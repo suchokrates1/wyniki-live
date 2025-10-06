@@ -22,6 +22,18 @@
 
     <section class="controls" aria-labelledby="ctrl-title">
       <h2 id="ctrl-title" class="sr-only">Sterowanie</h2>
+      <label class="sr-only" for="langSelect" id="langLabel">Wybierz język</label>
+      <select id="langSelect" name="lang">
+        <option value="pl">Polski</option>
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+        <option value="it">Italiano</option>
+        <option value="es">Español</option>
+        <option value="fi">Suomi</option>
+        <option value="uk">Українська</option>
+        <option value="fr">Français</option>
+        <option value="lt">Lietuvių</option>
+      </select>
       <button class="btn" id="pauseBtn" type="button" aria-pressed="false">Wstrzymaj odświeżanie</button>
     </section>
 
@@ -30,7 +42,7 @@
     </main>
 
     <div class="meta">
-      Ostatnie odświeżenie: <span id="lastRefresh">brak</span>.
+      <span id="lastRefreshText">Ostatnie odświeżenie: brak.</span>
       <span id="errLine" class="error" role="alert" aria-live="assertive"></span>
     </div>
   </div>
