@@ -5,6 +5,34 @@ const errLine = document.getElementById('errLine');
 const pauseBtn = document.getElementById('pauseBtn');
 const lastRefresh = document.getElementById('lastRefresh');
 
+const fallbackStore = {};
+
+function storageGet(key){
+  try{
+    return window.localStorage.getItem(key);
+  }catch(e){
+    return Object.prototype.hasOwnProperty.call(fallbackStore, key)
+      ? fallbackStore[key]
+      : null;
+  }
+}
+
+function storageSet(key, value){
+  try{
+    if (value === null){
+      window.localStorage.removeItem(key);
+    }else{
+      window.localStorage.setItem(key, value);
+    }
+  }catch(e){
+    if (value === null){
+      delete fallbackStore[key];
+    }else{
+      fallbackStore[key] = value;
+    }
+  }
+}
+
 let paused = false;
 let prev = {};
 let timer = null;
@@ -16,8 +44,8 @@ function flash(el){
 }
 
 function lsKey(k){ return `announce-k${k}`; }
-function getAnnounce(k){ return localStorage.getItem(lsKey(k)) === 'on'; }
-function setAnnounce(k, val){ localStorage.setItem(lsKey(k), val ? 'on' : 'off'); }
+function getAnnounce(k){ return storageGet(lsKey(k)) === 'on'; }
+function setAnnounce(k, val){ storageSet(lsKey(k), val ? 'on' : 'off'); }
 
 function makeCourtCard(k){
   const section = document.createElement('section');
