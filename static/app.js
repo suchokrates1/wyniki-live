@@ -116,7 +116,7 @@ function ensureCardsFromSnapshot(snap){
   COURTS.forEach(k => grid.appendChild(makeCourtCard(k)));
 }
 
-function setStatus(k, visible, tieVisible){
+function setStatus(k, visible, tieVisible, currentSet){
   const p = document.getElementById(`status-${k}`);
   const dot = p.querySelector('.dot');
   const txt = p.querySelector('.txt');
@@ -125,11 +125,16 @@ function setStatus(k, visible, tieVisible){
   if (visible === true) mainStatus = 'widoczny';
   else if (visible === false) mainStatus = 'ukryty';
 
-  const tieTxt = tieVisible === true ? ' | Super tiebreak: TAK'
-               : tieVisible === false ? ' | Super tiebreak: NIE'
-               : '';
+  const parts = [`Status: ${mainStatus}`];
+  if (tieVisible === true) parts.push('Super tiebreak: TAK');
+  else if (tieVisible === false) parts.push('Super tiebreak: NIE');
 
-  txt.textContent = `Status: ${mainStatus}${tieTxt}`;
+  const setNumber = Number(currentSet);
+  if (Number.isInteger(setNumber) && setNumber > 0){
+    parts.push(`Set: ${setNumber}`);
+  }
+
+  txt.textContent = parts.join(' | ');
   if (visible === true) { dot.classList.remove('off'); dot.classList.add('on'); }
   else { dot.classList.remove('on'); dot.classList.add('off'); }
 }
@@ -156,6 +161,12 @@ function announceSetEnd(k, winnerSurname, winnerGames, loserSurname, loserGames)
   announce(k, `koniec seta: ${winnerSurname} ${winnerGames} do ${loserSurname} ${loserGames}`);
 }
 
+function announceSetNumber(k, setNumber){
+  const num = Number(setNumber);
+  if (!Number.isInteger(num) || num < 1) return;
+  announce(k, `rozpoczyna się set ${num}`);
+}
+
 function announceTiePoint(k, surname, value){
   if (!surname || surname === '-') surname = 'zawodnik';
   announce(k, `tiebreak ${surname} ${value}`);
@@ -175,10 +186,20 @@ function updateTitle(k, Aname, Bname){
 }
 
 function updateCourt(k, data){
-  // status + tiebreak indicator
-  setStatus(k, data.overlay_visible, data.tie?.visible);
-
+  const prevExists = Object.prototype.hasOwnProperty.call(prev, k);
   const prevK = prev[k] || { A:{}, B:{}, tie:{} };
+  const prevSet = prevExists ? prevK?.current_set : undefined;
+
+  const setChanged = data.current_set !== undefined && data.current_set !== prevSet;
+  const currentSet = data.current_set ?? prevSet ?? null;
+
+  // status + tiebreak indicator
+  setStatus(k, data.overlay_visible, data.tie?.visible, currentSet);
+  if (setChanged && prevExists){
+    announceSetNumber(k, data.current_set);
+    flash(document.getElementById(`status-${k}`));
+  }
+
   const A = data.A || {}, B = data.B || {};
 
   const nameAChanged = A.surname !== undefined && A.surname !== prevK?.A?.surname;
