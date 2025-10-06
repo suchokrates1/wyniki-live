@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  wyniki:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wyniki-tenis
+    restart: unless-stopped
+    ports:
+      - "8087:8080"    # lokalnie; Traefik i tak trafi po IP:port
+    environment:
+      # UNO / Overlays
+      UNO_BASE: ${UNO_BASE:-https://app.overlays.uno/apiv2/controlapps}
+      KORT1_ID: ${KORT1_ID}
+      KORT2_ID: ${KORT2_ID}
+      KORT3_ID: ${KORT3_ID}
+      KORT4_ID: ${KORT4_ID}
+      # Jeśli potrzebujesz Bearer:
+      UNO_AUTH_BEARER: ${UNO_AUTH_BEARER:-}
+      # Limity per kort
+      RPM_PER_COURT: ${RPM_PER_COURT:-55}
+      BURST: ${BURST:-8}
+      # Ścieżka bazy (w kontenerze)
+      DB_PATH: /data/wyniki_archive.sqlite3
+      PORT: 8080
+    volumes:
+      - wyniki_data:/data
+    labels:
+      - "traefik.enable=true"
+      # Router
+      - "traefik.http.routers.wyniki.rule=Host(`${PUBLIC_HOST}`)"
+      - "traefik.http.routers.wyniki.entrypoints=https"
+      - "traefik.http.routers.wyniki.tls=true"
+      # Service (Traefik łączy po IP:port, bez sieci proxy)
+      - "traefik.http.services.wyniki.loadbalancer.server.port=8080"
+      # Opcjonalnie: nagłówki bezpieczeństwa
+      - "traefik.http.middlewares.wyniki-headers.headers.stsSeconds=31536000"
+      - "traefik.http.routers.wyniki.middlewares=wyniki-headers@docker"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 20s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  wyniki_data:
