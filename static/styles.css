@@ -1,0 +1,273 @@
+:root {
+  --bg: #0b0f14;
+  --card: #101825;
+  --text: #e6edf3;
+  --muted: #9fb1c2;
+  --line: #1e2a3a;
+  --accent: #9ad1ff;
+  --ok: #35c46a;
+  --warn: #ffcc33;
+  --err: #ff6b6b;
+  --focus: #ffe08a;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #fff;
+    --card: #f5f7fa;
+    --text: #111827;
+    --muted: #4b5563;
+    --line: #e5e7eb;
+    --accent: #0b6efd;
+    --focus: #0b6efd;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial, Helvetica, sans-serif;
+}
+
+.wrap {
+  width: 100%;
+  max-width: min(1400px, 80vw);
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .wrap {
+    max-width: 95vw;
+  }
+}
+
+header {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+header h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+nav {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+nav ul {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+nav a {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--card);
+}
+
+nav a:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.controls {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.meta {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.error {
+  color: var(--err);
+}
+
+main {
+  padding: 16px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px 24px;
+  justify-items: center;
+}
+
+@media (min-width: 800px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.status {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.status .dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.status .on {
+  background: var(--ok);
+}
+
+.status .off {
+  background: var(--warn);
+}
+
+.control {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--card);
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.control input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+
+caption {
+  text-align: left;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 2px 0 6px;
+  font-size: 16px;
+}
+
+thead th {
+  text-align: center;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 6px;
+}
+
+tbody td,
+tbody th {
+  border-top: 1px solid var(--line);
+  padding: 8px 6px;
+  text-align: center;
+}
+
+tbody th[scope="row"] {
+  text-align: left;
+}
+
+.changed {
+  box-shadow: inset 0 0 0 9999px rgba(154, 209, 255, 0.18);
+  transition: box-shadow 1.2s linear;
+}
+
+:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .changed {
+    transition: none;
+  }
+}
