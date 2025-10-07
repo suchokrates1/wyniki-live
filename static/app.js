@@ -9,7 +9,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Sterowanie',
     languageLabel: 'Wybierz język',
     pause: { pause: 'Wstrzymaj odświeżanie', resume: 'Wznów odświeżanie' },
-    announceLabel: 'Czytaj wynik',
+    announceLabel: 'Automatyczny odczyt',
     status: {
       label: 'Status: {state}{tiebreak}',
       states: { unknown: 'nieznany', visible: 'widoczny', hidden: 'ukryty' },
@@ -54,7 +54,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Steuerung',
     languageLabel: 'Sprache wählen',
     pause: { pause: 'Aktualisierung anhalten', resume: 'Aktualisierung fortsetzen' },
-    announceLabel: 'Ergebnis ansagen',
+    announceLabel: 'Automatische Ansage',
     status: {
       label: 'Status: {state}{tiebreak}',
       states: { unknown: 'unbekannt', visible: 'sichtbar', hidden: 'ausgeblendet' },
@@ -99,7 +99,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Controls',
     languageLabel: 'Choose language',
     pause: { pause: 'Pause updates', resume: 'Resume updates' },
-    announceLabel: 'Announce score',
+    announceLabel: 'Automatic readout',
     status: {
       label: 'Status: {state}{tiebreak}',
       states: { unknown: 'unknown', visible: 'visible', hidden: 'hidden' },
@@ -144,7 +144,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Controlli',
     languageLabel: 'Scegli lingua',
     pause: { pause: 'Metti in pausa gli aggiornamenti', resume: 'Riprendi gli aggiornamenti' },
-    announceLabel: 'Leggi il punteggio',
+    announceLabel: 'Lettura automatica',
     status: {
       label: 'Stato: {state}{tiebreak}',
       states: { unknown: 'sconosciuto', visible: 'visibile', hidden: 'nascosto' },
@@ -189,7 +189,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Controles',
     languageLabel: 'Elegir idioma',
     pause: { pause: 'Pausar actualizaciones', resume: 'Reanudar actualizaciones' },
-    announceLabel: 'Anunciar marcador',
+    announceLabel: 'Lectura automática',
     status: {
       label: 'Estado: {state}{tiebreak}',
       states: { unknown: 'desconocido', visible: 'visible', hidden: 'oculto' },
@@ -234,7 +234,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Ohjaimet',
     languageLabel: 'Valitse kieli',
     pause: { pause: 'Keskeytä päivitykset', resume: 'Jatka päivityksiä' },
-    announceLabel: 'Ilmoita tulos',
+    announceLabel: 'Automaattinen kuulutus',
     status: {
       label: 'Tila: {state}{tiebreak}',
       states: { unknown: 'tuntematon', visible: 'näkyvissä', hidden: 'piilotettu' },
@@ -279,7 +279,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Керування',
     languageLabel: 'Оберіть мову',
     pause: { pause: 'Призупинити оновлення', resume: 'Відновити оновлення' },
-    announceLabel: 'Озвучувати рахунок',
+    announceLabel: 'Автоматичне озвучування',
     status: {
       label: 'Статус: {state}{tiebreak}',
       states: { unknown: 'невідомо', visible: 'видно', hidden: 'приховано' },
@@ -324,7 +324,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Commandes',
     languageLabel: 'Choisir la langue',
     pause: { pause: 'Mettre les mises à jour en pause', resume: 'Reprendre les mises à jour' },
-    announceLabel: 'Annoncer le score',
+    announceLabel: 'Lecture automatique',
     status: {
       label: 'Statut : {state}{tiebreak}',
       states: { unknown: 'inconnu', visible: 'visible', hidden: 'masqué' },
@@ -369,7 +369,7 @@ const TRANSLATIONS = {
     controlsTitle: 'Valdikliai',
     languageLabel: 'Pasirinkite kalbą',
     pause: { pause: 'Pristabdyti atnaujinimus', resume: 'Tęsti atnaujinimus' },
-    announceLabel: 'Skaityti rezultatą',
+    announceLabel: 'Automatinis skaitymas',
     status: {
       label: 'Būsena: {state}{tiebreak}',
       states: { unknown: 'nežinoma', visible: 'rodoma', hidden: 'paslėpta' },
@@ -484,8 +484,7 @@ function makeCourtCard(k) {
   section.innerHTML = `
     <div class="card-head">
       <h2 id="heading-${k}">
-        <span class="court-label" id="court-label-${k}">${courtLabel}</span>
-        — <span id="title-${k}">${defaultA} ${t.versus} ${defaultB}</span>
+        <span class="court-label" id="court-label-${k}">${courtLabel}</span>: <span id="title-${k}">${defaultA} | ${defaultB}</span>
       </h2>
       <label class="control">
         <input type="checkbox" id="announce-${k}">
@@ -589,7 +588,9 @@ function announce(k, text) {
   const live = document.getElementById(`live-${k}`);
   if (!live) return;
   live.setAttribute('lang', currentLocale());
-  live.textContent = text;
+  const nextText = `${text}`;
+  if (live.textContent === nextText) return;
+  live.textContent = nextText;
 }
 
 function fallbackPlayerName(surname, type) {
@@ -647,7 +648,7 @@ function updateTitle(k, Aname, Bname) {
   const safeB = resolvePlayerName(Bname, 'defaultB');
 
   if (title) {
-    title.textContent = `${safeA} ${t.versus} ${safeB}`;
+    title.textContent = `${safeA} | ${safeB}`;
   }
   if (cap) {
     cap.textContent = format(t.table.caption, {
