@@ -4,15 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>UNO Control — rozszerzony panel</title>
+  <meta name="kort" content="{{ kort|default('1') }}" />
   <link rel="stylesheet" href="/static/uno-control.css">
   <script src="/static/players.js" defer></script>
   <script src="/static/uno-control.js" defer></script>
 </head>
 <body>
-  <div class="wrap" id="app" data-kort="">
+  <div class="wrap" id="app" data-kort="{{ kort|default('1') }}">
     <header class="header">
       <h1 class="title">
-        <span id="hdr-court">Kort 1</span>
+        <span id="hdr-court">Kort {{ kort|default('1') }}</span>
         <span class="sep">—</span>
         <span id="hdr-a">Zawodnik A</span>
         <span class="vs" aria-hidden="true">|</span>
