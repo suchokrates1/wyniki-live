@@ -8,6 +8,32 @@ if (appRoot) {
   appRoot.dataset.kort = String(kort);
 }
 const $ = sel => document.querySelector(sel);
+const setText = (id, value) => {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+};
+const setSelectValue = (id, value) => {
+  const el = document.getElementById(id);
+  if (el) el.value = value;
+};
+const state = {
+  names: { A: 'Zawodnik A', B: 'Zawodnik B' },
+  currentSet: 1,
+  sets: { a: [0, 0, 0], b: [0, 0, 0] },
+  currentGames: { A: 0, B: 0 },
+  tieBreak: { A: 0, B: 0 },
+  matchTime: { h: 0, m: 0, s: 0 },
+  mode: '3set',
+  serve: 'none'
+};
+const NAME_TARGETS = {
+  A: ['hdr-a', 'pA-name', 'sa-name', 'cga-name', 'tba-name'],
+  B: ['hdr-b', 'pB-name', 'sb-name', 'cgb-name', 'tbb-name']
+};
+const viewContainer = document.querySelector('#view-container');
+const tabList = document.querySelector('#view-tabs');
+let activeView = null;
+const mt = state.matchTime;
 const live = (msg, timeout = 800) => {
   const n = $('#live');
   if (n) {
@@ -18,6 +44,115 @@ const live = (msg, timeout = 800) => {
   }
 };
 const ORIGIN = location.origin;
+
+function renderNames(side){
+  const name = state.names[side] || '';
+  const ids = NAME_TARGETS[side] || [];
+  for (const id of ids) setText(id, name);
+}
+function renderCurrentSet(){ setText('current-set', state.currentSet); }
+function renderSets(){
+  state.sets.a.forEach((val, idx) => setText(`s${idx + 1}a`, val));
+  state.sets.b.forEach((val, idx) => setText(`s${idx + 1}b`, val));
+}
+function renderCurrentGames(){
+  setText('cga', state.currentGames.A);
+  setText('cgb', state.currentGames.B);
+}
+function renderTieBreak(){
+  setText('tba', state.tieBreak.A);
+  setText('tbb', state.tieBreak.B);
+}
+function renderMatchTime(){
+  setText('mt-h', mt.h);
+  setText('mt-m', mt.m);
+  setText('mt-s', mt.s);
+}
+function renderMode(){ setSelectValue('modeSel', state.mode); }
+function renderServe(){
+  document.querySelectorAll('#view-container [data-cmd="SetServe"]').forEach(btn => {
+    btn.classList.toggle('is-current', (btn.dataset.value || 'none') === state.serve);
+  });
+}
+function renderView(viewId){
+  switch(viewId){
+    case 'points':
+      renderNames('A');
+      renderNames('B');
+      break;
+    case 'serve':
+      renderServe();
+      break;
+    case 'current-set':
+      renderNames('A');
+      renderNames('B');
+      renderCurrentSet();
+      renderSets();
+      renderCurrentGames();
+      break;
+    case 'tie-break':
+      renderNames('A');
+      renderNames('B');
+      renderTieBreak();
+      break;
+    case 'match-time':
+      renderMatchTime();
+      break;
+    case 'settings':
+      renderMode();
+      break;
+    default:
+      break;
+  }
+}
+
+function activateView(viewId){
+  if(!viewContainer) return;
+  if(activeView === viewId) return;
+
+  const prevTab = tabList?.querySelector('.tabs__item.is-active');
+  if(prevTab){
+    prevTab.classList.remove('is-active');
+    prevTab.setAttribute('aria-selected', 'false');
+  }
+
+  const tab = tabList?.querySelector(`[data-view="${viewId}"]`);
+  if(tab){
+    tab.classList.add('is-active');
+    tab.setAttribute('aria-selected', 'true');
+  }
+
+  viewContainer.innerHTML = '';
+  const tmpl = document.getElementById(`view-${viewId}`);
+  if(!tmpl){
+    activeView = null;
+    return;
+  }
+  const fragment = tmpl.content.firstElementChild?.cloneNode(true);
+  if(!fragment){
+    activeView = null;
+    return;
+  }
+  const panelId = `panel-${viewId}`;
+  fragment.id = panelId;
+  fragment.classList.add('is-active');
+  fragment.setAttribute('role', 'tabpanel');
+  if(tab){
+    tab.setAttribute('aria-controls', panelId);
+  }
+  viewContainer.appendChild(fragment);
+  activeView = viewId;
+  renderView(viewId);
+}
+
+tabList?.addEventListener('click', e => {
+  const btn = e.target.closest('.tabs__item');
+  if(!btn) return;
+  const viewId = btn.dataset.view;
+  if(viewId) activateView(viewId);
+});
+
+activateView('points');
 
 function buildPayload(command, value, extra){
   const body = { command };
@@ -233,19 +368,9 @@ function makeCombo(root, side){
 }
 
 function updateNames(side, full){
-  if(side==='A'){
-    $('#hdr-a').textContent = full;
-    $('#pA-name').textContent = full;
-    $('#sa-name').textContent = full;
-    $('#cga-name').textContent = full;
-    $('#tba-name').textContent = full;
-  }else{
-    $('#hdr-b').textContent = full;
-    $('#pB-name').textContent = full;
-    $('#sb-name').textContent = full;
-    $('#cgb-name').textContent = full;
-    $('#tbb-name').textContent = full;
-  }
+  const fallback = side === 'A' ? 'Zawodnik A' : 'Zawodnik B';
+  state.names[side] = (full || fallback).trim() || fallback;
+  renderNames(side);
 }
 
 function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
@@ -258,20 +383,24 @@ async function bootstrap(){
 
   try{ const r = await callUno('GetNamePlayerA'); if(r?.payload){ updateNames('A', r.payload); } }catch(e){}
   try{ const r = await callUno('GetNamePlayerB'); if(r?.payload){ updateNames('B', r.payload); } }catch(e){}
-  try{ const r = await callUno('GetMode'); if(r?.payload){ $('#modeSel').value = r.payload; } }catch(e){}
-  try{ const r = await callUno('GetSet'); if(r?.payload!=null){ $('#current-set').textContent = r.payload; } }catch(e){}
+  try{ const r = await callUno('GetMode'); if(r?.payload){ state.mode = r.payload; renderMode(); } }catch(e){}
+  try{ const r = await callUno('GetSet'); if(r?.payload!=null){ state.currentSet = clamp(parseInt(r.payload,10)||1,1,5); renderCurrentSet(); } }catch(e){}
   for(const pl of ['A','B']){
+    const key = pl.toLowerCase();
     for(const i of [1,2,3]){
       try{
         const r = await callUno(`GetSet${i}Player${pl}`);
-        if(r?.payload!=null) { $(`#s${i}${pl.toLowerCase()}`).textContent = r.payload; }
+        if(r?.payload!=null) { state.sets[key][i-1] = parseInt(r.payload,10)||0; }
       }catch(e){}
     }
   }
-  try{ const r = await callUno('GetCurrentSetPlayerA'); if(r?.payload!=null){ $('#cga').textContent = r.payload; } }catch(e){}
-  try{ const r = await callUno('GetCurrentSetPlayerB'); if(r?.payload!=null){ $('#cgb').textContent = r.payload; } }catch(e){}
-  try{ const r = await callUno('GetTieBreakPlayerA'); if(r?.payload!=null){ $('#tba').textContent = r.payload; } }catch(e){}
-  try{ const r = await callUno('GetTieBreakPlayerB'); if(r?.payload!=null){ $('#tbb').textContent = r.payload; } }catch(e){}
+  renderSets();
+  try{ const r = await callUno('GetCurrentSetPlayerA'); if(r?.payload!=null){ state.currentGames.A = parseInt(r.payload,10)||0; } }catch(e){}
+  try{ const r = await callUno('GetCurrentSetPlayerB'); if(r?.payload!=null){ state.currentGames.B = parseInt(r.payload,10)||0; } }catch(e){}
+  renderCurrentGames();
+  try{ const r = await callUno('GetTieBreakPlayerA'); if(r?.payload!=null){ state.tieBreak.A = parseInt(r.payload,10)||0; } }catch(e){}
+  try{ const r = await callUno('GetTieBreakPlayerB'); if(r?.payload!=null){ state.tieBreak.B = parseInt(r.payload,10)||0; } }catch(e){}
+  renderTieBreak();
   try{
     const r = await callUno('GetMatchTime');
     const total = parseInt(r?.payload||'0',10)||0;
@@ -286,7 +415,29 @@ document.addEventListener('click', async e=>{
   if(!release) return;
   const cmd = b.dataset.cmd;
   const sel = b.dataset.select;
-  const val = sel ? $(`#${sel}`).value : b.dataset.value;
+  const val = sel ? $(`#${sel}`)?.value : b.dataset.value;
+  switch(cmd){
+    case 'IncreaseSet':
+      state.currentSet = clamp(state.currentSet + 1, 1, 5);
+      renderCurrentSet();
+      break;
+    case 'DecreaseSet':
+      state.currentSet = clamp(state.currentSet - 1, 1, 5);
+      renderCurrentSet();
+      break;
+    case 'SetServe':
+      state.serve = val || 'none';
+      renderServe();
+      break;
+    case 'SetMode':
+      if(val != null){
+        state.mode = val;
+        renderMode();
+      }
+      break;
+    default:
+      break;
+  }
   try{
     await dispatchCommand(cmd, val);
   }finally{
@@ -294,15 +445,10 @@ document.addEventListener('click', async e=>{
   }
 });
 
-document.querySelector('[data-cmd="IncreaseSet"]').addEventListener('click', ()=>{
-  const el = $('#current-set'); el.textContent = clamp(parseInt(el.textContent||'1',10)+1,1,5);
-});
-document.querySelector('[data-cmd="DecreaseSet"]').addEventListener('click', ()=>{
-  const el = $('#current-set'); el.textContent = clamp(parseInt(el.textContent||'1',10)-1,1,5);
-});
-
-$('#reset-sets').addEventListener('click', async e=>{
-  const release = applyCooldown(e.currentTarget, 400);
+document.addEventListener('click', async e=>{
+  const btn = e.target.closest('#reset-sets');
+  if(!btn) return;
+  const release = applyCooldown(btn, 400);
   if(!release) return;
   const cmds = [
     ['SetSet1PlayerA',0],['SetSet2PlayerA',0],['SetSet3PlayerA',0],
@@ -310,44 +456,55 @@ $('#reset-sets').addEventListener('click', async e=>{
   ];
   try{
     for(const [c,v] of cmds){ await dispatchCommand(c, v, undefined, {silent:true}); }
-    ['s1a','s2a','s3a','s1b','s2b','s3b'].forEach(id=>$( '#'+id ).textContent='0');
+    state.sets.a = [0,0,0];
+    state.sets.b = [0,0,0];
+    renderSets();
   }finally{
     release();
   }
 });
 
-$('#reset-current-games').addEventListener('click', async e=>{
-  const release = applyCooldown(e.currentTarget, 400);
+document.addEventListener('click', async e=>{
+  const btn = e.target.closest('#reset-current-games');
+  if(!btn) return;
+  const release = applyCooldown(btn, 400);
   if(!release) return;
   try{
-    await dispatchCommand('SetCurrentSetPlayerA',0, undefined, {silent:true}); $('#cga').textContent='0';
-    await dispatchCommand('SetCurrentSetPlayerB',0, undefined, {silent:true}); $('#cgb').textContent='0';
+    await dispatchCommand('SetCurrentSetPlayerA',0, undefined, {silent:true});
+    await dispatchCommand('SetCurrentSetPlayerB',0, undefined, {silent:true});
+    state.currentGames.A = 0;
+    state.currentGames.B = 0;
+    renderCurrentGames();
   }finally{
     release();
   }
 });
 
-$('#reset-tb').addEventListener('click', async e=>{
-  const release = applyCooldown(e.currentTarget, 400);
+document.addEventListener('click', async e=>{
+  const btn = e.target.closest('#reset-tb');
+  if(!btn) return;
+  const release = applyCooldown(btn, 400);
   if(!release) return;
   try{
-    await dispatchCommand('SetTieBreakPlayerA',0, undefined, {silent:true}); $('#tba').textContent='0';
-    await dispatchCommand('SetTieBreakPlayerB',0, undefined, {silent:true}); $('#tbb').textContent='0';
+    await dispatchCommand('SetTieBreakPlayerA',0, undefined, {silent:true});
+    await dispatchCommand('SetTieBreakPlayerB',0, undefined, {silent:true});
+    state.tieBreak.A = 0;
+    state.tieBreak.B = 0;
+    renderTieBreak();
   }finally{
     release();
   }
 });
 
-const mt = {h:0,m:0,s:0};
 function updateMt(){
-  $('#mt-h').textContent = mt.h;
-  $('#mt-m').textContent = mt.m;
-  $('#mt-s').textContent = mt.s;
+  renderMatchTime();
   const total = mt.h*3600 + mt.m*60 + mt.s;
   return dispatchCommand('SetMatchTime', total, undefined, {silent:true});
 }
-$('#mt-play').addEventListener('click', async function(e){
-  const release = applyCooldown(e.currentTarget);
+document.addEventListener('click', async e=>{
+  const btn = e.target.closest('#mt-play');
+  if(!btn) return;
+  const release = applyCooldown(btn);
   if(!release) return;
   try{
     await dispatchCommand('PlayMatchTime', undefined, undefined, {silent:true});
@@ -355,8 +512,10 @@ $('#mt-play').addEventListener('click', async function(e){
     release();
   }
 });
-$('#mt-pause').addEventListener('click', async function(e){
-  const release = applyCooldown(e.currentTarget);
+document.addEventListener('click', async e=>{
+  const btn = e.target.closest('#mt-pause');
+  if(!btn) return;
+  const release = applyCooldown(btn);
   if(!release) return;
   try{
     await dispatchCommand('PauseMatchTime', undefined, undefined, {silent:true});
@@ -364,8 +523,10 @@ $('#mt-pause').addEventListener('click', async function(e){
     release();
   }
 });
-$('#mt-reset').addEventListener('click', async function(e){
-  const release = applyCooldown(e.currentTarget, 400);
+document.addEventListener('click', async e=>{
+  const btn = e.target.closest('#mt-reset');
+  if(!btn) return;
+  const release = applyCooldown(btn, 400);
   if(!release) return;
   mt.h=0;mt.m=0;mt.s=0;
   try{
