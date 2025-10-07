@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-import os, json, time, threading, sqlite3, logging, random, re
+import os, json, time, threading, sqlite3, logging, re, queue
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import requests
-from flask import Flask, jsonify, send_from_directory, request, redirect, abort
+from collections import deque
+from flask import Flask, jsonify, send_from_directory, request, redirect, abort, Response
 
 # ====== Ścieżki / Flask ======
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -35,18 +36,6 @@ if UNO_AUTH_BEARER:
 
 RPM_PER_COURT = int(os.environ.get("RPM_PER_COURT", "55"))
 BURST = int(os.environ.get("BURST", "8"))
-JITTER = 0.12
-
-# Interwały odpytywania (s) – zachowawcze vs. limity UNO
-INTERVALS = {
-    "POINTS": 7.0,
-    "GAMES": 60.0,
-    "NAMES": 120.0,
-    "VIS": 60.0,
-    "TIE": 7.0,       # punkty tiebreak gdy aktywny
-    "TIEVIS": 15.0,   # widoczność tiebreak
-    "CURSET": 30.0    # numer bieżącego seta
-}
 
 DB_PATH = os.environ.get("DB_PATH", "wyniki_archive.sqlite3")
 PORT = int(os.environ.get("PORT", "8080"))
@@ -88,17 +77,80 @@ def db_init():
 db_init()
 
 # ====== Stan w pamięci ======
-snapshots: Dict[str, Dict[str, Any]] = {
-    k: {
-        "overlay_visible": None,
-        "A": {"surname": "-", "points": "-", "set1": 0, "set2": 0},
-        "B": {"surname": "-", "points": "-", "set1": 0, "set2": 0},
-        "tie": {"visible": None, "A": 0, "B": 0},   # super tiebreak
-        "current_set": None,                        # numer seta wg UNO (1..)
-        "updated": None
+RING_BUFFER_SIZE = int(os.environ.get("STATE_LOG_SIZE", "200"))
+
+STATE_LOCK = threading.Lock()
+
+class EventBroker:
+    def __init__(self):
+        self.listeners = set()
+        self.lock = threading.Lock()
+
+    def listen(self) -> queue.Queue:
+        q: queue.Queue = queue.Queue(maxsize=25)
+        with self.lock:
+            self.listeners.add(q)
+        return q
+
+    def discard(self, q: queue.Queue) -> None:
+        with self.lock:
+            self.listeners.discard(q)
+
+    def broadcast(self, payload: Dict[str, Any]) -> None:
+        with self.lock:
+            listeners = list(self.listeners)
+        for q in listeners:
+            try:
+                q.put_nowait(payload)
+            except queue.Full:
+                pass
+
+event_broker = EventBroker()
+
+POINT_SEQUENCE = ["0", "15", "30", "40", "ADV"]
+
+def _empty_player_state() -> Dict[str, Any]:
+    return {
+        "full_name": None,
+        "surname": "-",
+        "points": "-",
+        "set1": 0,
+        "set2": 0,
+        "set3": 0,
+        "current_games": 0,
     }
-    for k in OVERLAY_IDS.keys()
-}
+
+def _empty_court_state() -> Dict[str, Any]:
+    return {
+        "overlay_visible": None,
+        "mode": None,
+        "serve": None,
+        "current_set": None,
+        "match_time": {"seconds": 0, "running": False},
+        "A": _empty_player_state(),
+        "B": _empty_player_state(),
+        "tie": {"visible": None, "A": 0, "B": 0},
+        "local": {"commands": {}, "updated": None},
+        "uno": {
+            "last_command": None,
+            "last_value": None,
+            "last_payload": None,
+            "last_status": None,
+            "last_response": None,
+            "updated": None,
+        },
+        "log": deque(maxlen=RING_BUFFER_SIZE),
+        "updated": None,
+    }
+
+if OVERLAY_IDS:
+    _initial_courts = sorted(OVERLAY_IDS.keys(), key=lambda v: int(v))
+else:
+    _initial_courts = [str(i) for i in range(1, 5)]
+
+snapshots: Dict[str, Dict[str, Any]] = {k: _empty_court_state() for k in _initial_courts}
+
+GLOBAL_LOG: deque = deque(maxlen=max(100, RING_BUFFER_SIZE * max(1, len(snapshots) or 1)))
 
 class TokenBucket:
     def __init__(self, rpm: int, burst: int):
@@ -132,17 +184,6 @@ def _now_iso() -> str:
 def _api_endpoint(kort_id: str) -> str:
     return f"{OVERLAY_BASE}/{OVERLAY_IDS[kort_id]}/api"
 
-def _uno_call(kort_id: str, command: str, value: Any = None) -> Optional[requests.Response]:
-    if not OVERLAY_IDS.get(kort_id): return None
-    if not buckets[kort_id].take(): return None
-    body = {"command": command}
-    if value is not None: body["value"] = value
-    try:
-        return requests.put(_api_endpoint(kort_id), headers=AUTH_HEADER, json=body, timeout=5)
-    except requests.RequestException as e:
-        log.warning("UNO error kort=%s cmd=%s err=%s", kort_id, command, e)
-        return None
-
 def _to_bool(val):
     if isinstance(val, bool): return val
     if isinstance(val, (int, float)): return val != 0
@@ -152,216 +193,399 @@ def _to_bool(val):
     if s in ("false","0","no","off","hidden","hide","invisible","inactive","disabled"): return False
     return None
 
-def _parse_visibility_body(body: str):
-    try:
-        data = json.loads(body)
-        if isinstance(data, dict):
-            if "payload" in data: return _to_bool(data["payload"])
-            for k in ("visible","isVisible","visibility","value","status"):
-                if k in data:
-                    b = _to_bool(data[k]); 
-                    if b is not None: return b
-    except Exception:
-        pass
-    return _to_bool(body)
+def _ensure_court_state(kort_id: str) -> Dict[str, Any]:
+    state = snapshots.get(kort_id)
+    if state is None:
+        state = _empty_court_state()
+        snapshots[kort_id] = state
+    return state
 
-def _parse_int_payload(text: str, default: int = 0) -> int:
-    try:
-        data = json.loads(text)
-        if isinstance(data, dict) and "payload" in data:
-            return int(str(data["payload"]).strip())
-    except Exception:
-        pass
-    m = re.findall(r"-?\d+", text.strip())
-    return int(m[0]) if m else default
+def _serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "overlay_visible": state["overlay_visible"],
+        "mode": state["mode"],
+        "serve": state["serve"],
+        "current_set": state["current_set"],
+        "match_time": dict(state["match_time"]),
+        "A": dict(state["A"]),
+        "B": dict(state["B"]),
+        "tie": dict(state["tie"]),
+        "local": {
+            "updated": state["local"]["updated"],
+            "commands": {cmd: dict(info) for cmd, info in state["local"]["commands"].items()},
+        },
+        "uno": dict(state["uno"]),
+        "log": list(state["log"]),
+        "updated": state["updated"],
+    }
 
-def _update_and_archive(kort_id: str, new: Dict[str, Any]):
-    old = snapshots[kort_id]
+def _serialize_all_states() -> Dict[str, Any]:
+    with STATE_LOCK:
+        return {kort: _serialize_court_state(state) for kort, state in snapshots.items()}
+
+def _safe_copy(data: Any) -> Any:
+    if data is None:
+        return None
+    if isinstance(data, (str, int, float, bool)):
+        return data
+    if isinstance(data, dict):
+        return {str(k): _safe_copy(v) for k, v in data.items()}
+    if isinstance(data, (list, tuple, set)):
+        return [_safe_copy(v) for v in data]
+    try:
+        return json.loads(json.dumps(data))
+    except (TypeError, ValueError):
+        return str(data)
+
+def _record_log_entry(state: Dict[str, Any], kort_id: str, source: str, command: str,
+                      value: Any, extras: Optional[Dict[str, Any]], ts: str) -> Dict[str, Any]:
+    entry: Dict[str, Any] = {
+        "ts": ts,
+        "source": source,
+        "kort": kort_id,
+        "command": command,
+    }
+    if value is not None:
+        entry["value"] = value
+    if extras:
+        entry["extras"] = extras
+    state["log"].append(entry)
+    GLOBAL_LOG.append(entry)
+    return entry
+
+def _broadcast_kort_state(kort_id: str, event_type: str, command: str, value: Any,
+                          extras: Optional[Dict[str, Any]], ts: str,
+                          status: Optional[int] = None) -> None:
+    with STATE_LOCK:
+        state = snapshots.get(kort_id)
+        if not state:
+            return
+        payload = {
+            "type": event_type,
+            "kort": kort_id,
+            "ts": ts,
+            "command": command,
+            "value": value,
+            "extras": extras,
+            "state": _serialize_court_state(state),
+        }
+        if status is not None:
+            payload["status"] = status
+    event_broker.broadcast(payload)
+
+ALLOWED_COMMAND_PREFIXES = (
+    "set", "increase", "decrease", "reset", "show", "hide", "toggle",
+    "play", "pause", "stop", "resume", "sync", "update"
+)
+
+def _validate_command(command: Any) -> bool:
+    if not isinstance(command, str):
+        return False
+    stripped = command.strip()
+    if not stripped:
+        return False
+    lower = stripped.lower()
+    return any(lower.startswith(prefix) for prefix in ALLOWED_COMMAND_PREFIXES)
+
+def _step_points(current: Any, delta: int) -> str:
+    cur = str(current or "0").strip().upper()
+    if cur not in POINT_SEQUENCE:
+        cur = POINT_SEQUENCE[0]
+    idx = POINT_SEQUENCE.index(cur)
+    idx = max(0, min(len(POINT_SEQUENCE) - 1, idx + delta))
+    return POINT_SEQUENCE[idx]
+
+def _as_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError, AttributeError):
+        return default
+
+def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
+                         extras: Optional[Dict[str, Any]]) -> bool:
     changed = False
-
-    if "overlay_visible" in new:
-        vis = new["overlay_visible"]
-        if vis is not None and vis != old["overlay_visible"]:
-            old["overlay_visible"] = bool(vis)
+    if command == "SetNamePlayerA":
+        full = str(value or "").strip() or None
+        state["A"]["full_name"] = full
+        state["A"]["surname"] = _surname(full)
+        changed = True
+    elif command == "SetNamePlayerB":
+        full = str(value or "").strip() or None
+        state["B"]["full_name"] = full
+        state["B"]["surname"] = _surname(full)
+        changed = True
+    elif command == "SetPointsPlayerA":
+        state["A"]["points"] = str(value if value is not None else "-")
+        changed = True
+    elif command == "SetPointsPlayerB":
+        state["B"]["points"] = str(value if value is not None else "-")
+        changed = True
+    elif command == "IncreasePointsPlayerA":
+        state["A"]["points"] = _step_points(state["A"]["points"], +1)
+        changed = True
+    elif command == "IncreasePointsPlayerB":
+        state["B"]["points"] = _step_points(state["B"]["points"], +1)
+        changed = True
+    elif command == "DecreasePointsPlayerA":
+        state["A"]["points"] = _step_points(state["A"]["points"], -1)
+        changed = True
+    elif command == "DecreasePointsPlayerB":
+        state["B"]["points"] = _step_points(state["B"]["points"], -1)
+        changed = True
+    elif command == "ResetPoints":
+        state["A"]["points"] = "0"
+        state["B"]["points"] = "0"
+        changed = True
+    else:
+        set_match = re.fullmatch(r"SetSet([123])Player([AB])", command)
+        if set_match:
+            idx = set_match.group(1)
+            side = set_match.group(2)
+            key = f"set{idx}"
+            state[side][key] = _as_int(value, 0)
             changed = True
-
-    # aktualizacje A/B (nazwisko/punkty/sety)
-    for side in ("A", "B"):
-        if side in new:
-            for key in ("surname", "points", "set1", "set2"):
-                if key in new[side] and new[side][key] != old[side][key]:
-                    old[side][key] = new[side][key]
+        else:
+            cur_match = re.fullmatch(r"SetCurrentSetPlayer([AB])", command)
+            if cur_match:
+                side = cur_match.group(1)
+                state[side]["current_games"] = _as_int(value, 0)
+                changed = True
+            elif command == "IncreaseCurrentSetPlayerA":
+                state["A"]["current_games"] = max(0, state["A"]["current_games"] + 1)
+                changed = True
+            elif command == "IncreaseCurrentSetPlayerB":
+                state["B"]["current_games"] = max(0, state["B"]["current_games"] + 1)
+                changed = True
+            elif command == "DecreaseCurrentSetPlayerA":
+                state["A"]["current_games"] = max(0, state["A"]["current_games"] - 1)
+                changed = True
+            elif command == "DecreaseCurrentSetPlayerB":
+                state["B"]["current_games"] = max(0, state["B"]["current_games"] - 1)
+                changed = True
+            elif command == "SetCurrentSet":
+                state["current_set"] = _as_int(value, 0) or None
+                changed = True
+            elif command == "SetSet":
+                state["current_set"] = _as_int(value, 0) or None
+                changed = True
+            elif command == "IncreaseSet":
+                state["current_set"] = (state["current_set"] or 0) + 1
+                changed = True
+            elif command == "DecreaseSet":
+                current = state["current_set"] or 0
+                current = max(0, current - 1)
+                state["current_set"] = current or None
+                changed = True
+            else:
+                tie_match = re.fullmatch(r"SetTieBreakPlayer([AB])", command)
+                if tie_match:
+                    side = tie_match.group(1)
+                    state["tie"][side] = _as_int(value, 0)
+                    changed = True
+                elif command == "IncreaseTieBreakPlayerA":
+                    state["tie"]["A"] = max(0, state["tie"]["A"] + 1)
+                    changed = True
+                elif command == "IncreaseTieBreakPlayerB":
+                    state["tie"]["B"] = max(0, state["tie"]["B"] + 1)
+                    changed = True
+                elif command == "DecreaseTieBreakPlayerA":
+                    state["tie"]["A"] = max(0, state["tie"]["A"] - 1)
+                    changed = True
+                elif command == "DecreaseTieBreakPlayerB":
+                    state["tie"]["B"] = max(0, state["tie"]["B"] - 1)
+                    changed = True
+                elif command == "ResetTieBreak":
+                    state["tie"]["A"] = 0
+                    state["tie"]["B"] = 0
+                    changed = True
+                elif command == "SetTieBreakVisibility":
+                    state["tie"]["visible"] = _to_bool(value)
+                    changed = True
+                elif command == "ShowTieBreak":
+                    state["tie"]["visible"] = True
+                    changed = True
+                elif command == "HideTieBreak":
+                    state["tie"]["visible"] = False
+                    changed = True
+                elif command == "ToggleTieBreak":
+                    current = state["tie"].get("visible")
+                    state["tie"]["visible"] = not current if current is not None else True
+                    changed = True
+                elif command == "SetServe":
+                    if value is None:
+                        state["serve"] = None
+                    else:
+                        val = str(value).strip().upper()
+                        if val in ("A", "B"):
+                            state["serve"] = val
+                        else:
+                            state["serve"] = None
+                    changed = True
+                elif command == "SetMode":
+                    state["mode"] = str(value) if value is not None else None
+                    changed = True
+                elif command == "ShowOverlay":
+                    state["overlay_visible"] = True
+                    changed = True
+                elif command == "HideOverlay":
+                    state["overlay_visible"] = False
+                    changed = True
+                elif command == "ToggleOverlay":
+                    current = state.get("overlay_visible")
+                    state["overlay_visible"] = not current if current is not None else True
+                    changed = True
+                elif command == "SetOverlayVisibility":
+                    state["overlay_visible"] = _to_bool(value)
+                    changed = True
+                elif command == "SetMatchTime":
+                    state["match_time"]["seconds"] = max(0, _as_int(value, 0))
+                    changed = True
+                elif command == "ResetMatchTime":
+                    state["match_time"]["seconds"] = 0
+                    state["match_time"]["running"] = False
+                    changed = True
+                elif command == "PlayMatchTime":
+                    state["match_time"]["running"] = True
+                    changed = True
+                elif command == "PauseMatchTime":
+                    state["match_time"]["running"] = False
                     changed = True
 
-    # tiebreak
-    if "tie" in new:
-        tnew = new["tie"]
-        told = old["tie"]
-        for key in ("visible", "A", "B"):
-            if key in tnew and tnew[key] != told[key]:
-                told[key] = tnew[key]
-                changed = True
-
-    # numer bieżącego seta (z UNO)
-    if "current_set" in new and new["current_set"] != old.get("current_set"):
-        old["current_set"] = new["current_set"]
-        changed = True
-
-    if changed:
-        old["updated"] = _now_iso()
-        # Archiwizujemy tylko klasyczne pola (nazwiska/punkty/gemy/visibility)
-        con = db_conn()
-        cur = con.cursor()
-        vis_db = -1 if old["overlay_visible"] is None else (1 if old["overlay_visible"] else 0)
-        cur.execute(
-            "INSERT INTO snapshot_meta (ts, kort_id, overlay_visible) VALUES (?, ?, ?)",
-            (old["updated"], kort_id, vis_db)
-        )
-        for side in ("A", "B"):
-            cur.execute(
-                "INSERT INTO snapshots (ts, kort_id, player, surname, points, set1, set2)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (old["updated"], kort_id, side, old[side]["surname"], str(old[side]["points"]),
-                 int(old[side]["set1"] or 0), int(old[side]["set2"] or 0))
-            )
-        con.commit()
-        con.close()
-
-# ====== Poller ======
-def poller():
-    clocks: Dict[str, Dict[str, float]] = {
-        k: {
-            "nameA":0.0,"nameB":0.0,
-            "ptsA":0.0,"ptsB":0.0,
-            "set1A":0.0,"set1B":0.0,"set2A":0.0,"set2B":0.0,
-            "vis":0.0,
-            "tieVis":0.0,"tieA":0.0,"tieB":0.0,
-            "curSet":0.0
-        } for k in OVERLAY_IDS.keys()
-    }
-    while True:
-        now = time.monotonic()
-        for kort_id in OVERLAY_IDS.keys():
-            # overlay visibility
-            if now >= clocks[kort_id]["vis"]:
-                r = _uno_call(kort_id, "GetOverlayVisibility")
-                if r is not None and r.ok:
-                    b = _parse_visibility_body(r.text)
-                    if b is not None:
-                        _update_and_archive(kort_id, {"overlay_visible": b})
-                clocks[kort_id]["vis"] = now + INTERVALS["VIS"] + random.uniform(0, JITTER)
-
-            # names
-            if now >= clocks[kort_id]["nameA"]:
-                r = _uno_call(kort_id, "GetNamePlayerA")
-                if r is not None and r.ok:
-                    try: payload = json.loads(r.text).get("payload", "")
-                    except Exception: payload = r.text
-                    _update_and_archive(kort_id, {"A": {"surname": _surname(payload)}})
-                clocks[kort_id]["nameA"] = now + INTERVALS["NAMES"] + random.uniform(0, JITTER)
-            if now >= clocks[kort_id]["nameB"]:
-                r = _uno_call(kort_id, "GetNamePlayerB")
-                if r is not None and r.ok:
-                    try: payload = json.loads(r.text).get("payload", "")
-                    except Exception: payload = r.text
-                    _update_and_archive(kort_id, {"B": {"surname": _surname(payload)}})
-                clocks[kort_id]["nameB"] = now + INTERVALS["NAMES"] + random.uniform(0, JITTER)
-
-            # points
-            if now >= clocks[kort_id]["ptsA"]:
-                r = _uno_call(kort_id, "GetPointsPlayerA")
-                if r is not None and r.ok:
-                    try: p = json.loads(r.text).get("payload", "-")
-                    except Exception: p = r.text.strip()
-                    _update_and_archive(kort_id, {"A": {"points": str(p)}})
-                clocks[kort_id]["ptsA"] = now + INTERVALS["POINTS"] + random.uniform(0, JITTER)
-            if now >= clocks[kort_id]["ptsB"]:
-                r = _uno_call(kort_id, "GetPointsPlayerB")
-                if r is not None and r.ok:
-                    try: p = json.loads(r.text).get("payload", "-")
-                    except Exception: p = r.text.strip()
-                    _update_and_archive(kort_id, {"B": {"points": str(p)}})
-                clocks[kort_id]["ptsB"] = now + INTERVALS["POINTS"] + random.uniform(0, JITTER)
-
-            # games set1
-            if now >= clocks[kort_id]["set1A"]:
-                r = _uno_call(kort_id, "GetSet1PlayerA")
-                if r is not None and r.ok:
-                    v = _parse_int_payload(r.text, 0)
-                    _update_and_archive(kort_id, {"A": {"set1": int(v or 0)}})
-                clocks[kort_id]["set1A"] = now + INTERVALS["GAMES"] + random.uniform(0, JITTER)
-            if now >= clocks[kort_id]["set1B"]:
-                r = _uno_call(kort_id, "GetSet1PlayerB")
-                if r is not None and r.ok:
-                    v = _parse_int_payload(r.text, 0)
-                    _update_and_archive(kort_id, {"B": {"set1": int(v or 0)}})
-                clocks[kort_id]["set1B"] = now + INTERVALS["GAMES"] + random.uniform(0, JITTER)
-
-            # games set2
-            if now >= clocks[kort_id]["set2A"]:
-                r = _uno_call(kort_id, "GetSet2PlayerA")
-                if r is not None and r.ok:
-                    v = _parse_int_payload(r.text, 0)
-                    _update_and_archive(kort_id, {"A": {"set2": int(v or 0)}})
-                clocks[kort_id]["set2A"] = now + INTERVALS["GAMES"] + random.uniform(0, JITTER)
-            if now >= clocks[kort_id]["set2B"]:
-                r = _uno_call(kort_id, "GetSet2PlayerB")
-                if r is not None and r.ok:
-                    v = _parse_int_payload(r.text, 0)
-                    _update_and_archive(kort_id, {"B": {"set2": int(v or 0)}})
-                clocks[kort_id]["set2B"] = now + INTERVALS["GAMES"] + random.uniform(0, JITTER)
-
-            # super tie-break visibility
-            if now >= clocks[kort_id]["tieVis"]:
-                r = _uno_call(kort_id, "GetTieBreakVisibility")
-                if r is not None and r.ok:
-                    b = _parse_visibility_body(r.text)
-                    _update_and_archive(kort_id, {"tie": {"visible": b}})
-                clocks[kort_id]["tieVis"] = now + INTERVALS["TIEVIS"] + random.uniform(0, JITTER)
-
-            # super tie-break points (gdy aktywny, pytamy częściej)
-            tie_on = snapshots[kort_id]["tie"]["visible"] is True
-            tie_interval = INTERVALS["TIE"] if tie_on else INTERVALS["GAMES"]
-            if now >= clocks[kort_id]["tieA"]:
-                r = _uno_call(kort_id, "GetTieBreakPlayerA")
-                if r is not None and r.ok:
-                    v = _parse_int_payload(r.text, 0)
-                    _update_and_archive(kort_id, {"tie": {"A": int(v or 0)}})
-                clocks[kort_id]["tieA"] = now + tie_interval + random.uniform(0, JITTER)
-            if now >= clocks[kort_id]["tieB"]:
-                r = _uno_call(kort_id, "GetTieBreakPlayerB")
-                if r is not None and r.ok:
-                    v = _parse_int_payload(r.text, 0)
-                    _update_and_archive(kort_id, {"tie": {"B": int(v or 0)}})
-                clocks[kort_id]["tieB"] = now + tie_interval + random.uniform(0, JITTER)
-
-            # numer bieżącego seta
-            if now >= clocks[kort_id]["curSet"]:
-                r = _uno_call(kort_id, "GetSet")
-                if r is not None and r.ok:
-                    v = _parse_int_payload(r.text, None)
-                    if v is not None:
-                        _update_and_archive(kort_id, {"current_set": int(v)})
-                clocks[kort_id]["curSet"] = now + INTERVALS["CURSET"] + random.uniform(0, JITTER)
-
-        time.sleep(0.15)
-
-def start_background():
-    t = threading.Thread(target=poller, name="poller", daemon=True)
-    t.start()
+    return changed
 
 # ====== API ======
 @app.route("/api/snapshot")
 def api_snapshot():
+    return jsonify(_serialize_all_states())
+
+@app.route("/api/local/reflect/<kort_id>", methods=["POST"])
+def api_local_reflect(kort_id: str):
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "invalid payload"}), 400
+
+    command = payload.get("command")
+    if not _validate_command(command):
+        return jsonify({"error": "invalid command"}), 400
+
+    value = payload.get("value")
+    if value is None and "payload" in payload:
+        value = payload.get("payload")
+    extras_dict = {k: v for k, v in payload.items() if k not in {"command", "value"}}
+    extras = extras_dict or None
+    extras_copy = _safe_copy(extras)
+    ts = _now_iso()
+
+    with STATE_LOCK:
+        state = _ensure_court_state(kort_id)
+        changed = _apply_local_command(state, command, value, extras)
+        state["local"]["commands"][command] = {
+            "value": value,
+            "extras": extras_copy,
+            "ts": ts,
+        }
+        state["local"]["updated"] = ts
+        state["updated"] = ts
+        entry = _record_log_entry(state, kort_id, "reflect", command, value, extras_copy, ts)
+        response_state = _serialize_court_state(state)
+
+    log.info("reflect kort=%s command=%s value=%s extras=%s", kort_id, command, value, extras)
+    _broadcast_kort_state(kort_id, "reflect", command, value, extras_copy, ts)
+
     return jsonify({
-        kort: {
-            "overlay_visible": s["overlay_visible"],
-            "A": s["A"], "B": s["B"],
-            "tie": s["tie"],
-            "current_set": s["current_set"],
-            "updated": s["updated"],
-        } for kort, s in snapshots.items()
+        "ok": True,
+        "ts": ts,
+        "changed": changed,
+        "state": response_state,
+        "log": entry,
     })
+
+@app.route("/api/uno/exec/<kort_id>", methods=["POST"])
+def api_uno_exec(kort_id: str):
+    if kort_id not in OVERLAY_IDS:
+        return jsonify({"error": "unknown kort"}), 404
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "invalid payload"}), 400
+
+    command = payload.get("command")
+    if not isinstance(command, str) or not command.strip():
+        return jsonify({"error": "command required"}), 400
+
+    bucket = buckets.get(kort_id)
+    if bucket and not bucket.take():
+        return jsonify({"error": "rate limited"}), 429
+
+    ts = _now_iso()
+    value = payload.get("value")
+    extras_dict = {k: v for k, v in payload.items() if k not in {"command", "value"}}
+    extras = extras_dict or None
+    payload_copy = _safe_copy(payload)
+    extras_copy = _safe_copy(extras)
+
+    try:
+        response = requests.put(_api_endpoint(kort_id), headers=AUTH_HEADER, json=payload, timeout=5)
+        status_code = response.status_code
+        content_type = response.headers.get("Content-Type", "")
+        if "application/json" in content_type.lower():
+            try:
+                response_body: Any = response.json()
+            except ValueError:
+                response_body = {"raw": response.text}
+        else:
+            response_body = {"raw": response.text}
+    except requests.RequestException as exc:
+        log.warning("UNO proxy error kort=%s command=%s err=%s", kort_id, command, exc)
+        response = None
+        status_code = 502
+        response_body = {"error": str(exc)}
+
+    response_copy = _safe_copy(response_body)
+
+    with STATE_LOCK:
+        state = _ensure_court_state(kort_id)
+        state["uno"].update({
+            "last_command": command,
+            "last_value": value,
+            "last_payload": payload_copy,
+            "last_status": status_code,
+            "last_response": response_copy,
+            "updated": ts,
+        })
+        state["updated"] = ts
+        _record_log_entry(state, kort_id, "uno", command, value, extras_copy, ts)
+
+    log.info("uno kort=%s command=%s value=%s status=%s", kort_id, command, value, status_code)
+    _broadcast_kort_state(kort_id, "uno", command, value, extras_copy, ts, status=status_code)
+
+    resp = jsonify(response_body)
+    resp.status_code = status_code
+    return resp
+
+@app.route("/api/stream")
+def api_stream():
+    def event_stream():
+        q = event_broker.listen()
+        try:
+            initial = _serialize_all_states()
+            yield f"data: {json.dumps({'type': 'snapshot', 'state': initial})}\n\n"
+            while True:
+                try:
+                    event = q.get(timeout=25)
+                except queue.Empty:
+                    yield "event: ping\ndata: {}\n\n"
+                    continue
+                yield f"data: {json.dumps(event)}\n\n"
+        finally:
+            event_broker.discard(q)
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return Response(event_stream(), mimetype="text/event-stream", headers=headers)
 
 @app.route("/api/archive")
 def api_archive():
@@ -403,6 +627,3 @@ def index():
 @app.route('/%23<path:frag>')
 def hash_fix(frag):
     return redirect('/#' + frag, code=302)
-
-# ====== Start pollera ======
-start_background()
