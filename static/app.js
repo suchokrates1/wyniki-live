@@ -431,6 +431,7 @@ const lastRefreshText = document.getElementById('lastRefreshText');
 
 let paused = false;
 let prev = {};
+const COURT_SET_STATE = {};
 const INITIAL_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 
@@ -662,12 +663,126 @@ function updateTitle(k, Aname, Bname) {
   }
 }
 
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj || {}, key);
+}
+
+function latestValue(current, previous, key) {
+  if (hasOwn(current, key)) return current[key];
+  if (hasOwn(previous, key)) return previous[key];
+  return undefined;
+}
+
+function normalizeGamesValue(value) {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed === '-') return undefined;
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return undefined;
+}
+
+function determineSetWinner(gamesA, gamesB) {
+  if (typeof gamesA !== 'number' || typeof gamesB !== 'number') return null;
+  if (gamesA < 0 || gamesB < 0) return null;
+  const maxGames = Math.max(gamesA, gamesB);
+  if (maxGames < 6) return null;
+  const diff = Math.abs(gamesA - gamesB);
+  if (diff >= 2) return gamesA > gamesB ? 'A' : 'B';
+  if (gamesA === 7 && gamesB === 6) return 'A';
+  if (gamesB === 7 && gamesA === 6) return 'B';
+  return null;
+}
+
+function maybeAnnounceSetCompletion(k, info, surnames) {
+  const prevWinner = determineSetWinner(info.prevA, info.prevB);
+  const newWinner = determineSetWinner(info.currentA, info.currentB);
+  const changedScore = info.prevA !== info.currentA || info.prevB !== info.currentB;
+  if (!newWinner) return;
+  if (!prevWinner || prevWinner !== newWinner || changedScore) {
+    const winnerName = newWinner === 'A' ? surnames.A : surnames.B;
+    const loserName = newWinner === 'A' ? surnames.B : surnames.A;
+    const winnerGames = newWinner === 'A' ? info.currentA : info.currentB;
+    const loserGames = newWinner === 'A' ? info.currentB : info.currentA;
+    announceSetEnd(k, winnerName, winnerGames ?? 0, loserName, loserGames ?? 0);
+  }
+}
+
+function comparableTieValue(value) {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed === '-') return undefined;
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isNaN(parsed) ? trimmed : parsed;
+  }
+  return value;
+}
+
+function collectTieScoreChanges(current, previous, path = [], acc = []) {
+  if (!current || typeof current !== 'object' || Array.isArray(current)) {
+    const normalizedCurrent = comparableTieValue(current);
+    const normalizedPrev = comparableTieValue(previous);
+    if (normalizedCurrent === undefined || normalizedCurrent === null) return acc;
+    if (normalizedCurrent === normalizedPrev) return acc;
+    acc.push({ path, value: normalizedCurrent });
+    return acc;
+  }
+
+  Object.keys(current).forEach(key => {
+    if (key === 'visible') return;
+    collectTieScoreChanges(current[key], previous ? previous[key] : undefined, path.concat(key), acc);
+  });
+  return acc;
+}
+
+function resolveTiePlayerFromPath(path) {
+  if (!Array.isArray(path) || path.length === 0) return null;
+  const last = path[path.length - 1];
+  if (last === 'A' || last === 'B') return last;
+  if (typeof last === 'string') {
+    const upper = last.toUpperCase();
+    if (upper.endsWith('A')) return 'A';
+    if (upper.endsWith('B')) return 'B';
+  }
+  return null;
+}
+
+function handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames) {
+  if (!tieNow || typeof tieNow !== 'object') return;
+  const changes = collectTieScoreChanges(tieNow, tiePrev || {});
+  if (!changes.length) return;
+
+  const directPlayers = new Set(
+    changes
+      .filter(change => change.path.length === 1 && (change.path[0] === 'A' || change.path[0] === 'B'))
+      .map(change => change.path[0])
+  );
+
+  changes.forEach(change => {
+    const player = resolveTiePlayerFromPath(change.path);
+    if (!player) return;
+    if (change.path.length > 1 && directPlayers.has(player)) return;
+    const value = change.value;
+    if (value === undefined || value === null) return;
+    announceTiePoint(k, player === 'A' ? surnames.A : surnames.B, value);
+  });
+}
+
 function updateCourt(k, data) {
   setStatus(k, data.overlay_visible, data.tie?.visible);
 
   const prevK = prev[k] || { A: {}, B: {}, tie: {} };
   const A = data.A || {};
   const B = data.B || {};
+  const surnameA = A.surname || prevK?.A?.surname;
+  const surnameB = B.surname || prevK?.B?.surname;
 
   const nameAChanged = A.surname !== undefined && A.surname !== prevK?.A?.surname;
   const nameBChanged = B.surname !== undefined && B.surname !== prevK?.B?.surname;
@@ -694,7 +809,7 @@ function updateCourt(k, data) {
     if (cell) {
       cell.textContent = A.points ?? '-';
       flash(cell);
-      announcePoints(k, A.surname || prevK?.A?.surname, cell.textContent);
+      announcePoints(k, surnameA, cell.textContent);
     }
   }
   if (B.points !== undefined && B.points !== prevK?.B?.points) {
@@ -702,7 +817,7 @@ function updateCourt(k, data) {
     if (cell) {
       cell.textContent = B.points ?? '-';
       flash(cell);
-      announcePoints(k, B.surname || prevK?.B?.surname, cell.textContent);
+      announcePoints(k, surnameB, cell.textContent);
     }
   }
 
@@ -711,7 +826,7 @@ function updateCourt(k, data) {
     if (cell) {
       cell.textContent = A.set1 ?? 0;
       flash(cell);
-      announceGames(k, A.surname || prevK?.A?.surname, cell.textContent);
+      announceGames(k, surnameA, cell.textContent);
     }
   }
   if (B.set1 !== undefined && B.set1 !== prevK?.B?.set1) {
@@ -719,20 +834,8 @@ function updateCourt(k, data) {
     if (cell) {
       cell.textContent = B.set1 ?? 0;
       flash(cell);
-      announceGames(k, B.surname || prevK?.B?.surname, cell.textContent);
+      announceGames(k, surnameB, cell.textContent);
     }
-  }
-
-  const s1A = A.set1 ?? prevK?.A?.set1;
-  const s1B = B.set1 ?? prevK?.B?.set1;
-  const s1Aprev = prevK?.A?.set1;
-  const s1Bprev = prevK?.B?.set1;
-  if ((s1A === 4 && s1Aprev !== 4) || (s1B === 4 && s1Bprev !== 4)) {
-    const winner = s1A === 4 ? (A.surname || prevK?.A?.surname) : (B.surname || prevK?.B?.surname);
-    const loser = s1A === 4 ? (B.surname || prevK?.B?.surname) : (A.surname || prevK?.A?.surname);
-    const wGames = 4;
-    const lGames = s1A === 4 ? (s1B ?? 0) : (s1A ?? 0);
-    announceSetEnd(k, winner, wGames, loser, lGames);
   }
 
   if (A.set2 !== undefined && A.set2 !== prevK?.A?.set2) {
@@ -740,7 +843,7 @@ function updateCourt(k, data) {
     if (cell) {
       cell.textContent = A.set2 ?? 0;
       flash(cell);
-      announceGames(k, A.surname || prevK?.A?.surname, cell.textContent);
+      announceGames(k, surnameA, cell.textContent);
     }
   }
   if (B.set2 !== undefined && B.set2 !== prevK?.B?.set2) {
@@ -748,34 +851,49 @@ function updateCourt(k, data) {
     if (cell) {
       cell.textContent = B.set2 ?? 0;
       flash(cell);
-      announceGames(k, B.surname || prevK?.B?.surname, cell.textContent);
+      announceGames(k, surnameB, cell.textContent);
     }
   }
-
-  const s2A = A.set2 ?? prevK?.A?.set2;
-  const s2B = B.set2 ?? prevK?.B?.set2;
-  const s2Aprev = prevK?.A?.set2;
-  const s2Bprev = prevK?.B?.set2;
-  if ((s2A === 4 && s2Aprev !== 4) || (s2B === 4 && s2Bprev !== 4)) {
-    const winner = s2A === 4 ? (A.surname || prevK?.A?.surname) : (B.surname || prevK?.B?.surname);
-    const loser = s2A === 4 ? (B.surname || prevK?.B?.surname) : (A.surname || prevK?.A?.surname);
-    const wGames = 4;
-    const lGames = s2A === 4 ? (s2B ?? 0) : (s2A ?? 0);
-    announceSetEnd(k, winner, wGames, loser, lGames);
-  }
-
   const tieNow = data.tie || {};
   const tiePrev = prevK.tie || {};
+  const surnames = { A: surnameA, B: surnameB };
+
+  const setInfos = ['set1', 'set2', 'set3'].map(key => ({
+    key,
+    currentA: normalizeGamesValue(latestValue(A, prevK.A, key)),
+    currentB: normalizeGamesValue(latestValue(B, prevK.B, key)),
+    prevA: normalizeGamesValue(prevK?.A?.[key]),
+    prevB: normalizeGamesValue(prevK?.B?.[key])
+  }));
+
+  setInfos.forEach(info => {
+    if (info.currentA === undefined && info.currentB === undefined) return;
+    maybeAnnounceSetCompletion(k, info, surnames);
+  });
+
+  const wins = setInfos.reduce((acc, info) => {
+    const winner = determineSetWinner(info.currentA, info.currentB);
+    if (winner === 'A') acc.A += 1;
+    else if (winner === 'B') acc.B += 1;
+    return acc;
+  }, { A: 0, B: 0 });
+
+  const hadPrevCounts = Object.prototype.hasOwnProperty.call(COURT_SET_STATE, k);
+  const prevCounts = COURT_SET_STATE[k] || { winsA: 0, winsB: 0, splitAnnounced: false };
+  const reachedSplitNow = wins.A === 1 && wins.B === 1;
+  const tieVisibilityTurnedOn = tieNow.visible === true && tiePrev?.visible !== true;
+
+  if (hadPrevCounts && reachedSplitNow && !prevCounts.splitAnnounced && !tieVisibilityTurnedOn) {
+    announceTieToggle(k, true);
+  }
+
+  COURT_SET_STATE[k] = { winsA: wins.A, winsB: wins.B, splitAnnounced: reachedSplitNow };
 
   if (tieNow.visible !== undefined && tieNow.visible !== tiePrev.visible) {
     announceTieToggle(k, tieNow.visible === true);
   }
-  if (typeof tieNow.A === 'number' && tieNow.A !== tiePrev.A) {
-    announceTiePoint(k, A.surname || prevK?.A?.surname, tieNow.A);
-  }
-  if (typeof tieNow.B === 'number' && tieNow.B !== tiePrev.B) {
-    announceTiePoint(k, B.surname || prevK?.B?.surname, tieNow.B);
-  }
+
+  handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames);
 }
 
 function renderError() {
