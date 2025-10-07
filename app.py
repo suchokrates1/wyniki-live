@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import requests
 from collections import deque
-from flask import Flask, jsonify, send_from_directory, request, redirect, abort, Response
+from flask import Flask, jsonify, send_from_directory, request, redirect, abort, Response, render_template_string
 
 # ====== Ścieżki / Flask ======
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -151,6 +151,19 @@ else:
 snapshots: Dict[str, Dict[str, Any]] = {k: _empty_court_state() for k in _initial_courts}
 
 GLOBAL_LOG: deque = deque(maxlen=max(100, RING_BUFFER_SIZE * max(1, len(snapshots) or 1)))
+
+
+def _available_courts():
+    if OVERLAY_IDS:
+        return [(k, OVERLAY_IDS[k]) for k in sorted(OVERLAY_IDS.keys(), key=lambda v: int(v))]
+    return [(k, None) for k in sorted(snapshots.keys(), key=lambda v: int(v))]
+
+
+def _render_file_template(relative_path: str, **context: Any):
+    path = os.path.join(BASE_DIR, relative_path)
+    with open(path, "r", encoding="utf-8") as handle:
+        template = handle.read()
+    return render_template_string(template, **context)
 
 class TokenBucket:
     def __init__(self, rpm: int, burst: int):
@@ -606,6 +619,26 @@ def healthz():
         return "ok", 200
     except Exception as e:
         return f"db error: {e}", 500
+
+
+@app.route("/control")
+def control_index():
+    korts = _available_courts()
+    return _render_file_template(os.path.join("static", "control.html"), korts=korts)
+
+
+@app.route("/control/<kort>")
+def control_panel(kort: str):
+    try:
+        kort_norm = str(int(kort))
+    except (TypeError, ValueError):
+        abort(404)
+
+    available = {k for k, _ in _available_courts()}
+    if kort_norm not in available:
+        abort(404)
+
+    return _render_file_template("uno-control.html", kort=kort_norm)
 
 # ====== Statyki z fallbackiem ======
 @app.route("/static/<path:filename>")
