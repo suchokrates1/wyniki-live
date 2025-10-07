@@ -524,9 +524,6 @@ def control_panel(kort_id: str):
     if not normalized:
         abort(404)
 
-    if OVERLAY_IDS and not _is_known_kort(normalized):
-        abort(404)
-
     # ZAWSZE utwórz/upewnij się, że istnieje lokalny stan dla kortu,
     # żeby UI mogło działać nawet bez UNO_ID.
     with STATE_LOCK:
