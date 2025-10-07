@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UNO Control — rozszerzony panel</title>
+  <link rel="stylesheet" href="/static/uno-control.css">
+  <script src="/static/players.js" defer></script>
+  <script src="/static/uno-control.js" defer></script>
+</head>
+<body>
+  <div class="wrap" id="app" data-kort="">
+    <header class="header">
+      <h1 class="title">
+        <span id="hdr-court">Kort 1</span>
+        <span class="sep">—</span>
+        <span id="hdr-a">Zawodnik A</span>
+        <span class="vs" aria-hidden="true">|</span>
+        <span id="hdr-b">Zawodnik B</span>
+      </h1>
+      <div class="players-picker" aria-label="Wybór zawodników">
+        <div class="picker">
+          <label class="picker__label" for="cbxA">Zawodnik A</label>
+          <div id="cbxA" class="combo" data-side="A"></div>
+        </div>
+        <div class="picker">
+          <label class="picker__label" for="cbxB">Zawodnik B</label>
+          <div id="cbxB" class="combo" data-side="B"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <h2>Points</h2>
+        <div class="row">
+          <div class="lbl" id="pA-name">Zawodnik A</div>
+          <div class="seg" data-player="A">
+            <button data-cmd="SetPointsPlayerA" data-value="0">0</button>
+            <button data-cmd="SetPointsPlayerA" data-value="15">15</button>
+            <button data-cmd="SetPointsPlayerA" data-value="30">30</button>
+            <button data-cmd="SetPointsPlayerA" data-value="40">40</button>
+            <button data-cmd="SetPointsPlayerA" data-value="ADV">ADV</button>
+          </div>
+          <div class="pill">
+            <button class="btn" data-cmd="IncreasePointsPlayerA">+1</button>
+            <button class="btn" data-cmd="DecreasePointsPlayerA">−1</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lbl" id="pB-name">Zawodnik B</div>
+          <div class="seg" data-player="B">
+            <button data-cmd="SetPointsPlayerB" data-value="0">0</button>
+            <button data-cmd="SetPointsPlayerB" data-value="15">15</button>
+            <button data-cmd="SetPointsPlayerB" data-value="30">30</button>
+            <button data-cmd="SetPointsPlayerB" data-value="40">40</button>
+            <button data-cmd="SetPointsPlayerB" data-value="ADV">ADV</button>
+          </div>
+          <div class="pill">
+            <button class="btn" data-cmd="IncreasePointsPlayerB">+1</button>
+            <button class="btn" data-cmd="DecreasePointsPlayerB">−1</button>
+          </div>
+        </div>
+        <div class="row end">
+          <div></div>
+          <div class="pill">
+            <button class="btn ghost" data-cmd="ResetPoints">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Serve</h2>
+        <div class="row serve">
+          <button class="btn" data-cmd="SetServe" data-value="none">None</button>
+          <button class="btn" data-cmd="SetServe" data-value="A">Player A</button>
+          <button class="btn" data-cmd="SetServe" data-value="B">Player B</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Current Set</h2>
+        <div class="row">
+          <div class="chip" id="current-set" aria-live="polite">1</div>
+          <div class="pill">
+            <button class="btn circle" data-cmd="DecreaseSet">−</button>
+            <button class="btn circle" data-cmd="IncreaseSet">+</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+
+        <h3>Sets and Games</h3>
+        <div class="row">
+          <div class="lbl muted" id="sa-name">Zawodnik A</div>
+          <div class="g3">
+            <div class="box" id="s1a">0</div>
+            <div class="box" id="s2a">0</div>
+            <div class="box" id="s3a">0</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lbl muted" id="sb-name">Zawodnik B</div>
+          <div class="g3">
+            <div class="box" id="s1b">0</div>
+            <div class="box" id="s2b">0</div>
+            <div class="box" id="s3b">0</div>
+          </div>
+        </div>
+        <div class="row end">
+          <div></div>
+          <button class="btn ghost" id="reset-sets">Reset</button>
+        </div>
+
+        <div class="hr"></div>
+        <h3>Current Games</h3>
+        <div class="row">
+          <div class="lbl muted" id="cga-name">Zawodnik A</div>
+          <div class="pill">
+            <div class="chip" id="cga">0</div>
+            <button class="btn circle" data-cmd="DecreaseCurrentSetPlayerA">−</button>
+            <button class="btn circle" data-cmd="IncreaseCurrentSetPlayerA">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lbl muted" id="cgb-name">Zawodnik B</div>
+          <div class="pill">
+            <div class="chip" id="cgb">0</div>
+            <button class="btn circle" data-cmd="DecreaseCurrentSetPlayerB">−</button>
+            <button class="btn circle" data-cmd="IncreaseCurrentSetPlayerB">+</button>
+          </div>
+        </div>
+        <div class="row end">
+          <div></div>
+          <button class="btn ghost" id="reset-current-games">Reset</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Tie-Break</h2>
+        <div class="row">
+          <div class="lbl muted" id="tba-name">Zawodnik A</div>
+          <div class="pill">
+            <div class="chip" id="tba">0</div>
+            <button class="btn circle" data-cmd="DecreaseTieBreakPlayerA">−</button>
+            <button class="btn circle" data-cmd="IncreaseTieBreakPlayerA">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lbl muted" id="tbb-name">Zawodnik B</div>
+          <div class="pill">
+            <div class="chip" id="tbb">0</div>
+            <button class="btn circle" data-cmd="DecreaseTieBreakPlayerB">−</button>
+            <button class="btn circle" data-cmd="IncreaseTieBreakPlayerB">+</button>
+          </div>
+        </div>
+        <div class="row end">
+          <div></div>
+          <button class="btn ghost" id="reset-tb">Reset</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Match Time</h2>
+        <div class="row">
+          <div class="lbl">Hours</div>
+          <div class="pill">
+            <div class="chip" id="mt-h">0</div>
+            <button class="btn circle" data-time="-3600">−</button>
+            <button class="btn circle" data-time="+3600">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lbl">Minutes</div>
+          <div class="pill">
+            <div class="chip" id="mt-m">0</div>
+            <button class="btn circle" data-time="-60">−</button>
+            <button class="btn circle" data-time="+60">+</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lbl">Seconds</div>
+          <div class="pill">
+            <div class="chip" id="mt-s">0</div>
+            <button class="btn circle" data-time="-1">−</button>
+            <button class="btn circle" data-time="+1">+</button>
+          </div>
+        </div>
+        <div class="row end">
+          <div></div>
+          <div class="pill">
+            <button class="btn" id="mt-play">Play</button>
+            <button class="btn" id="mt-pause">Pause</button>
+            <button class="btn ghost" id="mt-reset">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Number of Sets</h2>
+        <div class="row">
+          <select id="modeSel" class="select">
+            <option value="3set">3 Sets</option>
+            <option value="5set">5 Sets</option>
+          </select>
+          <button class="btn" data-cmd="SetMode" data-select="modeSel">Save</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="sr-only" aria-live="polite" id="live"></div>
+  </div>
+</body>
+</html>

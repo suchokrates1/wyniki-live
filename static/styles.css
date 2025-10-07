@@ -133,7 +133,7 @@ main {
 .grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px 24px;
+  gap: 32px 48px;
   justify-items: center;
 }
 
