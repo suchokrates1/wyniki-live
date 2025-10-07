@@ -1,5 +1,12 @@
 const qs = new URLSearchParams(location.search);
-const kort = parseInt(qs.get('kort') || '1', 10);
+const appRoot = document.querySelector('#app');
+const kortMeta = document.querySelector('meta[name="kort"]');
+const kortSource = qs.get('kort') || appRoot?.dataset?.kort || kortMeta?.content || '1';
+const parsedKort = Number.parseInt(kortSource, 10);
+const kort = Number.isNaN(parsedKort) ? 1 : parsedKort;
+if (appRoot) {
+  appRoot.dataset.kort = String(kort);
+}
 const $ = sel => document.querySelector(sel);
 const live = (msg, timeout = 800) => {
   const n = $('#live');
