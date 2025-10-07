@@ -1,18 +1,113 @@
 const qs = new URLSearchParams(location.search);
 const kort = parseInt(qs.get('kort') || '1', 10);
 const $ = sel => document.querySelector(sel);
-const live = msg => { const n = $('#live'); if(n){ n.textContent = msg; setTimeout(()=>n.textContent='',800); }};
+const live = (msg, timeout = 800) => {
+  const n = $('#live');
+  if (n) {
+    n.textContent = msg;
+    setTimeout(() => {
+      if (n.textContent === msg) n.textContent = '';
+    }, timeout);
+  }
+};
 const ORIGIN = location.origin;
 
-async function execUno(command, value, extra){
+function buildPayload(command, value, extra){
   const body = { command };
-  if(value !== undefined) body.value = value;
-  if(extra && typeof extra === 'object') Object.assign(body, extra);
-  const r = await fetch(`/api/uno/exec/${kort}`, {
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+  if (value !== undefined) body.value = value;
+  if (extra && typeof extra === 'object') Object.assign(body, extra);
+  return body;
+}
+
+async function postJSON(url, body){
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   });
-  if(!r.ok) throw new Error('UNO HTTP '+r.status);
-  return r.json().catch(()=>({}));
+  const txt = await r.text();
+  let data;
+  if (txt) {
+    try { data = JSON.parse(txt); } catch (e) { data = { raw: txt }; }
+  }
+  if (!r.ok) {
+    const err = new Error((data && (data.message || data.error)) || `${r.status} ${r.statusText}`);
+    err.status = r.status;
+    err.details = data;
+    throw err;
+  }
+  return data ?? {};
+}
+
+async function callUno(command, value, extra){
+  const body = buildPayload(command, value, extra);
+  return postJSON(`/api/uno/exec/${kort}`, body);
+}
+
+async function dispatchCommand(command, value, extra, opts = {}){
+  const body = buildPayload(command, value, extra);
+  const reflectBody = opts.reflectPayload || body;
+
+  const sendReflect = () => postJSON(`/api/local/reflect/${kort}`, reflectBody);
+  const sendUno = () => postJSON(`/api/uno/exec/${kort}`, body);
+
+  const reflectPromise = sendReflect();
+  const unoPromise = opts.reflectFirst
+    ? reflectPromise.catch(() => {}).then(() => sendUno())
+    : sendUno();
+
+  const [reflectResult, unoResult] = await Promise.allSettled([
+    reflectPromise.then(data => ({ target: 'reflect', data })),
+    unoPromise.then(data => ({ target: 'uno', data }))
+  ]);
+
+  const out = {};
+  for (const result of [reflectResult, unoResult]) {
+    if (result.status === 'fulfilled') {
+      out[result.value.target] = result.value.data;
+    } else if (!opts.silent) {
+      const err = result.reason || {};
+      console.error('Command dispatch error', command, err);
+      const details = err.details;
+      let msg = err.message || 'Błąd komunikacji';
+      if(details){
+        let errors = null;
+        if(Array.isArray(details.errors)){
+          errors = details.errors;
+        }else if(details.errors && typeof details.errors === 'object'){
+          errors = Object.values(details.errors).reduce((all, item)=>{
+            if(Array.isArray(item)) return all.concat(item);
+            if(item!=null) all.push(item);
+            return all;
+          }, []);
+        }
+        if(errors && errors.length) msg = errors.join(', ');
+        else if(typeof details.detail === 'string') msg = details.detail;
+      }
+      live(msg, 2000);
+    }
+  }
+  return out;
+}
+
+function applyCooldown(btn, ms = 220){
+  if (!btn) return null;
+  if (btn.dataset.cooling === '1') return null;
+  btn.dataset.cooling = '1';
+  const wasDisabled = btn.disabled;
+  if (!wasDisabled) btn.disabled = true;
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    if (!wasDisabled) btn.disabled = false;
+    delete btn.dataset.cooling;
+  };
+  const timer = setTimeout(release, ms);
+  return () => {
+    clearTimeout(timer);
+    release();
+  };
 }
 
 function flagEmoji(cc=''){ return cc.toUpperCase().replace(/./g,c=>String.fromCodePoint(127397+c.charCodeAt(0))); }
@@ -96,7 +191,7 @@ function makeCombo(root, side){
   async function primeFlags(){
     if(flagsPrimed) return;
     flagsPrimed = true;
-    try{ await execUno('SetCustomization', undefined, {content:{Flags:true, "Image Fit":"contain"}}); }catch(e){}
+    await dispatchCommand('SetCustomization', undefined, {content:{Flags:true, "Image Fit":"contain"}}, {silent:true});
   }
 
   function open(){
@@ -116,12 +211,12 @@ function makeCombo(root, side){
     txt.textContent = `${shortName(p.first,p.last)} (${p.country})`;
     close();
     const full = `${p.first} ${p.last}`.trim();
-    try{ await execUno(side==='A' ? 'SetNamePlayerA' : 'SetNamePlayerB', full); }catch(e){}
     updateNames(side, full);
+    await dispatchCommand(side==='A' ? 'SetNamePlayerA' : 'SetNamePlayerB', full, undefined, {reflectFirst:true});
     await primeFlags();
     const fieldId = side==='A' ? 'Player A Flag' : 'Player B Flag';
     const url = flagUrl(p.country, p.flagUrl);
-    try{ await execUno('SetCustomizationField', undefined, {fieldId, value:url}); }catch(e){}
+    await dispatchCommand('SetCustomizationField', undefined, {fieldId, value:url}, {silent:true});
     live(`Wybrano: ${full}`);
   }
 
@@ -154,36 +249,42 @@ async function bootstrap(){
   makeCombo($('#cbxA'), 'A');
   makeCombo($('#cbxB'), 'B');
 
-  try{ const r = await execUno('GetNamePlayerA'); if(r?.payload){ updateNames('A', r.payload); } }catch(e){}
-  try{ const r = await execUno('GetNamePlayerB'); if(r?.payload){ updateNames('B', r.payload); } }catch(e){}
-  try{ const r = await execUno('GetMode'); if(r?.payload){ $('#modeSel').value = r.payload; } }catch(e){}
-  try{ const r = await execUno('GetSet'); if(r?.payload!=null){ $('#current-set').textContent = r.payload; } }catch(e){}
+  try{ const r = await callUno('GetNamePlayerA'); if(r?.payload){ updateNames('A', r.payload); } }catch(e){}
+  try{ const r = await callUno('GetNamePlayerB'); if(r?.payload){ updateNames('B', r.payload); } }catch(e){}
+  try{ const r = await callUno('GetMode'); if(r?.payload){ $('#modeSel').value = r.payload; } }catch(e){}
+  try{ const r = await callUno('GetSet'); if(r?.payload!=null){ $('#current-set').textContent = r.payload; } }catch(e){}
   for(const pl of ['A','B']){
     for(const i of [1,2,3]){
       try{
-        const r = await execUno(`GetSet${i}Player${pl}`);
+        const r = await callUno(`GetSet${i}Player${pl}`);
         if(r?.payload!=null) { $(`#s${i}${pl.toLowerCase()}`).textContent = r.payload; }
       }catch(e){}
     }
   }
-  try{ const r = await execUno('GetCurrentSetPlayerA'); if(r?.payload!=null){ $('#cga').textContent = r.payload; } }catch(e){}
-  try{ const r = await execUno('GetCurrentSetPlayerB'); if(r?.payload!=null){ $('#cgb').textContent = r.payload; } }catch(e){}
-  try{ const r = await execUno('GetTieBreakPlayerA'); if(r?.payload!=null){ $('#tba').textContent = r.payload; } }catch(e){}
-  try{ const r = await execUno('GetTieBreakPlayerB'); if(r?.payload!=null){ $('#tbb').textContent = r.payload; } }catch(e){}
+  try{ const r = await callUno('GetCurrentSetPlayerA'); if(r?.payload!=null){ $('#cga').textContent = r.payload; } }catch(e){}
+  try{ const r = await callUno('GetCurrentSetPlayerB'); if(r?.payload!=null){ $('#cgb').textContent = r.payload; } }catch(e){}
+  try{ const r = await callUno('GetTieBreakPlayerA'); if(r?.payload!=null){ $('#tba').textContent = r.payload; } }catch(e){}
+  try{ const r = await callUno('GetTieBreakPlayerB'); if(r?.payload!=null){ $('#tbb').textContent = r.payload; } }catch(e){}
   try{
-    const r = await execUno('GetMatchTime');
+    const r = await callUno('GetMatchTime');
     const total = parseInt(r?.payload||'0',10)||0;
-    mt.h=Math.floor(total/3600); mt.m=Math.floor((total%3600)/60); mt.s=total%60; updateMt();
+    mt.h=Math.floor(total/3600); mt.m=Math.floor((total%3600)/60); mt.s=total%60; await updateMt();
   }catch(e){}
 }
 
-document.addEventListener('click', e=>{
+document.addEventListener('click', async e=>{
   const b = e.target.closest('button[data-cmd]');
   if(!b) return;
+  const release = applyCooldown(b);
+  if(!release) return;
   const cmd = b.dataset.cmd;
   const sel = b.dataset.select;
   const val = sel ? $(`#${sel}`).value : b.dataset.value;
-  execUno(cmd, val).catch(()=>{});
+  try{
+    await dispatchCommand(cmd, val);
+  }finally{
+    release();
+  }
 });
 
 document.querySelector('[data-cmd="IncreaseSet"]').addEventListener('click', ()=>{
@@ -193,23 +294,41 @@ document.querySelector('[data-cmd="DecreaseSet"]').addEventListener('click', ()=
   const el = $('#current-set'); el.textContent = clamp(parseInt(el.textContent||'1',10)-1,1,5);
 });
 
-$('#reset-sets').addEventListener('click', async ()=>{
+$('#reset-sets').addEventListener('click', async e=>{
+  const release = applyCooldown(e.currentTarget, 400);
+  if(!release) return;
   const cmds = [
     ['SetSet1PlayerA',0],['SetSet2PlayerA',0],['SetSet3PlayerA',0],
     ['SetSet1PlayerB',0],['SetSet2PlayerB',0],['SetSet3PlayerB',0]
   ];
-  for(const [c,v] of cmds){ try{ await execUno(c,v); }catch(e){} }
-  ['s1a','s2a','s3a','s1b','s2b','s3b'].forEach(id=>$( '#'+id ).textContent='0');
+  try{
+    for(const [c,v] of cmds){ await dispatchCommand(c, v, undefined, {silent:true}); }
+    ['s1a','s2a','s3a','s1b','s2b','s3b'].forEach(id=>$( '#'+id ).textContent='0');
+  }finally{
+    release();
+  }
 });
 
-$('#reset-current-games').addEventListener('click', async ()=>{
-  await execUno('SetCurrentSetPlayerA',0); $('#cga').textContent='0';
-  await execUno('SetCurrentSetPlayerB',0); $('#cgb').textContent='0';
+$('#reset-current-games').addEventListener('click', async e=>{
+  const release = applyCooldown(e.currentTarget, 400);
+  if(!release) return;
+  try{
+    await dispatchCommand('SetCurrentSetPlayerA',0, undefined, {silent:true}); $('#cga').textContent='0';
+    await dispatchCommand('SetCurrentSetPlayerB',0, undefined, {silent:true}); $('#cgb').textContent='0';
+  }finally{
+    release();
+  }
 });
 
-$('#reset-tb').addEventListener('click', async ()=>{
-  await execUno('SetTieBreakPlayerA',0); $('#tba').textContent='0';
-  await execUno('SetTieBreakPlayerB',0); $('#tbb').textContent='0';
+$('#reset-tb').addEventListener('click', async e=>{
+  const release = applyCooldown(e.currentTarget, 400);
+  if(!release) return;
+  try{
+    await dispatchCommand('SetTieBreakPlayerA',0, undefined, {silent:true}); $('#tba').textContent='0';
+    await dispatchCommand('SetTieBreakPlayerB',0, undefined, {silent:true}); $('#tbb').textContent='0';
+  }finally{
+    release();
+  }
 });
 
 const mt = {h:0,m:0,s:0};
@@ -218,23 +337,53 @@ function updateMt(){
   $('#mt-m').textContent = mt.m;
   $('#mt-s').textContent = mt.s;
   const total = mt.h*3600 + mt.m*60 + mt.s;
-  execUno('SetMatchTime', total).catch(()=>{});
+  return dispatchCommand('SetMatchTime', total, undefined, {silent:true});
 }
-$('#mt-play').addEventListener('click', ()=>execUno('PlayMatchTime'));
-$('#mt-pause').addEventListener('click', ()=>execUno('PauseMatchTime'));
-$('#mt-reset').addEventListener('click', async ()=>{
-  mt.h=0;mt.m=0;mt.s=0; updateMt(); await execUno('ResetMatchTime');
+$('#mt-play').addEventListener('click', async function(e){
+  const release = applyCooldown(e.currentTarget);
+  if(!release) return;
+  try{
+    await dispatchCommand('PlayMatchTime', undefined, undefined, {silent:true});
+  }finally{
+    release();
+  }
 });
-document.addEventListener('click', e=>{
+$('#mt-pause').addEventListener('click', async function(e){
+  const release = applyCooldown(e.currentTarget);
+  if(!release) return;
+  try{
+    await dispatchCommand('PauseMatchTime', undefined, undefined, {silent:true});
+  }finally{
+    release();
+  }
+});
+$('#mt-reset').addEventListener('click', async function(e){
+  const release = applyCooldown(e.currentTarget, 400);
+  if(!release) return;
+  mt.h=0;mt.m=0;mt.s=0;
+  try{
+    await updateMt();
+    await dispatchCommand('ResetMatchTime', undefined, undefined, {silent:true});
+  }finally{
+    release();
+  }
+});
+document.addEventListener('click', async e=>{
   const b = e.target.closest('button[data-time]');
   if(!b) return;
+  const release = applyCooldown(b);
+  if(!release) return;
   const d = parseInt(b.dataset.time,10);
   let total = mt.h*3600 + mt.m*60 + mt.s + d;
   if(total<0) total=0;
   mt.h = Math.floor(total/3600);
   mt.m = Math.floor((total%3600)/60);
   mt.s = total%60;
-  updateMt();
+  try{
+    await updateMt();
+  }finally{
+    release();
+  }
 });
 
 bootstrap();
