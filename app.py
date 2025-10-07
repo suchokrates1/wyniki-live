@@ -20,7 +20,12 @@ def load_overlay_ids() -> Dict[str, str]:
     for k, v in os.environ.items():
         m = re.fullmatch(r"KORT(\d+)_ID", k)
         if m and v and v.strip():
-            ids[m.group(1)] = v.strip()
+            raw_idx = m.group(1)
+            try:
+                norm_idx = str(int(raw_idx))
+            except ValueError:
+                norm_idx = raw_idx.lstrip("0") or raw_idx or "0"
+            ids[norm_idx] = v.strip()
     if not ids:
         for i in range(1, 5):
             val = os.environ.get(f"KORT{i}_ID", "").strip()
