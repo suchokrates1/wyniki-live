@@ -431,7 +431,12 @@ const lastRefreshText = document.getElementById('lastRefreshText');
 
 let paused = false;
 let prev = {};
-let timer = null;
+const INITIAL_RECONNECT_DELAY = 1000;
+const MAX_RECONNECT_DELAY = 30000;
+
+let eventSource = null;
+let reconnectTimer = null;
+let reconnectDelay = INITIAL_RECONNECT_DELAY;
 let lastRefreshDate = null;
 let lastError = null;
 
@@ -779,9 +784,11 @@ function renderError() {
     return;
   }
   const t = currentT();
-  if (lastError.type === 'fetch') {
+  if (lastError.type === 'fetch' || lastError.type === 'sse') {
     errLine.textContent = format(t.errors.fetch, { message: lastError.message });
+    return;
   }
+  errLine.textContent = lastError.message || '';
 }
 
 async function fetchSnapshot() {
@@ -798,6 +805,116 @@ async function fetchSnapshot() {
     return null;
   }
 }
+
+function clearReconnectTimer() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+}
+
+function closeEventSource() {
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+}
+
+function scheduleReconnect(reason) {
+  clearReconnectTimer();
+  if (paused) return;
+  const seconds = Math.round(reconnectDelay / 1000);
+  lastError = { type: 'sse', message: `${reason}; retrying in ${seconds}s` };
+  renderError();
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectStream();
+  }, reconnectDelay);
+  reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+}
+
+function parseTimestamp(ts) {
+  if (!ts) return null;
+  const date = new Date(ts);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function handleStreamPayload(payload) {
+  if (!payload || paused) return;
+
+  if (payload.type === 'snapshot') {
+    const state = payload.state || {};
+    ensureCardsFromSnapshot(state);
+    const keys = computeCourts(state);
+    keys.forEach(k => {
+      if (state[k]) updateCourt(k, state[k]);
+    });
+    prev = state;
+    updateLastRefresh(parseTimestamp(payload.ts) || new Date());
+    return;
+  }
+
+  const kort = payload.kort;
+  const state = payload.state;
+  if (!kort || !state) return;
+
+  if (!COURTS.includes(kort)) {
+    const merged = { ...prev, [kort]: state };
+    ensureCardsFromSnapshot(merged);
+    const keys = computeCourts(merged);
+    keys.forEach(k => {
+      const courtState = merged[k];
+      if (courtState) updateCourt(k, courtState);
+    });
+    prev = merged;
+  } else {
+    updateCourt(kort, state);
+    prev = { ...prev, [kort]: state };
+  }
+
+  updateLastRefresh(parseTimestamp(payload.ts) || new Date());
+}
+
+function handleStreamMessage(event) {
+  if (!event || !event.data) return;
+  let payload = null;
+  try {
+    payload = JSON.parse(event.data);
+  } catch (err) {
+    console.error('Invalid SSE payload', err, event.data);
+    return;
+  }
+  handleStreamPayload(payload);
+}
+
+function connectStream() {
+  if (paused) return;
+  clearReconnectTimer();
+  closeEventSource();
+  try {
+    eventSource = new EventSource('/api/stream');
+  } catch (err) {
+    scheduleReconnect('SSE connection error');
+    return;
+  }
+
+  eventSource.addEventListener('open', () => {
+    reconnectDelay = INITIAL_RECONNECT_DELAY;
+    lastError = null;
+    renderError();
+  });
+  eventSource.addEventListener('message', handleStreamMessage);
+  eventSource.addEventListener('ping', () => {});
+  eventSource.addEventListener('error', () => {
+    closeEventSource();
+    scheduleReconnect('SSE disconnected');
+  });
+}
+
+window.addEventListener('beforeunload', () => {
+  clearReconnectTimer();
+  closeEventSource();
+});
 
 function computeCourts(data) {
   return Object.keys(data).sort((a, b) => Number(a) - Number(b));
@@ -901,33 +1018,20 @@ async function bootstrap() {
   updateLastRefresh(new Date());
 }
 
-async function tick() {
-  if (paused) return;
-  const data = await fetchSnapshot();
-  if (!data) return;
-
-  const keysNow = computeCourts(data);
-  if (keysNow.join(',') !== COURTS.join(',')) {
-    ensureCardsFromSnapshot(data);
-    COURTS = keysNow;
-  }
-  COURTS.forEach(k => {
-    if (data[k]) updateCourt(k, data[k]);
-  });
-  prev = data;
-  updateLastRefresh(new Date());
-}
-
-function start() {
-  if (timer) clearInterval(timer);
-  timer = setInterval(tick, 1000);
-}
-
 pauseBtn.addEventListener('click', () => {
   paused = !paused;
   pauseBtn.setAttribute('aria-pressed', String(paused));
   const t = currentT();
   pauseBtn.textContent = paused ? t.pause.resume : t.pause.pause;
+  if (paused) {
+    clearReconnectTimer();
+    closeEventSource();
+    lastError = null;
+    renderError();
+  } else {
+    reconnectDelay = INITIAL_RECONNECT_DELAY;
+    connectStream();
+  }
 });
 
 if (langSelect) {
@@ -939,7 +1043,11 @@ if (langSelect) {
 applyLanguage(currentLang, { skipSave: true, skipSelect: true });
 if (langSelect) langSelect.value = currentLang;
 
-bootstrap().then(() => {
-  renderLanguage();
-  start();
-});
+bootstrap()
+  .catch(err => {
+    console.error('Bootstrap failed', err);
+  })
+  .finally(() => {
+    renderLanguage();
+    connectStream();
+  });
