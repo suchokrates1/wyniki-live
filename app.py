@@ -537,12 +537,125 @@ def api_uno_exec(kort_id: str):
 
     ts = _now_iso()
     value = payload.get("value")
+    value_copy = _safe_copy(value)
     extras_dict = {k: v for k, v in payload.items() if k not in {"command", "value"}}
     extras = extras_dict or None
     payload_copy = _safe_copy(payload)
     extras_copy = _safe_copy(extras)
 
+    status_code: Optional[int] = None
+    response_payload: Any = None
+    error_message: Optional[str] = None
+
     try:
-        response = requests.put(_api_endpoint(kort_id), headers=AUTH_HEADER, json=payload, timeout=5)
+        response = requests.put(
+            _api_endpoint(kort_id),
+            headers=AUTH_HEADER,
+            json=payload,
+            timeout=5,
+        )
         status_code = response.status_code
-        content_type = response.headers.get("
+        content_type = response.headers.get("Content-Type", "")
+        if content_type and "json" in content_type.lower():
+            try:
+                response_payload = response.json()
+            except ValueError:
+                response_payload = response.text
+        else:
+            response_payload = response.text
+    except requests.RequestException as exc:
+        error_message = str(exc)
+        response_payload = {"error": error_message}
+        log.error("uno kort=%s command=%s request failed: %s", kort_id, command, exc)
+
+    success = status_code is not None and 200 <= status_code < 300
+
+    safe_response = _safe_copy(response_payload)
+    broadcast_extras = extras_copy if isinstance(extras_copy, dict) else extras_copy
+    if extras_copy is None:
+        log_extras: Optional[Dict[str, Any]] = {
+            "uno_status": status_code,
+            "uno_response": safe_response,
+        }
+    else:
+        log_extras = dict(extras_copy)
+        log_extras["uno_status"] = status_code
+        log_extras["uno_response"] = safe_response
+    if error_message:
+        if log_extras is None:
+            log_extras = {"uno_error": error_message}
+        else:
+            log_extras["uno_error"] = error_message
+
+    with STATE_LOCK:
+        state = _ensure_court_state(kort_id)
+        if success:
+            try:
+                _apply_local_command(state, command, value, extras)
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "failed to apply local command mirror kort=%s command=%s error=%s",
+                    kort_id,
+                    command,
+                    exc,
+                )
+        uno_state = state["uno"]
+        uno_state["last_command"] = command
+        uno_state["last_value"] = value_copy
+        uno_state["last_payload"] = payload_copy
+        uno_state["last_status"] = status_code
+        uno_state["last_response"] = safe_response
+        uno_state["updated"] = ts
+        state["updated"] = ts
+        entry = _record_log_entry(
+            state,
+            kort_id,
+            "uno",
+            command,
+            value_copy,
+            log_extras or None,
+            ts,
+        )
+        response_state = _serialize_court_state(state)
+
+    _broadcast_kort_state(
+        kort_id,
+        "uno",
+        command,
+        value_copy,
+        broadcast_extras,
+        ts,
+        status_code,
+    )
+
+    if success:
+        log.info("uno kort=%s command=%s status=%s", kort_id, command, status_code)
+        return jsonify(
+            {
+                "ok": True,
+                "ts": ts,
+                "status": status_code,
+                "response": response_payload,
+                "state": response_state,
+                "log": entry,
+            }
+        )
+
+    error_text = error_message or (
+        f"remote returned status {status_code}" if status_code is not None else "request failed"
+    )
+    http_status = status_code if status_code and status_code >= 400 else 502
+    return (
+        jsonify(
+            {
+                "ok": False,
+                "ts": ts,
+                "status": status_code,
+                "error": error_text,
+                "response": response_payload,
+                "state": response_state,
+                "log": entry,
+            }
+        ),
+        http_status,
+    )
