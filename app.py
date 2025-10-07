@@ -20,7 +20,12 @@ def load_overlay_ids() -> Dict[str, str]:
     for k, v in os.environ.items():
         m = re.fullmatch(r"KORT(\d+)_ID", k)
         if m and v and v.strip():
-            ids[m.group(1)] = v.strip()
+            raw_idx = m.group(1)
+            try:
+                norm_idx = str(int(raw_idx))
+            except ValueError:
+                norm_idx = raw_idx.lstrip("0") or raw_idx or "0"
+            ids[norm_idx] = v.strip()
     if not ids:
         for i in range(1, 5):
             val = os.environ.get(f"KORT{i}_ID", "").strip()
@@ -540,128 +545,4 @@ def api_uno_exec(kort_id: str):
     try:
         response = requests.put(_api_endpoint(kort_id), headers=AUTH_HEADER, json=payload, timeout=5)
         status_code = response.status_code
-        content_type = response.headers.get("Content-Type", "")
-        if "application/json" in content_type.lower():
-            try:
-                response_body: Any = response.json()
-            except ValueError:
-                response_body = {"raw": response.text}
-        else:
-            response_body = {"raw": response.text}
-    except requests.RequestException as exc:
-        log.warning("UNO proxy error kort=%s command=%s err=%s", kort_id, command, exc)
-        response = None
-        status_code = 502
-        response_body = {"error": str(exc)}
-
-    response_copy = _safe_copy(response_body)
-
-    with STATE_LOCK:
-        state = _ensure_court_state(kort_id)
-        state["uno"].update({
-            "last_command": command,
-            "last_value": value,
-            "last_payload": payload_copy,
-            "last_status": status_code,
-            "last_response": response_copy,
-            "updated": ts,
-        })
-        state["updated"] = ts
-        _record_log_entry(state, kort_id, "uno", command, value, extras_copy, ts)
-
-    log.info("uno kort=%s command=%s value=%s status=%s", kort_id, command, value, status_code)
-    _broadcast_kort_state(kort_id, "uno", command, value, extras_copy, ts, status=status_code)
-
-    resp = jsonify(response_body)
-    resp.status_code = status_code
-    return resp
-
-@app.route("/api/stream")
-def api_stream():
-    def event_stream():
-        q = event_broker.listen()
-        try:
-            initial = _serialize_all_states()
-            yield f"data: {json.dumps({'type': 'snapshot', 'state': initial})}\n\n"
-            while True:
-                try:
-                    event = q.get(timeout=25)
-                except queue.Empty:
-                    yield "event: ping\ndata: {}\n\n"
-                    continue
-                yield f"data: {json.dumps(event)}\n\n"
-        finally:
-            event_broker.discard(q)
-
-    headers = {
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no",
-    }
-    return Response(event_stream(), mimetype="text/event-stream", headers=headers)
-
-@app.route("/api/archive")
-def api_archive():
-    date = request.args.get("date")
-    con = db_conn(); cur = con.cursor()
-    if date:
-        cur.execute("SELECT * FROM snapshots WHERE ts LIKE ? ORDER BY ts ASC", (f"{date}%",))
-    else:
-        cur.execute("SELECT * FROM snapshots ORDER BY ts DESC LIMIT 200")
-    rows = [dict(r) for r in cur.fetchall()]
-    con.close()
-    return jsonify(rows)
-
-@app.route("/healthz")
-def healthz():
-    try:
-        con = db_conn(); con.execute("SELECT 1"); con.close()
-        return "ok", 200
-    except Exception as e:
-        return f"db error: {e}", 500
-
-
-@app.route("/control")
-def control_index():
-    korts = _available_courts()
-    return _render_file_template(os.path.join("static", "control.html"), korts=korts)
-
-
-@app.route("/control/<kort>")
-def control_panel(kort: str):
-    try:
-        kort_norm = str(int(kort))
-    except (TypeError, ValueError):
-        abort(404)
-
-    available = {k for k, _ in _available_courts()}
-    if kort_norm not in available:
-        abort(404)
-
-    return redirect(url_for("uno_control_static", kort=kort_norm), code=302)
-
-
-@app.route("/uno-control.html")
-def uno_control_static():
-    return send_from_directory(BASE_DIR, "uno-control.html")
-
-# ====== Statyki z fallbackiem ======
-@app.route("/static/<path:filename>")
-def serve_static(filename):
-    app_static = os.path.join(BASE_DIR, "static")
-    path1 = os.path.join(app_static, filename)
-    if os.path.isfile(path1):
-        return send_from_directory(app_static, filename)
-    path2 = os.path.join("/static", filename)
-    if os.path.isfile(path2):
-        return send_from_directory("/static", filename)
-    abort(404)
-
-# ====== Index / hash-fix ======
-@app.route("/")
-def index():
-    return send_from_directory(BASE_DIR, "index.html")
-
-@app.route('/%23<path:frag>')
-def hash_fix(frag):
-    return redirect('/#' + frag, code=302)
+        content_type = response.headers.get("
