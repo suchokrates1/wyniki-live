@@ -10,7 +10,14 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 Inter,sys
 .title .vs{display:inline-block;margin:0 8px;color:var(--muted)}
 .players-picker{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .picker__label{display:block;margin:0 0 6px;color:var(--muted);font-size:14px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.tabs{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 18px;padding:0 0 12px;border-bottom:1px solid var(--ring)}
+.tabs__item{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;padding:8px 16px;border-radius:999px;cursor:pointer;transition:background .2s ease,color .2s ease}
+.tabs__item:hover{background:#241d30;color:var(--ink)}
+.tabs__item.is-active{background:var(--accent);color:#120c1f}
+.tabs__item:focus{outline:2px solid var(--accent);outline-offset:2px}
+.view-container{min-height:260px}
+.view{display:none}
+.view.is-active{display:block}
 .card{background:var(--panel);border-radius:18px;padding:18px 18px 16px;box-shadow:0 10px 30px #0004,inset 0 0 0 1px #0003}
 .card h2{margin:0 0 10px;font-size:20px}
 .card h3{margin:8px 0;font-size:16px;color:var(--muted)}
@@ -25,6 +32,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 Inter,sys
 .pill{display:flex;gap:10px;align-items:center}
 .btn{height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--ring);background:#2d2538;color:var(--ink);font-weight:600;cursor:pointer}
 .btn:hover{background:#352b45}
+.btn.is-current{background:var(--accent);color:#120c1f}
 .btn.circle{width:44px;min-width:44px;padding:0;border-radius:50%}
 .btn.ghost{background:transparent}
 .chip{min-width:64px;height:44px;border:1px solid var(--ring);border-radius:12px;background:#271f31;display:grid;place-items:center;font-weight:800}
@@ -46,4 +54,3 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 Inter,sys
 .combo__empty{padding:12px;color:var(--muted)}
 .sep{opacity:.5}
 .sr-only{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
-@media (max-width:1024px){.grid{grid-template-columns:1fr}}
