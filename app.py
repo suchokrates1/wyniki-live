@@ -8,6 +8,9 @@ from flask import Flask, jsonify, send_from_directory, request, redirect, abort,
 
 # ====== Ścieżki / Flask ======
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+UNO_CONTROL_TEMPLATE = "uno-control.html"
+CONTROL_LIST_TEMPLATE = os.path.join("static", "control.html")
 # Serwujemy statyki własnym routerem (fallback na /app/static oraz /static)
 app = Flask(__name__, static_folder=None)
 
@@ -162,6 +165,29 @@ def _available_courts():
     if OVERLAY_IDS:
         return [(k, OVERLAY_IDS[k]) for k in sorted(OVERLAY_IDS.keys(), key=lambda v: int(v))]
     return [(k, None) for k in sorted(snapshots.keys(), key=lambda v: int(v))]
+
+
+def _normalize_kort_id(raw: Any) -> Optional[str]:
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    if text.isdigit():
+        try:
+            return str(int(text))
+        except ValueError:
+            pass
+    normalized = text.lstrip("0")
+    return normalized or text
+
+
+def _is_known_kort(kort_id: str) -> bool:
+    if not kort_id:
+        return False
+    if OVERLAY_IDS:
+        return kort_id in OVERLAY_IDS
+    return kort_id in snapshots
 
 
 def _render_file_template(relative_path: str, **context: Any):
@@ -470,6 +496,42 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
                     changed = True
 
     return changed
+
+# ====== Widoki ======
+@app.route("/")
+def index():
+    return _render_file_template("index.html")
+
+
+@app.route("/static/<path:filename>")
+def static_files(filename: str):
+    safe_path = os.path.normpath(filename)
+    if safe_path.startswith("..") or os.path.isabs(filename):
+        abort(404)
+    return send_from_directory(STATIC_DIR, safe_path)
+
+
+@app.route("/control")
+@app.route("/control/")
+def control_list():
+    korts = _available_courts()
+    return _render_file_template(CONTROL_LIST_TEMPLATE, korts=korts)
+
+
+@app.route("/control/<kort_id>")
+def control_panel(kort_id: str):
+    normalized = _normalize_kort_id(kort_id)
+    if not normalized:
+        abort(404)
+
+    known = _is_known_kort(normalized)
+    if not known and OVERLAY_IDS:
+        abort(404)
+    if not known:
+        with STATE_LOCK:
+            _ensure_court_state(normalized)
+
+    return _render_file_template(UNO_CONTROL_TEMPLATE, kort=normalized)
 
 # ====== API ======
 @app.route("/api/snapshot")
