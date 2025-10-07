@@ -524,12 +524,13 @@ def control_panel(kort_id: str):
     if not normalized:
         abort(404)
 
-    known = _is_known_kort(normalized)
-    if not known and OVERLAY_IDS:
+    if OVERLAY_IDS and not _is_known_kort(normalized):
         abort(404)
-    if not known:
-        with STATE_LOCK:
-            _ensure_court_state(normalized)
+
+    # ZAWSZE utwórz/upewnij się, że istnieje lokalny stan dla kortu,
+    # żeby UI mogło działać nawet bez UNO_ID.
+    with STATE_LOCK:
+        _ensure_court_state(normalized)
 
     return _render_file_template(UNO_CONTROL_TEMPLATE, kort=normalized)
 
