@@ -257,14 +257,14 @@ main {
 }
 
 .score-table .points {
-  background: #232323;
+  background: #2a2a2a;
   font-size: 20px;
   min-width: 42px;
   text-align: center;
 }
 
 .score-table .set {
-  background: #c7410f;
+  background: #b5521a;
   min-width: 42px;
   text-align: center;
   font-size: 18px;
@@ -290,7 +290,7 @@ main {
   border-bottom-right-radius: 10px;
 }
 .score-table .set.is-active {
-  background: #f26a1b;
+  background: #d26724;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
