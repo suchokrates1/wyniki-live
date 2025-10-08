@@ -372,6 +372,7 @@ def _as_int(value: Any, default: int = 0) -> int:
 
 def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
                          extras: Optional[Dict[str, Any]]) -> bool:
+    log.debug("apply command=%s value=%s extras=%s", command, _shorten(value), _shorten(extras))
     changed = False
     if command == "SetNamePlayerA":
         full = str(value or "").strip() or None
@@ -530,9 +531,41 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
                 elif command == "PlayMatchTime":
                     state["match_time"]["running"] = True
                     changed = True
+                elif command == "SetCustomizationField":
+                    field_id = None
+                    if extras and isinstance(extras, dict):
+                        field_id = extras.get("fieldId") or extras.get("field_id")
+                    if not field_id and isinstance(value, dict):
+                        field_id = value.get("fieldId") or value.get("field_id")
+                    if not field_id and extras and isinstance(extras, dict):
+                        field_id = extras.get("field")
+                    if field_id:
+                        fid = str(field_id).lower()
+                        if fid in {"player a flag", "player a image", "player_a_flag", "player_a_image"}:
+                            url = None
+                            if isinstance(value, dict):
+                                url = value.get("value")
+                            if url is None and extras and isinstance(extras, dict):
+                                url = extras.get("value")
+                            state["A"]["flag_url"] = url or None
+                            changed = True
+                        elif fid in {"player b flag", "player b image", "player_b_flag", "player_b_image"}:
+                            url = None
+                            if isinstance(value, dict):
+                                url = value.get("value")
+                            if url is None and extras and isinstance(extras, dict):
+                                url = extras.get("value")
+                            state["B"]["flag_url"] = url or None
+                            changed = True
+                        else:
+                            log.info("SetCustomizationField ignored field=%s value=%s extras=%s", field_id, _shorten(value), _shorten(extras))
+                    else:
+                        log.info("SetCustomizationField missing fieldId value=%s extras=%s", _shorten(value), _shorten(extras))
                 elif command == "PauseMatchTime":
                     state["match_time"]["running"] = False
                     changed = True
+                else:
+                    log.info("unhandled command=%s value=%s extras=%s", command, _shorten(value), _shorten(extras))
 
     return changed
 
@@ -628,6 +661,10 @@ def api_mirror():
     kort_id = str(kort_id)
 
     body = payload.get("unoBody")
+    uno_method = (payload.get("unoMethod") or "").upper()
+    uno_value = body.get("value") if isinstance(body, dict) else None
+    log.info("mirror command=%s overlay=%s kort=%s method=%s value=%s extras=%s raw=%s",
+             command, overlay_id, kort_id, uno_method, _shorten(uno_value), _shorten(extras), _shorten(body))
 
     log.info("mirror received overlay=%s kort=%s command=%s value=%s extras=%s uno_url=%s", overlay_id, kort_id, command, _shorten(value), _shorten(extras), uno_url)
 
