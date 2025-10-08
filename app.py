@@ -661,6 +661,13 @@ def api_mirror():
     kort_id = str(kort_id)
 
     body = payload.get("unoBody")
+    if not isinstance(body, dict):
+        body = {}
+    extras = {k: v for k, v in body.items() if k not in {"command", "value"}} or None
+    command = body.get("command") or payload.get("command")
+    if not command:
+        return jsonify({"ok": False, "error": "command required"}), 400
+
     uno_method = (payload.get("unoMethod") or "").upper()
     uno_value = body.get("value") if isinstance(body, dict) else None
     log.info("mirror command=%s overlay=%s kort=%s method=%s value=%s extras=%s raw=%s",
