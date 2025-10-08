@@ -170,29 +170,6 @@ main {
   font-size: 13px;
 }
 
-.status {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.status .dot {
-  display: inline-block;
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
-.status .on {
-  background: var(--ok);
-}
-
-.status .off {
-  background: var(--warn);
-}
-
 .control {
   display: flex;
   gap: 8px;
