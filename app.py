@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import requests
 from collections import deque
-from flask import Flask, jsonify, send_from_directory, request, redirect, abort, Response, render_template_string, url_for
+from flask import Flask, jsonify, send_from_directory, request, redirect, abort, Response, render_template_string, url_for, stream_with_context
 
 # ====== Ścieżki / Flask ======
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -564,6 +564,36 @@ def control_panel(kort_id: str):
 @app.route("/api/snapshot")
 def api_snapshot():
     return jsonify(_serialize_all_states())
+
+
+@app.route("/api/stream")
+def api_stream():
+    def event_stream():
+        queue_obj = event_broker.listen()
+        try:
+            snapshot_payload = {
+                "type": "snapshot",
+                "ts": _now_iso(),
+                "state": _serialize_all_states(),
+            }
+            yield f"data: {json.dumps(snapshot_payload, ensure_ascii=False)}\n\n"
+            while True:
+                try:
+                    payload = queue_obj.get(timeout=20)
+                except queue.Empty:
+                    yield "event: ping\ndata: {}\n\n"
+                    continue
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+        finally:
+            event_broker.discard(queue_obj)
+
+    headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return Response(stream_with_context(event_stream()), headers=headers)
 
 
 @app.route("/api/mirror", methods=["POST"])
