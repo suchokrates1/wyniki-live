@@ -1027,6 +1027,8 @@ function parseTimestamp(ts) {
 function handleStreamPayload(payload) {
   if (!payload || paused) return;
 
+  console.debug('[score.vestmedia] SSE payload', payload);
+
   if (payload.type === 'snapshot') {
     const state = payload.state || {};
     ensureCardsFromSnapshot(state);
