@@ -37,6 +37,7 @@ def load_overlay_ids() -> Dict[str, str]:
     return dict(sorted(ids.items(), key=lambda kv: int(kv[0])))
 
 OVERLAY_IDS = load_overlay_ids()
+OVERLAY_ID_TO_KORT = {v: k for k, v in OVERLAY_IDS.items()}
 
 AUTH_HEADER = {"Content-Type": "application/json"}
 if UNO_AUTH_BEARER:
@@ -188,6 +189,18 @@ def _is_known_kort(kort_id: str) -> bool:
     if OVERLAY_IDS:
         return kort_id in OVERLAY_IDS
     return kort_id in snapshots
+
+
+def _overlay_id_from_url(uno_url: Optional[str]) -> Optional[str]:
+    if not uno_url:
+        return None
+    try:
+        match = re.search(r"/controlapps/([^/]+)/api", str(uno_url))
+        if match:
+            return match.group(1)
+    except re.error:
+        return None
+    return None
 
 
 def _render_file_template(relative_path: str, **context: Any):
@@ -535,6 +548,107 @@ def control_panel(kort_id: str):
 @app.route("/api/snapshot")
 def api_snapshot():
     return jsonify(_serialize_all_states())
+
+
+@app.route("/api/mirror", methods=["POST"])
+def api_mirror():
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid payload"}), 400
+
+    uno_url = payload.get("unoUrl") or payload.get("uno_url")
+    overlay_id = _overlay_id_from_url(uno_url)
+
+    kort_id = None
+    if overlay_id:
+        kort_id = OVERLAY_ID_TO_KORT.get(overlay_id)
+    if not kort_id:
+        kort_id = payload.get("kort")
+    if not kort_id and overlay_id:
+        kort_id = overlay_id
+    if not kort_id:
+        return jsonify({"ok": False, "error": "unknown kort"}), 400
+    kort_id = str(kort_id)
+
+    body = payload.get("unoBody")
+    if body is None and isinstance(payload.get("unoBodyRaw"), str):
+        try:
+            body = json.loads(payload["unoBodyRaw"])
+        except (TypeError, ValueError, json.JSONDecodeError):  # type: ignore[attr-defined]
+            body = None
+
+    body = body if isinstance(body, dict) else {}
+    command = body.get("command") or payload.get("command")
+    value = body.get("value")
+    extras = {k: v for k, v in body.items() if k not in {"command", "value"}}
+
+    ts = payload.get("mirroredAt") or _now_iso()
+    status_code = payload.get("unoStatus")
+    ok_flag = payload.get("unoOk")
+    response_payload = payload.get("unoResponse")
+
+    extras_for_log = {
+        "uno_status": status_code,
+        "uno_ok": ok_flag,
+        "uno_method": payload.get("unoMethod"),
+        "uno_url": uno_url,
+    }
+    if extras:
+        extras_for_log["payload_extras"] = _safe_copy(extras)
+    if overlay_id:
+        extras_for_log["overlay_id"] = overlay_id
+
+    extras_for_log = {k: v for k, v in extras_for_log.items() if v is not None}
+
+    with STATE_LOCK:
+        state = _ensure_court_state(kort_id)
+        uno_state = state["uno"]
+        uno_state["last_command"] = command
+        uno_state["last_value"] = _safe_copy(value)
+        uno_state["last_payload"] = _safe_copy(body)
+        uno_state["last_status"] = status_code
+        uno_state["last_response"] = _safe_copy(response_payload)
+        uno_state["updated"] = ts
+        state["updated"] = ts
+        entry = _record_log_entry(
+            state,
+            kort_id,
+            "mirror",
+            command or "unknown",
+            _safe_copy(value),
+            extras_for_log or None,
+            ts,
+        )
+        response_state = _serialize_court_state(state)
+
+    broadcast_extras = _safe_copy(extras) if extras else None
+    _broadcast_kort_state(
+        kort_id,
+        "mirror",
+        command or "unknown",
+        _safe_copy(value),
+        broadcast_extras,
+        ts,
+        status_code,
+    )
+
+    log.info(
+        "mirror kort=%s overlay=%s command=%s status=%s",
+        kort_id,
+        overlay_id,
+        command,
+        status_code,
+    )
+
+    return jsonify({
+        "ok": True,
+        "kort": kort_id,
+        "overlay": overlay_id,
+        "command": command,
+        "ts": ts,
+        "state": response_state,
+        "log": entry,
+    })
 
 @app.route("/api/local/reflect/<kort_id>", methods=["POST"])
 def api_local_reflect(kort_id: str):

@@ -488,35 +488,22 @@ function makeCourtCard(k) {
       </h2>
       <label class="control">
         <input type="checkbox" id="announce-${k}">
-        <span>${t.announceLabel}</span>
-      </label>
-    </div>
+      <span>${t.announceLabel}</span>
+    </label>
+  </div>
 
-    <p class="status" id="status-${k}">
-      <span class="dot off" aria-hidden="true"></span>
-      <span class="txt">${format(t.status.label, { state: t.status.states.unknown, tiebreak: t.status.tiebreak.off })}</span>
-    </p>
-
-    <table aria-describedby="status-${k}">
-      <caption id="cap-${k}" class="sr-only">${format(t.table.caption, {
-        court: k,
-        playerA: defaultA,
-        playerB: defaultB,
-        versus: t.versus
-      })}</caption>
-      <thead>
-        <tr>
-          <th scope="col">${t.table.columns.name}</th>
-          <th scope="col">${t.table.columns.points}</th>
-          <th scope="col">${t.table.columns.set1}</th>
-          <th scope="col">${t.table.columns.set2}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th id="k${k}-name-A" scope="row">${defaultA}</th>
-          <td id="k${k}-pts-A">-</td>
-          <td id="k${k}-s1-A">0</td>
+  <table role="presentation" aria-labelledby="heading-${k}">
+    <caption id="cap-${k}" class="sr-only">${format(t.table.caption, {
+      court: k,
+      playerA: defaultA,
+      playerB: defaultB,
+      versus: t.versus
+    })}</caption>
+    <tbody>
+      <tr>
+        <th id="k${k}-name-A" scope="row">${defaultA}</th>
+        <td id="k${k}-pts-A">-</td>
+        <td id="k${k}-s1-A">0</td>
           <td id="k${k}-s2-A">0</td>
         </tr>
         <tr>
@@ -543,7 +530,16 @@ function makeCourtCard(k) {
 
 function ensureCardsFromSnapshot(snap) {
   const t = currentT();
-  COURTS = Object.keys(snap).sort((a, b) => Number(a) - Number(b));
+  COURTS = Object.keys(snap).sort((a, b) => {
+    const na = Number(a);
+    const nb = Number(b);
+    const aNaN = Number.isNaN(na);
+    const bNaN = Number.isNaN(nb);
+    if (aNaN && bNaN) return String(a).localeCompare(String(b));
+    if (aNaN) return 1;
+    if (bNaN) return -1;
+    return na - nb;
+  });
   navlist.innerHTML = '';
   COURTS.forEach(k => {
     const li = document.createElement('li');
