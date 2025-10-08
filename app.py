@@ -232,6 +232,16 @@ class TokenBucket:
 buckets = {k: TokenBucket(RPM_PER_COURT, BURST) for k in OVERLAY_IDS.keys()}
 
 # ====== Helpery ======
+
+def _shorten(data, limit=120):
+    try:
+        text = json.dumps(data, ensure_ascii=False)
+    except TypeError:
+        text = str(data)
+    if len(text) > limit:
+        return text[:limit] + '...'
+    return text
+
 def _surname(full: Optional[str]) -> str:
     if not full: return "-"
     parts = str(full).strip().split()
@@ -568,6 +578,7 @@ def api_snapshot():
 
 @app.route("/api/stream")
 def api_stream():
+    log.info("stream connection from %s", request.remote_addr)
     def event_stream():
         queue_obj = event_broker.listen()
         try:
@@ -617,6 +628,9 @@ def api_mirror():
     kort_id = str(kort_id)
 
     body = payload.get("unoBody")
+
+    log.info("mirror received overlay=%s kort=%s command=%s value=%s extras=%s uno_url=%s", overlay_id, kort_id, command, _shorten(value), _shorten(extras), uno_url)
+
     if body is None and isinstance(payload.get("unoBodyRaw"), str):
         try:
             body = json.loads(payload["unoBodyRaw"])
@@ -687,6 +701,22 @@ def api_mirror():
         )
         response_state = _serialize_court_state(state)
 
+        a_state = state["A"]
+        b_state = state["B"]
+        log.info("mirror state kort=%s A=%s flag=%s pts=%s sets=(%s,%s) B=%s flag=%s pts=%s sets=(%s,%s) current_set=%s",
+                 kort_id,
+                 _shorten(a_state.get("full_name") or a_state.get("surname")),
+                 _shorten(a_state.get("flag_url") or a_state.get("flag_code")),
+                 a_state.get("points"),
+                 a_state.get("set1"),
+                 a_state.get("set2"),
+                 _shorten(b_state.get("full_name") or b_state.get("surname")),
+                 _shorten(b_state.get("flag_url") or b_state.get("flag_code")),
+                 b_state.get("points"),
+                 b_state.get("set1"),
+                 b_state.get("set2"),
+                 state.get("current_set"))
+
     broadcast_extras = _safe_copy(extras) if extras else None
     _broadcast_kort_state(
         kort_id,
@@ -746,6 +776,22 @@ def api_local_reflect(kort_id: str):
         state["updated"] = ts
         entry = _record_log_entry(state, kort_id, "reflect", command, value, extras_copy, ts)
         response_state = _serialize_court_state(state)
+
+        a_state = state["A"]
+        b_state = state["B"]
+        log.info("mirror state kort=%s A=%s flag=%s pts=%s sets=(%s,%s) B=%s flag=%s pts=%s sets=(%s,%s) current_set=%s",
+                 kort_id,
+                 _shorten(a_state.get("full_name") or a_state.get("surname")),
+                 _shorten(a_state.get("flag_url") or a_state.get("flag_code")),
+                 a_state.get("points"),
+                 a_state.get("set1"),
+                 a_state.get("set2"),
+                 _shorten(b_state.get("full_name") or b_state.get("surname")),
+                 _shorten(b_state.get("flag_url") or b_state.get("flag_code")),
+                 b_state.get("points"),
+                 b_state.get("set1"),
+                 b_state.get("set2"),
+                 state.get("current_set"))
 
     log.info("reflect kort=%s command=%s value=%s extras=%s", kort_id, command, value, extras)
     _broadcast_kort_state(kort_id, "reflect", command, value, extras_copy, ts)
@@ -857,6 +903,22 @@ def api_uno_exec(kort_id: str):
             ts,
         )
         response_state = _serialize_court_state(state)
+
+        a_state = state["A"]
+        b_state = state["B"]
+        log.info("mirror state kort=%s A=%s flag=%s pts=%s sets=(%s,%s) B=%s flag=%s pts=%s sets=(%s,%s) current_set=%s",
+                 kort_id,
+                 _shorten(a_state.get("full_name") or a_state.get("surname")),
+                 _shorten(a_state.get("flag_url") or a_state.get("flag_code")),
+                 a_state.get("points"),
+                 a_state.get("set1"),
+                 a_state.get("set2"),
+                 _shorten(b_state.get("full_name") or b_state.get("surname")),
+                 _shorten(b_state.get("flag_url") or b_state.get("flag_code")),
+                 b_state.get("points"),
+                 b_state.get("set1"),
+                 b_state.get("set2"),
+                 state.get("current_set"))
 
     _broadcast_kort_state(
         kort_id,
