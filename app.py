@@ -36,8 +36,8 @@ def load_overlay_ids() -> Dict[str, str]:
                 ids[str(i)] = val
     return dict(sorted(ids.items(), key=lambda kv: int(kv[0])))
 
-OVERLAY_IDS = load_overlay_ids()
-OVERLAY_ID_TO_KORT = {v: k for k, v in OVERLAY_IDS.items()}
+OVERLAY_IDS = {k: (_normalize_overlay_id(v) or v) for k, v in load_overlay_ids().items()}
+OVERLAY_ID_TO_KORT = {v: k for k, v in OVERLAY_IDS.items() if v}
 
 AUTH_HEADER = {"Content-Type": "application/json"}
 if UNO_AUTH_BEARER:
@@ -183,6 +183,20 @@ def _normalize_kort_id(raw: Any) -> Optional[str]:
             pass
     normalized = text.lstrip("0")
     return normalized or text
+
+
+def _normalize_overlay_id(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    lower = text.lower()
+    if lower.startswith('app_'):
+        return lower
+    if text.isdigit():
+        return f'app_{text}'.lower()
+    return lower
 
 
 def _is_known_kort(kort_id: str) -> bool:
@@ -647,7 +661,9 @@ def api_mirror():
         return jsonify({"ok": False, "error": "invalid payload"}), 400
 
     uno_url = payload.get("unoUrl") or payload.get("uno_url")
-    overlay_id = _overlay_id_from_url(uno_url)
+    overlay_id = _overlay_id_from_url(uno_url) or _normalize_overlay_id(payload.get("overlay") or payload.get("app") or payload.get("appId"))
+    if overlay_id:
+        overlay_id = _normalize_overlay_id(overlay_id)
 
     kort_id = None
     if overlay_id:
@@ -669,9 +685,10 @@ def api_mirror():
         return jsonify({"ok": False, "error": "command required"}), 400
 
     uno_method = (payload.get("unoMethod") or "").upper()
-    uno_value = body.get("value") if isinstance(body, dict) else None
+    uno_value = body.get("value") if isinstance(body, dict) else payload.get('value')
+    value = uno_value
     log.info("mirror command=%s overlay=%s kort=%s method=%s value=%s extras=%s raw=%s",
-             command, overlay_id, kort_id, uno_method, _shorten(uno_value), _shorten(extras), _shorten(body))
+             command, overlay_id, kort_id, uno_method, _shorten(value), _shorten(extras), _shorten(body))
 
     log.info("mirror received overlay=%s kort=%s command=%s value=%s extras=%s uno_url=%s", overlay_id, kort_id, command, _shorten(value), _shorten(extras), uno_url)
 
