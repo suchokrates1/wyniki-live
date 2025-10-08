@@ -492,7 +492,7 @@ function makeCourtCard(k) {
     </label>
   </div>
 
-  <table role="presentation" aria-labelledby="heading-${k}">
+  <table class="score-table" role="presentation" aria-labelledby="heading-${k}">
     <caption id="cap-${k}" class="sr-only">${format(t.table.caption, {
       court: k,
       playerA: defaultA,
@@ -501,19 +501,25 @@ function makeCourtCard(k) {
     })}</caption>
     <tbody>
       <tr>
-        <th id="k${k}-name-A" scope="row">${defaultA}</th>
-        <td id="k${k}-pts-A">-</td>
-        <td id="k${k}-s1-A">0</td>
-          <td id="k${k}-s2-A">0</td>
-        </tr>
-        <tr>
-          <th id="k${k}-name-B" scope="row">${defaultB}</th>
-          <td id="k${k}-pts-B">-</td>
-          <td id="k${k}-s1-B">0</td>
-          <td id="k${k}-s2-B">0</td>
-        </tr>
-      </tbody>
-    </table>
+        <th scope="row" class="player-cell">
+          <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
+          <span class="player-name" id="k${k}-name-A">${defaultA}</span>
+        </th>
+        <td class="points" id="k${k}-pts-A">0</td>
+        <td class="set set-1" id="k${k}-s1-A">0</td>
+        <td class="set set-2" id="k${k}-s2-A">0</td>
+      </tr>
+      <tr>
+        <th scope="row" class="player-cell">
+          <span class="player-flag" id="k${k}-flag-B" aria-hidden="true"></span>
+          <span class="player-name" id="k${k}-name-B">${defaultB}</span>
+        </th>
+        <td class="points" id="k${k}-pts-B">0</td>
+        <td class="set set-1" id="k${k}-s1-B">0</td>
+        <td class="set set-2" id="k${k}-s2-B">0</td>
+      </tr>
+    </tbody>
+  </table>
 
     <div id="live-${k}" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   `;
@@ -630,18 +636,25 @@ function announceTieToggle(k, on) {
   announce(k, on ? t.announcements.tieToggleOn : t.announcements.tieToggleOff);
 }
 
-function resolvePlayerName(surname, fallbackKey) {
+function resolvePlayerName(playerData, fallbackKey) {
   const t = currentT();
-  if (surname && surname !== '-') return surname;
+  if (playerData && typeof playerData === 'object') {
+    const full = playerData.full_name || playerData.fullName;
+    if (full && String(full).trim()) return String(full).trim();
+    const surname = playerData.surname;
+    if (surname && surname !== '-') return surname;
+  } else if (typeof playerData === 'string' && playerData.trim()) {
+    return playerData.trim();
+  }
   return t.players[fallbackKey];
 }
 
-function updateTitle(k, Aname, Bname) {
+function updateTitle(k, Adata, Bdata) {
   const t = currentT();
   const title = document.getElementById(`title-${k}`);
   const cap = document.getElementById(`cap-${k}`);
-  const safeA = resolvePlayerName(Aname, 'defaultA');
-  const safeB = resolvePlayerName(Bname, 'defaultB');
+  const safeA = resolvePlayerName(Adata, 'defaultA');
+  const safeB = resolvePlayerName(Bdata, 'defaultB');
 
   if (title) {
     title.textContent = `${safeA} | ${safeB}`;
@@ -781,40 +794,45 @@ function updateCourt(k, data) {
   const surnameA = A.surname || prevK?.A?.surname;
   const surnameB = B.surname || prevK?.B?.surname;
 
+  updatePlayerFlag(k, 'A', A, prevK.A || {});
+  updatePlayerFlag(k, 'B', B, prevK.B || {});
+
   const nameAChanged = A.surname !== undefined && A.surname !== prevK?.A?.surname;
   const nameBChanged = B.surname !== undefined && B.surname !== prevK?.B?.surname;
   if (nameAChanged) {
     const cell = document.getElementById(`k${k}-name-A`);
     if (cell) {
-      cell.textContent = resolvePlayerName(A.surname, 'defaultA');
+      cell.textContent = resolvePlayerName(A, 'defaultA');
       flash(cell);
     }
   }
   if (nameBChanged) {
     const cell = document.getElementById(`k${k}-name-B`);
     if (cell) {
-      cell.textContent = resolvePlayerName(B.surname, 'defaultB');
+      cell.textContent = resolvePlayerName(B, 'defaultB');
       flash(cell);
     }
   }
   if (nameAChanged || nameBChanged) {
-    updateTitle(k, A.surname, B.surname);
+    updateTitle(k, A, B);
   }
 
   if (A.points !== undefined && A.points !== prevK?.A?.points) {
     const cell = document.getElementById(`k${k}-pts-A`);
     if (cell) {
-      cell.textContent = A.points ?? '-';
+      const pointsText = normalizePointsDisplay(A.points);
+      cell.textContent = pointsText;
       flash(cell);
-      announcePoints(k, surnameA, cell.textContent);
+      announcePoints(k, surnameA, pointsText);
     }
   }
   if (B.points !== undefined && B.points !== prevK?.B?.points) {
     const cell = document.getElementById(`k${k}-pts-B`);
     if (cell) {
-      cell.textContent = B.points ?? '-';
+      const pointsText = normalizePointsDisplay(B.points);
+      cell.textContent = pointsText;
       flash(cell);
-      announcePoints(k, surnameB, cell.textContent);
+      announcePoints(k, surnameB, pointsText);
     }
   }
 
@@ -891,6 +909,58 @@ function updateCourt(k, data) {
   }
 
   handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames);
+
+  applySetHighlight(k, data.current_set ?? 1);
+}
+
+function normalizePointsDisplay(value) {
+  if (value === undefined || value === null) return '0';
+  const text = String(value).trim();
+  if (!text || text === '-') return '0';
+  return text;
+}
+
+function updatePlayerFlag(k, side, current, previous) {
+  const el = document.getElementById(`k${k}-flag-${side}`);
+  if (!el) return;
+
+  const currentUrl = current?.flag_url || current?.flagUrl || null;
+  const previousUrl = previous?.flag_url || previous?.flagUrl || null;
+  const currentCode = current?.flag_code || current?.flag || null;
+  const previousCode = previous?.flag_code || previous?.flag || null;
+
+  const urlChanged = currentUrl !== previousUrl;
+  const codeChanged = (currentCode || null) !== (previousCode || null);
+  if (!urlChanged && !codeChanged) return;
+
+  if (currentUrl) {
+    el.style.backgroundImage = `url(${currentUrl})`;
+    el.textContent = '';
+    el.classList.add('has-image');
+  } else if (currentCode) {
+    el.style.backgroundImage = '';
+    el.textContent = String(currentCode).toUpperCase();
+    el.classList.remove('has-image');
+  } else {
+    el.style.backgroundImage = '';
+    el.textContent = '';
+    el.classList.remove('has-image');
+  }
+}
+
+function applySetHighlight(k, currentSet) {
+  const active = Number(currentSet || 1);
+  ['1', '2'].forEach(idx => {
+    ['A', 'B'].forEach(side => {
+      const cell = document.getElementById(`k${k}-s${idx}-${side}`);
+      if (!cell) return;
+      if (Number(idx) === active) {
+        cell.classList.add('is-active');
+      } else {
+        cell.classList.remove('is-active');
+      }
+    });
+  });
 }
 
 function renderError() {
@@ -1062,8 +1132,7 @@ function refreshNavLanguage() {
 function refreshCardsLanguage() {
   const t = currentT();
   COURTS.forEach(k => {
-    updateTitle(k, prev[k]?.A?.surname, prev[k]?.B?.surname);
-    setStatus(k, prev[k]?.overlay_visible, prev[k]?.tie?.visible);
+    updateTitle(k, prev[k]?.A, prev[k]?.B);
 
     const section = document.getElementById(`kort-${k}`);
     if (!section) return;
@@ -1071,26 +1140,20 @@ function refreshCardsLanguage() {
     const controlLabel = section.querySelector('label.control span');
     if (controlLabel) controlLabel.textContent = t.announceLabel;
 
-    const table = section.querySelector('table thead tr');
-    if (table) {
-      const headers = table.querySelectorAll('th');
-      if (headers[0]) headers[0].textContent = t.table.columns.name;
-      if (headers[1]) headers[1].textContent = t.table.columns.points;
-      if (headers[2]) headers[2].textContent = t.table.columns.set1;
-      if (headers[3]) headers[3].textContent = t.table.columns.set2;
-    }
-
     const live = document.getElementById(`live-${k}`);
     if (live) live.setAttribute('lang', currentLocale());
 
     const nameACell = document.getElementById(`k${k}-name-A`);
     if (nameACell && (!prev[k]?.A?.surname || prev[k]?.A?.surname === '-')) {
-      nameACell.textContent = resolvePlayerName(prev[k]?.A?.surname, 'defaultA');
+      nameACell.textContent = resolvePlayerName(prev[k]?.A, 'defaultA');
     }
     const nameBCell = document.getElementById(`k${k}-name-B`);
     if (nameBCell && (!prev[k]?.B?.surname || prev[k]?.B?.surname === '-')) {
-      nameBCell.textContent = resolvePlayerName(prev[k]?.B?.surname, 'defaultB');
+      nameBCell.textContent = resolvePlayerName(prev[k]?.B, 'defaultB');
     }
+    updatePlayerFlag(k, 'A', prev[k]?.A || {}, {});
+    updatePlayerFlag(k, 'B', prev[k]?.B || {}, {});
+    applySetHighlight(k, prev[k]?.current_set ?? 1);
   });
 }
 

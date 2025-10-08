@@ -122,11 +122,13 @@ def _empty_player_state() -> Dict[str, Any]:
     return {
         "full_name": None,
         "surname": "-",
-        "points": "-",
+        "points": "0",
         "set1": 0,
         "set2": 0,
         "set3": 0,
         "current_games": 0,
+        "flag_url": None,
+        "flag_code": None,
     }
 
 def _empty_court_state() -> Dict[str, Any]:
@@ -134,7 +136,7 @@ def _empty_court_state() -> Dict[str, Any]:
         "overlay_visible": None,
         "mode": None,
         "serve": None,
-        "current_set": None,
+        "current_set": 1,
         "match_time": {"seconds": 0, "running": False},
         "A": _empty_player_state(),
         "B": _empty_player_state(),
@@ -365,11 +367,25 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
         full = str(value or "").strip() or None
         state["A"]["full_name"] = full
         state["A"]["surname"] = _surname(full)
+        if extras:
+            flag_url = extras.get("flagUrl") or extras.get("flag_url")
+            flag_code = extras.get("flag") or extras.get("flagCode") or extras.get("flag_code")
+            if flag_url is not None:
+                state["A"]["flag_url"] = flag_url or None
+            if flag_code is not None:
+                state["A"]["flag_code"] = (str(flag_code).lower() or None)
         changed = True
     elif command == "SetNamePlayerB":
         full = str(value or "").strip() or None
         state["B"]["full_name"] = full
         state["B"]["surname"] = _surname(full)
+        if extras:
+            flag_url = extras.get("flagUrl") or extras.get("flag_url")
+            flag_code = extras.get("flag") or extras.get("flagCode") or extras.get("flag_code")
+            if flag_url is not None:
+                state["B"]["flag_url"] = flag_url or None
+            if flag_code is not None:
+                state["B"]["flag_code"] = (str(flag_code).lower() or None)
         changed = True
     elif command == "SetPointsPlayerA":
         state["A"]["points"] = str(value if value is not None else "-")
@@ -602,6 +618,26 @@ def api_mirror():
 
     with STATE_LOCK:
         state = _ensure_court_state(kort_id)
+        changed = False
+        if command:
+            try:
+                changed = _apply_local_command(state, command, value, extras or None)
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "mirror apply failed kort=%s command=%s error=%s",
+                    kort_id,
+                    command,
+                    exc,
+                )
+        if changed and command:
+            state["local"]["commands"][command] = {
+                "value": _safe_copy(value),
+                "extras": _safe_copy(extras) if extras else None,
+                "ts": ts,
+            }
+            state["local"]["updated"] = ts
+        elif changed:
+            state["local"]["updated"] = ts
         uno_state = state["uno"]
         uno_state["last_command"] = command
         uno_state["last_value"] = _safe_copy(value)
