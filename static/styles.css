@@ -301,6 +301,44 @@ main {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
+.match-history {
+  margin-top: 18px;
+}
+
+.match-history .history-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.match-history.is-empty .history-empty {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 14px;
+  margin: 0;
+}
+
+.history-body {
+  font-size: 14px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+}
+
+.history-table th,
+.history-table td {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.history-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .changed {
   box-shadow: inset 0 0 0 9999px rgba(154, 209, 255, 0.18);
   transition: box-shadow 1.2s linear;
