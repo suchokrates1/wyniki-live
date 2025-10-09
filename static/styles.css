@@ -301,41 +301,41 @@ main {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-.match-history {
+#history-section {
   margin-top: 18px;
 }
 
-.match-history .history-title {
+#history-section .history-title {
   margin: 0 0 8px;
   font-size: 15px;
   color: var(--muted);
 }
 
-.match-history.is-empty .history-empty {
+#history-section.is-empty .history-empty {
   color: var(--muted);
   font-style: italic;
   font-size: 14px;
   margin: 0;
 }
 
-.history-body {
+#history-body {
   font-size: 14px;
 }
 
-.history-table {
+#history-section .history-table {
   width: 100%;
   border-collapse: collapse;
   background: var(--card);
 }
 
-.history-table th,
-.history-table td {
+#history-section .history-table th,
+#history-section .history-table td {
   padding: 6px 8px;
   border: 1px solid var(--line);
   text-align: left;
 }
 
-.history-table tbody tr:nth-child(even) {
+#history-section .history-table tbody tr:nth-child(even) {
   background: rgba(255, 255, 255, 0.04);
 }
 

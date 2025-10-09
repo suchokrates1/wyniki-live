@@ -1,4 +1,4 @@
-const TRANSLATIONS = {
+﻿const TRANSLATIONS = {
   pl: {
     langName: 'Polski',
     htmlLang: 'pl',
@@ -47,11 +47,11 @@ const TRANSLATIONS = {
       title: 'Historia meczów',
       empty: 'Brak zapisanych wyników.',
       columns: {
-        ended: 'Zakończono',
-        players: 'Zawodnicy',
-        set1: 'Set 1',
-        set2: 'Set 2',
+        description: 'Mecz',
         duration: 'Czas'
+      },
+      labels: {
+        supertb: 'Wynik SUPERTB'
       }
     }
   },
@@ -103,11 +103,11 @@ const TRANSLATIONS = {
       title: 'Match-Historie',
       empty: 'Keine gespeicherten Ergebnisse.',
       columns: {
-        ended: 'Beendet',
-        players: 'Spieler',
-        set1: 'Satz 1',
-        set2: 'Satz 2',
+        description: 'Begegnung',
         duration: 'Dauer'
+      },
+      labels: {
+        supertb: 'Super-Tiebreak'
       }
     }
   },
@@ -159,11 +159,11 @@ const TRANSLATIONS = {
       title: 'Match history',
       empty: 'No saved results.',
       columns: {
-        ended: 'Finished',
-        players: 'Players',
-        set1: 'Set 1',
-        set2: 'Set 2',
-        duration: 'Time'
+        description: 'Match',
+        duration: 'Duration'
+      },
+      labels: {
+        supertb: 'Super tiebreak'
       }
     }
   },
@@ -215,11 +215,11 @@ const TRANSLATIONS = {
       title: 'Storico incontri',
       empty: 'Nessun risultato salvato.',
       columns: {
-        ended: 'Concluso',
-        players: 'Giocatori',
-        set1: 'Set 1',
-        set2: 'Set 2',
+        description: 'Incontro',
         duration: 'Durata'
+      },
+      labels: {
+        supertb: 'Super tie-break'
       }
     }
   },
@@ -271,11 +271,11 @@ const TRANSLATIONS = {
       title: 'Historial de partidos',
       empty: 'No hay resultados guardados.',
       columns: {
-        ended: 'Finalizado',
-        players: 'Jugadores',
-        set1: 'Set 1',
-        set2: 'Set 2',
-        duration: 'Tiempo'
+        description: 'Partido',
+        duration: 'Duración'
+      },
+      labels: {
+        supertb: 'Resultado super desempate'
       }
     }
   },
@@ -327,11 +327,11 @@ const TRANSLATIONS = {
       title: 'Otteluhistoria',
       empty: 'Ei tallennettuja tuloksia.',
       columns: {
-        ended: 'Päättynyt',
-        players: 'Pelaajat',
-        set1: 'Erä 1',
-        set2: 'Erä 2',
-        duration: 'Aika'
+        description: 'Ottelu',
+        duration: 'Kesto'
+      },
+      labels: {
+        supertb: 'Super-tiebreak-tulos'
       }
     }
   },
@@ -383,11 +383,11 @@ const TRANSLATIONS = {
       title: 'Історія матчів',
       empty: 'Немає збережених результатів.',
       columns: {
-        ended: 'Завершено',
-        players: 'Гравці',
-        set1: 'Сет 1',
-        set2: 'Сет 2',
-        duration: 'Час'
+        description: 'Матч',
+        duration: 'Тривалість'
+      },
+      labels: {
+        supertb: 'Результат супер-тайбрейку'
       }
     }
   },
@@ -439,11 +439,11 @@ const TRANSLATIONS = {
       title: 'Historique des matchs',
       empty: 'Aucun résultat enregistré.',
       columns: {
-        ended: 'Terminé',
-        players: 'Joueurs',
-        set1: 'Set 1',
-        set2: 'Set 2',
+        description: 'Match',
         duration: 'Durée'
+      },
+      labels: {
+        supertb: 'Résultat super tie-break'
       }
     }
   },
@@ -495,11 +495,11 @@ const TRANSLATIONS = {
       title: 'Mačo istorija',
       empty: 'Nėra išsaugotų rezultatų.',
       columns: {
-        ended: 'Baigta',
-        players: 'Žaidėjai',
-        set1: 'Setas 1',
-        set2: 'Setas 2',
-        duration: 'Laikas'
+        description: 'Mačas',
+        duration: 'Trukmė'
+      },
+      labels: {
+        supertb: 'Super taibreiko rezultatas'
       }
     }
   }
@@ -527,12 +527,17 @@ const controlsTitle = document.getElementById('ctrl-title');
 const headerTitle = document.querySelector('header h1');
 const headerDesc = document.querySelector('.desc');
 const lastRefreshText = document.getElementById('lastRefreshText');
+const historySection = document.getElementById('history-section');
+const historyBody = document.getElementById('history-body');
+const historyTitle = document.getElementById('history-title');
 
 let paused = false;
 let prev = {};
 const COURT_SET_STATE = {};
 const INITIAL_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 30000;
+
+let latestHistory = [];
 const SNAPSHOT_STORAGE_KEY = 'score.vestmedia.snapshot.v1';
 
 let eventSource = null;
@@ -621,11 +626,6 @@ function makeCourtCard(k) {
     </tbody>
   </table>
 
-  <div class="match-history" id="history-${k}">
-    <h3 class="history-title">${t.history?.title || 'Historia meczów'}</h3>
-    <div class="history-body" id="history-body-${k}" aria-live="polite"></div>
-  </div>
-
     <div id="live-${k}" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   `;
 
@@ -635,7 +635,6 @@ function makeCourtCard(k) {
 
   const liveRegion = section.querySelector(`#live-${k}`);
   liveRegion.setAttribute('lang', currentLocale());
-  renderHistory(k, []);
 
   return section;
 }
@@ -771,67 +770,70 @@ function formatHistoryTimestamp(iso) {
   return dt.toLocaleString(currentLocale(), { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 }
 
-function renderHistory(k, history = []) {
-  const container = document.getElementById(`history-${k}`);
-  if (!container) return;
-  const body = container.querySelector('.history-body') || container;
-  const t = currentT();
-  const target = document.getElementById(`history-body-${k}`) || body;
-  target.innerHTML = '';
+function _formatDurationLocal(seconds) {
+  const total = Number(seconds || 0);
+  if (!Number.isFinite(total) || total <= 0) return '–';
+  const mins = Math.floor(total / 60) % 60;
+  const hours = Math.floor(total / 3600);
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+}
 
+function renderGlobalHistory(history = []) {
+  const section = document.getElementById('history-section');
+  const body = document.getElementById('history-body');
+  const title = document.getElementById('history-title');
+  if (!section || !body) return;
+
+  const t = currentT();
+  if (title && t.history?.title) title.textContent = t.history.title;
+
+  body.innerHTML = '';
   if (!history || !history.length) {
-    container.classList.add('is-empty');
+    section.classList.add('is-empty');
     const empty = document.createElement('p');
     empty.className = 'history-empty';
     empty.textContent = t.history?.empty || 'Brak zapisanych wyników.';
-    target.appendChild(empty);
+    body.appendChild(empty);
     return;
   }
 
-  container.classList.remove('is-empty');
+  section.classList.remove('is-empty');
   const table = document.createElement('table');
   table.className = 'history-table';
   const cols = t.history?.columns || {
-    ended: 'Zakończono',
-    players: 'Zawodnicy',
-    set1: 'Set 1',
-    set2: 'Set 2',
+    description: 'Mecz',
     duration: 'Czas'
   };
   table.innerHTML = `
     <thead>
       <tr>
-        <th scope="col">${cols.ended}</th>
-        <th scope="col">${cols.players}</th>
-        <th scope="col">${cols.set1}</th>
-        <th scope="col">${cols.set2}</th>
+        <th scope="col">${cols.description}</th>
         <th scope="col">${cols.duration}</th>
       </tr>
     </thead>
     <tbody></tbody>
   `;
   const tbody = table.querySelector('tbody');
-  history.slice(0, 10).forEach((entry) => {
+  history.forEach((entry) => {
     const row = document.createElement('tr');
     const playerA = resolvePlayerName(entry.players?.A || {}, 'defaultA');
     const playerB = resolvePlayerName(entry.players?.B || {}, 'defaultB');
     const set1 = `${entry.sets?.set1?.A ?? 0}:${entry.sets?.set1?.B ?? 0}`;
     const set2 = `${entry.sets?.set2?.A ?? 0}:${entry.sets?.set2?.B ?? 0}`;
-    const duration = entry.duration_text || (() => {
-      const secs = Number(entry.duration_seconds || 0);
-      const minutes = Math.floor(secs / 60) % 60;
-      const hours = Math.floor(secs / 3600);
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-    })();
+    const tie = entry.sets?.tie || {};
+    const duration = entry.duration_text || _formatDurationLocal(entry.duration_seconds || 0);
 
-    const cells = [
-      formatHistoryTimestamp(entry.ended_at),
-      `${playerA} vs ${playerB}`,
-      set1,
-      set2,
-      duration
-    ];
-    cells.forEach((value, idx) => {
+    const courtLabel = format(currentT().courtLabel, { court: entry.kort });
+    const head = `${courtLabel}, ${playerA} : ${playerB}`;
+    const segments = [set1, set2];
+    if (tie.played) {
+      const label = t.history?.labels?.supertb || 'SUPERTB';
+      segments.push(`${label} ${tie.A ?? 0}:${tie.B ?? 0}`);
+    }
+    const description = [head, ...segments].join(' | ');
+
+    const cells = [description, duration];
+    cells.forEach((value) => {
       const cell = document.createElement('td');
       cell.textContent = typeof value === 'string' ? value : String(value ?? '');
       row.appendChild(cell);
@@ -839,7 +841,7 @@ function renderHistory(k, history = []) {
     tbody.appendChild(row);
   });
 
-  target.appendChild(table);
+  body.appendChild(table);
 }
 
 function applyScoreAria(k, data) {
@@ -1131,7 +1133,6 @@ function updateCourt(k, data) {
   }
 
   handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames);
-  renderHistory(k, Array.isArray(data.history) ? data.history : []);
   applyScoreAria(k, data);
 
   applySetHighlight(k, data.current_set ?? 1);
@@ -1284,14 +1285,17 @@ function handleStreamPayload(payload) {
 
   if (payload.type === 'snapshot') {
     const state = payload.state || {};
+    latestHistory = Array.isArray(payload.history) ? payload.history : latestHistory;
+    renderGlobalHistory(latestHistory);
     ensureCardsFromSnapshot(state);
     const keys = computeCourts(state);
     keys.forEach(k => {
       if (state[k]) updateCourt(k, state[k]);
     });
     prev = state;
-    updateLastRefresh(parseTimestamp(payload.ts) || new Date());
-    persistSnapshot(prev, payload.ts);
+    const snapshotTime = parseTimestamp(payload.ts) || new Date();
+    updateLastRefresh(snapshotTime);
+    persistSnapshot(prev, latestHistory, snapshotTime.toISOString());
     return;
   }
 
@@ -1313,8 +1317,14 @@ function handleStreamPayload(payload) {
     prev = { ...prev, [kort]: state };
   }
 
-  updateLastRefresh(parseTimestamp(payload.ts) || new Date());
-  persistSnapshot(prev, payload.ts);
+  if (Array.isArray(payload.history)) {
+    latestHistory = payload.history;
+    renderGlobalHistory(latestHistory);
+  }
+
+  const updateTime = parseTimestamp(payload.ts) || new Date();
+  updateLastRefresh(updateTime);
+  persistSnapshot(prev, latestHistory, updateTime.toISOString());
 }
 
 function handleStreamMessage(event) {
@@ -1371,14 +1381,24 @@ function cloneStateForStorage(state) {
   }
 }
 
-function persistSnapshot(state, ts) {
+function cloneHistoryForStorage(history) {
+  try {
+    return JSON.parse(JSON.stringify(history || []));
+  } catch (err) {
+    console.warn('[score] history clone failed', err);
+    return [];
+  }
+}
+function persistSnapshot(state, history, ts) {
   if (!state || typeof state !== 'object') return;
   const clone = cloneStateForStorage(state);
   if (!clone) return;
+  const histClone = cloneHistoryForStorage(history);
   try {
     const payload = {
       ts: ts || new Date().toISOString(),
-      state: clone
+      state: clone,
+      history: histClone
     };
     localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(payload));
   } catch (err) {
@@ -1395,6 +1415,7 @@ function hydrateFromStorage() {
       return false;
     }
     const state = parsed.state;
+    latestHistory = Array.isArray(parsed.history) ? parsed.history : [];
     ensureCardsFromSnapshot(state);
     const courts = computeCourts(state);
     const prevBackup = prev;
@@ -1403,6 +1424,7 @@ function hydrateFromStorage() {
       if (state[k]) updateCourt(k, state[k]);
     });
     prev = state;
+    renderGlobalHistory(latestHistory);
     if (parsed.ts) {
       const dt = new Date(parsed.ts);
       if (!Number.isNaN(dt.getTime())) {
@@ -1468,10 +1490,12 @@ function refreshCardsLanguage() {
     const historyTitle = section.querySelector('.history-title');
     if (historyTitle && t.history?.title) historyTitle.textContent = t.history.title;
     if (prev[k]) {
-      renderHistory(k, Array.isArray(prev[k].history) ? prev[k].history : []);
       applyScoreAria(k, prev[k]);
     }
   });
+
+  if (historyTitle && t.history?.title) historyTitle.textContent = t.history.title;
+  renderGlobalHistory(latestHistory);
 }
 
 function renderLanguage() {
@@ -1499,19 +1523,23 @@ function applyLanguage(lang, { skipSave = false, skipSelect = false } = {}) {
 }
 
 async function bootstrap() {
-  const data = await fetchSnapshot();
-  if (!data) {
+  const snapshot = await fetchSnapshot();
+  if (!snapshot) {
     updateLastRefresh();
     return;
   }
-  ensureCardsFromSnapshot(data);
-  COURTS = computeCourts(data);
+  const state = snapshot.state || {};
+  latestHistory = Array.isArray(snapshot.history) ? snapshot.history : [];
+  renderGlobalHistory(latestHistory);
+  ensureCardsFromSnapshot(state);
+  COURTS = computeCourts(state);
   COURTS.forEach(k => {
-    if (data[k]) updateCourt(k, data[k]);
+    if (state[k]) updateCourt(k, state[k]);
   });
-  prev = data;
-  updateLastRefresh(new Date());
-  persistSnapshot(prev);
+  prev = state;
+  const now = new Date();
+  updateLastRefresh(now);
+  persistSnapshot(prev, latestHistory, now.toISOString());
 }
 
 pauseBtn.addEventListener('click', () => {
