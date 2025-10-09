@@ -53,6 +53,13 @@
       labels: {
         supertb: 'Wynik SUPERTB'
       }
+    },
+    accessibility: {
+      versus: 'kontra',
+      points: 'punkty',
+      tieBreak: 'tiebreak',
+      superTieBreak: 'super tiebreak',
+      set: 'Set {number}'
     }
   },
   de: {
@@ -109,6 +116,13 @@
       labels: {
         supertb: 'Super-Tiebreak'
       }
+    },
+    accessibility: {
+      versus: 'gegen',
+      points: 'Punkte',
+      tieBreak: 'Tiebreak',
+      superTieBreak: 'Super-Tiebreak',
+      set: 'Satz {number}'
     }
   },
   en: {
@@ -165,6 +179,13 @@
       labels: {
         supertb: 'Super tiebreak'
       }
+    },
+    accessibility: {
+      versus: 'versus',
+      points: 'points',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}'
     }
   },
   it: {
@@ -221,6 +242,13 @@
       labels: {
         supertb: 'Super tie-break'
       }
+    },
+    accessibility: {
+      versus: 'contro',
+      points: 'punti',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}'
     }
   },
   es: {
@@ -277,6 +305,13 @@
       labels: {
         supertb: 'Resultado super desempate'
       }
+    },
+    accessibility: {
+      versus: 'contra',
+      points: 'puntos',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}'
     }
   },
   fi: {
@@ -333,6 +368,13 @@
       labels: {
         supertb: 'Super-tiebreak-tulos'
       }
+    },
+    accessibility: {
+      versus: 'vastaan',
+      points: 'pisteet',
+      tieBreak: 'tiebreak',
+      superTieBreak: 'super-tiebreak',
+      set: 'Erä {number}'
     }
   },
   uk: {
@@ -558,6 +600,39 @@ function currentLocale() {
   return t.htmlLang || currentLang;
 }
 
+function resolveAccessibilityStrings(t) {
+  const acc = t.accessibility || {};
+  let versus = acc.versus;
+  if (!versus) {
+    if (currentLang === 'pl') {
+      versus = 'kontra';
+    } else if (currentLang === 'en') {
+      versus = 'versus';
+    } else {
+      versus = t.versus || 'versus';
+    }
+  }
+  const rawPoints = acc.points || t.table?.columns?.points || 'Points';
+  const points = rawPoints.replace(/\s*\(.*?\)\s*/g, '').trim() || 'Points';
+  const tieBreak = acc.tieBreak || 'tie-break';
+  const superTieBreak = acc.superTieBreak || `super ${tieBreak}`;
+  let setTemplate = acc.set;
+  if (!setTemplate) {
+    const rawSet = t.table?.columns?.set1;
+    if (typeof rawSet === 'string') {
+      const cleaned = rawSet.split('(')[0].trim();
+      const replaced = cleaned.replace(/\d+/, '{number}');
+      if (replaced && replaced.includes('{number}')) {
+        setTemplate = replaced;
+      }
+    }
+  }
+  if (!setTemplate || !setTemplate.includes('{number}')) {
+    setTemplate = 'Set {number}';
+  }
+  return { versus, points, tieBreak, superTieBreak, setTemplate };
+}
+
 function flash(el) {
   if (!el) return;
   el.classList.add('changed');
@@ -578,6 +653,7 @@ function setAnnounce(k, val) {
 
 function makeCourtCard(k) {
   const t = currentT();
+  const acc = resolveAccessibilityStrings(t);
   const courtLabel = format(t.courtLabel, { court: k });
   const defaultA = t.players.defaultA;
   const defaultB = t.players.defaultB;
@@ -589,22 +665,21 @@ function makeCourtCard(k) {
   section.innerHTML = `
     <div class="card-head">
       <h2 id="heading-${k}">
-        <span class="court-label" id="court-label-${k}">${courtLabel}</span>: <span id="title-${k}">${defaultA} | ${defaultB}</span>
+        <span class="court-label" id="court-label-${k}">${courtLabel}</span>:
+        <span id="title-${k}" class="match-title">
+          <span class="match-player" data-title="A">${defaultA}</span>
+          <span class="match-versus" id="title-${k}-versus" aria-label="${acc.versus}">${t.versus}</span>
+          <span class="match-player" data-title="B">${defaultB}</span>
+        </span>
       </h2>
       <label class="control">
         <input type="checkbox" id="announce-${k}">
-      <span>${t.announceLabel}</span>
-    </label>
-  </div>
+        <span>${t.announceLabel}</span>
+      </label>
+    </div>
 
-  <table class="score-table" role="presentation" aria-labelledby="heading-${k}">
-    <caption id="cap-${k}" class="sr-only">${format(t.table.caption, {
-      court: k,
-      playerA: defaultA,
-      playerB: defaultB,
-      versus: t.versus
-    })}</caption>
-    <tbody>
+    <table class="score-table" role="presentation" aria-labelledby="heading-${k}">
+      <tbody>
       <tr>
         <th scope="row" class="player-cell">
           <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
@@ -849,6 +924,8 @@ function applyScoreAria(k, data) {
   if (!section) return;
   const table = section.querySelector('.score-table');
   if (!table) return;
+  const t = currentT();
+  const acc = resolveAccessibilityStrings(t);
   const nameA = resolvePlayerName(data.A || {}, 'defaultA');
   const nameB = resolvePlayerName(data.B || {}, 'defaultB');
   const pointsA = (document.getElementById(`k${k}-pts-A`)?.textContent || '0').trim();
@@ -857,28 +934,63 @@ function applyScoreAria(k, data) {
   const set1B = (document.getElementById(`k${k}-s1-B`)?.textContent || '0').trim();
   const set2A = (document.getElementById(`k${k}-s2-A`)?.textContent || '0').trim();
   const set2B = (document.getElementById(`k${k}-s2-B`)?.textContent || '0').trim();
-  const activeSet = Number(data.current_set || 1);
-  const summary = `${nameA} kontra ${nameB}, punkty ${pointsA}:${pointsB}, Set 1${activeSet === 1 ? ' aktywny' : ''}: ${set1A}:${set1B}, Set 2${activeSet === 2 ? ' aktywny' : ''}: ${set2A}:${set2B}`;
+  const currentSet = Number(data.current_set || 1);
+  const tieVisible = data.tie?.visible === true;
+  const isSuperTieBreak = tieVisible && currentSet === 3;
+
+  const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
+  let pointsSegment = `${acc.points} ${pointsA}:${pointsB}`;
+  if (tieVisible) {
+    const tieLabel = isSuperTieBreak ? acc.superTieBreak : acc.tieBreak;
+    pointsSegment += `, ${tieLabel}`;
+  }
+  summaryParts.push(pointsSegment);
+
+  const setSegments = [];
+  [
+    { index: 1, a: set1A, b: set1B },
+    { index: 2, a: set2A, b: set2B }
+  ].forEach(({ index, a, b }) => {
+    const aNum = Number.parseInt(a, 10) || 0;
+    const bNum = Number.parseInt(b, 10) || 0;
+    const include = index === 1 || currentSet >= index || aNum > 0 || bNum > 0;
+    if (!include) return;
+    const label = format(acc.setTemplate, { number: index });
+    setSegments.push(`${label}: ${a}:${b}`);
+  });
+
+  if (setSegments.length) {
+    summaryParts.push(setSegments.join(', '));
+  }
+
+  const summary = summaryParts.join('. ');
   table.setAttribute('aria-label', summary);
+  section.setAttribute('aria-label', summary);
 }
 
 function updateTitle(k, Adata, Bdata) {
   const t = currentT();
   const title = document.getElementById(`title-${k}`);
-  const cap = document.getElementById(`cap-${k}`);
   const safeA = resolvePlayerName(Adata, 'defaultA');
   const safeB = resolvePlayerName(Bdata, 'defaultB');
 
   if (title) {
-    title.textContent = `${safeA} | ${safeB}`;
+    const nameAEl = title.querySelector('[data-title="A"]');
+    const nameBEl = title.querySelector('[data-title="B"]');
+    const versusEl = title.querySelector('.match-versus');
+    if (nameAEl && nameBEl && versusEl) {
+      const acc = resolveAccessibilityStrings(t);
+      nameAEl.textContent = safeA;
+      nameBEl.textContent = safeB;
+      versusEl.textContent = t.versus;
+      versusEl.setAttribute('aria-label', acc.versus);
+    } else {
+      title.textContent = `${safeA} | ${safeB}`;
+    }
   }
-  if (cap) {
-    cap.textContent = format(t.table.caption, {
-      court: k,
-      playerA: safeA,
-      playerB: safeB,
-      versus: t.versus
-    });
+  const legacyCaption = document.getElementById(`cap-${k}`);
+  if (legacyCaption) {
+    legacyCaption.remove();
   }
   const courtLabel = document.getElementById(`court-label-${k}`);
   if (courtLabel) {

@@ -618,6 +618,10 @@ def _reset_after_match(state: Dict[str, Any]) -> None:
     mt, status = _ensure_match_struct(state)
     for side in ("A", "B"):
         side_state = state[side]
+        side_state["full_name"] = None
+        side_state["surname"] = "-"
+        side_state["flag_url"] = None
+        side_state["flag_code"] = None
         side_state["points"] = "0"
         side_state["set1"] = 0
         side_state["set2"] = 0
