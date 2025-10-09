@@ -127,6 +127,7 @@ def _persist_state_cache(kort_id: str, state: Dict[str, Any]) -> None:
     con = db_conn()
     try:
         cur = con.cursor()
+        log.info("persist cache kort=%s ts=%s", kort_id, ts)
         cur.execute("""
             INSERT INTO state_cache (kort_id, ts, state)
             VALUES (?, ?, ?)
@@ -139,6 +140,7 @@ def _persist_state_cache(kort_id: str, state: Dict[str, Any]) -> None:
 
 def _hydrate_state_from_cache(kort_id: str, cached: Dict[str, Any]) -> None:
     state = _ensure_court_state(kort_id)
+    log.info("hydrate cache kort=%s", kort_id)
     fields = ("overlay_visible", "mode", "serve", "current_set", "updated")
     for key in fields:
         if key in cached:
