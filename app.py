@@ -282,8 +282,6 @@ snapshots: Dict[str, Dict[str, Any]] = {k: _empty_court_state() for k in _initia
 
 GLOBAL_LOG: deque = deque(maxlen=max(100, RING_BUFFER_SIZE * max(1, len(snapshots) or 1)))
 
-load_state_cache()
-
 
 def _available_courts():
     if OVERLAY_IDS:
@@ -389,6 +387,8 @@ def _ensure_court_state(kort_id: str) -> Dict[str, Any]:
         state = _empty_court_state()
         snapshots[kort_id] = state
     return state
+
+load_state_cache()
 
 def _serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
     return {
