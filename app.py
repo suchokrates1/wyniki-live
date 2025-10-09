@@ -99,9 +99,94 @@ def db_init():
       overlay_visible INTEGER NOT NULL
     );
     """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS state_cache (
+      kort_id TEXT PRIMARY KEY,
+      ts TEXT NOT NULL,
+      state TEXT NOT NULL
+    );
+    """)
     con.commit()
     con.close()
 db_init()
+
+
+def _state_for_cache(state: Dict[str, Any]) -> Dict[str, Any]:
+    serialized = _serialize_court_state(state)
+    serialized["log"] = []
+    return serialized
+
+
+def _persist_state_cache(kort_id: str, state: Dict[str, Any]) -> None:
+    payload = _state_for_cache(state)
+    ts = payload.get("updated") or _now_iso()
+    try:
+        encoded = json.dumps(payload)
+    except TypeError:
+        encoded = json.dumps(json.loads(json.dumps(payload, default=str)))
+    con = db_conn()
+    try:
+        cur = con.cursor()
+        cur.execute("""
+            INSERT INTO state_cache (kort_id, ts, state)
+            VALUES (?, ?, ?)
+            ON CONFLICT(kort_id) DO UPDATE SET ts=excluded.ts, state=excluded.state
+        """, (kort_id, ts, encoded))
+        con.commit()
+    finally:
+        con.close()
+
+
+def _hydrate_state_from_cache(kort_id: str, cached: Dict[str, Any]) -> None:
+    state = _ensure_court_state(kort_id)
+    fields = ("overlay_visible", "mode", "serve", "current_set", "updated")
+    for key in fields:
+        if key in cached:
+            state[key] = cached[key]
+    mt_in = cached.get("match_time")
+    if isinstance(mt_in, dict):
+        mt, _ = _ensure_match_struct(state)
+        mt.update(mt_in)
+    status_in = cached.get("match_status")
+    if isinstance(status_in, dict):
+        mt, status = _ensure_match_struct(state)
+        status.update(status_in)
+    for side in ("A", "B"):
+        side_in = cached.get(side)
+        if isinstance(side_in, dict):
+            state[side].update(side_in)
+    tie_in = cached.get("tie")
+    if isinstance(tie_in, dict):
+        state["tie"].update(tie_in)
+    history_in = cached.get("history")
+    if isinstance(history_in, list):
+        state["history"] = history_in[:]
+    local_in = cached.get("local")
+    if isinstance(local_in, dict):
+        state["local"]["updated"] = local_in.get("updated")
+        if isinstance(local_in.get("commands"), dict):
+            state["local"]["commands"] = local_in["commands"]
+    uno_in = cached.get("uno")
+    if isinstance(uno_in, dict):
+        state["uno"].update(uno_in)
+
+
+def load_state_cache() -> None:
+    con = db_conn()
+    try:
+        cur = con.cursor()
+        cur.execute("SELECT kort_id, state FROM state_cache")
+        rows = cur.fetchall()
+    finally:
+        con.close()
+    for row in rows or []:
+        try:
+            payload = json.loads(row["state"])
+        except (TypeError, ValueError, json.JSONDecodeError):  # type: ignore[attr-defined]
+            continue
+        kort_id = row["kort_id"]
+        _hydrate_state_from_cache(kort_id, payload)
+
 
 # ====== Stan w pamięci ======
 RING_BUFFER_SIZE = int(os.environ.get("STATE_LOG_SIZE", "200"))
@@ -194,6 +279,8 @@ else:
 snapshots: Dict[str, Dict[str, Any]] = {k: _empty_court_state() for k in _initial_courts}
 
 GLOBAL_LOG: deque = deque(maxlen=max(100, RING_BUFFER_SIZE * max(1, len(snapshots) or 1)))
+
+load_state_cache()
 
 
 def _available_courts():
@@ -955,6 +1042,7 @@ def api_mirror():
             ts,
         )
         response_state = _serialize_court_state(state)
+        _persist_state_cache(kort_id, state)
 
         a_state = state["A"]
         b_state = state["B"]
@@ -1031,6 +1119,7 @@ def api_local_reflect(kort_id: str):
         state["updated"] = ts
         entry = _record_log_entry(state, kort_id, "reflect", command, value, extras_copy, ts)
         response_state = _serialize_court_state(state)
+        _persist_state_cache(kort_id, state)
 
         a_state = state["A"]
         b_state = state["B"]
