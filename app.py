@@ -433,9 +433,13 @@ def _serialize_all_states() -> Dict[str, Any]:
         return {kort: _serialize_court_state(state) for kort, state in snapshots.items()}
 
 
+def _serialize_history_locked() -> List[Dict[str, Any]]:
+    return [json.loads(json.dumps(entry)) for entry in list(GLOBAL_HISTORY)]
+
+
 def _serialize_history() -> List[Dict[str, Any]]:
     with STATE_LOCK:
-        return [json.loads(json.dumps(entry)) for entry in list(GLOBAL_HISTORY)]
+        return _serialize_history_locked()
 
 def _safe_copy(data: Any) -> Any:
     if data is None:
@@ -723,7 +727,7 @@ def _broadcast_kort_state(kort_id: str, event_type: str, command: str, value: An
             "value": value,
             "extras": extras,
             "state": _serialize_court_state(state),
-            "history": _serialize_history(),
+            "history": _serialize_history_locked(),
         }
         if status is not None:
             payload["status"] = status
@@ -1029,6 +1033,11 @@ def api_stream():
         "X-Accel-Buffering": "no",
     }
     return Response(stream_with_context(event_stream()), headers=headers)
+
+
+@app.route("/healthz")
+def api_healthz():
+    return jsonify({"ok": True, "ts": _now_iso()}), 200
 
 
 @app.route("/api/mirror", methods=["POST"])
