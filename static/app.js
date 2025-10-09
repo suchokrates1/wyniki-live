@@ -60,6 +60,9 @@
       tieBreak: 'tiebreak',
       superTieBreak: 'super tiebreak',
       set: 'Set {number}'
+    },
+    shortcuts: {
+      desc: 'Skróty: [1–6] – korty, H – historia.'
     }
   },
   de: {
@@ -179,6 +182,9 @@
       labels: {
         supertb: 'Super tiebreak'
       }
+    },
+    shortcuts: {
+      desc: 'Shortcuts: [1–6] courts, H – history.'
     },
     accessibility: {
       versus: 'versus',
@@ -741,6 +747,11 @@ function ensureCardsFromSnapshot(snap) {
     li.innerHTML = `<a href="#kort-${k}">${format(t.courtLabel, { court: k })}</a>`;
     navlist.appendChild(li);
   });
+  // Add History link at the end
+  const liHistory = document.createElement('li');
+  const historyLabel = (t.history && t.history.title) ? t.history.title : 'Historia';
+  liHistory.innerHTML = `<a href="#history-section">${historyLabel}</a>`;
+  navlist.appendChild(liHistory);
   grid.innerHTML = '';
   COURTS.forEach(k => grid.appendChild(makeCourtCard(k)));
 }
@@ -1167,6 +1178,10 @@ function updateCourt(k, data) {
     cellA.classList.toggle('is-tiebreak', pointsA.isTie);
     if (textChanged) {
       flash(cellA);
+      if (nextText === 'ADV' || nextText === '40') {
+        cellA.classList.add('flip-strong');
+        setTimeout(() => cellA.classList.remove('flip-strong'), 450);
+      }
       announcePoints(k, surnameA, nextText);
     }
   }
@@ -1180,6 +1195,10 @@ function updateCourt(k, data) {
     cellB.classList.toggle('is-tiebreak', pointsB.isTie);
     if (textChanged) {
       flash(cellB);
+      if (nextText === 'ADV' || nextText === '40') {
+        cellB.classList.add('flip-strong');
+        setTimeout(() => cellB.classList.remove('flip-strong'), 450);
+      }
       announcePoints(k, surnameB, nextText);
     }
   }
@@ -1582,6 +1601,8 @@ function refreshNavLanguage() {
       link.textContent = format(t.courtLabel, { court });
     }
   });
+  const histLink = navlist.querySelector('a[href="#history-section"]');
+  if (histLink && t.history?.title) histLink.textContent = t.history.title;
 }
 
 function refreshCardsLanguage() {
@@ -1625,7 +1646,9 @@ function renderLanguage() {
   document.documentElement.lang = t.htmlLang;
   document.title = t.title;
   if (headerTitle) headerTitle.textContent = t.title;
-  if (headerDesc) headerDesc.textContent = t.description;
+  if (headerDesc) headerDesc.textContent = (t.shortcuts && t.shortcuts.desc)
+    ? t.shortcuts.desc
+    : t.description;
   if (nav) nav.setAttribute('aria-label', t.navLabel);
   if (controlsTitle) controlsTitle.textContent = t.controlsTitle;
   if (langLabel) langLabel.textContent = t.languageLabel;
@@ -1664,21 +1687,28 @@ async function bootstrap() {
   persistSnapshot(prev, latestHistory, now.toISOString());
 }
 
-pauseBtn.addEventListener('click', () => {
-  paused = !paused;
-  pauseBtn.setAttribute('aria-pressed', String(paused));
-  const t = currentT();
-  pauseBtn.textContent = paused ? t.pause.resume : t.pause.pause;
-  if (paused) {
-    clearReconnectTimer();
-    closeEventSource();
-    lastError = null;
-    renderError();
-  } else {
-    reconnectDelay = INITIAL_RECONNECT_DELAY;
-    connectStream();
-  }
-});
+if (pauseBtn) {
+  pauseBtn.addEventListener('click', () => {
+    paused = !paused;
+    pauseBtn.setAttribute('aria-pressed', String(paused));
+    const t = currentT();
+    pauseBtn.textContent = paused ? t.pause.resume : t.pause.pause;
+    if (paused) {
+      clearReconnectTimer();
+      closeEventSource();
+      lastError = null;
+      renderError();
+    } else {
+      reconnectDelay = INITIAL_RECONNECT_DELAY;
+      connectStream();
+    }
+  });
+} else {
+  // No pause UI: always live
+  paused = false;
+  reconnectDelay = INITIAL_RECONNECT_DELAY;
+  connectStream();
+}
 
 if (langSelect) {
   langSelect.addEventListener('change', () => {
@@ -1700,3 +1730,22 @@ bootstrap()
     connectStream();
   });
 
+// Keyboard shortcuts: 1–6 courts, H = history
+document.addEventListener('keydown', (e) => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  const target = e.target;
+  const isField = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+  if (isField) return;
+  const key = e.key;
+  if (/^[1-6]$/.test(key)) {
+    const idx = Number(key) - 1;
+    const court = COURTS[idx];
+    if (court) {
+      const el = document.getElementById(`kort-${court}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  } else if (key === 'h' || key === 'H') {
+    const hist = document.getElementById('history-section');
+    if (hist) hist.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
