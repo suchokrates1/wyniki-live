@@ -467,8 +467,8 @@ main {
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(360px, 1fr));
-  gap: 14px;
-  margin: 14px 0;
+  gap: 24px;
+  margin: 22px 0;
 }
 @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
 
@@ -477,6 +477,7 @@ main {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px 10px 6px;
+  box-sizing: border-box;
   opacity: 0;
   transform: translateY(10px) scale(.98);
   animation: card-in .5s ease forwards;
