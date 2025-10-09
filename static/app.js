@@ -817,22 +817,35 @@ function updateCourt(k, data) {
     updateTitle(k, A, B);
   }
 
-  if (A.points !== undefined && A.points !== prevK?.A?.points) {
-    const cell = document.getElementById(`k${k}-pts-A`);
-    if (cell) {
-      const pointsText = normalizePointsDisplay(A.points);
-      cell.textContent = pointsText;
-      flash(cell);
-      announcePoints(k, surnameA, pointsText);
+  const tieNow = data.tie || {};
+  const tiePrev = prevK.tie || {};
+
+  const pointsA = resolveDisplayedPoints('A', A, prevK.A || {}, tieNow, tiePrev);
+  const pointsB = resolveDisplayedPoints('B', B, prevK.B || {}, tieNow, tiePrev);
+
+  const cellA = document.getElementById(`k${k}-pts-A`);
+  if (cellA) {
+    const prevText = cellA.textContent;
+    const nextText = pointsA.text;
+    const textChanged = prevText !== nextText;
+    cellA.textContent = nextText;
+    cellA.classList.toggle('is-tiebreak', pointsA.isTie);
+    if (textChanged) {
+      flash(cellA);
+      announcePoints(k, surnameA, nextText);
     }
   }
-  if (B.points !== undefined && B.points !== prevK?.B?.points) {
-    const cell = document.getElementById(`k${k}-pts-B`);
-    if (cell) {
-      const pointsText = normalizePointsDisplay(B.points);
-      cell.textContent = pointsText;
-      flash(cell);
-      announcePoints(k, surnameB, pointsText);
+
+  const cellB = document.getElementById(`k${k}-pts-B`);
+  if (cellB) {
+    const prevText = cellB.textContent;
+    const nextText = pointsB.text;
+    const textChanged = prevText !== nextText;
+    cellB.textContent = nextText;
+    cellB.classList.toggle('is-tiebreak', pointsB.isTie);
+    if (textChanged) {
+      flash(cellB);
+      announcePoints(k, surnameB, nextText);
     }
   }
 
@@ -869,8 +882,6 @@ function updateCourt(k, data) {
       announceGames(k, surnameB, cell.textContent);
     }
   }
-  const tieNow = data.tie || {};
-  const tiePrev = prevK.tie || {};
   const surnames = { A: surnameA, B: surnameB };
 
   const setInfos = ['set1', 'set2', 'set3'].map(key => ({
@@ -918,6 +929,35 @@ function normalizePointsDisplay(value) {
   const text = String(value).trim();
   if (!text || text === '-') return '0';
   return text;
+}
+
+function normalizeTieDisplay(value) {
+  if (value === undefined || value === null) return '0';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '0';
+    return String(value);
+  }
+  const text = String(value).trim();
+  if (!text || text === '-') return '0';
+  const parsed = Number.parseInt(text, 10);
+  return Number.isNaN(parsed) ? text : String(parsed);
+}
+
+function resolveDisplayedPoints(side, currentPlayer, previousPlayer, tieNow, tiePrev) {
+  const tieCurrent = tieNow || {};
+  const tiePrevious = tiePrev || {};
+  if (tieCurrent.visible === true) {
+    const raw = latestValue(tieCurrent, tiePrevious, side);
+    return {
+      text: normalizeTieDisplay(raw),
+      isTie: true
+    };
+  }
+  const rawPoints = latestValue(currentPlayer || {}, previousPlayer || {}, 'points');
+  return {
+    text: normalizePointsDisplay(rawPoints),
+    isTie: false
+  };
 }
 
 function updatePlayerFlag(k, side, current, previous) {

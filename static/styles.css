@@ -263,6 +263,13 @@ main {
   text-align: center;
 }
 
+.score-table .points.is-tiebreak {
+  background: #f4c86a;
+  color: #1d1d1d;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
 .score-table .set {
   background: #b5521a;
   min-width: 42px;
