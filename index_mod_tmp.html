@@ -8,28 +8,11 @@
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E🎾%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/app.js" defer></script>
-  <meta http-equiv="Content-Language" content="pl" />
 </head>
 <body>
   <div class="wrap">
-    <header role="banner" class="header">
-      <div class="header-bar">
-        <h1 class="header-title">Wyniki tenisowe – na żywo</h1>
-        <div class="header-actions">
-          <label class="sr-only" for="langSelect" id="langLabel">Wybierz język</label>
-          <select id="langSelect" name="lang" class="lang-select">
-            <option value="pl">Polski</option>
-            <option value="de">Deutsch</option>
-            <option value="en">English</option>
-            <option value="it">Italiano</option>
-            <option value="es">Español</option>
-            <option value="fi">Suomi</option>
-            <option value="uk">Українська</option>
-            <option value="fr">Français</option>
-            <option value="lt">Lietuvių</option>
-          </select>
-        </div>
-      </div>
+    <header role="banner">
+      <h1>Wyniki tenisowe – na żywo</h1>
       <p class="desc">Strona odświeża wyniki automatycznie. Dostępna dla czytników ekranu.</p>
     </header>
 
@@ -39,6 +22,18 @@
 
     <section class="controls" aria-labelledby="ctrl-title">
       <h2 id="ctrl-title" class="sr-only">Sterowanie</h2>
+      <label class="sr-only" for="langSelect" id="langLabel">Wybierz język</label>
+      <select id="langSelect" name="lang">
+        <option value="pl">Polski</option>
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+        <option value="it">Italiano</option>
+        <option value="es">Español</option>
+        <option value="fi">Suomi</option>
+        <option value="uk">Українська</option>
+        <option value="fr">Français</option>
+        <option value="lt">Lietuvių</option>
+      </select>
       <button class="btn" id="pauseBtn" type="button" aria-pressed="false">Wstrzymaj odświeżanie</button>
     </section>
 
@@ -58,4 +53,3 @@
   </div>
 </body>
 </html>
-
