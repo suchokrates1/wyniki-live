@@ -16,6 +16,26 @@ app = Flask(__name__, static_folder=None)
 OVERLAY_BASE = os.environ.get("UNO_BASE", "https://app.overlays.uno/apiv2/controlapps")
 UNO_AUTH_BEARER = os.environ.get("UNO_AUTH_BEARER", "").strip()
 
+def _normalize_overlay_id(value: Any) -> Optional[str]:
+    if not value:
+        return None
+    if isinstance(value, (tuple, list)):
+        value = value[0] if value else None
+    if isinstance(value, dict):
+        value = value.get("overlay") or value.get("id") or value.get("app") or value.get("appId")
+    if isinstance(value, bytes):
+        value = value.decode("utf-8", "ignore")
+    text = str(value).strip()
+    if not text:
+        return None
+    match = re.search(r"(?:^|[^A-Za-z0-9])app_([A-Za-z0-9]+)", text, re.IGNORECASE)
+    if match:
+        return f"app_{match.group(1).lower()}"
+    match = re.search(r"(?:^|[^A-Za-z0-9])([A-F0-9]{32})", text, re.IGNORECASE)
+    if match:
+        return f"app_{match.group(1).lower()}"
+    return None
+
 def load_overlay_ids() -> Dict[str, str]:
     ids: Dict[str, str] = {}
     for k, v in os.environ.items():
@@ -181,20 +201,6 @@ def _normalize_kort_id(raw: Any) -> Optional[str]:
             pass
     normalized = text.lstrip("0")
     return normalized or text
-
-
-def _normalize_overlay_id(value: Any) -> Optional[str]:
-    if value is None:
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    lower = text.lower()
-    if lower.startswith('app_'):
-        return lower
-    if text.isdigit():
-        return f'app_{text}'.lower()
-    return lower
 
 
 def _is_known_kort(kort_id: str) -> bool:
