@@ -228,6 +228,8 @@
     players: { defaultA: 'Giocatore A', defaultB: 'Giocatore B', fallback: 'giocatore', fallbackOpponent: 'avversario' },
     liveBadge: 'LIVE',
     shortcuts: { desc: 'Scorciatoie: [1–6] campi, H – storia.' },
+    liveBadge: 'LIVE',
+    shortcuts: { desc: 'Scorciatoie: [1–6] campi, H – storia.' },
     versus: 'contro',
     meta: {
       lastRefresh: 'Ultimo aggiornamento: {time}.',
@@ -291,6 +293,8 @@
       }
     },
     players: { defaultA: 'Jugador A', defaultB: 'Jugador B', fallback: 'jugador', fallbackOpponent: 'rival' },
+    liveBadge: 'EN VIVO',
+    shortcuts: { desc: 'Atajos: [1–6] canchas, H – historial.' },
     liveBadge: 'EN VIVO',
     shortcuts: { desc: 'Atajos: [1–6] canchas, H – historial.' },
     versus: 'contra',
@@ -358,6 +362,8 @@
     players: { defaultA: 'Pelaaja A', defaultB: 'Pelaaja B', fallback: 'pelaaja', fallbackOpponent: 'vastustaja' },
     liveBadge: 'LIVE',
     shortcuts: { desc: 'Pikanäppäimet: [1–6] kentät, H – historia.' },
+    liveBadge: 'LIVE',
+    shortcuts: { desc: 'Pikanäppäimet: [1–6] kentät, H – historia.' },
     versus: 'vastaan',
     meta: {
       lastRefresh: 'Viimeisin päivitys: {time}.',
@@ -423,6 +429,8 @@
     players: { defaultA: 'Гравець A', defaultB: 'Гравець B', fallback: 'гравець', fallbackOpponent: 'суперник' },
     liveBadge: 'LIVE',
     shortcuts: { desc: 'Скорочення: [1–6] корти, H – історія.' },
+    liveBadge: 'LIVE',
+    shortcuts: { desc: 'Скорочення: [1–6] корти, H – історія.' },
     versus: 'проти',
     meta: {
       lastRefresh: 'Останнє оновлення: {time}.',
@@ -481,6 +489,8 @@
     players: { defaultA: 'Joueur A', defaultB: 'Joueur B', fallback: 'joueur', fallbackOpponent: 'adversaire' },
     liveBadge: 'EN DIRECT',
     shortcuts: { desc: 'Raccourcis : [1–6] courts, H – historique.' },
+    liveBadge: 'EN DIRECT',
+    shortcuts: { desc: 'Raccourcis : [1–6] courts, H – historique.' },
     versus: 'contre',
     meta: {
       lastRefresh: 'Dernière mise à jour : {time}.',
@@ -537,6 +547,8 @@
       }
     },
     players: { defaultA: 'Žaidėjas A', defaultB: 'Žaidėjas B', fallback: 'žaidėjas', fallbackOpponent: 'varžovas' },
+    liveBadge: 'TIESIOGIAI',
+    shortcuts: { desc: 'Trumpiniai: [1–6] aikštės, H – istorija.' },
     liveBadge: 'TIESIOGIAI',
     shortcuts: { desc: 'Trumpiniai: [1–6] aikštės, H – istorija.' },
     versus: 'prieš',
