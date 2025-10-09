@@ -179,6 +179,11 @@ def _reset_tie_and_points(state: Dict[str, Any]) -> None:
     state["A"]["points"] = "0"
     state["B"]["points"] = "0"
 
+
+def _reset_regular_points(state: Dict[str, Any]) -> None:
+    state["A"]["points"] = "0"
+    state["B"]["points"] = "0"
+
 if OVERLAY_IDS:
     _initial_courts = sorted(OVERLAY_IDS.keys(), key=lambda v: int(v))
 else:
@@ -458,24 +463,31 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
             if cur_match:
                 side = cur_match.group(1)
                 state[side]["current_games"] = _as_int(value, 0)
+                _reset_regular_points(state)
                 changed = True
             elif command == "IncreaseCurrentSetPlayerA":
                 state["A"]["current_games"] = max(0, state["A"]["current_games"] + 1)
+                _reset_regular_points(state)
                 changed = True
             elif command == "IncreaseCurrentSetPlayerB":
                 state["B"]["current_games"] = max(0, state["B"]["current_games"] + 1)
+                _reset_regular_points(state)
                 changed = True
             elif command == "DecreaseCurrentSetPlayerA":
                 state["A"]["current_games"] = max(0, state["A"]["current_games"] - 1)
+                _reset_regular_points(state)
                 changed = True
             elif command == "DecreaseCurrentSetPlayerB":
                 state["B"]["current_games"] = max(0, state["B"]["current_games"] - 1)
+                _reset_regular_points(state)
                 changed = True
             elif command == "SetCurrentSet":
                 state["current_set"] = _as_int(value, 0) or None
+                _reset_regular_points(state)
                 changed = True
             elif command == "SetSet":
                 state["current_set"] = _as_int(value, 0) or None
+                _reset_regular_points(state)
                 changed = True
             elif command == "IncreaseSet":
                 state["current_set"] = (state["current_set"] or 0) + 1
