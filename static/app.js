@@ -668,7 +668,7 @@ function makeCourtCard(k) {
         <span class="court-label" id="court-label-${k}">${courtLabel}</span>:
         <span id="title-${k}" class="match-title">
           <span class="match-player" data-title="A">${defaultA}</span>
-          <span class="match-versus" id="title-${k}-versus" aria-label="${acc.versus}">${t.versus}</span>
+          <span class="match-versus" id="title-${k}-versus" aria-label="${acc.versus}"><span aria-hidden="true">${t.versus}</span><span class="sr-only">${acc.versus}</span></span>
           <span class="match-player" data-title="B">${defaultB}</span>
         </span>
       </h2>
@@ -982,7 +982,11 @@ function updateTitle(k, Adata, Bdata) {
       const acc = resolveAccessibilityStrings(t);
       nameAEl.textContent = safeA;
       nameBEl.textContent = safeB;
-      versusEl.textContent = t.versus;
+      // visible abbreviation + screenreader-friendly label
+      const vis = versusEl.querySelector('[aria-hidden="true"]');
+      const sr = versusEl.querySelector('.sr-only');
+      if (vis) vis.textContent = t.versus;
+      if (sr) sr.textContent = acc.versus;
       versusEl.setAttribute('aria-label', acc.versus);
     } else {
       title.textContent = `${safeA} | ${safeB}`;
