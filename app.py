@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os, json, time, threading, sqlite3, logging, re, queue
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 import requests
 from collections import deque
 from flask import Flask, jsonify, send_from_directory, request, abort, Response, render_template_string, stream_with_context
@@ -155,10 +155,12 @@ def _empty_court_state() -> Dict[str, Any]:
         "mode": None,
         "serve": None,
         "current_set": 1,
-        "match_time": {"seconds": 0, "running": False},
+        "match_time": {"seconds": 0, "running": False, "started_ts": None, "finished_ts": None},
+        "match_status": {"active": False, "last_completed": None},
         "A": _empty_player_state(),
         "B": _empty_player_state(),
         "tie": {"visible": None, "A": 0, "B": 0},
+        "history": [],
         "local": {"commands": {}, "updated": None},
         "uno": {
             "last_command": None,
@@ -306,9 +308,11 @@ def _serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
         "serve": state["serve"],
         "current_set": state["current_set"],
         "match_time": dict(state["match_time"]),
+        "match_status": dict(state["match_status"]),
         "A": dict(state["A"]),
         "B": dict(state["B"]),
         "tie": dict(state["tie"]),
+        "history": list(state["history"]),
         "local": {
             "updated": state["local"]["updated"],
             "commands": {cmd: dict(info) for cmd, info in state["local"]["commands"].items()},
@@ -336,6 +340,176 @@ def _safe_copy(data: Any) -> Any:
     except (TypeError, ValueError):
         return str(data)
 
+
+def _parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        if value.endswith("Z"):
+            try:
+                return datetime.fromisoformat(value[:-1] + "+00:00")
+            except ValueError:
+                return None
+    return None
+
+
+def _ensure_match_struct(state: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    mt = state.setdefault("match_time", {"seconds": 0, "running": False, "started_ts": None, "finished_ts": None})
+    if "started_ts" not in mt:
+        mt["started_ts"] = None
+    if "finished_ts" not in mt:
+        mt["finished_ts"] = None
+    if "seconds" not in mt:
+        mt["seconds"] = 0
+    if "running" not in mt:
+        mt["running"] = False
+    status = state.setdefault("match_status", {"active": False, "last_completed": None})
+    if "active" not in status:
+        status["active"] = False
+    if "last_completed" not in status:
+        status["last_completed"] = None
+    if "history" not in state or not isinstance(state["history"], list):
+        state["history"] = []
+    return mt, status
+
+
+def _maybe_start_match(state: Dict[str, Any]) -> None:
+    mt, status = _ensure_match_struct(state)
+    if status.get("active") and mt.get("running"):
+        return
+    if mt.get("started_ts"):
+        return
+    set1_started = (state["A"].get("set1") or 0) > 0 or (state["B"].get("set1") or 0) > 0
+    current_games_started = ((state["A"].get("current_games") or 0) > 0 or (state["B"].get("current_games") or 0) > 0) and (state.get("current_set") in (None, 0, 1))
+    if set1_started or current_games_started:
+        iso = _now_iso()
+        mt["started_ts"] = iso
+        mt["finished_ts"] = None
+        mt["seconds"] = 0
+        mt["running"] = True
+        status["active"] = True
+
+
+def _update_match_timer(state: Dict[str, Any]) -> None:
+    mt, _ = _ensure_match_struct(state)
+    if not mt.get("running"):
+        return
+    start = _parse_iso_datetime(mt.get("started_ts"))
+    if start is None:
+        iso = _now_iso()
+        mt["started_ts"] = iso
+        start = _parse_iso_datetime(iso)
+        if start is None:
+            return
+    now_iso = _now_iso()
+    now_dt = _parse_iso_datetime(now_iso)
+    if now_dt is None:
+        return
+    seconds = max(0, int((now_dt - start).total_seconds()))
+    mt["seconds"] = seconds
+    mt["finished_ts"] = now_iso
+
+
+def _stop_match_timer(state: Dict[str, Any]) -> None:
+    mt, _ = _ensure_match_struct(state)
+    _update_match_timer(state)
+    mt["running"] = False
+    if not mt.get("finished_ts"):
+        mt["finished_ts"] = _now_iso()
+
+
+def _format_duration(seconds: int) -> str:
+    seconds = max(0, int(seconds))
+    minutes, _ = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours:02d}:{minutes:02d}"
+
+
+def _reset_after_match(state: Dict[str, Any]) -> None:
+    mt, status = _ensure_match_struct(state)
+    for side in ("A", "B"):
+        side_state = state[side]
+        side_state["points"] = "0"
+        side_state["set1"] = 0
+        side_state["set2"] = 0
+        side_state["set3"] = 0
+        side_state["current_games"] = 0
+    state["tie"]["A"] = 0
+    state["tie"]["B"] = 0
+    state["tie"]["visible"] = False
+    state["current_set"] = 1
+    mt["seconds"] = 0
+    mt["running"] = False
+    mt["started_ts"] = None
+    mt["finished_ts"] = None
+    status["active"] = False
+
+
+def _build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
+    mt, _ = _ensure_match_struct(state)
+    ended_at = mt.get("finished_ts") or _now_iso()
+    duration_seconds = int(mt.get("seconds") or 0)
+    return {
+        "kort": kort_id,
+        "ended_at": ended_at,
+        "duration_seconds": duration_seconds,
+        "duration_text": _format_duration(duration_seconds),
+        "players": {
+            "A": {
+                "full_name": state["A"].get("full_name"),
+                "surname": state["A"].get("surname"),
+            },
+            "B": {
+                "full_name": state["B"].get("full_name"),
+                "surname": state["B"].get("surname"),
+            },
+        },
+        "sets": {
+            "set1": {"A": state["A"].get("set1") or 0, "B": state["B"].get("set1") or 0},
+            "set2": {"A": state["A"].get("set2") or 0, "B": state["B"].get("set2") or 0},
+            "set3": {"A": state["A"].get("set3") or 0, "B": state["B"].get("set3") or 0},
+            "tie": {"A": state["tie"].get("A") or 0, "B": state["tie"].get("B") or 0},
+        },
+    }
+
+
+def _finalize_match_if_needed(kort_id: str, state: Dict[str, Any]) -> None:
+    mt, status = _ensure_match_struct(state)
+    if not status.get("active"):
+        return
+    a_set2 = int(state["A"].get("set2") or 0)
+    b_set2 = int(state["B"].get("set2") or 0)
+    if (a_set2 == 4 and b_set2 <= 3) or (b_set2 == 4 and a_set2 <= 3):
+        _stop_match_timer(state)
+        entry = _build_match_history_entry(kort_id, state)
+        history = state.setdefault("history", [])
+        history.insert(0, entry)
+        if len(history) > 20:
+            history.pop()
+        status["active"] = False
+        status["last_completed"] = entry["ended_at"]
+        log.info(
+            "match completed kort=%s players=%s duration=%s",
+            kort_id,
+            {
+                "A": entry["players"]["A"]["surname"],
+                "B": entry["players"]["B"]["surname"],
+                "set1": entry["sets"]["set1"],
+                "set2": entry["sets"]["set2"],
+            },
+            entry["duration_text"],
+        )
+        _reset_after_match(state)
+
+
+def _handle_match_flow(kort_id: Optional[str], state: Dict[str, Any]) -> None:
+    _ensure_match_struct(state)
+    _maybe_start_match(state)
+    _update_match_timer(state)
+    if kort_id is not None:
+        _finalize_match_if_needed(kort_id, state)
 def _record_log_entry(state: Dict[str, Any], kort_id: str, source: str, command: str,
                       value: Any, extras: Optional[Dict[str, Any]], ts: str) -> Dict[str, Any]:
     entry: Dict[str, Any] = {
@@ -401,7 +575,7 @@ def _as_int(value: Any, default: int = 0) -> int:
         return default
 
 def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
-                         extras: Optional[Dict[str, Any]]) -> bool:
+                         extras: Optional[Dict[str, Any]], kort_id: Optional[str] = None) -> bool:
     log.debug("apply command=%s value=%s extras=%s", command, _shorten(value), _shorten(extras))
     changed = False
     if command == "SetNamePlayerA":
@@ -457,6 +631,7 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
             side = set_match.group(2)
             key = f"set{idx}"
             state[side][key] = _as_int(value, 0)
+            _reset_regular_points(state)
             changed = True
         else:
             cur_match = re.fullmatch(r"SetCurrentSetPlayer([AB])", command)
@@ -607,6 +782,7 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
                 else:
                     log.info("unhandled command=%s value=%s extras=%s", command, _shorten(value), _shorten(extras))
 
+    _handle_match_flow(kort_id, state)
     return changed
 
 # ====== Widoki ======
@@ -732,7 +908,7 @@ def api_mirror():
         changed = False
         if command:
             try:
-                changed = _apply_local_command(state, command, value, extras or None)
+                changed = _apply_local_command(state, command, value, extras or None, kort_id)
             except Exception as exc:  # noqa: BLE001
                 log.warning(
                     "mirror apply failed kort=%s command=%s error=%s",
@@ -833,7 +1009,7 @@ def api_local_reflect(kort_id: str):
 
     with STATE_LOCK:
         state = _ensure_court_state(kort_id)
-        changed = _apply_local_command(state, command, value, extras)
+        changed = _apply_local_command(state, command, value, extras, kort_id)
         state["local"]["commands"][command] = {
             "value": value,
             "extras": extras_copy,
@@ -944,7 +1120,7 @@ def api_uno_exec(kort_id: str):
         state = _ensure_court_state(kort_id)
         if success:
             try:
-                _apply_local_command(state, command, value, extras)
+                _apply_local_command(state, command, value, extras, kort_id)
             except Exception as exc:  # noqa: BLE001
                 log.warning(
                     "failed to apply local command mirror kort=%s command=%s error=%s",

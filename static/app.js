@@ -42,6 +42,17 @@ const TRANSLATIONS = {
       tiePoint: 'tiebreak {player} {value}',
       tieToggleOn: 'Super tiebreak rozpoczęty',
       tieToggleOff: 'Super tiebreak zakończony'
+    },
+    history: {
+      title: 'Historia meczów',
+      empty: 'Brak zapisanych wyników.',
+      columns: {
+        ended: 'Zakończono',
+        players: 'Zawodnicy',
+        set1: 'Set 1',
+        set2: 'Set 2',
+        duration: 'Czas'
+      }
     }
   },
   de: {
@@ -87,6 +98,17 @@ const TRANSLATIONS = {
       tiePoint: 'Tiebreak {player} {value}',
       tieToggleOn: 'Super-Tiebreak gestartet',
       tieToggleOff: 'Super-Tiebreak beendet'
+    },
+    history: {
+      title: 'Match-Historie',
+      empty: 'Keine gespeicherten Ergebnisse.',
+      columns: {
+        ended: 'Beendet',
+        players: 'Spieler',
+        set1: 'Satz 1',
+        set2: 'Satz 2',
+        duration: 'Dauer'
+      }
     }
   },
   en: {
@@ -132,6 +154,17 @@ const TRANSLATIONS = {
       tiePoint: 'tiebreak {player} {value}',
       tieToggleOn: 'Super tiebreak started',
       tieToggleOff: 'Super tiebreak finished'
+    },
+    history: {
+      title: 'Match history',
+      empty: 'No saved results.',
+      columns: {
+        ended: 'Finished',
+        players: 'Players',
+        set1: 'Set 1',
+        set2: 'Set 2',
+        duration: 'Time'
+      }
     }
   },
   it: {
@@ -177,6 +210,17 @@ const TRANSLATIONS = {
       tiePoint: 'tiebreak {player} {value}',
       tieToggleOn: 'Super tiebreak iniziato',
       tieToggleOff: 'Super tiebreak terminato'
+    },
+    history: {
+      title: 'Storico incontri',
+      empty: 'Nessun risultato salvato.',
+      columns: {
+        ended: 'Concluso',
+        players: 'Giocatori',
+        set1: 'Set 1',
+        set2: 'Set 2',
+        duration: 'Durata'
+      }
     }
   },
   es: {
@@ -222,6 +266,17 @@ const TRANSLATIONS = {
       tiePoint: 'desempate {player} {value}',
       tieToggleOn: 'Súper desempate iniciado',
       tieToggleOff: 'Súper desempate finalizado'
+    },
+    history: {
+      title: 'Historial de partidos',
+      empty: 'No hay resultados guardados.',
+      columns: {
+        ended: 'Finalizado',
+        players: 'Jugadores',
+        set1: 'Set 1',
+        set2: 'Set 2',
+        duration: 'Tiempo'
+      }
     }
   },
   fi: {
@@ -267,6 +322,17 @@ const TRANSLATIONS = {
       tiePoint: 'tiebreak {player} {value}',
       tieToggleOn: 'Super-tiebreak alkoi',
       tieToggleOff: 'Super-tiebreak päättyi'
+    },
+    history: {
+      title: 'Otteluhistoria',
+      empty: 'Ei tallennettuja tuloksia.',
+      columns: {
+        ended: 'Päättynyt',
+        players: 'Pelaajat',
+        set1: 'Erä 1',
+        set2: 'Erä 2',
+        duration: 'Aika'
+      }
     }
   },
   uk: {
@@ -312,6 +378,17 @@ const TRANSLATIONS = {
       tiePoint: 'тайбрейк {player} {value}',
       tieToggleOn: 'Супер-тайбрейк розпочато',
       tieToggleOff: 'Супер-тайбрейк завершено'
+    },
+    history: {
+      title: 'Історія матчів',
+      empty: 'Немає збережених результатів.',
+      columns: {
+        ended: 'Завершено',
+        players: 'Гравці',
+        set1: 'Сет 1',
+        set2: 'Сет 2',
+        duration: 'Час'
+      }
     }
   },
   fr: {
@@ -357,6 +434,17 @@ const TRANSLATIONS = {
       tiePoint: 'tie-break {player} {value}',
       tieToggleOn: 'Super tie-break commencé',
       tieToggleOff: 'Super tie-break terminé'
+    },
+    history: {
+      title: 'Historique des matchs',
+      empty: 'Aucun résultat enregistré.',
+      columns: {
+        ended: 'Terminé',
+        players: 'Joueurs',
+        set1: 'Set 1',
+        set2: 'Set 2',
+        duration: 'Durée'
+      }
     }
   },
   lt: {
@@ -402,6 +490,17 @@ const TRANSLATIONS = {
       tiePoint: 'taibreikas {player} {value}',
       tieToggleOn: 'Super taibreikas pradėtas',
       tieToggleOff: 'Super taibreikas baigtas'
+    },
+    history: {
+      title: 'Mačo istorija',
+      empty: 'Nėra išsaugotų rezultatų.',
+      columns: {
+        ended: 'Baigta',
+        players: 'Žaidėjai',
+        set1: 'Setas 1',
+        set2: 'Setas 2',
+        duration: 'Laikas'
+      }
     }
   }
 };
@@ -434,6 +533,7 @@ let prev = {};
 const COURT_SET_STATE = {};
 const INITIAL_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 30000;
+const SNAPSHOT_STORAGE_KEY = 'score.vestmedia.snapshot.v1';
 
 let eventSource = null;
 let reconnectTimer = null;
@@ -521,6 +621,11 @@ function makeCourtCard(k) {
     </tbody>
   </table>
 
+  <div class="match-history" id="history-${k}">
+    <h3 class="history-title">${t.history?.title || 'Historia meczów'}</h3>
+    <div class="history-body" id="history-body-${k}" aria-live="polite"></div>
+  </div>
+
     <div id="live-${k}" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   `;
 
@@ -530,6 +635,7 @@ function makeCourtCard(k) {
 
   const liveRegion = section.querySelector(`#live-${k}`);
   liveRegion.setAttribute('lang', currentLocale());
+  renderHistory(k, []);
 
   return section;
 }
@@ -656,6 +762,102 @@ function resolvePlayerName(playerData, fallbackKey) {
     return playerData.trim();
   }
   return t.players[fallbackKey];
+}
+
+function formatHistoryTimestamp(iso) {
+  if (!iso) return '-';
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return '-';
+  return dt.toLocaleString(currentLocale(), { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+}
+
+function renderHistory(k, history = []) {
+  const container = document.getElementById(`history-${k}`);
+  if (!container) return;
+  const body = container.querySelector('.history-body') || container;
+  const t = currentT();
+  const target = document.getElementById(`history-body-${k}`) || body;
+  target.innerHTML = '';
+
+  if (!history || !history.length) {
+    container.classList.add('is-empty');
+    const empty = document.createElement('p');
+    empty.className = 'history-empty';
+    empty.textContent = t.history?.empty || 'Brak zapisanych wyników.';
+    target.appendChild(empty);
+    return;
+  }
+
+  container.classList.remove('is-empty');
+  const table = document.createElement('table');
+  table.className = 'history-table';
+  const cols = t.history?.columns || {
+    ended: 'Zakończono',
+    players: 'Zawodnicy',
+    set1: 'Set 1',
+    set2: 'Set 2',
+    duration: 'Czas'
+  };
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th scope="col">${cols.ended}</th>
+        <th scope="col">${cols.players}</th>
+        <th scope="col">${cols.set1}</th>
+        <th scope="col">${cols.set2}</th>
+        <th scope="col">${cols.duration}</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+  history.slice(0, 10).forEach((entry) => {
+    const row = document.createElement('tr');
+    const playerA = resolvePlayerName(entry.players?.A || {}, 'defaultA');
+    const playerB = resolvePlayerName(entry.players?.B || {}, 'defaultB');
+    const set1 = `${entry.sets?.set1?.A ?? 0}:${entry.sets?.set1?.B ?? 0}`;
+    const set2 = `${entry.sets?.set2?.A ?? 0}:${entry.sets?.set2?.B ?? 0}`;
+    const duration = entry.duration_text || (() => {
+      const secs = Number(entry.duration_seconds || 0);
+      const minutes = Math.floor(secs / 60) % 60;
+      const hours = Math.floor(secs / 3600);
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    })();
+
+    const cells = [
+      formatHistoryTimestamp(entry.ended_at),
+      `${playerA} vs ${playerB}`,
+      set1,
+      set2,
+      duration
+    ];
+    cells.forEach((value, idx) => {
+      const cell = document.createElement('td');
+      cell.textContent = typeof value === 'string' ? value : String(value ?? '');
+      row.appendChild(cell);
+    });
+    tbody.appendChild(row);
+  });
+
+  target.appendChild(table);
+}
+
+function applyScoreAria(k, data) {
+  const section = document.getElementById(`kort-${k}`);
+  if (!section) return;
+  const table = section.querySelector('.score-table');
+  if (!table) return;
+  const nameA = resolvePlayerName(data.A || {}, 'defaultA');
+  const nameB = resolvePlayerName(data.B || {}, 'defaultB');
+  const pointsA = (document.getElementById(`k${k}-pts-A`)?.textContent || '0').trim();
+  const pointsB = (document.getElementById(`k${k}-pts-B`)?.textContent || '0').trim();
+  const set1A = (document.getElementById(`k${k}-s1-A`)?.textContent || '0').trim();
+  const set1B = (document.getElementById(`k${k}-s1-B`)?.textContent || '0').trim();
+  const set2A = (document.getElementById(`k${k}-s2-A`)?.textContent || '0').trim();
+  const set2B = (document.getElementById(`k${k}-s2-B`)?.textContent || '0').trim();
+  const activeSet = Number(data.current_set || 1);
+  const summary = `${nameA} kontra ${nameB}, punkty ${pointsA}:${pointsB}, Set 1${activeSet === 1 ? ' aktywny' : ''}: ${set1A}:${set1B}, Set 2${activeSet === 2 ? ' aktywny' : ''}: ${set2A}:${set2B}`;
+  table.setAttribute('aria-label', summary);
 }
 
 function updateTitle(k, Adata, Bdata) {
@@ -929,6 +1131,8 @@ function updateCourt(k, data) {
   }
 
   handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames);
+  renderHistory(k, Array.isArray(data.history) ? data.history : []);
+  applyScoreAria(k, data);
 
   applySetHighlight(k, data.current_set ?? 1);
 }
@@ -1087,6 +1291,7 @@ function handleStreamPayload(payload) {
     });
     prev = state;
     updateLastRefresh(parseTimestamp(payload.ts) || new Date());
+    persistSnapshot(prev, payload.ts);
     return;
   }
 
@@ -1109,6 +1314,7 @@ function handleStreamPayload(payload) {
   }
 
   updateLastRefresh(parseTimestamp(payload.ts) || new Date());
+  persistSnapshot(prev, payload.ts);
 }
 
 function handleStreamMessage(event) {
@@ -1154,6 +1360,60 @@ window.addEventListener('beforeunload', () => {
 
 function computeCourts(data) {
   return Object.keys(data).sort((a, b) => Number(a) - Number(b));
+}
+
+function cloneStateForStorage(state) {
+  try {
+    return JSON.parse(JSON.stringify(state, (key, value) => (key === 'log' ? undefined : value)));
+  } catch (err) {
+    console.warn('[score] snapshot clone failed', err);
+    return null;
+  }
+}
+
+function persistSnapshot(state, ts) {
+  if (!state || typeof state !== 'object') return;
+  const clone = cloneStateForStorage(state);
+  if (!clone) return;
+  try {
+    const payload = {
+      ts: ts || new Date().toISOString(),
+      state: clone
+    };
+    localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.warn('[score] snapshot persist failed', err);
+  }
+}
+
+function hydrateFromStorage() {
+  try {
+    const raw = localStorage.getItem(SNAPSHOT_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.state || typeof parsed.state !== 'object') {
+      return false;
+    }
+    const state = parsed.state;
+    ensureCardsFromSnapshot(state);
+    const courts = computeCourts(state);
+    const prevBackup = prev;
+    prev = prevBackup || {};
+    courts.forEach(k => {
+      if (state[k]) updateCourt(k, state[k]);
+    });
+    prev = state;
+    if (parsed.ts) {
+      const dt = new Date(parsed.ts);
+      if (!Number.isNaN(dt.getTime())) {
+        updateLastRefresh(dt);
+      }
+    }
+    return true;
+  } catch (err) {
+    console.warn('[score] snapshot hydrate failed', err);
+    return false;
+  }
 }
 
 function updateLastRefresh(now) {
@@ -1205,6 +1465,12 @@ function refreshCardsLanguage() {
     updatePlayerFlag(k, 'A', prev[k]?.A || {}, {});
     updatePlayerFlag(k, 'B', prev[k]?.B || {}, {});
     applySetHighlight(k, prev[k]?.current_set ?? 1);
+    const historyTitle = section.querySelector('.history-title');
+    if (historyTitle && t.history?.title) historyTitle.textContent = t.history.title;
+    if (prev[k]) {
+      renderHistory(k, Array.isArray(prev[k].history) ? prev[k].history : []);
+      applyScoreAria(k, prev[k]);
+    }
   });
 }
 
@@ -1245,6 +1511,7 @@ async function bootstrap() {
   });
   prev = data;
   updateLastRefresh(new Date());
+  persistSnapshot(prev);
 }
 
 pauseBtn.addEventListener('click', () => {
@@ -1272,6 +1539,8 @@ if (langSelect) {
 applyLanguage(currentLang, { skipSave: true, skipSelect: true });
 if (langSelect) langSelect.value = currentLang;
 
+hydrateFromStorage();
+
 bootstrap()
   .catch(err => {
     console.error('Bootstrap failed', err);
@@ -1280,3 +1549,4 @@ bootstrap()
     renderLanguage();
     connectStream();
   });
+
