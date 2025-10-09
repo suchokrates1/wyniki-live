@@ -1010,19 +1010,24 @@ function updateCourt(k, data) {
   updatePlayerFlag(k, 'A', A, prevK.A || {});
   updatePlayerFlag(k, 'B', B, prevK.B || {});
 
-  const nameAChanged = A.surname !== undefined && A.surname !== prevK?.A?.surname;
-  const nameBChanged = B.surname !== undefined && B.surname !== prevK?.B?.surname;
+  const normalizeName = (value) => (typeof value === 'string' ? value.trim() : value);
+  const nextNameA = resolvePlayerName(A, 'defaultA');
+  const prevNameA = resolvePlayerName(prevK?.A || {}, 'defaultA');
+  const nameAChanged = normalizeName(nextNameA) !== normalizeName(prevNameA);
+  const nextNameB = resolvePlayerName(B, 'defaultB');
+  const prevNameB = resolvePlayerName(prevK?.B || {}, 'defaultB');
+  const nameBChanged = normalizeName(nextNameB) !== normalizeName(prevNameB);
   if (nameAChanged) {
     const cell = document.getElementById(`k${k}-name-A`);
     if (cell) {
-      cell.textContent = resolvePlayerName(A, 'defaultA');
+      cell.textContent = nextNameA;
       flash(cell);
     }
   }
   if (nameBChanged) {
     const cell = document.getElementById(`k${k}-name-B`);
     if (cell) {
-      cell.textContent = resolvePlayerName(B, 'defaultB');
+      cell.textContent = nextNameB;
       flash(cell);
     }
   }
