@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os, json, time, threading, sqlite3, logging, re, queue
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 import requests
 from collections import deque
 from flask import Flask, jsonify, send_from_directory, request, abort, Response, render_template_string, stream_with_context
@@ -106,6 +106,22 @@ def db_init():
       state TEXT NOT NULL
     );
     """)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS match_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kort_id TEXT NOT NULL,
+      ended_ts TEXT NOT NULL,
+      duration_seconds INTEGER NOT NULL,
+      player_a TEXT,
+      player_b TEXT,
+      set1_a INTEGER,
+      set1_b INTEGER,
+      set2_a INTEGER,
+      set2_b INTEGER,
+      tie_a INTEGER,
+      tie_b INTEGER
+    );
+    """)
     con.commit()
     con.close()
 db_init()
@@ -192,6 +208,7 @@ def load_state_cache() -> None:
 
 # ====== Stan w pamięci ======
 RING_BUFFER_SIZE = int(os.environ.get("STATE_LOG_SIZE", "200"))
+MAX_HISTORY_ENTRIES = int(os.environ.get("MATCH_HISTORY_SIZE", "50"))
 
 STATE_LOCK = threading.Lock()
 
@@ -281,6 +298,7 @@ else:
 snapshots: Dict[str, Dict[str, Any]] = {k: _empty_court_state() for k in _initial_courts}
 
 GLOBAL_LOG: deque = deque(maxlen=max(100, RING_BUFFER_SIZE * max(1, len(snapshots) or 1)))
+GLOBAL_HISTORY: deque = deque(maxlen=MAX_HISTORY_ENTRIES)
 
 
 def _available_courts():
@@ -401,7 +419,6 @@ def _serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
         "A": dict(state["A"]),
         "B": dict(state["B"]),
         "tie": dict(state["tie"]),
-        "history": list(state["history"]),
         "local": {
             "updated": state["local"]["updated"],
             "commands": {cmd: dict(info) for cmd, info in state["local"]["commands"].items()},
@@ -414,6 +431,11 @@ def _serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
 def _serialize_all_states() -> Dict[str, Any]:
     with STATE_LOCK:
         return {kort: _serialize_court_state(state) for kort, state in snapshots.items()}
+
+
+def _serialize_history() -> List[Dict[str, Any]]:
+    with STATE_LOCK:
+        return [json.loads(json.dumps(entry)) for entry in list(GLOBAL_HISTORY)]
 
 def _safe_copy(data: Any) -> Any:
     if data is None:
@@ -464,7 +486,6 @@ def _ensure_match_struct(state: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[st
     return mt, status
 
 load_state_cache()
-
 
 def _maybe_start_match(state: Dict[str, Any]) -> None:
     mt, status = _ensure_match_struct(state)
@@ -517,6 +538,77 @@ def _format_duration(seconds: int) -> str:
     hours, minutes = divmod(minutes, 60)
     return f"{hours:02d}:{minutes:02d}"
 
+def load_match_history() -> None:
+    con = db_conn()
+    try:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT kort_id, ended_ts, duration_seconds, player_a, player_b, "
+            "set1_a, set1_b, set2_a, set2_b, tie_a, tie_b "
+            "FROM match_history ORDER BY id DESC LIMIT ?",
+            (MAX_HISTORY_ENTRIES,)
+        )
+        rows = cur.fetchall()
+    finally:
+        con.close()
+    GLOBAL_HISTORY.clear()
+    for row in rows or []:
+        entry = {
+            "kort": row["kort_id"],
+            "ended_at": row["ended_ts"],
+            "duration_seconds": row["duration_seconds"],
+            "duration_text": _format_duration(row["duration_seconds"]),
+            "players": {
+                "A": {"surname": row["player_a"], "full_name": row["player_a"]},
+                "B": {"surname": row["player_b"], "full_name": row["player_b"]},
+            },
+            "sets": {
+                "set1": {"A": row["set1_a"], "B": row["set1_b"]},
+                "set2": {"A": row["set2_a"], "B": row["set2_b"]},
+                "tie": {
+                    "A": row["tie_a"],
+                    "B": row["tie_b"],
+                    "played": bool(row["tie_a"] or row["tie_b"])
+                }
+            }
+        }
+        GLOBAL_HISTORY.append(entry)
+
+
+def persist_match_history_entry(entry: Dict[str, Any]) -> None:
+    con = db_conn()
+    try:
+        cur = con.cursor()
+        cur.execute(
+            """
+            INSERT INTO match_history (
+                kort_id, ended_ts, duration_seconds, player_a, player_b,
+                set1_a, set1_b, set2_a, set2_b, tie_a, tie_b
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                entry.get("kort"),
+                entry.get("ended_at"),
+                entry.get("duration_seconds", 0),
+                entry.get("players", {}).get("A", {}).get("surname"),
+                entry.get("players", {}).get("B", {}).get("surname"),
+                entry.get("sets", {}).get("set1", {}).get("A", 0),
+                entry.get("sets", {}).get("set1", {}).get("B", 0),
+                entry.get("sets", {}).get("set2", {}).get("A", 0),
+                entry.get("sets", {}).get("set2", {}).get("B", 0),
+                entry.get("sets", {}).get("tie", {}).get("A", 0),
+                entry.get("sets", {}).get("tie", {}).get("B", 0),
+            ),
+        )
+        con.commit()
+    finally:
+        con.close()
+    GLOBAL_HISTORY.appendleft(entry)
+    while len(GLOBAL_HISTORY) > MAX_HISTORY_ENTRIES:
+        GLOBAL_HISTORY.pop()
+
+load_match_history()
+
 
 def _reset_after_match(state: Dict[str, Any]) -> None:
     mt, status = _ensure_match_struct(state)
@@ -542,6 +634,9 @@ def _build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str,
     mt, _ = _ensure_match_struct(state)
     ended_at = mt.get("finished_ts") or _now_iso()
     duration_seconds = int(mt.get("seconds") or 0)
+    tie_state = state.get("tie") if isinstance(state.get("tie"), dict) else {"A": 0, "B": 0}
+    tie_a = tie_state.get("A") or 0
+    tie_b = tie_state.get("B") or 0
     return {
         "kort": kort_id,
         "ended_at": ended_at,
@@ -560,8 +655,7 @@ def _build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str,
         "sets": {
             "set1": {"A": state["A"].get("set1") or 0, "B": state["B"].get("set1") or 0},
             "set2": {"A": state["A"].get("set2") or 0, "B": state["B"].get("set2") or 0},
-            "set3": {"A": state["A"].get("set3") or 0, "B": state["B"].get("set3") or 0},
-            "tie": {"A": state["tie"].get("A") or 0, "B": state["tie"].get("B") or 0},
+            "tie": {"A": tie_a, "B": tie_b, "played": bool(tie_a or tie_b)},
         },
     }
 
@@ -575,10 +669,7 @@ def _finalize_match_if_needed(kort_id: str, state: Dict[str, Any]) -> None:
     if (a_set2 == 4 and b_set2 <= 3) or (b_set2 == 4 and a_set2 <= 3):
         _stop_match_timer(state)
         entry = _build_match_history_entry(kort_id, state)
-        history = state.setdefault("history", [])
-        history.insert(0, entry)
-        if len(history) > 20:
-            history.pop()
+        persist_match_history_entry(entry)
         status["active"] = False
         status["last_completed"] = entry["ended_at"]
         log.info(
@@ -632,6 +723,7 @@ def _broadcast_kort_state(kort_id: str, event_type: str, command: str, value: An
             "value": value,
             "extras": extras,
             "state": _serialize_court_state(state),
+            "history": _serialize_history(),
         }
         if status is not None:
             payload["status"] = status
