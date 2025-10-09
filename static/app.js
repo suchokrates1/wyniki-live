@@ -1010,25 +1010,26 @@ function updateCourt(k, data) {
   updatePlayerFlag(k, 'A', A, prevK.A || {});
   updatePlayerFlag(k, 'B', B, prevK.B || {});
 
-  const normalizeName = (value) => (typeof value === 'string' ? value.trim() : value);
   const nextNameA = resolvePlayerName(A, 'defaultA');
-  const prevNameA = resolvePlayerName(prevK?.A || {}, 'defaultA');
-  const nameAChanged = normalizeName(nextNameA) !== normalizeName(prevNameA);
   const nextNameB = resolvePlayerName(B, 'defaultB');
-  const prevNameB = resolvePlayerName(prevK?.B || {}, 'defaultB');
-  const nameBChanged = normalizeName(nextNameB) !== normalizeName(prevNameB);
-  if (nameAChanged) {
-    const cell = document.getElementById(`k${k}-name-A`);
-    if (cell) {
-      cell.textContent = nextNameA;
-      flash(cell);
+  let nameAChanged = false;
+  let nameBChanged = false;
+  const nameCellA = document.getElementById(`k${k}-name-A`);
+  if (nameCellA) {
+    const prevText = nameCellA.textContent || '';
+    if (prevText !== nextNameA) {
+      nameCellA.textContent = nextNameA;
+      flash(nameCellA);
+      nameAChanged = true;
     }
   }
-  if (nameBChanged) {
-    const cell = document.getElementById(`k${k}-name-B`);
-    if (cell) {
-      cell.textContent = nextNameB;
-      flash(cell);
+  const nameCellB = document.getElementById(`k${k}-name-B`);
+  if (nameCellB) {
+    const prevText = nameCellB.textContent || '';
+    if (prevText !== nextNameB) {
+      nameCellB.textContent = nextNameB;
+      flash(nameCellB);
+      nameBChanged = true;
     }
   }
   if (nameAChanged || nameBChanged) {
