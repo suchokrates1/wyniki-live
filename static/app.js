@@ -29,6 +29,7 @@
       }
     },
     players: { defaultA: 'Gracz A', defaultB: 'Gracz B', fallback: 'zawodnik', fallbackOpponent: 'rywal' },
+    liveBadge: 'LIVE',
     versus: 'vs',
     meta: {
       lastRefresh: 'Ostatnie odświeżenie: {time}.',
@@ -95,6 +96,8 @@
       }
     },
     players: { defaultA: 'Spieler A', defaultB: 'Spieler B', fallback: 'Spieler', fallbackOpponent: 'Gegner' },
+    liveBadge: 'LIVE',
+    shortcuts: { desc: 'Kurzbefehle: [1–6] Plätze, H – Historie.' },
     versus: 'gegen',
     meta: {
       lastRefresh: 'Letzte Aktualisierung: {time}.',
@@ -158,6 +161,7 @@
       }
     },
     players: { defaultA: 'Player A', defaultB: 'Player B', fallback: 'player', fallbackOpponent: 'opponent' },
+    liveBadge: 'LIVE',
     versus: 'vs',
     meta: {
       lastRefresh: 'Last refresh: {time}.',
@@ -183,9 +187,7 @@
         supertb: 'Super tiebreak'
       }
     },
-    shortcuts: {
-      desc: 'Shortcuts: [1–6] courts, H – history.'
-    },
+    shortcuts: { desc: 'Shortcuts: [1–6] courts, H – history.' },
     accessibility: {
       versus: 'versus',
       points: 'points',
@@ -224,6 +226,8 @@
       }
     },
     players: { defaultA: 'Giocatore A', defaultB: 'Giocatore B', fallback: 'giocatore', fallbackOpponent: 'avversario' },
+    liveBadge: 'LIVE',
+    shortcuts: { desc: 'Scorciatoie: [1–6] campi, H – storia.' },
     versus: 'contro',
     meta: {
       lastRefresh: 'Ultimo aggiornamento: {time}.',
@@ -287,6 +291,8 @@
       }
     },
     players: { defaultA: 'Jugador A', defaultB: 'Jugador B', fallback: 'jugador', fallbackOpponent: 'rival' },
+    liveBadge: 'EN VIVO',
+    shortcuts: { desc: 'Atajos: [1–6] canchas, H – historial.' },
     versus: 'contra',
     meta: {
       lastRefresh: 'Última actualización: {time}.',
@@ -350,6 +356,8 @@
       }
     },
     players: { defaultA: 'Pelaaja A', defaultB: 'Pelaaja B', fallback: 'pelaaja', fallbackOpponent: 'vastustaja' },
+    liveBadge: 'LIVE',
+    shortcuts: { desc: 'Pikanäppäimet: [1–6] kentät, H – historia.' },
     versus: 'vastaan',
     meta: {
       lastRefresh: 'Viimeisin päivitys: {time}.',
@@ -413,6 +421,8 @@
       }
     },
     players: { defaultA: 'Гравець A', defaultB: 'Гравець B', fallback: 'гравець', fallbackOpponent: 'суперник' },
+    liveBadge: 'LIVE',
+    shortcuts: { desc: 'Скорочення: [1–6] корти, H – історія.' },
     versus: 'проти',
     meta: {
       lastRefresh: 'Останнє оновлення: {time}.',
@@ -469,6 +479,8 @@
       }
     },
     players: { defaultA: 'Joueur A', defaultB: 'Joueur B', fallback: 'joueur', fallbackOpponent: 'adversaire' },
+    liveBadge: 'EN DIRECT',
+    shortcuts: { desc: 'Raccourcis : [1–6] courts, H – historique.' },
     versus: 'contre',
     meta: {
       lastRefresh: 'Dernière mise à jour : {time}.',
@@ -525,6 +537,8 @@
       }
     },
     players: { defaultA: 'Žaidėjas A', defaultB: 'Žaidėjas B', fallback: 'žaidėjas', fallbackOpponent: 'varžovas' },
+    liveBadge: 'TIESIOGIAI',
+    shortcuts: { desc: 'Trumpiniai: [1–6] aikštės, H – istorija.' },
     versus: 'prieš',
     meta: {
       lastRefresh: 'Paskutinis atnaujinimas: {time}.',
@@ -706,16 +720,13 @@ function makeCourtCard(k) {
       </tr>
     </tbody>
   </table>
-
-    <div id="live-${k}" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   `;
 
   const cb = section.querySelector(`#announce-${k}`);
   cb.checked = getAnnounce(k);
   cb.addEventListener('change', () => setAnnounce(k, cb.checked));
 
-  const liveRegion = section.querySelector(`#live-${k}`);
-  liveRegion.setAttribute('lang', currentLocale());
+  // live region removed to reduce redundant announcements
 
   return section;
 }
@@ -786,13 +797,7 @@ function setStatus(k, visible, tieVisible) {
 }
 
 function announce(k, text) {
-  if (!getAnnounce(k)) return;
-  const live = document.getElementById(`live-${k}`);
-  if (!live) return;
-  live.setAttribute('lang', currentLocale());
-  const nextText = `${text}`;
-  if (live.textContent === nextText) return;
-  live.textContent = nextText;
+  // Live region removed – keep function as no-op for compatibility
 }
 
 function fallbackPlayerName(surname, type) {
@@ -873,6 +878,14 @@ function renderGlobalHistory(history = []) {
   const t = currentT();
   if (title && t.history?.title) title.textContent = t.history.title;
 
+  // pagination
+  const PAGE = window.__histPage || 1;
+  const SIZE = window.__histPageSize || 10;
+  const total = Array.isArray(history) ? history.length : 0;
+  const pages = Math.max(1, Math.ceil(total / SIZE));
+  const page = Math.min(Math.max(1, PAGE), pages);
+  window.__histPage = page;
+
   body.innerHTML = '';
   if (!history || !history.length) {
     section.classList.add('is-empty');
@@ -900,7 +913,9 @@ function renderGlobalHistory(history = []) {
     <tbody></tbody>
   `;
   const tbody = table.querySelector('tbody');
-  history.forEach((entry) => {
+  const start = (page - 1) * SIZE;
+  const slice = history.slice(start, start + SIZE);
+  slice.forEach((entry) => {
     const row = document.createElement('tr');
     const playerA = resolvePlayerName(entry.players?.A || {}, 'defaultA');
     const playerB = resolvePlayerName(entry.players?.B || {}, 'defaultB');
@@ -928,6 +943,18 @@ function renderGlobalHistory(history = []) {
   });
 
   body.appendChild(table);
+  const pager = document.createElement('div');
+  pager.className = 'history-controls';
+  pager.innerHTML = `
+    <button class="btn hist-prev" ${page<=1?'disabled':''}>&laquo;</button>
+    <span class="hist-page">${page} / ${pages}</span>
+    <button class="btn hist-next" ${page>=pages?'disabled':''}>&raquo;</button>
+  `;
+  body.appendChild(pager);
+  const btnPrev = pager.querySelector('.hist-prev');
+  const btnNext = pager.querySelector('.hist-next');
+  if (btnPrev) btnPrev.addEventListener('click', () => { if (window.__histPage>1){ window.__histPage--; renderGlobalHistory(history); }});
+  if (btnNext) btnNext.addEventListener('click', () => { if (window.__histPage<pages){ window.__histPage++; renderGlobalHistory(history); }});
 }
 
 function applyScoreAria(k, data) {
@@ -1174,7 +1201,7 @@ function updateCourt(k, data) {
     const prevText = cellA.textContent;
     const nextText = pointsA.text;
     const textChanged = prevText !== nextText;
-    cellA.textContent = nextText;
+    if (textChanged) animatePointsChange(cellA, prevText, nextText); else cellA.textContent = nextText;
     cellA.classList.toggle('is-tiebreak', pointsA.isTie);
     if (textChanged) {
       flash(cellA);
@@ -1191,7 +1218,7 @@ function updateCourt(k, data) {
     const prevText = cellB.textContent;
     const nextText = pointsB.text;
     const textChanged = prevText !== nextText;
-    cellB.textContent = nextText;
+    if (textChanged) animatePointsChange(cellB, prevText, nextText); else cellB.textContent = nextText;
     cellB.classList.toggle('is-tiebreak', pointsB.isTie);
     if (textChanged) {
       flash(cellB);
@@ -1313,6 +1340,39 @@ function resolveDisplayedPoints(side, currentPlayer, previousPlayer, tieNow, tie
     text: normalizePointsDisplay(rawPoints),
     isTie: false
   };
+}
+
+function animatePointsChange(cell, prevText, nextText) {
+  try {
+    const old = String(prevText ?? '');
+    const neu = String(nextText ?? '');
+    const max = Math.max(old.length, neu.length);
+    const container = document.createElement('span');
+    container.className = 'digits';
+    for (let i = 0; i < max; i++) {
+      const chOld = old[i] ?? '';
+      const chNew = neu[i] ?? '';
+      const digit = document.createElement('span');
+      digit.className = 'digit';
+      const spanOld = document.createElement('span');
+      spanOld.className = 'd-old';
+      spanOld.textContent = chOld;
+      const spanNew = document.createElement('span');
+      spanNew.className = 'd-new';
+      spanNew.textContent = chNew;
+      digit.append(spanOld, spanNew);
+      container.appendChild(digit);
+    }
+    cell.innerHTML = '';
+    cell.appendChild(container);
+    cell.classList.add('rolling');
+    setTimeout(() => {
+      cell.classList.remove('rolling');
+      cell.textContent = nextText;
+    }, 350);
+  } catch {
+    cell.textContent = nextText;
+  }
 }
 
 function updatePlayerFlag(k, side, current, previous) {
@@ -1509,6 +1569,26 @@ window.addEventListener('beforeunload', () => {
   closeEventSource();
 });
 
+function ensureHistoryToggle() {
+  const section = document.getElementById('history-section');
+  const title = document.getElementById('history-title');
+  if (!section || !title) return;
+  if (title.querySelector('#history-toggle')) return;
+  const btn = document.createElement('button');
+  btn.id = 'history-toggle';
+  btn.className = 'btn';
+  btn.type = 'button';
+  btn.style.marginLeft = '8px';
+  btn.setAttribute('aria-expanded', 'true');
+  btn.textContent = '▼';
+  btn.addEventListener('click', () => {
+    const collapsed = section.classList.toggle('is-collapsed');
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    btn.textContent = collapsed ? '►' : '▼';
+  });
+  title.appendChild(btn);
+}
+
 function computeCourts(data) {
   return Object.keys(data).sort((a, b) => Number(a) - Number(b));
 }
@@ -1649,6 +1729,8 @@ function renderLanguage() {
   if (headerDesc) headerDesc.textContent = (t.shortcuts && t.shortcuts.desc)
     ? t.shortcuts.desc
     : t.description;
+  const liveBadge = document.getElementById('live-badge');
+  if (liveBadge) liveBadge.textContent = t.liveBadge || 'LIVE';
   if (nav) nav.setAttribute('aria-label', t.navLabel);
   if (controlsTitle) controlsTitle.textContent = t.controlsTitle;
   if (langLabel) langLabel.textContent = t.languageLabel;
@@ -1657,6 +1739,7 @@ function renderLanguage() {
   refreshCardsLanguage();
   updateLastRefresh();
   renderError();
+  ensureHistoryToggle();
 }
 
 function applyLanguage(lang, { skipSave = false, skipSelect = false } = {}) {

@@ -64,6 +64,28 @@ header.header {
   letter-spacing: 0.2px;
 }
 
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: rgba(53, 196, 106, 0.15);
+  color: #35c46a;
+  border: 1px solid rgba(53, 196, 106, 0.35);
+}
+.live-badge::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #35c46a;
+  box-shadow: 0 0 8px rgba(53,196,106,.8);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -346,6 +368,8 @@ main {
 #history-body {
   font-size: 14px;
 }
+#history-section.is-collapsed #history-body { display: none; }
+.history-controls { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
 
 #history-section .history-table {
   width: 100%;
@@ -373,6 +397,16 @@ main {
 .set.changed { animation: flip .38s ease; }
 .player-name.changed { animation: glow .9s ease; }
 .points.flip-strong { animation: flipStrong .45s ease; transform-origin: center top; backface-visibility: hidden; }
+
+/* Per-digit rolling animation */
+.points.rolling { position: relative; }
+.points .digits { display: inline-flex; gap: 0; align-items: stretch; }
+.points .digit { position: relative; display: inline-block; width: 0.75em; height: 1.2em; overflow: hidden; }
+.points .digit .d-old, .points .digit .d-new { display: block; line-height: 1.2em; transform: translateY(0); }
+.points.rolling .digit .d-old { animation: rollUpOld .35s ease forwards; }
+.points.rolling .digit .d-new { transform: translateY(100%); animation: rollUpNew .35s ease forwards; }
+@keyframes rollUpOld { from { transform: translateY(0); } to { transform: translateY(-100%); } }
+@keyframes rollUpNew { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 @keyframes card-in {
   from { opacity: 0; transform: translateY(14px) scale(.98); }
