@@ -388,7 +388,7 @@ def _ensure_court_state(kort_id: str) -> Dict[str, Any]:
         snapshots[kort_id] = state
     return state
 
-load_state_cache()
+
 
 def _serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
     return {
@@ -462,6 +462,8 @@ def _ensure_match_struct(state: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[st
     if "history" not in state or not isinstance(state["history"], list):
         state["history"] = []
     return mt, status
+
+load_state_cache()
 
 
 def _maybe_start_match(state: Dict[str, Any]) -> None:
