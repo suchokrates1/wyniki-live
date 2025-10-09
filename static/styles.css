@@ -144,6 +144,7 @@ nav a:focus {
   color: var(--muted);
   font-size: 14px;
 }
+#lastRefreshText { display: none; }
 
 .error {
   color: var(--err);
@@ -371,6 +372,7 @@ main {
 .points.changed { animation: bump .28s ease; }
 .set.changed { animation: flip .38s ease; }
 .player-name.changed { animation: glow .9s ease; }
+.points.flip-strong { animation: flipStrong .45s ease; transform-origin: center top; backface-visibility: hidden; }
 
 @keyframes card-in {
   from { opacity: 0; transform: translateY(14px) scale(.98); }
@@ -387,6 +389,11 @@ main {
   0% { transform: rotateX(0deg); }
   50% { transform: rotateX(90deg); }
   100% { transform: rotateX(0deg); }
+}
+@keyframes flipStrong {
+  0% { transform: rotateX(0deg) scale(1); }
+  40% { transform: rotateX(95deg) scale(1.08); }
+  100% { transform: rotateX(0deg) scale(1); }
 }
 
 @keyframes glow {
@@ -425,10 +432,11 @@ main {
 /* Enhancements */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  grid-template-columns: repeat(2, minmax(360px, 1fr));
   gap: 14px;
   margin: 14px 0;
 }
+@media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
 
 .card {
   background: var(--card);
@@ -438,4 +446,22 @@ main {
   opacity: 0;
   transform: translateY(10px) scale(.98);
   animation: card-in .5s ease forwards;
+}
+.grid .card:nth-child(1) { animation-delay: .00s; }
+.grid .card:nth-child(2) { animation-delay: .05s; }
+.grid .card:nth-child(3) { animation-delay: .10s; }
+.grid .card:nth-child(4) { animation-delay: .15s; }
+.grid .card:nth-child(5) { animation-delay: .20s; }
+.grid .card:nth-child(6) { animation-delay: .25s; }
+.grid .card:nth-child(7) { animation-delay: .30s; }
+.grid .card:nth-child(8) { animation-delay: .35s; }
+.grid .card:nth-child(9) { animation-delay: .40s; }
+.grid .card:nth-child(10) { animation-delay: .45s; }
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: saturate(140%) blur(6px);
+  background: rgba(0,0,0,.35);
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
