@@ -536,7 +536,7 @@ function makeCourtCard(k) {
 
 function ensureCardsFromSnapshot(snap) {
   const t = currentT();
-  COURTS = Object.keys(snap).sort((a, b) => {
+  const targetCourts = Object.keys(snap).sort((a, b) => {
     const na = Number(a);
     const nb = Number(b);
     const aNaN = Number.isNaN(na);
@@ -546,6 +546,15 @@ function ensureCardsFromSnapshot(snap) {
     if (bNaN) return -1;
     return na - nb;
   });
+
+  const sameOrder = COURTS.length === targetCourts.length &&
+    targetCourts.every((kort, idx) => COURTS[idx] === kort);
+
+  COURTS = targetCourts;
+  if (sameOrder) {
+    return;
+  }
+
   navlist.innerHTML = '';
   COURTS.forEach(k => {
     const li = document.createElement('li');
@@ -990,7 +999,7 @@ function updatePlayerFlag(k, side, current, previous) {
 
 function applySetHighlight(k, currentSet) {
   const active = Number(currentSet || 1);
-  ['1', '2'].forEach(idx => {
+  ['1', '2', '3'].forEach(idx => {
     ['A', 'B'].forEach(side => {
       const cell = document.getElementById(`k${k}-s${idx}-${side}`);
       if (!cell) return;

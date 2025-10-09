@@ -172,6 +172,13 @@ def _empty_court_state() -> Dict[str, Any]:
         "updated": None,
     }
 
+
+def _reset_tie_and_points(state: Dict[str, Any]) -> None:
+    state["tie"]["A"] = 0
+    state["tie"]["B"] = 0
+    state["A"]["points"] = "0"
+    state["B"]["points"] = "0"
+
 if OVERLAY_IDS:
     _initial_courts = sorted(OVERLAY_IDS.keys(), key=lambda v: int(v))
 else:
@@ -497,21 +504,24 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
                     state["tie"]["B"] = max(0, state["tie"]["B"] - 1)
                     changed = True
                 elif command == "ResetTieBreak":
-                    state["tie"]["A"] = 0
-                    state["tie"]["B"] = 0
+                    _reset_tie_and_points(state)
                     changed = True
                 elif command == "SetTieBreakVisibility":
                     state["tie"]["visible"] = _to_bool(value)
+                    _reset_tie_and_points(state)
                     changed = True
                 elif command == "ShowTieBreak":
                     state["tie"]["visible"] = True
+                    _reset_tie_and_points(state)
                     changed = True
                 elif command == "HideTieBreak":
                     state["tie"]["visible"] = False
+                    _reset_tie_and_points(state)
                     changed = True
                 elif command == "ToggleTieBreak":
                     current = state["tie"].get("visible")
                     state["tie"]["visible"] = not current if current is not None else True
+                    _reset_tie_and_points(state)
                     changed = True
                 elif command == "SetServe":
                     if value is None:
