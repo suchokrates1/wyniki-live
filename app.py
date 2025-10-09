@@ -630,16 +630,22 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
             idx = set_match.group(1)
             side = set_match.group(2)
             key = f"set{idx}"
-            state[side][key] = _as_int(value, 0)
-            _reset_regular_points(state)
-            changed = True
+            prev_games = int(state[side].get(key) or 0)
+            new_games = _as_int(value, prev_games)
+            if new_games != prev_games:
+                state[side][key] = new_games
+                _reset_regular_points(state)
+                changed = True
         else:
             cur_match = re.fullmatch(r"SetCurrentSetPlayer([AB])", command)
             if cur_match:
                 side = cur_match.group(1)
-                state[side]["current_games"] = _as_int(value, 0)
-                _reset_regular_points(state)
-                changed = True
+                prev_games = int(state[side].get("current_games") or 0)
+                new_games = _as_int(value, prev_games)
+                if new_games != prev_games:
+                    state[side]["current_games"] = new_games
+                    _reset_regular_points(state)
+                    changed = True
             elif command == "IncreaseCurrentSetPlayerA":
                 state["A"]["current_games"] = max(0, state["A"]["current_games"] + 1)
                 _reset_regular_points(state)
@@ -657,13 +663,19 @@ def _apply_local_command(state: Dict[str, Any], command: str, value: Any,
                 _reset_regular_points(state)
                 changed = True
             elif command == "SetCurrentSet":
-                state["current_set"] = _as_int(value, 0) or None
-                _reset_regular_points(state)
-                changed = True
+                prev_set = state.get("current_set")
+                new_set = _as_int(value, prev_set or 0) or None
+                if new_set != prev_set:
+                    state["current_set"] = new_set
+                    _reset_regular_points(state)
+                    changed = True
             elif command == "SetSet":
-                state["current_set"] = _as_int(value, 0) or None
-                _reset_regular_points(state)
-                changed = True
+                prev_set = state.get("current_set")
+                new_set = _as_int(value, prev_set or 0) or None
+                if new_set != prev_set:
+                    state["current_set"] = new_set
+                    _reset_regular_points(state)
+                    changed = True
             elif command == "IncreaseSet":
                 state["current_set"] = (state["current_set"] or 0) + 1
                 changed = True
