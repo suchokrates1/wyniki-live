@@ -4,13 +4,11 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import requests
 from collections import deque
-from flask import Flask, jsonify, send_from_directory, request, redirect, abort, Response, render_template_string, url_for, stream_with_context
+from flask import Flask, jsonify, send_from_directory, request, abort, Response, render_template_string, stream_with_context
 
 # ====== Ścieżki / Flask ======
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-UNO_CONTROL_TEMPLATE = "uno-control.html"
-CONTROL_LIST_TEMPLATE = os.path.join("static", "control.html")
 # Serwujemy statyki własnym routerem (fallback na /app/static oraz /static)
 app = Flask(__name__, static_folder=None)
 
@@ -597,26 +595,6 @@ def static_files(filename: str):
     return send_from_directory(STATIC_DIR, safe_path)
 
 
-@app.route("/control")
-@app.route("/control/")
-def control_list():
-    korts = _available_courts()
-    return _render_file_template(CONTROL_LIST_TEMPLATE, korts=korts)
-
-
-@app.route("/control/<kort_id>")
-def control_panel(kort_id: str):
-    normalized = _normalize_kort_id(kort_id)
-    if not normalized:
-        abort(404)
-
-    # ZAWSZE utwórz/upewnij się, że istnieje lokalny stan dla kortu,
-    # żeby UI mogło działać nawet bez UNO_ID.
-    with STATE_LOCK:
-        _ensure_court_state(normalized)
-
-    return _render_file_template(UNO_CONTROL_TEMPLATE, kort=normalized)
-
 # ====== API ======
 @app.route("/api/snapshot")
 def api_snapshot():
@@ -1022,3 +1000,6 @@ def api_uno_exec(kort_id: str):
         ),
         http_status,
     )
+
+
+
