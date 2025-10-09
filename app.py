@@ -1044,6 +1044,84 @@ def api_healthz():
     return jsonify({"ok": True, "ts": _now_iso()}), 200
 
 
+@app.route("/api/history/delete-last", methods=["POST"])
+def api_history_delete_last():
+    payload = request.get_json(silent=True) or {}
+    kort_raw = None
+    if isinstance(payload, dict):
+        kort_raw = payload.get("kort") or payload.get("court")
+    if kort_raw is None:
+        kort_raw = request.args.get("kort")
+    kort_id = None
+    if kort_raw is not None:
+        kort_text = str(kort_raw).strip()
+        normalized = _normalize_kort_id(kort_text)
+        kort_id = normalized or (kort_text if kort_text else None)
+
+    with STATE_LOCK:
+        con = db_conn()
+        try:
+            cur = con.cursor()
+            if kort_id:
+                cur.execute(
+                    """
+                    SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
+                           set1_a, set1_b, set2_a, set2_b, tie_a, tie_b
+                    FROM match_history
+                    WHERE kort_id = ?
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (kort_id,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
+                           set1_a, set1_b, set2_a, set2_b, tie_a, tie_b
+                    FROM match_history
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """
+                )
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"ok": False, "error": "history-empty"}), 404
+            cur.execute("DELETE FROM match_history WHERE id = ?", (row["id"],))
+            con.commit()
+        finally:
+            con.close()
+
+        deleted_entry = {
+            "kort": row["kort_id"],
+            "ended_at": row["ended_ts"],
+            "duration_seconds": row["duration_seconds"],
+            "duration_text": _format_duration(row["duration_seconds"]),
+            "players": {
+                "A": {"surname": row["player_a"], "full_name": row["player_a"]},
+                "B": {"surname": row["player_b"], "full_name": row["player_b"]},
+            },
+            "sets": {
+                "set1": {"A": row["set1_a"], "B": row["set1_b"]},
+                "set2": {"A": row["set2_a"], "B": row["set2_b"]},
+                "tie": {
+                    "A": row["tie_a"],
+                    "B": row["tie_b"],
+                    "played": bool(row["tie_a"] or row["tie_b"]),
+                },
+            },
+        }
+
+        for idx, entry in enumerate(list(GLOBAL_HISTORY)):
+            if entry.get("kort") == deleted_entry["kort"] and entry.get("ended_at") == deleted_entry["ended_at"]:
+                del GLOBAL_HISTORY[idx]
+                break
+
+        remaining = len(GLOBAL_HISTORY)
+
+    return jsonify({"ok": True, "deleted": deleted_entry, "remaining": remaining})
+
+
 @app.route("/api/mirror", methods=["POST"])
 def api_mirror():
     payload = request.get_json(silent=True)
