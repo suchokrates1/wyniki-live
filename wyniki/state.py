@@ -450,6 +450,103 @@ def maybe_update_current_set_indicator(state: Dict[str, Any]) -> Dict[str, int]:
     return wins
 
 
+def _extract_short_set_tiebreaks(state: Dict[str, Any]) -> Dict[str, Dict[str, int]]:
+    set_ties: Dict[str, Dict[str, int]] = {}
+    log_entries = list(state.get("log") or [])
+    if not log_entries:
+        return set_ties
+
+    set_scores: Dict[str, Dict[str, int]] = {
+        "set1": {"A": 0, "B": 0},
+        "set2": {"A": 0, "B": 0},
+        "set3": {"A": 0, "B": 0},
+    }
+    current_tie = {"A": 0, "B": 0}
+    last_nonzero_tie: Optional[Dict[str, int]] = None
+
+    for entry in log_entries:
+        command = entry.get("command")
+        if not isinstance(command, str):
+            continue
+
+        tie_set_match = re.fullmatch(r"SetTieBreakPlayer([AB])", command)
+        if tie_set_match:
+            side = tie_set_match.group(1)
+            current_value = current_tie.get(side, 0)
+            updated = max(0, as_int(entry.get("value"), current_value))
+            current_tie[side] = updated
+            if current_tie["A"] or current_tie["B"]:
+                last_nonzero_tie = {"A": current_tie["A"], "B": current_tie["B"]}
+            continue
+
+        if command == "IncreaseTieBreakPlayerA":
+            current_tie["A"] = max(0, current_tie["A"] + 1)
+            if current_tie["A"] or current_tie["B"]:
+                last_nonzero_tie = {"A": current_tie["A"], "B": current_tie["B"]}
+            continue
+        if command == "IncreaseTieBreakPlayerB":
+            current_tie["B"] = max(0, current_tie["B"] + 1)
+            if current_tie["A"] or current_tie["B"]:
+                last_nonzero_tie = {"A": current_tie["A"], "B": current_tie["B"]}
+            continue
+        if command == "DecreaseTieBreakPlayerA":
+            current_tie["A"] = max(0, current_tie["A"] - 1)
+            if current_tie["A"] or current_tie["B"]:
+                last_nonzero_tie = {"A": current_tie["A"], "B": current_tie["B"]}
+            continue
+        if command == "DecreaseTieBreakPlayerB":
+            current_tie["B"] = max(0, current_tie["B"] - 1)
+            if current_tie["A"] or current_tie["B"]:
+                last_nonzero_tie = {"A": current_tie["A"], "B": current_tie["B"]}
+            continue
+
+        if command in {"ResetTieBreak", "HideTieBreak"}:
+            if current_tie["A"] or current_tie["B"]:
+                last_nonzero_tie = {"A": current_tie["A"], "B": current_tie["B"]}
+            current_tie = {"A": 0, "B": 0}
+            continue
+
+        if command == "SetTieBreakVisibility":
+            visible = to_bool(entry.get("value"))
+            if visible is False and (current_tie["A"] or current_tie["B"]):
+                last_nonzero_tie = {"A": current_tie["A"], "B": current_tie["B"]}
+            if visible is False:
+                current_tie = {"A": 0, "B": 0}
+            continue
+
+        if command == "ToggleTieBreak":
+            if current_tie["A"] or current_tie["B"]:
+                last_nonzero_tie = {"A": current_tie["A"], "B": current_tie["B"]}
+            continue
+
+        set_match = re.fullmatch(r"SetSet([123])Player([AB])", command)
+        if set_match:
+            set_idx = set_match.group(1)
+            side = set_match.group(2)
+            key = f"set{set_idx}"
+            prev_value = set_scores[key][side]
+            new_value = as_int(entry.get("value"), prev_value)
+            set_scores[key][side] = new_value
+            opponent_side = "B" if side == "A" else "A"
+            opponent_score = set_scores[key][opponent_side]
+            if new_value >= 4 and new_value - opponent_score >= 1:
+                tie_values = None
+                if current_tie["A"] or current_tie["B"]:
+                    tie_values = {"A": current_tie["A"], "B": current_tie["B"]}
+                elif last_nonzero_tie and (last_nonzero_tie.get("A") or last_nonzero_tie.get("B")):
+                    tie_values = {
+                        "A": last_nonzero_tie.get("A", 0),
+                        "B": last_nonzero_tie.get("B", 0),
+                    }
+                if tie_values:
+                    set_ties[key] = tie_values
+                current_tie = {"A": 0, "B": 0}
+                last_nonzero_tie = None
+            continue
+
+    return set_ties
+
+
 def build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
     match_time, _ = ensure_match_struct(state)
     ended_at = match_time.get("finished_ts") or now_iso()
@@ -457,6 +554,25 @@ def build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, 
     tie_state = state.get("tie") if isinstance(state.get("tie"), dict) else {"A": 0, "B": 0}
     tie_a = tie_state.get("A") or 0
     tie_b = tie_state.get("B") or 0
+    set_tiebreaks = _extract_short_set_tiebreaks(state)
+
+    def _build_set_payload(index: int) -> Dict[str, Any]:
+        key = f"set{index}"
+        data = {
+            "A": state["A"].get(key) or 0,
+            "B": state["B"].get(key) or 0,
+        }
+        tie_scores = set_tiebreaks.get(key)
+        if tie_scores:
+            data["tb"] = {
+                "A": tie_scores.get("A", 0),
+                "B": tie_scores.get("B", 0),
+                "played": True,
+            }
+        else:
+            data["tb"] = {"A": 0, "B": 0, "played": False}
+        return data
+
     return {
         "kort": kort_id,
         "ended_at": ended_at,
@@ -467,8 +583,8 @@ def build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, 
             "B": {"full_name": state["B"].get("full_name"), "surname": state["B"].get("surname")},
         },
         "sets": {
-            "set1": {"A": state["A"].get("set1") or 0, "B": state["B"].get("set1") or 0},
-            "set2": {"A": state["A"].get("set2") or 0, "B": state["B"].get("set2") or 0},
+            "set1": _build_set_payload(1),
+            "set2": _build_set_payload(2),
             "tie": {"A": tie_a, "B": tie_b, "played": bool(tie_a or tie_b)},
         },
     }
@@ -488,6 +604,10 @@ def persist_match_history_entry(entry: Dict[str, Any]) -> None:
             "set2_b": entry.get("sets", {}).get("set2", {}).get("B", 0),
             "tie_a": entry.get("sets", {}).get("tie", {}).get("A", 0),
             "tie_b": entry.get("sets", {}).get("tie", {}).get("B", 0),
+            "set1_tb_a": entry.get("sets", {}).get("set1", {}).get("tb", {}).get("A", 0),
+            "set1_tb_b": entry.get("sets", {}).get("set1", {}).get("tb", {}).get("B", 0),
+            "set2_tb_a": entry.get("sets", {}).get("set2", {}).get("tb", {}).get("A", 0),
+            "set2_tb_b": entry.get("sets", {}).get("set2", {}).get("tb", {}).get("B", 0),
         }
     )
     GLOBAL_HISTORY.appendleft(entry)
@@ -508,8 +628,24 @@ def load_match_history() -> None:
                 "B": {"surname": row["player_b"], "full_name": row["player_b"]},
             },
             "sets": {
-                "set1": {"A": row["set1_a"], "B": row["set1_b"]},
-                "set2": {"A": row["set2_a"], "B": row["set2_b"]},
+                "set1": {
+                    "A": row["set1_a"],
+                    "B": row["set1_b"],
+                    "tb": {
+                        "A": row["set1_tb_a"],
+                        "B": row["set1_tb_b"],
+                        "played": bool(row["set1_tb_a"] or row["set1_tb_b"]),
+                    },
+                },
+                "set2": {
+                    "A": row["set2_a"],
+                    "B": row["set2_b"],
+                    "tb": {
+                        "A": row["set2_tb_a"],
+                        "B": row["set2_tb_b"],
+                        "played": bool(row["set2_tb_a"] or row["set2_tb_b"]),
+                    },
+                },
                 "tie": {"A": row["tie_a"], "B": row["tie_b"], "played": bool(row["tie_a"] or row["tie_b"])},
             },
         }
@@ -860,6 +996,7 @@ def state_snapshot_for_broadcast(
         "ts": ts,
         "status": status_code,
         "state": serialize_court_state(ensure_court_state(kort_id)),
+        "history": serialize_history(),
     }
 
 
@@ -921,8 +1058,24 @@ def delete_latest_history(kort_id: Optional[str] = None) -> Optional[Dict[str, A
             "B": {"surname": removed["player_b"], "full_name": removed["player_b"]},
         },
         "sets": {
-            "set1": {"A": removed["set1_a"], "B": removed["set1_b"]},
-            "set2": {"A": removed["set2_a"], "B": removed["set2_b"]},
+            "set1": {
+                "A": removed["set1_a"],
+                "B": removed["set1_b"],
+                "tb": {
+                    "A": removed.get("set1_tb_a", 0),
+                    "B": removed.get("set1_tb_b", 0),
+                    "played": bool(removed.get("set1_tb_a", 0) or removed.get("set1_tb_b", 0)),
+                },
+            },
+            "set2": {
+                "A": removed["set2_a"],
+                "B": removed["set2_b"],
+                "tb": {
+                    "A": removed.get("set2_tb_a", 0),
+                    "B": removed.get("set2_tb_b", 0),
+                    "played": bool(removed.get("set2_tb_a", 0) or removed.get("set2_tb_b", 0)),
+                },
+            },
             "tie": {
                 "A": removed["tie_a"],
                 "B": removed["tie_b"],
