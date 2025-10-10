@@ -1085,7 +1085,7 @@ function applyScoreAria(k, data) {
 
   const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
   const summaryPointsLabel = tieVisible ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak) : acc.points;
-  const pointsSegment = `${summaryPointsLabel}: ${pointsA}:${pointsB}`;
+  const pointsSegment = `${summaryPointsLabel} ${pointsA}:${pointsB}`;
   summaryParts.push(pointsSegment);
 
   const setSegments = [];
@@ -1099,15 +1099,17 @@ function applyScoreAria(k, data) {
     if (!include) return;
     const label = format(acc.setTemplate, { number: index });
     const isActive = currentSet === index;
-    const labelWithState = isActive ? `${label} ${acc.active}` : label;
-    setSegments.push(`${labelWithState}: ${a}:${b}`);
+    const segment = isActive
+      ? `${label}, ${acc.active}, ${a}:${b}`
+      : `${label} ${a}:${b}`;
+    setSegments.push(segment);
   });
-
-  setSegments.forEach(segment => summaryParts.push(segment));
 
   updatePointsLabelText(k, tieVisible, isSuperTieBreak);
 
-  const summary = summaryParts.join('. ');
+  setSegments.forEach(segment => summaryParts.push(segment));
+
+  const summary = summaryParts.join('\n');
   list.setAttribute('aria-label', summary);
   section.setAttribute('aria-label', summary);
 }
