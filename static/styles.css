@@ -494,6 +494,10 @@ main {
   border: 0;
 }
 
+.score-summary {
+  white-space: pre-line;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
