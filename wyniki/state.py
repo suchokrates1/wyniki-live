@@ -117,7 +117,7 @@ def _empty_court_state() -> Dict[str, Any]:
         "match_status": {"active": False, "last_completed": None},
         "A": _empty_player_state(),
         "B": _empty_player_state(),
-        "tie": {"visible": None, "A": 0, "B": 0},
+        "tie": {"visible": None, "A": 0, "B": 0, "locked": False},
         "history": [],
         "local": {"commands": {}, "updated": None},
         "uno": {
@@ -384,8 +384,10 @@ def stop_match_timer(state: Dict[str, Any]) -> None:
 
 
 def reset_tie_and_points(state: Dict[str, Any]) -> None:
+    state.setdefault("tie", {})
     state["tie"]["A"] = 0
     state["tie"]["B"] = 0
+    state["tie"]["locked"] = False
     state["A"]["points"] = "0"
     state["B"]["points"] = "0"
 
@@ -393,6 +395,21 @@ def reset_tie_and_points(state: Dict[str, Any]) -> None:
 def reset_regular_points(state: Dict[str, Any]) -> None:
     state["A"]["points"] = "0"
     state["B"]["points"] = "0"
+
+
+def lock_tie_updates(state: Dict[str, Any]) -> None:
+    tie = state.get("tie")
+    if isinstance(tie, dict):
+        tie["locked"] = True
+
+
+def tie_update_allowed(state: Dict[str, Any], new_value: int) -> bool:
+    tie = state.get("tie")
+    if not isinstance(tie, dict):
+        return True
+    if not tie.get("locked"):
+        return True
+    return new_value == 0
 
 
 def count_short_set_wins(state: Dict[str, Any]) -> Dict[str, int]:
@@ -515,9 +532,9 @@ def reset_after_match(state: Dict[str, Any]) -> None:
         side_state["set2"] = 0
         side_state["set3"] = 0
         side_state["current_games"] = 0
-    state["tie"]["A"] = 0
-    state["tie"]["B"] = 0
+    reset_tie_and_points(state)
     state["tie"]["visible"] = False
+    lock_tie_updates(state)
     state["current_set"] = 1
     match_time["seconds"] = 0
     match_time["running"] = False
@@ -557,11 +574,15 @@ def finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional
         _complete_match()
         return
 
+    tie_state = state.get("tie") if isinstance(state.get("tie"), dict) else {"A": 0, "B": 0}
+    tie_a = as_int(tie_state.get("A"), 0)
+    tie_b = as_int(tie_state.get("B"), 0)
+    if (tie_a >= 10 or tie_b >= 10) and abs(tie_a - tie_b) >= 2:
+        _complete_match()
+        return
+
     if wins["A"] == 1 and wins["B"] == 1:
-        tie_state = state.get("tie") if isinstance(state.get("tie"), dict) else {"A": 0, "B": 0}
-        tie_a = as_int(tie_state.get("A"), 0)
-        tie_b = as_int(tie_state.get("B"), 0)
-        if (tie_a >= 10 or tie_b >= 10) and abs(tie_a - tie_b) >= 2:
+        if (tie_a >= 7 or tie_b >= 7) and abs(tie_a - tie_b) >= 2:
             _complete_match()
 
 
@@ -693,20 +714,30 @@ def apply_local_command(
                 tie_match = re.fullmatch(r"SetTieBreakPlayer([AB])", command)
                 if tie_match:
                     side = tie_match.group(1)
-                    state["tie"][side] = as_int(value, 0)
-                    changed = True
+                    new_value = as_int(value, 0)
+                    if tie_update_allowed(state, new_value):
+                        state["tie"][side] = new_value
+                        changed = True
                 elif command == "IncreaseTieBreakPlayerA":
-                    state["tie"]["A"] = max(0, state["tie"].get("A", 0) + 1)
-                    changed = True
+                    next_value = max(0, state["tie"].get("A", 0) + 1)
+                    if tie_update_allowed(state, next_value):
+                        state["tie"]["A"] = next_value
+                        changed = True
                 elif command == "IncreaseTieBreakPlayerB":
-                    state["tie"]["B"] = max(0, state["tie"].get("B", 0) + 1)
-                    changed = True
+                    next_value = max(0, state["tie"].get("B", 0) + 1)
+                    if tie_update_allowed(state, next_value):
+                        state["tie"]["B"] = next_value
+                        changed = True
                 elif command == "DecreaseTieBreakPlayerA":
-                    state["tie"]["A"] = max(0, state["tie"].get("A", 0) - 1)
-                    changed = True
+                    next_value = max(0, state["tie"].get("A", 0) - 1)
+                    if tie_update_allowed(state, next_value):
+                        state["tie"]["A"] = next_value
+                        changed = True
                 elif command == "DecreaseTieBreakPlayerB":
-                    state["tie"]["B"] = max(0, state["tie"].get("B", 0) - 1)
-                    changed = True
+                    next_value = max(0, state["tie"].get("B", 0) - 1)
+                    if tie_update_allowed(state, next_value):
+                        state["tie"]["B"] = next_value
+                        changed = True
                 elif command == "ResetTieBreak":
                     reset_tie_and_points(state)
                     changed = True
