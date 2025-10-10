@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, json, time, threading, sqlite3, logging, re, queue
+import os, json, time, threading, sqlite3, logging, re, queue, hmac
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Tuple, List
 import requests
@@ -66,6 +66,7 @@ BURST = int(os.environ.get("BURST", "8"))
 
 DB_PATH = os.environ.get("DB_PATH", "wyniki_archive.sqlite3")
 PORT = int(os.environ.get("PORT", "8080"))
+DELETE_PASSWORD = (os.environ.get("HISTORY_DELETE_PASSWORD") or os.environ.get("DELETE_PASSWORD") or "").strip()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 log = logging.getLogger("wyniki")
@@ -1096,9 +1097,36 @@ def api_healthz():
     return jsonify({"ok": True, "ts": _now_iso()}), 200
 
 
-@app.route("/api/history/delete-last", methods=["POST"])
+@app.route("/delete", methods=["POST"])
 def api_history_delete_last():
     payload = request.get_json(silent=True) or {}
+
+    if not DELETE_PASSWORD:
+        log.error("DELETE_PASSWORD not configured; refusing to delete history entry")
+        return jsonify({"ok": False, "error": "password-not-configured"}), 500
+
+    def _sanitize_password(value: Optional[Any]) -> Optional[str]:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text if text else None
+
+    provided_password: Optional[str] = None
+    if isinstance(payload, dict):
+        provided_password = _sanitize_password(payload.get("password"))
+    if not provided_password:
+        provided_password = _sanitize_password(request.form.get("password"))
+    if not provided_password:
+        provided_password = _sanitize_password(request.args.get("password"))
+    if not provided_password:
+        provided_password = _sanitize_password(request.headers.get("X-Delete-Password"))
+
+    if not provided_password:
+        return jsonify({"ok": False, "error": "password-required"}), 401
+
+    if not hmac.compare_digest(provided_password, DELETE_PASSWORD):
+        return jsonify({"ok": False, "error": "password-invalid"}), 403
+
     kort_raw = None
     if isinstance(payload, dict):
         kort_raw = payload.get("kort") or payload.get("court")
