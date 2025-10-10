@@ -1083,10 +1083,15 @@ function applyScoreAria(k, data) {
   const tieVisible = data.tie?.visible === true;
   const isSuperTieBreak = tieVisible && currentSet === 3;
 
+  updatePointsLabelText(k, tieVisible, isSuperTieBreak);
+
+  const pointsLabelEl = document.getElementById(`k${k}-label-points`);
+  const pointsLabelText = (pointsLabelEl?.textContent || '').trim() || (tieVisible
+    ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak)
+    : acc.points);
+
   const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
-  const summaryPointsLabel = tieVisible ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak) : acc.points;
-  const pointsSegment = `${summaryPointsLabel} ${pointsA}:${pointsB}`;
-  summaryParts.push(pointsSegment);
+  summaryParts.push(`${pointsLabelText} ${pointsA}:${pointsB}`);
 
   const setSegments = [];
   [
@@ -1097,15 +1102,22 @@ function applyScoreAria(k, data) {
     const bNum = Number.parseInt(b, 10) || 0;
     const include = index === 1 || currentSet >= index || aNum > 0 || bNum > 0;
     if (!include) return;
-    const label = format(acc.setTemplate, { number: index });
+    const labelEl = document.getElementById(`k${k}-label-set${index}`);
+    const fallbackLabel = format(acc.setTemplate, { number: index });
+    const labelText = (labelEl?.textContent || '').trim() || fallbackLabel;
     const isActive = currentSet === index;
+    if (labelEl) {
+      if (isActive) {
+        labelEl.setAttribute('aria-label', `${labelText}, ${acc.active}`);
+      } else {
+        labelEl.removeAttribute('aria-label');
+      }
+    }
     const segment = isActive
-      ? `${label}, ${acc.active}, ${a}:${b}`
-      : `${label} ${a}:${b}`;
+      ? `${labelText}, ${acc.active}, ${a}:${b}`
+      : `${labelText} ${a}:${b}`;
     setSegments.push(segment);
   });
-
-  updatePointsLabelText(k, tieVisible, isSuperTieBreak);
 
   setSegments.forEach(segment => summaryParts.push(segment));
 
