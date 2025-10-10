@@ -763,6 +763,7 @@ function makeCourtCard(k) {
   section.className = 'card';
   section.id = `kort-${k}`;
   section.setAttribute('aria-labelledby', `heading-${k}`);
+  section.setAttribute('aria-describedby', `k${k}-sr-summary`);
   section.innerHTML = `
     <div class="card-head">
       <h2 id="heading-${k}">
@@ -779,40 +780,43 @@ function makeCourtCard(k) {
       </label>
     </div>
 
-    <div class="score-wrapper">
-      <dl class="score-list" aria-labelledby="heading-${k}">
-        <div class="score-row" data-side="A">
-          <dt class="player-cell">
-            <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
-            <span class="player-name" id="k${k}-name-A">${defaultA}</span>
-          </dt>
-          <dd class="metric points" aria-labelledby="k${k}-label-points k${k}-name-A">
-            <span class="metric-label" id="k${k}-label-points" data-default-label="${pointsLabel}" data-tie-label="${tieBreakLabel}" data-super-label="${superTieBreakLabel}">${pointsLabel}</span>
-            <span class="metric-value points" id="k${k}-pts-A">0</span>
-          </dd>
-          <dd class="metric set-1" aria-labelledby="k${k}-label-set1 k${k}-name-A">
-            <span class="metric-label" id="k${k}-label-set1">${set1Label}</span>
-            <span class="metric-value set set-1" id="k${k}-s1-A">0</span>
-          </dd>
-          <dd class="metric set-2" aria-labelledby="k${k}-label-set2 k${k}-name-A">
-            <span class="metric-label" id="k${k}-label-set2">${set2Label}</span>
-            <span class="metric-value set set-2" id="k${k}-s2-A">0</span>
-          </dd>
-        </div>
-        <div class="score-row" data-side="B">
-          <dt class="player-cell">
-            <span class="player-flag" id="k${k}-flag-B" aria-hidden="true"></span>
-            <span class="player-name" id="k${k}-name-B">${defaultB}</span>
-          </dt>
-          <dd class="metric points" aria-labelledby="k${k}-label-points k${k}-name-B">
-            <span class="metric-value points" id="k${k}-pts-B">0</span>
-          </dd>
-          <dd class="metric set-1" aria-labelledby="k${k}-label-set1 k${k}-name-B">
-            <span class="metric-value set set-1" id="k${k}-s1-B">0</span>
-          </dd>
-          <dd class="metric set-2" aria-labelledby="k${k}-label-set2 k${k}-name-B">
-            <span class="metric-value set set-2" id="k${k}-s2-B">0</span>
-          </dd>
+    <div class="score-wrapper" role="group" aria-describedby="k${k}-sr-summary">
+      <div class="sr-only score-summary" id="k${k}-sr-summary" role="text"></div>
+      <dl class="score-list" aria-hidden="true">
+        <div class="score-rows">
+          <div class="score-row" data-side="A">
+            <dt class="player-cell">
+              <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
+              <span class="player-name" id="k${k}-name-A">${defaultA}</span>
+            </dt>
+            <dd class="metric points" aria-labelledby="k${k}-label-points k${k}-name-A">
+              <span class="metric-label" id="k${k}-label-points" data-default-label="${pointsLabel}" data-tie-label="${tieBreakLabel}" data-super-label="${superTieBreakLabel}">${pointsLabel}</span>
+              <span class="metric-value points" id="k${k}-pts-A">0</span>
+            </dd>
+            <dd class="metric set-1" aria-labelledby="k${k}-label-set1 k${k}-name-A">
+              <span class="metric-label" id="k${k}-label-set1">${set1Label}</span>
+              <span class="metric-value set set-1" id="k${k}-s1-A">0</span>
+            </dd>
+            <dd class="metric set-2" aria-labelledby="k${k}-label-set2 k${k}-name-A">
+              <span class="metric-label" id="k${k}-label-set2">${set2Label}</span>
+              <span class="metric-value set set-2" id="k${k}-s2-A">0</span>
+            </dd>
+          </div>
+          <div class="score-row" data-side="B">
+            <dt class="player-cell">
+              <span class="player-flag" id="k${k}-flag-B" aria-hidden="true"></span>
+              <span class="player-name" id="k${k}-name-B">${defaultB}</span>
+            </dt>
+            <dd class="metric points" aria-labelledby="k${k}-label-points k${k}-name-B">
+              <span class="metric-value points" id="k${k}-pts-B">0</span>
+            </dd>
+            <dd class="metric set-1" aria-labelledby="k${k}-label-set1 k${k}-name-B">
+              <span class="metric-value set set-1" id="k${k}-s1-B">0</span>
+            </dd>
+            <dd class="metric set-2" aria-labelledby="k${k}-label-set2 k${k}-name-B">
+              <span class="metric-value set set-2" id="k${k}-s2-B">0</span>
+            </dd>
+          </div>
         </div>
       </dl>
     </div>
@@ -1085,7 +1089,7 @@ function applyScoreAria(k, data) {
 
   const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
   const summaryPointsLabel = tieVisible ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak) : acc.points;
-  const pointsSegment = `${summaryPointsLabel}: ${pointsA}:${pointsB}`;
+  const pointsSegment = `${summaryPointsLabel} ${pointsA}:${pointsB}`;
   summaryParts.push(pointsSegment);
 
   const setSegments = [];
@@ -1099,17 +1103,33 @@ function applyScoreAria(k, data) {
     if (!include) return;
     const label = format(acc.setTemplate, { number: index });
     const isActive = currentSet === index;
-    const labelWithState = isActive ? `${label} ${acc.active}` : label;
-    setSegments.push(`${labelWithState}: ${a}:${b}`);
+    const segment = isActive
+      ? `${label}, ${acc.active}, ${a}:${b}`
+      : `${label} ${a}:${b}`;
+    setSegments.push(segment);
   });
-
-  setSegments.forEach(segment => summaryParts.push(segment));
 
   updatePointsLabelText(k, tieVisible, isSuperTieBreak);
 
-  const summary = summaryParts.join('. ');
-  list.setAttribute('aria-label', summary);
-  section.setAttribute('aria-label', summary);
+  setSegments.forEach(segment => summaryParts.push(segment));
+
+  const summary = summaryParts.join('\n');
+
+  const srSummary = document.getElementById(`k${k}-sr-summary`);
+  if (srSummary) {
+    srSummary.textContent = summary;
+  }
+
+  const scoreWrapper = section.querySelector('.score-wrapper');
+  if (scoreWrapper) {
+    scoreWrapper.setAttribute('role', 'group');
+    scoreWrapper.setAttribute('aria-describedby', `k${k}-sr-summary`);
+  }
+
+  section.removeAttribute('aria-label');
+  section.setAttribute('aria-describedby', `k${k}-sr-summary`);
+
+  list.removeAttribute('aria-label');
 }
 
 function updateTitle(k, Adata, Bdata) {
