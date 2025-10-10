@@ -69,10 +69,26 @@ def init_db() -> None:
               set2_a INTEGER,
               set2_b INTEGER,
               tie_a INTEGER,
-              tie_b INTEGER
+              tie_b INTEGER,
+              set1_tb_a INTEGER DEFAULT 0,
+              set1_tb_b INTEGER DEFAULT 0,
+              set2_tb_a INTEGER DEFAULT 0,
+              set2_tb_b INTEGER DEFAULT 0
             );
             """
         )
+
+        cursor.execute("PRAGMA table_info(match_history)")
+        existing_columns = {row["name"] for row in cursor.fetchall()}
+        tie_columns = {
+            "set1_tb_a": "ALTER TABLE match_history ADD COLUMN set1_tb_a INTEGER DEFAULT 0",
+            "set1_tb_b": "ALTER TABLE match_history ADD COLUMN set1_tb_b INTEGER DEFAULT 0",
+            "set2_tb_a": "ALTER TABLE match_history ADD COLUMN set2_tb_a INTEGER DEFAULT 0",
+            "set2_tb_b": "ALTER TABLE match_history ADD COLUMN set2_tb_b INTEGER DEFAULT 0",
+        }
+        for column, statement in tie_columns.items():
+            if column not in existing_columns:
+                cursor.execute(statement)
         connection.commit()
 
 
@@ -104,7 +120,8 @@ def fetch_recent_history(limit: int) -> Iterable[sqlite3.Row]:
         cursor.execute(
             """
             SELECT kort_id, ended_ts, duration_seconds, player_a, player_b,
-                   set1_a, set1_b, set2_a, set2_b, tie_a, tie_b
+                   set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
+                   set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
             FROM match_history
             ORDER BY id DESC
             LIMIT ?
@@ -121,8 +138,9 @@ def insert_match_history(entry: Dict[str, object]) -> None:
             """
             INSERT INTO match_history (
                 kort_id, ended_ts, duration_seconds, player_a, player_b,
-                set1_a, set1_b, set2_a, set2_b, tie_a, tie_b
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
+                set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 entry.get("kort"),
@@ -136,6 +154,10 @@ def insert_match_history(entry: Dict[str, object]) -> None:
                 entry.get("set2_b", 0),
                 entry.get("tie_a", 0),
                 entry.get("tie_b", 0),
+                entry.get("set1_tb_a", 0),
+                entry.get("set1_tb_b", 0),
+                entry.get("set2_tb_a", 0),
+                entry.get("set2_tb_b", 0),
             ),
         )
         connection.commit()
@@ -148,7 +170,8 @@ def delete_latest_history_entry(kort_id: Optional[str] = None) -> Optional[Dict[
             cursor.execute(
                 """
                 SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
-                       set1_a, set1_b, set2_a, set2_b, tie_a, tie_b
+                       set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
+                       set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
                 FROM match_history
                 WHERE kort_id = ?
                 ORDER BY id DESC
@@ -160,7 +183,8 @@ def delete_latest_history_entry(kort_id: Optional[str] = None) -> Optional[Dict[
             cursor.execute(
                 """
                 SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
-                       set1_a, set1_b, set2_a, set2_b, tie_a, tie_b
+                       set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
+                       set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
                 FROM match_history
                 ORDER BY id DESC
                 LIMIT 1
@@ -183,6 +207,10 @@ def delete_latest_history_entry(kort_id: Optional[str] = None) -> Optional[Dict[
         "set2_b": row["set2_b"],
         "tie_a": row["tie_a"],
         "tie_b": row["tie_b"],
+        "set1_tb_a": row["set1_tb_a"],
+        "set1_tb_b": row["set1_tb_b"],
+        "set2_tb_a": row["set2_tb_a"],
+        "set2_tb_b": row["set2_tb_b"],
     }
 
 
