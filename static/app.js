@@ -26,8 +26,8 @@
         points: 'Punkty',
         tieBreak: 'Tie Break',
         superTieBreak: 'Super TB',
-        set1: 'Set 1 (gemy)',
-        set2: 'Set 2 (gemy)'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Gracz A', defaultB: 'Gracz B', fallback: 'zawodnik', fallbackOpponent: 'rywal' },
@@ -96,8 +96,8 @@
         points: 'Punkte',
         tieBreak: 'Tiebreak',
         superTieBreak: 'Super-Tiebreak',
-        set1: 'Satz 1 (Spiele)',
-        set2: 'Satz 2 (Spiele)'
+        set1: 'Satz 1',
+        set2: 'Satz 2'
       }
     },
     players: { defaultA: 'Spieler A', defaultB: 'Spieler B', fallback: 'Spieler', fallbackOpponent: 'Gegner' },
@@ -164,8 +164,8 @@
         points: 'Points',
         tieBreak: 'Tie-break',
         superTieBreak: 'Super tie-break',
-        set1: 'Set 1 (games)',
-        set2: 'Set 2 (games)'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Player A', defaultB: 'Player B', fallback: 'player', fallbackOpponent: 'opponent' },
@@ -232,8 +232,8 @@
         points: 'Punti',
         tieBreak: 'Tie-break',
         superTieBreak: 'Super tie-break',
-        set1: 'Set 1 (giochi)',
-        set2: 'Set 2 (giochi)'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Giocatore A', defaultB: 'Giocatore B', fallback: 'giocatore', fallbackOpponent: 'avversario' },
@@ -302,8 +302,8 @@
         points: 'Puntos',
         tieBreak: 'Tie break',
         superTieBreak: 'Súper tie break',
-        set1: 'Set 1 (juegos)',
-        set2: 'Set 2 (juegos)'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Jugador A', defaultB: 'Jugador B', fallback: 'jugador', fallbackOpponent: 'rival' },
@@ -372,8 +372,8 @@
         points: 'Pisteet',
         tieBreak: 'Tie-break',
         superTieBreak: 'Super-tie-break',
-        set1: 'Erä 1 (pelit)',
-        set2: 'Erä 2 (pelit)'
+        set1: 'Erä 1',
+        set2: 'Erä 2'
       }
     },
     players: { defaultA: 'Pelaaja A', defaultB: 'Pelaaja B', fallback: 'pelaaja', fallbackOpponent: 'vastustaja' },
@@ -442,8 +442,8 @@
         points: 'Очки',
         tieBreak: 'Тай-брейк',
         superTieBreak: 'Супер тай-брейк',
-        set1: 'Сет 1 (гейми)',
-        set2: 'Сет 2 (гейми)'
+        set1: 'Сет 1',
+        set2: 'Сет 2'
       }
     },
     players: { defaultA: 'Гравець A', defaultB: 'Гравець B', fallback: 'гравець', fallbackOpponent: 'суперник' },
@@ -512,8 +512,8 @@
         points: 'Points',
         tieBreak: 'Tie-break',
         superTieBreak: 'Super tie-break',
-        set1: 'Set 1 (jeux)',
-        set2: 'Set 2 (jeux)'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Joueur A', defaultB: 'Joueur B', fallback: 'joueur', fallbackOpponent: 'adversaire' },
@@ -582,8 +582,8 @@
         points: 'Taškai',
         tieBreak: 'Taibreikas',
         superTieBreak: 'Super taibreikas',
-        set1: 'Setas 1 (geimai)',
-        set2: 'Setas 2 (geimai)'
+        set1: 'Setas 1',
+        set2: 'Setas 2'
       }
     },
     players: { defaultA: 'Žaidėjas A', defaultB: 'Žaidėjas B', fallback: 'žaidėjas', fallbackOpponent: 'varžovas' },
