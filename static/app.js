@@ -26,8 +26,8 @@
         points: 'Punkty',
         tieBreak: 'Tie Break',
         superTieBreak: 'Super TB',
-        set1: 'Set 1',
-        set2: 'Set 2'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Gracz A', defaultB: 'Gracz B', fallback: 'zawodnik', fallbackOpponent: 'rywal' },
@@ -96,8 +96,8 @@
         points: 'Punkte',
         tieBreak: 'Tiebreak',
         superTieBreak: 'Super-Tiebreak',
-        set1: 'Satz 1',
-        set2: 'Satz 2'
+        set1: 'Satz 1',
+        set2: 'Satz 2'
       }
     },
     players: { defaultA: 'Spieler A', defaultB: 'Spieler B', fallback: 'Spieler', fallbackOpponent: 'Gegner' },
@@ -164,8 +164,8 @@
         points: 'Points',
         tieBreak: 'Tie-break',
         superTieBreak: 'Super tie-break',
-        set1: 'Set 1',
-        set2: 'Set 2'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Player A', defaultB: 'Player B', fallback: 'player', fallbackOpponent: 'opponent' },
@@ -232,13 +232,11 @@
         points: 'Punti',
         tieBreak: 'Tie-break',
         superTieBreak: 'Super tie-break',
-        set1: 'Set 1',
-        set2: 'Set 2'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Giocatore A', defaultB: 'Giocatore B', fallback: 'giocatore', fallbackOpponent: 'avversario' },
-    liveBadge: 'LIVE',
-    shortcuts: { desc: 'Scorciatoie: [1–6] campi, H – storia.' },
     liveBadge: 'LIVE',
     shortcuts: { desc: 'Scorciatoie: [1–6] campi, H – storia.' },
     versus: 'contro',
@@ -302,13 +300,11 @@
         points: 'Puntos',
         tieBreak: 'Tie break',
         superTieBreak: 'Súper tie break',
-        set1: 'Set 1',
-        set2: 'Set 2'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Jugador A', defaultB: 'Jugador B', fallback: 'jugador', fallbackOpponent: 'rival' },
-    liveBadge: 'EN VIVO',
-    shortcuts: { desc: 'Atajos: [1–6] canchas, H – historial.' },
     liveBadge: 'EN VIVO',
     shortcuts: { desc: 'Atajos: [1–6] canchas, H – historial.' },
     versus: 'contra',
@@ -372,13 +368,11 @@
         points: 'Pisteet',
         tieBreak: 'Tie-break',
         superTieBreak: 'Super-tie-break',
-        set1: 'Erä 1',
-        set2: 'Erä 2'
+        set1: 'Erä 1',
+        set2: 'Erä 2'
       }
     },
     players: { defaultA: 'Pelaaja A', defaultB: 'Pelaaja B', fallback: 'pelaaja', fallbackOpponent: 'vastustaja' },
-    liveBadge: 'LIVE',
-    shortcuts: { desc: 'Pikanäppäimet: [1–6] kentät, H – historia.' },
     liveBadge: 'LIVE',
     shortcuts: { desc: 'Pikanäppäimet: [1–6] kentät, H – historia.' },
     versus: 'vastaan',
@@ -442,13 +436,11 @@
         points: 'Очки',
         tieBreak: 'Тай-брейк',
         superTieBreak: 'Супер тай-брейк',
-        set1: 'Сет 1',
-        set2: 'Сет 2'
+        set1: 'Сет 1',
+        set2: 'Сет 2'
       }
     },
     players: { defaultA: 'Гравець A', defaultB: 'Гравець B', fallback: 'гравець', fallbackOpponent: 'суперник' },
-    liveBadge: 'LIVE',
-    shortcuts: { desc: 'Скорочення: [1–6] корти, H – історія.' },
     liveBadge: 'LIVE',
     shortcuts: { desc: 'Скорочення: [1–6] корти, H – історія.' },
     versus: 'проти',
@@ -497,40 +489,38 @@
     pause: { pause: 'Mettre les mises à jour en pause', resume: 'Reprendre les mises à jour' },
     announceLabel: 'Lecture automatique',
     status: {
-      label: 'Statut : {state}{tiebreak}',
+      label: 'Statut : {state}{tiebreak}',
       states: { unknown: 'inconnu', visible: 'visible', hidden: 'masqué' },
       tiebreak: {
-        yes: ' | Super tie-break : OUI',
-        no: ' | Super tie-break : NON',
+        yes: ' | Super tie-break : OUI',
+        no: ' | Super tie-break : NON',
         off: ''
       }
     },
     table: {
-      caption: 'Scores – Court {court} : {playerA} {versus} {playerB}',
+      caption: 'Scores – Court {court} : {playerA} {versus} {playerB}',
       columns: {
         name: 'Nom',
         points: 'Points',
         tieBreak: 'Tie-break',
         superTieBreak: 'Super tie-break',
-        set1: 'Set 1',
-        set2: 'Set 2'
+        set1: 'Set 1',
+        set2: 'Set 2'
       }
     },
     players: { defaultA: 'Joueur A', defaultB: 'Joueur B', fallback: 'joueur', fallbackOpponent: 'adversaire' },
     liveBadge: 'EN DIRECT',
-    shortcuts: { desc: 'Raccourcis : [1–6] courts, H – historique.' },
-    liveBadge: 'EN DIRECT',
-    shortcuts: { desc: 'Raccourcis : [1–6] courts, H – historique.' },
+    shortcuts: { desc: 'Raccourcis : [1–6] courts, H – historique.' },
     versus: 'contre',
     meta: {
-      lastRefresh: 'Dernière mise à jour : {time}.',
-      lastRefreshNever: 'Dernière mise à jour : aucune.'
+      lastRefresh: 'Dernière mise à jour : {time}.',
+      lastRefreshNever: 'Dernière mise à jour : aucune.'
     },
     errors: { fetch: 'Erreur lors du chargement des données ({message}).' },
     announcements: {
       points: 'points {player} {value}',
       games: 'jeux {player} {value}',
-      setEnd: 'fin de set : {winner} {winnerGames} à {loser} {loserGames}',
+      setEnd: 'fin de set : {winner} {winnerGames} à {loser} {loserGames}',
       tiePoint: 'tie-break {player} {value}',
       tieToggleOn: 'Super tie-break commencé',
       tieToggleOff: 'Super tie-break terminé'
@@ -582,13 +572,11 @@
         points: 'Taškai',
         tieBreak: 'Taibreikas',
         superTieBreak: 'Super taibreikas',
-        set1: 'Setas 1',
-        set2: 'Setas 2'
+        set1: 'Setas 1',
+        set2: 'Setas 2'
       }
     },
     players: { defaultA: 'Žaidėjas A', defaultB: 'Žaidėjas B', fallback: 'žaidėjas', fallbackOpponent: 'varžovas' },
-    liveBadge: 'TIESIOGIAI',
-    shortcuts: { desc: 'Trumpiniai: [1–6] aikštės, H – istorija.' },
     liveBadge: 'TIESIOGIAI',
     shortcuts: { desc: 'Trumpiniai: [1–6] aikštės, H – istorija.' },
     versus: 'prieš',
@@ -1086,6 +1074,7 @@ function applyScoreAria(k, data) {
     : acc.points);
 
   const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
+
   const pointsAText = tieVisible
     ? normalizeTieDisplay(tieState.A)
     : normalizePointsDisplay(data?.A?.points);
@@ -1276,18 +1265,18 @@ function handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames) {
   });
 }
 
-  function updateCourt(k, data) {
-    const prevK = prev[k] || { A: {}, B: {}, tie: {} };
-    const rawTieNow = data.tie || {};
-    const rawTiePrev = prevK.tie || {};
-    const tieNow = { ...rawTieNow, visible: computeTieVisibility(rawTieNow) };
-    const tiePrev = { ...rawTiePrev, visible: computeTieVisibility(rawTiePrev) };
-    const dataWithTie = { ...data, tie: tieNow };
-    data.tie = tieNow;
+function updateCourt(k, data) {
+  const prevK = prev[k] || { A: {}, B: {}, tie: {} };
+  const rawTieNow = data.tie || {};
+  const rawTiePrev = prevK.tie || {};
+  const tieNow = { ...rawTieNow, visible: computeTieVisibility(rawTieNow) };
+  const tiePrev = { ...rawTiePrev, visible: computeTieVisibility(rawTiePrev) };
+  const dataWithTie = { ...data, tie: tieNow };
+  data.tie = tieNow;
 
-    setStatus(k, data.overlay_visible, tieNow.visible);
+  setStatus(k, data.overlay_visible, tieNow.visible);
 
-    const A = data.A || {};
+  const A = data.A || {};
   const B = data.B || {};
   const surnameA = A.surname || prevK?.A?.surname;
   const surnameB = B.surname || prevK?.B?.surname;
