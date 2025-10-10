@@ -638,6 +638,44 @@ def _reset_after_match(state: Dict[str, Any]) -> None:
     status["active"] = False
 
 
+def _short_set_winner(games_a: int, games_b: int) -> Optional[str]:
+    if games_a == 4 and games_b <= 3:
+        return "A"
+    if games_b == 4 and games_a <= 3:
+        return "B"
+    return None
+
+
+def _count_short_set_wins(state: Dict[str, Any]) -> Dict[str, int]:
+    wins = {"A": 0, "B": 0}
+    for idx in (1, 2):
+        key = f"set{idx}"
+        try:
+            games_a = int(state["A"].get(key) or 0)
+        except (TypeError, ValueError):
+            games_a = 0
+        try:
+            games_b = int(state["B"].get(key) or 0)
+        except (TypeError, ValueError):
+            games_b = 0
+        winner = _short_set_winner(games_a, games_b)
+        if winner:
+            wins[winner] += 1
+    return wins
+
+
+def _maybe_update_current_set_indicator(state: Dict[str, Any]) -> Dict[str, int]:
+    wins = _count_short_set_wins(state)
+    current = state.get("current_set") or 0
+    if wins["A"] == 1 and wins["B"] == 1:
+        if current != 3:
+            state["current_set"] = 3
+    elif wins["A"] >= 2 or wins["B"] >= 2:
+        if current and current > 2:
+            state["current_set"] = 2
+    return wins
+
+
 def _build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
     mt, _ = _ensure_match_struct(state)
     ended_at = mt.get("finished_ts") or _now_iso()
@@ -668,13 +706,14 @@ def _build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str,
     }
 
 
-def _finalize_match_if_needed(kort_id: str, state: Dict[str, Any]) -> None:
+def _finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional[Dict[str, int]] = None) -> None:
     mt, status = _ensure_match_struct(state)
     if not status.get("active"):
         return
-    a_set2 = int(state["A"].get("set2") or 0)
-    b_set2 = int(state["B"].get("set2") or 0)
-    if (a_set2 == 4 and b_set2 <= 3) or (b_set2 == 4 and a_set2 <= 3):
+    if wins is None:
+        wins = _count_short_set_wins(state)
+
+    def _complete_match():
         _stop_match_timer(state)
         entry = _build_match_history_entry(kort_id, state)
         persist_match_history_entry(entry)
@@ -688,18 +727,31 @@ def _finalize_match_if_needed(kort_id: str, state: Dict[str, Any]) -> None:
                 "B": entry["players"]["B"]["surname"],
                 "set1": entry["sets"]["set1"],
                 "set2": entry["sets"]["set2"],
+                "tie": entry["sets"].get("tie"),
             },
             entry["duration_text"],
         )
         _reset_after_match(state)
+
+    if wins["A"] >= 2 or wins["B"] >= 2:
+        _complete_match()
+        return
+
+    if wins["A"] == 1 and wins["B"] == 1:
+        tie_state = state.get("tie") if isinstance(state.get("tie"), dict) else {"A": 0, "B": 0}
+        tie_a = _as_int(tie_state.get("A"), 0)
+        tie_b = _as_int(tie_state.get("B"), 0)
+        if (tie_a >= 10 or tie_b >= 10) and abs(tie_a - tie_b) >= 2:
+            _complete_match()
 
 
 def _handle_match_flow(kort_id: Optional[str], state: Dict[str, Any]) -> None:
     _ensure_match_struct(state)
     _maybe_start_match(state)
     _update_match_timer(state)
+    wins = _maybe_update_current_set_indicator(state)
     if kort_id is not None:
-        _finalize_match_if_needed(kort_id, state)
+        _finalize_match_if_needed(kort_id, state, wins)
 def _record_log_entry(state: Dict[str, Any], kort_id: str, source: str, command: str,
                       value: Any, extras: Optional[Dict[str, Any]], ts: str) -> Dict[str, Any]:
     entry: Dict[str, Any] = {
