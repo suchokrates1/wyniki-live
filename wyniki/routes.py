@@ -124,7 +124,7 @@ def api_healthz():
     return jsonify({"ok": True, "ts": now_iso()}), 200
 
 
-@blueprint.route("/delete", methods=["POST"])
+@blueprint.route("/delete", methods=["GET", "POST"])
 def api_history_delete_last():
     payload = request.get_json(silent=True) or {}
 
@@ -139,7 +139,11 @@ def api_history_delete_last():
         return text if text else None
 
     provided_password: Optional[str] = None
-    if isinstance(payload, dict):
+    if request.authorization:
+        provided_password = _sanitize_password(request.authorization.password)
+        if not provided_password:
+            provided_password = _sanitize_password(request.authorization.username)
+    if not provided_password and isinstance(payload, dict):
         provided_password = _sanitize_password(payload.get("password"))
     if not provided_password:
         provided_password = _sanitize_password(request.form.get("password"))
@@ -149,10 +153,14 @@ def api_history_delete_last():
         provided_password = _sanitize_password(request.headers.get("X-Delete-Password"))
 
     if not provided_password:
-        return jsonify({"ok": False, "error": "password-required"}), 401
+        response = Response("Authentication required", 401)
+        response.headers["WWW-Authenticate"] = 'Basic realm="History"'
+        return response
 
     if not hmac.compare_digest(provided_password, settings.delete_password):
-        return jsonify({"ok": False, "error": "password-invalid"}), 403
+        response = Response("Invalid password", 401)
+        response.headers["WWW-Authenticate"] = 'Basic realm="History"'
+        return response
 
     kort_raw = None
     if isinstance(payload, dict):
