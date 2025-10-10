@@ -2,7 +2,7 @@
 
 ## Konfiguracja
 
-- `HISTORY_DELETE_PASSWORD` – hasło wymagane przy wywołaniu endpointu `https://score.vestmedia.pl/delete` usuwającego ostatni wpis z historii.
+- `HISTORY_DELETE_PASSWORD` – hasło wymagane przy wywołaniu endpointu `https://score.vestmedia.pl/delete` usuwającego ostatni wpis z historii. Endpoint obsługuje logowanie typu HTTP Basic, więc można go wywołać bezpośrednio z przeglądarki (przeglądarka poprosi o hasło).
 
 ## Dostępność wyników
 
