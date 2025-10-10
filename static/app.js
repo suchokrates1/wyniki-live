@@ -60,8 +60,8 @@
     accessibility: {
       versus: 'kontra',
       points: 'punkty',
-      tieBreak: 'tie break',
-      superTieBreak: 'super tie break',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
       set: 'Set {number}',
       active: 'aktywny'
     },
@@ -1073,39 +1073,56 @@ function applyScoreAria(k, data) {
   const acc = resolveAccessibilityStrings(t);
   const nameA = resolvePlayerName(data.A || {}, 'defaultA');
   const nameB = resolvePlayerName(data.B || {}, 'defaultB');
-  const pointsA = (document.getElementById(`k${k}-pts-A`)?.textContent || '0').trim();
-  const pointsB = (document.getElementById(`k${k}-pts-B`)?.textContent || '0').trim();
-  const set1A = (document.getElementById(`k${k}-s1-A`)?.textContent || '0').trim();
-  const set1B = (document.getElementById(`k${k}-s1-B`)?.textContent || '0').trim();
-  const set2A = (document.getElementById(`k${k}-s2-A`)?.textContent || '0').trim();
-  const set2B = (document.getElementById(`k${k}-s2-B`)?.textContent || '0').trim();
   const currentSet = Number(data.current_set || 1);
-  const tieVisible = data.tie?.visible === true;
+  const tieState = data.tie || {};
+  const tieVisible = tieState.visible === true;
   const isSuperTieBreak = tieVisible && currentSet === 3;
 
+  updatePointsLabelText(k, tieVisible, isSuperTieBreak);
+
+  const pointsLabelEl = document.getElementById(`k${k}-label-points`);
+  const domPointsLabel = (pointsLabelEl?.textContent || '').trim();
+  const pointsLabelText = tieVisible
+    ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak)
+    : (domPointsLabel || acc.points);
+
   const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
-  const summaryPointsLabel = tieVisible ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak) : acc.points;
-  const pointsSegment = `${summaryPointsLabel} ${pointsA}:${pointsB}`;
-  summaryParts.push(pointsSegment);
+  const pointsAText = tieVisible
+    ? normalizeTieDisplay(tieState.A)
+    : normalizePointsDisplay(data?.A?.points);
+  const pointsBText = tieVisible
+    ? normalizeTieDisplay(tieState.B)
+    : normalizePointsDisplay(data?.B?.points);
+
+  summaryParts.push(`${pointsLabelText} ${pointsAText}:${pointsBText}`);
 
   const setSegments = [];
   [
-    { index: 1, a: set1A, b: set1B },
-    { index: 2, a: set2A, b: set2B }
-  ].forEach(({ index, a, b }) => {
-    const aNum = Number.parseInt(a, 10) || 0;
-    const bNum = Number.parseInt(b, 10) || 0;
+    { index: 1, a: data?.A?.set1, b: data?.B?.set1, nodeId: `k${k}-label-set1` },
+    { index: 2, a: data?.A?.set2, b: data?.B?.set2, nodeId: `k${k}-label-set2` }
+  ].forEach(({ index, a, b, nodeId }) => {
+    const safeA = a === undefined || a === null ? '0' : String(a).trim() || '0';
+    const safeB = b === undefined || b === null ? '0' : String(b).trim() || '0';
+    const aNum = Number.parseInt(safeA, 10) || 0;
+    const bNum = Number.parseInt(safeB, 10) || 0;
     const include = index === 1 || currentSet >= index || aNum > 0 || bNum > 0;
     if (!include) return;
-    const label = format(acc.setTemplate, { number: index });
+    const labelEl = document.getElementById(nodeId);
+    const fallbackLabel = format(acc.setTemplate, { number: index });
+    const labelText = (labelEl?.textContent || '').trim() || fallbackLabel;
     const isActive = currentSet === index;
+    if (labelEl) {
+      if (isActive) {
+        labelEl.setAttribute('aria-label', `${labelText}, ${acc.active}`);
+      } else {
+        labelEl.removeAttribute('aria-label');
+      }
+    }
     const segment = isActive
-      ? `${label}, ${acc.active}, ${a}:${b}`
-      : `${label} ${a}:${b}`;
+      ? `${labelText}, ${acc.active}, ${safeA}:${safeB}`
+      : `${labelText} ${safeA}:${safeB}`;
     setSegments.push(segment);
   });
-
-  updatePointsLabelText(k, tieVisible, isSuperTieBreak);
 
   setSegments.forEach(segment => summaryParts.push(segment));
 
