@@ -341,6 +341,28 @@ function _formatDurationLocal(seconds) {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
+function formatSetHistorySegment(setData) {
+  if (!setData || typeof setData !== 'object') return null;
+  const rawA = Number.parseInt(setData.A ?? setData.a ?? 0, 10);
+  const rawB = Number.parseInt(setData.B ?? setData.b ?? 0, 10);
+  const gamesA = Number.isNaN(rawA) ? 0 : rawA;
+  const gamesB = Number.isNaN(rawB) ? 0 : rawB;
+  if (gamesA === 0 && gamesB === 0) return null;
+  const base = `${gamesA}–${gamesB}`;
+  const tb = setData.tb;
+  if (tb && typeof tb === 'object') {
+    const rawTbA = Number.parseInt(tb.A ?? tb.a ?? 0, 10);
+    const rawTbB = Number.parseInt(tb.B ?? tb.b ?? 0, 10);
+    const tieA = Number.isNaN(rawTbA) ? 0 : rawTbA;
+    const tieB = Number.isNaN(rawTbB) ? 0 : rawTbB;
+    const played = Boolean(tb.played ?? (tieA || tieB));
+    if (played && (tieA || tieB)) {
+      return `${base}(${tieA}:${tieB})`;
+    }
+  }
+  return base;
+}
+
 function renderGlobalHistory(history = []) {
   const section = document.getElementById('history-section');
   const body = document.getElementById('history-body');
@@ -382,19 +404,24 @@ function renderGlobalHistory(history = []) {
     item.className = 'history-item';
     const playerA = resolvePlayerName(entry.players?.A || {}, 'defaultA');
     const playerB = resolvePlayerName(entry.players?.B || {}, 'defaultB');
-    const set1 = `${entry.sets?.set1?.A ?? 0}:${entry.sets?.set1?.B ?? 0}`;
-    const set2 = `${entry.sets?.set2?.A ?? 0}:${entry.sets?.set2?.B ?? 0}`;
+    const setSegments = [];
+    const set1 = formatSetHistorySegment(entry.sets?.set1);
+    const set2 = formatSetHistorySegment(entry.sets?.set2);
+    if (set1) setSegments.push(set1);
+    if (set2) setSegments.push(set2);
     const tie = entry.sets?.tie || {};
     const duration = entry.duration_text || _formatDurationLocal(entry.duration_seconds || 0);
 
     const courtLabel = format(currentT().courtLabel, { court: entry.kort });
-    const head = `${courtLabel}, ${playerA} : ${playerB}`;
-    const segments = [set1, set2];
+    const accStrings = resolveAccessibilityStrings(t);
+    const versusText = accStrings.versus || currentT().versus || 'vs';
+    const head = `${courtLabel}, ${playerA} ${versusText} ${playerB}`;
+    const segments = [...setSegments];
     if (tie.played) {
       const label = t.history?.labels?.supertb || 'SUPERTB';
-      segments.push(`${label} ${tie.A ?? 0}:${tie.B ?? 0}`);
+      segments.push(`${label}: ${(tie.A ?? 0)}–${tie.B ?? 0}`);
     }
-    const description = [head, ...segments].join(' | ');
+    const description = segments.length ? `${head} ${segments.join(', ')}` : head;
 
     const terms = [
       { label: cols.description, value: description, className: 'description' },
