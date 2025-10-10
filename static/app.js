@@ -24,6 +24,8 @@
       columns: {
         name: 'Nazwisko',
         points: 'Punkty',
+        tieBreak: 'Tie Break',
+        superTieBreak: 'Super TB',
         set1: 'Set 1 (gemy)',
         set2: 'Set 2 (gemy)'
       }
@@ -58,9 +60,10 @@
     accessibility: {
       versus: 'kontra',
       points: 'punkty',
-      tieBreak: 'tiebreak',
-      superTieBreak: 'super tiebreak',
-      set: 'Set {number}'
+      tieBreak: 'tie break',
+      superTieBreak: 'super tie break',
+      set: 'Set {number}',
+      active: 'aktywny'
     },
     shortcuts: {
       desc: 'Skróty: [1–6] – korty, H – historia.'
@@ -91,6 +94,8 @@
       columns: {
         name: 'Nachname',
         points: 'Punkte',
+        tieBreak: 'Tiebreak',
+        superTieBreak: 'Super-Tiebreak',
         set1: 'Satz 1 (Spiele)',
         set2: 'Satz 2 (Spiele)'
       }
@@ -128,7 +133,8 @@
       points: 'Punkte',
       tieBreak: 'Tiebreak',
       superTieBreak: 'Super-Tiebreak',
-      set: 'Satz {number}'
+      set: 'Satz {number}',
+      active: 'aktiv'
     }
   },
   en: {
@@ -156,6 +162,8 @@
       columns: {
         name: 'Surname',
         points: 'Points',
+        tieBreak: 'Tie-break',
+        superTieBreak: 'Super tie-break',
         set1: 'Set 1 (games)',
         set2: 'Set 2 (games)'
       }
@@ -193,7 +201,8 @@
       points: 'points',
       tieBreak: 'tie-break',
       superTieBreak: 'super tie-break',
-      set: 'Set {number}'
+      set: 'Set {number}',
+      active: 'active'
     }
   },
   it: {
@@ -221,6 +230,8 @@
       columns: {
         name: 'Cognome',
         points: 'Punti',
+        tieBreak: 'Tie-break',
+        superTieBreak: 'Super tie-break',
         set1: 'Set 1 (giochi)',
         set2: 'Set 2 (giochi)'
       }
@@ -260,7 +271,8 @@
       points: 'punti',
       tieBreak: 'tie-break',
       superTieBreak: 'super tie-break',
-      set: 'Set {number}'
+      set: 'Set {number}',
+      active: 'attivo'
     }
   },
   es: {
@@ -288,6 +300,8 @@
       columns: {
         name: 'Apellido',
         points: 'Puntos',
+        tieBreak: 'Tie break',
+        superTieBreak: 'Súper tie break',
         set1: 'Set 1 (juegos)',
         set2: 'Set 2 (juegos)'
       }
@@ -327,7 +341,8 @@
       points: 'puntos',
       tieBreak: 'tie-break',
       superTieBreak: 'super tie-break',
-      set: 'Set {number}'
+      set: 'Set {number}',
+      active: 'activo'
     }
   },
   fi: {
@@ -355,6 +370,8 @@
       columns: {
         name: 'Sukunimi',
         points: 'Pisteet',
+        tieBreak: 'Tie-break',
+        superTieBreak: 'Super-tie-break',
         set1: 'Erä 1 (pelit)',
         set2: 'Erä 2 (pelit)'
       }
@@ -394,7 +411,8 @@
       points: 'pisteet',
       tieBreak: 'tiebreak',
       superTieBreak: 'super-tiebreak',
-      set: 'Erä {number}'
+      set: 'Erä {number}',
+      active: 'käynnissä'
     }
   },
   uk: {
@@ -422,6 +440,8 @@
       columns: {
         name: 'Прізвище',
         points: 'Очки',
+        tieBreak: 'Тай-брейк',
+        superTieBreak: 'Супер тай-брейк',
         set1: 'Сет 1 (гейми)',
         set2: 'Сет 2 (гейми)'
       }
@@ -455,6 +475,14 @@
       labels: {
         supertb: 'Результат супер-тайбрейку'
       }
+    },
+    accessibility: {
+      versus: 'проти',
+      points: 'очки',
+      tieBreak: 'тай-брейк',
+      superTieBreak: 'супер тай-брейк',
+      set: 'Сет {number}',
+      active: 'активний'
     }
   },
   fr: {
@@ -482,6 +510,8 @@
       columns: {
         name: 'Nom',
         points: 'Points',
+        tieBreak: 'Tie-break',
+        superTieBreak: 'Super tie-break',
         set1: 'Set 1 (jeux)',
         set2: 'Set 2 (jeux)'
       }
@@ -515,6 +545,14 @@
       labels: {
         supertb: 'Résultat super tie-break'
       }
+    },
+    accessibility: {
+      versus: 'contre',
+      points: 'points',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}',
+      active: 'actif'
     }
   },
   lt: {
@@ -542,6 +580,8 @@
       columns: {
         name: 'Pavardė',
         points: 'Taškai',
+        tieBreak: 'Taibreikas',
+        superTieBreak: 'Super taibreikas',
         set1: 'Setas 1 (geimai)',
         set2: 'Setas 2 (geimai)'
       }
@@ -575,6 +615,14 @@
       labels: {
         supertb: 'Super taibreiko rezultatas'
       }
+    },
+    accessibility: {
+      versus: 'prieš',
+      points: 'taškai',
+      tieBreak: 'taibreikas',
+      superTieBreak: 'super taibreikas',
+      set: 'Setas {number}',
+      active: 'aktyvus'
     }
   }
 };
@@ -634,6 +682,7 @@ function currentLocale() {
 
 function resolveAccessibilityStrings(t) {
   const acc = t.accessibility || {};
+  const columns = t.table?.columns || {};
   let versus = acc.versus;
   if (!versus) {
     if (currentLang === 'pl') {
@@ -644,13 +693,13 @@ function resolveAccessibilityStrings(t) {
       versus = t.versus || 'versus';
     }
   }
-  const rawPoints = acc.points || t.table?.columns?.points || 'Points';
+  const rawPoints = acc.points || columns.points || 'Points';
   const points = rawPoints.replace(/\s*\(.*?\)\s*/g, '').trim() || 'Points';
-  const tieBreak = acc.tieBreak || 'tie-break';
-  const superTieBreak = acc.superTieBreak || `super ${tieBreak}`;
+  const tieBreak = acc.tieBreak || columns.tieBreak || 'tie-break';
+  const superTieBreak = acc.superTieBreak || columns.superTieBreak || `super ${tieBreak}`;
   let setTemplate = acc.set;
   if (!setTemplate) {
-    const rawSet = t.table?.columns?.set1;
+    const rawSet = columns?.set1;
     if (typeof rawSet === 'string') {
       const cleaned = rawSet.split('(')[0].trim();
       const replaced = cleaned.replace(/\d+/, '{number}');
@@ -662,7 +711,8 @@ function resolveAccessibilityStrings(t) {
   if (!setTemplate || !setTemplate.includes('{number}')) {
     setTemplate = 'Set {number}';
   }
-  return { versus, points, tieBreak, superTieBreak, setTemplate };
+  const active = acc.active || 'active';
+  return { versus, points, tieBreak, superTieBreak, setTemplate, active };
 }
 
 function computeTieVisibility(tieState) {
@@ -703,6 +753,8 @@ function makeCourtCard(k) {
   const defaultB = t.players.defaultB;
   const columns = t.table?.columns || {};
   const pointsLabel = columns.points || acc.points;
+  const tieBreakLabel = columns.tieBreak || acc.tieBreak;
+  const superTieBreakLabel = columns.superTieBreak || acc.superTieBreak;
   const setLabel = (idx) => columns[`set${idx}`] || format(acc.setTemplate, { number: idx });
   const set1Label = setLabel(1);
   const set2Label = setLabel(2);
@@ -734,16 +786,16 @@ function makeCourtCard(k) {
             <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
             <span class="player-name" id="k${k}-name-A">${defaultA}</span>
           </dt>
-          <dd class="metric points">
-            <span class="metric-label">${pointsLabel}</span>
+          <dd class="metric points" aria-labelledby="k${k}-label-points k${k}-name-A">
+            <span class="metric-label" id="k${k}-label-points" data-default-label="${pointsLabel}" data-tie-label="${tieBreakLabel}" data-super-label="${superTieBreakLabel}">${pointsLabel}</span>
             <span class="metric-value points" id="k${k}-pts-A">0</span>
           </dd>
-          <dd class="metric set-1">
-            <span class="metric-label">${set1Label}</span>
+          <dd class="metric set-1" aria-labelledby="k${k}-label-set1 k${k}-name-A">
+            <span class="metric-label" id="k${k}-label-set1">${set1Label}</span>
             <span class="metric-value set set-1" id="k${k}-s1-A">0</span>
           </dd>
-          <dd class="metric set-2">
-            <span class="metric-label">${set2Label}</span>
+          <dd class="metric set-2" aria-labelledby="k${k}-label-set2 k${k}-name-A">
+            <span class="metric-label" id="k${k}-label-set2">${set2Label}</span>
             <span class="metric-value set set-2" id="k${k}-s2-A">0</span>
           </dd>
         </div>
@@ -752,16 +804,13 @@ function makeCourtCard(k) {
             <span class="player-flag" id="k${k}-flag-B" aria-hidden="true"></span>
             <span class="player-name" id="k${k}-name-B">${defaultB}</span>
           </dt>
-          <dd class="metric points">
-            <span class="metric-label">${pointsLabel}</span>
+          <dd class="metric points" aria-labelledby="k${k}-label-points k${k}-name-B">
             <span class="metric-value points" id="k${k}-pts-B">0</span>
           </dd>
-          <dd class="metric set-1">
-            <span class="metric-label">${set1Label}</span>
+          <dd class="metric set-1" aria-labelledby="k${k}-label-set1 k${k}-name-B">
             <span class="metric-value set set-1" id="k${k}-s1-B">0</span>
           </dd>
-          <dd class="metric set-2">
-            <span class="metric-label">${set2Label}</span>
+          <dd class="metric set-2" aria-labelledby="k${k}-label-set2 k${k}-name-B">
             <span class="metric-value set set-2" id="k${k}-s2-B">0</span>
           </dd>
         </div>
@@ -1003,6 +1052,18 @@ function renderGlobalHistory(history = []) {
   if (btnNext) btnNext.addEventListener('click', () => { if (window.__histPage<pages){ window.__histPage++; renderGlobalHistory(history); }});
 }
 
+function updatePointsLabelText(k, tieVisible, isSuperTieBreak) {
+  const label = document.getElementById(`k${k}-label-points`);
+  if (!label) return;
+  const defaultLabel = label.getAttribute('data-default-label') || label.textContent || '';
+  const tieLabel = label.getAttribute('data-tie-label') || defaultLabel;
+  const superLabel = label.getAttribute('data-super-label') || tieLabel;
+  const target = tieVisible ? (isSuperTieBreak ? superLabel : tieLabel) : defaultLabel;
+  if (label.textContent !== target) {
+    label.textContent = target;
+  }
+}
+
 function applyScoreAria(k, data) {
   const section = document.getElementById(`kort-${k}`);
   if (!section) return;
@@ -1023,11 +1084,8 @@ function applyScoreAria(k, data) {
   const isSuperTieBreak = tieVisible && currentSet === 3;
 
   const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
-  let pointsSegment = `${acc.points} ${pointsA}:${pointsB}`;
-  if (tieVisible) {
-    const tieLabel = isSuperTieBreak ? acc.superTieBreak : acc.tieBreak;
-    pointsSegment += `, ${tieLabel}`;
-  }
+  const summaryPointsLabel = tieVisible ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak) : acc.points;
+  let pointsSegment = `${summaryPointsLabel} ${pointsA}:${pointsB}`;
   summaryParts.push(pointsSegment);
 
   const setSegments = [];
@@ -1040,12 +1098,16 @@ function applyScoreAria(k, data) {
     const include = index === 1 || currentSet >= index || aNum > 0 || bNum > 0;
     if (!include) return;
     const label = format(acc.setTemplate, { number: index });
-    setSegments.push(`${label}: ${a}:${b}`);
+    const isActive = currentSet === index;
+    const labelWithState = isActive ? `${label} ${acc.active}` : label;
+    setSegments.push(`${labelWithState}: ${a}:${b}`);
   });
 
   if (setSegments.length) {
     summaryParts.push(setSegments.join(', '));
   }
+
+  updatePointsLabelText(k, tieVisible, isSuperTieBreak);
 
   const summary = summaryParts.join('. ');
   list.setAttribute('aria-label', summary);
@@ -1742,6 +1804,26 @@ function refreshCardsLanguage() {
 
     const section = document.getElementById(`kort-${k}`);
     if (!section) return;
+
+    const accStrings = resolveAccessibilityStrings(t);
+    const columns = t.table?.columns || {};
+    const pointsLabel = columns.points || accStrings.points;
+    const tieBreakLabel = columns.tieBreak || accStrings.tieBreak;
+    const superTieBreakLabel = columns.superTieBreak || accStrings.superTieBreak;
+    const set1Label = columns.set1 || format(accStrings.setTemplate, { number: 1 });
+    const set2Label = columns.set2 || format(accStrings.setTemplate, { number: 2 });
+
+    const pointsLabelEl = document.getElementById(`k${k}-label-points`);
+    if (pointsLabelEl) {
+      pointsLabelEl.textContent = pointsLabel;
+      pointsLabelEl.setAttribute('data-default-label', pointsLabel);
+      pointsLabelEl.setAttribute('data-tie-label', tieBreakLabel);
+      pointsLabelEl.setAttribute('data-super-label', superTieBreakLabel);
+    }
+    const set1LabelEl = document.getElementById(`k${k}-label-set1`);
+    if (set1LabelEl) set1LabelEl.textContent = set1Label;
+    const set2LabelEl = document.getElementById(`k${k}-label-set2`);
+    if (set2LabelEl) set2LabelEl.textContent = set2Label;
 
     const controlLabel = section.querySelector('label.control span');
     if (controlLabel) controlLabel.textContent = t.announceLabel;
