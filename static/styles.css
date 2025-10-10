@@ -241,81 +241,74 @@ main {
   list-style: none;
   display: grid;
   gap: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   overflow: hidden;
-  background: #0c0c0c;
+  background: linear-gradient(180deg, #1d1d1d 0%, #090909 100%);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.8);
 }
 
 .score-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2.3fr) repeat(3, minmax(0, 0.95fr));
   align-items: stretch;
-  color: #f5f5f5;
+  color: #fdfdfd;
 }
 
-.score-row + .score-row .player-cell,
-.score-row + .score-row dd.metric {
+.score-row + .score-row {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .score-row dt,
 .score-row dd {
   margin: 0;
-  padding: 12px;
-}
-
-.score-row[data-side='A'] dt,
-.score-row[data-side='A'] dd {
-  padding-bottom: 0;
-}
-
-.score-row[data-side='B'] dt,
-.score-row[data-side='B'] dd {
-  padding-top: 0;
+  padding: 10px 14px;
 }
 
 .score-row dt.player-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #181818;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(0, 0, 0, 0) 100%);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  border-right: 1px solid rgba(0, 0, 0, 0.65);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
 }
+
 .score-row[data-side='B'] dt.player-cell {
-  background: #141414;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0) 100%);
 }
 
 .score-row .player-name {
   flex: 1;
   color: #fefefe;
-  text-transform: uppercase;
 }
 
 .score-row dd.metric {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 6px;
-  text-align: center;
-  background: rgba(42, 42, 42, 0.92);
-}
-.score-row[data-side='B'] dd.metric {
-  background: rgba(35, 35, 35, 0.92);
+  padding: 0;
+  background: transparent;
 }
 
 .score-row dd.metric + dd.metric {
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(0, 0, 0, 0.6);
 }
 
 .metric-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .metric-value {
@@ -323,47 +316,50 @@ main {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 42px;
-  border-radius: 8px;
-  font-size: 20px;
-  color: #fff;
-  background: rgba(24, 24, 24, 0.88);
+  min-height: 54px;
+  font-size: 22px;
+  font-weight: 700;
+  border-radius: 0;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
   transition: background-color 0.3s ease, color 0.3s ease, transform 0.25s ease;
 }
 
 .metric-value.points {
-  background: #1f1f1f;
-}
-
-.metric-value.set {
-  font-size: 18px;
-  background: #a04a18;
+  background: linear-gradient(180deg, #141414 0%, #050505 100%);
+  color: #fafafa;
 }
 
 .metric-value.points.is-tiebreak {
-  background: #f4c86a;
-  color: #1d1d1d;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(180deg, #ffe6a7 0%, #f3c34a 100%);
+  color: #261200;
+  text-shadow: none;
+}
+
+.metric-value.set {
+  background: linear-gradient(180deg, #ff7a1c 0%, #d64900 100%);
+  color: #fff9f2;
 }
 
 .metric-value.set.is-active {
-  background: #d26724;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
+
 .player-flag {
-  width: 26px;
-  height: 18px;
+  width: 32px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
   font-weight: 700;
-  border-radius: 2px;
+  border-radius: 3px;
   background: #2f2f2f;
   color: #111;
   text-transform: uppercase;
   background-size: cover;
   background-position: center;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
 }
 
 .player-flag.has-image {
