@@ -149,7 +149,7 @@ function makeCourtCard(k) {
     </div>
 
     <div class="score-wrapper">
-      <dl class="score-list" aria-labelledby="heading-${k}">
+      <dl class="score-list" aria-labelledby="heading-${k}" aria-hidden="true">
         <div class="score-row" data-side="A">
           <dt class="player-cell">
             <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
@@ -184,6 +184,13 @@ function makeCourtCard(k) {
           </dd>
         </div>
       </dl>
+    </div>
+    <div class="sr-only score-summary" id="k${k}-summary">
+      <p data-summary-line="0" id="k${k}-summary-0" aria-live="polite"></p>
+      <p data-summary-line="1" id="k${k}-summary-1" aria-live="polite"></p>
+      <p data-summary-line="2" id="k${k}-summary-2" aria-live="polite"></p>
+      <p data-summary-line="3" id="k${k}-summary-3" aria-live="polite"></p>
+      <p data-summary-line="4" id="k${k}-summary-4" aria-live="polite"></p>
     </div>
   `;
 
@@ -438,6 +445,7 @@ function applyScoreAria(k, data) {
   if (!section) return;
   const list = section.querySelector('.score-list');
   if (!list) return;
+  const summaryRoot = document.getElementById(`k${k}-summary`);
   const t = currentT();
   const acc = resolveAccessibilityStrings(t);
   const nameA = resolvePlayerName(data.A || {}, 'defaultA');
@@ -496,9 +504,21 @@ function applyScoreAria(k, data) {
 
   setSegments.forEach(segment => summaryParts.push(segment));
 
-  const summary = summaryParts.join('\n');
-  list.setAttribute('aria-label', summary);
-  section.setAttribute('aria-label', summary);
+  if (summaryRoot) {
+    const lines = summaryRoot.querySelectorAll('[data-summary-line]');
+    summaryParts.forEach((line, index) => {
+      const target = lines[index];
+      if (target && target.textContent !== line) {
+        target.textContent = line;
+      }
+    });
+    for (let i = summaryParts.length; i < lines.length; i += 1) {
+      const target = lines[i];
+      if (target && target.textContent !== '') {
+        target.textContent = '';
+      }
+    }
+  }
 }
 
 function updateTitle(k, Adata, Bdata) {
