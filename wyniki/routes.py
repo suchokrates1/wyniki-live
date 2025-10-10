@@ -37,6 +37,7 @@ from .state import (
     record_log_entry,
     serialize_all_states,
     serialize_court_state,
+    serialize_history,
     validate_command,
 )
 from .utils import now_iso, render_file_template, safe_copy, shorten
@@ -77,6 +78,7 @@ def api_stream():
                 "type": "snapshot",
                 "ts": now_iso(),
                 "state": serialize_all_states(),
+                "history": serialize_history(),
             }
             yield f"data: {json.dumps(snapshot_payload, ensure_ascii=False)}\n\n"
             while True:
