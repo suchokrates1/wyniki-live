@@ -665,6 +665,18 @@ function resolveAccessibilityStrings(t) {
   return { versus, points, tieBreak, superTieBreak, setTemplate };
 }
 
+function computeTieVisibility(tieState) {
+  if (!tieState || typeof tieState !== 'object') return false;
+  const rawA = Number.parseInt(tieState.A ?? tieState.a ?? 0, 10);
+  const rawB = Number.parseInt(tieState.B ?? tieState.b ?? 0, 10);
+  const safeA = Number.isNaN(rawA) ? 0 : rawA;
+  const safeB = Number.isNaN(rawB) ? 0 : rawB;
+  if (safeA !== 0 || safeB !== 0) {
+    return true;
+  }
+  return false;
+}
+
 function flash(el) {
   if (!el) return;
   el.classList.add('changed');
@@ -689,6 +701,11 @@ function makeCourtCard(k) {
   const courtLabel = format(t.courtLabel, { court: k });
   const defaultA = t.players.defaultA;
   const defaultB = t.players.defaultB;
+  const columns = t.table?.columns || {};
+  const pointsLabel = columns.points || acc.points;
+  const setLabel = (idx) => columns[`set${idx}`] || format(acc.setTemplate, { number: idx });
+  const set1Label = setLabel(1);
+  const set2Label = setLabel(2);
 
   const section = document.createElement('section');
   section.className = 'card';
@@ -710,28 +727,46 @@ function makeCourtCard(k) {
       </label>
     </div>
 
-    <table class="score-table" role="presentation" aria-labelledby="heading-${k}">
-      <tbody>
-      <tr>
-        <th scope="row" class="player-cell">
-          <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
-          <span class="player-name" id="k${k}-name-A">${defaultA}</span>
-        </th>
-        <td class="points" id="k${k}-pts-A">0</td>
-        <td class="set set-1" id="k${k}-s1-A">0</td>
-        <td class="set set-2" id="k${k}-s2-A">0</td>
-      </tr>
-      <tr>
-        <th scope="row" class="player-cell">
-          <span class="player-flag" id="k${k}-flag-B" aria-hidden="true"></span>
-          <span class="player-name" id="k${k}-name-B">${defaultB}</span>
-        </th>
-        <td class="points" id="k${k}-pts-B">0</td>
-        <td class="set set-1" id="k${k}-s1-B">0</td>
-        <td class="set set-2" id="k${k}-s2-B">0</td>
-      </tr>
-    </tbody>
-  </table>
+    <div class="score-wrapper">
+      <dl class="score-list" aria-labelledby="heading-${k}">
+        <div class="score-row" data-side="A">
+          <dt class="player-cell">
+            <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
+            <span class="player-name" id="k${k}-name-A">${defaultA}</span>
+          </dt>
+          <dd class="metric points">
+            <span class="metric-label">${pointsLabel}</span>
+            <span class="metric-value points" id="k${k}-pts-A">0</span>
+          </dd>
+          <dd class="metric set-1">
+            <span class="metric-label">${set1Label}</span>
+            <span class="metric-value set set-1" id="k${k}-s1-A">0</span>
+          </dd>
+          <dd class="metric set-2">
+            <span class="metric-label">${set2Label}</span>
+            <span class="metric-value set set-2" id="k${k}-s2-A">0</span>
+          </dd>
+        </div>
+        <div class="score-row" data-side="B">
+          <dt class="player-cell">
+            <span class="player-flag" id="k${k}-flag-B" aria-hidden="true"></span>
+            <span class="player-name" id="k${k}-name-B">${defaultB}</span>
+          </dt>
+          <dd class="metric points">
+            <span class="metric-label">${pointsLabel}</span>
+            <span class="metric-value points" id="k${k}-pts-B">0</span>
+          </dd>
+          <dd class="metric set-1">
+            <span class="metric-label">${set1Label}</span>
+            <span class="metric-value set set-1" id="k${k}-s1-B">0</span>
+          </dd>
+          <dd class="metric set-2">
+            <span class="metric-label">${set2Label}</span>
+            <span class="metric-value set set-2" id="k${k}-s2-B">0</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
   `;
 
   const cb = section.querySelector(`#announce-${k}`);
@@ -909,26 +944,17 @@ function renderGlobalHistory(history = []) {
   }
 
   section.classList.remove('is-empty');
-  const table = document.createElement('table');
-  table.className = 'history-table';
   const cols = t.history?.columns || {
     description: 'Mecz',
     duration: 'Czas'
   };
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th scope="col">${cols.description}</th>
-        <th scope="col">${cols.duration}</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  `;
-  const tbody = table.querySelector('tbody');
+  const list = document.createElement('div');
+  list.className = 'history-list';
   const start = (page - 1) * SIZE;
   const slice = history.slice(start, start + SIZE);
   slice.forEach((entry) => {
-    const row = document.createElement('tr');
+    const item = document.createElement('dl');
+    item.className = 'history-item';
     const playerA = resolvePlayerName(entry.players?.A || {}, 'defaultA');
     const playerB = resolvePlayerName(entry.players?.B || {}, 'defaultB');
     const set1 = `${entry.sets?.set1?.A ?? 0}:${entry.sets?.set1?.B ?? 0}`;
@@ -945,16 +971,24 @@ function renderGlobalHistory(history = []) {
     }
     const description = [head, ...segments].join(' | ');
 
-    const cells = [description, duration];
-    cells.forEach((value) => {
-      const cell = document.createElement('td');
-      cell.textContent = typeof value === 'string' ? value : String(value ?? '');
-      row.appendChild(cell);
+    const terms = [
+      { label: cols.description, value: description, className: 'description' },
+      { label: cols.duration, value: duration, className: 'duration' }
+    ];
+    terms.forEach(({ label, value, className }) => {
+      const dt = document.createElement('dt');
+      dt.className = `history-term history-term-${className}`;
+      dt.textContent = label;
+      const dd = document.createElement('dd');
+      dd.className = `history-value history-value-${className}`;
+      dd.textContent = typeof value === 'string' ? value : String(value ?? '');
+      item.appendChild(dt);
+      item.appendChild(dd);
     });
-    tbody.appendChild(row);
+    list.appendChild(item);
   });
 
-  body.appendChild(table);
+  body.appendChild(list);
   const pager = document.createElement('div');
   pager.className = 'history-controls';
   pager.innerHTML = `
@@ -972,8 +1006,8 @@ function renderGlobalHistory(history = []) {
 function applyScoreAria(k, data) {
   const section = document.getElementById(`kort-${k}`);
   if (!section) return;
-  const table = section.querySelector('.score-table');
-  if (!table) return;
+  const list = section.querySelector('.score-list');
+  if (!list) return;
   const t = currentT();
   const acc = resolveAccessibilityStrings(t);
   const nameA = resolvePlayerName(data.A || {}, 'defaultA');
@@ -1014,7 +1048,7 @@ function applyScoreAria(k, data) {
   }
 
   const summary = summaryParts.join('. ');
-  table.setAttribute('aria-label', summary);
+  list.setAttribute('aria-label', summary);
   section.setAttribute('aria-label', summary);
 }
 
@@ -1164,11 +1198,18 @@ function handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames) {
   });
 }
 
-function updateCourt(k, data) {
-  setStatus(k, data.overlay_visible, data.tie?.visible);
+  function updateCourt(k, data) {
+    const prevK = prev[k] || { A: {}, B: {}, tie: {} };
+    const rawTieNow = data.tie || {};
+    const rawTiePrev = prevK.tie || {};
+    const tieNow = { ...rawTieNow, visible: computeTieVisibility(rawTieNow) };
+    const tiePrev = { ...rawTiePrev, visible: computeTieVisibility(rawTiePrev) };
+    const dataWithTie = { ...data, tie: tieNow };
+    data.tie = tieNow;
 
-  const prevK = prev[k] || { A: {}, B: {}, tie: {} };
-  const A = data.A || {};
+    setStatus(k, data.overlay_visible, tieNow.visible);
+
+    const A = data.A || {};
   const B = data.B || {};
   const surnameA = A.surname || prevK?.A?.surname;
   const surnameB = B.surname || prevK?.B?.surname;
@@ -1201,9 +1242,6 @@ function updateCourt(k, data) {
   if (nameAChanged || nameBChanged) {
     updateTitle(k, A, B);
   }
-
-  const tieNow = data.tie || {};
-  const tiePrev = prevK.tie || {};
 
   const pointsA = resolveDisplayedPoints('A', A, prevK.A || {}, tieNow, tiePrev);
   const pointsB = resolveDisplayedPoints('B', B, prevK.B || {}, tieNow, tiePrev);
@@ -1313,7 +1351,7 @@ function updateCourt(k, data) {
   }
 
   handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames);
-  applyScoreAria(k, data);
+  applyScoreAria(k, dataWithTie);
 
   applySetHighlight(k, data.current_set ?? 1);
 }
