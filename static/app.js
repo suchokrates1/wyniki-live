@@ -60,8 +60,8 @@
     accessibility: {
       versus: 'kontra',
       points: 'punkty',
-      tieBreak: 'tie break',
-      superTieBreak: 'super tie break',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
       set: 'Set {number}',
       active: 'aktywny'
     },
@@ -1069,9 +1069,10 @@ function applyScoreAria(k, data) {
   updatePointsLabelText(k, tieVisible, isSuperTieBreak);
 
   const pointsLabelEl = document.getElementById(`k${k}-label-points`);
-  const pointsLabelText = (pointsLabelEl?.textContent || '').trim() || (tieVisible
+  const domPointsLabel = (pointsLabelEl?.textContent || '').trim();
+  const pointsLabelText = tieVisible
     ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak)
-    : acc.points);
+    : (domPointsLabel || acc.points);
 
   const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
 
@@ -1235,7 +1236,7 @@ function collectTieScoreChanges(current, previous, path = [], acc = []) {
 function resolveTiePlayerFromPath(path) {
   if (!Array.isArray(path) || path.length === 0) return null;
   const last = path[path.length - 1];
-  if (last === 'A' || last === 'B') return last;
+  if (last === 'A' || last === 'B') return 'A' || 'B';
   if (typeof last === 'string') {
     const upper = last.toUpperCase();
     if (upper.endsWith('A')) return 'A';
