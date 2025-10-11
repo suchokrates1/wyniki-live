@@ -13,6 +13,7 @@
   const refreshCourtsButton = document.getElementById('refresh-courts');
   const courtsTableBody = document.getElementById('courts-rows');
   const bodyElement = document.body;
+  const adminDisabledSection = document.getElementById('admin-disabled-section');
 
   if (!configElement) {
     return;
@@ -26,6 +27,10 @@
     initialConfig = { history: [], is_authenticated: false, int_fields: [] };
   }
 
+  const adminEnabled = initialConfig.admin_enabled !== false;
+  const disabledMessage =
+    initialConfig.admin_disabled_message ||
+    'Panel administracyjny jest wyłączony przez administratora.';
   const intFields = new Set(initialConfig.int_fields || []);
   const initialCourts = Array.isArray(initialConfig.courts) ? initialConfig.courts : [];
 
@@ -58,6 +63,25 @@
   }
 
   function toggleAuthenticated(isAuthenticated) {
+    if (!adminEnabled) {
+      if (loginSection) {
+        loginSection.hidden = true;
+      }
+      if (historySection) {
+        historySection.hidden = true;
+      }
+      if (courtsSection) {
+        courtsSection.hidden = true;
+      }
+      if (adminDisabledSection) {
+        adminDisabledSection.hidden = false;
+      }
+      if (bodyElement) {
+        bodyElement.dataset.authenticated = 'false';
+        bodyElement.dataset.adminEnabled = 'false';
+      }
+      return;
+    }
     if (loginSection) {
       loginSection.hidden = Boolean(isAuthenticated);
     }
@@ -69,6 +93,7 @@
     }
     if (bodyElement) {
       bodyElement.dataset.authenticated = isAuthenticated ? 'true' : 'false';
+      bodyElement.dataset.adminEnabled = 'true';
     }
   }
 
@@ -400,30 +425,40 @@
     }
   }
 
-  if (loginForm) {
+  if (bodyElement) {
+    bodyElement.dataset.adminEnabled = adminEnabled ? 'true' : 'false';
+  }
+
+  if (!adminEnabled) {
+    setFeedback(disabledMessage, 'info');
+  }
+
+  if (loginForm && adminEnabled) {
     loginForm.addEventListener('submit', handleLogin);
   }
-  if (refreshButton) {
+  if (refreshButton && adminEnabled) {
     refreshButton.addEventListener('click', refreshHistory);
   }
-  if (historyTableBody) {
+  if (historyTableBody && adminEnabled) {
     historyTableBody.addEventListener('click', handleTableClick);
   }
-  if (courtForm) {
+  if (courtForm && adminEnabled) {
     courtForm.addEventListener('submit', handleCourtFormSubmit);
   }
-  if (refreshCourtsButton) {
+  if (refreshCourtsButton && adminEnabled) {
     refreshCourtsButton.addEventListener('click', refreshCourts);
   }
-  if (courtsTableBody) {
+  if (courtsTableBody && adminEnabled) {
     courtsTableBody.addEventListener('click', handleCourtsTableClick);
   }
 
   toggleAuthenticated(Boolean(initialConfig.is_authenticated));
-  if (Array.isArray(initialConfig.history) && initialConfig.history.length > 0) {
-    renderHistory(initialConfig.history);
-  }
-  if (Boolean(initialConfig.is_authenticated)) {
-    renderCourts(initialCourts);
+  if (adminEnabled) {
+    if (Array.isArray(initialConfig.history) && initialConfig.history.length > 0) {
+      renderHistory(initialConfig.history);
+    }
+    if (Boolean(initialConfig.is_authenticated)) {
+      renderCourts(initialCourts);
+    }
   }
 })();
