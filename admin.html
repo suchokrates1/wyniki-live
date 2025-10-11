@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel administracyjny</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/js/admin.js" defer></script>
+  </head>
+  <body data-authenticated="{{ 'true' if is_authenticated else 'false' }}">
+    <main class="container">
+      <h1>Panel administracyjny</h1>
+      <div id="admin-feedback" class="feedback" role="alert" aria-live="polite"></div>
+
+      <section id="login-section" {% if is_authenticated %}hidden{% endif %}>
+        <h2>Dostęp chroniony</h2>
+        <p>Podaj hasło administratora, aby uzyskać dostęp do historii spotkań.</p>
+        <form id="admin-login-form">
+          <label for="admin-password">Hasło</label>
+          <input id="admin-password" name="password" type="password" required />
+          <button type="submit">Zaloguj</button>
+        </form>
+      </section>
+
+      <section id="history-section" {% if not is_authenticated %}hidden{% endif %}>
+        <header class="section-header">
+          <h2>Historia spotkań</h2>
+          <div class="section-actions">
+            <button id="refresh-history" type="button">Odśwież</button>
+          </div>
+        </header>
+        <div class="history-table-wrapper">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Kort</th>
+                <th>Zakończono</th>
+                <th>Czas (s)</th>
+                <th>Zawodnik A</th>
+                <th>Zawodnik B</th>
+                <th>Set 1 (A)</th>
+                <th>Set 1 (B)</th>
+                <th>Set 2 (A)</th>
+                <th>Set 2 (B)</th>
+                <th>Super Tie A</th>
+                <th>Super Tie B</th>
+                <th>TB1 A</th>
+                <th>TB1 B</th>
+                <th>TB2 A</th>
+                <th>TB2 B</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="history-rows">
+              {% for entry in history %}
+              <tr data-entry-id="{{ entry.id }}">
+                <td class="id">{{ entry.id }}</td>
+                <td><input name="kort_id" type="text" value="{{ entry.kort_id or '' }}" /></td>
+                <td><input name="ended_ts" type="text" value="{{ entry.ended_ts or '' }}" /></td>
+                <td><input name="duration_seconds" type="number" value="{{ entry.duration_seconds or '' }}" /></td>
+                <td><input name="player_a" type="text" value="{{ entry.player_a or '' }}" /></td>
+                <td><input name="player_b" type="text" value="{{ entry.player_b or '' }}" /></td>
+                <td><input name="set1_a" type="number" value="{{ entry.set1_a or '' }}" /></td>
+                <td><input name="set1_b" type="number" value="{{ entry.set1_b or '' }}" /></td>
+                <td><input name="set2_a" type="number" value="{{ entry.set2_a or '' }}" /></td>
+                <td><input name="set2_b" type="number" value="{{ entry.set2_b or '' }}" /></td>
+                <td><input name="tie_a" type="number" value="{{ entry.tie_a or '' }}" /></td>
+                <td><input name="tie_b" type="number" value="{{ entry.tie_b or '' }}" /></td>
+                <td><input name="set1_tb_a" type="number" value="{{ entry.set1_tb_a or '' }}" /></td>
+                <td><input name="set1_tb_b" type="number" value="{{ entry.set1_tb_b or '' }}" /></td>
+                <td><input name="set2_tb_a" type="number" value="{{ entry.set2_tb_a or '' }}" /></td>
+                <td><input name="set2_tb_b" type="number" value="{{ entry.set2_tb_b or '' }}" /></td>
+                <td class="actions">
+                  <button class="update-entry" type="button">Zapisz</button>
+                  <button class="delete-entry" type="button">Usuń</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script id="admin-initial-data" type="application/json">{{ {
+      'is_authenticated': is_authenticated,
+      'history': history,
+      'int_fields': int_fields,
+    } | tojson }}</script>
+  </body>
+</html>

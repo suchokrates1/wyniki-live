@@ -65,6 +65,13 @@ class Settings:
     db_path: str = os.environ.get("DB_PATH", "wyniki_archive.sqlite3")
     port: int = int(os.environ.get("PORT", "8080"))
     delete_password: str = (os.environ.get("HISTORY_DELETE_PASSWORD") or os.environ.get("DELETE_PASSWORD") or "").strip()
+    admin_password: str = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+    secret_key: str = (
+        os.environ.get("SECRET_KEY")
+        or os.environ.get("FLASK_SECRET_KEY")
+        or os.environ.get("SESSION_SECRET")
+        or "wyniki-dev-secret"
+    )
     state_log_size: int = int(os.environ.get("STATE_LOG_SIZE", "200"))
     match_history_size: int = int(os.environ.get("MATCH_HISTORY_SIZE", "50"))
     overlay_ids: Dict[str, str] = field(default_factory=dict)
