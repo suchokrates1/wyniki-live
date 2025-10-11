@@ -1028,7 +1028,12 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
 
       row.appendChild(flagEl);
       row.appendChild(nameSpan);
-      row.addEventListener('click', async () => {
+
+      let handled = false;
+      const handleSelect = async () => {
+        if (handled) return;
+        handled = true;
+
         if (!opts.noNameWrite) await commitInputValue(targetInput, p.name);
 
         const extras = {};
@@ -1048,7 +1053,20 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
 
         closePopover();
         if (opts.noNameWrite && targetInput.__tempDummy) targetInput.remove();
-      });
+      };
+
+      // Desktop/mysz
+      row.addEventListener('click', handleSelect);
+      // Dotyk/tablet (gdy 'click' bywa połykany/opóźniony)
+      row.addEventListener('pointerup', (ev) => {
+        if (ev.pointerType !== 'touch') return;
+        Promise.resolve().then(handleSelect);
+      }, { passive: true });
+      // Fallback dla starszych WebView
+      row.addEventListener('touchend', () => {
+        Promise.resolve().then(handleSelect);
+      }, { passive: true });
+
       list.appendChild(row);
       }
   };
