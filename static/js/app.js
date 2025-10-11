@@ -488,8 +488,6 @@ function applyScoreAria(k, data) {
   const summaryRoot = document.getElementById(`k${k}-summary`);
   const t = currentT();
   const acc = resolveAccessibilityStrings(t);
-  const nameA = resolvePlayerName(data.A || {}, 'defaultA');
-  const nameB = resolvePlayerName(data.B || {}, 'defaultB');
   const currentSet = Number(data.current_set || 1);
   const tieState = data.tie || {};
   const tieVisible = tieState.visible === true;
@@ -503,7 +501,7 @@ function applyScoreAria(k, data) {
     ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak)
     : (domPointsLabel || acc.points);
 
-  const summaryParts = [`${nameA} ${acc.versus} ${nameB}`];
+  const summaryParts = [];
 
   const pointsAText = tieVisible
     ? normalizeTieDisplay(tieState.A)
