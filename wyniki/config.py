@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+DOWNLOAD_DIR = os.path.join(BASE_DIR, "download")
 
 
 def normalize_overlay_id(value: Any) -> Optional[str]:
@@ -95,6 +96,7 @@ log = logging.getLogger("wyniki")
 __all__ = [
     "BASE_DIR",
     "STATIC_DIR",
+    "DOWNLOAD_DIR",
     "Settings",
     "log",
     "normalize_overlay_id",
