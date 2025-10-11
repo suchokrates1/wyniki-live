@@ -38,6 +38,14 @@ def init_db() -> None:
         )
         cursor.execute(
             """
+            CREATE TABLE IF NOT EXISTS courts (
+              kort_id TEXT PRIMARY KEY,
+              overlay_id TEXT
+            );
+            """
+        )
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS snapshot_meta (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               ts TEXT NOT NULL,
@@ -90,6 +98,58 @@ def init_db() -> None:
             if column not in existing_columns:
                 cursor.execute(statement)
         connection.commit()
+
+
+def fetch_courts() -> List[Dict[str, Optional[str]]]:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            SELECT kort_id, overlay_id
+            FROM courts
+            ORDER BY CAST(kort_id AS INTEGER), kort_id
+            """
+        )
+        rows = cursor.fetchall()
+    return [
+        {"kort_id": str(row["kort_id"]), "overlay_id": row["overlay_id"] or None}
+        for row in rows
+    ]
+
+
+def fetch_court(kort_id: str) -> Optional[Dict[str, Optional[str]]]:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT kort_id, overlay_id FROM courts WHERE kort_id = ? LIMIT 1",
+            (kort_id,),
+        )
+        row = cursor.fetchone()
+    if not row:
+        return None
+    return {"kort_id": str(row["kort_id"]), "overlay_id": row["overlay_id"] or None}
+
+
+def upsert_court(kort_id: str, overlay_id: Optional[str]) -> None:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            INSERT INTO courts (kort_id, overlay_id)
+            VALUES (?, ?)
+            ON CONFLICT(kort_id) DO UPDATE SET overlay_id=excluded.overlay_id
+            """,
+            (kort_id, overlay_id),
+        )
+        connection.commit()
+
+
+def delete_court(kort_id: str) -> bool:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM courts WHERE kort_id = ?", (kort_id,))
+        connection.commit()
+        return cursor.rowcount > 0
 
 
 def fetch_state_cache() -> Iterable[sqlite3.Row]:
@@ -322,10 +382,14 @@ init_db()
 
 __all__ = [
     "db_conn",
+    "delete_court",
     "delete_latest_history_entry",
+    "fetch_court",
+    "fetch_courts",
     "fetch_recent_history",
     "fetch_state_cache",
     "init_db",
     "insert_match_history",
+    "upsert_court",
     "upsert_state_cache",
 ]

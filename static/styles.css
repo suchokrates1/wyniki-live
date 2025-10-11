@@ -551,3 +551,85 @@ main {
   padding: 4px 10px;
   font-size: 13px;
 }
+
+/* Admin panel */
+main.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+main.container section {
+  margin-bottom: 32px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.feedback {
+  margin-bottom: 16px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.court-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.court-form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.court-form-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.courts-table-wrapper,
+.history-table-wrapper {
+  overflow-x: auto;
+}
+
+.courts-table,
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.courts-table th,
+.courts-table td,
+.history-table th,
+.history-table td {
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.courts-table th,
+.history-table th {
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.courts-table .actions,
+.history-table .actions {
+  display: flex;
+  gap: 8px;
+}

@@ -22,6 +22,47 @@
         </form>
       </section>
 
+      <section id="courts-section" {% if not is_authenticated %}hidden{% endif %}>
+        <header class="section-header">
+          <h2>Korty</h2>
+          <div class="section-actions">
+            <button id="refresh-courts" type="button">Odśwież</button>
+          </div>
+        </header>
+        <form id="court-form" class="court-form">
+          <div class="court-form-grid">
+            <label for="court-id-input">ID kortu</label>
+            <input id="court-id-input" name="kort_id" type="text" required />
+            <label for="court-overlay-input">Overlay ID</label>
+            <input id="court-overlay-input" name="overlay_id" type="text" />
+          </div>
+          <p class="court-form-note">Pozostaw pole puste, aby zapisać kort bez powiązanego overlay ID.</p>
+          <button type="submit">Zapisz kort</button>
+        </form>
+        <div class="courts-table-wrapper">
+          <table class="courts-table">
+            <thead>
+              <tr>
+                <th>Kort</th>
+                <th>Overlay ID</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="courts-rows">
+              {% for court in courts %}
+              <tr data-kort-id="{{ court.kort_id }}">
+                <td class="kort-id">{{ court.kort_id }}</td>
+                <td class="overlay-id">{{ court.overlay_id or '' }}</td>
+                <td class="actions">
+                  <button class="delete-court" type="button">Usuń</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="history-section" {% if not is_authenticated %}hidden{% endif %}>
         <header class="section-header">
           <h2>Historia spotkań</h2>
@@ -85,6 +126,7 @@
     <script id="admin-initial-data" type="application/json">{{ {
       'is_authenticated': is_authenticated,
       'history': history,
+      'courts': courts,
       'int_fields': int_fields,
     } | tojson }}</script>
   </body>
