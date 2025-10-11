@@ -113,6 +113,38 @@ function setAnnounce(k, val) {
   localStorage.setItem(lsKey(k), val ? 'on' : 'off');
 }
 
+function formatShortcutRange(count) {
+  if (!count || count < 1) return '';
+  if (count === 1) return '[1]';
+  return `[1–${count}]`;
+}
+
+function updateShortcutsDescription() {
+  if (!headerDesc) return;
+  const t = currentT();
+  const parts = [];
+  if (t.description) parts.push(t.description);
+
+  const shortcuts = t.shortcuts || {};
+  const range = formatShortcutRange(COURTS.length);
+  let shortcutsText = '';
+
+  if (range && shortcuts.template) {
+    shortcutsText = format(shortcuts.template, {
+      range,
+      courtsLabel: shortcuts.courtsLabel || '',
+      count: COURTS.length
+    }).trim();
+  } else if (shortcuts.fallback) {
+    shortcutsText = shortcuts.fallback;
+  }
+
+  if (shortcutsText) parts.push(shortcutsText);
+  if (shortcuts.autoRead) parts.push(shortcuts.autoRead);
+
+  headerDesc.textContent = parts.join(' ');
+}
+
 function makeCourtCard(k) {
   const t = currentT();
   const acc = resolveAccessibilityStrings(t);
@@ -224,6 +256,7 @@ function ensureCardsFromSnapshot(snap) {
     targetCourts.every((kort, idx) => COURTS[idx] === kort);
 
   COURTS = targetCourts;
+  updateShortcutsDescription();
   if (sameOrder) {
     return;
   }
@@ -1052,6 +1085,8 @@ function handleStreamPayload(payload) {
     renderGlobalHistory(latestHistory);
     ensureCardsFromSnapshot(state);
     const keys = computeCourts(state);
+    COURTS = keys;
+    updateShortcutsDescription();
     keys.forEach(k => {
       if (state[k]) updateCourt(k, state[k]);
     });
@@ -1070,6 +1105,8 @@ function handleStreamPayload(payload) {
     const merged = { ...prev, [kort]: state };
     ensureCardsFromSnapshot(merged);
     const keys = computeCourts(merged);
+    COURTS = keys;
+    updateShortcutsDescription();
     keys.forEach(k => {
       const courtState = merged[k];
       if (courtState) updateCourt(k, courtState);
@@ -1201,6 +1238,8 @@ function hydrateFromStorage() {
     latestHistory = Array.isArray(parsed.history) ? parsed.history : [];
     ensureCardsFromSnapshot(state);
     const courts = computeCourts(state);
+    COURTS = courts;
+    updateShortcutsDescription();
     const prevBackup = prev;
     prev = prevBackup || {};
     courts.forEach(k => {
@@ -1308,9 +1347,7 @@ function renderLanguage() {
   document.documentElement.lang = t.htmlLang;
   document.title = t.title;
   if (headerTitle) headerTitle.textContent = t.title;
-  if (headerDesc) headerDesc.textContent = (t.shortcuts && t.shortcuts.desc)
-    ? t.shortcuts.desc
-    : t.description;
+  updateShortcutsDescription();
   const liveBadge = document.getElementById('live-badge');
   if (liveBadge) liveBadge.textContent = t.liveBadge || 'LIVE';
   if (nav) nav.setAttribute('aria-label', t.navLabel);
@@ -1341,8 +1378,10 @@ async function bootstrap() {
   latestHistory = Array.isArray(snapshot.history) ? snapshot.history : [];
   renderGlobalHistory(latestHistory);
   ensureCardsFromSnapshot(state);
-  COURTS = computeCourts(state);
-  COURTS.forEach(k => {
+  const computedCourts = computeCourts(state);
+  COURTS = computedCourts;
+  updateShortcutsDescription();
+  computedCourts.forEach(k => {
     if (state[k]) updateCourt(k, state[k]);
   });
   prev = state;
@@ -1394,22 +1433,19 @@ bootstrap()
     connectStream();
   });
 
-// Keyboard shortcuts: 1–6 courts, H = history
+// Keyboard shortcuts: number keys navigate between courts
 document.addEventListener('keydown', (e) => {
   if (e.altKey || e.ctrlKey || e.metaKey) return;
   const target = e.target;
   const isField = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
   if (isField) return;
   const key = e.key;
-  if (/^[1-6]$/.test(key)) {
+  if (/^[1-9]$/.test(key)) {
     const idx = Number(key) - 1;
     const court = COURTS[idx];
     if (court) {
       const el = document.getElementById(`kort-${court}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  } else if (key === 'h' || key === 'H') {
-    const hist = document.getElementById('history-section');
-    if (hist) hist.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 });
