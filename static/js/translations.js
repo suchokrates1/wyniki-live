@@ -53,6 +53,8 @@ export const TRANSLATIONS = {
       empty: 'Brak zapisanych wyników.',
       columns: {
         description: 'Mecz',
+        category: 'Kategoria',
+        phase: 'Faza',
         duration: 'Czas'
       },
       labels: {
@@ -124,6 +126,8 @@ export const TRANSLATIONS = {
       empty: 'Keine gespeicherten Ergebnisse.',
       columns: {
         description: 'Begegnung',
+        category: 'Kategorie',
+        phase: 'Phase',
         duration: 'Dauer'
       },
       labels: {
@@ -191,6 +195,8 @@ export const TRANSLATIONS = {
       empty: 'No saved results.',
       columns: {
         description: 'Match',
+        category: 'Category',
+        phase: 'Phase',
         duration: 'Duration'
       },
       labels: {
@@ -260,6 +266,8 @@ export const TRANSLATIONS = {
       empty: 'Nessun risultato salvato.',
       columns: {
         description: 'Incontro',
+        category: 'Categoria',
+        phase: 'Fase',
         duration: 'Durata'
       },
       labels: {
@@ -328,6 +336,8 @@ export const TRANSLATIONS = {
       empty: 'No hay resultados guardados.',
       columns: {
         description: 'Partido',
+        category: 'Categoría',
+        phase: 'Fase',
         duration: 'Duración'
       },
       labels: {
@@ -396,6 +406,8 @@ export const TRANSLATIONS = {
       empty: 'Ei tallennettuja tuloksia.',
       columns: {
         description: 'Ottelu',
+        category: 'Luokka',
+        phase: 'Vaihe',
         duration: 'Kesto'
       },
       labels: {
@@ -464,6 +476,8 @@ export const TRANSLATIONS = {
       empty: 'Немає збережених результатів.',
       columns: {
         description: 'Матч',
+        category: 'Категорія',
+        phase: 'Стадія',
         duration: 'Тривалість'
       },
       labels: {
@@ -532,6 +546,8 @@ export const TRANSLATIONS = {
       empty: 'Aucun résultat enregistré.',
       columns: {
         description: 'Match',
+        category: 'Catégorie',
+        phase: 'Phase',
         duration: 'Durée'
       },
       labels: {
@@ -600,6 +616,8 @@ export const TRANSLATIONS = {
       empty: 'Nėra išsaugotų rezultatų.',
       columns: {
         description: 'Mačas',
+        category: 'Kategorija',
+        phase: 'Etapas',
         duration: 'Trukmė'
       },
       labels: {

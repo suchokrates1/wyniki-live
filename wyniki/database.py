@@ -81,22 +81,32 @@ def init_db() -> None:
               set1_tb_a INTEGER DEFAULT 0,
               set1_tb_b INTEGER DEFAULT 0,
               set2_tb_a INTEGER DEFAULT 0,
-              set2_tb_b INTEGER DEFAULT 0
+              set2_tb_b INTEGER DEFAULT 0,
+              category TEXT,
+              phase TEXT DEFAULT 'Grupowa'
             );
             """
         )
 
         cursor.execute("PRAGMA table_info(match_history)")
         existing_columns = {row["name"] for row in cursor.fetchall()}
-        tie_columns = {
+        migrations = {
             "set1_tb_a": "ALTER TABLE match_history ADD COLUMN set1_tb_a INTEGER DEFAULT 0",
             "set1_tb_b": "ALTER TABLE match_history ADD COLUMN set1_tb_b INTEGER DEFAULT 0",
             "set2_tb_a": "ALTER TABLE match_history ADD COLUMN set2_tb_a INTEGER DEFAULT 0",
             "set2_tb_b": "ALTER TABLE match_history ADD COLUMN set2_tb_b INTEGER DEFAULT 0",
+            "category": "ALTER TABLE match_history ADD COLUMN category TEXT",
+            "phase": "ALTER TABLE match_history ADD COLUMN phase TEXT DEFAULT 'Grupowa'",
         }
-        for column, statement in tie_columns.items():
+        for column, statement in migrations.items():
             if column not in existing_columns:
                 cursor.execute(statement)
+        if "phase" not in existing_columns:
+            cursor.execute("UPDATE match_history SET phase = 'Grupowa' WHERE phase IS NULL")
+        else:
+            cursor.execute(
+                "UPDATE match_history SET phase = 'Grupowa' WHERE phase IS NULL OR TRIM(phase) = ''"
+            )
         connection.commit()
 
 
@@ -181,7 +191,8 @@ def fetch_recent_history(limit: int) -> Iterable[sqlite3.Row]:
             """
             SELECT kort_id, ended_ts, duration_seconds, player_a, player_b,
                    set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
-                   set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
+                   set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b,
+                   category, phase
             FROM match_history
             ORDER BY id DESC
             LIMIT ?
@@ -199,8 +210,9 @@ def insert_match_history(entry: Dict[str, object]) -> None:
             INSERT INTO match_history (
                 kort_id, ended_ts, duration_seconds, player_a, player_b,
                 set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
-                set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b,
+                category, phase
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 entry.get("kort"),
@@ -218,6 +230,8 @@ def insert_match_history(entry: Dict[str, object]) -> None:
                 entry.get("set1_tb_b", 0),
                 entry.get("set2_tb_a", 0),
                 entry.get("set2_tb_b", 0),
+                entry.get("category"),
+                entry.get("phase"),
             ),
         )
         connection.commit()
@@ -231,7 +245,8 @@ def delete_latest_history_entry(kort_id: Optional[str] = None) -> Optional[Dict[
                 """
                 SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
                        set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
-                       set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
+                       set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b,
+                       category, phase
                 FROM match_history
                 WHERE kort_id = ?
                 ORDER BY id DESC
@@ -244,7 +259,8 @@ def delete_latest_history_entry(kort_id: Optional[str] = None) -> Optional[Dict[
                 """
                 SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
                        set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
-                       set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
+                       set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b,
+                       category, phase
                 FROM match_history
                 ORDER BY id DESC
                 LIMIT 1
@@ -271,6 +287,8 @@ def delete_latest_history_entry(kort_id: Optional[str] = None) -> Optional[Dict[
         "set1_tb_b": row["set1_tb_b"],
         "set2_tb_a": row["set2_tb_a"],
         "set2_tb_b": row["set2_tb_b"],
+        "category": row["category"],
+        "phase": row["phase"],
     }
 
 
@@ -279,7 +297,8 @@ def fetch_all_history(limit: Optional[int] = None) -> List[Dict[str, object]]:
         """
         SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
                set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
-               set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
+               set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b,
+               category, phase
         FROM match_history
         ORDER BY id DESC
         {limit_clause}
@@ -305,7 +324,8 @@ def fetch_history_entry(entry_id: int) -> Optional[Dict[str, object]]:
             """
             SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
                    set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
-                   set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
+                   set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b,
+                   category, phase
             FROM match_history
             WHERE id = ?
             LIMIT 1
@@ -335,6 +355,8 @@ def update_history_entry(entry_id: int, fields: Dict[str, object]) -> bool:
         "set1_tb_b",
         "set2_tb_a",
         "set2_tb_b",
+        "category",
+        "phase",
     }
     updates = {key: value for key, value in fields.items() if key in allowed}
     if not updates:
@@ -375,6 +397,8 @@ def _row_to_history_dict(row: sqlite3.Row) -> Dict[str, object]:
         "set1_tb_b": row["set1_tb_b"],
         "set2_tb_a": row["set2_tb_a"],
         "set2_tb_b": row["set2_tb_b"],
+        "category": row["category"],
+        "phase": row["phase"],
     }
 
 

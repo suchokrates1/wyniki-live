@@ -31,6 +31,7 @@ from .database import (
     upsert_court,
 )
 from .state import (
+    DEFAULT_HISTORY_PHASE,
     apply_local_command,
     available_courts,
     broadcast_kort_state,
@@ -70,7 +71,7 @@ HISTORY_INT_FIELDS = {
     "set2_tb_a",
     "set2_tb_b",
 }
-HISTORY_STR_FIELDS = {"kort_id", "ended_ts", "player_a", "player_b"}
+HISTORY_STR_FIELDS = {"kort_id", "ended_ts", "player_a", "player_b", "category", "phase"}
 
 
 def _admin_enabled() -> bool:
@@ -102,7 +103,12 @@ def _sanitize_history_payload(payload: Dict[str, object]) -> Dict[str, object]:
             text = str(raw_value).strip()
             if field in {"kort_id", "ended_ts"} and not text:
                 raise ValueError(field)
-            sanitized[field] = text
+            if field == "phase":
+                sanitized[field] = text or DEFAULT_HISTORY_PHASE
+            elif field == "category":
+                sanitized[field] = text or None
+            else:
+                sanitized[field] = text
     for field in HISTORY_INT_FIELDS:
         if field in payload:
             raw_value = payload.get(field)
