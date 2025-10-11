@@ -5,7 +5,7 @@ export const TRANSLATIONS = {
     langName: 'Polski',
     htmlLang: 'pl',
     title: 'Wyniki tenisowe – na żywo',
-    description: 'Strona odświeża wyniki automatycznie. Dostępna dla czytników ekranu.',
+    description: '',
     navLabel: 'Szybka nawigacja po kortach',
     courtLabel: 'Kort {court}',
     languageLabel: 'Wybierz język',
