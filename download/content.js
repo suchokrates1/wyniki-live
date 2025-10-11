@@ -1,5 +1,6 @@
 ﻿// content.js
 const log = (...a) => console.log('[UNO Picker]', ...a);
+const supportsPointerEvents = typeof window !== 'undefined' && 'PointerEvent' in window;
 
 function storageGet(keys) {
   if (!chrome?.storage?.local?.get) return Promise.resolve({});
@@ -763,14 +764,15 @@ async function loadPlayers() {
 
 // Prawdziwe wpisanie do inputa (aby React/UNO zarejestrowal zmiane)
 async function commitInputValue(el, value) {
+  const normalizedValue = value == null ? '' : String(value);
   try { el.focus({ preventScroll: true }); } catch {}
   const proto = Object.getPrototypeOf(el);
   const desc =
     Object.getOwnPropertyDescriptor(proto, 'value') ||
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
 
-  if (desc?.set) desc.set.call(el, value);
-  else el.value = value;
+  if (desc?.set) desc.set.call(el, normalizedValue);
+  else el.value = normalizedValue;
 
   const evtOpts = { bubbles: true, cancelable: true, composed: true };
   el.dispatchEvent(new Event('input', evtOpts));
@@ -778,7 +780,7 @@ async function commitInputValue(el, value) {
     el.dispatchEvent(new InputEvent('input', {
       ...evtOpts,
       inputType: 'insertText',
-      data: value
+      data: normalizedValue
     }));
   } catch {}
 
@@ -804,11 +806,11 @@ async function commitInputValue(el, value) {
   el.dispatchEvent(createEnterEvent('keypress'));
   el.dispatchEvent(createEnterEvent('keyup'));
 
-  await new Promise(r => setTimeout(r, 40));
+  await new Promise(r => setTimeout(r, 80));
   try { el.dispatchEvent(new FocusEvent('blur', evtOpts)); } catch { el.dispatchEvent(new Event('blur', evtOpts)); }
   try { el.blur(); } catch {}
 
-  await new Promise(r => setTimeout(r, 10));
+  await new Promise(r => setTimeout(r, 40));
   el.dispatchEvent(new Event('change', evtOpts));
 }
 
@@ -1066,14 +1068,38 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
       // Desktop/mysz
       row.addEventListener('click', handleSelect);
       // Dotyk/tablet (gdy 'click' bywa połykany/opóźniony)
-      row.addEventListener('pointerup', (ev) => {
-        if (ev.pointerType !== 'touch') return;
-        Promise.resolve().then(handleSelect);
-      }, { passive: true });
-      // Fallback dla starszych WebView
-      row.addEventListener('touchend', () => {
-        Promise.resolve().then(handleSelect);
-      }, { passive: true });
+      if (supportsPointerEvents) {
+        let touchSession = null;
+        let touchMoved = false;
+        const resetTouchSession = () => { touchSession = null; touchMoved = false; };
+        row.addEventListener('pointerdown', (ev) => {
+          if (ev.pointerType !== 'touch') return;
+          touchSession = { id: ev.pointerId, x: ev.clientX, y: ev.clientY };
+          touchMoved = false;
+        }, { passive: true });
+        row.addEventListener('pointermove', (ev) => {
+          if (ev.pointerType !== 'touch' || !touchSession || touchSession.id !== ev.pointerId) return;
+          const dx = Math.abs(ev.clientX - touchSession.x);
+          const dy = Math.abs(ev.clientY - touchSession.y);
+          if (dx > 6 || dy > 6) touchMoved = true;
+        }, { passive: true });
+        row.addEventListener('pointercancel', (ev) => {
+          if (!touchSession || touchSession.id !== ev.pointerId) return;
+          resetTouchSession();
+        }, { passive: true });
+        row.addEventListener('pointerup', (ev) => {
+          if (ev.pointerType !== 'touch' || !touchSession || touchSession.id !== ev.pointerId) return;
+          const moved = touchMoved;
+          resetTouchSession();
+          if (moved) return;
+          Promise.resolve().then(handleSelect);
+        }, { passive: true });
+      } else {
+        // Fallback dla starszych WebView
+        row.addEventListener('touchend', () => {
+          Promise.resolve().then(handleSelect);
+        }, { passive: true });
+      }
 
       list.appendChild(row);
       }
