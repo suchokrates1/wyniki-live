@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
-from typing import Dict, Generator, Iterable, Optional
+from typing import Dict, Generator, Iterable, List, Optional
 
 from .config import settings
 
@@ -198,6 +198,110 @@ def delete_latest_history_entry(kort_id: Optional[str] = None) -> Optional[Dict[
     return {
         "kort": row["kort_id"],
         "ended_at": row["ended_ts"],
+        "duration_seconds": row["duration_seconds"],
+        "player_a": row["player_a"],
+        "player_b": row["player_b"],
+        "set1_a": row["set1_a"],
+        "set1_b": row["set1_b"],
+        "set2_a": row["set2_a"],
+        "set2_b": row["set2_b"],
+        "tie_a": row["tie_a"],
+        "tie_b": row["tie_b"],
+        "set1_tb_a": row["set1_tb_a"],
+        "set1_tb_b": row["set1_tb_b"],
+        "set2_tb_a": row["set2_tb_a"],
+        "set2_tb_b": row["set2_tb_b"],
+    }
+
+
+def fetch_all_history(limit: Optional[int] = None) -> List[Dict[str, object]]:
+    query = (
+        """
+        SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
+               set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
+               set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
+        FROM match_history
+        ORDER BY id DESC
+        {limit_clause}
+        """
+    )
+    limit_clause = ""
+    params: List[object] = []
+    if isinstance(limit, int) and limit > 0:
+        limit_clause = "LIMIT ?"
+        params.append(limit)
+    query = query.format(limit_clause=limit_clause)
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+    return [_row_to_history_dict(row) for row in rows]
+
+
+def fetch_history_entry(entry_id: int) -> Optional[Dict[str, object]]:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            SELECT id, kort_id, ended_ts, duration_seconds, player_a, player_b,
+                   set1_a, set1_b, set2_a, set2_b, tie_a, tie_b,
+                   set1_tb_a, set1_tb_b, set2_tb_a, set2_tb_b
+            FROM match_history
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (entry_id,),
+        )
+        row = cursor.fetchone()
+    if not row:
+        return None
+    return _row_to_history_dict(row)
+
+
+def update_history_entry(entry_id: int, fields: Dict[str, object]) -> bool:
+    allowed = {
+        "kort_id",
+        "ended_ts",
+        "duration_seconds",
+        "player_a",
+        "player_b",
+        "set1_a",
+        "set1_b",
+        "set2_a",
+        "set2_b",
+        "tie_a",
+        "tie_b",
+        "set1_tb_a",
+        "set1_tb_b",
+        "set2_tb_a",
+        "set2_tb_b",
+    }
+    updates = {key: value for key, value in fields.items() if key in allowed}
+    if not updates:
+        return False
+    columns = ", ".join(f"{key} = ?" for key in updates)
+    values = list(updates.values())
+    values.append(entry_id)
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(f"UPDATE match_history SET {columns} WHERE id = ?", values)
+        connection.commit()
+        return cursor.rowcount > 0
+
+
+def delete_history_entry(entry_id: int) -> bool:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM match_history WHERE id = ?", (entry_id,))
+        connection.commit()
+        return cursor.rowcount > 0
+
+
+def _row_to_history_dict(row: sqlite3.Row) -> Dict[str, object]:
+    return {
+        "id": row["id"],
+        "kort_id": row["kort_id"],
+        "ended_ts": row["ended_ts"],
         "duration_seconds": row["duration_seconds"],
         "player_a": row["player_a"],
         "player_b": row["player_b"],
