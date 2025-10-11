@@ -6,7 +6,7 @@ import json
 import os
 import re
 from queue import Empty
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from flask import (
@@ -23,20 +23,27 @@ from flask import (
 
 from .config import DOWNLOAD_DIR, STATIC_DIR, log, normalize_overlay_id, settings
 from .database import (
+    delete_court,
     delete_history_entry,
     fetch_all_history,
     fetch_history_entry,
     update_history_entry,
+    upsert_court,
 )
 from .state import (
     apply_local_command,
+    available_courts,
     broadcast_kort_state,
     buckets,
     ensure_court_state,
     event_broker,
+    get_kort_for_overlay,
+    get_overlay_for_kort,
     log_state_summary,
     is_known_kort,
+    normalize_kort_id,
     persist_state_cache,
+    refresh_courts_from_db,
     record_log_entry,
     serialize_all_states,
     serialize_court_state,
@@ -109,6 +116,28 @@ def _sanitize_history_payload(payload: Dict[str, object]) -> Dict[str, object]:
     return sanitized
 
 
+def _serialize_courts() -> List[Dict[str, Optional[str]]]:
+    return [
+        {"kort_id": kort_id, "overlay_id": overlay_id}
+        for kort_id, overlay_id in available_courts()
+    ]
+
+
+def _sanitize_court_payload(payload: Dict[str, object]) -> Tuple[str, Optional[str]]:
+    raw_kort = payload.get("kort_id") or payload.get("kort")
+    kort_id = normalize_kort_id(raw_kort) if raw_kort is not None else None
+    if not kort_id:
+        raise ValueError("kort_id")
+    overlay_raw = payload.get("overlay_id") or payload.get("overlay")
+    if overlay_raw is None:
+        return kort_id, None
+    overlay_text = str(overlay_raw).strip()
+    if not overlay_text:
+        return kort_id, None
+    normalized_overlay = normalize_overlay_id(overlay_text) or overlay_text
+    return kort_id, normalized_overlay
+
+
 def register_routes(app: Flask) -> None:
     app.register_blueprint(blueprint)
     app.register_blueprint(admin_blueprint)
@@ -121,10 +150,16 @@ def admin_index() -> str:
         abort(404)
     is_authenticated = _is_admin_authenticated()
     history = fetch_all_history(settings.match_history_size) if is_authenticated else []
+    courts = (
+        [{"kort_id": kort_id, "overlay_id": overlay_id} for kort_id, overlay_id in available_courts()]
+        if is_authenticated
+        else []
+    )
     return render_file_template(
         "admin.html",
         is_authenticated=is_authenticated,
         history=history,
+        courts=courts,
         int_fields=sorted(HISTORY_INT_FIELDS),
     )
 
@@ -205,6 +240,63 @@ def admin_api_history_delete(entry_id: int):
     return jsonify({"ok": True, "deleted": deleted, "entry": existing})
 
 
+@admin_api_blueprint.route("/courts", methods=["GET"])
+def admin_api_courts_list():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    return jsonify({"ok": True, "courts": _serialize_courts()})
+
+
+@admin_api_blueprint.route("/courts", methods=["POST"])
+def admin_api_courts_create():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid-payload"}), 400
+    try:
+        kort_id, overlay_id = _sanitize_court_payload(payload)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": "invalid-field", "field": str(exc)}), 400
+    existed_before = is_known_kort(kort_id)
+    upsert_court(kort_id, overlay_id)
+    refresh_courts_from_db()
+    court_record = {"kort_id": kort_id, "overlay_id": get_overlay_for_kort(kort_id)}
+    return jsonify(
+        {
+            "ok": True,
+            "created": not existed_before,
+            "court": court_record,
+            "courts": _serialize_courts(),
+        }
+    )
+
+
+@admin_api_blueprint.route("/courts/<kort_id>", methods=["DELETE"])
+def admin_api_courts_delete(kort_id: str):
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    normalized_id = normalize_kort_id(kort_id)
+    if not normalized_id:
+        return jsonify({"ok": False, "error": "invalid-field", "field": "kort_id"}), 400
+    existing_overlay = get_overlay_for_kort(normalized_id)
+    deleted = delete_court(normalized_id)
+    if not deleted:
+        return jsonify({"ok": False, "error": "not-found"}), 404
+    refresh_courts_from_db()
+    return jsonify(
+        {
+            "ok": True,
+            "deleted": True,
+            "court": {"kort_id": normalized_id, "overlay_id": existing_overlay},
+            "courts": _serialize_courts(),
+        }
+    )
+
+
 @blueprint.route("/")
 def index() -> str:
     return render_file_template("index.html")
@@ -283,7 +375,7 @@ def _overlay_id_from_url(uno_url: Optional[str]) -> Optional[str]:
 
 
 def _api_endpoint(kort_id: str) -> Optional[str]:
-    overlay_id = settings.overlay_ids.get(kort_id)
+    overlay_id = get_overlay_for_kort(kort_id)
     if not overlay_id:
         return None
     return f"{settings.overlay_base}/{overlay_id}/api"
@@ -307,16 +399,18 @@ def api_mirror():
     if overlay_id:
         overlay_id = normalize_overlay_id(overlay_id)
 
-    kort_id = None
+    kort_id: Optional[str] = None
     if overlay_id:
-        kort_id = settings.overlay_id_to_kort.get(overlay_id)
+        kort_id = get_kort_for_overlay(overlay_id)
     if not kort_id:
-        kort_id = payload.get("kort")
+        kort_id_raw = payload.get("kort")
+        if kort_id_raw is not None:
+            kort_id = normalize_kort_id(kort_id_raw) or str(kort_id_raw)
     if not kort_id and overlay_id:
         kort_id = overlay_id
     if not kort_id:
         return jsonify({"ok": False, "error": "unknown kort"}), 400
-    kort_id = str(kort_id)
+    kort_id = normalize_kort_id(kort_id) or str(kort_id)
 
     body = payload.get("unoBody")
     if not isinstance(body, dict):
@@ -483,7 +577,10 @@ def api_local_reflect(kort_id: str):
 
 @blueprint.route("/api/uno/exec/<kort_id>", methods=["POST"])
 def api_uno_exec(kort_id: str):
-    if settings.overlay_ids and kort_id not in settings.overlay_ids:
+    normalized_id = normalize_kort_id(kort_id)
+    if normalized_id:
+        kort_id = normalized_id
+    if not is_known_kort(kort_id):
         return jsonify({"error": "unknown kort"}), 404
 
     payload = request.get_json(silent=True)

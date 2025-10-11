@@ -12,9 +12,11 @@ from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 from .config import settings, log
 from .database import (
     delete_latest_history_entry,
+    fetch_courts,
     fetch_recent_history,
     fetch_state_cache,
     insert_match_history,
+    upsert_court,
     upsert_state_cache,
 )
 from .utils import (
@@ -59,14 +61,7 @@ event_broker = EventBroker()
 
 POINT_SEQUENCE = ["0", "15", "30", "40", "ADV"]
 STATE_LOCK = threading.Lock()
-
-if settings.overlay_ids:
-    INITIAL_COURTS = sorted(settings.overlay_ids.keys(), key=lambda value: int(value))
-else:
-    INITIAL_COURTS = [str(index) for index in range(1, 5)]
-
-snapshots: Dict[str, Dict[str, Any]] = {kort: None for kort in INITIAL_COURTS}  # type: ignore[assignment]
-GLOBAL_LOG: Deque[Dict[str, Any]] = deque(maxlen=max(100, settings.state_log_size * max(1, len(snapshots) or 1)))
+GLOBAL_LOG: Deque[Dict[str, Any]] = deque()
 GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size)
 
 
@@ -88,9 +83,6 @@ class TokenBucket:
                 self.tokens -= count
                 return True
             return False
-
-
-buckets = {kort: TokenBucket(settings.rpm_per_court, settings.burst) for kort in settings.overlay_ids.keys()}
 
 
 def _empty_player_state() -> Dict[str, Any]:
@@ -133,14 +125,129 @@ def _empty_court_state() -> Dict[str, Any]:
     }
 
 
-for kort in list(snapshots.keys()):
-    snapshots[kort] = _empty_court_state()
+COURT_OVERLAYS: Dict[str, Optional[str]] = {}
+OVERLAY_TO_KORT: Dict[str, str] = {}
+snapshots: Dict[str, Dict[str, Any]] = {}
+INITIAL_COURTS: List[str] = []
+buckets: Dict[str, TokenBucket] = {}
+
+
+def _kort_sort_key(value: str) -> Tuple[int, str]:
+    try:
+        return (0, int(value))
+    except (TypeError, ValueError):
+        return (1, str(value))
+
+
+def _sorted_court_ids(values: Iterable[str]) -> List[str]:
+    return sorted({str(value) for value in values}, key=_kort_sort_key)
+
+
+def _courts_list_to_mapping(rows: Iterable[Dict[str, Optional[str]]]) -> Dict[str, Optional[str]]:
+    mapping: Dict[str, Optional[str]] = {}
+    for row in rows:
+        kort_id = str(row.get("kort_id", "")).strip()
+        if not kort_id:
+            continue
+        overlay_value = row.get("overlay_id")
+        mapping[kort_id] = overlay_value or None
+    return mapping
+
+
+def _seed_courts_from_environment() -> Dict[str, Optional[str]]:
+    seeded = False
+    for kort_id, overlay_id in sorted(settings.overlay_ids.items(), key=lambda item: _kort_sort_key(item[0])):
+        upsert_court(kort_id, overlay_id)
+        seeded = True
+    if not seeded:
+        for idx in range(1, 5):
+            upsert_court(str(idx), None)
+        seeded = True
+    if seeded:
+        return _courts_list_to_mapping(fetch_courts())
+    return {}
+
+
+def _load_courts_with_seed(seed_if_empty: bool) -> Dict[str, Optional[str]]:
+    mapping = _courts_list_to_mapping(fetch_courts())
+    if mapping or not seed_if_empty:
+        return mapping
+    return _seed_courts_from_environment()
+
+
+def _update_settings_overlay_cache(mapping: Dict[str, Optional[str]]) -> None:
+    sanitized = {kort_id: overlay_id for kort_id, overlay_id in mapping.items() if overlay_id}
+    object.__setattr__(settings, "overlay_ids", sanitized)
+    object.__setattr__(settings, "overlay_id_to_kort", {overlay_id: kort_id for kort_id, overlay_id in sanitized.items()})
+
+
+def _resize_global_log() -> None:
+    global GLOBAL_LOG
+    desired_maxlen = max(100, settings.state_log_size * max(1, len(snapshots) or 1))
+    if GLOBAL_LOG.maxlen == desired_maxlen:
+        return
+    GLOBAL_LOG = deque(list(GLOBAL_LOG)[-desired_maxlen:], maxlen=desired_maxlen)
+
+
+def _apply_court_configuration(mapping: Dict[str, Optional[str]]) -> None:
+    global COURT_OVERLAYS, OVERLAY_TO_KORT, INITIAL_COURTS, buckets
+    sorted_ids = _sorted_court_ids(mapping.keys())
+    new_snapshots: Dict[str, Dict[str, Any]] = {}
+    for kort_id in sorted_ids:
+        state = snapshots.get(kort_id)
+        if state is None:
+            state = _empty_court_state()
+        new_snapshots[kort_id] = state
+    snapshots.clear()
+    snapshots.update(new_snapshots)
+
+    COURT_OVERLAYS = {kort_id: mapping.get(kort_id) for kort_id in sorted_ids}
+    OVERLAY_TO_KORT = {
+        overlay_id: kort_id for kort_id, overlay_id in COURT_OVERLAYS.items() if overlay_id
+    }
+    INITIAL_COURTS = list(sorted_ids)
+
+    updated_buckets: Dict[str, TokenBucket] = {}
+    for kort_id in INITIAL_COURTS:
+        bucket = buckets.get(kort_id)
+        if bucket is None:
+            bucket = TokenBucket(settings.rpm_per_court, settings.burst)
+        updated_buckets[kort_id] = bucket
+    buckets.clear()
+    buckets.update(updated_buckets)
+
+    _update_settings_overlay_cache(COURT_OVERLAYS)
+    _resize_global_log()
+
+
+def refresh_courts_from_db(seed_if_empty: bool = False) -> Dict[str, Optional[str]]:
+    mapping = _load_courts_with_seed(seed_if_empty)
+    with STATE_LOCK:
+        _apply_court_configuration(mapping)
+        return dict(COURT_OVERLAYS)
+
+
+def get_overlay_for_kort(kort_id: str) -> Optional[str]:
+    return COURT_OVERLAYS.get(kort_id)
+
+
+def get_kort_for_overlay(overlay_id: Optional[str]) -> Optional[str]:
+    if not overlay_id:
+        return None
+    return OVERLAY_TO_KORT.get(str(overlay_id))
+
+
+def courts_map() -> Dict[str, Optional[str]]:
+    with STATE_LOCK:
+        return dict(COURT_OVERLAYS)
+
+
+refresh_courts_from_db(seed_if_empty=True)
 
 
 def available_courts() -> List[Tuple[str, Optional[str]]]:
-    if settings.overlay_ids:
-        return [(kort, settings.overlay_ids[kort]) for kort in sorted(settings.overlay_ids.keys(), key=lambda value: int(value))]
-    return [(kort, None) for kort in sorted(snapshots.keys(), key=lambda value: int(value))]
+    with STATE_LOCK:
+        return [(kort_id, COURT_OVERLAYS.get(kort_id)) for kort_id in INITIAL_COURTS]
 
 
 def normalize_kort_id(raw: Any) -> Optional[str]:
@@ -161,8 +268,6 @@ def normalize_kort_id(raw: Any) -> Optional[str]:
 def is_known_kort(kort_id: str) -> bool:
     if not kort_id:
         return False
-    if settings.overlay_ids:
-        return kort_id in settings.overlay_ids
     return kort_id in snapshots
 
 
@@ -1097,6 +1202,7 @@ __all__ = [
     "available_courts",
     "broadcast_kort_state",
     "buckets",
+    "courts_map",
     "delete_latest_history",
     "ensure_court_state",
     "event_broker",
@@ -1108,7 +1214,10 @@ __all__ = [
     "log_state_summary",
     "normalize_kort_id",
     "persist_state_cache",
+    "refresh_courts_from_db",
     "record_log_entry",
+    "get_kort_for_overlay",
+    "get_overlay_for_kort",
     "serialize_all_states",
     "serialize_court_state",
     "serialize_history",

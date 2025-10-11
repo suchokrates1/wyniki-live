@@ -5,9 +5,13 @@
   const feedbackElement = document.getElementById('admin-feedback');
   const loginSection = document.getElementById('login-section');
   const historySection = document.getElementById('history-section');
+  const courtsSection = document.getElementById('courts-section');
   const loginForm = document.getElementById('admin-login-form');
   const refreshButton = document.getElementById('refresh-history');
   const historyTableBody = document.getElementById('history-rows');
+  const courtForm = document.getElementById('court-form');
+  const refreshCourtsButton = document.getElementById('refresh-courts');
+  const courtsTableBody = document.getElementById('courts-rows');
   const bodyElement = document.body;
 
   if (!configElement) {
@@ -23,6 +27,7 @@
   }
 
   const intFields = new Set(initialConfig.int_fields || []);
+  const initialCourts = Array.isArray(initialConfig.courts) ? initialConfig.courts : [];
 
   const fieldDefinitions = [
     { name: 'kort_id', type: 'text' },
@@ -56,6 +61,9 @@
     }
     if (historySection) {
       historySection.hidden = !isAuthenticated;
+    }
+    if (courtsSection) {
+      courtsSection.hidden = !isAuthenticated;
     }
     if (bodyElement) {
       bodyElement.dataset.authenticated = isAuthenticated ? 'true' : 'false';
@@ -115,6 +123,42 @@
     historyTableBody.innerHTML = '';
     entries.forEach((entry) => {
       historyTableBody.appendChild(createRow(entry));
+    });
+  }
+
+  function createCourtRow(court) {
+    const row = document.createElement('tr');
+    row.dataset.kortId = String(court.kort_id);
+
+    const kortCell = document.createElement('td');
+    kortCell.className = 'kort-id';
+    kortCell.textContent = String(court.kort_id);
+    row.appendChild(kortCell);
+
+    const overlayCell = document.createElement('td');
+    overlayCell.className = 'overlay-id';
+    overlayCell.textContent = court.overlay_id ? String(court.overlay_id) : '';
+    row.appendChild(overlayCell);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'actions';
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'delete-court';
+    deleteButton.textContent = 'Usuń';
+    actionsCell.appendChild(deleteButton);
+    row.appendChild(actionsCell);
+
+    return row;
+  }
+
+  function renderCourts(courts) {
+    if (!courtsTableBody) {
+      return;
+    }
+    courtsTableBody.innerHTML = '';
+    (courts || []).forEach((court) => {
+      courtsTableBody.appendChild(createCourtRow(court));
     });
   }
 
@@ -192,6 +236,7 @@
       setFeedback('Zalogowano pomyślnie.', 'success');
       toggleAuthenticated(true);
       await refreshHistory();
+      await refreshCourts();
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -202,7 +247,19 @@
       const data = await requestJson('/api/admin/history', { method: 'GET' });
       if (Array.isArray(data.history)) {
         renderHistory(data.history);
-        setFeedback('Lista zaktualizowana.', 'success');
+        setFeedback('Historia zaktualizowana.', 'success');
+      }
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+  async function refreshCourts() {
+    try {
+      const data = await requestJson('/api/admin/courts', { method: 'GET' });
+      if (Array.isArray(data.courts)) {
+        renderCourts(data.courts);
+        setFeedback('Lista kortów zaktualizowana.', 'success');
       }
     } catch (error) {
       setFeedback(error.message, 'error');
@@ -231,6 +288,64 @@
         updateRowFromEntry(row, data.entry);
       }
       setFeedback('Rekord zapisany.', 'success');
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+  async function handleCourtFormSubmit(event) {
+    event.preventDefault();
+    if (!courtForm) {
+      return;
+    }
+    const formData = new FormData(courtForm);
+    const kortId = String(formData.get('kort_id') || '').trim();
+    const overlayValueRaw = formData.get('overlay_id');
+    const overlayId = overlayValueRaw === null ? '' : String(overlayValueRaw).trim();
+    if (!kortId) {
+      setFeedback('Podaj identyfikator kortu.', 'error');
+      return;
+    }
+    const payload = { kort_id: kortId };
+    if (overlayId !== '') {
+      payload.overlay_id = overlayId;
+    }
+    try {
+      const data = await requestJson('/api/admin/courts', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (Array.isArray(data.courts)) {
+        renderCourts(data.courts);
+      }
+      if (courtForm) {
+        courtForm.reset();
+      }
+      setFeedback(data.created ? 'Kort dodany.' : 'Kort zaktualizowany.', 'success');
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+  async function deleteCourtRow(row) {
+    const kortId = row.dataset.kortId;
+    if (!kortId) {
+      setFeedback('Nie udało się odczytać identyfikatora kortu.', 'error');
+      return;
+    }
+    if (!window.confirm('Czy na pewno usunąć ten kort?')) {
+      return;
+    }
+    try {
+      const data = await requestJson(`/api/admin/courts/${encodeURIComponent(kortId)}`, {
+        method: 'DELETE'
+      });
+      if (Array.isArray(data.courts)) {
+        renderCourts(data.courts);
+      } else {
+        row.remove();
+      }
+      setFeedback('Kort został usunięty.', 'success');
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -270,6 +385,19 @@
     }
   }
 
+  function handleCourtsTableClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.classList.contains('delete-court')) {
+      const row = target.closest('tr[data-kort-id]');
+      if (row) {
+        deleteCourtRow(row);
+      }
+    }
+  }
+
   if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
   }
@@ -279,9 +407,21 @@
   if (historyTableBody) {
     historyTableBody.addEventListener('click', handleTableClick);
   }
+  if (courtForm) {
+    courtForm.addEventListener('submit', handleCourtFormSubmit);
+  }
+  if (refreshCourtsButton) {
+    refreshCourtsButton.addEventListener('click', refreshCourts);
+  }
+  if (courtsTableBody) {
+    courtsTableBody.addEventListener('click', handleCourtsTableClick);
+  }
 
   toggleAuthenticated(Boolean(initialConfig.is_authenticated));
   if (Array.isArray(initialConfig.history) && initialConfig.history.length > 0) {
     renderHistory(initialConfig.history);
+  }
+  if (Boolean(initialConfig.is_authenticated)) {
+    renderCourts(initialCourts);
   }
 })();
