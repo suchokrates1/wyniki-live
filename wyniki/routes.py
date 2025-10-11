@@ -58,6 +58,10 @@ admin_blueprint = Blueprint("admin", __name__, url_prefix="/admin")
 admin_api_blueprint = Blueprint("admin_api", __name__, url_prefix="/api/admin")
 
 ADMIN_SESSION_KEY = "admin_authenticated"
+ADMIN_DISABLED_MESSAGE = (
+    "Panel administracyjny jest wyłączony. Skonfiguruj zmienną środowiskową"
+    " ADMIN_PASSWORD, aby go aktywować."
+)
 HISTORY_INT_FIELDS = {
     "duration_seconds",
     "set1_a",
@@ -78,13 +82,25 @@ def _admin_enabled() -> bool:
     return bool(settings.admin_password)
 
 
+def _require_admin_enabled_json():
+    if _admin_enabled():
+        return None
+    return (
+        jsonify(
+            {"ok": False, "error": "admin-disabled", "message": ADMIN_DISABLED_MESSAGE}
+        ),
+        503,
+    )
+
+
 def _is_admin_authenticated() -> bool:
     return session.get(ADMIN_SESSION_KEY) is True
 
 
 def _require_admin_session_json():
-    if not _admin_enabled():
-        return jsonify({"ok": False, "error": "admin-disabled"}), 404
+    disabled_response = _require_admin_enabled_json()
+    if disabled_response is not None:
+        return disabled_response
     if not _is_admin_authenticated():
         return jsonify({"ok": False, "error": "not-authorized"}), 401
     return None
@@ -152,9 +168,8 @@ def register_routes(app: Flask) -> None:
 
 @admin_blueprint.route("/", methods=["GET"])
 def admin_index() -> str:
-    if not _admin_enabled():
-        abort(404)
-    is_authenticated = _is_admin_authenticated()
+    admin_enabled = _admin_enabled()
+    is_authenticated = admin_enabled and _is_admin_authenticated()
     history = fetch_all_history(settings.match_history_size) if is_authenticated else []
     courts = (
         [{"kort_id": kort_id, "overlay_id": overlay_id} for kort_id, overlay_id in available_courts()]
@@ -167,13 +182,16 @@ def admin_index() -> str:
         history=history,
         courts=courts,
         int_fields=sorted(HISTORY_INT_FIELDS),
+        admin_enabled=admin_enabled,
+        admin_disabled_message=ADMIN_DISABLED_MESSAGE,
     )
 
 
 @admin_blueprint.route("/login", methods=["POST"])
 def admin_login():
-    if not _admin_enabled():
-        abort(404)
+    disabled_response = _require_admin_enabled_json()
+    if disabled_response is not None:
+        return disabled_response
     payload = request.get_json(silent=True)
     password: Optional[str] = None
     if isinstance(payload, dict):
