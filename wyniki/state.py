@@ -9,9 +9,11 @@ import time
 from collections import deque
 from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 
+from . import courts
 from .config import settings, log
 from .database import (
     delete_latest_history_entry,
+    fetch_match_history_entry,
     fetch_recent_history,
     fetch_state_cache,
     insert_match_history,
@@ -60,13 +62,8 @@ event_broker = EventBroker()
 POINT_SEQUENCE = ["0", "15", "30", "40", "ADV"]
 STATE_LOCK = threading.Lock()
 
-if settings.overlay_ids:
-    INITIAL_COURTS = sorted(settings.overlay_ids.keys(), key=lambda value: int(value))
-else:
-    INITIAL_COURTS = [str(index) for index in range(1, 5)]
-
-snapshots: Dict[str, Dict[str, Any]] = {kort: None for kort in INITIAL_COURTS}  # type: ignore[assignment]
-GLOBAL_LOG: Deque[Dict[str, Any]] = deque(maxlen=max(100, settings.state_log_size * max(1, len(snapshots) or 1)))
+snapshots: Dict[str, Dict[str, Any]] = {}
+GLOBAL_LOG: Deque[Dict[str, Any]] = deque(maxlen=max(100, settings.state_log_size * 4))
 GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size)
 
 
@@ -90,7 +87,52 @@ class TokenBucket:
             return False
 
 
-buckets = {kort: TokenBucket(settings.rpm_per_court, settings.burst) for kort in settings.overlay_ids.keys()}
+buckets: Dict[str, TokenBucket] = {}
+
+
+def _fallback_courts() -> List[str]:
+    if settings.overlay_ids:
+        try:
+            return sorted(settings.overlay_ids.keys(), key=lambda value: int(value))
+        except ValueError:
+            return sorted(settings.overlay_ids.keys())
+    return [str(index) for index in range(1, 5)]
+
+
+def _sorted_snapshot_ids() -> List[str]:
+    def _key(value: str) -> Tuple[int, str]:
+        try:
+            return (0, f"{int(value):04d}")
+        except (TypeError, ValueError):
+            return (1, str(value))
+
+    return sorted(snapshots.keys(), key=_key)
+
+
+def refresh_courts() -> List[Tuple[str, Optional[str]]]:
+    courts.reload_courts()
+    listed = courts.list_courts()
+    ids = [kort for kort, _ in listed] or _sorted_snapshot_ids() or _fallback_courts()
+    known = set(ids)
+    with STATE_LOCK:
+        global GLOBAL_LOG
+        for kort in ids:
+            if kort not in snapshots:
+                snapshots[kort] = _empty_court_state()
+            if kort not in buckets:
+                buckets[kort] = TokenBucket(settings.rpm_per_court, settings.burst)
+        for kort in list(snapshots.keys()):
+            if kort not in known:
+                snapshots.pop(kort, None)
+        for kort in list(buckets.keys()):
+            if kort not in known:
+                buckets.pop(kort, None)
+        new_maxlen = max(100, settings.state_log_size * max(1, len(ids)))
+        if GLOBAL_LOG.maxlen != new_maxlen:
+            GLOBAL_LOG = deque(GLOBAL_LOG, maxlen=new_maxlen)
+    if listed:
+        return listed
+    return [(kort, courts.get_overlay_map().get(kort)) for kort in ids]
 
 
 def _empty_player_state() -> Dict[str, Any]:
@@ -133,14 +175,14 @@ def _empty_court_state() -> Dict[str, Any]:
     }
 
 
-for kort in list(snapshots.keys()):
-    snapshots[kort] = _empty_court_state()
+refresh_courts()
 
 
 def available_courts() -> List[Tuple[str, Optional[str]]]:
-    if settings.overlay_ids:
-        return [(kort, settings.overlay_ids[kort]) for kort in sorted(settings.overlay_ids.keys(), key=lambda value: int(value))]
-    return [(kort, None) for kort in sorted(snapshots.keys(), key=lambda value: int(value))]
+    listed = courts.list_courts()
+    if listed:
+        return listed
+    return [(kort, None) for kort in _sorted_snapshot_ids()]
 
 
 def normalize_kort_id(raw: Any) -> Optional[str]:
@@ -161,9 +203,13 @@ def normalize_kort_id(raw: Any) -> Optional[str]:
 def is_known_kort(kort_id: str) -> bool:
     if not kort_id:
         return False
-    if settings.overlay_ids:
-        return kort_id in settings.overlay_ids
-    return kort_id in snapshots
+    normalized = normalize_kort_id(kort_id)
+    if not normalized:
+        return False
+    overlay_map = courts.get_overlay_map()
+    if overlay_map:
+        return normalized in overlay_map
+    return normalized in snapshots
 
 
 def ensure_court_state(kort_id: str) -> Dict[str, Any]:
@@ -578,6 +624,8 @@ def build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, 
         "ended_at": ended_at,
         "duration_seconds": duration_seconds,
         "duration_text": format_duration(duration_seconds),
+        "category": state.get("category"),
+        "phase": state.get("phase") or "Grupowa",
         "players": {
             "A": {"full_name": state["A"].get("full_name"), "surname": state["A"].get("surname")},
             "B": {"full_name": state["B"].get("full_name"), "surname": state["B"].get("surname")},
@@ -591,13 +639,17 @@ def build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, 
 
 
 def persist_match_history_entry(entry: Dict[str, Any]) -> None:
-    insert_match_history(
+    if not isinstance(entry.get("phase"), str) or not entry.get("phase", "").strip():
+        entry["phase"] = "Grupowa"
+    record_id = insert_match_history(
         {
             "kort": entry.get("kort"),
             "ended_at": entry.get("ended_at"),
             "duration_seconds": entry.get("duration_seconds", 0),
             "player_a": entry.get("players", {}).get("A", {}).get("surname"),
             "player_b": entry.get("players", {}).get("B", {}).get("surname"),
+            "category": entry.get("category"),
+            "phase": entry.get("phase", "Grupowa"),
             "set1_a": entry.get("sets", {}).get("set1", {}).get("A", 0),
             "set1_b": entry.get("sets", {}).get("set1", {}).get("B", 0),
             "set2_a": entry.get("sets", {}).get("set2", {}).get("A", 0),
@@ -610,46 +662,72 @@ def persist_match_history_entry(entry: Dict[str, Any]) -> None:
             "set2_tb_b": entry.get("sets", {}).get("set2", {}).get("tb", {}).get("B", 0),
         }
     )
+    if record_id:
+        entry["id"] = record_id
     GLOBAL_HISTORY.appendleft(entry)
     while len(GLOBAL_HISTORY) > settings.match_history_size:
         GLOBAL_HISTORY.pop()
 
 
+def history_row_to_entry(row, include_id: bool = True) -> Dict[str, Any]:
+    entry = {
+        "kort": row["kort_id"],
+        "ended_at": row["ended_ts"],
+        "duration_seconds": row["duration_seconds"],
+        "duration_text": format_duration(row["duration_seconds"]),
+        "category": row["category"],
+        "phase": row["phase"] or "Grupowa",
+        "players": {
+            "A": {"surname": row["player_a"], "full_name": row["player_a"]},
+            "B": {"surname": row["player_b"], "full_name": row["player_b"]},
+        },
+        "sets": {
+            "set1": {
+                "A": row["set1_a"],
+                "B": row["set1_b"],
+                "tb": {
+                    "A": row["set1_tb_a"],
+                    "B": row["set1_tb_b"],
+                    "played": bool(row["set1_tb_a"] or row["set1_tb_b"]),
+                },
+            },
+            "set2": {
+                "A": row["set2_a"],
+                "B": row["set2_b"],
+                "tb": {
+                    "A": row["set2_tb_a"],
+                    "B": row["set2_tb_b"],
+                    "played": bool(row["set2_tb_a"] or row["set2_tb_b"]),
+                },
+            },
+            "tie": {"A": row["tie_a"], "B": row["tie_b"], "played": bool(row["tie_a"] or row["tie_b"])},
+        },
+    }
+    if include_id and "id" in row.keys():
+        entry["id"] = row["id"]
+    return entry
+
+
+def get_history_entry(entry_id: int) -> Optional[Dict[str, Any]]:
+    row = fetch_match_history_entry(entry_id)
+    if not row:
+        return None
+    return history_row_to_entry(row)
+
+
 def load_match_history() -> None:
-    GLOBAL_HISTORY.clear()
-    for row in fetch_recent_history(settings.match_history_size) or []:
-        entry = {
-            "kort": row["kort_id"],
-            "ended_at": row["ended_ts"],
-            "duration_seconds": row["duration_seconds"],
-            "duration_text": format_duration(row["duration_seconds"]),
-            "players": {
-                "A": {"surname": row["player_a"], "full_name": row["player_a"]},
-                "B": {"surname": row["player_b"], "full_name": row["player_b"]},
-            },
-            "sets": {
-                "set1": {
-                    "A": row["set1_a"],
-                    "B": row["set1_b"],
-                    "tb": {
-                        "A": row["set1_tb_a"],
-                        "B": row["set1_tb_b"],
-                        "played": bool(row["set1_tb_a"] or row["set1_tb_b"]),
-                    },
-                },
-                "set2": {
-                    "A": row["set2_a"],
-                    "B": row["set2_b"],
-                    "tb": {
-                        "A": row["set2_tb_a"],
-                        "B": row["set2_tb_b"],
-                        "played": bool(row["set2_tb_a"] or row["set2_tb_b"]),
-                    },
-                },
-                "tie": {"A": row["tie_a"], "B": row["tie_b"], "played": bool(row["tie_a"] or row["tie_b"])},
-            },
-        }
-        GLOBAL_HISTORY.append(entry)
+    refresh_history(False)
+
+
+def refresh_history(broadcast: bool = False) -> List[Dict[str, Any]]:
+    with STATE_LOCK:
+        GLOBAL_HISTORY.clear()
+        for row in fetch_recent_history(settings.match_history_size) or []:
+            GLOBAL_HISTORY.append(history_row_to_entry(row))
+        history_payload = serialize_history_locked()
+    if broadcast:
+        event_broker.broadcast({"type": "history", "history": history_payload, "ts": now_iso()})
+    return history_payload
 
 
 load_match_history()
@@ -1090,7 +1168,6 @@ __all__ = [
     "ALLOWED_COMMAND_PREFIXES",
     "GLOBAL_HISTORY",
     "GLOBAL_LOG",
-    "INITIAL_COURTS",
     "POINT_SEQUENCE",
     "STATE_LOCK",
     "apply_local_command",
@@ -1100,6 +1177,8 @@ __all__ = [
     "delete_latest_history",
     "ensure_court_state",
     "event_broker",
+    "get_history_entry",
+    "history_row_to_entry",
     "finalize_match_if_needed",
     "handle_match_flow",
     "is_known_kort",
@@ -1108,6 +1187,8 @@ __all__ = [
     "log_state_summary",
     "normalize_kort_id",
     "persist_state_cache",
+    "refresh_courts",
+    "refresh_history",
     "record_log_entry",
     "serialize_all_states",
     "serialize_court_state",

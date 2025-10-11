@@ -392,9 +392,13 @@ function renderGlobalHistory(history = []) {
 
   section.classList.remove('is-empty');
   const cols = t.history?.columns || {
-    description: 'Mecz',
-    duration: 'Czas'
+    description: 'Match',
+    duration: 'Duration',
+    category: 'Category',
+    phase: 'Stage'
   };
+  const defaults = t.history?.defaults || {};
+  const placeholders = t.history?.placeholders || {};
   const list = document.createElement('div');
   list.className = 'history-list';
   const start = (page - 1) * SIZE;
@@ -411,6 +415,10 @@ function renderGlobalHistory(history = []) {
     if (set2) setSegments.push(set2);
     const tie = entry.sets?.tie || {};
     const duration = entry.duration_text || _formatDurationLocal(entry.duration_seconds || 0);
+    const categoryRaw = typeof entry.category === 'string' ? entry.category.trim() : '';
+    const category = categoryRaw || placeholders.category || '—';
+    const phaseRaw = typeof entry.phase === 'string' ? entry.phase.trim() : '';
+    const phase = phaseRaw || defaults.phase || placeholders.phase || 'Grupowa';
 
     const courtLabel = format(currentT().courtLabel, { court: entry.kort });
     const accStrings = resolveAccessibilityStrings(t);
@@ -424,6 +432,8 @@ function renderGlobalHistory(history = []) {
     const description = segments.length ? `${head} ${segments.join(', ')}` : head;
 
     const terms = [
+      { label: cols.category || 'Category', value: category, className: 'category' },
+      { label: cols.phase || 'Stage', value: phase, className: 'phase' },
       { label: cols.description, value: description, className: 'description' },
       { label: cols.duration, value: duration, className: 'duration' }
     ];
@@ -1043,6 +1053,18 @@ function handleStreamPayload(payload) {
     const snapshotTime = parseTimestamp(payload.ts) || new Date();
     updateLastRefresh(snapshotTime);
     persistSnapshot(prev, latestHistory, snapshotTime.toISOString());
+    return;
+  }
+
+  if (payload.type === 'history') {
+    if (Array.isArray(payload.history)) {
+      latestHistory = payload.history;
+      renderGlobalHistory(latestHistory);
+    }
+    const ts = parseTimestamp(payload.ts);
+    if (ts) {
+      updateLastRefresh(ts);
+    }
     return;
   }
 

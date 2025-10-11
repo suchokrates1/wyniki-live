@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel administracyjny &middot; Wyniki na żywo</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f4f6f8;
+        color: #1a1a1a;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #101214;
+          color: #f0f4f8;
+        }
+      }
+      header {
+        background: #0d47a1;
+        color: #fff;
+        padding: 1.5rem;
+        text-align: center;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+      h1, h2, h3 {
+        font-weight: 600;
+        margin: 0;
+      }
+      section.panel {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(15, 35, 95, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+      @media (prefers-color-scheme: dark) {
+        section.panel {
+          background: rgba(19, 23, 32, 0.92);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        }
+      }
+      .hidden {
+        display: none !important;
+      }
+      form {
+        margin: 1.5rem 0;
+        display: grid;
+        gap: 1rem;
+      }
+      label {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      input[type="text"],
+      input[type="password"],
+      input[type="number"] {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border-radius: 8px;
+        border: 1px solid rgba(10, 31, 68, 0.2);
+        font-size: 1rem;
+        background: rgba(255, 255, 255, 0.9);
+        color: inherit;
+      }
+      @media (prefers-color-scheme: dark) {
+        input[type="text"],
+        input[type="password"],
+        input[type="number"] {
+          background: rgba(26, 34, 46, 0.9);
+          border-color: rgba(200, 215, 255, 0.2);
+        }
+      }
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1.2rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: linear-gradient(135deg, #1976d2, #0d47a1);
+        color: #fff;
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+      }
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(25, 118, 210, 0.25);
+      }
+      button.secondary {
+        background: transparent;
+        color: inherit;
+        border: 1px solid rgba(13, 71, 161, 0.4);
+      }
+      button.danger {
+        background: linear-gradient(135deg, #d32f2f, #b71c1c);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        font-size: 0.95rem;
+      }
+      th, td {
+        padding: 0.75rem;
+        border-bottom: 1px solid rgba(13, 31, 68, 0.08);
+        vertical-align: top;
+      }
+      thead th {
+        text-align: left;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: rgba(13, 31, 68, 0.75);
+      }
+      @media (prefers-color-scheme: dark) {
+        th, td {
+          border-bottom-color: rgba(200, 215, 255, 0.08);
+        }
+        thead th {
+          color: rgba(220, 235, 255, 0.75);
+        }
+      }
+      td.actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      td.actions button {
+        flex: 1 1 auto;
+        min-width: 90px;
+      }
+      .history-empty {
+        text-align: center;
+        padding: 2rem 0;
+        font-style: italic;
+        color: rgba(13, 31, 68, 0.7);
+      }
+      .status-line {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        min-height: 1.2rem;
+      }
+      .status-line.success {
+        color: #2e7d32;
+      }
+      .status-line.error {
+        color: #c62828;
+      }
+      .court-list {
+        list-style: none;
+        margin: 1rem 0;
+        padding: 0;
+        display: grid;
+        gap: 0.75rem;
+      }
+      .court-item {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        align-items: end;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        background: rgba(13, 71, 161, 0.05);
+      }
+      @media (prefers-color-scheme: dark) {
+        .court-item {
+          background: rgba(40, 75, 140, 0.18);
+        }
+      }
+      .court-item strong {
+        font-size: 1.05rem;
+      }
+      .inline-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      #login-section p.hint {
+        color: rgba(13, 31, 68, 0.7);
+      }
+      @media (prefers-color-scheme: dark) {
+        #login-section p.hint {
+          color: rgba(220, 235, 255, 0.7);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Panel administracyjny</h1>
+      <p>Zarządzaj historią meczów i konfiguracją kortów</p>
+    </header>
+    <main>
+      <section class="panel" id="login-section">
+        <h2>Dostęp chroniony</h2>
+        <p class="hint">Podaj hasło administratora, aby uzyskać dostęp do panelu.</p>
+        <form id="login-form" autocomplete="off">
+          <label for="admin-password">Hasło administratora</label>
+          <input type="password" id="admin-password" name="password" required>
+          <button type="submit">Zaloguj się</button>
+          <p class="status-line" id="login-status"></p>
+        </form>
+        <p class="status-line error hidden" id="password-missing">Brak skonfigurowanego hasła administratora. Uzupełnij zmienną <code>ADMIN_PASSWORD</code> w pliku konfiguracyjnym.</p>
+      </section>
+
+      <section class="panel hidden" id="admin-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <div>
+            <h2>Historia meczów</h2>
+            <p class="hint">Uzupełnij dane i zapisz zmiany, aby pojawiły się na stronie głównej.</p>
+          </div>
+          <button class="secondary" id="logout-btn">Wyloguj</button>
+        </div>
+        <div class="status-line" id="history-status"></div>
+        <div class="table-wrapper">
+          <table id="history-table">
+            <thead>
+              <tr>
+                <th>Informacje</th>
+                <th>Zawodnik A</th>
+                <th>Zawodnik B</th>
+                <th>Kategoria</th>
+                <th>Faza</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="history-rows">
+              <tr class="history-empty"><td colspan="6">Trwa wczytywanie danych…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="courts-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <div>
+            <h2>Korty i identyfikatory overlay</h2>
+            <p class="hint">Identyfikatory overlay są zapisywane w bazie danych i wczytywane przy starcie aplikacji.</p>
+          </div>
+        </div>
+        <ul class="court-list" id="court-list"></ul>
+        <form id="court-form" autocomplete="off">
+          <h3>Dodaj lub zaktualizuj kort</h3>
+          <div class="inline-field">
+            <label for="court-id">Numer kortu</label>
+            <input type="number" id="court-id" name="kort" min="1" step="1" required>
+          </div>
+          <div class="inline-field">
+            <label for="court-overlay">Identyfikator overlay</label>
+            <input type="text" id="court-overlay" name="overlay" required placeholder="np. app_1234567890abcdef">
+          </div>
+          <button type="submit">Zapisz kort</button>
+          <p class="status-line" id="courts-status"></p>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      window.ADMIN_INITIAL = {{ initial_json|safe }};
+    </script>
+    <script type="module" src="/static/js/admin.js"></script>
+  </body>
+</html>

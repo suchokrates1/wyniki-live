@@ -53,10 +53,18 @@ export const TRANSLATIONS = {
       empty: 'Brak zapisanych wyników.',
       columns: {
         description: 'Mecz',
-        duration: 'Czas'
+        duration: 'Czas',
+        category: 'Kategoria',
+        phase: 'Faza rozgrywek'
       },
       labels: {
         supertb: 'Wynik SUPERTB'
+      },
+      defaults: {
+        phase: 'Grupowa'
+      },
+      placeholders: {
+        category: '—'
       }
     },
     accessibility: {
@@ -124,10 +132,18 @@ export const TRANSLATIONS = {
       empty: 'Keine gespeicherten Ergebnisse.',
       columns: {
         description: 'Begegnung',
-        duration: 'Dauer'
+        duration: 'Dauer',
+        category: 'Kategorie',
+        phase: 'Turnierphase'
       },
       labels: {
         supertb: 'Super-Tiebreak'
+      },
+      defaults: {
+        phase: 'Gruppenphase'
+      },
+      placeholders: {
+        category: '—'
       }
     },
     accessibility: {
@@ -191,10 +207,18 @@ export const TRANSLATIONS = {
       empty: 'No saved results.',
       columns: {
         description: 'Match',
-        duration: 'Duration'
+        duration: 'Duration',
+        category: 'Category',
+        phase: 'Stage'
       },
       labels: {
         supertb: 'Super tiebreak'
+      },
+      defaults: {
+        phase: 'Group stage'
+      },
+      placeholders: {
+        category: '—'
       }
     },
     shortcuts: { desc: 'Shortcuts: [1–6] courts, H – history.' },
@@ -260,10 +284,18 @@ export const TRANSLATIONS = {
       empty: 'Nessun risultato salvato.',
       columns: {
         description: 'Incontro',
-        duration: 'Durata'
+        duration: 'Durata',
+        category: 'Categoria',
+        phase: 'Fase'
       },
       labels: {
         supertb: 'Super tie-break'
+      },
+      defaults: {
+        phase: 'Fase a gironi'
+      },
+      placeholders: {
+        category: '—'
       }
     },
     accessibility: {
@@ -328,10 +360,18 @@ export const TRANSLATIONS = {
       empty: 'No hay resultados guardados.',
       columns: {
         description: 'Partido',
-        duration: 'Duración'
+        duration: 'Duración',
+        category: 'Categoría',
+        phase: 'Fase'
       },
       labels: {
         supertb: 'Resultado super desempate'
+      },
+      defaults: {
+        phase: 'Fase de grupos'
+      },
+      placeholders: {
+        category: '—'
       }
     },
     accessibility: {

@@ -1,12 +1,10 @@
 """Flask route registrations for the wyniki application."""
 from __future__ import annotations
-
-import hmac
 import json
 import os
 import re
 from queue import Empty
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from flask import (
@@ -16,24 +14,28 @@ from flask import (
     abort,
     jsonify,
     request,
+    session,
     send_from_directory,
     stream_with_context,
 )
 
 from .config import DOWNLOAD_DIR, STATIC_DIR, log, normalize_overlay_id, settings
+from . import courts
+from .database import delete_match_history_entry_by_id, update_match_history_entry
 from .state import (
-    GLOBAL_HISTORY,
     STATE_LOCK,
     apply_local_command,
     broadcast_kort_state,
     buckets,
-    delete_latest_history,
     ensure_court_state,
     event_broker,
+    get_history_entry,
     log_state_summary,
     is_known_kort,
     normalize_kort_id,
     persist_state_cache,
+    refresh_courts,
+    refresh_history,
     record_log_entry,
     serialize_all_states,
     serialize_court_state,
@@ -45,6 +47,63 @@ from .utils import now_iso, render_file_template, safe_copy, shorten
 blueprint = Blueprint("wyniki", __name__)
 
 
+ADMIN_SESSION_KEY = "wyniki_admin_authenticated"
+DEFAULT_PHASE = "Grupowa"
+
+
+def _admin_authenticated() -> bool:
+    return bool(session.get(ADMIN_SESSION_KEY))
+
+
+def _set_admin_session() -> None:
+    session[ADMIN_SESSION_KEY] = True
+    session.permanent = True
+
+
+def _clear_admin_session() -> None:
+    session.pop(ADMIN_SESSION_KEY, None)
+
+
+def _admin_guard_response():
+    if not _admin_authenticated():
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    return None
+
+
+def _courts_payload(force_reload: bool = False) -> List[Dict[str, Optional[str]]]:
+    listed = courts.list_courts()
+    if force_reload or not listed:
+        listed = refresh_courts()
+    if not listed:
+        listed = courts.list_courts()
+    return [{"kort": kort, "overlay": overlay} for kort, overlay in listed]
+
+
+def _admin_payload() -> Dict[str, Any]:
+    authenticated = _admin_authenticated()
+    history_entries: List[Dict[str, Any]] = []
+    if authenticated:
+        history_entries = refresh_history(False)
+    return {
+        "authenticated": authenticated,
+        "history": history_entries,
+        "courts": _courts_payload(force_reload=authenticated),
+        "hasPassword": bool(settings.admin_password),
+        "defaultPhase": DEFAULT_PHASE,
+    }
+
+
+def _broadcast_snapshot() -> None:
+    event_broker.broadcast(
+        {
+            "type": "snapshot",
+            "ts": now_iso(),
+            "state": serialize_all_states(),
+            "history": serialize_history(),
+        }
+    )
+
+
 def register_routes(app: Flask) -> None:
     app.register_blueprint(blueprint)
 
@@ -52,6 +111,12 @@ def register_routes(app: Flask) -> None:
 @blueprint.route("/")
 def index() -> str:
     return render_file_template("index.html")
+
+
+@blueprint.route("/admin")
+def admin_index() -> str:
+    initial = json.dumps(_admin_payload(), ensure_ascii=False)
+    return render_file_template("admin.html", initial_json=initial)
 
 
 @blueprint.route("/static/<path:filename>")
@@ -79,6 +144,141 @@ def download_plugin():
 @blueprint.route("/api/snapshot")
 def api_snapshot():
     return jsonify(serialize_all_states())
+
+
+@blueprint.route("/api/admin/session", methods=["GET", "POST", "DELETE"])
+def api_admin_session():
+    if request.method == "GET":
+        payload = _admin_payload()
+        return jsonify({"ok": True, **payload})
+    if request.method == "POST":
+        if not settings.admin_password:
+            return jsonify({"ok": False, "error": "admin password not configured"}), 503
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            data = request.form.to_dict() if request.form else {}
+        password = str((data or {}).get("password") or "")
+        if password.strip() == settings.admin_password:
+            _set_admin_session()
+            payload = _admin_payload()
+            return jsonify({"ok": True, **payload})
+        _clear_admin_session()
+        return jsonify({"ok": False, "error": "invalid password"}), 401
+    if request.method == "DELETE":
+        _clear_admin_session()
+        return jsonify({"ok": True})
+    abort(405)
+
+
+@blueprint.route("/api/admin/history", methods=["GET"])
+def api_admin_history():
+    guard = _admin_guard_response()
+    if guard:
+        return guard
+    history_entries = refresh_history(False)
+    return jsonify({"ok": True, "history": history_entries})
+
+
+@blueprint.route("/api/admin/history/<int:entry_id>", methods=["PUT", "DELETE"])
+def api_admin_history_entry(entry_id: int):
+    guard = _admin_guard_response()
+    if guard:
+        return guard
+    if request.method == "DELETE":
+        deleted = delete_match_history_entry_by_id(entry_id)
+        if not deleted:
+            return jsonify({"ok": False, "error": "not found"}), 404
+        history_entries = refresh_history(True)
+        return jsonify({"ok": True, "deleted": entry_id, "history": history_entries})
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid payload"}), 400
+    updates: Dict[str, Optional[str]] = {}
+    for field in ("player_a", "player_b", "category", "phase"):
+        if field in payload:
+            value = payload.get(field)
+            if value is None:
+                updates[field] = None
+            else:
+                updates[field] = str(value).strip()
+    if "phase" in updates:
+        phase_value = updates["phase"] or DEFAULT_PHASE
+        if not phase_value:
+            phase_value = DEFAULT_PHASE
+        updates["phase"] = phase_value
+    if "category" in updates and updates["category"] == "":
+        updates["category"] = None
+    if "player_a" in updates and updates["player_a"] == "":
+        updates["player_a"] = None
+    if "player_b" in updates and updates["player_b"] == "":
+        updates["player_b"] = None
+    if not updates:
+        return jsonify({"ok": False, "error": "no changes provided"}), 400
+    updated = update_match_history_entry(entry_id, updates)
+    if not updated:
+        return jsonify({"ok": False, "error": "not found"}), 404
+    history_entries = refresh_history(True)
+    entry = next((item for item in history_entries if item.get("id") == entry_id), None)
+    if entry is None:
+        entry = get_history_entry(entry_id)
+    return jsonify({"ok": True, "entry": entry, "history": history_entries})
+
+
+@blueprint.route("/api/admin/courts", methods=["GET", "POST"])
+def api_admin_courts():
+    guard = _admin_guard_response()
+    if guard:
+        return guard
+    if request.method == "GET":
+        return jsonify({"ok": True, "courts": _courts_payload()})
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid payload"}), 400
+    kort_id = payload.get("kort") or payload.get("kort_id")
+    overlay_id = payload.get("overlay") or payload.get("overlay_id")
+    if overlay_id is None or not str(overlay_id).strip():
+        return jsonify({"ok": False, "error": "overlay required"}), 400
+    if kort_id is None or not str(kort_id).strip():
+        return jsonify({"ok": False, "error": "kort required"}), 400
+    try:
+        courts.upsert_court(str(kort_id), str(overlay_id))
+    except ValueError as exc:  # includes normalization failures
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    refresh_courts()
+    _broadcast_snapshot()
+    return jsonify({"ok": True, "courts": _courts_payload(True)})
+
+
+@blueprint.route("/api/admin/courts/<kort_id>", methods=["PUT", "DELETE"])
+def api_admin_court_entry(kort_id: str):
+    guard = _admin_guard_response()
+    if guard:
+        return guard
+    normalized = normalize_kort_id(kort_id)
+    if not normalized:
+        return jsonify({"ok": False, "error": "invalid kort"}), 400
+    if request.method == "DELETE":
+        if not courts.delete_court(normalized):
+            return jsonify({"ok": False, "error": "not found"}), 404
+        refresh_courts()
+        _broadcast_snapshot()
+        return jsonify({"ok": True, "courts": _courts_payload(True)})
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid payload"}), 400
+    overlay_id = payload.get("overlay") or payload.get("overlay_id")
+    if overlay_id is None or not str(overlay_id).strip():
+        return jsonify({"ok": False, "error": "overlay required"}), 400
+    try:
+        courts.upsert_court(normalized, str(overlay_id))
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    refresh_courts()
+    _broadcast_snapshot()
+    return jsonify({"ok": True, "courts": _courts_payload(True)})
 
 
 @blueprint.route("/api/stream")
@@ -127,7 +327,7 @@ def _overlay_id_from_url(uno_url: Optional[str]) -> Optional[str]:
 
 
 def _api_endpoint(kort_id: str) -> Optional[str]:
-    overlay_id = settings.overlay_ids.get(kort_id)
+    overlay_id = courts.get_overlay_for_kort(kort_id)
     if not overlay_id:
         return None
     return f"{settings.overlay_base}/{overlay_id}/api"
@@ -136,65 +336,6 @@ def _api_endpoint(kort_id: str) -> Optional[str]:
 @blueprint.route("/healthz")
 def api_healthz():
     return jsonify({"ok": True, "ts": now_iso()}), 200
-
-
-@blueprint.route("/delete", methods=["GET", "POST"])
-def api_history_delete_last():
-    payload = request.get_json(silent=True) or {}
-
-    if not settings.delete_password:
-        log.error("DELETE_PASSWORD not configured; refusing to delete history entry")
-        return jsonify({"ok": False, "error": "password-not-configured"}), 500
-
-    def _sanitize_password(value: Optional[Any]) -> Optional[str]:
-        if value is None:
-            return None
-        text = str(value).strip()
-        return text if text else None
-
-    provided_password: Optional[str] = None
-    if request.authorization:
-        provided_password = _sanitize_password(request.authorization.password)
-        if not provided_password:
-            provided_password = _sanitize_password(request.authorization.username)
-    if not provided_password and isinstance(payload, dict):
-        provided_password = _sanitize_password(payload.get("password"))
-    if not provided_password:
-        provided_password = _sanitize_password(request.form.get("password"))
-    if not provided_password:
-        provided_password = _sanitize_password(request.args.get("password"))
-    if not provided_password:
-        provided_password = _sanitize_password(request.headers.get("X-Delete-Password"))
-
-    if not provided_password:
-        response = Response("Authentication required", 401)
-        response.headers["WWW-Authenticate"] = 'Basic realm="History"'
-        return response
-
-    if not hmac.compare_digest(provided_password, settings.delete_password):
-        response = Response("Invalid password", 401)
-        response.headers["WWW-Authenticate"] = 'Basic realm="History"'
-        return response
-
-    kort_raw = None
-    if isinstance(payload, dict):
-        kort_raw = payload.get("kort") or payload.get("court")
-    if kort_raw is None:
-        kort_raw = request.args.get("kort")
-
-    kort_id: Optional[str] = None
-    if kort_raw is not None:
-        kort_text = str(kort_raw).strip()
-        normalized = normalize_kort_id(kort_text)
-        kort_id = normalized or (kort_text if kort_text else None)
-
-    with STATE_LOCK:
-        deleted_entry = delete_latest_history(kort_id)
-        if not deleted_entry:
-            return jsonify({"ok": False, "error": "history-empty"}), 404
-        remaining = len(GLOBAL_HISTORY)
-
-    return jsonify({"ok": True, "deleted": deleted_entry, "remaining": remaining})
 
 
 @blueprint.route("/api/mirror", methods=["POST"])
@@ -212,7 +353,7 @@ def api_mirror():
 
     kort_id = None
     if overlay_id:
-        kort_id = settings.overlay_id_to_kort.get(overlay_id)
+        kort_id = courts.overlay_id_to_kort_map().get(overlay_id)
     if not kort_id:
         kort_id = payload.get("kort")
     if not kort_id and overlay_id:
@@ -386,8 +527,10 @@ def api_local_reflect(kort_id: str):
 
 @blueprint.route("/api/uno/exec/<kort_id>", methods=["POST"])
 def api_uno_exec(kort_id: str):
-    if settings.overlay_ids and kort_id not in settings.overlay_ids:
+    normalized = normalize_kort_id(kort_id)
+    if not normalized or not is_known_kort(normalized):
         return jsonify({"error": "unknown kort"}), 404
+    kort_id = normalized
 
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):

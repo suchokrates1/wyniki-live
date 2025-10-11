@@ -60,6 +60,13 @@ class Settings:
 
     overlay_base: str = os.environ.get("UNO_BASE", "https://app.overlays.uno/apiv2/controlapps")
     uno_auth_bearer: str = os.environ.get("UNO_AUTH_BEARER", "").strip()
+    admin_password: str = os.environ.get("ADMIN_PASSWORD", "").strip()
+    secret_key: str = (
+        os.environ.get("FLASK_SECRET_KEY")
+        or os.environ.get("SECRET_KEY")
+        or os.environ.get("APP_SECRET_KEY")
+        or "wyniki-secret-key"
+    )
     rpm_per_court: int = int(os.environ.get("RPM_PER_COURT", "55"))
     burst: int = int(os.environ.get("BURST", "8"))
     db_path: str = os.environ.get("DB_PATH", "wyniki_archive.sqlite3")
