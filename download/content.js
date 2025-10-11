@@ -763,18 +763,45 @@ async function loadPlayers() {
 
 // Prawdziwe wpisanie do inputa (aby React/UNO zarejestrowal zmiane)
 async function commitInputValue(el, value) {
+  const text = value == null ? '' : String(value);
   try { el.focus({ preventScroll: true }); } catch {}
   const proto = Object.getPrototypeOf(el);
   const desc =
     Object.getOwnPropertyDescriptor(proto, 'value') ||
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
 
-  if (desc?.set) desc.set.call(el, value);
-  else el.value = value;
+  const setNativeValue = (val) => {
+    if (desc?.set) {
+      desc.set.call(el, val);
+    } else {
+      el.value = val;
+    }
+  };
 
   const evtOpts = { bubbles: true, cancelable: true, composed: true };
-  el.dispatchEvent(new Event('input', evtOpts));
-  try { el.dispatchEvent(new InputEvent('input', { ...evtOpts, inputType: 'insertFromPaste', data: value })); } catch {}
+  const fireBeforeInput = (inputType, data) => {
+    try {
+      el.dispatchEvent(new InputEvent('beforeinput', { ...evtOpts, inputType, data }));
+    } catch {}
+  };
+
+  const fireInput = (inputType, data) => {
+    el.dispatchEvent(new Event('input', evtOpts));
+    try {
+      el.dispatchEvent(new InputEvent('input', { ...evtOpts, inputType, data }));
+    } catch {}
+  };
+
+  const currentValue = el.value == null ? '' : String(el.value);
+  if (currentValue !== text) {
+    fireBeforeInput('insertReplacementText', text);
+    setNativeValue(text);
+    fireInput('insertText', text);
+  } else {
+    fireBeforeInput('insertText', text);
+    setNativeValue(text);
+    fireInput('insertText', text);
+  }
 
   const createEnterEvent = (type) => {
     let event;
@@ -797,9 +824,10 @@ async function commitInputValue(el, value) {
   el.dispatchEvent(createEnterEvent('keydown'));
   el.dispatchEvent(createEnterEvent('keypress'));
   el.dispatchEvent(createEnterEvent('keyup'));
+
   el.dispatchEvent(new Event('change', evtOpts));
 
-  await new Promise(r => setTimeout(r, 30));
+  await new Promise(r => setTimeout(r, 50));
   try { el.dispatchEvent(new FocusEvent('blur', evtOpts)); } catch { el.dispatchEvent(new Event('blur', evtOpts)); }
   try { el.blur(); } catch {}
 }
@@ -1057,15 +1085,69 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
 
       // Desktop/mysz
       row.addEventListener('click', handleSelect);
-      // Dotyk/tablet (gdy 'click' bywa połykany/opóźniony)
-      row.addEventListener('pointerup', (ev) => {
-        if (ev.pointerType !== 'touch') return;
-        Promise.resolve().then(handleSelect);
-      }, { passive: true });
-      // Fallback dla starszych WebView
-      row.addEventListener('touchend', () => {
-        Promise.resolve().then(handleSelect);
-      }, { passive: true });
+
+      const pointerSupported = typeof window !== 'undefined' && 'PointerEvent' in window;
+      if (pointerSupported) {
+        let touchTrack = null;
+        const resetTouchTrack = () => { touchTrack = null; };
+
+        row.addEventListener('pointerdown', (ev) => {
+          if (ev.pointerType !== 'touch') return;
+          touchTrack = {
+            id: ev.pointerId,
+            x: ev.clientX,
+            y: ev.clientY,
+            moved: false
+          };
+        }, { passive: true });
+
+        row.addEventListener('pointermove', (ev) => {
+          if (!touchTrack || ev.pointerType !== 'touch' || ev.pointerId !== touchTrack.id) return;
+          const dx = Math.abs(ev.clientX - touchTrack.x);
+          const dy = Math.abs(ev.clientY - touchTrack.y);
+          if (dx > 8 || dy > 8) touchTrack.moved = true;
+        }, { passive: true });
+
+        row.addEventListener('pointercancel', resetTouchTrack, { passive: true });
+
+        row.addEventListener('pointerup', (ev) => {
+          if (!touchTrack || ev.pointerType !== 'touch' || ev.pointerId !== touchTrack.id) {
+            resetTouchTrack();
+            return;
+          }
+          const { moved } = touchTrack;
+          resetTouchTrack();
+          if (moved) return;
+          Promise.resolve().then(handleSelect);
+        }, { passive: true });
+      } else {
+        let touchTrack = null;
+        const resetTouchTrack = () => { touchTrack = null; };
+
+        row.addEventListener('touchstart', (ev) => {
+          if (!ev.touches || !ev.touches.length) return;
+          const t = ev.touches[0];
+          touchTrack = { x: t.clientX, y: t.clientY, moved: false };
+        }, { passive: true });
+
+        row.addEventListener('touchmove', (ev) => {
+          if (!touchTrack || !ev.touches || !ev.touches.length) return;
+          const t = ev.touches[0];
+          const dx = Math.abs(t.clientX - touchTrack.x);
+          const dy = Math.abs(t.clientY - touchTrack.y);
+          if (dx > 8 || dy > 8) touchTrack.moved = true;
+        }, { passive: true });
+
+        row.addEventListener('touchcancel', resetTouchTrack, { passive: true });
+
+        row.addEventListener('touchend', () => {
+          if (!touchTrack) return;
+          const { moved } = touchTrack;
+          resetTouchTrack();
+          if (moved) return;
+          Promise.resolve().then(handleSelect);
+        }, { passive: true });
+      }
 
       list.appendChild(row);
       }
