@@ -1028,7 +1028,12 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
 
       row.appendChild(flagEl);
       row.appendChild(nameSpan);
-      row.addEventListener('click', async () => {
+
+      let handled = false;
+      const handleSelect = async () => {
+        if (handled) return;
+        handled = true;
+
         if (!opts.noNameWrite) await commitInputValue(targetInput, p.name);
 
         const extras = {};
@@ -1048,7 +1053,42 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
 
         closePopover();
         if (opts.noNameWrite && targetInput.__tempDummy) targetInput.remove();
-      });
+      };
+
+      // Desktop/mysz
+      row.addEventListener('click', handleSelect);
+
+      // Dotyk/tablet: manualna detekcja tapniecia (bez scrolla)
+      let touchStart = null;
+      row.addEventListener('touchstart', (ev) => {
+        if (ev.touches.length !== 1) {
+          touchStart = null;
+          return;
+        }
+        const t = ev.touches[0];
+        touchStart = { x: t.clientX, y: t.clientY };
+      }, { passive: true });
+
+      row.addEventListener('touchmove', (ev) => {
+        if (!touchStart || ev.touches.length !== 1) return;
+        const t = ev.touches[0];
+        const dx = Math.abs(t.clientX - touchStart.x);
+        const dy = Math.abs(t.clientY - touchStart.y);
+        if (dx > 12 || dy > 12) {
+          touchStart = null;
+        }
+      }, { passive: true });
+
+      const touchSelect = (ev) => {
+        if (!touchStart) return;
+        touchStart = null;
+        if (ev.cancelable) ev.preventDefault();
+        handleSelect();
+      };
+
+      row.addEventListener('touchend', touchSelect, { passive: false });
+      row.addEventListener('touchcancel', () => { touchStart = null; });
+
       list.appendChild(row);
       }
   };
