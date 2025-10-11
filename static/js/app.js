@@ -391,9 +391,12 @@ function renderGlobalHistory(history = []) {
   }
 
   section.classList.remove('is-empty');
-  const cols = t.history?.columns || {
-    description: 'Mecz',
-    duration: 'Czas'
+  const columnTranslations = t.history?.columns || {};
+  const columns = {
+    description: columnTranslations.description || 'Mecz',
+    category: columnTranslations.category || 'Kategoria',
+    phase: columnTranslations.phase || 'Faza',
+    duration: columnTranslations.duration || 'Czas'
   };
   const list = document.createElement('div');
   list.className = 'history-list';
@@ -411,6 +414,10 @@ function renderGlobalHistory(history = []) {
     if (set2) setSegments.push(set2);
     const tie = entry.sets?.tie || {};
     const duration = entry.duration_text || _formatDurationLocal(entry.duration_seconds || 0);
+    const rawCategory = typeof entry.category === 'string' ? entry.category.trim() : '';
+    const categoryText = rawCategory || '—';
+    const rawPhase = typeof entry.phase === 'string' ? entry.phase.trim() : '';
+    const phaseText = rawPhase || '—';
 
     const courtLabel = format(currentT().courtLabel, { court: entry.kort });
     const accStrings = resolveAccessibilityStrings(t);
@@ -424,8 +431,10 @@ function renderGlobalHistory(history = []) {
     const description = segments.length ? `${head} ${segments.join(', ')}` : head;
 
     const terms = [
-      { label: cols.description, value: description, className: 'description' },
-      { label: cols.duration, value: duration, className: 'duration' }
+      { label: columns.description, value: description, className: 'description' },
+      { label: columns.category, value: categoryText, className: 'category' },
+      { label: columns.phase, value: phaseText, className: 'phase' },
+      { label: columns.duration, value: duration, className: 'duration' }
     ];
     terms.forEach(({ label, value, className }) => {
       const dt = document.createElement('dt');
