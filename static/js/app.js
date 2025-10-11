@@ -14,7 +14,6 @@ const errLine = document.getElementById('errLine');
 const pauseBtn = document.getElementById('pauseBtn');
 const langSelect = document.getElementById('langSelect');
 const langLabel = document.getElementById('langLabel');
-const controlsTitle = document.getElementById('ctrl-title');
 const headerTitle = document.querySelector('header h1');
 const headerDesc = document.querySelector('.desc');
 const lastRefreshText = document.getElementById('lastRefreshText');
@@ -1317,7 +1316,6 @@ function renderLanguage() {
   const liveBadge = document.getElementById('live-badge');
   if (liveBadge) liveBadge.textContent = t.liveBadge || 'LIVE';
   if (nav) nav.setAttribute('aria-label', t.navLabel);
-  if (controlsTitle) controlsTitle.textContent = t.controlsTitle;
   if (langLabel) langLabel.textContent = t.languageLabel;
   if (pauseBtn) pauseBtn.textContent = paused ? t.pause.resume : t.pause.pause;
   refreshNavLanguage();
