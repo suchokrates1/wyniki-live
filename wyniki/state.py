@@ -64,6 +64,8 @@ STATE_LOCK = threading.Lock()
 GLOBAL_LOG: Deque[Dict[str, Any]] = deque()
 GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size)
 
+DEFAULT_HISTORY_PHASE = "Grupowa"
+
 
 class TokenBucket:
     def __init__(self, rpm: int, burst: int) -> None:
@@ -111,6 +113,7 @@ def _empty_court_state() -> Dict[str, Any]:
         "B": _empty_player_state(),
         "tie": {"visible": None, "A": 0, "B": 0, "locked": False},
         "history": [],
+        "history_meta": {"category": None, "phase": DEFAULT_HISTORY_PHASE},
         "local": {"commands": {}, "updated": None},
         "uno": {
             "last_command": None,
@@ -220,6 +223,38 @@ def _apply_court_configuration(mapping: Dict[str, Optional[str]]) -> None:
     _resize_global_log()
 
 
+def _clean_history_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _extract_custom_field_value(value: Any, extras: Optional[Dict[str, Any]]) -> Any:
+    if isinstance(value, dict) and "value" in value:
+        return value.get("value")
+    if isinstance(extras, dict):
+        for key in ("value", "text", "label"):
+            if extras.get(key) not in (None, ""):
+                return extras.get(key)
+    return value
+
+
+def ensure_history_meta(state: Dict[str, Any]) -> Dict[str, Any]:
+    meta = state.setdefault("history_meta", {})
+    if "category" in meta:
+        meta["category"] = _clean_history_text(meta.get("category"))
+    else:
+        meta["category"] = None
+    phase_value = meta.get("phase")
+    if phase_value is None:
+        meta["phase"] = DEFAULT_HISTORY_PHASE
+    else:
+        cleaned_phase = str(phase_value).strip()
+        meta["phase"] = cleaned_phase or DEFAULT_HISTORY_PHASE
+    return meta
+
+
 def refresh_courts_from_db(seed_if_empty: bool = False) -> Dict[str, Optional[str]]:
     mapping = _load_courts_with_seed(seed_if_empty)
     with STATE_LOCK:
@@ -276,6 +311,7 @@ def ensure_court_state(kort_id: str) -> Dict[str, Any]:
     if state is None:
         state = _empty_court_state()
         snapshots[kort_id] = state
+    ensure_history_meta(state)
     return state
 
 
@@ -290,6 +326,7 @@ def serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
         "A": dict(state["A"]),
         "B": dict(state["B"]),
         "tie": dict(state["tie"]),
+        "history_meta": dict(ensure_history_meta(state)),
         "local": {
             "updated": state["local"].get("updated"),
             "commands": {cmd: dict(info) for cmd, info in state["local"].get("commands", {}).items()},
@@ -356,6 +393,13 @@ def hydrate_state_from_cache(kort_id: str, cached: Dict[str, Any]) -> None:
     history_in = cached.get("history")
     if isinstance(history_in, list):
         state["history"] = history_in[:]
+    meta_in = cached.get("history_meta")
+    meta = ensure_history_meta(state)
+    if isinstance(meta_in, dict):
+        if "category" in meta_in:
+            meta["category"] = _clean_history_text(meta_in.get("category"))
+        if "phase" in meta_in:
+            meta["phase"] = _clean_history_text(meta_in.get("phase")) or DEFAULT_HISTORY_PHASE
     local_in = cached.get("local")
     if isinstance(local_in, dict):
         state["local"]["updated"] = local_in.get("updated")
@@ -654,6 +698,7 @@ def _extract_short_set_tiebreaks(state: Dict[str, Any]) -> Dict[str, Dict[str, i
 
 def build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
     match_time, _ = ensure_match_struct(state)
+    meta = ensure_history_meta(state)
     ended_at = match_time.get("finished_ts") or now_iso()
     duration_seconds = int(match_time.get("seconds") or 0)
     tie_state = state.get("tie") if isinstance(state.get("tie"), dict) else {"A": 0, "B": 0}
@@ -683,6 +728,8 @@ def build_match_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, 
         "ended_at": ended_at,
         "duration_seconds": duration_seconds,
         "duration_text": format_duration(duration_seconds),
+        "category": meta.get("category"),
+        "phase": meta.get("phase") or DEFAULT_HISTORY_PHASE,
         "players": {
             "A": {"full_name": state["A"].get("full_name"), "surname": state["A"].get("surname")},
             "B": {"full_name": state["B"].get("full_name"), "surname": state["B"].get("surname")},
@@ -713,6 +760,8 @@ def persist_match_history_entry(entry: Dict[str, Any]) -> None:
             "set1_tb_b": entry.get("sets", {}).get("set1", {}).get("tb", {}).get("B", 0),
             "set2_tb_a": entry.get("sets", {}).get("set2", {}).get("tb", {}).get("A", 0),
             "set2_tb_b": entry.get("sets", {}).get("set2", {}).get("tb", {}).get("B", 0),
+            "category": entry.get("category"),
+            "phase": entry.get("phase") or DEFAULT_HISTORY_PHASE,
         }
     )
     GLOBAL_HISTORY.appendleft(entry)
@@ -723,11 +772,15 @@ def persist_match_history_entry(entry: Dict[str, Any]) -> None:
 def load_match_history() -> None:
     GLOBAL_HISTORY.clear()
     for row in fetch_recent_history(settings.match_history_size) or []:
+        category = _clean_history_text(row["category"])
+        phase = _clean_history_text(row["phase"]) or DEFAULT_HISTORY_PHASE
         entry = {
             "kort": row["kort_id"],
             "ended_at": row["ended_ts"],
             "duration_seconds": row["duration_seconds"],
             "duration_text": format_duration(row["duration_seconds"]),
+            "category": category,
+            "phase": phase,
             "players": {
                 "A": {"surname": row["player_a"], "full_name": row["player_a"]},
                 "B": {"surname": row["player_b"], "full_name": row["player_b"]},
@@ -782,6 +835,9 @@ def reset_after_match(state: Dict[str, Any]) -> None:
     match_time["started_ts"] = None
     match_time["finished_ts"] = None
     status["active"] = False
+    meta = ensure_history_meta(state)
+    meta["category"] = None
+    meta["phase"] = DEFAULT_HISTORY_PHASE
 
 
 def finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional[Dict[str, int]] = None) -> None:
@@ -1036,6 +1092,14 @@ def apply_local_command(
                 elif command == "PauseMatchTime":
                     state["match_time"]["running"] = False
                     changed = True
+                elif command in {"SetMatchCategory", "SetCategory"}:
+                    meta = ensure_history_meta(state)
+                    meta["category"] = _clean_history_text(value)
+                    changed = True
+                elif command in {"SetMatchPhase", "SetPhase"}:
+                    meta = ensure_history_meta(state)
+                    meta["phase"] = _clean_history_text(value) or DEFAULT_HISTORY_PHASE
+                    changed = True
                 elif command == "SetCustomizationField":
                     field_id = None
                     if extras and isinstance(extras, dict):
@@ -1061,6 +1125,19 @@ def apply_local_command(
                             if url is None and extras and isinstance(extras, dict):
                                 url = extras.get("value")
                             state["B"]["flag_url"] = url or None
+                            changed = True
+                        elif fid in {"category", "match_category", "kategoria"}:
+                            meta = ensure_history_meta(state)
+                            meta["category"] = _clean_history_text(
+                                _extract_custom_field_value(value, extras)
+                            )
+                            changed = True
+                        elif fid in {"phase", "match_phase", "faza", "stage"}:
+                            meta = ensure_history_meta(state)
+                            meta["phase"] = (
+                                _clean_history_text(_extract_custom_field_value(value, extras))
+                                or DEFAULT_HISTORY_PHASE
+                            )
                             changed = True
                         else:
                             log.info(
@@ -1153,11 +1230,15 @@ def delete_latest_history(kort_id: Optional[str] = None) -> Optional[Dict[str, A
         if entry.get("kort") == removed["kort"] and entry.get("ended_at") == removed["ended_at"]:
             del GLOBAL_HISTORY[index]
             break
+    category = _clean_history_text(removed.get("category"))
+    phase = _clean_history_text(removed.get("phase")) or DEFAULT_HISTORY_PHASE
     removed_entry = {
         "kort": removed["kort"],
         "ended_at": removed["ended_at"],
         "duration_seconds": removed["duration_seconds"],
         "duration_text": format_duration(removed["duration_seconds"]),
+        "category": category,
+        "phase": phase,
         "players": {
             "A": {"surname": removed["player_a"], "full_name": removed["player_a"]},
             "B": {"surname": removed["player_b"], "full_name": removed["player_b"]},
@@ -1204,6 +1285,7 @@ __all__ = [
     "buckets",
     "courts_map",
     "delete_latest_history",
+    "DEFAULT_HISTORY_PHASE",
     "ensure_court_state",
     "event_broker",
     "finalize_match_if_needed",

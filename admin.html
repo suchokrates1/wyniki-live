@@ -78,6 +78,8 @@
                 <th>Kort</th>
                 <th>Zakończono</th>
                 <th>Czas (s)</th>
+                <th>Kategoria</th>
+                <th>Faza</th>
                 <th>Zawodnik A</th>
                 <th>Zawodnik B</th>
                 <th>Set 1 (A)</th>
@@ -100,6 +102,8 @@
                 <td><input name="kort_id" type="text" value="{{ entry.kort_id or '' }}" /></td>
                 <td><input name="ended_ts" type="text" value="{{ entry.ended_ts or '' }}" /></td>
                 <td><input name="duration_seconds" type="number" value="{{ entry.duration_seconds or '' }}" /></td>
+                <td><input name="category" type="text" value="{{ entry.category or '' }}" /></td>
+                <td><input name="phase" type="text" value="{{ entry.phase or '' }}" /></td>
                 <td><input name="player_a" type="text" value="{{ entry.player_a or '' }}" /></td>
                 <td><input name="player_b" type="text" value="{{ entry.player_b or '' }}" /></td>
                 <td><input name="set1_a" type="number" value="{{ entry.set1_a or '' }}" /></td>
