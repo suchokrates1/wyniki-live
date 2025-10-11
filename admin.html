@@ -7,12 +7,27 @@
     <link rel="stylesheet" href="/static/styles.css" />
     <script src="/static/js/admin.js" defer></script>
   </head>
-  <body data-authenticated="{{ 'true' if is_authenticated else 'false' }}">
+  <body
+    data-authenticated="{{ 'true' if is_authenticated else 'false' }}"
+    data-admin-enabled="{{ 'true' if admin_enabled else 'false' }}"
+  >
     <main class="container">
       <h1>Panel administracyjny</h1>
       <div id="admin-feedback" class="feedback" role="alert" aria-live="polite"></div>
 
-      <section id="login-section" {% if is_authenticated %}hidden{% endif %}>
+      <section id="admin-disabled-section" {% if admin_enabled %}hidden{% endif %}>
+        <h2>Panel wyłączony</h2>
+        <p>{{ admin_disabled_message }}</p>
+        <p>
+          Ustaw zmienną środowiskową <code>ADMIN_PASSWORD</code>, a następnie zrestartuj usługę,
+          aby włączyć logowanie administratora.
+        </p>
+      </section>
+
+      <section
+        id="login-section"
+        {% if is_authenticated or not admin_enabled %}hidden{% endif %}
+      >
         <h2>Dostęp chroniony</h2>
         <p>Podaj hasło administratora, aby uzyskać dostęp do historii spotkań.</p>
         <form id="admin-login-form">
@@ -22,7 +37,7 @@
         </form>
       </section>
 
-      <section id="courts-section" {% if not is_authenticated %}hidden{% endif %}>
+      <section id="courts-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
         <header class="section-header">
           <h2>Korty</h2>
           <div class="section-actions">
@@ -63,7 +78,7 @@
         </div>
       </section>
 
-      <section id="history-section" {% if not is_authenticated %}hidden{% endif %}>
+      <section id="history-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
         <header class="section-header">
           <h2>Historia spotkań</h2>
           <div class="section-actions">
@@ -132,6 +147,8 @@
       'history': history,
       'courts': courts,
       'int_fields': int_fields,
+      'admin_enabled': admin_enabled,
+      'admin_disabled_message': admin_disabled_message,
     } | tojson }}</script>
   </body>
 </html>

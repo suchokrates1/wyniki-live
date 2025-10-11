@@ -2,7 +2,7 @@
 
 ## Konfiguracja
 
-- `ADMIN_PASSWORD` – hasło umożliwiające zalogowanie do panelu administracyjnego. Po uwierzytelnieniu administrator może edytować oraz usuwać rekordy historii poprzez interfejs webowy lub dedykowane endpointy API.
+- `ADMIN_PASSWORD` – hasło umożliwiające zalogowanie do panelu administracyjnego. Po uwierzytelnieniu administrator może edytować oraz usuwać rekordy historii poprzez interfejs webowy lub dedykowane endpointy API. Gdy zmienna nie jest ustawiona, panel `/admin` pozostaje dostępny, ale wyświetla informację o konieczności konfiguracji zamiast błędu 404.
 
 Aby rozpocząć konfigurację środowiska:
 
@@ -17,6 +17,10 @@ Publiczny endpoint `/delete` został usunięty. Aby skasować wpis z historii na
 2. Skorzystać z przycisku „Usuń” przy wybranym rekordzie lub wysłać żądanie `DELETE /api/admin/history/<id>` z aktywną sesją administracyjną.
 
 Żądania API bez poprawnej sesji otrzymają odpowiedź `401 Unauthorized`, a próba usunięcia nieistniejącego rekordu zakończy się statusem `404 Not Found`.
+
+## Pliki do pobrania
+
+- Endpoint `/download` udostępnia pierwszy (alfabetycznie) archiwalny plik `.zip` znajdujący się w katalogu `download/`. Jeśli katalog jest pusty lub zawiera wyłącznie pliki o innych rozszerzeniach, żądanie zwróci `404 Not Found`.
 
 ## Dostępność wyników
 
