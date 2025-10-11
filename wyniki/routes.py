@@ -20,7 +20,7 @@ from flask import (
     stream_with_context,
 )
 
-from .config import STATIC_DIR, log, normalize_overlay_id, settings
+from .config import DOWNLOAD_DIR, STATIC_DIR, log, normalize_overlay_id, settings
 from .state import (
     GLOBAL_HISTORY,
     STATE_LOCK,
@@ -60,6 +60,20 @@ def static_files(filename: str):
     if safe_path.startswith("..") or os.path.isabs(safe_path):
         abort(404)
     return send_from_directory(STATIC_DIR, safe_path)
+
+
+@blueprint.route("/download")
+def download_plugin():
+    if not os.path.isdir(DOWNLOAD_DIR):
+        abort(404)
+    archive_names = sorted(
+        filename
+        for filename in os.listdir(DOWNLOAD_DIR)
+        if filename.lower().endswith(".zip") and os.path.isfile(os.path.join(DOWNLOAD_DIR, filename))
+    )
+    if not archive_names:
+        abort(404)
+    return send_from_directory(DOWNLOAD_DIR, archive_names[0], as_attachment=True)
 
 
 @blueprint.route("/api/snapshot")
