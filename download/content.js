@@ -557,16 +557,16 @@ function buildScoreReflectMessage(overlay, kortInput, command, value, extras) {
   };
 }
 
-async function mirrorScoreUpdate(command, value, extras = null) {
-  if (!command) return;
-  const overlay = normalizeOverlayId(uno.appInstance || lastAppId || overlayFromLocation());
-  if (!overlay) {
-    log('Mirror update skipped: overlay missing', { command });
-    return;
-  }
-  if (documentKort) setKortForOverlay(overlay, documentKort);
-  const kort = window.__unoKortMap?.[overlay] || documentKort || '1';
-  const message = buildScoreReflectMessage(overlay, kort, command, value, extras);
+  async function mirrorScoreUpdate(command, value, extras = null) {
+    if (!command) return;
+    const overlay = normalizeOverlayId(uno.appInstance || lastAppId || overlayFromLocation()) || null;
+    if (!overlay) {
+      log('Mirror update: overlay missing, sending without overlay context', { command });
+    } else if (documentKort) {
+      setKortForOverlay(overlay, documentKort);
+    }
+    const kort = (overlay && window.__unoKortMap?.[overlay]) || documentKort || '1';
+    const message = buildScoreReflectMessage(overlay, kort, command, value, extras);
   try {
     await chrome.runtime.sendMessage(message);
   } catch (err) {
