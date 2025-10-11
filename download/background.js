@@ -1,6 +1,5 @@
 // background.js
 const SCORE_HOSTS = [
-  'https://score.vestmediia.pl',
   'https://score.vestmedia.pl'
 ];
 const REFLECT_PATH = '/api/local/reflect';
