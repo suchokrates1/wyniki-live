@@ -774,7 +774,13 @@ async function commitInputValue(el, value) {
 
   const evtOpts = { bubbles: true, cancelable: true, composed: true };
   el.dispatchEvent(new Event('input', evtOpts));
-  try { el.dispatchEvent(new InputEvent('input', { ...evtOpts, inputType: 'insertFromPaste', data: value })); } catch {}
+  try {
+    el.dispatchEvent(new InputEvent('input', {
+      ...evtOpts,
+      inputType: 'insertText',
+      data: value
+    }));
+  } catch {}
 
   const createEnterEvent = (type) => {
     let event;
@@ -797,11 +803,13 @@ async function commitInputValue(el, value) {
   el.dispatchEvent(createEnterEvent('keydown'));
   el.dispatchEvent(createEnterEvent('keypress'));
   el.dispatchEvent(createEnterEvent('keyup'));
-  el.dispatchEvent(new Event('change', evtOpts));
 
-  await new Promise(r => setTimeout(r, 30));
+  await new Promise(r => setTimeout(r, 40));
   try { el.dispatchEvent(new FocusEvent('blur', evtOpts)); } catch { el.dispatchEvent(new Event('blur', evtOpts)); }
   try { el.blur(); } catch {}
+
+  await new Promise(r => setTimeout(r, 10));
+  el.dispatchEvent(new Event('change', evtOpts));
 }
 
 // Flagi: API -> UI fallback
