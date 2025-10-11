@@ -4,6 +4,11 @@
 
 - `ADMIN_PASSWORD` – hasło umożliwiające zalogowanie do panelu administracyjnego. Po uwierzytelnieniu administrator może edytować oraz usuwać rekordy historii poprzez interfejs webowy lub dedykowane endpointy API.
 
+Aby rozpocząć konfigurację środowiska:
+
+1. Skopiuj plik przykładowy: `cp .env.example .env`.
+2. Uzupełnij wartości zmiennych środowiskowych w `.env` zgodnie z potrzebami instalacji.
+
 ## Usuwanie wpisów z historii
 
 Publiczny endpoint `/delete` został usunięty. Aby skasować wpis z historii należy:
