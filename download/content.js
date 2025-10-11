@@ -775,11 +775,32 @@ async function commitInputValue(el, value) {
   const evtOpts = { bubbles: true, cancelable: true, composed: true };
   el.dispatchEvent(new Event('input', evtOpts));
   try { el.dispatchEvent(new InputEvent('input', { ...evtOpts, inputType: 'insertFromPaste', data: value })); } catch {}
-  el.dispatchEvent(new KeyboardEvent('keydown', { ...evtOpts, key: 'Enter', code: 'Enter' }));
-  el.dispatchEvent(new KeyboardEvent('keyup',   { ...evtOpts, key: 'Enter', code: 'Enter' }));
+
+  const createEnterEvent = (type) => {
+    let event;
+    try {
+      event = new KeyboardEvent(type, { ...evtOpts, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, charCode: 13 });
+    } catch (err) {
+      event = document.createEvent('KeyboardEvent');
+      event.initKeyboardEvent?.(type, true, true, window, 'Enter', 0, '', false, 'Enter');
+    }
+    try {
+      Object.defineProperties(event, {
+        keyCode: { value: 13 },
+        which: { value: 13 },
+        charCode: { value: 13 }
+      });
+    } catch {}
+    return event;
+  };
+
+  el.dispatchEvent(createEnterEvent('keydown'));
+  el.dispatchEvent(createEnterEvent('keypress'));
+  el.dispatchEvent(createEnterEvent('keyup'));
   el.dispatchEvent(new Event('change', evtOpts));
 
   await new Promise(r => setTimeout(r, 30));
+  try { el.dispatchEvent(new FocusEvent('blur', evtOpts)); } catch { el.dispatchEvent(new Event('blur', evtOpts)); }
   try { el.blur(); } catch {}
 }
 
