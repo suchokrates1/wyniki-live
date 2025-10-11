@@ -33,6 +33,8 @@
     { name: 'kort_id', type: 'text' },
     { name: 'ended_ts', type: 'text' },
     { name: 'duration_seconds', type: 'number' },
+    { name: 'category', type: 'text' },
+    { name: 'phase', type: 'text' },
     { name: 'player_a', type: 'text' },
     { name: 'player_b', type: 'text' },
     { name: 'set1_a', type: 'number' },
