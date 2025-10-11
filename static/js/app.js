@@ -198,6 +198,11 @@ function makeCourtCard(k) {
   cb.checked = getAnnounce(k);
   cb.addEventListener('change', () => setAnnounce(k, cb.checked));
 
+  const heading = section.querySelector(`#heading-${k}`);
+  if (heading) {
+    heading.setAttribute('aria-label', `${courtLabel}: ${defaultA} ${acc.versus} ${defaultB}`);
+  }
+
   // live region removed to reduce redundant announcements
 
   return section;
@@ -559,6 +564,7 @@ function applyScoreAria(k, data) {
 
 function updateTitle(k, Adata, Bdata) {
   const t = currentT();
+  const acc = resolveAccessibilityStrings(t);
   const title = document.getElementById(`title-${k}`);
   const safeA = resolvePlayerName(Adata, 'defaultA');
   const safeB = resolvePlayerName(Bdata, 'defaultB');
@@ -568,7 +574,6 @@ function updateTitle(k, Adata, Bdata) {
     const nameBEl = title.querySelector('[data-title="B"]');
     const versusEl = title.querySelector('.match-versus');
     if (nameAEl && nameBEl && versusEl) {
-      const acc = resolveAccessibilityStrings(t);
       nameAEl.textContent = safeA;
       nameBEl.textContent = safeB;
       // visible abbreviation + screenreader-friendly label
@@ -585,9 +590,14 @@ function updateTitle(k, Adata, Bdata) {
   if (legacyCaption) {
     legacyCaption.remove();
   }
+  const courtLabelText = format(t.courtLabel, { court: k });
   const courtLabel = document.getElementById(`court-label-${k}`);
   if (courtLabel) {
-    courtLabel.textContent = format(t.courtLabel, { court: k });
+    courtLabel.textContent = courtLabelText;
+  }
+  const heading = document.getElementById(`heading-${k}`);
+  if (heading) {
+    heading.setAttribute('aria-label', `${courtLabelText}: ${safeA} ${acc.versus} ${safeB}`);
   }
 }
 
