@@ -49,6 +49,7 @@ from .state import (
     serialize_all_states,
     serialize_court_state,
     serialize_history,
+    STATE_LOCK,
     validate_command,
 )
 from .utils import now_iso, render_file_template, safe_copy, shorten
