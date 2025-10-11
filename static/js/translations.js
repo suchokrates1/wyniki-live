@@ -69,7 +69,10 @@ export const TRANSLATIONS = {
       active: 'aktywny'
     },
     shortcuts: {
-      desc: 'Skróty: [1–6] – korty, H – historia.'
+      template: 'Skróty: {range} – {courtsLabel}.',
+      courtsLabel: 'korty',
+      fallback: 'Skróty do kortów pojawią się po załadowaniu wyników.',
+      autoRead: 'Automatyczny odczyt czyta na głos wynik aktywnego kortu.'
     }
   },
   de: {
@@ -104,7 +107,12 @@ export const TRANSLATIONS = {
     },
     players: { defaultA: 'Spieler A', defaultB: 'Spieler B', fallback: 'Spieler', fallbackOpponent: 'Gegner' },
     liveBadge: 'LIVE',
-    shortcuts: { desc: 'Kurzbefehle: [1–6] Plätze, H – Historie.' },
+    shortcuts: {
+      template: 'Kurzbefehle: {range} – {courtsLabel}.',
+      courtsLabel: 'Plätze',
+      fallback: 'Kurzbefehle für die Plätze erscheinen, sobald Daten geladen sind.',
+      autoRead: 'Die automatische Ansage liest das Ergebnis des aktiven Platzes vor.'
+    },
     versus: 'gegen',
     meta: {
       lastRefresh: 'Letzte Aktualisierung: {time}.',
@@ -200,7 +208,12 @@ export const TRANSLATIONS = {
         supertb: 'Super tiebreak'
       }
     },
-    shortcuts: { desc: 'Shortcuts: [1–6] courts, H – history.' },
+    shortcuts: {
+      template: 'Shortcuts: {range} – {courtsLabel}.',
+      courtsLabel: 'courts',
+      fallback: 'Court shortcuts appear after scores load.',
+      autoRead: 'Automatic readout speaks the score for the active court.'
+    },
     accessibility: {
       versus: 'versus',
       points: 'points',
@@ -242,7 +255,12 @@ export const TRANSLATIONS = {
     },
     players: { defaultA: 'Giocatore A', defaultB: 'Giocatore B', fallback: 'giocatore', fallbackOpponent: 'avversario' },
     liveBadge: 'LIVE',
-    shortcuts: { desc: 'Scorciatoie: [1–6] campi, H – storia.' },
+    shortcuts: {
+      template: 'Scorciatoie: {range} – {courtsLabel}.',
+      courtsLabel: 'campi',
+      fallback: 'Le scorciatoie dei campi compaiono quando i punteggi sono caricati.',
+      autoRead: 'La lettura automatica annuncia il punteggio del campo attivo.'
+    },
     versus: 'contro',
     meta: {
       lastRefresh: 'Ultimo aggiornamento: {time}.',
@@ -311,7 +329,12 @@ export const TRANSLATIONS = {
     },
     players: { defaultA: 'Jugador A', defaultB: 'Jugador B', fallback: 'jugador', fallbackOpponent: 'rival' },
     liveBadge: 'EN VIVO',
-    shortcuts: { desc: 'Atajos: [1–6] canchas, H – historial.' },
+    shortcuts: {
+      template: 'Atajos: {range} – {courtsLabel}.',
+      courtsLabel: 'canchas',
+      fallback: 'Los atajos de canchas aparecen cuando se cargan los marcadores.',
+      autoRead: 'La lectura automática anuncia el marcador de la cancha activa.'
+    },
     versus: 'contra',
     meta: {
       lastRefresh: 'Última actualización: {time}.',
@@ -380,7 +403,12 @@ export const TRANSLATIONS = {
     },
     players: { defaultA: 'Pelaaja A', defaultB: 'Pelaaja B', fallback: 'pelaaja', fallbackOpponent: 'vastustaja' },
     liveBadge: 'LIVE',
-    shortcuts: { desc: 'Pikanäppäimet: [1–6] kentät, H – historia.' },
+    shortcuts: {
+      template: 'Pikanäppäimet: {range} – {courtsLabel}.',
+      courtsLabel: 'kentät',
+      fallback: 'Kenttien pikanäppäimet näkyvät, kun tulokset on ladattu.',
+      autoRead: 'Automaattinen kuulutus lukee käynnissä olevan kentän tuloksen.'
+    },
     versus: 'vastaan',
     meta: {
       lastRefresh: 'Viimeisin päivitys: {time}.',
@@ -449,7 +477,12 @@ export const TRANSLATIONS = {
     },
     players: { defaultA: 'Гравець A', defaultB: 'Гравець B', fallback: 'гравець', fallbackOpponent: 'суперник' },
     liveBadge: 'LIVE',
-    shortcuts: { desc: 'Скорочення: [1–6] корти, H – історія.' },
+    shortcuts: {
+      template: 'Скорочення: {range} – {courtsLabel}.',
+      courtsLabel: 'корти',
+      fallback: 'Клавіатурні скорочення з’являться після завантаження рахунків.',
+      autoRead: 'Автоматичне озвучування читає рахунок активного корту.'
+    },
     versus: 'проти',
     meta: {
       lastRefresh: 'Останнє оновлення: {time}.',
@@ -518,7 +551,12 @@ export const TRANSLATIONS = {
     },
     players: { defaultA: 'Joueur A', defaultB: 'Joueur B', fallback: 'joueur', fallbackOpponent: 'adversaire' },
     liveBadge: 'EN DIRECT',
-    shortcuts: { desc: 'Raccourcis : [1–6] courts, H – historique.' },
+    shortcuts: {
+      template: 'Raccourcis : {range} – {courtsLabel}.',
+      courtsLabel: 'courts',
+      fallback: 'Les raccourcis vers les courts apparaissent une fois les scores chargés.',
+      autoRead: 'La lecture automatique annonce le score du court actif.'
+    },
     versus: 'contre',
     meta: {
       lastRefresh: 'Dernière mise à jour : {time}.',
@@ -587,7 +625,12 @@ export const TRANSLATIONS = {
     },
     players: { defaultA: 'Žaidėjas A', defaultB: 'Žaidėjas B', fallback: 'žaidėjas', fallbackOpponent: 'varžovas' },
     liveBadge: 'TIESIOGIAI',
-    shortcuts: { desc: 'Trumpiniai: [1–6] aikštės, H – istorija.' },
+    shortcuts: {
+      template: 'Trumpiniai: {range} – {courtsLabel}.',
+      courtsLabel: 'aikštės',
+      fallback: 'Aikščių trumpiniai pasirodys, kai rezultatai bus įkelti.',
+      autoRead: 'Automatinis skaitymas praneša aktyvios aikštės rezultatą.'
+    },
     versus: 'prieš',
     meta: {
       lastRefresh: 'Paskutinis atnaujinimas: {time}.',
