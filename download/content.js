@@ -1030,6 +1030,8 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
       row.appendChild(nameSpan);
 
       let handled = false;
+      let pointerHandled = false;
+      let touchMoved = false;
       const handleSelect = async () => {
         if (handled) return;
         handled = true;
@@ -1060,10 +1062,19 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
       // Dotyk/tablet (gdy 'click' bywa połykany/opóźniony)
       row.addEventListener('pointerup', (ev) => {
         if (ev.pointerType !== 'touch') return;
+        pointerHandled = true;
         Promise.resolve().then(handleSelect);
       }, { passive: true });
       // Fallback dla starszych WebView
+      row.addEventListener('touchstart', () => {
+        pointerHandled = false;
+        touchMoved = false;
+      }, { passive: true });
+      row.addEventListener('touchmove', () => {
+        touchMoved = true;
+      }, { passive: true });
       row.addEventListener('touchend', () => {
+        if (pointerHandled || touchMoved) return;
         Promise.resolve().then(handleSelect);
       }, { passive: true });
 
