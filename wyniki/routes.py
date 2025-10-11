@@ -338,10 +338,12 @@ def static_files(filename: str):
 def download_plugin():
     if not os.path.isdir(DOWNLOAD_DIR):
         abort(404)
+    allowed_extensions = {".zip", ".crx"}
     archive_names = sorted(
         filename
         for filename in os.listdir(DOWNLOAD_DIR)
-        if filename.lower().endswith(".zip") and os.path.isfile(os.path.join(DOWNLOAD_DIR, filename))
+        if os.path.splitext(filename)[1].lower() in allowed_extensions
+        and os.path.isfile(os.path.join(DOWNLOAD_DIR, filename))
     )
     if not archive_names:
         abort(404)
