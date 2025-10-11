@@ -17,10 +17,17 @@ from flask import (
     jsonify,
     request,
     send_from_directory,
+    session,
     stream_with_context,
 )
 
 from .config import DOWNLOAD_DIR, STATIC_DIR, log, normalize_overlay_id, settings
+from .database import (
+    delete_history_entry,
+    fetch_all_history,
+    fetch_history_entry,
+    update_history_entry,
+)
 from .state import (
     GLOBAL_HISTORY,
     STATE_LOCK,
@@ -43,10 +50,163 @@ from .state import (
 from .utils import now_iso, render_file_template, safe_copy, shorten
 
 blueprint = Blueprint("wyniki", __name__)
+admin_blueprint = Blueprint("admin", __name__, url_prefix="/admin")
+admin_api_blueprint = Blueprint("admin_api", __name__, url_prefix="/api/admin")
+
+ADMIN_SESSION_KEY = "admin_authenticated"
+HISTORY_INT_FIELDS = {
+    "duration_seconds",
+    "set1_a",
+    "set1_b",
+    "set2_a",
+    "set2_b",
+    "tie_a",
+    "tie_b",
+    "set1_tb_a",
+    "set1_tb_b",
+    "set2_tb_a",
+    "set2_tb_b",
+}
+HISTORY_STR_FIELDS = {"kort_id", "ended_ts", "player_a", "player_b"}
+
+
+def _admin_enabled() -> bool:
+    return bool(settings.admin_password)
+
+
+def _is_admin_authenticated() -> bool:
+    return session.get(ADMIN_SESSION_KEY) is True
+
+
+def _require_admin_session_json():
+    if not _admin_enabled():
+        return jsonify({"ok": False, "error": "admin-disabled"}), 404
+    if not _is_admin_authenticated():
+        return jsonify({"ok": False, "error": "not-authorized"}), 401
+    return None
+
+
+def _sanitize_history_payload(payload: Dict[str, object]) -> Dict[str, object]:
+    sanitized: Dict[str, object] = {}
+    for field in HISTORY_STR_FIELDS:
+        if field in payload:
+            raw_value = payload.get(field)
+            if raw_value is None:
+                if field in {"kort_id", "ended_ts"}:
+                    raise ValueError(field)
+                sanitized[field] = None
+                continue
+            text = str(raw_value).strip()
+            if field in {"kort_id", "ended_ts"} and not text:
+                raise ValueError(field)
+            sanitized[field] = text
+    for field in HISTORY_INT_FIELDS:
+        if field in payload:
+            raw_value = payload.get(field)
+            if raw_value is None or raw_value == "":
+                sanitized[field] = None
+                continue
+            try:
+                sanitized[field] = int(raw_value)
+            except (TypeError, ValueError):
+                raise ValueError(field) from None
+    return sanitized
 
 
 def register_routes(app: Flask) -> None:
     app.register_blueprint(blueprint)
+    app.register_blueprint(admin_blueprint)
+    app.register_blueprint(admin_api_blueprint)
+
+
+@admin_blueprint.route("/", methods=["GET"])
+def admin_index() -> str:
+    if not _admin_enabled():
+        abort(404)
+    is_authenticated = _is_admin_authenticated()
+    history = fetch_all_history(settings.match_history_size) if is_authenticated else []
+    return render_file_template(
+        "admin.html",
+        is_authenticated=is_authenticated,
+        history=history,
+        int_fields=sorted(HISTORY_INT_FIELDS),
+    )
+
+
+@admin_blueprint.route("/login", methods=["POST"])
+def admin_login():
+    if not _admin_enabled():
+        abort(404)
+    payload = request.get_json(silent=True)
+    password: Optional[str] = None
+    if isinstance(payload, dict):
+        value = payload.get("password")
+        if value is not None:
+            password = str(value)
+    if password is None:
+        password = request.form.get("password")
+    if password is None:
+        password = request.args.get("password")
+    password = password.strip() if isinstance(password, str) else None
+    if not password:
+        return jsonify({"ok": False, "error": "password-required"}), 400
+    if not hmac.compare_digest(password, settings.admin_password):
+        return jsonify({"ok": False, "error": "invalid-password"}), 401
+    session[ADMIN_SESSION_KEY] = True
+    return jsonify({"ok": True})
+
+
+@admin_api_blueprint.route("/history", methods=["GET"])
+def admin_api_history():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    limit_value = request.args.get("limit")
+    limit = None
+    if limit_value is not None:
+        try:
+            limit = max(1, int(limit_value))
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "invalid-limit"}), 400
+    history = fetch_all_history(limit or settings.match_history_size)
+    return jsonify({"ok": True, "history": history})
+
+
+@admin_api_blueprint.route("/history/<int:entry_id>", methods=["PUT"])
+def admin_api_history_update(entry_id: int):
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid-payload"}), 400
+    existing = fetch_history_entry(entry_id)
+    if not existing:
+        return jsonify({"ok": False, "error": "not-found"}), 404
+    try:
+        sanitized = _sanitize_history_payload(payload)
+    except ValueError as exc:
+        return (
+            jsonify({"ok": False, "error": "invalid-field", "field": str(exc)}),
+            400,
+        )
+    if not sanitized:
+        return jsonify({"ok": False, "error": "no-updates"}), 400
+    updated = update_history_entry(entry_id, sanitized)
+    refreshed = fetch_history_entry(entry_id)
+    return jsonify({"ok": True, "updated": updated, "entry": refreshed})
+
+
+@admin_api_blueprint.route("/history/<int:entry_id>", methods=["DELETE"])
+def admin_api_history_delete(entry_id: int):
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    existing = fetch_history_entry(entry_id)
+    if not existing:
+        return jsonify({"ok": False, "error": "not-found"}), 404
+    deleted = delete_history_entry(entry_id)
+    return jsonify({"ok": True, "deleted": deleted, "entry": existing})
 
 
 @blueprint.route("/")
