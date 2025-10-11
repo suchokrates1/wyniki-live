@@ -216,13 +216,7 @@ function makeCourtCard(k) {
         </div>
       </dl>
     </div>
-    <div class="sr-only score-summary" id="k${k}-summary">
-      <p data-summary-line="0" id="k${k}-summary-0" aria-live="polite"></p>
-      <p data-summary-line="1" id="k${k}-summary-1" aria-live="polite"></p>
-      <p data-summary-line="2" id="k${k}-summary-2" aria-live="polite"></p>
-      <p data-summary-line="3" id="k${k}-summary-3" aria-live="polite"></p>
-      <p data-summary-line="4" id="k${k}-summary-4" aria-live="polite"></p>
-    </div>
+    <p class="sr-only score-summary" id="k${k}-summary" aria-live="polite"></p>
   `;
 
   const cb = section.querySelector(`#announce-${k}`);
@@ -576,18 +570,10 @@ function applyScoreAria(k, data) {
   setSegments.forEach(segment => summaryParts.push(segment));
 
   if (summaryRoot) {
-    const lines = summaryRoot.querySelectorAll('[data-summary-line]');
-    summaryParts.forEach((line, index) => {
-      const target = lines[index];
-      if (target && target.textContent !== line) {
-        target.textContent = line;
-      }
-    });
-    for (let i = summaryParts.length; i < lines.length; i += 1) {
-      const target = lines[i];
-      if (target && target.textContent !== '') {
-        target.textContent = '';
-      }
+    const summaryText = summaryParts.join('. ').trim();
+    const finalText = summaryText.length ? summaryText : '';
+    if (summaryRoot.textContent !== finalText) {
+      summaryRoot.textContent = finalText;
     }
   }
 }
