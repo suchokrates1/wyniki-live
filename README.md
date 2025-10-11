@@ -2,7 +2,16 @@
 
 ## Konfiguracja
 
-- `HISTORY_DELETE_PASSWORD` – hasło wymagane przy wywołaniu endpointu `https://score.vestmedia.pl/delete` usuwającego ostatni wpis z historii. Endpoint obsługuje logowanie typu HTTP Basic, więc można go wywołać bezpośrednio z przeglądarki (przeglądarka poprosi o hasło).
+- `ADMIN_PASSWORD` – hasło umożliwiające zalogowanie do panelu administracyjnego. Po uwierzytelnieniu administrator może edytować oraz usuwać rekordy historii poprzez interfejs webowy lub dedykowane endpointy API.
+
+## Usuwanie wpisów z historii
+
+Publiczny endpoint `/delete` został usunięty. Aby skasować wpis z historii należy:
+
+1. Zalogować się w panelu `/admin` używając hasła administratora.
+2. Skorzystać z przycisku „Usuń” przy wybranym rekordzie lub wysłać żądanie `DELETE /api/admin/history/<id>` z aktywną sesją administracyjną.
+
+Żądania API bez poprawnej sesji otrzymają odpowiedź `401 Unauthorized`, a próba usunięcia nieistniejącego rekordu zakończy się statusem `404 Not Found`.
 
 ## Dostępność wyników
 

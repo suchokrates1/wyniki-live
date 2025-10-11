@@ -29,17 +29,13 @@ from .database import (
     update_history_entry,
 )
 from .state import (
-    GLOBAL_HISTORY,
-    STATE_LOCK,
     apply_local_command,
     broadcast_kort_state,
     buckets,
-    delete_latest_history,
     ensure_court_state,
     event_broker,
     log_state_summary,
     is_known_kort,
-    normalize_kort_id,
     persist_state_cache,
     record_log_entry,
     serialize_all_states,
@@ -296,65 +292,6 @@ def _api_endpoint(kort_id: str) -> Optional[str]:
 @blueprint.route("/healthz")
 def api_healthz():
     return jsonify({"ok": True, "ts": now_iso()}), 200
-
-
-@blueprint.route("/delete", methods=["GET", "POST"])
-def api_history_delete_last():
-    payload = request.get_json(silent=True) or {}
-
-    if not settings.delete_password:
-        log.error("DELETE_PASSWORD not configured; refusing to delete history entry")
-        return jsonify({"ok": False, "error": "password-not-configured"}), 500
-
-    def _sanitize_password(value: Optional[Any]) -> Optional[str]:
-        if value is None:
-            return None
-        text = str(value).strip()
-        return text if text else None
-
-    provided_password: Optional[str] = None
-    if request.authorization:
-        provided_password = _sanitize_password(request.authorization.password)
-        if not provided_password:
-            provided_password = _sanitize_password(request.authorization.username)
-    if not provided_password and isinstance(payload, dict):
-        provided_password = _sanitize_password(payload.get("password"))
-    if not provided_password:
-        provided_password = _sanitize_password(request.form.get("password"))
-    if not provided_password:
-        provided_password = _sanitize_password(request.args.get("password"))
-    if not provided_password:
-        provided_password = _sanitize_password(request.headers.get("X-Delete-Password"))
-
-    if not provided_password:
-        response = Response("Authentication required", 401)
-        response.headers["WWW-Authenticate"] = 'Basic realm="History"'
-        return response
-
-    if not hmac.compare_digest(provided_password, settings.delete_password):
-        response = Response("Invalid password", 401)
-        response.headers["WWW-Authenticate"] = 'Basic realm="History"'
-        return response
-
-    kort_raw = None
-    if isinstance(payload, dict):
-        kort_raw = payload.get("kort") or payload.get("court")
-    if kort_raw is None:
-        kort_raw = request.args.get("kort")
-
-    kort_id: Optional[str] = None
-    if kort_raw is not None:
-        kort_text = str(kort_raw).strip()
-        normalized = normalize_kort_id(kort_text)
-        kort_id = normalized or (kort_text if kort_text else None)
-
-    with STATE_LOCK:
-        deleted_entry = delete_latest_history(kort_id)
-        if not deleted_entry:
-            return jsonify({"ok": False, "error": "history-empty"}), 404
-        remaining = len(GLOBAL_HISTORY)
-
-    return jsonify({"ok": True, "deleted": deleted_entry, "remaining": remaining})
 
 
 @blueprint.route("/api/mirror", methods=["POST"])

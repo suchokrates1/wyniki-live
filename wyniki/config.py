@@ -64,7 +64,6 @@ class Settings:
     burst: int = int(os.environ.get("BURST", "8"))
     db_path: str = os.environ.get("DB_PATH", "wyniki_archive.sqlite3")
     port: int = int(os.environ.get("PORT", "8080"))
-    delete_password: str = (os.environ.get("HISTORY_DELETE_PASSWORD") or os.environ.get("DELETE_PASSWORD") or "").strip()
     admin_password: str = (os.environ.get("ADMIN_PASSWORD") or "").strip()
     secret_key: str = (
         os.environ.get("SECRET_KEY")
