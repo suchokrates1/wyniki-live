@@ -234,7 +234,7 @@ function sendScoreCommand(command, value, appId, extras) {
     log('Score command skipped: runtime unavailable', { command, value });
     return;
   }
-  const overlay = normalizeOverlayId(appId || uno.appInstance || lastAppId);
+  const overlay = normalizeOverlayId(appId || uno.appInstance || lastAppId || overlayFromLocation());
   if (!overlay) {
     log('Score command skipped: overlay missing', { command, value });
     return;
@@ -558,9 +558,13 @@ function buildScoreReflectMessage(overlay, kortInput, command, value, extras) {
 }
 
 async function mirrorScoreUpdate(command, value, extras = null) {
-  if (!uno.appInstance || !command) return;
-  const overlay = normalizeOverlayId(uno.appInstance);
-  if (!overlay) return;
+  if (!command) return;
+  const overlay = normalizeOverlayId(uno.appInstance || lastAppId || overlayFromLocation());
+  if (!overlay) {
+    log('Mirror update skipped: overlay missing', { command });
+    return;
+  }
+  if (documentKort) setKortForOverlay(overlay, documentKort);
   const kort = window.__unoKortMap?.[overlay] || documentKort || '1';
   const message = buildScoreReflectMessage(overlay, kort, command, value, extras);
   try {
