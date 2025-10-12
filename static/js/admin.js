@@ -169,10 +169,15 @@
 
     const actionsCell = document.createElement('td');
     actionsCell.className = 'actions';
+    const resetButton = document.createElement('button');
+    resetButton.type = 'button';
+    resetButton.className = 'reset-court';
+    resetButton.textContent = 'Resetuj';
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.className = 'delete-court';
     deleteButton.textContent = 'Usuń';
+    actionsCell.appendChild(resetButton);
     actionsCell.appendChild(deleteButton);
     row.appendChild(actionsCell);
 
@@ -378,6 +383,25 @@
     }
   }
 
+  async function resetCourtState(kortId) {
+    if (!kortId) {
+      setFeedback('Nie udało się odczytać identyfikatora kortu.', 'error');
+      return;
+    }
+    if (!window.confirm(`Czy na pewno wyzerować stan kortu ${kortId}?`)) {
+      return;
+    }
+    try {
+      const data = await requestJson(`/api/admin/courts/${encodeURIComponent(kortId)}/reset`, {
+        method: 'POST'
+      });
+      const message = (data && (data.message || data.detail)) || `Kort ${kortId} został wyzerowany.`;
+      setFeedback(message, 'success');
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
   async function deleteEntry(row) {
     const entryId = row.dataset.entryId;
     if (!entryId) {
@@ -417,11 +441,14 @@
     if (!(target instanceof HTMLElement)) {
       return;
     }
-    if (target.classList.contains('delete-court')) {
-      const row = target.closest('tr[data-kort-id]');
-      if (row) {
-        deleteCourtRow(row);
-      }
+    const row = target.closest('tr[data-kort-id]');
+    if (!row) {
+      return;
+    }
+    if (target.classList.contains('reset-court')) {
+      resetCourtState(row.dataset.kortId || '');
+    } else if (target.classList.contains('delete-court')) {
+      deleteCourtRow(row);
     }
   }
 
