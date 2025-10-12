@@ -507,6 +507,15 @@ function updatePointsLabelText(k, tieVisible, isSuperTieBreak) {
   }
 }
 
+function normalizeCurrentSetValue(raw) {
+  if (raw === undefined || raw === null) return 0;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+    return 0;
+  }
+  return parsed;
+}
+
 function applyScoreAria(k, data) {
   const section = document.getElementById(`kort-${k}`);
   if (!section) return;
@@ -515,7 +524,7 @@ function applyScoreAria(k, data) {
   const summaryRoot = document.getElementById(`k${k}-summary`);
   const t = currentT();
   const acc = resolveAccessibilityStrings(t);
-  const currentSet = Number(data.current_set || 1);
+  const currentSet = normalizeCurrentSetValue(data.current_set);
   const tieState = data.tie || {};
   const tieVisible = tieState.visible === true;
   const isSuperTieBreak = tieVisible && currentSet === 3;
@@ -884,7 +893,7 @@ function updateCourt(k, data) {
   handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames);
   applyScoreAria(k, dataWithTie);
 
-  applySetHighlight(k, data.current_set ?? 1);
+  applySetHighlight(k, data.current_set);
 }
 
 function normalizePointsDisplay(value) {
@@ -985,7 +994,7 @@ function updatePlayerFlag(k, side, current, previous) {
 }
 
 function applySetHighlight(k, currentSet) {
-  const active = Number(currentSet || 1);
+  const active = normalizeCurrentSetValue(currentSet);
   ['1', '2', '3'].forEach(idx => {
     ['A', 'B'].forEach(side => {
       const cell = document.getElementById(`k${k}-s${idx}-${side}`);
@@ -1316,7 +1325,7 @@ function refreshCardsLanguage() {
     }
     updatePlayerFlag(k, 'A', prev[k]?.A || {}, {});
     updatePlayerFlag(k, 'B', prev[k]?.B || {}, {});
-    applySetHighlight(k, prev[k]?.current_set ?? 1);
+    applySetHighlight(k, prev[k]?.current_set);
     const historyTitle = section.querySelector('.history-title');
     if (historyTitle && t.history?.title) historyTitle.textContent = t.history.title;
     if (prev[k]) {
