@@ -599,6 +599,47 @@ def maybe_update_current_set_indicator(state: Dict[str, Any]) -> Dict[str, int]:
     return wins
 
 
+def _has_started_points(value: Any) -> bool:
+    if value is None:
+        return False
+    text = str(value).strip()
+    if not text:
+        return False
+    return text not in {"0", "-"}
+
+
+def _has_player_name(side_state: Dict[str, Any]) -> bool:
+    full = side_state.get("full_name")
+    if isinstance(full, str) and full.strip():
+        return True
+    surname_value = side_state.get("surname")
+    return isinstance(surname_value, str) and surname_value.strip() not in {"", "-"}
+
+
+def maybe_activate_initial_set(state: Dict[str, Any]) -> None:
+    current = state.get("current_set")
+    if isinstance(current, int) and current > 0:
+        return
+    games_started = False
+    for side in ("A", "B"):
+        if as_int(state[side].get("set1"), 0) > 0 or as_int(state[side].get("current_games"), 0) > 0:
+            games_started = True
+            break
+    if games_started:
+        state["current_set"] = 1
+        return
+    tie_state = state.get("tie") if isinstance(state.get("tie"), dict) else {"visible": False, "A": 0, "B": 0}
+    if to_bool(tie_state.get("visible")) and (
+        as_int(tie_state.get("A"), 0) > 0 or as_int(tie_state.get("B"), 0) > 0
+    ):
+        state["current_set"] = 1
+        return
+    if all(_has_player_name(state[side]) for side in ("A", "B")) and any(
+        _has_started_points(state[side].get("points")) for side in ("A", "B")
+    ):
+        state["current_set"] = 1
+
+
 def _extract_short_set_tiebreaks(state: Dict[str, Any]) -> Dict[str, Dict[str, int]]:
     set_ties: Dict[str, Dict[str, int]] = {}
     log_entries = list(state.get("log") or [])
@@ -829,7 +870,7 @@ def reset_after_match(state: Dict[str, Any]) -> None:
     reset_tie_and_points(state)
     state["tie"]["visible"] = False
     lock_tie_updates(state)
-    state["current_set"] = 1
+    state["current_set"] = None
     match_time["seconds"] = 0
     match_time["running"] = False
     match_time["started_ts"] = None
@@ -886,6 +927,7 @@ def finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional
 def handle_match_flow(kort_id: Optional[str], state: Dict[str, Any]) -> None:
     ensure_match_struct(state)
     maybe_start_match(state)
+    maybe_activate_initial_set(state)
     update_match_timer(state)
     wins = maybe_update_current_set_indicator(state)
     if kort_id is not None:
