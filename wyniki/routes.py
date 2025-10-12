@@ -44,6 +44,7 @@ from .state import (
     is_known_kort,
     normalize_kort_id,
     persist_state_cache,
+    reset_after_match,
     refresh_courts_from_db,
     record_log_entry,
     serialize_all_states,
@@ -318,6 +319,45 @@ def admin_api_courts_delete(kort_id: str):
             "deleted": True,
             "court": {"kort_id": normalized_id, "overlay_id": existing_overlay},
             "courts": _serialize_courts(),
+        }
+    )
+
+
+@admin_api_blueprint.route("/courts/<kort_id>/reset", methods=["POST"])
+def admin_api_courts_reset(kort_id: str):
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    normalized_id = normalize_kort_id(kort_id)
+    if not normalized_id:
+        return jsonify({"ok": False, "error": "invalid-field", "field": "kort_id"}), 400
+    ts = now_iso()
+    extras = {"initiator": "admin", "action": "manual-reset"}
+    with STATE_LOCK:
+        state = ensure_court_state(normalized_id)
+        reset_after_match(state)
+        state["updated"] = ts
+        entry = record_log_entry(
+            state,
+            normalized_id,
+            "admin",
+            "ResetCourtState",
+            None,
+            extras,
+            ts,
+        )
+        persist_state_cache(normalized_id, state)
+        response_state = serialize_court_state(state)
+        log_state_summary(normalized_id, state, "admin reset")
+    broadcast_kort_state(normalized_id, "admin", "ResetCourtState", None, extras, ts)
+    message = f"Kort {normalized_id} został wyzerowany."
+    return jsonify(
+        {
+            "ok": True,
+            "kort_id": normalized_id,
+            "state": response_state,
+            "log": entry,
+            "message": message,
         }
     )
 
