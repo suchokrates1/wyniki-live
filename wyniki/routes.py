@@ -59,6 +59,13 @@ blueprint = Blueprint("wyniki", __name__)
 admin_blueprint = Blueprint("admin", __name__, url_prefix="/admin")
 admin_api_blueprint = Blueprint("admin_api", __name__, url_prefix="/api/admin")
 
+VIEWERS_API_URL = (
+    "https://www.googleapis.com/youtube/v3/videos"
+    "?part=liveStreamingDetails&id=AIKUKTQ7I0A"
+    "&key=AIzaSyC_yeqE5ro_wzsHsqK9cj2xH1tg1xumSCI"
+    "&fields=items/liveStreamingDetails/concurrentViewers&prettyPrint=false"
+)
+
 ADMIN_SESSION_KEY = "admin_authenticated"
 ADMIN_DISABLED_MESSAGE = (
     "Panel administracyjny jest wyłączony. Skonfiguruj zmienną środowiskową"
@@ -166,6 +173,29 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(blueprint)
     app.register_blueprint(admin_blueprint)
     app.register_blueprint(admin_api_blueprint)
+
+
+@blueprint.route("/vievers", methods=["GET"])
+def vievers() -> Response:
+    """Return the concurrent viewers count for the configured livestream."""
+    try:
+        response = requests.get(VIEWERS_API_URL, timeout=5)
+        response.raise_for_status()
+        payload = response.json()
+        items = payload.get("items")
+        if not isinstance(items, list) or not items:
+            raise ValueError("missing-items")
+        details = items[0].get("liveStreamingDetails")
+        if not isinstance(details, dict):
+            raise ValueError("missing-details")
+        raw_count = details.get("concurrentViewers")
+        if raw_count is None:
+            raise ValueError("missing-count")
+        count = int(raw_count)
+    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError) as exc:
+        log.warning("Failed to fetch viewers information: %s", exc)
+        return Response("0", status=502, mimetype="text/plain")
+    return Response(str(count), mimetype="text/plain")
 
 
 @admin_blueprint.route("/", methods=["GET"])
