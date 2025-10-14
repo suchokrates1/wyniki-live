@@ -178,10 +178,18 @@
     if (!historyTableBody) {
       return;
     }
-    historyTableBody.innerHTML = '';
-    entries.forEach((entry) => {
-      historyTableBody.appendChild(createRow(entry));
+
+    const fragment = document.createDocumentFragment();
+    (entries || []).forEach((entry) => {
+      fragment.appendChild(createRow(entry));
     });
+
+    if (typeof historyTableBody.replaceChildren === 'function') {
+      historyTableBody.replaceChildren(fragment);
+    } else {
+      historyTableBody.innerHTML = '';
+      historyTableBody.appendChild(fragment);
+    }
   }
 
   function createCourtRow(court) {
@@ -219,10 +227,18 @@
     if (!courtsTableBody) {
       return;
     }
-    courtsTableBody.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
     (courts || []).forEach((court) => {
-      courtsTableBody.appendChild(createCourtRow(court));
+      fragment.appendChild(createCourtRow(court));
     });
+
+    if (typeof courtsTableBody.replaceChildren === 'function') {
+      courtsTableBody.replaceChildren(fragment);
+    } else {
+      courtsTableBody.innerHTML = '';
+      courtsTableBody.appendChild(fragment);
+    }
   }
 
   function applyYoutubeConfig(data, options = {}) {
