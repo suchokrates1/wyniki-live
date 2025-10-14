@@ -50,9 +50,9 @@ from .state import (
     reset_after_match,
     refresh_courts_from_db,
     record_log_entry,
-    serialize_all_states,
     serialize_court_state,
     serialize_history,
+    serialize_public_snapshot,
     STATE_LOCK,
     validate_command,
 )
@@ -507,7 +507,7 @@ def download_plugin():
 
 @blueprint.route("/api/snapshot")
 def api_snapshot():
-    return jsonify(serialize_all_states())
+    return jsonify(serialize_public_snapshot())
 
 
 @blueprint.route("/api/stream")
@@ -520,10 +520,15 @@ def api_stream():
             snapshot_payload = {
                 "type": "snapshot",
                 "ts": now_iso(),
-                "state": serialize_all_states(),
-                "history": serialize_history(),
+                "state": serialize_public_snapshot(),
             }
             yield f"data: {json.dumps(snapshot_payload, ensure_ascii=False)}\n\n"
+            history_payload = {
+                "type": "history-update",
+                "ts": now_iso(),
+                "history": serialize_history(),
+            }
+            yield f"data: {json.dumps(history_payload, ensure_ascii=False)}\n\n"
             while True:
                 try:
                     payload = queue_obj.get(timeout=20)

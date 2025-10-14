@@ -1076,8 +1076,6 @@ function handleStreamPayload(payload) {
 
   if (payload.type === 'snapshot') {
     const state = payload.state || {};
-    latestHistory = Array.isArray(payload.history) ? payload.history : latestHistory;
-    renderGlobalHistory(latestHistory);
     ensureCardsFromSnapshot(state);
     const keys = computeCourts(state);
     COURTS = keys;
@@ -1089,6 +1087,15 @@ function handleStreamPayload(payload) {
     const snapshotTime = parseTimestamp(payload.ts) || new Date();
     updateLastRefresh(snapshotTime);
     persistSnapshot(prev, latestHistory, snapshotTime.toISOString());
+    return;
+  }
+
+  if (payload.type === 'history-update') {
+    latestHistory = Array.isArray(payload.history) ? payload.history : [];
+    renderGlobalHistory(latestHistory);
+    const historyTime = parseTimestamp(payload.ts) || new Date();
+    updateLastRefresh(historyTime);
+    persistSnapshot(prev, latestHistory, historyTime.toISOString());
     return;
   }
 
@@ -1370,7 +1377,9 @@ async function bootstrap() {
     return;
   }
   const state = snapshot.state || {};
-  latestHistory = Array.isArray(snapshot.history) ? snapshot.history : [];
+  if (Array.isArray(snapshot.history)) {
+    latestHistory = snapshot.history;
+  }
   renderGlobalHistory(latestHistory);
   ensureCardsFromSnapshot(state);
   const computedCourts = computeCourts(state);

@@ -64,6 +64,8 @@ STATE_LOCK = threading.Lock()
 GLOBAL_LOG: Deque[Dict[str, Any]] = deque()
 GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size)
 
+_HISTORY_DIRTY = threading.Event()
+
 DEFAULT_HISTORY_PHASE = "Grupowa"
 
 
@@ -337,9 +339,60 @@ def serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+_PUBLIC_PLAYER_FIELDS = (
+    "full_name",
+    "surname",
+    "points",
+    "set1",
+    "set2",
+    "set3",
+    "current_games",
+    "flag_url",
+    "flag_code",
+)
+
+
+def _serialize_public_player(player: Dict[str, Any]) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {}
+    for field in _PUBLIC_PLAYER_FIELDS:
+        if field in player:
+            payload[field] = player.get(field)
+    return payload
+
+
+def _serialize_public_tie(tie_state: Any) -> Dict[str, Any]:
+    if not isinstance(tie_state, dict):
+        return {"A": None, "B": None}
+    return {
+        "A": tie_state.get("A"),
+        "B": tie_state.get("B"),
+    }
+
+
+def serialize_public_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
+    players = {
+        "A": _serialize_public_player(state.get("A", {})),
+        "B": _serialize_public_player(state.get("B", {})),
+    }
+    tie_payload = _serialize_public_tie(state.get("tie"))
+    return {
+        "overlay_visible": state.get("overlay_visible"),
+        "current_set": state.get("current_set"),
+        "A": players["A"],
+        "B": players["B"],
+        "tie": tie_payload,
+        "updated": state.get("updated"),
+    }
+
+
 def serialize_all_states() -> Dict[str, Any]:
     with STATE_LOCK:
         return {kort: serialize_court_state(state) for kort, state in snapshots.items()}
+
+
+def serialize_public_snapshot() -> Dict[str, Any]:
+    with STATE_LOCK:
+        return {kort: serialize_public_court_state(state) for kort, state in snapshots.items()}
 
 
 def serialize_history_locked() -> List[Dict[str, Any]]:
@@ -349,6 +402,22 @@ def serialize_history_locked() -> List[Dict[str, Any]]:
 def serialize_history() -> List[Dict[str, Any]]:
     with STATE_LOCK:
         return serialize_history_locked()
+
+
+def broadcast_history_update() -> None:
+    payload = {
+        "type": "history-update",
+        "ts": now_iso(),
+        "history": serialize_history(),
+    }
+    event_broker.broadcast(payload)
+
+
+def broadcast_history_if_dirty() -> None:
+    if not _HISTORY_DIRTY.is_set():
+        return
+    _HISTORY_DIRTY.clear()
+    broadcast_history_update()
 
 
 def _state_for_cache(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -808,6 +877,7 @@ def persist_match_history_entry(entry: Dict[str, Any]) -> None:
     GLOBAL_HISTORY.appendleft(entry)
     while len(GLOBAL_HISTORY) > settings.match_history_size:
         GLOBAL_HISTORY.pop()
+    _HISTORY_DIRTY.set()
 
 
 def load_match_history() -> None:
@@ -1219,8 +1289,7 @@ def state_snapshot_for_broadcast(
         "extras": safe_copy(extras) if extras else None,
         "ts": ts,
         "status": status_code,
-        "state": serialize_court_state(ensure_court_state(kort_id)),
-        "history": serialize_history(),
+        "state": serialize_public_court_state(ensure_court_state(kort_id)),
     }
 
 
@@ -1235,12 +1304,14 @@ def broadcast_kort_state(
 ) -> None:
     payload = state_snapshot_for_broadcast(kort_id, source, command, value, extras, ts, status_code)
     event_broker.broadcast(payload)
+    broadcast_history_if_dirty()
 
 
 def register_history_entry(entry: Dict[str, Any]) -> None:
     GLOBAL_HISTORY.appendleft(entry)
     while len(GLOBAL_HISTORY) > settings.match_history_size:
         GLOBAL_HISTORY.pop()
+    _HISTORY_DIRTY.set()
 
 
 def log_state_summary(kort_id: str, state: Dict[str, Any], context: str) -> None:
@@ -1311,6 +1382,7 @@ def delete_latest_history(kort_id: Optional[str] = None) -> Optional[Dict[str, A
             },
         },
     }
+    _HISTORY_DIRTY.set()
     return removed_entry
 
 
@@ -1345,6 +1417,8 @@ __all__ = [
     "serialize_all_states",
     "serialize_court_state",
     "serialize_history",
+    "serialize_public_court_state",
+    "serialize_public_snapshot",
     "snapshots",
     "state_snapshot_for_broadcast",
     "validate_command",
