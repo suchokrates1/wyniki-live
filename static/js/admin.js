@@ -6,12 +6,19 @@
   const loginSection = document.getElementById('login-section');
   const historySection = document.getElementById('history-section');
   const courtsSection = document.getElementById('courts-section');
+  const streamSection = document.getElementById('stream-section');
   const loginForm = document.getElementById('admin-login-form');
-  const refreshButton = document.getElementById('refresh-history');
+  const refreshHistoryButton = document.getElementById('refresh-history');
   const historyTableBody = document.getElementById('history-rows');
   const courtForm = document.getElementById('court-form');
   const refreshCourtsButton = document.getElementById('refresh-courts');
   const courtsTableBody = document.getElementById('courts-rows');
+  const youtubeConfigForm = document.getElementById('youtube-config-form');
+  const youtubeApiKeyInput = document.getElementById('youtube-api-key');
+  const youtubeStreamIdInput = document.getElementById('youtube-stream-id');
+  const refreshViewersButton = document.getElementById('refresh-viewers');
+  const viewerCountElement = document.getElementById('viewer-count');
+  const viewerStatusElement = document.getElementById('viewer-status');
   const bodyElement = document.body;
   const adminDisabledSection = document.getElementById('admin-disabled-section');
 
@@ -62,6 +69,24 @@
     feedbackElement.dataset.type = type;
   }
 
+  function setViewerStatus(message, type = 'info') {
+    if (!viewerStatusElement) {
+      return;
+    }
+    const text = message || '';
+    viewerStatusElement.textContent = text;
+    viewerStatusElement.hidden = text === '';
+    if (viewerStatusElement.hidden) {
+      viewerStatusElement.classList.remove('error');
+      return;
+    }
+    if (type === 'error') {
+      viewerStatusElement.classList.add('error');
+    } else {
+      viewerStatusElement.classList.remove('error');
+    }
+  }
+
   function toggleAuthenticated(isAuthenticated) {
     if (!adminEnabled) {
       if (loginSection) {
@@ -72,6 +97,9 @@
       }
       if (courtsSection) {
         courtsSection.hidden = true;
+      }
+      if (streamSection) {
+        streamSection.hidden = true;
       }
       if (adminDisabledSection) {
         adminDisabledSection.hidden = false;
@@ -90,6 +118,9 @@
     }
     if (courtsSection) {
       courtsSection.hidden = !isAuthenticated;
+    }
+    if (streamSection) {
+      streamSection.hidden = !isAuthenticated;
     }
     if (bodyElement) {
       bodyElement.dataset.authenticated = isAuthenticated ? 'true' : 'false';
@@ -194,6 +225,71 @@
     });
   }
 
+  function applyYoutubeConfig(data, options = {}) {
+    const updateInputs = options.updateInputs !== false;
+    if (updateInputs && youtubeApiKeyInput) {
+      youtubeApiKeyInput.value =
+        data && typeof data.api_key === 'string' ? data.api_key : '';
+    }
+    if (updateInputs && youtubeStreamIdInput) {
+      youtubeStreamIdInput.value =
+        data && typeof data.stream_id === 'string' ? data.stream_id : '';
+    }
+    if (viewerCountElement) {
+      const countValue = Number(data && typeof data.viewers !== 'undefined' ? data.viewers : 0);
+      viewerCountElement.textContent = Number.isFinite(countValue)
+        ? String(Math.max(0, Math.trunc(countValue)))
+        : '0';
+    }
+    const errorMessage =
+      data && typeof data.viewers_error === 'string' ? data.viewers_error : '';
+    setViewerStatus(errorMessage, errorMessage ? 'error' : 'info');
+  }
+
+  async function loadYoutubeConfig(options = {}) {
+    if (!adminEnabled) {
+      return;
+    }
+    const { updateInputs = true, successMessage } = options;
+    try {
+      const data = await requestJson('/api/admin/youtube', { method: 'GET' });
+      applyYoutubeConfig(data, { updateInputs });
+      if (successMessage) {
+        setFeedback(successMessage, 'success');
+      }
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+  async function handleYoutubeConfigSubmit(event) {
+    event.preventDefault();
+    if (!youtubeConfigForm) {
+      return;
+    }
+    const formData = new FormData(youtubeConfigForm);
+    const apiKey = String(formData.get('api_key') || '').trim();
+    const streamId = String(formData.get('stream_id') || '').trim();
+    const payload = { api_key: apiKey, stream_id: streamId };
+    try {
+      const data = await requestJson('/api/admin/youtube', {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+      applyYoutubeConfig(data, { updateInputs: true });
+      setFeedback('Konfiguracja YouTube zapisana.', 'success');
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+  async function handleRefreshViewers() {
+    await loadYoutubeConfig({
+      updateInputs: false,
+      successMessage: 'Liczba widzów odświeżona.'
+    });
+  }
+
   function updateRowFromEntry(row, entry) {
     fieldDefinitions.forEach((field) => {
       const input = row.querySelector(`input[name="${field.name}"]`);
@@ -269,6 +365,7 @@
       toggleAuthenticated(true);
       await refreshHistory();
       await refreshCourts();
+      await loadYoutubeConfig();
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -463,8 +560,8 @@
   if (loginForm && adminEnabled) {
     loginForm.addEventListener('submit', handleLogin);
   }
-  if (refreshButton && adminEnabled) {
-    refreshButton.addEventListener('click', refreshHistory);
+  if (refreshHistoryButton && adminEnabled) {
+    refreshHistoryButton.addEventListener('click', refreshHistory);
   }
   if (historyTableBody && adminEnabled) {
     historyTableBody.addEventListener('click', handleTableClick);
@@ -478,6 +575,12 @@
   if (courtsTableBody && adminEnabled) {
     courtsTableBody.addEventListener('click', handleCourtsTableClick);
   }
+  if (youtubeConfigForm && adminEnabled) {
+    youtubeConfigForm.addEventListener('submit', handleYoutubeConfigSubmit);
+  }
+  if (refreshViewersButton && adminEnabled) {
+    refreshViewersButton.addEventListener('click', handleRefreshViewers);
+  }
 
   toggleAuthenticated(Boolean(initialConfig.is_authenticated));
   if (adminEnabled) {
@@ -486,6 +589,11 @@
     }
     if (Boolean(initialConfig.is_authenticated)) {
       renderCourts(initialCourts);
+      loadYoutubeConfig().catch((error) => {
+        if (error && error.message) {
+          setFeedback(error.message, 'error');
+        }
+      });
     }
   }
 })();
