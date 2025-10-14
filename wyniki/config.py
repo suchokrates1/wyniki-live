@@ -104,6 +104,14 @@ class Settings:
     )
     state_log_size: int = int(os.environ.get("STATE_LOG_SIZE", "200"))
     match_history_size: int = int(os.environ.get("MATCH_HISTORY_SIZE", "50"))
+    youtube_api_key: str = (
+        os.environ.get("YOUTUBE_API_KEY")
+        or "AIzaSyC_yeqE5ro_wzsHsqK9cj2xH1tg1xumSCI"
+    ).strip()
+    youtube_stream_id: str = (
+        os.environ.get("YOUTUBE_STREAM_ID")
+        or "AIKUKTQ7I0A"
+    ).strip()
     overlay_ids: Dict[str, str] = field(default_factory=dict)
     overlay_id_to_kort: Dict[str, str] = field(default_factory=dict)
 
