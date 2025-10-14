@@ -337,9 +337,30 @@ def serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def serialize_public_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "overlay_visible": state.get("overlay_visible"),
+        "mode": state.get("mode"),
+        "serve": state.get("serve"),
+        "current_set": state.get("current_set"),
+        "match_time": safe_copy(state.get("match_time")),
+        "match_status": safe_copy(state.get("match_status")),
+        "A": safe_copy(state.get("A")),
+        "B": safe_copy(state.get("B")),
+        "tie": safe_copy(state.get("tie")),
+        "history_meta": safe_copy(ensure_history_meta(state)),
+        "updated": state.get("updated"),
+    }
+
+
 def serialize_all_states() -> Dict[str, Any]:
     with STATE_LOCK:
         return {kort: serialize_court_state(state) for kort, state in snapshots.items()}
+
+
+def serialize_public_snapshot() -> Dict[str, Any]:
+    with STATE_LOCK:
+        return {kort: serialize_public_court_state(state) for kort, state in snapshots.items()}
 
 
 def serialize_history_locked() -> List[Dict[str, Any]]:
@@ -1219,7 +1240,7 @@ def state_snapshot_for_broadcast(
         "extras": safe_copy(extras) if extras else None,
         "ts": ts,
         "status": status_code,
-        "state": serialize_court_state(ensure_court_state(kort_id)),
+        "state": serialize_public_court_state(ensure_court_state(kort_id)),
         "history": serialize_history(),
     }
 
@@ -1345,6 +1366,8 @@ __all__ = [
     "serialize_all_states",
     "serialize_court_state",
     "serialize_history",
+    "serialize_public_court_state",
+    "serialize_public_snapshot",
     "snapshots",
     "state_snapshot_for_broadcast",
     "validate_command",
