@@ -37,6 +37,31 @@
         </form>
       </section>
 
+      <section id="stream-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
+        <header class="section-header">
+          <h2>Transmisja YouTube</h2>
+          <div class="section-actions">
+            <button id="refresh-viewers" type="button">Odśwież widzów</button>
+          </div>
+        </header>
+        <form id="youtube-config-form" class="youtube-config-form">
+          <div class="youtube-config-grid">
+            <label for="youtube-api-key">Klucz API YouTube</label>
+            <input id="youtube-api-key" name="api_key" type="text" autocomplete="off" />
+            <label for="youtube-stream-id">ID transmisji</label>
+            <input id="youtube-stream-id" name="stream_id" type="text" autocomplete="off" />
+          </div>
+          <p class="youtube-config-note">
+            Wprowadź klucz API oraz identyfikator transmisji, aby pobierać liczbę widzów.
+          </p>
+          <button type="submit">Zapisz konfigurację</button>
+        </form>
+        <p class="viewer-info">
+          Aktualna liczba widzów: <strong id="viewer-count">0</strong>
+        </p>
+        <p id="viewer-status" class="viewer-status" hidden></p>
+      </section>
+
       <section id="courts-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
         <header class="section-header">
           <h2>Korty</h2>
