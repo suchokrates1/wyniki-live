@@ -5,6 +5,7 @@ import hmac
 import json
 import os
 import re
+from urllib.parse import urlparse, urlunparse
 from queue import Empty
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -554,6 +555,88 @@ def _overlay_id_from_url(uno_url: Optional[str]) -> Optional[str]:
     return None
 
 
+def _normalize_uno_api_url(raw_url: Optional[str]) -> Optional[str]:
+    if not raw_url:
+        return None
+    text = str(raw_url)
+    try:
+        parsed = urlparse(text)
+    except ValueError:
+        normalized = re.sub(r"/api/info(?=$|[/?#])", "/api", text, flags=re.IGNORECASE)
+        normalized = re.sub(r"/info(?=$|[/?#])", "/api", normalized, flags=re.IGNORECASE)
+        return normalized
+    path = re.sub(r"/api/info/?$", "/api", parsed.path, flags=re.IGNORECASE)
+    path = re.sub(r"/info/?$", "/api", path, flags=re.IGNORECASE)
+    normalized = parsed._replace(path=path)
+    return urlunparse(normalized)
+
+
+def _normalize_uno_method(raw_method: Optional[str]) -> str:
+    method = str(raw_method or "").strip().upper()
+    if method in {"PUT", "POST"}:
+        return method
+    return "PUT"
+
+
+def _send_flag_update_to_uno(
+    url: str,
+    method: str,
+    field_id: str,
+    flag_url: str,
+) -> Tuple[bool, Optional[int], Optional[object]]:
+    payload = {
+        "command": "SetCustomizationField",
+        "fieldId": field_id,
+        "value": str(flag_url),
+    }
+    try:
+        response = requests.request(
+            method,
+            url,
+            headers=settings.auth_header,
+            json=payload,
+            timeout=5,
+        )
+    except requests.RequestException as exc:
+        log.warning(
+            "mirror flag push failed url=%s field=%s error=%s",
+            shorten(url),
+            field_id,
+            exc,
+        )
+        return False, None, str(exc)
+
+    status_code = response.status_code
+    response_payload: Optional[object]
+    content_type = response.headers.get("Content-Type", "")
+    if "json" in content_type.lower():
+        try:
+            response_payload = response.json()
+        except ValueError:
+            response_payload = response.text
+    else:
+        response_payload = response.text
+
+    success = 200 <= status_code < 300
+    if success:
+        log.info(
+            "mirror flag push ok url=%s field=%s status=%s",
+            shorten(url),
+            field_id,
+            status_code,
+        )
+    else:
+        log.warning(
+            "mirror flag push failed url=%s field=%s status=%s payload=%s",
+            shorten(url),
+            field_id,
+            status_code,
+            shorten(response_payload),
+        )
+
+    return success, status_code, response_payload
+
+
 def _api_endpoint(kort_id: str) -> Optional[str]:
     overlay_id = get_overlay_for_kort(kort_id)
     if not overlay_id:
@@ -600,7 +683,8 @@ def api_mirror():
     if not command:
         return jsonify({"ok": False, "error": "command required"}), 400
 
-    uno_method = (payload.get("unoMethod") or "").upper()
+    normalized_uno_url = _normalize_uno_api_url(uno_url)
+    uno_method = _normalize_uno_method(payload.get("unoMethod") or payload.get("uno_method"))
     uno_value = body.get("value") if isinstance(body, dict) else payload.get("value")
     value = uno_value
     log.info(
@@ -633,8 +717,8 @@ def api_mirror():
     extras_for_log: Dict[str, Any] = {
         "uno_status": status_code,
         "uno_ok": ok_flag,
-        "uno_method": payload.get("unoMethod"),
-        "uno_url": uno_url,
+        "uno_method": uno_method,
+        "uno_url": normalized_uno_url or uno_url,
     }
     if extras:
         extras_for_log["payload_extras"] = safe_copy(extras)
@@ -643,6 +727,34 @@ def api_mirror():
 
     extras_for_log = {k: v for k, v in extras_for_log.items() if v is not None}
     broadcast_extras = safe_copy(extras) if extras else None
+
+    flag_push_plan: Optional[Dict[str, str]] = None
+    if command in {"SetNamePlayerA", "SetNamePlayerB"} and extras:
+        raw_flag_url = (
+            extras.get("flagUrl")
+            or extras.get("flag_url")
+            or extras.get("flagUrlA")
+            or extras.get("flagUrlB")
+        )
+        if raw_flag_url:
+            flag_value = str(raw_flag_url).strip()
+            if flag_value:
+                target_url = normalized_uno_url or _api_endpoint(kort_id)
+                if target_url:
+                    field_id = "Player A Flag" if command.endswith("A") else "Player B Flag"
+                    flag_push_plan = {
+                        "url": target_url,
+                        "method": uno_method,
+                        "field": field_id,
+                        "value": flag_value,
+                    }
+                    extras_for_log["flag_url"] = flag_value
+                else:
+                    log.info(
+                        "mirror flag push skipped kort=%s command=%s reason=no-endpoint",
+                        kort_id,
+                        command,
+                    )
 
     with STATE_LOCK:
         state = ensure_court_state(kort_id)
@@ -682,6 +794,14 @@ def api_mirror():
         persist_state_cache(kort_id, state)
 
         log_state_summary(kort_id, state, "mirror state")
+
+    if flag_push_plan:
+        _send_flag_update_to_uno(
+            flag_push_plan["url"],
+            flag_push_plan["method"],
+            flag_push_plan["field"],
+            flag_push_plan["value"],
+        )
 
     broadcast_kort_state(
         kort_id,
