@@ -26,8 +26,10 @@ from .database import (
     delete_court,
     delete_history_entry,
     fetch_all_history,
+    fetch_app_settings,
     fetch_history_entry,
     update_history_entry,
+    upsert_app_settings,
     upsert_court,
 )
 from .state import (
@@ -58,6 +60,11 @@ from .utils import now_iso, render_file_template, safe_copy, shorten
 blueprint = Blueprint("wyniki", __name__)
 admin_blueprint = Blueprint("admin", __name__, url_prefix="/admin")
 admin_api_blueprint = Blueprint("admin_api", __name__, url_prefix="/api/admin")
+
+YOUTUBE_API_ENDPOINT = "https://www.googleapis.com/youtube/v3/videos"
+YOUTUBE_API_KEY_SETTING = "youtube_api_key"
+YOUTUBE_STREAM_ID_SETTING = "youtube_stream_id"
+YOUTUBE_SETTINGS_KEYS = (YOUTUBE_API_KEY_SETTING, YOUTUBE_STREAM_ID_SETTING)
 
 ADMIN_SESSION_KEY = "admin_authenticated"
 ADMIN_DISABLED_MESSAGE = (
@@ -106,6 +113,75 @@ def _require_admin_session_json():
     if not _is_admin_authenticated():
         return jsonify({"ok": False, "error": "not-authorized"}), 401
     return None
+
+
+def _load_youtube_settings() -> Dict[str, str]:
+    stored = fetch_app_settings(YOUTUBE_SETTINGS_KEYS)
+    stored_api_key = stored.get(YOUTUBE_API_KEY_SETTING)
+    stored_stream_id = stored.get(YOUTUBE_STREAM_ID_SETTING)
+    api_key = (stored_api_key or settings.youtube_api_key or "").strip()
+    stream_id = (stored_stream_id or settings.youtube_stream_id or "").strip()
+    if stored_api_key or stored_stream_id:
+        source = "database"
+    elif settings.youtube_api_key or settings.youtube_stream_id:
+        source = "environment"
+    else:
+        source = "unset"
+    return {"api_key": api_key, "stream_id": stream_id, "source": source}
+
+
+def _fetch_viewers_data(
+    credentials: Optional[Dict[str, str]] = None,
+) -> Tuple[int, Optional[str], Optional[str]]:
+    config = credentials or _load_youtube_settings()
+    api_key = (config.get("api_key") or "").strip()
+    stream_id = (config.get("stream_id") or "").strip()
+    if not api_key or not stream_id:
+        log.warning("YouTube API configuration missing (api_key=%s, stream_id=%s)", bool(api_key), bool(stream_id))
+        return 0, "missing-config", "Brak skonfigurowanego klucza API lub ID transmisji."
+    params = {
+        "part": "liveStreamingDetails",
+        "id": stream_id,
+        "key": api_key,
+        "fields": "items/liveStreamingDetails/concurrentViewers",
+        "prettyPrint": "false",
+    }
+    try:
+        response = requests.get(YOUTUBE_API_ENDPOINT, params=params, timeout=5)
+        response.raise_for_status()
+        payload = response.json()
+        items = payload.get("items")
+        if not isinstance(items, list) or not items:
+            raise ValueError("missing-items")
+        details = items[0].get("liveStreamingDetails")
+        if not isinstance(details, dict):
+            raise ValueError("missing-details")
+        raw_count = details.get("concurrentViewers")
+        if raw_count is None:
+            raise ValueError("missing-count")
+        count = int(raw_count)
+        return count, None, None
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else None
+        detail = f" (HTTP {status})" if status is not None else ""
+        log.warning("Failed to fetch viewers information due to HTTP error: %s", exc)
+        return 0, "http-error", f"Nie udało się pobrać liczby widzów{detail}."
+    except requests.Timeout:
+        log.warning("Failed to fetch viewers information: request timed out")
+        return 0, "timeout", "Przekroczono czas oczekiwania na odpowiedź YouTube."
+    except requests.RequestException as exc:
+        log.warning("Failed to fetch viewers information due to network error: %s", exc)
+        return 0, "network-error", "Błąd połączenia z API YouTube."
+    except (ValueError, KeyError, IndexError, TypeError) as exc:
+        error_code = str(exc) if isinstance(exc, ValueError) else "unexpected-response"
+        log.warning("Failed to fetch viewers information due to invalid response: %s", exc)
+        message_map = {
+            "missing-items": "Brak danych o transmisji w odpowiedzi API.",
+            "missing-details": "Brak sekcji liveStreamingDetails w odpowiedzi API.",
+            "missing-count": "Brak licznika widzów w odpowiedzi API.",
+        }
+        message = message_map.get(error_code, "Nieprawidłowa odpowiedź API YouTube.")
+        return 0, error_code, message
 
 
 def _sanitize_history_payload(payload: Dict[str, object]) -> Dict[str, object]:
@@ -168,6 +244,14 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(admin_api_blueprint)
 
 
+@blueprint.route("/viewers", methods=["GET"])
+@blueprint.route("/vievers", methods=["GET"])
+def viewers() -> Response:
+    """Return the concurrent viewers count for the configured livestream."""
+    count, _, _ = _fetch_viewers_data()
+    return Response(str(count), mimetype="text/plain")
+
+
 @admin_blueprint.route("/", methods=["GET"])
 def admin_index() -> str:
     admin_enabled = _admin_enabled()
@@ -211,6 +295,66 @@ def admin_login():
         return jsonify({"ok": False, "error": "invalid-password"}), 401
     session[ADMIN_SESSION_KEY] = True
     return jsonify({"ok": True})
+
+
+@admin_api_blueprint.route("/youtube", methods=["GET"])
+def admin_api_youtube_get():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    config = _load_youtube_settings()
+    viewers, error_code, error_message = _fetch_viewers_data(config)
+    return jsonify(
+        {
+            "ok": True,
+            "api_key": config["api_key"],
+            "stream_id": config["stream_id"],
+            "viewers": viewers,
+            "viewers_error": error_message,
+            "viewers_error_code": error_code,
+            "config_source": config.get("source", "unset"),
+        }
+    )
+
+
+@admin_api_blueprint.route("/youtube", methods=["PUT"])
+def admin_api_youtube_update():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid-payload"}), 400
+    updates: Dict[str, Optional[str]] = {}
+    if "api_key" in payload:
+        value = payload.get("api_key")
+        if value is not None and not isinstance(value, str):
+            return jsonify({"ok": False, "error": "invalid-field", "field": "api_key"}), 400
+        updates[YOUTUBE_API_KEY_SETTING] = (str(value).strip() if isinstance(value, str) else None)
+    if "stream_id" in payload:
+        value = payload.get("stream_id")
+        if value is not None and not isinstance(value, str):
+            return jsonify({"ok": False, "error": "invalid-field", "field": "stream_id"}), 400
+        updates[YOUTUBE_STREAM_ID_SETTING] = (
+            str(value).strip() if isinstance(value, str) else None
+        )
+    if not updates:
+        return jsonify({"ok": False, "error": "no-updates"}), 400
+    upsert_app_settings(updates)
+    config = _load_youtube_settings()
+    viewers, error_code, error_message = _fetch_viewers_data(config)
+    return jsonify(
+        {
+            "ok": True,
+            "api_key": config["api_key"],
+            "stream_id": config["stream_id"],
+            "viewers": viewers,
+            "viewers_error": error_message,
+            "viewers_error_code": error_code,
+            "config_source": config.get("source", "unset"),
+            "saved": True,
+        }
+    )
 
 
 @admin_api_blueprint.route("/history", methods=["GET"])

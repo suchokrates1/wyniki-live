@@ -46,6 +46,14 @@ def init_db() -> None:
         )
         cursor.execute(
             """
+            CREATE TABLE IF NOT EXISTS app_settings (
+              key TEXT PRIMARY KEY,
+              value TEXT
+            );
+            """
+        )
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS snapshot_meta (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               ts TEXT NOT NULL,
@@ -107,6 +115,59 @@ def init_db() -> None:
             cursor.execute(
                 "UPDATE match_history SET phase = 'Grupowa' WHERE phase IS NULL OR TRIM(phase) = ''"
             )
+        connection.commit()
+
+
+def fetch_app_settings(keys: Optional[Iterable[str]] = None) -> Dict[str, Optional[str]]:
+    query = "SELECT key, value FROM app_settings"
+    params: List[object] = []
+    filtered_keys: Optional[List[str]] = None
+    if keys is not None:
+        filtered_keys = [str(key) for key in keys if key]
+        if not filtered_keys:
+            return {}
+        placeholders = ", ".join("?" for _ in filtered_keys)
+        query += f" WHERE key IN ({placeholders})"
+        params.extend(filtered_keys)
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+    settings_map: Dict[str, Optional[str]] = {
+        str(row["key"]): row["value"] for row in rows
+    }
+    if filtered_keys is not None:
+        for key in filtered_keys:
+            settings_map.setdefault(key, None)
+    return settings_map
+
+
+def upsert_app_settings(updates: Dict[str, Optional[str]]) -> None:
+    if not updates:
+        return
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        for raw_key, raw_value in updates.items():
+            if not raw_key:
+                continue
+            key = str(raw_key)
+            value: Optional[str]
+            if raw_value is None:
+                value = None
+            else:
+                text_value = str(raw_value).strip()
+                value = text_value or None
+            if value is None:
+                cursor.execute("DELETE FROM app_settings WHERE key = ?", (key,))
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO app_settings (key, value)
+                    VALUES (?, ?)
+                    ON CONFLICT(key) DO UPDATE SET value=excluded.value
+                    """,
+                    (key, value),
+                )
         connection.commit()
 
 
@@ -408,12 +469,14 @@ __all__ = [
     "db_conn",
     "delete_court",
     "delete_latest_history_entry",
+    "fetch_app_settings",
     "fetch_court",
     "fetch_courts",
     "fetch_recent_history",
     "fetch_state_cache",
     "init_db",
     "insert_match_history",
+    "upsert_app_settings",
     "upsert_court",
     "upsert_state_cache",
 ]

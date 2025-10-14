@@ -584,6 +584,43 @@ main.container section {
   gap: 8px;
 }
 
+.youtube-config-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.youtube-config-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.youtube-config-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.viewer-info {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.viewer-status {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.viewer-status.error {
+  color: var(--err);
+}
+
+.viewer-status.success {
+  color: var(--ok);
+}
+
 .court-form {
   display: grid;
   gap: 12px;
