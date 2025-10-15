@@ -3,6 +3,7 @@ const SCORE_HOSTS = [
   'https://score.vestmedia.pl'
 ];
 const REFLECT_PATH = '/api/local/reflect';
+const UNO_EXEC_PATH = '/api/uno/exec';
 const SCORE_TIMEOUT_MS = 8000;
 
 async function postScoreJson(path, payload, options = {}) {
@@ -116,6 +117,31 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         });
 
         sendResponse({ ok: res.ok, status: res.status, data, raw });
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    } else if (msg?.type === 'UNO_FLAG_PUSH') {
+      try {
+        if (!msg.kort) {
+          sendResponse({ ok: false, error: 'kort missing' });
+          return;
+        }
+        if (!msg.payload || typeof msg.payload !== 'object') {
+          sendResponse({ ok: false, error: 'payload missing' });
+          return;
+        }
+
+        const kort = String(msg.kort);
+        const path = `${UNO_EXEC_PATH}/${encodeURIComponent(kort)}`;
+
+        console.log('[UNO Picker][BG] -> server flag', { kort, payload: msg.payload });
+
+        const result = await postScoreJson(path, msg.payload);
+        if (result.ok) {
+          sendResponse({ ok: true, status: result.status, host: result.url });
+        } else {
+          sendResponse({ ok: false, error: 'All score hosts failed', details: result.errors });
+        }
       } catch (e) {
         sendResponse({ ok: false, error: String(e) });
       }
