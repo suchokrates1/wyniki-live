@@ -841,9 +841,80 @@ def api_local_reflect(kort_id: str):
     value = payload.get("value")
     if value is None and "payload" in payload:
         value = payload.get("payload")
+
     extras_dict = {k: v for k, v in payload.items() if k not in {"command", "value"}}
+
+    overlay_hint = extras_dict.pop("overlay", None)
+    extras_dict.pop("kort", None)
+
+    raw_uno_url = extras_dict.pop("unoUrl", None)
+    if raw_uno_url is None:
+        raw_uno_url = extras_dict.pop("uno_url", None)
+    raw_uno_method = extras_dict.pop("unoMethod", None)
+    if raw_uno_method is None:
+        raw_uno_method = extras_dict.pop("uno_method", None)
+    extras_dict.pop("unoToken", None)
+    extras_dict.pop("uno_token", None)
+    extras_dict.pop("unoApp", None)
+    extras_dict.pop("uno_app", None)
+    extras_dict.pop("reflectedAt", None)
+    extras_dict.pop("mirroredAt", None)
+
     extras = extras_dict or None
     extras_copy = safe_copy(extras)
+
+    overlay_normalized = normalize_overlay_id(overlay_hint) if overlay_hint else None
+    normalized_uno_url = _normalize_uno_api_url(raw_uno_url)
+    uno_method = _normalize_uno_method(raw_uno_method)
+
+    log_extras = safe_copy(extras)
+    if isinstance(log_extras, dict):
+        log_extras = dict(log_extras)
+    elif log_extras is None:
+        log_extras = None
+    else:
+        log_extras = {"value": log_extras}
+
+    if overlay_normalized:
+        if log_extras is None:
+            log_extras = {"overlay": overlay_normalized}
+        else:
+            log_extras.setdefault("overlay", overlay_normalized)
+
+    flag_push_plan: Optional[Dict[str, str]] = None
+    if command in {"SetNamePlayerA", "SetNamePlayerB"} and isinstance(extras, dict):
+        raw_flag_url = (
+            extras.get("flagUrl")
+            or extras.get("flag_url")
+            or extras.get("flagUrlA")
+            or extras.get("flagUrlB")
+        )
+        if raw_flag_url:
+            flag_value = str(raw_flag_url).strip()
+            if flag_value:
+                target_url = normalized_uno_url or _api_endpoint(kort_id)
+                if not target_url and overlay_normalized:
+                    target_url = f"{settings.overlay_base}/{overlay_normalized}/api"
+                if target_url:
+                    field_id = "Player A Flag" if command.endswith("A") else "Player B Flag"
+                    flag_push_plan = {
+                        "url": target_url,
+                        "method": uno_method,
+                        "field": field_id,
+                        "value": flag_value,
+                    }
+                    if isinstance(log_extras, dict):
+                        log_extras.setdefault("flag_url", flag_value)
+                else:
+                    log.info(
+                        "reflect flag push skipped kort=%s command=%s reason=no-endpoint",
+                        kort_id,
+                        command,
+                    )
+
+    if isinstance(log_extras, dict) and not log_extras:
+        log_extras = None
+
     ts = now_iso()
 
     with STATE_LOCK:
@@ -856,7 +927,7 @@ def api_local_reflect(kort_id: str):
         }
         state["local"]["updated"] = ts
         state["updated"] = ts
-        entry = record_log_entry(state, kort_id, "reflect", command, value, extras_copy, ts)
+        entry = record_log_entry(state, kort_id, "reflect", command, value, log_extras, ts)
         response_state = serialize_court_state(state)
         persist_state_cache(kort_id, state)
 
@@ -871,6 +942,14 @@ def api_local_reflect(kort_id: str):
         ts,
         None,
     )
+
+    if flag_push_plan:
+        _send_flag_update_to_uno(
+            flag_push_plan["url"],
+            flag_push_plan["method"],
+            flag_push_plan["field"],
+            flag_push_plan["value"],
+        )
 
     return jsonify({"ok": True, "changed": changed, "state": response_state, "log": entry})
 
