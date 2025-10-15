@@ -827,17 +827,16 @@ async function commitInputValue(el, value) {
   el.dispatchEvent(new Event('change', evtOpts));
 }
 
-// Flagi: API -> UI fallback
-async function setFlagViaApi(player, code2, flagUrl) {
+// Flagi: prosba do serwera -> UI fallback
+async function setFlagViaServer(player, _code2, flagUrl) {
   if (!flagUrl) return false;
-  const storedPattern = loadApiPattern() || {};
-  const { url: apiUrl, method } = normalizeUnoApiTarget(storedPattern.url, storedPattern.method);
-  if (!apiUrl) {
-    log('Brak zapisanego endpointu UNO - pomijam wysylke flagi.');
-    return false;
-  }
-  if (!uno.token) {
-    log('Brak tokenu UNO - pomijam wysylke flagi.');
+
+  const overlay = normalizeOverlayId(uno.appInstance || lastAppId || overlayFromLocation()) || null;
+  if (overlay && documentKort) setKortForOverlay(overlay, documentKort);
+
+  const kort = (overlay && window.__unoKortMap?.[overlay]) || documentKort || '1';
+  if (!kort) {
+    log('Brak kortu dla wysylki flagi - pomijam wysylke.');
     return false;
   }
 
@@ -848,25 +847,27 @@ async function setFlagViaApi(player, code2, flagUrl) {
     value: String(flagUrl)
   };
 
-  log('UNO API flag request', { url: apiUrl, method, fieldId, value: payload.value });
+  log('UNO flag via server request', { kort, fieldId, value: payload.value });
 
   let resp;
   try {
     resp = await chrome.runtime.sendMessage({
-      type: 'UNO_API_POST',
-      url: apiUrl,
-      method,
-      token: uno.token,
-      body: JSON.stringify(payload)
+      type: 'UNO_FLAG_PUSH',
+      kort,
+      payload
     });
   } catch (error) {
-    log('UNO API flag request failed', error);
+    log('UNO flag via server request failed', error);
     return false;
   }
 
-  log('UNO API flag response', resp);
+  if (resp?.ok) {
+    log('UNO flag via server response', resp);
+    return true;
+  }
 
-  return !!(resp && resp.ok);
+  log('UNO flag via server rejected', resp);
+  return false;
 }
 
 function setFlagViaUI(root, player, code2) {
@@ -1071,8 +1072,8 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
           Object.keys(extras).length ? extras : null
         );
 
-        const viaApi = await setFlagViaApi(playerLetter, p.flag || '', p.flagUrl);
-        if (!viaApi && p.flag) setFlagViaUI(document, playerLetter, p.flag);
+        const viaServer = await setFlagViaServer(playerLetter, p.flag || '', p.flagUrl);
+        if (!viaServer && p.flag) setFlagViaUI(document, playerLetter, p.flag);
 
         closePopover();
         if (opts.noNameWrite && targetInput.__tempDummy) targetInput.remove();
