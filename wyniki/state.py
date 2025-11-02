@@ -398,6 +398,17 @@ def serialize_public_snapshot() -> Dict[str, Any]:
         return {kort: serialize_public_court_state(state) for kort, state in snapshots.items()}
 
 
+def broadcast_snapshot(include_history: bool = False) -> None:
+    payload: Dict[str, Any] = {
+        "type": "snapshot",
+        "ts": now_iso(),
+        "state": serialize_public_snapshot(),
+    }
+    if include_history:
+        payload["history"] = serialize_history()
+    event_broker.broadcast(payload)
+
+
 def serialize_history_locked() -> List[Dict[str, Any]]:
     return [json.loads(json.dumps(entry)) for entry in list(GLOBAL_HISTORY)]
 
@@ -1481,6 +1492,7 @@ __all__ = [
     "STATE_LOCK",
     "apply_local_command",
     "available_courts",
+    "broadcast_snapshot",
     "broadcast_kort_state",
     "buckets",
     "courts_map",

@@ -91,15 +91,35 @@
             <label for="player-list-input">Lista</label>
             <input id="player-list-input" name="list_name" type="text" placeholder="default" />
             <label for="player-flag-code-input">Kod kraju (np. pl)</label>
-            <input id="player-flag-code-input" name="flag_code" type="text" maxlength="2" />
+            <input
+              id="player-flag-code-input"
+              name="flag_code"
+              type="text"
+              maxlength="2"
+              list="flag-code-options"
+            />
             <label for="player-flag-url-input">Adres flagi</label>
-            <input id="player-flag-url-input" name="flag_url" type="url" />
+            <input id="player-flag-url-input" name="flag_url" type="url" placeholder="https://" />
           </div>
           <p class="player-form-note">
-            Kod kraju jest opcjonalny. Pozostaw listę pustą, aby użyć listy domyślnej.
+            Kod kraju jest opcjonalny. Pozostaw listę pustą, aby użyć listy domyślnej. Wybór kodu automatycznie
+            uzupełni adres flagi dostępny w wtyczce UNO.
           </p>
           <button type="submit">Dodaj zawodnika</button>
         </form>
+        <form id="player-import-form" class="player-import-form" enctype="multipart/form-data">
+          <label for="player-import-file">Importuj graczy z pliku</label>
+          <input
+            id="player-import-file"
+            name="file"
+            type="file"
+            accept=".txt,.csv,.tsv,text/plain"
+            required
+          />
+          <button type="submit">Importuj</button>
+          <p class="player-import-note">Format: Imię Nazwisko kod_kraju (np. Jan Kowalski PL).</p>
+        </form>
+        <datalist id="flag-code-options"></datalist>
         <div class="players-table-wrapper">
           <table class="players-table">
             <thead>
@@ -116,8 +136,16 @@
               <tr data-player-id="{{ player.id }}">
                 <td><input name="name" type="text" value="{{ player.name or '' }}" /></td>
                 <td><input name="list_name" type="text" value="{{ player.list_name or '' }}" /></td>
-                <td><input name="flag_code" type="text" value="{{ player.flag_code or '' }}" /></td>
-                <td><input name="flag_url" type="text" value="{{ player.flag_url or '' }}" /></td>
+                <td>
+                  <input
+                    name="flag_code"
+                    type="text"
+                    maxlength="2"
+                    list="flag-code-options"
+                    value="{{ player.flag_code or '' }}"
+                  />
+                </td>
+                <td><input name="flag_url" type="url" value="{{ player.flag_url or '' }}" placeholder="https://" /></td>
                 <td class="actions">
                   <button class="update-player" type="button">Zapisz</button>
                   <button class="delete-player" type="button">Usuń</button>
