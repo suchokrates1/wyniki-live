@@ -1236,18 +1236,107 @@ def api_local_reflect(kort_id: str):
         log_extras = None
 
     ts = now_iso()
+    plugin_enabled = is_plugin_enabled()
 
-    # Do not apply commands coming from browser plugins. Record a skipped
-    # reflect entry so admins can see attempts, but rely only on UNO
-    # originating `/api/uno/exec/<kort_id>` calls for state changes.
+    if not plugin_enabled:
+        extras_with_skip = {**(log_extras or {}), "skipped": "plugin-reflect-disabled"}
+        with STATE_LOCK:
+            state = ensure_court_state(kort_id)
+            entry = record_log_entry(state, kort_id, "reflect", command, value, extras_with_skip, ts)
+            response_state = serialize_court_state(state)
+            persist_state_cache(kort_id, state)
+
+        log.info("reflect skipped kort=%s command=%s", kort_id, command)
+        return jsonify({"ok": True, "changed": False, "state": response_state, "log": entry})
+
+    extras_for_log = dict(log_extras) if isinstance(log_extras, dict) else {}
+    changed = False
+    flag_updates_copy: Optional[Dict[str, Dict[str, Optional[str]]]] = None
+
     with STATE_LOCK:
         state = ensure_court_state(kort_id)
-        entry = record_log_entry(state, kort_id, "reflect", command, value, {**(log_extras or {}), "skipped": "plugin-reflect-disabled"}, ts)
-        response_state = serialize_court_state(state)
+        try:
+            changed, flag_updates = apply_local_command(state, command, value, extras, kort_id)
+            flag_updates_copy = safe_copy(flag_updates) if flag_updates else None
+        except Exception as exc:  # noqa: BLE001
+            log.warning("reflect apply failed kort=%s command=%s error=%s", kort_id, command, exc)
+            flag_updates = None
+        if flag_updates_copy:
+            extras_for_log.setdefault("flag_updates", flag_updates_copy)
+        entry = record_log_entry(
+            state,
+            kort_id,
+            "reflect",
+            command,
+            value,
+            extras_for_log or None,
+            ts,
+        )
+        state["updated"] = ts
         persist_state_cache(kort_id, state)
+        response_state = serialize_court_state(state)
+        log_state_summary(kort_id, state, "reflect state")
 
-    log.info("reflect skipped kort=%s command=%s", kort_id, command)
-    return jsonify({"ok": True, "changed": False, "state": response_state, "log": entry})
+    # Attempt to keep track of UNO customization flags when available.
+    target_url = normalized_uno_url or _api_endpoint(kort_id)
+    if not target_url and overlay_normalized:
+        target_url = f"{settings.overlay_base}/{overlay_normalized}/api"
+
+    if flag_updates_copy and target_url:
+        for side, updates in flag_updates_copy.items():
+            if not isinstance(updates, dict):
+                continue
+            flag_url_candidate = updates.get("flag_url")
+            if not flag_url_candidate:
+                continue
+            field_id = "Player A Flag" if side == "A" else "Player B Flag"
+            already_planned = any(plan.get("field") == field_id for plan in flag_push_plans)
+            if not already_planned:
+                flag_push_plans.append(
+                    {
+                        "url": target_url,
+                        "method": uno_method,
+                        "field": field_id,
+                        "value": flag_url_candidate,
+                    }
+                )
+
+    flag_push_results: List[Dict[str, Any]] = []
+    for plan in flag_push_plans:
+        ok, status_code, payload = _send_flag_update_to_uno(
+            plan["url"],
+            plan["method"],
+            plan["field"],
+            plan["value"],
+        )
+        flag_push_results.append(
+            {
+                "ok": ok,
+                "status": status_code,
+                "field": plan["field"],
+                "url": shorten(plan["url"]),
+                "response": shorten(payload),
+            }
+        )
+
+    broadcast_kort_state(kort_id, "reflect", command, value, extras_copy, ts)
+
+    if flag_push_results:
+        entry_extras = entry.get("extras") or {}
+        entry_extras = dict(entry_extras)
+        entry_extras.setdefault("flag_push", flag_push_results)
+        entry["extras"] = entry_extras
+
+    log.info("reflect applied kort=%s command=%s changed=%s flag_pushes=%s", kort_id, command, changed, len(flag_push_results))
+    return jsonify(
+        {
+            "ok": True,
+            "changed": bool(changed),
+            "state": response_state,
+            "log": entry,
+            "flag_push": flag_push_results or None,
+        }
+    )
 
 
 @blueprint.route("/api/uno/exec/<kort_id>", methods=["POST"])
