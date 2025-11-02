@@ -392,6 +392,18 @@ def upsert_state_cache(kort_id: str, ts: str, state: Dict[str, object]) -> None:
         connection.commit()
 
 
+def delete_state_cache_entries(kort_ids: Iterable[str]) -> int:
+    ids = [str(kort_id).strip() for kort_id in kort_ids if str(kort_id).strip()]
+    if not ids:
+        return 0
+    placeholders = ",".join(["?"] * len(ids))
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(f"DELETE FROM state_cache WHERE kort_id IN ({placeholders})", ids)
+        connection.commit()
+        return cursor.rowcount
+
+
 def fetch_recent_history(limit: int) -> Iterable[sqlite3.Row]:
     with db_conn() as connection:
         cursor = connection.cursor()
@@ -627,6 +639,7 @@ __all__ = [
     "init_db",
     "insert_match_history",
     "insert_player",
+    "delete_state_cache_entries",
     "upsert_app_settings",
     "upsert_court",
     "update_player",

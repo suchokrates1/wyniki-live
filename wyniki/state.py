@@ -19,6 +19,7 @@ from .database import (
     fetch_state_cache,
     find_player_by_surname,
     insert_match_history,
+    delete_state_cache_entries,
     upsert_app_settings,
     upsert_court,
     upsert_state_cache,
@@ -635,12 +636,22 @@ def hydrate_state_from_cache(kort_id: str, cached: Dict[str, Any]) -> None:
 
 
 def load_state_cache() -> None:
+    known_courts = set(INITIAL_COURTS)
+    stale_entries: List[str] = []
     for row in fetch_state_cache() or []:
+        raw_kort = row["kort_id"]
+        normalized_kort = normalize_kort_id(raw_kort) or (str(raw_kort).strip() if raw_kort is not None else None)
+        if not normalized_kort or normalized_kort not in known_courts:
+            stale_entries.append(str(raw_kort))
+            continue
         try:
             payload = json.loads(row["state"])
         except (TypeError, ValueError, json.JSONDecodeError):  # type: ignore[attr-defined]
             continue
-        hydrate_state_from_cache(row["kort_id"], payload)
+        hydrate_state_from_cache(normalized_kort, payload)
+    if stale_entries:
+        removed = delete_state_cache_entries(stale_entries)
+        log.info("removed %s stale court cache entries: %s", removed, ",".join(sorted(set(stale_entries))))
 
 
 def serialize_log_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
