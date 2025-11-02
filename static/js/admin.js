@@ -26,6 +26,12 @@
   const unoToggleStatus = document.getElementById('uno-toggle-status');
   const pluginToggle = document.getElementById('plugin-toggle');
   const pluginToggleStatus = document.getElementById('plugin-toggle-status');
+  const unoRateLimitBanner = document.getElementById('uno-limit-banner');
+  const unoRateLimitValue = document.getElementById('uno-rate-limit-value');
+  const unoRateLimitHeader = document.getElementById('uno-rate-limit-header');
+  const unoRateLimitUpdated = document.getElementById('uno-rate-limit-updated');
+  const unoRateLimitRemaining = document.getElementById('uno-rate-limit-remaining');
+  const unoRateLimitReset = document.getElementById('uno-rate-limit-reset');
   const playersSection = document.getElementById('players-section');
   const playerForm = document.getElementById('player-form');
   const playersTableBody = document.getElementById('players-rows');
@@ -54,6 +60,9 @@
   const initialPlayers = Array.isArray(initialConfig.players) ? initialConfig.players : [];
   let unoRequestsEnabled = initialConfig.uno_requests_enabled === true;
   let pluginEnabled = initialConfig.plugin_enabled === true;
+  let unoRateLimitInfo = initialConfig.uno_rate_limit && typeof initialConfig.uno_rate_limit === 'object'
+    ? initialConfig.uno_rate_limit
+    : null;
   let flagCatalog = [];
   const flagCatalogMap = new Map();
   let flagCatalogPromise = null;
@@ -454,6 +463,54 @@
   }
 
 
+  function applyUnoRateLimit(info) {
+    if (!unoRateLimitBanner) {
+      return;
+    }
+    if (!info || typeof info !== 'object') {
+      unoRateLimitBanner.hidden = true;
+      unoRateLimitInfo = null;
+      return;
+    }
+    unoRateLimitInfo = info;
+    const limitValue = typeof info.limit === 'number'
+      ? info.limit.toLocaleString('pl-PL')
+      : (info.raw ? String(info.raw) : '—');
+    if (unoRateLimitValue) {
+      unoRateLimitValue.textContent = limitValue;
+    }
+    if (unoRateLimitHeader) {
+      if (info.header) {
+        unoRateLimitHeader.textContent = String(info.header);
+        unoRateLimitHeader.hidden = false;
+      } else {
+        unoRateLimitHeader.hidden = true;
+      }
+    }
+    if (unoRateLimitRemaining) {
+      const remainingValue = typeof info.remaining === 'number'
+        ? info.remaining.toLocaleString('pl-PL')
+        : '—';
+      unoRateLimitRemaining.textContent = remainingValue;
+    }
+    if (unoRateLimitUpdated) {
+      unoRateLimitUpdated.textContent = info.updated ? String(info.updated) : '—';
+    }
+    if (unoRateLimitReset) {
+      let resetLabel = '—';
+      if (typeof info.reset === 'number' && Number.isFinite(info.reset)) {
+        const resetDate = new Date(info.reset * 1000);
+        if (!Number.isNaN(resetDate.getTime())) {
+          resetLabel = resetDate.toLocaleString('pl-PL');
+        }
+      }
+      unoRateLimitReset.textContent = resetLabel;
+    }
+    const hasData = Boolean(info.limit != null || info.remaining != null || info.raw || info.header);
+    unoRateLimitBanner.hidden = !hasData;
+  }
+
+
   async function loadSystemSettings(options = {}) {
     if (!adminEnabled) {
       return;
@@ -466,6 +523,9 @@
       }
       if (typeof data.plugin_enabled !== 'undefined') {
         applyPluginToggle(data.plugin_enabled);
+      }
+      if (typeof data.uno_rate_limit !== 'undefined') {
+        applyUnoRateLimit(data.uno_rate_limit);
       }
       if (successMessage) {
         setFeedback(successMessage, 'success');
@@ -487,6 +547,9 @@
         body: JSON.stringify({ uno_requests_enabled: desired })
       });
       applyUnoToggle(data.uno_requests_enabled === true);
+      if (typeof data.uno_rate_limit !== 'undefined') {
+        applyUnoRateLimit(data.uno_rate_limit);
+      }
       setFeedback('Ustawienia UNO zapisane.', 'success');
     } catch (error) {
       applyUnoToggle(unoRequestsEnabled);
@@ -504,6 +567,9 @@
         body: JSON.stringify({ plugin_enabled: desired })
       });
       applyPluginToggle(data.plugin_enabled === true);
+      if (typeof data.uno_rate_limit !== 'undefined') {
+        applyUnoRateLimit(data.uno_rate_limit);
+      }
       setFeedback('Ustawienia wtyczki zapisane.', 'success');
     } catch (error) {
       applyPluginToggle(pluginEnabled);
@@ -1210,6 +1276,7 @@
 
   applyUnoToggle(unoRequestsEnabled);
   applyPluginToggle(pluginEnabled);
+  applyUnoRateLimit(unoRateLimitInfo);
   toggleAuthenticated(Boolean(initialConfig.is_authenticated));
   if (adminEnabled) {
     if (Array.isArray(initialConfig.history) && initialConfig.history.length > 0) {

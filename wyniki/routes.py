@@ -54,6 +54,7 @@ from .state import (
     load_match_history,
     is_uno_requests_enabled,
     is_plugin_enabled,
+    get_uno_rate_limit_info,
     is_known_kort,
     normalize_kort_id,
     persist_state_cache,
@@ -69,6 +70,7 @@ from .state import (
     STATE_LOCK,
     validate_command,
     refresh_plugin_setting,
+    update_uno_rate_limit,
 )
 from .utils import now_iso, render_file_template, safe_copy, shorten
 
@@ -410,6 +412,7 @@ def admin_index() -> str:
         players=players,
         uno_requests_enabled=is_uno_requests_enabled(),
         plugin_enabled=is_plugin_enabled(),
+        uno_rate_limit=get_uno_rate_limit_info(),
         int_fields=sorted(HISTORY_INT_FIELDS),
         admin_enabled=admin_enabled,
         admin_disabled_message=ADMIN_DISABLED_MESSAGE,
@@ -824,6 +827,7 @@ def admin_api_system_settings():
             "ok": True,
             "uno_requests_enabled": is_uno_requests_enabled(),
             "plugin_enabled": is_plugin_enabled(),
+            "uno_rate_limit": get_uno_rate_limit_info(),
         }
     )
 
@@ -870,6 +874,8 @@ def admin_api_system_update():
         set_plugin_enabled(enabled)
         refresh_plugin_setting()
         response_payload["plugin_enabled"] = is_plugin_enabled()
+
+    response_payload["uno_rate_limit"] = get_uno_rate_limit_info()
 
     return jsonify(response_payload)
 
@@ -1032,6 +1038,7 @@ def _send_flag_update_to_uno(
             json=payload,
             timeout=5,
         )
+        update_uno_rate_limit(response.headers)
     except requests.RequestException as exc:
         log.warning(
             "mirror flag push failed url=%s field=%s error=%s",
@@ -1295,6 +1302,7 @@ def api_uno_exec(kort_id: str):
             json=payload,
             timeout=5,
         )
+        update_uno_rate_limit(response.headers)
         status_code = response.status_code
         content_type = response.headers.get("Content-Type", "")
         if content_type and "json" in content_type.lower():

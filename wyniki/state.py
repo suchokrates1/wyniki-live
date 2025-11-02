@@ -71,6 +71,27 @@ UNO_REQUESTS_LOCK = threading.Lock()
 UNO_REQUESTS_ENABLED = False
 PLUGIN_LOCK = threading.Lock()
 PLUGIN_ENABLED = False
+UNO_RATE_LIMIT_LOCK = threading.Lock()
+UNO_RATE_LIMIT_INFO: Dict[str, Optional[object]] = {
+    "header": None,
+    "raw": None,
+    "limit": None,
+    "remaining": None,
+    "reset": None,
+    "updated": None,
+}
+CANDIDATE_RATE_LIMIT_HEADERS = (
+    "rate-limit-daily",
+    "ratelimit-limit",
+    "x-ratelimit-limit",
+    "x-ratelimit-daily",
+    "x-ratelimit-daily-limit",
+    "x-uno-daily-limit",
+    "x-daily-limit",
+    "x-singular-ratelimit-daily-calls",
+    "x-singular-ratelimit-daily",
+    "x-singular-ratelimit-daily-limit",
+)
 
 DEFAULT_HISTORY_PHASE = "Grupowa"
 
@@ -129,6 +150,78 @@ def refresh_plugin_setting() -> bool:
         global PLUGIN_ENABLED
         PLUGIN_ENABLED = new_value
     return new_value
+
+
+def update_uno_rate_limit(headers: Optional[Dict[str, str]]) -> None:
+    if not headers:
+        return
+    normalized = {str(key).strip().lower(): str(value).strip() for key, value in headers.items() if key}
+    header_key: Optional[str] = None
+    for candidate in CANDIDATE_RATE_LIMIT_HEADERS:
+        if candidate in normalized:
+            header_key = candidate
+            break
+    if header_key is None:
+        for key in normalized:
+            if "limit" in key and "day" in key:
+                header_key = key
+                break
+    if header_key is None:
+        return
+    raw_value = normalized.get(header_key)
+    limit_value: Optional[int] = None
+    remaining_value: Optional[int] = None
+    reset_value: Optional[int] = None
+    if raw_value:
+        text = raw_value.strip()
+        parsed: Optional[Dict[str, object]] = None
+        if text.startswith("{") and text.endswith("}"):
+            try:
+                parsed = json.loads(text)
+            except (ValueError, json.JSONDecodeError):  # type: ignore[attr-defined]
+                parsed = None
+        if isinstance(parsed, dict):
+            raw_limit = parsed.get("limit")
+            raw_remaining = parsed.get("remaining")
+            raw_reset = parsed.get("reset")
+            try:
+                if raw_limit is not None:
+                    limit_value = int(raw_limit)
+            except (TypeError, ValueError):
+                limit_value = None
+            try:
+                if raw_remaining is not None:
+                    remaining_value = int(raw_remaining)
+            except (TypeError, ValueError):
+                remaining_value = None
+            try:
+                if raw_reset is not None:
+                    reset_value = int(raw_reset)
+            except (TypeError, ValueError):
+                reset_value = None
+        else:
+            match_limit = re.search(r"\d+", text)
+            if match_limit:
+                try:
+                    limit_value = int(match_limit.group())
+                except ValueError:
+                    limit_value = None
+    with UNO_RATE_LIMIT_LOCK:
+        UNO_RATE_LIMIT_INFO.update(
+            {
+                "header": header_key,
+                "raw": raw_value,
+                "limit": limit_value,
+                "remaining": remaining_value,
+                "reset": reset_value,
+                "updated": now_iso(),
+            }
+        )
+
+
+def get_uno_rate_limit_info() -> Dict[str, Optional[object]]:
+    with UNO_RATE_LIMIT_LOCK:
+        return dict(UNO_RATE_LIMIT_INFO)
 
 
 class TokenBucket:
@@ -1035,6 +1128,7 @@ def load_match_history() -> None:
 
 load_match_history()
 refresh_uno_requests_setting()
+refresh_plugin_setting()
 
 
 def reset_after_match(state: Dict[str, Any]) -> None:
