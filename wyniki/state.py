@@ -16,6 +16,7 @@ from .database import (
     fetch_courts,
     fetch_recent_history,
     fetch_state_cache,
+    find_player_by_surname,
     insert_match_history,
     upsert_app_settings,
     upsert_court,
@@ -131,6 +132,7 @@ def _empty_player_state() -> Dict[str, Any]:
         "current_games": 0,
         "flag_url": None,
         "flag_code": None,
+        "flag_lookup_surname": None,
     }
 
 
@@ -670,6 +672,86 @@ def _has_player_name(side_state: Dict[str, Any]) -> bool:
     return isinstance(surname_value, str) and surname_value.strip() not in {"", "-"}
 
 
+def _normalized_surname(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text == "-":
+        return None
+    return text.lower()
+
+
+def _maybe_lookup_flag_for_side(
+    state: Dict[str, Any],
+    side: str,
+    *,
+    prefer_existing_flag: bool = False,
+) -> Optional[Dict[str, Optional[str]]]:
+    side_state = state.get(side)
+    if not isinstance(side_state, dict):
+        return None
+
+    current_surname = side_state.get("surname")
+    normalized = _normalized_surname(current_surname)
+    previous_lookup = side_state.get("flag_lookup_surname")
+
+    existing_flag_url = side_state.get("flag_url")
+    existing_flag_code = side_state.get("flag_code")
+
+    updates: Dict[str, Optional[str]] = {}
+
+    if normalized is None:
+        if previous_lookup is not None:
+            side_state["flag_lookup_surname"] = None
+        if prefer_existing_flag:
+            return None
+        if existing_flag_url is not None:
+            side_state["flag_url"] = None
+            updates["flag_url"] = None
+        if existing_flag_code is not None:
+            side_state["flag_code"] = None
+            updates["flag_code"] = None
+        return updates or None
+
+    if isinstance(previous_lookup, str) and previous_lookup == normalized:
+        return None
+
+    side_state["flag_lookup_surname"] = normalized
+
+    player = find_player_by_surname(current_surname)
+    if not player:
+        if prefer_existing_flag:
+            return None
+        if existing_flag_url is not None:
+            side_state["flag_url"] = None
+            updates["flag_url"] = None
+        if existing_flag_code is not None:
+            side_state["flag_code"] = None
+            updates["flag_code"] = None
+        return updates or None
+
+    new_flag_url_raw = player.get("flag_url")
+    new_flag_url = str(new_flag_url_raw).strip() if new_flag_url_raw else None
+    new_flag_code_raw = player.get("flag_code")
+    new_flag_code = str(new_flag_code_raw).strip().lower() if new_flag_code_raw else None
+
+    if new_flag_url and new_flag_url != existing_flag_url:
+        side_state["flag_url"] = new_flag_url
+        updates["flag_url"] = new_flag_url
+    elif not new_flag_url and not prefer_existing_flag and existing_flag_url is not None:
+        side_state["flag_url"] = None
+        updates["flag_url"] = None
+
+    if new_flag_code and new_flag_code != existing_flag_code:
+        side_state["flag_code"] = new_flag_code
+        updates["flag_code"] = new_flag_code
+    elif not new_flag_code and not prefer_existing_flag and existing_flag_code is not None:
+        side_state["flag_code"] = None
+        updates["flag_code"] = None
+
+    return updates or None
+
+
 def maybe_activate_initial_set(state: Dict[str, Any]) -> None:
     current = state.get("current_set")
     if isinstance(current, int) and current > 0:
@@ -922,6 +1004,7 @@ def reset_after_match(state: Dict[str, Any]) -> None:
         side_state["surname"] = "-"
         side_state["flag_url"] = None
         side_state["flag_code"] = None
+        side_state["flag_lookup_surname"] = None
         side_state["points"] = "0"
         side_state["set1"] = 0
         side_state["set2"] = 0
@@ -1000,32 +1083,47 @@ def apply_local_command(
     value: Any,
     extras: Optional[Dict[str, Any]],
     kort_id: Optional[str] = None,
-) -> bool:
+) -> Tuple[bool, Optional[Dict[str, Dict[str, Optional[str]]]]]:
     log.debug("apply command=%s value=%s extras=%s", command, shorten(value), shorten(extras))
     changed = False
+    flag_updates: Dict[str, Dict[str, Optional[str]]] = {}
     if command == "SetNamePlayerA":
         full = str(value or "").strip() or None
         state["A"]["full_name"] = full
         state["A"]["surname"] = surname(full)
+        prefer_existing_flag = False
         if extras:
             flag_url = extras.get("flagUrl") or extras.get("flag_url")
             flag_code = extras.get("flag") or extras.get("flagCode") or extras.get("flag_code")
             if flag_url is not None:
-                state["A"]["flag_url"] = flag_url or None
+                trimmed_url = str(flag_url).strip()
+                state["A"]["flag_url"] = trimmed_url or None
+                prefer_existing_flag = bool(trimmed_url)
             if flag_code is not None:
-                state["A"]["flag_code"] = (str(flag_code).lower() or None)
+                code_text = str(flag_code).strip().lower()
+                state["A"]["flag_code"] = code_text or None
+        lookup = _maybe_lookup_flag_for_side(state, "A", prefer_existing_flag=prefer_existing_flag)
+        if lookup:
+            flag_updates["A"] = lookup
         changed = True
     elif command == "SetNamePlayerB":
         full = str(value or "").strip() or None
         state["B"]["full_name"] = full
         state["B"]["surname"] = surname(full)
+        prefer_existing_flag = False
         if extras:
             flag_url = extras.get("flagUrl") or extras.get("flag_url")
             flag_code = extras.get("flag") or extras.get("flagCode") or extras.get("flag_code")
             if flag_url is not None:
-                state["B"]["flag_url"] = flag_url or None
+                trimmed_url = str(flag_url).strip()
+                state["B"]["flag_url"] = trimmed_url or None
+                prefer_existing_flag = bool(trimmed_url)
             if flag_code is not None:
-                state["B"]["flag_code"] = (str(flag_code).lower() or None)
+                code_text = str(flag_code).strip().lower()
+                state["B"]["flag_code"] = code_text or None
+        lookup = _maybe_lookup_flag_for_side(state, "B", prefer_existing_flag=prefer_existing_flag)
+        if lookup:
+            flag_updates["B"] = lookup
         changed = True
     elif command == "SetPointsPlayerA":
         state["A"]["points"] = str(value if value is not None else "-")
@@ -1258,7 +1356,7 @@ def apply_local_command(
                     log.info("unhandled command=%s value=%s extras=%s", command, shorten(value), shorten(extras))
 
     handle_match_flow(kort_id, state)
-    return changed
+    return changed, flag_updates or None
 
 
 def state_snapshot_for_broadcast(
