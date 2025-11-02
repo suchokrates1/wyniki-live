@@ -230,37 +230,11 @@ function normalizeScoreValue(field, value) {
 
 function sendScoreCommand(command, value, appId, extras) {
   if (!command) return;
-  if (!chrome?.runtime?.id || typeof chrome.runtime.sendMessage !== 'function') {
-    log('Score command skipped: runtime unavailable', { command, value });
-    return;
-  }
+  // We no longer forward score reflect commands to the background/plugin.
+  // The picker will only manipulate the UI and rely on UNO-origin actions
+  // delivered to the server via `/api/uno/exec`.
   const overlay = normalizeOverlayId(appId || uno.appInstance || lastAppId || overlayFromLocation());
-  if (!overlay) {
-    log('Score command skipped: overlay missing', { command, value });
-    return;
-  }
-  lastAppId = overlay;
-  if (!window.__unoKortMap) window.__unoKortMap = {};
-  if (extras && typeof extras === 'object' && extras.kort) setKortForOverlay(overlay, extras.kort);
-  if (documentKort) setKortForOverlay(overlay, documentKort);
-  const kort = window.__unoKortMap[overlay] || documentKort || '1';
-  const message = buildScoreReflectMessage(overlay, kort, command, value, extras);
-  log('UNO score reflect send', { command, value, overlay: message.overlay, kort: message.kort });
-  try {
-    chrome.runtime.sendMessage(message, (resp) => {
-      if (chrome.runtime.lastError) {
-        log('UNO score reflect error', chrome.runtime.lastError.message);
-        return;
-      }
-      if (resp && resp.ok) {
-        log('UNO score reflect ack', { command, status: resp.status });
-      } else {
-        log('UNO score reflect response', resp);
-      }
-    });
-  } catch (err) {
-    log('UNO score reflect send failed (runtime)', { command, message: err?.message || String(err) });
-  }
+  lastAppId = overlay || lastAppId;
 }
 
 const scoreStateByOverlay = new Map();
@@ -860,43 +834,8 @@ async function commitInputValue(el, value) {
 // Flagi: prosba do serwera -> UI fallback
 async function setFlagViaServer(player, _code2, flagUrl) {
   if (!flagUrl) return false;
-
-  const overlay = normalizeOverlayId(uno.appInstance || lastAppId || overlayFromLocation()) || null;
-  if (overlay && documentKort) setKortForOverlay(overlay, documentKort);
-
-  const kort = (overlay && window.__unoKortMap?.[overlay]) || documentKort || '1';
-  if (!kort) {
-    log('Brak kortu dla wysylki flagi - pomijam wysylke.');
-    return false;
-  }
-
-  const fieldId = player === 'A' ? 'Player A Flag' : 'Player B Flag';
-  const payload = {
-    command: 'SetCustomizationField',
-    fieldId,
-    value: String(flagUrl)
-  };
-
-  log('UNO flag via server request', { kort, fieldId, value: payload.value });
-
-  let resp;
-  try {
-    resp = await chrome.runtime.sendMessage({
-      type: 'UNO_FLAG_PUSH',
-      kort,
-      payload
-    });
-  } catch (error) {
-    log('UNO flag via server request failed', error);
-    return false;
-  }
-
-  if (resp?.ok) {
-    log('UNO flag via server response', resp);
-    return true;
-  }
-
-  log('UNO flag via server rejected', resp);
+  // Plugin no longer pushes flags via server. Return false to let caller
+  // attempt to set flag via UI only.
   return false;
 }
 
