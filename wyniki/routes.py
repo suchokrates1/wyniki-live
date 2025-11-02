@@ -73,6 +73,7 @@ from .state import (
     update_uno_rate_limit,
     record_uno_request,
 )
+from .poller import sync_poller_state
 from .utils import now_iso, render_file_template, safe_copy, shorten
 
 blueprint = Blueprint("wyniki", __name__)
@@ -580,6 +581,7 @@ def admin_api_courts_create():
     existed_before = is_known_kort(kort_id)
     upsert_court(kort_id, overlay_id)
     refresh_courts_from_db()
+    sync_poller_state()
     broadcast_snapshot(include_history=True)
     court_record = {"kort_id": kort_id, "overlay_id": get_overlay_for_kort(kort_id)}
     return jsonify(
@@ -605,6 +607,7 @@ def admin_api_courts_delete(kort_id: str):
     if not deleted:
         return jsonify({"ok": False, "error": "not-found"}), 404
     refresh_courts_from_db()
+    sync_poller_state()
     broadcast_snapshot(include_history=True)
     return jsonify(
         {
@@ -859,6 +862,7 @@ def admin_api_system_update():
             return jsonify({"ok": False, "error": "invalid-field", "field": "uno_requests_enabled"}), 400
         set_uno_requests_enabled(enabled)
         refresh_uno_requests_setting()
+        sync_poller_state()
         response_payload["uno_requests_enabled"] = is_uno_requests_enabled()
 
     if "plugin_enabled" in payload:
