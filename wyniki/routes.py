@@ -972,7 +972,7 @@ def api_mirror():
     extras_for_log = {k: v for k, v in extras_for_log.items() if v is not None}
     broadcast_extras = safe_copy(extras) if extras else None
 
-    flag_push_plan: Optional[Dict[str, str]] = None
+    flag_push_plans: List[Dict[str, str]] = []
     if command in {"SetNamePlayerA", "SetNamePlayerB"} and extras:
         raw_flag_url = (
             extras.get("flagUrl")
@@ -986,12 +986,14 @@ def api_mirror():
                 target_url = normalized_uno_url or _api_endpoint(kort_id)
                 if target_url:
                     field_id = "Player A Flag" if command.endswith("A") else "Player B Flag"
-                    flag_push_plan = {
-                        "url": target_url,
-                        "method": uno_method,
-                        "field": field_id,
-                        "value": flag_value,
-                    }
+                    flag_push_plans.append(
+                        {
+                            "url": target_url,
+                            "method": uno_method,
+                            "field": field_id,
+                            "value": flag_value,
+                        }
+                    )
                     extras_for_log["flag_url"] = flag_value
                 else:
                     log.info(
@@ -1000,12 +1002,16 @@ def api_mirror():
                         command,
                     )
 
+    flag_updates: Optional[Dict[str, Dict[str, Optional[str]]]] = None
+
     with STATE_LOCK:
         state = ensure_court_state(kort_id)
         changed = False
         if command:
             try:
-                changed = apply_local_command(state, command, value, extras or None, kort_id)
+                changed, flag_updates = apply_local_command(
+                    state, command, value, extras or None, kort_id
+                )
             except Exception as exc:  # noqa: BLE001
                 log.warning("mirror apply failed kort=%s command=%s error=%s", kort_id, command, exc)
         if changed and command:
@@ -1039,12 +1045,44 @@ def api_mirror():
 
         log_state_summary(kort_id, state, "mirror state")
 
-    if flag_push_plan:
+    if flag_updates:
+        for side, info in flag_updates.items():
+            if not isinstance(info, dict):
+                continue
+            flag_value = info.get("flag_url")
+            if not flag_value:
+                continue
+            target_url = normalized_uno_url or _api_endpoint(kort_id)
+            if not target_url:
+                log.info(
+                    "mirror flag push skipped kort=%s command=%s side=%s reason=no-endpoint",
+                    kort_id,
+                    command,
+                    side,
+                )
+                continue
+            field_id = "Player A Flag" if side == "A" else "Player B Flag"
+            if not any(
+                plan.get("field") == field_id and plan.get("value") == flag_value
+                for plan in flag_push_plans
+            ):
+                flag_push_plans.append(
+                    {
+                        "url": target_url,
+                        "method": uno_method,
+                        "field": field_id,
+                        "value": flag_value,
+                    }
+                )
+            if isinstance(extras_for_log, dict):
+                extras_for_log[f"db_flag_{side}"] = flag_value
+
+    for plan in flag_push_plans:
         _send_flag_update_to_uno(
-            flag_push_plan["url"],
-            flag_push_plan["method"],
-            flag_push_plan["field"],
-            flag_push_plan["value"],
+            plan["url"],
+            plan["method"],
+            plan["field"],
+            plan["value"],
         )
 
     broadcast_kort_state(
@@ -1125,7 +1163,7 @@ def api_local_reflect(kort_id: str):
         else:
             log_extras.setdefault("overlay", overlay_normalized)
 
-    flag_push_plan: Optional[Dict[str, str]] = None
+    flag_push_plans: List[Dict[str, str]] = []
     if command in {"SetNamePlayerA", "SetNamePlayerB"} and isinstance(extras, dict):
         raw_flag_url = (
             extras.get("flagUrl")
@@ -1141,12 +1179,14 @@ def api_local_reflect(kort_id: str):
                     target_url = f"{settings.overlay_base}/{overlay_normalized}/api"
                 if target_url:
                     field_id = "Player A Flag" if command.endswith("A") else "Player B Flag"
-                    flag_push_plan = {
-                        "url": target_url,
-                        "method": uno_method,
-                        "field": field_id,
-                        "value": flag_value,
-                    }
+                    flag_push_plans.append(
+                        {
+                            "url": target_url,
+                            "method": uno_method,
+                            "field": field_id,
+                            "value": flag_value,
+                        }
+                    )
                     if isinstance(log_extras, dict):
                         log_extras.setdefault("flag_url", flag_value)
                 else:
@@ -1161,9 +1201,11 @@ def api_local_reflect(kort_id: str):
 
     ts = now_iso()
 
+    flag_updates: Optional[Dict[str, Dict[str, Optional[str]]]] = None
+
     with STATE_LOCK:
         state = ensure_court_state(kort_id)
-        changed = apply_local_command(state, command, value, extras, kort_id)
+        changed, flag_updates = apply_local_command(state, command, value, extras, kort_id)
         state["local"]["commands"][command] = {
             "value": value,
             "extras": extras_copy,
@@ -1177,6 +1219,38 @@ def api_local_reflect(kort_id: str):
 
         log_state_summary(kort_id, state, "reflect state")
 
+    if flag_updates:
+        for side, info in flag_updates.items():
+            if not isinstance(info, dict):
+                continue
+            flag_value = info.get("flag_url")
+            if not flag_value:
+                continue
+            target_url = normalized_uno_url or _api_endpoint(kort_id)
+            if not target_url and overlay_normalized:
+                target_url = f"{settings.overlay_base}/{overlay_normalized}/api"
+            if not target_url:
+                log.info(
+                    "reflect flag push skipped kort=%s command=%s side=%s reason=no-endpoint",
+                    kort_id,
+                    command,
+                    side,
+                )
+                continue
+            field_id = "Player A Flag" if side == "A" else "Player B Flag"
+            if not any(
+                plan.get("field") == field_id and plan.get("value") == flag_value
+                for plan in flag_push_plans
+            ):
+                flag_push_plans.append(
+                    {
+                        "url": target_url,
+                        "method": uno_method,
+                        "field": field_id,
+                        "value": flag_value,
+                    }
+                )
+
     broadcast_kort_state(
         kort_id,
         "reflect",
@@ -1187,12 +1261,12 @@ def api_local_reflect(kort_id: str):
         None,
     )
 
-    if flag_push_plan:
+    for plan in flag_push_plans:
         _send_flag_update_to_uno(
-            flag_push_plan["url"],
-            flag_push_plan["method"],
-            flag_push_plan["field"],
-            flag_push_plan["value"],
+            plan["url"],
+            plan["method"],
+            plan["field"],
+            plan["value"],
         )
 
     return jsonify({"ok": True, "changed": changed, "state": response_state, "log": entry})
