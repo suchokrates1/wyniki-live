@@ -21,6 +21,13 @@
   const viewerStatusElement = document.getElementById('viewer-status');
   const bodyElement = document.body;
   const adminDisabledSection = document.getElementById('admin-disabled-section');
+  const systemSection = document.getElementById('system-section');
+  const unoToggle = document.getElementById('uno-requests-toggle');
+  const unoToggleStatus = document.getElementById('uno-toggle-status');
+  const playersSection = document.getElementById('players-section');
+  const playerForm = document.getElementById('player-form');
+  const playersTableBody = document.getElementById('players-rows');
+  const refreshPlayersButton = document.getElementById('refresh-players');
 
   if (!configElement) {
     return;
@@ -40,6 +47,8 @@
     'Panel administracyjny jest wyłączony przez administratora.';
   const intFields = new Set(initialConfig.int_fields || []);
   const initialCourts = Array.isArray(initialConfig.courts) ? initialConfig.courts : [];
+  const initialPlayers = Array.isArray(initialConfig.players) ? initialConfig.players : [];
+  let unoRequestsEnabled = initialConfig.uno_requests_enabled === true;
 
   const fieldDefinitions = [
     { name: 'kort_id', type: 'text' },
@@ -59,6 +68,13 @@
     { name: 'set1_tb_b', type: 'number' },
     { name: 'set2_tb_a', type: 'number' },
     { name: 'set2_tb_b', type: 'number' }
+  ];
+
+  const playerFieldDefinitions = [
+    { name: 'name', type: 'text' },
+    { name: 'list_name', type: 'text' },
+    { name: 'flag_code', type: 'text' },
+    { name: 'flag_url', type: 'text' }
   ];
 
   function setFeedback(message, type = 'info') {
@@ -121,6 +137,12 @@
     }
     if (streamSection) {
       streamSection.hidden = !isAuthenticated;
+    }
+    if (systemSection) {
+      systemSection.hidden = !isAuthenticated;
+    }
+    if (playersSection) {
+      playersSection.hidden = !isAuthenticated;
     }
     if (bodyElement) {
       bodyElement.dataset.authenticated = isAuthenticated ? 'true' : 'false';
@@ -238,6 +260,310 @@
     } else {
       courtsTableBody.innerHTML = '';
       courtsTableBody.appendChild(fragment);
+    }
+  }
+
+
+  function applyUnoToggle(enabled) {
+    const value = Boolean(enabled);
+    unoRequestsEnabled = value;
+    if (unoToggle) {
+      unoToggle.checked = value;
+    }
+    if (unoToggleStatus) {
+      unoToggleStatus.textContent = value
+        ? 'Zapytania do UNO są aktywne.'
+        : 'Zapytania do UNO są wyłączone.';
+    }
+  }
+
+
+  async function loadSystemSettings(options = {}) {
+    if (!adminEnabled) {
+      return;
+    }
+    const { successMessage } = options;
+    try {
+      const data = await requestJson('/api/admin/system', { method: 'GET' });
+      if (typeof data.uno_requests_enabled !== 'undefined') {
+        applyUnoToggle(data.uno_requests_enabled);
+      }
+      if (successMessage) {
+        setFeedback(successMessage, 'success');
+      }
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  async function handleUnoToggleChange() {
+    if (!unoToggle) {
+      return;
+    }
+    const desired = unoToggle.checked;
+    try {
+      const data = await requestJson('/api/admin/system', {
+        method: 'PUT',
+        body: JSON.stringify({ uno_requests_enabled: desired })
+      });
+      applyUnoToggle(data.uno_requests_enabled === true);
+      setFeedback('Ustawienia UNO zapisane.', 'success');
+    } catch (error) {
+      applyUnoToggle(unoRequestsEnabled);
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  function createPlayerRow(player) {
+    const row = document.createElement('tr');
+    row.dataset.playerId = String(player.id);
+
+    playerFieldDefinitions.forEach((field) => {
+      const cell = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = field.type;
+      input.name = field.name;
+      input.autocomplete = 'off';
+      let value = player[field.name];
+      if (field.name === 'list_name' && (!value || value === 'default')) {
+        value = '';
+      }
+      if (field.name === 'flag_code' && typeof value === 'string') {
+        value = value.toLowerCase();
+      }
+      input.value = value ?? '';
+      if (field.name === 'flag_code') {
+        input.maxLength = 2;
+      }
+      cell.appendChild(input);
+      row.appendChild(cell);
+    });
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'actions';
+    const updateButton = document.createElement('button');
+    updateButton.type = 'button';
+    updateButton.className = 'update-player';
+    updateButton.textContent = 'Zapisz';
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'delete-player';
+    deleteButton.textContent = 'Usuń';
+    actionsCell.appendChild(updateButton);
+    actionsCell.appendChild(deleteButton);
+    row.appendChild(actionsCell);
+
+    return row;
+  }
+
+
+  function renderPlayers(players) {
+    if (!playersTableBody) {
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    (players || []).forEach((player) => {
+      fragment.appendChild(createPlayerRow(player));
+    });
+
+    if (typeof playersTableBody.replaceChildren === 'function') {
+      playersTableBody.replaceChildren(fragment);
+    } else {
+      playersTableBody.innerHTML = '';
+      playersTableBody.appendChild(fragment);
+    }
+  }
+
+
+  function updatePlayerRowInputs(row, player) {
+    if (!row || !player) {
+      return;
+    }
+    playerFieldDefinitions.forEach((field) => {
+      const input = row.querySelector(`input[name="${field.name}"]`);
+      if (!input) {
+        return;
+      }
+      let value = player[field.name];
+      if (field.name === 'list_name' && (!value || value === 'default')) {
+        value = '';
+      }
+      if (field.name === 'flag_code' && typeof value === 'string') {
+        value = value.toLowerCase();
+      }
+      input.value = value ?? '';
+    });
+  }
+
+
+  function parsePlayerRow(row) {
+    const payload = {};
+    playerFieldDefinitions.forEach((field) => {
+      const input = row.querySelector(`input[name="${field.name}"]`);
+      if (!input) {
+        return;
+      }
+      const value = input.value.trim();
+      if (field.name === 'name') {
+        if (!value) {
+          throw new Error('Podaj imię i nazwisko zawodnika.');
+        }
+        payload.name = value;
+        return;
+      }
+      if (field.name === 'list_name') {
+        payload.list_name = value === '' ? null : value;
+        return;
+      }
+      if (field.name === 'flag_code') {
+        if (!value) {
+          payload.flag_code = null;
+          return;
+        }
+        const normalized = value.toLowerCase();
+        if (!/^[a-z]{2}$/.test(normalized)) {
+          throw new Error('Kod kraju musi składać się z dwóch liter.');
+        }
+        payload.flag_code = normalized;
+        return;
+      }
+      if (field.name === 'flag_url') {
+        payload.flag_url = value === '' ? null : value;
+      }
+    });
+    if (!payload.name) {
+      throw new Error('Podaj imię i nazwisko zawodnika.');
+    }
+    return payload;
+  }
+
+
+  async function refreshPlayers() {
+    try {
+      const data = await requestJson('/api/admin/players', { method: 'GET' });
+      if (Array.isArray(data.players)) {
+        renderPlayers(data.players);
+      }
+      setFeedback('Lista zawodników zaktualizowana.', 'success');
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  async function handlePlayerFormSubmit(event) {
+    event.preventDefault();
+    if (!playerForm) {
+      return;
+    }
+    const formData = new FormData(playerForm);
+    const name = String(formData.get('name') || '').trim();
+    if (!name) {
+      setFeedback('Podaj imię i nazwisko zawodnika.', 'error');
+      return;
+    }
+    const listName = String(formData.get('list_name') || '').trim();
+    const rawFlag = String(formData.get('flag_code') || '').trim().toLowerCase();
+    if (rawFlag && !/^[a-z]{2}$/.test(rawFlag)) {
+      setFeedback('Kod kraju musi składać się z dwóch liter.', 'error');
+      return;
+    }
+    const flagUrl = String(formData.get('flag_url') || '').trim();
+    const payload = { name };
+    if (listName) {
+      payload.list_name = listName;
+    }
+    if (rawFlag) {
+      payload.flag_code = rawFlag;
+    }
+    if (flagUrl) {
+      payload.flag_url = flagUrl;
+    }
+    try {
+      const data = await requestJson('/api/admin/players', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (Array.isArray(data.players)) {
+        renderPlayers(data.players);
+      }
+      playerForm.reset();
+      setFeedback('Zawodnik dodany.', 'success');
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  async function updatePlayerRow(row) {
+    const playerId = row.dataset.playerId;
+    if (!playerId) {
+      setFeedback('Nie udało się odczytać identyfikatora zawodnika.', 'error');
+      return;
+    }
+    let payload;
+    try {
+      payload = parsePlayerRow(row);
+    } catch (error) {
+      setFeedback(error.message, 'error');
+      return;
+    }
+    try {
+      const data = await requestJson(`/api/admin/players/${playerId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+      if (data.player) {
+        updatePlayerRowInputs(row, data.player);
+      }
+      setFeedback('Zawodnik zapisany.', 'success');
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  async function deletePlayerRow(row) {
+    const playerId = row.dataset.playerId;
+    if (!playerId) {
+      setFeedback('Nie udało się odczytać identyfikatora zawodnika.', 'error');
+      return;
+    }
+    if (!window.confirm('Czy na pewno usunąć tego zawodnika?')) {
+      return;
+    }
+    try {
+      const data = await requestJson(`/api/admin/players/${playerId}`, {
+        method: 'DELETE'
+      });
+      if (Array.isArray(data.players)) {
+        renderPlayers(data.players);
+      } else {
+        row.remove();
+      }
+      setFeedback('Zawodnik został usunięty.', 'success');
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  function handlePlayersTableClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const row = target.closest('tr[data-player-id]');
+    if (!row) {
+      return;
+    }
+    if (target.classList.contains('update-player')) {
+      updatePlayerRow(row);
+    } else if (target.classList.contains('delete-player')) {
+      deletePlayerRow(row);
     }
   }
 
@@ -382,6 +708,8 @@
       await refreshHistory();
       await refreshCourts();
       await loadYoutubeConfig();
+      await refreshPlayers();
+      await loadSystemSettings();
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -591,13 +919,26 @@
   if (courtsTableBody && adminEnabled) {
     courtsTableBody.addEventListener('click', handleCourtsTableClick);
   }
+  if (playerForm && adminEnabled) {
+    playerForm.addEventListener('submit', handlePlayerFormSubmit);
+  }
+  if (refreshPlayersButton && adminEnabled) {
+    refreshPlayersButton.addEventListener('click', refreshPlayers);
+  }
+  if (playersTableBody && adminEnabled) {
+    playersTableBody.addEventListener('click', handlePlayersTableClick);
+  }
   if (youtubeConfigForm && adminEnabled) {
     youtubeConfigForm.addEventListener('submit', handleYoutubeConfigSubmit);
   }
   if (refreshViewersButton && adminEnabled) {
     refreshViewersButton.addEventListener('click', handleRefreshViewers);
   }
+  if (unoToggle && adminEnabled) {
+    unoToggle.addEventListener('change', handleUnoToggleChange);
+  }
 
+  applyUnoToggle(unoRequestsEnabled);
   toggleAuthenticated(Boolean(initialConfig.is_authenticated));
   if (adminEnabled) {
     if (Array.isArray(initialConfig.history) && initialConfig.history.length > 0) {
@@ -605,6 +946,7 @@
     }
     if (Boolean(initialConfig.is_authenticated)) {
       renderCourts(initialCourts);
+      renderPlayers(initialPlayers);
       loadYoutubeConfig().catch((error) => {
         if (error && error.message) {
           setFeedback(error.message, 'error');
