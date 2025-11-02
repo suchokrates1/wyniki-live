@@ -6,7 +6,7 @@ import queue
 import re
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from collections import deque
 from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 
@@ -71,6 +71,7 @@ GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size
 
 UNO_REQUESTS_LOCK = threading.Lock()
 UNO_REQUESTS_ENABLED = False
+UNO_AUTO_DISABLED_REASON: Optional[str] = None
 PLUGIN_LOCK = threading.Lock()
 PLUGIN_ENABLED = False
 UNO_RATE_LIMIT_LOCK = threading.Lock()
@@ -88,6 +89,253 @@ UNO_REQUEST_METRICS: Dict[str, Any] = {
     "total": 0,
     "success": 0,
 }
+UNO_REQUEST_USAGE_LOCK = threading.Lock()
+UNO_REQUEST_USAGE: Dict[str, Deque[datetime]] = {}
+UNO_POLLING_CONFIG_LOCK = threading.Lock()
+
+UNO_HOURLY_LIMIT_KEY = "uno_hourly_limit"
+UNO_HOURLY_THRESHOLD_KEY = "uno_hourly_threshold"
+UNO_HOURLY_FACTOR_KEY = "uno_hourly_slowdown_factor"
+UNO_HOURLY_SLEEP_KEY = "uno_hourly_slowdown_sleep"
+
+
+def _sanitize_threshold(value: float) -> float:
+    if value > 1.0:
+        value = value / 100.0
+    return max(0.0, min(1.0, value))
+
+
+DEFAULT_UNO_POLLING_CONFIG: Dict[str, float] = {
+    "limit": float(max(0, int(settings.uno_hourly_limit_per_court))),
+    "threshold": _sanitize_threshold(float(settings.uno_hourly_slowdown_threshold)),
+    "slowdown_factor": float(max(1, int(settings.uno_hourly_slowdown_factor))),
+    "slowdown_sleep": float(max(0.0, float(settings.uno_hourly_slowdown_sleep_seconds))),
+}
+
+# Internal copy guarded by ``UNO_POLLING_CONFIG_LOCK``
+UNO_POLLING_CONFIG: Dict[str, float] = dict(DEFAULT_UNO_POLLING_CONFIG)
+
+
+def _get_uno_config_values() -> Dict[str, float]:
+    with UNO_POLLING_CONFIG_LOCK:
+        return dict(UNO_POLLING_CONFIG)
+
+
+def _parse_int_setting(value: Any, default: int, *, minimum: int) -> int:
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError, AttributeError):
+        return default
+    if parsed < minimum:
+        return minimum
+    return parsed
+
+
+def _parse_float_setting(value: Any, default: float, *, minimum: float = 0.0) -> float:
+    if value is None:
+        return default
+    text = str(value).strip().replace(",", ".")
+    if not text:
+        return default
+    try:
+        parsed = float(text)
+    except ValueError:
+        return default
+    if parsed < minimum:
+        return minimum
+    return parsed
+
+
+def _load_uno_hourly_config_from_db() -> Dict[str, float]:
+    stored = fetch_app_settings(
+        [
+            UNO_HOURLY_LIMIT_KEY,
+            UNO_HOURLY_THRESHOLD_KEY,
+            UNO_HOURLY_FACTOR_KEY,
+            UNO_HOURLY_SLEEP_KEY,
+        ]
+    )
+    current = _get_uno_config_values()
+    limit_default = int(current.get("limit", DEFAULT_UNO_POLLING_CONFIG["limit"]))
+    factor_default = int(current.get("slowdown_factor", DEFAULT_UNO_POLLING_CONFIG["slowdown_factor"]))
+    sleep_default = float(current.get("slowdown_sleep", DEFAULT_UNO_POLLING_CONFIG["slowdown_sleep"]))
+    threshold_default = float(current.get("threshold", DEFAULT_UNO_POLLING_CONFIG["threshold"]))
+
+    limit_value = _parse_int_setting(stored.get(UNO_HOURLY_LIMIT_KEY), limit_default, minimum=0)
+    threshold_value = _sanitize_threshold(
+        _parse_float_setting(stored.get(UNO_HOURLY_THRESHOLD_KEY), threshold_default)
+    )
+    factor_value = _parse_int_setting(
+        stored.get(UNO_HOURLY_FACTOR_KEY), factor_default, minimum=1
+    )
+    sleep_value = _parse_float_setting(
+        stored.get(UNO_HOURLY_SLEEP_KEY), sleep_default, minimum=0.0
+    )
+
+    return {
+        "limit": float(limit_value),
+        "threshold": threshold_value,
+        "slowdown_factor": float(factor_value),
+        "slowdown_sleep": float(sleep_value),
+    }
+
+
+def refresh_uno_hourly_config() -> Dict[str, Any]:
+    loaded = _load_uno_hourly_config_from_db()
+    with UNO_POLLING_CONFIG_LOCK:
+        UNO_POLLING_CONFIG.update(loaded)
+        current = dict(UNO_POLLING_CONFIG)
+    return get_uno_hourly_config()
+
+
+def get_uno_hourly_config() -> Dict[str, Any]:
+    values = _get_uno_config_values()
+    config = {
+        "limit": int(values.get("limit", 0)),
+        "threshold": float(values.get("threshold", 0.0)),
+        "slowdown_factor": int(values.get("slowdown_factor", 1)),
+        "slowdown_sleep": float(values.get("slowdown_sleep", 0.0)),
+    }
+    config["threshold_percent"] = round(config["threshold"] * 100.0, 2)
+    return config
+
+
+def update_uno_hourly_config(
+    *,
+    limit: Optional[int] = None,
+    threshold: Optional[float] = None,
+    slowdown_factor: Optional[int] = None,
+    slowdown_sleep: Optional[float] = None,
+) -> Dict[str, Any]:
+    current = get_uno_hourly_config()
+    new_config = dict(current)
+
+    if limit is not None:
+        if limit < 0:
+            raise ValueError("limit must be >= 0")
+        new_config["limit"] = int(limit)
+    if threshold is not None:
+        new_config["threshold"] = _sanitize_threshold(float(threshold))
+    else:
+        new_config["threshold"] = float(new_config["threshold"])
+    if slowdown_factor is not None:
+        if slowdown_factor < 1:
+            raise ValueError("slowdown_factor must be >= 1")
+        new_config["slowdown_factor"] = int(slowdown_factor)
+    if slowdown_sleep is not None:
+        if slowdown_sleep < 0:
+            raise ValueError("slowdown_sleep must be >= 0")
+        new_config["slowdown_sleep"] = float(slowdown_sleep)
+
+    # Ensure derived field is consistent
+    new_config["threshold_percent"] = round(new_config["threshold"] * 100.0, 2)
+
+    with UNO_POLLING_CONFIG_LOCK:
+        UNO_POLLING_CONFIG.update(
+            {
+                "limit": float(new_config["limit"]),
+                "threshold": float(new_config["threshold"]),
+                "slowdown_factor": float(new_config["slowdown_factor"]),
+                "slowdown_sleep": float(new_config["slowdown_sleep"]),
+            }
+        )
+
+    upsert_app_settings(
+        {
+            UNO_HOURLY_LIMIT_KEY: str(new_config["limit"]),
+            UNO_HOURLY_THRESHOLD_KEY: f"{new_config['threshold']:.4f}",
+            UNO_HOURLY_FACTOR_KEY: str(new_config["slowdown_factor"]),
+            UNO_HOURLY_SLEEP_KEY: f"{new_config['slowdown_sleep']:.2f}",
+        }
+    )
+    log.info(
+        "UNO polling config updated limit=%s threshold=%.3f factor=%s sleep=%.2f",
+        new_config["limit"],
+        new_config["threshold"],
+        new_config["slowdown_factor"],
+        new_config["slowdown_sleep"],
+    )
+    return get_uno_hourly_config()
+
+
+def _prune_usage(queue: Deque[datetime], cutoff: datetime) -> None:
+    while queue and queue[0] < cutoff:
+        queue.popleft()
+
+
+def _record_hourly_usage(kort_id: str, timestamp: datetime) -> int:
+    if not kort_id:
+        return 0
+    cutoff = timestamp - timedelta(hours=1)
+    with UNO_REQUEST_USAGE_LOCK:
+        queue = UNO_REQUEST_USAGE.setdefault(kort_id, deque())
+        queue.append(timestamp)
+        _prune_usage(queue, cutoff)
+        return len(queue)
+
+
+def get_uno_hourly_status(kort_id: str) -> Dict[str, Any]:
+    timestamp = datetime.now(timezone.utc)
+    cutoff = timestamp - timedelta(hours=1)
+    with UNO_REQUEST_USAGE_LOCK:
+        queue = UNO_REQUEST_USAGE.setdefault(kort_id, deque())
+        _prune_usage(queue, cutoff)
+        count = len(queue)
+    config_values = _get_uno_config_values()
+    limit = int(config_values.get("limit", DEFAULT_UNO_POLLING_CONFIG["limit"]))
+    threshold = float(config_values.get("threshold", DEFAULT_UNO_POLLING_CONFIG["threshold"]))
+    slowdown_factor = max(1, int(config_values.get("slowdown_factor", DEFAULT_UNO_POLLING_CONFIG["slowdown_factor"])) )
+    slowdown_sleep = max(0.0, float(config_values.get("slowdown_sleep", DEFAULT_UNO_POLLING_CONFIG["slowdown_sleep"])) )
+    if not is_uno_requests_enabled():
+        return {
+            "kort_id": kort_id,
+            "count": count,
+            "limit": limit,
+            "remaining": limit - count if limit > 0 else None,
+            "ratio": 0.0 if limit <= 0 else min(1.0, count / float(limit)),
+            "threshold": threshold,
+            "mode": "disabled",
+            "slowdown_factor": slowdown_factor,
+            "slowdown_sleep": slowdown_sleep,
+        }
+    if limit <= 0:
+        return {
+            "kort_id": kort_id,
+            "count": count,
+            "limit": limit,
+            "remaining": None,
+            "ratio": 0.0,
+            "threshold": threshold,
+            "mode": "unlimited",
+            "slowdown_factor": slowdown_factor,
+            "slowdown_sleep": slowdown_sleep,
+        }
+    ratio = count / float(limit)
+    remaining = max(0, limit - count)
+    if ratio >= 1.0:
+        mode = "limit"
+    elif ratio >= threshold:
+        mode = "slowdown"
+    else:
+        mode = "normal"
+    return {
+        "kort_id": kort_id,
+        "count": count,
+        "limit": limit,
+        "remaining": remaining,
+        "ratio": ratio,
+        "threshold": threshold,
+        "mode": mode,
+        "slowdown_factor": slowdown_factor,
+        "slowdown_sleep": slowdown_sleep,
+    }
+
+
+def get_uno_hourly_usage_summary() -> Dict[str, Dict[str, Any]]:
+    summary: Dict[str, Dict[str, Any]] = {}
+    for kort_id, _ in available_courts():
+        summary[kort_id] = get_uno_hourly_status(kort_id)
+    return summary
 CANDIDATE_RATE_LIMIT_HEADERS = (
     "rate-limit-daily",
     "ratelimit-limit",
@@ -121,18 +369,32 @@ def is_uno_requests_enabled() -> bool:
         return UNO_REQUESTS_ENABLED
 
 
+def get_uno_auto_disabled_reason() -> Optional[str]:
+    with UNO_REQUESTS_LOCK:
+        return UNO_AUTO_DISABLED_REASON
+
+
 def is_plugin_enabled() -> bool:
     with PLUGIN_LOCK:
         return PLUGIN_ENABLED
 
 
-def set_uno_requests_enabled(enabled: bool) -> None:
+def set_uno_requests_enabled(enabled: bool, reason: Optional[str] = None) -> None:
     normalized = bool(enabled)
     with UNO_REQUESTS_LOCK:
-        global UNO_REQUESTS_ENABLED
+        global UNO_REQUESTS_ENABLED, UNO_AUTO_DISABLED_REASON
         UNO_REQUESTS_ENABLED = normalized
+        if normalized:
+            UNO_AUTO_DISABLED_REASON = None
+        else:
+            UNO_AUTO_DISABLED_REASON = reason
     upsert_app_settings({"uno_requests_enabled": "1" if normalized else "0"})
-    log.info("UNO requests %s", "enabled" if normalized else "disabled")
+    if normalized:
+        log.info("UNO requests enabled")
+    elif reason:
+        log.warning("UNO requests disabled reason=%s", reason)
+    else:
+        log.info("UNO requests disabled")
 
 
 def set_plugin_enabled(enabled: bool) -> None:
@@ -147,8 +409,10 @@ def set_plugin_enabled(enabled: bool) -> None:
 def refresh_uno_requests_setting() -> bool:
     new_value = _load_uno_requests_setting()
     with UNO_REQUESTS_LOCK:
-        global UNO_REQUESTS_ENABLED
+        global UNO_REQUESTS_ENABLED, UNO_AUTO_DISABLED_REASON
         UNO_REQUESTS_ENABLED = new_value
+        if new_value:
+            UNO_AUTO_DISABLED_REASON = None
     return new_value
 
 
@@ -232,7 +496,7 @@ def _log_uno_request_summary(bucket: datetime, success: int, total: int) -> None
     log.info("Zapytania do UNO %s: %s/%s", readable, success, total)
 
 
-def record_uno_request(success: bool) -> None:
+def record_uno_request(success: bool, kort_id: Optional[str] = None, command: Optional[str] = None) -> Optional[str]:
     now = datetime.now(timezone.utc)
     bucket = now.replace(second=0, microsecond=0)
     with UNO_REQUEST_METRICS_LOCK:
@@ -252,6 +516,17 @@ def record_uno_request(success: bool) -> None:
         UNO_REQUEST_METRICS["total"] = int(UNO_REQUEST_METRICS.get("total") or 0) + 1
         if success:
             UNO_REQUEST_METRICS["success"] = int(UNO_REQUEST_METRICS.get("success") or 0) + 1
+    auto_reason: Optional[str] = None
+    if kort_id:
+        count = _record_hourly_usage(kort_id, now)
+        config_values = _get_uno_config_values()
+        limit = int(config_values.get("limit", DEFAULT_UNO_POLLING_CONFIG["limit"]))
+        if limit > 0 and count >= limit and is_uno_requests_enabled():
+            auto_reason = (
+                f"kort {kort_id} reached UNO hourly limit ({count}/{limit})"
+            )
+            set_uno_requests_enabled(False, auto_reason)
+    return auto_reason
 
 
 def get_uno_rate_limit_info() -> Dict[str, Optional[object]]:
@@ -309,6 +584,7 @@ def _empty_court_state() -> Dict[str, Any]:
         "history_meta": {"category": None, "phase": DEFAULT_HISTORY_PHASE},
         "local": {"commands": {}, "updated": None},
         "uno": {
+            "last_remote_command": None,
             "last_command": None,
             "last_value": None,
             "last_payload": None,
@@ -1174,6 +1450,7 @@ def load_match_history() -> None:
 load_match_history()
 refresh_uno_requests_setting()
 refresh_plugin_setting()
+refresh_uno_hourly_config()
 
 
 def reset_after_match(state: Dict[str, Any]) -> None:
@@ -1671,6 +1948,10 @@ __all__ = [
     "event_broker",
     "finalize_match_if_needed",
     "handle_match_flow",
+    "get_uno_auto_disabled_reason",
+    "get_uno_hourly_config",
+    "get_uno_hourly_status",
+    "get_uno_hourly_usage_summary",
     "is_uno_requests_enabled",
     "is_known_kort",
     "load_match_history",
@@ -1679,8 +1960,11 @@ __all__ = [
     "normalize_kort_id",
     "persist_state_cache",
     "refresh_uno_requests_setting",
+    "refresh_uno_hourly_config",
     "refresh_courts_from_db",
     "record_log_entry",
+    "record_uno_request",
+    "update_uno_hourly_config",
     "set_uno_requests_enabled",
     "get_kort_for_overlay",
     "get_overlay_for_kort",

@@ -112,6 +112,10 @@ class Settings:
         os.environ.get("YOUTUBE_STREAM_ID")
         or "AIKUKTQ7I0A"
     ).strip()
+    uno_hourly_limit_per_court: int = int(os.environ.get("UNO_HOURLY_LIMIT_PER_COURT", "1000"))
+    uno_hourly_slowdown_threshold: float = float(os.environ.get("UNO_HOURLY_SLOWDOWN_THRESHOLD", "0.8"))
+    uno_hourly_slowdown_factor: int = int(os.environ.get("UNO_HOURLY_SLOWDOWN_FACTOR", "4"))
+    uno_hourly_slowdown_sleep_seconds: float = float(os.environ.get("UNO_HOURLY_SLOWDOWN_SLEEP_SECONDS", "5"))
     overlay_ids: Dict[str, str] = field(default_factory=dict)
     overlay_id_to_kort: Dict[str, str] = field(default_factory=dict)
 

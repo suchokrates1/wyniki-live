@@ -13,25 +13,6 @@
   >
     <main class="container">
       <h1>Panel administracyjny</h1>
-      <section id="uno-limit-banner" class="admin-rate-limit" hidden>
-        <div class="admin-rate-limit__icon" aria-hidden="true">⚡</div>
-        <div class="admin-rate-limit__content">
-          <p class="admin-rate-limit__title">Dzienne limity zapytań UNO</p>
-          <p class="admin-rate-limit__line">
-            Limit dzienny: <strong id="uno-rate-limit-value">—</strong>
-            <span id="uno-rate-limit-header" class="admin-rate-limit__tag" hidden></span>
-          </p>
-          <p class="admin-rate-limit__line">
-            Pozostało dzisiaj: <strong id="uno-rate-limit-remaining">—</strong>
-          </p>
-          <p class="admin-rate-limit__meta">
-            Ostatnia aktualizacja: <span id="uno-rate-limit-updated">—</span>
-          </p>
-          <p class="admin-rate-limit__meta">
-            Reset limitu: <span id="uno-rate-limit-reset">—</span>
-          </p>
-        </div>
-      </section>
       <div id="admin-feedback" class="feedback" role="alert" aria-live="polite"></div>
 
       <section id="admin-disabled-section" {% if admin_enabled %}hidden{% endif %}>
@@ -85,14 +66,67 @@
         <header class="section-header">
           <h2>System</h2>
         </header>
-        <div class="system-toggle">
-          <label class="toggle">
-            <input id="uno-requests-toggle" type="checkbox" />
-            <span>Wysyłaj zapytania do UNO</span>
-          </label>
-          <p id="uno-toggle-status" class="system-note">
-            Gdy opcja jest wyłączona, żadne komendy nie są wysyłane do UNO.
-          </p>
+        <div id="uno-status-card" class="admin-rate-limit">
+          <div class="admin-rate-limit__icon" aria-hidden="true">⚡</div>
+          <div class="admin-rate-limit__content uno-status-wrapper">
+            <div class="uno-status-controls">
+              <label class="toggle">
+                <input id="uno-requests-toggle" type="checkbox" />
+                <span>Wysyłaj zapytania do UNO</span>
+              </label>
+              <p id="uno-toggle-status" class="system-note">
+                Gdy opcja jest wyłączona, żadne komendy nie są wysyłane do UNO.
+              </p>
+            </div>
+            <dl class="uno-status-list">
+              <div>
+                <dt>Dzienny limit</dt>
+                <dd id="uno-daily-summary">—</dd>
+              </div>
+              <div>
+                <dt>Godzinowy limit</dt>
+                <dd id="uno-hourly-summary">—</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd id="uno-status-label">—</dd>
+              </div>
+            </dl>
+            <p id="uno-auto-disabled" class="system-note" hidden></p>
+            <form id="uno-poller-form" class="uno-poller-form">
+              <div class="uno-poller-grid">
+                <label for="uno-hourly-limit">Limit/h (na kort)</label>
+                <input id="uno-hourly-limit" name="limit" type="number" min="0" step="1" />
+                <label for="uno-slowdown-threshold">Spowolnij przy (%)</label>
+                <input
+                  id="uno-slowdown-threshold"
+                  name="threshold_percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                />
+                <label for="uno-slowdown-factor">Przepuść co n-te zapytanie</label>
+                <input id="uno-slowdown-factor" name="slowdown_factor" type="number" min="1" step="1" />
+                <label for="uno-slowdown-sleep">Dodatkowa pauza (s)</label>
+                <input id="uno-slowdown-sleep" name="slowdown_sleep" type="number" min="0" step="0.5" />
+              </div>
+              <div class="uno-poller-actions">
+                <button type="submit">Zapisz limity</button>
+              </div>
+            </form>
+            <div id="uno-rate-limit-meta" class="uno-rate-meta" hidden>
+              <p class="admin-rate-limit__meta">
+                Nagłówek: <span id="uno-rate-limit-header">—</span>
+              </p>
+              <p class="admin-rate-limit__meta">
+                Reset limitu: <span id="uno-rate-limit-reset">—</span>
+              </p>
+              <p class="admin-rate-limit__meta">
+                Ostatnia aktualizacja: <span id="uno-rate-limit-updated">—</span>
+              </p>
+            </div>
+          </div>
         </div>
         <div class="system-toggle">
           <label class="toggle">
@@ -299,6 +333,9 @@
       'uno_requests_enabled': uno_requests_enabled,
       'plugin_enabled': plugin_enabled,
       'uno_rate_limit': uno_rate_limit,
+      'uno_hourly_usage': uno_hourly_usage,
+      'uno_hourly_config': uno_hourly_config,
+      'uno_auto_disabled_reason': uno_auto_disabled_reason,
       'int_fields': int_fields,
       'admin_enabled': admin_enabled,
       'admin_disabled_message': admin_disabled_message,

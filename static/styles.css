@@ -226,6 +226,87 @@ nav a:focus {
   border: 1px solid rgba(11, 110, 253, 0.35);
 }
 
+.uno-status-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.uno-status-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin: 0;
+  padding: 0;
+}
+
+.uno-status-list dt {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.uno-status-list dd {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.uno-status-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uno-poller-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.uno-poller-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.uno-poller-grid label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.uno-poller-grid input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+}
+
+.uno-poller-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.uno-poller-actions button {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.uno-rate-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 main {
   padding: 16px 0;
 }

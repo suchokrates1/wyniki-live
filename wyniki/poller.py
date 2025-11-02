@@ -8,7 +8,12 @@ import requests
 
 from .config import settings, log
 from .query_system import QuerySystem
-from .state import available_courts, is_uno_requests_enabled, normalize_kort_id
+from .state import (
+    available_courts,
+    get_uno_hourly_status,
+    is_uno_requests_enabled,
+    normalize_kort_id,
+)
 from .utils import shorten
 
 
@@ -73,6 +78,8 @@ class CourtPollingWorker(threading.Thread):
         self.client = UnoCommandClient(kort_id)
         self._stop_event = threading.Event()
         self.system = QuerySystem(self.client, sleep_fn=self._sleep)
+        self._slowdown_counter = 0
+        self._last_mode: Optional[str] = None
 
     def _sleep(self, delay: float) -> None:
         if delay <= 0:
@@ -90,6 +97,50 @@ class CourtPollingWorker(threading.Thread):
                     if self._stop_event.wait(1.0):
                         break
                     continue
+                status = get_uno_hourly_status(self.kort_id)
+                mode = status.get("mode")
+                if mode != self._last_mode:
+                    if mode == "slowdown":
+                        log.warning(
+                            "UNO poller slowdown kort=%s count=%s limit=%s remaining=%s",
+                            self.kort_id,
+                            status.get("count"),
+                            status.get("limit"),
+                            status.get("remaining"),
+                        )
+                    elif mode == "normal" and self._last_mode in {"slowdown", "limit"}:
+                        log.info(
+                            "UNO poller resumed normal cadence kort=%s count=%s limit=%s",
+                            self.kort_id,
+                            status.get("count"),
+                            status.get("limit"),
+                        )
+                    elif mode == "limit":
+                        log.warning(
+                            "UNO poller hit hourly limit kort=%s count=%s limit=%s",
+                            self.kort_id,
+                            status.get("count"),
+                            status.get("limit"),
+                        )
+                    self._last_mode = mode
+
+                if mode == "limit":
+                    sleep_for = float(status.get("slowdown_sleep") or 5.0)
+                    if self._stop_event.wait(sleep_for):
+                        break
+                    continue
+
+                if mode == "slowdown":
+                    factor = max(1, int(status.get("slowdown_factor") or 1))
+                    self._slowdown_counter = (self._slowdown_counter + 1) % factor
+                    if self._slowdown_counter != 0:
+                        sleep_for = float(status.get("slowdown_sleep") or 5.0)
+                        if self._stop_event.wait(sleep_for):
+                            break
+                        continue
+                else:
+                    self._slowdown_counter = 0
+
                 try:
                     self.system.run_once()
                 except Exception as exc:  # pragma: no cover - defensive guard
