@@ -26,12 +26,17 @@ from .config import DOWNLOAD_DIR, STATIC_DIR, log, normalize_overlay_id, setting
 from .database import (
     delete_court,
     delete_history_entry,
+    delete_player,
     fetch_all_history,
     fetch_app_settings,
     fetch_history_entry,
+    fetch_player,
+    fetch_players,
     update_history_entry,
+    update_player,
     upsert_app_settings,
     upsert_court,
+    insert_player,
 )
 from .state import (
     DEFAULT_HISTORY_PHASE,
@@ -44,12 +49,16 @@ from .state import (
     get_kort_for_overlay,
     get_overlay_for_kort,
     log_state_summary,
+    load_match_history,
+    is_uno_requests_enabled,
     is_known_kort,
     normalize_kort_id,
     persist_state_cache,
     reset_after_match,
+    refresh_uno_requests_setting,
     refresh_courts_from_db,
     record_log_entry,
+    set_uno_requests_enabled,
     serialize_court_state,
     serialize_history,
     serialize_public_snapshot,
@@ -198,6 +207,26 @@ def _serialize_courts() -> List[Dict[str, Optional[str]]]:
     ]
 
 
+def _serialize_player(record: Dict[str, Optional[str]]) -> Dict[str, Optional[str]]:
+    return {
+        "id": record.get("id"),
+        "name": record.get("name"),
+        "list_name": record.get("list_name"),
+        "flag_code": record.get("flag_code"),
+        "flag_url": record.get("flag_url"),
+    }
+
+
+def _public_player_payload(record: Dict[str, Optional[str]]) -> Dict[str, Optional[str]]:
+    return {
+        "id": record.get("id"),
+        "name": record.get("name"),
+        "flag": record.get("flag_code"),
+        "flagUrl": record.get("flag_url"),
+        "list": record.get("list_name"),
+    }
+
+
 def _sanitize_court_payload(payload: Dict[str, object]) -> Tuple[str, Optional[str]]:
     raw_kort = payload.get("kort_id") or payload.get("kort")
     kort_id = normalize_kort_id(raw_kort) if raw_kort is not None else None
@@ -211,6 +240,46 @@ def _sanitize_court_payload(payload: Dict[str, object]) -> Tuple[str, Optional[s
         return kort_id, None
     normalized_overlay = normalize_overlay_id(overlay_text) or overlay_text
     return kort_id, normalized_overlay
+
+
+def _sanitize_player_payload(payload: Dict[str, object], *, partial: bool = False) -> Dict[str, Optional[str]]:
+    if not isinstance(payload, dict):
+        raise ValueError("payload")
+    sanitized: Dict[str, Optional[str]] = {}
+    if not partial or "name" in payload:
+        value = payload.get("name")
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("name")
+        sanitized["name"] = value.strip()
+    if "list_name" in payload or not partial:
+        raw_list = payload.get("list_name") if "list_name" in payload else "default"
+        if raw_list is None:
+            sanitized["list_name"] = "default"
+        elif not isinstance(raw_list, str):
+            raise ValueError("list_name")
+        else:
+            text = raw_list.strip()
+            sanitized["list_name"] = text or "default"
+    if "flag_code" in payload:
+        raw_code = payload.get("flag_code")
+        if raw_code is None:
+            sanitized["flag_code"] = None
+        elif not isinstance(raw_code, str):
+            raise ValueError("flag_code")
+        else:
+            text = raw_code.strip().lower()
+            if text and not re.fullmatch(r"[a-z]{2}", text):
+                raise ValueError("flag_code")
+            sanitized["flag_code"] = text or None
+    if "flag_url" in payload:
+        raw_url = payload.get("flag_url")
+        if raw_url is None:
+            sanitized["flag_url"] = None
+        elif not isinstance(raw_url, str):
+            raise ValueError("flag_url")
+        else:
+            sanitized["flag_url"] = raw_url.strip() or None
+    return sanitized
 
 
 def register_routes(app: Flask) -> None:
@@ -237,11 +306,14 @@ def admin_index() -> str:
         if is_authenticated
         else []
     )
+    players = fetch_players() if is_authenticated else []
     return render_file_template(
         "admin.html",
         is_authenticated=is_authenticated,
         history=history,
         courts=courts,
+        players=players,
+        uno_requests_enabled=is_uno_requests_enabled(),
         int_fields=sorted(HISTORY_INT_FIELDS),
         admin_enabled=admin_enabled,
         admin_disabled_message=ADMIN_DISABLED_MESSAGE,
@@ -365,6 +437,8 @@ def admin_api_history_update(entry_id: int):
         return jsonify({"ok": False, "error": "no-updates"}), 400
     updated = update_history_entry(entry_id, sanitized)
     refreshed = fetch_history_entry(entry_id)
+    if updated:
+        load_match_history()
     return jsonify({"ok": True, "updated": updated, "entry": refreshed})
 
 
@@ -377,6 +451,8 @@ def admin_api_history_delete(entry_id: int):
     if not existing:
         return jsonify({"ok": False, "error": "not-found"}), 404
     deleted = delete_history_entry(entry_id)
+    if deleted:
+        load_match_history()
     return jsonify({"ok": True, "deleted": deleted, "entry": existing})
 
 
@@ -476,6 +552,137 @@ def admin_api_courts_reset(kort_id: str):
     )
 
 
+@admin_api_blueprint.route("/players", methods=["GET"])
+def admin_api_players_list():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    list_name = request.args.get("list")
+    players = fetch_players(list_name)
+    return jsonify({"ok": True, "players": [_serialize_player(player) for player in players]})
+
+
+@admin_api_blueprint.route("/players", methods=["POST"])
+def admin_api_players_create():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid-payload"}), 400
+    try:
+        sanitized = _sanitize_player_payload(payload)
+    except ValueError as exc:
+        return (
+            jsonify({"ok": False, "error": "invalid-field", "field": str(exc)}),
+            400,
+        )
+    player_id = insert_player(
+        sanitized.get("name", ""),
+        sanitized.get("list_name"),
+        sanitized.get("flag_code"),
+        sanitized.get("flag_url"),
+    )
+    record = fetch_player(player_id)
+    players = fetch_players()
+    return jsonify(
+        {
+            "ok": True,
+            "player": _serialize_player(record or {}),
+            "players": [_serialize_player(player) for player in players],
+        }
+    )
+
+
+@admin_api_blueprint.route("/players/<int:player_id>", methods=["PUT"])
+def admin_api_players_update(player_id: int):
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    existing = fetch_player(player_id)
+    if not existing:
+        return jsonify({"ok": False, "error": "not-found"}), 404
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid-payload"}), 400
+    try:
+        sanitized = _sanitize_player_payload(payload, partial=True)
+    except ValueError as exc:
+        return (
+            jsonify({"ok": False, "error": "invalid-field", "field": str(exc)}),
+            400,
+        )
+    if not sanitized:
+        return jsonify({"ok": False, "error": "no-updates"}), 400
+    try:
+        updated = update_player(player_id, sanitized)
+    except ValueError as exc:
+        return (
+            jsonify({"ok": False, "error": "invalid-field", "field": str(exc)}),
+            400,
+        )
+    refreshed = fetch_player(player_id)
+    return jsonify(
+        {
+            "ok": True,
+            "updated": bool(updated),
+            "player": _serialize_player(refreshed or existing),
+        }
+    )
+
+
+@admin_api_blueprint.route("/players/<int:player_id>", methods=["DELETE"])
+def admin_api_players_delete(player_id: int):
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    existing = fetch_player(player_id)
+    if not existing:
+        return jsonify({"ok": False, "error": "not-found"}), 404
+    deleted = delete_player(player_id)
+    players = fetch_players()
+    return jsonify(
+        {
+            "ok": True,
+            "deleted": bool(deleted),
+            "player": _serialize_player(existing),
+            "players": [_serialize_player(player) for player in players],
+        }
+    )
+
+
+@admin_api_blueprint.route("/system", methods=["GET"])
+def admin_api_system_settings():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    return jsonify({"ok": True, "uno_requests_enabled": is_uno_requests_enabled()})
+
+
+@admin_api_blueprint.route("/system", methods=["PUT"])
+def admin_api_system_update():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or "uno_requests_enabled" not in payload:
+        return jsonify({"ok": False, "error": "invalid-payload"}), 400
+    value = payload.get("uno_requests_enabled")
+    enabled = bool(value) if isinstance(value, bool) else None
+    if enabled is None:
+        if isinstance(value, (str, int)):
+            text = str(value).strip().lower()
+            if text in {"1", "true", "yes", "on"}:
+                enabled = True
+            elif text in {"0", "false", "no", "off"}:
+                enabled = False
+    if enabled is None:
+        return jsonify({"ok": False, "error": "invalid-field", "field": "uno_requests_enabled"}), 400
+    set_uno_requests_enabled(enabled)
+    refresh_uno_requests_setting()
+    return jsonify({"ok": True, "uno_requests_enabled": is_uno_requests_enabled()})
+
+
 @blueprint.route("/")
 def index() -> str:
     return render_file_template("index.html")
@@ -503,6 +710,36 @@ def download_plugin():
     if not archive_names:
         abort(404)
     return send_from_directory(DOWNLOAD_DIR, archive_names[0], as_attachment=True)
+
+
+@blueprint.route("/api/players")
+def api_players():
+    list_name = request.args.get("list")
+    all_players = fetch_players()
+    normalized_list = None
+    if list_name is not None:
+        normalized_list = list_name.strip()
+        if not normalized_list:
+            normalized_list = "default"
+    if normalized_list:
+        filtered_players = [
+            player
+            for player in all_players
+            if (player.get("list_name") or "default") == normalized_list
+        ]
+    else:
+        filtered_players = all_players
+    available_lists = sorted({(player.get("list_name") or "default") for player in all_players})
+    payload = {
+        "ok": True,
+        "generated_at": now_iso(),
+        "count": len(filtered_players),
+        "players": [_public_player_payload(player) for player in filtered_players],
+        "lists": available_lists,
+    }
+    if normalized_list:
+        payload["list"] = normalized_list
+    return jsonify(payload)
 
 
 @blueprint.route("/api/snapshot")
@@ -584,6 +821,13 @@ def _send_flag_update_to_uno(
     field_id: str,
     flag_url: str,
 ) -> Tuple[bool, Optional[int], Optional[object]]:
+    if not is_uno_requests_enabled():
+        log.info(
+            "flag push skipped url=%s field=%s reason=uno-disabled",
+            shorten(url),
+            field_id,
+        )
+        return False, None, {"error": "uno-disabled"}
     payload = {
         "command": "SetCustomizationField",
         "fieldId": field_id,
@@ -961,6 +1205,16 @@ def api_uno_exec(kort_id: str):
         kort_id = normalized_id
     if not is_known_kort(kort_id):
         return jsonify({"error": "unknown kort"}), 404
+    if not is_uno_requests_enabled():
+        return (
+            jsonify(
+                {
+                    "error": "uno-disabled",
+                    "message": "Wysyłanie zapytań do UNO jest obecnie wyłączone.",
+                }
+            ),
+            503,
+        )
 
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):

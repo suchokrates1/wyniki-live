@@ -54,6 +54,17 @@ def init_db() -> None:
         )
         cursor.execute(
             """
+            CREATE TABLE IF NOT EXISTS players (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              list_name TEXT NOT NULL DEFAULT 'default',
+              name TEXT NOT NULL,
+              flag_code TEXT,
+              flag_url TEXT
+            );
+            """
+        )
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS snapshot_meta (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               ts TEXT NOT NULL,
@@ -169,6 +180,99 @@ def upsert_app_settings(updates: Dict[str, Optional[str]]) -> None:
                     (key, value),
                 )
         connection.commit()
+
+
+def _row_to_player_dict(row: sqlite3.Row) -> Dict[str, Optional[str]]:
+    return {
+        "id": int(row["id"]),
+        "list_name": row["list_name"],
+        "name": row["name"],
+        "flag_code": row["flag_code"],
+        "flag_url": row["flag_url"],
+    }
+
+
+def fetch_players(list_name: Optional[str] = None) -> List[Dict[str, Optional[str]]]:
+    query = "SELECT id, list_name, name, flag_code, flag_url FROM players"
+    params: List[object] = []
+    if list_name:
+        query += " WHERE list_name = ?"
+        params.append(str(list_name))
+    query += " ORDER BY list_name COLLATE NOCASE, name COLLATE NOCASE, id"
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+    return [_row_to_player_dict(row) for row in rows]
+
+
+def fetch_player(player_id: int) -> Optional[Dict[str, Optional[str]]]:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT id, list_name, name, flag_code, flag_url FROM players WHERE id = ?",
+            (player_id,),
+        )
+        row = cursor.fetchone()
+    if not row:
+        return None
+    return _row_to_player_dict(row)
+
+
+def insert_player(
+    name: str,
+    list_name: Optional[str] = None,
+    flag_code: Optional[str] = None,
+    flag_url: Optional[str] = None,
+) -> int:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            INSERT INTO players (list_name, name, flag_code, flag_url)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                str(list_name or "default"),
+                name,
+                flag_code.strip() if flag_code else None,
+                flag_url.strip() if flag_url else None,
+            ),
+        )
+        connection.commit()
+        return int(cursor.lastrowid)
+
+
+def update_player(player_id: int, updates: Dict[str, Optional[str]]) -> bool:
+    allowed = {"name", "list_name", "flag_code", "flag_url"}
+    sanitized: Dict[str, Optional[str]] = {}
+    for raw_key, raw_value in updates.items():
+        if raw_key not in allowed:
+            continue
+        if raw_value is None:
+            sanitized[raw_key] = None
+        else:
+            sanitized[raw_key] = str(raw_value).strip() or None
+    if "name" in sanitized and not sanitized["name"]:
+        raise ValueError("name")
+    if not sanitized:
+        return False
+    columns = ", ".join(f"{key} = ?" for key in sanitized)
+    values = list(sanitized.values())
+    values.append(player_id)
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(f"UPDATE players SET {columns} WHERE id = ?", values)
+        connection.commit()
+        return cursor.rowcount > 0
+
+
+def delete_player(player_id: int) -> bool:
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM players WHERE id = ?", (player_id,))
+        connection.commit()
+        return cursor.rowcount > 0
 
 
 def fetch_courts() -> List[Dict[str, Optional[str]]]:
@@ -469,14 +573,19 @@ __all__ = [
     "db_conn",
     "delete_court",
     "delete_latest_history_entry",
+    "delete_player",
     "fetch_app_settings",
     "fetch_court",
     "fetch_courts",
+    "fetch_player",
+    "fetch_players",
     "fetch_recent_history",
     "fetch_state_cache",
     "init_db",
     "insert_match_history",
+    "insert_player",
     "upsert_app_settings",
     "upsert_court",
+    "update_player",
     "upsert_state_cache",
 ]

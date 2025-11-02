@@ -584,6 +584,30 @@ main.container section {
   gap: 8px;
 }
 
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.system-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.system-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .youtube-config-form {
   display: grid;
   gap: 12px;
@@ -635,17 +659,39 @@ main.container section {
   color: var(--muted);
 }
 
+.player-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.player-form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.player-form-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.players-table-wrapper,
 .courts-table-wrapper,
 .history-table-wrapper {
   overflow-x: auto;
 }
 
+.players-table,
 .courts-table,
 .history-table {
   width: 100%;
   border-collapse: collapse;
 }
 
+.players-table th,
+.players-table td,
 .courts-table th,
 .courts-table td,
 .history-table th,
@@ -655,12 +701,14 @@ main.container section {
   text-align: left;
 }
 
+.players-table th,
 .courts-table th,
 .history-table th {
   font-weight: 600;
   background: rgba(255, 255, 255, 0.04);
 }
 
+.players-table .actions,
 .courts-table .actions,
 .history-table .actions {
   display: flex;
