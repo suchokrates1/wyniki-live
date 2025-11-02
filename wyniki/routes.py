@@ -246,6 +246,7 @@ def _plugin_players_path() -> Optional[str]:
 
 
 def _load_plugin_flag_catalog() -> Dict[str, str]:
+    global FLAG_PLUGIN_CACHE, FLAG_PLUGIN_MTIME
     path = _plugin_players_path()
     try:
         mtime = os.path.getmtime(path) if path else None
