@@ -6,6 +6,7 @@ import queue
 import re
 import threading
 import time
+from datetime import datetime, timezone
 from collections import deque
 from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 
@@ -79,6 +80,12 @@ UNO_RATE_LIMIT_INFO: Dict[str, Optional[object]] = {
     "remaining": None,
     "reset": None,
     "updated": None,
+}
+UNO_REQUEST_METRICS_LOCK = threading.Lock()
+UNO_REQUEST_METRICS: Dict[str, Any] = {
+    "bucket": None,
+    "total": 0,
+    "success": 0,
 }
 CANDIDATE_RATE_LIMIT_HEADERS = (
     "rate-limit-daily",
@@ -217,6 +224,33 @@ def update_uno_rate_limit(headers: Optional[Dict[str, str]]) -> None:
                 "updated": now_iso(),
             }
         )
+
+
+def _log_uno_request_summary(bucket: datetime, success: int, total: int) -> None:
+    readable = bucket.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M")
+    log.info("Zapytania do UNO %s: %s/%s", readable, success, total)
+
+
+def record_uno_request(success: bool) -> None:
+    now = datetime.now(timezone.utc)
+    bucket = now.replace(second=0, microsecond=0)
+    with UNO_REQUEST_METRICS_LOCK:
+        current_bucket: Optional[datetime] = UNO_REQUEST_METRICS.get("bucket")
+        if current_bucket is None:
+            UNO_REQUEST_METRICS["bucket"] = bucket
+            current_bucket = bucket
+        elif bucket != current_bucket:
+            total = int(UNO_REQUEST_METRICS.get("total") or 0)
+            success_count = int(UNO_REQUEST_METRICS.get("success") or 0)
+            if total:
+                _log_uno_request_summary(current_bucket, success_count, total)
+            UNO_REQUEST_METRICS["bucket"] = bucket
+            UNO_REQUEST_METRICS["total"] = 0
+            UNO_REQUEST_METRICS["success"] = 0
+            current_bucket = bucket
+        UNO_REQUEST_METRICS["total"] = int(UNO_REQUEST_METRICS.get("total") or 0) + 1
+        if success:
+            UNO_REQUEST_METRICS["success"] = int(UNO_REQUEST_METRICS.get("success") or 0) + 1
 
 
 def get_uno_rate_limit_info() -> Dict[str, Optional[object]]:
