@@ -542,19 +542,19 @@
     const sleepValue = Number(config.slowdown_sleep);
 
     if (unoHourlyLimitInput) {
-      unoHourlyLimitInput.value = Number.isFinite(limitValue) ? Math.round(limitValue) : '';
+      unoHourlyLimitInput.value = Number.isFinite(limitValue) ? String(Math.round(limitValue)) : '';
     }
     if (unoSlowdownThresholdInput) {
       unoSlowdownThresholdInput.value = Number.isFinite(thresholdPercent)
-        ? Math.round(thresholdPercent)
+        ? String(Math.round(thresholdPercent))
         : '';
     }
     if (unoSlowdownFactorInput) {
-      unoSlowdownFactorInput.value = Number.isFinite(factorValue) ? Math.round(factorValue) : '';
+      unoSlowdownFactorInput.value = Number.isFinite(factorValue) ? String(Math.round(factorValue)) : '';
     }
     if (unoSlowdownSleepInput) {
       unoSlowdownSleepInput.value = Number.isFinite(sleepValue)
-        ? Number(sleepValue.toFixed(2))
+        ? sleepValue.toFixed(2)
         : '';
     }
     updateUnoStatusSummary();
@@ -569,7 +569,7 @@
         const remainingValue = Number(unoRateLimitInfo.remaining);
         if (Number.isFinite(limitValue) && Number.isFinite(remainingValue)) {
           const used = Math.max(0, limitValue - remainingValue);
-          dailyText = `${formatNumber(used)} / ${formatNumber(limitValue)}`;
+          dailyText = `${formatNumber(used)}/${formatNumber(limitValue)}`;
         } else if (Number.isFinite(limitValue)) {
           dailyText = formatNumber(limitValue);
         } else if (unoRateLimitInfo.raw) {
@@ -586,7 +586,7 @@
     if (unoHourlySummary) {
       let hourlyText = '—';
       if (peak && Number.isFinite(peak.limit) && peak.limit > 0) {
-        hourlyText = `${formatNumber(peak.count)} / ${formatNumber(peak.limit)}`;
+  hourlyText = `${formatNumber(peak.count)}/${formatNumber(peak.limit)}`;
         if (peak.kort_id) {
           hourlyText += ` (kort ${peak.kort_id})`;
         }
@@ -596,7 +596,7 @@
           hourlyText += ` (kort ${peak.kort_id})`;
         }
       } else if (configLimit !== null) {
-        hourlyText = `0 / ${formatNumber(configLimit)}`;
+  hourlyText = `0/${formatNumber(configLimit)}`;
       }
       unoHourlySummary.textContent = hourlyText;
     }
@@ -658,51 +658,87 @@
   }
 
 
+  function applyUnoSystemData(data) {
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+    if (typeof data.uno_hourly_config !== 'undefined') {
+      applyUnoPollerConfig(data.uno_hourly_config);
+    }
+    if (typeof data.uno_hourly_usage !== 'undefined') {
+      applyUnoHourlyUsage(data.uno_hourly_usage);
+    }
+    if (typeof data.uno_rate_limit !== 'undefined') {
+      applyUnoRateLimit(data.uno_rate_limit);
+    }
+    if (typeof data.uno_auto_disabled_reason !== 'undefined') {
+      applyUnoAutoDisabledReason(data.uno_auto_disabled_reason);
+    }
+    if (typeof data.uno_requests_enabled !== 'undefined') {
+      applyUnoToggle(data.uno_requests_enabled);
+    }
+  }
+
+
   function applyUnoRateLimit(info) {
-    if (!unoRateLimitBanner) {
+    if (!unoStatusCard) {
       return;
     }
     if (!info || typeof info !== 'object') {
-      unoRateLimitBanner.hidden = true;
       unoRateLimitInfo = null;
+      if (unoRateLimitHeader) {
+        unoRateLimitHeader.textContent = '—';
+        unoRateLimitHeader.hidden = true;
+      }
+      if (unoRateLimitUpdated) {
+        unoRateLimitUpdated.textContent = '—';
+      }
+      if (unoRateLimitReset) {
+        unoRateLimitReset.textContent = '—';
+      }
+      if (unoRateLimitMeta) {
+        unoRateLimitMeta.hidden = true;
+      }
+      updateUnoStatusSummary();
       return;
     }
-    unoRateLimitInfo = info;
-    const limitValue = typeof info.limit === 'number'
-      ? info.limit.toLocaleString('pl-PL')
-      : (info.raw ? String(info.raw) : '—');
-    if (unoRateLimitValue) {
-      unoRateLimitValue.textContent = limitValue;
-    }
+    const rateLimit = {
+      limit: Number.isFinite(Number(info.limit)) ? Number(info.limit) : undefined,
+      remaining: Number.isFinite(Number(info.remaining)) ? Number(info.remaining) : undefined,
+      header: info.header ? String(info.header) : undefined,
+      updated: info.updated ? String(info.updated) : undefined,
+      reset: Number.isFinite(Number(info.reset)) ? Number(info.reset) : undefined,
+      raw: info.raw
+    };
+    unoRateLimitInfo = rateLimit;
+
     if (unoRateLimitHeader) {
-      if (info.header) {
-        unoRateLimitHeader.textContent = String(info.header);
+      if (rateLimit.header) {
+        unoRateLimitHeader.textContent = rateLimit.header;
         unoRateLimitHeader.hidden = false;
       } else {
+        unoRateLimitHeader.textContent = '—';
         unoRateLimitHeader.hidden = true;
       }
     }
-    if (unoRateLimitRemaining) {
-      const remainingValue = typeof info.remaining === 'number'
-        ? info.remaining.toLocaleString('pl-PL')
-        : '—';
-      unoRateLimitRemaining.textContent = remainingValue;
-    }
     if (unoRateLimitUpdated) {
-      unoRateLimitUpdated.textContent = info.updated ? String(info.updated) : '—';
+      unoRateLimitUpdated.textContent = rateLimit.updated || '—';
     }
     if (unoRateLimitReset) {
       let resetLabel = '—';
-      if (typeof info.reset === 'number' && Number.isFinite(info.reset)) {
-        const resetDate = new Date(info.reset * 1000);
+      if (Number.isFinite(rateLimit.reset)) {
+        const resetDate = new Date(rateLimit.reset * 1000);
         if (!Number.isNaN(resetDate.getTime())) {
           resetLabel = resetDate.toLocaleString('pl-PL');
         }
       }
       unoRateLimitReset.textContent = resetLabel;
     }
-    const hasData = Boolean(info.limit != null || info.remaining != null || info.raw || info.header);
-    unoRateLimitBanner.hidden = !hasData;
+    if (unoRateLimitMeta) {
+      const hasMeta = Boolean(rateLimit.header || rateLimit.updated || Number.isFinite(rateLimit.reset));
+      unoRateLimitMeta.hidden = !hasMeta;
+    }
+    updateUnoStatusSummary();
   }
 
 
@@ -713,14 +749,9 @@
     const { successMessage } = options;
     try {
       const data = await requestJson('/api/admin/system', { method: 'GET' });
-      if (typeof data.uno_requests_enabled !== 'undefined') {
-        applyUnoToggle(data.uno_requests_enabled);
-      }
+      applyUnoSystemData(data);
       if (typeof data.plugin_enabled !== 'undefined') {
         applyPluginToggle(data.plugin_enabled);
-      }
-      if (typeof data.uno_rate_limit !== 'undefined') {
-        applyUnoRateLimit(data.uno_rate_limit);
       }
       if (successMessage) {
         setFeedback(successMessage, 'success');
@@ -741,10 +772,10 @@
         method: 'PUT',
         body: JSON.stringify({ uno_requests_enabled: desired })
       });
-      applyUnoToggle(data.uno_requests_enabled === true);
-      if (typeof data.uno_rate_limit !== 'undefined') {
-        applyUnoRateLimit(data.uno_rate_limit);
-      }
+        applyUnoSystemData(data);
+        if (typeof data.plugin_enabled !== 'undefined') {
+          applyPluginToggle(data.plugin_enabled);
+        }
       setFeedback('Ustawienia UNO zapisane.', 'success');
     } catch (error) {
       applyUnoToggle(unoRequestsEnabled);
@@ -761,13 +792,59 @@
         method: 'PUT',
         body: JSON.stringify({ plugin_enabled: desired })
       });
-      applyPluginToggle(data.plugin_enabled === true);
-      if (typeof data.uno_rate_limit !== 'undefined') {
-        applyUnoRateLimit(data.uno_rate_limit);
-      }
+        applyPluginToggle(data.plugin_enabled === true);
+        applyUnoSystemData(data);
       setFeedback('Ustawienia wtyczki zapisane.', 'success');
     } catch (error) {
       applyPluginToggle(pluginEnabled);
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  async function handleUnoPollerFormSubmit(event) {
+    event.preventDefault();
+    if (!unoPollerForm) {
+      return;
+    }
+    const limitValue = unoHourlyLimitInput ? unoHourlyLimitInput.valueAsNumber : NaN;
+    if (!Number.isFinite(limitValue) || limitValue < 0 || !Number.isInteger(limitValue)) {
+      setFeedback('Limit na godzinę musi być liczbą całkowitą ≥ 0.', 'error');
+      return;
+    }
+    const thresholdValue = unoSlowdownThresholdInput ? unoSlowdownThresholdInput.valueAsNumber : NaN;
+    if (!Number.isFinite(thresholdValue) || thresholdValue < 0 || thresholdValue > 100) {
+      setFeedback('Próg spowolnienia musi być liczbą z zakresu 0-100.', 'error');
+      return;
+    }
+    const factorValue = unoSlowdownFactorInput ? unoSlowdownFactorInput.valueAsNumber : NaN;
+    if (!Number.isFinite(factorValue) || factorValue < 1 || !Number.isInteger(factorValue)) {
+      setFeedback('Współczynnik spowolnienia musi być liczbą całkowitą ≥ 1.', 'error');
+      return;
+    }
+    const sleepValue = unoSlowdownSleepInput ? unoSlowdownSleepInput.valueAsNumber : NaN;
+    if (!Number.isFinite(sleepValue) || sleepValue < 0) {
+      setFeedback('Dodatkowa pauza musi być liczbą nieujemną.', 'error');
+      return;
+    }
+
+    const payload = {
+      uno_hourly_config: {
+        limit: Math.round(limitValue),
+        threshold_percent: Number(thresholdValue.toFixed(2)),
+        slowdown_factor: Math.round(factorValue),
+        slowdown_sleep: Number(sleepValue.toFixed(2)),
+      }
+    };
+
+    try {
+      const data = await requestJson('/api/admin/system', {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+      applyUnoSystemData(data);
+      setFeedback('Konfiguracja limitów UNO zapisana.', 'success');
+    } catch (error) {
       setFeedback(error.message, 'error');
     }
   }
@@ -1468,10 +1545,17 @@
   if (pluginToggle && adminEnabled) {
     pluginToggle.addEventListener('change', handlePluginToggleChange);
   }
+  if (unoPollerForm && adminEnabled) {
+    unoPollerForm.addEventListener('submit', handleUnoPollerFormSubmit);
+  }
 
+  applyUnoPollerConfig(unoPollerConfig);
+  applyUnoHourlyUsage(unoHourlyUsage);
+  applyUnoAutoDisabledReason(unoAutoDisabledReason);
   applyUnoToggle(unoRequestsEnabled);
   applyPluginToggle(pluginEnabled);
   applyUnoRateLimit(unoRateLimitInfo);
+
   toggleAuthenticated(Boolean(initialConfig.is_authenticated));
   if (adminEnabled) {
     if (Array.isArray(initialConfig.history) && initialConfig.history.length > 0) {
