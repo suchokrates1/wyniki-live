@@ -12,10 +12,12 @@ from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 from .config import settings, log
 from .database import (
     delete_latest_history_entry,
+    fetch_app_settings,
     fetch_courts,
     fetch_recent_history,
     fetch_state_cache,
     insert_match_history,
+    upsert_app_settings,
     upsert_court,
     upsert_state_cache,
 )
@@ -64,7 +66,38 @@ STATE_LOCK = threading.Lock()
 GLOBAL_LOG: Deque[Dict[str, Any]] = deque()
 GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size)
 
+UNO_REQUESTS_LOCK = threading.Lock()
+UNO_REQUESTS_ENABLED = False
+
 DEFAULT_HISTORY_PHASE = "Grupowa"
+
+
+def _load_uno_requests_setting() -> bool:
+    stored = fetch_app_settings(["uno_requests_enabled"]).get("uno_requests_enabled")
+    parsed = to_bool(stored)
+    return bool(parsed) if parsed is not None else False
+
+
+def is_uno_requests_enabled() -> bool:
+    with UNO_REQUESTS_LOCK:
+        return UNO_REQUESTS_ENABLED
+
+
+def set_uno_requests_enabled(enabled: bool) -> None:
+    normalized = bool(enabled)
+    with UNO_REQUESTS_LOCK:
+        global UNO_REQUESTS_ENABLED
+        UNO_REQUESTS_ENABLED = normalized
+    upsert_app_settings({"uno_requests_enabled": "1" if normalized else "0"})
+    log.info("UNO requests %s", "enabled" if normalized else "disabled")
+
+
+def refresh_uno_requests_setting() -> bool:
+    new_value = _load_uno_requests_setting()
+    with UNO_REQUESTS_LOCK:
+        global UNO_REQUESTS_ENABLED
+        UNO_REQUESTS_ENABLED = new_value
+    return new_value
 
 
 class TokenBucket:
@@ -832,47 +865,53 @@ def persist_match_history_entry(entry: Dict[str, Any]) -> None:
 
 
 def load_match_history() -> None:
-    GLOBAL_HISTORY.clear()
-    for row in fetch_recent_history(settings.match_history_size) or []:
-        category = _clean_history_text(row["category"])
-        phase = _clean_history_text(row["phase"]) or DEFAULT_HISTORY_PHASE
-        entry = {
-            "kort": row["kort_id"],
-            "ended_at": row["ended_ts"],
-            "duration_seconds": row["duration_seconds"],
-            "duration_text": format_duration(row["duration_seconds"]),
-            "category": category,
-            "phase": phase,
-            "players": {
-                "A": {"surname": row["player_a"], "full_name": row["player_a"]},
-                "B": {"surname": row["player_b"], "full_name": row["player_b"]},
-            },
-            "sets": {
-                "set1": {
-                    "A": row["set1_a"],
-                    "B": row["set1_b"],
-                    "tb": {
-                        "A": row["set1_tb_a"],
-                        "B": row["set1_tb_b"],
-                        "played": bool(row["set1_tb_a"] or row["set1_tb_b"]),
+    with STATE_LOCK:
+        GLOBAL_HISTORY.clear()
+        for row in fetch_recent_history(settings.match_history_size) or []:
+            category = _clean_history_text(row["category"])
+            phase = _clean_history_text(row["phase"]) or DEFAULT_HISTORY_PHASE
+            entry = {
+                "kort": row["kort_id"],
+                "ended_at": row["ended_ts"],
+                "duration_seconds": row["duration_seconds"],
+                "duration_text": format_duration(row["duration_seconds"]),
+                "category": category,
+                "phase": phase,
+                "players": {
+                    "A": {"surname": row["player_a"], "full_name": row["player_a"]},
+                    "B": {"surname": row["player_b"], "full_name": row["player_b"]},
+                },
+                "sets": {
+                    "set1": {
+                        "A": row["set1_a"],
+                        "B": row["set1_b"],
+                        "tb": {
+                            "A": row["set1_tb_a"],
+                            "B": row["set1_tb_b"],
+                            "played": bool(row["set1_tb_a"] or row["set1_tb_b"]),
+                        },
+                    },
+                    "set2": {
+                        "A": row["set2_a"],
+                        "B": row["set2_b"],
+                        "tb": {
+                            "A": row["set2_tb_a"],
+                            "B": row["set2_tb_b"],
+                            "played": bool(row["set2_tb_a"] or row["set2_tb_b"]),
+                        },
+                    },
+                    "tie": {
+                        "A": row["tie_a"],
+                        "B": row["tie_b"],
+                        "played": bool(row["tie_a"] or row["tie_b"]),
                     },
                 },
-                "set2": {
-                    "A": row["set2_a"],
-                    "B": row["set2_b"],
-                    "tb": {
-                        "A": row["set2_tb_a"],
-                        "B": row["set2_tb_b"],
-                        "played": bool(row["set2_tb_a"] or row["set2_tb_b"]),
-                    },
-                },
-                "tie": {"A": row["tie_a"], "B": row["tie_b"], "played": bool(row["tie_a"] or row["tie_b"])},
-            },
-        }
-        GLOBAL_HISTORY.append(entry)
+            }
+            GLOBAL_HISTORY.append(entry)
 
 
 load_match_history()
+refresh_uno_requests_setting()
 
 
 def reset_after_match(state: Dict[str, Any]) -> None:
@@ -1353,14 +1392,17 @@ __all__ = [
     "event_broker",
     "finalize_match_if_needed",
     "handle_match_flow",
+    "is_uno_requests_enabled",
     "is_known_kort",
     "load_match_history",
     "load_state_cache",
     "log_state_summary",
     "normalize_kort_id",
     "persist_state_cache",
+    "refresh_uno_requests_setting",
     "refresh_courts_from_db",
     "record_log_entry",
+    "set_uno_requests_enabled",
     "get_kort_for_overlay",
     "get_overlay_for_kort",
     "serialize_all_states",

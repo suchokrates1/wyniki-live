@@ -738,6 +738,10 @@ function handleUnoApiEvent(evt) {
 }
 
 // -------- players.json
+const REMOTE_PLAYER_ENDPOINTS = [
+  'https://score.vestmedia.pl/api/players'
+];
+
 function normalizePlayer(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const name = raw.name || raw.player || raw.playerName || raw.fullname || raw.fullName || raw.label;
@@ -752,18 +756,29 @@ function normalizePlayer(raw) {
   return { name: String(name), flag, flagUrl };
 }
 
-async function loadPlayers() {
-  try {
-    const res = await fetch(chrome.runtime.getURL('players.json'));
-    const data = await res.json();
-    const arr = Array.isArray(data) ? data : (Array.isArray(data?.players) ? data.players : []);
-    const out = arr.map(normalizePlayer).filter(Boolean);
-    log('Lista graczy:', out.length);
-    return out;
-  } catch (e) {
-    console.warn('[UNO Picker] nie wczytano players.json', e);
-    return [];
+async function fetchPlayersFrom(url) {
+  const options = url.startsWith('chrome-extension://') ? {} : { credentials: 'include' };
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
   }
+  return res.json();
+}
+
+async function loadPlayers() {
+  const sources = [...REMOTE_PLAYER_ENDPOINTS, chrome.runtime.getURL('players.json')];
+  for (const source of sources) {
+    try {
+      const data = await fetchPlayersFrom(source);
+      const arr = Array.isArray(data) ? data : (Array.isArray(data?.players) ? data.players : []);
+      const out = arr.map(normalizePlayer).filter(Boolean);
+      log('Lista graczy:', out.length, { source });
+      return out;
+    } catch (e) {
+      console.warn('[UNO Picker] nie wczytano players', { source, error: e?.message || e });
+    }
+  }
+  return [];
 }
 
 // Prawdziwe wpisanie do inputa (aby React/UNO zarejestrowal zmiane)
