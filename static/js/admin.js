@@ -28,6 +28,8 @@
   const playerForm = document.getElementById('player-form');
   const playersTableBody = document.getElementById('players-rows');
   const refreshPlayersButton = document.getElementById('refresh-players');
+  const playerImportForm = document.getElementById('player-import-form');
+  const FLAG_DATALIST_ID = 'flag-code-options';
 
   if (!configElement) {
     return;
@@ -49,6 +51,9 @@
   const initialCourts = Array.isArray(initialConfig.courts) ? initialConfig.courts : [];
   const initialPlayers = Array.isArray(initialConfig.players) ? initialConfig.players : [];
   let unoRequestsEnabled = initialConfig.uno_requests_enabled === true;
+  let flagCatalog = [];
+  const flagCatalogMap = new Map();
+  let flagCatalogPromise = null;
 
   const fieldDefinitions = [
     { name: 'kort_id', type: 'text' },
@@ -74,7 +79,7 @@
     { name: 'name', type: 'text' },
     { name: 'list_name', type: 'text' },
     { name: 'flag_code', type: 'text' },
-    { name: 'flag_url', type: 'text' }
+    { name: 'flag_url', type: 'url' }
   ];
 
   function setFeedback(message, type = 'info') {
@@ -101,6 +106,157 @@
     } else {
       viewerStatusElement.classList.remove('error');
     }
+  }
+
+  function applyFlagCodeAttributes(input) {
+    if (!input) {
+      return;
+    }
+    input.setAttribute('list', FLAG_DATALIST_ID);
+    input.autocomplete = 'off';
+    input.maxLength = 2;
+  }
+
+  function initializeFlagInputs(scope) {
+    const root = scope && scope.querySelectorAll ? scope : document;
+    root.querySelectorAll('input[name="flag_code"]').forEach((input) => {
+      applyFlagCodeAttributes(input);
+    });
+  }
+
+  function updateFlagCatalogMap() {
+    flagCatalogMap.clear();
+    flagCatalog.forEach((item) => {
+      if (!item || typeof item.code !== 'string') {
+        return;
+      }
+      const code = item.code.trim().toLowerCase();
+      if (!code) {
+        return;
+      }
+      flagCatalogMap.set(code, {
+        code,
+        url: typeof item.url === 'string' ? item.url : '',
+        label: item.label || code.toUpperCase()
+      });
+    });
+  }
+
+  function renderFlagOptionsList() {
+    const datalist = document.getElementById(FLAG_DATALIST_ID);
+    if (!datalist) {
+      return;
+    }
+    datalist.innerHTML = '';
+    flagCatalog.forEach((item) => {
+      if (!item || !item.code) {
+        return;
+      }
+      const option = document.createElement('option');
+      option.value = item.code.toLowerCase();
+      option.textContent = item.label || item.code.toUpperCase();
+      datalist.appendChild(option);
+    });
+  }
+
+  function setFlagUrlSuggestion(codeInput, urlInput, options = {}) {
+    if (!codeInput || !urlInput) {
+      return;
+    }
+    const { force = false } = options;
+    const rawCode = String(codeInput.value || '').trim().toLowerCase();
+    const suggestion = rawCode ? flagCatalogMap.get(rawCode) : null;
+    if (!suggestion) {
+      if (!force && urlInput.dataset.suggestedUrl && urlInput.value === urlInput.dataset.suggestedUrl) {
+        urlInput.value = '';
+      }
+      delete urlInput.dataset.suggestedUrl;
+      return;
+    }
+    const current = (urlInput.value || '').trim();
+    const suggested = suggestion.url || '';
+    if (!suggested) {
+      return;
+    }
+    const previousSuggestion = urlInput.dataset.suggestedUrl || '';
+    const shouldApply = force || !current || current === previousSuggestion;
+    if (!shouldApply) {
+      return;
+    }
+    urlInput.value = suggested;
+    urlInput.dataset.suggestedUrl = suggested;
+  }
+
+  function applyFlagSuggestions(scope, options = {}) {
+    if (!flagCatalog.length) {
+      return;
+    }
+    const root = scope && scope.querySelectorAll ? scope : document;
+    root.querySelectorAll('input[name="flag_code"]').forEach((codeInput) => {
+      const container = codeInput.closest('tr') || codeInput.closest('form');
+      if (!container) {
+        return;
+      }
+      const urlInput = container.querySelector('input[name="flag_url"]');
+      if (!urlInput) {
+        return;
+      }
+      const shouldForce = Boolean(options.force) || !(urlInput.value || '').trim();
+      setFlagUrlSuggestion(codeInput, urlInput, { force: shouldForce });
+    });
+  }
+
+  function handleFlagCodeChange(event) {
+    const target = event.target;
+    if (!target || target.name !== 'flag_code') {
+      return;
+    }
+    const container = target.closest('tr') || target.closest('form');
+    if (!container) {
+      return;
+    }
+    const urlInput = container.querySelector('input[name="flag_url"]');
+    if (!urlInput) {
+      return;
+    }
+    setFlagUrlSuggestion(target, urlInput, { force: event.type === 'change' });
+  }
+
+  async function loadFlagCatalog() {
+    try {
+      const data = await requestJson('/api/admin/flags', { method: 'GET' });
+      if (Array.isArray(data.flags)) {
+        flagCatalog = data.flags
+          .map((item) => ({
+            code: typeof item.code === 'string' ? item.code.trim().toLowerCase() : '',
+            url: typeof item.url === 'string' ? item.url : '',
+            label: typeof item.label === 'string' ? item.label : undefined
+          }))
+          .filter((item) => item.code);
+        updateFlagCatalogMap();
+        renderFlagOptionsList();
+        applyFlagSuggestions(document);
+      }
+    } catch (error) {
+      console.warn('Nie udało się pobrać listy flag', error);
+      throw error;
+    }
+  }
+
+  function ensureFlagCatalogLoaded() {
+    if (flagCatalogPromise) {
+      return flagCatalogPromise;
+    }
+    flagCatalogPromise = loadFlagCatalog().catch((error) => {
+      flagCatalogPromise = null;
+      return Promise.reject(error);
+    });
+    return flagCatalogPromise;
+  }
+
+  function reloadFlagCatalog() {
+    flagCatalogPromise = null;
+    return ensureFlagCatalogLoaded();
   }
 
   function toggleAuthenticated(isAuthenticated) {
@@ -143,6 +299,9 @@
     }
     if (playersSection) {
       playersSection.hidden = !isAuthenticated;
+    }
+    if (isAuthenticated) {
+      ensureFlagCatalogLoaded().catch(() => {});
     }
     if (bodyElement) {
       bodyElement.dataset.authenticated = isAuthenticated ? 'true' : 'false';
@@ -335,7 +494,10 @@
       }
       input.value = value ?? '';
       if (field.name === 'flag_code') {
-        input.maxLength = 2;
+        applyFlagCodeAttributes(input);
+      }
+      if (field.name === 'flag_url') {
+        input.placeholder = 'https://';
       }
       cell.appendChild(input);
       row.appendChild(cell);
@@ -375,6 +537,8 @@
       playersTableBody.innerHTML = '';
       playersTableBody.appendChild(fragment);
     }
+    initializeFlagInputs(playersTableBody);
+    applyFlagSuggestions(playersTableBody);
   }
 
 
@@ -395,7 +559,18 @@
         value = value.toLowerCase();
       }
       input.value = value ?? '';
+      if (field.name === 'flag_code') {
+        applyFlagCodeAttributes(input);
+      }
+      if (field.name === 'flag_url') {
+        input.placeholder = 'https://';
+      }
     });
+    const codeInput = row.querySelector('input[name="flag_code"]');
+    const urlInput = row.querySelector('input[name="flag_url"]');
+    if (codeInput && urlInput) {
+      setFlagUrlSuggestion(codeInput, urlInput);
+    }
   }
 
 
@@ -492,6 +667,44 @@
       }
       playerForm.reset();
       setFeedback('Zawodnik dodany.', 'success');
+      reloadFlagCatalog().catch(() => {});
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  async function handlePlayerImportSubmit(event) {
+    event.preventDefault();
+    if (!playerImportForm) {
+      return;
+    }
+    const fileInput = playerImportForm.querySelector('input[name="file"]');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      setFeedback('Wybierz plik do importu.', 'error');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    try {
+      const data = await requestJson('/api/admin/players/import', {
+        method: 'POST',
+        body: formData
+      });
+      if (Array.isArray(data.players)) {
+        renderPlayers(data.players);
+      }
+      const imported = Number(data.imported || 0);
+      const skipped = Number(data.skipped || 0);
+      let message = imported > 0
+        ? `Zaimportowano ${imported} graczy.`
+        : 'Brak nowych graczy do zaimportowania.';
+      if (skipped > 0) {
+        message += ` Pominięto ${skipped} linii.`;
+      }
+      setFeedback(message, imported > 0 ? 'success' : 'info');
+      playerImportForm.reset();
+      reloadFlagCatalog().catch(() => {});
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -518,6 +731,9 @@
       });
       if (data.player) {
         updatePlayerRowInputs(row, data.player);
+      }
+      if (payload.flag_code || payload.flag_url) {
+        reloadFlagCatalog().catch(() => {});
       }
       setFeedback('Zawodnik zapisany.', 'success');
     } catch (error) {
@@ -669,10 +885,15 @@
 
   async function requestJson(url, options) {
     const requestOptions = { credentials: 'same-origin', ...(options || {}) };
-    requestOptions.headers = {
-      'Content-Type': 'application/json',
+    const isFormData = requestOptions.body instanceof FormData;
+    const headers = {
+      Accept: 'application/json',
       ...(options && options.headers)
     };
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+    requestOptions.headers = headers;
     const response = await fetch(url, requestOptions);
     let data;
     try {
@@ -897,6 +1118,8 @@
     bodyElement.dataset.adminEnabled = adminEnabled ? 'true' : 'false';
   }
 
+  initializeFlagInputs(document);
+
   if (!adminEnabled) {
     setFeedback(disabledMessage, 'info');
   }
@@ -921,12 +1144,19 @@
   }
   if (playerForm && adminEnabled) {
     playerForm.addEventListener('submit', handlePlayerFormSubmit);
+    playerForm.addEventListener('input', handleFlagCodeChange);
+    playerForm.addEventListener('change', handleFlagCodeChange);
   }
   if (refreshPlayersButton && adminEnabled) {
     refreshPlayersButton.addEventListener('click', refreshPlayers);
   }
   if (playersTableBody && adminEnabled) {
     playersTableBody.addEventListener('click', handlePlayersTableClick);
+    playersTableBody.addEventListener('input', handleFlagCodeChange);
+    playersTableBody.addEventListener('change', handleFlagCodeChange);
+  }
+  if (playerImportForm && adminEnabled) {
+    playerImportForm.addEventListener('submit', handlePlayerImportSubmit);
   }
   if (youtubeConfigForm && adminEnabled) {
     youtubeConfigForm.addEventListener('submit', handleYoutubeConfigSubmit);

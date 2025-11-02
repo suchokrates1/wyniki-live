@@ -677,6 +677,33 @@ main.container section {
   color: var(--muted);
 }
 
+.player-import-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.player-import-form label {
+  font-weight: 600;
+}
+
+.player-import-form input[type="file"] {
+  flex: 1 1 240px;
+}
+
+.player-import-form button {
+  height: 36px;
+}
+
+.player-import-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  flex: 1 1 100%;
+}
+
 .players-table-wrapper,
 .courts-table-wrapper,
 .history-table-wrapper {

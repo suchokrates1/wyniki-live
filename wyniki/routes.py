@@ -5,8 +5,9 @@ import hmac
 import json
 import os
 import re
-from urllib.parse import urlparse, urlunparse
 from queue import Empty
+from threading import Lock
+from urllib.parse import urlparse, urlunparse
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
@@ -32,17 +33,18 @@ from .database import (
     fetch_history_entry,
     fetch_player,
     fetch_players,
+    insert_player,
     update_history_entry,
     update_player,
     upsert_app_settings,
     upsert_court,
-    insert_player,
 )
 from .state import (
     DEFAULT_HISTORY_PHASE,
     apply_local_command,
     available_courts,
     broadcast_kort_state,
+    broadcast_snapshot,
     buckets,
     ensure_court_state,
     event_broker,
@@ -227,6 +229,88 @@ def _public_player_payload(record: Dict[str, Optional[str]]) -> Dict[str, Option
     }
 
 
+FLAG_PLUGIN_CACHE: Dict[str, str] = {}
+FLAG_PLUGIN_MTIME: Optional[float] = None
+FLAG_PLUGIN_LOCK = Lock()
+FLAG_CODE_PATTERN = re.compile(r"^[a-z]{2}$")
+
+
+def _plugin_players_path() -> Optional[str]:
+    candidate = os.path.join(DOWNLOAD_DIR, "players.json")
+    return candidate if os.path.isfile(candidate) else None
+
+
+def _load_plugin_flag_catalog() -> Dict[str, str]:
+    path = _plugin_players_path()
+    try:
+        mtime = os.path.getmtime(path) if path else None
+    except OSError:
+        mtime = None
+    with FLAG_PLUGIN_LOCK:
+        if FLAG_PLUGIN_CACHE and FLAG_PLUGIN_MTIME == mtime:
+            return dict(FLAG_PLUGIN_CACHE)
+        mapping: Dict[str, str] = {}
+        if path and mtime is not None:
+            try:
+                with open(path, "r", encoding="utf-8") as handle:
+                    payload = json.load(handle)
+                if isinstance(payload, list):
+                    for entry in payload:
+                        if not isinstance(entry, dict):
+                            continue
+                        raw_code = entry.get("flag") or entry.get("flag_code")
+                        raw_url = entry.get("flagUrl") or entry.get("flag_url")
+                        if not isinstance(raw_code, str):
+                            continue
+                        code = raw_code.strip().lower()
+                        if not code or not FLAG_CODE_PATTERN.fullmatch(code):
+                            continue
+                        url_text = str(raw_url or "").strip()
+                        if not url_text:
+                            continue
+                        mapping.setdefault(code, url_text)
+            except (OSError, ValueError) as exc:
+                log.warning("Nie udało się odczytać listy flag z wtyczki: %s", exc)
+        FLAG_PLUGIN_CACHE.clear()
+        FLAG_PLUGIN_CACHE.update(mapping)
+        FLAG_PLUGIN_MTIME = mtime
+        return dict(mapping)
+
+
+def _flag_catalog() -> Dict[str, str]:
+    catalog = _load_plugin_flag_catalog()
+    for record in fetch_players():
+        raw_code = record.get("flag_code")
+        raw_url = record.get("flag_url")
+        if not isinstance(raw_code, str):
+            continue
+        code = raw_code.strip().lower()
+        if not code or not FLAG_CODE_PATTERN.fullmatch(code):
+            continue
+        url_text = str(raw_url or "").strip()
+        if not url_text:
+            continue
+        catalog.setdefault(code, url_text)
+    return catalog
+
+
+def _lookup_flag_url(code: Optional[str]) -> Optional[str]:
+    if not code or not isinstance(code, str):
+        return None
+    normalized = code.strip().lower()
+    if not normalized or not FLAG_CODE_PATTERN.fullmatch(normalized):
+        return None
+    return _flag_catalog().get(normalized)
+
+
+def _serialize_flags_catalog() -> List[Dict[str, str]]:
+    catalog = _flag_catalog()
+    return [
+        {"code": code, "url": url, "label": code.upper()}
+        for code, url in sorted(catalog.items())
+    ]
+
+
 def _sanitize_court_payload(payload: Dict[str, object]) -> Tuple[str, Optional[str]]:
     raw_kort = payload.get("kort_id") or payload.get("kort")
     kort_id = normalize_kort_id(raw_kort) if raw_kort is not None else None
@@ -279,6 +363,14 @@ def _sanitize_player_payload(payload: Dict[str, object], *, partial: bool = Fals
             raise ValueError("flag_url")
         else:
             sanitized["flag_url"] = raw_url.strip() or None
+    suggested_code = sanitized.get("flag_code")
+    if suggested_code:
+        provided_flag_url = payload.get("flag_url") if isinstance(payload, dict) else None
+        wants_suggestion = "flag_url" not in payload or provided_flag_url in (None, "")
+        if wants_suggestion and not sanitized.get("flag_url"):
+            suggested_url = _lookup_flag_url(suggested_code)
+            if suggested_url:
+                sanitized["flag_url"] = suggested_url
     return sanitized
 
 
@@ -479,6 +571,7 @@ def admin_api_courts_create():
     existed_before = is_known_kort(kort_id)
     upsert_court(kort_id, overlay_id)
     refresh_courts_from_db()
+    broadcast_snapshot(include_history=True)
     court_record = {"kort_id": kort_id, "overlay_id": get_overlay_for_kort(kort_id)}
     return jsonify(
         {
@@ -503,6 +596,7 @@ def admin_api_courts_delete(kort_id: str):
     if not deleted:
         return jsonify({"ok": False, "error": "not-found"}), 404
     refresh_courts_from_db()
+    broadcast_snapshot(include_history=True)
     return jsonify(
         {
             "ok": True,
@@ -562,6 +656,14 @@ def admin_api_players_list():
     return jsonify({"ok": True, "players": [_serialize_player(player) for player in players]})
 
 
+@admin_api_blueprint.route("/flags", methods=["GET"])
+def admin_api_flags_list():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    return jsonify({"ok": True, "flags": _serialize_flags_catalog()})
+
+
 @admin_api_blueprint.route("/players", methods=["POST"])
 def admin_api_players_create():
     auth_error = _require_admin_session_json()
@@ -589,6 +691,63 @@ def admin_api_players_create():
         {
             "ok": True,
             "player": _serialize_player(record or {}),
+            "players": [_serialize_player(player) for player in players],
+        }
+    )
+
+
+@admin_api_blueprint.route("/players/import", methods=["POST"])
+def admin_api_players_import():
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    uploaded = request.files.get("file")
+    if uploaded is None:
+        return jsonify({"ok": False, "error": "missing-file"}), 400
+    try:
+        raw_bytes = uploaded.read() or b""
+    except OSError:
+        return jsonify({"ok": False, "error": "invalid-file"}), 400
+    if not raw_bytes:
+        return jsonify({"ok": False, "error": "empty-file"}), 400
+    text = raw_bytes.decode("utf-8-sig", errors="ignore")
+    imported = 0
+    skipped = 0
+    errors: List[int] = []
+    for idx, line in enumerate(text.splitlines(), start=1):
+        cleaned = line.strip()
+        if not cleaned:
+            continue
+        parts = cleaned.split()
+        if len(parts) < 3:
+            skipped += 1
+            errors.append(idx)
+            continue
+        code_candidate = parts[-1].strip().lower()
+        if not FLAG_CODE_PATTERN.fullmatch(code_candidate):
+            skipped += 1
+            errors.append(idx)
+            continue
+        name = " ".join(parts[:-1]).strip()
+        if not name:
+            skipped += 1
+            errors.append(idx)
+            continue
+        flag_url = _lookup_flag_url(code_candidate)
+        try:
+            insert_player(name, None, code_candidate, flag_url)
+            imported += 1
+        except Exception as exc:
+            log.warning("Nie udało się zaimportować zawodnika (wiersz %s): %s", idx, exc)
+            skipped += 1
+            errors.append(idx)
+    players = fetch_players()
+    return jsonify(
+        {
+            "ok": True,
+            "imported": imported,
+            "skipped": skipped,
+            "errors": errors,
             "players": [_serialize_player(player) for player in players],
         }
     )

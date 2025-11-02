@@ -756,6 +756,21 @@ function normalizePlayer(raw) {
   return { name: String(name), flag, flagUrl };
 }
 
+function extractSurname(name) {
+  if (!name) return '';
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return String(name).trim();
+  return parts[parts.length - 1];
+}
+
+function buildDoubleLabel(firstName, secondName) {
+  const surnameA = extractSurname(firstName);
+  const surnameB = extractSurname(secondName);
+  const left = surnameA || String(firstName || '').trim();
+  const right = surnameB || String(secondName || '').trim();
+  return `${left || ''}/${right || ''}`.replace(/\/+/g, '/');
+}
+
 async function fetchPlayersFrom(url) {
   const options = url.startsWith('chrome-extension://') ? {} : { credentials: 'include' };
   const res = await fetch(url, options);
@@ -977,12 +992,31 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
   pop.className = 'uno-picker-popover';
   pop.style.zIndex = '2147483647';
 
+  const externalDoubleToggle = targetInput.__unoDoubleToggle || null;
+
+  const optionsRow = document.createElement('div');
+  optionsRow.className = 'uno-picker-options';
+
+  const doubleLabel = document.createElement('label');
+  doubleLabel.className = 'uno-picker-double-toggle';
+  const doubleToggle = document.createElement('input');
+  doubleToggle.type = 'checkbox';
+  doubleToggle.className = 'uno-picker-double-checkbox';
+  doubleToggle.checked = Boolean(externalDoubleToggle && externalDoubleToggle.checked);
+  const doubleText = document.createElement('span');
+  doubleText.textContent = 'Double';
+  doubleLabel.append(doubleToggle, doubleText);
+  optionsRow.appendChild(doubleLabel);
+
   const search = document.createElement('input');
   search.className = 'uno-picker-search';
   search.placeholder = 'Szukaj zawodnika...';
 
+  const hint = document.createElement('div');
+  hint.className = 'uno-picker-double-hint';
+
   const list = document.createElement('div');
-  pop.append(search, list);
+  pop.append(optionsRow, search, hint, list);
   document.body.appendChild(pop);
   openPopover = pop;
   openPopoverCleanups = [];
@@ -1008,6 +1042,45 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
   registerPopoverCleanup(() => document.removeEventListener('mousedown', closeOnOutside, true));
   registerPopoverCleanup(() => document.removeEventListener('keydown', closeOnKey, true));
   registerPopoverCleanup(() => window.removeEventListener('resize', closeOnResize, true));
+
+  let doubleSelections = [];
+  const isDoubleMode = () => Boolean(doubleToggle.checked);
+  const updateDoubleHint = () => {
+    if (!isDoubleMode()) {
+      hint.textContent = '';
+      return;
+    }
+    if (doubleSelections.length === 0) {
+      hint.textContent = 'Wybierz dwóch zawodników, aby utworzyć parę.';
+    } else if (doubleSelections.length === 1) {
+      hint.textContent = `Wybrano: ${doubleSelections[0].name}. Wybierz partnera.`;
+    } else {
+      hint.textContent = '';
+    }
+  };
+  const resetDoubleState = () => {
+    doubleSelections = [];
+    updateDoubleHint();
+  };
+
+  const handleDoubleToggleChange = () => {
+    if (externalDoubleToggle) externalDoubleToggle.checked = doubleToggle.checked;
+    resetDoubleState();
+  };
+  doubleToggle.addEventListener('change', handleDoubleToggleChange);
+  registerPopoverCleanup(() => doubleToggle.removeEventListener('change', handleDoubleToggleChange));
+
+  if (externalDoubleToggle) {
+    const syncExternal = () => {
+      doubleToggle.checked = externalDoubleToggle.checked;
+      resetDoubleState();
+    };
+    externalDoubleToggle.addEventListener('change', syncExternal);
+    registerPopoverCleanup(() => externalDoubleToggle.removeEventListener('change', syncExternal));
+  }
+
+  registerPopoverCleanup(resetDoubleState);
+  updateDoubleHint();
 
   let players = [];
   const render = (q = '') => {
@@ -1072,6 +1145,42 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
       const handleSelect = async () => {
         if (handled) return;
         handled = true;
+
+        if (isDoubleMode()) {
+          doubleSelections.push(p);
+          if (doubleSelections.length < 2) {
+            updateDoubleHint();
+            return;
+          }
+          const [first, second] = doubleSelections.slice(0, 2);
+          const teamName = buildDoubleLabel(first.name, second.name);
+          const flagSource = first.flagUrl || first.flag ? first : (second.flagUrl || second.flag ? second : null);
+          const extras = {};
+          if (flagSource?.flagUrl) extras.flagUrl = flagSource.flagUrl;
+          if (flagSource?.flag) {
+            extras.flag = flagSource.flag;
+            extras.flagCode = flagSource.flag;
+          }
+          const extrasPayload = Object.keys(extras).length ? extras : null;
+          if (!opts.noNameWrite) await commitInputValue(targetInput, teamName);
+          await mirrorScoreUpdate(
+            playerLetter === 'A' ? 'SetNamePlayerA' : 'SetNamePlayerB',
+            teamName,
+            extrasPayload
+          );
+          if (flagSource && (flagSource.flag || flagSource.flagUrl)) {
+            const viaServer = await setFlagViaServer(
+              playerLetter,
+              flagSource.flag || '',
+              flagSource.flagUrl || null
+            );
+            if (!viaServer && flagSource.flag) setFlagViaUI(document, playerLetter, flagSource.flag);
+          }
+          resetDoubleState();
+          closePopover();
+          if (opts.noNameWrite && targetInput.__tempDummy) targetInput.remove();
+          return;
+        }
 
         if (!opts.noNameWrite) await commitInputValue(targetInput, p.name);
 
@@ -1157,24 +1266,44 @@ function ensureUI() {
   }
 
   // Usun zblakane przyciski pickera poza sekcja Player Names
-  document.querySelectorAll('.uno-picker-button').forEach(btn => {
-    if (!btn.previousSibling || !btn.previousSibling.matches?.('input')) {
-      btn.remove();
-      }
+  document.querySelectorAll('.uno-picker-controls').forEach(group => {
+    const anchor = group.previousElementSibling;
+    if (!anchor || !(anchor instanceof HTMLInputElement)) {
+      group.remove();
+    }
   });
 
   const attach = (input, letter) => {
     if (!input || input.__unoWired) return;
     input.__unoWired = true;
 
-    if (input.parentElement?.querySelector('.uno-picker-button')) return;
+    if (input.parentElement?.querySelector('.uno-picker-controls')) return;
+
+    const controls = document.createElement('span');
+    controls.className = 'uno-picker-controls';
 
     const btn = document.createElement('button');
     btn.className = 'uno-picker-button';
     btn.type = 'button';
     btn.textContent = `Wybierz gracza ${letter}`;
-    btn.style.marginLeft = '10px';
-    input.parentElement?.insertBefore(btn, input.nextSibling);
+
+    const doubleLabel = document.createElement('label');
+    doubleLabel.className = 'uno-picker-double-label';
+    doubleLabel.title = 'Włącz wybór pary zawodników';
+
+    const doubleToggle = document.createElement('input');
+    doubleToggle.type = 'checkbox';
+    doubleToggle.className = 'uno-picker-double-checkbox';
+    doubleToggle.setAttribute('aria-label', 'Wybierz tryb gry podwójnej');
+
+    const doubleText = document.createElement('span');
+    doubleText.textContent = 'Double';
+
+    doubleLabel.append(doubleToggle, doubleText);
+    controls.append(btn, doubleLabel);
+    input.parentElement?.insertBefore(controls, input.nextSibling);
+
+    input.__unoDoubleToggle = doubleToggle;
 
     btn.addEventListener('click', () => showPickerFor(input, letter));
     input.addEventListener('mousedown', e => { e.stopPropagation(); e.preventDefault(); showPickerFor(input, letter); }, true);
