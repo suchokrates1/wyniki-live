@@ -4,9 +4,10 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import contextmanager
-from typing import Dict, Generator, Iterable, List, Optional
+from typing import Dict, Generator, Iterable, List, Optional, Tuple
 
 from .config import settings
+from .utils import surname
 
 
 @contextmanager
@@ -217,6 +218,48 @@ def fetch_player(player_id: int) -> Optional[Dict[str, Optional[str]]]:
     if not row:
         return None
     return _row_to_player_dict(row)
+
+
+def _flag_score(row: sqlite3.Row) -> int:
+    score = 0
+    if row["flag_url"]:
+        score += 2
+    if row["flag_code"]:
+        score += 1
+    return score
+
+
+def find_player_by_surname(
+    surname_value: str, list_name: Optional[str] = None
+) -> Optional[Dict[str, Optional[str]]]:
+    normalized = str(surname_value or "").strip()
+    if not normalized:
+        return None
+    normalized_lower = normalized.lower()
+
+    query = "SELECT id, list_name, name, flag_code, flag_url FROM players"
+    params: List[object] = []
+    if list_name:
+        query += " WHERE list_name = ?"
+        params.append(str(list_name))
+
+    with db_conn() as connection:
+        cursor = connection.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+    matches: List[Tuple[int, sqlite3.Row]] = []
+    for row in rows:
+        player_surname = surname(row["name"]) if row["name"] else None
+        if player_surname and player_surname.strip().lower() == normalized_lower:
+            score = _flag_score(row)
+            matches.append((-score, row))
+
+    if not matches:
+        return None
+
+    matches.sort(key=lambda item: (item[0], str(item[1]["name"]).lower(), int(item[1]["id"])))
+    return _row_to_player_dict(matches[0][1])
 
 
 def insert_player(
