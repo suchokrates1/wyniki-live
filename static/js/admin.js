@@ -24,6 +24,8 @@
   const systemSection = document.getElementById('system-section');
   const unoToggle = document.getElementById('uno-requests-toggle');
   const unoToggleStatus = document.getElementById('uno-toggle-status');
+  const pluginToggle = document.getElementById('plugin-toggle');
+  const pluginToggleStatus = document.getElementById('plugin-toggle-status');
   const playersSection = document.getElementById('players-section');
   const playerForm = document.getElementById('player-form');
   const playersTableBody = document.getElementById('players-rows');
@@ -51,6 +53,7 @@
   const initialCourts = Array.isArray(initialConfig.courts) ? initialConfig.courts : [];
   const initialPlayers = Array.isArray(initialConfig.players) ? initialConfig.players : [];
   let unoRequestsEnabled = initialConfig.uno_requests_enabled === true;
+  let pluginEnabled = initialConfig.plugin_enabled === true;
   let flagCatalog = [];
   const flagCatalogMap = new Map();
   let flagCatalogPromise = null;
@@ -437,6 +440,20 @@
   }
 
 
+  function applyPluginToggle(enabled) {
+    const value = Boolean(enabled);
+    pluginEnabled = value;
+    if (pluginToggle) {
+      pluginToggle.checked = value;
+    }
+    if (pluginToggleStatus) {
+      pluginToggleStatus.textContent = value
+        ? 'Wtyczka jest używana i jej komunikaty są akceptowane.'
+        : 'Komunikaty od wtyczki są ignorowane.';
+    }
+  }
+
+
   async function loadSystemSettings(options = {}) {
     if (!adminEnabled) {
       return;
@@ -446,6 +463,9 @@
       const data = await requestJson('/api/admin/system', { method: 'GET' });
       if (typeof data.uno_requests_enabled !== 'undefined') {
         applyUnoToggle(data.uno_requests_enabled);
+      }
+      if (typeof data.plugin_enabled !== 'undefined') {
+        applyPluginToggle(data.plugin_enabled);
       }
       if (successMessage) {
         setFeedback(successMessage, 'success');
@@ -470,6 +490,23 @@
       setFeedback('Ustawienia UNO zapisane.', 'success');
     } catch (error) {
       applyUnoToggle(unoRequestsEnabled);
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  async function handlePluginToggleChange() {
+    if (!pluginToggle) return;
+    const desired = pluginToggle.checked;
+    try {
+      const data = await requestJson('/api/admin/system', {
+        method: 'PUT',
+        body: JSON.stringify({ plugin_enabled: desired })
+      });
+      applyPluginToggle(data.plugin_enabled === true);
+      setFeedback('Ustawienia wtyczki zapisane.', 'success');
+    } catch (error) {
+      applyPluginToggle(pluginEnabled);
       setFeedback(error.message, 'error');
     }
   }
@@ -1167,8 +1204,12 @@
   if (unoToggle && adminEnabled) {
     unoToggle.addEventListener('change', handleUnoToggleChange);
   }
+  if (pluginToggle && adminEnabled) {
+    pluginToggle.addEventListener('change', handlePluginToggleChange);
+  }
 
   applyUnoToggle(unoRequestsEnabled);
+  applyPluginToggle(pluginEnabled);
   toggleAuthenticated(Boolean(initialConfig.is_authenticated));
   if (adminEnabled) {
     if (Array.isArray(initialConfig.history) && initialConfig.history.length > 0) {

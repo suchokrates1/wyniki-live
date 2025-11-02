@@ -75,6 +75,15 @@
             Gdy opcja jest wyłączona, żadne komendy nie są wysyłane do UNO.
           </p>
         </div>
+        <div class="system-toggle">
+          <label class="toggle">
+            <input id="plugin-toggle" type="checkbox" />
+            <span>Używaj wtyczki</span>
+          </label>
+          <p id="plugin-toggle-status" class="system-note">
+            Gdy opcja jest wyłączona, komunikaty od wtyczki będą ignorowane — pracujemy tylko z UNO.
+          </p>
+        </div>
       </section>
 
       <section id="players-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
@@ -269,6 +278,7 @@
       'courts': courts,
       'players': players,
       'uno_requests_enabled': uno_requests_enabled,
+      'plugin_enabled': plugin_enabled,
       'int_fields': int_fields,
       'admin_enabled': admin_enabled,
       'admin_disabled_message': admin_disabled_message,

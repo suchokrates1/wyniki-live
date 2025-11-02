@@ -53,6 +53,7 @@ from .state import (
     log_state_summary,
     load_match_history,
     is_uno_requests_enabled,
+    is_plugin_enabled,
     is_known_kort,
     normalize_kort_id,
     persist_state_cache,
@@ -61,11 +62,13 @@ from .state import (
     refresh_courts_from_db,
     record_log_entry,
     set_uno_requests_enabled,
+    set_plugin_enabled,
     serialize_court_state,
     serialize_history,
     serialize_public_snapshot,
     STATE_LOCK,
     validate_command,
+    refresh_plugin_setting,
 )
 from .utils import now_iso, render_file_template, safe_copy, shorten
 
@@ -406,6 +409,7 @@ def admin_index() -> str:
         courts=courts,
         players=players,
         uno_requests_enabled=is_uno_requests_enabled(),
+        plugin_enabled=is_plugin_enabled(),
         int_fields=sorted(HISTORY_INT_FIELDS),
         admin_enabled=admin_enabled,
         admin_disabled_message=ADMIN_DISABLED_MESSAGE,
@@ -815,7 +819,13 @@ def admin_api_system_settings():
     auth_error = _require_admin_session_json()
     if auth_error is not None:
         return auth_error
-    return jsonify({"ok": True, "uno_requests_enabled": is_uno_requests_enabled()})
+    return jsonify(
+        {
+            "ok": True,
+            "uno_requests_enabled": is_uno_requests_enabled(),
+            "plugin_enabled": is_plugin_enabled(),
+        }
+    )
 
 
 @admin_api_blueprint.route("/system", methods=["PUT"])
@@ -824,22 +834,44 @@ def admin_api_system_update():
     if auth_error is not None:
         return auth_error
     payload = request.get_json(silent=True)
-    if not isinstance(payload, dict) or "uno_requests_enabled" not in payload:
+    if not isinstance(payload, dict):
         return jsonify({"ok": False, "error": "invalid-payload"}), 400
-    value = payload.get("uno_requests_enabled")
-    enabled = bool(value) if isinstance(value, bool) else None
-    if enabled is None:
-        if isinstance(value, (str, int)):
-            text = str(value).strip().lower()
-            if text in {"1", "true", "yes", "on"}:
-                enabled = True
-            elif text in {"0", "false", "no", "off"}:
-                enabled = False
-    if enabled is None:
-        return jsonify({"ok": False, "error": "invalid-field", "field": "uno_requests_enabled"}), 400
-    set_uno_requests_enabled(enabled)
-    refresh_uno_requests_setting()
-    return jsonify({"ok": True, "uno_requests_enabled": is_uno_requests_enabled()})
+
+    response_payload = {"ok": True}
+
+    if "uno_requests_enabled" in payload:
+        value = payload.get("uno_requests_enabled")
+        enabled = bool(value) if isinstance(value, bool) else None
+        if enabled is None:
+            if isinstance(value, (str, int)):
+                text = str(value).strip().lower()
+                if text in {"1", "true", "yes", "on"}:
+                    enabled = True
+                elif text in {"0", "false", "no", "off"}:
+                    enabled = False
+        if enabled is None:
+            return jsonify({"ok": False, "error": "invalid-field", "field": "uno_requests_enabled"}), 400
+        set_uno_requests_enabled(enabled)
+        refresh_uno_requests_setting()
+        response_payload["uno_requests_enabled"] = is_uno_requests_enabled()
+
+    if "plugin_enabled" in payload:
+        value = payload.get("plugin_enabled")
+        enabled = bool(value) if isinstance(value, bool) else None
+        if enabled is None:
+            if isinstance(value, (str, int)):
+                text = str(value).strip().lower()
+                if text in {"1", "true", "yes", "on"}:
+                    enabled = True
+                elif text in {"0", "false", "no", "off"}:
+                    enabled = False
+        if enabled is None:
+            return jsonify({"ok": False, "error": "invalid-field", "field": "plugin_enabled"}), 400
+        set_plugin_enabled(enabled)
+        refresh_plugin_setting()
+        response_payload["plugin_enabled"] = is_plugin_enabled()
+
+    return jsonify(response_payload)
 
 
 @blueprint.route("/")
@@ -1062,16 +1094,14 @@ def api_mirror():
     overlay_id = _overlay_id_from_url(uno_url) or normalize_overlay_id(
         payload.get("overlay") or payload.get("app") or payload.get("appId")
     )
-    if overlay_id:
-        overlay_id = normalize_overlay_id(overlay_id)
 
     kort_id: Optional[str] = None
     if overlay_id:
         kort_id = get_kort_for_overlay(overlay_id)
     if not kort_id:
-        kort_id_raw = payload.get("kort")
-        if kort_id_raw is not None:
-            kort_id = normalize_kort_id(kort_id_raw) or str(kort_id_raw)
+        kort_raw = payload.get("kort")
+        if kort_raw is not None:
+            kort_id = normalize_kort_id(kort_raw) or str(kort_raw)
     if not kort_id and overlay_id:
         kort_id = overlay_id
     if not kort_id:
@@ -1081,192 +1111,31 @@ def api_mirror():
     body = payload.get("unoBody")
     if not isinstance(body, dict):
         body = {}
-    extras = {k: v for k, v in body.items() if k not in {"command", "value"}} or None
-    command = body.get("command") or payload.get("command")
-    if not command:
-        return jsonify({"ok": False, "error": "command required"}), 400
-
-    normalized_uno_url = _normalize_uno_api_url(uno_url)
-    uno_method = _normalize_uno_method(payload.get("unoMethod") or payload.get("uno_method"))
-    uno_value = body.get("value") if isinstance(body, dict) else payload.get("value")
-    value = uno_value
-    log.info(
-        "mirror command=%s overlay=%s kort=%s method=%s value=%s extras=%s raw=%s",
-        command,
-        overlay_id,
-        kort_id,
-        uno_method,
-        shorten(value),
-        shorten(extras),
-        shorten(body),
-    )
-
-    if body is None and isinstance(payload.get("unoBodyRaw"), str):
-        try:
-            body = json.loads(payload["unoBodyRaw"])
-        except (TypeError, ValueError, json.JSONDecodeError):  # type: ignore[attr-defined]
-            body = None
-
-    body = body if isinstance(body, dict) else {}
+    # prefer structured body but accept top-level command/value
     command = body.get("command") or payload.get("command")
     value = body.get("value")
     extras = {k: v for k, v in body.items() if k not in {"command", "value"}}
 
     ts = payload.get("mirroredAt") or now_iso()
-    status_code = payload.get("unoStatus")
-    ok_flag = payload.get("unoOk")
-    response_payload = payload.get("unoResponse")
 
-    extras_for_log: Dict[str, Any] = {
-        "uno_status": status_code,
-        "uno_ok": ok_flag,
-        "uno_method": uno_method,
-        "uno_url": normalized_uno_url or uno_url,
-    }
-    if extras:
-        extras_for_log["payload_extras"] = safe_copy(extras)
-    if overlay_id:
-        extras_for_log["overlay_id"] = overlay_id
-
-    extras_for_log = {k: v for k, v in extras_for_log.items() if v is not None}
-    broadcast_extras = safe_copy(extras) if extras else None
-
-    flag_push_plans: List[Dict[str, str]] = []
-    if command in {"SetNamePlayerA", "SetNamePlayerB"} and extras:
-        raw_flag_url = (
-            extras.get("flagUrl")
-            or extras.get("flag_url")
-            or extras.get("flagUrlA")
-            or extras.get("flagUrlB")
-        )
-        if raw_flag_url:
-            flag_value = str(raw_flag_url).strip()
-            if flag_value:
-                target_url = normalized_uno_url or _api_endpoint(kort_id)
-                if target_url:
-                    field_id = "Player A Flag" if command.endswith("A") else "Player B Flag"
-                    flag_push_plans.append(
-                        {
-                            "url": target_url,
-                            "method": uno_method,
-                            "field": field_id,
-                            "value": flag_value,
-                        }
-                    )
-                    extras_for_log["flag_url"] = flag_value
-                else:
-                    log.info(
-                        "mirror flag push skipped kort=%s command=%s reason=no-endpoint",
-                        kort_id,
-                        command,
-                    )
-
-    flag_updates: Optional[Dict[str, Dict[str, Optional[str]]]] = None
-
+    # Log and skip applying any state changes coming from browser plugins.
     with STATE_LOCK:
         state = ensure_court_state(kort_id)
-        changed = False
-        if command:
-            try:
-                changed, flag_updates = apply_local_command(
-                    state, command, value, extras or None, kort_id
-                )
-            except Exception as exc:  # noqa: BLE001
-                log.warning("mirror apply failed kort=%s command=%s error=%s", kort_id, command, exc)
-        if changed and command:
-            state["local"]["commands"][command] = {
-                "value": safe_copy(value),
-                "extras": safe_copy(extras) if extras else None,
-                "ts": ts,
-            }
-            state["local"]["updated"] = ts
-        elif changed:
-            state["local"]["updated"] = ts
-        uno_state = state["uno"]
-        uno_state["last_command"] = command
-        uno_state["last_value"] = safe_copy(value)
-        uno_state["last_payload"] = safe_copy(body)
-        uno_state["last_status"] = status_code
-        uno_state["last_response"] = safe_copy(response_payload)
-        uno_state["updated"] = ts
-        state["updated"] = ts
         entry = record_log_entry(
             state,
             kort_id,
             "mirror",
             command or "unknown",
             safe_copy(value),
-            extras_for_log or None,
+            {"skipped": "plugin-mirror-disabled", "overlay": overlay_id} if overlay_id else {"skipped": "plugin-mirror-disabled"},
             ts,
         )
         response_state = serialize_court_state(state)
         persist_state_cache(kort_id, state)
 
-        log_state_summary(kort_id, state, "mirror state")
+    log.info("mirror skipped kort=%s overlay=%s command=%s", kort_id, overlay_id, command)
 
-    if flag_updates:
-        for side, info in flag_updates.items():
-            if not isinstance(info, dict):
-                continue
-            flag_value = info.get("flag_url")
-            if not flag_value:
-                continue
-            target_url = normalized_uno_url or _api_endpoint(kort_id)
-            if not target_url:
-                log.info(
-                    "mirror flag push skipped kort=%s command=%s side=%s reason=no-endpoint",
-                    kort_id,
-                    command,
-                    side,
-                )
-                continue
-            field_id = "Player A Flag" if side == "A" else "Player B Flag"
-            if not any(
-                plan.get("field") == field_id and plan.get("value") == flag_value
-                for plan in flag_push_plans
-            ):
-                flag_push_plans.append(
-                    {
-                        "url": target_url,
-                        "method": uno_method,
-                        "field": field_id,
-                        "value": flag_value,
-                    }
-                )
-            if isinstance(extras_for_log, dict):
-                extras_for_log[f"db_flag_{side}"] = flag_value
-
-    for plan in flag_push_plans:
-        _send_flag_update_to_uno(
-            plan["url"],
-            plan["method"],
-            plan["field"],
-            plan["value"],
-        )
-
-    broadcast_kort_state(
-        kort_id,
-        "mirror",
-        command or "unknown",
-        safe_copy(value),
-        broadcast_extras,
-        ts,
-        status_code,
-    )
-
-    log.info("mirror kort=%s overlay=%s command=%s status=%s", kort_id, overlay_id, command, status_code)
-
-    return jsonify(
-        {
-            "ok": True,
-            "kort": kort_id,
-            "overlay": overlay_id,
-            "command": command,
-            "ts": ts,
-            "state": response_state,
-            "log": entry,
-        }
-    )
+    return jsonify({"ok": True, "kort": kort_id, "overlay": overlay_id, "command": command, "ts": ts, "state": response_state, "log": entry})
 
 
 @blueprint.route("/api/local/reflect/<kort_id>", methods=["POST"])
@@ -1360,75 +1229,17 @@ def api_local_reflect(kort_id: str):
 
     ts = now_iso()
 
-    flag_updates: Optional[Dict[str, Dict[str, Optional[str]]]] = None
-
+    # Do not apply commands coming from browser plugins. Record a skipped
+    # reflect entry so admins can see attempts, but rely only on UNO
+    # originating `/api/uno/exec/<kort_id>` calls for state changes.
     with STATE_LOCK:
         state = ensure_court_state(kort_id)
-        changed, flag_updates = apply_local_command(state, command, value, extras, kort_id)
-        state["local"]["commands"][command] = {
-            "value": value,
-            "extras": extras_copy,
-            "ts": ts,
-        }
-        state["local"]["updated"] = ts
-        state["updated"] = ts
-        entry = record_log_entry(state, kort_id, "reflect", command, value, log_extras, ts)
+        entry = record_log_entry(state, kort_id, "reflect", command, value, {**(log_extras or {}), "skipped": "plugin-reflect-disabled"}, ts)
         response_state = serialize_court_state(state)
         persist_state_cache(kort_id, state)
 
-        log_state_summary(kort_id, state, "reflect state")
-
-    if flag_updates:
-        for side, info in flag_updates.items():
-            if not isinstance(info, dict):
-                continue
-            flag_value = info.get("flag_url")
-            if not flag_value:
-                continue
-            target_url = normalized_uno_url or _api_endpoint(kort_id)
-            if not target_url and overlay_normalized:
-                target_url = f"{settings.overlay_base}/{overlay_normalized}/api"
-            if not target_url:
-                log.info(
-                    "reflect flag push skipped kort=%s command=%s side=%s reason=no-endpoint",
-                    kort_id,
-                    command,
-                    side,
-                )
-                continue
-            field_id = "Player A Flag" if side == "A" else "Player B Flag"
-            if not any(
-                plan.get("field") == field_id and plan.get("value") == flag_value
-                for plan in flag_push_plans
-            ):
-                flag_push_plans.append(
-                    {
-                        "url": target_url,
-                        "method": uno_method,
-                        "field": field_id,
-                        "value": flag_value,
-                    }
-                )
-
-    broadcast_kort_state(
-        kort_id,
-        "reflect",
-        command,
-        value,
-        extras_copy if isinstance(extras_copy, dict) else extras_copy,
-        ts,
-        None,
-    )
-
-    for plan in flag_push_plans:
-        _send_flag_update_to_uno(
-            plan["url"],
-            plan["method"],
-            plan["field"],
-            plan["value"],
-        )
-
-    return jsonify({"ok": True, "changed": changed, "state": response_state, "log": entry})
+    log.info("reflect skipped kort=%s command=%s", kort_id, command)
+    return jsonify({"ok": True, "changed": False, "state": response_state, "log": entry})
 
 
 @blueprint.route("/api/uno/exec/<kort_id>", methods=["POST"])

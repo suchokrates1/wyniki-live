@@ -69,6 +69,8 @@ GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size
 
 UNO_REQUESTS_LOCK = threading.Lock()
 UNO_REQUESTS_ENABLED = False
+PLUGIN_LOCK = threading.Lock()
+PLUGIN_ENABLED = False
 
 DEFAULT_HISTORY_PHASE = "Grupowa"
 
@@ -79,9 +81,20 @@ def _load_uno_requests_setting() -> bool:
     return bool(parsed) if parsed is not None else False
 
 
+def _load_plugin_setting() -> bool:
+    stored = fetch_app_settings(["plugin_enabled"]).get("plugin_enabled")
+    parsed = to_bool(stored)
+    return bool(parsed) if parsed is not None else False
+
+
 def is_uno_requests_enabled() -> bool:
     with UNO_REQUESTS_LOCK:
         return UNO_REQUESTS_ENABLED
+
+
+def is_plugin_enabled() -> bool:
+    with PLUGIN_LOCK:
+        return PLUGIN_ENABLED
 
 
 def set_uno_requests_enabled(enabled: bool) -> None:
@@ -93,11 +106,28 @@ def set_uno_requests_enabled(enabled: bool) -> None:
     log.info("UNO requests %s", "enabled" if normalized else "disabled")
 
 
+def set_plugin_enabled(enabled: bool) -> None:
+    normalized = bool(enabled)
+    with PLUGIN_LOCK:
+        global PLUGIN_ENABLED
+        PLUGIN_ENABLED = normalized
+    upsert_app_settings({"plugin_enabled": "1" if normalized else "0"})
+    log.info("Plugin messages %s", "enabled" if normalized else "disabled")
+
+
 def refresh_uno_requests_setting() -> bool:
     new_value = _load_uno_requests_setting()
     with UNO_REQUESTS_LOCK:
         global UNO_REQUESTS_ENABLED
         UNO_REQUESTS_ENABLED = new_value
+    return new_value
+
+
+def refresh_plugin_setting() -> bool:
+    new_value = _load_plugin_setting()
+    with PLUGIN_LOCK:
+        global PLUGIN_ENABLED
+        PLUGIN_ENABLED = new_value
     return new_value
 
 
