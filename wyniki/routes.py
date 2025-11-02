@@ -8,7 +8,7 @@ import re
 from queue import Empty
 from threading import Lock
 from urllib.parse import urlparse, urlunparse
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import requests
 from flask import (
@@ -50,6 +50,8 @@ from .state import (
     event_broker,
     get_kort_for_overlay,
     get_overlay_for_kort,
+    get_uno_auto_disabled_reason,
+    get_uno_hourly_usage_summary,
     log_state_summary,
     load_match_history,
     is_uno_requests_enabled,
@@ -833,6 +835,8 @@ def admin_api_system_settings():
             "uno_requests_enabled": is_uno_requests_enabled(),
             "plugin_enabled": is_plugin_enabled(),
             "uno_rate_limit": get_uno_rate_limit_info(),
+            "uno_auto_disabled_reason": get_uno_auto_disabled_reason(),
+            "uno_hourly_usage": get_uno_hourly_usage_summary(),
         }
     )
 
@@ -882,6 +886,8 @@ def admin_api_system_update():
         response_payload["plugin_enabled"] = is_plugin_enabled()
 
     response_payload["uno_rate_limit"] = get_uno_rate_limit_info()
+    response_payload["uno_auto_disabled_reason"] = get_uno_auto_disabled_reason()
+    response_payload["uno_hourly_usage"] = get_uno_hourly_usage_summary()
 
     return jsonify(response_payload)
 
@@ -1018,6 +1024,82 @@ def _normalize_uno_method(raw_method: Optional[str]) -> str:
     return "PUT"
 
 
+UNO_GET_TO_SET_MAP: Dict[str, str] = {
+    "GetPointsPlayerA": "SetPointsPlayerA",
+    "GetPointsPlayerB": "SetPointsPlayerB",
+    "GetCurrentSetPlayerA": "SetCurrentSetPlayerA",
+    "GetCurrentSetPlayerB": "SetCurrentSetPlayerB",
+    "GetSet1PlayerA": "SetSet1PlayerA",
+    "GetSet1PlayerB": "SetSet1PlayerB",
+    "GetSet2PlayerA": "SetSet2PlayerA",
+    "GetSet2PlayerB": "SetSet2PlayerB",
+    "GetTieBreakPlayerA": "SetTieBreakPlayerA",
+    "GetTieBreakPlayerB": "SetTieBreakPlayerB",
+    "GetTieBreakVisibility": "SetTieBreakVisibility",
+    "GetNamePlayerA": "SetNamePlayerA",
+    "GetNamePlayerB": "SetNamePlayerB",
+}
+
+
+def _extract_uno_value(payload: Any) -> Any:
+    current = payload
+    visited: Set[int] = set()
+    while True:
+        if current is None:
+            return None
+        if isinstance(current, (str, int, float, bool)):
+            return current
+        obj_id = id(current)
+        if obj_id in visited:
+            return current
+        visited.add(obj_id)
+        if isinstance(current, dict):
+            for key in (
+                "value",
+                "Value",
+                "payload",
+                "Payload",
+                "text",
+                "Text",
+                "current",
+                "Current",
+                "currentValue",
+                "current_value",
+                "data",
+                "Data",
+                "result",
+                "Result",
+                "response",
+                "Response",
+                "returnValue",
+                "return_value",
+            ):
+                if key in current:
+                    current = current[key]
+                    break
+            else:
+                return current
+        elif isinstance(current, (list, tuple)):
+            if not current:
+                return None
+            if len(current) == 1:
+                current = current[0]
+            else:
+                return current
+        else:
+            return current
+
+
+def _derive_local_uno_command(command: str, response_payload: Any) -> Optional[Tuple[str, Any]]:
+    mapped = UNO_GET_TO_SET_MAP.get(command)
+    if not mapped:
+        return None
+    derived_value = _extract_uno_value(response_payload)
+    if derived_value is None:
+        return None
+    return mapped, derived_value
+
+
 def _send_flag_update_to_uno(
     url: str,
     method: str,
@@ -1046,7 +1128,7 @@ def _send_flag_update_to_uno(
         )
         update_uno_rate_limit(response.headers)
     except requests.RequestException as exc:
-        record_uno_request(False)
+        record_uno_request(False, None, "SetCustomizationField")
         log.warning(
             "mirror flag push failed url=%s field=%s error=%s",
             shorten(url),
@@ -1067,7 +1149,7 @@ def _send_flag_update_to_uno(
         response_payload = response.text
 
     success = 200 <= status_code < 300
-    record_uno_request(success)
+    record_uno_request(success, None, "SetCustomizationField")
     if success:
         log.info(
             "mirror flag push ok url=%s field=%s status=%s",
@@ -1384,8 +1466,7 @@ def api_uno_exec(kort_id: str):
         return jsonify({"error": "overlay-missing"}), 400
 
     ts = now_iso()
-    value = payload.get("value")
-    value_copy = safe_copy(value)
+    request_value = payload.get("value")
     extras_dict = {k: v for k, v in payload.items() if k not in {"command", "value"}}
     extras = extras_dict or None
     payload_copy = safe_copy(payload)
@@ -1421,9 +1502,28 @@ def api_uno_exec(kort_id: str):
     success = status_code is not None and 200 <= status_code < 300
 
     safe_response = safe_copy(response_payload)
+
+    local_command = command
+    local_value = request_value
+    derived_from_response = False
+    if success and request_value is None:
+        mapped = _derive_local_uno_command(command, response_payload)
+        if mapped:
+            derived_from_response = True
+            local_command, local_value = mapped
+
+    value_copy = safe_copy(local_value)
+
+    auto_disable_reason = record_uno_request(success, kort_id, command)
+
     broadcast_extras = extras_copy if isinstance(extras_copy, dict) else extras_copy
+    if isinstance(broadcast_extras, dict) and command != local_command:
+        broadcast_extras = dict(broadcast_extras)
+        broadcast_extras.setdefault("uno_original_command", command)
+
+    log_extras: Optional[Dict[str, Any]]
     if extras_copy is None:
-        log_extras: Optional[Dict[str, Any]] = {
+        log_extras = {
             "uno_status": status_code,
             "uno_response": safe_response,
         }
@@ -1431,26 +1531,42 @@ def api_uno_exec(kort_id: str):
         log_extras = dict(extras_copy)
         log_extras["uno_status"] = status_code
         log_extras["uno_response"] = safe_response
+    if command != local_command:
+        if log_extras is None:
+            log_extras = {"uno_original_command": command}
+        else:
+            log_extras.setdefault("uno_original_command", command)
+    if derived_from_response:
+        if log_extras is None:
+            log_extras = {"uno_value_source": "response"}
+        else:
+            log_extras.setdefault("uno_value_source", "response")
     if error_message:
         if log_extras is None:
             log_extras = {"uno_error": error_message}
         else:
             log_extras["uno_error"] = error_message
+    if auto_disable_reason:
+        if log_extras is None:
+            log_extras = {"uno_auto_disabled": auto_disable_reason}
+        else:
+            log_extras.setdefault("uno_auto_disabled", auto_disable_reason)
 
     with STATE_LOCK:
         state = ensure_court_state(kort_id)
         if success:
             try:
-                apply_local_command(state, command, value, extras, kort_id)
+                apply_local_command(state, local_command, local_value, extras, kort_id)
             except Exception as exc:  # noqa: BLE001
                 log.warning(
                     "failed to apply local command mirror kort=%s command=%s error=%s",
                     kort_id,
-                    command,
+                    local_command,
                     exc,
                 )
         uno_state = state["uno"]
-        uno_state["last_command"] = command
+        uno_state["last_remote_command"] = command
+        uno_state["last_command"] = local_command
         uno_state["last_value"] = value_copy
         uno_state["last_payload"] = payload_copy
         uno_state["last_status"] = status_code
@@ -1461,7 +1577,7 @@ def api_uno_exec(kort_id: str):
             state,
             kort_id,
             "uno",
-            command,
+            local_command,
             value_copy,
             log_extras or None,
             ts,
@@ -1473,17 +1589,27 @@ def api_uno_exec(kort_id: str):
     broadcast_kort_state(
         kort_id,
         "uno",
-        command,
+        local_command,
         value_copy,
         broadcast_extras,
         ts,
         status_code,
     )
-
-    record_uno_request(success)
+    if auto_disable_reason:
+        log.warning("UNO auto-disabled kort=%s reason=%s", kort_id, auto_disable_reason)
+        sync_poller_state()
 
     if success:
-        log.info("uno kort=%s command=%s status=%s", kort_id, command, status_code)
+        if local_command != command:
+            log.info(
+                "uno kort=%s remote=%s applied=%s status=%s",
+                kort_id,
+                command,
+                local_command,
+                status_code,
+            )
+        else:
+            log.info("uno kort=%s command=%s status=%s", kort_id, command, status_code)
         return jsonify(
             {
                 "ok": True,
