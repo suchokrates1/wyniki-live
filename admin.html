@@ -13,6 +13,25 @@
   >
     <main class="container">
       <h1>Panel administracyjny</h1>
+      <section id="uno-limit-banner" class="admin-rate-limit" hidden>
+        <div class="admin-rate-limit__icon" aria-hidden="true">⚡</div>
+        <div class="admin-rate-limit__content">
+          <p class="admin-rate-limit__title">Dzienne limity zapytań UNO</p>
+          <p class="admin-rate-limit__line">
+            Limit dzienny: <strong id="uno-rate-limit-value">—</strong>
+            <span id="uno-rate-limit-header" class="admin-rate-limit__tag" hidden></span>
+          </p>
+          <p class="admin-rate-limit__line">
+            Pozostało dzisiaj: <strong id="uno-rate-limit-remaining">—</strong>
+          </p>
+          <p class="admin-rate-limit__meta">
+            Ostatnia aktualizacja: <span id="uno-rate-limit-updated">—</span>
+          </p>
+          <p class="admin-rate-limit__meta">
+            Reset limitu: <span id="uno-rate-limit-reset">—</span>
+          </p>
+        </div>
+      </section>
       <div id="admin-feedback" class="feedback" role="alert" aria-live="polite"></div>
 
       <section id="admin-disabled-section" {% if admin_enabled %}hidden{% endif %}>
@@ -279,6 +298,7 @@
       'players': players,
       'uno_requests_enabled': uno_requests_enabled,
       'plugin_enabled': plugin_enabled,
+      'uno_rate_limit': uno_rate_limit,
       'int_fields': int_fields,
       'admin_enabled': admin_enabled,
       'admin_disabled_message': admin_disabled_message,
