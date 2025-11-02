@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import math
 import os
 import re
 from queue import Empty
@@ -51,6 +52,7 @@ from .state import (
     get_kort_for_overlay,
     get_overlay_for_kort,
     get_uno_auto_disabled_reason,
+    get_uno_hourly_config,
     get_uno_hourly_usage_summary,
     log_state_summary,
     load_match_history,
@@ -73,6 +75,7 @@ from .state import (
     validate_command,
     refresh_plugin_setting,
     update_uno_rate_limit,
+    update_uno_hourly_config,
     record_uno_request,
 )
 from .poller import sync_poller_state
@@ -836,6 +839,7 @@ def admin_api_system_settings():
             "plugin_enabled": is_plugin_enabled(),
             "uno_rate_limit": get_uno_rate_limit_info(),
             "uno_auto_disabled_reason": get_uno_auto_disabled_reason(),
+            "uno_hourly_config": get_uno_hourly_config(),
             "uno_hourly_usage": get_uno_hourly_usage_summary(),
         }
     )
@@ -885,8 +889,89 @@ def admin_api_system_update():
         refresh_plugin_setting()
         response_payload["plugin_enabled"] = is_plugin_enabled()
 
+    if "uno_hourly_config" in payload:
+        config_payload = payload.get("uno_hourly_config")
+        if not isinstance(config_payload, dict):
+            return jsonify({"ok": False, "error": "invalid-field", "field": "uno_hourly_config"}), 400
+
+        def _parse_optional_int(raw_value: Any, field: str, *, minimum: Optional[int] = None) -> Optional[int]:
+            if raw_value is None:
+                return None
+            text = str(raw_value).strip()
+            if not text:
+                return None
+            normalized = text.replace(",", ".")
+            try:
+                numeric = float(normalized)
+            except (TypeError, ValueError):
+                raise ValueError(field)
+            if not math.isfinite(numeric) or not numeric.is_integer():
+                raise ValueError(field)
+            parsed = int(numeric)
+            if minimum is not None and parsed < minimum:
+                raise ValueError(field)
+            return parsed
+
+        def _parse_optional_float(raw_value: Any, field: str, *, minimum: Optional[float] = None, maximum: Optional[float] = None) -> Optional[float]:
+            if raw_value is None:
+                return None
+            text = str(raw_value).strip()
+            if not text:
+                return None
+            normalized = text.replace(",", ".")
+            try:
+                parsed = float(normalized)
+            except (TypeError, ValueError):
+                raise ValueError(field)
+            if not math.isfinite(parsed):
+                raise ValueError(field)
+            if minimum is not None and parsed < minimum:
+                raise ValueError(field)
+            if maximum is not None and parsed > maximum:
+                raise ValueError(field)
+            return parsed
+
+        try:
+            limit_value = _parse_optional_int(config_payload.get("limit"), "uno_hourly_config.limit", minimum=0)
+            threshold_percent = _parse_optional_float(
+                config_payload.get("threshold_percent"),
+                "uno_hourly_config.threshold_percent",
+                minimum=0.0,
+                maximum=100.0,
+            )
+            slowdown_factor = _parse_optional_int(
+                config_payload.get("slowdown_factor"),
+                "uno_hourly_config.slowdown_factor",
+                minimum=1,
+            )
+            slowdown_sleep = _parse_optional_float(
+                config_payload.get("slowdown_sleep"),
+                "uno_hourly_config.slowdown_sleep",
+                minimum=0.0,
+            )
+        except ValueError as exc:
+            return jsonify({"ok": False, "error": "invalid-field", "field": str(exc)}), 400
+
+        update_kwargs: Dict[str, Any] = {}
+        if limit_value is not None:
+            update_kwargs["limit"] = limit_value
+        if threshold_percent is not None:
+            update_kwargs["threshold"] = threshold_percent / 100.0
+        if slowdown_factor is not None:
+            update_kwargs["slowdown_factor"] = slowdown_factor
+        if slowdown_sleep is not None:
+            update_kwargs["slowdown_sleep"] = slowdown_sleep
+
+        if update_kwargs:
+            updated_config = update_uno_hourly_config(**update_kwargs)
+        else:
+            updated_config = get_uno_hourly_config()
+        sync_poller_state()
+        response_payload["uno_hourly_config"] = updated_config
+
     response_payload["uno_rate_limit"] = get_uno_rate_limit_info()
     response_payload["uno_auto_disabled_reason"] = get_uno_auto_disabled_reason()
+    response_payload["uno_hourly_config"] = response_payload.get("uno_hourly_config", get_uno_hourly_config())
     response_payload["uno_hourly_usage"] = get_uno_hourly_usage_summary()
 
     return jsonify(response_payload)
