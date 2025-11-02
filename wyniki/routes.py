@@ -71,6 +71,7 @@ from .state import (
     validate_command,
     refresh_plugin_setting,
     update_uno_rate_limit,
+    record_uno_request,
 )
 from .utils import now_iso, render_file_template, safe_copy, shorten
 
@@ -1041,6 +1042,7 @@ def _send_flag_update_to_uno(
         )
         update_uno_rate_limit(response.headers)
     except requests.RequestException as exc:
+        record_uno_request(False)
         log.warning(
             "mirror flag push failed url=%s field=%s error=%s",
             shorten(url),
@@ -1061,6 +1063,7 @@ def _send_flag_update_to_uno(
         response_payload = response.text
 
     success = 200 <= status_code < 300
+    record_uno_request(success)
     if success:
         log.info(
             "mirror flag push ok url=%s field=%s status=%s",
@@ -1468,6 +1471,8 @@ def api_uno_exec(kort_id: str):
         ts,
         status_code,
     )
+
+    record_uno_request(success)
 
     if success:
         log.info("uno kort=%s command=%s status=%s", kort_id, command, status_code)
