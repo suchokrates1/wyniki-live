@@ -31,8 +31,44 @@
 .uno-picker-item:hover { background: #f2f2f2; }
 .uno-picker-flag { opacity: .7; font-size: 12px; }
 
-.uno-picker-button {
+.uno-picker-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   margin-left: 8px;
+}
+
+.uno-picker-double-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #444;
+  user-select: none;
+}
+
+.uno-picker-double-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #ff5c25;
+}
+
+.uno-picker-options {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.uno-picker-double-hint {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.uno-picker-button {
+  margin-left: 0;
   height: 32px;
   padding: 0 12px;
   border-radius: 8px;
@@ -72,6 +108,8 @@
 }
 
 .uno-picker-flag { color: #b9c2d0 !important; opacity: .9 !important; }
+.uno-picker-double-label { color: #b9c2d0 !important; }
+.uno-picker-double-hint { color: #8b93a1 !important; }
 
 .uno-picker-button {
   background: #ff5c25 !important;
