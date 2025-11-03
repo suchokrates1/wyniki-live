@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, Dict, Optional, Set, Tuple
+import time
+from typing import Any, Dict, Optional, Set, Tuple, Callable
 
 import requests
 
 from .config import settings, log
 from .query_system import QuerySystem
 from .state import (
+    STATE_LOCK,
     available_courts,
     dequeue_uno_command,
+    ensure_court_state,
     get_uno_activity_multiplier,
     get_uno_hourly_status,
     is_uno_requests_enabled,
@@ -116,6 +119,233 @@ class UnoCommandClient:
         raise AttributeError(name)
 
 
+class SmartCourtPollingController:
+    """Implements smart polling rules for a single court."""
+
+    MODE_IN_MATCH = "in_match"
+    MODE_AWAIT_NAMES = "awaiting_names"
+    MODE_AWAIT_FIRST_POINT = "awaiting_first_point"
+
+    TRIGGER_POINTS = {"40", "ADV"}
+    NAME_INTERVAL_RESET = 5.0
+    NAME_INTERVAL_PREMATCH = 20.0
+    POINT_INTERVAL_PREMATCH = 12.0
+
+    def __init__(self, kort_id: str, system: QuerySystem, *, now_fn: Optional[Callable[[], float]] = None) -> None:
+        self.kort_id = kort_id
+        self.system = system
+        self._now = now_fn or time.monotonic
+        self._mode = self.MODE_IN_MATCH
+        self._pending_set_poll = False
+        self._points_decisive: Dict[str, bool] = {"A": False, "B": False}
+        self._last_points: Dict[str, Optional[str]] = {"A": None, "B": None}
+        self._previous_match_names: Dict[str, Optional[str]] = {"A": None, "B": None}
+        self._current_names: Dict[str, Optional[str]] = {"A": None, "B": None}
+        self._next_name_poll_allowed = 0.0
+        self._next_point_poll_allowed = 0.0
+
+        # Prepared callables for QuerySystem configuration
+        self._point_preconditions = {
+            "A": lambda: self._should_poll_points("A"),
+            "B": lambda: self._should_poll_points("B"),
+        }
+        self._set_precondition = self._should_poll_sets
+        self._name_preconditions = {
+            "A": lambda: self._should_poll_name("A"),
+            "B": lambda: self._should_poll_name("B"),
+        }
+
+    def attach(self) -> None:
+        self.system.configure_spec(
+            "GetPointsPlayerA",
+            precondition=self._point_preconditions["A"],
+            on_result=lambda value: self._on_point_result("A", value),
+        )
+        self.system.configure_spec(
+            "GetPointsPlayerB",
+            precondition=self._point_preconditions["B"],
+            on_result=lambda value: self._on_point_result("B", value),
+        )
+        self.system.configure_spec(
+            "GetCurrentSetPlayerA",
+            precondition=self._set_precondition,
+            on_result=self._on_set_poll_result,
+        )
+        self.system.configure_spec(
+            "GetCurrentSetPlayerB",
+            precondition=self._set_precondition,
+            on_result=self._on_set_poll_result,
+        )
+        self.system.configure_spec(
+            "GetNamePlayerA",
+            precondition=self._name_preconditions["A"],
+            on_result=lambda value: self._on_name_result("A", value),
+        )
+        self.system.configure_spec(
+            "GetNamePlayerB",
+            precondition=self._name_preconditions["B"],
+            on_result=lambda value: self._on_name_result("B", value),
+        )
+
+    def sync_from_state(self) -> None:
+        with STATE_LOCK:
+            state = ensure_court_state(self.kort_id)
+            a_state = dict(state.get("A") or {})
+            b_state = dict(state.get("B") or {})
+            match_status = dict(state.get("match_status") or {})
+        active = bool(match_status.get("active"))
+        points = {
+            "A": self._normalize_point(a_state.get("points")),
+            "B": self._normalize_point(b_state.get("points")),
+        }
+        names = {
+            "A": self._canonical_name(a_state),
+            "B": self._canonical_name(b_state),
+        }
+        self._current_names = names
+        self._update_mode(active, names, points)
+        self._update_point_triggers(points)
+
+    # ------------------------------------------------------------------
+    # Internal helpers for state analysis
+    # ------------------------------------------------------------------
+    def _update_mode(self, active: bool, names: Dict[str, Optional[str]], points: Dict[str, Optional[str]]) -> None:
+        if not active:
+            if self._mode == self.MODE_IN_MATCH:
+                self._previous_match_names = dict(names)
+                self._mode = self.MODE_AWAIT_NAMES
+                self._next_name_poll_allowed = 0.0
+                self._next_point_poll_allowed = 0.0
+                self._pending_set_poll = False
+                self._points_decisive = {"A": False, "B": False}
+            elif self._mode == self.MODE_AWAIT_NAMES:
+                if self._names_changed_meaningfully(names):
+                    self._mode = self.MODE_AWAIT_FIRST_POINT
+                    self._next_name_poll_allowed = 0.0
+                    self._next_point_poll_allowed = 0.0
+            elif self._mode == self.MODE_AWAIT_FIRST_POINT:
+                if self._names_changed_meaningfully(names):
+                    self._next_name_poll_allowed = 0.0
+                if self._first_point_detected(points):
+                    self._mode = self.MODE_IN_MATCH
+                    self._previous_match_names = dict(names)
+        else:
+            if self._mode != self.MODE_IN_MATCH:
+                self._mode = self.MODE_IN_MATCH
+            self._previous_match_names = dict(names)
+
+    def _update_point_triggers(self, points: Dict[str, Optional[str]]) -> None:
+        for side in ("A", "B"):
+            value = points.get(side)
+            previous = self._last_points.get(side)
+            decisive = value in self.TRIGGER_POINTS
+            if self._mode == self.MODE_IN_MATCH and decisive:
+                if not self._points_decisive[side] or value != previous:
+                    self._pending_set_poll = True
+                self._points_decisive[side] = True
+            else:
+                self._points_decisive[side] = False
+            self._last_points[side] = value
+
+        if self._mode != self.MODE_IN_MATCH:
+            self._pending_set_poll = False
+
+    # ------------------------------------------------------------------
+    # Precondition helpers wired into QuerySystem
+    # ------------------------------------------------------------------
+    def _should_poll_points(self, side: str) -> bool:
+        if self._mode == self.MODE_AWAIT_NAMES:
+            return False
+        if self._mode == self.MODE_AWAIT_FIRST_POINT:
+            now = self._now()
+            if now < self._next_point_poll_allowed:
+                return False
+            self._next_point_poll_allowed = now + self.POINT_INTERVAL_PREMATCH
+            return True
+        return True
+
+    def _should_poll_sets(self) -> bool:
+        return self._mode == self.MODE_IN_MATCH and self._pending_set_poll
+
+    def _should_poll_name(self, side: str) -> bool:
+        if self._mode == self.MODE_IN_MATCH:
+            return False
+        now = self._now()
+        interval = self.NAME_INTERVAL_RESET if self._mode == self.MODE_AWAIT_NAMES else self.NAME_INTERVAL_PREMATCH
+        if now < self._next_name_poll_allowed:
+            return False
+        self._next_name_poll_allowed = now + interval
+        return True
+
+    # ------------------------------------------------------------------
+    # Result handlers used after successful UNO calls
+    # ------------------------------------------------------------------
+    def _on_point_result(self, side: str, value: Any) -> None:
+        # Handling is deferred to sync_from_state where we work against the persisted state.
+        if self._mode == self.MODE_AWAIT_FIRST_POINT:
+            normalized = self._normalize_point(value)
+            if normalized and normalized not in {"0", "0-0", "-", ""}:
+                self._mode = self.MODE_IN_MATCH
+
+    def _on_set_poll_result(self, _value: Any) -> None:
+        self._pending_set_poll = False
+
+    def _on_name_result(self, side: str, value: Any) -> None:
+        # names are applied through _derive_local_uno_command; we only keep track of recent non-empty values
+        normalized = self._normalize_name_value(value)
+        if normalized:
+            self._current_names[side] = normalized
+
+    # ------------------------------------------------------------------
+    # Utility helpers
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _normalize_point(raw: Any) -> Optional[str]:
+        if raw is None:
+            return None
+        text = str(raw).strip()
+        if not text:
+            return None
+        return text.upper()
+
+    @staticmethod
+    def _canonical_name(side_state: Dict[str, Any]) -> Optional[str]:
+        full = side_state.get("full_name") or side_state.get("fullName")
+        if isinstance(full, str) and full.strip():
+            return full.strip()
+        surname = side_state.get("surname")
+        if isinstance(surname, str) and surname.strip():
+            text = surname.strip()
+            if text == "-":
+                return None
+            return text
+        return None
+
+    @staticmethod
+    def _normalize_name_value(raw: Any) -> Optional[str]:
+        if raw is None:
+            return None
+        if isinstance(raw, dict):
+            candidate = raw.get("value") or raw.get("name")
+            if candidate is not None:
+                raw = candidate
+        text = str(raw).strip()
+        if not text or text == "-":
+            return None
+        return text
+
+    def _names_changed_meaningfully(self, names: Dict[str, Optional[str]]) -> bool:
+        for side in ("A", "B"):
+            candidate = names.get(side)
+            previous = self._previous_match_names.get(side)
+            if candidate and candidate != previous:
+                return True
+        return False
+
+    @staticmethod
+    def _first_point_detected(points: Dict[str, Optional[str]]) -> bool:
+        baseline = {None, "", "-", "0", "0-0"}
+        return any(value not in baseline for value in points.values())
 class CourtPollingWorker(threading.Thread):
     """Background thread running a ``QuerySystem`` for a single court."""
 
@@ -125,6 +355,8 @@ class CourtPollingWorker(threading.Thread):
         self.client = UnoCommandClient(kort_id)
         self._stop_event = threading.Event()
         self.system = QuerySystem(self.client, sleep_fn=self._sleep)
+        self.smart = SmartCourtPollingController(kort_id, self.system)
+        self.smart.attach()
         self._slowdown_counter = 0
         self._last_mode: Optional[str] = None
         self._current_speed_multiplier = 1.0
@@ -208,6 +440,7 @@ class CourtPollingWorker(threading.Thread):
         log.info("UNO poller started kort=%s", self.kort_id)
         try:
             self._sync_activity_multiplier()
+            self.smart.sync_from_state()
             while not self._stop_event.is_set():
                 self._sync_activity_multiplier()
                 if not is_uno_requests_enabled():
@@ -257,6 +490,8 @@ class CourtPollingWorker(threading.Thread):
                         continue
                 else:
                     self._slowdown_counter = 0
+
+                self.smart.sync_from_state()
 
                 if self._process_command_queue():
                     continue

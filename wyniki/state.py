@@ -684,7 +684,15 @@ def _empty_court_state() -> Dict[str, Any]:
         "mode": None,
         "serve": None,
         "current_set": 1,
-        "match_time": {"seconds": 0, "running": False, "started_ts": None, "finished_ts": None},
+        "match_time": {
+            "seconds": 0,
+            "running": False,
+            "started_ts": None,
+            "finished_ts": None,
+            "resume_ts": None,
+            "offset_seconds": 0,
+            "auto_resume": True,
+        },
         "match_status": {"active": False, "last_completed": None},
         "A": _empty_player_state(),
         "B": _empty_player_state(),
@@ -1230,11 +1238,25 @@ def validate_command(command: Optional[str]) -> bool:
 
 
 def ensure_match_struct(state: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    match_time = state.setdefault("match_time", {"seconds": 0, "running": False, "started_ts": None, "finished_ts": None})
+    match_time = state.setdefault(
+        "match_time",
+        {
+            "seconds": 0,
+            "running": False,
+            "started_ts": None,
+            "finished_ts": None,
+            "resume_ts": None,
+            "offset_seconds": 0,
+            "auto_resume": True,
+        },
+    )
     match_time.setdefault("started_ts", None)
     match_time.setdefault("finished_ts", None)
+    match_time.setdefault("resume_ts", None)
     match_time.setdefault("seconds", 0)
+    match_time.setdefault("offset_seconds", 0)
     match_time.setdefault("running", False)
+    match_time.setdefault("auto_resume", True)
     status = state.setdefault("match_status", {"active": False, "last_completed": None})
     status.setdefault("active", False)
     status.setdefault("last_completed", None)
@@ -1248,6 +1270,8 @@ load_state_cache()
 
 def maybe_start_match(state: Dict[str, Any]) -> None:
     match_time, status = ensure_match_struct(state)
+    if not match_time.get("auto_resume", True):
+        return
     if status.get("active") and match_time.get("running"):
         return
     if match_time.get("started_ts"):
@@ -1259,8 +1283,11 @@ def maybe_start_match(state: Dict[str, Any]) -> None:
     if set1_started or current_games_started:
         iso = now_iso()
         match_time["started_ts"] = iso
+        match_time["resume_ts"] = iso
         match_time["finished_ts"] = None
-        match_time["seconds"] = 0
+        current_seconds = max(0, int(match_time.get("seconds") or 0))
+        match_time["seconds"] = current_seconds
+        match_time["offset_seconds"] = current_seconds
         match_time["running"] = True
         status["active"] = True
 
@@ -1269,26 +1296,46 @@ def update_match_timer(state: Dict[str, Any]) -> None:
     match_time, _ = ensure_match_struct(state)
     if not match_time.get("running"):
         return
-    start = parse_iso_datetime(match_time.get("started_ts"))
-    if start is None:
-        iso = now_iso()
-        match_time["started_ts"] = iso
-        start = parse_iso_datetime(iso)
-        if start is None:
+    resume_iso = match_time.get("resume_ts") or match_time.get("started_ts")
+    resume_dt = parse_iso_datetime(resume_iso) if resume_iso else None
+    if resume_dt is None:
+        resume_iso = now_iso()
+        match_time["resume_ts"] = resume_iso
+        if match_time.get("started_ts") is None:
+            match_time["started_ts"] = resume_iso
+        resume_dt = parse_iso_datetime(resume_iso)
+        if resume_dt is None:
             return
-    now = now_iso()
-    now_dt = parse_iso_datetime(now)
+    now_value = now_iso()
+    now_dt = parse_iso_datetime(now_value)
     if now_dt is None:
         return
-    seconds = max(0, int((now_dt - start).total_seconds()))
-    match_time["seconds"] = seconds
-    match_time["finished_ts"] = now
+    offset = max(0, int(match_time.get("offset_seconds") or 0))
+    delta = max(0, int((now_dt - resume_dt).total_seconds()))
+    match_time["seconds"] = offset + delta
+    match_time["finished_ts"] = now_value
 
 
 def stop_match_timer(state: Dict[str, Any]) -> None:
+    pause_match_timer(state)
     match_time, _ = ensure_match_struct(state)
+    match_time["auto_resume"] = True
+    if not match_time.get("finished_ts"):
+        match_time["finished_ts"] = now_iso()
+
+
+def pause_match_timer(state: Dict[str, Any], *, manual: bool = False) -> None:
+    match_time, _ = ensure_match_struct(state)
+    if not match_time.get("running"):
+        if manual:
+            match_time["auto_resume"] = False
+        return
     update_match_timer(state)
     match_time["running"] = False
+    match_time["offset_seconds"] = max(0, int(match_time.get("seconds") or 0))
+    match_time["resume_ts"] = None
+    if manual:
+        match_time["auto_resume"] = False
     if not match_time.get("finished_ts"):
         match_time["finished_ts"] = now_iso()
 
@@ -1725,6 +1772,9 @@ def reset_after_match(state: Dict[str, Any]) -> None:
     match_time["running"] = False
     match_time["started_ts"] = None
     match_time["finished_ts"] = None
+    match_time["resume_ts"] = None
+    match_time["offset_seconds"] = 0
+    match_time["auto_resume"] = True
     status["active"] = False
     meta = ensure_history_meta(state)
     meta["category"] = None
@@ -1794,6 +1844,7 @@ def apply_local_command(
     log.debug("apply command=%s value=%s extras=%s", command, shorten(value), shorten(extras))
     changed = False
     flag_updates: Dict[str, Dict[str, Optional[str]]] = {}
+    match_time, _ = ensure_match_struct(state)
     if command == "SetNamePlayerA":
         full = str(value or "").strip() or None
         state["A"]["full_name"] = full
@@ -1987,18 +2038,55 @@ def apply_local_command(
                     state["overlay_visible"] = to_bool(value)
                     changed = True
                 elif command == "SetMatchTime":
-                    state["match_time"]["seconds"] = max(0, as_int(value, 0))
-                    changed = True
+                    seconds = max(0, as_int(value, 0))
+                    if match_time.get("seconds") != seconds or match_time.get("offset_seconds") != seconds:
+                        match_time["seconds"] = seconds
+                        match_time["offset_seconds"] = seconds
+                        if match_time.get("running"):
+                            resume_iso = now_iso()
+                            match_time["resume_ts"] = resume_iso
+                            if match_time.get("started_ts") is None:
+                                match_time["started_ts"] = resume_iso
+                            match_time["finished_ts"] = resume_iso
+                        changed = True
                 elif command == "ResetMatchTime":
-                    state["match_time"]["seconds"] = 0
-                    state["match_time"]["running"] = False
-                    changed = True
+                    if (
+                        match_time.get("seconds")
+                        or match_time.get("running")
+                        or match_time.get("started_ts")
+                        or match_time.get("finished_ts")
+                        or match_time.get("resume_ts")
+                        or match_time.get("offset_seconds")
+                        or not match_time.get("auto_resume", True)
+                    ):
+                        match_time["seconds"] = 0
+                        match_time["offset_seconds"] = 0
+                        match_time["running"] = False
+                        match_time["started_ts"] = None
+                        match_time["finished_ts"] = None
+                        match_time["resume_ts"] = None
+                        match_time["auto_resume"] = True
+                        changed = True
                 elif command == "PlayMatchTime":
-                    state["match_time"]["running"] = True
-                    changed = True
+                    if not match_time.get("running"):
+                        now_value = now_iso()
+                        match_time["running"] = True
+                        if match_time.get("started_ts") is None:
+                            match_time["started_ts"] = now_value
+                        match_time["offset_seconds"] = max(0, int(match_time.get("seconds") or 0))
+                        match_time["resume_ts"] = now_value
+                        match_time["finished_ts"] = None
+                        match_time["auto_resume"] = True
+                        changed = True
+                    elif not match_time.get("auto_resume", True):
+                        match_time["auto_resume"] = True
+                        changed = True
                 elif command == "PauseMatchTime":
-                    state["match_time"]["running"] = False
-                    changed = True
+                    was_running = bool(match_time.get("running"))
+                    auto_before = match_time.get("auto_resume", True)
+                    pause_match_timer(state, manual=True)
+                    if was_running or auto_before != match_time.get("auto_resume", True):
+                        changed = True
                 elif command in {"SetMatchCategory", "SetCategory"}:
                     meta = ensure_history_meta(state)
                     meta["category"] = _clean_history_text(value)
