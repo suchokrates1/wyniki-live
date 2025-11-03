@@ -66,63 +66,71 @@
         <header class="section-header">
           <h2>System</h2>
         </header>
-        <div id="uno-status-card" class="admin-rate-limit">
-          <div class="admin-rate-limit__icon" aria-hidden="true">⚡</div>
-          <div class="admin-rate-limit__content uno-status-wrapper">
-            <div class="uno-status-controls">
+        <div id="uno-status-card" class="system-card">
+          <div class="system-card__icon" aria-hidden="true">⚡</div>
+          <div class="system-card__content">
+            <div class="system-card__header">
               <label class="toggle">
                 <input id="uno-requests-toggle" type="checkbox" />
                 <span>Wysyłaj zapytania do UNO</span>
               </label>
-              <p id="uno-toggle-status" class="system-note">
-                Gdy opcja jest wyłączona, żadne komendy nie są wysyłane do UNO.
-              </p>
+              <div class="system-card__actions">
+                <button id="uno-activity-reset" type="button" class="button-secondary">Stan normalny</button>
+              </div>
             </div>
-            <dl class="uno-status-list">
-              <div>
+            <p id="uno-toggle-status" class="system-note">
+              Gdy opcja jest wyłączona, żadne komendy nie są wysyłane do UNO.
+            </p>
+            <dl class="uno-metrics">
+              <div class="uno-metric">
                 <dt>Dzienny limit</dt>
                 <dd id="uno-daily-summary">—</dd>
+                <dd class="uno-metric__hint">Dane z nagłówka UNO</dd>
               </div>
-              <div>
+              <div class="uno-metric">
                 <dt>Godzinowy limit</dt>
                 <dd id="uno-hourly-summary">—</dd>
               </div>
-              <div>
+              <div class="uno-metric">
                 <dt>Status</dt>
                 <dd id="uno-status-label">—</dd>
               </div>
             </dl>
+            <p id="uno-activity-note" class="system-note" hidden></p>
             <p id="uno-auto-disabled" class="system-note" hidden></p>
             <form id="uno-poller-form" class="uno-poller-form">
-              <div class="uno-poller-grid">
-                <label for="uno-hourly-limit">Limit/h (na kort)</label>
-                <input id="uno-hourly-limit" name="limit" type="number" min="0" step="1" />
-                <label for="uno-slowdown-threshold">Spowolnij przy (%)</label>
-                <input
-                  id="uno-slowdown-threshold"
-                  name="threshold_percent"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                />
-                <label for="uno-slowdown-factor">Przepuść co n-te zapytanie</label>
-                <input id="uno-slowdown-factor" name="slowdown_factor" type="number" min="1" step="1" />
-                <label for="uno-slowdown-sleep">Dodatkowa pauza (s)</label>
-                <input id="uno-slowdown-sleep" name="slowdown_sleep" type="number" min="0" step="0.5" />
-              </div>
-              <div class="uno-poller-actions">
-                <button type="submit">Zapisz limity</button>
-              </div>
+              <fieldset class="uno-poller-fieldset">
+                <legend>Limity na kort</legend>
+                <div class="uno-poller-grid">
+                  <label for="uno-hourly-limit">Limit/h (na kort)</label>
+                  <input id="uno-hourly-limit" name="limit" type="number" min="0" step="1" />
+                  <label for="uno-slowdown-threshold">Spowolnij przy (%)</label>
+                  <input
+                    id="uno-slowdown-threshold"
+                    name="threshold_percent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                  />
+                  <label for="uno-slowdown-factor">Przepuść co n-te zapytanie</label>
+                  <input id="uno-slowdown-factor" name="slowdown_factor" type="number" min="1" step="1" />
+                  <label for="uno-slowdown-sleep">Dodatkowa pauza (s)</label>
+                  <input id="uno-slowdown-sleep" name="slowdown_sleep" type="number" min="0" step="0.5" />
+                </div>
+                <div class="uno-poller-actions">
+                  <button type="submit">Zapisz limity</button>
+                </div>
+              </fieldset>
             </form>
             <div id="uno-rate-limit-meta" class="uno-rate-meta" hidden>
-              <p class="admin-rate-limit__meta">
+              <p class="uno-rate-meta__item">
                 Nagłówek: <span id="uno-rate-limit-header">—</span>
               </p>
-              <p class="admin-rate-limit__meta">
+              <p class="uno-rate-meta__item">
                 Reset limitu: <span id="uno-rate-limit-reset">—</span>
               </p>
-              <p class="admin-rate-limit__meta">
+              <p class="uno-rate-meta__item">
                 Ostatnia aktualizacja: <span id="uno-rate-limit-updated">—</span>
               </p>
             </div>

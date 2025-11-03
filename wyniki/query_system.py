@@ -101,6 +101,7 @@ class QuerySystem:
         self.mode = self.NORMAL_MODE
         self._queue: List[ScheduledTask] = []
         self._counter = 0
+        self._speed_multiplier = 1.0
         self._modes: Dict[str, List[QuerySpec]] = {
             self.NORMAL_MODE: self._build_normal_specs(),
             self.TIE_MODE: self._build_tie_specs(),
@@ -141,7 +142,8 @@ class QuerySystem:
             spec.on_result(result)
 
         if self.mode == spec.mode:
-            self._schedule(spec, now + spec.interval)
+            interval = max(0.0, spec.interval * self._speed_multiplier)
+            self._schedule(spec, now + interval)
 
     def run_steps(self, steps: int) -> None:
         """Execute ``steps`` tasks sequentially."""
@@ -184,6 +186,18 @@ class QuerySystem:
             self._schedule(spec, now)
         if not initial:
             self.log.info("Query system switched to %s mode", mode)
+
+    def set_speed_multiplier(self, multiplier: float) -> None:
+        try:
+            value = float(multiplier)
+        except (TypeError, ValueError):
+            return
+        if value < 1.0:
+            value = 1.0
+        if abs(value - self._speed_multiplier) < 0.01:
+            return
+        self._speed_multiplier = value
+        self._activate_mode(self.mode, initial=True)
 
     def _build_normal_specs(self) -> List[QuerySpec]:
         return [

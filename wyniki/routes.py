@@ -52,6 +52,7 @@ from .state import (
     get_kort_for_overlay,
     get_overlay_for_kort,
     get_uno_auto_disabled_reason,
+    get_uno_activity_status,
     get_uno_hourly_config,
     get_uno_hourly_usage_summary,
     log_state_summary,
@@ -62,10 +63,12 @@ from .state import (
     is_known_kort,
     normalize_kort_id,
     persist_state_cache,
+    record_uno_activity_event,
     reset_after_match,
     refresh_uno_requests_setting,
     refresh_courts_from_db,
     record_log_entry,
+    reset_uno_activity_timer,
     set_uno_requests_enabled,
     set_plugin_enabled,
     serialize_court_state,
@@ -424,6 +427,7 @@ def admin_index() -> str:
         uno_hourly_config=get_uno_hourly_config(),
         uno_hourly_usage=get_uno_hourly_usage_summary(),
         uno_auto_disabled_reason=get_uno_auto_disabled_reason(),
+        uno_activity_status=get_uno_activity_status(),
         int_fields=sorted(HISTORY_INT_FIELDS),
         admin_enabled=admin_enabled,
         admin_disabled_message=ADMIN_DISABLED_MESSAGE,
@@ -844,6 +848,7 @@ def admin_api_system_settings():
             "uno_auto_disabled_reason": get_uno_auto_disabled_reason(),
             "uno_hourly_config": get_uno_hourly_config(),
             "uno_hourly_usage": get_uno_hourly_usage_summary(),
+            "uno_activity_status": get_uno_activity_status(),
         }
     )
 
@@ -891,6 +896,9 @@ def admin_api_system_update():
         set_plugin_enabled(enabled)
         refresh_plugin_setting()
         response_payload["plugin_enabled"] = is_plugin_enabled()
+
+    if payload.get("uno_activity_reset"):
+        response_payload["uno_activity_status"] = reset_uno_activity_timer("admin-reset")
 
     if "uno_hourly_config" in payload:
         config_payload = payload.get("uno_hourly_config")
@@ -976,6 +984,7 @@ def admin_api_system_update():
     response_payload["uno_auto_disabled_reason"] = get_uno_auto_disabled_reason()
     response_payload["uno_hourly_config"] = response_payload.get("uno_hourly_config", get_uno_hourly_config())
     response_payload["uno_hourly_usage"] = get_uno_hourly_usage_summary()
+    response_payload["uno_activity_status"] = response_payload.get("uno_activity_status", get_uno_activity_status())
 
     return jsonify(response_payload)
 
@@ -1455,6 +1464,9 @@ def api_local_reflect(kort_id: str):
         log_state_summary(kort_id, state, "reflect state")
 
     # Attempt to keep track of UNO customization flags when available.
+    if changed:
+        record_uno_activity_event(ts)
+
     target_url = normalized_uno_url or _api_endpoint(kort_id)
     if not target_url and overlay_normalized:
         target_url = f"{settings.overlay_base}/{overlay_normalized}/api"
@@ -1640,11 +1652,12 @@ def api_uno_exec(kort_id: str):
         else:
             log_extras.setdefault("uno_auto_disabled", auto_disable_reason)
 
+    changed = False
     with STATE_LOCK:
         state = ensure_court_state(kort_id)
         if success:
             try:
-                apply_local_command(state, local_command, local_value, extras, kort_id)
+                changed, _ = apply_local_command(state, local_command, local_value, extras, kort_id)
             except Exception as exc:  # noqa: BLE001
                 log.warning(
                     "failed to apply local command mirror kort=%s command=%s error=%s",
@@ -1686,6 +1699,9 @@ def api_uno_exec(kort_id: str):
     if auto_disable_reason:
         log.warning("UNO auto-disabled kort=%s reason=%s", kort_id, auto_disable_reason)
         sync_poller_state()
+
+    if success and changed:
+        record_uno_activity_event(ts)
 
     if success:
         if local_command != command:
