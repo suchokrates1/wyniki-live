@@ -40,49 +40,6 @@ from .database import (
     upsert_app_settings,
     upsert_court,
 )
-from .state import (
-    DEFAULT_HISTORY_PHASE,
-    apply_local_command,
-    available_courts,
-    broadcast_kort_state,
-    broadcast_snapshot,
-    buckets,
-    ensure_court_state,
-    event_broker,
-    get_kort_for_overlay,
-    get_overlay_for_kort,
-    get_uno_auto_disabled_reason,
-    get_uno_activity_status,
-    get_uno_hourly_config,
-    get_uno_hourly_usage_summary,
-    log_state_summary,
-    load_match_history,
-    is_uno_requests_enabled,
-    is_plugin_enabled,
-    get_uno_rate_limit_info,
-    is_known_kort,
-    normalize_kort_id,
-    persist_state_cache,
-    record_uno_activity_event,
-    reset_after_match,
-    refresh_uno_requests_setting,
-    refresh_courts_from_db,
-    record_log_entry,
-    reset_uno_activity_timer,
-    set_uno_requests_enabled,
-    set_plugin_enabled,
-    serialize_court_state,
-    serialize_history,
-    serialize_public_snapshot,
-    STATE_LOCK,
-    validate_command,
-    refresh_plugin_setting,
-    update_uno_rate_limit,
-    update_uno_hourly_config,
-    record_uno_request,
-)
-from .poller import sync_poller_state
-from .utils import now_iso, render_file_template, safe_copy, shorten
 
 blueprint = Blueprint("wyniki", __name__)
 admin_blueprint = Blueprint("admin", __name__, url_prefix="/admin")
@@ -98,6 +55,7 @@ ADMIN_DISABLED_MESSAGE = (
     "Panel administracyjny jest wyłączony. Skonfiguruj zmienną środowiskową"
     " ADMIN_PASSWORD, aby go aktywować."
 )
+
 HISTORY_INT_FIELDS = {
     "duration_seconds",
     "set1_a",
@@ -112,6 +70,51 @@ HISTORY_INT_FIELDS = {
     "set2_tb_b",
 }
 HISTORY_STR_FIELDS = {"kort_id", "ended_ts", "player_a", "player_b", "category", "phase"}
+
+from .state import (
+    DEFAULT_HISTORY_PHASE,
+    STATE_LOCK,
+    apply_local_command,
+    available_courts,
+    broadcast_kort_state,
+    broadcast_snapshot,
+    buckets,
+    ensure_court_state,
+    event_broker,
+    get_kort_for_overlay,
+    get_overlay_for_kort,
+    get_uno_activity_status,
+    get_uno_auto_disabled_reason,
+    get_uno_hourly_config,
+    get_uno_hourly_usage_summary,
+    get_uno_rate_limit_info,
+    is_known_kort,
+    is_plugin_enabled,
+    is_uno_requests_enabled,
+    load_match_history,
+    log_state_summary,
+    normalize_kort_id,
+    persist_state_cache,
+    record_log_entry,
+    record_uno_activity_event,
+    record_uno_request,
+    refresh_courts_from_db,
+    refresh_plugin_setting,
+    refresh_uno_requests_setting,
+    reset_after_match,
+    reset_uno_activity_timer,
+    serialize_court_state,
+    serialize_history,
+    serialize_public_snapshot,
+    set_plugin_enabled,
+    set_uno_requests_enabled,
+    update_uno_hourly_config,
+    update_uno_rate_limit,
+    enqueue_uno_flag_update,
+    validate_command,
+)
+from .poller import sync_poller_state
+from .utils import now_iso, render_file_template, safe_copy, shorten
 
 
 def _admin_enabled() -> bool:
@@ -1197,74 +1200,6 @@ def _derive_local_uno_command(command: str, response_payload: Any) -> Optional[T
     return mapped, derived_value
 
 
-def _send_flag_update_to_uno(
-    url: str,
-    method: str,
-    field_id: str,
-    flag_url: str,
-) -> Tuple[bool, Optional[int], Optional[object]]:
-    if not is_uno_requests_enabled():
-        log.info(
-            "flag push skipped url=%s field=%s reason=uno-disabled",
-            shorten(url),
-            field_id,
-        )
-        return False, None, {"error": "uno-disabled"}
-    payload = {
-        "command": "SetCustomizationField",
-        "fieldId": field_id,
-        "value": str(flag_url),
-    }
-    try:
-        response = requests.request(
-            method,
-            url,
-            headers=settings.auth_header,
-            json=payload,
-            timeout=5,
-        )
-        update_uno_rate_limit(response.headers)
-    except requests.RequestException as exc:
-        record_uno_request(False, None, "SetCustomizationField")
-        log.warning(
-            "mirror flag push failed url=%s field=%s error=%s",
-            shorten(url),
-            field_id,
-            exc,
-        )
-        return False, None, str(exc)
-
-    status_code = response.status_code
-    response_payload: Optional[object]
-    content_type = response.headers.get("Content-Type", "")
-    if "json" in content_type.lower():
-        try:
-            response_payload = response.json()
-        except ValueError:
-            response_payload = response.text
-    else:
-        response_payload = response.text
-
-    success = 200 <= status_code < 300
-    record_uno_request(success, None, "SetCustomizationField")
-    if success:
-        log.info(
-            "mirror flag push ok url=%s field=%s status=%s",
-            shorten(url),
-            field_id,
-            status_code,
-        )
-    else:
-        log.warning(
-            "mirror flag push failed url=%s field=%s status=%s payload=%s",
-            shorten(url),
-            field_id,
-            status_code,
-            shorten(response_payload),
-        )
-
-    return success, status_code, response_payload
-
 
 def _api_endpoint(kort_id: str) -> Optional[str]:
     overlay_id = get_overlay_for_kort(kort_id)
@@ -1351,12 +1286,10 @@ def api_local_reflect(kort_id: str):
     overlay_hint = extras_dict.pop("overlay", None)
     extras_dict.pop("kort", None)
 
-    raw_uno_url = extras_dict.pop("unoUrl", None)
-    if raw_uno_url is None:
-        raw_uno_url = extras_dict.pop("uno_url", None)
-    raw_uno_method = extras_dict.pop("unoMethod", None)
-    if raw_uno_method is None:
-        raw_uno_method = extras_dict.pop("uno_method", None)
+    extras_dict.pop("unoUrl", None)
+    extras_dict.pop("uno_url", None)
+    extras_dict.pop("unoMethod", None)
+    extras_dict.pop("uno_method", None)
     extras_dict.pop("unoToken", None)
     extras_dict.pop("uno_token", None)
     extras_dict.pop("unoApp", None)
@@ -1368,8 +1301,6 @@ def api_local_reflect(kort_id: str):
     extras_copy = safe_copy(extras)
 
     overlay_normalized = normalize_overlay_id(overlay_hint) if overlay_hint else None
-    normalized_uno_url = _normalize_uno_api_url(raw_uno_url)
-    uno_method = _normalize_uno_method(raw_uno_method)
 
     log_extras = safe_copy(extras)
     if isinstance(log_extras, dict):
@@ -1385,7 +1316,16 @@ def api_local_reflect(kort_id: str):
         else:
             log_extras.setdefault("overlay", overlay_normalized)
 
-    flag_push_plans: List[Dict[str, str]] = []
+    flag_queue_requests: Dict[str, str] = {}
+
+    def _plan_flag_update(field_id: str, flag_value: str) -> None:
+        if not field_id:
+            return
+        value_normalized = str(flag_value or "").strip()
+        if not value_normalized:
+            return
+        flag_queue_requests[field_id] = value_normalized
+
     if command in {"SetNamePlayerA", "SetNamePlayerB"} and isinstance(extras, dict):
         raw_flag_url = (
             extras.get("flagUrl")
@@ -1396,27 +1336,16 @@ def api_local_reflect(kort_id: str):
         if raw_flag_url:
             flag_value = str(raw_flag_url).strip()
             if flag_value:
-                target_url = normalized_uno_url or _api_endpoint(kort_id)
-                if not target_url and overlay_normalized:
-                    target_url = f"{settings.overlay_base}/{overlay_normalized}/api"
-                if target_url:
-                    field_id = "Player A Flag" if command.endswith("A") else "Player B Flag"
-                    flag_push_plans.append(
-                        {
-                            "url": target_url,
-                            "method": uno_method,
-                            "field": field_id,
-                            "value": flag_value,
-                        }
-                    )
-                    if isinstance(log_extras, dict):
-                        log_extras.setdefault("flag_url", flag_value)
-                else:
-                    log.info(
-                        "reflect flag push skipped kort=%s command=%s reason=no-endpoint",
-                        kort_id,
-                        command,
-                    )
+                field_id = "Player A Flag" if command.endswith("A") else "Player B Flag"
+                _plan_flag_update(field_id, flag_value)
+                if isinstance(log_extras, dict):
+                    log_extras.setdefault("flag_url", flag_value)
+            else:
+                log.info(
+                    "reflect flag update skipped kort=%s command=%s reason=blank-flag",
+                    kort_id,
+                    command,
+                )
 
     if isinstance(log_extras, dict) and not log_extras:
         log_extras = None
@@ -1467,11 +1396,7 @@ def api_local_reflect(kort_id: str):
     if changed:
         record_uno_activity_event(ts)
 
-    target_url = normalized_uno_url or _api_endpoint(kort_id)
-    if not target_url and overlay_normalized:
-        target_url = f"{settings.overlay_base}/{overlay_normalized}/api"
-
-    if flag_updates_copy and target_url:
+    if flag_updates_copy:
         for side, updates in flag_updates_copy.items():
             if not isinstance(updates, dict):
                 continue
@@ -1479,51 +1404,60 @@ def api_local_reflect(kort_id: str):
             if not flag_url_candidate:
                 continue
             field_id = "Player A Flag" if side == "A" else "Player B Flag"
-            already_planned = any(plan.get("field") == field_id for plan in flag_push_plans)
-            if not already_planned:
-                flag_push_plans.append(
-                    {
-                        "url": target_url,
-                        "method": uno_method,
-                        "field": field_id,
-                        "value": flag_url_candidate,
-                    }
-                )
+            if field_id not in flag_queue_requests:
+                _plan_flag_update(field_id, flag_url_candidate)
 
-    flag_push_results: List[Dict[str, Any]] = []
-    for plan in flag_push_plans:
-        ok, status_code, payload = _send_flag_update_to_uno(
-            plan["url"],
-            plan["method"],
-            plan["field"],
-            plan["value"],
-        )
-        flag_push_results.append(
+    flag_queue_results: List[Dict[str, Any]] = []
+    for field_id, flag_value in flag_queue_requests.items():
+        queued = enqueue_uno_flag_update(kort_id, field_id, flag_value)
+        flag_queue_results.append(
             {
-                "ok": ok,
-                "status": status_code,
-                "field": plan["field"],
-                "url": shorten(plan["url"]),
-                "response": shorten(payload),
+                "ok": queued,
+                "queued": queued,
+                "field": field_id,
+                "value": flag_value,
+                "status": None,
+                "url": None,
+                "response": None,
             }
         )
+        if queued:
+            log.info(
+                "reflect queued flag update kort=%s field=%s value=%s",
+                kort_id,
+                field_id,
+                shorten(flag_value),
+            )
+        else:
+            log.warning(
+                "reflect failed to queue flag update kort=%s field=%s value=%s",
+                kort_id,
+                field_id,
+                shorten(flag_value),
+            )
 
     broadcast_kort_state(kort_id, "reflect", command, value, extras_copy, ts)
 
-    if flag_push_results:
+    if flag_queue_results:
         entry_extras = entry.get("extras") or {}
         entry_extras = dict(entry_extras)
-        entry_extras.setdefault("flag_push", flag_push_results)
+        entry_extras.setdefault("flag_push", flag_queue_results)
         entry["extras"] = entry_extras
 
-    log.info("reflect applied kort=%s command=%s changed=%s flag_pushes=%s", kort_id, command, changed, len(flag_push_results))
+    log.info(
+        "reflect applied kort=%s command=%s changed=%s flag_updates=%s",
+        kort_id,
+        command,
+        changed,
+        len(flag_queue_results),
+    )
     return jsonify(
         {
             "ok": True,
             "changed": bool(changed),
             "state": response_state,
             "log": entry,
-            "flag_push": flag_push_results or None,
+            "flag_push": flag_queue_results or None,
         }
     )
 

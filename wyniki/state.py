@@ -7,7 +7,7 @@ import re
 import threading
 import time
 from datetime import datetime, timezone, timedelta
-from collections import deque
+from collections import OrderedDict, deque
 from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 
 from .config import settings, log
@@ -119,6 +119,10 @@ UNO_ACTIVITY_DESCRIPTIONS = {
     2: "Brak zmian przez 60 min — tempo zapytań x0.25.",
     3: "Brak zmian przez 90 min — pojedyncze zapytanie na godzinę.",
 }
+
+UNO_COMMAND_QUEUE_LOCK = threading.Lock()
+UNO_PENDING_COMMANDS: Dict[str, OrderedDict[str, Dict[str, Any]]] = {}
+UNO_COMMAND_MAX_ATTEMPTS = 3
 
 
 def _sanitize_threshold(value: float) -> float:
@@ -872,6 +876,147 @@ def normalize_kort_id(raw: Any) -> Optional[str]:
             pass
     normalized = text.lstrip("0")
     return normalized or text
+
+
+def _queue_kort_id(kort_id: Any) -> Optional[str]:
+    normalized = normalize_kort_id(kort_id)
+    if normalized:
+        return normalized
+    if kort_id is None:
+        return None
+    text = str(kort_id).strip()
+    return text or None
+
+
+def _prepare_command_payload(payload: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if payload is None:
+        return {}
+    if isinstance(payload, dict):
+        return safe_copy(payload)
+    return {"value": safe_copy(payload)}
+
+
+def enqueue_uno_command(
+    kort_id: str,
+    command: str,
+    *,
+    payload: Optional[Dict[str, Any]] = None,
+    key: Optional[str] = None,
+    max_attempts: int = UNO_COMMAND_MAX_ATTEMPTS,
+) -> bool:
+    if not command:
+        return False
+    queue_kort = _queue_kort_id(kort_id)
+    if not queue_kort:
+        return False
+    command_key = key or command
+    payload_copy = _prepare_command_payload(payload)
+    item = {
+        "command": command,
+        "payload": payload_copy,
+        "queued_at": now_iso(),
+        "attempts": 0,
+        "max_attempts": max(1, int(max_attempts or 1)),
+        "key": command_key,
+        "next_attempt": time.monotonic(),
+    }
+    with UNO_COMMAND_QUEUE_LOCK:
+        queue_map = UNO_PENDING_COMMANDS.setdefault(queue_kort, OrderedDict())
+        if command_key in queue_map:
+            queue_map.pop(command_key)
+        queue_map[command_key] = item
+    log.debug(
+        "uno queued kort=%s key=%s command=%s payload=%s",
+        queue_kort,
+        command_key,
+        command,
+        shorten(payload_copy),
+    )
+    return True
+
+
+def dequeue_uno_command(kort_id: str) -> Optional[Dict[str, Any]]:
+    queue_kort = _queue_kort_id(kort_id)
+    if not queue_kort:
+        return None
+    with UNO_COMMAND_QUEUE_LOCK:
+        queue_map = UNO_PENDING_COMMANDS.get(queue_kort)
+        if not queue_map:
+            return None
+        first_key, first_item = next(iter(queue_map.items()))
+        not_before = float(first_item.get("next_attempt", 0.0) or 0.0)
+        if not_before > time.monotonic():
+            return None
+        queue_map.pop(first_key)
+        if not queue_map:
+            UNO_PENDING_COMMANDS.pop(queue_kort, None)
+    item_copy = safe_copy(first_item)
+    item_copy.setdefault("key", first_key)
+    return item_copy
+
+
+def requeue_uno_command(
+    kort_id: str,
+    item: Dict[str, Any],
+    *,
+    backoff_seconds: float = 5.0,
+) -> bool:
+    queue_kort = _queue_kort_id(kort_id)
+    if not queue_kort:
+        return False
+    command = item.get("command")
+    key = item.get("key") or command
+    if not command or not key:
+        return False
+    attempts = int(item.get("attempts", 0)) + 1
+    max_attempts = int(item.get("max_attempts", UNO_COMMAND_MAX_ATTEMPTS))
+    if attempts >= max_attempts:
+        log.warning(
+            "uno queue drop kort=%s key=%s command=%s attempts=%s",
+            queue_kort,
+            key,
+            command,
+            attempts,
+        )
+        return False
+    payload_copy = _prepare_command_payload(item.get("payload"))
+    next_attempt = time.monotonic() + max(1.0, backoff_seconds) * attempts
+    updated = {
+        "command": command,
+        "payload": payload_copy,
+        "queued_at": item.get("queued_at") or now_iso(),
+        "attempts": attempts,
+        "max_attempts": max_attempts,
+        "key": key,
+        "next_attempt": next_attempt,
+    }
+    with UNO_COMMAND_QUEUE_LOCK:
+        queue_map = UNO_PENDING_COMMANDS.setdefault(queue_kort, OrderedDict())
+        if key in queue_map:
+            queue_map.pop(key)
+        queue_map[key] = updated
+    log.info(
+        "uno queue retry kort=%s key=%s command=%s attempt=%s next_in=%.1fs",
+        queue_kort,
+        key,
+        command,
+        attempts,
+        next_attempt - time.monotonic(),
+    )
+    return True
+
+
+def enqueue_uno_flag_update(kort_id: str, field_id: str, flag_url: Optional[str]) -> bool:
+    if not flag_url:
+        return False
+    if not field_id:
+        return False
+    normalized_field = str(field_id).strip()
+    if not normalized_field:
+        return False
+    payload = {"fieldId": normalized_field, "value": str(flag_url)}
+    queue_key = f"flag:{normalized_field.lower()}"
+    return enqueue_uno_command(kort_id, "SetCustomizationField", payload=payload, key=queue_key)
 
 
 def is_known_kort(kort_id: str) -> bool:
@@ -2053,6 +2198,10 @@ __all__ = [
     "event_broker",
     "finalize_match_if_needed",
     "handle_match_flow",
+    "enqueue_uno_command",
+    "dequeue_uno_command",
+    "requeue_uno_command",
+    "enqueue_uno_flag_update",
     "get_uno_auto_disabled_reason",
     "get_uno_hourly_config",
     "get_uno_hourly_status",
