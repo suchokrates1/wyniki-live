@@ -508,6 +508,13 @@ const uno = { token: null, appInstance: null };
 let lastAppId = null;
 let documentKort = null;
 const API_PATTERN_KEY = 'uno_flag_api_pattern';
+const REFLECT_ENDPOINT_KEY = 'uno_reflect_endpoint';
+const REFLECT_TIMEOUT_MS = 4000;
+const REFLECT_FALLBACK_BASES = [
+  'https://score.vestmedia.pl',
+  'http://127.0.0.1:5000',
+  'http://localhost:5000'
+];
 
 function buildScoreReflectMessage(overlay, kortInput, command, value, extras) {
   const storedPattern = loadApiPattern() || {};
@@ -531,21 +538,31 @@ function buildScoreReflectMessage(overlay, kortInput, command, value, extras) {
   };
 }
 
-  async function mirrorScoreUpdate(command, value, extras = null) {
-    if (!command) return;
-    const overlay = normalizeOverlayId(uno.appInstance || lastAppId || overlayFromLocation()) || null;
-    if (!overlay) {
-      log('Mirror update: overlay missing, sending without overlay context', { command });
-    } else if (documentKort) {
-      setKortForOverlay(overlay, documentKort);
-    }
-    const kort = (overlay && window.__unoKortMap?.[overlay]) || documentKort || '1';
-    const message = buildScoreReflectMessage(overlay, kort, command, value, extras);
+async function mirrorScoreUpdate(command, value, extras = null) {
+  if (!command) return false;
+  const overlay = normalizeOverlayId(uno.appInstance || lastAppId || overlayFromLocation()) || null;
+  if (!overlay) {
+    log('Mirror update: overlay missing, sending without overlay context', { command });
+  } else if (documentKort) {
+    setKortForOverlay(overlay, documentKort);
+  }
+  const kort = (overlay && window.__unoKortMap?.[overlay]) || documentKort || '1';
+  const message = buildScoreReflectMessage(overlay, kort, command, value, extras);
+  let delivered = false;
+  try {
+    delivered = await sendReflectMessage(message);
+  } catch (err) {
+    log('Reflect delivery error', { command, kort, error: err?.message || err });
+  }
+  if (!delivered) {
+    log('Reflect delivery skipped', { command, kort });
+  }
   try {
     await chrome.runtime.sendMessage(message);
   } catch (err) {
     log('Score mirror failed', err);
   }
+  return delivered;
 }
 
 function normalizeUnoApiTarget(rawUrl, rawMethod) {
@@ -685,6 +702,17 @@ function loadApiPattern() {
   catch { return null; }
 }
 
+function loadStoredReflectBase() {
+  try { return localStorage.getItem(REFLECT_ENDPOINT_KEY) || null; }
+  catch { return null; }
+}
+
+function saveReflectBase(base) {
+  if (!base) return;
+  try { localStorage.setItem(REFLECT_ENDPOINT_KEY, base); }
+  catch {}
+}
+
 function handleUnoApiEvent(evt) {
   if (!evt || !evt.body || typeof evt.body !== 'object') return;
   if (!evt.body.command || typeof evt.body.command !== 'string') return;
@@ -715,6 +743,95 @@ function handleUnoApiEvent(evt) {
 const REMOTE_PLAYER_ENDPOINTS = [
   'https://score.vestmedia.pl/api/players'
 ];
+
+function normalizeReflectBase(input) {
+  if (!input) return null;
+  try {
+    const url = new URL(input, window.location.href);
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function candidateReflectBases() {
+  const bases = [];
+  const stored = loadStoredReflectBase();
+  if (stored) bases.push(stored);
+  REMOTE_PLAYER_ENDPOINTS.forEach((endpoint) => {
+    try {
+      const origin = new URL(endpoint, window.location.href).origin;
+      bases.push(origin);
+    } catch {}
+  });
+  REFLECT_FALLBACK_BASES.forEach((base) => bases.push(base));
+  const unique = [];
+  const seen = new Set();
+  bases.forEach((base) => {
+    const normalized = normalizeReflectBase(base);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    unique.push(normalized);
+  });
+  return unique;
+}
+
+function buildReflectRequestBody(message) {
+  const payload = { command: message.command };
+  if (Object.prototype.hasOwnProperty.call(message, 'value')) {
+    payload.value = message.value;
+  }
+  if (message.overlay) payload.overlay = message.overlay;
+  if (message.reflectedAt) payload.reflectedAt = message.reflectedAt;
+  const extras = (message.extras && typeof message.extras === 'object') ? message.extras : null;
+  if (extras) {
+    Object.entries(extras).forEach(([key, val]) => {
+      if (val !== undefined) payload[key] = val;
+    });
+  }
+  ['unoUrl', 'unoMethod', 'unoToken', 'unoApp'].forEach((key) => {
+    const val = message[key];
+    if (val !== undefined && val !== null) payload[key] = val;
+  });
+  return payload;
+}
+
+async function sendReflectMessage(message) {
+  if (!message || !message.kort) return false;
+  const kort = String(message.kort);
+  const payload = buildReflectRequestBody(message);
+  if (!payload.reflectedAt) payload.reflectedAt = new Date().toISOString();
+
+  const bases = candidateReflectBases();
+  for (const base of bases) {
+    if (!base) continue;
+    const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+    const url = `${trimmedBase}/api/local/reflect/${encodeURIComponent(kort)}`;
+    try {
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), REFLECT_TIMEOUT_MS) : null;
+      const options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'omit',
+        mode: 'cors',
+        body: JSON.stringify(payload)
+      };
+      if (controller) options.signal = controller.signal;
+      const response = await fetch(url, options);
+      if (timer) clearTimeout(timer);
+      if (response.ok) {
+        saveReflectBase(trimmedBase);
+        log('Reflect delivered', { kort, command: message.command, base: trimmedBase });
+        return true;
+      }
+      log('Reflect request failed', { kort, command: message.command, base: trimmedBase, status: response.status });
+    } catch (err) {
+      log('Reflect request error', { kort, command: message.command, base, error: err?.message || err });
+    }
+  }
+  return false;
+}
 
 function normalizePlayer(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -832,11 +949,24 @@ async function commitInputValue(el, value) {
 }
 
 // Flagi: prosba do serwera -> UI fallback
-async function setFlagViaServer(player, _code2, flagUrl) {
+async function setFlagViaServer(player, code2, flagUrl) {
   if (!flagUrl) return false;
-  // Plugin no longer pushes flags via server. Return false to let caller
-  // attempt to set flag via UI only.
-  return false;
+  const overlay = normalizeOverlayId(uno.appInstance || lastAppId || overlayFromLocation()) || null;
+  if (overlay && documentKort) {
+    setKortForOverlay(overlay, documentKort);
+  }
+  const kort = (overlay && window.__unoKortMap?.[overlay]) || documentKort || '1';
+  const fieldId = player === 'A' ? 'Player A Flag' : 'Player B Flag';
+  const value = { fieldId, value: flagUrl };
+  const extras = {};
+  if (flagUrl) extras.flagUrl = flagUrl;
+  const normalizedCode = typeof code2 === 'string' ? code2.trim().toLowerCase() : '';
+  if (normalizedCode) {
+    extras.flag = normalizedCode;
+    extras.flagCode = normalizedCode;
+  }
+  const message = buildScoreReflectMessage(overlay, kort, 'SetCustomizationField', value, Object.keys(extras).length ? extras : null);
+  return sendReflectMessage(message);
 }
 
 function setFlagViaUI(root, player, code2) {
@@ -1102,17 +1232,20 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
           }
           const extrasPayload = Object.keys(extras).length ? extras : null;
           if (!opts.noNameWrite) await commitInputValue(targetInput, teamName);
-          await mirrorScoreUpdate(
+          const mirrored = await mirrorScoreUpdate(
             playerLetter === 'A' ? 'SetNamePlayerA' : 'SetNamePlayerB',
             teamName,
             extrasPayload
           );
           if (flagSource && (flagSource.flag || flagSource.flagUrl)) {
-            const viaServer = await setFlagViaServer(
-              playerLetter,
-              flagSource.flag || '',
-              flagSource.flagUrl || null
-            );
+            let viaServer = Boolean(mirrored);
+            if (!viaServer) {
+              viaServer = await setFlagViaServer(
+                playerLetter,
+                flagSource.flag || '',
+                flagSource.flagUrl || null
+              );
+            }
             if (!viaServer && flagSource.flag) setFlagViaUI(document, playerLetter, flagSource.flag);
           }
           resetDoubleState();
@@ -1129,14 +1262,19 @@ function showPickerFor(targetInput, playerLetter, opts = {}) {
           extras.flag = p.flag;
           extras.flagCode = p.flag;
         }
-        await mirrorScoreUpdate(
+        const mirrored = await mirrorScoreUpdate(
           playerLetter === 'A' ? 'SetNamePlayerA' : 'SetNamePlayerB',
           p.name,
           Object.keys(extras).length ? extras : null
         );
 
-        const viaServer = await setFlagViaServer(playerLetter, p.flag || '', p.flagUrl);
-        if (!viaServer && p.flag) setFlagViaUI(document, playerLetter, p.flag);
+        if (p.flag || p.flagUrl) {
+          let viaServer = Boolean(mirrored);
+          if (!viaServer) {
+            viaServer = await setFlagViaServer(playerLetter, p.flag || '', p.flagUrl);
+          }
+          if (!viaServer && p.flag) setFlagViaUI(document, playerLetter, p.flag);
+        }
 
         closePopover();
         if (opts.noNameWrite && targetInput.__tempDummy) targetInput.remove();

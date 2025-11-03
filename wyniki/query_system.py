@@ -69,6 +69,8 @@ class QuerySpec:
     args: Tuple[Any, ...] = field(default_factory=tuple)
     kwargs: Dict[str, Any] = field(default_factory=dict)
     on_result: Optional[Callable[[Any], None]] = None
+    precondition: Optional[Callable[[], bool]] = None
+    repeat: bool = True
 
 
 @dataclass(order=True)
@@ -127,21 +129,33 @@ class QuerySystem:
             now = self._now()
 
         spec = task.spec
-        result: Any = None
-        try:
-            method = getattr(self.client, spec.method_name)
-        except AttributeError as exc:
-            self.log.error("Missing client method %s: %s", spec.method_name, exc)
-        else:
+        should_run = True
+        if spec.precondition is not None:
             try:
-                result = method(*spec.args, **spec.kwargs)
+                should_run = bool(spec.precondition())
             except Exception as exc:  # pragma: no cover - defensive guard
-                self.log.warning("Query %s failed: %s", spec.name, exc)
+                should_run = False
+                self.log.warning("Query %s precondition failed: %s", spec.name, exc)
 
-        if spec.on_result is not None:
-            spec.on_result(result)
+        result: Any = None
+        if should_run:
+            try:
+                method = getattr(self.client, spec.method_name)
+            except AttributeError as exc:
+                self.log.error("Missing client method %s: %s", spec.method_name, exc)
+            else:
+                try:
+                    result = method(*spec.args, **spec.kwargs)
+                except Exception as exc:  # pragma: no cover - defensive guard
+                    self.log.warning("Query %s failed: %s", spec.name, exc)
 
-        if self.mode == spec.mode:
+            if spec.on_result is not None:
+                try:
+                    spec.on_result(result)
+                except Exception as exc:  # pragma: no cover - defensive guard
+                    self.log.warning("Query %s result handler failed: %s", spec.name, exc)
+
+        if spec.repeat and self.mode == spec.mode:
             interval = max(0.0, spec.interval * self._speed_multiplier)
             self._schedule(spec, now + interval)
 
@@ -199,12 +213,45 @@ class QuerySystem:
         self._speed_multiplier = value
         self._activate_mode(self.mode, initial=True)
 
+    def configure_spec(
+        self,
+        method_name: str,
+        *,
+        precondition: Optional[Callable[[], bool]] = None,
+        on_result: Optional[Callable[[Any], None]] = None,
+        interval: Optional[float] = None,
+        repeat: Optional[bool] = None,
+    ) -> None:
+        for specs in self._modes.values():
+            for spec in specs:
+                if spec.method_name != method_name:
+                    continue
+                if precondition is not None:
+                    spec.precondition = precondition
+                if on_result is not None:
+                    spec.on_result = on_result
+                if interval is not None:
+                    spec.interval = float(interval)
+                if repeat is not None:
+                    spec.repeat = bool(repeat)
+        for task in self._queue:
+            if task.spec.method_name != method_name:
+                continue
+            if precondition is not None:
+                task.spec.precondition = precondition
+            if on_result is not None:
+                task.spec.on_result = on_result
+            if interval is not None:
+                task.spec.interval = float(interval)
+            if repeat is not None:
+                task.spec.repeat = bool(repeat)
+
     def _build_normal_specs(self) -> List[QuerySpec]:
         return [
             self._spec(self.NORMAL_MODE, "GetPointsPlayerA", 10.0),
             self._spec(self.NORMAL_MODE, "GetPointsPlayerB", 10.0),
-            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerA", 60.0),
-            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerB", 60.0),
+            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerA", 5.0),
+            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerB", 5.0),
             self._spec(self.NORMAL_MODE, "GetSet1PlayerA", 180.0),
             self._spec(self.NORMAL_MODE, "GetSet1PlayerB", 180.0),
             self._spec(self.NORMAL_MODE, "GetSet2PlayerA", 180.0),
@@ -215,8 +262,8 @@ class QuerySystem:
                 180.0,
                 on_result=self._handle_visibility_normal,
             ),
-            self._spec(self.NORMAL_MODE, "GetNamePlayerA", 300.0),
-            self._spec(self.NORMAL_MODE, "GetNamePlayerB", 300.0),
+            self._spec(self.NORMAL_MODE, "GetNamePlayerA", 30.0),
+            self._spec(self.NORMAL_MODE, "GetNamePlayerB", 30.0),
         ]
 
     def _build_tie_specs(self) -> List[QuerySpec]:
@@ -241,6 +288,8 @@ class QuerySystem:
         args: Iterable[Any] | None = None,
         kwargs: Dict[str, Any] | None = None,
         on_result: Optional[Callable[[Any], None]] = None,
+        precondition: Optional[Callable[[], bool]] = None,
+        repeat: bool = True,
     ) -> QuerySpec:
         return QuerySpec(
             mode=mode,
@@ -250,6 +299,8 @@ class QuerySystem:
             args=tuple(args or ()),
             kwargs=dict(kwargs or {}),
             on_result=on_result,
+            precondition=precondition,
+            repeat=repeat,
         )
 
     def _handle_visibility_normal(self, result: Any) -> None:

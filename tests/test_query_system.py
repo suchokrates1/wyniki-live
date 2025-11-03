@@ -86,18 +86,18 @@ def test_normal_mode_cadence(scheduler: tuple[QuerySystem, RecordingClient, Fake
     assert system.mode == QuerySystem.NORMAL_MODE
     assert client.calls["GetPointsPlayerA"] == 6
     assert client.calls["GetPointsPlayerB"] == 6
-    assert client.calls["GetCurrentSetPlayerA"] == 1
-    assert client.calls["GetCurrentSetPlayerB"] == 1
+    assert client.calls["GetCurrentSetPlayerA"] == 12
+    assert client.calls["GetCurrentSetPlayerB"] == 12
     assert client.calls["GetSet1PlayerA"] == 1
     assert client.calls["GetSet1PlayerB"] == 1
     assert client.calls["GetSet2PlayerA"] == 1
     assert client.calls["GetSet2PlayerB"] == 1
     assert client.calls["GetTieBreakVisibility"] == 1
-    assert client.calls["GetNamePlayerA"] == 1
-    assert client.calls["GetNamePlayerB"] == 1
+    assert client.calls["GetNamePlayerA"] == 2
+    assert client.calls["GetNamePlayerB"] == 2
     assert client.calls["GetTieBreakPlayerA"] == 0
     assert client.calls["GetTieBreakPlayerB"] == 0
-    assert clock.now() == 50
+    assert clock.now() == 55
 
 
 def test_switches_to_tie_mode(scheduler: tuple[QuerySystem, RecordingClient, FakeClock]) -> None:
@@ -159,3 +159,32 @@ def test_returns_to_normal_mode_after_tie(
 
     assert system.mode == QuerySystem.NORMAL_MODE
     assert all(task.mode == QuerySystem.NORMAL_MODE for task in system.pending())
+
+
+def test_configure_spec_precondition_blocks_calls(
+    scheduler: tuple[QuerySystem, RecordingClient, FakeClock]
+) -> None:
+    system, client, _ = scheduler
+    toggle = {"allow": False}
+
+    system.configure_spec("GetCurrentSetPlayerA", precondition=lambda: toggle["allow"])
+
+    system.run_steps(3)
+    assert client.calls["GetCurrentSetPlayerA"] == 0
+
+    toggle["allow"] = True
+    system.run_for(6)
+    assert client.calls["GetCurrentSetPlayerA"] >= 1
+
+
+def test_configure_spec_on_result_runs_handler(
+    scheduler: tuple[QuerySystem, RecordingClient, FakeClock]
+) -> None:
+    system, client, _ = scheduler
+    results: list[object] = []
+
+    system.configure_spec("GetPointsPlayerA", on_result=lambda value: results.append(value))
+
+    system.run_steps(1)
+
+    assert results == [None]
