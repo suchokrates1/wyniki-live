@@ -98,6 +98,28 @@ UNO_HOURLY_THRESHOLD_KEY = "uno_hourly_threshold"
 UNO_HOURLY_FACTOR_KEY = "uno_hourly_slowdown_factor"
 UNO_HOURLY_SLEEP_KEY = "uno_hourly_slowdown_sleep"
 
+UNO_ACTIVITY_LOCK = threading.Lock()
+UNO_ACTIVITY_LAST_CHANGE = datetime.now(timezone.utc)
+UNO_ACTIVITY_LAST_STAGE = 0
+UNO_ACTIVITY_THRESHOLDS = (
+    timedelta(minutes=30),
+    timedelta(minutes=60),
+    timedelta(minutes=90),
+)
+UNO_ACTIVITY_MULTIPLIERS = (1.0, 2.0, 4.0, 360.0)
+UNO_ACTIVITY_LABELS = {
+    0: "normalny",
+    1: "spowolniony",
+    2: "wolny",
+    3: "tryb czuwania",
+}
+UNO_ACTIVITY_DESCRIPTIONS = {
+    0: "Wykryto zmiany w ciągu ostatnich 30 minut.",
+    1: "Brak zmian przez 30 min — tempo zapytań x0.5.",
+    2: "Brak zmian przez 60 min — tempo zapytań x0.25.",
+    3: "Brak zmian przez 90 min — pojedyncze zapytanie na godzinę.",
+}
+
 
 def _sanitize_threshold(value: float) -> float:
     if value > 1.0:
@@ -532,6 +554,88 @@ def record_uno_request(success: bool, kort_id: Optional[str] = None, command: Op
 def get_uno_rate_limit_info() -> Dict[str, Optional[object]]:
     with UNO_RATE_LIMIT_LOCK:
         return dict(UNO_RATE_LIMIT_INFO)
+
+
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _compute_uno_activity_stage(elapsed_seconds: float) -> int:
+    if elapsed_seconds >= UNO_ACTIVITY_THRESHOLDS[2].total_seconds():
+        return 3
+    if elapsed_seconds >= UNO_ACTIVITY_THRESHOLDS[1].total_seconds():
+        return 2
+    if elapsed_seconds >= UNO_ACTIVITY_THRESHOLDS[0].total_seconds():
+        return 1
+    return 0
+
+
+def _evaluate_uno_activity(now: Optional[datetime] = None) -> Tuple[int, float, datetime]:
+    current = now or _now_utc()
+    should_log = False
+    log_payload: Optional[Tuple[int, int, int]] = None
+    with UNO_ACTIVITY_LOCK:
+        last_change = UNO_ACTIVITY_LAST_CHANGE
+        elapsed_seconds = max(0.0, (current - last_change).total_seconds())
+        stage = _compute_uno_activity_stage(elapsed_seconds)
+        previous_stage = UNO_ACTIVITY_LAST_STAGE
+        if stage != previous_stage:
+            UNO_ACTIVITY_LAST_STAGE = stage
+            should_log = True
+            log_payload = (previous_stage, stage, int(elapsed_seconds))
+    if should_log and log_payload is not None:
+        log.info(
+            "UNO inactivity stage change prev=%s next=%s elapsed=%ss",
+            log_payload[0],
+            log_payload[1],
+            log_payload[2],
+        )
+    return stage, elapsed_seconds, last_change
+
+
+def record_uno_activity_event(timestamp: Optional[str] = None) -> None:
+    if timestamp:
+        parsed = parse_iso_datetime(timestamp)
+    else:
+        parsed = None
+    if parsed is None:
+        parsed = _now_utc()
+    else:
+        parsed = parsed.astimezone(timezone.utc)
+    with UNO_ACTIVITY_LOCK:
+        global UNO_ACTIVITY_LAST_CHANGE, UNO_ACTIVITY_LAST_STAGE
+        UNO_ACTIVITY_LAST_CHANGE = parsed
+        UNO_ACTIVITY_LAST_STAGE = 0
+    log.debug("UNO inactivity timer updated ts=%s", parsed.isoformat())
+
+
+def reset_uno_activity_timer(reason: str = "manual") -> Dict[str, Any]:
+    now = _now_utc()
+    with UNO_ACTIVITY_LOCK:
+        global UNO_ACTIVITY_LAST_CHANGE, UNO_ACTIVITY_LAST_STAGE
+        previous_stage = UNO_ACTIVITY_LAST_STAGE
+        UNO_ACTIVITY_LAST_CHANGE = now
+        UNO_ACTIVITY_LAST_STAGE = 0
+    log.info("UNO inactivity timer reset reason=%s prev_stage=%s", reason, previous_stage)
+    return get_uno_activity_status()
+
+
+def get_uno_activity_status() -> Dict[str, Any]:
+    stage, elapsed_seconds, last_change = _evaluate_uno_activity()
+    last_change_iso = last_change.astimezone(timezone.utc).isoformat()
+    return {
+        "stage": stage,
+        "label": UNO_ACTIVITY_LABELS.get(stage, "normalny"),
+        "description": UNO_ACTIVITY_DESCRIPTIONS.get(stage),
+        "elapsed_seconds": int(elapsed_seconds),
+        "last_change": last_change_iso,
+        "multiplier": UNO_ACTIVITY_MULTIPLIERS[stage],
+    }
+
+
+def get_uno_activity_multiplier() -> float:
+    stage, _, _ = _evaluate_uno_activity()
+    return UNO_ACTIVITY_MULTIPLIERS[stage]
 
 
 class TokenBucket:

@@ -30,6 +30,7 @@
   const unoDailySummary = document.getElementById('uno-daily-summary');
   const unoHourlySummary = document.getElementById('uno-hourly-summary');
   const unoStatusLabel = document.getElementById('uno-status-label');
+  const unoActivityNote = document.getElementById('uno-activity-note');
   const unoAutoDisabled = document.getElementById('uno-auto-disabled');
   const unoPollerForm = document.getElementById('uno-poller-form');
   const unoHourlyLimitInput = document.getElementById('uno-hourly-limit');
@@ -40,6 +41,7 @@
   const unoRateLimitHeader = document.getElementById('uno-rate-limit-header');
   const unoRateLimitUpdated = document.getElementById('uno-rate-limit-updated');
   const unoRateLimitReset = document.getElementById('uno-rate-limit-reset');
+  const unoActivityResetButton = document.getElementById('uno-activity-reset');
   const playersSection = document.getElementById('players-section');
   const playerForm = document.getElementById('player-form');
   const playersTableBody = document.getElementById('players-rows');
@@ -79,6 +81,9 @@
     : null;
   let unoAutoDisabledReason = typeof initialConfig.uno_auto_disabled_reason === 'string'
     ? initialConfig.uno_auto_disabled_reason
+    : null;
+  let unoActivityStatus = initialConfig.uno_activity_status && typeof initialConfig.uno_activity_status === 'object'
+    ? initialConfig.uno_activity_status
     : null;
   let flagCatalog = [];
   const flagCatalogMap = new Map();
@@ -513,6 +518,39 @@
   }
 
 
+  function applyUnoActivityStatus(status) {
+    if (status && typeof status === 'object') {
+      const stageValue = Number(status.stage);
+      const multiplierValue = Number(status.multiplier);
+      unoActivityStatus = {
+        stage: Number.isFinite(stageValue) ? stageValue : 0,
+        label: typeof status.label === 'string' ? status.label : null,
+        description: typeof status.description === 'string' ? status.description : '',
+        last_change: typeof status.last_change === 'string' ? status.last_change : null,
+        multiplier: Number.isFinite(multiplierValue) ? multiplierValue : 1,
+      };
+    } else {
+      unoActivityStatus = null;
+    }
+    if (unoActivityNote) {
+      const shouldShowNote = Boolean(
+        unoActivityStatus &&
+        Number.isFinite(Number(unoActivityStatus.stage)) &&
+        Number(unoActivityStatus.stage) > 0 &&
+        unoActivityStatus.description
+      );
+      if (shouldShowNote) {
+        unoActivityNote.textContent = unoActivityStatus.description;
+        unoActivityNote.hidden = false;
+      } else {
+        unoActivityNote.textContent = '';
+        unoActivityNote.hidden = true;
+      }
+    }
+    updateUnoStatusSummary();
+  }
+
+
   function applyUnoHourlyUsage(usage) {
     if (usage && typeof usage === 'object') {
       unoHourlyUsage = usage;
@@ -568,10 +606,12 @@
         const limitValue = Number(unoRateLimitInfo.limit);
         const remainingValue = Number(unoRateLimitInfo.remaining);
         if (Number.isFinite(limitValue) && Number.isFinite(remainingValue)) {
-          const used = Math.max(0, limitValue - remainingValue);
-          dailyText = `${formatNumber(used)}/${formatNumber(limitValue)}`;
+          const normalizedRemaining = Math.max(0, Math.min(limitValue, remainingValue));
+          dailyText = `${formatNumber(normalizedRemaining)}/${formatNumber(limitValue)}`;
+        } else if (Number.isFinite(remainingValue)) {
+          dailyText = formatNumber(Math.max(0, remainingValue));
         } else if (Number.isFinite(limitValue)) {
-          dailyText = formatNumber(limitValue);
+          dailyText = `${formatNumber(limitValue)}`;
         } else if (unoRateLimitInfo.raw) {
           dailyText = String(unoRateLimitInfo.raw);
         }
@@ -586,43 +626,54 @@
     if (unoHourlySummary) {
       let hourlyText = '—';
       if (peak && Number.isFinite(peak.limit) && peak.limit > 0) {
-  hourlyText = `${formatNumber(peak.count)}/${formatNumber(peak.limit)}`;
+        const remainingValue = Number.isFinite(Number(peak.remaining))
+          ? Number(peak.remaining)
+          : peak.limit - Number(peak.count || 0);
+        const normalized = Math.max(0, Math.min(peak.limit, remainingValue));
+        hourlyText = `${formatNumber(normalized)}/${formatNumber(peak.limit)}`;
         if (peak.kort_id) {
           hourlyText += ` (kort ${peak.kort_id})`;
         }
       } else if (peak && (!Number.isFinite(peak.limit) || peak.limit <= 0)) {
-        hourlyText = formatNumber(peak.count);
+        const remainingValue = Number.isFinite(Number(peak.remaining))
+          ? Number(peak.remaining)
+          : 0;
+        hourlyText = formatNumber(Math.max(0, remainingValue));
         if (peak.kort_id) {
           hourlyText += ` (kort ${peak.kort_id})`;
         }
       } else if (configLimit !== null) {
-  hourlyText = `0/${formatNumber(configLimit)}`;
+        hourlyText = `${formatNumber(configLimit)}/${formatNumber(configLimit)}`;
       }
       unoHourlySummary.textContent = hourlyText;
     }
 
     let status = 'normalny';
-    let slowdownDetected = false;
-    if (!unoRequestsEnabled) {
-      status = 'zatrzymany';
-    }
-    if (status !== 'zatrzymany' && unoHourlyUsage && typeof unoHourlyUsage === 'object') {
+    let limitKort = null;
+    let slowdownKort = null;
+    if (unoHourlyUsage && typeof unoHourlyUsage === 'object') {
       Object.values(unoHourlyUsage).forEach((entry) => {
         if (!entry || typeof entry !== 'object') {
           return;
         }
-        const mode = entry.mode;
-        if (mode === 'limit' || mode === 'disabled') {
-          status = 'zatrzymany';
-        } else if (mode === 'slowdown') {
-          slowdownDetected = true;
+        if ((entry.mode === 'limit' || entry.mode === 'disabled') && !limitKort) {
+          limitKort = entry.kort_id || null;
+        } else if (entry.mode === 'slowdown' && !slowdownKort) {
+          slowdownKort = entry.kort_id || null;
         }
       });
     }
-    if (status !== 'zatrzymany' && unoAutoDisabledReason) {
+
+    if (!unoRequestsEnabled) {
       status = 'zatrzymany';
-    } else if (status !== 'zatrzymany' && slowdownDetected) {
-      status = 'spowolniony';
+    } else if (unoAutoDisabledReason) {
+      status = 'zatrzymany';
+    } else if (limitKort) {
+      status = limitKort ? `limit (kort ${limitKort})` : 'limit';
+    } else if (slowdownKort) {
+      status = slowdownKort ? `spowolniony (kort ${slowdownKort})` : 'spowolniony';
+    } else if (unoActivityStatus && Number.isFinite(Number(unoActivityStatus.stage)) && Number(unoActivityStatus.stage) > 0) {
+      status = unoActivityStatus.label || 'tryb czuwania';
     }
 
     if (unoStatusLabel) {
@@ -667,6 +718,9 @@
     }
     if (typeof data.uno_hourly_usage !== 'undefined') {
       applyUnoHourlyUsage(data.uno_hourly_usage);
+    }
+    if (typeof data.uno_activity_status !== 'undefined') {
+      applyUnoActivityStatus(data.uno_activity_status);
     }
     if (typeof data.uno_rate_limit !== 'undefined') {
       applyUnoRateLimit(data.uno_rate_limit);
@@ -797,6 +851,23 @@
       setFeedback('Ustawienia wtyczki zapisane.', 'success');
     } catch (error) {
       applyPluginToggle(pluginEnabled);
+      setFeedback(error.message, 'error');
+    }
+  }
+
+
+  async function handleUnoActivityReset(event) {
+    if (event) {
+      event.preventDefault();
+    }
+    try {
+      const data = await requestJson('/api/admin/system', {
+        method: 'PUT',
+        body: JSON.stringify({ uno_activity_reset: true })
+      });
+      applyUnoSystemData(data);
+      setFeedback('Przywrócono normalny tryb zapytań UNO.', 'success');
+    } catch (error) {
       setFeedback(error.message, 'error');
     }
   }
@@ -1542,6 +1613,9 @@
   if (unoToggle && adminEnabled) {
     unoToggle.addEventListener('change', handleUnoToggleChange);
   }
+  if (unoActivityResetButton && adminEnabled) {
+    unoActivityResetButton.addEventListener('click', handleUnoActivityReset);
+  }
   if (pluginToggle && adminEnabled) {
     pluginToggle.addEventListener('change', handlePluginToggleChange);
   }
@@ -1551,6 +1625,7 @@
 
   applyUnoPollerConfig(unoPollerConfig);
   applyUnoHourlyUsage(unoHourlyUsage);
+  applyUnoActivityStatus(unoActivityStatus);
   applyUnoAutoDisabledReason(unoAutoDisabledReason);
   applyUnoToggle(unoRequestsEnabled);
   applyPluginToggle(pluginEnabled);

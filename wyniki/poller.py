@@ -10,6 +10,7 @@ from .config import settings, log
 from .query_system import QuerySystem
 from .state import (
     available_courts,
+    get_uno_activity_multiplier,
     get_uno_hourly_status,
     is_uno_requests_enabled,
     normalize_kort_id,
@@ -80,6 +81,7 @@ class CourtPollingWorker(threading.Thread):
         self.system = QuerySystem(self.client, sleep_fn=self._sleep)
         self._slowdown_counter = 0
         self._last_mode: Optional[str] = None
+        self._current_speed_multiplier = 1.0
 
     def _sleep(self, delay: float) -> None:
         if delay <= 0:
@@ -89,10 +91,20 @@ class CourtPollingWorker(threading.Thread):
     def stop(self) -> None:
         self._stop_event.set()
 
+    def _sync_activity_multiplier(self) -> None:
+        target = get_uno_activity_multiplier()
+        if abs(target - self._current_speed_multiplier) < 0.01:
+            return
+        self.system.set_speed_multiplier(target)
+        self._current_speed_multiplier = target
+        log.info("UNO poller speed kort=%s multiplier=%.2f", self.kort_id, target)
+
     def run(self) -> None:  # noqa: D401 - inherited docstring
         log.info("UNO poller started kort=%s", self.kort_id)
         try:
+            self._sync_activity_multiplier()
             while not self._stop_event.is_set():
+                self._sync_activity_multiplier()
                 if not is_uno_requests_enabled():
                     if self._stop_event.wait(1.0):
                         break
