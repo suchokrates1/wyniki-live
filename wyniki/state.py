@@ -575,6 +575,7 @@ def _evaluate_uno_activity(now: Optional[datetime] = None) -> Tuple[int, float, 
     should_log = False
     log_payload: Optional[Tuple[int, int, int]] = None
     with UNO_ACTIVITY_LOCK:
+        global UNO_ACTIVITY_LAST_STAGE
         last_change = UNO_ACTIVITY_LAST_CHANGE
         elapsed_seconds = max(0.0, (current - last_change).total_seconds())
         stage = _compute_uno_activity_stage(elapsed_seconds)
