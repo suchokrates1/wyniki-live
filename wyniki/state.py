@@ -1388,9 +1388,17 @@ def count_short_set_wins(state: Dict[str, Any]) -> Dict[str, int]:
 
 
 def short_set_winner(games_a: int, games_b: int) -> Optional[str]:
-    if games_a == 4 and games_b <= 3:
+    if games_a == 4 and games_b <= 2:
         return "A"
-    if games_b == 4 and games_a <= 3:
+    if games_b == 4 and games_a <= 2:
+        return "B"
+    if games_a == 5 and games_b == 3:
+        return "A"
+    if games_b == 5 and games_a == 3:
+        return "B"
+    if games_a == 5 and games_b == 4:
+        return "A"
+    if games_b == 5 and games_a == 4:
         return "B"
     return None
 
@@ -1782,6 +1790,8 @@ def reset_after_match(state: Dict[str, Any]) -> None:
 
 
 def finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional[Dict[str, int]] = None) -> None:
+    if not is_uno_requests_enabled():
+        return
     match_time, status = ensure_match_struct(state)
     if not status.get("active"):
         return
@@ -1819,9 +1829,6 @@ def finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional
         _complete_match()
         return
 
-    if wins["A"] == 1 and wins["B"] == 1:
-        if (tie_a >= 7 or tie_b >= 7) and abs(tie_a - tie_b) >= 2:
-            _complete_match()
 
 
 def handle_match_flow(kort_id: Optional[str], state: Dict[str, Any]) -> None:
