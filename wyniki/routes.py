@@ -570,6 +570,7 @@ def admin_api_history_delete(entry_id: int):
     deleted = delete_history_entry(entry_id)
     if deleted:
         load_match_history()
+        broadcast_snapshot(include_history=True)
     return jsonify({"ok": True, "deleted": deleted, "entry": existing})
 
 
