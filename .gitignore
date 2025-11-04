@@ -2,6 +2,9 @@
 .env.*
 !.env.example
 *.sqlite3
+wyniki.db
+cookies.txt
+gunicorn.log
 __pycache__/
 *.pyc
 .DS_Store
