@@ -993,6 +993,14 @@ def admin_api_system_update():
     return jsonify(response_payload)
 
 
+@blueprint.route("/<kort_id>")
+def embed(kort_id: str) -> str:
+    normalized_id = normalize_kort_id(kort_id)
+    if not normalized_id or not is_known_kort(normalized_id):
+        return render_file_template("embed.html", kort_id=kort_id), 404
+    return render_file_template("embed.html", kort_id=normalized_id)
+
+
 @blueprint.route("/")
 def index() -> str:
     return render_file_template("index.html")
