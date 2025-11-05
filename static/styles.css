@@ -367,7 +367,46 @@ main {
 }
 
 .score-wrapper {
+  position: relative;
   margin-top: 6px;
+}
+
+.score-labels {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  padding: 4px 0;
+  pointer-events: none;
+}
+
+.score-label {
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.score-label.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.score-label-tb {
+  background: #f3c34a;
+  color: #261200;
+}
+
+.score-label-stb {
+  background: #d64900;
+  color: #fff9f2;
 }
 
 .score-list {
