@@ -236,6 +236,10 @@ export function makeCourtCard(k, currentLang, options = {}) {
   section.innerHTML = `
     <div class="card-head">${headHTML}</div>
     <div class="score-wrapper">
+      <div class="score-labels">
+        <div class="score-label score-label-tb" id="k${k}-tb-label"></div>
+        <div class="score-label score-label-stb" id="k${k}-stb-label"></div>
+      </div>
       <dl class="score-list" aria-labelledby="heading-${k}" aria-hidden="true">
         <div class="score-row" data-side="A">
           <dt class="player-cell">
@@ -362,6 +366,17 @@ function applyScoreAria(k, data, currentLang) {
   const isSuperTieBreak = tieVisible && currentSet === 3;
 
   updatePointsLabelText(k, tieVisible, isSuperTieBreak);
+
+  const tbLabel = document.getElementById(`k${k}-tb-label`);
+  const stbLabel = document.getElementById(`k${k}-stb-label`);
+  if (tbLabel) {
+    tbLabel.textContent = t.tieBreakLabel || 'TIE-BREAK';
+    tbLabel.classList.toggle('is-visible', tieVisible && !isSuperTieBreak);
+  }
+  if (stbLabel) {
+    stbLabel.textContent = t.superTieBreakLabel || 'SUPER TIE-BREAK';
+    stbLabel.classList.toggle('is-visible', isSuperTieBreak);
+  }
 
   const pointsLabelEl = document.getElementById(`k${k}-label-points`);
   const domPointsLabel = (pointsLabelEl?.textContent || '').trim();

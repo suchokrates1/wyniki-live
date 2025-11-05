@@ -18,6 +18,7 @@ from flask import (
     Response,
     abort,
     jsonify,
+    redirect,
     request,
     send_from_directory,
     session,
@@ -994,11 +995,23 @@ def admin_api_system_update():
 
 
 @blueprint.route("/<int:kort_id>")
-def embed(kort_id: int) -> str:
-    normalized_id = normalize_kort_id(str(kort_id))
+def embed_legacy(kort_id: int):
+    return redirect(f"/embed/pl/{kort_id}", code=301)
+
+
+@blueprint.route("/embed/<country_code>/<kort_id>")
+def embed(country_code: str, kort_id: str) -> str:
+    normalized_id = normalize_kort_id(kort_id)
     if not normalized_id or not is_known_kort(normalized_id):
-        return render_file_template("embed.html", kort_id=str(kort_id)), 404
-    return render_file_template("embed.html", kort_id=normalized_id)
+        return (
+            render_file_template(
+                "embed.html", kort_id=kort_id, country_code=country_code
+            ),
+            404,
+        )
+    return render_file_template(
+        "embed.html", kort_id=normalized_id, country_code=country_code
+    )
 
 
 @blueprint.route("/")

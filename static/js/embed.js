@@ -13,19 +13,15 @@ let eventSource = null;
 let reconnectTimer = null;
 let reconnectDelay = INITIAL_RECONNECT_DELAY;
 
-const storedLang = localStorage.getItem('preferred-language');
-let currentLang = SUPPORTED_LANGS.includes(storedLang) ? storedLang : DEFAULT_LANG;
+const KORT_ID = grid.dataset.kort;
+const LANG = grid.dataset.lang;
 
-function getKortIdFromPath() {
-  const path = window.location.pathname;
-  const parts = path.split('/').filter(Boolean);
-  return parts.length > 0 ? parts[0] : null;
-}
-
-const KORT_ID = getKortIdFromPath();
 if (KORT_ID) {
     COURTS = [KORT_ID];
 }
+
+const storedLang = localStorage.getItem('preferred-language');
+let currentLang = SUPPORTED_LANGS.includes(LANG) ? LANG : (SUPPORTED_LANGS.includes(storedLang) ? storedLang : DEFAULT_LANG);
 
 function currentT() {
   return getTranslation(currentLang);
