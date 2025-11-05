@@ -1,5 +1,5 @@
 import { TRANSLATIONS, DEFAULT_LANG, SUPPORTED_LANGS, getTranslation } from './translations.js';
-import { makeCourtCard, updateCourt, format, resolvePlayerName } from './common.js';
+import { makeCourtCard, updateCourt, format, resolvePlayerName, announcePoints, announceGames } from './common.js';
 
 let COURTS = [];
 const grid = document.getElementById('grid');

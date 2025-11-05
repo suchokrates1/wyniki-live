@@ -20,13 +20,13 @@ function fallbackPlayerName(surname, type, currentLang) {
   return type === 'opponent' ? t.players.fallbackOpponent : t.players.fallback;
 }
 
-function announcePoints(k, surname, pointsText, currentLang) {
+export function announcePoints(k, surname, pointsText, currentLang) {
     const t = getTranslation(currentLang);
   const player = fallbackPlayerName(surname, 'player', currentLang);
   announce(k, format(t.announcements.points, { player, value: pointsText }));
 }
 
-function announceGames(k, surname, games, currentLang) {
+export function announceGames(k, surname, games, currentLang) {
     const t = getTranslation(currentLang);
   const player = fallbackPlayerName(surname, 'player', currentLang);
   announce(k, format(t.announcements.games, { player, value: games }));
@@ -282,6 +282,11 @@ export function makeCourtCard(k, currentLang, options = {}) {
   if (heading) {
     heading.setAttribute('aria-label', `${courtLabel}: ${defaultA} ${acc.versus} ${defaultB}`);
   }
+
+  // Call applyScoreAria on creation to populate the initial summary
+  const initialData = { A: { set1: 0, set2: 0, points: '0' }, B: { set1: 0, set2: 0, points: '0' }, tie: {}, current_set: 1 };
+  setTimeout(() => applyScoreAria(k, initialData, currentLang), 0);
+
   return section;
 }
 
