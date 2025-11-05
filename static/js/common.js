@@ -237,8 +237,8 @@ export function makeCourtCard(k, currentLang, options = {}) {
     <div class="card-head">${headHTML}</div>
     <div class="score-wrapper">
       <div class="score-labels">
-        <div class="score-label score-label-tb" id="k${k}-tb-label"></div>
-        <div class="score-label score-label-stb" id="k${k}-stb-label"></div>
+        <div class="score-label score-label-tb" id="k${k}-tb-label" aria-hidden="true"></div>
+        <div class="score-label score-label-stb" id="k${k}-stb-label" aria-hidden="true"></div>
       </div>
       <dl class="score-list" aria-labelledby="heading-${k}" aria-hidden="true">
         <div class="score-row" data-side="A">
@@ -374,13 +374,18 @@ function applyScoreAria(k, data, currentLang) {
 
   const tbLabel = document.getElementById(`k${k}-tb-label`);
   const stbLabel = document.getElementById(`k${k}-stb-label`);
+  const tbActive = tieVisible && !isSuperTieBreak;
+  const stbActive = isSuperTieBreak;
+
   if (tbLabel) {
     tbLabel.textContent = t.tieBreakLabel || 'TIE-BREAK';
-    tbLabel.classList.toggle('is-visible', tieVisible && !isSuperTieBreak);
+    tbLabel.classList.toggle('is-visible', tbActive);
+    tbLabel.setAttribute('aria-hidden', String(!tbActive));
   }
   if (stbLabel) {
     stbLabel.textContent = t.superTieBreakLabel || 'SUPER TIE-BREAK';
-    stbLabel.classList.toggle('is-visible', isSuperTieBreak);
+    stbLabel.classList.toggle('is-visible', stbActive);
+    stbLabel.setAttribute('aria-hidden', String(!stbActive));
   }
 
   const pointsLabelEl = document.getElementById(`k${k}-label-points`);
