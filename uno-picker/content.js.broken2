@@ -1,1222 +1,612 @@
-﻿// UNO Player Picker v0.3.11 - API + Tryb Debla + Tablet Edition// UNO Player Picker v0.3.11 - Tablet & Edge Canary Compatible// UNO Player Picker v0.3.11 - API + Tryb Debla// content.js
-
-// content.js
+﻿// UNO Player Picker v0.3.11 - Tablet & Edge Canary Compatible// UNO Player Picker v0.3.11 - API + Tryb Debla// content.js
 
 const API_BASE = 'https://score.vestmedia.pl';
 
-const API_BASE = 'https://score.vestmedia.pl';
-
-const log = (...a) => console.log('[UNO Picker v0.3.11]', ...a);const log = (...a) => console.log('[UNO Picker v0.3.11]', ...a);const API_BASE = 'https://score.vestmedia.pl';const log = (...a) => console.log('[UNO Picker]', ...a);
+const log = (...a) => console.log('[UNO Picker v0.3.11]', ...a);const API_BASE = 'https://score.vestmedia.pl';const log = (...a) => console.log('[UNO Picker]', ...a);
 
 
 
-// Detekcja wsparcia dla Pointer Events (Edge, Chrome)
+// Detekcja wsparcia dla Pointer Events (Edge, Chrome)const log = (...a) => console.log('[UNO Picker v0.3.11]', ...a);const supportsPointerEvents = typeof window !== 'undefined' && 'PointerEvent' in window;
 
 const supportsPointer = typeof window !== 'undefined' && 'PointerEvent' in window;
 
-const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;// Detekcja wsparcia dla Pointer Events (Edge, Chrome)const log = (...a) => console.log('[UNO Picker v0.3.11]', ...a);const supportsPointerEvents = typeof window !== 'undefined' && 'PointerEvent' in window;
 
-
-
-log('Tablet Edition', { supportsPointer, isTouch });const supportsPointer = typeof window !== 'undefined' && 'PointerEvent' in window;
-
-
-
-// Storage helpers
-
-function storageGet(keys) {
-
-  if (!chrome?.storage?.local?.get) return Promise.resolve({});// Cache dla graczy (5 min TTL)
-
-  return new Promise((resolve) => {
-
-    try {let cachedPlayers = [];// Cache dla graczy (5 min TTL)function storageGet(keys) {
-
-      chrome.storage.local.get(keys, (result) => {
-
-        const err = chrome?.runtime?.lastError;let cacheTime = 0;
-
-        if (err) {
-
-          log('storage.get failed', err.message || err);const CACHE_TTL = 5 * 60 * 1000;let cachedPlayers = [];  if (!chrome?.storage?.local?.get) return Promise.resolve({});
-
-          resolve({});
-
-          return;
-
-        }
-
-        resolve(result || {});// Stan trybu deblalet cacheTime = 0;  return new Promise((resolve) => {
-
-      });
-
-    } catch (err) {let doublesMode = false;
-
-      log('storage.get error', err);
-
-      resolve({});let selectedPlayers = [];const CACHE_TTL = 5 * 60 * 1000;    try {
-
-    }
-
-  });
-
-}
-
-// Storage helpers      chrome.storage.local.get(keys, (result) => {
-
-function storageSet(items) {
-
-  if (!chrome?.storage?.local?.set) return Promise.resolve(false);async function storageGet(key, fallback = null) {
-
-  return new Promise((resolve) => {
-
-    try {  try {// Stan trybu debla        const err = chrome?.runtime?.lastError;
-
-      chrome.storage.local.set(items, () => {
-
-        const err = chrome?.runtime?.lastError;    const result = await chrome.storage.local.get([key]);
-
-        if (err) {
-
-          log('storage.set failed', err.message || err);    return result[key] !== undefined ? result[key] : fallback;let doublesMode = false;        if (err) {
-
-          resolve(false);
-
-          return;  } catch {
-
-        }
-
-        resolve(true);    return fallback;let selectedPlayers = [];          log('storage.get failed', err.message || err);
-
-      });
-
-    } catch (err) {  }
-
-      log('storage.set error', err);
-
-      resolve(false);}          resolve({});
-
-    }
-
-  });
-
-}
-
-async function storageSet(key, value) {// Storage helpers          return;
 
 // Cache dla graczy (5 min TTL)
 
-let cachedPlayers = [];  try {
+let cachedPlayers = [];// Cache dla graczy (5 min TTL)function storageGet(keys) {
 
 let cacheTime = 0;
 
-const CACHE_TTL = 5 * 60 * 1000;    await chrome.storage.local.set({ [key]: value });async function storageGet(key, fallback = null) {        }
+const CACHE_TTL = 5 * 60 * 1000;let cachedPlayers = [];  if (!chrome?.storage?.local?.get) return Promise.resolve({});
 
 
 
-// Stan trybu debla  } catch (e) {
+// Stan trybu deblalet cacheTime = 0;  return new Promise((resolve) => {
 
 let doublesMode = false;
 
-let selectedPlayers = [];    log('Storage error:', e);  try {        resolve(result || {});
+let selectedPlayers = [];const CACHE_TTL = 5 * 60 * 1000;    try {
 
 
 
-// Pobierz graczy z API  }
+// Storage helpers      chrome.storage.local.get(keys, (result) => {
 
-async function fetchPlayers() {
+async function storageGet(key, fallback = null) {
 
-  const now = Date.now();}    const result = await chrome.storage.local.get([key]);      });
+  try {// Stan trybu debla        const err = chrome?.runtime?.lastError;
 
-  if (cachedPlayers.length > 0 && (now - cacheTime) < CACHE_TTL) {
+    const result = await chrome.storage.local.get([key]);
 
-    log('Cache hit:', cachedPlayers.length, 'players');
+    return result[key] !== undefined ? result[key] : fallback;let doublesMode = false;        if (err) {
 
-    return cachedPlayers;
+  } catch {
 
-  }// Pobieranie graczy z API    return result[key] !== undefined ? result[key] : fallback;    } catch (err) {
+    return fallback;let selectedPlayers = [];          log('storage.get failed', err.message || err);
+
+  }
+
+}          resolve({});
 
 
 
-  try {async function fetchPlayers() {
+async function storageSet(key, value) {// Storage helpers          return;
 
-    log('Fetching players from API...');
+  try {
 
-    const res = await fetch(`${API_BASE}/api/players`);  const now = Date.now();  } catch {      log('storage.get error', err);
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      if (cachedPlayers.length && (now - cacheTime < CACHE_TTL)) {
-
-    const data = await res.json();
-
-    const arr = Array.isArray(data) ? data : (Array.isArray(data?.players) ? data.players : []);    log('Using cached players:', cachedPlayers.length);    return fallback;      resolve({});
-
-    
-
-    cachedPlayers = arr.map(p => ({    return cachedPlayers;
-
-      name: String(p.name || '').trim(),
-
-      flag: String(p.flag || '').toLowerCase(),  }  }    }
-
-      flagUrl: p.flag_url || ''
-
-    })).filter(p => p.name);
-
-    
-
-    cacheTime = now;  try {}  });
-
-    log('Loaded players:', cachedPlayers.length);
-
-    return cachedPlayers;    log('Fetching players from API...');
+    await chrome.storage.local.set({ [key]: value });async function storageGet(key, fallback = null) {        }
 
   } catch (e) {
 
-    log('Failed to fetch players:', e);    const res = await fetch(`${API_BASE}/api/players`);}
+    log('Storage error:', e);  try {        resolve(result || {});
 
-    return [];
+  }
 
-  }    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}    const result = await chrome.storage.local.get([key]);      });
 
-}
+
+
+// Pobieranie graczy z API    return result[key] !== undefined ? result[key] : fallback;    } catch (err) {
+
+async function fetchPlayers() {
+
+  const now = Date.now();  } catch {      log('storage.get error', err);
+
+  if (cachedPlayers.length && (now - cacheTime < CACHE_TTL)) {
+
+    log('Using cached players:', cachedPlayers.length);    return fallback;      resolve({});
+
+    return cachedPlayers;
+
+  }  }    }
+
+
+
+  try {}  });
+
+    log('Fetching players from API...');
+
+    const res = await fetch(`${API_BASE}/api/players`);}
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     async function storageSet(key, value) {
 
-// Format nazwiska dla debla (Nazwisko1/Nazwisko2)
+    const data = await res.json();
 
-function formatDoublesName(players) {    const data = await res.json();
+    const players = Array.isArray(data) ? data : (data.players || []);  try {function storageSet(items) {
 
-  if (!Array.isArray(players) || players.length !== 2) return '';
+    
 
-  const surnames = players.map(p => {    const players = Array.isArray(data) ? data : (data.players || []);  try {function storageSet(items) {
-
-    const parts = p.name.split(' ').filter(Boolean);
-
-    return parts[parts.length - 1];    
-
-  });
-
-  return surnames.join(' / ');    cachedPlayers = players.map(p => ({    await chrome.storage.local.set({ [key]: value });  if (!chrome?.storage?.local?.set) return Promise.resolve(false);
-
-}
+    cachedPlayers = players.map(p => ({    await chrome.storage.local.set({ [key]: value });  if (!chrome?.storage?.local?.set) return Promise.resolve(false);
 
       name: p.name || '',
 
-// Prawdziwe wpisanie do inputa (aby React/UNO zarejestrowal zmiane)
+      flag: p.flag || '',  } catch (e) {  return new Promise((resolve) => {
 
-async function commitInputValue(el, value) {      flag: p.flag || '',  } catch (e) {  return new Promise((resolve) => {
+      flagUrl: p.flag_url || p.flagUrl || ''
 
-  const normalizedValue = value == null ? '' : String(value);
+    })).filter(p => p.name);    log('Storage error:', e);    try {
 
-  try { el.focus({ preventScroll: true }); } catch {}      flagUrl: p.flag_url || p.flagUrl || ''
-
-  
-
-  const proto = Object.getPrototypeOf(el);    })).filter(p => p.name);    log('Storage error:', e);    try {
-
-  const desc =
-
-    Object.getOwnPropertyDescriptor(proto, 'value') ||    
-
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    
 
     cacheTime = now;  }      chrome.storage.local.set(items, () => {
 
-  if (desc?.set) desc.set.call(el, normalizedValue);
+    log('Fetched players:', cachedPlayers.length);
 
-  else el.value = normalizedValue;    log('Fetched players:', cachedPlayers.length);
+    return cachedPlayers;}        const err = chrome?.runtime?.lastError;
 
+  } catch (e) {
 
+    log('API error:', e);        if (err) {
 
-  const evtOpts = { bubbles: true, cancelable: true, composed: true };    return cachedPlayers;}        const err = chrome?.runtime?.lastError;
+    return [];
 
-  
+  }// Pobieranie graczy z API          log('storage.set failed', err.message || err);
 
-  try {  } catch (e) {
+}
 
-    el.dispatchEvent(new InputEvent('beforeinput', {
+async function fetchPlayers() {          resolve(false);
 
-      ...evtOpts,    log('API error:', e);        if (err) {
+// Formatowanie nazwisk dla debla
 
-      inputType: 'insertReplacementText',
+function formatDoublesName(name1, name2) {  const now = Date.now();          return;
 
-      data: normalizedValue    return [];
+  const getSurname = (name) => name.trim().split(/\s+/).pop();
 
-    }));
+  return `${getSurname(name1)}/${getSurname(name2)}`;  if (cachedPlayers.length && (now - cacheTime < CACHE_TTL)) {        }
 
-  } catch {  }// Pobieranie graczy z API          log('storage.set failed', err.message || err);
+}
 
-    el.dispatchEvent(new Event('beforeinput', evtOpts));
+    log('Using cached players:', cachedPlayers.length);        resolve(true);
 
-  }}
+// Ustawianie flag przez API
 
-  
+async function setFlag(player, flag, flagUrl) {    return cachedPlayers;      });
 
-  el.dispatchEvent(new Event('input', evtOpts));async function fetchPlayers() {          resolve(false);
+  try {
 
-  
+    const res = await fetch(`${API_BASE}/api/set_flag`, {  }    } catch (err) {
 
-  try {// Formatowanie nazwisk dla debla
+      method: 'POST',
 
-    el.dispatchEvent(new InputEvent('input', {
+      headers: { 'Content-Type': 'application/json' },      log('storage.set error', err);
 
-      ...evtOpts,function formatDoublesName(name1, name2) {  const now = Date.now();          return;
+      body: JSON.stringify({ player, flag, flag_url: flagUrl })
 
-      inputType: 'insertText',
+    });  try {      resolve(false);
 
-      data: normalizedValue  const getSurname = (name) => name.trim().split(/\s+/).pop();
+    if (res.ok) {
 
-    }));
+      log(`Flag set for Player ${player}:`, flag);    log('Fetching players from API...');    }
 
-  } catch {}  return `${getSurname(name1)}/${getSurname(name2)}`;  if (cachedPlayers.length && (now - cacheTime < CACHE_TTL)) {        }
+      return true;
 
+    }    const res = await fetch(`${API_BASE}/api/players`);  });
 
+  } catch (e) {
 
-  const createEnterEvent = (type) => {}
-
-    let event;
-
-    try {    log('Using cached players:', cachedPlayers.length);        resolve(true);
-
-      event = new KeyboardEvent(type, { ...evtOpts, key: 'Enter', code: 'Enter', keyCode: 13, which: 13, charCode: 13 });
-
-    } catch (err) {// Ustawianie flag przez API
-
-      event = document.createEvent('KeyboardEvent');
-
-      event.initKeyboardEvent?.(type, true, true, window, 'Enter', 0, '', false, 'Enter');async function setFlag(player, flag, flagUrl) {    return cachedPlayers;      });
-
-    }
-
-    try {  try {
-
-      Object.defineProperties(event, {
-
-        keyCode: { value: 13 },    const res = await fetch(`${API_BASE}/api/set_flag`, {  }    } catch (err) {
-
-        which: { value: 13 },
-
-        charCode: { value: 13 }      method: 'POST',
-
-      });
-
-    } catch {}      headers: { 'Content-Type': 'application/json' },      log('storage.set error', err);
-
-    return event;
-
-  };      body: JSON.stringify({ player, flag, flag_url: flagUrl })
-
-
-
-  el.dispatchEvent(createEnterEvent('keydown'));    });  try {      resolve(false);
-
-  el.dispatchEvent(createEnterEvent('keypress'));
-
-  el.dispatchEvent(createEnterEvent('keyup'));    if (res.ok) {
-
-
-
-  await new Promise(r => setTimeout(r, 80));      log(`Flag set for Player ${player}:`, flag);    log('Fetching players from API...');    }
-
-  try { el.dispatchEvent(new FocusEvent('blur', evtOpts)); } catch { el.dispatchEvent(new Event('blur', evtOpts)); }
-
-  try { el.blur(); } catch {}      return true;
-
-
-
-  await new Promise(r => setTimeout(r, 40));    }    const res = await fetch(`${API_BASE}/api/players`);  });
-
-  el.dispatchEvent(new Event('change', evtOpts));
-
-}  } catch (e) {
-
-
-
-// UI pickera    log('Set flag error:', e);    if (!res.ok) throw new Error(`HTTP ${res.status}`);}
-
-let openPopover = null;
+    log('Set flag error:', e);    if (!res.ok) throw new Error(`HTTP ${res.status}`);}
 
   }
 
-function closePopover() {
+  return false;    
 
-  if (openPopover) {  return false;    
+}
 
-    try { openPopover.remove(); } catch {}
+    const data = await res.json();const ready = (fn) => {
 
-    openPopover = null;}
+// Wpisywanie wartości do inputa (React-compatible)
 
-  }
+function setInputValue(el, value) {    const players = Array.isArray(data) ? data : (data.players || []);  window.__unoKortMap = window.__unoKortMap || {
 
-}    const data = await res.json();const ready = (fn) => {
+  if (!el) return;
 
+  const nativeSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;        'app_7kvfwf2n2tqtcgflgqsocg': '1'
 
+  nativeSet.call(el, value);
 
-async function showPickerFor(input, letter) {// Wpisywanie wartości do inputa (React-compatible)
+  el.dispatchEvent(new Event('input', { bubbles: true }));    cachedPlayers = players.map(p => ({  };
 
-  closePopover();
+  el.dispatchEvent(new Event('change', { bubbles: true }));
 
-  function setInputValue(el, value) {    const players = Array.isArray(data) ? data : (data.players || []);  window.__unoKortMap = window.__unoKortMap || {
-
-  // Zaladuj stan trybu debla
-
-  const stored = await storageGet(['doublesMode', 'selectedPlayers']);  if (!el) return;
-
-  doublesMode = stored.doublesMode || false;
-
-  selectedPlayers = stored.selectedPlayers || [];  const nativeSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;        'app_7kvfwf2n2tqtcgflgqsocg': '1'
+}      name: p.name || '',  log('kort map', window.__unoKortMap);
 
 
 
-  const players = await fetchPlayers();  nativeSet.call(el, value);
-
-
-
-  const popover = document.createElement('div');  el.dispatchEvent(new Event('input', { bubbles: true }));    cachedPlayers = players.map(p => ({  };
-
-  popover.className = 'uno-picker-popover';
-
-  openPopover = popover;  el.dispatchEvent(new Event('change', { bubbles: true }));
-
-
-
-  // Oblicz pozycję (nad lub pod inputem)}      name: p.name || '',  log('kort map', window.__unoKortMap);
-
-  const inputRect = input.getBoundingClientRect();
-
-  const viewportHeight = window.innerHeight;
-
-  const spaceBelow = viewportHeight - inputRect.bottom;
-
-  const spaceAbove = inputRect.top;// Znajdowanie pól Player A/B      flag: p.flag || '',  log('ready handler', { state: document.readyState });
-
-  const popoverHeight = 400; // szacowana wysokość
+// Znajdowanie pól Player A/B      flag: p.flag || '',  log('ready handler', { state: document.readyState });
 
 function getPlayerInputs() {
 
-  let positionAbove = false;
+  const headers = Array.from(document.querySelectorAll('.app-field-label, .app-section-header'));      flagUrl: p.flag_url || p.flagUrl || ''  if (document.readyState === 'loading') {
 
-  if (spaceBelow < popoverHeight && spaceAbove > spaceBelow) {  const headers = Array.from(document.querySelectorAll('.app-field-label, .app-section-header'));      flagUrl: p.flag_url || p.flagUrl || ''  if (document.readyState === 'loading') {
+  const playerSection = headers.find(h => /Player\s+Names?/i.test(h.textContent || ''));
 
-    positionAbove = true;
+      })).filter(p => p.name);    document.addEventListener('DOMContentLoaded', fn, { once: true });
 
-  }  const playerSection = headers.find(h => /Player\s+Names?/i.test(h.textContent || ''));
+  if (!playerSection) return { A: null, B: null };
 
+        } else {
 
+  let section = playerSection.closest('section, div.app-section, div[class*="section"]') 
 
-  if (positionAbove) {      })).filter(p => p.name);    document.addEventListener('DOMContentLoaded', fn, { once: true });
+                || playerSection.parentElement;    cacheTime = now;    fn();
 
-    popover.style.bottom = (viewportHeight - inputRect.top) + 'px';
+  if (!section) return { A: null, B: null };
 
-  } else {  if (!playerSection) return { A: null, B: null };
+      log('Fetched players:', cachedPlayers.length);  }
 
-    popover.style.top = inputRect.bottom + 'px';
+  const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
 
-  }        } else {
-
-  popover.style.left = inputRect.left + 'px';
-
-  popover.style.width = Math.max(inputRect.width, 300) + 'px';  let section = playerSection.closest('section, div.app-section, div[class*="section"]') 
-
-
-
-  // Header z checkboxem trybu debla                || playerSection.parentElement;    cacheTime = now;    fn();
-
-  const header = document.createElement('div');
-
-  header.className = 'picker-header';  if (!section) return { A: null, B: null };
+  const labeled = [];    return cachedPlayers;};
 
   
 
-  const doublesLabel = document.createElement('label');      log('Fetched players:', cachedPlayers.length);  }
+  for (const inp of inputs) {  } catch (e) {
 
-  doublesLabel.style.display = 'flex';
+    const wrapper = inp.closest('.app-field, div[class*="field"]');
 
-  doublesLabel.style.alignItems = 'center';  const inputs = Array.from(section.querySelectorAll('input[type="text"]'));
+    if (!wrapper) continue;    log('API error:', e);log('UNO Picker content init', { readyState: document.readyState });
 
-  doublesLabel.style.cursor = 'pointer';
+    const label = wrapper.querySelector('.app-field-label');
 
-  doublesLabel.style.userSelect = 'none';  const labeled = [];    return cachedPlayers;};
+    const text = label?.textContent || '';    return [];
 
-  doublesLabel.style.padding = '8px';
+    if (/Player\s*A/i.test(text)) labeled.push({ input: inp, type: 'A' });
 
-  doublesLabel.style.minHeight = '50px'; // Większy dla tabletów  
+    else if (/Player\s*B/i.test(text)) labeled.push({ input: inp, type: 'B' });  }function resolveKortFromDom() {
 
-  
+  }
 
-  const doublesCheckbox = document.createElement('input');  for (const inp of inputs) {  } catch (e) {
+  }  try {
 
-  doublesCheckbox.type = 'checkbox';
+  return {
 
-  doublesCheckbox.checked = doublesMode;    const wrapper = inp.closest('.app-field, div[class*="field"]');
+    A: labeled.find(x => x.type === 'A')?.input || null,    const attrSelectors = ['[data-kort]', '[data-court]', '[data-court-id]'];
 
-  doublesCheckbox.style.width = '20px';
+    B: labeled.find(x => x.type === 'B')?.input || null
 
-  doublesCheckbox.style.height = '20px';    if (!wrapper) continue;    log('API error:', e);log('UNO Picker content init', { readyState: document.readyState });
+  };// Formatowanie nazwisk dla debla    for (const sel of attrSelectors) {
 
-  doublesCheckbox.style.marginRight = '10px';
+}
 
-  doublesCheckbox.style.cursor = 'pointer';    const label = wrapper.querySelector('.app-field-label');
+function formatDoublesName(name1, name2) {      const el = document.querySelector(sel);
 
-  
-
-  const doublesText = document.createElement('span');    const text = label?.textContent || '';    return [];
-
-  doublesText.textContent = 'Tryb debla (wybierz 2 graczy)';
-
-  doublesText.style.fontSize = '14px';    if (/Player\s*A/i.test(text)) labeled.push({ input: inp, type: 'A' });
-
-  
-
-  doublesLabel.appendChild(doublesCheckbox);    else if (/Player\s*B/i.test(text)) labeled.push({ input: inp, type: 'B' });  }function resolveKortFromDom() {
-
-  doublesLabel.appendChild(doublesText);
-
-  header.appendChild(doublesLabel);  }
-
-
-
-  // Search input  }  try {
-
-  const search = document.createElement('input');
-
-  search.type = 'text';  return {
-
-  search.placeholder = 'Szukaj gracza...';
-
-  search.className = 'picker-search';    A: labeled.find(x => x.type === 'A')?.input || null,    const attrSelectors = ['[data-kort]', '[data-court]', '[data-court-id]'];
-
-  search.style.minHeight = '40px'; // Większy dla tabletów
-
-  search.style.fontSize = '16px'; // Zapobiega zoom na iOS    B: labeled.find(x => x.type === 'B')?.input || null
-
-
-
-  // Lista graczy  };// Formatowanie nazwisk dla debla    for (const sel of attrSelectors) {
-
-  const list = document.createElement('div');
-
-  list.className = 'picker-list';}
-
-
-
-  popover.appendChild(header);function formatDoublesName(name1, name2) {      const el = document.querySelector(sel);
-
-  popover.appendChild(search);
-
-  popover.appendChild(list);// Popover
-
-  document.body.appendChild(popover);
+// Popover
 
 let openPopover = null;  const getSurname = (name) => name.trim().split(/\s+/).pop();      if (!el) continue;
 
-  // Obsługa zmiany trybu debla
 
-  doublesCheckbox.addEventListener('change', async () => {
 
-    doublesMode = doublesCheckbox.checked;
+function closePopover() {  return `${getSurname(name1)}/${getSurname(name2)}`;      const raw = el.getAttribute('data-kort') || el.getAttribute('data-court') || el.getAttribute('data-court-id');
 
-    if (!doublesMode) {function closePopover() {  return `${getSurname(name1)}/${getSurname(name2)}`;      const raw = el.getAttribute('data-kort') || el.getAttribute('data-court') || el.getAttribute('data-court-id');
+  if (openPopover) {
 
-      selectedPlayers = [];
-
-    }  if (openPopover) {
-
-    await storageSet({ doublesMode, selectedPlayers });
-
-    render(search.value);    openPopover.remove();}      if (raw && /\d+/.test(raw)) return raw.match(/\d+/)[0];
-
-  });
+    openPopover.remove();}      if (raw && /\d+/.test(raw)) return raw.match(/\d+/)[0];
 
     openPopover = null;
 
-  // Render listy
+  }    }
 
-  const render = (query = '') => {  }    }
-
-    list.innerHTML = '';
-
-    const q = query.toLowerCase().trim();}
-
-    const filtered = q ? players.filter(p => p.name.toLowerCase().includes(q)) : players;
+}
 
 // Ustawianie flag przez API    const candidates = document.querySelectorAll('nav *, header *, [class*="kort"], [id*="kort"], [class*="court"], [id*="court"]');
 
-    if (filtered.length === 0) {
+function showPicker(targetInput, playerLetter) {
 
-      const noResults = document.createElement('div');function showPicker(targetInput, playerLetter) {
-
-      noResults.className = 'picker-row';
-
-      noResults.textContent = 'Brak wyników';  closePopover();async function setFlag(player, flag, flagUrl) {    for (const el of candidates) {
-
-      noResults.style.textAlign = 'center';
-
-      noResults.style.padding = '20px';  
-
-      noResults.style.color = '#999';
-
-      list.appendChild(noResults);  const pop = document.createElement('div');  try {      const text = (el.textContent || '').trim();
-
-      return;
-
-    }  pop.style.cssText = `
-
-
-
-    filtered.forEach(player => {    position: absolute;    const res = await fetch(`${API_BASE}/api/set_flag`, {      if (!text) continue;
-
-      const row = document.createElement('div');
-
-      row.className = 'picker-row';    z-index: 2147483647;
-
-      row.style.minHeight = '50px'; // Większy dla tabletów
-
-      row.style.display = 'flex';    background: white;      method: 'POST',      const match = text.match(/\b(kort|court)\s*(\d+)/i);
-
-      row.style.alignItems = 'center';
-
-      row.style.padding = '12px';    border: 1px solid #ccc;
-
-      row.style.cursor = 'pointer';
-
-      row.style.userSelect = 'none';    border-radius: 8px;      headers: { 'Content-Type': 'application/json' },      if (match) return match[2];
-
-      row.style.WebkitTapHighlightColor = 'transparent';
-
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-
-      // Flaga
-
-      if (player.flag) {    padding: 12px;      body: JSON.stringify({ player, flag, flag_url: flagUrl })    }
-
-        const flagSpan = document.createElement('span');
-
-        flagSpan.textContent = player.flag;    min-width: 320px;
-
-        flagSpan.style.marginRight = '10px';
-
-        flagSpan.style.fontSize = '20px';    max-width: 400px;    });    const bodyText = document.body?.textContent || '';
-
-        row.appendChild(flagSpan);
-
-      }    touch-action: auto;
-
-
-
-      // Nazwa  `;    if (res.ok) {    const match = bodyText.match(/\b(kort|court)\s*(\d+)/i);
-
-      const nameSpan = document.createElement('span');
-
-      nameSpan.textContent = player.name;  
-
-      nameSpan.style.flex = '1';
-
-      row.appendChild(nameSpan);  // Checkbox debla      log(`Flag set for Player ${player}:`, flag);    if (match) return match[2];
-
-
-
-      // Checkbox dla trybu debla  const checkDiv = document.createElement('div');
-
-      if (doublesMode) {
-
-        const checkbox = document.createElement('input');  checkDiv.style.cssText = 'margin-bottom: 10px; user-select: none;';      return true;  } catch (err) {
-
-        checkbox.type = 'checkbox';
-
-        checkbox.checked = selectedPlayers.some(p => p.name === player.name);  
-
-        checkbox.style.width = '20px';
-
-        checkbox.style.height = '20px';  const checkbox = document.createElement('input');    }    log('resolveKortFromDom error', err);
-
-        checkbox.style.marginLeft = '10px';
-
-        checkbox.style.pointerEvents = 'none'; // Nie blokuj kliknięcia w row  checkbox.type = 'checkbox';
-
-        row.appendChild(checkbox);
-
-      }  checkbox.checked = doublesMode;  } catch (e) {  }
-
-
-
-      const handleSelect = async () => {  checkbox.style.cssText = 'margin-right: 8px; width: 20px; height: 20px;';
-
-        if (doublesMode) {
-
-          // Tryb debla - toggle selection      log('Set flag error:', e);  return null;
-
-          const idx = selectedPlayers.findIndex(p => p.name === player.name);
-
-          if (idx >= 0) {  const label = document.createElement('label');
-
-            selectedPlayers.splice(idx, 1);
-
-          } else {  label.textContent = 'Tryb debla (2 zawodników)';  }}
-
-            if (selectedPlayers.length < 2) {
-
-              selectedPlayers.push(player);  label.style.cssText = 'cursor: pointer; font-size: 16px; vertical-align: middle;';
-
-            }
-
-          }  label.prepend(checkbox);  return false;
-
-          await storageSet({ selectedPlayers });
+  closePopover();async function setFlag(player, flag, flagUrl) {    for (const el of candidates) {
 
   
 
-          // Jeśli wybrano 2 graczy, wpisz i zamknij
+  const pop = document.createElement('div');  try {      const text = (el.textContent || '').trim();
 
-          if (selectedPlayers.length === 2) {  checkDiv.appendChild(label);}// Wstrzykniecie stylow pickera
+  pop.style.cssText = `
 
-            const formattedName = formatDoublesName(selectedPlayers);
+    position: absolute;    const res = await fetch(`${API_BASE}/api/set_flag`, {      if (!text) continue;
 
-            await commitInputValue(input, formattedName);  
+    z-index: 2147483647;
 
-            log(`Debel wybrany dla ${letter}:`, formattedName);
+    background: white;      method: 'POST',      const match = text.match(/\b(kort|court)\s*(\d+)/i);
 
-            selectedPlayers = [];  // Search inputconst ensureStyle = () => {
+    border: 1px solid #ccc;
 
-            await storageSet({ selectedPlayers });
+    border-radius: 8px;      headers: { 'Content-Type': 'application/json' },      if (match) return match[2];
 
-            closePopover();  const search = document.createElement('input');
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 
-          } else {
+    padding: 12px;      body: JSON.stringify({ player, flag, flag_url: flagUrl })    }
 
-            render(search.value);  search.placeholder = 'Szukaj...';// Wpisywanie wartości do inputa (React-compatible)  const cssUrl = chrome.runtime.getURL('picker.css');
+    min-width: 320px;
 
-          }
+    max-width: 400px;    });    const bodyText = document.body?.textContent || '';
 
-        } else {  search.style.cssText = `
+    touch-action: auto;
 
-          // Tryb singla
+  `;    if (res.ok) {    const match = bodyText.match(/\b(kort|court)\s*(\d+)/i);
 
-          await commitInputValue(input, player.name);    width: 100%;function setInputValue(el, value) {  if (!document.querySelector(`link[href="${cssUrl}"]`)) {
+  
 
-          log(`Gracz wybrany dla ${letter}:`, player.name);
+  // Checkbox debla      log(`Flag set for Player ${player}:`, flag);    if (match) return match[2];
 
-          closePopover();    padding: 12px;
+  const checkDiv = document.createElement('div');
 
-        }
+  checkDiv.style.cssText = 'margin-bottom: 10px; user-select: none;';      return true;  } catch (err) {
 
-      };    border: 1px solid #ddd;  if (!el) return;    const l = document.createElement('link');
+  
 
+  const checkbox = document.createElement('input');    }    log('resolveKortFromDom error', err);
 
+  checkbox.type = 'checkbox';
 
-      // Obsługa touch/pointer events dla tabletów    border-radius: 4px;
+  checkbox.checked = doublesMode;  } catch (e) {  }
 
-      if (supportsPointer) {
+  checkbox.style.cssText = 'margin-right: 8px; width: 20px; height: 20px;';
 
-        let touchSession = null;    margin-bottom: 10px;  const nativeSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;    l.rel = 'stylesheet';
+      log('Set flag error:', e);  return null;
 
-        const resetTouchSession = () => { touchSession = null; };
+  const label = document.createElement('label');
+
+  label.textContent = 'Tryb debla (2 zawodników)';  }}
+
+  label.style.cssText = 'cursor: pointer; font-size: 16px; vertical-align: middle;';
+
+  label.prepend(checkbox);  return false;
+
+  
+
+  checkDiv.appendChild(label);}// Wstrzykniecie stylow pickera
+
+  
+
+  // Search inputconst ensureStyle = () => {
+
+  const search = document.createElement('input');
+
+  search.placeholder = 'Szukaj...';// Wpisywanie wartości do inputa (React-compatible)  const cssUrl = chrome.runtime.getURL('picker.css');
+
+  search.style.cssText = `
+
+    width: 100%;function setInputValue(el, value) {  if (!document.querySelector(`link[href="${cssUrl}"]`)) {
+
+    padding: 12px;
+
+    border: 1px solid #ddd;  if (!el) return;    const l = document.createElement('link');
+
+    border-radius: 4px;
+
+    margin-bottom: 10px;  const nativeSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;    l.rel = 'stylesheet';
 
     font-size: 16px;
 
-        row.addEventListener('pointerdown', (ev) => {
+  `;  nativeSet.call(el, value);    l.href = cssUrl;
 
-          if (ev.pointerType !== 'touch') return;  `;  nativeSet.call(el, value);    l.href = cssUrl;
+  
 
-          touchSession = {
+  // Selected list (doubles only)  el.dispatchEvent(new Event('input', { bubbles: true }));    document.documentElement.appendChild(l);
 
-            id: ev.pointerId,  
-
-            startX: ev.clientX,
-
-            startY: ev.clientY,  // Selected list (doubles only)  el.dispatchEvent(new Event('input', { bubbles: true }));    document.documentElement.appendChild(l);
-
-            moved: false
-
-          };  const selectedDiv = document.createElement('div');
-
-        }, { passive: true });
+  const selectedDiv = document.createElement('div');
 
   selectedDiv.style.cssText = 'margin-bottom: 10px; display: none;';  el.dispatchEvent(new Event('change', { bubbles: true }));  }
 
-        row.addEventListener('pointermove', (ev) => {
+  
 
-          if (!touchSession || touchSession.id !== ev.pointerId) return;  
+  // Players list}};
 
-          const dx = Math.abs(ev.clientX - touchSession.startX);
+  const list = document.createElement('div');
 
-          const dy = Math.abs(ev.clientY - touchSession.startY);  // Players list}};
+  list.style.cssText = `
 
-          if (dx > 10 || dy > 10) {
+    max-height: 300px;
 
-            touchSession.moved = true;  const list = document.createElement('div');
-
-          }
-
-        }, { passive: true });  list.style.cssText = `
-
-
-
-        row.addEventListener('pointercancel', (ev) => {    max-height: 300px;
-
-          if (!touchSession || touchSession.id !== ev.pointerId) return;
-
-          resetTouchSession();    overflow-y: auto;// Znajdowanie pól Player A/Bready(() => {
-
-        }, { passive: true });
+    overflow-y: auto;// Znajdowanie pól Player A/Bready(() => {
 
     border: 1px solid #eee;
 
-        row.addEventListener('pointerup', (ev) => {
+    border-radius: 4px;function getPlayerInputs() {  ensureStyle();
 
-          if (ev.pointerType !== 'touch' || !touchSession || touchSession.id !== ev.pointerId) return;    border-radius: 4px;function getPlayerInputs() {  ensureStyle();
+    -webkit-overflow-scrolling: touch;
 
-          const moved = touchSession.moved;
+  `;  const headers = Array.from(document.querySelectorAll('.app-field-label, .app-section-header'));  documentKort = documentKort || resolveKortFromDom();
 
-          resetTouchSession();    -webkit-overflow-scrolling: touch;
+  
 
-          if (moved) return; // Był scroll, nie tap
+  pop.append(checkDiv, search, selectedDiv, list);  const playerSection = headers.find(h => /Player\s+Names?/i.test(h.textContent || ''));  if (documentKort) {
 
-          Promise.resolve().then(handleSelect);  `;  const headers = Array.from(document.querySelectorAll('.app-field-label, .app-section-header'));  documentKort = documentKort || resolveKortFromDom();
-
-        }, { passive: true });
-
-      } else {  
-
-        // Fallback dla starszych WebView
-
-        row.addEventListener('touchend', () => {  pop.append(checkDiv, search, selectedDiv, list);  const playerSection = headers.find(h => /Player\s+Names?/i.test(h.textContent || ''));  if (documentKort) {
-
-          Promise.resolve().then(handleSelect);
-
-        }, { passive: true });  document.body.appendChild(pop);
-
-      }
+  document.body.appendChild(pop);
 
   openPopover = pop;      log('Detected kort', { kort: documentKort });
 
-      // Desktop click
+  
 
-      row.addEventListener('click', handleSelect);  
+  // Position - optymalizacja dla tabletów  if (!playerSection) return { A: null, B: null };    const locOverlay = overlayFromLocation();
 
+  const rect = targetInput.getBoundingClientRect();
 
+  const viewportHeight = window.innerHeight;      if (locOverlay) setKortForOverlay(locOverlay, documentKort);
 
-      list.appendChild(row);  // Position - optymalizacja dla tabletów  if (!playerSection) return { A: null, B: null };    const locOverlay = overlayFromLocation();
+  const spaceBelow = viewportHeight - rect.bottom;
 
-    });
+  const spaceAbove = rect.top;  let section = playerSection.closest('section, div.app-section, div[class*="section"]')     if (uno.appInstance) setKortForOverlay(uno.appInstance, documentKort);
 
-  };  const rect = targetInput.getBoundingClientRect();
+  
 
+  // Jeśli więcej miejsca nad inputem, pokaż tam                || playerSection.parentElement;    if (lastAppId) setKortForOverlay(lastAppId, documentKort);
 
+  if (spaceBelow < 350 && spaceAbove > spaceBelow) {
 
-  render();  const viewportHeight = window.innerHeight;      if (locOverlay) setKortForOverlay(locOverlay, documentKort);
+    pop.style.bottom = `${viewportHeight - rect.top + 8}px`;  if (!section) return { A: null, B: null };  } else {
 
-  search.addEventListener('input', () => render(search.value));
+  } else {
 
-  try { search.focus({ preventScroll: true }); } catch { search.focus(); }  const spaceBelow = viewportHeight - rect.bottom;
-
-
-
-  // Zamknij przy kliknięciu poza  const spaceAbove = rect.top;  let section = playerSection.closest('section, div.app-section, div[class*="section"]')     if (uno.appInstance) setKortForOverlay(uno.appInstance, documentKort);
-
-  const outsideClick = (e) => {
-
-    if (!popover.contains(e.target) && e.target !== input) {  
-
-      closePopover();
-
-      document.removeEventListener('click', outsideClick, true);  // Jeśli więcej miejsca nad inputem, pokaż tam                || playerSection.parentElement;    if (lastAppId) setKortForOverlay(lastAppId, documentKort);
-
-    }
-
-  };  if (spaceBelow < 350 && spaceAbove > spaceBelow) {
-
-  setTimeout(() => document.addEventListener('click', outsideClick, true), 100);
-
-}    pop.style.bottom = `${viewportHeight - rect.top + 8}px`;  if (!section) return { A: null, B: null };  } else {
-
-
-
-// Odszukanie pól Player A/B po sekcji "Player Names"  } else {
-
-function getPlayerInputsFromSection() {
-
-  if (!document.body) {    pop.style.top = `${rect.bottom + window.scrollY + 8}px`;      setTimeout(() => {
-
-    log('getPlayerInputsFromSection: no body, skipping UI wiring');
-
-    return { A: null, B: null };  }
+    pop.style.top = `${rect.bottom + window.scrollY + 8}px`;      setTimeout(() => {
 
   }
 
   pop.style.left = `${Math.max(10, rect.left + window.scrollX)}px`;  const inputs = Array.from(section.querySelectorAll('input[type="text"]'));      if (!documentKort) {
 
-  // 1) Znajdź nagłówek tekstowy "Player Names"
+  pop.style.right = '10px';
 
-  const headerNodes = [];  pop.style.right = '10px';
+    const labeled = [];        documentKort = resolveKortFromDom();
 
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+  // Close handlers
 
-    acceptNode(n) {    const labeled = [];        documentKort = resolveKortFromDom();
+  const closeOnOutside = (e) => {          if (documentKort) {
 
-      const v = n.nodeValue?.trim();
-
-      if (!v) return NodeFilter.FILTER_REJECT;  // Close handlers
-
-      return /^player\s+names$/i.test(v) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-
-    }  const closeOnOutside = (e) => {          if (documentKort) {
-
-  });
-
-  let n;    if (!pop.contains(e.target) && e.target !== targetInput) closePopover();
-
-  while ((n = walker.nextNode())) headerNodes.push(n);
+    if (!pop.contains(e.target) && e.target !== targetInput) closePopover();
 
   };  for (const inp of inputs) {          log('Detected kort (delayed)', { kort: documentKort });
 
-  if (!headerNodes.length) {
+  const closeOnEsc = (e) => {
 
-    log('Player Names section not found');  const closeOnEsc = (e) => {
+    if (e.key === 'Escape') closePopover();    const wrapper = inp.closest('.app-field, div[class*="field"]');          const locOverlayDelayed = overlayFromLocation();
 
-    return { A: null, B: null };
+  };
 
-  }    if (e.key === 'Escape') closePopover();    const wrapper = inp.closest('.app-field, div[class*="field"]');          const locOverlayDelayed = overlayFromLocation();
+      if (!wrapper) continue;          if (locOverlayDelayed) setKortForOverlay(locOverlayDelayed, documentKort);
 
-
-
-  // 2) Weź najbliższy sensowny kontener (kilka poziomów w górę),  };
-
-  //    a potem w dół pierwsze 2 WIDOCZNE inputy typu text
-
-  function visible(el) {      if (!wrapper) continue;          if (locOverlayDelayed) setKortForOverlay(locOverlayDelayed, documentKort);
-
-    const r = el.getBoundingClientRect();
-
-    return el.offsetParent !== null && r.width > 5 && r.height > 10;  document.addEventListener('mousedown', closeOnOutside, true);
-
-  }
+  document.addEventListener('mousedown', closeOnOutside, true);
 
   document.addEventListener('keydown', closeOnEsc, true);    const label = wrapper.querySelector('.app-field-label');          if (uno.appInstance) setKortForOverlay(uno.appInstance, documentKort);
 
-  for (const textNode of headerNodes) {
+  window.addEventListener('resize', closePopover, true);
 
-    let box = textNode.parentElement;  window.addEventListener('resize', closePopover, true);
+      const text = label?.textContent || '';          if (lastAppId) setKortForOverlay(lastAppId, documentKort);
 
-    for (let i = 0; i < 5 && box; i++) {
+  // Cleanup
 
-      const inputs = Array.from(box.querySelectorAll('input[type="text"], input:not([type])'))      const text = label?.textContent || '';          if (lastAppId) setKortForOverlay(lastAppId, documentKort);
+  pop.__cleanup = () => {    if (/Player\s*A/i.test(text)) labeled.push({ input: inp, type: 'A' });        }
 
-        .filter(visible);
+    document.removeEventListener('mousedown', closeOnOutside, true);
 
-      if (inputs.length >= 2) {  // Cleanup
+    document.removeEventListener('keydown', closeOnEsc, true);    else if (/Player\s*B/i.test(text)) labeled.push({ input: inp, type: 'B' });      }
 
-        log('Found Player Name inputs:', inputs.length);
+    window.removeEventListener('resize', closePopover, true);
 
-        return { A: inputs[0], B: inputs[1] };  pop.__cleanup = () => {    if (/Player\s*A/i.test(text)) labeled.push({ input: inp, type: 'A' });        }
+  };  }    }, 1000);
 
-      }
+  
 
-      box = box.parentElement;    document.removeEventListener('mousedown', closeOnOutside, true);
-
-    }
-
-  }    document.removeEventListener('keydown', closeOnEsc, true);    else if (/Player\s*B/i.test(text)) labeled.push({ input: inp, type: 'B' });      }
-
-
-
-  log('Player Name inputs not found in section');    window.removeEventListener('resize', closePopover, true);
-
-  return { A: null, B: null };
-
-}  };  }    }, 1000);
-
-
-
-// Wpiecie przycisków i obsluga wejscia  
-
-function ensureUI() {
-
-  if (!document.body) return;  // Checkbox handler    }
-
-  if (!document.body.querySelector || !document.body.querySelector('.app-field-label')) return;
+  // Checkbox handler    }
 
   checkbox.addEventListener('change', () => {
 
-  const { A, B } = getPlayerInputsFromSection();
-
     doublesMode = checkbox.checked;  return {});
 
-  // Usuń zbłąkane przyciski pickera poza sekcją Player Names
+    storageSet('doublesMode', doublesMode);
 
-  document.querySelectorAll('.uno-picker-button').forEach(btn => {    storageSet('doublesMode', doublesMode);
+    selectedPlayers = [];    A: labeled.find(x => x.type === 'A')?.input || null,
 
-    if (!btn.previousSibling || !btn.previousSibling.matches?.('input')) {
+    renderSelected();
 
-      btn.remove();    selectedPlayers = [];    A: labeled.find(x => x.type === 'A')?.input || null,
-
-    }
-
-  });    renderSelected();
-
-
-
-  const attach = (input, letter) => {    renderList();    B: labeled.find(x => x.type === 'B')?.input || nullfunction normalizeOverlayId(input) {
-
-    if (!input || input.__unoWired) return;
-
-    input.__unoWired = true;  });
-
-
-
-    if (input.parentElement?.querySelector('.uno-picker-button')) return;    };  if (input === null || input === undefined) return null;
-
-
-
-    const btn = document.createElement('button');  // Render selected
-
-    btn.className = 'uno-picker-button';
-
-    btn.type = 'button';  const renderSelected = () => {}  if (typeof input === 'number' || /^\d+$/.test(String(input).trim())) {
-
-    btn.textContent = `Wybierz ${letter}`;
-
-    btn.style.marginLeft = '10px';    if (!checkbox.checked) {
-
-    btn.style.minHeight = '40px'; // Większy dla tabletów
-
-    btn.style.minWidth = '100px';      selectedDiv.style.display = 'none';    return `app_${String(input).trim()}`.toLowerCase();
-
-    btn.style.padding = '8px 16px';
-
-    btn.style.fontSize = '14px';      return;
-
-    btn.style.cursor = 'pointer';
-
-    btn.style.userSelect = 'none';    }// Popover  }
-
-    btn.style.WebkitTapHighlightColor = 'transparent';
-
-        
-
-    input.parentElement?.insertBefore(btn, input.nextSibling);
-
-    selectedDiv.style.display = 'block';let openPopover = null;  const str = String(input).trim();
-
-    // Obsługa kliknięcia w przycisk
-
-    if (supportsPointer) {    selectedDiv.innerHTML = `<div style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">Wybrani (${selectedPlayers.length}/2):</div>`;
-
-      let touchSession = null;
-
-      const resetTouchSession = () => { touchSession = null; };      const match = str.match(/app_([A-Za-z0-9]+)/i);
-
-
-
-      btn.addEventListener('pointerdown', (ev) => {    if (selectedPlayers.length === 0) {
-
-        if (ev.pointerType !== 'touch') return;
-
-        touchSession = {      selectedDiv.innerHTML += '<div style="font-size: 14px; color: #999;">Brak</div>';function closePopover() {  if (match) return `app_${match[1].toLowerCase()}`;
-
-          id: ev.pointerId,
-
-          startX: ev.clientX,    } else {
-
-          startY: ev.clientY,
-
-          moved: false      selectedPlayers.forEach((p, idx) => {  if (openPopover) {  return null;
-
-        };
-
-      }, { passive: true });        const item = document.createElement('div');
-
-
-
-      btn.addEventListener('pointermove', (ev) => {        item.style.cssText = 'display: flex; align-items: center; padding: 8px; background: #f0f0f0; border-radius: 4px; margin-bottom: 4px;';    openPopover.remove();}
-
-        if (!touchSession || touchSession.id !== ev.pointerId) return;
-
-        const dx = Math.abs(ev.clientX - touchSession.startX);        
-
-        const dy = Math.abs(ev.clientY - touchSession.startY);
-
-        if (dx > 10 || dy > 10) {        const flagHTML = p.flagUrl     openPopover = null;
-
-          touchSession.moved = true;
-
-        }          ? `<img src="${p.flagUrl}" style="height: 18px; margin-right: 8px;">` 
-
-      }, { passive: true });
-
-          : `<span style="margin-right: 8px; font-weight: bold;">${(p.flag || '?').toUpperCase()}</span>`;  }function extractAppId(source) {
-
-      btn.addEventListener('pointercancel', (ev) => {
-
-        if (!touchSession || touchSession.id !== ev.pointerId) return;        
-
-        resetTouchSession();
-
-      }, { passive: true });        const removeBtn = document.createElement('button');}  try {
-
-
-
-      btn.addEventListener('pointerup', (ev) => {        removeBtn.textContent = '✕';
-
-        if (ev.pointerType !== 'touch' || !touchSession || touchSession.id !== ev.pointerId) return;
-
-        const moved = touchSession.moved;        removeBtn.style.cssText = 'margin-left: auto; background: none; border: none; cursor: pointer; font-size: 20px; color: #666; padding: 4px 8px; min-width: 30px; min-height: 30px;';    return normalizeOverlayId(source);
-
-        resetTouchSession();
-
-        if (!moved) {        removeBtn.addEventListener('click', () => {
-
-          ev.preventDefault();
-
-          ev.stopPropagation();          selectedPlayers.splice(idx, 1);function showPicker(targetInput, playerLetter) {  } catch {
-
-          showPickerFor(input, letter);
-
-        }          renderSelected();
-
-      });
-
-    }          renderList();  closePopover();    return null;
-
-
-
-    btn.addEventListener('click', (ev) => {        });
-
-      ev.preventDefault();
-
-      ev.stopPropagation();            }
-
-      showPickerFor(input, letter);
-
-    });        item.innerHTML = `${flagHTML}<span style="font-size: 15px;">${p.name}</span>`;
-
-
-
-    // Obsługa kliknięcia w sam input        item.appendChild(removeBtn);  const pop = document.createElement('div');}
-
-    input.addEventListener('mousedown', (e) => {
-
-      e.stopPropagation();        selectedDiv.appendChild(item);
-
-      e.preventDefault();
-
-      showPickerFor(input, letter);      });  pop.style.cssText = `
-
-    }, true);
-
-    }
-
-    input.addEventListener('focus', () => {
-
-      showPickerFor(input, letter);  };    position: absolute;function overlayFromLocation() {
-
-    }, true);
-
-  
-
-    log(`Podłączono picker do Player ${letter}`);
-
-  };  // Render list    z-index: 2147483647;  try {
-
-
-
-  attach(A, 'A');  let allPlayers = [];
-
-  attach(B, 'B');
-
-}      background: white;    const match = window.location.pathname.match(/(?:control|output)\/([A-Za-z0-9]+)/i);
-
-
-
-// Ready handler  const renderList = (query = '') => {
-
-const ready = (fn) => {
-
-  log('ready handler', { state: document.readyState });    list.innerHTML = '';    border: 1px solid #ccc;    if (match) return normalizeOverlayId(match[1]);
-
-  if (document.readyState === 'loading') {
-
-    document.addEventListener('DOMContentLoaded', fn, { once: true });    
-
-  } else {
-
-    fn();    if (!allPlayers.length) {    border-radius: 8px;  } catch {}
-
-  }
-
-};      list.innerHTML = '<div style="padding: 16px; text-align: center; color: #999; font-size: 15px;">Ładowanie...</div>';
-
-
-
-// Inicjalizacja      return;    box-shadow: 0 4px 12px rgba(0,0,0,0.15);  return null;
-
-log('UNO Picker content init', { readyState: document.readyState });
-
-    }
-
-ready(() => {
-
-  log('DOM ready, initializing UI...');        padding: 12px;}
-
-  
-
-  // MutationObserver do śledzenia zmian DOM    const needle = query.trim().toLowerCase();
-
-  const mo = new MutationObserver(() => {
-
-    try {    const filtered = needle     min-width: 320px;
-
-      ensureUI();
-
-    } catch (err) {      ? allPlayers.filter(p => p.name.toLowerCase().includes(needle) || p.flag.toLowerCase().includes(needle))
-
-      log('ensureUI error:', err);
-
-    }      : allPlayers;    max-width: 400px;function setKortForOverlay(overlay, kort) {
+    renderList();    B: labeled.find(x => x.type === 'B')?.input || nullfunction normalizeOverlayId(input) {
 
   });
 
-      
+    };  if (input === null || input === undefined) return null;
 
-  mo.observe(document.documentElement, {
+  // Render selected
 
-    childList: true,    if (!filtered.length) {  `;  const normalizedOverlay = normalizeOverlayId(overlay);
+  const renderSelected = () => {}  if (typeof input === 'number' || /^\d+$/.test(String(input).trim())) {
 
-    subtree: true
+    if (!checkbox.checked) {
 
-  });      list.innerHTML = '<div style="padding: 16px; text-align: center; color: #999; font-size: 15px;">Brak wyników</div>';
+      selectedDiv.style.display = 'none';    return `app_${String(input).trim()}`.toLowerCase();
 
+      return;
 
+    }// Popover  }
 
-  // Pierwsza próba      return;    if (!normalizedOverlay || !kort) return;
+    
 
-  ensureUI();
+    selectedDiv.style.display = 'block';let openPopover = null;  const str = String(input).trim();
 
-      }
+    selectedDiv.innerHTML = `<div style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">Wybrani (${selectedPlayers.length}/2):</div>`;
 
-  // Opóźniona próba (czasem DOM nie jest jeszcze gotowy)
+      const match = str.match(/app_([A-Za-z0-9]+)/i);
 
-  setTimeout(() => {      // Checkbox debla  window.__unoKortMap = window.__unoKortMap || {};
+    if (selectedPlayers.length === 0) {
 
-    log('Delayed UI initialization...');
+      selectedDiv.innerHTML += '<div style="font-size: 14px; color: #999;">Brak</div>';function closePopover() {  if (match) return `app_${match[1].toLowerCase()}`;
 
-    ensureUI();    filtered.forEach(p => {
+    } else {
 
-  }, 1000);
+      selectedPlayers.forEach((p, idx) => {  if (openPopover) {  return null;
 
-        const row = document.createElement('div');  const checkDiv = document.createElement('div');  window.__unoKortMap[normalizedOverlay] = String(kort);
+        const item = document.createElement('div');
 
-  setTimeout(() => {
+        item.style.cssText = 'display: flex; align-items: center; padding: 8px; background: #f0f0f0; border-radius: 4px; margin-bottom: 4px;';    openPopover.remove();}
 
-    log('Final UI initialization...');      row.style.cssText = `
+        
 
-    ensureUI();
+        const flagHTML = p.flagUrl     openPopover = null;
 
-  }, 3000);        padding: 14px 12px;  checkDiv.style.cssText = 'margin-bottom: 10px;';}
+          ? `<img src="${p.flagUrl}" style="height: 18px; margin-right: 8px;">` 
 
-});
+          : `<span style="margin-right: 8px; font-weight: bold;">${(p.flag || '?').toUpperCase()}</span>`;  }function extractAppId(source) {
+
+        
+
+        const removeBtn = document.createElement('button');}  try {
+
+        removeBtn.textContent = '✕';
+
+        removeBtn.style.cssText = 'margin-left: auto; background: none; border: none; cursor: pointer; font-size: 20px; color: #666; padding: 4px 8px; min-width: 30px; min-height: 30px;';    return normalizeOverlayId(source);
+
+        removeBtn.addEventListener('click', () => {
+
+          selectedPlayers.splice(idx, 1);function showPicker(targetInput, playerLetter) {  } catch {
+
+          renderSelected();
+
+          renderList();  closePopover();    return null;
+
+        });
+
+            }
+
+        item.innerHTML = `${flagHTML}<span style="font-size: 15px;">${p.name}</span>`;
+
+        item.appendChild(removeBtn);  const pop = document.createElement('div');}
+
+        selectedDiv.appendChild(item);
+
+      });  pop.style.cssText = `
+
+    }
+
+  };    position: absolute;function overlayFromLocation() {
+
+  
+
+  // Render list    z-index: 2147483647;  try {
+
+  let allPlayers = [];
+
+      background: white;    const match = window.location.pathname.match(/(?:control|output)\/([A-Za-z0-9]+)/i);
+
+  const renderList = (query = '') => {
+
+    list.innerHTML = '';    border: 1px solid #ccc;    if (match) return normalizeOverlayId(match[1]);
+
+    
+
+    if (!allPlayers.length) {    border-radius: 8px;  } catch {}
+
+      list.innerHTML = '<div style="padding: 16px; text-align: center; color: #999; font-size: 15px;">Ładowanie...</div>';
+
+      return;    box-shadow: 0 4px 12px rgba(0,0,0,0.15);  return null;
+
+    }
+
+        padding: 12px;}
+
+    const needle = query.trim().toLowerCase();
+
+    const filtered = needle     min-width: 320px;
+
+      ? allPlayers.filter(p => p.name.toLowerCase().includes(needle) || p.flag.toLowerCase().includes(needle))
+
+      : allPlayers;    max-width: 400px;function setKortForOverlay(overlay, kort) {
+
+    
+
+    if (!filtered.length) {  `;  const normalizedOverlay = normalizeOverlayId(overlay);
+
+      list.innerHTML = '<div style="padding: 16px; text-align: center; color: #999; font-size: 15px;">Brak wyników</div>';
+
+      return;    if (!normalizedOverlay || !kort) return;
+
+    }
+
+      // Checkbox debla  window.__unoKortMap = window.__unoKortMap || {};
+
+    filtered.forEach(p => {
+
+      const row = document.createElement('div');  const checkDiv = document.createElement('div');  window.__unoKortMap[normalizedOverlay] = String(kort);
+
+      row.style.cssText = `
+
+        padding: 14px 12px;  checkDiv.style.cssText = 'margin-bottom: 10px;';}
 
         cursor: pointer;
 

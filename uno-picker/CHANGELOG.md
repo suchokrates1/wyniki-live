@@ -2,14 +2,21 @@
 
 ## [0.3.11] - 2025-11-06 (Release)
 
+### 🚨 CRITICAL FIX
+- **Naprawiono wykrywanie inputów Player A/B** - Wtyczka teraz poprawnie znajduje pola na stronie UNO
+- Przywrócono metodę TreeWalker do wyszukiwania sekcji "Player Names"
+- Naprawiono inicjalizację UI (ready handler + MutationObserver)
+- Dodano wielokrotne próby inicjalizacji (0ms, 1000ms, 3000ms)
+
 ### ✨ Release Notes
 - **Dostępność:** Wtyczka dostępna do pobrania na `https://score.vestmedia.pl/download`
-- **Plik:** `uno-picker-v0.3.11.crx` (17.8 KB)
+- **Plik:** `uno-picker-v0.3.11.crx` (78.7 KB)
 - **Instalacja:** Rozpakuj archiwum .crx i załaduj jako "Załaduj rozpakowane rozszerzenie"
 - **Wsparcie:** Edge Canary na tabletach (Pointer Events + Touch Events)
 
 ### 🔧 Zmiany techniczne
-- Uproszczony `content.js` (467 LOC) - -60% kodu vs v1.0.0
+- Przepisany `content.js` (~550 LOC) z poprawnym wykrywaniem DOM
+- Selektor: TreeWalker + NodeFilter.SHOW_TEXT dla "Player Names"
 - API integration: `https://score.vestmedia.pl/api/players`
 - Tryb debla z formatowaniem nazwisk
 - Cache API (5 min TTL)
