@@ -18,6 +18,7 @@ from flask import (
     Response,
     abort,
     jsonify,
+    make_response,
     redirect,
     request,
     send_from_directory,
@@ -1198,8 +1199,14 @@ def download_plugin():
     return send_from_directory(DOWNLOAD_DIR, archive_names[0], as_attachment=True)
 
 
-@blueprint.route("/api/players")
+@blueprint.route("/api/players", methods=["GET", "OPTIONS"])
 def api_players():
+    if request.method == "OPTIONS":
+        response = make_response("", 204)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
     list_name = request.args.get("list")
     all_players = fetch_players()
     normalized_list = None
@@ -1225,7 +1232,11 @@ def api_players():
     }
     if normalized_list:
         payload["list"] = normalized_list
-    return jsonify(payload)
+    response = jsonify(payload)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
 
 
 @blueprint.route("/api/set_flag", methods=["POST"])
