@@ -1,19 +1,29 @@
 # 📋 CHANGELOG - UNO Player Picker
 
-## [0.3.11] - 2025-11-06 (Release)
+## [0.3.12] - 2025-11-06 (Current Release)
 
-### 🚨 CRITICAL FIX
-- **Naprawiono wykrywanie inputów Player A/B** - Wtyczka teraz poprawnie znajduje pola na stronie UNO
-- Przywrócono metodę TreeWalker do wyszukiwania sekcji "Player Names"
-- Naprawiono inicjalizację UI (ready handler + MutationObserver)
-- Dodano wielokrotne próby inicjalizacji (0ms, 1000ms, 3000ms)
+### 🎉 Major UI & API Improvements
+- **✅ NAPRAWIONO API** - Poprawiono parsowanie odpowiedzi API (flagUrl vs flag_url)
+- **✅ Szerszy dropdown** - Zwiększono szerokość do min 500px dla lepszej czytelności
+- **✅ Flagi po lewej** - Każde nazwisko ma flagę po lewej stronie (24px)
+- **✅ Kliknięcie obok zamyka** - Dropdown zamyka się przy kliknięciu poza nim
+- **✅ Checkbox debel na głównym UI** - Przycisk "Debel" obok "Wybierz A/B" zamiast w dropdownie
+- **✅ Hover effect** - Podświetlenie wierszy przy najechaniu myszką (#f5f5f5)
+- **✅ Lepsza diagnostyka** - Dodano logi API response i warning gdy brak graczy
 
 ### ✨ Release Notes
-- **Dostępność:** Wtyczka dostępna do pobrania na `https://score.vestmedia.pl/download`
-- **Plik:** `uno-picker-v0.3.11.crx` (23.4 KB) - **PRAWDZIWY CRX z podpisem cyfrowym**
-- **Format:** CRX3 (magic bytes: `43 72 32 34` = "Cr24"), podpisany kluczem `uno-name-flag-picker.pem`
-- **Instalacja:** Przeciągnij plik `.crx` na `edge://extensions/` lub rozpakuj i załaduj jako rozpakowane
-- **Wsparcie:** Edge Canary na tabletach (Pointer Events + Touch Events)
+- **Dostępność:** `https://score.vestmedia.pl/download`
+- **Plik:** `uno-picker-v0.3.12.crx` (27.8 KB)
+- **Format:** CRX3 (magic bytes: `43 72 32 34`)
+- **content.js:** 14.6 KB
+
+## [0.3.11] - 2025-11-06
+
+### 🚨 CRITICAL FIX
+- **Naprawiono wykrywanie inputów Player A/B** - TreeWalker do wyszukiwania "Player Names"
+- Naprawiono inicjalizację UI (ready handler + MutationObserver)
+- Dodano wielokrotne próby inicjalizacji (0ms, 1000ms, 3000ms)
+- **Plik:** `uno-picker-v0.3.11.crx` (23.4 KB)
 - **content.js:** 12.7 KB (minified)
 
 ### 🔧 Zmiany techniczne

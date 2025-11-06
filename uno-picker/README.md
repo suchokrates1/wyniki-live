@@ -23,11 +23,17 @@ Wtyczka Chrome do wyboru zawodników tenisowych dla UNO Overlays (app.overlays.u
 ### Metoda 2: Pobierz plik .crx (Podpisane rozszerzenie)
 
 1. Wejdź na: `https://score.vestmedia.pl/download`
-2. Pobierz plik `uno-picker-v0.3.11.crx` (23.4 KB)
+2. Pobierz plik `uno-picker-v0.3.12.crx` (27.8 KB)
 3. **Bezpośrednia instalacja:** Przeciągnij plik `.crx` na stronę `edge://extensions/` lub `chrome://extensions/`
 4. **Lub rozpakuj:** Zmień rozszerzenie na `.zip`, rozpakuj, a następnie użyj "Załaduj rozpakowane"
 
 **WAŻNE:** Plik `.crx` to NIE zwykły ZIP! To specjalny format Chrome Extension z podpisem cyfrowym (CRX3, magic bytes: `43 72 32 34` = "Cr24"). Wtyczka jest podpisana kluczem `uno-name-flag-picker.pem` - dzięki temu Edge/Chrome może zweryfikować autentyczność i załadować ją bezpośrednio.
+
+**Changelog v0.3.12:**
+- ✅ Naprawiono połączenie z API (poprawne parsowanie flagUrl/flag_url)
+- ✅ Dropdown szerszy (min 500px) z flagami po lewej
+- ✅ Checkbox "Debel" przeniesiony obok przycisku "Wybierz A/B"
+- ✅ Kliknięcie obok dropdownu go zamyka
 
 ## 🔧 Konfiguracja API
 
