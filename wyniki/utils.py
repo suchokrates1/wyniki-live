@@ -111,13 +111,66 @@ def ensure_list(value: Iterable[Any]) -> List[Any]:
     return list(value)
 
 
+def error_response(
+    message: str,
+    code: int = 400,
+    error_type: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Tworzy ujednoliconą odpowiedź błędu dla API.
+    
+    Args:
+        message: Komunikat błędu
+        code: Kod HTTP (domyślnie 400)
+        error_type: Typ błędu (np. "invalid-payload", "not-found")
+        details: Dodatkowe szczegóły błędu
+    
+    Returns:
+        Słownik z formatem {"ok": False, "error": ..., ...}
+    """
+    response: Dict[str, Any] = {
+        "ok": False,
+        "message": message,
+    }
+    if error_type:
+        response["error"] = error_type
+    if details:
+        response["details"] = details
+    return response
+
+
+def success_response(
+    data: Optional[Dict[str, Any]] = None,
+    message: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Tworzy ujednoliconą odpowiedź sukcesu dla API.
+    
+    Args:
+        data: Dane do zwrócenia
+        message: Opcjonalny komunikat sukcesu
+    
+    Returns:
+        Słownik z formatem {"ok": True, ...}
+    """
+    response: Dict[str, Any] = {"ok": True}
+    if message:
+        response["message"] = message
+    if data:
+        response.update(data)
+    return response
+
+
 __all__ = [
     "as_int",
     "ensure_list",
+    "error_response",
     "format_duration",
     "now_iso",
     "parse_iso_datetime",
     "render_file_template",
+    "success_response",
     "safe_copy",
     "shorten",
     "step_points",
