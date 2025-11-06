@@ -1644,6 +1644,30 @@
           setFeedback(error.message, 'error');
         }
       });
+      
+      // Auto-refresh UNO limits every 2 seconds
+      setInterval(async () => {
+        try {
+          const data = await requestJson('/api/admin/system', { method: 'GET' });
+          if (data && typeof data === 'object') {
+            if (data.uno_hourly_usage) {
+              applyUnoHourlyUsage(data.uno_hourly_usage);
+            }
+            if (data.uno_activity_status) {
+              applyUnoActivityStatus(data.uno_activity_status);
+            }
+            if (data.uno_rate_limit) {
+              applyUnoRateLimit(data.uno_rate_limit);
+            }
+            if (data.uno_auto_disabled_reason !== undefined) {
+              applyUnoAutoDisabledReason(data.uno_auto_disabled_reason);
+            }
+          }
+        } catch (error) {
+          // Silently fail on auto-refresh errors
+          console.warn('Auto-refresh failed:', error);
+        }
+      }, 2000);
     }
   }
 })();
