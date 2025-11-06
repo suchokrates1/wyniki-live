@@ -4,8 +4,9 @@
 
 ### ✨ Release Notes
 - **Dostępność:** Wtyczka dostępna do pobrania na `https://score.vestmedia.pl/download`
-- **Plik:** `uno-picker-v0.3.11.crx` (15.5 KB)
+- **Plik:** `uno-picker-v0.3.11.crx` (17.8 KB)
 - **Instalacja:** Rozpakuj archiwum .crx i załaduj jako "Załaduj rozpakowane rozszerzenie"
+- **Wsparcie:** Edge Canary na tabletach (Pointer Events + Touch Events)
 
 ### 🔧 Zmiany techniczne
 - Uproszczony `content.js` (467 LOC) - -60% kodu vs v1.0.0
