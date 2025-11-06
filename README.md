@@ -157,7 +157,8 @@ Projekt zawiera wtyczkę Chrome do integracji z UNO Overlays:
 
 **Bezpośredni link:** `https://score.vestmedia.pl/download`
 
-Plik: `uno-picker-v0.3.11.crx` (15.5 KB)
+Plik: `uno-picker-v0.3.11.crx` (17.8 KB)  
+**Wsparcie:** Edge Canary na tabletach ✅
 
 ### Instalacja wtyczki
 
