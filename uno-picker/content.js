@@ -1,6 +1,6 @@
-﻿// UNO Player Picker v0.3.15 - Visual Toggle State + Selected Highlight
+﻿// UNO Player Picker v0.3.16 - Fix Touch Selection in Doubles Mode
 const API_BASE = 'https://score.vestmedia.pl';
-const log = (...a) => console.log('[UNO Picker v0.3.15]', ...a);
+const log = (...a) => console.log('[UNO Picker v0.3.16]', ...a);
 const supportsPointer = 'PointerEvent' in window;
 log('Init', { api: API_BASE, supportsPointer });
 
@@ -171,17 +171,22 @@ async function showPickerFor(input, letter) {
         row.appendChild(c);
       }
       const handleSel = async () => {
+        log('handleSel for', player.name, 'doublesMode:', doublesMode);
         if (doublesMode) {
           const idx = selectedPlayers.findIndex(p => p.name === player.name);
           if (idx >= 0) {
+            log('Removing player', player.name);
             selectedPlayers.splice(idx, 1);
           } else {
             if (selectedPlayers.length < 2) {
+              log('Adding player', player.name);
               selectedPlayers.push(player);
             } else {
+              log('Already 2 players selected');
               return;
             }
           }
+          log('Selected players:', selectedPlayers.length, selectedPlayers.map(p => p.name));
           await storageSet({ selectedPlayers });
           if (selectedPlayers.length === 2) {
             await commitInputValue(input, formatDoublesName(selectedPlayers));
@@ -190,6 +195,7 @@ async function showPickerFor(input, letter) {
             await storageSet({ selectedPlayers });
             closeModal();
           } else {
+            log('Re-rendering list');
             render(search.value);
           }
         } else {
@@ -216,15 +222,25 @@ async function showPickerFor(input, letter) {
           if (e.pointerType !== 'touch' || !ts || ts.id !== e.pointerId) return;
           const m = ts.moved;
           ts = null;
-          if (!m) Promise.resolve().then(handleSel);
-        }, { passive: true });
+          if (!m) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSel();
+          }
+        });
       }
-      row.addEventListener('click', handleSel);
+      row.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSel();
+      });
       row.addEventListener('mouseenter', () => { 
-        if (!isSelected) row.style.backgroundColor = '#3a3a3a'; 
+        const nowSelected = doublesMode && selectedPlayers.some(p => p.name === player.name);
+        if (!nowSelected) row.style.backgroundColor = '#3a3a3a'; 
       });
       row.addEventListener('mouseleave', () => { 
-        row.style.backgroundColor = isSelected ? '#007bff' : ''; 
+        const nowSelected = doublesMode && selectedPlayers.some(p => p.name === player.name);
+        row.style.backgroundColor = nowSelected ? '#007bff' : ''; 
       });
       list.appendChild(row);
     });
