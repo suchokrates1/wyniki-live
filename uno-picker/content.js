@@ -1,6 +1,6 @@
-﻿// UNO Player Picker v0.3.16 - Fix Touch Selection in Doubles Mode
+﻿// UNO Player Picker v0.3.20 - English UI
 const API_BASE = 'https://score.vestmedia.pl';
-const log = (...a) => console.log('[UNO Picker v0.3.16]', ...a);
+const log = (...a) => console.log('[UNO Picker v0.3.20]', ...a);
 const supportsPointer = 'PointerEvent' in window;
 log('Init', { api: API_BASE, supportsPointer });
 
@@ -66,6 +66,45 @@ function formatDoublesName(players) {
   return players.map(p => p.name.split(' ').filter(Boolean).pop()).join(' / ');
 }
 
+function getOverlayId() {
+  const match = window.location.href.match(/app_([a-z0-9]+)/i);
+  return match ? `app_${match[1].toLowerCase()}` : null;
+}
+
+async function sendFlagToUNO(playerLetter, flagUrl) {
+  if (!flagUrl) return;
+  const overlayId = getOverlayId();
+  if (!overlayId) {
+    log('No overlay ID found in URL');
+    return;
+  }
+  const unoApiUrl = `https://app.overlays.uno/apiv2/controlapps/${overlayId}/api`;
+  const fieldId = playerLetter === 'A' ? 'Player A Flag' : 'Player B Flag';
+  const payload = {
+    command: 'SetCustomizationField',
+    fieldId: fieldId,
+    value: flagUrl
+  };
+  try {
+    log('Sending flag to UNO:', payload);
+    const res = await fetch(unoApiUrl, { 
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      credentials: 'omit'
+    });
+    if (res.ok) {
+      log('Flag sent to UNO for Player', playerLetter, ':', flagUrl);
+    } else {
+      log('UNO API error:', res.status, await res.text());
+    }
+  } catch (e) {
+    log('Error sending flag to UNO:', e);
+  }
+}
+
 async function commitInputValue(el, value) {
   const val = value == null ? '' : String(value);
   try { el.focus({ preventScroll: true }); } catch {}
@@ -107,7 +146,7 @@ async function showPickerFor(input, letter) {
   const players = await fetchPlayers();
   log('Players to show:', players.length);
   if (players.length === 0) {
-    alert('Brak graczy w API! Sprawdź połączenie z ' + API_BASE + '/api/players');
+    alert('No players in API! Check connection to ' + API_BASE + '/api/players');
     return;
   }
   const modal = document.createElement('div');
@@ -118,7 +157,7 @@ async function showPickerFor(input, letter) {
   const header = document.createElement('div');
   header.style.cssText = 'padding:20px;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center';
   const title = document.createElement('h2');
-  title.textContent = 'Wybierz gracza ' + letter + (doublesMode ? ' (debel - wybierz 2)' : '');
+  title.textContent = 'Select Player ' + letter + (doublesMode ? ' (doubles - pick 2)' : '');
   title.style.cssText = 'margin:0;font-size:20px;font-weight:600;color:#fff';
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '';
@@ -128,7 +167,7 @@ async function showPickerFor(input, letter) {
   header.appendChild(closeBtn);
   const search = document.createElement('input');
   search.type = 'text';
-  search.placeholder = 'Szukaj gracza...';
+  search.placeholder = 'Search player...';
   search.style.cssText = 'width:100%;box-sizing:border-box;padding:16px 20px;font-size:16px;border:none;border-bottom:1px solid #444;background:#1a1a1a;color:#fff';
   const list = document.createElement('div');
   list.style.cssText = 'flex:1;overflow-y:auto;padding:10px 0';
@@ -145,7 +184,7 @@ async function showPickerFor(input, letter) {
     if (filt.length === 0) {
       const nr = document.createElement('div');
       nr.style.cssText = 'text-align:center;padding:40px 20px;color:#888;font-size:16px';
-      nr.textContent = 'Brak wyników';
+      nr.textContent = 'No results';
       list.appendChild(nr);
       return;
     }
@@ -190,7 +229,11 @@ async function showPickerFor(input, letter) {
           await storageSet({ selectedPlayers });
           if (selectedPlayers.length === 2) {
             await commitInputValue(input, formatDoublesName(selectedPlayers));
-            log('Debel ' + letter + ':', formatDoublesName(selectedPlayers));
+            log('Doubles ' + letter + ':', formatDoublesName(selectedPlayers));
+            const firstPlayerFlag = selectedPlayers[0].flagUrl;
+            if (firstPlayerFlag) {
+              await sendFlagToUNO(letter, firstPlayerFlag);
+            }
             selectedPlayers = [];
             await storageSet({ selectedPlayers });
             closeModal();
@@ -200,7 +243,10 @@ async function showPickerFor(input, letter) {
           }
         } else {
           await commitInputValue(input, player.name);
-          log('Gracz ' + letter + ':', player.name);
+          log('Player ' + letter + ':', player.name);
+          if (player.flagUrl) {
+            await sendFlagToUNO(letter, player.flagUrl);
+          }
           closeModal();
         }
       };
@@ -307,7 +353,7 @@ async function ensureUI() {
   toggleCheckbox.checked = doublesMode;
   toggleCheckbox.style.cssText = 'width:20px;height:20px;cursor:pointer;flex-shrink:0';
   const toggleText = document.createElement('span');
-  toggleText.textContent = 'Tryb debla (2 graczy)';
+  toggleText.textContent = 'Doubles Mode (2 players)';
   toggleLabel.appendChild(toggleCheckbox);
   toggleLabel.appendChild(toggleText);
   globalWrapper.appendChild(toggleLabel);
@@ -331,7 +377,7 @@ async function ensureUI() {
     const btn = document.createElement('button');
     btn.className = 'uno-picker-button';
     btn.type = 'button';
-    btn.textContent = 'Wybierz ' + ltr;
+    btn.textContent = 'Select ' + ltr;
     btn.style.cssText = 'margin-left:10px;min-height:40px;min-width:120px;padding:10px 20px;font-size:15px;cursor:pointer;background:#007bff;color:#fff;border:none;border-radius:6px;font-weight:500';
     inp.parentElement?.insertBefore(btn, inp.nextSibling);
     if (supportsPointer) {
