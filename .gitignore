@@ -1,10 +1,58 @@
+# Environment and secrets
 .env
 .env.*
 !.env.example
+
+# Database
 *.sqlite3
 wyniki.db
+wyniki_archive.sqlite3
+
+# Logs
 cookies.txt
 gunicorn.log
+*.log
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Code quality
+.ruff_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Pre-commit
+.pre-commit-cache/

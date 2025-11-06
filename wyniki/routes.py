@@ -122,7 +122,7 @@ def _admin_enabled() -> bool:
     return bool(settings.admin_password)
 
 
-def _require_admin_enabled_json():
+def _require_admin_enabled_json() -> Optional[Tuple[Response, int]]:
     if _admin_enabled():
         return None
     return (
@@ -137,7 +137,7 @@ def _is_admin_authenticated() -> bool:
     return session.get(ADMIN_SESSION_KEY) is True
 
 
-def _require_admin_session_json():
+def _require_admin_session_json() -> Optional[Tuple[Response, int]]:
     disabled_response = _require_admin_enabled_json()
     if disabled_response is not None:
         return disabled_response
@@ -248,57 +248,212 @@ def _public_player_payload(record: Dict[str, Optional[str]]) -> Dict[str, Option
     }
 
 
-FLAG_PLUGIN_CACHE: Dict[str, str] = {}
-FLAG_PLUGIN_MTIME: Optional[float] = None
-FLAG_PLUGIN_LOCK = Lock()
 FLAG_CODE_PATTERN = re.compile(r"^[a-z]{2}$")
 
-
-def _plugin_players_path() -> Optional[str]:
-    candidate = os.path.join(DOWNLOAD_DIR, "players.json")
-    return candidate if os.path.isfile(candidate) else None
-
-
-def _load_plugin_flag_catalog() -> Dict[str, str]:
-    global FLAG_PLUGIN_CACHE, FLAG_PLUGIN_MTIME
-    path = _plugin_players_path()
-    try:
-        mtime = os.path.getmtime(path) if path else None
-    except OSError:
-        mtime = None
-    with FLAG_PLUGIN_LOCK:
-        if FLAG_PLUGIN_CACHE and FLAG_PLUGIN_MTIME == mtime:
-            return dict(FLAG_PLUGIN_CACHE)
-        mapping: Dict[str, str] = {}
-        if path and mtime is not None:
-            try:
-                with open(path, "r", encoding="utf-8") as handle:
-                    payload = json.load(handle)
-                if isinstance(payload, list):
-                    for entry in payload:
-                        if not isinstance(entry, dict):
-                            continue
-                        raw_code = entry.get("flag") or entry.get("flag_code")
-                        raw_url = entry.get("flagUrl") or entry.get("flag_url")
-                        if not isinstance(raw_code, str):
-                            continue
-                        code = raw_code.strip().lower()
-                        if not code or not FLAG_CODE_PATTERN.fullmatch(code):
-                            continue
-                        url_text = str(raw_url or "").strip()
-                        if not url_text:
-                            continue
-                        mapping.setdefault(code, url_text)
-            except (OSError, ValueError) as exc:
-                log.warning("Nie udało się odczytać listy flag z wtyczki: %s", exc)
-        FLAG_PLUGIN_CACHE.clear()
-        FLAG_PLUGIN_CACHE.update(mapping)
-        FLAG_PLUGIN_MTIME = mtime
-        return dict(mapping)
+# Predefiniowany katalog flag krajów (flagcdn.com)
+DEFAULT_FLAGS_CATALOG: Dict[str, str] = {
+    "ad": "https://flagcdn.com/w80/ad.png",  # Andora
+    "ae": "https://flagcdn.com/w80/ae.png",  # Zjednoczone Emiraty Arabskie
+    "af": "https://flagcdn.com/w80/af.png",  # Afganistan
+    "ag": "https://flagcdn.com/w80/ag.png",  # Antigua i Barbuda
+    "al": "https://flagcdn.com/w80/al.png",  # Albania
+    "am": "https://flagcdn.com/w80/am.png",  # Armenia
+    "ao": "https://flagcdn.com/w80/ao.png",  # Angola
+    "ar": "https://flagcdn.com/w80/ar.png",  # Argentyna
+    "at": "https://flagcdn.com/w80/at.png",  # Austria
+    "au": "https://flagcdn.com/w80/au.png",  # Australia
+    "az": "https://flagcdn.com/w80/az.png",  # Azerbejdżan
+    "ba": "https://flagcdn.com/w80/ba.png",  # Bośnia i Hercegowina
+    "bb": "https://flagcdn.com/w80/bb.png",  # Barbados
+    "bd": "https://flagcdn.com/w80/bd.png",  # Bangladesz
+    "be": "https://flagcdn.com/w80/be.png",  # Belgia
+    "bf": "https://flagcdn.com/w80/bf.png",  # Burkina Faso
+    "bg": "https://flagcdn.com/w80/bg.png",  # Bułgaria
+    "bh": "https://flagcdn.com/w80/bh.png",  # Bahrajn
+    "bi": "https://flagcdn.com/w80/bi.png",  # Burundi
+    "bj": "https://flagcdn.com/w80/bj.png",  # Benin
+    "bn": "https://flagcdn.com/w80/bn.png",  # Brunei
+    "bo": "https://flagcdn.com/w80/bo.png",  # Boliwia
+    "br": "https://flagcdn.com/w80/br.png",  # Brazylia
+    "bs": "https://flagcdn.com/w80/bs.png",  # Bahamy
+    "bt": "https://flagcdn.com/w80/bt.png",  # Bhutan
+    "bw": "https://flagcdn.com/w80/bw.png",  # Botswana
+    "by": "https://flagcdn.com/w80/by.png",  # Białoruś
+    "bz": "https://flagcdn.com/w80/bz.png",  # Belize
+    "ca": "https://flagcdn.com/w80/ca.png",  # Kanada
+    "cd": "https://flagcdn.com/w80/cd.png",  # Demokratyczna Republika Konga
+    "cf": "https://flagcdn.com/w80/cf.png",  # Republika Środkowoafrykańska
+    "cg": "https://flagcdn.com/w80/cg.png",  # Kongo
+    "ch": "https://flagcdn.com/w80/ch.png",  # Szwajcaria
+    "ci": "https://flagcdn.com/w80/ci.png",  # Wybrzeże Kości Słoniowej
+    "cl": "https://flagcdn.com/w80/cl.png",  # Chile
+    "cm": "https://flagcdn.com/w80/cm.png",  # Kamerun
+    "cn": "https://flagcdn.com/w80/cn.png",  # Chiny
+    "co": "https://flagcdn.com/w80/co.png",  # Kolumbia
+    "cr": "https://flagcdn.com/w80/cr.png",  # Kostaryka
+    "cu": "https://flagcdn.com/w80/cu.png",  # Kuba
+    "cv": "https://flagcdn.com/w80/cv.png",  # Republika Zielonego Przylądka
+    "cy": "https://flagcdn.com/w80/cy.png",  # Cypr
+    "cz": "https://flagcdn.com/w80/cz.png",  # Czechy
+    "de": "https://flagcdn.com/w80/de.png",  # Niemcy
+    "dj": "https://flagcdn.com/w80/dj.png",  # Dżibuti
+    "dk": "https://flagcdn.com/w80/dk.png",  # Dania
+    "dm": "https://flagcdn.com/w80/dm.png",  # Dominika
+    "do": "https://flagcdn.com/w80/do.png",  # Dominikana
+    "dz": "https://flagcdn.com/w80/dz.png",  # Algieria
+    "ec": "https://flagcdn.com/w80/ec.png",  # Ekwador
+    "ee": "https://flagcdn.com/w80/ee.png",  # Estonia
+    "eg": "https://flagcdn.com/w80/eg.png",  # Egipt
+    "er": "https://flagcdn.com/w80/er.png",  # Erytrea
+    "es": "https://flagcdn.com/w80/es.png",  # Hiszpania
+    "et": "https://flagcdn.com/w80/et.png",  # Etiopia
+    "fi": "https://flagcdn.com/w80/fi.png",  # Finlandia
+    "fj": "https://flagcdn.com/w80/fj.png",  # Fidżi
+    "fm": "https://flagcdn.com/w80/fm.png",  # Mikronezja
+    "fr": "https://flagcdn.com/w80/fr.png",  # Francja
+    "ga": "https://flagcdn.com/w80/ga.png",  # Gabon
+    "gb": "https://flagcdn.com/w80/gb.png",  # Wielka Brytania
+    "gd": "https://flagcdn.com/w80/gd.png",  # Grenada
+    "ge": "https://flagcdn.com/w80/ge.png",  # Gruzja
+    "gh": "https://flagcdn.com/w80/gh.png",  # Ghana
+    "gm": "https://flagcdn.com/w80/gm.png",  # Gambia
+    "gn": "https://flagcdn.com/w80/gn.png",  # Gwinea
+    "gq": "https://flagcdn.com/w80/gq.png",  # Gwinea Równikowa
+    "gr": "https://flagcdn.com/w80/gr.png",  # Grecja
+    "gt": "https://flagcdn.com/w80/gt.png",  # Gwatemala
+    "gw": "https://flagcdn.com/w80/gw.png",  # Gwinea Bissau
+    "gy": "https://flagcdn.com/w80/gy.png",  # Gujana
+    "hn": "https://flagcdn.com/w80/hn.png",  # Honduras
+    "hr": "https://flagcdn.com/w80/hr.png",  # Chorwacja
+    "ht": "https://flagcdn.com/w80/ht.png",  # Haiti
+    "hu": "https://flagcdn.com/w80/hu.png",  # Węgry
+    "id": "https://flagcdn.com/w80/id.png",  # Indonezja
+    "ie": "https://flagcdn.com/w80/ie.png",  # Irlandia
+    "il": "https://flagcdn.com/w80/il.png",  # Izrael
+    "in": "https://flagcdn.com/w80/in.png",  # Indie
+    "iq": "https://flagcdn.com/w80/iq.png",  # Irak
+    "ir": "https://flagcdn.com/w80/ir.png",  # Iran
+    "is": "https://flagcdn.com/w80/is.png",  # Islandia
+    "it": "https://flagcdn.com/w80/it.png",  # Włochy
+    "jm": "https://flagcdn.com/w80/jm.png",  # Jamajka
+    "jo": "https://flagcdn.com/w80/jo.png",  # Jordania
+    "jp": "https://flagcdn.com/w80/jp.png",  # Japonia
+    "ke": "https://flagcdn.com/w80/ke.png",  # Kenia
+    "kg": "https://flagcdn.com/w80/kg.png",  # Kirgistan
+    "kh": "https://flagcdn.com/w80/kh.png",  # Kambodża
+    "ki": "https://flagcdn.com/w80/ki.png",  # Kiribati
+    "km": "https://flagcdn.com/w80/km.png",  # Komory
+    "kn": "https://flagcdn.com/w80/kn.png",  # Saint Kitts i Nevis
+    "kp": "https://flagcdn.com/w80/kp.png",  # Korea Północna
+    "kr": "https://flagcdn.com/w80/kr.png",  # Korea Południowa
+    "kw": "https://flagcdn.com/w80/kw.png",  # Kuwejt
+    "kz": "https://flagcdn.com/w80/kz.png",  # Kazachstan
+    "la": "https://flagcdn.com/w80/la.png",  # Laos
+    "lb": "https://flagcdn.com/w80/lb.png",  # Liban
+    "lc": "https://flagcdn.com/w80/lc.png",  # Saint Lucia
+    "li": "https://flagcdn.com/w80/li.png",  # Liechtenstein
+    "lk": "https://flagcdn.com/w80/lk.png",  # Sri Lanka
+    "lr": "https://flagcdn.com/w80/lr.png",  # Liberia
+    "ls": "https://flagcdn.com/w80/ls.png",  # Lesotho
+    "lt": "https://flagcdn.com/w80/lt.png",  # Litwa
+    "lu": "https://flagcdn.com/w80/lu.png",  # Luksemburg
+    "lv": "https://flagcdn.com/w80/lv.png",  # Łotwa
+    "ly": "https://flagcdn.com/w80/ly.png",  # Libia
+    "ma": "https://flagcdn.com/w80/ma.png",  # Maroko
+    "mc": "https://flagcdn.com/w80/mc.png",  # Monako
+    "md": "https://flagcdn.com/w80/md.png",  # Mołdawia
+    "me": "https://flagcdn.com/w80/me.png",  # Czarnogóra
+    "mg": "https://flagcdn.com/w80/mg.png",  # Madagaskar
+    "mh": "https://flagcdn.com/w80/mh.png",  # Wyspy Marshalla
+    "mk": "https://flagcdn.com/w80/mk.png",  # Macedonia Północna
+    "ml": "https://flagcdn.com/w80/ml.png",  # Mali
+    "mm": "https://flagcdn.com/w80/mm.png",  # Myanmar
+    "mn": "https://flagcdn.com/w80/mn.png",  # Mongolia
+    "mr": "https://flagcdn.com/w80/mr.png",  # Mauretania
+    "mt": "https://flagcdn.com/w80/mt.png",  # Malta
+    "mu": "https://flagcdn.com/w80/mu.png",  # Mauritius
+    "mv": "https://flagcdn.com/w80/mv.png",  # Malediwy
+    "mw": "https://flagcdn.com/w80/mw.png",  # Malawi
+    "mx": "https://flagcdn.com/w80/mx.png",  # Meksyk
+    "my": "https://flagcdn.com/w80/my.png",  # Malezja
+    "mz": "https://flagcdn.com/w80/mz.png",  # Mozambik
+    "na": "https://flagcdn.com/w80/na.png",  # Namibia
+    "ne": "https://flagcdn.com/w80/ne.png",  # Niger
+    "ng": "https://flagcdn.com/w80/ng.png",  # Nigeria
+    "ni": "https://flagcdn.com/w80/ni.png",  # Nikaragua
+    "nl": "https://flagcdn.com/w80/nl.png",  # Holandia
+    "no": "https://flagcdn.com/w80/no.png",  # Norwegia
+    "np": "https://flagcdn.com/w80/np.png",  # Nepal
+    "nr": "https://flagcdn.com/w80/nr.png",  # Nauru
+    "nz": "https://flagcdn.com/w80/nz.png",  # Nowa Zelandia
+    "om": "https://flagcdn.com/w80/om.png",  # Oman
+    "pa": "https://flagcdn.com/w80/pa.png",  # Panama
+    "pe": "https://flagcdn.com/w80/pe.png",  # Peru
+    "pg": "https://flagcdn.com/w80/pg.png",  # Papua-Nowa Gwinea
+    "ph": "https://flagcdn.com/w80/ph.png",  # Filipiny
+    "pk": "https://flagcdn.com/w80/pk.png",  # Pakistan
+    "pl": "https://flagcdn.com/w80/pl.png",  # Polska
+    "pt": "https://flagcdn.com/w80/pt.png",  # Portugalia
+    "pw": "https://flagcdn.com/w80/pw.png",  # Palau
+    "py": "https://flagcdn.com/w80/py.png",  # Paragwaj
+    "qa": "https://flagcdn.com/w80/qa.png",  # Katar
+    "ro": "https://flagcdn.com/w80/ro.png",  # Rumunia
+    "rs": "https://flagcdn.com/w80/rs.png",  # Serbia
+    "ru": "https://flagcdn.com/w80/ru.png",  # Rosja
+    "rw": "https://flagcdn.com/w80/rw.png",  # Rwanda
+    "sa": "https://flagcdn.com/w80/sa.png",  # Arabia Saudyjska
+    "sb": "https://flagcdn.com/w80/sb.png",  # Wyspy Salomona
+    "sc": "https://flagcdn.com/w80/sc.png",  # Seszele
+    "sd": "https://flagcdn.com/w80/sd.png",  # Sudan
+    "se": "https://flagcdn.com/w80/se.png",  # Szwecja
+    "sg": "https://flagcdn.com/w80/sg.png",  # Singapur
+    "si": "https://flagcdn.com/w80/si.png",  # Słowenia
+    "sk": "https://flagcdn.com/w80/sk.png",  # Słowacja
+    "sl": "https://flagcdn.com/w80/sl.png",  # Sierra Leone
+    "sm": "https://flagcdn.com/w80/sm.png",  # San Marino
+    "sn": "https://flagcdn.com/w80/sn.png",  # Senegal
+    "so": "https://flagcdn.com/w80/so.png",  # Somalia
+    "sr": "https://flagcdn.com/w80/sr.png",  # Surinam
+    "ss": "https://flagcdn.com/w80/ss.png",  # Sudan Południowy
+    "st": "https://flagcdn.com/w80/st.png",  # Wyspy Świętego Tomasza i Książęca
+    "sv": "https://flagcdn.com/w80/sv.png",  # Salwador
+    "sy": "https://flagcdn.com/w80/sy.png",  # Syria
+    "sz": "https://flagcdn.com/w80/sz.png",  # Eswatini
+    "td": "https://flagcdn.com/w80/td.png",  # Czad
+    "tg": "https://flagcdn.com/w80/tg.png",  # Togo
+    "th": "https://flagcdn.com/w80/th.png",  # Tajlandia
+    "tj": "https://flagcdn.com/w80/tj.png",  # Tadżykistan
+    "tl": "https://flagcdn.com/w80/tl.png",  # Timor Wschodni
+    "tm": "https://flagcdn.com/w80/tm.png",  # Turkmenistan
+    "tn": "https://flagcdn.com/w80/tn.png",  # Tunezja
+    "to": "https://flagcdn.com/w80/to.png",  # Tonga
+    "tr": "https://flagcdn.com/w80/tr.png",  # Turcja
+    "tt": "https://flagcdn.com/w80/tt.png",  # Trynidad i Tobago
+    "tv": "https://flagcdn.com/w80/tv.png",  # Tuvalu
+    "tw": "https://flagcdn.com/w80/tw.png",  # Tajwan
+    "tz": "https://flagcdn.com/w80/tz.png",  # Tanzania
+    "ua": "https://flagcdn.com/w80/ua.png",  # Ukraina
+    "ug": "https://flagcdn.com/w80/ug.png",  # Uganda
+    "us": "https://flagcdn.com/w80/us.png",  # Stany Zjednoczone
+    "uy": "https://flagcdn.com/w80/uy.png",  # Urugwaj
+    "uz": "https://flagcdn.com/w80/uz.png",  # Uzbekistan
+    "va": "https://flagcdn.com/w80/va.png",  # Watykan
+    "vc": "https://flagcdn.com/w80/vc.png",  # Saint Vincent i Grenadyny
+    "ve": "https://flagcdn.com/w80/ve.png",  # Wenezuela
+    "vn": "https://flagcdn.com/w80/vn.png",  # Wietnam
+    "vu": "https://flagcdn.com/w80/vu.png",  # Vanuatu
+    "ws": "https://flagcdn.com/w80/ws.png",  # Samoa
+    "ye": "https://flagcdn.com/w80/ye.png",  # Jemen
+    "za": "https://flagcdn.com/w80/za.png",  # Republika Południowej Afryki
+    "zm": "https://flagcdn.com/w80/zm.png",  # Zambia
+    "zw": "https://flagcdn.com/w80/zw.png",  # Zimbabwe
+}
 
 
 def _flag_catalog() -> Dict[str, str]:
-    catalog = _load_plugin_flag_catalog()
+    """Zwraca katalog flag z domyślnych wartości oraz bazy danych."""
+    catalog = dict(DEFAULT_FLAGS_CATALOG)
+    # Nadpisz wartościami z bazy danych (gracze)
     for record in fetch_players():
         raw_code = record.get("flag_code")
         raw_url = record.get("flag_url")
@@ -310,7 +465,7 @@ def _flag_catalog() -> Dict[str, str]:
         url_text = str(raw_url or "").strip()
         if not url_text:
             continue
-        catalog.setdefault(code, url_text)
+        catalog[code] = url_text
     return catalog
 
 
@@ -1071,6 +1226,50 @@ def api_players():
     if normalized_list:
         payload["list"] = normalized_list
     return jsonify(payload)
+
+
+@blueprint.route("/api/set_flag", methods=["POST"])
+def api_set_flag():
+    """
+    Endpoint dla wtyczki UNO Picker do ustawiania flag graczy.
+    
+    Payload:
+        {
+            "player": "A" lub "B",
+            "flag": "pl" (kod ISO),
+            "flag_url": "https://flagcdn.com/w80/pl.png"
+        }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"ok": False, "error": "Missing JSON payload"}), 400
+        
+        player_letter = data.get("player", "").upper()
+        flag_code = data.get("flag", "").lower()
+        flag_url = data.get("flag_url", "")
+        
+        if player_letter not in ["A", "B"]:
+            return jsonify({"ok": False, "error": "Invalid player (must be A or B)"}), 400
+        
+        if not flag_code and not flag_url:
+            return jsonify({"ok": False, "error": "Either flag or flag_url required"}), 400
+        
+        # Tutaj można dodać logikę zapisywania flag do stanu gry
+        # Na razie zwracamy sukces - flagi są zarządzane po stronie UNO
+        log.info(f"Flag set for Player {player_letter}: {flag_code} ({flag_url})")
+        
+        return jsonify({
+            "ok": True,
+            "player": player_letter,
+            "flag": flag_code,
+            "flag_url": flag_url,
+            "message": f"Flag set for Player {player_letter}"
+        })
+        
+    except Exception as e:
+        log.error(f"Error in /api/set_flag: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @blueprint.route("/api/snapshot")
