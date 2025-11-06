@@ -1,6 +1,6 @@
-﻿// UNO Player Picker v0.3.13 - Fullscreen Modal + Global Doubles Switch
+﻿// UNO Player Picker v0.3.14 - Dark Mode + No Auto-Focus
 const API_BASE = 'https://score.vestmedia.pl';
-const log = (...a) => console.log('[UNO Picker v0.3.13]', ...a);
+const log = (...a) => console.log('[UNO Picker v0.3.14]', ...a);
 const supportsPointer = 'PointerEvent' in window;
 log('Init', { api: API_BASE, supportsPointer });
 
@@ -111,25 +111,25 @@ async function showPickerFor(input, letter) {
     return;
   }
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px';
   openModal = modal;
   const content = document.createElement('div');
-  content.style.cssText = 'background:#fff;border-radius:8px;width:100%;max-width:800px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
+  content.style.cssText = 'background:#2d2d2d;border-radius:8px;width:100%;max-width:800px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.5)';
   const header = document.createElement('div');
-  header.style.cssText = 'padding:20px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center';
+  header.style.cssText = 'padding:20px;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center';
   const title = document.createElement('h2');
   title.textContent = 'Wybierz gracza ' + letter + (doublesMode ? ' (debel - wybierz 2)' : '');
-  title.style.cssText = 'margin:0;font-size:20px;font-weight:600';
+  title.style.cssText = 'margin:0;font-size:20px;font-weight:600;color:#fff';
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '';
-  closeBtn.style.cssText = 'background:none;border:none;font-size:32px;cursor:pointer;padding:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#666';
+  closeBtn.style.cssText = 'background:none;border:none;font-size:32px;cursor:pointer;padding:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#aaa';
   closeBtn.onclick = closeModal;
   header.appendChild(title);
   header.appendChild(closeBtn);
   const search = document.createElement('input');
   search.type = 'text';
   search.placeholder = 'Szukaj gracza...';
-  search.style.cssText = 'width:100%;box-sizing:border-box;padding:16px 20px;font-size:16px;border:none;border-bottom:1px solid #ddd';
+  search.style.cssText = 'width:100%;box-sizing:border-box;padding:16px 20px;font-size:16px;border:none;border-bottom:1px solid #444;background:#1a1a1a;color:#fff';
   const list = document.createElement('div');
   list.style.cssText = 'flex:1;overflow-y:auto;padding:10px 0';
   content.appendChild(header);
@@ -144,14 +144,14 @@ async function showPickerFor(input, letter) {
     const filt = qq ? players.filter(p => p.name.toLowerCase().includes(qq)) : players;
     if (filt.length === 0) {
       const nr = document.createElement('div');
-      nr.style.cssText = 'text-align:center;padding:40px 20px;color:#999;font-size:16px';
+      nr.style.cssText = 'text-align:center;padding:40px 20px;color:#888;font-size:16px';
       nr.textContent = 'Brak wyników';
       list.appendChild(nr);
       return;
     }
     filt.forEach(player => {
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;padding:16px 20px;cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background 0.2s';
+      row.style.cssText = 'display:flex;align-items:center;padding:16px 20px;cursor:pointer;border-bottom:1px solid #444;transition:background 0.2s;color:#fff';
       if (player.flag) {
         const f = document.createElement('span');
         f.textContent = player.flag;
@@ -160,7 +160,7 @@ async function showPickerFor(input, letter) {
       }
       const n = document.createElement('span');
       n.textContent = player.name;
-      n.style.cssText = 'flex:1;font-size:16px;font-weight:500';
+      n.style.cssText = 'flex:1;font-size:16px;font-weight:500;color:#fff';
       row.appendChild(n);
       if (doublesMode) {
         const c = document.createElement('input');
@@ -219,14 +219,13 @@ async function showPickerFor(input, letter) {
         }, { passive: true });
       }
       row.addEventListener('click', handleSel);
-      row.addEventListener('mouseenter', () => { row.style.backgroundColor = '#f5f5f5'; });
+      row.addEventListener('mouseenter', () => { row.style.backgroundColor = '#3a3a3a'; });
       row.addEventListener('mouseleave', () => { row.style.backgroundColor = ''; });
       list.appendChild(row);
     });
   };
   render();
   search.addEventListener('input', () => render(search.value));
-  setTimeout(() => { try { search.focus(); } catch {} }, 100);
 }
 
 function getPlayerInputsFromSection() {
@@ -275,9 +274,9 @@ async function ensureUI() {
   if (document.querySelector('.uno-global-controls')) return;
   const globalWrapper = document.createElement('div');
   globalWrapper.className = 'uno-global-controls';
-  globalWrapper.style.cssText = 'margin-bottom:16px;padding:12px;background:#f9f9f9;border-radius:6px;display:flex;align-items:center;gap:12px';
+  globalWrapper.style.cssText = 'margin-bottom:16px;padding:12px;background:#2d2d2d;border-radius:6px;display:flex;align-items:center;gap:12px';
   const toggleLabel = document.createElement('label');
-  toggleLabel.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:15px;font-weight:500';
+  toggleLabel.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:15px;font-weight:500;color:#fff';
   const toggleCheckbox = document.createElement('input');
   toggleCheckbox.type = 'checkbox';
   toggleCheckbox.checked = doublesMode;
