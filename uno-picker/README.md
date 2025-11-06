@@ -43,11 +43,16 @@ Domyślnie wtyczka łączy się z `http://localhost:5001`. Aby zmienić URL:
 
 1. Otwórz stronę UNO: `https://app.overlays.uno/*`
 2. Znajdź sekcję **Player Names** z polami Player A i Player B
-3. Kliknij przycisk **"Wybierz gracza A/B"** lub kliknij w pole input
+3. Kliknij przycisk **"Wybierz A"** lub **"Wybierz B"** (lub kliknij w pole input)
 4. Pojawi się popover z:
    - Checkbox **"Tryb debla"** (domyślnie wyłączony)
    - Pole wyszukiwania
    - Lista zawodników z flagami
+
+**Troubleshooting:** Jeśli przyciski nie pojawiają się:
+- Sprawdź konsolę przeglądarki (F12) - powinny być logi `[UNO Picker v0.3.11]`
+- Odśwież stronę (Ctrl+R) - wtyczka ponawia inicjalizację po 1s i 3s
+- Upewnij się że jesteś na stronie `app.overlays.uno/control/*` lub `/output/*`
 
 ### Tryb pojedynczy (Singles)
 - Kliknij na zawodnika → natychmiastowe wypełnienie pola
