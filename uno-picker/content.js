@@ -1,6 +1,6 @@
-﻿// UNO Player Picker v0.3.14 - Dark Mode + No Auto-Focus
+﻿// UNO Player Picker v0.3.15 - Visual Toggle State + Selected Highlight
 const API_BASE = 'https://score.vestmedia.pl';
-const log = (...a) => console.log('[UNO Picker v0.3.14]', ...a);
+const log = (...a) => console.log('[UNO Picker v0.3.15]', ...a);
 const supportsPointer = 'PointerEvent' in window;
 log('Init', { api: API_BASE, supportsPointer });
 
@@ -150,8 +150,9 @@ async function showPickerFor(input, letter) {
       return;
     }
     filt.forEach(player => {
+      const isSelected = doublesMode && selectedPlayers.some(p => p.name === player.name);
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;padding:16px 20px;cursor:pointer;border-bottom:1px solid #444;transition:background 0.2s;color:#fff';
+      row.style.cssText = 'display:flex;align-items:center;padding:16px 20px;cursor:pointer;border-bottom:1px solid #444;transition:background 0.2s;color:#fff;background:' + (isSelected ? '#007bff' : 'transparent');
       if (player.flag) {
         const f = document.createElement('span');
         f.textContent = player.flag;
@@ -165,7 +166,7 @@ async function showPickerFor(input, letter) {
       if (doublesMode) {
         const c = document.createElement('input');
         c.type = 'checkbox';
-        c.checked = selectedPlayers.some(p => p.name === player.name);
+        c.checked = isSelected;
         c.style.cssText = 'width:24px;height:24px;margin-left:16px;pointer-events:none';
         row.appendChild(c);
       }
@@ -219,8 +220,12 @@ async function showPickerFor(input, letter) {
         }, { passive: true });
       }
       row.addEventListener('click', handleSel);
-      row.addEventListener('mouseenter', () => { row.style.backgroundColor = '#3a3a3a'; });
-      row.addEventListener('mouseleave', () => { row.style.backgroundColor = ''; });
+      row.addEventListener('mouseenter', () => { 
+        if (!isSelected) row.style.backgroundColor = '#3a3a3a'; 
+      });
+      row.addEventListener('mouseleave', () => { 
+        row.style.backgroundColor = isSelected ? '#007bff' : ''; 
+      });
       list.appendChild(row);
     });
   };
@@ -276,11 +281,15 @@ async function ensureUI() {
   globalWrapper.className = 'uno-global-controls';
   globalWrapper.style.cssText = 'margin-bottom:16px;padding:12px;background:#2d2d2d;border-radius:6px;display:flex;align-items:center;gap:12px';
   const toggleLabel = document.createElement('label');
-  toggleLabel.style.cssText = 'display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:15px;font-weight:500;color:#fff';
+  toggleLabel.style.cssText = 'display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;font-size:15px;font-weight:500;color:#fff;padding:8px 12px;border-radius:6px;transition:background 0.2s';
+  const updateToggleStyle = () => {
+    toggleLabel.style.backgroundColor = doublesMode ? '#007bff' : '#1a1a1a';
+  };
+  updateToggleStyle();
   const toggleCheckbox = document.createElement('input');
   toggleCheckbox.type = 'checkbox';
   toggleCheckbox.checked = doublesMode;
-  toggleCheckbox.style.cssText = 'width:20px;height:20px;cursor:pointer';
+  toggleCheckbox.style.cssText = 'width:20px;height:20px;cursor:pointer;flex-shrink:0';
   const toggleText = document.createElement('span');
   toggleText.textContent = 'Tryb debla (2 graczy)';
   toggleLabel.appendChild(toggleCheckbox);
@@ -296,6 +305,7 @@ async function ensureUI() {
     doublesMode = toggleCheckbox.checked;
     selectedPlayers = [];
     await storageSet({ doublesMode, selectedPlayers });
+    updateToggleStyle();
     log('Doubles mode:', doublesMode);
   });
   const attach = (inp, ltr) => {
