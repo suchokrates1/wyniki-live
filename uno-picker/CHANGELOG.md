@@ -10,9 +10,11 @@
 
 ### ✨ Release Notes
 - **Dostępność:** Wtyczka dostępna do pobrania na `https://score.vestmedia.pl/download`
-- **Plik:** `uno-picker-v0.3.11.crx` (78.7 KB)
-- **Instalacja:** Rozpakuj archiwum .crx i załaduj jako "Załaduj rozpakowane rozszerzenie"
+- **Plik:** `uno-picker-v0.3.11.crx` (23.4 KB) - **PRAWDZIWY CRX z podpisem cyfrowym**
+- **Format:** CRX3 (magic bytes: `43 72 32 34` = "Cr24"), podpisany kluczem `uno-name-flag-picker.pem`
+- **Instalacja:** Przeciągnij plik `.crx` na `edge://extensions/` lub rozpakuj i załaduj jako rozpakowane
 - **Wsparcie:** Edge Canary na tabletach (Pointer Events + Touch Events)
+- **content.js:** 12.7 KB (minified)
 
 ### 🔧 Zmiany techniczne
 - Przepisany `content.js` (~550 LOC) z poprawnym wykrywaniem DOM
