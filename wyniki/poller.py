@@ -444,7 +444,8 @@ class CourtPollingWorker(threading.Thread):
             while not self._stop_event.is_set():
                 self._sync_activity_multiplier()
                 if not is_uno_requests_enabled():
-                    if self._stop_event.wait(1.0):
+                    log.debug("UNO poller kort=%s paused (UNO disabled)", self.kort_id)
+                    if self._stop_event.wait(5.0):
                         break
                     continue
                 status = get_uno_hourly_status(self.kort_id)

@@ -113,6 +113,7 @@ from .state import (
     update_uno_hourly_config,
     update_uno_rate_limit,
     enqueue_uno_flag_update,
+    enqueue_uno_full_reset,
     validate_command,
 )
 from .poller import sync_poller_state
@@ -818,6 +819,11 @@ def admin_api_courts_reset(kort_id: str):
         persist_state_cache(normalized_id, state)
         response_state = serialize_court_state(state)
         log_state_summary(normalized_id, state, "admin reset")
+    
+    # Send reset commands to UNO overlay
+    if is_uno_requests_enabled():
+        enqueue_uno_full_reset(normalized_id)
+    
     broadcast_kort_state(normalized_id, "admin", "ResetCourtState", None, extras, ts)
     message = f"Kort {normalized_id} został wyzerowany."
     return jsonify(

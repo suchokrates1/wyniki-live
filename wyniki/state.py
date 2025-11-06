@@ -1027,6 +1027,30 @@ def enqueue_uno_flag_update(kort_id: str, field_id: str, flag_url: Optional[str]
     return enqueue_uno_command(kort_id, "SetCustomizationField", payload=payload, key=queue_key)
 
 
+def enqueue_uno_full_reset(kort_id: str) -> bool:
+    """Enqueue commands to reset all UNO overlay values."""
+    commands = [
+        ("ResetPoints", None, "reset_points"),
+        ("SetNamePlayerA", {"value": "-"}, "name_a"),
+        ("SetNamePlayerB", {"value": "-"}, "name_b"),
+        ("SetSet1PlayerA", {"value": "0"}, "set1_a"),
+        ("SetSet1PlayerB", {"value": "0"}, "set1_b"),
+        ("SetSet2PlayerA", {"value": "0"}, "set2_a"),
+        ("SetSet2PlayerB", {"value": "0"}, "set2_b"),
+        ("SetSet3PlayerA", {"value": "0"}, "set3_a"),
+        ("SetSet3PlayerB", {"value": "0"}, "set3_b"),
+        ("HideTieBreak", None, "hide_tb"),
+        ("SetTieBreakPlayerA", {"value": "0"}, "tb_a"),
+        ("SetTieBreakPlayerB", {"value": "0"}, "tb_b"),
+        ("ResetMatchTime", None, "reset_time"),
+    ]
+    success = True
+    for command, payload, key in commands:
+        if not enqueue_uno_command(kort_id, command, payload=payload, key=key):
+            success = False
+    return success
+
+
 def is_known_kort(kort_id: str) -> bool:
     if not kort_id:
         return False
@@ -1790,6 +1814,7 @@ def reset_after_match(state: Dict[str, Any]) -> None:
 
 
 def finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional[Dict[str, int]] = None) -> None:
+    # Don't finalize matches when UNO is disabled - we don't have reliable data
     if not is_uno_requests_enabled():
         return
     match_time, status = ensure_match_struct(state)
@@ -1797,6 +1822,12 @@ def finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional
         return
     if wins is None:
         wins = count_short_set_wins(state)
+    
+    # Don't save matches with placeholder names
+    player_a_name = state.get("A", {}).get("surname", "-")
+    player_b_name = state.get("B", {}).get("surname", "-")
+    if player_a_name == "-" or player_b_name == "-":
+        return
 
     def _complete_match() -> None:
         stop_match_timer(state)
@@ -2297,6 +2328,7 @@ __all__ = [
     "dequeue_uno_command",
     "requeue_uno_command",
     "enqueue_uno_flag_update",
+    "enqueue_uno_full_reset",
     "get_uno_auto_disabled_reason",
     "get_uno_hourly_config",
     "get_uno_hourly_status",
