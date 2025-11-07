@@ -192,13 +192,18 @@ def upsert_app_settings(updates: Dict[str, Optional[str]]) -> None:
 
 
 def _row_to_player_dict(row: sqlite3.Row) -> Dict[str, Optional[str]]:
+    try:
+        group_category = row["group_category"]
+    except (IndexError, KeyError):
+        group_category = None
+    
     return {
         "id": int(row["id"]),
         "list_name": row["list_name"],
         "name": row["name"],
         "flag_code": row["flag_code"],
         "flag_url": row["flag_url"],
-        "group_category": row.get("group_category"),
+        "group_category": group_category,
     }
 
 

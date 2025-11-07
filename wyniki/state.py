@@ -2271,20 +2271,21 @@ def register_history_entry(entry: Dict[str, Any]) -> None:
 def log_state_summary(kort_id: str, state: Dict[str, Any], context: str) -> None:
     a_state = state["A"]
     b_state = state["B"]
+    
+    # Shortened version - only essential info
+    a_name = shorten(a_state.get("full_name") or a_state.get("surname"), 15)
+    b_name = shorten(b_state.get("full_name") or b_state.get("surname"), 15)
+    
     log.info(
-        "%s kort=%s A=%s flag=%s pts=%s sets=(%s,%s) B=%s flag=%s pts=%s sets=(%s,%s) current_set=%s",
+        "%s kort=%s | %s %s-%s vs %s %s-%s | set=%s",
         context,
         kort_id,
-        shorten(a_state.get("full_name") or a_state.get("surname")),
-        shorten(a_state.get("flag_url") or a_state.get("flag_code")),
-        a_state.get("points"),
-        a_state.get("set1"),
-        a_state.get("set2"),
-        shorten(b_state.get("full_name") or b_state.get("surname")),
-        shorten(b_state.get("flag_url") or b_state.get("flag_code")),
-        b_state.get("points"),
-        b_state.get("set1"),
-        b_state.get("set2"),
+        a_name,
+        a_state.get("set1", 0),
+        a_state.get("set2", 0),
+        b_name,
+        b_state.get("set1", 0),
+        b_state.get("set2", 0),
         state.get("current_set"),
     )
 

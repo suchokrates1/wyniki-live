@@ -58,6 +58,21 @@ class UnoCommandClient:
             return 0, None
         status = response.status_code
         update_uno_rate_limit(response.headers)
+        
+        # Log rate limit info on 429 errors
+        if status == 429:
+            from .state import UNO_RATE_LIMIT_INFO, UNO_RATE_LIMIT_LOCK
+            with UNO_RATE_LIMIT_LOCK:
+                limit_info = dict(UNO_RATE_LIMIT_INFO)
+            if limit_info.get("remaining") is not None:
+                log.warning(
+                    "RATE LIMIT kort=%s: %s/%s remaining (resets at %s)",
+                    self.kort_id,
+                    limit_info.get("remaining", "?"),
+                    limit_info.get("limit", "?"),
+                    limit_info.get("reset", "?"),
+                )
+        
         try:
             data = response.json()
         except ValueError:
@@ -67,12 +82,25 @@ class UnoCommandClient:
     def _send(self, command: str) -> Optional[object]:
         status, data = self._call_api({"command": command})
         if status != 200 or not isinstance(data, dict):
+            # Extract key error info for cleaner logging
+            error_msg = ""
+            if isinstance(data, dict):
+                error = data.get("error", "")
+                if status == 429:
+                    # Rate limit - extract from headers if available
+                    error_msg = f"rate_limit (status 429)"
+                elif status == 503:
+                    error_msg = f"uno_disabled"
+                else:
+                    error_msg = error[:50] if error else f"http_{status}"
+            else:
+                error_msg = f"http_{status}"
+            
             log.warning(
-                "poller kort=%s command=%s status=%s payload=%s",
+                "poller kort=%s command=%s: %s",
                 self.kort_id,
                 command,
-                status,
-                shorten(data),
+                error_msg,
             )
             return None
         payload = data.get("response")
@@ -92,20 +120,31 @@ class UnoCommandClient:
             request_payload.update(payload)
         status, data = self._call_api(request_payload)
         if status != 200 or not isinstance(data, dict):
+            error_msg = ""
+            if isinstance(data, dict):
+                error = data.get("error", "")
+                if status == 429:
+                    error_msg = "rate_limit"
+                elif status == 503:
+                    error_msg = "uno_disabled"
+                else:
+                    error_msg = error[:40] if error else f"http_{status}"
+            else:
+                error_msg = f"http_{status}"
+                
             log.warning(
-                "poller kort=%s command=%s exec status=%s payload=%s",
+                "poller kort=%s command=%s exec: %s",
                 self.kort_id,
                 command,
-                status,
-                shorten(data),
+                error_msg,
             )
             return False, status, data
         if not data.get("ok"):
             log.warning(
-                "poller kort=%s command=%s exec rejected payload=%s",
+                "poller kort=%s command=%s exec rejected: %s",
                 self.kort_id,
                 command,
-                shorten(data),
+                shorten(data.get("error", "unknown")),
             )
             return False, status, data
         return True, status, data
