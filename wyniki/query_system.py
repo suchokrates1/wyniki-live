@@ -250,12 +250,12 @@ class QuerySystem:
         return [
             self._spec(self.NORMAL_MODE, "GetPointsPlayerA", 10.0),
             self._spec(self.NORMAL_MODE, "GetPointsPlayerB", 10.0),
-            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerA", 5.0),
-            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerB", 5.0),
-            self._spec(self.NORMAL_MODE, "GetSet1PlayerA", 180.0),
-            self._spec(self.NORMAL_MODE, "GetSet1PlayerB", 180.0),
-            self._spec(self.NORMAL_MODE, "GetSet2PlayerA", 180.0),
-            self._spec(self.NORMAL_MODE, "GetSet2PlayerB", 180.0),
+            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerA", 10.0),  # Polled only at 40/ADV via precondition
+            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerB", 10.0),  # Polled only at 40/ADV via precondition
+            self._spec(self.NORMAL_MODE, "GetSet1PlayerA", 10.0),  # Polled only when games >= 3 via precondition
+            self._spec(self.NORMAL_MODE, "GetSet1PlayerB", 10.0),  # Polled only when games >= 3 via precondition
+            self._spec(self.NORMAL_MODE, "GetSet2PlayerA", 10.0),  # Polled only when games >= 3 via precondition
+            self._spec(self.NORMAL_MODE, "GetSet2PlayerB", 10.0),  # Polled only when games >= 3 via precondition
             self._spec(
                 self.NORMAL_MODE,
                 "GetTieBreakVisibility",

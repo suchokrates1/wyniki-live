@@ -1,0 +1,301 @@
+# Wyniki-Live - Tennis Live Scores System
+
+## Project Overview
+Live tennis scoring system with UNO API integration, admin panel, multi-language support, and real-time polling for multiple courts.
+
+## Tech Stack
+- **Backend**: Python 3.10+, Flask 3.0.0
+- **Database**: SQLite3
+- **Frontend**: Vanilla JS (ES6+), CSS3
+- **Deployment**: Docker + Docker Compose ready
+- **Extensions**: Chrome extension (uno-picker) for UNO API integration
+
+## Key Architecture Decisions
+
+### 1. Ultra-Smart Hierarchical Polling System
+**Location**: `wyniki/poller.py` + `wyniki/query_system.py`
+
+**3-tier hierarchical polling strategy:**
+- **Tier 1 (baseline)**: Points - always polled every 10s (12 req/min)
+- **Tier 2 (conditional)**: Current games - only at 40/ADV (triggered by `_pending_current_games_poll`)
+- **Tier 3 (conditional)**: Set scores - only when games ≥ 3 (triggered by `_pending_set_poll`)
+- **Tie-break mode**: Separate polling mode with TB-specific queries
+
+**Request optimization**: 60-66% reduction vs naive polling (17-20 req/min average vs 50 req/min)
+
+**Important**: System does NOT implement tennis rules. UNO API enforces "win by 2" in tie-breaks. Poller just polls until `GetTieBreakVisibility = False`.
+
+### 2. State Management
+**Location**: `wyniki/state.py`
+
+**Global state with thread-safe locking**:
+```python
+STATE_LOCK = threading.RLock()
+_COURTS: Dict[str, Dict[str, Any]] = {}
+```
+
+**Key features**:
+- Normalized court IDs (`kort1`, `kort2`, etc.)
+- Match status tracking (`active`, `inactive`)
+- UNO command queue with retry logic
+- Rate limiting (200 req/h rolling, 50k/day)
+- Full reset: 15 commands (names, points, sets, tie-break, flags, time)
+
+### 3. Query System (Smart Polling)
+**Location**: `wyniki/query_system.py`
+
+**Two polling modes**:
+- `NORMAL_MODE`: Standard game flow polling
+- `TIE_MODE`: Tie-break specific polling
+
+**Precondition-based queries**: Queries only execute when preconditions are met
+- Example: `GetCurrentSetPlayerA/B` only polls when `_pending_current_games_poll = True`
+
+**Intervals**:
+- Points: 10s (always in match)
+- Current games: 10s (only at 40/ADV)
+- Set scores: 10s (only when games ≥ 3)
+- Tie-break visibility: 60s (background check)
+
+### 4. Admin Panel Features
+**Location**: `admin.html` + `static/js/admin.js`
+
+**Key features**:
+- Player management with flag preview (flag URL updates live)
+- Match history tracking
+- Court control (start/stop/reset)
+- UNO API activity monitoring
+- Rate limit visualization
+- Player groups B1-B4 management
+
+### 5. Multi-Language Support
+**Location**: `static/js/translations.js`
+
+**Supported languages**: PL (default), EN, DE, IT, ES
+
+**Translation keys**: `window.TRANSLATIONS[lang][key]`
+
+**Flag URLs**: 195+ countries predefined in admin panel
+
+## Testing Strategy
+
+### Test Files
+- `tests/test_realistic_polling.py` - **11 tests** covering:
+  - 4-court simultaneous polling (3,524 req/h = 70% of 5k/h limit)
+  - Edge cases: 4:3 → 5:3, 4:3 → 4:4 → TB
+  - Tie-break 2-point margin: 7-6 → 8-6, 10-9 → 11-9
+  - Extreme deuce: 15-13 super TB
+  - Request counting accuracy
+
+- `tests/test_query_system.py` - Query scheduler tests
+- `tests/test_uno_queue.py` - UNO command queue tests
+- `tests/test_match_time.py` - Match timing tests
+
+### Test Coverage Goals
+- Poller: Hierarchical triggers, preconditions, mode switching
+- Query system: Interval scheduling, result handlers
+- State: Thread safety, normalization, rate limiting
+
+## API Limits & Capacity Planning
+
+**Current UNO API limits**:
+- Hourly: 200 req/h (rolling window) ⚠️ **TOO LOW**
+- Daily: 50,000 req/day ✅
+
+**Actual usage (4 courts, 10 hours)**:
+- Per court: ~880 req/h (17-20 req/min average)
+- 4 courts: 3,524 req/h
+- Daily: 35,240 requests (70% of 50k limit) ✅
+
+**Recommendation**: Request API limit increase to 5,000 req/h
+
+## Code Patterns & Conventions
+
+### 1. Thread Safety
+Always use `STATE_LOCK` when accessing global state:
+```python
+with STATE_LOCK:
+    state = ensure_court_state(kort_id)
+    # ... modify state
+```
+
+### 2. Court ID Normalization
+Always normalize court IDs:
+```python
+kort_id = normalize_kort_id(raw_id)  # "Court 1" → "kort1"
+```
+
+### 3. Precondition Pattern
+For conditional polling:
+```python
+def _should_poll_current_games(self, side: str) -> bool:
+    return self._mode == MODE_IN_MATCH and self._pending_current_games_poll
+```
+
+### 4. Result Handler Pattern
+For triggering next-level queries:
+```python
+def _on_current_games_result(self, side: str, value: Any) -> None:
+    current_games = int(value or 0)
+    if current_games >= 3:
+        self._pending_set_poll = True  # Trigger set polling
+    self._pending_current_games_poll = False  # Clear flag
+```
+
+### 5. UNO Command Queue
+Enqueue commands, don't call API directly:
+```python
+enqueue_uno_command(kort_id, "SetPointsPlayerA", {"value": "30"})
+```
+
+## Important Files
+
+### Backend Core
+- `wyniki/poller.py` - Smart polling controller (hierarchical logic)
+- `wyniki/query_system.py` - Query scheduler with preconditions
+- `wyniki/state.py` - Global state management (2000+ lines)
+- `wyniki/routes.py` - Flask routes (API endpoints)
+- `wyniki/web.py` - WebSocket routes (live updates)
+
+### Frontend
+- `index.html` - Main scoreboard view
+- `admin.html` - Admin panel
+- `embed.html` - Embeddable widget
+- `static/js/app.js` - Main scoreboard logic
+- `static/js/admin.js` - Admin panel logic
+- `static/js/translations.js` - i18n support
+
+### Configuration
+- `wyniki/config.py` - Settings, logging, environment
+- `.env` - Environment variables (not in repo)
+- `docker-compose.yml` - Docker setup
+- `requirements.txt` - Python dependencies
+
+### Browser Extension
+- `uno-picker/manifest.json` - Chrome extension manifest
+- `uno-picker/content.js` - UNO API picker script
+
+## Common Tasks
+
+### Adding a New Query
+1. Add spec in `query_system.py`:
+   ```python
+   self._spec(self.NORMAL_MODE, "GetNewField", 10.0, on_result=self._handle_new)
+   ```
+2. Add precondition if conditional:
+   ```python
+   precondition=lambda: self._should_poll_new()
+   ```
+3. Wire in `poller.py` `attach()` method
+
+### Adding a New Court
+1. Update `available_courts()` in `state.py`
+2. Add to `COURT_CONFIGS` in `config.py`
+3. Initialize state: `ensure_court_state(kort_id)`
+
+### Debugging Polling
+1. Check logs: `grep "pending_current_games_poll" app.log`
+2. Monitor request counts: `grep "GetCurrentSet" app.log | wc -l`
+3. Verify triggers: Look for "40", "ADV" in point updates
+
+### Testing New Feature
+1. Write test in `tests/test_*.py`
+2. Use `FakeUnoClient` for mocking
+3. Use `MatchSimulator` for realistic scenarios
+4. Run: `pytest tests/test_*.py -v`
+
+## Known Limitations
+
+1. **Hourly API limit**: 200 req/h is insufficient for 4 courts (need 5k/h)
+2. **No authentication**: Admin panel unprotected (add AUTH_HEADER in production)
+3. **SQLite limitations**: Single-writer, not suitable for high-concurrency
+4. **No WebSocket reconnect**: Client must refresh on disconnect
+
+## Performance Metrics
+
+**Request rates (per court)**:
+- Pre-match (awaiting names): 24 req/min
+- Pre-match (awaiting first point): 16 req/min
+- In match (baseline): 12 req/min
+- In match (at 40/ADV): 24 req/min
+- In match (games ≥ 3): 48 req/min
+- Tie-break mode: 12 req/min
+
+**Average in match**: 17-20 req/min (weighted by time in each state)
+
+## Deployment Notes
+
+### Docker
+```bash
+docker-compose up -d
+```
+
+### Production Checklist
+- [ ] Set `AUTH_HEADER` in environment
+- [ ] Configure `DATABASE_PATH` for persistent storage
+- [ ] Set up reverse proxy (nginx) with SSL
+- [ ] Request UNO API limit increase (5k/h)
+- [ ] Enable CORS for specific domains only
+- [ ] Set up monitoring (request counts, error rates)
+- [ ] Configure log rotation
+
+## Tennis Scoring Rules (for context)
+
+**Games**: First to 4 (or 5 at 4:3)
+**Sets**: Best of 3 (or 2)
+**Tie-break**: At 4:4 in games, first to 7 with 2-point margin
+**Super tie-break**: At 1:1 in sets, first to 10 with 2-point margin
+
+**System handles**:
+- ✅ Regular games
+- ✅ Tie-breaks with 2-point margin (7-6 → 8-6)
+- ✅ Super tie-breaks (10-9 → 11-9)
+- ✅ Extended deuces (15-13, 20-18, etc.)
+
+## Recent Changes
+
+**Last updated**: 2025-11-07
+
+**Recent optimizations**:
+1. Implemented hierarchical polling (60% reduction in requests)
+2. Added precondition-based queries
+3. Split polling into 3 tiers (points → games → sets)
+4. Added tie-break 2-point margin tests
+5. Verified 4-court capacity (70% of limits)
+
+**Test status**: 11/11 passing ✅
+
+## Key Metrics to Monitor
+
+1. **Request rate**: Should stay ~17-20 req/min per court in match
+2. **API limits**: Watch hourly rolling window (currently 200/h)
+3. **Error rate**: Failed UNO commands (retry queue length)
+4. **Polling lag**: Time between due and actual query execution
+5. **Mode transitions**: NORMAL ↔ TIE mode switches
+
+## Troubleshooting
+
+**High request rate?**
+- Check if preconditions are working (`_pending_*` flags)
+- Verify mode is correct (not stuck in wrong mode)
+- Look for stuck queries (due time in past)
+
+**Missing updates?**
+- Check UNO API connectivity
+- Verify rate limits not exceeded
+- Check poller is running (`/api/health`)
+
+**Wrong scores?**
+- Check state normalization (court IDs)
+- Verify UNO command queue processing
+- Check reflect endpoint responses
+
+## Resources
+
+- GitHub: https://github.com/suchokrates1/wyniki-live
+- Tests: Run `pytest tests/ -v` for full suite
+- API docs: See `/api/health` for status
+
+---
+
+**Note**: This file is for AI assistant context. Keep it updated with architectural decisions and key patterns.
