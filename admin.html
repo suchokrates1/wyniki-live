@@ -90,7 +90,7 @@
               <div class="uno-metric">
                 <dt>Godzinowy limit <span class="live-indicator" style="color: #4CAF50; font-size: 0.8em;">●</span></dt>
                 <dd id="uno-hourly-summary">—</dd>
-                <dd class="uno-metric__hint">Odświeżane co 2s</dd>
+                <dd class="uno-metric__hint">Okno przesuwne 60 min • Odświeżane co 2s</dd>
               </div>
               <div class="uno-metric">
                 <dt>Status</dt>
@@ -161,6 +161,14 @@
             <input id="player-name-input" name="name" type="text" required />
             <label for="player-list-input">Lista</label>
             <input id="player-list-input" name="list_name" type="text" placeholder="default" />
+            <label for="player-group-input">Grupa</label>
+            <select id="player-group-input" name="group_category">
+              <option value="">Brak</option>
+              <option value="B1">B1</option>
+              <option value="B2">B2</option>
+              <option value="B3">B3</option>
+              <option value="B4">B4</option>
+            </select>
             <label for="player-flag-code-input">Kod kraju (np. pl)</label>
             <input
               id="player-flag-code-input"
@@ -173,8 +181,7 @@
             <input id="player-flag-url-input" name="flag_url" type="url" placeholder="https://" />
           </div>
           <p class="player-form-note">
-            Kod kraju jest opcjonalny. Pozostaw listę pustą, aby użyć listy domyślnej. Wybór kodu automatycznie
-            uzupełni adres flagi dostępny w wtyczce UNO.
+            Grupa i kod kraju są opcjonalne. Format importu: <code>Imię Nazwisko Grupa KOD</code> (np. John Smith B1 us)
           </p>
           <button type="submit">Dodaj zawodnika</button>
         </form>
@@ -195,18 +202,33 @@
           <table class="players-table">
             <thead>
               <tr>
+                <th style="width: 48px;">Flaga</th>
                 <th>Imię i nazwisko</th>
                 <th>Lista</th>
+                <th>Grupa</th>
                 <th>Kod kraju</th>
-                <th>Flaga</th>
+                <th>URL flagi</th>
                 <th>Akcje</th>
               </tr>
             </thead>
             <tbody id="players-rows">
               {% for player in players %}
               <tr data-player-id="{{ player.id }}">
+                <td class="flag-cell">
+                  {% if player.flag_url %}
+                  <img 
+                    src="{{ player.flag_url }}" 
+                    alt="{{ player.flag_code or '' }}" 
+                    class="flag-preview"
+                    onerror="this.classList.add('error')"
+                  />
+                  {% else %}
+                  <span style="color: var(--muted); font-size: 11px;">—</span>
+                  {% endif %}
+                </td>
                 <td><input name="name" type="text" value="{{ player.name or '' }}" /></td>
                 <td><input name="list_name" type="text" value="{{ player.list_name or '' }}" /></td>
+                <td><input name="group_category" type="text" value="{{ player.group_category or '' }}" maxlength="2" placeholder="B1-B4" /></td>
                 <td>
                   <input
                     name="flag_code"

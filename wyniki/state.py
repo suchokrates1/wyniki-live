@@ -307,11 +307,19 @@ def get_uno_hourly_status(kort_id: str) -> Dict[str, Any]:
         queue = UNO_REQUEST_USAGE.setdefault(kort_id, deque())
         _prune_usage(queue, cutoff)
         count = len(queue)
+        oldest_timestamp = queue[0] if queue else None
+    
     config_values = _get_uno_config_values()
     limit = int(config_values.get("limit", DEFAULT_UNO_POLLING_CONFIG["limit"]))
     threshold = float(config_values.get("threshold", DEFAULT_UNO_POLLING_CONFIG["threshold"]))
     slowdown_factor = max(1, int(config_values.get("slowdown_factor", DEFAULT_UNO_POLLING_CONFIG["slowdown_factor"])) )
     slowdown_sleep = max(0.0, float(config_values.get("slowdown_sleep", DEFAULT_UNO_POLLING_CONFIG["slowdown_sleep"])) )
+    
+    # Calculate when the oldest request will expire (reset time)
+    next_reset = None
+    if oldest_timestamp:
+        next_reset = oldest_timestamp + timedelta(hours=1)
+    
     if not is_uno_requests_enabled():
         return {
             "kort_id": kort_id,
@@ -323,6 +331,7 @@ def get_uno_hourly_status(kort_id: str) -> Dict[str, Any]:
             "mode": "disabled",
             "slowdown_factor": slowdown_factor,
             "slowdown_sleep": slowdown_sleep,
+            "next_reset": next_reset.isoformat() if next_reset else None,
         }
     if limit <= 0:
         return {
@@ -335,6 +344,7 @@ def get_uno_hourly_status(kort_id: str) -> Dict[str, Any]:
             "mode": "unlimited",
             "slowdown_factor": slowdown_factor,
             "slowdown_sleep": slowdown_sleep,
+            "next_reset": next_reset.isoformat() if next_reset else None,
         }
     ratio = count / float(limit)
     remaining = max(0, limit - count)
@@ -354,6 +364,7 @@ def get_uno_hourly_status(kort_id: str) -> Dict[str, Any]:
         "mode": mode,
         "slowdown_factor": slowdown_factor,
         "slowdown_sleep": slowdown_sleep,
+        "next_reset": next_reset.isoformat() if next_reset else None,
     }
 
 
@@ -1029,6 +1040,14 @@ def enqueue_uno_flag_update(kort_id: str, field_id: str, flag_url: Optional[str]
 
 def enqueue_uno_full_reset(kort_id: str) -> bool:
     """Enqueue commands to reset all UNO overlay values."""
+    # Get overlay field IDs for flags (court-specific)
+    state = snapshots.get(kort_id)
+    flag_field_a = None
+    flag_field_b = None
+    if state:
+        flag_field_a = state.get("uno", {}).get("flag_field_a")
+        flag_field_b = state.get("uno", {}).get("flag_field_b")
+    
     commands = [
         ("ResetPoints", None, "reset_points"),
         ("SetNamePlayerA", {"value": "-"}, "name_a"),
@@ -1044,6 +1063,21 @@ def enqueue_uno_full_reset(kort_id: str) -> bool:
         ("SetTieBreakPlayerB", {"value": "0"}, "tb_b"),
         ("ResetMatchTime", None, "reset_time"),
     ]
+    
+    # Add flag reset commands if field IDs are configured
+    if flag_field_a:
+        commands.append((
+            "SetCustomizationField",
+            {"fieldId": flag_field_a, "value": ""},
+            "flag:reset_a"
+        ))
+    if flag_field_b:
+        commands.append((
+            "SetCustomizationField",
+            {"fieldId": flag_field_b, "value": ""},
+            "flag:reset_b"
+        ))
+    
     success = True
     for command, payload, key in commands:
         if not enqueue_uno_command(kort_id, command, payload=payload, key=key):

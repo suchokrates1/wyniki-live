@@ -237,6 +237,7 @@ def _serialize_player(record: Dict[str, Optional[str]]) -> Dict[str, Optional[st
         "list_name": record.get("list_name"),
         "flag_code": record.get("flag_code"),
         "flag_url": record.get("flag_url"),
+        "group_category": record.get("group_category"),
     }
 
 
@@ -247,6 +248,7 @@ def _public_player_payload(record: Dict[str, Optional[str]]) -> Dict[str, Option
         "flag": record.get("flag_code"),
         "flagUrl": record.get("flag_url"),
         "list": record.get("list_name"),
+        "group": record.get("group_category"),
     }
 
 
@@ -521,6 +523,18 @@ def _sanitize_player_payload(payload: Dict[str, object], *, partial: bool = Fals
         else:
             text = raw_list.strip()
             sanitized["list_name"] = text or "default"
+    if "group_category" in payload:
+        raw_group = payload.get("group_category")
+        if raw_group is None:
+            sanitized["group_category"] = None
+        elif not isinstance(raw_group, str):
+            raise ValueError("group_category")
+        else:
+            text = raw_group.strip()
+            # Validate group category format (B1, B2, B3, B4)
+            if text and not re.fullmatch(r"B[1-4]", text, re.IGNORECASE):
+                raise ValueError("group_category")
+            sanitized["group_category"] = text.upper() if text else None
     if "flag_code" in payload:
         raw_code = payload.get("flag_code")
         if raw_code is None:
@@ -875,6 +889,7 @@ def admin_api_players_create():
         sanitized.get("list_name"),
         sanitized.get("flag_code"),
         sanitized.get("flag_url"),
+        sanitized.get("group_category"),
     )
     record = fetch_player(player_id)
     players = fetch_players()
@@ -914,19 +929,31 @@ def admin_api_players_import():
             skipped += 1
             errors.append(idx)
             continue
+        
+        # Format: Name Group Code OR Name Code (backwards compatible)
         code_candidate = parts[-1].strip().lower()
         if not FLAG_CODE_PATTERN.fullmatch(code_candidate):
             skipped += 1
             errors.append(idx)
             continue
-        name = " ".join(parts[:-1]).strip()
+        
+        # Check if second-to-last is group category (B1-B4)
+        group_category = None
+        name_parts = parts[:-1]
+        if len(parts) >= 4:
+            potential_group = parts[-2].strip().upper()
+            if re.fullmatch(r"B[1-4]", potential_group):
+                group_category = potential_group
+                name_parts = parts[:-2]
+        
+        name = " ".join(name_parts).strip()
         if not name:
             skipped += 1
             errors.append(idx)
             continue
         flag_url = _lookup_flag_url(code_candidate)
         try:
-            insert_player(name, None, code_candidate, flag_url)
+            insert_player(name, None, code_candidate, flag_url, group_category)
             imported += 1
         except Exception as exc:
             log.warning("Nie udało się zaimportować zawodnika (wiersz %s): %s", idx, exc)
