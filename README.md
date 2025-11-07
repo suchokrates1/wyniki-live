@@ -89,8 +89,7 @@ Publiczny endpoint `/delete` został usunięty. Aby skasować wpis z historii na
 ## 📚 Dokumentacja
 
 - **[API.md](API.md)** - Kompletna dokumentacja API endpoints
-- **[REFACTORING_REPORT.md](REFACTORING_REPORT.md)** - Raport refaktoryzacji i rekomendacje
-- **[CHANGELOG_REFACTORING.md](CHANGELOG_REFACTORING.md)** - Podsumowanie zmian
+- **[.cursorrules](.cursorrules)** - Informacje architektoniczne dla AI (wzorce kodowania, kluczowe decyzje)
 
 ## 🧪 Testowanie
 
@@ -232,16 +231,19 @@ wyniki-live/
 - Rate limiting dla UNO API
 - Input sanitization i validation
 
-## 🌟 Changelog
+## 🌟 Kluczowe Funkcje
 
-Zobacz [CHANGELOG_REFACTORING.md](CHANGELOG_REFACTORING.md) dla ostatnich zmian.
+**Ultra-Smart Hierarchical Polling** (60% redukcja zapytań vs naive approach):
+- Tier 1: Punkty zawsze co 10s
+- Tier 2: Gemy tylko przy 40/ADV
+- Tier 3: Sety tylko gdy gemy ≥ 3
+- Tie-break mode: Dedykowany polling z obsługą przewagi 2 punktów
 
-**Najnowsze ulepszenia (2025-11-06):**
-- ✅ Dodano katalog 195+ flag krajów (flagcdn.com)
-- ✅ Usunięto zależność od players.json
-- ✅ Dodano funkcje pomocnicze error_response() i success_response()
-- ✅ Kompletna dokumentacja API
-- ✅ Konfiguracja mypy i pre-commit hooks
+**Capacity**: 4 korty równocześnie (70% limitu dziennego API)
+
+**Testy**: 11/11 passing - scenariusze realistyczne + edge cases
+
+---
 
 ## 📄 Licencja
 

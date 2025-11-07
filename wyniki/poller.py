@@ -137,8 +137,10 @@ class SmartCourtPollingController:
         self._now = now_fn or time.monotonic
         self._mode = self.MODE_IN_MATCH
         self._pending_set_poll = False
+        self._pending_current_games_poll = False
         self._points_decisive: Dict[str, bool] = {"A": False, "B": False}
         self._last_points: Dict[str, Optional[str]] = {"A": None, "B": None}
+        self._last_current_games: Dict[str, int] = {"A": 0, "B": 0}
         self._previous_match_names: Dict[str, Optional[str]] = {"A": None, "B": None}
         self._current_names: Dict[str, Optional[str]] = {"A": None, "B": None}
         self._next_name_poll_allowed = 0.0
@@ -148,6 +150,10 @@ class SmartCourtPollingController:
         self._point_preconditions = {
             "A": lambda: self._should_poll_points("A"),
             "B": lambda: self._should_poll_points("B"),
+        }
+        self._current_games_preconditions = {
+            "A": lambda: self._should_poll_current_games("A"),
+            "B": lambda: self._should_poll_current_games("B"),
         }
         self._set_precondition = self._should_poll_sets
         self._name_preconditions = {
@@ -168,11 +174,31 @@ class SmartCourtPollingController:
         )
         self.system.configure_spec(
             "GetCurrentSetPlayerA",
+            precondition=self._current_games_preconditions["A"],
+            on_result=lambda value: self._on_current_games_result("A", value),
+        )
+        self.system.configure_spec(
+            "GetCurrentSetPlayerB",
+            precondition=self._current_games_preconditions["B"],
+            on_result=lambda value: self._on_current_games_result("B", value),
+        )
+        self.system.configure_spec(
+            "GetSet1PlayerA",
             precondition=self._set_precondition,
             on_result=self._on_set_poll_result,
         )
         self.system.configure_spec(
-            "GetCurrentSetPlayerB",
+            "GetSet1PlayerB",
+            precondition=self._set_precondition,
+            on_result=self._on_set_poll_result,
+        )
+        self.system.configure_spec(
+            "GetSet2PlayerA",
+            precondition=self._set_precondition,
+            on_result=self._on_set_poll_result,
+        )
+        self.system.configure_spec(
+            "GetSet2PlayerB",
             precondition=self._set_precondition,
             on_result=self._on_set_poll_result,
         )
@@ -198,13 +224,17 @@ class SmartCourtPollingController:
             "A": self._normalize_point(a_state.get("points")),
             "B": self._normalize_point(b_state.get("points")),
         }
+        current_games = {
+            "A": int(a_state.get("current_games") or 0),
+            "B": int(b_state.get("current_games") or 0),
+        }
         names = {
             "A": self._canonical_name(a_state),
             "B": self._canonical_name(b_state),
         }
         self._current_names = names
         self._update_mode(active, names, points)
-        self._update_point_triggers(points)
+        self._update_point_triggers(points, current_games)
 
     # ------------------------------------------------------------------
     # Internal helpers for state analysis
@@ -234,21 +264,39 @@ class SmartCourtPollingController:
                 self._mode = self.MODE_IN_MATCH
             self._previous_match_names = dict(names)
 
-    def _update_point_triggers(self, points: Dict[str, Optional[str]]) -> None:
+    def _update_point_triggers(self, points: Dict[str, Optional[str]], current_games: Dict[str, int]) -> None:
         for side in ("A", "B"):
             value = points.get(side)
             previous = self._last_points.get(side)
             decisive = value in self.TRIGGER_POINTS
-            if self._mode == self.MODE_IN_MATCH and decisive:
-                if not self._points_decisive[side] or value != previous:
+            
+            # Check if current games changed (gem won)
+            prev_games = self._last_current_games.get(side, 0)
+            curr_games = current_games.get(side, 0)
+            games_changed = curr_games != prev_games
+            
+            if self._mode == self.MODE_IN_MATCH:
+                # Trigger current games polling when at decisive points (40/ADV)
+                if decisive and (not self._points_decisive[side] or value != previous):
+                    self._pending_current_games_poll = True
+                
+                # Trigger set polling when games changed (gem won)
+                if games_changed and curr_games >= 3:
+                    # Near end of set (3+ games), check set scores
                     self._pending_set_poll = True
-                self._points_decisive[side] = True
+                    # Also keep checking current games
+                    self._pending_current_games_poll = True
+                
+                self._points_decisive[side] = decisive
             else:
                 self._points_decisive[side] = False
+                
             self._last_points[side] = value
+            self._last_current_games[side] = curr_games
 
         if self._mode != self.MODE_IN_MATCH:
             self._pending_set_poll = False
+            self._pending_current_games_poll = False
 
     # ------------------------------------------------------------------
     # Precondition helpers wired into QuerySystem
@@ -264,7 +312,18 @@ class SmartCourtPollingController:
             return True
         return True
 
+    def _should_poll_current_games(self, side: str) -> bool:
+        """Poll current games (GetCurrentSetPlayerA/B) only when:
+        - We're in match mode
+        - Points are at 40 or ADV (decisive moment)
+        """
+        return self._mode == self.MODE_IN_MATCH and self._pending_current_games_poll
+
     def _should_poll_sets(self) -> bool:
+        """Poll set scores (GetSet1/2PlayerA/B) only when:
+        - We're in match mode
+        - Current games increased to 3+ (near end of set)
+        """
         return self._mode == self.MODE_IN_MATCH and self._pending_set_poll
 
     def _should_poll_name(self, side: str) -> bool:
@@ -287,7 +346,23 @@ class SmartCourtPollingController:
             if normalized and normalized not in {"0", "0-0", "-", ""}:
                 self._mode = self.MODE_IN_MATCH
 
+    def _on_current_games_result(self, side: str, value: Any) -> None:
+        """Called after GetCurrentSetPlayerA/B returns.
+        If games increased, we should check set scores next."""
+        try:
+            current_games = int(value or 0)
+            prev_games = self._last_current_games.get(side, 0)
+            if current_games != prev_games and current_games >= 3:
+                # Games changed and approaching end of set
+                self._pending_set_poll = True
+            self._last_current_games[side] = current_games
+        except (ValueError, TypeError):
+            pass
+        # Clear current games poll flag after checking
+        self._pending_current_games_poll = False
+
     def _on_set_poll_result(self, _value: Any) -> None:
+        """Called after GetSet1/2PlayerA/B returns."""
         self._pending_set_poll = False
 
     def _on_name_result(self, side: str, value: Any) -> None:
