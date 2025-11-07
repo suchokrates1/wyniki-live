@@ -1058,3 +1058,22 @@ main.container section {
   display: flex;
   gap: 8px;
 }
+
+.players-table .flag-preview {
+  width: 32px;
+  height: 21px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  display: block;
+}
+
+.players-table .flag-preview.error {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.players-table td.flag-cell {
+  text-align: center;
+  vertical-align: middle;
+}

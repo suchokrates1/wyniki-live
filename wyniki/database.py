@@ -60,10 +60,18 @@ def init_db() -> None:
               list_name TEXT NOT NULL DEFAULT 'default',
               name TEXT NOT NULL,
               flag_code TEXT,
-              flag_url TEXT
+              flag_url TEXT,
+              group_category TEXT
             );
             """
         )
+        
+        # Add group_category column if it doesn't exist
+        cursor.execute("PRAGMA table_info(players)")
+        player_columns = {row["name"] for row in cursor.fetchall()}
+        if "group_category" not in player_columns:
+            cursor.execute("ALTER TABLE players ADD COLUMN group_category TEXT")
+        
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS snapshot_meta (
@@ -190,11 +198,12 @@ def _row_to_player_dict(row: sqlite3.Row) -> Dict[str, Optional[str]]:
         "name": row["name"],
         "flag_code": row["flag_code"],
         "flag_url": row["flag_url"],
+        "group_category": row.get("group_category"),
     }
 
 
 def fetch_players(list_name: Optional[str] = None) -> List[Dict[str, Optional[str]]]:
-    query = "SELECT id, list_name, name, flag_code, flag_url FROM players"
+    query = "SELECT id, list_name, name, flag_code, flag_url, group_category FROM players"
     params: List[object] = []
     if list_name:
         query += " WHERE list_name = ?"
@@ -211,7 +220,7 @@ def fetch_player(player_id: int) -> Optional[Dict[str, Optional[str]]]:
     with db_conn() as connection:
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT id, list_name, name, flag_code, flag_url FROM players WHERE id = ?",
+            "SELECT id, list_name, name, flag_code, flag_url, group_category FROM players WHERE id = ?",
             (player_id,),
         )
         row = cursor.fetchone()
@@ -237,7 +246,7 @@ def find_player_by_surname(
         return None
     normalized_lower = normalized.lower()
 
-    query = "SELECT id, list_name, name, flag_code, flag_url FROM players"
+    query = "SELECT id, list_name, name, flag_code, flag_url, group_category FROM players"
     params: List[object] = []
     if list_name:
         query += " WHERE list_name = ?"
@@ -267,19 +276,21 @@ def insert_player(
     list_name: Optional[str] = None,
     flag_code: Optional[str] = None,
     flag_url: Optional[str] = None,
+    group_category: Optional[str] = None,
 ) -> int:
     with db_conn() as connection:
         cursor = connection.cursor()
         cursor.execute(
             """
-            INSERT INTO players (list_name, name, flag_code, flag_url)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO players (list_name, name, flag_code, flag_url, group_category)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 str(list_name or "default"),
                 name,
                 flag_code.strip() if flag_code else None,
                 flag_url.strip() if flag_url else None,
+                group_category.strip() if group_category else None,
             ),
         )
         connection.commit()

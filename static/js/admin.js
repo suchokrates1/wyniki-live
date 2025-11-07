@@ -112,6 +112,7 @@
   const playerFieldDefinitions = [
     { name: 'name', type: 'text' },
     { name: 'list_name', type: 'text' },
+    { name: 'group_category', type: 'text' },
     { name: 'flag_code', type: 'text' },
     { name: 'flag_url', type: 'url' }
   ];
@@ -634,6 +635,25 @@
         if (peak.kort_id) {
           hourlyText += ` (kort ${peak.kort_id})`;
         }
+        // Add reset time if available
+        if (peak.next_reset) {
+          try {
+            const resetDate = new Date(peak.next_reset);
+            const now = new Date();
+            const diffMs = resetDate - now;
+            if (diffMs > 0) {
+              const minutes = Math.floor(diffMs / 60000);
+              const seconds = Math.floor((diffMs % 60000) / 1000);
+              if (minutes > 0) {
+                hourlyText += ` • reset za ${minutes}min`;
+              } else {
+                hourlyText += ` • reset za ${seconds}s`;
+              }
+            }
+          } catch (e) {
+            // Ignore date parsing errors
+          }
+        }
       } else if (peak && (!Number.isFinite(peak.limit) || peak.limit <= 0)) {
         const remainingValue = Number.isFinite(Number(peak.remaining))
           ? Number(peak.remaining)
@@ -925,6 +945,27 @@
     const row = document.createElement('tr');
     row.dataset.playerId = String(player.id);
 
+    // Add flag preview cell first
+    const flagCell = document.createElement('td');
+    flagCell.className = 'flag-cell';
+    if (player.flag_url) {
+      const flagImg = document.createElement('img');
+      flagImg.src = player.flag_url;
+      flagImg.alt = player.flag_code || '';
+      flagImg.className = 'flag-preview';
+      flagImg.onerror = function() {
+        this.classList.add('error');
+      };
+      flagCell.appendChild(flagImg);
+    } else {
+      const placeholder = document.createElement('span');
+      placeholder.textContent = '—';
+      placeholder.style.color = 'var(--muted)';
+      placeholder.style.fontSize = '11px';
+      flagCell.appendChild(placeholder);
+    }
+    row.appendChild(flagCell);
+
     playerFieldDefinitions.forEach((field) => {
       const cell = document.createElement('td');
       const input = document.createElement('input');
@@ -938,12 +979,42 @@
       if (field.name === 'flag_code' && typeof value === 'string') {
         value = value.toLowerCase();
       }
+      if (field.name === 'group_category') {
+        input.placeholder = 'B1-B4';
+        input.maxLength = 2;
+      }
       input.value = value ?? '';
       if (field.name === 'flag_code') {
         applyFlagCodeAttributes(input);
       }
       if (field.name === 'flag_url') {
         input.placeholder = 'https://';
+        // Update flag preview when URL changes
+        input.addEventListener('input', () => {
+          const flagImg = row.querySelector('.flag-preview');
+          if (input.value.trim()) {
+            if (flagImg) {
+              flagImg.src = input.value;
+              flagImg.classList.remove('error');
+            } else {
+              const newImg = document.createElement('img');
+              newImg.src = input.value;
+              newImg.alt = '';
+              newImg.className = 'flag-preview';
+              newImg.onerror = function() { this.classList.add('error'); };
+              const flagCellToUpdate = row.querySelector('.flag-cell');
+              if (flagCellToUpdate) {
+                flagCellToUpdate.innerHTML = '';
+                flagCellToUpdate.appendChild(newImg);
+              }
+            }
+          } else if (flagImg) {
+            const flagCellToUpdate = row.querySelector('.flag-cell');
+            if (flagCellToUpdate) {
+              flagCellToUpdate.innerHTML = '<span style="color: var(--muted); font-size: 11px;">—</span>';
+            }
+          }
+        });
       }
       cell.appendChild(input);
       row.appendChild(cell);
