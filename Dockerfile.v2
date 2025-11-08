@@ -7,13 +7,13 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy backend requirements (old version for compatibility)
+# Copy backend requirements (v2 requirements)
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code (wyniki_compat = old backend with new frontend)
-COPY backend/wyniki_compat ./wyniki
-COPY backend/app_compat.py ./app.py
+# Copy backend v2 code
+COPY backend/wyniki_v2 ./wyniki_v2
+COPY backend/app_v2.py ./app.py
 
 # Copy built frontend
 COPY static_v2 ./static
