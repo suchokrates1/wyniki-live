@@ -8,7 +8,7 @@ from flask import Flask
 from prometheus_flask_exporter import PrometheusMetrics
 
 from wyniki_v2.config import logger, settings
-from wyniki_v2.api import courts, admin, health, stream
+from wyniki_v2.api import courts, admin, health, stream, web
 from wyniki_v2.init_state import initialize_state
 
 
@@ -33,6 +33,7 @@ def create_app() -> Flask:
     metrics.info('wyniki_live_v2', 'Tennis Live Scores v2', version='2.0.0')
     
     # Register blueprints
+    app.register_blueprint(web.blueprint)
     app.register_blueprint(courts.blueprint)
     app.register_blueprint(admin.blueprint)
     app.register_blueprint(health.blueprint)
