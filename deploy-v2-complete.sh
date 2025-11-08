@@ -38,10 +38,9 @@ echo -e "${GREEN}✅ Frontend built successfully${NC}"
 # Step 4: Copy backend files
 echo -e "${BLUE}Step 4: Preparing backend...${NC}"
 cd ~/count
-cp -r wyniki backend/wyniki_compat/
-cp app.py backend/app_compat.py
-cp requirements.txt backend/
-echo -e "${GREEN}✅ Backend files prepared${NC}"
+# Note: Dockerfile.v2 already copies backend/wyniki_v2 and backend/requirements.txt
+# No need to copy old compat files
+echo -e "${GREEN}✅ Backend files ready (handled by Dockerfile)${NC}"
 
 # Step 5: Build Docker image
 echo -e "${BLUE}Step 5: Building Docker image...${NC}"
