@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify
 
 from ..services.court_manager import serialize_public_snapshot
 from ..services.history_manager import get_history
-from ..config import loggerger
+from ..config import logger
 
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
 

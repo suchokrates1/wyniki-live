@@ -1,7 +1,7 @@
 """State initialization and loading."""
 from __future__ import annotations
 
-from .config import loggerger, settings
+from .config import logger, settings
 from .database import fetch_courts
 from .services.court_manager import refresh_courts_from_db
 from .services.throttle_manager import set_uno_requests_enabled
