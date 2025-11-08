@@ -101,9 +101,8 @@ def get_courts():
         from ..services import court_manager
         
         courts_data = []
-        for kort_id in court_manager.available_courts():
+        for kort_id, overlay_id in court_manager.available_courts():
             state = court_manager.COURTS.get(kort_id, {})
-            overlay_id = court_manager.COURTS_OVERLAY_MAP.get(kort_id)
             courts_data.append({
                 "kort_id": kort_id,
                 "overlay_id": overlay_id,
