@@ -80,3 +80,4 @@ def step_points(current: str, direction: str = "up") -> str:
         idx = max(idx - 1, 0)
     
     return sequence[idx]
+

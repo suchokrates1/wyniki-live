@@ -4,7 +4,7 @@ import json
 
 from ..services.event_broker import event_broker
 from ..services.court_manager import serialize_public_snapshot
-from ..config import logger
+from ..config import loggerger
 
 blueprint = Blueprint('stream', __name__, url_prefix='/api')
 
@@ -40,3 +40,4 @@ def event_stream():
             'X-Accel-Buffering': 'no'
         }
     )
+

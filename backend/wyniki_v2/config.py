@@ -110,3 +110,4 @@ def setup_logging():
 # Initialize logging
 setup_logging()
 logger = structlog.get_logger()
+

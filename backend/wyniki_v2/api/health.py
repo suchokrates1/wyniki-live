@@ -24,3 +24,4 @@ def health_check():
 def metrics():
     """Prometheus metrics endpoint (handled by prometheus-flask-exporter)."""
     pass
+

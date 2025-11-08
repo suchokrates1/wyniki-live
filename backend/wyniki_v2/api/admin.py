@@ -10,7 +10,7 @@ from ..services.throttle_manager import (
     set_uno_requests_enabled,
 )
 from ..services.uno_queue import get_all_queue_status, clear_queue
-from ..config import logger
+from ..config import loggerger
 
 blueprint = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -103,3 +103,4 @@ def get_courts():
     except Exception as e:
         logger.error(f"Failed to get courts: {e}")
         return jsonify({"error": str(e)}), 500
+

@@ -6,7 +6,7 @@ from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import Any, Deque, Dict, Optional, Tuple
 
-from ..config import log, settings
+from ..config import loggerger, settings
 
 # Throttling state
 UNO_REQUESTS_LOCK = threading.Lock()
@@ -63,7 +63,7 @@ def set_uno_requests_enabled(enabled: bool, reason: Optional[str] = None) -> Non
     with UNO_REQUESTS_LOCK:
         UNO_REQUESTS_ENABLED = enabled
         UNO_AUTO_DISABLED_REASON = reason
-    log.info(f"UNO requests {'enabled' if enabled else 'disabled'}: {reason or 'no reason'}")
+    logger.info(f"UNO requests {'enabled' if enabled else 'disabled'}: {reason or 'no reason'}")
 
 
 def get_uno_auto_disabled_reason() -> Optional[str]:
@@ -98,7 +98,7 @@ def update_uno_config(
         
         config = dict(UNO_POLLING_CONFIG)
     
-    log.info(f"UNO config updated: {config}")
+    logger.info(f"UNO config updated: {config}")
     return config
 
 
@@ -182,7 +182,7 @@ def record_uno_activity_event(timestamp: Optional[str] = None) -> None:
         UNO_ACTIVITY_LAST_CHANGE = datetime.now(timezone.utc)
         UNO_ACTIVITY_LAST_STAGE = 0
     
-    log.debug("UNO activity event recorded")
+    logger.debug("UNO activity event recorded")
 
 
 def get_uno_activity_status() -> Dict[str, Any]:
@@ -228,7 +228,7 @@ def reset_uno_activity_timer(reason: str = "manual") -> Dict[str, Any]:
         UNO_ACTIVITY_LAST_CHANGE = datetime.now(timezone.utc)
         UNO_ACTIVITY_LAST_STAGE = 0
     
-    log.info(f"UNO activity timer reset: {reason}")
+    logger.info(f"UNO activity timer reset: {reason}")
     return get_uno_activity_status()
 
 
@@ -244,7 +244,7 @@ def update_uno_rate_limit(headers: Optional[Dict[str, str]]) -> None:
                 UNO_RATE_LIMIT_INFO["header"] = key
                 UNO_RATE_LIMIT_INFO["raw"] = headers[key]
                 UNO_RATE_LIMIT_INFO["updated"] = datetime.now(timezone.utc).isoformat()
-                log.debug(f"Rate limit header found: {key}={headers[key]}")
+                logger.debug(f"Rate limit header found: {key}={headers[key]}")
                 break
 
 
@@ -252,3 +252,4 @@ def get_uno_rate_limit_info() -> Dict[str, Optional[object]]:
     """Get stored rate limit information."""
     with UNO_RATE_LIMIT_LOCK:
         return dict(UNO_RATE_LIMIT_INFO)
+

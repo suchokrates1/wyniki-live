@@ -150,3 +150,4 @@ class ErrorResponse(BaseModel):
     error: str
     message: str
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "+00:00")
+

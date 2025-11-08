@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
-from ..config import log
+from ..config import logger
 from .court_manager import STATE_LOCK
 
 POINT_SEQUENCE = ["0", "15", "30", "40", "ADV"]
@@ -48,7 +48,7 @@ def maybe_start_match(state: Dict[str, Any]) -> None:
         if match_time.get("auto_resume", True):
             match_time["running"] = True
             match_time["resume_ts"] = datetime.now(timezone.utc).isoformat()
-        log.info(f"Match started: {a_name} vs {b_name}")
+        logger.info(f"Match started: {a_name} vs {b_name}")
 
 
 def update_match_timer(state: Dict[str, Any]) -> None:
@@ -69,7 +69,7 @@ def update_match_timer(state: Dict[str, Any]) -> None:
         elapsed = (now - resumed).total_seconds()
         match_time["seconds"] = match_time.get("offset_seconds", 0) + int(elapsed)
     except Exception as e:
-        log.warning(f"Failed to update match timer: {e}")
+        logger.warning(f"Failed to update match timer: {e}")
 
 
 def stop_match_timer(state: Dict[str, Any]) -> None:
@@ -77,7 +77,7 @@ def stop_match_timer(state: Dict[str, Any]) -> None:
     match_time, _ = ensure_match_struct(state)
     match_time["running"] = False
     match_time["finished_ts"] = datetime.now(timezone.utc).isoformat()
-    log.debug("Match timer stopped")
+    logger.debug("Match timer stopped")
 
 
 def pause_match_timer(state: Dict[str, Any], *, manual: bool = False) -> None:
@@ -89,7 +89,7 @@ def pause_match_timer(state: Dict[str, Any], *, manual: bool = False) -> None:
         match_time["offset_seconds"] = match_time.get("seconds", 0)
         match_time["running"] = False
         match_time["resume_ts"] = None
-        log.debug(f"Match timer paused (manual={manual})")
+        logger.debug(f"Match timer paused (manual={manual})")
 
 
 def reset_tie_and_points(state: Dict[str, Any]) -> None:
@@ -173,7 +173,7 @@ def finalize_match_if_needed(kort_id: str, state: Dict[str, Any], wins: Optional
         match_status["last_completed"] = datetime.now(timezone.utc).isoformat()
         
         winner = "A" if wins["A"] >= 2 else "B"
-        log.info(f"Match completed on court {kort_id}: {winner} wins {wins[winner]}-{wins['A' if winner == 'B' else 'B']}")
+        logger.info(f"Match completed on court {kort_id}: {winner} wins {wins[winner]}-{wins['A' if winner == 'B' else 'B']}")
         
         # Create history entry
         from .history_manager import add_match_to_history
@@ -222,7 +222,7 @@ def reset_after_match(state: Dict[str, Any]) -> None:
         "active": False,
         "last_completed": None,
     }
-    log.info("Court reset after match")
+    logger.info("Court reset after match")
 
 
 def handle_match_flow(kort_id: Optional[str], state: Dict[str, Any]) -> None:
@@ -231,3 +231,4 @@ def handle_match_flow(kort_id: Optional[str], state: Dict[str, Any]) -> None:
         maybe_start_match(state)
         wins = maybe_update_current_set_indicator(state)
         finalize_match_if_needed(kort_id or "unknown", state, wins)
+

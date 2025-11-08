@@ -5,7 +5,7 @@ import threading
 from collections import OrderedDict, deque
 from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 
-from ..config import settings, log
+from ..config import settings, logger
 
 
 # Thread-safe state storage
@@ -153,7 +153,7 @@ def refresh_courts_from_db(db_courts: Dict[str, Optional[str]], seed_if_empty: b
         removed = [k for k in COURTS if k not in db_courts]
         for k in removed:
             del COURTS[k]
-            log.info(f"Removed court {k} from memory")
+            logger.info(f"Removed court {k} from memory")
         
         # Resize log if needed
         max_size = len(COURTS) * settings.log_entries_per_court
@@ -189,3 +189,4 @@ def serialize_public_snapshot() -> Dict[str, Any]:
     """Get public snapshot of all courts."""
     with STATE_LOCK:
         return {kort_id: serialize_public_court_state(state) for kort_id, state in COURTS.items()}
+
