@@ -4,13 +4,27 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Panel administracyjny</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎾</text></svg>">
+    <meta name="theme-color" content="#4CAF50">
+    
     <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/toast.css" />
+    <link rel="stylesheet" href="/static/modal.css" />
+    <script src="/static/js/toast.js"></script>
+    <script src="/static/js/modal.js"></script>
     <script src="/static/js/admin.js" defer></script>
   </head>
   <body
     data-authenticated="{{ 'true' if is_authenticated else 'false' }}"
     data-admin-enabled="{{ 'true' if admin_enabled else 'false' }}"
   >
+    <!-- Dark Mode Toggle -->
+    <button id="dark-mode-toggle" class="dark-mode-toggle" aria-label="Przełącz tryb ciemny" title="Przełącz tryb ciemny">
+      <span class="dark-mode-toggle__icon">🌙</span>
+    </button>
+    
     <main class="container">
       <h1>Panel administracyjny</h1>
       <div id="admin-feedback" class="feedback" role="alert" aria-live="polite"></div>
@@ -37,11 +51,24 @@
         </form>
       </section>
 
+      <!-- Dashboard Section -->
+      <section id="dashboard-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
+        <header class="section-header">
+          <h2>Dashboard Kortów</h2>
+          <div class="section-actions">
+            <button id="dashboard-refresh" type="button" data-tooltip="Odśwież widok kortów">🔄 Odśwież</button>
+          </div>
+        </header>
+        <div id="courts-grid" class="courts-grid">
+          <!-- Courts will be dynamically inserted here -->
+        </div>
+      </section>
+
       <section id="stream-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
         <header class="section-header">
           <h2>Transmisja YouTube</h2>
           <div class="section-actions">
-            <button id="refresh-viewers" type="button">Odśwież widzów</button>
+            <button id="refresh-viewers" type="button" data-tooltip="Pobierz aktualną liczbę widzów">Odśwież widzów</button>
           </div>
         </header>
         <form id="youtube-config-form" class="youtube-config-form">
@@ -72,10 +99,11 @@
             <div class="system-card__header">
               <label class="toggle">
                 <input id="uno-requests-toggle" type="checkbox" />
+                <span class="toggle-switch"></span>
                 <span>Wysyłaj zapytania do UNO</span>
               </label>
               <div class="system-card__actions">
-                <button id="uno-activity-reset" type="button" class="button-secondary">Stan normalny</button>
+                <button id="uno-activity-reset" type="button" class="button-secondary" data-tooltip="Przywróć normalny tryb zapytań UNO">Stan normalny</button>
               </div>
             </div>
             <p id="uno-toggle-status" class="system-note">
@@ -140,6 +168,7 @@
         <div class="system-toggle">
           <label class="toggle">
             <input id="plugin-toggle" type="checkbox" />
+            <span class="toggle-switch"></span>
             <span>Używaj wtyczki</span>
           </label>
           <p id="plugin-toggle-status" class="system-note">
@@ -152,7 +181,7 @@
         <header class="section-header">
           <h2>Listy zawodników</h2>
           <div class="section-actions">
-            <button id="refresh-players" type="button">Odśwież</button>
+            <button id="refresh-players" type="button" data-tooltip="Odśwież listę graczy z serwera">Odśwież</button>
           </div>
         </header>
         <form id="player-form" class="player-form">
@@ -198,14 +227,40 @@
           <p class="player-import-note">Format: Imię Nazwisko kod_kraju (np. Jan Kowalski PL).</p>
         </form>
         <datalist id="flag-code-options"></datalist>
+        
+        <!-- Search/Filter -->
+        <div class="table-controls">
+          <input 
+            type="search" 
+            id="players-search" 
+            class="search-input" 
+            placeholder="🔍 Szukaj gracza (nazwa, lista, grupa)..."
+            aria-label="Szukaj graczy"
+          />
+          <select id="players-filter-group" class="filter-select" aria-label="Filtruj po grupie">
+            <option value="">Wszystkie grupy</option>
+            <option value="B1">B1</option>
+            <option value="B2">B2</option>
+            <option value="B3">B3</option>
+            <option value="B4">B4</option>
+          </select>
+          <button id="players-clear-filters" class="button-secondary" type="button">Wyczyść filtry</button>
+        </div>
+        
         <div class="players-table-wrapper">
           <table class="players-table">
             <thead>
               <tr>
                 <th style="width: 48px;">Flaga</th>
-                <th>Imię i nazwisko</th>
-                <th>Lista</th>
-                <th>Grupa</th>
+                <th class="sortable" data-sort="name">
+                  Imię i nazwisko <span class="sort-icon">⇅</span>
+                </th>
+                <th class="sortable" data-sort="list">
+                  Lista <span class="sort-icon">⇅</span>
+                </th>
+                <th class="sortable" data-sort="group">
+                  Grupa <span class="sort-icon">⇅</span>
+                </th>
                 <th>Kod kraju</th>
                 <th>URL flagi</th>
                 <th>Akcje</th>

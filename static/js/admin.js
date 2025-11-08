@@ -1,5 +1,49 @@
 'use strict';
 
+// ========================================
+// Dark Mode
+// ========================================
+(function initDarkMode() {
+  const savedTheme = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
+  // Set initial theme
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  } else if (prefersDark) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+  
+  // Toggle button
+  const toggle = document.getElementById('dark-mode-toggle');
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const newTheme = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      
+      // Update icon
+      const icon = toggle.querySelector('.dark-mode-toggle__icon');
+      if (icon) {
+        icon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+      }
+      
+      // Toast notification
+      if (typeof window.showToast === 'function') {
+        window.showToast('info', 'Tryb zmieniony', `Włączono tryb ${newTheme === 'dark' ? 'ciemny' : 'jasny'}`);
+      }
+    });
+    
+    // Set initial icon
+    const icon = toggle.querySelector('.dark-mode-toggle__icon');
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    if (icon) {
+      icon.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+    }
+  }
+})();
+
 (function () {
   const configElement = document.getElementById('admin-initial-data');
   const feedbackElement = document.getElementById('admin-feedback');
@@ -118,6 +162,18 @@
   ];
 
   function setFeedback(message, type = 'info') {
+    // Use toast notifications if available
+    if (typeof window.showToast === 'function' && message) {
+      const titles = {
+        success: 'Sukces',
+        error: 'Błąd',
+        warning: 'Uwaga',
+        info: 'Informacja'
+      };
+      window.showToast(type, titles[type] || titles.info, message);
+    }
+    
+    // Also update old feedback element for compatibility
     if (!feedbackElement) {
       return;
     }
@@ -1567,9 +1623,23 @@
       setFeedback('Nie udało się odczytać identyfikatora kortu.', 'error');
       return;
     }
-    if (!window.confirm(`Czy na pewno wyzerować stan kortu ${kortId}?`)) {
+    
+    // Use new modal if available, fallback to window.confirm
+    let confirmed = false;
+    if (typeof window.showConfirmDialog === 'function') {
+      confirmed = await window.showConfirmDialog(
+        'Zresetować kort?',
+        `Czy na pewno wyzerować stan kortu ${kortId}? Ta akcja jest nieodwracalna.`,
+        { confirmText: 'Resetuj', cancelText: 'Anuluj', danger: true }
+      );
+    } else {
+      confirmed = window.confirm(`Czy na pewno wyzerować stan kortu ${kortId}?`);
+    }
+    
+    if (!confirmed) {
       return;
     }
+    
     try {
       const data = await requestJson(`/api/admin/courts/${encodeURIComponent(kortId)}/reset`, {
         method: 'POST'
@@ -1587,9 +1657,23 @@
       setFeedback('Nie udało się odczytać identyfikatora rekordu.', 'error');
       return;
     }
-    if (!window.confirm('Czy na pewno usunąć ten rekord?')) {
+    
+    // Use new modal if available
+    let confirmed = false;
+    if (typeof window.showConfirmDialog === 'function') {
+      confirmed = await window.showConfirmDialog(
+        'Usunąć rekord?',
+        'Czy na pewno usunąć ten rekord z historii? Ta akcja jest nieodwracalna.',
+        { confirmText: 'Usuń', cancelText: 'Anuluj', danger: true }
+      );
+    } else {
+      confirmed = window.confirm('Czy na pewno usunąć ten rekord?');
+    }
+    
+    if (!confirmed) {
       return;
     }
+    
     try {
       await requestJson(`/api/admin/history/${entryId}`, { method: 'DELETE' });
       row.remove();
@@ -1710,11 +1794,24 @@
     if (Boolean(initialConfig.is_authenticated)) {
       renderCourts(initialCourts);
       renderPlayers(initialPlayers);
+      renderDashboard(initialCourts);
       loadYoutubeConfig().catch((error) => {
         if (error && error.message) {
           setFeedback(error.message, 'error');
         }
       });
+      
+      // Auto-refresh dashboard every 2 seconds
+      setInterval(async () => {
+        try {
+          const courts = await requestJson('/api/courts', { method: 'GET' });
+          if (Array.isArray(courts)) {
+            renderDashboard(courts);
+          }
+        } catch (error) {
+          console.warn('Dashboard auto-refresh failed:', error);
+        }
+      }, 2000);
       
       // Auto-refresh UNO limits every 2 seconds
       setInterval(async () => {
@@ -1741,4 +1838,338 @@
       }, 2000);
     }
   }
+
+  // ========================================
+  // Dashboard Functions
+  // ========================================
+  
+  function renderDashboard(courts) {
+    const grid = document.getElementById('courts-grid');
+    if (!grid) return;
+    
+    grid.innerHTML = '';
+    
+    courts.forEach(court => {
+      const card = createCourtCard(court);
+      grid.appendChild(card);
+    });
+  }
+  
+  function createCourtCard(court) {
+    const card = document.createElement('div');
+    const isActive = court.status?.active || false;
+    const playerA = court.A || {};
+    const playerB = court.B || {};
+    const isEmpty = !playerA.surname || playerA.surname === '-';
+    
+    let statusClass = 'empty';
+    let statusText = 'Pusty';
+    
+    if (isActive) {
+      statusClass = 'active';
+      statusText = 'Aktywny';
+    } else if (!isEmpty) {
+      statusClass = 'finished';
+      statusText = 'Zakończony';
+    }
+    
+    card.className = `court-card court-card--${statusClass}`;
+    card.innerHTML = `
+      <div class="court-card__header">
+        <h3 class="court-card__title">Kort ${court.id}</h3>
+        <span class="court-card__status court-card__status--${statusClass}">
+          ${statusText}
+        </span>
+      </div>
+      ${isEmpty ? `
+        <div class="court-card__empty-state">
+          <div class="court-card__empty-icon">🎾</div>
+          <p class="court-card__empty-text">Brak aktywnego meczu</p>
+        </div>
+      ` : `
+        <div class="court-card__match">
+          <div class="court-card__player">
+            ${playerA.flag_url ? `<img src="${playerA.flag_url}" alt="" class="court-card__flag">` : ''}
+            <span class="court-card__name">${playerA.surname || '-'}</span>
+            <div class="court-card__score">
+              <span class="court-card__set">${playerA.set1 || 0}</span>
+              <span class="court-card__set">${playerA.set2 || 0}</span>
+              ${playerA.set3 ? `<span class="court-card__set">${playerA.set3}</span>` : ''}
+            </div>
+          </div>
+          <div class="court-card__player">
+            ${playerB.flag_url ? `<img src="${playerB.flag_url}" alt="" class="court-card__flag">` : ''}
+            <span class="court-card__name">${playerB.surname || '-'}</span>
+            <div class="court-card__score">
+              <span class="court-card__set">${playerB.set1 || 0}</span>
+              <span class="court-card__set">${playerB.set2 || 0}</span>
+              ${playerB.set3 ? `<span class="court-card__set">${playerB.set3}</span>` : ''}
+            </div>
+          </div>
+          ${isActive && (playerA.points || playerB.points) ? `
+            <div class="court-card__points">
+              ${playerA.points || '0'} : ${playerB.points || '0'}
+            </div>
+          ` : ''}
+          ${court.match_time?.seconds ? `
+            <div class="court-card__time">
+              ⏱️ ${formatMatchTime(court.match_time.seconds)}
+            </div>
+          ` : ''}
+        </div>
+      `}
+      <div class="court-card__actions">
+        <button class="court-card__action" data-action="view" data-court="${court.id}">
+          👁️ Zobacz
+        </button>
+        ${isActive ? `
+          <button class="court-card__action court-card__action--danger" data-action="reset" data-court="${court.id}">
+            🔄 Reset
+          </button>
+        ` : ''}
+      </div>
+    `;
+    
+    // Add event listeners
+    const viewBtn = card.querySelector('[data-action="view"]');
+    const resetBtn = card.querySelector('[data-action="reset"]');
+    
+    if (viewBtn) {
+      viewBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.open(`/?kort=${court.id}`, '_blank');
+      });
+    }
+    
+    if (resetBtn) {
+      resetBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await resetCourtState(court.id);
+        // Refresh dashboard
+        const courts = await requestJson('/api/courts', { method: 'GET' });
+        if (Array.isArray(courts)) {
+          renderDashboard(courts);
+        }
+      });
+    }
+    
+    return card;
+  }
+  
+  function formatMatchTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  }
+  
+  // Dashboard refresh button
+  const dashboardRefreshBtn = document.getElementById('dashboard-refresh');
+  if (dashboardRefreshBtn) {
+    dashboardRefreshBtn.addEventListener('click', async () => {
+      try {
+        const courts = await requestJson('/api/courts', { method: 'GET' });
+        if (Array.isArray(courts)) {
+          renderDashboard(courts);
+          if (typeof window.showToast === 'function') {
+            window.showToast('success', 'Odświeżono', 'Dashboard zaktualizowany');
+          }
+        }
+      } catch (error) {
+        setFeedback(error.message, 'error');
+      }
+    });
+  }
+  
+  // ========================================
+  // Keyboard Shortcuts
+  // ========================================
+  
+  const shortcuts = {
+    'ctrl+1': () => window.open('/?kort=1', '_blank'),
+    'ctrl+2': () => window.open('/?kort=2', '_blank'),
+    'ctrl+3': () => window.open('/?kort=3', '_blank'),
+    'ctrl+4': () => window.open('/?kort=4', '_blank'),
+    'ctrl+d': () => {
+      const dashboardSection = document.getElementById('dashboard-section');
+      if (dashboardSection) {
+        dashboardSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    },
+    '?': () => showKeyboardHelp()
+  };
+  
+  document.addEventListener('keydown', (e) => {
+    // Ignore if typing in input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      return;
+    }
+    
+    const key = [];
+    if (e.ctrlKey) key.push('ctrl');
+    if (e.altKey) key.push('alt');
+    if (e.shiftKey && e.key !== 'Shift') key.push('shift');
+    key.push(e.key.toLowerCase());
+    
+    const combo = key.join('+');
+    const handler = shortcuts[combo];
+    
+    if (handler) {
+      e.preventDefault();
+      handler();
+    }
+  });
+  
+  function showKeyboardHelp() {
+    const helpText = `
+      <strong>Skróty klawiszowe:</strong><br><br>
+      <code>Ctrl+1/2/3/4</code> → Otwórz kort w nowej karcie<br>
+      <code>Ctrl+D</code> → Przejdź do dashboardu<br>
+      <code>?</code> → Pokaż tę pomoc<br>
+      <code>Esc</code> → Zamknij modały
+    `;
+    
+    if (typeof window.showToast === 'function') {
+      window.showToast('info', 'Skróty klawiszowe', helpText.replace(/<br>/g, '\n').replace(/<[^>]*>/g, ''), 8000);
+    } else {
+      alert(helpText.replace(/<br>/g, '\n').replace(/<[^>]*>/g, ''));
+    }
+  }
+  
+  // Show help on first visit
+  if (!localStorage.getItem('shortcuts-help-shown')) {
+    setTimeout(() => {
+      if (typeof window.showToast === 'function') {
+        window.showToast('info', 'Wskazówka', 'Naciśnij ? aby zobaczyć skróty klawiszowe', 6000);
+      }
+      localStorage.setItem('shortcuts-help-shown', 'true');
+    }, 2000);
+  }
+  
+  // ========================================
+  // Players Table Search & Sort
+  // ========================================
+  
+  const playersSearchInput = document.getElementById('players-search');
+  const playersFilterGroup = document.getElementById('players-filter-group');
+  const playersClearFilters = document.getElementById('players-clear-filters');
+  const playersTable = document.getElementById('players-rows');
+  
+  let sortState = { column: null, direction: 'asc' };
+  
+  function filterPlayers() {
+    if (!playersTable) return;
+    
+    const searchTerm = playersSearchInput?.value.toLowerCase() || '';
+    const groupFilter = playersFilterGroup?.value || '';
+    
+    const rows = playersTable.querySelectorAll('tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+      const name = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+      const list = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+      const group = row.querySelector('td:nth-child(4)')?.textContent || '';
+      
+      const matchesSearch = !searchTerm || 
+        name.includes(searchTerm) || 
+        list.includes(searchTerm) || 
+        group.toLowerCase().includes(searchTerm);
+      
+      const matchesGroup = !groupFilter || group === groupFilter;
+      
+      if (matchesSearch && matchesGroup) {
+        row.classList.remove('filtered-out');
+        visibleCount++;
+      } else {
+        row.classList.add('filtered-out');
+      }
+    });
+    
+    // Show count in search placeholder
+    if (playersSearchInput) {
+      const total = rows.length;
+      if (searchTerm || groupFilter) {
+        playersSearchInput.placeholder = `🔍 Pokazano ${visibleCount}/${total} graczy`;
+      } else {
+        playersSearchInput.placeholder = '🔍 Szukaj gracza (nazwa, lista, grupa)...';
+      }
+    }
+  }
+  
+  function sortPlayers(column) {
+    if (!playersTable) return;
+    
+    // Toggle direction if same column
+    if (sortState.column === column) {
+      sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortState.column = column;
+      sortState.direction = 'asc';
+    }
+    
+    const rows = Array.from(playersTable.querySelectorAll('tr'));
+    
+    const columnIndex = {
+      'name': 1,
+      'list': 2,
+      'group': 3
+    }[column];
+    
+    rows.sort((a, b) => {
+      const aText = a.querySelector(`td:nth-child(${columnIndex + 1})`)?.textContent || '';
+      const bText = b.querySelector(`td:nth-child(${columnIndex + 1})`)?.textContent || '';
+      
+      const compare = aText.localeCompare(bText, 'pl', { numeric: true });
+      return sortState.direction === 'asc' ? compare : -compare;
+    });
+    
+    rows.forEach(row => playersTable.appendChild(row));
+    
+    // Update header icons
+    document.querySelectorAll('.sortable').forEach(th => {
+      th.classList.remove('sorted-asc', 'sorted-desc');
+      if (th.dataset.sort === column) {
+        th.classList.add(`sorted-${sortState.direction}`);
+      }
+    });
+    
+    if (typeof window.showToast === 'function') {
+      window.showToast('info', 'Sortowanie', `Posortowano po: ${column} (${sortState.direction === 'asc' ? '↑' : '↓'})`, 2000);
+    }
+  }
+  
+  // Event listeners
+  if (playersSearchInput) {
+    playersSearchInput.addEventListener('input', filterPlayers);
+  }
+  
+  if (playersFilterGroup) {
+    playersFilterGroup.addEventListener('change', filterPlayers);
+  }
+  
+  if (playersClearFilters) {
+    playersClearFilters.addEventListener('click', () => {
+      if (playersSearchInput) playersSearchInput.value = '';
+      if (playersFilterGroup) playersFilterGroup.value = '';
+      filterPlayers();
+      if (typeof window.showToast === 'function') {
+        window.showToast('info', 'Filtry wyczyszczone', '');
+      }
+    });
+  }
+  
+  // Sortable headers
+  document.querySelectorAll('.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const column = th.dataset.sort;
+      if (column) {
+        sortPlayers(column);
+      }
+    });
+  });
 })();
+
