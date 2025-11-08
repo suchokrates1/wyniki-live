@@ -23,6 +23,7 @@ def admin():
 
 @blueprint.route('/embed')
 @blueprint.route('/embed.html')
-def embed():
-    """Serve embed page."""
+@blueprint.route('/embed/<lang>/<int:court>')
+def embed(lang=None, court=None):
+    """Serve embed page with optional language and court parameters."""
     return send_from_directory(APP_ROOT, 'embed.html')
