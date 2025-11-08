@@ -122,13 +122,13 @@ def main():
     """Main monitoring loop."""
     print("🚀 Starting UNO Request Monitor")
     print("📝 Monitoring production server (wyniki-tenis container)")
-    print("⏱️  Duration: 30 minutes")
+    print("⏱️  Duration: 60 minutes")
     print("🔄 Sample interval: 60 seconds")
     print(f"🕐 Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("\nPress Ctrl+C to stop early\n")
     
     start_time = time.time()
-    duration_minutes = 30
+    duration_minutes = 60
     sample_interval = 60  # seconds
     
     cumulative_stats = {
