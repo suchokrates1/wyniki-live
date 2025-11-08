@@ -12,6 +12,12 @@ Alpine.data('adminApp', () => ({
   unoCourtStatus: {},
   courts: [],
   history: [],
+  tournaments: [],
+  selectedTournament: null,
+  players: [],
+  newTournament: { name: '', start_date: '', end_date: '' },
+  newPlayer: { name: '', category: '', country: '' },
+  importText: '',
   toast: { show: false, message: '', type: 'info' },
 
   async init() {
@@ -19,6 +25,7 @@ Alpine.data('adminApp', () => ({
     await this.loadUnoStatus()
     await this.loadCourts()
     await this.loadHistory()
+    await this.loadTournaments()
     
     // Refresh UNO status every 10s
     setInterval(() => this.loadUnoStatus(), 10000)
@@ -191,6 +198,186 @@ Alpine.data('adminApp', () => ({
     if (!isoString) return '-'
     const date = new Date(isoString)
     return date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+  },
+
+  // ==================== TOURNAMENTS ====================
+
+  async loadTournaments() {
+    try {
+      const res = await fetch('/admin/api/tournaments')
+      if (res.ok) {
+        this.tournaments = await res.json()
+        // Load active tournament players
+        const activeTournament = this.tournaments.find(t => t.active)
+        if (activeTournament) {
+          this.selectedTournament = activeTournament.id
+          await this.loadPlayers(activeTournament.id)
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load tournaments:', e)
+    }
+  },
+
+  async createTournament() {
+    if (!this.newTournament.name || !this.newTournament.start_date || !this.newTournament.end_date) {
+      this.showToast('Wypełnij wszystkie pola', 'warning')
+      return
+    }
+
+    try {
+      const res = await fetch('/admin/api/tournaments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.newTournament)
+      })
+
+      if (res.ok) {
+        this.showToast('Turniej utworzony', 'success')
+        this.newTournament = { name: '', start_date: '', end_date: '' }
+        await this.loadTournaments()
+      } else {
+        this.showToast('Błąd tworzenia turnieju', 'error')
+      }
+    } catch (e) {
+      this.showToast('Błąd połączenia', 'error')
+    }
+  },
+
+  async deleteTournament(tournamentId) {
+    if (!confirm('Czy na pewno usunąć ten turniej? Zostaną usunięci wszyscy gracze!')) return
+
+    try {
+      const res = await fetch(`/admin/api/tournaments/${tournamentId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        this.showToast('Turniej usunięty', 'success')
+        await this.loadTournaments()
+      } else {
+        this.showToast('Błąd usuwania turnieju', 'error')
+      }
+    } catch (e) {
+      this.showToast('Błąd połączenia', 'error')
+    }
+  },
+
+  async activateTournament(tournamentId) {
+    try {
+      const res = await fetch(`/admin/api/tournaments/${tournamentId}/activate`, {
+        method: 'POST'
+      })
+
+      if (res.ok) {
+        this.showToast('Turniej aktywowany', 'success')
+        await this.loadTournaments()
+      } else {
+        this.showToast('Błąd aktywacji turnieju', 'error')
+      }
+    } catch (e) {
+      this.showToast('Błąd połączenia', 'error')
+    }
+  },
+
+  async selectTournament(tournamentId) {
+    this.selectedTournament = tournamentId
+    await this.loadPlayers(tournamentId)
+  },
+
+  // ==================== PLAYERS ====================
+
+  async loadPlayers(tournamentId) {
+    if (!tournamentId) return
+
+    try {
+      const res = await fetch(`/admin/api/tournaments/${tournamentId}/players`)
+      if (res.ok) {
+        this.players = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to load players:', e)
+    }
+  },
+
+  async addPlayer() {
+    if (!this.selectedTournament) {
+      this.showToast('Wybierz turniej', 'warning')
+      return
+    }
+
+    if (!this.newPlayer.name) {
+      this.showToast('Podaj imię i nazwisko gracza', 'warning')
+      return
+    }
+
+    try {
+      const res = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.newPlayer)
+      })
+
+      if (res.ok) {
+        this.showToast('Gracz dodany', 'success')
+        this.newPlayer = { name: '', category: '', country: '' }
+        await this.loadPlayers(this.selectedTournament)
+      } else {
+        this.showToast('Błąd dodawania gracza', 'error')
+      }
+    } catch (e) {
+      this.showToast('Błąd połączenia', 'error')
+    }
+  },
+
+  async deletePlayer(playerId) {
+    if (!confirm('Czy na pewno usunąć tego gracza?')) return
+
+    try {
+      const res = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/${playerId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        this.showToast('Gracz usunięty', 'success')
+        await this.loadPlayers(this.selectedTournament)
+      } else {
+        this.showToast('Błąd usuwania gracza', 'error')
+      }
+    } catch (e) {
+      this.showToast('Błąd połączenia', 'error')
+    }
+  },
+
+  async importPlayers() {
+    if (!this.selectedTournament) {
+      this.showToast('Wybierz turniej', 'warning')
+      return
+    }
+
+    if (!this.importText.trim()) {
+      this.showToast('Wklej listę graczy', 'warning')
+      return
+    }
+
+    try {
+      const res = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: this.importText })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        this.showToast(data.message, 'success')
+        this.importText = ''
+        await this.loadPlayers(this.selectedTournament)
+      } else {
+        this.showToast('Błąd importu graczy', 'error')
+      }
+    } catch (e) {
+      this.showToast('Błąd połączenia', 'error')
+    }
   },
 
   showToast(message, type = 'info') {

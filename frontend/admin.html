@@ -15,6 +15,7 @@
         <div class="flex gap-2">
           <button @click="activeTab = 'uno'" :class="{'btn-primary': activeTab === 'uno'}" class="btn btn-sm">UNO Throttling</button>
           <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
+          <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
           <button @click="activeTab = 'history'" :class="{'btn-primary': activeTab === 'history'}" class="btn btn-sm">Historia</button>
         </div>
       </div>
@@ -150,6 +151,158 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Tournaments Tab -->
+    <div x-show="activeTab === 'tournaments'" x-cloak>
+      
+      <!-- Add Tournament Form -->
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <h2 class="card-title">Dodaj nowy turniej</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="form-control">
+              <label class="label"><span class="label-text">Nazwa turnieju</span></label>
+              <input type="text" x-model="newTournament.name" class="input input-bordered" placeholder="np. IPC Włochy 2025">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Data rozpoczęcia</span></label>
+              <input type="date" x-model="newTournament.start_date" class="input input-bordered">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Data zakończenia</span></label>
+              <input type="date" x-model="newTournament.end_date" class="input input-bordered">
+            </div>
+          </div>
+
+          <div class="card-actions justify-end mt-4">
+            <button @click="createTournament()" class="btn btn-primary">Utwórz turniej</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tournaments List -->
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <h2 class="card-title">Lista turniejów</h2>
+          
+          <div class="overflow-x-auto">
+            <table class="table table-zebra">
+              <thead>
+                <tr>
+                  <th>Nazwa</th>
+                  <th>Rozpoczęcie</th>
+                  <th>Zakończenie</th>
+                  <th>Status</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="tournament in tournaments" :key="tournament.id">
+                  <tr :class="{'bg-success bg-opacity-10': tournament.active}">
+                    <td>
+                      <span class="font-semibold" x-text="tournament.name"></span>
+                      <span v-if="tournament.active" class="badge badge-success badge-sm ml-2">Aktywny</span>
+                    </td>
+                    <td x-text="tournament.start_date"></td>
+                    <td x-text="tournament.end_date"></td>
+                    <td>
+                      <span v-if="!tournament.active" @click="activateTournament(tournament.id)" class="badge badge-ghost badge-sm cursor-pointer hover:badge-primary">Ustaw aktywny</span>
+                    </td>
+                    <td class="flex gap-2">
+                      <button @click="selectTournament(tournament.id)" class="btn btn-xs btn-ghost">📋 Gracze</button>
+                      <button @click="deleteTournament(tournament.id)" class="btn btn-xs btn-error">Usuń</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert alert-info mt-4" x-show="tournaments.length === 0">
+            <span>Brak turniejów. Dodaj pierwszy turniej powyżej.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Players Management -->
+      <div class="card bg-base-100 shadow-xl" x-show="selectedTournament">
+        <div class="card-body">
+          <h2 class="card-title">Gracze w turnieju</h2>
+          
+          <!-- Add Player Form -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div class="form-control">
+              <label class="label"><span class="label-text">Imię i nazwisko</span></label>
+              <input type="text" x-model="newPlayer.name" class="input input-bordered input-sm" placeholder="Jan Kowalski">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Kategoria</span></label>
+              <input type="text" x-model="newPlayer.category" class="input input-bordered input-sm" placeholder="B1">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Kraj</span></label>
+              <input type="text" x-model="newPlayer.country" class="input input-bordered input-sm" placeholder="pl" maxlength="2">
+            </div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">&nbsp;</span></label>
+              <button @click="addPlayer()" class="btn btn-primary btn-sm">Dodaj gracza</button>
+            </div>
+          </div>
+
+          <!-- Bulk Import -->
+          <div class="collapse collapse-arrow bg-base-200 mb-4">
+            <input type="checkbox" />
+            <div class="collapse-title font-medium">
+              📥 Import graczy z pliku tekstowego
+            </div>
+            <div class="collapse-content">
+              <p class="text-sm mb-2">Format: <code>Imię Nazwisko Kategoria Kraj</code> (jeden gracz na linię)</p>
+              <textarea x-model="importText" class="textarea textarea-bordered w-full" rows="6" placeholder="John Doe B1 us&#10;Jane Smith B2 ca&#10;..."></textarea>
+              <button @click="importPlayers()" class="btn btn-primary btn-sm mt-2">Importuj graczy</button>
+            </div>
+          </div>
+
+          <!-- Players Table -->
+          <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm">
+              <thead>
+                <tr>
+                  <th>Imię i nazwisko</th>
+                  <th>Kategoria</th>
+                  <th>Kraj</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="player in players" :key="player.id">
+                  <tr>
+                    <td x-text="player.name"></td>
+                    <td><span class="badge badge-sm" x-text="player.category"></span></td>
+                    <td x-text="player.country"></td>
+                    <td>
+                      <button @click="deletePlayer(player.id)" class="btn btn-xs btn-error">Usuń</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert alert-info mt-4" x-show="players.length === 0">
+            <span>Brak graczy w tym turnieju</span>
+          </div>
+
+          <div class="stats stats-vertical lg:stats-horizontal shadow mt-4">
+            <div class="stat">
+              <div class="stat-title">Liczba graczy</div>
+              <div class="stat-value" x-text="players.length"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- History Tab -->
