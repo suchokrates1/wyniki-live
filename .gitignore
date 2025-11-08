@@ -58,7 +58,6 @@ frontend/.vite/
 # Backend v2
 backend/wyniki_compat/
 backend/__pycache__/
-backend/requirements.txt
 
 # Virtual environments
 venv/
