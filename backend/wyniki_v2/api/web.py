@@ -14,12 +14,14 @@ def index():
     return send_from_directory(APP_ROOT, 'index.html')
 
 
+@blueprint.route('/admin')
 @blueprint.route('/admin.html')
 def admin():
     """Serve admin page."""
     return send_from_directory(APP_ROOT, 'admin.html')
 
 
+@blueprint.route('/embed')
 @blueprint.route('/embed.html')
 def embed():
     """Serve embed page."""
