@@ -18,6 +18,8 @@ Alpine.data('adminApp', () => ({
   newTournament: { name: '', start_date: '', end_date: '' },
   newPlayer: { name: '', category: '', country: '' },
   importText: '',
+  playerSearchQuery: '',
+  loading: { tournaments: false, players: false, courts: false, history: false },
   toast: { show: false, message: '', type: 'info' },
 
   async init() {
@@ -203,6 +205,7 @@ Alpine.data('adminApp', () => ({
   // ==================== TOURNAMENTS ====================
 
   async loadTournaments() {
+    this.loading.tournaments = true
     try {
       const res = await fetch('/admin/api/tournaments')
       if (res.ok) {
@@ -216,12 +219,20 @@ Alpine.data('adminApp', () => ({
       }
     } catch (e) {
       console.error('Failed to load tournaments:', e)
+    } finally {
+      this.loading.tournaments = false
     }
   },
 
   async createTournament() {
     if (!this.newTournament.name || !this.newTournament.start_date || !this.newTournament.end_date) {
       this.showToast('Wypełnij wszystkie pola', 'warning')
+      return
+    }
+
+    // Validate dates: start_date must be before end_date
+    if (new Date(this.newTournament.start_date) >= new Date(this.newTournament.end_date)) {
+      this.showToast('Data rozpoczęcia musi być wcześniej niż data zakończenia', 'warning')
       return
     }
 
@@ -290,6 +301,7 @@ Alpine.data('adminApp', () => ({
   async loadPlayers(tournamentId) {
     if (!tournamentId) return
 
+    this.loading.players = true
     try {
       const res = await fetch(`/admin/api/tournaments/${tournamentId}/players`)
       if (res.ok) {
@@ -297,6 +309,8 @@ Alpine.data('adminApp', () => ({
       }
     } catch (e) {
       console.error('Failed to load players:', e)
+    } finally {
+      this.loading.players = false
     }
   },
 
@@ -378,6 +392,51 @@ Alpine.data('adminApp', () => ({
     } catch (e) {
       this.showToast('Błąd połączenia', 'error')
     }
+  },
+
+  get filteredPlayers() {
+    if (!this.playerSearchQuery) return this.players
+    
+    const query = this.playerSearchQuery.toLowerCase()
+    return this.players.filter(p => 
+      p.name.toLowerCase().includes(query) ||
+      (p.category && p.category.toLowerCase().includes(query)) ||
+      (p.country && p.country.toLowerCase().includes(query))
+    )
+  },
+
+  exportPlayersCSV() {
+    if (!this.selectedTournament || this.filteredPlayers.length === 0) {
+      this.showToast('Brak graczy do eksportu', 'warning')
+      return
+    }
+
+    // CSV header
+    const header = 'Imię i nazwisko,Kategoria,Państwo\n'
+    
+    // CSV rows
+    const rows = this.filteredPlayers.map(p => 
+      `"${p.name}","${p.category || ''}","${p.country || ''}"`
+    ).join('\n')
+    
+    const csv = header + rows
+    
+    // Create download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    const tournament = this.tournaments.find(t => t.id === this.selectedTournament)
+    const filename = `gracze_${tournament?.name || 'turniej'}_${new Date().toISOString().split('T')[0]}.csv`
+    
+    link.setAttribute('href', url)
+    link.setAttribute('download', filename)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    this.showToast(`Wyeksportowano ${this.filteredPlayers.length} graczy`, 'success')
   },
 
   showToast(message, type = 'info') {
