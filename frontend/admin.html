@@ -187,7 +187,14 @@
         <div class="card-body">
           <h2 class="card-title">Lista turniejów</h2>
           
-          <div class="overflow-x-auto">
+          <!-- Loading Skeleton -->
+          <div x-show="loading.tournaments" class="space-y-4">
+            <div class="skeleton h-12 w-full"></div>
+            <div class="skeleton h-12 w-full"></div>
+            <div class="skeleton h-12 w-full"></div>
+          </div>
+
+          <div x-show="!loading.tournaments" class="overflow-x-auto">
             <table class="table table-zebra">
               <thead>
                 <tr>
@@ -265,7 +272,30 @@
           </div>
 
           <!-- Players Table -->
-          <div class="overflow-x-auto">
+          <div class="flex justify-between items-center mb-4">
+            <div class="form-control">
+              <input 
+                type="text" 
+                x-model="playerSearchQuery" 
+                class="input input-bordered input-sm" 
+                placeholder="🔍 Szukaj gracza (imię, kategoria, kraj)..."
+                :disabled="loading.players"
+              >
+            </div>
+            <button @click="exportPlayersCSV()" class="btn btn-sm btn-outline" :disabled="players.length === 0 || loading.players">
+              📄 Export CSV
+            </button>
+          </div>
+
+          <!-- Loading Skeleton -->
+          <div x-show="loading.players" class="space-y-2 mb-4">
+            <div class="skeleton h-8 w-full"></div>
+            <div class="skeleton h-8 w-full"></div>
+            <div class="skeleton h-8 w-full"></div>
+            <div class="skeleton h-8 w-full"></div>
+          </div>
+
+          <div x-show="!loading.players" class="overflow-x-auto">
             <table class="table table-zebra table-sm">
               <thead>
                 <tr>
@@ -276,7 +306,7 @@
                 </tr>
               </thead>
               <tbody>
-                <template x-for="player in players" :key="player.id">
+                <template x-for="player in filteredPlayers" :key="player.id">
                   <tr>
                     <td x-text="player.name"></td>
                     <td><span class="badge badge-sm" x-text="player.category"></span></td>
@@ -290,6 +320,10 @@
             </table>
           </div>
 
+          <div class="alert alert-warning mt-4" x-show="players.length > 0 && filteredPlayers.length === 0">
+            <span>Brak graczy pasujących do wyszukiwania</span>
+          </div>
+
           <div class="alert alert-info mt-4" x-show="players.length === 0">
             <span>Brak graczy w tym turnieju</span>
           </div>
@@ -298,6 +332,10 @@
             <div class="stat">
               <div class="stat-title">Liczba graczy</div>
               <div class="stat-value" x-text="players.length"></div>
+            </div>
+            <div class="stat">
+              <div class="stat-title">Wyświetlane</div>
+              <div class="stat-value" x-text="filteredPlayers.length"></div>
             </div>
           </div>
         </div>
