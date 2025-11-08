@@ -248,32 +248,32 @@ class QuerySystem:
 
     def _build_normal_specs(self) -> List[QuerySpec]:
         return [
-            self._spec(self.NORMAL_MODE, "GetPointsPlayerA", 10.0),
-            self._spec(self.NORMAL_MODE, "GetPointsPlayerB", 10.0),
-            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerA", 10.0),  # Polled only at 40/ADV via precondition
-            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerB", 10.0),  # Polled only at 40/ADV via precondition
-            self._spec(self.NORMAL_MODE, "GetSet1PlayerA", 10.0),  # Polled only when games >= 3 via precondition
-            self._spec(self.NORMAL_MODE, "GetSet1PlayerB", 10.0),  # Polled only when games >= 3 via precondition
-            self._spec(self.NORMAL_MODE, "GetSet2PlayerA", 10.0),  # Polled only when games >= 3 via precondition
-            self._spec(self.NORMAL_MODE, "GetSet2PlayerB", 10.0),  # Polled only when games >= 3 via precondition
+            self._spec(self.NORMAL_MODE, "GetPointsPlayerA", 15.0),  # Increased from 10s to 15s (-33% requests)
+            self._spec(self.NORMAL_MODE, "GetPointsPlayerB", 15.0),  # Increased from 10s to 15s (-33% requests)
+            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerA", 15.0),  # Polled only at 40/ADV via precondition
+            self._spec(self.NORMAL_MODE, "GetCurrentSetPlayerB", 15.0),  # Polled only at 40/ADV via precondition
+            self._spec(self.NORMAL_MODE, "GetSet1PlayerA", 15.0),  # Polled only when games >= 3 via precondition
+            self._spec(self.NORMAL_MODE, "GetSet1PlayerB", 15.0),  # Polled only when games >= 3 via precondition
+            self._spec(self.NORMAL_MODE, "GetSet2PlayerA", 15.0),  # Polled only when games >= 3 via precondition
+            self._spec(self.NORMAL_MODE, "GetSet2PlayerB", 15.0),  # Polled only when games >= 3 via precondition
             self._spec(
                 self.NORMAL_MODE,
                 "GetTieBreakVisibility",
-                180.0,
+                300.0,  # Increased from 180s to 300s (-40% requests)
                 on_result=self._handle_visibility_normal,
             ),
-            self._spec(self.NORMAL_MODE, "GetNamePlayerA", 30.0),
-            self._spec(self.NORMAL_MODE, "GetNamePlayerB", 30.0),
+            self._spec(self.NORMAL_MODE, "GetNamePlayerA", 60.0),  # Increased from 30s to 60s (-50% requests)
+            self._spec(self.NORMAL_MODE, "GetNamePlayerB", 60.0),  # Increased from 30s to 60s (-50% requests)
         ]
 
     def _build_tie_specs(self) -> List[QuerySpec]:
         return [
-            self._spec(self.TIE_MODE, "GetTieBreakPlayerA", 10.0),
-            self._spec(self.TIE_MODE, "GetTieBreakPlayerB", 10.0),
+            self._spec(self.TIE_MODE, "GetTieBreakPlayerA", 12.0),  # Increased from 10s to 12s (tiebreak needs faster updates)
+            self._spec(self.TIE_MODE, "GetTieBreakPlayerB", 12.0),  # Increased from 10s to 12s
             self._spec(
                 self.TIE_MODE,
                 "GetTieBreakVisibility",
-                60.0,
+                90.0,  # Increased from 60s to 90s
                 on_result=self._handle_visibility_tie,
             ),
         ]
