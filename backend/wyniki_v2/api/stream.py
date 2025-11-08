@@ -1,7 +1,10 @@
 """SSE Stream endpoints."""
 from flask import Blueprint, Response, stream_with_context
 import json
-import time
+
+from ..services.event_broker import event_broker
+from ..services.court_manager import serialize_public_snapshot
+from ..config import logger
 
 blueprint = Blueprint('stream', __name__, url_prefix='/api')
 
@@ -10,19 +13,24 @@ blueprint = Blueprint('stream', __name__, url_prefix='/api')
 def event_stream():
     """Server-Sent Events stream for real-time updates."""
     def generate():
-        while True:
-            # TODO: Implement real event streaming
-            data = {
-                "courts": {
-                    "1": {
-                        "A": {"full_name": "Player A", "points": "0"},
-                        "B": {"full_name": "Player B", "points": "0"},
-                        "match_status": {"active": False}
-                    }
-                }
-            }
-            yield f"data: {json.dumps(data)}\n\n"
-            time.sleep(5)
+        listener = event_broker.listen()
+        try:
+            # Send initial snapshot
+            snapshot = serialize_public_snapshot()
+            yield f"data: {json.dumps({'type': 'snapshot', 'payload': snapshot})}\n\n"
+            
+            # Stream updates
+            while True:
+                try:
+                    event = listener.get(timeout=30)  # 30s timeout for heartbeat
+                    yield f"data: {json.dumps(event)}\n\n"
+                except:
+                    # Send heartbeat
+                    yield f": heartbeat\n\n"
+        except GeneratorExit:
+            logger.info("Client disconnected from SSE stream")
+        finally:
+            event_broker.discard(listener)
     
     return Response(
         stream_with_context(generate()),
