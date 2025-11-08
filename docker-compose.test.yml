@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  wyniki-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.v2
+    container_name: wyniki-test
+    image: count-wyniki-v2
+    ports:
+      - "8088:8080"
+    volumes:
+      - ./data_test:/data
+      - ./download:/app/download:ro
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-test-secret-key-change-me}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/snapshot"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - tennis-network
+
+networks:
+  tennis-network:
+    driver: bridge

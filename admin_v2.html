@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Administracyjny - Wyniki Live</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎾</text></svg>">
+</head>
+<body class="min-h-screen bg-base-200">
+  <div class="container mx-auto px-4 py-8 max-w-7xl">
+    
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold mb-4">🎾 Panel Administracyjny</h1>
+      <div class="alert alert-info">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>Panel administracyjny - pełna funkcjonalność w przygotowaniu</span>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Korty</h2>
+          <p>Zarządzaj kortami i overlay ID</p>
+          <div class="card-actions justify-end">
+            <button class="btn btn-primary btn-sm" disabled>Zarządzaj</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Gracze</h2>
+          <p>Baza danych graczy i flagi</p>
+          <div class="card-actions justify-end">
+            <button class="btn btn-primary btn-sm" disabled>Zarządzaj</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Historia</h2>
+          <p>Archiwum meczów</p>
+          <div class="card-actions justify-end">
+            <button class="btn btn-primary btn-sm" disabled>Przeglądaj</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8">
+      <a href="/" class="btn btn-ghost">← Powrót do strony głównej</a>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

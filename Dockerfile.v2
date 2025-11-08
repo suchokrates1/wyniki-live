@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy backend requirements (old version for compatibility)
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend code (wyniki_compat = old backend with new frontend)
+COPY backend/wyniki_compat ./wyniki
+COPY backend/app_compat.py ./app.py
+
+# Copy built frontend
+COPY static_v2 ./static
+
+# Copy HTML templates for v2
+COPY index_v2.html ./index.html
+COPY admin_v2.html ./admin.html  
+COPY embed_v2.html ./embed.html
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/api/snapshot || exit 1
+
+# Run gunicorn
+CMD ["gunicorn", "--workers", "3", "--threads", "2", "--bind", "0.0.0.0:8080", \
+     "--access-logfile", "-", "--error-logfile", "-", \
+     "--log-level", "info", "app:app"]

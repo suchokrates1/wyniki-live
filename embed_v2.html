@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Embed - Wyniki Live</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎾</text></svg>">
+  <style>
+    body { margin: 0; padding: 0; }
+    .embed-container { height: 100vh; overflow: auto; }
+  </style>
+</head>
+<body class="bg-transparent">
+  <div class="embed-container" x-data="tennisApp">
+    <!-- Simplified embed view -->
+    <div class="p-4">
+      <template x-for="courtId in getCourtIds()" :key="courtId">
+        <div class="mb-4 bg-base-100 rounded-lg p-4 shadow" x-show="isMatchActive(courtId)">
+          <div class="text-sm font-bold mb-2">Kort <span x-text="courtId"></span></div>
+          <div class="flex justify-between text-xl">
+            <span x-text="courts[courtId].A.full_name"></span>
+            <span x-text="getScore(courtId, 'A').points"></span>
+          </div>
+          <div class="flex justify-between text-xl">
+            <span x-text="courts[courtId].B.full_name"></span>
+            <span x-text="getScore(courtId, 'B').points"></span>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -48,6 +48,18 @@ dmypy.json
 # Code quality
 .ruff_cache/
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+static_v2/
+frontend/package-lock.json
+frontend/.vite/
+
+# Backend v2
+backend/wyniki_compat/
+backend/__pycache__/
+backend/requirements.txt
+
 # Virtual environments
 venv/
 env/
