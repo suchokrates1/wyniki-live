@@ -22,12 +22,21 @@ def initialize_state() -> None:
     try:
         db_courts_list = fetch_courts()
         db_courts = {row["kort_id"]: row.get("overlay_id") for row in db_courts_list}
-        refresh_courts_from_db(db_courts, seed_if_empty=True)
+        
+        if not db_courts:
+            # Seed with production court IDs (1-5)
+            logger.info("Seeding default courts (1-5)")
+            from .database import insert_court
+            for kort_id in ['1', '2', '3', '4', '5']:
+                insert_court(kort_id, None)
+            db_courts = {str(i): None for i in range(1, 6)}
+        
+        refresh_courts_from_db(db_courts, seed_if_empty=False)
         logger.info(f"Loaded {len(db_courts)} courts from database")
     except Exception as e:
         logger.error(f"Failed to load courts: {e}")
         # Fallback to default courts
-        default_courts = {str(i): None for i in range(1, 5)}
+        default_courts = {str(i): None for i in range(1, 6)}
         refresh_courts_from_db(default_courts)
         logger.info(f"Using {len(default_courts)} default courts")
     
