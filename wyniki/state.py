@@ -1338,7 +1338,11 @@ def maybe_start_match(state: Dict[str, Any]) -> None:
     current_games_started = (
         (state["A"].get("current_games") or 0) > 0 or (state["B"].get("current_games") or 0) > 0
     ) and (state.get("current_set") in (None, 0, 1))
-    if set1_started or current_games_started:
+    # Also detect match start from points (when poller detects first point in AWAIT_NAMES mode)
+    points_a = str(state["A"].get("points") or "0").strip()
+    points_b = str(state["B"].get("points") or "0").strip()
+    points_started = points_a not in ("0", "-", "") or points_b not in ("0", "-", "")
+    if set1_started or current_games_started or points_started:
         iso = now_iso()
         match_time["started_ts"] = iso
         match_time["resume_ts"] = iso
