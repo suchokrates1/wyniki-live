@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .config import logger, settings
-from .database import fetch_courts
+from .database import init_db, fetch_courts
 from .services.court_manager import refresh_courts_from_db
 from .services.throttle_manager import set_uno_requests_enabled
 
@@ -10,6 +10,13 @@ from .services.throttle_manager import set_uno_requests_enabled
 def initialize_state() -> None:
     """Initialize application state from database."""
     logger.info("Initializing application state...")
+    
+    # Initialize database schema
+    try:
+        init_db()
+        logger.info("Database schema initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
     
     # Load courts from database
     try:
