@@ -176,6 +176,7 @@ class SmartCourtPollingController:
     NAME_INTERVAL_PREMATCH = 20.0
     POINT_INTERVAL_PREMATCH = 12.0
     POINT_INTERVAL_IN_MATCH = 10.0  # Poll points every 10s during match
+    POINT_INTERVAL_AWAIT_NAMES = 30.0  # Poll points every 30s in AWAIT_NAMES to detect match start
 
     def __init__(self, kort_id: str, system: QuerySystem, *, now_fn: Optional[Callable[[], float]] = None) -> None:
         self.kort_id = kort_id
@@ -191,6 +192,7 @@ class SmartCourtPollingController:
         self._current_names: Dict[str, Optional[str]] = {"A": None, "B": None}
         self._next_name_poll_allowed = 0.0
         self._next_point_poll_allowed = 0.0
+        self._next_point_poll_side = "A"  # Track which player to poll next (A or B alternating)
 
         # Prepared callables for QuerySystem configuration
         self._point_preconditions = {
@@ -292,12 +294,18 @@ class SmartCourtPollingController:
                 self._mode = self.MODE_AWAIT_NAMES
                 self._next_name_poll_allowed = 0.0
                 self._next_point_poll_allowed = 0.0
+                self._next_point_poll_side = "A"  # Start alternating from A
                 self._pending_set_poll = False
                 self._points_decisive = {"A": False, "B": False}
             elif self._mode == self.MODE_AWAIT_NAMES:
                 if self._names_changed_meaningfully(names):
                     self._mode = self.MODE_AWAIT_FIRST_POINT
                     self._next_name_poll_allowed = 0.0
+                    self._next_point_poll_allowed = 0.0
+                # Check if match started (points detected from our polling in AWAIT_NAMES)
+                if self._first_point_detected(points):
+                    self._mode = self.MODE_IN_MATCH
+                    self._previous_match_names = dict(names)
                     self._next_point_poll_allowed = 0.0
             elif self._mode == self.MODE_AWAIT_FIRST_POINT:
                 if self._names_changed_meaningfully(names):
@@ -351,16 +359,22 @@ class SmartCourtPollingController:
     # ------------------------------------------------------------------
     def _should_poll_points(self, side: str) -> bool:
         """Poll points with throttling:
-        - AWAIT_NAMES mode: don't poll
+        - AWAIT_NAMES mode: poll A and B alternating every 30s to detect match start
         - AWAIT_FIRST_POINT mode: every 12s
         - IN_MATCH mode: every 10s (not on every cycle!)
         """
-        if self._mode == self.MODE_AWAIT_NAMES:
-            return False
-        
         now = self._now()
         if now < self._next_point_poll_allowed:
             return False
+        
+        if self._mode == self.MODE_AWAIT_NAMES:
+            # Poll only the scheduled side (A or B alternating)
+            if side != self._next_point_poll_side:
+                return False
+            # Schedule next poll for opposite player in 30s
+            self._next_point_poll_side = "B" if side == "A" else "A"
+            self._next_point_poll_allowed = now + self.POINT_INTERVAL_AWAIT_NAMES
+            return True
         
         if self._mode == self.MODE_AWAIT_FIRST_POINT:
             self._next_point_poll_allowed = now + self.POINT_INTERVAL_PREMATCH
