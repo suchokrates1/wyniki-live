@@ -355,6 +355,11 @@ function handleStreamPayload(payload) {
   const kort = payload.kort;
   const state = payload.state;
   if (!kort || !state) return;
+  
+  // Debug: log state to see if points are present
+  if (state.A || state.B) {
+    console.log(`[kort=${kort}] A.points=${state.A?.points}, B.points=${state.B?.points}`);
+  }
 
   if (!COURTS.includes(kort)) {
     const merged = { ...prev, [kort]: state };
@@ -667,6 +672,23 @@ bootstrap()
     renderLanguage();
     connectStream();
   });
+
+// Prevent full page reload on navigation link clicks
+if (nav) {
+  nav.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href^="#"]');
+    if (!link) return;
+    e.preventDefault();
+    const hash = link.getAttribute('href');
+    const targetId = hash.substring(1); // remove #
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Update URL without reload
+      window.history.pushState(null, '', hash);
+    }
+  });
+}
 
 document.addEventListener('keydown', (e) => {
   if (e.altKey || e.ctrlKey || e.metaKey) return;

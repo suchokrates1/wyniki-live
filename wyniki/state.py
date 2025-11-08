@@ -2277,15 +2277,17 @@ def log_state_summary(kort_id: str, state: Dict[str, Any], context: str) -> None
     b_name = shorten(b_state.get("full_name") or b_state.get("surname"), 15)
     
     log.info(
-        "%s kort=%s | %s %s-%s vs %s %s-%s | set=%s",
+        "%s kort=%s | %s sets=%s-%s pts=%s vs %s sets=%s-%s pts=%s | currSet=%s",
         context,
         kort_id,
         a_name,
         a_state.get("set1", 0),
         a_state.get("set2", 0),
+        a_state.get("points", "?"),
         b_name,
         b_state.get("set1", 0),
         b_state.get("set2", 0),
+        b_state.get("points", "?"),
         state.get("current_set"),
     )
 

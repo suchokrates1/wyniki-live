@@ -175,6 +175,7 @@ class SmartCourtPollingController:
     NAME_INTERVAL_RESET = 5.0
     NAME_INTERVAL_PREMATCH = 20.0
     POINT_INTERVAL_PREMATCH = 12.0
+    POINT_INTERVAL_IN_MATCH = 10.0  # Poll points every 10s during match
 
     def __init__(self, kort_id: str, system: QuerySystem, *, now_fn: Optional[Callable[[], float]] = None) -> None:
         self.kort_id = kort_id
@@ -304,9 +305,11 @@ class SmartCourtPollingController:
                 if self._first_point_detected(points):
                     self._mode = self.MODE_IN_MATCH
                     self._previous_match_names = dict(names)
+                    self._next_point_poll_allowed = 0.0  # Start polling immediately in match
         else:
             if self._mode != self.MODE_IN_MATCH:
                 self._mode = self.MODE_IN_MATCH
+                self._next_point_poll_allowed = 0.0  # Start polling immediately in match
             self._previous_match_names = dict(names)
 
     def _update_point_triggers(self, points: Dict[str, Optional[str]], current_games: Dict[str, int]) -> None:
@@ -347,14 +350,24 @@ class SmartCourtPollingController:
     # Precondition helpers wired into QuerySystem
     # ------------------------------------------------------------------
     def _should_poll_points(self, side: str) -> bool:
+        """Poll points with throttling:
+        - AWAIT_NAMES mode: don't poll
+        - AWAIT_FIRST_POINT mode: every 12s
+        - IN_MATCH mode: every 10s (not on every cycle!)
+        """
         if self._mode == self.MODE_AWAIT_NAMES:
             return False
+        
+        now = self._now()
+        if now < self._next_point_poll_allowed:
+            return False
+        
         if self._mode == self.MODE_AWAIT_FIRST_POINT:
-            now = self._now()
-            if now < self._next_point_poll_allowed:
-                return False
             self._next_point_poll_allowed = now + self.POINT_INTERVAL_PREMATCH
             return True
+        
+        # MODE_IN_MATCH: throttle to 10s interval
+        self._next_point_poll_allowed = now + self.POINT_INTERVAL_IN_MATCH
         return True
 
     def _should_poll_current_games(self, side: str) -> bool:
@@ -390,6 +403,7 @@ class SmartCourtPollingController:
             normalized = self._normalize_point(value)
             if normalized and normalized not in {"0", "0-0", "-", ""}:
                 self._mode = self.MODE_IN_MATCH
+                self._next_point_poll_allowed = 0.0  # Start polling immediately
 
     def _on_current_games_result(self, side: str, value: Any) -> None:
         """Called after GetCurrentSetPlayerA/B returns.
