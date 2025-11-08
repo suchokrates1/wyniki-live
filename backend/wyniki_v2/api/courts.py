@@ -1,7 +1,9 @@
 """Courts API endpoints."""
 from flask import Blueprint, jsonify
 
-from wyniki_v2.config import logger
+from ..services.court_manager import serialize_public_snapshot
+from ..services.history_manager import get_history
+from ..config import logger
 
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
 
@@ -9,18 +11,20 @@ blueprint = Blueprint('courts', __name__, url_prefix='/api')
 @blueprint.route('/snapshot')
 def snapshot():
     """Get current state of all courts."""
-    # TODO: Implement with real state management
-    return jsonify({
-        "1": {
-            "A": {"full_name": "Test Player A", "points": "0", "current_games": 0, "set1": 0},
-            "B": {"full_name": "Test Player B", "points": "0", "current_games": 0, "set1": 0},
-            "match_status": {"active": False},
-            "match_time": {"running": False, "seconds": 0}
-        }
-    })
+    try:
+        snapshot = serialize_public_snapshot()
+        return jsonify(snapshot)
+    except Exception as e:
+        logger.error(f"Failed to get snapshot: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @blueprint.route('/history')
 def history():
     """Get match history."""
-    return jsonify([])
+    try:
+        history_data = get_history()
+        return jsonify(history_data)
+    except Exception as e:
+        logger.error(f"Failed to get history: {e}")
+        return jsonify({"error": str(e)}), 500

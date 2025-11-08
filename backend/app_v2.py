@@ -9,6 +9,7 @@ from prometheus_flask_exporter import PrometheusMetrics
 
 from wyniki_v2.config import logger, settings
 from wyniki_v2.api import courts, admin, health, stream
+from wyniki_v2.init_state import initialize_state
 
 
 def create_app() -> Flask:
@@ -22,6 +23,10 @@ def create_app() -> Flask:
     # Configure Flask
     app.config['SECRET_KEY'] = settings.secret_key
     app.config['DEBUG'] = settings.debug
+    
+    # Initialize application state
+    with app.app_context():
+        initialize_state()
     
     # Initialize Prometheus metrics
     metrics = PrometheusMetrics(app)
