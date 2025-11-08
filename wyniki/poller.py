@@ -65,12 +65,18 @@ class UnoCommandClient:
             with UNO_RATE_LIMIT_LOCK:
                 limit_info = dict(UNO_RATE_LIMIT_INFO)
             if limit_info.get("remaining") is not None:
+                reset_ts = limit_info.get("reset")
+                if reset_ts:
+                    from datetime import datetime
+                    reset_str = datetime.fromtimestamp(reset_ts).strftime("%H:%M:%S")
+                else:
+                    reset_str = "?"
                 log.warning(
                     "RATE LIMIT kort=%s: %s/%s remaining (resets at %s)",
                     self.kort_id,
                     limit_info.get("remaining", "?"),
                     limit_info.get("limit", "?"),
-                    limit_info.get("reset", "?"),
+                    reset_str,
                 )
         
         try:

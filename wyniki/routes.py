@@ -1735,7 +1735,7 @@ def api_uno_exec(kort_id: str):
     if not is_known_kort(kort_id):
         return jsonify({"error": "unknown kort"}), 404
     if not is_uno_requests_enabled():
-        log.info("uno kort=%s command=%s skipped reason=disabled", kort_id, request.json.get("command") if request.is_json else None)
+        # Don't log here - poller will log the 503 error
         return (
             jsonify(
                 {
