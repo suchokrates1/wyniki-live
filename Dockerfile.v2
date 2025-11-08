@@ -15,13 +15,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/wyniki_v2 ./wyniki_v2
 COPY backend/app_v2.py ./app.py
 
-# Copy built frontend
+# Copy built frontend (includes HTML files and assets)
 COPY static_v2 ./static
 
-# Copy HTML templates for v2
-COPY index_v2.html ./index.html
-COPY admin_v2.html ./admin.html  
-COPY embed_v2.html ./embed.html
+# Copy built HTML files to root for web.py routes
+COPY static_v2/index.html ./index.html
+COPY static_v2/admin.html ./admin.html  
+COPY static_v2/embed.html ./embed.html
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
