@@ -5,7 +5,7 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Any, Deque, Dict, List, Optional
 
-from ..config import settings, log
+from ..config import settings, logger
 from .court_manager import GLOBAL_HISTORY, STATE_LOCK
 
 
@@ -16,7 +16,7 @@ def add_match_to_history(kort_id: str, state: Dict[str, Any]) -> None:
     with STATE_LOCK:
         GLOBAL_HISTORY.append(entry)
     
-    log.info(f"Match added to history: {entry.get('player_a')} vs {entry.get('player_b')}")
+    logger.info(f"Match added to history: {entry.get('player_a')} vs {entry.get('player_b')}")
     
     # Persist to database
     _persist_history_entry(entry)
@@ -52,7 +52,7 @@ def _persist_history_entry(entry: Dict[str, Any]) -> None:
         from ..database import insert_match_history
         insert_match_history(entry)
     except Exception as e:
-        log.error(f"Failed to persist history entry: {e}")
+        logger.error(f"Failed to persist history entry: {e}")
 
 
 def get_history() -> List[Dict[str, Any]]:
@@ -68,7 +68,7 @@ def load_history_from_db(entries: List[Dict[str, Any]]) -> None:
         for entry in entries[-settings.match_history_size:]:
             GLOBAL_HISTORY.append(entry)
     
-    log.info(f"Loaded {len(GLOBAL_HISTORY)} history entries")
+    logger.info(f"Loaded {len(GLOBAL_HISTORY)} history entries")
 
 
 def delete_latest_history() -> bool:
@@ -76,14 +76,15 @@ def delete_latest_history() -> bool:
     with STATE_LOCK:
         if GLOBAL_HISTORY:
             removed = GLOBAL_HISTORY.pop()
-            log.info(f"Removed history entry: {removed.get('player_a')} vs {removed.get('player_b')}")
+            logger.info(f"Removed history entry: {removed.get('player_a')} vs {removed.get('player_b')}")
             
             # Also remove from database
             try:
                 from ..database import delete_latest_history_entry
                 delete_latest_history_entry()
             except Exception as e:
-                log.error(f"Failed to delete from DB: {e}")
+                logger.error(f"Failed to delete from DB: {e}")
             
             return True
     return False
+

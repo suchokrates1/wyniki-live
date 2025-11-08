@@ -3,19 +3,19 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from .config import log
+from .config import logger
 
 
 def insert_match_history(entry: Dict[str, Any]) -> None:
     """Insert match history entry into database."""
     # TODO: Implement database insertion
-    log.info(f"TODO: Insert history: {entry}")
+    logger.info(f"TODO: Insert history: {entry}")
 
 
 def delete_latest_history_entry() -> None:
     """Delete most recent history entry."""
     # TODO: Implement database deletion
-    log.info("TODO: Delete latest history")
+    logger.info("TODO: Delete latest history")
 
 
 def fetch_courts() -> List[Dict[str, Optional[str]]]:
@@ -32,7 +32,7 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
 def upsert_court(kort_id: str, overlay_id: Optional[str]) -> None:
     """Insert or update court configuration."""
     # TODO: Implement database upsert
-    log.info(f"TODO: Upsert court: {kort_id} -> {overlay_id}")
+    logger.info(f"TODO: Upsert court: {kort_id} -> {overlay_id}")
 
 
 def fetch_app_settings(keys: List[str]) -> Dict[str, Any]:
@@ -44,4 +44,5 @@ def fetch_app_settings(keys: List[str]) -> Dict[str, Any]:
 def upsert_app_settings(settings: Dict[str, str]) -> None:
     """Update application settings."""
     # TODO: Implement database upsert
-    log.info(f"TODO: Upsert settings: {settings}")
+    logger.info(f"TODO: Upsert settings: {settings}")
+

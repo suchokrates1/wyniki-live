@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify
 
 from ..services.court_manager import serialize_public_snapshot
 from ..services.history_manager import get_history
-from ..config import logger
+from ..config import loggerger
 
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
 
@@ -28,3 +28,4 @@ def history():
     except Exception as e:
         logger.error(f"Failed to get history: {e}")
         return jsonify({"error": str(e)}), 500
+

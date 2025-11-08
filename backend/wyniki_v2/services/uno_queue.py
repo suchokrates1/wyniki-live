@@ -5,7 +5,7 @@ import threading
 from collections import OrderedDict
 from typing import Any, Dict, Optional
 
-from ..config import log
+from ..config import logger
 
 UNO_COMMAND_QUEUE_LOCK = threading.Lock()
 UNO_PENDING_COMMANDS: Dict[str, OrderedDict[str, Dict[str, Any]]] = {}  # kort_id -> {cmd_id: command}
@@ -28,7 +28,7 @@ def enqueue_uno_command(
     """Add command to UNO queue."""
     normalized_kort = normalize_kort_id(kort_id)
     if not normalized_kort:
-        log.warning(f"Invalid kort_id for enqueue: {kort_id}")
+        logger.warning(f"Invalid kort_id for enqueue: {kort_id}")
         return False
     
     if not command_id:
@@ -49,7 +49,7 @@ def enqueue_uno_command(
         
         UNO_PENDING_COMMANDS[normalized_kort][command_id] = cmd_entry
     
-    log.info(f"Enqueued UNO command: kort={normalized_kort} cmd={command} id={command_id}")
+    logger.info(f"Enqueued UNO command: kort={normalized_kort} cmd={command} id={command_id}")
     return True
 
 
@@ -68,7 +68,7 @@ def dequeue_uno_command(kort_id: str) -> Optional[Dict[str, Any]]:
         command_id, cmd_entry = next(iter(queue.items()))
         del queue[command_id]
         
-        log.debug(f"Dequeued UNO command: kort={normalized_kort} cmd={cmd_entry['command']}")
+        logger.debug(f"Dequeued UNO command: kort={normalized_kort} cmd={cmd_entry['command']}")
         return cmd_entry
 
 
@@ -80,7 +80,7 @@ def requeue_uno_command(kort_id: str, command_entry: Dict[str, Any]) -> bool:
     
     command_entry["attempts"] += 1
     if command_entry["attempts"] >= command_entry.get("max_attempts", UNO_COMMAND_MAX_ATTEMPTS):
-        log.warning(f"Command exceeded max attempts: {command_entry}")
+        logger.warning(f"Command exceeded max attempts: {command_entry}")
         return False
     
     command_id = command_entry.get("command_id", "unknown")
@@ -92,7 +92,7 @@ def requeue_uno_command(kort_id: str, command_entry: Dict[str, Any]) -> bool:
         # Add to end of queue
         UNO_PENDING_COMMANDS[normalized_kort][command_id] = command_entry
     
-    log.info(f"Requeued UNO command: kort={normalized_kort} attempt={command_entry['attempts']}")
+    logger.info(f"Requeued UNO command: kort={normalized_kort} attempt={command_entry['attempts']}")
     return True
 
 
@@ -140,5 +140,6 @@ def clear_queue(kort_id: str) -> int:
         if normalized_kort in UNO_PENDING_COMMANDS:
             del UNO_PENDING_COMMANDS[normalized_kort]
     
-    log.info(f"Cleared {count} commands from queue for kort={normalized_kort}")
+    logger.info(f"Cleared {count} commands from queue for kort={normalized_kort}")
     return count
+

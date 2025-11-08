@@ -38,3 +38,4 @@ class EventBroker:
 
 # Global singleton instance
 event_broker = EventBroker()
+
