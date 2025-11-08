@@ -49,6 +49,16 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"  # "json" or "console"
     
+    # History
+    match_history_size: int = 100
+    log_entries_per_court: int = 50
+    
+    # UNO Throttling (from original config)
+    uno_hourly_limit_per_court: int = 100
+    uno_hourly_slowdown_threshold: float = 0.8
+    uno_hourly_slowdown_factor: int = 2
+    uno_hourly_slowdown_sleep_seconds: float = 1.0
+    
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent
     static_dir: Path = Path(__file__).parent.parent.parent / "static_v2"
