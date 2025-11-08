@@ -4,7 +4,7 @@ import json
 
 from ..services.event_broker import event_broker
 from ..services.court_manager import serialize_public_snapshot
-from ..config import loggerger
+from ..config import logger
 
 blueprint = Blueprint('stream', __name__, url_prefix='/api')
 

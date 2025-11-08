@@ -10,7 +10,7 @@ from ..services.throttle_manager import (
     set_uno_requests_enabled,
 )
 from ..services.uno_queue import get_all_queue_status, clear_queue
-from ..config import loggerger
+from ..config import logger
 
 blueprint = Blueprint('admin', __name__, url_prefix='/admin')
 

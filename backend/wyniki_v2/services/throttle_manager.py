@@ -6,7 +6,7 @@ from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import Any, Deque, Dict, Optional, Tuple
 
-from ..config import loggerger, settings
+from ..config import logger, settings
 
 # Throttling state
 UNO_REQUESTS_LOCK = threading.Lock()
