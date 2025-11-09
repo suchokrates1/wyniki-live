@@ -461,10 +461,10 @@ class SmartCourtPollingController:
 
     def _on_set_poll_result(self, value: Any) -> None:
         """Called after GetSet1/2PlayerA/B returns.
-        Track current_set to determine when to start polling set 2."""
-        # Clear flags after polling
-        self._pending_set_poll = False
-        self._pending_set2_poll = False
+        Track current_set to determine when to start polling set 2.
+        NOTE: Don't clear _pending_set_poll here - it needs to stay True
+        for all 4 set queries (GetSet1PlayerA/B, GetSet2PlayerA/B).
+        It will be cleared in _update_point_triggers on next point update."""
         
         # Check current_set indicator to determine if we should poll set 2
         with STATE_LOCK:
