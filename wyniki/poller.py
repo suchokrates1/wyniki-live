@@ -387,13 +387,17 @@ class SmartCourtPollingController:
             self._next_point_poll_allowed = now + self.POINT_INTERVAL_PREMATCH
             return True
         
-        # MODE_IN_MATCH: Poll BOTH players together every 10s
-        # Use shared throttle but allow both players in same window
+        # MODE_IN_MATCH: Poll BOTH players together co 10s
+        # Throttle ustawia się dopiero po B, więc oba wywołania (A i B) zawsze przechodzą
         if now < self._next_point_poll_allowed:
             return False
-        # First player to check updates the throttle
-        if side == "A":
+        if not hasattr(self, '_in_match_poll_sides') or self._in_match_poll_sides is None:
+            self._in_match_poll_sides = set()
+        self._in_match_poll_sides.add(side)
+        # Jeśli oba wywołania (A i B) już były w tym oknie, ustaw throttle i wyczyść
+        if len(self._in_match_poll_sides) == 2:
             self._next_point_poll_allowed = now + self.POINT_INTERVAL_IN_MATCH
+            self._in_match_poll_sides = set()
         return True
 
     def _should_poll_current_games(self, side: str) -> bool:
