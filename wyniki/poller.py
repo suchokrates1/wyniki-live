@@ -184,10 +184,12 @@ class SmartCourtPollingController:
         self._now = now_fn or time.monotonic
         self._mode = self.MODE_IN_MATCH
         self._pending_set_poll = False
+        self._pending_set2_poll = False  # Track whether to poll set 2
         self._pending_current_games_poll = False
         self._points_decisive: Dict[str, bool] = {"A": False, "B": False}
         self._last_points: Dict[str, Optional[str]] = {"A": None, "B": None}
         self._last_current_games: Dict[str, int] = {"A": 0, "B": 0}
+        self._last_set1_games: Dict[str, int] = {"A": 0, "B": 0}  # Track set 1 games to determine when set 2 starts
         self._previous_match_names: Dict[str, Optional[str]] = {"A": None, "B": None}
         self._current_names: Dict[str, Optional[str]] = {"A": None, "B": None}
         self._next_name_poll_allowed = 0.0
@@ -204,6 +206,7 @@ class SmartCourtPollingController:
             "B": lambda: self._should_poll_current_games("B"),
         }
         self._set_precondition = self._should_poll_sets
+        self._set2_precondition = self._should_poll_set2
         self._name_preconditions = {
             "A": lambda: self._should_poll_name("A"),
             "B": lambda: self._should_poll_name("B"),
@@ -245,12 +248,12 @@ class SmartCourtPollingController:
         )
         self.system.configure_spec(
             "GetSet2PlayerA",
-            precondition=self._set_precondition,
+            precondition=self._set2_precondition,
             on_result=self._on_set_poll_result,
         )
         self.system.configure_spec(
             "GetSet2PlayerB",
-            precondition=self._set_precondition,
+            precondition=self._set2_precondition,
             on_result=self._on_set_poll_result,
         )
         self.system.configure_spec(
@@ -407,11 +410,19 @@ class SmartCourtPollingController:
         return self._mode == self.MODE_IN_MATCH and self._pending_current_games_poll
 
     def _should_poll_sets(self) -> bool:
-        """Poll set scores (GetSet1/2PlayerA/B) only when:
+        """Poll set 1 scores (GetSet1PlayerA/B) only when:
         - We're in match mode
-        - Current games increased to 3+ (near end of set)
+        - Pending set poll flag is set
         """
         return self._mode == self.MODE_IN_MATCH and self._pending_set_poll
+
+    def _should_poll_set2(self) -> bool:
+        """Poll set 2 scores (GetSet2PlayerA/B) only when:
+        - We're in match mode
+        - Set 1 is finished (either player has >= 6 games in set 1)
+        - Pending set 2 poll flag is set
+        """
+        return self._mode == self.MODE_IN_MATCH and self._pending_set2_poll
 
     def _should_poll_name(self, side: str) -> bool:
         if self._mode == self.MODE_IN_MATCH:
@@ -449,9 +460,27 @@ class SmartCourtPollingController:
         # Clear current games poll flag after checking
         self._pending_current_games_poll = False
 
-    def _on_set_poll_result(self, _value: Any) -> None:
-        """Called after GetSet1/2PlayerA/B returns."""
+    def _on_set_poll_result(self, value: Any) -> None:
+        """Called after GetSet1/2PlayerA/B returns.
+        Track set 1 games to determine when to start polling set 2."""
+        # Extract which side and set from the result (if available in state)
+        # For now, clear flags after polling
         self._pending_set_poll = False
+        self._pending_set2_poll = False
+        
+        # Update set 1 tracking to determine when set 2 should be polled
+        with STATE_LOCK:
+            state = ensure_court_state(self.kort_id)
+            a_state = dict(state.get("A") or {})
+            b_state = dict(state.get("B") or {})
+            set1_a = int(a_state.get("set1") or 0)
+            set1_b = int(b_state.get("set1") or 0)
+            self._last_set1_games["A"] = set1_a
+            self._last_set1_games["B"] = set1_b
+            
+            # If set 1 is finished (either player >= 6), enable set 2 polling
+            if set1_a >= 6 or set1_b >= 6:
+                self._pending_set2_poll = True
 
     def _on_name_result(self, side: str, value: Any) -> None:
         # names are applied through _derive_local_uno_command; we only keep track of recent non-empty values
