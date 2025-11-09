@@ -171,7 +171,12 @@ class SmartCourtPollingController:
     MODE_AWAIT_NAMES = "awaiting_names"
     MODE_AWAIT_FIRST_POINT = "awaiting_first_point"
 
-    TRIGGER_POINTS = {"40", "ADV"}
+    # Decisive game scores where next point can end the game
+    DECISIVE_SCORES = {
+        ("40", "30"), ("30", "40"),  # One player needs 1 point to win
+        ("40", "40"),                 # Deuce - next point gives ADV
+        ("40", "ADV"), ("ADV", "40")  # Advantage - next point wins or back to deuce
+    }
     NAME_INTERVAL_RESET = 5.0
     NAME_INTERVAL_PREMATCH = 20.0
     POINT_INTERVAL_PREMATCH = 12.0
@@ -329,30 +334,40 @@ class SmartCourtPollingController:
         for side in ("A", "B"):
             value = points.get(side)
             previous = self._last_points.get(side)
-            decisive = value in self.TRIGGER_POINTS
 
             # Check if current games changed (gem won)
             prev_games = self._last_current_games.get(side, 0)
             curr_games = current_games.get(side, 0)
             games_changed = curr_games != prev_games
 
-            if self._mode == self.MODE_IN_MATCH:
-                # ZAWSZE triggeruj polling gemów, jeśli punkty są na 40/ADV
-                if decisive:
-                    self._pending_current_games_poll = True
-                    self._pending_set_poll = True  # Poll set scores when at 40/ADV
-
-                # Trigger set polling gdy zmienił się gem (i >=3)
-                if games_changed and curr_games >= 3:
-                    self._pending_set_poll = True
-                    self._pending_current_games_poll = True
-
-                self._points_decisive[side] = decisive
-            else:
-                self._points_decisive[side] = False
-
             self._last_points[side] = value
             self._last_current_games[side] = curr_games
+
+        # Check if current score is decisive (game can end on next point)
+        pts_a = points.get("A")
+        pts_b = points.get("B")
+        score_tuple = (pts_a, pts_b) if pts_a and pts_b else None
+        is_decisive_score = score_tuple in self.DECISIVE_SCORES if score_tuple else False
+
+        if self._mode == self.MODE_IN_MATCH:
+            # Poll games/sets when score is decisive (40:30, 30:40, 40:40, 40:ADV, ADV:40)
+            if is_decisive_score:
+                self._pending_current_games_poll = True
+                self._pending_set_poll = True
+
+            # Also trigger set polling when any player's games increased to >=3
+            if any(current_games.get(side, 0) >= 3 and 
+                   current_games.get(side, 0) != self._last_current_games.get(side, 0) 
+                   for side in ("A", "B")):
+                self._pending_set_poll = True
+                self._pending_current_games_poll = True
+
+            # Update decisive flags for both players
+            self._points_decisive["A"] = is_decisive_score
+            self._points_decisive["B"] = is_decisive_score
+        else:
+            self._points_decisive["A"] = False
+            self._points_decisive["B"] = False
 
         if self._mode != self.MODE_IN_MATCH:
             self._pending_set_poll = False
