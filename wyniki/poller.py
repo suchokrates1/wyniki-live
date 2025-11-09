@@ -338,6 +338,7 @@ class SmartCourtPollingController:
                 # ZAWSZE triggeruj polling gemów, jeśli punkty są na 40/ADV
                 if decisive:
                     self._pending_current_games_poll = True
+                    self._pending_set_poll = True  # Poll set scores when at 40/ADV
 
                 # Trigger set polling gdy zmienił się gem (i >=3)
                 if games_changed and curr_games >= 3:
