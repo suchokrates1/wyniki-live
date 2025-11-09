@@ -188,8 +188,6 @@ class SmartCourtPollingController:
         self.system = system
         self._now = now_fn or time.monotonic
         self._mode = self.MODE_IN_MATCH
-        self._pending_set_poll = False
-        self._pending_set2_poll = False  # Track whether to poll set 2
         self._pending_current_games_poll = False
         self._points_decisive: Dict[str, bool] = {"A": False, "B": False}
         self._last_points: Dict[str, Optional[str]] = {"A": None, "B": None}
@@ -209,8 +207,6 @@ class SmartCourtPollingController:
             "A": lambda: self._should_poll_current_games("A"),
             "B": lambda: self._should_poll_current_games("B"),
         }
-        self._set_precondition = self._should_poll_sets
-        self._set2_precondition = self._should_poll_set2
         self._name_preconditions = {
             "A": lambda: self._should_poll_name("A"),
             "B": lambda: self._should_poll_name("B"),
@@ -240,26 +236,8 @@ class SmartCourtPollingController:
             precondition=self._current_games_preconditions["B"],
             on_result=lambda value: self._on_current_games_result("B", value),
         )
-        self.system.configure_spec(
-            "GetSet1PlayerA",
-            precondition=self._set_precondition,
-            on_result=self._on_set_poll_result,
-        )
-        self.system.configure_spec(
-            "GetSet1PlayerB",
-            precondition=self._set_precondition,
-            on_result=self._on_set_poll_result,
-        )
-        self.system.configure_spec(
-            "GetSet2PlayerA",
-            precondition=self._set2_precondition,
-            on_result=self._on_set_poll_result,
-        )
-        self.system.configure_spec(
-            "GetSet2PlayerB",
-            precondition=self._set2_precondition,
-            on_result=self._on_set_poll_result,
-        )
+        # Note: GetSet1/Set2 commands removed - we only poll GetCurrentSet which always
+        # returns games for the currently active set. Backend tracks which set is active.
         self.system.configure_spec(
             "GetNamePlayerA",
             precondition=self._name_preconditions["A"],
@@ -305,7 +283,6 @@ class SmartCourtPollingController:
                 self._next_name_poll_allowed = 0.0
                 self._next_point_poll_allowed = 0.0
                 self._next_point_poll_side = "A"  # Start alternating from A
-                self._pending_set_poll = False
                 self._points_decisive = {"A": False, "B": False}
             elif self._mode == self.MODE_AWAIT_NAMES:
                 if self._names_changed_meaningfully(names):
@@ -350,16 +327,11 @@ class SmartCourtPollingController:
         is_decisive_score = score_tuple in self.DECISIVE_SCORES if score_tuple else False
 
         if self._mode == self.MODE_IN_MATCH:
-            # Poll games/sets when score is decisive (40:30, 30:40, 40:40, 40:ADV, ADV:40)
-            if is_decisive_score:
-                self._pending_current_games_poll = True
-                self._pending_set_poll = True
-
-            # Also trigger set polling when any player's games increased to >=3
-            if any(current_games.get(side, 0) >= 3 and 
+            # Poll current games when score is decisive (40:30, 30:40, 40:40, 40:ADV, ADV:40)
+            # or when games increased to >=3 (potential set completion)
+            if is_decisive_score or any(current_games.get(side, 0) >= 3 and 
                    current_games.get(side, 0) != self._last_current_games.get(side, 0) 
                    for side in ("A", "B")):
-                self._pending_set_poll = True
                 self._pending_current_games_poll = True
 
             # Update decisive flags for both players
@@ -370,7 +342,6 @@ class SmartCourtPollingController:
             self._points_decisive["B"] = False
 
         if self._mode != self.MODE_IN_MATCH:
-            self._pending_set_poll = False
             self._pending_current_games_poll = False
 
     # ------------------------------------------------------------------
@@ -423,21 +394,6 @@ class SmartCourtPollingController:
         """
         return self._mode == self.MODE_IN_MATCH and self._pending_current_games_poll
 
-    def _should_poll_sets(self) -> bool:
-        """Poll set 1 scores (GetSet1PlayerA/B) only when:
-        - We're in match mode
-        - Pending set poll flag is set
-        """
-        return self._mode == self.MODE_IN_MATCH and self._pending_set_poll
-
-    def _should_poll_set2(self) -> bool:
-        """Poll set 2 scores (GetSet2PlayerA/B) only when:
-        - We're in match mode
-        - current_set indicator is 2 or higher (set 1 is finished)
-        - Pending set 2 poll flag is set
-        """
-        return self._mode == self.MODE_IN_MATCH and self._pending_set2_poll
-
     def _should_poll_name(self, side: str) -> bool:
         if self._mode == self.MODE_IN_MATCH:
             return False
@@ -461,34 +417,14 @@ class SmartCourtPollingController:
 
     def _on_current_games_result(self, side: str, value: Any) -> None:
         """Called after GetCurrentSetPlayerA/B returns.
-        If games increased, we should check set scores next."""
+        Track current_games for internal state."""
         try:
             current_games = int(value or 0)
-            prev_games = self._last_current_games.get(side, 0)
-            if current_games != prev_games and current_games >= 3:
-                # Games changed and approaching end of set
-                self._pending_set_poll = True
             self._last_current_games[side] = current_games
         except (ValueError, TypeError):
             pass
         # Clear current games poll flag after checking
         self._pending_current_games_poll = False
-
-    def _on_set_poll_result(self, value: Any) -> None:
-        """Called after GetSet1/2PlayerA/B returns.
-        Track current_set to determine when to start polling set 2.
-        NOTE: Don't clear _pending_set_poll here - it needs to stay True
-        for all 4 set queries (GetSet1PlayerA/B, GetSet2PlayerA/B).
-        It will be cleared in _update_point_triggers on next point update."""
-        
-        # Check current_set indicator to determine if we should poll set 2
-        with STATE_LOCK:
-            state = ensure_court_state(self.kort_id)
-            current_set = state.get("current_set") or 1
-            
-            # If current_set is 2 or 3, we're in set 2, so enable set 2 polling
-            if current_set >= 2:
-                self._pending_set2_poll = True
 
     def _on_name_result(self, side: str, value: Any) -> None:
         # names are applied through _derive_local_uno_command; we only keep track of recent non-empty values
