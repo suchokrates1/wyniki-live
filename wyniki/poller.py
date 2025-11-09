@@ -210,16 +210,19 @@ class SmartCourtPollingController:
         }
 
     def attach(self) -> None:
+        log.info("SmartCourtPollingController kort=%s attaching preconditions", self.kort_id)
         self.system.configure_spec(
             "GetPointsPlayerA",
             precondition=self._point_preconditions["A"],
             on_result=lambda value: self._on_point_result("A", value),
         )
+        log.info("SmartCourtPollingController kort=%s attached GetPointsPlayerA", self.kort_id)
         self.system.configure_spec(
             "GetPointsPlayerB",
             precondition=self._point_preconditions["B"],
             on_result=lambda value: self._on_point_result("B", value),
         )
+        log.info("SmartCourtPollingController kort=%s attached GetPointsPlayerB", self.kort_id)
         self.system.configure_spec(
             "GetCurrentSetPlayerA",
             precondition=self._current_games_preconditions["A"],
@@ -361,13 +364,14 @@ class SmartCourtPollingController:
         """Poll points with throttling:
         - AWAIT_NAMES mode: poll A and B alternating every 30s to detect match start
         - AWAIT_FIRST_POINT mode: every 12s
-        - IN_MATCH mode: every 10s (not on every cycle!)
+        - IN_MATCH mode: every 10s (both players polled together)
         """
         now = self._now()
-        if now < self._next_point_poll_allowed:
-            return False
         
         if self._mode == self.MODE_AWAIT_NAMES:
+            # In AWAIT_NAMES: use global throttle and alternating
+            if now < self._next_point_poll_allowed:
+                return False
             # Poll only the scheduled side (A or B alternating)
             if side != self._next_point_poll_side:
                 return False
@@ -377,11 +381,19 @@ class SmartCourtPollingController:
             return True
         
         if self._mode == self.MODE_AWAIT_FIRST_POINT:
+            # In AWAIT_FIRST_POINT: use global throttle for both players
+            if now < self._next_point_poll_allowed:
+                return False
             self._next_point_poll_allowed = now + self.POINT_INTERVAL_PREMATCH
             return True
         
-        # MODE_IN_MATCH: throttle to 10s interval
-        self._next_point_poll_allowed = now + self.POINT_INTERVAL_IN_MATCH
+        # MODE_IN_MATCH: Poll BOTH players together every 10s
+        # Use shared throttle but allow both players in same window
+        if now < self._next_point_poll_allowed:
+            return False
+        # First player to check updates the throttle
+        if side == "A":
+            self._next_point_poll_allowed = now + self.POINT_INTERVAL_IN_MATCH
         return True
 
     def _should_poll_current_games(self, side: str) -> bool:
@@ -504,7 +516,9 @@ class CourtPollingWorker(threading.Thread):
         self._stop_event = threading.Event()
         self.system = QuerySystem(self.client, sleep_fn=self._sleep)
         self.smart = SmartCourtPollingController(kort_id, self.system)
+        log.info("Poller kort=%s calling smart.attach()", kort_id)
         self.smart.attach()
+        log.info("Poller kort=%s smart.attach() completed", kort_id)
         self._slowdown_counter = 0
         self._last_mode: Optional[str] = None
         self._current_speed_multiplier = 1.0
