@@ -328,28 +328,26 @@ class SmartCourtPollingController:
             value = points.get(side)
             previous = self._last_points.get(side)
             decisive = value in self.TRIGGER_POINTS
-            
+
             # Check if current games changed (gem won)
             prev_games = self._last_current_games.get(side, 0)
             curr_games = current_games.get(side, 0)
             games_changed = curr_games != prev_games
-            
+
             if self._mode == self.MODE_IN_MATCH:
-                # Trigger current games polling when at decisive points (40/ADV)
-                if decisive and (not self._points_decisive[side] or value != previous):
+                # ZAWSZE triggeruj polling gemów, jeśli punkty są na 40/ADV
+                if decisive:
                     self._pending_current_games_poll = True
-                
-                # Trigger set polling when games changed (gem won)
+
+                # Trigger set polling gdy zmienił się gem (i >=3)
                 if games_changed and curr_games >= 3:
-                    # Near end of set (3+ games), check set scores
                     self._pending_set_poll = True
-                    # Also keep checking current games
                     self._pending_current_games_poll = True
-                
+
                 self._points_decisive[side] = decisive
             else:
                 self._points_decisive[side] = False
-                
+
             self._last_points[side] = value
             self._last_current_games[side] = curr_games
 
