@@ -182,6 +182,7 @@ class SmartCourtPollingController:
     POINT_INTERVAL_PREMATCH = 12.0
     POINT_INTERVAL_IN_MATCH = 10.0  # Poll points every 10s during match
     POINT_INTERVAL_AWAIT_NAMES = 30.0  # Poll points every 30s in AWAIT_NAMES to detect match start
+    SET_INTERVAL = 15.0  # Poll set scores every 15s to detect set completion
 
     def __init__(self, kort_id: str, system: QuerySystem, *, now_fn: Optional[Callable[[], float]] = None) -> None:
         self.kort_id = kort_id
@@ -197,6 +198,8 @@ class SmartCourtPollingController:
         self._next_name_poll_allowed = 0.0
         self._next_point_poll_allowed = 0.0
         self._next_point_poll_side = "A"  # Track which player to poll next (A or B alternating)
+        self._next_set_poll_allowed = 0.0  # Track when to poll set scores
+        self._current_set: Optional[int] = None  # Track which set is currently active
 
         # Prepared callables for QuerySystem configuration
         self._point_preconditions = {
@@ -210,6 +213,12 @@ class SmartCourtPollingController:
         self._name_preconditions = {
             "A": lambda: self._should_poll_name("A"),
             "B": lambda: self._should_poll_name("B"),
+        }
+        self._set_preconditions = {
+            "GetSet1PlayerA": lambda: self._should_poll_set("GetSet1PlayerA"),
+            "GetSet1PlayerB": lambda: self._should_poll_set("GetSet1PlayerB"),
+            "GetSet2PlayerA": lambda: self._should_poll_set("GetSet2PlayerA"),
+            "GetSet2PlayerB": lambda: self._should_poll_set("GetSet2PlayerB"),
         }
 
     def attach(self) -> None:
@@ -236,8 +245,25 @@ class SmartCourtPollingController:
             precondition=self._current_games_preconditions["B"],
             on_result=lambda value: self._on_current_games_result("B", value),
         )
-        # Note: GetSet1/Set2 commands removed - we only poll GetCurrentSet which always
-        # returns games for the currently active set. Backend tracks which set is active.
+        # Poll set scores periodically to detect set completion
+        self.system.configure_spec(
+            "GetSet1PlayerA",
+            precondition=self._set_preconditions["GetSet1PlayerA"],
+        )
+        self.system.configure_spec(
+            "GetSet1PlayerB",
+            precondition=self._set_preconditions["GetSet1PlayerB"],
+        )
+        self.system.configure_spec(
+            "GetSet2PlayerA",
+            precondition=self._set_preconditions["GetSet2PlayerA"],
+        )
+        self.system.configure_spec(
+            "GetSet2PlayerB",
+            precondition=self._set_preconditions["GetSet2PlayerB"],
+        )
+        # Note: GetCurrentSetPlayer commands return games for the currently active set.
+        # Backend auto-detects set transitions when SetSet1/SetSet2 are updated.
         self.system.configure_spec(
             "GetNamePlayerA",
             precondition=self._name_preconditions["A"],
@@ -255,6 +281,7 @@ class SmartCourtPollingController:
             a_state = dict(state.get("A") or {})
             b_state = dict(state.get("B") or {})
             match_status = dict(state.get("match_status") or {})
+            self._current_set = state.get("current_set")  # Track current set
         active = bool(match_status.get("active"))
         points = {
             "A": self._normalize_point(a_state.get("points")),
@@ -308,30 +335,26 @@ class SmartCourtPollingController:
             self._previous_match_names = dict(names)
 
     def _update_point_triggers(self, points: Dict[str, Optional[str]], current_games: Dict[str, int]) -> None:
-        for side in ("A", "B"):
-            value = points.get(side)
-            previous = self._last_points.get(side)
-
-            # Check if current games changed (gem won)
-            prev_games = self._last_current_games.get(side, 0)
-            curr_games = current_games.get(side, 0)
-            games_changed = curr_games != prev_games
-
-            self._last_points[side] = value
-            self._last_current_games[side] = curr_games
-
         # Check if current score is decisive (game can end on next point)
         pts_a = points.get("A")
         pts_b = points.get("B")
         score_tuple = (pts_a, pts_b) if pts_a and pts_b else None
         is_decisive_score = score_tuple in self.DECISIVE_SCORES if score_tuple else False
 
+        # Check if games changed BEFORE updating _last_current_games
+        games_changed_a = current_games.get("A", 0) != self._last_current_games.get("A", 0)
+        games_changed_b = current_games.get("B", 0) != self._last_current_games.get("B", 0)
+        any_games_changed = games_changed_a or games_changed_b
+
+        # Now update tracking variables
+        for side in ("A", "B"):
+            self._last_points[side] = points.get(side)
+            self._last_current_games[side] = current_games.get(side, 0)
+
         if self._mode == self.MODE_IN_MATCH:
             # Poll current games when score is decisive (40:30, 30:40, 40:40, 40:ADV, ADV:40)
-            # or when games increased to >=3 (potential set completion)
-            if is_decisive_score or any(current_games.get(side, 0) >= 3 and 
-                   current_games.get(side, 0) != self._last_current_games.get(side, 0) 
-                   for side in ("A", "B")):
+            # or when games changed (potential set progression)
+            if is_decisive_score or any_games_changed:
                 self._pending_current_games_poll = True
 
             # Update decisive flags for both players
@@ -394,11 +417,43 @@ class SmartCourtPollingController:
         """
         return self._mode == self.MODE_IN_MATCH and self._pending_current_games_poll
 
-    def _should_poll_name(self, side: str) -> bool:
-        if self._mode == self.MODE_IN_MATCH:
+    def _should_poll_set(self, command: str) -> bool:
+        """Poll set scores (GetSet1/Set2 PlayerA/B) periodically during match to detect set completion.
+        Only poll the sets that have been completed (not the current active set)."""
+        if self._mode != self.MODE_IN_MATCH:
             return False
         now = self._now()
-        interval = self.NAME_INTERVAL_RESET if self._mode == self.MODE_AWAIT_NAMES else self.NAME_INTERVAL_PREMATCH
+        if now < self._next_set_poll_allowed:
+            return False
+        
+        # Update timing for ALL set polls to avoid hammering
+        self._next_set_poll_allowed = now + self.SET_INTERVAL
+        
+        # Determine which set queries to allow based on current_set
+        # If current_set=1, don't poll any completed sets yet
+        # If current_set=2, only poll GetSet1PlayerA/B (set1 is complete)
+        # If current_set=3, poll GetSet1 and GetSet2 (both complete)
+        current_set = self._current_set or 1
+        
+        if "GetSet1" in command:
+            # Only poll set1 if we're in set2 or later
+            return current_set >= 2
+        elif "GetSet2" in command:
+            # Only poll set2 if we're in set3
+            return current_set >= 3
+        else:
+            return False
+
+    def _should_poll_name(self, side: str) -> bool:
+        now = self._now()
+        # During match, poll names less frequently (every 60 seconds)
+        if self._mode == self.MODE_IN_MATCH:
+            interval = 60.0
+        elif self._mode == self.MODE_AWAIT_NAMES:
+            interval = self.NAME_INTERVAL_RESET
+        else:
+            interval = self.NAME_INTERVAL_PREMATCH
+        
         if now < self._next_name_poll_allowed:
             return False
         self._next_name_poll_allowed = now + interval
