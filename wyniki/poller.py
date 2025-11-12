@@ -421,9 +421,12 @@ class SmartCourtPollingController:
         """Poll set scores (GetSet1/Set2 PlayerA/B) periodically during match to detect set completion.
         Only poll the sets that have been completed (not the current active set)."""
         if self._mode != self.MODE_IN_MATCH:
+            log.debug("kort=%s command=%s _should_poll_set=False reason=not-in-match mode=%s", self.kort_id, command, self._mode)
             return False
         now = self._now()
         if now < self._next_set_poll_allowed:
+            log.debug("kort=%s command=%s _should_poll_set=False reason=timer next_allowed=%.1f now=%.1f", 
+                     self.kort_id, command, self._next_set_poll_allowed, now)
             return False
         
         # Update timing for ALL set polls to avoid hammering
@@ -436,11 +439,15 @@ class SmartCourtPollingController:
         
         if "GetSet1" in command:
             # Poll set1 always during match (it's either active or complete)
+            log.info("kort=%s command=%s _should_poll_set=True current_set=%s", self.kort_id, command, current_set)
             return True
         elif "GetSet2" in command:
             # Poll set2 when we're in set2 or later
-            return current_set >= 2
+            result = current_set >= 2
+            log.info("kort=%s command=%s _should_poll_set=%s current_set=%s", self.kort_id, command, result, current_set)
+            return result
         else:
+            log.debug("kort=%s command=%s _should_poll_set=False reason=unknown-command", self.kort_id, command)
             return False
 
     def _should_poll_name(self, side: str) -> bool:
