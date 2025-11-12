@@ -430,17 +430,16 @@ class SmartCourtPollingController:
         self._next_set_poll_allowed = now + self.SET_INTERVAL
         
         # Determine which set queries to allow based on current_set
-        # If current_set=1, don't poll any completed sets yet
-        # If current_set=2, only poll GetSet1PlayerA/B (set1 is complete)
-        # If current_set=3, poll GetSet1 and GetSet2 (both complete)
+        # GetSet1 should be polled during set1, set2, and set3 (always during match)
+        # GetSet2 should be polled during set2 and set3 (when it's active or complete)
         current_set = self._current_set or 1
         
         if "GetSet1" in command:
-            # Only poll set1 if we're in set2 or later
-            return current_set >= 2
+            # Poll set1 always during match (it's either active or complete)
+            return True
         elif "GetSet2" in command:
-            # Only poll set2 if we're in set3
-            return current_set >= 3
+            # Poll set2 when we're in set2 or later
+            return current_set >= 2
         else:
             return False
 
