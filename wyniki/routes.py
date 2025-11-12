@@ -1463,9 +1463,9 @@ def _derive_local_uno_command(command: str, response_payload: Any) -> Optional[T
     if derived_value is None:
         return None
     
-    # Debug log for set values
-    if "GetSet" in command:
-        log.debug(
+    # Debug log for set values and names
+    if "GetSet" in command or "GetName" in command:
+        log.info(
             "uno command=%s mapped=%s value=%s (type=%s) payload=%s",
             command,
             mapped,
