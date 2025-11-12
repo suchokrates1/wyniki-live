@@ -237,8 +237,8 @@ export function makeCourtCard(k, currentLang, options = {}) {
     <div class="card-head">${headHTML}</div>
     <div class="score-wrapper">
       <div class="score-labels">
-        <div class="score-label score-label-tb" id="k${k}-tb-label"></div>
-        <div class="score-label score-label-stb" id="k${k}-stb-label"></div>
+        <div class="score-label score-label-tb" id="k${k}-tb-label" aria-hidden="true"></div>
+        <div class="score-label score-label-stb" id="k${k}-stb-label" aria-hidden="true"></div>
       </div>
       <dl class="score-list" aria-labelledby="heading-${k}" aria-hidden="true">
         <div class="score-row" data-side="A">
@@ -375,12 +375,15 @@ function applyScoreAria(k, data, currentLang) {
   const tbLabel = document.getElementById(`k${k}-tb-label`);
   const stbLabel = document.getElementById(`k${k}-stb-label`);
   if (tbLabel) {
+    const tbVisible = tieVisible && !isSuperTieBreak;
     tbLabel.textContent = t.tieBreakLabel || 'TIE-BREAK';
-    tbLabel.classList.toggle('is-visible', tieVisible && !isSuperTieBreak);
+    tbLabel.classList.toggle('is-visible', tbVisible);
+    tbLabel.setAttribute('aria-hidden', tbVisible ? 'false' : 'true');
   }
   if (stbLabel) {
     stbLabel.textContent = t.superTieBreakLabel || 'SUPER TIE-BREAK';
     stbLabel.classList.toggle('is-visible', isSuperTieBreak);
+    stbLabel.setAttribute('aria-hidden', isSuperTieBreak ? 'false' : 'true');
   }
 
   const pointsLabelEl = document.getElementById(`k${k}-label-points`);
@@ -542,12 +545,13 @@ export function updateCourt(k, data, prev, currentLang, options = {}) {
     }
   }
 
+  // Update set scores (games won in completed sets)
+  // Note: current_games tracks games in the active set and is NOT displayed separately
   if (A.set1 !== undefined && A.set1 !== prevK?.A?.set1) {
     const cell = document.getElementById(`k${k}-s1-A`);
     if (cell) {
       cell.textContent = A.set1 ?? 0;
       flash(cell);
-      announceCb(k, 'announceGames', surnameA, cell.textContent);
     }
   }
   if (B.set1 !== undefined && B.set1 !== prevK?.B?.set1) {
@@ -555,7 +559,6 @@ export function updateCourt(k, data, prev, currentLang, options = {}) {
     if (cell) {
       cell.textContent = B.set1 ?? 0;
       flash(cell);
-        announceCb(k, 'announceGames', surnameB, cell.textContent);
     }
   }
     if (A.set2 !== undefined && A.set2 !== prevK?.A?.set2) {
@@ -563,7 +566,6 @@ export function updateCourt(k, data, prev, currentLang, options = {}) {
     if (cell) {
       cell.textContent = A.set2 ?? 0;
       flash(cell);
-        announceCb(k, 'announceGames', surnameA, cell.textContent);
     }
   }
   if (B.set2 !== undefined && B.set2 !== prevK?.B?.set2) {
@@ -571,7 +573,6 @@ export function updateCourt(k, data, prev, currentLang, options = {}) {
     if (cell) {
       cell.textContent = B.set2 ?? 0;
       flash(cell);
-        announceCb(k, 'announceGames', surnameB, cell.textContent);
     }
   }
     const surnames = { A: surnameA, B: surnameB };
