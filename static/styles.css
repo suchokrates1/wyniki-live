@@ -422,12 +422,13 @@ main {
 
 .score-labels {
   position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 100%;
+  left: 0;
+  right: 0;
   display: flex;
+  justify-content: center;
   gap: 12px;
-  padding: 4px 0;
+  padding: 0 0 6px 0;
   pointer-events: none;
 }
 
@@ -439,7 +440,7 @@ main {
   color: #fff;
   text-transform: uppercase;
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(10px);
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
