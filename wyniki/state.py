@@ -1450,17 +1450,26 @@ def count_short_set_wins(state: Dict[str, Any]) -> Dict[str, int]:
 
 
 def short_set_winner(games_a: int, games_b: int) -> Optional[str]:
-    # Standard set win: 6 games with at least 2 game difference
-    if games_a >= 6 and games_a - games_b >= 2:
+    # Short set (do 4 gemów) - wygrana przy 4 gemach z minimum 2 gemami różnicy
+    # 4-0, 4-1, 4-2 = bezpośrednia wygrana
+    if games_a == 4 and games_b <= 2:
         return "A"
-    if games_b >= 6 and games_b - games_a >= 2:
+    if games_b == 4 and games_a <= 2:
         return "B"
     
-    # Tie-break set: 7-6 (after 6-6, tie-break decides)
-    if games_a == 7 and games_b == 6:
+    # Przy 3-3 trzeba wygrać 5-3 (różnica 2 gemów)
+    if games_a == 5 and games_b == 3:
         return "A"
-    if games_b == 7 and games_a == 6:
+    if games_b == 5 and games_a == 3:
         return "B"
+    
+    # Przy 4-4 może być tie-break lub gra do 5-4, potem do 6-4 itd.
+    # Sprawdzamy czy jest różnica 2 gemów przy co najmniej 4 gemach każdy
+    if games_a >= 4 and games_b >= 4:
+        if games_a - games_b >= 2:
+            return "A"
+        if games_b - games_a >= 2:
+            return "B"
     
     return None
 
