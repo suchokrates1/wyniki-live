@@ -1788,7 +1788,7 @@ def api_uno_exec(kort_id: str):
     error_message: Optional[str] = None
 
     try:
-        log.debug("uno kort=%s command=%s sending to %s", kort_id, command, shorten(endpoint))
+        log.info("uno kort=%s command=%s sending to %s", kort_id, command, endpoint)
         response = requests.put(
             endpoint,
             headers=settings.auth_header,
