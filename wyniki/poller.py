@@ -424,13 +424,18 @@ class SmartCourtPollingController:
             log.debug("kort=%s command=%s _should_poll_set=False reason=not-in-match mode=%s", self.kort_id, command, self._mode)
             return False
         now = self._now()
-        if now < self._next_set_poll_allowed:
+        
+        # Only check timer for PlayerA commands (first in group)
+        # This allows PlayerB to be polled immediately after PlayerA
+        is_player_a = "PlayerA" in command
+        if is_player_a and now < self._next_set_poll_allowed:
             log.debug("kort=%s command=%s _should_poll_set=False reason=timer next_allowed=%.1f now=%.1f", 
                      self.kort_id, command, self._next_set_poll_allowed, now)
             return False
         
-        # Update timing for ALL set polls to avoid hammering
-        self._next_set_poll_allowed = now + self.SET_INTERVAL
+        # Update timing for next polling cycle (only when PlayerA is polled)
+        if is_player_a:
+            self._next_set_poll_allowed = now + self.SET_INTERVAL
         
         # Determine which set queries to allow based on current_set
         # GetSet1 should be polled during set1, set2, and set3 (always during match)
