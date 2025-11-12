@@ -195,7 +195,7 @@ class SmartCourtPollingController:
         self._last_current_games: Dict[str, int] = {"A": 0, "B": 0}
         self._previous_match_names: Dict[str, Optional[str]] = {"A": None, "B": None}
         self._current_names: Dict[str, Optional[str]] = {"A": None, "B": None}
-        self._next_name_poll_allowed = 0.0
+        self._next_name_poll_allowed: Dict[str, float] = {"A": 0.0, "B": 0.0}
         self._next_point_poll_allowed = 0.0
         self._next_point_poll_side = "A"  # Track which player to poll next (A or B alternating)
         self._next_set_poll_allowed = 0.0  # Track when to poll set scores
@@ -307,14 +307,14 @@ class SmartCourtPollingController:
             if self._mode == self.MODE_IN_MATCH:
                 self._previous_match_names = dict(names)
                 self._mode = self.MODE_AWAIT_NAMES
-                self._next_name_poll_allowed = 0.0
+                self._next_name_poll_allowed = {"A": 0.0, "B": 0.0}
                 self._next_point_poll_allowed = 0.0
                 self._next_point_poll_side = "A"  # Start alternating from A
                 self._points_decisive = {"A": False, "B": False}
             elif self._mode == self.MODE_AWAIT_NAMES:
                 if self._names_changed_meaningfully(names):
                     self._mode = self.MODE_AWAIT_FIRST_POINT
-                    self._next_name_poll_allowed = 0.0
+                    self._next_name_poll_allowed = {"A": 0.0, "B": 0.0}
                     self._next_point_poll_allowed = 0.0
                 # Check if match started (points detected from our polling in AWAIT_NAMES)
                 if self._first_point_detected(points):
@@ -323,7 +323,7 @@ class SmartCourtPollingController:
                     self._next_point_poll_allowed = 0.0
             elif self._mode == self.MODE_AWAIT_FIRST_POINT:
                 if self._names_changed_meaningfully(names):
-                    self._next_name_poll_allowed = 0.0
+                    self._next_name_poll_allowed = {"A": 0.0, "B": 0.0}
                 if self._first_point_detected(points):
                     self._mode = self.MODE_IN_MATCH
                     self._previous_match_names = dict(names)
@@ -454,9 +454,9 @@ class SmartCourtPollingController:
         else:
             interval = self.NAME_INTERVAL_PREMATCH
         
-        if now < self._next_name_poll_allowed:
+        if now < self._next_name_poll_allowed[side]:
             return False
-        self._next_name_poll_allowed = now + interval
+        self._next_name_poll_allowed[side] = now + interval
         return True
 
     # ------------------------------------------------------------------
