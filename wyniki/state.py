@@ -1457,19 +1457,18 @@ def short_set_winner(games_a: int, games_b: int) -> Optional[str]:
     if games_b == 4 and games_a <= 2:
         return "B"
     
-    # Przy 3-3 trzeba wygrać 5-3 (różnica 2 gemów)
+    # Przy 4-3 gra się gem decydujący
+    # Przy 5-3 = wygrana (po wygraniu gema przy 4-3)
     if games_a == 5 and games_b == 3:
         return "A"
     if games_b == 5 and games_a == 3:
         return "B"
     
-    # Przy 4-4 może być tie-break lub gra do 5-4, potem do 6-4 itd.
-    # Sprawdzamy czy jest różnica 2 gemów przy co najmniej 4 gemach każdy
-    if games_a >= 4 and games_b >= 4:
-        if games_a - games_b >= 2:
-            return "A"
-        if games_b - games_a >= 2:
-            return "B"
+    # Przy 4-4 = tie-break (gemy nie liczą się już, będzie tie-break punktowy)
+    # Set NIE jest zakończony przy 4-4, trzeba rozegrać tie-break
+    # Po tie-breaku jeden z graczy będzie miał wynik 5-4 w gemach (ale to nie określa wygranej)
+    # Wygrana seta przy 4-4 jest określana przez wynik tie-breaku (do 7 pkt z 2 pkt przewagi)
+    # Więc tutaj NIE wykrywamy 5-4 jako wygraną - tie-break decyduje
     
     return None
 
