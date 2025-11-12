@@ -1450,18 +1450,18 @@ def count_short_set_wins(state: Dict[str, Any]) -> Dict[str, int]:
 
 
 def short_set_winner(games_a: int, games_b: int) -> Optional[str]:
-    if games_a == 4 and games_b <= 2:
+    # Standard set win: 6 games with at least 2 game difference
+    if games_a >= 6 and games_a - games_b >= 2:
         return "A"
-    if games_b == 4 and games_a <= 2:
+    if games_b >= 6 and games_b - games_a >= 2:
         return "B"
-    if games_a == 5 and games_b == 3:
+    
+    # Tie-break set: 7-6 (after 6-6, tie-break decides)
+    if games_a == 7 and games_b == 6:
         return "A"
-    if games_b == 5 and games_a == 3:
+    if games_b == 7 and games_a == 6:
         return "B"
-    if games_a == 5 and games_b == 4:
-        return "A"
-    if games_b == 5 and games_a == 4:
-        return "B"
+    
     return None
 
 
@@ -1989,16 +1989,54 @@ def apply_local_command(
             key = f"set{idx}"
             prev_games = int(state[side].get(key) or 0)
             new_games = as_int(value, prev_games)
+            log.info(
+                "SetSet%sPlayer%s: prev=%d new=%d value=%s",
+                idx,
+                side,
+                prev_games,
+                new_games,
+                value,
+            )
             if new_games != prev_games:
                 state[side][key] = new_games
                 reset_regular_points(state)
                 changed = True
+            
+            # Auto-detect set transition: if set1 has value and current_set is still 1, move to set 2
+            # This happens when UNO is manually set to set2 but backend hasn't detected it yet
+            current_set = state.get("current_set")
+            if idx == "1" and current_set == 1 and new_games > 0:
+                # Check if either player has games in set1, meaning set1 is complete
+                a_set1 = int(state.get("A", {}).get("set1") or 0)
+                b_set1 = int(state.get("B", {}).get("set1") or 0)
+                if (a_set1 > 0 or b_set1 > 0) and (a_set1 > 0 or b_set1 > 0):
+                    state["current_set"] = 2
+                    state["A"]["current_games"] = 0
+                    state["B"]["current_games"] = 0
+                    log.info("Auto-detected set1 completion (A:%d B:%d), moving to set2 (kort=%s)", a_set1, b_set1, state.get("number"))
+                    changed = True
+            elif idx == "2" and current_set == 2 and new_games > 0:
+                a_set2 = int(state.get("A", {}).get("set2") or 0)
+                b_set2 = int(state.get("B", {}).get("set2") or 0)
+                if (a_set2 > 0 or b_set2 > 0) and (a_set2 > 0 or b_set2 > 0):
+                    state["current_set"] = 3
+                    state["A"]["current_games"] = 0
+                    state["B"]["current_games"] = 0
+                    log.info("Auto-detected set2 completion (A:%d B:%d), moving to set3 (kort=%s)", a_set2, b_set2, state.get("number"))
+                    changed = True
         else:
             cur_match = re.fullmatch(r"SetCurrentSetPlayer([AB])", command)
             if cur_match:
                 side = cur_match.group(1)
                 prev_games = int(state[side].get("current_games") or 0)
                 new_games = as_int(value, prev_games)
+                log.info(
+                    "SetCurrentSetPlayer%s: prev=%d new=%d value=%s",
+                    side,
+                    prev_games,
+                    new_games,
+                    value,
+                )
                 if new_games != prev_games:
                     state[side]["current_games"] = new_games
                     reset_regular_points(state)
@@ -2281,17 +2319,17 @@ def log_state_summary(kort_id: str, state: Dict[str, Any], context: str) -> None
     b_name = shorten(b_state.get("full_name") or b_state.get("surname"), 15)
     
     log.info(
-        "%s kort=%s | %s sets=%s-%s pts=%s vs %s sets=%s-%s pts=%s | currSet=%s",
+        "%s kort=%s | %s [%s-%s] %s vs %s [%s-%s] %s | set=%s",
         context,
         kort_id,
         a_name,
         a_state.get("set1", 0),
         a_state.get("set2", 0),
-        a_state.get("points", "?"),
+        a_state.get("points", "0"),
         b_name,
         b_state.get("set1", 0),
         b_state.get("set2", 0),
-        b_state.get("points", "?"),
+        b_state.get("points", "0"),
         state.get("current_set"),
     )
 

@@ -1462,6 +1462,18 @@ def _derive_local_uno_command(command: str, response_payload: Any) -> Optional[T
     derived_value = _extract_uno_value(response_payload)
     if derived_value is None:
         return None
+    
+    # Debug log for set values
+    if "GetSet" in command:
+        log.debug(
+            "uno command=%s mapped=%s value=%s (type=%s) payload=%s",
+            command,
+            mapped,
+            derived_value,
+            type(derived_value).__name__,
+            response_payload
+        )
+    
     return mapped, derived_value
 
 
@@ -1856,6 +1868,14 @@ def api_uno_exec(kort_id: str):
         state = ensure_court_state(kort_id)
         if success:
             try:
+                # Debug log for SetCurrentSet queries
+                if local_command and "SetCurrentSet" in local_command:
+                    log.info(
+                        "uno kort=%s applying command=%s value=%s",
+                        kort_id,
+                        local_command,
+                        local_value,
+                    )
                 changed, _ = apply_local_command(state, local_command, local_value, extras, kort_id)
             except Exception as exc:  # noqa: BLE001
                 log.warning(
