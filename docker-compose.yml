@@ -43,5 +43,25 @@ services:
       timeout: 3s
       retries: 5
 
+  nginx-rtmp:
+    image: tiangolo/nginx-rtmp:latest
+    container_name: wyniki-rtmp
+    restart: unless-stopped
+    ports:
+      - "1935:1935"    # RTMP input (OBS pushuje tutaj)
+      - "8088:80"      # HLS playback (http://score.vestmedia.pl:8088/hls/stream1/index.m3u8)
+    volumes:
+      - ./nginx-rtmp.conf:/etc/nginx/nginx.conf:ro
+      - ./stream.html:/var/www/stream.html:ro
+      - rtmp_hls:/tmp/hls
+    labels:
+      - "traefik.enable=true"
+      # Router dla HLS playback
+      - "traefik.http.routers.rtmp.rule=Host(`${PUBLIC_HOST}`) && PathPrefix(`/hls`, `/stream`)"
+      - "traefik.http.routers.rtmp.entrypoints=https"
+      - "traefik.http.routers.rtmp.tls=true"
+      - "traefik.http.services.rtmp.loadbalancer.server.port=80"
+
 volumes:
   wyniki_data:
+  rtmp_hls:
