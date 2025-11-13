@@ -1,6 +1,6 @@
-﻿// UNO Player Picker v0.3.21 - English UI
+﻿// UNO Player Picker v0.3.22 - English UI
 const API_BASE = 'https://score.vestmedia.pl';
-const log = (...a) => console.log('[UNO Picker v0.3.21]', ...a);
+const log = (...a) => console.log('[UNO Picker v0.3.22]', ...a);
 const supportsPointer = 'PointerEvent' in window;
 log('Init', { api: API_BASE, supportsPointer });
 
@@ -63,7 +63,15 @@ async function fetchPlayers() {
 
 function formatDoublesName(players) {
   if (!Array.isArray(players) || players.length !== 2) return '';
-  return players.map(p => p.name.split(' ').filter(Boolean).pop()).join(' / ');
+  // Bierz pierwsze litery każdego słowa w nazwisku
+  return players.map(p => {
+    const parts = p.name.split(' ').filter(Boolean);
+    if (parts.length === 1) return parts[0]; // Jeśli jedno słowo, zwróć całe
+    // Dla wielu słów: pierwsze litery każdego słowa, oprócz ostatniego (które bierzemy całe)
+    const initials = parts.slice(0, -1).map(word => word[0].toUpperCase()).join('.');
+    const lastName = parts[parts.length - 1];
+    return initials ? `${initials}. ${lastName}` : lastName;
+  }).join(' / ');
 }
 
 function getOverlayId() {
@@ -250,37 +258,12 @@ async function showPickerFor(input, letter) {
           closeModal();
         }
       };
-      if (supportsPointer) {
-        let ts = null;
-        row.addEventListener('pointerdown', e => {
-          ts = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, type: e.pointerType };
-        }, { passive: true });
-        row.addEventListener('pointermove', e => {
-          if (!ts || ts.id !== e.pointerId) return;
-          if (Math.abs(e.clientX - ts.x) > 10 || Math.abs(e.clientY - ts.y) > 10) ts.moved = true;
-        }, { passive: true });
-        row.addEventListener('pointercancel', e => {
-          if (!ts || ts.id !== e.pointerId) return;
-          ts = null;
-        }, { passive: true });
-        row.addEventListener('pointerup', e => {
-          if (!ts || ts.id !== e.pointerId) return;
-          const m = ts.moved;
-          ts = null;
-          if (!m) {
-            e.preventDefault();
-            e.stopPropagation();
-            handleSel();
-          }
-        });
-      } else {
-        // Fallback dla starszych przeglądarek
-        row.addEventListener('click', e => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleSel();
-        });
-      }
+      // Prosta obsługa kliknięcia - działa dla mouse i touch
+      row.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSel();
+      });
       row.addEventListener('mouseenter', () => { 
         const nowSelected = doublesMode && selectedPlayers.some(p => p.name === player.name);
         if (!nowSelected) row.style.backgroundColor = '#3a3a3a'; 
