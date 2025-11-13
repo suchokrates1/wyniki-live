@@ -36,8 +36,8 @@ Alpine.data('adminApp', () => ({
   async loadUnoStatus() {
     try {
       const [configRes, statusRes] = await Promise.all([
-        fetch('/admin/api/uno/config'),
-        fetch('/admin/api/uno/status')
+        fetch('/api/admin/uno/config'),
+        fetch('/api/admin/uno/status')
       ])
       
       if (configRes.ok) {
@@ -62,7 +62,7 @@ Alpine.data('adminApp', () => ({
 
   async saveUnoConfig() {
     try {
-      const res = await fetch('/admin/api/uno/config', {
+      const res = await fetch('/api/admin/uno/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,7 +86,7 @@ Alpine.data('adminApp', () => ({
 
   async toggleUno() {
     try {
-      const res = await fetch('/admin/api/uno/toggle', {
+      const res = await fetch('/api/admin/uno/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -108,7 +108,7 @@ Alpine.data('adminApp', () => ({
 
   async loadCourts() {
     try {
-      const res = await fetch('/admin/api/courts')
+      const res = await fetch('/api/admin/courts')
       if (res.ok) {
         this.courts = await res.json()
       }
@@ -119,7 +119,7 @@ Alpine.data('adminApp', () => ({
 
   async updateCourtOverlay(kortId, overlayId) {
     try {
-      const res = await fetch(`/admin/api/courts/${kortId}`, {
+      const res = await fetch(`/api/admin/courts/${kortId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ overlay_id: overlayId || null })
@@ -141,7 +141,7 @@ Alpine.data('adminApp', () => ({
     if (!newId) return
     
     try {
-      const res = await fetch('/admin/api/courts', {
+      const res = await fetch('/api/admin/courts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kort_id: newId, overlay_id: null })
@@ -177,7 +177,7 @@ Alpine.data('adminApp', () => ({
     if (!confirm('Czy na pewno usunąć ten mecz z historii?')) return
     
     try {
-      const res = await fetch('/admin/api/history/latest', {
+      const res = await fetch('/api/admin/history/latest', {
         method: 'DELETE'
       })
       
@@ -207,7 +207,7 @@ Alpine.data('adminApp', () => ({
   async loadTournaments() {
     this.loading.tournaments = true
     try {
-      const res = await fetch('/admin/api/tournaments')
+      const res = await fetch('/api/admin/tournaments')
       if (res.ok) {
         this.tournaments = await res.json()
         // Load active tournament players
@@ -237,7 +237,7 @@ Alpine.data('adminApp', () => ({
     }
 
     try {
-      const res = await fetch('/admin/api/tournaments', {
+      const res = await fetch('/api/admin/tournaments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(this.newTournament)
@@ -259,7 +259,7 @@ Alpine.data('adminApp', () => ({
     if (!confirm('Czy na pewno usunąć ten turniej? Zostaną usunięci wszyscy gracze!')) return
 
     try {
-      const res = await fetch(`/admin/api/tournaments/${tournamentId}`, {
+      const res = await fetch(`/api/admin/tournaments/${tournamentId}`, {
         method: 'DELETE'
       })
 
@@ -276,7 +276,7 @@ Alpine.data('adminApp', () => ({
 
   async activateTournament(tournamentId) {
     try {
-      const res = await fetch(`/admin/api/tournaments/${tournamentId}/activate`, {
+      const res = await fetch(`/api/admin/tournaments/${tournamentId}/activate`, {
         method: 'POST'
       })
 
@@ -303,7 +303,7 @@ Alpine.data('adminApp', () => ({
 
     this.loading.players = true
     try {
-      const res = await fetch(`/admin/api/tournaments/${tournamentId}/players`)
+      const res = await fetch(`/api/admin/tournaments/${tournamentId}/players`)
       if (res.ok) {
         this.players = await res.json()
       }
@@ -326,7 +326,7 @@ Alpine.data('adminApp', () => ({
     }
 
     try {
-      const res = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players`, {
+      const res = await fetch(`/api/admin/tournaments/${this.selectedTournament}/players`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(this.newPlayer)
@@ -348,7 +348,7 @@ Alpine.data('adminApp', () => ({
     if (!confirm('Czy na pewno usunąć tego gracza?')) return
 
     try {
-      const res = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/${playerId}`, {
+      const res = await fetch(`/api/admin/tournaments/${this.selectedTournament}/players/${playerId}`, {
         method: 'DELETE'
       })
 
@@ -375,7 +375,7 @@ Alpine.data('adminApp', () => ({
     }
 
     try {
-      const res = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/import`, {
+      const res = await fetch(`/api/admin/tournaments/${this.selectedTournament}/players/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: this.importText })

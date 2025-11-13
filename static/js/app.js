@@ -223,6 +223,7 @@ function renderGlobalHistory(history = []) {
     const categoryText = rawCategory || '—';
     const rawPhase = typeof entry.phase === 'string' ? entry.phase.trim() : '';
     const phaseText = rawPhase || '—';
+    const endedAt = formatHistoryTimestamp(entry.ended_at);
 
     const courtLabel = format(currentT().courtLabel, { court: entry.kort });
     const versusText = t.versus || 'vs';
@@ -236,9 +237,10 @@ function renderGlobalHistory(history = []) {
 
     const terms = [
       { label: columns.description, value: description, className: 'description' },
-      { label: columns.category, value: categoryText, className: 'category' },
+      // { label: columns.category, value: categoryText, className: 'category' },
       { label: columns.phase, value: phaseText, className: 'phase' },
-      { label: columns.duration, value: duration, className: 'duration' }
+      { label: columns.duration, value: duration, className: 'duration' },
+      { label: columns.date || 'Data', value: endedAt, className: 'date' }
     ];
     terms.forEach(({ label, value, className }) => {
       const dt = document.createElement('dt');
