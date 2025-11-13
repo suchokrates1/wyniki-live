@@ -1,6 +1,21 @@
 # 📋 CHANGELOG - UNO Player Picker
 
-## [0.3.21] - 2025-11-13 (Current Release)
+## [0.3.22] - 2025-11-13 (Current Release)
+
+### 🐛 Critical Bug Fixes
+- **✅ NAPRAWIONO: Lista się nie zamykała po kliknięciu** - Usunięto skomplikowaną logikę PointerEvent tracking
+- **✅ NAPRAWIONO: Formatowanie debla** - Deble teraz pokazują skróty inicjałów + nazwisko (np. "J. Kowalski / A. Nowak")
+- **✅ Uproszczona obsługa clicków** - Używamy prostego `click` event zamiast pointer tracking
+
+### 🔧 Zmiany techniczne
+- Usunięto `pointerdown`/`pointermove`/`pointercancel`/`pointerup` tracking dla rzędów listy
+- `formatDoublesName()` teraz poprawnie tworzy inicjały: pierwsze litery imion + pełne nazwisko
+- Prostsza i bardziej niezawodna obsługa eventów
+- **Kod:** content.js (~420 LOC)
+
+---
+
+## [0.3.21] - 2025-11-13
 
 ### 🐛 Critical Bug Fix
 - **✅ NAPRAWIONO: Kliknięcie myszką nie działało** - Usunięto warunek `pointerType !== 'touch'` który blokował eventy z myszy
