@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
     ports:
       - "1935:1935"    # RTMP input (OBS pushuje tutaj)
-      - "8088:80"      # HLS playback (http://score.vestmedia.pl:8088/hls/stream1/index.m3u8)
+      - "8089:80"      # HLS playback (http://score.vestmedia.pl:8089/hls/stream1/index.m3u8)
     volumes:
       - ./nginx-rtmp.conf:/etc/nginx/nginx.conf:ro
       - ./stream.html:/var/www/stream.html:ro
