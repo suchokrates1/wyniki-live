@@ -1,9 +1,25 @@
 # 📋 CHANGELOG - UNO Player Picker
 
-## [0.3.22] - 2025-11-13 (Current Release)
+## [0.3.23] - 2025-11-13 (Current Release)
+
+### 🐛 Critical Touch/Tablet Fix
+- **✅ NAPRAWIONO: Przyciski "Select A/B" nie działały na myszy** - Warunek `e.pointerType !== 'touch'` blokował mouse clicks
+- **✅ Ujednolicona obsługa touch i mouse** - Wszystkie elementy używają prostego `click` event
+- **✅ Touch na tablecie działa poprawnie** - Zarówno przyciski jak i lista graczy reagują na dotyk
+- **✅ Deble na touch** - Można zaznaczać 2 graczy touch/mouse, lista się zamyka po wyborze drugiego
+
+### 🔧 Zmiany techniczne
+- Usunięto całą logikę PointerEvent tracking z przycisków (niepotrzebna i buggy)
+- Prosty `click` event działa uniwersalnie dla mouse, touch i pen
+- Usunięto zmienną `supportsPointer` - nie jest już używana
+- **Kod:** content.js (~380 LOC, zmniejszony o 40 linii)
+
+---
+
+## [0.3.22] - 2025-11-13
 
 ### 🐛 Critical Bug Fixes
-- **✅ NAPRAWIONO: Lista się nie zamykała po kliknięciu** - Usunięto skomplikowaną logikę PointerEvent tracking
+- **✅ NAPRAWIONO: Lista się nie zamykała po kliknięciu** - Usunięto skomplikowaną logikę PointerEvent tracking dla listy
 - **✅ NAPRAWIONO: Formatowanie debla** - Deble teraz pokazują skróty inicjałów + nazwisko (np. "J. Kowalski / A. Nowak")
 - **✅ Uproszczona obsługa clicków** - Używamy prostego `click` event zamiast pointer tracking
 
