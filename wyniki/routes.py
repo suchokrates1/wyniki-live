@@ -1226,7 +1226,7 @@ def download_plugin():
         for filename in os.listdir(DOWNLOAD_DIR)
         if os.path.splitext(filename)[1].lower() in allowed_extensions
         and os.path.isfile(os.path.join(DOWNLOAD_DIR, filename))
-    )
+    , reverse=True)  # Najnowsza wersja (największy numer) na początku
     if not archive_names:
         abort(404)
     return send_from_directory(DOWNLOAD_DIR, archive_names[0], as_attachment=True)
