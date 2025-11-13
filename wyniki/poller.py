@@ -198,7 +198,7 @@ class SmartCourtPollingController:
         self._next_name_poll_allowed: Dict[str, float] = {"A": 0.0, "B": 0.0}
         self._next_point_poll_allowed = 0.0
         self._next_point_poll_side = "A"  # Track which player to poll next (A or B alternating)
-        self._next_set_poll_allowed = 0.0  # Track when to poll set scores
+        self._next_set_poll_allowed: Dict[str, float] = {"Set1": 0.0, "Set2": 0.0}  # Track when to poll set scores per set
         self._current_set: Optional[int] = None  # Track which set is currently active
 
         # Prepared callables for QuerySystem configuration
@@ -425,34 +425,39 @@ class SmartCourtPollingController:
             return False
         now = self._now()
         
+        # Determine which set this command is for
+        set_key = "Set1" if "GetSet1" in command else "Set2" if "GetSet2" in command else None
+        if not set_key:
+            log.debug("kort=%s command=%s _should_poll_set=False reason=unknown-command", self.kort_id, command)
+            return False
+        
         # Only check timer for PlayerA commands (first in group)
         # This allows PlayerB to be polled immediately after PlayerA
         is_player_a = "PlayerA" in command
-        if is_player_a and now < self._next_set_poll_allowed:
-            log.debug("kort=%s command=%s _should_poll_set=False reason=timer next_allowed=%.1f now=%.1f", 
-                     self.kort_id, command, self._next_set_poll_allowed, now)
+        if is_player_a and now < self._next_set_poll_allowed[set_key]:
+            log.debug("kort=%s command=%s _should_poll_set=False reason=timer next_allowed=%.1f now=%.1f set=%s", 
+                     self.kort_id, command, self._next_set_poll_allowed[set_key], now, set_key)
             return False
         
         # Update timing for next polling cycle (only when PlayerA is polled)
         if is_player_a:
-            self._next_set_poll_allowed = now + self.SET_INTERVAL
+            self._next_set_poll_allowed[set_key] = now + self.SET_INTERVAL
         
         # Determine which set queries to allow based on current_set
         # GetSet1 should be polled during set1, set2, and set3 (always during match)
         # GetSet2 should be polled during set2 and set3 (when it's active or complete)
         current_set = self._current_set or 1
         
-        if "GetSet1" in command:
+        if set_key == "Set1":
             # Poll set1 always during match (it's either active or complete)
             log.info("kort=%s command=%s _should_poll_set=True current_set=%s", self.kort_id, command, current_set)
             return True
-        elif "GetSet2" in command:
+        elif set_key == "Set2":
             # Poll set2 when we're in set2 or later
             result = current_set >= 2
             log.info("kort=%s command=%s _should_poll_set=%s current_set=%s", self.kort_id, command, result, current_set)
             return result
         else:
-            log.debug("kort=%s command=%s _should_poll_set=False reason=unknown-command", self.kort_id, command)
             return False
 
     def _should_poll_name(self, side: str) -> bool:
