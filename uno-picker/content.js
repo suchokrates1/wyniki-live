@@ -1,6 +1,6 @@
-﻿// UNO Player Picker v0.3.20 - English UI
+﻿// UNO Player Picker v0.3.21 - English UI
 const API_BASE = 'https://score.vestmedia.pl';
-const log = (...a) => console.log('[UNO Picker v0.3.20]', ...a);
+const log = (...a) => console.log('[UNO Picker v0.3.21]', ...a);
 const supportsPointer = 'PointerEvent' in window;
 log('Init', { api: API_BASE, supportsPointer });
 
@@ -253,8 +253,7 @@ async function showPickerFor(input, letter) {
       if (supportsPointer) {
         let ts = null;
         row.addEventListener('pointerdown', e => {
-          if (e.pointerType !== 'touch') return;
-          ts = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+          ts = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, type: e.pointerType };
         }, { passive: true });
         row.addEventListener('pointermove', e => {
           if (!ts || ts.id !== e.pointerId) return;
@@ -265,7 +264,7 @@ async function showPickerFor(input, letter) {
           ts = null;
         }, { passive: true });
         row.addEventListener('pointerup', e => {
-          if (e.pointerType !== 'touch' || !ts || ts.id !== e.pointerId) return;
+          if (!ts || ts.id !== e.pointerId) return;
           const m = ts.moved;
           ts = null;
           if (!m) {
@@ -274,12 +273,14 @@ async function showPickerFor(input, letter) {
             handleSel();
           }
         });
+      } else {
+        // Fallback dla starszych przeglądarek
+        row.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleSel();
+        });
       }
-      row.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        handleSel();
-      });
       row.addEventListener('mouseenter', () => { 
         const nowSelected = doublesMode && selectedPlayers.some(p => p.name === player.name);
         if (!nowSelected) row.style.backgroundColor = '#3a3a3a'; 

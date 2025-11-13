@@ -1,6 +1,21 @@
 # 📋 CHANGELOG - UNO Player Picker
 
-## [0.3.12] - 2025-11-06 (Current Release)
+## [0.3.21] - 2025-11-13 (Current Release)
+
+### 🐛 Critical Bug Fix
+- **✅ NAPRAWIONO: Kliknięcie myszką nie działało** - Usunięto warunek `pointerType !== 'touch'` który blokował eventy z myszy
+- **✅ NAPRAWIONO: Nie można zatwierdzić gracza** - PointerEvent handler teraz obsługuje zarówno mouse jak i touch
+- **✅ NAPRAWIONO: Debel - nie można zatwierdzić graczy** - Ta sama poprawka naprawia również tryb debla
+
+### 🔧 Zmiany techniczne
+- `pointerdown` handler zapisuje wszystkie typy pointer (mouse, touch, pen)
+- `pointerup` handler wykonuje `handleSel()` dla wszystkich typów, nie tylko touch
+- Fallback `click` handler tylko dla starych przeglądarek bez PointerEvent API
+- **Kod:** content.js (~444 LOC)
+
+---
+
+## [0.3.12] - 2025-11-06
 
 ### 🎉 Major UI & API Improvements
 - **✅ NAPRAWIONO API** - Poprawiono parsowanie odpowiedzi API (flagUrl vs flag_url)
