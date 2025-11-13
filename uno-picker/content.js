@@ -1,8 +1,7 @@
-﻿// UNO Player Picker v0.3.22 - English UI
+﻿// UNO Player Picker v0.3.23 - English UI
 const API_BASE = 'https://score.vestmedia.pl';
-const log = (...a) => console.log('[UNO Picker v0.3.22]', ...a);
-const supportsPointer = 'PointerEvent' in window;
-log('Init', { api: API_BASE, supportsPointer });
+const log = (...a) => console.log('[UNO Picker v0.3.23]', ...a);
+log('Init', { api: API_BASE });
 
 function storageGet(keys) {
   if (!chrome?.storage?.local?.get) return Promise.resolve({});
@@ -364,31 +363,7 @@ async function ensureUI() {
     btn.textContent = 'Select ' + ltr;
     btn.style.cssText = 'margin-left:10px;min-height:40px;min-width:120px;padding:10px 20px;font-size:15px;cursor:pointer;background:#007bff;color:#fff;border:none;border-radius:6px;font-weight:500';
     inp.parentElement?.insertBefore(btn, inp.nextSibling);
-    if (supportsPointer) {
-      let ts = null;
-      btn.addEventListener('pointerdown', e => {
-        if (e.pointerType !== 'touch') return;
-        ts = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
-      }, { passive: true });
-      btn.addEventListener('pointermove', e => {
-        if (!ts || ts.id !== e.pointerId) return;
-        if (Math.abs(e.clientX - ts.x) > 10 || Math.abs(e.clientY - ts.y) > 10) ts.moved = true;
-      }, { passive: true });
-      btn.addEventListener('pointercancel', e => {
-        if (!ts || ts.id !== e.pointerId) return;
-        ts = null;
-      }, { passive: true });
-      btn.addEventListener('pointerup', e => {
-        if (e.pointerType !== 'touch' || !ts || ts.id !== e.pointerId) return;
-        const m = ts.moved;
-        ts = null;
-        if (!m) {
-          e.preventDefault();
-          e.stopPropagation();
-          showPickerFor(inp, ltr);
-        }
-      });
-    }
+    // Prosta obsługa kliknięcia - działa dla mouse i touch
     btn.addEventListener('click', e => {
       e.preventDefault();
       e.stopPropagation();
