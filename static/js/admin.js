@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 (function () {
   const configElement = document.getElementById('admin-initial-data');
