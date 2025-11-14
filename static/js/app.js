@@ -1,4 +1,4 @@
-﻿import { TRANSLATIONS, DEFAULT_LANG, SUPPORTED_LANGS, getTranslation } from './translations.js';
+import { TRANSLATIONS, DEFAULT_LANG, SUPPORTED_LANGS, getTranslation } from './translations.js';
 import { makeCourtCard, updateCourt, format, resolvePlayerName } from './common.js';
 
 let COURTS = [];
@@ -58,7 +58,7 @@ function setAnnounce(k, val) {
 function formatShortcutRange(count) {
   if (!count || count < 1) return '';
   if (count === 1) return '[1]';
-  return `[1ÔÇô${count}]`;
+  return `[1–${count}]`;
 }
 
 function updateShortcutsDescription() {
@@ -141,7 +141,7 @@ function formatHistoryTimestamp(iso) {
 
 function _formatDurationLocal(seconds) {
   const total = Number(seconds || 0);
-  if (!Number.isFinite(total) || total <= 0) return 'ÔÇô';
+  if (!Number.isFinite(total) || total <= 0) return '–';
   const mins = Math.floor(total / 60) % 60;
   const hours = Math.floor(total / 3600);
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
@@ -154,7 +154,7 @@ function formatSetHistorySegment(setData) {
   const gamesA = Number.isNaN(rawA) ? 0 : rawA;
   const gamesB = Number.isNaN(rawB) ? 0 : rawB;
   if (gamesA === 0 && gamesB === 0) return null;
-  const base = `${gamesA}ÔÇô${gamesB}`;
+  const base = `${gamesA}–${gamesB}`;
   const tb = setData.tb;
   if (tb && typeof tb === 'object') {
     const rawTbA = Number.parseInt(tb.A ?? tb.a ?? 0, 10);
@@ -190,7 +190,7 @@ function renderGlobalHistory(history = []) {
     section.classList.add('is-empty');
     const empty = document.createElement('p');
     empty.className = 'history-empty';
-    empty.textContent = t.history?.empty || 'Brak zapisanych wynik├│w.';
+    empty.textContent = t.history?.empty || 'Brak zapisanych wyników.';
     body.appendChild(empty);
     return;
   }
@@ -220,9 +220,9 @@ function renderGlobalHistory(history = []) {
     const tie = entry.sets?.tie || {};
     const duration = entry.duration_text || _formatDurationLocal(entry.duration_seconds || 0);
     const rawCategory = typeof entry.category === 'string' ? entry.category.trim() : '';
-    const categoryText = rawCategory || 'ÔÇö';
+    const categoryText = rawCategory || '—';
     const rawPhase = typeof entry.phase === 'string' ? entry.phase.trim() : '';
-    const phaseText = rawPhase || 'ÔÇö';
+    const phaseText = rawPhase || '—';
     const endedAt = formatHistoryTimestamp(entry.ended_at);
 
     const courtLabel = format(currentT().courtLabel, { court: entry.kort });
@@ -231,7 +231,7 @@ function renderGlobalHistory(history = []) {
     const segments = [...setSegments];
     if (tie.played) {
       const label = t.history?.labels?.supertb || 'SUPERTB';
-      segments.push(`${label}: ${(tie.A ?? 0)}ÔÇô${tie.B ?? 0}`);
+      segments.push(`${label}: ${(tie.A ?? 0)}–${tie.B ?? 0}`);
     }
     const description = segments.length ? `${head} ${segments.join(', ')}` : head;
 
@@ -455,11 +455,11 @@ function ensureHistoryToggle() {
   btn.type = 'button';
   btn.style.marginLeft = '8px';
   btn.setAttribute('aria-expanded', 'true');
-  btn.textContent = 'Ôľ╝';
+  btn.textContent = '▼';
   btn.addEventListener('click', () => {
     const collapsed = section.classList.toggle('is-collapsed');
     btn.setAttribute('aria-expanded', String(!collapsed));
-    btn.textContent = collapsed ? 'Ôľ║' : 'Ôľ╝';
+    btn.textContent = collapsed ? '►' : '▼';
   });
   title.appendChild(btn);
 }

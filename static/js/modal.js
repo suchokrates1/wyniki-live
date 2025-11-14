@@ -1,1 +1,119 @@
-﻿⨯പ ‪潍慤⁬潃普物慭楴湯䐠慩潬൧ ‪敒汰捡獥眠湩潤⹷潣普物⡭ 楷桴愠渠捩牥洠摯污਍⨠唠慳敧ഺ ‪†潣獮⁴潣普物敭⁤‽睡楡⁴桳睯潃普物䑭慩潬⡧䌧祺渠⁡数湷㽯Ⱗ✠慔愠捫慪樠獥⁴楮潥睤慲慣湬❡㬩਍⨠†椠⁦挨湯楦浲摥 ⁻⸮‮ൽ ⼪਍਍⨯പ ‪桓睯愠挠湯楦浲瑡潩⁮楤污杯਍⨠䀠慰慲⁭獻牴湩絧琠瑩敬ⴠ䐠慩潬⁧楴汴൥ ‪灀牡浡笠瑳楲杮⁽敭獳条⁥‭楄污杯洠獥慳敧਍⨠䀠慰慲⁭潻橢捥絴漠瑰潩獮ⴠ传瑰潩獮›⁻潣普物呭硥ⱴ挠湡散呬硥ⱴ搠湡敧⁲ൽ ‪牀瑥牵獮笠牐浯獩㱥潢汯慥㹮⁽牔敵椠⁦潣普物敭Ɽ映污敳椠⁦慣据汥敬൤ ⼪਍畦据楴湯猠潨䍷湯楦浲楄污杯琨瑩敬‬敭獳条ⱥ漠瑰潩獮㴠笠⥽笠਍†敲畴湲渠睥倠潲業敳⠨敲潳癬⥥㴠‾ൻ †挠湯瑳笠਍†††潣普物呭硥⁴‽伧❋ബ ††挠湡散呬硥⁴‽䄧畮畬❪ബ ††搠湡敧⁲‽慦獬൥ †素㴠漠瑰潩獮഻ †ഠ †⼠ 牃慥整漠敶汲祡਍††潣獮⁴癯牥慬⁹‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨楤❶㬩਍††癯牥慬⹹汣獡乳浡⁥‽洧摯污漭敶汲祡㬧਍††癯牥慬⹹敳䅴瑴楲畢整✨潲敬Ⱗ✠楤污杯⤧഻ †漠敶汲祡献瑥瑁牴扩瑵⡥愧楲ⵡ潭慤❬‬琧畲❥㬩਍††癯牥慬⹹敳䅴瑴楲畢整✨牡慩氭扡汥敬扤❹‬洧摯污琭瑩敬⤧഻ †ഠ †⼠ 牃慥整洠摯污਍††潣獮⁴潭慤⁬‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨楤❶㬩਍††潭慤⹬汣獡乳浡⁥‽洧摯污㬧਍††਍††⼯䠠慥敤൲ †挠湯瑳栠慥敤⁲‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨楤❶㬩਍††敨摡牥挮慬獳慎敭㴠✠潭慤彬桟慥敤❲഻ †挠湯瑳琠瑩敬汅㴠搠捯浵湥⹴牣慥整汅浥湥⡴栧✲㬩਍††楴汴䕥⹬汣獡乳浡⁥‽洧摯污彟楴汴❥഻ †琠瑩敬汅椮⁤‽洧摯污琭瑩敬㬧਍††楴汴䕥⹬整瑸潃瑮湥⁴‽楴汴㭥਍††敨摡牥愮灰湥䍤楨摬琨瑩敬汅㬩਍††਍††⼯䈠摯൹ †挠湯瑳戠摯⁹‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨楤❶㬩਍††潢祤挮慬獳慎敭㴠✠潭慤彬扟摯❹഻ †戠摯⹹整瑸潃瑮湥⁴‽敭獳条㭥਍††਍††⼯䘠潯整൲ †挠湯瑳映潯整⁲‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨楤❶㬩਍††潦瑯牥挮慬獳慎敭㴠✠潭慤彬晟潯整❲഻ †ഠ †挠湯瑳挠湡散䉬湴㴠搠捯浵湥⹴牣慥整汅浥湥⡴戧瑵潴❮㬩਍††慣据汥瑂⹮汣獡乳浡⁥‽洧摯污彟畢瑴湯洠摯污彟畢瑴湯ⴭ敳潣摮牡❹഻ †挠湡散䉬湴琮硥䍴湯整瑮㴠挠湡散呬硥㭴਍††慣据汥瑂⹮祴数㴠✠畢瑴湯㬧਍††਍††潣獮⁴潣普物䉭湴㴠搠捯浵湥⹴牣慥整汅浥湥⡴戧瑵潴❮㬩਍††潣普物䉭湴挮慬獳慎敭㴠怠潭慤彬扟瑵潴⁮潭慤彬扟瑵潴⵮␭摻湡敧⁲‿搧湡敧❲㨠✠牰浩牡❹恽഻ †挠湯楦浲瑂⹮整瑸潃瑮湥⁴‽潣普物呭硥㭴਍††潣普物䉭湴琮灹⁥‽戧瑵潴❮഻ †ഠ †映潯整⹲灡数摮桃汩⡤慣据汥瑂⥮഻ †映潯整⹲灡数摮桃汩⡤潣普物䉭湴㬩਍††਍††⼯䄠獳浥汢൥ †洠摯污愮灰湥䍤楨摬栨慥敤⥲഻ †洠摯污愮灰湥䍤楨摬戨摯⥹഻ †洠摯污愮灰湥䍤楨摬昨潯整⥲഻ †漠敶汲祡愮灰湥䍤楨摬洨摯污㬩਍††਍††⼯䔠敶瑮栠湡汤牥൳ †挠湯瑳挠敬湡灵㴠⠠敲畳瑬 㸽笠਍†††癯牥慬⹹瑳汹⹥湡浩瑡潩⁮‽洧摯污昭摡ⵥ湩〠㈮⁳慥敳漭瑵爠癥牥敳㬧਍†††敳呴浩潥瑵⠨ 㸽笠਍††††癯牥慬⹹敲潭敶⤨഻ †††爠獥汯敶爨獥汵⥴഻ ††素‬〲⤰഻ †素഻ †ഠ †挠湡散䉬湴漮据楬正㴠⠠ 㸽挠敬湡灵昨污敳㬩਍††潣普物䉭湴漮据楬正㴠⠠ 㸽挠敬湡灵琨畲⥥഻ †ഠ †⼠ 汃捩⁫畯獴摩⁥潴挠湡散൬ †漠敶汲祡漮据楬正㴠⠠⥥㴠‾ൻ ††椠⁦攨琮牡敧⁴㴽‽癯牥慬⥹笠਍††††汣慥畮⡰慦獬⥥഻ ††素਍††㭽਍††਍††⼯䔠䍓琠⁯慣据汥਍††潣獮⁴獥䡣湡汤牥㴠⠠⥥㴠‾ൻ ††椠⁦攨欮祥㴠㴽✠獅慣数⤧笠਍††††汣慥畮⡰慦獬⥥഻ †††搠捯浵湥⹴敲潭敶癅湥䱴獩整敮⡲欧祥潤湷Ⱗ攠捳慈摮敬⥲഻ ††素਍††㭽਍††潤畣敭瑮愮摤癅湥䱴獩整敮⡲欧祥潤湷Ⱗ攠捳慈摮敬⥲഻ †ഠ †⼠ 桓睯洠摯污਍††潤畣敭瑮戮摯⹹灡数摮桃汩⡤癯牥慬⥹഻ †挠湯楦浲瑂⹮潦畣⡳㬩਍†⥽഻紊਍਍⼯䔠灸牯൴眊湩潤⹷桳睯潃普物䑭慩潬⁧‽桳睯潃普物䑭慩潬㭧਍਍⼯传敶牲摩⁥楷摮睯挮湯楦浲映牯戠捡睫牡獤挠浯慰楴楢楬祴⠠灯楴湯污ഩ眊湩潤⹷潣普物佭楲楧慮⁬‽楷摮睯挮湯楦浲഻眊湩潤⹷潣普物⁭‽畦据楴湯洨獥慳敧 ൻ ⼠ 晉挠污敬⁤楷桴畯⁴獡湹⁣潣瑮硥ⱴ映污⁬慢正琠⁯牯杩湩污਍†晩⠠眡湩潤⹷牐浯獩⥥笠਍††敲畴湲眠湩潤⹷潣普物佭楲楧慮⡬敭獳条⥥഻ 素਍†⼯䘠牯愠祳据挠摯ⱥ琠楨⁳潷❮⁴潷歲瀠潲数汲ⱹ戠瑵眠⁥慣⁮牴൹ ⼠ 敂瑴牥琠⁯獵⁥桳睯潃普物䑭慩潬⁧楤敲瑣祬਍†敲畴湲眠湩潤⹷潣普物佭楲楧慮⡬敭獳条⥥഻紊഻
+/**
+ * Modal Confirmation Dialog
+ * Replaces window.confirm() with a nicer modal
+ * Usage:
+ *   const confirmed = await showConfirmDialog('Czy na pewno?', 'Ta akcja jest nieodwracalna');
+ *   if (confirmed) { ... }
+ */
+
+/**
+ * Show a confirmation dialog
+ * @param {string} title - Dialog title
+ * @param {string} message - Dialog message
+ * @param {object} options - Options: { confirmText, cancelText, danger }
+ * @returns {Promise<boolean>} True if confirmed, false if cancelled
+ */
+function showConfirmDialog(title, message, options = {}) {
+  return new Promise((resolve) => {
+    const {
+      confirmText = 'OK',
+      cancelText = 'Anuluj',
+      danger = false
+    } = options;
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'modal-title');
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    
+    // Header
+    const header = document.createElement('div');
+    header.className = 'modal__header';
+    const titleEl = document.createElement('h2');
+    titleEl.className = 'modal__title';
+    titleEl.id = 'modal-title';
+    titleEl.textContent = title;
+    header.appendChild(titleEl);
+    
+    // Body
+    const body = document.createElement('div');
+    body.className = 'modal__body';
+    body.textContent = message;
+    
+    // Footer
+    const footer = document.createElement('div');
+    footer.className = 'modal__footer';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'modal__button modal__button--secondary';
+    cancelBtn.textContent = cancelText;
+    cancelBtn.type = 'button';
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = `modal__button modal__button--${danger ? 'danger' : 'primary'}`;
+    confirmBtn.textContent = confirmText;
+    confirmBtn.type = 'button';
+    
+    footer.appendChild(cancelBtn);
+    footer.appendChild(confirmBtn);
+    
+    // Assemble
+    modal.appendChild(header);
+    modal.appendChild(body);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
+    
+    // Event handlers
+    const cleanup = (result) => {
+      overlay.style.animation = 'modal-fade-in 0.2s ease-out reverse';
+      setTimeout(() => {
+        overlay.remove();
+        resolve(result);
+      }, 200);
+    };
+    
+    cancelBtn.onclick = () => cleanup(false);
+    confirmBtn.onclick = () => cleanup(true);
+    
+    // Click outside to cancel
+    overlay.onclick = (e) => {
+      if (e.target === overlay) {
+        cleanup(false);
+      }
+    };
+    
+    // ESC to cancel
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        cleanup(false);
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    // Show modal
+    document.body.appendChild(overlay);
+    confirmBtn.focus();
+  });
+}
+
+// Export
+window.showConfirmDialog = showConfirmDialog;
+
+// Override window.confirm for backwards compatibility (optional)
+window.confirmOriginal = window.confirm;
+window.confirm = function(message) {
+  // If called without async context, fall back to original
+  if (!window.Promise) {
+    return window.confirmOriginal(message);
+  }
+  // For async code, this won't work properly, but we can try
+  // Better to use showConfirmDialog directly
+  return window.confirmOriginal(message);
+};

@@ -1,1 +1,174 @@
-﻿浩潰瑲笠吠䅒华䅌䥔乏ⱓ䐠䙅啁呌䱟乁ⱇ匠偕佐呒䑅䱟乁升‬敧呴慲獮慬楴湯素映潲⁭⸧琯慲獮慬楴湯⹳獪㬧਍浩潰瑲笠洠歡䍥畯瑲慃摲‬灵慤整潃牵ⱴ映牯慭ⱴ爠獥汯敶汐祡牥慎敭‬湡潮湵散潐湩獴‬湡潮湵散慇敭⁳⁽牦浯✠⼮潣浭湯樮❳഻ഊ氊瑥䌠問呒⁓‽嵛഻挊湯瑳朠楲⁤‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤朧楲❤㬩਍਍敬⁴牰癥㴠笠㭽਍਍潣獮⁴义呉䅉彌䕒佃乎䍅彔䕄䅌⁙‽〱〰഻挊湯瑳䴠塁剟䍅乏䕎呃䑟䱅奁㴠㌠〰〰഻ഊ氊瑥攠敶瑮潓牵散㴠渠汵㭬਍敬⁴敲潣湮捥呴浩牥㴠渠汵㭬਍敬⁴敲潣湮捥䑴汥祡㴠䤠䥎䥔䱁剟䍅乏䕎呃䑟䱅奁഻ഊ挊湯瑳䬠剏彔䑉㴠朠楲⹤慤慴敳⹴潫瑲഻挊湯瑳䰠乁⁇‽牧摩搮瑡獡瑥氮湡㭧਍਍晩⠠佋呒䥟⥄笠਍††佃剕協㴠嬠佋呒䥟嵄഻紊਍਍潣獮⁴瑳牯摥慌杮㴠氠捯污瑓牯条⹥敧䥴整⡭瀧敲敦牲摥氭湡畧条❥㬩਍敬⁴畣牲湥䱴湡⁧‽啓偐剏䕔彄䅌䝎⹓湩汣摵獥䰨乁⥇㼠䰠乁⁇›匨偕佐呒䑅䱟乁升椮据畬敤⡳瑳牯摥慌杮 ‿瑳牯摥慌杮㨠䐠䙅啁呌䱟乁⥇഻ഊ昊湵瑣潩⁮畣牲湥呴⤨笠਍†敲畴湲朠瑥牔湡汳瑡潩⡮畣牲湥䱴湡⥧഻紊਍਍畦据楴湯氠䭳祥欨 ൻ 爠瑥牵⁮慠湮畯据ⵥ⑫死恽഻紊਍਍畦据楴湯朠瑥湁潮湵散欨 ൻ 爠瑥牵⁮潬慣卬潴慲敧朮瑥瑉浥氨䭳祥欨⤩㴠㴽✠湯㬧਍ൽഊ昊湵瑣潩⁮敳䅴湮畯据⡥Ⱬ瘠污 ൻ 氠捯污瑓牯条⹥敳䥴整⡭獬敋⡹⥫‬慶⁬‿漧❮㨠✠景❦㬩਍ൽഊ昊湵瑣潩⁮湥畳敲慃摲䙳潲卭慮獰潨⡴湳灡 ൻ 椠⁦ℨ佋呒䥟⥄爠瑥牵㭮਍†潣獮⁴⁴‽畣牲湥呴⤨഻ 朠楲⹤湩敮䡲䵔⁌‽✧഻ 挠湯瑳挠牡⁤‽慭敫潃牵䍴牡⡤佋呒䥟ⱄ挠牵敲瑮慌杮‬⁻桳睯湁潮湵散›牴敵素㬩਍†潣獮⁴扣㴠挠牡⹤畱牥卹汥捥潴⡲⍠湡潮湵散␭䭻剏彔䑉恽㬩਍†晩⠠扣 ൻ ††挠⹢档捥敫⁤‽敧䅴湮畯据⡥佋呒䥟⥄഻ ††挠⹢摡䕤敶瑮楌瑳湥牥✨档湡敧Ⱗ⠠ 㸽猠瑥湁潮湵散䬨剏彔䑉‬扣挮敨正摥⤩഻ 素਍†牧摩愮灰湥䍤楨摬挨牡⥤഻紊਍਍畦据楴湯栠湡汤䅥湮畯据浥湥⡴Ⱬ琠灹ⱥ⸠⸮牡獧 ൻ †椠⁦ℨ敧䅴湮畯据⡥⥫ 敲畴湲഻ †挠湯瑳琠㴠挠牵敲瑮⡔㬩਍††睳瑩档⠠祴数 ൻ †††挠獡⁥愧湮畯据健楯瑮❳ഺ †††††愠湮畯据健楯瑮⡳Ⱬ⸠⸮牡獧‬畣牲湥䱴湡⥧഻ †††††戠敲歡഻ †††挠獡⁥愧湮畯据䝥浡獥㨧਍††††††湡潮湵散慇敭⡳Ⱬ⸠⸮牡獧‬畣牲湥䱴湡⥧഻ †††††戠敲歡഻ †素਍ൽഊ昊湵瑣潩⁮汣慥割捥湯敮瑣楔敭⡲ ൻ 椠⁦爨捥湯敮瑣楔敭⥲笠਍††汣慥呲浩潥瑵爨捥湯敮瑣楔敭⥲഻ †爠捥湯敮瑣楔敭⁲‽畮汬഻ 素਍ൽഊ昊湵瑣潩⁮汣獯䕥敶瑮潓牵散⤨笠਍†晩⠠癥湥却畯捲⥥笠਍††癥湥却畯捲⹥汣獯⡥㬩਍††癥湥却畯捲⁥‽畮汬഻ 素਍ൽഊ昊湵瑣潩⁮捳敨畤敬敒潣湮捥⡴敲獡湯 ൻ 挠敬牡敒潣湮捥呴浩牥⤨഻ 挠湯瑳猠捥湯獤㴠䴠瑡⹨潲湵⡤敲潣湮捥䑴汥祡⼠ㄠ〰⤰഻ 挠湯潳敬攮牲牯怨卓⁅楤捳湯敮瑣摥›笤敲獡湯㭽爠瑥祲湩⁧湩␠獻捥湯獤獽⥠഻ 爠捥湯敮瑣楔敭⁲‽敳呴浩潥瑵⠨ 㸽笠਍††敲潣湮捥呴浩牥㴠渠汵㭬਍††潣湮捥却牴慥⡭㬩਍†ⱽ爠捥湯敮瑣敄慬⥹഻ 爠捥湯敮瑣敄慬⁹‽慍桴洮湩爨捥湯敮瑣敄慬⁹‪ⰲ䴠塁剟䍅乏䕎呃䑟䱅奁㬩਍ൽഊ昊湵瑣潩⁮慰獲呥浩獥慴灭琨⥳笠਍†晩⠠琡⥳爠瑥牵⁮畮汬഻ 挠湯瑳搠瑡⁥‽敮⁷慄整琨⥳഻ 爠瑥牵⁮畎扭牥椮乳乡搨瑡⹥敧呴浩⡥⤩㼠渠汵⁬›慤整഻紊਍਍畦据楴湯栠湡汤卥牴慥偭祡潬摡瀨祡潬摡 ൻ †椠⁦ℨ慰汹慯⥤爠瑥牵㭮਍਍††晩⠠慰汹慯⹤祴数㴠㴽✠湳灡桳瑯⤧笠਍††††潣獮⁴瑳瑡⁥‽慰汹慯⹤瑳瑡⁥籼笠㭽਍††††晩⠠瑳瑡孥佋呒䥟嵄 ൻ †††††攠獮牵䍥牡獤牆浯湓灡桳瑯猨慴整㬩਍††††††灵慤整潃牵⡴佋呒䥟ⱄ猠慴整䭛剏彔䑉ⱝ瀠敲ⱶ挠牵敲瑮慌杮‬⁻湡潮湵散扃›慨摮敬湁潮湵散敭瑮素㬩਍††††††牰癥㴠猠慴整഻ †††素਍††††敲畴湲഻ †素਍਍††潣獮⁴潫瑲㴠瀠祡潬摡欮牯㭴਍††潣獮⁴瑳瑡⁥‽慰汹慯⹤瑳瑡㭥਍††晩⠠次牯⁴籼℠瑳瑡⁥籼欠牯⁴㴡‽佋呒䥟⥄爠瑥牵㭮਍਍††灵慤整潃牵⡴潫瑲‬瑳瑡ⱥ瀠敲ⱶ挠牵敲瑮慌杮‬⁻湡潮湵散扃›慨摮敬湁潮湵散敭瑮素㬩਍††牰癥㴠笠⸠⸮牰癥‬歛牯嵴›瑳瑡⁥㭽਍ൽഊ昊湵瑣潩⁮慨摮敬瑓敲浡敍獳条⡥癥湥⥴笠਍†晩⠠攡敶瑮簠⁼攡敶瑮搮瑡⥡爠瑥牵㭮਍†敬⁴慰汹慯⁤‽畮汬഻ 琠祲笠਍††慰汹慯⁤‽半乏瀮牡敳攨敶瑮搮瑡⥡഻ 素挠瑡档⠠牥⥲笠਍††潣獮汯⹥牥潲⡲䤧癮污摩匠䕓瀠祡潬摡Ⱗ攠牲‬癥湥⹴慤慴㬩਍††敲畴湲഻ 素਍†慨摮敬瑓敲浡慐汹慯⡤慰汹慯⥤഻紊਍਍畦据楴湯挠湯敮瑣瑓敲浡⤨笠਍†汣慥割捥湯敮瑣楔敭⡲㬩਍†汣獯䕥敶瑮潓牵散⤨഻ 琠祲笠਍††癥湥却畯捲⁥‽敮⁷癅湥却畯捲⡥⼧灡⽩瑳敲浡⤧഻ 素挠瑡档⠠牥⥲笠਍††捳敨畤敬敒潣湮捥⡴匧䕓挠湯敮瑣潩⁮牥潲❲㬩਍††敲畴湲഻ 素਍਍†癥湥却畯捲⹥摡䕤敶瑮楌瑳湥牥✨灯湥Ⱗ⠠ 㸽笠਍††敲潣湮捥䑴汥祡㴠䤠䥎䥔䱁剟䍅乏䕎呃䑟䱅奁഻ 素㬩਍†癥湥却畯捲⹥摡䕤敶瑮楌瑳湥牥✨敭獳条❥‬慨摮敬瑓敲浡敍獳条⥥഻ 攠敶瑮潓牵散愮摤癅湥䱴獩整敮⡲瀧湩❧‬⤨㴠‾絻㬩਍†癥湥却畯捲⹥摡䕤敶瑮楌瑳湥牥✨牥潲❲‬⤨㴠‾ൻ †挠潬敳癅湥却畯捲⡥㬩਍††捳敨畤敬敒潣湮捥⡴匧䕓搠獩潣湮捥整❤㬩਍†⥽഻紊਍਍楷摮睯愮摤癅湥䱴獩整敮⡲戧晥牯略汮慯❤‬⤨㴠‾ൻ 挠敬牡敒潣湮捥呴浩牥⤨഻ 挠潬敳癅湥却畯捲⡥㬩਍⥽഻ഊ昊湵瑣潩⁮潣灭瑵䍥畯瑲⡳慤慴 ൻ 爠瑥牵⁮扏敪瑣欮祥⡳慤慴⸩潳瑲⠨ⱡ戠 㸽丠浵敢⡲⥡ⴠ丠浵敢⡲⥢㬩਍ൽഊ⠊畦据楴湯⠠ ൻ †椠⁦䬨剏彔䑉 ൻ †††挠湯瑳甠汲慐慲獭㴠渠睥唠䱒敓牡档慐慲獭眨湩潤⹷潬慣楴湯献慥捲⥨഻ †††挠湯瑳氠湡偧牡浡㴠甠汲慐慲獭朮瑥✨慬杮⤧഻ †††椠⁦氨湡偧牡浡☠…啓偐剏䕔彄䅌䝎⹓湩汣摵獥氨湡偧牡浡⤩笠਍††††††畣牲湥䱴湡⁧‽慬杮慐慲㭭਍††††ൽ †††攠獮牵䍥牡獤牆浯湓灡桳瑯笨⥽഻ †††挠湯敮瑣瑓敲浡⤨഻ †素攠獬⁥ൻ †††朠楲⹤湩敮䡲䵔⁌‽㰧㹰楎灥慲楷앤澂祷愠牤獥‮潐慤⁪畮敭⁲潫瑲Ⱶ渠⹰⼠㰱瀯✾഻ †素਍⥽⤨഻
+import { TRANSLATIONS, DEFAULT_LANG, SUPPORTED_LANGS, getTranslation } from './translations.js';
+import { makeCourtCard, updateCourt, format, resolvePlayerName, announcePoints, announceGames } from './common.js';
+
+let COURTS = [];
+const grid = document.getElementById('grid');
+
+let prev = {};
+
+const INITIAL_RECONNECT_DELAY = 1000;
+const MAX_RECONNECT_DELAY = 30000;
+
+let eventSource = null;
+let reconnectTimer = null;
+let reconnectDelay = INITIAL_RECONNECT_DELAY;
+
+const KORT_ID = grid.dataset.kort;
+const LANG = grid.dataset.lang;
+
+if (KORT_ID) {
+    COURTS = [KORT_ID];
+}
+
+const storedLang = localStorage.getItem('preferred-language');
+let currentLang = SUPPORTED_LANGS.includes(LANG) ? LANG : (SUPPORTED_LANGS.includes(storedLang) ? storedLang : DEFAULT_LANG);
+
+function currentT() {
+  return getTranslation(currentLang);
+}
+
+function lsKey(k) {
+  return `announce-k${k}`;
+}
+
+function getAnnounce(k) {
+  return localStorage.getItem(lsKey(k)) === 'on';
+}
+
+function setAnnounce(k, val) {
+  localStorage.setItem(lsKey(k), val ? 'on' : 'off');
+}
+
+function ensureCardsFromSnapshot(snap) {
+  if (!KORT_ID) return;
+  const t = currentT();
+  grid.innerHTML = '';
+  const card = makeCourtCard(KORT_ID, currentLang, { showAnnounce: true });
+  const cb = card.querySelector(`#announce-${KORT_ID}`);
+  if (cb) {
+      cb.checked = getAnnounce(KORT_ID);
+      cb.addEventListener('change', () => setAnnounce(KORT_ID, cb.checked));
+  }
+  grid.appendChild(card);
+}
+
+function handleAnnouncement(k, type, ...args) {
+    if (!getAnnounce(k)) return;
+    const t = currentT();
+    switch (type) {
+        case 'announcePoints':
+            announcePoints(k, ...args, currentLang);
+            break;
+        case 'announceGames':
+            announceGames(k, ...args, currentLang);
+            break;
+    }
+}
+
+function clearReconnectTimer() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+}
+
+function closeEventSource() {
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+}
+
+function scheduleReconnect(reason) {
+  clearReconnectTimer();
+  const seconds = Math.round(reconnectDelay / 1000);
+  console.error(`SSE disconnected: ${reason}; retrying in ${seconds}s`);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectStream();
+  }, reconnectDelay);
+  reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+}
+
+function parseTimestamp(ts) {
+  if (!ts) return null;
+  const date = new Date(ts);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function handleStreamPayload(payload) {
+    if (!payload) return;
+
+    if (payload.type === 'snapshot') {
+        const state = payload.state || {};
+        if (state[KORT_ID]) {
+            ensureCardsFromSnapshot(state);
+            updateCourt(KORT_ID, state[KORT_ID], prev, currentLang, { announceCb: handleAnnouncement });
+            prev = state;
+        }
+        return;
+    }
+
+    const kort = payload.kort;
+    const state = payload.state;
+    if (!kort || !state || kort !== KORT_ID) return;
+
+    updateCourt(kort, state, prev, currentLang, { announceCb: handleAnnouncement });
+    prev = { ...prev, [kort]: state };
+}
+
+function handleStreamMessage(event) {
+  if (!event || !event.data) return;
+  let payload = null;
+  try {
+    payload = JSON.parse(event.data);
+  } catch (err) {
+    console.error('Invalid SSE payload', err, event.data);
+    return;
+  }
+  handleStreamPayload(payload);
+}
+
+function connectStream() {
+  clearReconnectTimer();
+  closeEventSource();
+  try {
+    eventSource = new EventSource('/api/stream');
+  } catch (err) {
+    scheduleReconnect('SSE connection error');
+    return;
+  }
+
+  eventSource.addEventListener('open', () => {
+    reconnectDelay = INITIAL_RECONNECT_DELAY;
+  });
+  eventSource.addEventListener('message', handleStreamMessage);
+  eventSource.addEventListener('ping', () => {});
+  eventSource.addEventListener('error', () => {
+    closeEventSource();
+    scheduleReconnect('SSE disconnected');
+  });
+}
+
+window.addEventListener('beforeunload', () => {
+  clearReconnectTimer();
+  closeEventSource();
+});
+
+function computeCourts(data) {
+  return Object.keys(data).sort((a, b) => Number(a) - Number(b));
+}
+
+(function () {
+    if (KORT_ID) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const langParam = urlParams.get('lang');
+        if (langParam && SUPPORTED_LANGS.includes(langParam)) {
+            currentLang = langParam;
+        }
+        ensureCardsFromSnapshot({});
+        connectStream();
+    } else {
+        grid.innerHTML = '<p>Nieprawidłowy adres. Podaj numer kortu, np. /1</p>';
+    }
+})();
