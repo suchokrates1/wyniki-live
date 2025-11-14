@@ -233,6 +233,13 @@ export function makeCourtCard(k, currentLang, options = {}) {
       </label>
     `;
   }
+  // Add pause polling button
+  headHTML += `
+    <button class="court-pause-btn" data-kort-id="${k}" aria-pressed="false" type="button">
+      <span class="btn-icon" aria-hidden="true">⏸️</span>
+      <span class="btn-text">${t.pausePolling || 'Pause'}</span>
+    </button>
+  `;
   section.innerHTML = `
     <div class="card-head">${headHTML}</div>
     <div class="score-wrapper">

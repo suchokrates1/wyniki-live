@@ -10,6 +10,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Kort {court}',
     languageLabel: 'Wybierz język',
     pause: { pause: 'Wstrzymaj odświeżanie', resume: 'Wznów odświeżanie' },
+    pausePolling: 'Wstrzymaj',
+    resumePolling: 'Wznów',
     announceLabel: 'Automatyczny odczyt',
     status: {
       label: 'Status: {state}{tiebreak}',
@@ -84,6 +86,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Platz {court}',
     languageLabel: 'Sprache wählen',
     pause: { pause: 'Aktualisierung anhalten', resume: 'Aktualisierung fortsetzen' },
+    pausePolling: 'Pause',
+    resumePolling: 'Fortsetzen',
     announceLabel: 'Automatische Ansage',
     status: {
       label: 'Status: {state}{tiebreak}',
@@ -158,6 +162,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Court {court}',
     languageLabel: 'Choose language',
     pause: { pause: 'Pause updates', resume: 'Resume updates' },
+    pausePolling: 'Pause',
+    resumePolling: 'Resume',
     announceLabel: 'Automatic readout',
     status: {
       label: 'Status: {state}{tiebreak}',
@@ -232,6 +238,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Campo {court}',
     languageLabel: 'Scegli lingua',
     pause: { pause: 'Metti in pausa gli aggiornamenti', resume: 'Riprendi gli aggiornamenti' },
+    pausePolling: 'Pausa',
+    resumePolling: 'Riprendi',
     announceLabel: 'Lettura automatica',
     status: {
       label: 'Stato: {state}{tiebreak}',
@@ -306,6 +314,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Cancha {court}',
     languageLabel: 'Elegir idioma',
     pause: { pause: 'Pausar actualizaciones', resume: 'Reanudar actualizaciones' },
+    pausePolling: 'Pausar',
+    resumePolling: 'Reanudar',
     announceLabel: 'Lectura automática',
     status: {
       label: 'Estado: {state}{tiebreak}',
@@ -380,6 +390,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Kenttä {court}',
     languageLabel: 'Valitse kieli',
     pause: { pause: 'Keskeytä päivitykset', resume: 'Jatka päivityksiä' },
+    pausePolling: 'Keskeytä',
+    resumePolling: 'Jatka',
     announceLabel: 'Automaattinen kuulutus',
     status: {
       label: 'Tila: {state}{tiebreak}',
@@ -454,6 +466,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Корт {court}',
     languageLabel: 'Оберіть мову',
     pause: { pause: 'Призупинити оновлення', resume: 'Відновити оновлення' },
+    pausePolling: 'Призупинити',
+    resumePolling: 'Відновити',
     announceLabel: 'Автоматичне озвучування',
     status: {
       label: 'Статус: {state}{tiebreak}',
@@ -528,6 +542,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Court {court}',
     languageLabel: 'Choisir la langue',
     pause: { pause: 'Mettre les mises à jour en pause', resume: 'Reprendre les mises à jour' },
+    pausePolling: 'Pause',
+    resumePolling: 'Reprendre',
     announceLabel: 'Lecture automatique',
     status: {
       label: 'Statut : {state}{tiebreak}',
@@ -602,6 +618,8 @@ export const TRANSLATIONS = {
     courtLabel: 'Aikštė {court}',
     languageLabel: 'Pasirinkite kalbą',
     pause: { pause: 'Pristabdyti atnaujinimus', resume: 'Tęsti atnaujinimus' },
+    pausePolling: 'Pristabdyti',
+    resumePolling: 'Tęsti',
     announceLabel: 'Automatinis skaitymas',
     status: {
       label: 'Būsena: {state}{tiebreak}',
