@@ -1,1 +1,676 @@
-﻿硥潰瑲挠湯瑳䐠䙅啁呌䱟乁⁇‽瀧❬഻ഊ攊灸牯⁴潣獮⁴剔乁䱓呁佉华㴠笠਍†汰›ൻ †氠湡乧浡㩥✠潐獬楫Ⱗ਍††瑨汭慌杮›瀧❬ബ †琠瑩敬›圧湹歩⁩整楮潳敷鎀渠⁡볅睹❯ബ †搠獥牣灩楴湯›✧ബ †渠癡慌敢㩬✠穓批慫渠睡杩捡慪瀠⁯潫瑲捡❨ബ †挠畯瑲慌敢㩬✠潋瑲笠潣牵絴Ⱗ਍††慬杮慵敧慌敢㩬✠祗楢牥⁺쑪窙歹Ⱗ਍††慰獵㩥笠瀠畡敳›圧瑳穲浹橡漠앤瞛敩볅湡敩Ⱗ爠獥浵㩥✠穗썮瞳漠앤瞛敩볅湡敩‧ⱽ਍††湡潮湵散慌敢㩬✠畁潴慭祴穣祮漠捤祺❴ബ †猠慴畴㩳笠਍†††慬敢㩬✠瑓瑡獵›獻慴整筽楴扥敲歡❽ബ ††猠慴整㩳笠甠歮潮湷›渧敩湺湡❹‬楶楳汢㩥✠楷潤穣祮Ⱗ栠摩敤㩮✠歵祲祴‧ⱽ਍†††楴扥敲歡›ൻ †††礠獥›‧⁼畓数⁲楴扥敲歡›䅔❋ബ †††渠㩯✠簠匠灵牥琠敩牢慥㩫丠䕉Ⱗ਍††††景㩦✠ധ ††素਍††ⱽ਍††慴汢㩥笠਍†††慣瑰潩㩮✠祗楮楫鎀䬠牯⁴捻畯瑲㩽笠汰祡牥絁笠敶獲獵⁽灻慬敹䉲❽ബ ††挠汯浵獮›ൻ †††渠浡㩥✠慎睺獩潫Ⱗ਍††††潰湩獴›倧湵瑫❹ബ †††琠敩牂慥㩫✠楔⁥牂慥❫ബ †††猠灵牥楔䉥敲歡›匧灵牥吠❂ബ †††猠瑥㨱✠敓⁴✱ബ †††猠瑥㨲✠敓⁴✲਍†††ൽ †素ബ †瀠慬敹獲›⁻敤慦汵䅴›䜧慲穣䄠Ⱗ搠晥畡瑬㩂✠片捡⁺❂‬慦汬慢正›稧睡摯楮❫‬慦汬慢正灏潰敮瑮›爧睹污‧ⱽ਍††楬敶慂杤㩥✠䥌䕖Ⱗ਍††敶獲獵›瘧❳ബ †洠瑥㩡笠਍†††慬瑳敒牦獥㩨✠獏慴湴敩漠앤瞛敩볅湥敩›瑻浩絥✮ബ ††氠獡剴晥敲桳敎敶㩲✠獏慴湴敩漠앤瞛敩볅湥敩›牢歡✮਍††ⱽ਍††牥潲獲›⁻敦捴㩨✠앂쒂撅瀠扯敩慲楮⁡慤祮档⠠浻獥慳敧⥽✮素ബ †愠湮畯据浥湥獴›ൻ ††瀠楯瑮㩳✠異歮祴笠汰祡牥⁽登污敵❽ബ ††朠浡獥›朧浥⁹灻慬敹絲笠慶畬絥Ⱗ਍†††敳䕴摮›欧湯敩⁣敳慴›睻湩敮絲笠楷湮牥慇敭絳搠⁯汻獯牥⁽汻獯牥慇敭絳Ⱗ਍†††楴健楯瑮›琧敩牢慥⁫灻慬敹絲笠慶畬絥Ⱗ਍†††楴呥杯汧佥㩮✠畓数⁲楴扥敲歡爠穯潰穣駄祴Ⱗ਍†††楴呥杯汧佥晦›匧灵牥琠敩牢慥⁫慺潫蓅穣湯❹਍††ⱽ਍††楨瑳牯㩹笠਍†††楴汴㩥✠楈瑳牯慩洠捥썺瞳Ⱗ਍†††浥瑰㩹✠牂歡稠灡獩湡捹⁨祷楮썫瞳✮ബ ††挠汯浵獮›ൻ †††搠獥牣灩楴湯›䴧捥❺ബ †††挠瑡来牯㩹✠態整潧楲❡ബ †††瀠慨敳›䘧穡❡ബ †††搠牵瑡潩㩮✠穃獡ധ ††素ബ ††氠扡汥㩳笠਍††††畳数瑲㩢✠祗楮⁫啓䕐呒❂਍†††ൽ †素ബ †愠捣獥楳楢楬祴›ൻ ††瘠牥畳㩳✠潫瑮慲Ⱗ਍†††潰湩獴›瀧湵瑫❹ബ ††琠敩牂慥㩫✠楴ⵥ牢慥❫ബ ††猠灵牥楔䉥敲歡›猧灵牥琠敩戭敲歡Ⱗ਍†††敳㩴✠敓⁴湻浵敢絲Ⱗ਍†††捡楴敶›愧瑫睹祮ധ †素ബ †猠潨瑲畣獴›ൻ ††琠浥汰瑡㩥✠歓썲璳㩹笠慲杮絥鎀笠潣牵獴慌敢絬✮ബ ††挠畯瑲䱳扡汥›欧牯祴Ⱗ਍†††慦汬慢正›匧牫돃祴搠⁯潫瑲돃⁷潰慪楷藄猠쑩ₙ潰稠액憂潤慷楮⁵祷楮썫瞳✮ബ ††愠瑵副慥㩤✠畁潴慭祴穣祮漠捤祺⁴穣瑹⁡慮朠苅獯眠湹歩愠瑫睹敮潧欠牯畴✮਍††ൽ 素ബ 搠㩥笠਍††慬杮慎敭›䐧略獴档Ⱗ਍††瑨汭慌杮›搧❥ബ †琠瑩敬›吧湥楮⵳牅敧湢獩敳鎀氠癩❥ബ †搠獥牣灩楴湯›䐧敩匠楥整愠瑫慵楬楳牥⁴楤⁥牅敧湢獩敳愠瑵浯瑡獩档‮썆犼匠牣敥牮慥敤⁲灯楴業牥⹴Ⱗ਍††慮䱶扡汥›匧档敮汬慮楶慧楴湯稠⁵敤⁮汐꓃穴湥Ⱗ਍††潣牵䱴扡汥›倧慬穴笠潣牵絴Ⱗ਍††慬杮慵敧慌敢㩬✠灓慲档⁥썷梤敬❮ബ †瀠畡敳›⁻慰獵㩥✠歁畴污獩敩畲杮愠桮污整❮‬敲畳敭›䄧瑫慵楬楳牥湵⁧潦瑲敳穴湥‧ⱽ਍††湡潮湵散慌敢㩬✠畁潴慭楴捳敨䄠獮条❥ബ †猠慴畴㩳笠਍†††慬敢㩬✠瑓瑡獵›獻慴整筽楴扥敲歡❽ബ ††猠慴整㩳笠甠歮潮湷›甧扮步湡瑮Ⱗ瘠獩扩敬›猧捩瑨慢❲‬楨摤湥›愧獵敧汢湥敤❴素ബ ††琠敩牢慥㩫笠਍††††敹㩳✠簠匠灵牥吭敩牢慥㩫䨠❁ബ †††渠㩯✠簠匠灵牥吭敩牢慥㩫丠䥅❎ബ †††漠晦›✧਍†††ൽ †素ബ †琠扡敬›ൻ ††挠灡楴湯›䔧杲扥楮獳⁥胢ₓ汐瑡⁺捻畯瑲㩽笠汰祡牥絁笠敶獲獵⁽灻慬敹䉲❽ബ ††挠汯浵獮›ൻ †††渠浡㩥✠慎档慮敭Ⱗ਍††††潰湩獴›倧湵瑫❥ബ †††琠敩牂慥㩫✠楔扥敲歡Ⱗ਍††††畳数呲敩牂慥㩫✠畓数⵲楔扥敲歡Ⱗ਍††††敳ㅴ›匧瑡⁺✱ബ †††猠瑥㨲✠慓穴㈠ധ ††素਍††ⱽ਍††汰祡牥㩳笠搠晥畡瑬㩁✠灓敩敬⁲❁‬敤慦汵䉴›匧楰汥牥䈠Ⱗ映污扬捡㩫✠灓敩敬❲‬慦汬慢正灏潰敮瑮›䜧来敮❲素ബ †氠癩䉥摡敧›䰧噉❅ബ †猠潨瑲畣獴›ൻ ††琠浥汰瑡㩥✠畋穲敢敦汨㩥笠慲杮絥鎀笠潣牵獴慌敢絬✮ബ ††挠畯瑲䱳扡汥›倧썬璤敺Ⱗ਍†††慦汬慢正›䬧牵扺晥桥敬映볃⁲楤⁥汐꓃穴⁥牥捳敨湩湥‬潳慢摬䐠瑡湥朠汥摡湥猠湩⹤Ⱗ਍†††畡潴敒摡›䐧敩愠瑵浯瑡獩档⁥湁慳敧氠敩瑳搠獡䔠杲扥楮⁳敤⁳歡楴敶⁮汐瑡敺⁳潶⹲ധ †素ബ †瘠牥畳㩳✠敧敧❮ബ †洠瑥㩡笠਍†††慬瑳敒牦獥㩨✠敌穴整䄠瑫慵楬楳牥湵㩧笠楴敭⹽Ⱗ਍†††慬瑳敒牦獥乨癥牥›䰧瑥瑺⁥歁畴污獩敩畲杮›敫湩⹥ധ †素ബ †攠牲牯㩳笠映瑥档›䘧桥敬⁲敢浩䰠摡湥搠牥䐠瑡湥⠠浻獥慳敧⥽✮素ബ †愠湮畯据浥湥獴›ൻ ††瀠楯瑮㩳✠畐歮整笠汰祡牥⁽登污敵❽ബ ††朠浡獥›匧楰汥⁥灻慬敹絲笠慶畬絥Ⱗ਍†††敳䕴摮›匧瑡敺摮㩥笠楷湮牥⁽睻湩敮䝲浡獥⁽畺笠潬敳絲笠潬敳䝲浡獥❽ബ ††琠敩潐湩㩴✠楔扥敲歡笠汰祡牥⁽登污敵❽ബ ††琠敩潔杧敬湏›匧灵牥吭敩牢慥⁫敧瑳牡整❴ബ ††琠敩潔杧敬晏㩦✠畓数⵲楔扥敲歡戠敥摮瑥ധ †素ബ †栠獩潴祲›ൻ ††琠瑩敬›䴧瑡档䠭獩潴楲❥ബ ††攠灭祴›䬧楥敮朠獥数捩敨瑲湥䔠杲扥楮獳⹥Ⱗ਍†††潣畬湭㩳笠਍††††敤捳楲瑰潩㩮✠敂敧湧湵❧ബ †††挠瑡来牯㩹✠態整潧楲❥ബ †††瀠慨敳›倧慨敳Ⱗ਍††††畤慲楴湯›䐧畡牥ധ ††素ബ ††氠扡汥㩳笠਍††††畳数瑲㩢✠畓数⵲楔扥敲歡ധ ††素਍††ⱽ਍††捡散獳扩汩瑩㩹笠਍†††敶獲獵›朧来湥Ⱗ਍†††潰湩獴›倧湵瑫❥ബ ††琠敩牂慥㩫✠楔扥敲歡Ⱗ਍†††畳数呲敩牂慥㩫✠畓数⵲楔扥敲歡Ⱗ਍†††敳㩴✠慓穴笠畮扭牥❽ബ ††愠瑣癩㩥✠歡楴❶਍††ൽ 素ബ 攠㩮笠਍††慬杮慎敭›䔧杮楬桳Ⱗ਍††瑨汭慌杮›攧❮ബ †琠瑩敬›䰧癩⁥整湮獩猠潣敲❳ബ †搠獥牣灩楴湯›匧潣敲⁳敲牦獥⁨畡潴慭楴慣汬⹹䄠捣獥楳汢⁥潦⁲捳敲湥爠慥敤獲✮ബ †渠癡慌敢㩬✠畑捩⁫潣牵⁴慮楶慧楴湯Ⱗ਍††潣牵䱴扡汥›䌧畯瑲笠潣牵絴Ⱗ਍††慬杮慵敧慌敢㩬✠桃潯敳氠湡畧条❥ബ †瀠畡敳›⁻慰獵㩥✠慐獵⁥灵慤整❳‬敲畳敭›刧獥浵⁥灵慤整❳素ബ †愠湮畯据䱥扡汥›䄧瑵浯瑡捩爠慥潤瑵Ⱗ਍††瑳瑡獵›ൻ ††氠扡汥›匧慴畴㩳笠瑳瑡絥瑻敩牢慥絫Ⱗ਍†††瑳瑡獥›⁻湵湫睯㩮✠湵湫睯❮‬楶楳汢㩥✠楶楳汢❥‬楨摤湥›栧摩敤❮素ബ ††琠敩牢慥㩫笠਍††††敹㩳✠簠匠灵牥琠敩牢慥㩫夠卅Ⱗ਍††††潮›‧⁼畓数⁲楴扥敲歡›低Ⱗ਍††††景㩦✠ധ ††素਍††ⱽ਍††慴汢㩥笠਍†††慣瑰潩㩮✠捓牯獥鎀䌠畯瑲笠潣牵絴›灻慬敹䅲⁽登牥畳絳笠汰祡牥終Ⱗ਍†††潣畬湭㩳笠਍††††慮敭›匧牵慮敭Ⱗ਍††††潰湩獴›倧楯瑮❳ബ †††琠敩牂慥㩫✠楔ⵥ牢慥❫ബ †††猠灵牥楔䉥敲歡›匧灵牥琠敩戭敲歡Ⱗ਍††††敳ㅴ›匧瑥ㄠⰧ਍††††敳㉴›匧瑥㈠ധ ††素਍††ⱽ਍††汰祡牥㩳笠搠晥畡瑬㩁✠汐祡牥䄠Ⱗ搠晥畡瑬㩂✠汐祡牥䈠Ⱗ映污扬捡㩫✠汰祡牥Ⱗ映污扬捡佫灰湯湥㩴✠灯潰敮瑮‧ⱽ਍††楬敶慂杤㩥✠䥌䕖Ⱗ਍††敶獲獵›瘧❳ബ †洠瑥㩡笠਍†††慬瑳敒牦獥㩨✠慌瑳爠晥敲桳›瑻浩絥✮ബ ††氠獡剴晥敲桳敎敶㩲✠慌瑳爠晥敲桳›潮敮✮਍††ⱽ਍††牥潲獲›⁻敦捴㩨✠牅潲⁲敦捴楨杮搠瑡⁡笨敭獳条絥⸩‧ⱽ਍††湡潮湵散敭瑮㩳笠਍†††潰湩獴›瀧楯瑮⁳灻慬敹絲笠慶畬絥Ⱗ਍†††慧敭㩳✠慧敭⁳灻慬敹絲笠慶畬絥Ⱗ਍†††敳䕴摮›猧瑥漠敶㩲笠楷湮牥⁽睻湩敮䝲浡獥⁽潴笠潬敳絲笠潬敳䝲浡獥❽ബ ††琠敩潐湩㩴✠楴扥敲歡笠汰祡牥⁽登污敵❽ബ ††琠敩潔杧敬湏›匧灵牥琠敩牢慥⁫瑳牡整❤ബ ††琠敩潔杧敬晏㩦✠畓数⁲楴扥敲歡映湩獩敨❤਍††ⱽ਍††楨瑳牯㩹笠਍†††楴汴㩥✠慍捴⁨楨瑳牯❹ബ ††攠灭祴›丧⁯慳敶⁤敲畳瑬⹳Ⱗ਍†††潣畬湭㩳笠਍††††敤捳楲瑰潩㩮✠慍捴❨ബ †††挠瑡来牯㩹✠慃整潧祲Ⱗ਍††††桰獡㩥✠桐獡❥ബ †††搠牵瑡潩㩮✠畄慲楴湯ധ ††素ബ ††氠扡汥㩳笠਍††††畳数瑲㩢✠畓数⁲楴扥敲歡ധ ††素਍††ⱽ਍††桳牯捴瑵㩳笠਍†††整灭慬整›匧潨瑲畣獴›牻湡敧⁽胢ₓ捻畯瑲䱳扡汥⹽Ⱗ਍†††潣牵獴慌敢㩬✠潣牵獴Ⱗ਍†††慦汬慢正›䌧畯瑲猠潨瑲畣獴愠灰慥⁲晡整⁲捳牯獥氠慯⹤Ⱗ਍†††畡潴敒摡›䄧瑵浯瑡捩爠慥潤瑵猠数歡⁳桴⁥捳牯⁥潦⁲桴⁥捡楴敶挠畯瑲✮਍††ⱽ਍††捡散獳扩汩瑩㩹笠਍†††敶獲獵›瘧牥畳❳ബ ††瀠楯瑮㩳✠潰湩獴Ⱗ਍†††楴䉥敲歡›琧敩戭敲歡Ⱗ਍†††畳数呲敩牂慥㩫✠畳数⁲楴ⵥ牢慥❫ബ ††猠瑥›匧瑥笠畮扭牥❽ബ ††愠瑣癩㩥✠捡楴敶ധ †素਍†ⱽ਍†瑩›ൻ †氠湡乧浡㩥✠瑉污慩潮Ⱗ਍††瑨汭慌杮›椧❴ബ †琠瑩敬›刧獩汵慴楴琠湥楮⁳胢ₓ楬敶Ⱗ਍††敤捳楲瑰潩㩮✠慌瀠条湩⁡条楧牯慮椠瀠湵整杧⁩畡潴慭楴慣敭瑮⹥䄠捣獥楳楢敬愠⁩敬瑴牯⁩楤猠档牥潭✮ബ †渠癡慌敢㩬✠慎楶慧楺湯⁥慲楰慤搠楥挠浡楰Ⱗ਍††潣牵䱴扡汥›䌧浡潰笠潣牵絴Ⱗ਍††慬杮慵敧慌敢㩬✠捓来楬氠湩畧❡ബ †瀠畡敳›⁻慰獵㩥✠敍瑴⁩湩瀠畡慳朠楬愠杧潩湲浡湥楴Ⱗ爠獥浵㩥✠楒牰湥楤朠楬愠杧潩湲浡湥楴‧ⱽ਍††湡潮湵散慌敢㩬✠敌瑴牵⁡畡潴慭楴慣Ⱗ਍††瑳瑡獵›ൻ ††氠扡汥›匧慴潴›獻慴整筽楴扥敲歡❽ബ ††猠慴整㩳笠甠歮潮湷›猧潣潮捳畩潴Ⱗ瘠獩扩敬›瘧獩扩汩❥‬楨摤湥›渧獡潣瑳❯素ബ ††琠敩牢慥㩫笠਍††††敹㩳✠簠匠灵牥琠敩牢慥㩫匠賃Ⱗ਍††††潮›‧⁼畓数⁲楴扥敲歡›低Ⱗ਍††††景㩦✠ധ ††素਍††ⱽ਍††慴汢㩥笠਍†††慣瑰潩㩮✠楒畳瑬瑡⁩胢ₓ慃灭⁯捻畯瑲㩽笠汰祡牥絁笠敶獲獵⁽灻慬敹䉲❽ബ ††挠汯浵獮›ൻ †††渠浡㩥✠潃湧浯❥ബ †††瀠楯瑮㩳✠畐瑮❩ബ †††琠敩牂慥㩫✠楔ⵥ牢慥❫ബ †††猠灵牥楔䉥敲歡›匧灵牥琠敩戭敲歡Ⱗ਍††††敳ㅴ›匧瑥ㄠⰧ਍††††敳㉴›匧瑥㈠ധ ††素਍††ⱽ਍††汰祡牥㩳笠搠晥畡瑬㩁✠楇捯瑡牯⁥❁‬敤慦汵䉴›䜧潩慣潴敲䈠Ⱗ映污扬捡㩫✠楧捯瑡牯❥‬慦汬慢正灏潰敮瑮›愧癶牥慳楲❯素ബ †氠癩䉥摡敧›䰧噉❅ബ †猠潨瑲畣獴›ൻ ††琠浥汰瑡㩥✠捓牯楣瑡楯㩥笠慲杮絥鎀笠潣牵獴慌敢絬✮ബ ††挠畯瑲䱳扡汥›挧浡楰Ⱗ਍†††慦汬慢正›䰧⁥捳牯楣瑡楯⁥敤⁩慣灭⁩潣灭楡湯⁯畱湡潤椠瀠湵整杧⁩潳潮挠牡捩瑡⹩Ⱗ਍†††畡潴敒摡›䰧⁡敬瑴牵⁡畡潴慭楴慣愠湮湵楣⁡汩瀠湵整杧潩搠汥挠浡潰愠瑴癩⹯ധ †素ബ †瘠牥畳㩳✠潣瑮潲Ⱗ਍††敭慴›ൻ ††氠獡剴晥敲桳›唧瑬浩⁯条楧牯慮敭瑮㩯笠楴敭⹽Ⱗ਍†††慬瑳敒牦獥乨癥牥›唧瑬浩⁯条楧牯慮敭瑮㩯渠獥畳潮✮਍††ⱽ਍††牥潲獲›⁻敦捴㩨✠牅潲敲搠牵湡整椠⁬敲畣数潲搠瑡⁩笨敭獳条絥⸩‧ⱽ਍††湡潮湵散敭瑮㩳笠਍†††潰湩獴›瀧湵楴笠汰祡牥⁽登污敵❽ബ ††朠浡獥›朧浡⁥灻慬敹絲笠慶畬絥Ⱗ਍†††敳䕴摮›昧湩⁥敳㩴笠楷湮牥⁽睻湩敮䝲浡獥⁽⁡汻獯牥⁽汻獯牥慇敭絳Ⱗ਍†††楴健楯瑮›琧敩牢慥⁫灻慬敹絲笠慶畬絥Ⱗ਍†††楴呥杯汧佥㩮✠畓数⁲楴扥敲歡椠楮楺瑡❯ബ ††琠敩潔杧敬晏㩦✠畓数⁲楴扥敲歡琠牥業慮潴ധ †素ബ †栠獩潴祲›ൻ ††琠瑩敬›匧潴楲潣椠据湯牴❩ബ ††攠灭祴›丧獥畳⁮楲畳瑬瑡⁯慳癬瑡⹯Ⱗ਍†††潣畬湭㩳笠਍††††敤捳楲瑰潩㩮✠湉潣瑮潲Ⱗ਍††††慣整潧祲›䌧瑡来牯慩Ⱗ਍††††桰獡㩥✠慆敳Ⱗ਍††††畤慲楴湯›䐧牵瑡❡਍†††ⱽ਍†††慬敢獬›ൻ †††猠灵牥扴›匧灵牥琠敩戭敲歡ധ ††素਍††ⱽ਍††捡散獳扩汩瑩㩹笠਍†††敶獲獵›挧湯牴❯ബ ††瀠楯瑮㩳✠異瑮❩ബ ††琠敩牂慥㩫✠楴ⵥ牢慥❫ബ ††猠灵牥楔䉥敲歡›猧灵牥琠敩戭敲歡Ⱗ਍†††敳㩴✠敓⁴湻浵敢絲Ⱗ਍†††捡楴敶›愧瑴癩❯਍††ൽ 素ബ 攠㩳笠਍††慬杮慎敭›䔧灳썡澱❬ബ †栠浴䱬湡㩧✠獥Ⱗ਍††楴汴㩥✠慍捲摡牯獥搠⁥整楮⁳湥瘠癩❯ബ †搠獥牣灩楴湯›䰧⁡썰枡湩⁡捡畴污穩⁡潬⁳慭捲摡牯獥愠瑵浯ꇃ楴慣敭瑮⹥䄠捣獥扩敬瀠牡⁡敬瑣牯獥搠⁥慰瑮污慬✮ബ †渠癡慌敢㩬✠慎敶慧楣돃⁮썲炡摩⁡潰⁲慣据慨❳ബ †挠畯瑲慌敢㩬✠慃据慨笠潣牵絴Ⱗ਍††慬杮慵敧慌敢㩬✠汅来物椠楤浯❡ബ †瀠畡敳›⁻慰獵㩥✠慐獵牡愠瑣慵楬慺楣湯獥Ⱗ爠獥浵㩥✠敒湡摵牡愠瑣慵楬慺楣湯獥‧ⱽ਍††湡潮湵散慌敢㩬✠敌瑣牵⁡畡潴썭璡捩❡ബ †猠慴畴㩳笠਍†††慬敢㩬✠獅慴潤›獻慴整筽楴扥敲歡❽ബ ††猠慴整㩳笠甠歮潮湷›搧獥潣潮楣潤Ⱗ瘠獩扩敬›瘧獩扩敬Ⱗ栠摩敤㩮✠捯汵潴‧ⱽ਍†††楴扥敲歡›ൻ †††礠獥›‧⁼썓為牥搠獥浥慰整›썓➍ബ †††渠㩯✠簠匠뫃数⁲敤敳灭瑡㩥丠❏ബ †††漠晦›✧਍†††ൽ †素ബ †琠扡敬›ൻ ††挠灡楴湯›䴧牡慣潤敲⁳胢ₓ慃据慨笠潣牵絴›灻慬敹䅲⁽登牥畳絳笠汰祡牥終Ⱗ਍†††潣畬湭㩳笠਍††††慮敭›䄧数汬摩❯ബ †††瀠楯瑮㩳✠畐瑮獯Ⱗ਍††††楴䉥敲歡›吧敩戠敲歡Ⱗ਍††††畳数呲敩牂慥㩫✠썓為牥琠敩戠敲歡Ⱗ਍††††敳ㅴ›匧瑥ㄠⰧ਍††††敳㉴›匧瑥㈠ധ ††素਍††ⱽ਍††汰祡牥㩳笠搠晥畡瑬㩁✠畊慧潤⁲❁‬敤慦汵䉴›䨧杵摡牯䈠Ⱗ映污扬捡㩫✠番慧潤❲‬慦汬慢正灏潰敮瑮›爧癩污‧ⱽ਍††楬敶慂杤㩥✠久嘠噉❏ബ †猠潨瑲畣獴›ൻ ††琠浥汰瑡㩥✠瑁橡獯›牻湡敧⁽胢ₓ捻畯瑲䱳扡汥⹽Ⱗ਍†††潣牵獴慌敢㩬✠慣据慨❳ബ ††映污扬捡㩫✠潌⁳瑡橡獯搠⁥慣据慨⁳灡牡捥湥挠慵摮⁯敳挠牡慧⁮潬⁳慭捲摡牯獥✮ബ ††愠瑵副慥㩤✠慌氠捥畴慲愠瑵浯ꇃ楴慣愠畮据慩攠⁬慭捲摡牯搠⁥慬挠湡档⁡捡楴慶✮਍††ⱽ਍††敶獲獵›挧湯牴❡ബ †洠瑥㩡笠਍†††慬瑳敒牦獥㩨✠髃瑬浩⁡捡畴污穩捡썩溳›瑻浩絥✮ബ ††氠獡剴晥敲桳敎敶㩲✠髃瑬浩⁡捡畴污穩捡썩溳›楮杮湵⹡ധ †素ബ †攠牲牯㩳笠映瑥档›䔧牲牯愠⁬扯整敮⁲慤潴⁳笨敭獳条絥⸩‧ⱽ਍††湡潮湵散敭瑮㩳笠਍†††潰湩獴›瀧湵潴⁳灻慬敹絲笠慶畬絥Ⱗ਍†††慧敭㩳✠番来獯笠汰祡牥⁽登污敵❽ബ ††猠瑥湅㩤✠楦⁮敤猠瑥›睻湩敮絲笠楷湮牥慇敭絳挠湯牴⁡汻獯牥⁽汻獯牥慇敭絳Ⱗ਍†††楴健楯瑮›搧獥浥慰整笠汰祡牥⁽登污敵❽ബ ††琠敩潔杧敬湏›匧뫃数⁲敤敳灭瑡⁥湩捩慩潤Ⱗ਍†††楴呥杯汧佥晦›匧뫃数⁲敤敳灭瑡⁥楦慮楬慺潤ധ †素ബ †栠獩潴祲›ൻ ††琠瑩敬›䠧獩潴楲污搠⁥慰瑲摩獯Ⱗ਍†††浥瑰㩹✠潎栠祡爠獥汵慴潤⁳畧牡慤潤⹳Ⱗ਍†††潣畬湭㩳笠਍††††敤捳楲瑰潩㩮✠慐瑲摩❯ബ †††挠瑡来牯㩹✠慃整潧썲憭Ⱗ਍††††桰獡㩥✠慆敳Ⱗ਍††††畤慲楴湯›䐧牵捡썩溳ധ ††素ബ ††氠扡汥㩳笠਍††††畳数瑲㩢✠敒畳瑬摡⁯畳数⁲敤敳灭瑡❥਍†††ൽ †素ബ †愠捣獥楳楢楬祴›ൻ ††瘠牥畳㩳✠潣瑮慲Ⱗ਍†††潰湩獴›瀧湵潴❳ബ ††琠敩牂慥㩫✠楴ⵥ牢慥❫ബ ††猠灵牥楔䉥敲歡›猧灵牥琠敩戭敲歡Ⱗ਍†††敳㩴✠敓⁴湻浵敢絲Ⱗ਍†††捡楴敶›愧瑣癩❯਍††ൽ 素ബ 映㩩笠਍††慬杮慎敭›匧潵業Ⱗ਍††瑨汭慌杮›昧❩ബ †琠瑩敬›吧湥楮瑳汵歯敳⁴胢ₓ楬敶썮➤ബ †搠獥牣灩楴湯›匧癩⁵썰榤楶瑴꓃꓃琠汵歯敳⁴畡潴慭瑡楴敳瑳⹩匠慡當整瑴癡⁡畲摵湵畬楫潪汩敬✮ബ †渠癡慌敢㩬✠敋瑮楴湥瀠歩湡癡杩楯瑮❩ബ †挠畯瑲慌敢㩬✠敋瑮썴₤捻畯瑲❽ബ †氠湡畧条䱥扡汥›嘧污瑩敳欠敩楬Ⱗ਍††慰獵㩥笠瀠畡敳›䬧獥敫瑹꓃瀠꓃癩瑩歹敳❴‬敲畳敭›䨧瑡慫瀠꓃癩瑩歹楳꓃‧ⱽ਍††湡潮湵散慌敢㩬✠畁潴慭瑡楴敮⁮畫汵瑵獵Ⱗ਍††瑳瑡獵›ൻ ††氠扡汥›吧汩㩡笠瑳瑡絥瑻敩牢慥絫Ⱗ਍†††瑳瑡獥›⁻湵湫睯㩮✠畴瑮浥瑡湯Ⱗ瘠獩扩敬›渧꓃祫楶獳꓃Ⱗ栠摩敤㩮✠楰汩瑯瑥畴‧ⱽ਍†††楴扥敲歡›ൻ †††礠獥›‧⁼畓数⵲楴扥敲歡›奋䱌蓃Ⱗ਍††††潮›‧⁼畓数⵲楴扥敲歡›䥅Ⱗ਍††††景㩦✠ധ ††素਍††ⱽ਍††慴汢㩥笠਍†††慣瑰潩㩮✠畔潬獫瑥鎀䬠湥瑴꓃笠潣牵絴›灻慬敹䅲⁽登牥畳絳笠汰祡牥終Ⱗ਍†††潣畬湭㩳笠਍††††慮敭›匧歵湵浩❩ബ †††瀠楯瑮㩳✠楐瑳敥❴ബ †††琠敩牂慥㩫✠楔ⵥ牢慥❫ബ †††猠灵牥楔䉥敲歡›匧灵牥琭敩戭敲歡Ⱗ਍††††敳ㅴ›䔧썲₤✱ബ †††猠瑥㨲✠牅꓃㈠ധ ††素਍††ⱽ਍††汰祡牥㩳笠搠晥畡瑬㩁✠敐慬橡⁡❁‬敤慦汵䉴›倧汥慡慪䈠Ⱗ映污扬捡㩫✠数慬橡❡‬慦汬慢正灏潰敮瑮›瘧獡畴瑳橡❡素ബ †氠癩䉥摡敧›䰧噉❅ബ †猠潨瑲畣獴›ൻ ††琠浥汰瑡㩥✠楐慫썮炤썰榤敭㩴笠慲杮絥鎀笠潣牵獴慌敢絬✮ബ ††挠畯瑲䱳扡汥›欧湥썴璤Ⱗ਍†††慦汬慢正›䬧湥瑴敩⁮楰慫썮炤썰榤敭⁴썮殤癹꓃ⱴ欠湵琠汵歯敳⁴湯氠摡瑡畴✮ബ ††愠瑵副慥㩤✠畁潴慭瑡楴敮⁮畫汵瑵獵氠歵敥欠꓃湹楮獳꓃漠敬慶⁮敫瑮꓃⁮畴潬獫湥✮਍††ⱽ਍††敶獲獵›瘧獡慴湡Ⱗ਍††敭慴›ൻ ††氠獡剴晥敲桳›嘧楩敭獩湩瀠꓃癩瑩獹›瑻浩絥✮ബ ††氠獡剴晥敲桳敎敶㩲✠楖浩楥楳⁮썰榤楶祴㩳攠⁩楶汥꓃✮਍††ⱽ਍††牥潲獲›⁻敦捴㩨✠楖桲⁥楴瑥橯⁡慨瑥慴獥慳⠠浻獥慳敧⥽✮素ബ †愠湮畯据浥湥獴›ൻ ††瀠楯瑮㩳✠楰瑳敥⁴灻慬敹絲笠慶畬絥Ⱗ਍†††慧敭㩳✠数楬⁴灻慬敹絲笠慶畬絥Ⱗ਍†††敳䕴摮›攧썲₤썰쎤璤祴㩩笠楷湮牥⁽睻湩敮䝲浡獥⁽胢ₓ汻獯牥⁽汻獯牥慇敭絳Ⱗ਍†††楴健楯瑮›琧敩牢慥⁫灻慬敹絲笠慶畬絥Ⱗ਍†††楴呥杯汧佥㩮✠畓数⵲楴扥敲歡愠歬楯Ⱗ਍†††楴呥杯汧佥晦›匧灵牥琭敩牢慥⁫썰쎤璤祴❩਍††ⱽ਍††楨瑳牯㩹笠਍†††楴汴㩥✠瑏整畬楨瑳牯慩Ⱗ਍†††浥瑰㩹✠楅琠污敬湮瑥畴慪琠汵歯楳⹡Ⱗ਍†††潣畬湭㩳笠਍††††敤捳楲瑰潩㩮✠瑏整畬Ⱗ਍††††慣整潧祲›䰧潵歫❡ബ †††瀠慨敳›嘧楡敨Ⱗ਍††††畤慲楴湯›䬧獥潴ധ ††素ബ ††氠扡汥㩳笠਍††††畳数瑲㩢✠畓数⵲楴扥敲歡琭汵獯ധ ††素਍††ⱽ਍††捡散獳扩汩瑩㩹笠਍†††敶獲獵›瘧獡慴湡Ⱗ਍†††潰湩獴›瀧獩整瑥Ⱗ਍†††楴䉥敲歡›琧敩牢慥❫ബ ††猠灵牥楔䉥敲歡›猧灵牥琭敩牢慥❫ബ ††猠瑥›䔧썲₤湻浵敢絲Ⱗ਍†††捡楴敶›欧꓃湹楮獳꓃ധ †素਍†ⱽ਍†歵›ൻ †氠湡乧浡㩥✠ꏐ뫐胑냐韑뷐臑賑뫐냐Ⱗ਍††瑨汭慌杮›甧❫ബ †琠瑩敬›퀧킢킵톽톖킁톽ₖ胑뗐럐菑믐賑苑냐苑룐퀠킽킰킶킸킲➾ബ †搠獥牣灩楴湯›퀧톡킂톾톀킖킽킺₰냐닐苑뻐볐냐苑룐蟑뷐뻐퀠킾킽킾킲톻톎ₔ胑냐藑菑뷐뫐룐‮铐뻐臑苑菑뿐뷐냐퀠킴톻₏蟑룐苑냐蟑雑닐퀠킵톺킀킰킽⺰Ⱗ਍††慮䱶扡汥›퀧킨킲킸킴킺₰뷐냐닐雑돐냐蛑雑近퀠킿₾뫐뻐胑苑냐藑Ⱗ਍††潣牵䱴扡汥›퀧킚톾톀₂捻畯瑲❽ബ †氠湡畧条䱥扡汥›퀧킞킱통톀톖톂₌볐뻐닐菑Ⱗ਍††慰獵㩥笠瀠畡敳›퀧톟킀킸톷킃킿킸킽톸킂₸뻐뷐뻐닐믐뗐뷐뷐近Ⱗ爠獥浵㩥✠鋐雑듐뷐뻐닐룐苑룐퀠킾킽킾킲킻킵킽톽➏素ബ †愠湮畯据䱥扡汥›퀧킐톲킂킾킼톰킂톸킇킽₵뻐럐닐菑蟑菑닐냐뷐뷐近Ⱗ਍††瑳瑡獵›ൻ ††氠扡汥›퀧톡킂톰톂톃㪁笠瑳瑡絥瑻敩牢慥絫Ⱗ਍†††瑳瑡獥›⁻湵湫睯㩮✠뷐뗐닐雑듐뻐볐뻐Ⱗ瘠獩扩敬›퀧킲킸킴킽➾‬楨摤湥›퀧톿킀톸킅킾킲킰킽➾素ബ ††琠敩牢慥㩫笠਍††††敹㩳✠簠퀠톡킃킿통ⶀ苑냐말뇐胑뗐말뫐›ꋐ郐髐Ⱗ਍††††潮›‧⁼ꇐ菑뿐뗐胑턭킂킰킹톱킀킵킹㪺퀠킝➆ബ †††漠晦›✧਍†††ൽ †素ബ †琠扡敬›ൻ ††挠灡楴湯›퀧킠톰톅킃킽킾₺胢ₓ髐뻐胑苑笠潣牵絴›灻慬敹䅲⁽登牥畳絳笠汰祡牥終Ⱗ਍†††潣畬湭㩳笠਍††††慮敭›퀧톟톀킖킷킲톸킉➵ബ †††瀠楯瑮㩳✠黐蟑뫐룐Ⱗ਍††††楴䉥敲歡›퀧킢킰ⶹ뇐胑뗐말뫐Ⱗ਍††††畳数呲敩牂慥㩫✠ꇐ菑뿐뗐胑턠킂킰ⶹ뇐胑뗐말뫐Ⱗ਍††††敳ㅴ›퀧킡통₂✱ബ †††猠瑥㨲✠ꇐ뗐苑㈠ധ ††素਍††ⱽ਍††汰祡牥㩳笠搠晥畡瑬㩁✠鏐胑냐닐뗐蛑賑䄠Ⱗ搠晥畡瑬㩂✠鏐胑냐닐뗐蛑賑䈠Ⱗ映污扬捡㩫✠돐胑냐닐뗐蛑賑Ⱗ映污扬捡佫灰湯湥㩴✠臑菑뿐뗐胑뷐룐뫐‧ⱽ਍††楬敶慂杤㩥✠䥌䕖Ⱗ਍††桳牯捴瑵㩳笠਍†††整灭慬整›퀧킡킺톾킀톾킇킵킽톽㪏笠慲杮絥鎀笠潣牵獴慌敢絬✮ബ ††挠畯瑲䱳扡汥›퀧킺톾톀킂➸ബ ††映污扬捡㩫✠髐믐냐닐雑냐苑菑胑뷐雑턠킁킺톾킀톾킇킵킽톽₏럐胢톙킏킲톻톏톂톌톁₏뿐雑臑믐近퀠킷킰킲킰톽킂킰킶킵킽톽₏胑냐藑菑뷐뫐雑닐✮ബ ††愠瑵副慥㩤✠郐닐苑뻐볐냐苑룐蟑뷐뗐퀠킾킷톲톃톇킃킲킰킽톽₏蟑룐苑냐铑턠킀톰톅킃킽킾₺냐뫐苑룐닐뷐뻐돐뻐퀠킺톾톀톂⺃ധ †素ബ †瘠牥畳㩳✠뿐胑뻐苑룐Ⱗ਍††敭慴›ൻ ††氠獡剴晥敲桳›퀧톞톁킂킰킽톽ₔ뻐뷐뻐닐믐뗐뷐뷐近›瑻浩絥✮ബ ††氠獡剴晥敲桳敎敶㩲✠黐臑苑냐뷐뷐铑퀠킾킽킾킲킻킵킽톽㪏턠킉₵뷐뗐볐냐铑✮਍††ⱽ਍††牥潲獲›⁻敦捴㩨✠鿐뻐볐룐믐뫐냐퀠톿킖₴蟑냐臑퀠톾톂킀킸킼킰킽톽₏듐냐뷐룐藑⠠浻獥慳敧⥽✮素ബ †愠湮畯据浥湥獴›ൻ ††瀠楯瑮㩳✠뻐蟑뫐룐笠汰祡牥⁽登污敵❽ബ ††朠浡獥›퀧킳킵킹킼₸灻慬敹絲笠慶畬絥Ⱗ਍†††敳䕴摮›퀧톺킖킽통톆₌臑뗐苑菑›睻湩敮絲笠楷湮牥慇敭絳퀠톿킀톾킂₸汻獯牥⁽汻獯牥慇敭絳Ⱗ਍†††楴健楯瑮›턧킂킰킹톱킀킵킹₺灻慬敹絲笠慶畬絥Ⱗ਍†††楴呥杯汧佥㩮✠ꇐ菑뿐뗐胑턭킂킰킹톱킀킵킹₺胑뻐럐뿐뻐蟑냐苑뻐Ⱗ਍†††楴呥杯汧佥晦›퀧톡킃킿통ⶀ苑냐말뇐胑뗐말뫐퀠킷킰킲통톀킈킵킽➾਍††ⱽ਍††楨瑳牯㩹笠਍†††楴汴㩥✠蛐臑苑뻐胑雑近퀠킼톰톂톇킖➲ബ ††攠灭祴›퀧킝킵킼톰ₔ럐뇐뗐胑뗐뛐뗐뷐룐藑턠킀킵톷킃톻톌킂톰톂킖⺲Ⱗ਍†††潣畬湭㩳笠਍††††敤捳楲瑰潩㩮✠鳐냐苑蟑Ⱗ਍††††慣整潧祲›퀧킚톰킂킵킳톾톀톖➏ബ †††瀠慨敳›퀧톡킂킰톴톖➏ബ †††搠牵瑡潩㩮✠ꋐ胑룐닐냐믐雑臑苑賑ധ ††素ബ ††氠扡汥㩳笠਍††††畳数瑲㩢✠ꃐ뗐럐菑믐賑苑냐苑턠톁킃킿통ⶀ苑냐말뇐胑뗐말뫐菑ധ ††素਍††ⱽ਍††捡散獳扩汩瑩㩹笠਍†††敶獲獵›퀧톿킀톾킂➸ബ ††瀠楯瑮㩳✠뻐蟑뫐룐Ⱗ਍†††楴䉥敲歡›턧킂킰ⶹ뇐胑뗐말뫐Ⱗ਍†††畳数呲敩牂慥㩫✠臑菑뿐뗐胑턠킂킰ⶹ뇐胑뗐말뫐Ⱗ਍†††敳㩴✠ꇐ뗐苑笠畮扭牥❽ബ ††愠瑣癩㩥✠냐뫐苑룐닐뷐룐말ധ †素਍†ⱽ਍†牦›ൻ †氠湡乧浡㩥✠牆湡ꟃ楡❳ബ †栠浴䱬湡㩧✠牦Ⱗ਍††楴汴㩥✠捓牯獥搠⁥整湮獩攠⁮楤敲瑣Ⱗ਍††敤捳楲瑰潩㩮✠慌瀠条⁥敭⁴ꃃ樠畯⁲敬⁳捳牯獥愠瑵浯瑡煩敵敭瑮‮捁散獳扩敬愠硵氠捥整牵⁳馀꧃牣湡✮ബ †渠癡慌敢㩬✠慎楶慧楴湯爠灡摩⁥湥牴⁥敬⁳潣牵獴Ⱗ਍††潣牵䱴扡汥›䌧畯瑲笠潣牵絴Ⱗ਍††慬杮慵敧慌敢㩬✠桃楯楳⁲慬氠湡畧❥ബ †瀠畡敳›⁻慰獵㩥✠敍瑴敲氠獥洠獩獥쌠₠潪牵攠⁮慰獵❥‬敲畳敭›刧灥敲摮敲氠獥洠獩獥쌠₠潪牵‧ⱽ਍††湡潮湵散慌敢㩬✠敌瑣牵⁥畡潴慭楴畱❥ബ †猠慴畴㩳笠਍†††慬敢㩬✠瑓瑡瑵㨠笠瑳瑡絥瑻敩牢慥絫Ⱗ਍†††瑳瑡獥›⁻湵湫睯㩮✠湩潣湮❵‬楶楳汢㩥✠楶楳汢❥‬楨摤湥›洧獡畱꧃‧ⱽ਍†††楴扥敲歡›ൻ †††礠獥›‧⁼畓数⁲楴ⵥ牢慥⁫›問❉ബ †††渠㩯✠簠匠灵牥琠敩戭敲歡㨠丠乏Ⱗ਍††††景㩦✠ധ ††素਍††ⱽ਍††慴汢㩥笠਍†††慣瑰潩㩮✠捓牯獥鎀䌠畯瑲笠潣牵絴㨠笠汰祡牥絁笠敶獲獵⁽灻慬敹䉲❽ബ ††挠汯浵獮›ൻ †††渠浡㩥✠潎❭ബ †††瀠楯瑮㩳✠潐湩獴Ⱗ਍††††楴䉥敲歡›吧敩戭敲歡Ⱗ਍††††畳数呲敩牂慥㩫✠畓数⁲楴ⵥ牢慥❫ബ †††猠瑥㨱✠敓⁴✱ബ †††猠瑥㨲✠敓⁴✲਍†††ൽ †素ബ †瀠慬敹獲›⁻敤慦汵䅴›䨧畯略⁲❁‬敤慦汵䉴›䨧畯略⁲❂‬慦汬慢正›樧畯略❲‬慦汬慢正灏潰敮瑮›愧癤牥慳物❥素ബ †氠癩䉥摡敧›䔧⁎䥄䕒呃Ⱗ਍††桳牯捴瑵㩳笠਍†††整灭慬整›刧捡潣牵楣⁳›牻湡敧⁽胢ₓ捻畯瑲䱳扡汥⹽Ⱗ਍†††潣牵獴慌敢㩬✠潣牵獴Ⱗ਍†††慦汬慢正›䰧獥爠捡潣牵楣⁳敶獲氠獥挠畯瑲⁳灡慰慲獩敳瑮甠敮映楯⁳敬⁳捳牯獥挠慨杲꧃⹳Ⱗ਍†††畡潴敒摡›䰧⁡敬瑣牵⁥畡潴慭楴畱⁥湡潮据⁥敬猠潣敲搠⁵潣牵⁴捡楴⹦ധ †素ബ †瘠牥畳㩳✠潣瑮敲Ⱗ਍††敭慴›ൻ ††氠獡剴晥敲桳›䐧牥楮ꣃ敲洠獩⁥ꃃ樠畯⁲›瑻浩絥✮ബ ††氠獡剴晥敲桳敎敶㩲✠敄湲썩犨⁥業敳쌠₠潪牵㨠愠捵湵⹥ധ †素ബ †攠牲牯㩳笠映瑥档›䔧牲略⁲潬獲搠⁵档牡敧敭瑮搠獥搠湯썮斩⁳笨敭獳条絥⸩‧ⱽ਍††湡潮湵散敭瑮㩳笠਍†††潰湩獴›瀧楯瑮⁳灻慬敹絲笠慶畬絥Ⱗ਍†††慧敭㩳✠敪硵笠汰祡牥⁽登污敵❽ബ ††猠瑥湅㩤✠楦⁮敤猠瑥㨠笠楷湮牥⁽睻湩敮䝲浡獥⁽ꃃ笠潬敳絲笠潬敳䝲浡獥❽ബ ††琠敩潐湩㩴✠楴ⵥ牢慥⁫灻慬敹絲笠慶畬絥Ⱗ਍†††楴呥杯汧佥㩮✠畓数⁲楴ⵥ牢慥⁫潣浭湥썣➩ബ ††琠敩潔杧敬晏㩦✠畓数⁲楴ⵥ牢慥⁫整浲湩꧃ധ †素ബ †栠獩潴祲›ൻ ††琠瑩敬›䠧獩潴楲畱⁥敤⁳慭捴獨Ⱗ਍†††浥瑰㩹✠畁畣⁮썲玩汵慴⁴湥敲楧瑳썲⺩Ⱗ਍†††潣畬湭㩳笠਍††††敤捳楲瑰潩㩮✠慍捴❨ബ †††挠瑡来牯㩹✠慃썴枩牯敩Ⱗ਍††††桰獡㩥✠桐獡❥ബ †††搠牵瑡潩㩮✠畄썲斩ധ ††素ബ ††氠扡汥㩳笠਍††††畳数瑲㩢✠썒玩汵慴⁴畳数⁲楴ⵥ牢慥❫਍†††ൽ †素ബ †愠捣獥楳楢楬祴›ൻ ††瘠牥畳㩳✠潣瑮敲Ⱗ਍†††潰湩獴›瀧楯瑮❳ബ ††琠敩牂慥㩫✠楴ⵥ牢慥❫ബ ††猠灵牥楔䉥敲歡›猧灵牥琠敩戭敲歡Ⱗ਍†††敳㩴✠敓⁴湻浵敢絲Ⱗ਍†††捡楴敶›愧瑣晩ധ †素਍†ⱽ਍†瑬›ൻ †氠湡乧浡㩥✠楌瑥癵앩➳ബ †栠浴䱬湡㩧✠瑬Ⱗ਍††楴汴㩥✠敔楮潳爠穥汵慴慴⁩胢ₓ楴獥潩楧楡Ⱗ਍††敤捳楲瑰潩㩮✠畐汳灡獩愠瑵浯瑡앩殡楡愠湴畡楪慮爠穥汵慴畴⹳倠楲楥慮慭⁳步慲潮猠慫瑩瑹癵浡⹳Ⱗ਍††慮䱶扡汥›䜧敲瑩⁡慮楶慧楣慪瀠⁯楡앫璡獥Ⱗ਍††潣牵䱴扡汥›䄧歩ꇅ쑴ₗ捻畯瑲❽ബ †氠湡畧条䱥扡汥›倧獡物湩楫整欠污쑢➅ബ †瀠畡敳›⁻慰獵㩥✠牐獩慴摢瑹⁩瑡慮橵湩浩獵Ⱗ爠獥浵㩥✠쑔玙楴愠湴畡楪楮畭❳素ബ †愠湮畯据䱥扡汥›䄧瑵浯瑡湩獩猠慫瑩浹獡Ⱗ਍††瑳瑡獵›ൻ ††氠扡汥›䈧ꯅ敳慮›獻慴整筽楴扥敲歡❽ബ ††猠慴整㩳笠甠歮潮湷›渧앥榾潮慭Ⱗ瘠獩扩敬›爧摯浯❡‬楨摤湥›瀧獡쑬炗慴‧ⱽ਍†††楴扥敲歡›ൻ †††礠獥›‧⁼畓数⁲慴扩敲歩獡›䅔偉Ⱗ਍††††潮›‧⁼畓数⁲慴扩敲歩獡›䕎Ⱗ਍††††景㩦✠ധ ††素਍††ⱽ਍††慴汢㩥笠਍†††慣瑰潩㩮✠敒畺瑬瑡楡鎀䄠歩ꇅ쑴ₗ捻畯瑲㩽笠汰祡牥絁笠敶獲獵⁽灻慬敹䉲❽ബ ††挠汯浵獮›ൻ †††渠浡㩥✠慐慶摲韄Ⱗ਍††††潰湩獴›吧액殡楡Ⱗ਍††††楴䉥敲歡›吧楡牢楥慫❳ബ †††猠灵牥楔䉥敲歡›匧灵牥琠楡牢楥慫❳ബ †††猠瑥㨱✠敓慴⁳✱ബ †††猠瑥㨲✠敓慴⁳✲਍†††ൽ †素ബ †瀠慬敹獲›⁻敤慦汵䅴›씧憽摩韄慪⁳❁‬敤慦汵䉴›씧憽摩韄慪⁳❂‬慦汬慢正›씧憾摩韄慪❳‬慦汬慢正灏潰敮瑮›瘧牡뻅癯獡‧ⱽ਍††楬敶慂杤㩥✠䥔卅佉䥇䥁Ⱗ਍††桳牯捴瑵㩳笠਍†††整灭慬整›吧畲灭湩慩㩩笠慲杮絥鎀笠潣牵獴慌敢絬✮ബ ††挠畯瑲䱳扡汥›愧歩ꇅ쑴玗Ⱗ਍†††慦汬慢正›䄧歩ꇅ跄앩₳牴浵楰楮楡瀠獡物摯獹‬慫⁩敲畺瑬瑡楡戠獵쐠殯汥楴✮ബ ††愠瑵副慥㩤✠畁潴慭楴楮⁳歳楡祴慭⁳牰湡앥憡愠瑫癹潩⁳楡앫璡韄⁳敲畺瑬瑡藄✮਍††ⱽ਍††敶獲獵›瀧楲앥➡ബ †洠瑥㩡笠਍†††慬瑳敒牦獥㩨✠慐歳瑵湩獩愠湴畡楪楮慭㩳笠楴敭⹽Ⱗ਍†††慬瑳敒牦獥乨癥牥›倧獡畫楴楮⁳瑡慮橵湩浩獡›慤⁲쑮犗⹡ധ †素ബ †攠牲牯㩳笠映瑥档›䬧慬摩⁡慧湵湡⁴畤浯湥獩⠠浻獥慳敧⥽✮素ബ †愠湮畯据浥湥獴›ൻ ††瀠楯瑮㩳✠慴ꇅ慫⁩灻慬敹絲笠慶畬絥Ⱗ਍†††慧敭㩳✠敧浩楡笠汰祡牥⁽登污敵❽ബ ††猠瑥湅㩤✠敳慴⁳慢杩慴㩳笠楷湮牥⁽睻湩敮䝲浡獥⁽牰敩ꇅ笠潬敳絲笠潬敳䝲浡獥❽ബ ††琠敩潐湩㩴✠慴扩敲歩獡笠汰祡牥⁽登污敵❽ബ ††琠敩潔杧敬湏›匧灵牥琠楡牢楥慫⁳牰摡韄慴❳ബ ††琠敩潔杧敬晏㩦✠畓数⁲慴扩敲歩獡戠楡瑧獡ധ †素ബ †栠獩潴祲›ൻ ††琠瑩敬›䴧쑡澍椠瑳牯橩❡ബ ††攠灭祴›丧韄慲椠ꇅ慳杵瑯독爠穥汵慴앴⺳Ⱗ਍†††潣畬湭㩳笠਍††††敤捳楲瑰潩㩮✠慍跄獡Ⱗ਍††††慣整潧祲›䬧瑡来牯橩❡ബ †††瀠慨敳›䔧慴慰❳ബ †††搠牵瑡潩㩮✠牔歵쑭➗਍†††ⱽ਍†††慬敢獬›ൻ †††猠灵牥扴›匧灵牥琠楡牢楥潫爠穥汵慴慴❳਍†††ൽ †素ബ †愠捣獥楳楢楬祴›ൻ ††瘠牥畳㩳✠牰敩ꇅⰧ਍†††潰湩獴›琧액殡楡Ⱗ਍†††楴䉥敲歡›琧楡牢楥慫❳ബ ††猠灵牥楔䉥敲歡›猧灵牥琠楡牢楥慫❳ബ ††猠瑥›匧瑥獡笠畮扭牥❽ബ ††愠瑣癩㩥✠歡祴當❳਍††ൽ 素਍㭽਍਍硥潰瑲挠湯瑳匠偕佐呒䑅䱟乁升㴠传橢捥⹴敫獹吨䅒华䅌䥔乏⥓഻ഊ攊灸牯⁴畦据楴湯朠瑥牔湡汳瑡潩⡮慬杮 ൻ 爠瑥牵⁮剔乁䱓呁佉华汛湡嵧簠⁼剔乁䱓呁佉华䑛䙅啁呌䱟乁嵇഻紊਍
+export const DEFAULT_LANG = 'pl';
+
+export const TRANSLATIONS = {
+  pl: {
+    langName: 'Polski',
+    htmlLang: 'pl',
+    title: 'Wyniki tenisowe – na żywo',
+    description: '',
+    navLabel: 'Szybka nawigacja po kortach',
+    courtLabel: 'Kort {court}',
+    languageLabel: 'Wybierz język',
+    pause: { pause: 'Wstrzymaj odświeżanie', resume: 'Wznów odświeżanie' },
+    announceLabel: 'Automatyczny odczyt',
+    status: {
+      label: 'Status: {state}{tiebreak}',
+      states: { unknown: 'nieznany', visible: 'widoczny', hidden: 'ukryty' },
+      tiebreak: {
+        yes: ' | Super tiebreak: TAK',
+        no: ' | Super tiebreak: NIE',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Wyniki – Kort {court}: {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Nazwisko',
+        points: 'Punkty',
+        tieBreak: 'Tie Break',
+        superTieBreak: 'Super TB',
+        set1: 'Set 1',
+        set2: 'Set 2'
+      }
+    },
+    players: { defaultA: 'Gracz A', defaultB: 'Gracz B', fallback: 'zawodnik', fallbackOpponent: 'rywal' },
+    liveBadge: 'LIVE',
+    versus: 'vs',
+    meta: {
+      lastRefresh: 'Ostatnie odświeżenie: {time}.',
+      lastRefreshNever: 'Ostatnie odświeżenie: brak.'
+    },
+    errors: { fetch: 'Błąd pobierania danych ({message}).' },
+    announcements: {
+      points: 'punkty {player} {value}',
+      games: 'gemy {player} {value}',
+      setEnd: 'koniec seta: {winner} {winnerGames} do {loser} {loserGames}',
+      tiePoint: 'tiebreak {player} {value}',
+      tieToggleOn: 'Super tiebreak rozpoczęty',
+      tieToggleOff: 'Super tiebreak zakończony'
+    },
+    history: {
+      title: 'Historia meczów',
+      empty: 'Brak zapisanych wyników.',
+      columns: {
+        description: 'Mecz',
+        category: 'Kategoria',
+        phase: 'Faza',
+        duration: 'Czas'
+      },
+      labels: {
+        supertb: 'Wynik SUPERTB'
+      }
+    },
+    accessibility: {
+      versus: 'kontra',
+      points: 'punkty',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}',
+      active: 'aktywny'
+    },
+    shortcuts: {
+      template: 'Skróty: {range} – {courtsLabel}.',
+      courtsLabel: 'korty',
+      fallback: 'Skróty do kortów pojawią się po załadowaniu wyników.',
+      autoRead: 'Automatyczny odczyt czyta na głos wynik aktywnego kortu.'
+    }
+  },
+  de: {
+    langName: 'Deutsch',
+    htmlLang: 'de',
+    title: 'Tennis-Ergebnisse – live',
+    description: 'Die Seite aktualisiert die Ergebnisse automatisch. Für Screenreader optimiert.',
+    navLabel: 'Schnellnavigation zu den Plätzen',
+    courtLabel: 'Platz {court}',
+    languageLabel: 'Sprache wählen',
+    pause: { pause: 'Aktualisierung anhalten', resume: 'Aktualisierung fortsetzen' },
+    announceLabel: 'Automatische Ansage',
+    status: {
+      label: 'Status: {state}{tiebreak}',
+      states: { unknown: 'unbekannt', visible: 'sichtbar', hidden: 'ausgeblendet' },
+      tiebreak: {
+        yes: ' | Super-Tiebreak: JA',
+        no: ' | Super-Tiebreak: NEIN',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Ergebnisse – Platz {court}: {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Nachname',
+        points: 'Punkte',
+        tieBreak: 'Tiebreak',
+        superTieBreak: 'Super-Tiebreak',
+        set1: 'Satz 1',
+        set2: 'Satz 2'
+      }
+    },
+    players: { defaultA: 'Spieler A', defaultB: 'Spieler B', fallback: 'Spieler', fallbackOpponent: 'Gegner' },
+    liveBadge: 'LIVE',
+    shortcuts: {
+      template: 'Kurzbefehle: {range} – {courtsLabel}.',
+      courtsLabel: 'Plätze',
+      fallback: 'Kurzbefehle für die Plätze erscheinen, sobald Daten geladen sind.',
+      autoRead: 'Die automatische Ansage liest das Ergebnis des aktiven Platzes vor.'
+    },
+    versus: 'gegen',
+    meta: {
+      lastRefresh: 'Letzte Aktualisierung: {time}.',
+      lastRefreshNever: 'Letzte Aktualisierung: keine.'
+    },
+    errors: { fetch: 'Fehler beim Laden der Daten ({message}).' },
+    announcements: {
+      points: 'Punkte {player} {value}',
+      games: 'Spiele {player} {value}',
+      setEnd: 'Satzende: {winner} {winnerGames} zu {loser} {loserGames}',
+      tiePoint: 'Tiebreak {player} {value}',
+      tieToggleOn: 'Super-Tiebreak gestartet',
+      tieToggleOff: 'Super-Tiebreak beendet'
+    },
+    history: {
+      title: 'Match-Historie',
+      empty: 'Keine gespeicherten Ergebnisse.',
+      columns: {
+        description: 'Begegnung',
+        category: 'Kategorie',
+        phase: 'Phase',
+        duration: 'Dauer'
+      },
+      labels: {
+        supertb: 'Super-Tiebreak'
+      }
+    },
+    accessibility: {
+      versus: 'gegen',
+      points: 'Punkte',
+      tieBreak: 'Tiebreak',
+      superTieBreak: 'Super-Tiebreak',
+      set: 'Satz {number}',
+      active: 'aktiv'
+    }
+  },
+  en: {
+    langName: 'English',
+    htmlLang: 'en',
+    title: 'Live tennis scores',
+    description: 'Scores refresh automatically. Accessible for screen readers.',
+    navLabel: 'Quick court navigation',
+    courtLabel: 'Court {court}',
+    languageLabel: 'Choose language',
+    pause: { pause: 'Pause updates', resume: 'Resume updates' },
+    announceLabel: 'Automatic readout',
+    status: {
+      label: 'Status: {state}{tiebreak}',
+      states: { unknown: 'unknown', visible: 'visible', hidden: 'hidden' },
+      tiebreak: {
+        yes: ' | Super tiebreak: YES',
+        no: ' | Super tiebreak: NO',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Scores – Court {court}: {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Surname',
+        points: 'Points',
+        tieBreak: 'Tie-break',
+        superTieBreak: 'Super tie-break',
+        set1: 'Set 1',
+        set2: 'Set 2'
+      }
+    },
+    players: { defaultA: 'Player A', defaultB: 'Player B', fallback: 'player', fallbackOpponent: 'opponent' },
+    liveBadge: 'LIVE',
+    versus: 'vs',
+    meta: {
+      lastRefresh: 'Last refresh: {time}.',
+      lastRefreshNever: 'Last refresh: none.'
+    },
+    errors: { fetch: 'Error fetching data ({message}).' },
+    announcements: {
+      points: 'points {player} {value}',
+      games: 'games {player} {value}',
+      setEnd: 'set over: {winner} {winnerGames} to {loser} {loserGames}',
+      tiePoint: 'tiebreak {player} {value}',
+      tieToggleOn: 'Super tiebreak started',
+      tieToggleOff: 'Super tiebreak finished'
+    },
+    history: {
+      title: 'Match history',
+      empty: 'No saved results.',
+      columns: {
+        description: 'Match',
+        category: 'Category',
+        phase: 'Phase',
+        duration: 'Duration'
+      },
+      labels: {
+        supertb: 'Super tiebreak'
+      }
+    },
+    shortcuts: {
+      template: 'Shortcuts: {range} – {courtsLabel}.',
+      courtsLabel: 'courts',
+      fallback: 'Court shortcuts appear after scores load.',
+      autoRead: 'Automatic readout speaks the score for the active court.'
+    },
+    accessibility: {
+      versus: 'versus',
+      points: 'points',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}',
+      active: 'active'
+    }
+  },
+  it: {
+    langName: 'Italiano',
+    htmlLang: 'it',
+    title: 'Risultati tennis – live',
+    description: 'La pagina aggiorna i punteggi automaticamente. Accessibile ai lettori di schermo.',
+    navLabel: 'Navigazione rapida dei campi',
+    courtLabel: 'Campo {court}',
+    languageLabel: 'Scegli lingua',
+    pause: { pause: 'Metti in pausa gli aggiornamenti', resume: 'Riprendi gli aggiornamenti' },
+    announceLabel: 'Lettura automatica',
+    status: {
+      label: 'Stato: {state}{tiebreak}',
+      states: { unknown: 'sconosciuto', visible: 'visibile', hidden: 'nascosto' },
+      tiebreak: {
+        yes: ' | Super tiebreak: SÌ',
+        no: ' | Super tiebreak: NO',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Risultati – Campo {court}: {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Cognome',
+        points: 'Punti',
+        tieBreak: 'Tie-break',
+        superTieBreak: 'Super tie-break',
+        set1: 'Set 1',
+        set2: 'Set 2'
+      }
+    },
+    players: { defaultA: 'Giocatore A', defaultB: 'Giocatore B', fallback: 'giocatore', fallbackOpponent: 'avversario' },
+    liveBadge: 'LIVE',
+    shortcuts: {
+      template: 'Scorciatoie: {range} – {courtsLabel}.',
+      courtsLabel: 'campi',
+      fallback: 'Le scorciatoie dei campi compaiono quando i punteggi sono caricati.',
+      autoRead: 'La lettura automatica annuncia il punteggio del campo attivo.'
+    },
+    versus: 'contro',
+    meta: {
+      lastRefresh: 'Ultimo aggiornamento: {time}.',
+      lastRefreshNever: 'Ultimo aggiornamento: nessuno.'
+    },
+    errors: { fetch: 'Errore durante il recupero dati ({message}).' },
+    announcements: {
+      points: 'punti {player} {value}',
+      games: 'game {player} {value}',
+      setEnd: 'fine set: {winner} {winnerGames} a {loser} {loserGames}',
+      tiePoint: 'tiebreak {player} {value}',
+      tieToggleOn: 'Super tiebreak iniziato',
+      tieToggleOff: 'Super tiebreak terminato'
+    },
+    history: {
+      title: 'Storico incontri',
+      empty: 'Nessun risultato salvato.',
+      columns: {
+        description: 'Incontro',
+        category: 'Categoria',
+        phase: 'Fase',
+        duration: 'Durata'
+      },
+      labels: {
+        supertb: 'Super tie-break'
+      }
+    },
+    accessibility: {
+      versus: 'contro',
+      points: 'punti',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}',
+      active: 'attivo'
+    }
+  },
+  es: {
+    langName: 'Español',
+    htmlLang: 'es',
+    title: 'Marcadores de tenis en vivo',
+    description: 'La página actualiza los marcadores automáticamente. Accesible para lectores de pantalla.',
+    navLabel: 'Navegación rápida por canchas',
+    courtLabel: 'Cancha {court}',
+    languageLabel: 'Elegir idioma',
+    pause: { pause: 'Pausar actualizaciones', resume: 'Reanudar actualizaciones' },
+    announceLabel: 'Lectura automática',
+    status: {
+      label: 'Estado: {state}{tiebreak}',
+      states: { unknown: 'desconocido', visible: 'visible', hidden: 'oculto' },
+      tiebreak: {
+        yes: ' | Súper desempate: SÍ',
+        no: ' | Súper desempate: NO',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Marcadores – Cancha {court}: {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Apellido',
+        points: 'Puntos',
+        tieBreak: 'Tie break',
+        superTieBreak: 'Súper tie break',
+        set1: 'Set 1',
+        set2: 'Set 2'
+      }
+    },
+    players: { defaultA: 'Jugador A', defaultB: 'Jugador B', fallback: 'jugador', fallbackOpponent: 'rival' },
+    liveBadge: 'EN VIVO',
+    shortcuts: {
+      template: 'Atajos: {range} – {courtsLabel}.',
+      courtsLabel: 'canchas',
+      fallback: 'Los atajos de canchas aparecen cuando se cargan los marcadores.',
+      autoRead: 'La lectura automática anuncia el marcador de la cancha activa.'
+    },
+    versus: 'contra',
+    meta: {
+      lastRefresh: 'Última actualización: {time}.',
+      lastRefreshNever: 'Última actualización: ninguna.'
+    },
+    errors: { fetch: 'Error al obtener datos ({message}).' },
+    announcements: {
+      points: 'puntos {player} {value}',
+      games: 'juegos {player} {value}',
+      setEnd: 'fin de set: {winner} {winnerGames} contra {loser} {loserGames}',
+      tiePoint: 'desempate {player} {value}',
+      tieToggleOn: 'Súper desempate iniciado',
+      tieToggleOff: 'Súper desempate finalizado'
+    },
+    history: {
+      title: 'Historial de partidos',
+      empty: 'No hay resultados guardados.',
+      columns: {
+        description: 'Partido',
+        category: 'Categoría',
+        phase: 'Fase',
+        duration: 'Duración'
+      },
+      labels: {
+        supertb: 'Resultado super desempate'
+      }
+    },
+    accessibility: {
+      versus: 'contra',
+      points: 'puntos',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}',
+      active: 'activo'
+    }
+  },
+  fi: {
+    langName: 'Suomi',
+    htmlLang: 'fi',
+    title: 'Tennistulokset – livenä',
+    description: 'Sivu päivittää tulokset automaattisesti. Saavutettava ruudunlukijoille.',
+    navLabel: 'Kenttien pikanavigointi',
+    courtLabel: 'Kenttä {court}',
+    languageLabel: 'Valitse kieli',
+    pause: { pause: 'Keskeytä päivitykset', resume: 'Jatka päivityksiä' },
+    announceLabel: 'Automaattinen kuulutus',
+    status: {
+      label: 'Tila: {state}{tiebreak}',
+      states: { unknown: 'tuntematon', visible: 'näkyvissä', hidden: 'piilotettu' },
+      tiebreak: {
+        yes: ' | Super-tiebreak: KYLLÄ',
+        no: ' | Super-tiebreak: EI',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Tulokset – Kenttä {court}: {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Sukunimi',
+        points: 'Pisteet',
+        tieBreak: 'Tie-break',
+        superTieBreak: 'Super-tie-break',
+        set1: 'Erä 1',
+        set2: 'Erä 2'
+      }
+    },
+    players: { defaultA: 'Pelaaja A', defaultB: 'Pelaaja B', fallback: 'pelaaja', fallbackOpponent: 'vastustaja' },
+    liveBadge: 'LIVE',
+    shortcuts: {
+      template: 'Pikanäppäimet: {range} – {courtsLabel}.',
+      courtsLabel: 'kentät',
+      fallback: 'Kenttien pikanäppäimet näkyvät, kun tulokset on ladattu.',
+      autoRead: 'Automaattinen kuulutus lukee käynnissä olevan kentän tuloksen.'
+    },
+    versus: 'vastaan',
+    meta: {
+      lastRefresh: 'Viimeisin päivitys: {time}.',
+      lastRefreshNever: 'Viimeisin päivitys: ei vielä.'
+    },
+    errors: { fetch: 'Virhe tietoja haettaessa ({message}).' },
+    announcements: {
+      points: 'pisteet {player} {value}',
+      games: 'pelit {player} {value}',
+      setEnd: 'erä päättyi: {winner} {winnerGames} – {loser} {loserGames}',
+      tiePoint: 'tiebreak {player} {value}',
+      tieToggleOn: 'Super-tiebreak alkoi',
+      tieToggleOff: 'Super-tiebreak päättyi'
+    },
+    history: {
+      title: 'Otteluhistoria',
+      empty: 'Ei tallennettuja tuloksia.',
+      columns: {
+        description: 'Ottelu',
+        category: 'Luokka',
+        phase: 'Vaihe',
+        duration: 'Kesto'
+      },
+      labels: {
+        supertb: 'Super-tiebreak-tulos'
+      }
+    },
+    accessibility: {
+      versus: 'vastaan',
+      points: 'pisteet',
+      tieBreak: 'tiebreak',
+      superTieBreak: 'super-tiebreak',
+      set: 'Erä {number}',
+      active: 'käynnissä'
+    }
+  },
+  uk: {
+    langName: 'Українська',
+    htmlLang: 'uk',
+    title: 'Тенісні результати наживо',
+    description: 'Сторінка автоматично оновлює рахунки. Доступна для читачів екрана.',
+    navLabel: 'Швидка навігація по кортах',
+    courtLabel: 'Корт {court}',
+    languageLabel: 'Оберіть мову',
+    pause: { pause: 'Призупинити оновлення', resume: 'Відновити оновлення' },
+    announceLabel: 'Автоматичне озвучування',
+    status: {
+      label: 'Статус: {state}{tiebreak}',
+      states: { unknown: 'невідомо', visible: 'видно', hidden: 'приховано' },
+      tiebreak: {
+        yes: ' | Супер-тайбрейк: ТАК',
+        no: ' | Супер-тайбрейк: НІ',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Рахунок – Корт {court}: {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Прізвище',
+        points: 'Очки',
+        tieBreak: 'Тай-брейк',
+        superTieBreak: 'Супер тай-брейк',
+        set1: 'Сет 1',
+        set2: 'Сет 2'
+      }
+    },
+    players: { defaultA: 'Гравець A', defaultB: 'Гравець B', fallback: 'гравець', fallbackOpponent: 'суперник' },
+    liveBadge: 'LIVE',
+    shortcuts: {
+      template: 'Скорочення: {range} – {courtsLabel}.',
+      courtsLabel: 'корти',
+      fallback: 'Клавіатурні скорочення з’являться після завантаження рахунків.',
+      autoRead: 'Автоматичне озвучування читає рахунок активного корту.'
+    },
+    versus: 'проти',
+    meta: {
+      lastRefresh: 'Останнє оновлення: {time}.',
+      lastRefreshNever: 'Останнє оновлення: ще немає.'
+    },
+    errors: { fetch: 'Помилка під час отримання даних ({message}).' },
+    announcements: {
+      points: 'очки {player} {value}',
+      games: 'гейми {player} {value}',
+      setEnd: 'кінець сету: {winner} {winnerGames} проти {loser} {loserGames}',
+      tiePoint: 'тайбрейк {player} {value}',
+      tieToggleOn: 'Супер-тайбрейк розпочато',
+      tieToggleOff: 'Супер-тайбрейк завершено'
+    },
+    history: {
+      title: 'Історія матчів',
+      empty: 'Немає збережених результатів.',
+      columns: {
+        description: 'Матч',
+        category: 'Категорія',
+        phase: 'Стадія',
+        duration: 'Тривалість'
+      },
+      labels: {
+        supertb: 'Результат супер-тайбрейку'
+      }
+    },
+    accessibility: {
+      versus: 'проти',
+      points: 'очки',
+      tieBreak: 'тай-брейк',
+      superTieBreak: 'супер тай-брейк',
+      set: 'Сет {number}',
+      active: 'активний'
+    }
+  },
+  fr: {
+    langName: 'Français',
+    htmlLang: 'fr',
+    title: 'Scores de tennis en direct',
+    description: 'La page met à jour les scores automatiquement. Accessible aux lecteurs d’écran.',
+    navLabel: 'Navigation rapide entre les courts',
+    courtLabel: 'Court {court}',
+    languageLabel: 'Choisir la langue',
+    pause: { pause: 'Mettre les mises à jour en pause', resume: 'Reprendre les mises à jour' },
+    announceLabel: 'Lecture automatique',
+    status: {
+      label: 'Statut : {state}{tiebreak}',
+      states: { unknown: 'inconnu', visible: 'visible', hidden: 'masqué' },
+      tiebreak: {
+        yes: ' | Super tie-break : OUI',
+        no: ' | Super tie-break : NON',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Scores – Court {court} : {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Nom',
+        points: 'Points',
+        tieBreak: 'Tie-break',
+        superTieBreak: 'Super tie-break',
+        set1: 'Set 1',
+        set2: 'Set 2'
+      }
+    },
+    players: { defaultA: 'Joueur A', defaultB: 'Joueur B', fallback: 'joueur', fallbackOpponent: 'adversaire' },
+    liveBadge: 'EN DIRECT',
+    shortcuts: {
+      template: 'Raccourcis : {range} – {courtsLabel}.',
+      courtsLabel: 'courts',
+      fallback: 'Les raccourcis vers les courts apparaissent une fois les scores chargés.',
+      autoRead: 'La lecture automatique annonce le score du court actif.'
+    },
+    versus: 'contre',
+    meta: {
+      lastRefresh: 'Dernière mise à jour : {time}.',
+      lastRefreshNever: 'Dernière mise à jour : aucune.'
+    },
+    errors: { fetch: 'Erreur lors du chargement des données ({message}).' },
+    announcements: {
+      points: 'points {player} {value}',
+      games: 'jeux {player} {value}',
+      setEnd: 'fin de set : {winner} {winnerGames} à {loser} {loserGames}',
+      tiePoint: 'tie-break {player} {value}',
+      tieToggleOn: 'Super tie-break commencé',
+      tieToggleOff: 'Super tie-break terminé'
+    },
+    history: {
+      title: 'Historique des matchs',
+      empty: 'Aucun résultat enregistré.',
+      columns: {
+        description: 'Match',
+        category: 'Catégorie',
+        phase: 'Phase',
+        duration: 'Durée'
+      },
+      labels: {
+        supertb: 'Résultat super tie-break'
+      }
+    },
+    accessibility: {
+      versus: 'contre',
+      points: 'points',
+      tieBreak: 'tie-break',
+      superTieBreak: 'super tie-break',
+      set: 'Set {number}',
+      active: 'actif'
+    }
+  },
+  lt: {
+    langName: 'Lietuvių',
+    htmlLang: 'lt',
+    title: 'Teniso rezultatai – tiesiogiai',
+    description: 'Puslapis automatiškai atnaujina rezultatus. Prieinamas ekrano skaitytuvams.',
+    navLabel: 'Greita navigacija po aikštes',
+    courtLabel: 'Aikštė {court}',
+    languageLabel: 'Pasirinkite kalbą',
+    pause: { pause: 'Pristabdyti atnaujinimus', resume: 'Tęsti atnaujinimus' },
+    announceLabel: 'Automatinis skaitymas',
+    status: {
+      label: 'Būsena: {state}{tiebreak}',
+      states: { unknown: 'nežinoma', visible: 'rodoma', hidden: 'paslėpta' },
+      tiebreak: {
+        yes: ' | Super taibreikas: TAIP',
+        no: ' | Super taibreikas: NE',
+        off: ''
+      }
+    },
+    table: {
+      caption: 'Rezultatai – Aikštė {court}: {playerA} {versus} {playerB}',
+      columns: {
+        name: 'Pavardė',
+        points: 'Taškai',
+        tieBreak: 'Taibreikas',
+        superTieBreak: 'Super taibreikas',
+        set1: 'Setas 1',
+        set2: 'Setas 2'
+      }
+    },
+    players: { defaultA: 'Žaidėjas A', defaultB: 'Žaidėjas B', fallback: 'žaidėjas', fallbackOpponent: 'varžovas' },
+    liveBadge: 'TIESIOGIAI',
+    shortcuts: {
+      template: 'Trumpiniai: {range} – {courtsLabel}.',
+      courtsLabel: 'aikštės',
+      fallback: 'Aikščių trumpiniai pasirodys, kai rezultatai bus įkelti.',
+      autoRead: 'Automatinis skaitymas praneša aktyvios aikštės rezultatą.'
+    },
+    versus: 'prieš',
+    meta: {
+      lastRefresh: 'Paskutinis atnaujinimas: {time}.',
+      lastRefreshNever: 'Paskutinis atnaujinimas: dar nėra.'
+    },
+    errors: { fetch: 'Klaida gaunant duomenis ({message}).' },
+    announcements: {
+      points: 'taškai {player} {value}',
+      games: 'geimai {player} {value}',
+      setEnd: 'setas baigtas: {winner} {winnerGames} prieš {loser} {loserGames}',
+      tiePoint: 'taibreikas {player} {value}',
+      tieToggleOn: 'Super taibreikas pradėtas',
+      tieToggleOff: 'Super taibreikas baigtas'
+    },
+    history: {
+      title: 'Mačo istorija',
+      empty: 'Nėra išsaugotų rezultatų.',
+      columns: {
+        description: 'Mačas',
+        category: 'Kategorija',
+        phase: 'Etapas',
+        duration: 'Trukmė'
+      },
+      labels: {
+        supertb: 'Super taibreiko rezultatas'
+      }
+    },
+    accessibility: {
+      versus: 'prieš',
+      points: 'taškai',
+      tieBreak: 'taibreikas',
+      superTieBreak: 'super taibreikas',
+      set: 'Setas {number}',
+      active: 'aktyvus'
+    }
+  }
+};
+
+export const SUPPORTED_LANGS = Object.keys(TRANSLATIONS);
+
+export function getTranslation(lang) {
+  return TRANSLATIONS[lang] || TRANSLATIONS[DEFAULT_LANG];
+}

@@ -1,1 +1,732 @@
-﻿甧敳猠牴捩❴഻ഊ椊灭牯⁴⁻敧呴慲獮慬楴湯素映潲⁭⸧琯慲獮慬楴湯⹳獪㬧਍਍敬⁴佃剕彔䕓彔呓呁⁅‽絻഻ഊ攊灸牯⁴畦据楴湯映牯慭⡴瑳Ⱳ瘠污敵⁳‽絻 ൻ 爠瑥牵⁮瑳⹲敲汰捡⡥尯⡻睜⤫絜术‬弨‬敫⥹㴠‾ൻ †爠瑥牵⁮扏敪瑣瀮潲潴祴数栮獡睏偮潲数瑲⹹慣汬瘨污敵ⱳ欠祥 ‿慶畬獥歛祥⁝›筠笤敫絹恽഻ 素㬩਍ൽഊ昊湵瑣潩⁮湡潮湵散欨‬整瑸 ൻ ⼠ 楌敶爠来潩⁮敲潭敶⁤胢ₓ敫灥映湵瑣潩⁮獡渠ⵯ灯映牯挠浯慰楴楢楬祴਍ൽഊ昊湵瑣潩⁮慦汬慢正汐祡牥慎敭猨牵慮敭‬祴数‬畣牲湥䱴湡⥧笠਍††潣獮⁴⁴‽敧呴慲獮慬楴湯挨牵敲瑮慌杮㬩਍†晩⠠畳湲浡⁥☦猠牵慮敭℠㴽✠✭ 敲畴湲猠牵慮敭഻ 爠瑥牵⁮祴数㴠㴽✠灯潰敮瑮‧‿⹴汰祡牥⹳慦汬慢正灏潰敮瑮㨠琠瀮慬敹獲昮污扬捡㭫਍ൽഊ攊灸牯⁴畦据楴湯愠湮畯据健楯瑮⡳Ⱬ猠牵慮敭‬潰湩獴敔瑸‬畣牲湥䱴湡⥧笠਍††潣獮⁴⁴‽敧呴慲獮慬楴湯挨牵敲瑮慌杮㬩਍†潣獮⁴汰祡牥㴠映污扬捡偫慬敹乲浡⡥畳湲浡ⱥ✠汰祡牥Ⱗ挠牵敲瑮慌杮㬩਍†湡潮湵散欨‬潦浲瑡琨愮湮畯据浥湥獴瀮楯瑮ⱳ笠瀠慬敹Ⱳ瘠污敵›潰湩獴敔瑸素⤩഻紊਍਍硥潰瑲映湵瑣潩⁮湡潮湵散慇敭⡳Ⱬ猠牵慮敭‬慧敭ⱳ挠牵敲瑮慌杮 ൻ †挠湯瑳琠㴠朠瑥牔湡汳瑡潩⡮畣牲湥䱴湡⥧഻ 挠湯瑳瀠慬敹⁲‽慦汬慢正汐祡牥慎敭猨牵慮敭‬瀧慬敹❲‬畣牲湥䱴湡⥧഻ 愠湮畯据⡥Ⱬ映牯慭⡴⹴湡潮湵散敭瑮⹳慧敭ⱳ笠瀠慬敹Ⱳ瘠污敵›慧敭⁳⥽㬩਍ൽഊ昊湵瑣潩⁮湡潮湵散敓䕴摮欨‬楷湮牥畓湲浡ⱥ眠湩敮䝲浡獥‬潬敳卲牵慮敭‬潬敳䝲浡獥‬畣牲湥䱴湡⥧笠਍††潣獮⁴⁴‽敧呴慲獮慬楴湯挨牵敲瑮慌杮㬩਍†潣獮⁴楷湮牥㴠映污扬捡偫慬敹乲浡⡥楷湮牥畓湲浡ⱥ✠汰祡牥Ⱗ挠牵敲瑮慌杮㬩਍†潣獮⁴潬敳⁲‽慦汬慢正汐祡牥慎敭氨獯牥畓湲浡ⱥ✠灯潰敮瑮Ⱗ挠牵敲瑮慌杮㬩਍†湡潮湵散欨‬潦浲瑡琨愮湮畯据浥湥獴献瑥湅Ɽ笠਍††楷湮牥ബ †眠湩敮䝲浡獥ബ †氠獯牥ബ †氠獯牥慇敭൳ 素⤩഻紊਍਍畦据楴湯愠湮畯据呥敩潐湩⡴Ⱬ猠牵慮敭‬慶畬ⱥ挠牵敲瑮慌杮 ൻ †挠湯瑳琠㴠朠瑥牔湡汳瑡潩⡮畣牲湥䱴湡⥧഻ 挠湯瑳瀠慬敹⁲‽慦汬慢正汐祡牥慎敭猨牵慮敭‬瀧慬敹❲‬畣牲湥䱴湡⥧഻ 愠湮畯据⡥Ⱬ映牯慭⡴⹴湡潮湵散敭瑮⹳楴健楯瑮‬⁻汰祡牥‬慶畬⁥⥽㬩਍ൽഊ昊湵瑣潩⁮湡潮湵散楔呥杯汧⡥Ⱬ漠Ɱ挠牵敲瑮慌杮 ൻ †挠湯瑳琠㴠朠瑥牔湡汳瑡潩⡮畣牲湥䱴湡⥧഻ 愠湮畯据⡥Ⱬ漠⁮‿⹴湡潮湵散敭瑮⹳楴呥杯汧佥⁮›⹴湡潮湵散敭瑮⹳楴呥杯汧佥晦㬩਍ൽഊ昊湵瑣潩⁮敤整浲湩卥瑥楗湮牥木浡獥ⱁ朠浡獥⥂笠਍†晩⠠祴数景朠浡獥⁁㴡‽渧浵敢❲簠⁼祴数景朠浡獥⁂㴡‽渧浵敢❲ 敲畴湲渠汵㭬਍†晩⠠慧敭䅳㰠〠簠⁼慧敭䉳㰠〠 敲畴湲渠汵㭬਍†潣獮⁴慭䝸浡獥㴠䴠瑡⹨慭⡸慧敭䅳‬慧敭䉳㬩਍†晩⠠慭䝸浡獥㰠㘠 敲畴湲渠汵㭬਍†潣獮⁴楤晦㴠䴠瑡⹨扡⡳慧敭䅳ⴠ朠浡獥⥂഻ 椠⁦搨晩⁦㴾㈠ 敲畴湲朠浡獥⁁‾慧敭䉳㼠✠❁㨠✠❂഻ 椠⁦木浡獥⁁㴽‽‷☦朠浡獥⁂㴽‽⤶爠瑥牵⁮䄧㬧਍†晩⠠慧敭䉳㴠㴽㜠☠…慧敭䅳㴠㴽㘠 敲畴湲✠❂഻ 爠瑥牵⁮畮汬഻紊਍਍畦据楴湯洠祡敢湁潮湵散敓䍴浯汰瑥潩⡮Ⱬ椠普Ɐ猠牵慮敭ⱳ挠牵敲瑮慌杮 ൻ 挠湯瑳瀠敲坶湩敮⁲‽敤整浲湩卥瑥楗湮牥椨普⹯牰癥ⱁ椠普⹯牰癥⥂഻ 挠湯瑳渠睥楗湮牥㴠搠瑥牥業敮敓坴湩敮⡲湩潦挮牵敲瑮ⱁ椠普⹯畣牲湥䉴㬩਍†潣獮⁴档湡敧卤潣敲㴠椠普⹯牰癥⁁㴡‽湩潦挮牵敲瑮⁁籼椠普⹯牰癥⁂㴡‽湩潦挮牵敲瑮㭂਍†晩⠠渡睥楗湮牥 敲畴湲഻ 椠⁦ℨ牰癥楗湮牥簠⁼牰癥楗湮牥℠㴽渠睥楗湮牥簠⁼档湡敧卤潣敲 ൻ †挠湯瑳眠湩敮乲浡⁥‽敮坷湩敮⁲㴽‽䄧‧‿畳湲浡獥䄮㨠猠牵慮敭⹳㭂਍††潣獮⁴潬敳乲浡⁥‽敮坷湩敮⁲㴽‽䄧‧‿畳湲浡獥䈮㨠猠牵慮敭⹳㭁਍††潣獮⁴楷湮牥慇敭⁳‽敮坷湩敮⁲㴽‽䄧‧‿湩潦挮牵敲瑮⁁›湩潦挮牵敲瑮㭂਍††潣獮⁴潬敳䝲浡獥㴠渠睥楗湮牥㴠㴽✠❁㼠椠普⹯畣牲湥䉴㨠椠普⹯畣牲湥䅴഻ †愠湮畯据卥瑥湅⡤Ⱬ眠湩敮乲浡ⱥ眠湩敮䝲浡獥㼠‿ⰰ氠獯牥慎敭‬潬敳䝲浡獥㼠‿ⰰ挠牵敲瑮慌杮㬩਍†ൽ紊਍਍畦据楴湯挠浯慰慲汢呥敩慖畬⡥慶畬⥥笠਍†晩⠠慶畬⁥㴽‽畮汬簠⁼慶畬⁥㴽‽湵敤楦敮⥤爠瑥牵⁮慶畬㭥਍†晩⠠祴数景瘠污敵㴠㴽✠畮扭牥⤧爠瑥牵⁮慶畬㭥਍†晩⠠祴数景瘠污敵㴠㴽✠瑳楲杮⤧笠਍††潣獮⁴牴浩敭⁤‽慶畬⹥牴浩⤨഻ †椠⁦ℨ牴浩敭⥤爠瑥牵⁮湵敤楦敮㭤਍††晩⠠牴浩敭⁤㴽‽ⴧ⤧爠瑥牵⁮湵敤楦敮㭤਍††潣獮⁴慰獲摥㴠丠浵敢⹲慰獲䥥瑮琨楲浭摥‬〱㬩਍††敲畴湲丠浵敢⹲獩慎⡎慰獲摥 ‿牴浩敭⁤›慰獲摥഻ 素਍†敲畴湲瘠污敵഻紊਍਍畦据楴湯挠汯敬瑣楔卥潣敲桃湡敧⡳畣牲湥ⱴ瀠敲楶畯ⱳ瀠瑡⁨‽嵛‬捡⁣‽嵛 ൻ 椠⁦ℨ畣牲湥⁴籼琠灹潥⁦畣牲湥⁴㴡‽漧橢捥❴簠⁼牁慲⹹獩牁慲⡹畣牲湥⥴ ൻ †挠湯瑳渠牯慭楬敺䍤牵敲瑮㴠挠浯慰慲汢呥敩慖畬⡥畣牲湥⥴഻ †挠湯瑳渠牯慭楬敺偤敲⁶‽潣灭牡扡敬楔噥污敵瀨敲楶畯⥳഻ †椠⁦渨牯慭楬敺䍤牵敲瑮㴠㴽甠摮晥湩摥簠⁼潮浲污穩摥畃牲湥⁴㴽‽畮汬 敲畴湲愠捣഻ †椠⁦渨牯慭楬敺䍤牵敲瑮㴠㴽渠牯慭楬敺偤敲⥶爠瑥牵⁮捡㭣਍††捡⹣異桳笨瀠瑡ⱨ瘠污敵›潮浲污穩摥畃牲湥⁴⥽഻ †爠瑥牵⁮捡㭣਍†ൽഊ 传橢捥⹴敫獹挨牵敲瑮⸩潦䕲捡⡨敫⁹㸽笠਍††晩⠠敫⁹㴽‽瘧獩扩敬⤧爠瑥牵㭮਍††潣汬捥呴敩捓牯䍥慨杮獥挨牵敲瑮歛祥ⱝ瀠敲楶畯⁳‿牰癥潩獵歛祥⁝›湵敤楦敮Ɽ瀠瑡⹨潣据瑡欨祥Ⱙ愠捣㬩਍†⥽഻ 爠瑥牵⁮捡㭣਍ൽഊ昊湵瑣潩⁮敲潳癬呥敩汐祡牥牆浯慐桴瀨瑡⥨笠਍†晩⠠䄡牲祡椮䅳牲祡瀨瑡⥨簠⁼慰桴氮湥瑧⁨㴽‽⤰爠瑥牵⁮畮汬഻ 挠湯瑳氠獡⁴‽慰桴灛瑡⹨敬杮桴ⴠㄠ㭝਍†晩⠠慬瑳㴠㴽✠❁簠⁼慬瑳㴠㴽✠❂ 敲畴湲氠獡㭴਍†晩⠠祴数景氠獡⁴㴽‽猧牴湩❧ ൻ †挠湯瑳甠灰牥㴠氠獡⹴潴灕数䍲獡⡥㬩਍††晩⠠灵数⹲湥獤楗桴✨❁⤩爠瑥牵⁮䄧㬧਍††晩⠠灵数⹲湥獤楗桴✨❂⤩爠瑥牵⁮䈧㬧਍†ൽ 爠瑥牵⁮畮汬഻紊਍਍畦据楴湯栠湡汤呥敩捓牯䅥湮畯据浥湥獴欨‬楴乥睯‬楴健敲ⱶ猠牵慮敭ⱳ挠牵敲瑮慌杮 ൻ 椠⁦ℨ楴乥睯簠⁼祴数景琠敩潎⁷㴡‽漧橢捥❴ 敲畴湲഻ 挠湯瑳挠慨杮獥㴠挠汯敬瑣楔卥潣敲桃湡敧⡳楴乥睯‬楴健敲⁶籼笠⥽഻ 椠⁦ℨ档湡敧⹳敬杮桴 敲畴湲഻ഊ 挠湯瑳搠物捥側慬敹獲㴠渠睥匠瑥ന †挠慨杮獥਍†††昮汩整⡲档湡敧㴠‾档湡敧瀮瑡⹨敬杮桴㴠㴽ㄠ☠…挨慨杮⹥慰桴せ⁝㴽‽䄧‧籼挠慨杮⹥慰桴せ⁝㴽‽䈧⤧ഩ ††⸠慭⡰档湡敧㴠‾档湡敧瀮瑡孨崰ഩ ⤠഻ഊ 挠慨杮獥昮牯慅档挨慨杮⁥㸽笠਍††潣獮⁴汰祡牥㴠爠獥汯敶楔健慬敹䙲潲偭瑡⡨档湡敧瀮瑡⥨഻ †椠⁦ℨ汰祡牥 敲畴湲഻ †椠⁦挨慨杮⹥慰桴氮湥瑧⁨‾‱☦搠物捥側慬敹獲栮獡瀨慬敹⥲ 敲畴湲഻ †挠湯瑳瘠污敵㴠挠慨杮⹥慶畬㭥਍††晩⠠慶畬⁥㴽‽湵敤楦敮⁤籼瘠污敵㴠㴽渠汵⥬爠瑥牵㭮਍††湡潮湵散楔健楯瑮欨‬汰祡牥㴠㴽✠❁㼠猠牵慮敭⹳⁁›畳湲浡獥䈮‬慶畬ⱥ挠牵敲瑮慌杮㬩਍†⥽഻紊਍਍硥潰瑲映湵瑣潩⁮敲潳癬䅥捣獥楳楢楬祴瑓楲杮⡳⥴笠਍†潣獮⁴捡⁣‽⹴捡散獳扩汩瑩⁹籼笠㭽਍†潣獮⁴潣畬湭⁳‽⹴慴汢㽥挮汯浵獮簠⁼絻഻ 氠瑥瘠牥畳⁳‽捡⹣敶獲獵഻ 椠⁦ℨ敶獲獵 ൻ †椠⁦琨栮浴䱬湡⁧㴽‽瀧❬ ൻ ††瘠牥畳⁳‽欧湯牴❡഻ †素攠獬⁥晩⠠⹴瑨汭慌杮㴠㴽✠湥⤧笠਍†††敶獲獵㴠✠敶獲獵㬧਍††⁽汥敳笠਍†††敶獲獵㴠琠瘮牥畳⁳籼✠敶獲獵㬧਍††ൽ 素਍†潣獮⁴慲偷楯瑮⁳‽捡⹣潰湩獴簠⁼潣畬湭⹳潰湩獴簠⁼倧楯瑮❳഻ 挠湯瑳瀠楯瑮⁳‽慲偷楯瑮⹳敲汰捡⡥尯⩳⡜⨮尿尩⩳术‬✧⸩牴浩⤨簠⁼倧楯瑮❳഻ 挠湯瑳琠敩牂慥⁫‽捡⹣楴䉥敲歡簠⁼潣畬湭⹳楴䉥敲歡簠⁼琧敩戭敲歡㬧਍†潣獮⁴畳数呲敩牂慥⁫‽捡⹣畳数呲敩牂慥⁫籼挠汯浵獮献灵牥楔䉥敲歡簠⁼獠灵牥␠瑻敩牂慥絫㭠਍†敬⁴敳呴浥汰瑡⁥‽捡⹣敳㭴਍†晩⠠猡瑥敔灭慬整 ൻ †挠湯瑳爠睡敓⁴‽潣畬湭㽳献瑥㬱਍††晩⠠祴数景爠睡敓⁴㴽‽猧牴湩❧ ൻ ††挠湯瑳挠敬湡摥㴠爠睡敓⹴灳楬⡴⠧⤧せ⹝牴浩⤨഻ ††挠湯瑳爠灥慬散⁤‽汣慥敮⹤敲汰捡⡥尯⭤Ⱟ✠湻浵敢絲⤧഻ ††椠⁦爨灥慬散⁤☦爠灥慬散⹤湩汣摵獥✨湻浵敢絲⤧ ൻ †††猠瑥敔灭慬整㴠爠灥慬散㭤਍†††ൽ †素਍†ൽ 椠⁦ℨ敳呴浥汰瑡⁥籼℠敳呴浥汰瑡⹥湩汣摵獥✨湻浵敢絲⤧ ൻ †猠瑥敔灭慬整㴠✠敓⁴湻浵敢絲㬧਍†ൽ 挠湯瑳愠瑣癩⁥‽捡⹣捡楴敶簠⁼愧瑣癩❥഻ 爠瑥牵⁮⁻敶獲獵‬潰湩獴‬楴䉥敲歡‬畳数呲敩牂慥Ⱬ猠瑥敔灭慬整‬捡楴敶素഻紊਍਍硥潰瑲映湵瑣潩⁮潣灭瑵呥敩楖楳楢楬祴琨敩瑓瑡⥥笠਍†晩⠠琡敩瑓瑡⁥籼琠灹潥⁦楴卥慴整℠㴽✠扯敪瑣⤧爠瑥牵⁮慦獬㭥਍†潣獮⁴慲䅷㴠丠浵敢⹲慰獲䥥瑮琨敩瑓瑡⹥⁁㼿琠敩瑓瑡⹥⁡㼿〠‬〱㬩਍†潣獮⁴慲䉷㴠丠浵敢⹲慰獲䥥瑮琨敩瑓瑡⹥⁂㼿琠敩瑓瑡⹥⁢㼿〠‬〱㬩਍†潣獮⁴慳敦⁁‽畎扭牥椮乳乡爨睡⥁㼠〠㨠爠睡㭁਍†潣獮⁴慳敦⁂‽畎扭牥椮乳乡爨睡⥂㼠〠㨠爠睡㭂਍†晩⠠慳敦⁁㴡‽‰籼猠晡䉥℠㴽〠 ൻ †爠瑥牵⁮牴敵഻ 素਍†敲畴湲映污敳഻紊਍਍硥潰瑲映湵瑣潩⁮汦獡⡨汥 ൻ 椠⁦ℨ汥 敲畴湲഻ 攠⹬汣獡䱳獩⹴摡⡤挧慨杮摥⤧഻ 猠瑥楔敭畯⡴⤨㴠‾汥挮慬獳楌瑳爮浥癯⡥挧慨杮摥⤧‬㈱〰㬩਍ൽഊ攊灸牯⁴畦据楴湯洠歡䍥畯瑲慃摲欨‬畣牲湥䱴湡Ⱨ漠瑰潩獮㴠笠⥽笠਍†潣獮⁴⁴‽敧呴慲獮慬楴湯挨牵敲瑮慌杮㬩਍†潣獮⁴捡⁣‽敲潳癬䅥捣獥楳楢楬祴瑓楲杮⡳⥴഻ 挠湯瑳挠畯瑲慌敢⁬‽潦浲瑡琨挮畯瑲慌敢ⱬ笠挠畯瑲›⁫⥽഻ 挠湯瑳搠晥畡瑬⁁‽⹴汰祡牥⹳敤慦汵䅴഻ 挠湯瑳搠晥畡瑬⁂‽⹴汰祡牥⹳敤慦汵䉴഻ 挠湯瑳挠汯浵獮㴠琠琮扡敬⸿潣畬湭⁳籼笠㭽਍†潣獮⁴潰湩獴慌敢⁬‽潣畬湭⹳潰湩獴簠⁼捡⹣潰湩獴഻ 挠湯瑳琠敩牂慥䱫扡汥㴠挠汯浵獮琮敩牂慥⁫籼愠捣琮敩牂慥㭫਍†潣獮⁴畳数呲敩牂慥䱫扡汥㴠挠汯浵獮献灵牥楔䉥敲歡簠⁼捡⹣畳数呲敩牂慥㭫਍†潣獮⁴敳䱴扡汥㴠⠠摩⥸㴠‾潣畬湭孳獠瑥笤摩絸嵠簠⁼潦浲瑡愨捣献瑥敔灭慬整‬⁻畮扭牥›摩⁸⥽഻ 挠湯瑳猠瑥䰱扡汥㴠猠瑥慌敢⡬⤱഻ 挠湯瑳猠瑥䰲扡汥㴠猠瑥慌敢⡬⤲഻ഊ 挠湯瑳猠捥楴湯㴠搠捯浵湥⹴牣慥整汅浥湥⡴猧捥楴湯⤧഻ 猠捥楴湯挮慬獳慎敭㴠✠慣摲㬧਍†敳瑣潩⹮摩㴠怠潫瑲␭死恽഻ 猠捥楴湯献瑥瑁牴扩瑵⡥愧楲ⵡ慬敢汬摥祢Ⱗ怠敨摡湩ⵧ笤絫⥠഻ 氠瑥栠慥䡤䵔⁌‽ൠ †㰠㉨椠㵤栢慥楤杮␭死≽ാ ††㰠灳湡挠慬獳∽潣牵⵴慬敢≬椠㵤挢畯瑲氭扡汥␭死≽␾捻畯瑲慌敢絬⼼灳湡㨾਍†††猼慰⁮摩∽楴汴ⵥ笤絫•汣獡㵳洢瑡档琭瑩敬㸢਍††††猼慰⁮汣獡㵳洢瑡档瀭慬敹≲搠瑡ⵡ楴汴㵥䄢㸢笤敤慦汵䅴㱽猯慰㹮਍††††猼慰⁮汣獡㵳洢瑡档瘭牥畳≳椠㵤琢瑩敬␭死⵽敶獲獵•牡慩氭扡汥∽笤捡⹣敶獲獵≽㰾灳湡愠楲ⵡ楨摤湥∽牴敵㸢笤⹴敶獲獵㱽猯慰㹮猼慰⁮汣獡㵳猢⵲湯祬㸢笤捡⹣敶獲獵㱽猯慰㹮⼼灳湡ാ †††㰠灳湡挠慬獳∽慭捴⵨汰祡牥•慤慴琭瑩敬∽≂␾摻晥畡瑬終⼼灳湡ാ ††㰠猯慰㹮਍††⼼㉨ാ 怠഻ 椠⁦漨瑰潩獮献潨䅷湮畯据⥥笠਍††敨摡呈䱍⬠‽ൠ ††㰠慬敢⁬汣獡㵳挢湯牴汯㸢਍††††椼灮瑵琠灹㵥挢敨正潢≸椠㵤愢湮畯据ⵥ笤絫㸢਍††††猼慰㹮笤⹴湡潮湵散慌敢絬⼼灳湡ാ ††㰠氯扡汥ാ †怠഻ 素਍†敳瑣潩⹮湩敮䡲䵔⁌‽ൠ †㰠楤⁶汣獡㵳挢牡ⵤ敨摡㸢笤敨摡呈䱍㱽搯癩ാ †㰠楤⁶汣獡㵳猢潣敲眭慲灰牥㸢਍†††搼癩挠慬獳∽捳牯ⵥ慬敢獬㸢਍††††搼癩挠慬獳∽捳牯ⵥ慬敢⁬捳牯ⵥ慬敢⵬扴•摩∽⑫死⵽扴氭扡汥•牡慩栭摩敤㵮琢畲≥㰾搯癩ാ †††㰠楤⁶汣獡㵳猢潣敲氭扡汥猠潣敲氭扡汥猭扴•摩∽⑫死⵽瑳ⵢ慬敢≬愠楲ⵡ楨摤湥∽牴敵㸢⼼楤㹶਍†††⼼楤㹶਍†††搼⁬汣獡㵳猢潣敲氭獩≴愠楲ⵡ慬敢汬摥祢∽敨摡湩ⵧ笤絫•牡慩栭摩敤㵮琢畲≥ാ †††㰠楤⁶汣獡㵳猢潣敲爭睯•慤慴猭摩㵥䄢㸢਍†††††搼⁴汣獡㵳瀢慬敹⵲散汬㸢਍††††††猼慰⁮汣獡㵳瀢慬敹⵲汦条•摩∽⑫死⵽汦条䄭•牡慩栭摩敤㵮琢畲≥㰾猯慰㹮਍††††††猼慰⁮汣獡㵳瀢慬敹⵲慮敭•摩∽⑫死⵽慮敭䄭㸢笤敤慦汵䅴㱽猯慰㹮਍†††††⼼瑤ാ ††††㰠摤挠慬獳∽敭牴捩瀠楯瑮≳愠楲ⵡ慬敢汬摥祢∽⑫死⵽慬敢⵬潰湩獴欠笤絫渭浡ⵥ≁ാ †††††㰠灳湡挠慬獳∽敭牴捩氭扡汥•摩∽⑫死⵽慬敢⵬潰湩獴•慤慴搭晥畡瑬氭扡汥∽笤潰湩獴慌敢絬•慤慴琭敩氭扡汥∽笤楴䉥敲歡慌敢絬•慤慴猭灵牥氭扡汥∽笤畳数呲敩牂慥䱫扡汥≽␾灻楯瑮䱳扡汥㱽猯慰㹮਍††††††猼慰⁮汣獡㵳洢瑥楲ⵣ慶畬⁥潰湩獴•摩∽⑫死⵽瑰⵳≁〾⼼灳湡ാ ††††㰠搯㹤਍†††††搼⁤汣獡㵳洢瑥楲⁣敳⵴∱愠楲ⵡ慬敢汬摥祢∽⑫死⵽慬敢⵬敳ㅴ欠笤絫渭浡ⵥ≁ാ †††††㰠灳湡挠慬獳∽敭牴捩氭扡汥•摩∽⑫死⵽慬敢⵬敳ㅴ㸢笤敳ㅴ慌敢絬⼼灳湡ാ †††††㰠灳湡挠慬獳∽敭牴捩瘭污敵猠瑥猠瑥ㄭ•摩∽⑫死⵽ㅳ䄭㸢㰰猯慰㹮਍†††††⼼摤ാ ††††㰠摤挠慬獳∽敭牴捩猠瑥㈭•牡慩氭扡汥敬扤㵹欢笤絫氭扡汥猭瑥′⑫死⵽慮敭䄭㸢਍††††††猼慰⁮汣獡㵳洢瑥楲ⵣ慬敢≬椠㵤欢笤絫氭扡汥猭瑥∲␾獻瑥䰲扡汥㱽猯慰㹮਍††††††猼慰⁮汣獡㵳洢瑥楲ⵣ慶畬⁥敳⁴敳⵴∲椠㵤欢笤絫猭ⴲ≁〾⼼灳湡ാ ††††㰠搯㹤਍††††⼼楤㹶਍††††搼癩挠慬獳∽捳牯ⵥ潲≷搠瑡ⵡ楳敤∽≂ാ ††††㰠瑤挠慬獳∽汰祡牥挭汥≬ാ †††††㰠灳湡挠慬獳∽汰祡牥昭慬≧椠㵤欢笤絫昭慬ⵧ≂愠楲ⵡ楨摤湥∽牴敵㸢⼼灳湡ാ †††††㰠灳湡挠慬獳∽汰祡牥渭浡≥椠㵤欢笤絫渭浡ⵥ≂␾摻晥畡瑬終⼼灳湡ാ ††††㰠搯㹴਍†††††搼⁤汣獡㵳洢瑥楲⁣潰湩獴•牡慩氭扡汥敬扤㵹欢笤絫氭扡汥瀭楯瑮⁳⑫死⵽慮敭䈭㸢਍††††††猼慰⁮汣獡㵳洢瑥楲ⵣ慶畬⁥潰湩獴•摩∽⑫死⵽瑰⵳≂〾⼼灳湡ാ ††††㰠搯㹤਍†††††搼⁤汣獡㵳洢瑥楲⁣敳⵴∱愠楲ⵡ慬敢汬摥祢∽⑫死⵽慬敢⵬敳ㅴ欠笤絫渭浡ⵥ≂ാ †††††㰠灳湡挠慬獳∽敭牴捩瘭污敵猠瑥猠瑥ㄭ•摩∽⑫死⵽ㅳ䈭㸢㰰猯慰㹮਍†††††⼼摤ാ ††††㰠摤挠慬獳∽敭牴捩猠瑥㈭•牡慩氭扡汥敬扤㵹欢笤絫氭扡汥猭瑥′⑫死⵽慮敭䈭㸢਍††††††猼慰⁮汣獡㵳洢瑥楲ⵣ慶畬⁥敳⁴敳⵴∲椠㵤欢笤絫猭ⴲ≂〾⼼灳湡ാ ††††㰠搯㹤਍††††⼼楤㹶਍†††⼼汤ാ †㰠搯癩ാ †㰠⁰汣獡㵳猢⵲湯祬猠潣敲猭浵慭祲•摩∽⑫死⵽畳浭牡≹愠楲ⵡ楬敶∽潰楬整㸢⼼㹰਍†㭠਍†潣獮⁴敨摡湩⁧‽敳瑣潩⹮畱牥卹汥捥潴⡲⍠敨摡湩ⵧ笤絫⥠഻ 椠⁦栨慥楤杮 ൻ †栠慥楤杮献瑥瑁牴扩瑵⡥愧楲ⵡ慬敢❬‬①捻畯瑲慌敢絬›笤敤慦汵䅴⁽笤捡⹣敶獲獵⁽笤敤慦汵䉴恽㬩਍†ൽഊ ⼠ 慃汬愠灰祬捓牯䅥楲⁡湯挠敲瑡潩⁮潴瀠灯汵瑡⁥桴⁥湩瑩慩⁬畳浭牡൹ 挠湯瑳椠楮楴污慄慴㴠笠䄠›⁻敳ㅴ›ⰰ猠瑥㨲〠‬潰湩獴›〧‧ⱽ䈠›⁻敳ㅴ›ⰰ猠瑥㨲〠‬潰湩獴›〧‧ⱽ琠敩›絻‬畣牲湥彴敳㩴ㄠ素഻ 猠瑥楔敭畯⡴⤨㴠‾灡汰卹潣敲牁慩欨‬湩瑩慩䑬瑡ⱡ挠牵敲瑮慌杮Ⱙ〠㬩਍਍†敲畴湲猠捥楴湯഻紊਍਍硥潰瑲映湵瑣潩⁮灵慤整楔汴⡥Ⱬ䄠慤慴‬摂瑡ⱡ挠牵敲瑮慌杮 ൻ 挠湯瑳琠㴠朠瑥牔湡汳瑡潩⡮畣牲湥䱴湡⥧഻ 挠湯瑳愠捣㴠爠獥汯敶捁散獳扩汩瑩卹牴湩獧琨㬩਍†潣獮⁴楴汴⁥‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤瑠瑩敬␭死恽㬩਍†潣獮⁴慳敦⁁‽敲潳癬健慬敹乲浡⡥摁瑡ⱡ✠敤慦汵䅴Ⱗ挠牵敲瑮慌杮㬩਍†潣獮⁴慳敦⁂‽敲潳癬健慬敹乲浡⡥摂瑡ⱡ✠敤慦汵䉴Ⱗ挠牵敲瑮慌杮㬩਍਍†晩⠠楴汴⥥笠਍††潣獮⁴慮敭䕁⁬‽楴汴⹥畱牥卹汥捥潴⡲嬧慤慴琭瑩敬∽≁❝㬩਍††潣獮⁴慮敭䕂⁬‽楴汴⹥畱牥卹汥捥潴⡲嬧慤慴琭瑩敬∽≂❝㬩਍††潣獮⁴敶獲獵汅㴠琠瑩敬焮敵祲敓敬瑣牯✨洮瑡档瘭牥畳❳㬩਍††晩⠠慮敭䕁⁬☦渠浡䉥汅☠…敶獲獵汅 ൻ ††渠浡䅥汅琮硥䍴湯整瑮㴠猠晡䅥഻ ††渠浡䉥汅琮硥䍴湯整瑮㴠猠晡䉥഻ ††挠湯瑳瘠獩㴠瘠牥畳䕳⹬畱牥卹汥捥潴⡲嬧牡慩栭摩敤㵮琢畲≥❝㬩਍†††潣獮⁴牳㴠瘠牥畳䕳⹬畱牥卹汥捥潴⡲⸧牳漭汮❹㬩਍†††晩⠠楶⥳瘠獩琮硥䍴湯整瑮㴠琠瘮牥畳㭳਍†††晩⠠牳 牳琮硥䍴湯整瑮㴠愠捣瘮牥畳㭳਍†††敶獲獵汅献瑥瑁牴扩瑵⡥愧楲ⵡ慬敢❬‬捡⹣敶獲獵㬩਍††⁽汥敳笠਍†††楴汴⹥整瑸潃瑮湥⁴‽①獻晡䅥⁽⁼笤慳敦終㭠਍††ൽ 素਍†潣獮⁴潣牵䱴扡汥敔瑸㴠映牯慭⡴⹴潣牵䱴扡汥‬⁻潣牵㩴欠素㬩਍†潣獮⁴潣牵䱴扡汥㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨潣牵⵴慬敢⵬笤絫⥠഻ 椠⁦挨畯瑲慌敢⥬笠਍††潣牵䱴扡汥琮硥䍴湯整瑮㴠挠畯瑲慌敢呬硥㭴਍†ൽ 挠湯瑳栠慥楤杮㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨敨摡湩ⵧ笤絫⥠഻ 椠⁦栨慥楤杮 ൻ †栠慥楤杮献瑥瑁牴扩瑵⡥愧楲ⵡ慬敢❬‬①捻畯瑲慌敢呬硥絴›笤慳敦絁␠慻捣瘮牥畳絳␠獻晡䉥恽㬩਍†ൽ紊਍硥潰瑲映湵瑣潩⁮敲潳癬健慬敹乲浡⡥汰祡牥慄慴‬慦汬慢正敋ⱹ挠牵敲瑮慌杮 ൻ 挠湯瑳琠㴠朠瑥牔湡汳瑡潩⡮畣牲湥䱴湡⥧഻ 椠⁦瀨慬敹䑲瑡⁡☦琠灹潥⁦汰祡牥慄慴㴠㴽✠扯敪瑣⤧笠਍††潣獮⁴畦汬㴠瀠慬敹䑲瑡⹡畦汬湟浡⁥籼瀠慬敹䑲瑡⹡畦汬慎敭഻ †椠⁦昨汵⁬☦匠牴湩⡧畦汬⸩牴浩⤨ 敲畴湲匠牴湩⡧畦汬⸩牴浩⤨഻ †挠湯瑳猠牵慮敭㴠瀠慬敹䑲瑡⹡畳湲浡㭥਍††晩⠠畳湲浡⁥☦猠牵慮敭℠㴽✠✭ 敲畴湲猠牵慮敭഻ 素攠獬⁥晩⠠祴数景瀠慬敹䑲瑡⁡㴽‽猧牴湩❧☠…汰祡牥慄慴琮楲⡭⤩笠਍††敲畴湲瀠慬敹䑲瑡⹡牴浩⤨഻ 素਍†敲畴湲琠瀮慬敹獲晛污扬捡䭫祥㭝਍ൽഊ昊湵瑣潩⁮灵慤整潐湩獴慌敢呬硥⡴Ⱬ琠敩楖楳汢ⱥ椠即灵牥楔䉥敲歡 ൻ 挠湯瑳氠扡汥㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨⑫死⵽慬敢⵬潰湩獴⥠഻ 椠⁦ℨ慬敢⥬爠瑥牵㭮਍†潣獮⁴敤慦汵䱴扡汥㴠氠扡汥朮瑥瑁牴扩瑵⡥搧瑡ⵡ敤慦汵⵴慬敢❬ 籼氠扡汥琮硥䍴湯整瑮簠⁼✧഻ 挠湯瑳琠敩慌敢⁬‽慬敢⹬敧䅴瑴楲畢整✨慤慴琭敩氭扡汥⤧簠⁼敤慦汵䱴扡汥഻ 挠湯瑳猠灵牥慌敢⁬‽慬敢⹬敧䅴瑴楲畢整✨慤慴猭灵牥氭扡汥⤧簠⁼楴䱥扡汥഻ 挠湯瑳琠牡敧⁴‽楴噥獩扩敬㼠⠠獩畓数呲敩牂慥⁫‿畳数䱲扡汥㨠琠敩慌敢⥬㨠搠晥畡瑬慌敢㭬਍†晩⠠慬敢⹬整瑸潃瑮湥⁴㴡‽慴杲瑥 ൻ †氠扡汥琮硥䍴湯整瑮㴠琠牡敧㭴਍†ൽ紊਍਍畦据楴湯渠牯慭楬敺畃牲湥却瑥慖畬⡥慲⥷笠਍†晩⠠慲⁷㴽‽湵敤楦敮⁤籼爠睡㴠㴽渠汵⥬爠瑥牵⁮㬰਍†潣獮⁴慰獲摥㴠丠浵敢⹲慰獲䥥瑮爨睡‬〱㬩਍†晩⠠両浵敢⹲獩楆楮整瀨牡敳⥤簠⁼畎扭牥椮乳乡瀨牡敳⥤簠⁼慰獲摥㰠‽⤰笠਍††敲畴湲〠഻ 素਍†敲畴湲瀠牡敳㭤਍ൽഊ昊湵瑣潩⁮灡汰卹潣敲牁慩欨‬慤慴‬畣牲湥䱴湡⥧笠਍†潣獮⁴敳瑣潩⁮‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠牯⵴笤絫⥠഻ 椠⁦ℨ敳瑣潩⥮爠瑥牵㭮਍†潣獮⁴楬瑳㴠猠捥楴湯焮敵祲敓敬瑣牯✨献潣敲氭獩❴㬩਍†晩⠠氡獩⥴爠瑥牵㭮਍†潣獮⁴畳浭牡剹潯⁴‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠笤絫猭浵慭祲⥠഻ 挠湯瑳琠㴠朠瑥牔湡汳瑡潩⡮畣牲湥䱴湡⥧഻ 挠湯瑳愠捣㴠爠獥汯敶捁散獳扩汩瑩卹牴湩獧琨㬩਍†潣獮⁴畣牲湥却瑥㴠渠牯慭楬敺畃牲湥却瑥慖畬⡥慤慴挮牵敲瑮獟瑥㬩਍†潣獮⁴楴卥慴整㴠搠瑡⹡楴⁥籼笠㭽਍†潣獮⁴楴噥獩扩敬㴠琠敩瑓瑡⹥楶楳汢⁥㴽‽牴敵഻ 挠湯瑳椠即灵牥楔䉥敲歡㴠琠敩楖楳汢⁥☦挠牵敲瑮敓⁴㴽‽㬳਍਍†灵慤整潐湩獴慌敢呬硥⡴Ⱬ琠敩楖楳汢ⱥ椠即灵牥楔䉥敲歡㬩਍਍†潣獮⁴扴慌敢⁬‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠笤絫琭ⵢ慬敢恬㬩਍†潣獮⁴瑳䱢扡汥㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨⑫死⵽瑳ⵢ慬敢恬㬩਍†晩⠠扴慌敢⥬笠਍††潣獮⁴扴楖楳汢⁥‽楴噥獩扩敬☠…椡即灵牥楔䉥敲歡഻ †琠䱢扡汥琮硥䍴湯整瑮㴠琠琮敩牂慥䱫扡汥簠⁼吧䕉䈭䕒䭁㬧਍††扴慌敢⹬汣獡䱳獩⹴潴杧敬✨獩瘭獩扩敬Ⱗ琠噢獩扩敬㬩਍††扴慌敢⹬敳䅴瑴楲畢整✨牡慩栭摩敤❮‬扴楖楳汢⁥‿昧污敳‧›琧畲❥㬩਍†ൽ 椠⁦猨扴慌敢⥬笠਍††瑳䱢扡汥琮硥䍴湯整瑮㴠琠献灵牥楔䉥敲歡慌敢⁬籼✠啓䕐⁒䥔ⵅ剂䅅❋഻ †猠扴慌敢⹬汣獡䱳獩⹴潴杧敬✨獩瘭獩扩敬Ⱗ椠即灵牥楔䉥敲歡㬩਍††瑳䱢扡汥献瑥瑁牴扩瑵⡥愧楲ⵡ楨摤湥Ⱗ椠即灵牥楔䉥敲歡㼠✠慦獬❥㨠✠牴敵⤧഻ 素਍਍†潣獮⁴潰湩獴慌敢䕬⁬‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠笤絫氭扡汥瀭楯瑮恳㬩਍†潣獮⁴潤偭楯瑮䱳扡汥㴠⠠潰湩獴慌敢䕬㽬琮硥䍴湯整瑮簠⁼✧⸩牴浩⤨഻ 挠湯瑳瀠楯瑮䱳扡汥敔瑸㴠琠敩楖楳汢൥ †㼠⠠獩畓数呲敩牂慥⁫‿捡⹣畳数呲敩牂慥⁫›捡⹣楴䉥敲歡ഩ †㨠⠠潤偭楯瑮䱳扡汥簠⁼捡⹣潰湩獴㬩਍਍†潣獮⁴畳浭牡偹牡獴㴠嬠㭝਍਍†潣獮⁴潰湩獴呁硥⁴‽楴噥獩扩敬਍††‿潮浲污穩呥敩楄灳慬⡹楴卥慴整䄮ഩ †㨠渠牯慭楬敺潐湩獴楄灳慬⡹慤慴⸿㽁瀮楯瑮⥳഻ 挠湯瑳瀠楯瑮䉳敔瑸㴠琠敩楖楳汢൥ †㼠渠牯慭楬敺楔䑥獩汰祡琨敩瑓瑡⹥⥂਍††›潮浲污穩健楯瑮䑳獩汰祡搨瑡㽡䈮⸿潰湩獴㬩਍਍†畳浭牡偹牡獴瀮獵⡨①灻楯瑮䱳扡汥敔瑸⁽笤潰湩獴呁硥絴␺灻楯瑮䉳敔瑸恽㬩਍਍†潣獮⁴敳却来敭瑮⁳‽嵛഻ 嬠਍††⁻湩敤㩸ㄠ‬㩡搠瑡㽡䄮⸿敳ㅴ‬㩢搠瑡㽡䈮⸿敳ㅴ‬潮敤摉›歠笤絫氭扡汥猭瑥怱素ബ †笠椠摮硥›ⰲ愠›慤慴⸿㽁献瑥ⰲ戠›慤慴⸿㽂献瑥ⰲ渠摯䥥㩤怠⑫死⵽慬敢⵬敳㉴⁠ൽ 崠昮牯慅档⠨⁻湩敤ⱸ愠‬Ɫ渠摯䥥⁤⥽㴠‾ൻ †挠湯瑳猠晡䅥㴠愠㴠㴽甠摮晥湩摥簠⁼⁡㴽‽畮汬㼠✠✰㨠匠牴湩⡧⥡琮楲⡭ 籼✠✰഻ †挠湯瑳猠晡䉥㴠戠㴠㴽甠摮晥湩摥簠⁼⁢㴽‽畮汬㼠✠✰㨠匠牴湩⡧⥢琮楲⡭ 籼✠✰഻ †挠湯瑳愠畎⁭‽畎扭牥瀮牡敳湉⡴慳敦ⱁㄠ⤰簠⁼㬰਍††潣獮⁴乢浵㴠丠浵敢⹲慰獲䥥瑮猨晡䉥‬〱 籼〠഻ †挠湯瑳椠据畬敤㴠椠摮硥㴠㴽ㄠ簠⁼畣牲湥却瑥㸠‽湩敤⁸籼愠畎⁭‾‰籼戠畎⁭‾㬰਍††晩⠠椡据畬敤 敲畴湲഻ †挠湯瑳氠扡汥汅㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉渨摯䥥⥤഻ †挠湯瑳映污扬捡䱫扡汥㴠映牯慭⡴捡⹣敳呴浥汰瑡ⱥ笠渠浵敢㩲椠摮硥素㬩਍††潣獮⁴慬敢呬硥⁴‽氨扡汥汅⸿整瑸潃瑮湥⁴籼✠⤧琮楲⡭ 籼映污扬捡䱫扡汥഻ †挠湯瑳椠䅳瑣癩⁥‽畣牲湥却瑥㴠㴽椠摮硥഻ †椠⁦氨扡汥汅 ൻ ††椠⁦椨䅳瑣癩⥥笠਍††††慬敢䕬⹬敳䅴瑴楲畢整✨牡慩氭扡汥Ⱗ怠笤慬敢呬硥絴‬笤捡⹣捡楴敶恽㬩਍†††⁽汥敳笠਍††††慬敢䕬⹬敲潭敶瑁牴扩瑵⡥愧楲ⵡ慬敢❬㬩਍†††ൽ †素਍††潣獮⁴敳浧湥⁴‽獩捁楴敶਍†††‿①汻扡汥敔瑸ⱽ␠慻捣愮瑣癩絥‬笤慳敦絁␺獻晡䉥恽਍†††›①汻扡汥敔瑸⁽笤慳敦絁␺獻晡䉥恽഻ †猠瑥敓浧湥獴瀮獵⡨敳浧湥⥴഻ 素㬩਍਍†敳却来敭瑮⹳潦䕲捡⡨敳浧湥⁴㸽猠浵慭祲慐瑲⹳異桳猨来敭瑮⤩഻ഊ 椠⁦猨浵慭祲潒瑯 ൻ †挠湯瑳猠浵慭祲敔瑸㴠猠浵慭祲慐瑲⹳潪湩✨‮⤧琮楲⡭㬩਍††潣獮⁴楦慮呬硥⁴‽畳浭牡呹硥⹴敬杮桴㼠猠浵慭祲敔瑸㨠✠㬧਍††晩⠠畳浭牡剹潯⹴整瑸潃瑮湥⁴㴡‽楦慮呬硥⥴笠਍†††畳浭牡剹潯⹴整瑸潃瑮湥⁴‽楦慮呬硥㭴਍††ൽ 素਍ൽഊ昊湵瑣潩⁮慨佳湷漨橢‬敫⥹笠਍†敲畴湲传橢捥⹴牰瑯瑯灹⹥慨佳湷牐灯牥祴挮污⡬扯⁪籼笠ⱽ欠祥㬩਍ൽഊ昊湵瑣潩⁮慬整瑳慖畬⡥畣牲湥ⱴ瀠敲楶畯ⱳ欠祥 ൻ 椠⁦栨獡睏⡮畣牲湥ⱴ欠祥⤩爠瑥牵⁮畣牲湥孴敫嵹഻ 椠⁦栨獡睏⡮牰癥潩獵‬敫⥹ 敲畴湲瀠敲楶畯孳敫嵹഻ 爠瑥牵⁮湵敤楦敮㭤਍ൽഊ昊湵瑣潩⁮潮浲污穩䝥浡獥慖畬⡥慶畬⥥笠਍†晩⠠慶畬⁥㴽‽畮汬簠⁼慶畬⁥㴽‽湵敤楦敮⥤爠瑥牵⁮湵敤楦敮㭤਍†晩⠠祴数景瘠污敵㴠㴽✠畮扭牥⤧爠瑥牵⁮畎扭牥椮䙳湩瑩⡥慶畬⥥㼠瘠污敵㨠甠摮晥湩摥഻ 椠⁦琨灹潥⁦慶畬⁥㴽‽猧牴湩❧ ൻ †挠湯瑳琠楲浭摥㴠瘠污敵琮楲⡭㬩਍††晩⠠琡楲浭摥 敲畴湲甠摮晥湩摥഻ †椠⁦琨楲浭摥㴠㴽✠✭ 敲畴湲甠摮晥湩摥഻ †挠湯瑳瀠牡敳⁤‽畎扭牥瀮牡敳湉⡴牴浩敭Ɽㄠ⤰഻ †爠瑥牵⁮畎扭牥椮乳乡瀨牡敳⥤㼠甠摮晥湩摥㨠瀠牡敳㭤਍†ൽ 爠瑥牵⁮湵敤楦敮㭤਍ൽഊ攊灸牯⁴畦据楴湯甠摰瑡䍥畯瑲欨‬慤慴‬牰癥‬畣牲湥䱴湡Ⱨ漠瑰潩獮㴠笠⥽笠਍†潣獮⁴⁻湡潮湵散扃素㴠漠瑰潩獮഻ 挠湯瑳瀠敲䭶㴠瀠敲孶嵫簠⁼⁻㩁笠ⱽ䈠›絻‬楴㩥笠⁽㭽਍†潣獮⁴慲呷敩潎⁷‽慤慴琮敩簠⁼絻഻ 挠湯瑳爠睡楔健敲⁶‽牰癥⹋楴⁥籼笠㭽਍†潣獮⁴楴乥睯㴠笠⸠⸮慲呷敩潎ⱷ瘠獩扩敬›潣灭瑵呥敩楖楳楢楬祴爨睡楔乥睯 㭽਍††潣獮⁴楴健敲⁶‽⁻⸮爮睡楔健敲ⱶ瘠獩扩敬›潣灭瑵呥敩楖楳楢楬祴爨睡楔健敲⥶素഻ 挠湯瑳搠瑡坡瑩周敩㴠笠⸠⸮慤慴‬楴㩥琠敩潎⁷㭽਍਍†潣獮⁴⁁‽慤慴䄮簠⁼絻഻ 挠湯瑳䈠㴠搠瑡⹡⁂籼笠㭽਍††潣獮⁴畳湲浡䅥㴠䄠献牵慮敭簠⁼牰癥㽋䄮⸿畳湲浡㭥਍††潣獮⁴畳湲浡䉥㴠䈠献牵慮敭簠⁼牰癥㽋䈮⸿畳湲浡㭥਍਍†灵慤整汐祡牥汆条欨‬䄧Ⱗ䄠‬牰癥⹋⁁籼笠⥽഻ 甠摰瑡健慬敹䙲慬⡧Ⱬ✠❂‬ⱂ瀠敲䭶䈮簠⁼絻㬩਍਍†潣獮⁴敮瑸慎敭⁁‽敲潳癬健慬敹乲浡⡥ⱁ✠敤慦汵䅴Ⱗ挠牵敲瑮慌杮㬩਍†潣獮⁴敮瑸慎敭⁂‽敲潳癬健慬敹乲浡⡥ⱂ✠敤慦汵䉴Ⱗ挠牵敲瑮慌杮㬩਍†敬⁴慮敭䍁慨杮摥㴠映污敳഻ 氠瑥渠浡䉥桃湡敧⁤‽慦獬㭥਍†潣獮⁴慮敭敃汬⁁‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠笤絫渭浡ⵥ恁㬩਍†晩⠠慮敭敃汬⥁笠਍††潣獮⁴牰癥敔瑸㴠渠浡䍥汥䅬琮硥䍴湯整瑮簠⁼✧഻ †椠⁦瀨敲呶硥⁴㴡‽敮瑸慎敭⥁笠਍†††慮敭敃汬⹁整瑸潃瑮湥⁴‽敮瑸慎敭㭁਍†††汦獡⡨慮敭敃汬⥁഻ ††渠浡䅥桃湡敧⁤‽牴敵഻ †素਍†ൽ 挠湯瑳渠浡䍥汥䉬㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨⑫死⵽慮敭䈭⥠഻ 椠⁦渨浡䍥汥䉬 ൻ †挠湯瑳瀠敲呶硥⁴‽慮敭敃汬⹂整瑸潃瑮湥⁴籼✠㬧਍††晩⠠牰癥敔瑸℠㴽渠硥乴浡䉥 ൻ ††渠浡䍥汥䉬琮硥䍴湯整瑮㴠渠硥乴浡䉥഻ ††映慬桳渨浡䍥汥䉬㬩਍†††慮敭䍂慨杮摥㴠琠畲㭥਍††ൽ 素਍†晩⠠慮敭䍁慨杮摥簠⁼慮敭䍂慨杮摥 ൻ †甠摰瑡呥瑩敬欨‬ⱁ䈠‬畣牲湥䱴湡⥧഻ 素਍਍†潣獮⁴潰湩獴⁁‽敲潳癬䑥獩汰祡摥潐湩獴✨❁‬ⱁ瀠敲䭶䄮簠⁼絻‬楴乥睯‬慲呷敩牐癥㬩਍†潣獮⁴潰湩獴⁂‽敲潳癬䑥獩汰祡摥潐湩獴✨❂‬ⱂ瀠敲䭶䈮簠⁼絻‬楴乥睯‬慲呷敩牐癥㬩਍਍†潣獮⁴散汬⁁‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠笤絫瀭獴䄭⥠഻ 椠⁦挨汥䅬 ൻ †挠湯瑳瀠敲呶硥⁴‽散汬⹁整瑸潃瑮湥㭴਍††潣獮⁴敮瑸敔瑸㴠瀠楯瑮䅳琮硥㭴਍††潣獮⁴整瑸桃湡敧⁤‽牰癥敔瑸℠㴽渠硥呴硥㭴਍††晩⠠整瑸桃湡敧⥤愠楮慭整潐湩獴桃湡敧挨汥䅬‬牰癥敔瑸‬敮瑸敔瑸㬩攠獬⁥散汬⹁整瑸潃瑮湥⁴‽敮瑸敔瑸഻ †挠汥䅬挮慬獳楌瑳琮杯汧⡥椧⵳楴扥敲歡Ⱗ瀠楯瑮䅳椮味敩㬩਍††††晩⠠整瑸桃湡敧⥤笠਍†††汦獡⡨散汬⥁഻ ††椠⁦渨硥呴硥⁴㴽‽䄧噄‧籼渠硥呴硥⁴㴽‽㐧✰ ൻ †††挠汥䅬挮慬獳楌瑳愮摤✨汦灩猭牴湯❧㬩਍††††敳呴浩潥瑵⠨ 㸽挠汥䅬挮慬獳楌瑳爮浥癯⡥昧楬⵰瑳潲杮⤧‬㔴⤰഻ ††素਍†††湡潮湵散扃欨‬愧湮畯据健楯瑮❳‬畳湲浡䅥‬敮瑸敔瑸㬩਍††ൽ 素਍਍†潣獮⁴散汬⁂‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠笤絫瀭獴䈭⥠഻ 椠⁦挨汥䉬 ൻ †挠湯瑳瀠敲呶硥⁴‽散汬⹂整瑸潃瑮湥㭴਍††潣獮⁴敮瑸敔瑸㴠瀠楯瑮䉳琮硥㭴਍††潣獮⁴整瑸桃湡敧⁤‽牰癥敔瑸℠㴽渠硥呴硥㭴਍††晩⠠整瑸桃湡敧⥤愠楮慭整潐湩獴桃湡敧挨汥䉬‬牰癥敔瑸‬敮瑸敔瑸㬩攠獬⁥散汬⹂整瑸潃瑮湥⁴‽敮瑸敔瑸഻ †挠汥䉬挮慬獳楌瑳琮杯汧⡥椧⵳楴扥敲歡Ⱗ瀠楯瑮䉳椮味敩㬩਍††††晩⠠整瑸桃湡敧⥤笠਍†††汦獡⡨散汬⥂഻ ††椠⁦渨硥呴硥⁴㴽‽䄧噄‧籼渠硥呴硥⁴㴽‽㐧✰ ൻ †††挠汥䉬挮慬獳楌瑳愮摤✨汦灩猭牴湯❧㬩਍††††敳呴浩潥瑵⠨ 㸽挠汥䉬挮慬獳楌瑳爮浥癯⡥昧楬⵰瑳潲杮⤧‬㔴⤰഻ ††素਍†††湡潮湵散扃欨‬愧湮畯据健楯瑮❳‬畳湲浡䉥‬敮瑸敔瑸㬩਍††ൽ 素਍਍†⼯唠摰瑡⁥敳⁴捳牯獥⠠慧敭⁳潷⁮湩挠浯汰瑥摥猠瑥⥳਍†⼯丠瑯㩥挠牵敲瑮束浡獥琠慲正⁳慧敭⁳湩琠敨愠瑣癩⁥敳⁴湡⁤獩丠呏搠獩汰祡摥猠灥牡瑡汥൹ 椠⁦䄨献瑥‱㴡‽湵敤楦敮⁤☦䄠献瑥‱㴡‽牰癥㽋䄮⸿敳ㅴ ൻ †挠湯瑳挠汥⁬‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠笤絫猭ⴱ恁㬩਍††晩⠠散汬 ൻ ††挠汥⹬整瑸潃瑮湥⁴‽⹁敳ㅴ㼠‿㬰਍†††汦獡⡨散汬㬩਍††ൽ 素਍†晩⠠⹂敳ㅴ℠㴽甠摮晥湩摥☠…⹂敳ㅴ℠㴽瀠敲䭶⸿㽂献瑥⤱笠਍††潣獮⁴散汬㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨⑫死⵽ㅳ䈭⥠഻ †椠⁦挨汥⥬笠਍†††散汬琮硥䍴湯整瑮㴠䈠献瑥‱㼿〠഻ ††映慬桳挨汥⥬഻ †素਍†ൽ †椠⁦䄨献瑥′㴡‽湵敤楦敮⁤☦䄠献瑥′㴡‽牰癥㽋䄮⸿敳㉴ ൻ †挠湯瑳挠汥⁬‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤歠笤絫猭ⴲ恁㬩਍††晩⠠散汬 ൻ ††挠汥⹬整瑸潃瑮湥⁴‽⹁敳㉴㼠‿㬰਍†††汦獡⡨散汬㬩਍††ൽ 素਍†晩⠠⹂敳㉴℠㴽甠摮晥湩摥☠…⹂敳㉴℠㴽瀠敲䭶⸿㽂献瑥⤲笠਍††潣獮⁴散汬㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨⑫死⵽㉳䈭⥠഻ †椠⁦挨汥⥬笠਍†††散汬琮硥䍴湯整瑮㴠䈠献瑥′㼿〠഻ ††映慬桳挨汥⥬഻ †素਍†ൽ †挠湯瑳猠牵慮敭⁳‽⁻㩁猠牵慮敭ⱁ䈠›畳湲浡䉥素഻ഊ 挠湯瑳猠瑥湉潦⁳‽❛敳ㅴⰧ✠敳㉴Ⱗ✠敳㍴崧洮灡欨祥㴠‾笨਍††敫ⱹ਍††畣牲湥䅴›潮浲污穩䝥浡獥慖畬⡥慬整瑳慖畬⡥ⱁ瀠敲䭶䄮‬敫⥹Ⱙ਍††畣牲湥䉴›潮浲污穩䝥浡獥慖畬⡥慬整瑳慖畬⡥ⱂ瀠敲䭶䈮‬敫⥹Ⱙ਍††牰癥㩁渠牯慭楬敺慇敭噳污敵瀨敲䭶⸿㽁嬮敫嵹Ⱙ਍††牰癥㩂渠牯慭楬敺慇敭噳污敵瀨敲䭶⸿㽂嬮敫嵹ഩ 素⤩഻ഊ 猠瑥湉潦⹳潦䕲捡⡨湩潦㴠‾ൻ †椠⁦椨普⹯畣牲湥䅴㴠㴽甠摮晥湩摥☠…湩潦挮牵敲瑮⁂㴽‽湵敤楦敮⥤爠瑥牵㭮਍††慭批䅥湮畯据卥瑥潃灭敬楴湯欨‬湩潦‬畳湲浡獥‬畣牲湥䱴湡⥧഻ 素㬩਍਍†潣獮⁴楷獮㴠猠瑥湉潦⹳敲畤散⠨捡Ᵽ椠普⥯㴠‾ൻ †挠湯瑳眠湩敮⁲‽敤整浲湩卥瑥楗湮牥椨普⹯畣牲湥䅴‬湩潦挮牵敲瑮⥂഻ †椠⁦眨湩敮⁲㴽‽䄧⤧愠捣䄮⬠‽㬱਍††汥敳椠⁦眨湩敮⁲㴽‽䈧⤧愠捣䈮⬠‽㬱਍††敲畴湲愠捣഻ 素‬⁻㩁〠‬㩂〠素㬩਍਍†潣獮⁴慨偤敲䍶畯瑮⁳‽扏敪瑣瀮潲潴祴数栮獡睏偮潲数瑲⹹慣汬䌨問呒卟呅卟䅔䕔‬⥫഻ 挠湯瑳瀠敲䍶畯瑮⁳‽佃剕彔䕓彔呓呁孅嵫簠⁼⁻楷獮㩁〠‬楷獮㩂〠‬灳楬䅴湮畯据摥›慦獬⁥㭽਍†潣獮⁴敲捡敨卤汰瑩潎⁷‽楷獮䄮㴠㴽ㄠ☠…楷獮䈮㴠㴽ㄠ഻ 挠湯瑳琠敩楖楳楢楬祴畔湲摥湏㴠琠敩潎⹷楶楳汢⁥㴽‽牴敵☠…楴健敲㽶瘮獩扩敬℠㴽琠畲㭥਍਍†晩⠠慨偤敲䍶畯瑮⁳☦爠慥档摥灓楬乴睯☠…瀡敲䍶畯瑮⹳灳楬䅴湮畯据摥☠…琡敩楖楳楢楬祴畔湲摥湏 ൻ †愠湮畯据呥敩潔杧敬欨‬牴敵‬畣牲湥䱴湡⥧഻ 素਍਍†佃剕彔䕓彔呓呁孅嵫㴠笠眠湩䅳›楷獮䄮‬楷獮㩂眠湩⹳ⱂ猠汰瑩湁潮湵散㩤爠慥档摥灓楬乴睯素഻ഊ 椠⁦琨敩潎⹷楶楳汢⁥㴡‽湵敤楦敮⁤☦琠敩潎⹷楶楳汢⁥㴡‽楴健敲⹶楶楳汢⥥笠਍††湡潮湵散楔呥杯汧⡥Ⱬ琠敩潎⹷楶楳汢⁥㴽‽牴敵‬畣牲湥䱴湡⥧഻ 素਍਍†慨摮敬楔卥潣敲湁潮湵散敭瑮⡳Ⱬ琠敩潎ⱷ琠敩牐癥‬畳湲浡獥‬畣牲湥䱴湡⥧഻ഊ 愠灰祬捓牯䅥楲⡡Ⱬ搠瑡坡瑩周敩‬畣牲湥䱴湡⥧഻ 愠灰祬敓䡴杩汨杩瑨欨‬慤慴挮牵敲瑮獟瑥㬩਍ൽഊഊ昊湵瑣潩⁮潮浲污穩健楯瑮䑳獩汰祡瘨污敵 ൻ 椠⁦瘨污敵㴠㴽甠摮晥湩摥簠⁼慶畬⁥㴽‽畮汬 敲畴湲✠✰഻ 挠湯瑳琠硥⁴‽瑓楲杮瘨污敵⸩牴浩⤨഻ 椠⁦ℨ整瑸簠⁼整瑸㴠㴽✠✭ 敲畴湲✠✰഻ 爠瑥牵⁮整瑸഻紊਍਍畦据楴湯渠牯慭楬敺楔䑥獩汰祡瘨污敵 ൻ 椠⁦瘨污敵㴠㴽甠摮晥湩摥簠⁼慶畬⁥㴽‽畮汬 敲畴湲✠✰഻ 椠⁦琨灹潥⁦慶畬⁥㴽‽渧浵敢❲ ൻ †椠⁦ℨ畎扭牥椮䙳湩瑩⡥慶畬⥥ 敲畴湲✠✰഻ †爠瑥牵⁮瑓楲杮瘨污敵㬩਍†ൽ 挠湯瑳琠硥⁴‽瑓楲杮瘨污敵⸩牴浩⤨഻ 椠⁦ℨ整瑸簠⁼整瑸㴠㴽✠✭ 敲畴湲✠✰഻ 挠湯瑳瀠牡敳⁤‽畎扭牥瀮牡敳湉⡴整瑸‬〱㬩਍†敲畴湲丠浵敢⹲獩慎⡎慰獲摥 ‿整瑸㨠匠牴湩⡧慰獲摥㬩਍ൽഊ昊湵瑣潩⁮敲潳癬䑥獩汰祡摥潐湩獴猨摩ⱥ挠牵敲瑮汐祡牥‬牰癥潩獵汐祡牥‬楴乥睯‬楴健敲⥶笠਍†潣獮⁴楴䍥牵敲瑮㴠琠敩潎⁷籼笠㭽਍†潣獮⁴楴健敲楶畯⁳‽楴健敲⁶籼笠㭽਍†晩⠠楴䍥牵敲瑮瘮獩扩敬㴠㴽琠畲⥥笠਍††潣獮⁴慲⁷‽慬整瑳慖畬⡥楴䍥牵敲瑮‬楴健敲楶畯ⱳ猠摩⥥഻ †爠瑥牵⁮ൻ ††琠硥㩴渠牯慭楬敺楔䑥獩汰祡爨睡Ⱙ਍†††獩楔㩥琠畲൥ †素഻ 素਍†潣獮⁴慲偷楯瑮⁳‽慬整瑳慖畬⡥畣牲湥側慬敹⁲籼笠ⱽ瀠敲楶畯偳慬敹⁲籼笠ⱽ✠潰湩獴⤧഻ 爠瑥牵⁮ൻ †琠硥㩴渠牯慭楬敺潐湩獴楄灳慬⡹慲偷楯瑮⥳ബ †椠味敩›慦獬൥ 素഻紊਍਍畦据楴湯愠楮慭整潐湩獴桃湡敧挨汥ⱬ瀠敲呶硥ⱴ渠硥呴硥⥴笠਍†牴⁹ൻ †挠湯瑳漠摬㴠匠牴湩⡧牰癥敔瑸㼠‿✧㬩਍††潣獮⁴敮⁵‽瑓楲杮渨硥呴硥⁴㼿✠⤧഻ †挠湯瑳洠硡㴠䴠瑡⹨慭⡸汯⹤敬杮桴‬敮⹵敬杮桴㬩਍††潣獮⁴潣瑮楡敮⁲‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨灳湡⤧഻ †挠湯慴湩牥挮慬獳慎敭㴠✠楤楧獴㬧਍††潦⁲氨瑥椠㴠〠※⁩‼慭㭸椠⬫ ൻ ††挠湯瑳挠佨摬㴠漠摬楛⁝㼿✠㬧਍†††潣獮⁴档敎⁷‽敮孵嵩㼠‿✧഻ ††挠湯瑳搠杩瑩㴠搠捯浵湥⹴牣慥整汅浥湥⡴猧慰❮㬩਍†††楤楧⹴汣獡乳浡⁥‽搧杩瑩㬧਍†††潣獮⁴灳湡汏⁤‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨灳湡⤧഻ ††猠慰佮摬挮慬獳慎敭㴠✠ⵤ汯❤഻ ††猠慰佮摬琮硥䍴湯整瑮㴠挠佨摬഻ ††挠湯瑳猠慰乮睥㴠搠捯浵湥⹴牣慥整汅浥湥⡴猧慰❮㬩਍†††灳湡敎⹷汣獡乳浡⁥‽搧渭睥㬧਍†††灳湡敎⹷整瑸潃瑮湥⁴‽档敎㭷਍†††楤楧⹴灡数摮猨慰佮摬‬灳湡敎⥷഻ ††挠湯慴湩牥愮灰湥䍤楨摬搨杩瑩㬩਍††ൽ †挠汥⹬湩敮䡲䵔⁌‽✧഻ †挠汥⹬灡数摮桃汩⡤潣瑮楡敮⥲഻ †挠汥⹬汣獡䱳獩⹴摡⡤爧汯楬杮⤧഻ †猠瑥楔敭畯⡴⤨㴠‾ൻ ††挠汥⹬汣獡䱳獩⹴敲潭敶✨潲汬湩❧㬩਍†††散汬琮硥䍴湯整瑮㴠渠硥呴硥㭴਍††ⱽ㌠〵㬩਍†⁽慣捴⁨ൻ †挠汥⹬整瑸潃瑮湥⁴‽敮瑸敔瑸഻ 素਍ൽഊ昊湵瑣潩⁮灵慤整汐祡牥汆条欨‬楳敤‬畣牲湥ⱴ瀠敲楶畯⥳笠਍†潣獮⁴汥㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨⑫死⵽汦条␭獻摩絥⥠഻ 椠⁦ℨ汥 敲畴湲഻ഊ 挠湯瑳挠牵敲瑮牕⁬‽畣牲湥㽴昮慬彧牵⁬籼挠牵敲瑮⸿汦条牕⁬籼渠汵㭬਍†潣獮⁴牰癥潩獵牕⁬‽牰癥潩獵⸿汦条畟汲簠⁼牰癥潩獵⸿汦条牕⁬籼渠汵㭬਍†潣獮⁴畣牲湥䍴摯⁥‽畣牲湥㽴昮慬彧潣敤簠⁼畣牲湥㽴昮慬⁧籼渠汵㭬਍†潣獮⁴牰癥潩獵潃敤㴠瀠敲楶畯㽳昮慬彧潣敤簠⁼牰癥潩獵⸿汦条簠⁼畮汬഻ഊ 挠湯瑳甠汲桃湡敧⁤‽畣牲湥啴汲℠㴽瀠敲楶畯啳汲഻ 挠湯瑳挠摯䍥慨杮摥㴠⠠畣牲湥䍴摯⁥籼渠汵⥬℠㴽⠠牰癥潩獵潃敤簠⁼畮汬㬩਍†晩⠠甡汲桃湡敧⁤☦℠潣敤桃湡敧⥤爠瑥牵㭮਍਍†晩⠠畣牲湥啴汲 ൻ †攠⹬瑳汹⹥慢正牧畯摮浉条⁥‽畠汲␨捻牵敲瑮牕絬怩഻ †攠⹬整瑸潃瑮湥⁴‽✧഻ †攠⹬汣獡䱳獩⹴摡⡤栧獡椭慭敧⤧഻ 素攠獬⁥晩⠠畣牲湥䍴摯⥥笠਍††汥献祴敬戮捡杫潲湵䥤慭敧㴠✠㬧਍††汥琮硥䍴湯整瑮㴠匠牴湩⡧畣牲湥䍴摯⥥琮啯灰牥慃敳⤨഻ †攠⹬汣獡䱳獩⹴敲潭敶✨慨⵳浩条❥㬩਍†⁽汥敳笠਍††汥献祴敬戮捡杫潲湵䥤慭敧㴠✠㬧਍††汥琮硥䍴湯整瑮㴠✠㬧਍††汥挮慬獳楌瑳爮浥癯⡥栧獡椭慭敧⤧഻ 素਍ൽഊ昊湵瑣潩⁮灡汰卹瑥楈桧楬桧⡴Ⱬ挠牵敲瑮敓⥴笠਍†潣獮⁴捡楴敶㴠渠牯慭楬敺畃牲湥却瑥慖畬⡥畣牲湥却瑥㬩਍†❛✱‬㈧Ⱗ✠✳⹝潦䕲捡⡨摩⁸㸽笠਍††❛❁‬䈧崧昮牯慅档猨摩⁥㸽笠਍†††潣獮⁴散汬㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨⑫死⵽⑳楻硤⵽笤楳敤恽㬩਍†††晩⠠挡汥⥬爠瑥牵㭮਍†††晩⠠畎扭牥椨硤 㴽‽捡楴敶 ൻ †††挠汥⹬汣獡䱳獩⹴摡⡤椧⵳捡楴敶⤧഻ ††素攠獬⁥ൻ †††挠汥⹬汣獡䱳獩⹴敲潭敶✨獩愭瑣癩❥㬩਍†††ൽ †素㬩਍†⥽഻紊਍
+'use strict';
+
+import { getTranslation } from './translations.js';
+
+let COURT_SET_STATE = {};
+
+export function format(str, values = {}) {
+  return str.replace(/\{(\w+)\}/g, (_, key) => {
+    return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : `{${key}}`;
+  });
+}
+
+function announce(k, text) {
+  // Live region removed – keep function as no-op for compatibility
+}
+
+function fallbackPlayerName(surname, type, currentLang) {
+    const t = getTranslation(currentLang);
+  if (surname && surname !== '-') return surname;
+  return type === 'opponent' ? t.players.fallbackOpponent : t.players.fallback;
+}
+
+export function announcePoints(k, surname, pointsText, currentLang) {
+    const t = getTranslation(currentLang);
+  const player = fallbackPlayerName(surname, 'player', currentLang);
+  announce(k, format(t.announcements.points, { player, value: pointsText }));
+}
+
+export function announceGames(k, surname, games, currentLang) {
+    const t = getTranslation(currentLang);
+  const player = fallbackPlayerName(surname, 'player', currentLang);
+  announce(k, format(t.announcements.games, { player, value: games }));
+}
+
+function announceSetEnd(k, winnerSurname, winnerGames, loserSurname, loserGames, currentLang) {
+    const t = getTranslation(currentLang);
+  const winner = fallbackPlayerName(winnerSurname, 'player', currentLang);
+  const loser = fallbackPlayerName(loserSurname, 'opponent', currentLang);
+  announce(k, format(t.announcements.setEnd, {
+    winner,
+    winnerGames,
+    loser,
+    loserGames
+  }));
+}
+
+function announceTiePoint(k, surname, value, currentLang) {
+    const t = getTranslation(currentLang);
+  const player = fallbackPlayerName(surname, 'player', currentLang);
+  announce(k, format(t.announcements.tiePoint, { player, value }));
+}
+
+function announceTieToggle(k, on, currentLang) {
+    const t = getTranslation(currentLang);
+  announce(k, on ? t.announcements.tieToggleOn : t.announcements.tieToggleOff);
+}
+
+function determineSetWinner(gamesA, gamesB) {
+  if (typeof gamesA !== 'number' || typeof gamesB !== 'number') return null;
+  if (gamesA < 0 || gamesB < 0) return null;
+  const maxGames = Math.max(gamesA, gamesB);
+  if (maxGames < 6) return null;
+  const diff = Math.abs(gamesA - gamesB);
+  if (diff >= 2) return gamesA > gamesB ? 'A' : 'B';
+  if (gamesA === 7 && gamesB === 6) return 'A';
+  if (gamesB === 7 && gamesA === 6) return 'B';
+  return null;
+}
+
+function maybeAnnounceSetCompletion(k, info, surnames, currentLang) {
+  const prevWinner = determineSetWinner(info.prevA, info.prevB);
+  const newWinner = determineSetWinner(info.currentA, info.currentB);
+  const changedScore = info.prevA !== info.currentA || info.prevB !== info.currentB;
+  if (!newWinner) return;
+  if (!prevWinner || prevWinner !== newWinner || changedScore) {
+    const winnerName = newWinner === 'A' ? surnames.A : surnames.B;
+    const loserName = newWinner === 'A' ? surnames.B : surnames.A;
+    const winnerGames = newWinner === 'A' ? info.currentA : info.currentB;
+    const loserGames = newWinner === 'A' ? info.currentB : info.currentA;
+    announceSetEnd(k, winnerName, winnerGames ?? 0, loserName, loserGames ?? 0, currentLang);
+  }
+}
+
+function comparableTieValue(value) {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed === '-') return undefined;
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isNaN(parsed) ? trimmed : parsed;
+  }
+  return value;
+}
+
+function collectTieScoreChanges(current, previous, path = [], acc = []) {
+  if (!current || typeof current !== 'object' || Array.isArray(current)) {
+    const normalizedCurrent = comparableTieValue(current);
+    const normalizedPrev = comparableTieValue(previous);
+    if (normalizedCurrent === undefined || normalizedCurrent === null) return acc;
+    if (normalizedCurrent === normalizedPrev) return acc;
+    acc.push({ path, value: normalizedCurrent });
+    return acc;
+  }
+
+  Object.keys(current).forEach(key => {
+    if (key === 'visible') return;
+    collectTieScoreChanges(current[key], previous ? previous[key] : undefined, path.concat(key), acc);
+  });
+  return acc;
+}
+
+function resolveTiePlayerFromPath(path) {
+  if (!Array.isArray(path) || path.length === 0) return null;
+  const last = path[path.length - 1];
+  if (last === 'A' || last === 'B') return last;
+  if (typeof last === 'string') {
+    const upper = last.toUpperCase();
+    if (upper.endsWith('A')) return 'A';
+    if (upper.endsWith('B')) return 'B';
+  }
+  return null;
+}
+
+function handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames, currentLang) {
+  if (!tieNow || typeof tieNow !== 'object') return;
+  const changes = collectTieScoreChanges(tieNow, tiePrev || {});
+  if (!changes.length) return;
+
+  const directPlayers = new Set(
+    changes
+      .filter(change => change.path.length === 1 && (change.path[0] === 'A' || change.path[0] === 'B'))
+      .map(change => change.path[0])
+  );
+
+  changes.forEach(change => {
+    const player = resolveTiePlayerFromPath(change.path);
+    if (!player) return;
+    if (change.path.length > 1 && directPlayers.has(player)) return;
+    const value = change.value;
+    if (value === undefined || value === null) return;
+    announceTiePoint(k, player === 'A' ? surnames.A : surnames.B, value, currentLang);
+  });
+}
+
+export function resolveAccessibilityStrings(t) {
+  const acc = t.accessibility || {};
+  const columns = t.table?.columns || {};
+  let versus = acc.versus;
+  if (!versus) {
+    if (t.htmlLang === 'pl') {
+      versus = 'kontra';
+    } else if (t.htmlLang === 'en') {
+      versus = 'versus';
+    } else {
+      versus = t.versus || 'versus';
+    }
+  }
+  const rawPoints = acc.points || columns.points || 'Points';
+  const points = rawPoints.replace(/\s*\(.*?\)\s*/g, '').trim() || 'Points';
+  const tieBreak = acc.tieBreak || columns.tieBreak || 'tie-break';
+  const superTieBreak = acc.superTieBreak || columns.superTieBreak || `super ${tieBreak}`;
+  let setTemplate = acc.set;
+  if (!setTemplate) {
+    const rawSet = columns?.set1;
+    if (typeof rawSet === 'string') {
+      const cleaned = rawSet.split('(')[0].trim();
+      const replaced = cleaned.replace(/\d+/, '{number}');
+      if (replaced && replaced.includes('{number}')) {
+        setTemplate = replaced;
+      }
+    }
+  }
+  if (!setTemplate || !setTemplate.includes('{number}')) {
+    setTemplate = 'Set {number}';
+  }
+  const active = acc.active || 'active';
+  return { versus, points, tieBreak, superTieBreak, setTemplate, active };
+}
+
+export function computeTieVisibility(tieState) {
+  if (!tieState || typeof tieState !== 'object') return false;
+  const rawA = Number.parseInt(tieState.A ?? tieState.a ?? 0, 10);
+  const rawB = Number.parseInt(tieState.B ?? tieState.b ?? 0, 10);
+  const safeA = Number.isNaN(rawA) ? 0 : rawA;
+  const safeB = Number.isNaN(rawB) ? 0 : rawB;
+  if (safeA !== 0 || safeB !== 0) {
+    return true;
+  }
+  return false;
+}
+
+export function flash(el) {
+  if (!el) return;
+  el.classList.add('changed');
+  setTimeout(() => el.classList.remove('changed'), 1200);
+}
+
+export function makeCourtCard(k, currentLang, options = {}) {
+  const t = getTranslation(currentLang);
+  const acc = resolveAccessibilityStrings(t);
+  const courtLabel = format(t.courtLabel, { court: k });
+  const defaultA = t.players.defaultA;
+  const defaultB = t.players.defaultB;
+  const columns = t.table?.columns || {};
+  const pointsLabel = columns.points || acc.points;
+  const tieBreakLabel = columns.tieBreak || acc.tieBreak;
+  const superTieBreakLabel = columns.superTieBreak || acc.superTieBreak;
+  const setLabel = (idx) => columns[`set${idx}`] || format(acc.setTemplate, { number: idx });
+  const set1Label = setLabel(1);
+  const set2Label = setLabel(2);
+
+  const section = document.createElement('section');
+  section.className = 'card';
+  section.id = `kort-${k}`;
+  section.setAttribute('aria-labelledby', `heading-${k}`);
+  let headHTML = `
+    <h2 id="heading-${k}">
+      <span class="court-label" id="court-label-${k}">${courtLabel}</span>:
+      <span id="title-${k}" class="match-title">
+        <span class="match-player" data-title="A">${defaultA}</span>
+        <span class="match-versus" id="title-${k}-versus" aria-label="${acc.versus}"><span aria-hidden="true">${t.versus}</span><span class="sr-only">${acc.versus}</span></span>
+        <span class="match-player" data-title="B">${defaultB}</span>
+      </span>
+    </h2>
+  `;
+  if (options.showAnnounce) {
+    headHTML += `
+      <label class="control">
+        <input type="checkbox" id="announce-${k}">
+        <span>${t.announceLabel}</span>
+      </label>
+    `;
+  }
+  section.innerHTML = `
+    <div class="card-head">${headHTML}</div>
+    <div class="score-wrapper">
+      <div class="score-labels">
+        <div class="score-label score-label-tb" id="k${k}-tb-label" aria-hidden="true"></div>
+        <div class="score-label score-label-stb" id="k${k}-stb-label" aria-hidden="true"></div>
+      </div>
+      <dl class="score-list" aria-labelledby="heading-${k}" aria-hidden="true">
+        <div class="score-row" data-side="A">
+          <dt class="player-cell">
+            <span class="player-flag" id="k${k}-flag-A" aria-hidden="true"></span>
+            <span class="player-name" id="k${k}-name-A">${defaultA}</span>
+          </dt>
+          <dd class="metric points" aria-labelledby="k${k}-label-points k${k}-name-A">
+            <span class="metric-label" id="k${k}-label-points" data-default-label="${pointsLabel}" data-tie-label="${tieBreakLabel}" data-super-label="${superTieBreakLabel}">${pointsLabel}</span>
+            <span class="metric-value points" id="k${k}-pts-A">0</span>
+          </dd>
+          <dd class="metric set-1" aria-labelledby="k${k}-label-set1 k${k}-name-A">
+            <span class="metric-label" id="k${k}-label-set1">${set1Label}</span>
+            <span class="metric-value set set-1" id="k${k}-s1-A">0</span>
+          </dd>
+          <dd class="metric set-2" aria-labelledby="k${k}-label-set2 k${k}-name-A">
+            <span class="metric-label" id="k${k}-label-set2">${set2Label}</span>
+            <span class="metric-value set set-2" id="k${k}-s2-A">0</span>
+          </dd>
+        </div>
+        <div class="score-row" data-side="B">
+          <dt class="player-cell">
+            <span class="player-flag" id="k${k}-flag-B" aria-hidden="true"></span>
+            <span class="player-name" id="k${k}-name-B">${defaultB}</span>
+          </dt>
+          <dd class="metric points" aria-labelledby="k${k}-label-points k${k}-name-B">
+            <span class="metric-value points" id="k${k}-pts-B">0</span>
+          </dd>
+          <dd class="metric set-1" aria-labelledby="k${k}-label-set1 k${k}-name-B">
+            <span class="metric-value set set-1" id="k${k}-s1-B">0</span>
+          </dd>
+          <dd class="metric set-2" aria-labelledby="k${k}-label-set2 k${k}-name-B">
+            <span class="metric-value set set-2" id="k${k}-s2-B">0</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
+    <p class="sr-only score-summary" id="k${k}-summary" aria-live="polite"></p>
+  `;
+  const heading = section.querySelector(`#heading-${k}`);
+  if (heading) {
+    heading.setAttribute('aria-label', `${courtLabel}: ${defaultA} ${acc.versus} ${defaultB}`);
+  }
+
+  // Call applyScoreAria on creation to populate the initial summary
+  const initialData = { A: { set1: 0, set2: 0, points: '0' }, B: { set1: 0, set2: 0, points: '0' }, tie: {}, current_set: 1 };
+  setTimeout(() => applyScoreAria(k, initialData, currentLang), 0);
+
+  return section;
+}
+
+export function updateTitle(k, Adata, Bdata, currentLang) {
+  const t = getTranslation(currentLang);
+  const acc = resolveAccessibilityStrings(t);
+  const title = document.getElementById(`title-${k}`);
+  const safeA = resolvePlayerName(Adata, 'defaultA', currentLang);
+  const safeB = resolvePlayerName(Bdata, 'defaultB', currentLang);
+
+  if (title) {
+    const nameAEl = title.querySelector('[data-title="A"]');
+    const nameBEl = title.querySelector('[data-title="B"]');
+    const versusEl = title.querySelector('.match-versus');
+    if (nameAEl && nameBEl && versusEl) {
+      nameAEl.textContent = safeA;
+      nameBEl.textContent = safeB;
+      const vis = versusEl.querySelector('[aria-hidden="true"]');
+      const sr = versusEl.querySelector('.sr-only');
+      if (vis) vis.textContent = t.versus;
+      if (sr) sr.textContent = acc.versus;
+      versusEl.setAttribute('aria-label', acc.versus);
+    } else {
+      title.textContent = `${safeA} | ${safeB}`;
+    }
+  }
+  const courtLabelText = format(t.courtLabel, { court: k });
+  const courtLabel = document.getElementById(`court-label-${k}`);
+  if (courtLabel) {
+    courtLabel.textContent = courtLabelText;
+  }
+  const heading = document.getElementById(`heading-${k}`);
+  if (heading) {
+    heading.setAttribute('aria-label', `${courtLabelText}: ${safeA} ${acc.versus} ${safeB}`);
+  }
+}
+export function resolvePlayerName(playerData, fallbackKey, currentLang) {
+  const t = getTranslation(currentLang);
+  if (playerData && typeof playerData === 'object') {
+    const full = playerData.full_name || playerData.fullName;
+    if (full && String(full).trim()) return String(full).trim();
+    const surname = playerData.surname;
+    if (surname && surname !== '-') return surname;
+  } else if (typeof playerData === 'string' && playerData.trim()) {
+    return playerData.trim();
+  }
+  return t.players[fallbackKey];
+}
+
+function updatePointsLabelText(k, tieVisible, isSuperTieBreak) {
+  const label = document.getElementById(`k${k}-label-points`);
+  if (!label) return;
+  const defaultLabel = label.getAttribute('data-default-label') || label.textContent || '';
+  const tieLabel = label.getAttribute('data-tie-label') || defaultLabel;
+  const superLabel = label.getAttribute('data-super-label') || tieLabel;
+  const target = tieVisible ? (isSuperTieBreak ? superLabel : tieLabel) : defaultLabel;
+  if (label.textContent !== target) {
+    label.textContent = target;
+  }
+}
+
+function normalizeCurrentSetValue(raw) {
+  if (raw === undefined || raw === null) return 0;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed) || parsed <= 0) {
+    return 0;
+  }
+  return parsed;
+}
+
+function applyScoreAria(k, data, currentLang) {
+  const section = document.getElementById(`kort-${k}`);
+  if (!section) return;
+  const list = section.querySelector('.score-list');
+  if (!list) return;
+  const summaryRoot = document.getElementById(`k${k}-summary`);
+  const t = getTranslation(currentLang);
+  const acc = resolveAccessibilityStrings(t);
+  const currentSet = normalizeCurrentSetValue(data.current_set);
+  const tieState = data.tie || {};
+  const tieVisible = tieState.visible === true;
+  const isSuperTieBreak = tieVisible && currentSet === 3;
+
+  updatePointsLabelText(k, tieVisible, isSuperTieBreak);
+
+  const tbLabel = document.getElementById(`k${k}-tb-label`);
+  const stbLabel = document.getElementById(`k${k}-stb-label`);
+  if (tbLabel) {
+    const tbVisible = tieVisible && !isSuperTieBreak;
+    tbLabel.textContent = t.tieBreakLabel || 'TIE-BREAK';
+    tbLabel.classList.toggle('is-visible', tbVisible);
+    tbLabel.setAttribute('aria-hidden', tbVisible ? 'false' : 'true');
+  }
+  if (stbLabel) {
+    stbLabel.textContent = t.superTieBreakLabel || 'SUPER TIE-BREAK';
+    stbLabel.classList.toggle('is-visible', isSuperTieBreak);
+    stbLabel.setAttribute('aria-hidden', isSuperTieBreak ? 'false' : 'true');
+  }
+
+  const pointsLabelEl = document.getElementById(`k${k}-label-points`);
+  const domPointsLabel = (pointsLabelEl?.textContent || '').trim();
+  const pointsLabelText = tieVisible
+    ? (isSuperTieBreak ? acc.superTieBreak : acc.tieBreak)
+    : (domPointsLabel || acc.points);
+
+  const summaryParts = [];
+
+  const pointsAText = tieVisible
+    ? normalizeTieDisplay(tieState.A)
+    : normalizePointsDisplay(data?.A?.points);
+  const pointsBText = tieVisible
+    ? normalizeTieDisplay(tieState.B)
+    : normalizePointsDisplay(data?.B?.points);
+
+  summaryParts.push(`${pointsLabelText} ${pointsAText}:${pointsBText}`);
+
+  const setSegments = [];
+  [
+    { index: 1, a: data?.A?.set1, b: data?.B?.set1, nodeId: `k${k}-label-set1` },
+    { index: 2, a: data?.A?.set2, b: data?.B?.set2, nodeId: `k${k}-label-set2` }
+  ].forEach(({ index, a, b, nodeId }) => {
+    const safeA = a === undefined || a === null ? '0' : String(a).trim() || '0';
+    const safeB = b === undefined || b === null ? '0' : String(b).trim() || '0';
+    const aNum = Number.parseInt(safeA, 10) || 0;
+    const bNum = Number.parseInt(safeB, 10) || 0;
+    const include = index === 1 || currentSet >= index || aNum > 0 || bNum > 0;
+    if (!include) return;
+    const labelEl = document.getElementById(nodeId);
+    const fallbackLabel = format(acc.setTemplate, { number: index });
+    const labelText = (labelEl?.textContent || '').trim() || fallbackLabel;
+    const isActive = currentSet === index;
+    if (labelEl) {
+      if (isActive) {
+        labelEl.setAttribute('aria-label', `${labelText}, ${acc.active}`);
+      } else {
+        labelEl.removeAttribute('aria-label');
+      }
+    }
+    const segment = isActive
+      ? `${labelText}, ${acc.active}, ${safeA}:${safeB}`
+      : `${labelText} ${safeA}:${safeB}`;
+    setSegments.push(segment);
+  });
+
+  setSegments.forEach(segment => summaryParts.push(segment));
+
+  if (summaryRoot) {
+    const summaryText = summaryParts.join('. ').trim();
+    const finalText = summaryText.length ? summaryText : '';
+    if (summaryRoot.textContent !== finalText) {
+      summaryRoot.textContent = finalText;
+    }
+  }
+}
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj || {}, key);
+}
+
+function latestValue(current, previous, key) {
+  if (hasOwn(current, key)) return current[key];
+  if (hasOwn(previous, key)) return previous[key];
+  return undefined;
+}
+
+function normalizeGamesValue(value) {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed === '-') return undefined;
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+  return undefined;
+}
+
+export function updateCourt(k, data, prev, currentLang, options = {}) {
+  const { announceCb } = options;
+  const prevK = prev[k] || { A: {}, B: {}, tie: {} };
+  const rawTieNow = data.tie || {};
+  const rawTiePrev = prevK.tie || {};
+  const tieNow = { ...rawTieNow, visible: computeTieVisibility(rawTieNow) };
+    const tiePrev = { ...rawTiePrev, visible: computeTieVisibility(rawTiePrev) };
+  const dataWithTie = { ...data, tie: tieNow };
+
+  const A = data.A || {};
+  const B = data.B || {};
+    const surnameA = A.surname || prevK?.A?.surname;
+    const surnameB = B.surname || prevK?.B?.surname;
+
+  updatePlayerFlag(k, 'A', A, prevK.A || {});
+  updatePlayerFlag(k, 'B', B, prevK.B || {});
+
+  const nextNameA = resolvePlayerName(A, 'defaultA', currentLang);
+  const nextNameB = resolvePlayerName(B, 'defaultB', currentLang);
+  let nameAChanged = false;
+  let nameBChanged = false;
+  const nameCellA = document.getElementById(`k${k}-name-A`);
+  if (nameCellA) {
+    const prevText = nameCellA.textContent || '';
+    if (prevText !== nextNameA) {
+      nameCellA.textContent = nextNameA;
+      flash(nameCellA);
+      nameAChanged = true;
+    }
+  }
+  const nameCellB = document.getElementById(`k${k}-name-B`);
+  if (nameCellB) {
+    const prevText = nameCellB.textContent || '';
+    if (prevText !== nextNameB) {
+      nameCellB.textContent = nextNameB;
+      flash(nameCellB);
+      nameBChanged = true;
+    }
+  }
+  if (nameAChanged || nameBChanged) {
+    updateTitle(k, A, B, currentLang);
+  }
+
+  const pointsA = resolveDisplayedPoints('A', A, prevK.A || {}, tieNow, rawTiePrev);
+  const pointsB = resolveDisplayedPoints('B', B, prevK.B || {}, tieNow, rawTiePrev);
+
+  const cellA = document.getElementById(`k${k}-pts-A`);
+  if (cellA) {
+    const prevText = cellA.textContent;
+    const nextText = pointsA.text;
+    const textChanged = prevText !== nextText;
+    if (textChanged) animatePointsChange(cellA, prevText, nextText); else cellA.textContent = nextText;
+    cellA.classList.toggle('is-tiebreak', pointsA.isTie);
+        if (textChanged) {
+      flash(cellA);
+      if (nextText === 'ADV' || nextText === '40') {
+        cellA.classList.add('flip-strong');
+        setTimeout(() => cellA.classList.remove('flip-strong'), 450);
+      }
+      announceCb(k, 'announcePoints', surnameA, nextText);
+    }
+  }
+
+  const cellB = document.getElementById(`k${k}-pts-B`);
+  if (cellB) {
+    const prevText = cellB.textContent;
+    const nextText = pointsB.text;
+    const textChanged = prevText !== nextText;
+    if (textChanged) animatePointsChange(cellB, prevText, nextText); else cellB.textContent = nextText;
+    cellB.classList.toggle('is-tiebreak', pointsB.isTie);
+        if (textChanged) {
+      flash(cellB);
+      if (nextText === 'ADV' || nextText === '40') {
+        cellB.classList.add('flip-strong');
+        setTimeout(() => cellB.classList.remove('flip-strong'), 450);
+      }
+      announceCb(k, 'announcePoints', surnameB, nextText);
+    }
+  }
+
+  // Update set scores (games won in completed sets)
+  // Note: current_games tracks games in the active set and is NOT displayed separately
+  if (A.set1 !== undefined && A.set1 !== prevK?.A?.set1) {
+    const cell = document.getElementById(`k${k}-s1-A`);
+    if (cell) {
+      cell.textContent = A.set1 ?? 0;
+      flash(cell);
+    }
+  }
+  if (B.set1 !== undefined && B.set1 !== prevK?.B?.set1) {
+    const cell = document.getElementById(`k${k}-s1-B`);
+    if (cell) {
+      cell.textContent = B.set1 ?? 0;
+      flash(cell);
+    }
+  }
+    if (A.set2 !== undefined && A.set2 !== prevK?.A?.set2) {
+    const cell = document.getElementById(`k${k}-s2-A`);
+    if (cell) {
+      cell.textContent = A.set2 ?? 0;
+      flash(cell);
+    }
+  }
+  if (B.set2 !== undefined && B.set2 !== prevK?.B?.set2) {
+    const cell = document.getElementById(`k${k}-s2-B`);
+    if (cell) {
+      cell.textContent = B.set2 ?? 0;
+      flash(cell);
+    }
+  }
+    const surnames = { A: surnameA, B: surnameB };
+
+  const setInfos = ['set1', 'set2', 'set3'].map(key => ({
+    key,
+    currentA: normalizeGamesValue(latestValue(A, prevK.A, key)),
+    currentB: normalizeGamesValue(latestValue(B, prevK.B, key)),
+    prevA: normalizeGamesValue(prevK?.A?.[key]),
+    prevB: normalizeGamesValue(prevK?.B?.[key])
+  }));
+
+  setInfos.forEach(info => {
+    if (info.currentA === undefined && info.currentB === undefined) return;
+    maybeAnnounceSetCompletion(k, info, surnames, currentLang);
+  });
+
+  const wins = setInfos.reduce((acc, info) => {
+    const winner = determineSetWinner(info.currentA, info.currentB);
+    if (winner === 'A') acc.A += 1;
+    else if (winner === 'B') acc.B += 1;
+    return acc;
+  }, { A: 0, B: 0 });
+
+  const hadPrevCounts = Object.prototype.hasOwnProperty.call(COURT_SET_STATE, k);
+  const prevCounts = COURT_SET_STATE[k] || { winsA: 0, winsB: 0, splitAnnounced: false };
+  const reachedSplitNow = wins.A === 1 && wins.B === 1;
+  const tieVisibilityTurnedOn = tieNow.visible === true && tiePrev?.visible !== true;
+
+  if (hadPrevCounts && reachedSplitNow && !prevCounts.splitAnnounced && !tieVisibilityTurnedOn) {
+    announceTieToggle(k, true, currentLang);
+  }
+
+  COURT_SET_STATE[k] = { winsA: wins.A, winsB: wins.B, splitAnnounced: reachedSplitNow };
+
+  if (tieNow.visible !== undefined && tieNow.visible !== tiePrev.visible) {
+    announceTieToggle(k, tieNow.visible === true, currentLang);
+  }
+
+  handleTieScoreAnnouncements(k, tieNow, tiePrev, surnames, currentLang);
+
+  applyScoreAria(k, dataWithTie, currentLang);
+  applySetHighlight(k, data.current_set);
+}
+
+
+function normalizePointsDisplay(value) {
+  if (value === undefined || value === null) return '0';
+  const text = String(value).trim();
+  if (!text || text === '-') return '0';
+  return text;
+}
+
+function normalizeTieDisplay(value) {
+  if (value === undefined || value === null) return '0';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '0';
+    return String(value);
+  }
+  const text = String(value).trim();
+  if (!text || text === '-') return '0';
+  const parsed = Number.parseInt(text, 10);
+  return Number.isNaN(parsed) ? text : String(parsed);
+}
+
+function resolveDisplayedPoints(side, currentPlayer, previousPlayer, tieNow, tiePrev) {
+  const tieCurrent = tieNow || {};
+  const tiePrevious = tiePrev || {};
+  if (tieCurrent.visible === true) {
+    const raw = latestValue(tieCurrent, tiePrevious, side);
+    return {
+      text: normalizeTieDisplay(raw),
+      isTie: true
+    };
+  }
+  const rawPoints = latestValue(currentPlayer || {}, previousPlayer || {}, 'points');
+  return {
+    text: normalizePointsDisplay(rawPoints),
+    isTie: false
+  };
+}
+
+function animatePointsChange(cell, prevText, nextText) {
+  try {
+    const old = String(prevText ?? '');
+    const neu = String(nextText ?? '');
+    const max = Math.max(old.length, neu.length);
+    const container = document.createElement('span');
+    container.className = 'digits';
+    for (let i = 0; i < max; i++) {
+      const chOld = old[i] ?? '';
+      const chNew = neu[i] ?? '';
+      const digit = document.createElement('span');
+      digit.className = 'digit';
+      const spanOld = document.createElement('span');
+      spanOld.className = 'd-old';
+      spanOld.textContent = chOld;
+      const spanNew = document.createElement('span');
+      spanNew.className = 'd-new';
+      spanNew.textContent = chNew;
+      digit.append(spanOld, spanNew);
+      container.appendChild(digit);
+    }
+    cell.innerHTML = '';
+    cell.appendChild(container);
+    cell.classList.add('rolling');
+    setTimeout(() => {
+      cell.classList.remove('rolling');
+      cell.textContent = nextText;
+    }, 350);
+  } catch {
+    cell.textContent = nextText;
+  }
+}
+
+function updatePlayerFlag(k, side, current, previous) {
+  const el = document.getElementById(`k${k}-flag-${side}`);
+  if (!el) return;
+
+  const currentUrl = current?.flag_url || current?.flagUrl || null;
+  const previousUrl = previous?.flag_url || previous?.flagUrl || null;
+  const currentCode = current?.flag_code || current?.flag || null;
+  const previousCode = previous?.flag_code || previous?.flag || null;
+
+  const urlChanged = currentUrl !== previousUrl;
+  const codeChanged = (currentCode || null) !== (previousCode || null);
+  if (!urlChanged && !codeChanged) return;
+
+  if (currentUrl) {
+    el.style.backgroundImage = `url(${currentUrl})`;
+    el.textContent = '';
+    el.classList.add('has-image');
+  } else if (currentCode) {
+    el.style.backgroundImage = '';
+    el.textContent = String(currentCode).toUpperCase();
+    el.classList.remove('has-image');
+  } else {
+    el.style.backgroundImage = '';
+    el.textContent = '';
+    el.classList.remove('has-image');
+  }
+}
+
+function applySetHighlight(k, currentSet) {
+  const active = normalizeCurrentSetValue(currentSet);
+  ['1', '2', '3'].forEach(idx => {
+    ['A', 'B'].forEach(side => {
+      const cell = document.getElementById(`k${k}-s${idx}-${side}`);
+      if (!cell) return;
+      if (Number(idx) === active) {
+        cell.classList.add('is-active');
+      } else {
+        cell.classList.remove('is-active');
+      }
+    });
+  });
+}
