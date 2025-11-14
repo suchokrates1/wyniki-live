@@ -39,14 +39,14 @@
   try {
     initialConfig = JSON.parse(configElement.textContent || '{}');
   } catch (error) {
-    console.error('Niepoprawne dane pocz─ůtkowe panelu administratora', error);
+    console.error('Niepoprawne dane początkowe panelu administratora', error);
     initialConfig = { history: [], is_authenticated: false, int_fields: [] };
   }
 
   const adminEnabled = initialConfig.admin_enabled !== false;
   const disabledMessage =
     initialConfig.admin_disabled_message ||
-    'Panel administracyjny jest wy┼é─ůczony przez administratora.';
+    'Panel administracyjny jest wyłączony przez administratora.';
   const intFields = new Set(initialConfig.int_fields || []);
   const initialCourts = Array.isArray(initialConfig.courts) ? initialConfig.courts : [];
   const initialPlayers = Array.isArray(initialConfig.players) ? initialConfig.players : [];
@@ -238,7 +238,7 @@
         applyFlagSuggestions(document);
       }
     } catch (error) {
-      console.warn('Nie uda┼éo si─Ö pobra─ç listy flag', error);
+      console.warn('Nie udało siĘ pobrać listy flag', error);
       throw error;
     }
   }
@@ -347,7 +347,7 @@
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.className = 'delete-entry';
-    deleteButton.textContent = 'Usu┼ä';
+    deleteButton.textContent = 'Usuń';
     actionsCell.appendChild(updateButton);
     actionsCell.appendChild(deleteButton);
     row.appendChild(actionsCell);
@@ -449,8 +449,8 @@
     }
     if (unoToggleStatus) {
       unoToggleStatus.textContent = value
-        ? 'Zapytania do UNO s─ů aktywne.'
-        : 'Zapytania do UNO s─ů wy┼é─ůczone.';
+        ? 'Zapytania do UNO są aktywne.'
+        : 'Zapytania do UNO są wyłączone.';
     }
   }
 
@@ -530,7 +530,7 @@
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.className = 'delete-player';
-    deleteButton.textContent = 'Usu┼ä';
+    deleteButton.textContent = 'Usuń';
     actionsCell.appendChild(updateButton);
     actionsCell.appendChild(deleteButton);
     row.appendChild(actionsCell);
@@ -602,7 +602,7 @@
       const value = input.value.trim();
       if (field.name === 'name') {
         if (!value) {
-          throw new Error('Podaj imi─Ö i nazwisko zawodnika.');
+          throw new Error('Podaj imiĘ i nazwisko zawodnika.');
         }
         payload.name = value;
         return;
@@ -618,7 +618,7 @@
         }
         const normalized = value.toLowerCase();
         if (!/^[a-z]{2}$/.test(normalized)) {
-          throw new Error('Kod kraju musi sk┼éada─ç si─Ö z dw├│ch liter.');
+          throw new Error('Kod kraju musi składać siĘ z dwóch liter.');
         }
         payload.flag_code = normalized;
         return;
@@ -628,7 +628,7 @@
       }
     });
     if (!payload.name) {
-      throw new Error('Podaj imi─Ö i nazwisko zawodnika.');
+      throw new Error('Podaj imiĘ i nazwisko zawodnika.');
     }
     return payload;
   }
@@ -640,7 +640,7 @@
       if (Array.isArray(data.players)) {
         renderPlayers(data.players);
       }
-      setFeedback('Lista zawodnik├│w zaktualizowana.', 'success');
+      setFeedback('Lista zawodników zaktualizowana.', 'success');
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -655,13 +655,13 @@
     const formData = new FormData(playerForm);
     const name = String(formData.get('name') || '').trim();
     if (!name) {
-      setFeedback('Podaj imi─Ö i nazwisko zawodnika.', 'error');
+      setFeedback('Podaj imiĘ i nazwisko zawodnika.', 'error');
       return;
     }
     const listName = String(formData.get('list_name') || '').trim();
     const rawFlag = String(formData.get('flag_code') || '').trim().toLowerCase();
     if (rawFlag && !/^[a-z]{2}$/.test(rawFlag)) {
-      setFeedback('Kod kraju musi sk┼éada─ç si─Ö z dw├│ch liter.', 'error');
+      setFeedback('Kod kraju musi składać siĘ z dwóch liter.', 'error');
       return;
     }
     const flagUrl = String(formData.get('flag_url') || '').trim();
@@ -718,7 +718,7 @@
         ? `Zaimportowano ${imported} graczy.`
         : 'Brak nowych graczy do zaimportowania.';
       if (skipped > 0) {
-        message += ` Pomini─Öto ${skipped} linii.`;
+        message += ` PominiĘto ${skipped} linii.`;
       }
       setFeedback(message, imported > 0 ? 'success' : 'info');
       playerImportForm.reset();
@@ -732,7 +732,7 @@
   async function updatePlayerRow(row) {
     const playerId = row.dataset.playerId;
     if (!playerId) {
-      setFeedback('Nie uda┼éo si─Ö odczyta─ç identyfikatora zawodnika.', 'error');
+      setFeedback('Nie udało siĘ odczytać identyfikatora zawodnika.', 'error');
       return;
     }
     let payload;
@@ -763,10 +763,10 @@
   async function deletePlayerRow(row) {
     const playerId = row.dataset.playerId;
     if (!playerId) {
-      setFeedback('Nie uda┼éo si─Ö odczyta─ç identyfikatora zawodnika.', 'error');
+      setFeedback('Nie udało siĘ odczytać identyfikatora zawodnika.', 'error');
       return;
     }
-    if (!window.confirm('Czy na pewno usun─ů─ç tego zawodnika?')) {
+    if (!window.confirm('Czy na pewno usunąć tego zawodnika?')) {
       return;
     }
     try {
@@ -778,7 +778,7 @@
       } else {
         row.remove();
       }
-      setFeedback('Zawodnik zosta┼é usuni─Öty.', 'success');
+      setFeedback('Zawodnik został usuniĘty.', 'success');
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -862,7 +862,7 @@
   async function handleRefreshViewers() {
     await loadYoutubeConfig({
       updateInputs: false,
-      successMessage: 'Liczba widz├│w od┼Ťwie┼╝ona.'
+      successMessage: 'Liczba widzów od┼Ťwieżona.'
     });
   }
 
@@ -891,7 +891,7 @@
       if (intFields.has(field.name) || field.type === 'number') {
         const parsed = Number(value);
         if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
-          throw new Error(`Pole ${field.name} musi by─ç liczb─ů.`);
+          throw new Error(`Pole ${field.name} musi być liczbą.`);
         }
         payload[field.name] = parsed;
       } else {
@@ -917,10 +917,10 @@
     try {
       data = await response.json();
     } catch (error) {
-      throw new Error('Nie uda┼éo si─Ö odczyta─ç odpowiedzi serwera.');
+      throw new Error('Nie udało siĘ odczytać odpowiedzi serwera.');
     }
     if (!response.ok || !data || data.ok === false) {
-      const message = (data && (data.message || data.error)) || 'Wyst─ůpi┼é b┼é─ůd serwera.';
+      const message = (data && (data.message || data.error)) || 'Wystąpił błąd serwera.';
       throw new Error(message);
     }
     return data;
@@ -934,7 +934,7 @@
     const formData = new FormData(loginForm);
     const password = formData.get('password');
     if (!password || String(password).trim() === '') {
-      setFeedback('Podaj has┼éo administratora.', 'error');
+      setFeedback('Podaj hasło administratora.', 'error');
       return;
     }
     try {
@@ -971,7 +971,7 @@
       const data = await requestJson('/api/admin/courts', { method: 'GET' });
       if (Array.isArray(data.courts)) {
         renderCourts(data.courts);
-        setFeedback('Lista kort├│w zaktualizowana.', 'success');
+        setFeedback('Lista kortów zaktualizowana.', 'success');
       }
     } catch (error) {
       setFeedback(error.message, 'error');
@@ -981,7 +981,7 @@
   async function updateEntry(row) {
     const entryId = row.dataset.entryId;
     if (!entryId) {
-      setFeedback('Nie uda┼éo si─Ö odczyta─ç identyfikatora rekordu.', 'error');
+      setFeedback('Nie udało siĘ odczytać identyfikatora rekordu.', 'error');
       return;
     }
     let payload;
@@ -1042,10 +1042,10 @@
   async function deleteCourtRow(row) {
     const kortId = row.dataset.kortId;
     if (!kortId) {
-      setFeedback('Nie uda┼éo si─Ö odczyta─ç identyfikatora kortu.', 'error');
+      setFeedback('Nie udało siĘ odczytać identyfikatora kortu.', 'error');
       return;
     }
-    if (!window.confirm('Czy na pewno usun─ů─ç ten kort?')) {
+    if (!window.confirm('Czy na pewno usunąć ten kort?')) {
       return;
     }
     try {
@@ -1057,7 +1057,7 @@
       } else {
         row.remove();
       }
-      setFeedback('Kort zosta┼é usuni─Öty.', 'success');
+      setFeedback('Kort został usuniĘty.', 'success');
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -1095,17 +1095,17 @@
 
     async function resetCourtState(kortId) {
     if (!kortId) {
-      setFeedback('Nie uda┼éo si─Ö odczyta─ç identyfikatora kortu.', 'error');
+      setFeedback('Nie udało siĘ odczytać identyfikatora kortu.', 'error');
       return;
     }
-    if (!window.confirm(`Czy na pewno wyzerowa─ç stan kortu ${kortId}?`)) {
+    if (!window.confirm(`Czy na pewno wyzerować stan kortu ${kortId}?`)) {
       return;
     }
     try {
       const data = await requestJson(`/api/admin/courts/${encodeURIComponent(kortId)}/reset`, {
         method: 'POST'
       });
-      const message = (data && (data.message || data.detail)) || `Kort ${kortId} zosta┼é wyzerowany.`;
+      const message = (data && (data.message || data.detail)) || `Kort ${kortId} został wyzerowany.`;
       setFeedback(message, 'success');
     } catch (error) {
       setFeedback(error.message, 'error');
@@ -1115,16 +1115,16 @@
   async function deleteEntry(row) {
     const entryId = row.dataset.entryId;
     if (!entryId) {
-      setFeedback('Nie uda┼éo si─Ö odczyta─ç identyfikatora rekordu.', 'error');
+      setFeedback('Nie udało siĘ odczytać identyfikatora rekordu.', 'error');
       return;
     }
-    if (!window.confirm('Czy na pewno usun─ů─ç ten rekord?')) {
+    if (!window.confirm('Czy na pewno usunąć ten rekord?')) {
       return;
     }
     try {
       await requestJson(`/api/admin/history/${entryId}`, { method: 'DELETE' });
       row.remove();
-      setFeedback('Rekord zosta┼é usuni─Öty.', 'success');
+      setFeedback('Rekord został usuniĘty.', 'success');
     } catch (error) {
       setFeedback(error.message, 'error');
     }

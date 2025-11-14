@@ -21,7 +21,7 @@
     data-admin-enabled="{{ 'true' if admin_enabled else 'false' }}"
   >
     <!-- Dark Mode Toggle -->
-    <button id="dark-mode-toggle" class="dark-mode-toggle" aria-label="Prze┼é─ůcz tryb ciemny" title="Prze┼é─ůcz tryb ciemny">
+    <button id="dark-mode-toggle" class="dark-mode-toggle" aria-label="Przełącz tryb ciemny" title="Przełącz tryb ciemny">
       <span class="dark-mode-toggle__icon">­čîÖ</span>
     </button>
     
@@ -30,11 +30,11 @@
       <div id="admin-feedback" class="feedback" role="alert" aria-live="polite"></div>
 
       <section id="admin-disabled-section" {% if admin_enabled %}hidden{% endif %}>
-        <h2>Panel wy┼é─ůczony</h2>
+        <h2>Panel wyłączony</h2>
         <p>{{ admin_disabled_message }}</p>
         <p>
-          Ustaw zmienn─ů ┼Ťrodowiskow─ů <code>ADMIN_PASSWORD</code>, a nast─Öpnie zrestartuj us┼éug─Ö,
-          aby w┼é─ůczy─ç logowanie administratora.
+          Ustaw zmienną ┼Ťrodowiskową <code>ADMIN_PASSWORD</code>, a nastĘpnie zrestartuj usługĘ,
+          aby włączyć logowanie administratora.
         </p>
       </section>
 
@@ -42,10 +42,10 @@
         id="login-section"
         {% if is_authenticated or not admin_enabled %}hidden{% endif %}
       >
-        <h2>Dost─Öp chroniony</h2>
-        <p>Podaj has┼éo administratora, aby uzyska─ç dost─Öp do historii spotka┼ä.</p>
+        <h2>DostĘp chroniony</h2>
+        <p>Podaj hasło administratora, aby uzyskać dostĘp do historii spotkań.</p>
         <form id="admin-login-form">
-          <label for="admin-password">Has┼éo</label>
+          <label for="admin-password">Hasło</label>
           <input id="admin-password" name="password" type="password" required />
           <button type="submit">Zaloguj</button>
         </form>
@@ -54,9 +54,9 @@
       <!-- Dashboard Section -->
       <section id="dashboard-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
         <header class="section-header">
-          <h2>Dashboard Kort├│w</h2>
+          <h2>Dashboard Kortów</h2>
           <div class="section-actions">
-            <button id="dashboard-refresh" type="button" data-tooltip="Od┼Ťwie┼╝ widok kort├│w">­čöä Od┼Ťwie┼╝</button>
+            <button id="dashboard-refresh" type="button" data-tooltip="Od┼Ťwież widok kortów">­čöä Od┼Ťwież</button>
           </div>
         </header>
         <div id="courts-grid" class="courts-grid">
@@ -68,7 +68,7 @@
         <header class="section-header">
           <h2>Transmisja YouTube</h2>
           <div class="section-actions">
-            <button id="refresh-viewers" type="button" data-tooltip="Pobierz aktualn─ů liczb─Ö widz├│w">Od┼Ťwie┼╝ widz├│w</button>
+            <button id="refresh-viewers" type="button" data-tooltip="Pobierz aktualną liczbę widzów">Od┼Ťwież widzów</button>
           </div>
         </header>
         <form id="youtube-config-form" class="youtube-config-form">
@@ -79,12 +79,12 @@
             <input id="youtube-stream-id" name="stream_id" type="text" autocomplete="off" />
           </div>
           <p class="youtube-config-note">
-            Wprowad┼║ klucz API oraz identyfikator transmisji, aby pobiera─ç liczb─Ö widz├│w.
+            Wprowadź klucz API oraz identyfikator transmisji, aby pobierać liczbę widzów.
           </p>
-          <button type="submit">Zapisz konfiguracj─Ö</button>
+          <button type="submit">Zapisz konfiguracjĘ</button>
         </form>
         <p class="viewer-info">
-          Aktualna liczba widz├│w: <strong id="viewer-count">0</strong>
+          Aktualna liczba widzów: <strong id="viewer-count">0</strong>
         </p>
         <p id="viewer-status" class="viewer-status" hidden></p>
       </section>
@@ -94,35 +94,35 @@
           <h2>System</h2>
         </header>
         <div id="uno-status-card" class="system-card">
-          <div class="system-card__icon" aria-hidden="true">ÔÜí</div>
+          <div class="system-card__icon" aria-hidden="true">⚙</div>
           <div class="system-card__content">
             <div class="system-card__header">
               <label class="toggle">
                 <input id="uno-requests-toggle" type="checkbox" />
                 <span class="toggle-switch"></span>
-                <span>Wysy┼éaj zapytania do UNO</span>
+                <span>Wysyłaj zapytania do UNO</span>
               </label>
               <div class="system-card__actions">
-                <button id="uno-activity-reset" type="button" class="button-secondary" data-tooltip="Przywr├│─ç normalny tryb zapyta┼ä UNO">Stan normalny</button>
+                <button id="uno-activity-reset" type="button" class="button-secondary" data-tooltip="Przywróć normalny tryb zapytań UNO">Stan normalny</button>
               </div>
             </div>
             <p id="uno-toggle-status" class="system-note">
-              Gdy opcja jest wy┼é─ůczona, ┼╝adne komendy nie s─ů wysy┼éane do UNO.
+              Gdy opcja jest wyłączona, żadne komendy nie są wysyłane do UNO.
             </p>
             <dl class="uno-metrics">
               <div class="uno-metric">
                 <dt>Dzienny limit</dt>
-                <dd id="uno-daily-summary">ÔÇö</dd>
-                <dd class="uno-metric__hint">Dane z nag┼é├│wka UNO</dd>
+                <dd id="uno-daily-summary">—</dd>
+                <dd class="uno-metric__hint">Dane z nagłówka UNO</dd>
               </div>
               <div class="uno-metric">
                 <dt>Godzinowy limit <span class="live-indicator" style="color: #4CAF50; font-size: 0.8em;">ÔŚĆ</span></dt>
-                <dd id="uno-hourly-summary">ÔÇö</dd>
-                <dd class="uno-metric__hint">Okno przesuwne 60 min ÔÇó Od┼Ťwie┼╝ane co 2s</dd>
+                <dd id="uno-hourly-summary">—</dd>
+                <dd class="uno-metric__hint">Okno przesuwne 60 min ÔÇó Od┼Ťwieżane co 2s</dd>
               </div>
               <div class="uno-metric">
                 <dt>Status</dt>
-                <dd id="uno-status-label">ÔÇö</dd>
+                <dd id="uno-status-label">—</dd>
               </div>
             </dl>
             <p id="uno-activity-note" class="system-note" hidden></p>
@@ -142,7 +142,7 @@
                     max="100"
                     step="1"
                   />
-                  <label for="uno-slowdown-factor">Przepu┼Ť─ç co n-te zapytanie</label>
+                  <label for="uno-slowdown-factor">Przepu┼Ťć co n-te zapytanie</label>
                   <input id="uno-slowdown-factor" name="slowdown_factor" type="number" min="1" step="1" />
                   <label for="uno-slowdown-sleep">Dodatkowa pauza (s)</label>
                   <input id="uno-slowdown-sleep" name="slowdown_sleep" type="number" min="0" step="0.5" />
@@ -154,13 +154,13 @@
             </form>
             <div id="uno-rate-limit-meta" class="uno-rate-meta" hidden>
               <p class="uno-rate-meta__item">
-                Nag┼é├│wek: <span id="uno-rate-limit-header">ÔÇö</span>
+                Nagłówek: <span id="uno-rate-limit-header">—</span>
               </p>
               <p class="uno-rate-meta__item">
-                Reset limitu: <span id="uno-rate-limit-reset">ÔÇö</span>
+                Reset limitu: <span id="uno-rate-limit-reset">—</span>
               </p>
               <p class="uno-rate-meta__item">
-                Ostatnia aktualizacja: <span id="uno-rate-limit-updated">ÔÇö</span>
+                Ostatnia aktualizacja: <span id="uno-rate-limit-updated">—</span>
               </p>
             </div>
           </div>
@@ -169,24 +169,24 @@
           <label class="toggle">
             <input id="plugin-toggle" type="checkbox" />
             <span class="toggle-switch"></span>
-            <span>U┼╝ywaj wtyczki</span>
+            <span>Używaj wtyczki</span>
           </label>
           <p id="plugin-toggle-status" class="system-note">
-            Gdy opcja jest wy┼é─ůczona, komunikaty od wtyczki b─Öd─ů ignorowane ÔÇö pracujemy tylko z UNO.
+            Gdy opcja jest wyłączona, komunikaty od wtyczki będą ignorowane — pracujemy tylko z UNO.
           </p>
         </div>
       </section>
 
       <section id="players-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
         <header class="section-header">
-          <h2>Listy zawodnik├│w</h2>
+          <h2>Listy zawodników</h2>
           <div class="section-actions">
-            <button id="refresh-players" type="button" data-tooltip="Od┼Ťwie┼╝ list─Ö graczy z serwera">Od┼Ťwie┼╝</button>
+            <button id="refresh-players" type="button" data-tooltip="Od┼Ťwież listĘ graczy z serwera">Od┼Ťwież</button>
           </div>
         </header>
         <form id="player-form" class="player-form">
           <div class="player-form-grid">
-            <label for="player-name-input">Imi─Ö i nazwisko</label>
+            <label for="player-name-input">ImiĘ i nazwisko</label>
             <input id="player-name-input" name="name" type="text" required />
             <label for="player-list-input">Lista</label>
             <input id="player-list-input" name="list_name" type="text" placeholder="default" />
@@ -210,7 +210,7 @@
             <input id="player-flag-url-input" name="flag_url" type="url" placeholder="https://" />
           </div>
           <p class="player-form-note">
-            Grupa i kod kraju s─ů opcjonalne. Format importu: <code>Imi─Ö Nazwisko Grupa KOD</code> (np. John Smith B1 us)
+            Grupa i kod kraju są opcjonalne. Format importu: <code>ImiĘ Nazwisko Grupa KOD</code> (np. John Smith B1 us)
           </p>
           <button type="submit">Dodaj zawodnika</button>
         </form>
@@ -224,7 +224,7 @@
             required
           />
           <button type="submit">Importuj</button>
-          <p class="player-import-note">Format: Imi─Ö Nazwisko kod_kraju (np. Jan Kowalski PL).</p>
+          <p class="player-import-note">Format: ImiĘ Nazwisko kod_kraju (np. Jan Kowalski PL).</p>
         </form>
         <datalist id="flag-code-options"></datalist>
         
@@ -244,7 +244,7 @@
             <option value="B3">B3</option>
             <option value="B4">B4</option>
           </select>
-          <button id="players-clear-filters" class="button-secondary" type="button">Wyczy┼Ť─ç filtry</button>
+          <button id="players-clear-filters" class="button-secondary" type="button">Wyczy┼Ťć filtry</button>
         </div>
         
         <div class="players-table-wrapper">
@@ -253,7 +253,7 @@
               <tr>
                 <th style="width: 48px;">Flaga</th>
                 <th class="sortable" data-sort="name">
-                  Imi─Ö i nazwisko <span class="sort-icon">Ôçů</span>
+                  ImiĘ i nazwisko <span class="sort-icon">Ôçů</span>
                 </th>
                 <th class="sortable" data-sort="list">
                   Lista <span class="sort-icon">Ôçů</span>
@@ -278,7 +278,7 @@
                     onerror="this.classList.add('error')"
                   />
                   {% else %}
-                  <span style="color: var(--muted); font-size: 11px;">ÔÇö</span>
+                  <span style="color: var(--muted); font-size: 11px;">—</span>
                   {% endif %}
                 </td>
                 <td><input name="name" type="text" value="{{ player.name or '' }}" /></td>
@@ -296,7 +296,7 @@
                 <td><input name="flag_url" type="url" value="{{ player.flag_url or '' }}" placeholder="https://" /></td>
                 <td class="actions">
                   <button class="update-player" type="button">Zapisz</button>
-                  <button class="delete-player" type="button">Usu┼ä</button>
+                  <button class="delete-player" type="button">Usuń</button>
                 </td>
               </tr>
               {% endfor %}
@@ -309,7 +309,7 @@
         <header class="section-header">
           <h2>Korty</h2>
           <div class="section-actions">
-            <button id="refresh-courts" type="button">Od┼Ťwie┼╝</button>
+            <button id="refresh-courts" type="button">Od┼Ťwież</button>
           </div>
         </header>
         <form id="court-form" class="court-form">
@@ -319,7 +319,7 @@
             <label for="court-overlay-input">Overlay ID</label>
             <input id="court-overlay-input" name="overlay_id" type="text" />
           </div>
-          <p class="court-form-note">Pozostaw pole puste, aby zapisa─ç kort bez powi─ůzanego overlay ID.</p>
+          <p class="court-form-note">Pozostaw pole puste, aby zapisać kort bez powiązanego overlay ID.</p>
           <button type="submit">Zapisz kort</button>
         </form>
         <div class="courts-table-wrapper">
@@ -338,7 +338,7 @@
                 <td class="overlay-id">{{ court.overlay_id or '' }}</td>
                 <td class="actions">
                   <button class="reset-court" type="button">Resetuj</button>
-                  <button class="delete-court" type="button">Usu┼ä</button>
+                  <button class="delete-court" type="button">Usuń</button>
                 </td>
               </tr>
               {% endfor %}
@@ -349,9 +349,9 @@
 
       <section id="history-section" {% if not is_authenticated or not admin_enabled %}hidden{% endif %}>
         <header class="section-header">
-          <h2>Historia spotka┼ä</h2>
+          <h2>Historia spotkań</h2>
           <div class="section-actions">
-            <button id="refresh-history" type="button">Od┼Ťwie┼╝</button>
+            <button id="refresh-history" type="button">Od┼Ťwież</button>
           </div>
         </header>
         <div class="history-table-wrapper">
@@ -360,7 +360,7 @@
               <tr>
                 <th>ID</th>
                 <th>Kort</th>
-                <th>Zako┼äczono</th>
+                <th>Zakończono</th>
                 <th>Czas (s)</th>
                 <th>Kategoria</th>
                 <th>Faza</th>
@@ -402,7 +402,7 @@
                 <td><input name="set2_tb_b" type="number" value="{{ entry.set2_tb_b or '' }}" /></td>
                 <td class="actions">
                   <button class="update-entry" type="button">Zapisz</button>
-                  <button class="delete-entry" type="button">Usu┼ä</button>
+                  <button class="delete-entry" type="button">Usuń</button>
                 </td>
               </tr>
               {% endfor %}
