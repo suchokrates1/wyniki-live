@@ -16,6 +16,7 @@ from .state import (
     ensure_court_state,
     get_uno_activity_multiplier,
     get_uno_hourly_status,
+    is_court_polling_paused,
     is_uno_requests_enabled,
     normalize_kort_id,
     requeue_uno_command,
@@ -652,6 +653,14 @@ class CourtPollingWorker(threading.Thread):
             self.smart.sync_from_state()
             while not self._stop_event.is_set():
                 self._sync_activity_multiplier()
+                
+                # Check if this specific court is paused
+                if is_court_polling_paused(self.kort_id):
+                    log.debug("UNO poller kort=%s paused by user", self.kort_id)
+                    if self._stop_event.wait(5.0):
+                        break
+                    continue
+                
                 if not is_uno_requests_enabled():
                     log.debug("UNO poller kort=%s paused (UNO disabled)", self.kort_id)
                     if self._stop_event.wait(5.0):
