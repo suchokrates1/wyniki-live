@@ -1963,3 +1963,48 @@ def api_uno_exec(kort_id: str):
         ),
         http_status,
     )
+
+
+# ============================================================================
+# Video Streaming Proxy Routes
+# ============================================================================
+
+@blueprint.route("/stream<int:court_num>")
+def stream_player(court_num):
+    """Proxy dla video streamu - zwraca HTML player."""
+    if court_num not in [1, 2, 3, 4]:
+        abort(404)
+    
+    # Proxy do nginx-rtmp kontenera
+    import requests
+    try:
+        resp = requests.get(
+            f"http://nginx-rtmp/stream{court_num}",
+            timeout=5,
+            headers={"Host": request.host}
+        )
+        return Response(resp.content, status=resp.status_code, content_type=resp.headers.get('content-type', 'text/html'))
+    except requests.RequestException as e:
+        log.error(f"Stream proxy error: {e}")
+        abort(502)
+
+
+@blueprint.route("/hls/<path:subpath>")
+def hls_proxy(subpath):
+    """Proxy dla HLS playlists i segmentów."""
+    import requests
+    try:
+        resp = requests.get(
+            f"http://nginx-rtmp/hls/{subpath}",
+            timeout=5,
+            stream=True,
+            headers={"Host": request.host}
+        )
+        return Response(
+            resp.iter_content(chunk_size=8192),
+            status=resp.status_code,
+            content_type=resp.headers.get('content-type', 'application/vnd.apple.mpegurl')
+        )
+    except requests.RequestException as e:
+        log.error(f"HLS proxy error: {e}")
+        abort(502)
