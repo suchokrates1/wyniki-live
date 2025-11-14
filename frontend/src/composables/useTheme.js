@@ -1,29 +1,1 @@
-// Theme Management
-export function useTheme() {
-  const THEME_KEY = 'tennis-theme';
-
-  function init() {
-    const savedTheme = localStorage.getItem(THEME_KEY);
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const theme = savedTheme || (prefersDark ? 'dark' : 'light');
-    setTheme(theme);
-  }
-
-  function setTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem(THEME_KEY, theme);
-  }
-
-  function toggleTheme() {
-    const current = localStorage.getItem(THEME_KEY) || 'light';
-    const newTheme = current === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    return newTheme;
-  }
-
-  function getCurrentTheme() {
-    return localStorage.getItem(THEME_KEY) || 'light';
-  }
-
-  return { init, setTheme, toggleTheme, getCurrentTheme };
-}
+﻿⼯吠敨敭䴠湡条浥湥൴攊灸牯⁴畦据楴湯甠敳桔浥⡥ ൻ 挠湯瑳吠䕈䕍䭟奅㴠✠整湮獩琭敨敭㬧਍਍†畦据楴湯椠楮⡴ ൻ †挠湯瑳猠癡摥桔浥⁥‽潬慣卬潴慲敧朮瑥瑉浥吨䕈䕍䭟奅㬩਍††潣獮⁴牰晥牥䑳牡⁫‽楷摮睯洮瑡档敍楤⡡⠧牰晥牥⵳潣潬⵲捳敨敭›慤歲✩⸩慭捴敨㭳਍††潣獮⁴桴浥⁥‽慳敶呤敨敭簠⁼瀨敲敦獲慄歲㼠✠慤歲‧›氧杩瑨⤧഻ †猠瑥桔浥⡥桴浥⥥഻ 素਍਍†畦据楴湯猠瑥桔浥⡥桴浥⥥笠਍††潤畣敭瑮搮捯浵湥䕴敬敭瑮献瑥瑁牴扩瑵⡥搧瑡ⵡ桴浥❥‬桴浥⥥഻ †氠捯污瑓牯条⹥敳䥴整⡭䡔䵅彅䕋ⱙ琠敨敭㬩਍†ൽഊ 映湵瑣潩⁮潴杧敬桔浥⡥ ൻ †挠湯瑳挠牵敲瑮㴠氠捯污瑓牯条⹥敧䥴整⡭䡔䵅彅䕋⥙簠⁼氧杩瑨㬧਍††潣獮⁴敮呷敨敭㴠挠牵敲瑮㴠㴽✠楬桧❴㼠✠慤歲‧›氧杩瑨㬧਍††敳呴敨敭渨睥桔浥⥥഻ †爠瑥牵⁮敮呷敨敭഻ 素਍਍†畦据楴湯朠瑥畃牲湥呴敨敭⤨笠਍††敲畴湲氠捯污瑓牯条⹥敧䥴整⡭䡔䵅彅䕋⥙簠⁼氧杩瑨㬧਍†ൽഊ 爠瑥牵⁮⁻湩瑩‬敳呴敨敭‬潴杧敬桔浥ⱥ朠瑥畃牲湥呴敨敭素഻紊਍

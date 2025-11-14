@@ -1,65 +1,1 @@
-// Court Data Management
-export function useCourtData() {
-  function sortCourtIds(courts) {
-    return Object.keys(courts).sort((a, b) => {
-      const na = Number(a);
-      const nb = Number(b);
-      if (isNaN(na) && isNaN(nb)) return a.localeCompare(b);
-      if (isNaN(na)) return 1;
-      if (isNaN(nb)) return -1;
-      return na - nb;
-    });
-  }
-
-  function isMatchActive(court) {
-    return court?.match_status?.active || false;
-  }
-
-  function getPlayerScore(court, player) {
-    if (!court || !court[player]) {
-      return { points: '0', games: 0, sets: [] };
-    }
-
-    const playerData = court[player];
-    const sets = ['set1', 'set2', 'set3']
-      .map(setKey => playerData[setKey] || 0)
-      .filter((s, i) => {
-        const otherPlayer = player === 'A' ? 'B' : 'A';
-        const otherSet = court[otherPlayer]?.[`set${i + 1}`] || 0;
-        return s > 0 || otherSet > 0;
-      });
-
-    return {
-      points: playerData.points || '0',
-      games: playerData.current_games || 0,
-      sets
-    };
-  }
-
-  function formatDuration(seconds) {
-    if (!seconds || seconds <= 0) return '00:00';
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-  }
-
-  function formatTimestamp(iso) {
-    if (!iso) return '-';
-    const date = new Date(iso);
-    if (isNaN(date.getTime())) return '-';
-    return date.toLocaleString('pl-PL', {
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit'
-    });
-  }
-
-  return {
-    sortCourtIds,
-    isMatchActive,
-    getPlayerScore,
-    formatDuration,
-    formatTimestamp
-  };
-}
+﻿⼯䌠畯瑲䐠瑡⁡慍慮敧敭瑮਍硥潰瑲映湵瑣潩⁮獵䍥畯瑲慄慴⤨笠਍†畦据楴湯猠牯䍴畯瑲摉⡳潣牵獴 ൻ †爠瑥牵⁮扏敪瑣欮祥⡳潣牵獴⸩潳瑲⠨ⱡ戠 㸽笠਍†††潣獮⁴慮㴠丠浵敢⡲⥡഻ ††挠湯瑳渠⁢‽畎扭牥戨㬩਍†††晩⠠獩慎⡎慮 ☦椠乳乡渨⥢ 敲畴湲愠氮捯污䍥浯慰敲戨㬩਍†††晩⠠獩慎⡎慮⤩爠瑥牵⁮㬱਍†††晩⠠獩慎⡎扮⤩爠瑥牵⁮ㄭ഻ ††爠瑥牵⁮慮ⴠ渠㭢਍††⥽഻ 素਍਍†畦据楴湯椠䵳瑡档捁楴敶挨畯瑲 ൻ †爠瑥牵⁮潣牵㽴洮瑡档獟慴畴㽳愮瑣癩⁥籼映污敳഻ 素਍਍†畦据楴湯朠瑥汐祡牥捓牯⡥潣牵ⱴ瀠慬敹⥲笠਍††晩⠠挡畯瑲簠⁼挡畯瑲灛慬敹嵲 ൻ ††爠瑥牵⁮⁻潰湩獴›〧Ⱗ朠浡獥›ⰰ猠瑥㩳嬠⁝㭽਍††ൽഊ †挠湯瑳瀠慬敹䑲瑡⁡‽潣牵孴汰祡牥㭝਍††潣獮⁴敳獴㴠嬠猧瑥✱‬猧瑥✲‬猧瑥✳൝ ††⸠慭⡰敳䭴祥㴠‾汰祡牥慄慴獛瑥敋嵹簠⁼⤰਍†††昮汩整⡲猨‬⥩㴠‾ൻ †††挠湯瑳漠桴牥汐祡牥㴠瀠慬敹⁲㴽‽䄧‧‿䈧‧›䄧㬧਍††††潣獮⁴瑯敨卲瑥㴠挠畯瑲潛桴牥汐祡牥㽝嬮獠瑥笤⁩‫紱嵠簠⁼㬰਍††††敲畴湲猠㸠〠簠⁼瑯敨卲瑥㸠〠഻ ††素㬩਍਍††敲畴湲笠਍†††潰湩獴›汰祡牥慄慴瀮楯瑮⁳籼✠✰ബ ††朠浡獥›汰祡牥慄慴挮牵敲瑮束浡獥簠⁼ⰰ਍†††敳獴਍††㭽਍†ൽഊ 映湵瑣潩⁮潦浲瑡畄慲楴湯猨捥湯獤 ൻ †椠⁦ℨ敳潣摮⁳籼猠捥湯獤㰠‽⤰爠瑥牵⁮〧㨰〰㬧਍††潣獮⁴潨牵⁳‽慍桴昮潬牯猨捥湯獤⼠㌠〶⤰഻ †挠湯瑳洠湩⁳‽慍桴昮潬牯⠨敳潣摮⁳‥㘳〰  〶㬩਍††敲畴湲怠笤瑓楲杮栨畯獲⸩慰卤慴瑲㈨‬〧⤧㩽笤瑓楲杮洨湩⥳瀮摡瑓牡⡴ⰲ✠✰紩㭠਍†ൽഊ 映湵瑣潩⁮潦浲瑡楔敭瑳浡⡰獩⥯笠਍††晩⠠椡潳 敲畴湲✠✭഻ †挠湯瑳搠瑡⁥‽敮⁷慄整椨潳㬩਍††晩⠠獩慎⡎慤整朮瑥楔敭⤨⤩爠瑥牵⁮ⴧ㬧਍††敲畴湲搠瑡⹥潴潌慣敬瑓楲杮✨汰倭❌‬ൻ ††栠畯㩲✠ⴲ楤楧❴ബ ††洠湩瑵㩥✠ⴲ楤楧❴ബ ††搠祡›㈧搭杩瑩Ⱗ਍†††潭瑮㩨✠ⴲ楤楧❴਍††⥽഻ 素਍਍†敲畴湲笠਍††潳瑲潃牵䥴獤ബ †椠䵳瑡档捁楴敶ബ †朠瑥汐祡牥捓牯ⱥ਍††潦浲瑡畄慲楴湯ബ †映牯慭呴浩獥慴灭਍†㭽਍ൽ
