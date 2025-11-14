@@ -124,6 +124,10 @@ UNO_COMMAND_QUEUE_LOCK = threading.Lock()
 UNO_PENDING_COMMANDS: Dict[str, OrderedDict[str, Dict[str, Any]]] = {}
 UNO_COMMAND_MAX_ATTEMPTS = 3
 
+# Per-court polling pause
+COURT_POLLING_PAUSED_LOCK = threading.Lock()
+COURT_POLLING_PAUSED: Dict[str, bool] = {}
+
 
 def _sanitize_threshold(value: float) -> float:
     if value > 1.0:
@@ -414,6 +418,25 @@ def get_uno_auto_disabled_reason() -> Optional[str]:
 def is_plugin_enabled() -> bool:
     with PLUGIN_LOCK:
         return PLUGIN_ENABLED
+
+
+def is_court_polling_paused(kort_id: str) -> bool:
+    """Check if polling is paused for a specific court."""
+    normalized = normalize_kort_id(kort_id)
+    if not normalized:
+        return False
+    with COURT_POLLING_PAUSED_LOCK:
+        return COURT_POLLING_PAUSED.get(normalized, False)
+
+
+def set_court_polling_paused(kort_id: str, paused: bool) -> None:
+    """Pause or resume polling for a specific court."""
+    normalized = normalize_kort_id(kort_id)
+    if not normalized:
+        return
+    with COURT_POLLING_PAUSED_LOCK:
+        COURT_POLLING_PAUSED[normalized] = bool(paused)
+    log.info("Court polling kort=%s paused=%s", normalized, paused)
 
 
 def set_uno_requests_enabled(enabled: bool, reason: Optional[str] = None) -> None:
@@ -2422,6 +2445,7 @@ __all__ = [
     "get_uno_hourly_config",
     "get_uno_hourly_status",
     "get_uno_hourly_usage_summary",
+    "is_court_polling_paused",
     "is_uno_requests_enabled",
     "is_known_kort",
     "load_match_history",
@@ -2443,6 +2467,7 @@ __all__ = [
     "serialize_history",
     "serialize_public_court_state",
     "serialize_public_snapshot",
+    "set_court_polling_paused",
     "snapshots",
     "state_snapshot_for_broadcast",
     "validate_command",

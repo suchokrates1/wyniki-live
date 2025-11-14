@@ -108,8 +108,10 @@ from .state import (
     serialize_court_state,
     serialize_history,
     serialize_public_snapshot,
+    set_court_polling_paused,
     set_plugin_enabled,
     set_uno_requests_enabled,
+    is_court_polling_paused,
     update_uno_hourly_config,
     update_uno_rate_limit,
     enqueue_uno_flag_update,
@@ -223,9 +225,13 @@ def _sanitize_history_payload(payload: Dict[str, object]) -> Dict[str, object]:
     return sanitized
 
 
-def _serialize_courts() -> List[Dict[str, Optional[str]]]:
+def _serialize_courts() -> List[Dict[str, Any]]:
     return [
-        {"kort_id": kort_id, "overlay_id": overlay_id}
+        {
+            "kort_id": kort_id,
+            "overlay_id": overlay_id,
+            "polling_paused": is_court_polling_paused(kort_id)
+        }
         for kort_id, overlay_id in available_courts()
     ]
 
@@ -1181,6 +1187,43 @@ def admin_api_system_update():
     response_payload["uno_activity_status"] = response_payload.get("uno_activity_status", get_uno_activity_status())
 
     return jsonify(response_payload)
+
+
+@admin_api_blueprint.route("/court/<kort_id>/polling", methods=["PUT"])
+def admin_api_court_polling(kort_id: str):
+    """Pause or resume polling for a specific court."""
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    
+    normalized_id = normalize_kort_id(kort_id)
+    if not normalized_id:
+        return jsonify({"ok": False, "error": "invalid-court-id"}), 400
+    
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid-payload"}), 400
+    
+    if "paused" not in payload:
+        return jsonify({"ok": False, "error": "missing-field", "field": "paused"}), 400
+    
+    paused = payload.get("paused")
+    if not isinstance(paused, bool):
+        text = str(paused).strip().lower()
+        if text in {"1", "true", "yes", "on"}:
+            paused = True
+        elif text in {"0", "false", "no", "off"}:
+            paused = False
+        else:
+            return jsonify({"ok": False, "error": "invalid-field", "field": "paused"}), 400
+    
+    set_court_polling_paused(normalized_id, paused)
+    
+    return jsonify({
+        "ok": True,
+        "kort_id": normalized_id,
+        "paused": is_court_polling_paused(normalized_id)
+    })
 
 
 @blueprint.route("/<int:kort_id>")
