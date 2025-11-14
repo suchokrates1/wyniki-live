@@ -1,6 +1,1 @@
-export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}
+﻿硥潰瑲搠晥畡瑬笠਍†汰杵湩㩳笠਍††慴汩楷摮獣㩳笠ⱽ਍††畡潴牰晥硩牥›絻ബ 素ബ紊਍

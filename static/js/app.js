@@ -1,709 +1,1 @@
-import { TRANSLATIONS, DEFAULT_LANG, SUPPORTED_LANGS, getTranslation } from './translations.js';
-import { makeCourtCard, updateCourt, format, resolvePlayerName } from './common.js';
-
-let COURTS = [];
-const grid = document.getElementById('grid');
-const nav = document.querySelector('nav');
-const navlist = document.getElementById('navlist');
-const errLine = document.getElementById('errLine');
-const pauseBtn = document.getElementById('pauseBtn');
-const langSelect = document.getElementById('langSelect');
-const langLabel = document.getElementById('langLabel');
-const headerTitle = document.querySelector('header h1');
-const headerDesc = document.querySelector('.desc');
-const lastRefreshText = document.getElementById('lastRefreshText');
-const historySection = document.getElementById('history-section');
-const historyBody = document.getElementById('history-body');
-const historyTitle = document.getElementById('history-title');
-
-let paused = false;
-let prev = {};
-const COURT_SET_STATE = {};
-const INITIAL_RECONNECT_DELAY = 1000;
-const MAX_RECONNECT_DELAY = 30000;
-
-let latestHistory = [];
-const SNAPSHOT_STORAGE_KEY = 'score.vestmedia.snapshot.v1';
-
-let eventSource = null;
-let reconnectTimer = null;
-let reconnectDelay = INITIAL_RECONNECT_DELAY;
-let lastRefreshDate = null;
-let lastError = null;
-
-const storedLang = localStorage.getItem('preferred-language');
-let currentLang = SUPPORTED_LANGS.includes(storedLang) ? storedLang : DEFAULT_LANG;
-
-function currentT() {
-  return getTranslation(currentLang);
-}
-
-function currentLocale() {
-  const t = currentT();
-  return t.htmlLang || currentLang;
-}
-
-function lsKey(k) {
-  return `announce-k${k}`;
-}
-
-function getAnnounce(k) {
-  return localStorage.getItem(lsKey(k)) === 'on';
-}
-
-function setAnnounce(k, val) {
-  localStorage.setItem(lsKey(k), val ? 'on' : 'off');
-}
-
-function formatShortcutRange(count) {
-  if (!count || count < 1) return '';
-  if (count === 1) return '[1]';
-  return `[1–${count}]`;
-}
-
-function updateShortcutsDescription() {
-  if (!headerDesc) return;
-  const t = currentT();
-  const parts = [];
-  if (t.description) parts.push(t.description);
-
-  const shortcuts = t.shortcuts || {};
-  const range = formatShortcutRange(COURTS.length);
-  let shortcutsText = '';
-
-  if (range && shortcuts.template) {
-    shortcutsText = format(shortcuts.template, {
-      range,
-      courtsLabel: shortcuts.courtsLabel || '',
-      count: COURTS.length
-    }).trim();
-  } else if (shortcuts.fallback) {
-    shortcutsText = shortcuts.fallback;
-  }
-
-  if (shortcutsText) parts.push(shortcutsText);
-  if (shortcuts.autoRead) parts.push(shortcuts.autoRead);
-
-  headerDesc.textContent = parts.join(' ');
-}
-
-function ensureCardsFromSnapshot(snap) {
-  const t = currentT();
-  const targetCourts = Object.keys(snap).sort((a, b) => {
-    const na = Number(a);
-    const nb = Number(b);
-    const aNaN = Number.isNaN(na);
-    const bNaN = Number.isNaN(nb);
-    if (aNaN && bNaN) return String(a).localeCompare(String(b));
-    if (aNaN) return 1;
-    if (bNaN) return -1;
-    return na - nb;
-  });
-
-  const sameOrder = COURTS.length === targetCourts.length &&
-    targetCourts.every((kort, idx) => COURTS[idx] === kort);
-
-  COURTS = targetCourts;
-  updateShortcutsDescription();
-  if (sameOrder) {
-    return;
-  }
-
-  navlist.innerHTML = '';
-  COURTS.forEach(k => {
-    const li = document.createElement('li');
-    li.innerHTML = `<a href="#kort-${k}">${format(t.courtLabel, { court: k })}</a>`;
-    navlist.appendChild(li);
-  });
-  // Add History link at the end
-  const liHistory = document.createElement('li');
-  const historyLabel = (t.history && t.history.title) ? t.history.title : 'Historia';
-  liHistory.innerHTML = `<a href="#history-section">${historyLabel}</a>`;
-  navlist.appendChild(liHistory);
-  grid.innerHTML = '';
-  COURTS.forEach(k => {
-    const card = makeCourtCard(k, currentLang, { showAnnounce: true });
-    const cb = card.querySelector(`#announce-${k}`);
-    if (cb) {
-      cb.checked = getAnnounce(k);
-      cb.addEventListener('change', () => setAnnounce(k, cb.checked));
-    }
-    grid.appendChild(card);
-  });
-}
-
-function formatHistoryTimestamp(iso) {
-  if (!iso) return '-';
-  const dt = new Date(iso);
-  if (Number.isNaN(dt.getTime())) return '-';
-  return dt.toLocaleString(currentLocale(), { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
-}
-
-function _formatDurationLocal(seconds) {
-  const total = Number(seconds || 0);
-  if (!Number.isFinite(total) || total <= 0) return '–';
-  const mins = Math.floor(total / 60) % 60;
-  const hours = Math.floor(total / 3600);
-  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-}
-
-function formatSetHistorySegment(setData) {
-  if (!setData || typeof setData !== 'object') return null;
-  const rawA = Number.parseInt(setData.A ?? setData.a ?? 0, 10);
-  const rawB = Number.parseInt(setData.B ?? setData.b ?? 0, 10);
-  const gamesA = Number.isNaN(rawA) ? 0 : rawA;
-  const gamesB = Number.isNaN(rawB) ? 0 : rawB;
-  if (gamesA === 0 && gamesB === 0) return null;
-  const base = `${gamesA}–${gamesB}`;
-  const tb = setData.tb;
-  if (tb && typeof tb === 'object') {
-    const rawTbA = Number.parseInt(tb.A ?? tb.a ?? 0, 10);
-    const rawTbB = Number.parseInt(tb.B ?? tb.b ?? 0, 10);
-    const tieA = Number.isNaN(rawTbA) ? 0 : rawTbA;
-    const tieB = Number.isNaN(rawTbB) ? 0 : rawTbB;
-    const played = Boolean(tb.played ?? (tieA || tieB));
-    if (played && (tieA || tieB)) {
-      return `${base}(${tieA}:${tieB})`;
-    }
-  }
-  return base;
-}
-
-function renderGlobalHistory(history = []) {
-  const section = document.getElementById('history-section');
-  const body = document.getElementById('history-body');
-  const title = document.getElementById('history-title');
-  if (!section || !body) return;
-
-  const t = currentT();
-  if (title && t.history?.title) title.textContent = t.history.title;
-
-  const PAGE = window.__histPage || 1;
-  const SIZE = window.__histPageSize || 10;
-  const total = Array.isArray(history) ? history.length : 0;
-  const pages = Math.max(1, Math.ceil(total / SIZE));
-  const page = Math.min(Math.max(1, PAGE), pages);
-  window.__histPage = page;
-
-  body.innerHTML = '';
-  if (!history || !history.length) {
-    section.classList.add('is-empty');
-    const empty = document.createElement('p');
-    empty.className = 'history-empty';
-    empty.textContent = t.history?.empty || 'Brak zapisanych wyników.';
-    body.appendChild(empty);
-    return;
-  }
-
-  section.classList.remove('is-empty');
-  const columnTranslations = t.history?.columns || {};
-  const columns = {
-    description: columnTranslations.description || 'Mecz',
-    category: columnTranslations.category || 'Kategoria',
-    phase: columnTranslations.phase || 'Faza',
-    duration: columnTranslations.duration || 'Czas'
-  };
-  const list = document.createElement('div');
-  list.className = 'history-list';
-  const start = (page - 1) * SIZE;
-  const slice = history.slice(start, start + SIZE);
-  slice.forEach((entry) => {
-    const item = document.createElement('dl');
-    item.className = 'history-item';
-    const playerA = resolvePlayerName(entry.players?.A || {}, 'defaultA', currentLang);
-    const playerB = resolvePlayerName(entry.players?.B || {}, 'defaultB', currentLang);
-    const setSegments = [];
-    const set1 = formatSetHistorySegment(entry.sets?.set1);
-    const set2 = formatSetHistorySegment(entry.sets?.set2);
-    if (set1) setSegments.push(set1);
-    if (set2) setSegments.push(set2);
-    const tie = entry.sets?.tie || {};
-    const duration = entry.duration_text || _formatDurationLocal(entry.duration_seconds || 0);
-    const rawCategory = typeof entry.category === 'string' ? entry.category.trim() : '';
-    const categoryText = rawCategory || '—';
-    const rawPhase = typeof entry.phase === 'string' ? entry.phase.trim() : '';
-    const phaseText = rawPhase || '—';
-    const endedAt = formatHistoryTimestamp(entry.ended_at);
-
-    const courtLabel = format(currentT().courtLabel, { court: entry.kort });
-    const versusText = t.versus || 'vs';
-    const head = `${courtLabel}, ${playerA} ${versusText} ${playerB}`;
-    const segments = [...setSegments];
-    if (tie.played) {
-      const label = t.history?.labels?.supertb || 'SUPERTB';
-      segments.push(`${label}: ${(tie.A ?? 0)}–${tie.B ?? 0}`);
-    }
-    const description = segments.length ? `${head} ${segments.join(', ')}` : head;
-
-    const terms = [
-      { label: columns.description, value: description, className: 'description' },
-      // { label: columns.category, value: categoryText, className: 'category' },
-      { label: columns.phase, value: phaseText, className: 'phase' },
-      { label: columns.duration, value: duration, className: 'duration' },
-      { label: columns.date || 'Data', value: endedAt, className: 'date' }
-    ];
-    terms.forEach(({ label, value, className }) => {
-      const dt = document.createElement('dt');
-      dt.className = `history-term history-term-${className}`;
-      dt.textContent = label;
-      const dd = document.createElement('dd');
-      dd.className = `history-value history-value-${className}`;
-      dd.textContent = typeof value === 'string' ? value : String(value ?? '');
-      item.appendChild(dt);
-      item.appendChild(dd);
-    });
-    list.appendChild(item);
-  });
-
-  body.appendChild(list);
-  const pager = document.createElement('div');
-  pager.className = 'history-controls';
-  pager.innerHTML = `
-    <button class="btn hist-prev" ${page <= 1 ? 'disabled' : ''}>&laquo;</button>
-    <span class="hist-page">${page} / ${pages}</span>
-    <button class="btn hist-next" ${page >= pages ? 'disabled' : ''}>&raquo;</button>
-  `;
-  body.appendChild(pager);
-  const btnPrev = pager.querySelector('.hist-prev');
-  const btnNext = pager.querySelector('.hist-next');
-  if (btnPrev) btnPrev.addEventListener('click', () => { if (window.__histPage > 1) { window.__histPage--; renderGlobalHistory(history); } });
-  if (btnNext) btnNext.addEventListener('click', () => { if (window.__histPage < pages) { window.__histPage++; renderGlobalHistory(history); } });
-}
-
-function renderError() {
-  if (!lastError) {
-    errLine.textContent = '';
-    return;
-  }
-  const t = currentT();
-  if (lastError.type === 'fetch' || lastError.type === 'sse') {
-    errLine.textContent = format(t.errors.fetch, { message: lastError.message });
-    return;
-  }
-  errLine.textContent = lastError.message || '';
-}
-
-async function fetchSnapshot() {
-  try {
-    const r = await fetch('/api/snapshot', { cache: 'no-store' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
-    lastError = null;
-    renderError();
-    return data;
-  } catch (e) {
-    lastError = { type: 'fetch', message: e.message };
-    renderError();
-    return null;
-  }
-}
-
-function clearReconnectTimer() {
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-}
-
-function closeEventSource() {
-  if (eventSource) {
-    eventSource.close();
-    eventSource = null;
-  }
-}
-
-function scheduleReconnect(reason) {
-  clearReconnectTimer();
-  if (paused) return;
-  const seconds = Math.round(reconnectDelay / 1000);
-  lastError = { type: 'sse', message: `${reason}; retrying in ${seconds}s` };
-  renderError();
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    connectStream();
-  }, reconnectDelay);
-  reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
-}
-
-function parseTimestamp(ts) {
-  if (!ts) return null;
-  const date = new Date(ts);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function handleStreamPayload(payload) {
-  if (!payload || paused) return;
-
-  console.debug('[score.vestmedia] SSE payload', payload);
-
-  if (payload.type === 'snapshot') {
-    const state = payload.state || {};
-    latestHistory = Array.isArray(payload.history) ? payload.history : latestHistory;
-    renderGlobalHistory(latestHistory);
-    ensureCardsFromSnapshot(state);
-    const keys = computeCourts(state);
-    COURTS = keys;
-    updateShortcutsDescription();
-    keys.forEach(k => {
-      if (state[k]) updateCourt(k, state[k], prev, currentLang, { announceCb: handleAnnouncement });
-    });
-    prev = state;
-    const snapshotTime = parseTimestamp(payload.ts) || new Date();
-    updateLastRefresh(snapshotTime);
-    persistSnapshot(prev, latestHistory, snapshotTime.toISOString());
-    return;
-  }
-
-  const kort = payload.kort;
-  const state = payload.state;
-  if (!kort || !state) return;
-  
-  // Debug: log state to see if points are present
-  if (state.A || state.B) {
-    console.log(`[kort=${kort}] A.points=${state.A?.points}, B.points=${state.B?.points}`);
-  }
-
-  if (!COURTS.includes(kort)) {
-    const merged = { ...prev, [kort]: state };
-    ensureCardsFromSnapshot(merged);
-    const keys = computeCourts(merged);
-    COURTS = keys;
-    updateShortcutsDescription();
-    keys.forEach(k => {
-      const courtState = merged[k];
-      if (courtState) updateCourt(k, courtState, prev, currentLang, { announceCb: handleAnnouncement });
-    });
-    prev = merged;
-  } else {
-    updateCourt(kort, state, prev, currentLang, { announceCb: handleAnnouncement });
-    prev = { ...prev, [kort]: state };
-  }
-
-  if (Array.isArray(payload.history)) {
-    latestHistory = payload.history;
-    renderGlobalHistory(latestHistory);
-  }
-
-  const updateTime = parseTimestamp(payload.ts) || new Date();
-  updateLastRefresh(updateTime);
-  persistSnapshot(prev, latestHistory, updateTime.toISOString());
-}
-
-function handleAnnouncement(k, type, ...args) {
-    if (!getAnnounce(k)) return;
-    const t = currentT();
-    switch (type) {
-        case 'announcePoints':
-            announcePoints(k, ...args, currentLang);
-            break;
-        case 'announceGames':
-            announceGames(k, ...args, currentLang);
-            break;
-    }
-}
-
-
-function handleStreamMessage(event) {
-  if (!event || !event.data) return;
-  let payload = null;
-  try {
-    payload = JSON.parse(event.data);
-  } catch (err) {
-    console.error('Invalid SSE payload', err, event.data);
-    return;
-  }
-  handleStreamPayload(payload);
-}
-
-function connectStream() {
-  if (paused) return;
-  clearReconnectTimer();
-  closeEventSource();
-  try {
-    eventSource = new EventSource('/api/stream');
-  } catch (err) {
-    scheduleReconnect('SSE connection error');
-    return;
-  }
-
-  eventSource.addEventListener('open', () => {
-    reconnectDelay = INITIAL_RECONNECT_DELAY;
-    lastError = null;
-    renderError();
-  });
-  eventSource.addEventListener('message', handleStreamMessage);
-  eventSource.addEventListener('ping', () => { });
-  eventSource.addEventListener('error', () => {
-    closeEventSource();
-    scheduleReconnect('SSE disconnected');
-  });
-}
-
-window.addEventListener('beforeunload', () => {
-  clearReconnectTimer();
-  closeEventSource();
-});
-
-function ensureHistoryToggle() {
-  const section = document.getElementById('history-section');
-  const title = document.getElementById('history-title');
-  if (!section || !title) return;
-  if (title.querySelector('#history-toggle')) return;
-  const btn = document.createElement('button');
-  btn.id = 'history-toggle';
-  btn.className = 'btn';
-  btn.type = 'button';
-  btn.style.marginLeft = '8px';
-  btn.setAttribute('aria-expanded', 'true');
-  btn.textContent = '▼';
-  btn.addEventListener('click', () => {
-    const collapsed = section.classList.toggle('is-collapsed');
-    btn.setAttribute('aria-expanded', String(!collapsed));
-    btn.textContent = collapsed ? '►' : '▼';
-  });
-  title.appendChild(btn);
-}
-
-function computeCourts(data) {
-  return Object.keys(data).sort((a, b) => Number(a) - Number(b));
-}
-
-function cloneStateForStorage(state) {
-  try {
-    return JSON.parse(JSON.stringify(state, (key, value) => (key === 'log' ? undefined : value)));
-  } catch (err) {
-    console.warn('[score] snapshot clone failed', err);
-    return null;
-  }
-}
-
-function cloneHistoryForStorage(history) {
-  try {
-    return JSON.parse(JSON.stringify(history || []));
-  } catch (err) {
-    console.warn('[score] history clone failed', err);
-    return [];
-  }
-}
-
-function persistSnapshot(state, history, ts) {
-  if (!state || typeof state !== 'object') return;
-  const clone = cloneStateForStorage(state);
-  if (!clone) return;
-  const histClone = cloneHistoryForStorage(history);
-  try {
-    const payload = {
-      ts: ts || new Date().toISOString(),
-      state: clone,
-      history: histClone
-    };
-    localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(payload));
-  } catch (err) {
-    console.warn('[score] snapshot persist failed', err);
-  }
-}
-
-function hydrateFromStorage() {
-  try {
-    const raw = localStorage.getItem(SNAPSHOT_STORAGE_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || !parsed.state || typeof parsed.state !== 'object') {
-      return false;
-    }
-    const state = parsed.state;
-    latestHistory = Array.isArray(parsed.history) ? parsed.history : [];
-    ensureCardsFromSnapshot(state);
-    const courts = computeCourts(state);
-    COURTS = courts;
-    updateShortcutsDescription();
-    const prevBackup = prev;
-    prev = prevBackup || {};
-    courts.forEach(k => {
-      if (state[k]) updateCourt(k, state[k], prev, currentLang, { announceCb: handleAnnouncement });
-    });
-    prev = state;
-    renderGlobalHistory(latestHistory);
-    if (parsed.ts) {
-      const dt = new Date(parsed.ts);
-      if (!Number.isNaN(dt.getTime())) {
-        updateLastRefresh(dt);
-      }
-    }
-    return true;
-  } catch (err) {
-    console.warn('[score] snapshot hydrate failed', err);
-    return false;
-  }
-}
-
-function updateLastRefresh(now) {
-  if (now) {
-    lastRefreshDate = now;
-  }
-  const t = currentT();
-  if (!lastRefreshDate) {
-    lastRefreshText.textContent = t.meta.lastRefreshNever;
-    return;
-  }
-  const time = lastRefreshDate.toLocaleTimeString(currentLocale());
-  lastRefreshText.textContent = format(t.meta.lastRefresh, { time });
-}
-
-function refreshNavLanguage() {
-  const t = currentT();
-  const links = navlist.querySelectorAll('a');
-  links.forEach((link, idx) => {
-    const court = COURTS[idx];
-    if (court) {
-      link.textContent = format(t.courtLabel, { court });
-    }
-  });
-  const histLink = navlist.querySelector('a[href="#history-section"]');
-  if (histLink && t.history?.title) histLink.textContent = t.history.title;
-}
-
-function refreshCardsLanguage() {
-  const t = currentT();
-  COURTS.forEach(k => {
-    const card = document.getElementById(`kort-${k}`);
-    if (card) {
-      const newCard = makeCourtCard(k, currentLang, { showAnnounce: true });
-      card.innerHTML = newCard.innerHTML;
-      const cb = card.querySelector(`#announce-${k}`);
-      if (cb) {
-        cb.checked = getAnnounce(k);
-        cb.addEventListener('change', () => setAnnounce(k, cb.checked));
-      }
-    }
-    if (prev[k]) {
-      updateCourt(k, prev[k], {}, currentLang, { announceCb: handleAnnouncement });
-    }
-  });
-
-  if (historyTitle && t.history?.title) historyTitle.textContent = t.history.title;
-  renderGlobalHistory(latestHistory);
-}
-
-function renderLanguage() {
-  const t = currentT();
-  document.documentElement.lang = t.htmlLang;
-  document.title = t.title;
-  if (headerTitle) headerTitle.textContent = t.title;
-  updateShortcutsDescription();
-  const liveBadge = document.getElementById('live-badge');
-  if (liveBadge) liveBadge.textContent = t.liveBadge || 'LIVE';
-  if (nav) nav.setAttribute('aria-label', t.navLabel);
-  if (langLabel) langLabel.textContent = t.languageLabel;
-  if (pauseBtn) pauseBtn.textContent = paused ? t.pause.resume : t.pause.pause;
-  refreshNavLanguage();
-  refreshCardsLanguage();
-  updateLastRefresh();
-  renderError();
-  ensureHistoryToggle();
-}
-
-function applyLanguage(lang, { skipSave = false, skipSelect = false } = {}) {
-  if (!TRANSLATIONS[lang]) lang = DEFAULT_LANG;
-  currentLang = lang;
-  if (!skipSave) localStorage.setItem('preferred-language', lang);
-  if (!skipSelect && langSelect) langSelect.value = lang;
-  renderLanguage();
-}
-
-async function bootstrap() {
-  const snapshot = await fetchSnapshot();
-  if (!snapshot) {
-    updateLastRefresh();
-    return;
-  }
-  const state = snapshot.state || {};
-  latestHistory = Array.isArray(snapshot.history) ? snapshot.history : [];
-  renderGlobalHistory(latestHistory);
-  ensureCardsFromSnapshot(state);
-  const computedCourts = computeCourts(state);
-  COURTS = computedCourts;
-  updateShortcutsDescription();
-  computedCourts.forEach(k => {
-    if (state[k]) updateCourt(k, state[k], prev, currentLang, { announceCb: handleAnnouncement });
-  });
-  prev = state;
-  const now = new Date();
-  updateLastRefresh(now);
-  persistSnapshot(prev, latestHistory, now.toISOString());
-}
-
-if (pauseBtn) {
-  pauseBtn.addEventListener('click', () => {
-    paused = !paused;
-    pauseBtn.setAttribute('aria-pressed', String(paused));
-    const t = currentT();
-    pauseBtn.textContent = paused ? t.pause.resume : t.pause.pause;
-    if (paused) {
-      clearReconnectTimer();
-      closeEventSource();
-      lastError = null;
-      renderError();
-    } else {
-      reconnectDelay = INITIAL_RECONNECT_DELAY;
-      connectStream();
-    }
-  });
-} else {
-  paused = false;
-  reconnectDelay = INITIAL_RECONNECT_DELAY;
-  connectStream();
-}
-
-if (langSelect) {
-  langSelect.addEventListener('change', () => {
-    applyLanguage(langSelect.value);
-  });
-}
-
-applyLanguage(currentLang, { skipSave: true, skipSelect: true });
-if (langSelect) langSelect.value = currentLang;
-
-hydrateFromStorage();
-
-bootstrap()
-  .catch(err => {
-    console.error('Bootstrap failed', err);
-  })
-  .finally(() => {
-    renderLanguage();
-    connectStream();
-  });
-
-// Prevent full page reload on navigation link clicks
-if (nav) {
-  nav.addEventListener('click', (e) => {
-    const link = e.target.closest('a[href^="#"]');
-    if (!link) return;
-    e.preventDefault();
-    const hash = link.getAttribute('href');
-    const targetId = hash.substring(1); // remove #
-    const target = document.getElementById(targetId);
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Update URL without reload
-      window.history.pushState(null, '', hash);
-    }
-  });
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.altKey || e.ctrlKey || e.metaKey) return;
-  const target = e.target;
-  const isField = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
-  if (isField) return;
-  const key = e.key;
-  if (/^[1-9]$/.test(key)) {
-    const idx = Number(key) - 1;
-    const court = COURTS[idx];
-    if (court) {
-      const el = document.getElementById(`kort-${court}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-});
+﻿浩潰瑲笠吠䅒华䅌䥔乏ⱓ䐠䙅啁呌䱟乁ⱇ匠偕佐呒䑅䱟乁升‬敧呴慲獮慬楴湯素映潲⁭⸧琯慲獮慬楴湯⹳獪㬧਍浩潰瑲笠洠歡䍥畯瑲慃摲‬灵慤整潃牵ⱴ映牯慭ⱴ爠獥汯敶汐祡牥慎敭素映潲⁭⸧振浯潭⹮獪㬧਍਍敬⁴佃剕協㴠嬠㭝਍潣獮⁴牧摩㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨牧摩⤧഻挊湯瑳渠癡㴠搠捯浵湥⹴畱牥卹汥捥潴⡲渧癡⤧഻挊湯瑳渠癡楬瑳㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨慮汶獩❴㬩਍潣獮⁴牥䱲湩⁥‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤攧牲楌敮⤧഻挊湯瑳瀠畡敳瑂⁮‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤瀧畡敳瑂❮㬩਍潣獮⁴慬杮敓敬瑣㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨慬杮敓敬瑣⤧഻挊湯瑳氠湡䱧扡汥㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨慬杮慌敢❬㬩਍潣獮⁴敨摡牥楔汴⁥‽潤畣敭瑮焮敵祲敓敬瑣牯✨敨摡牥栠✱㬩਍潣獮⁴敨摡牥敄捳㴠搠捯浵湥⹴畱牥卹汥捥潴⡲⸧敤捳⤧഻挊湯瑳氠獡剴晥敲桳敔瑸㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨慬瑳敒牦獥周硥❴㬩਍潣獮⁴楨瑳牯卹捥楴湯㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨楨瑳牯⵹敳瑣潩❮㬩਍潣獮⁴楨瑳牯䉹摯⁹‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤栧獩潴祲戭摯❹㬩਍潣獮⁴楨瑳牯呹瑩敬㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨楨瑳牯⵹楴汴❥㬩਍਍敬⁴慰獵摥㴠映污敳഻氊瑥瀠敲⁶‽絻഻挊湯瑳䌠問呒卟呅卟䅔䕔㴠笠㭽਍潣獮⁴义呉䅉彌䕒佃乎䍅彔䕄䅌⁙‽〱〰഻挊湯瑳䴠塁剟䍅乏䕎呃䑟䱅奁㴠㌠〰〰഻ഊ氊瑥氠瑡獥䡴獩潴祲㴠嬠㭝਍潣獮⁴乓偁䡓呏卟佔䅒䕇䭟奅㴠✠捳牯⹥敶瑳敭楤⹡湳灡桳瑯瘮✱഻ഊ氊瑥攠敶瑮潓牵散㴠渠汵㭬਍敬⁴敲潣湮捥呴浩牥㴠渠汵㭬਍敬⁴敲潣湮捥䑴汥祡㴠䤠䥎䥔䱁剟䍅乏䕎呃䑟䱅奁഻氊瑥氠獡剴晥敲桳慄整㴠渠汵㭬਍敬⁴慬瑳牅潲⁲‽畮汬഻ഊ挊湯瑳猠潴敲䱤湡⁧‽潬慣卬潴慲敧朮瑥瑉浥✨牰晥牥敲ⵤ慬杮慵敧⤧഻氊瑥挠牵敲瑮慌杮㴠匠偕佐呒䑅䱟乁升椮据畬敤⡳瑳牯摥慌杮 ‿瑳牯摥慌杮㨠䐠䙅啁呌䱟乁㭇਍਍畦据楴湯挠牵敲瑮⡔ ൻ 爠瑥牵⁮敧呴慲獮慬楴湯挨牵敲瑮慌杮㬩਍ൽഊ昊湵瑣潩⁮畣牲湥䱴捯污⡥ ൻ 挠湯瑳琠㴠挠牵敲瑮⡔㬩਍†敲畴湲琠栮浴䱬湡⁧籼挠牵敲瑮慌杮഻紊਍਍畦据楴湯氠䭳祥欨 ൻ 爠瑥牵⁮慠湮畯据ⵥ⑫死恽഻紊਍਍畦据楴湯朠瑥湁潮湵散欨 ൻ 爠瑥牵⁮潬慣卬潴慲敧朮瑥瑉浥氨䭳祥欨⤩㴠㴽✠湯㬧਍ൽഊ昊湵瑣潩⁮敳䅴湮畯据⡥Ⱬ瘠污 ൻ 氠捯污瑓牯条⹥敳䥴整⡭獬敋⡹⥫‬慶⁬‿漧❮㨠✠景❦㬩਍ൽഊ昊湵瑣潩⁮潦浲瑡桓牯捴瑵慒杮⡥潣湵⥴笠਍†晩⠠挡畯瑮簠⁼潣湵⁴‼⤱爠瑥牵⁮✧഻ 椠⁦挨畯瑮㴠㴽ㄠ 敲畴湲✠ㅛ❝഻ 爠瑥牵⁮孠鎀笤潣湵絴恝഻紊਍਍畦据楴湯甠摰瑡卥潨瑲畣獴敄捳楲瑰潩⡮ ൻ 椠⁦ℨ敨摡牥敄捳 敲畴湲഻ 挠湯瑳琠㴠挠牵敲瑮⡔㬩਍†潣獮⁴慰瑲⁳‽嵛഻ 椠⁦琨搮獥牣灩楴湯 慰瑲⹳異桳琨搮獥牣灩楴湯㬩਍਍†潣獮⁴桳牯捴瑵⁳‽⹴桳牯捴瑵⁳籼笠㭽਍†潣獮⁴慲杮⁥‽潦浲瑡桓牯捴瑵慒杮⡥佃剕協氮湥瑧⥨഻ 氠瑥猠潨瑲畣獴敔瑸㴠✠㬧਍਍†晩⠠慲杮⁥☦猠潨瑲畣獴琮浥汰瑡⥥笠਍††桳牯捴瑵味硥⁴‽潦浲瑡猨潨瑲畣獴琮浥汰瑡ⱥ笠਍†††慲杮ⱥ਍†††潣牵獴慌敢㩬猠潨瑲畣獴挮畯瑲䱳扡汥簠⁼✧ബ ††挠畯瑮›佃剕協氮湥瑧൨ †素⸩牴浩⤨഻ 素攠獬⁥晩⠠桳牯捴瑵⹳慦汬慢正 ൻ †猠潨瑲畣獴敔瑸㴠猠潨瑲畣獴昮污扬捡㭫਍†ൽഊ 椠⁦猨潨瑲畣獴敔瑸 慰瑲⹳異桳猨潨瑲畣獴敔瑸㬩਍†晩⠠桳牯捴瑵⹳畡潴敒摡 慰瑲⹳異桳猨潨瑲畣獴愮瑵副慥⥤഻ഊ 栠慥敤䑲獥⹣整瑸潃瑮湥⁴‽慰瑲⹳潪湩✨✠㬩਍ൽഊ昊湵瑣潩⁮湥畳敲慃摲䙳潲卭慮獰潨⡴湳灡 ൻ 挠湯瑳琠㴠挠牵敲瑮⡔㬩਍†潣獮⁴慴杲瑥潃牵獴㴠传橢捥⹴敫獹猨慮⥰献牯⡴愨‬⥢㴠‾ൻ †挠湯瑳渠⁡‽畎扭牥愨㬩਍††潣獮⁴扮㴠丠浵敢⡲⥢഻ †挠湯瑳愠慎⁎‽畎扭牥椮乳乡渨⥡഻ †挠湯瑳戠慎⁎‽畎扭牥椮乳乡渨⥢഻ †椠⁦愨慎⁎☦戠慎⥎爠瑥牵⁮瑓楲杮愨⸩潬慣敬潃灭牡⡥瑓楲杮戨⤩഻ †椠⁦愨慎⥎爠瑥牵⁮㬱਍††晩⠠乢乡 敲畴湲ⴠ㬱਍††敲畴湲渠⁡‭扮഻ 素㬩਍਍†潣獮⁴慳敭牏敤⁲‽佃剕協氮湥瑧⁨㴽‽慴杲瑥潃牵獴氮湥瑧⁨☦਍††慴杲瑥潃牵獴攮敶祲⠨潫瑲‬摩⥸㴠‾佃剕協楛硤⁝㴽‽潫瑲㬩਍਍†佃剕協㴠琠牡敧䍴畯瑲㭳਍†灵慤整桓牯捴瑵䑳獥牣灩楴湯⤨഻ 椠⁦猨浡佥摲牥 ൻ †爠瑥牵㭮਍†ൽഊ 渠癡楬瑳椮湮牥呈䱍㴠✠㬧਍†佃剕協昮牯慅档欨㴠‾ൻ †挠湯瑳氠⁩‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨楬⤧഻ †氠⹩湩敮䡲䵔⁌‽㱠⁡牨晥∽欣牯⵴笤絫㸢笤潦浲瑡琨挮畯瑲慌敢ⱬ笠挠畯瑲›⁫⥽㱽愯怾഻ †渠癡楬瑳愮灰湥䍤楨摬氨⥩഻ 素㬩਍†⼯䄠摤䠠獩潴祲氠湩⁫瑡琠敨攠摮਍†潣獮⁴楬楈瑳牯⁹‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨楬⤧഻ 挠湯瑳栠獩潴祲慌敢⁬‽琨栮獩潴祲☠…⹴楨瑳牯⹹楴汴⥥㼠琠栮獩潴祲琮瑩敬㨠✠楈瑳牯慩㬧਍†楬楈瑳牯⹹湩敮䡲䵔⁌‽㱠⁡牨晥∽栣獩潴祲猭捥楴湯㸢笤楨瑳牯䱹扡汥㱽愯怾഻ 渠癡楬瑳愮灰湥䍤楨摬氨䡩獩潴祲㬩਍†牧摩椮湮牥呈䱍㴠✠㬧਍†佃剕協昮牯慅档欨㴠‾ൻ †挠湯瑳挠牡⁤‽慭敫潃牵䍴牡⡤Ⱬ挠牵敲瑮慌杮‬⁻桳睯湁潮湵散›牴敵素㬩਍††潣獮⁴扣㴠挠牡⹤畱牥卹汥捥潴⡲⍠湡潮湵散␭死恽㬩਍††晩⠠扣 ൻ ††挠⹢档捥敫⁤‽敧䅴湮畯据⡥⥫഻ ††挠⹢摡䕤敶瑮楌瑳湥牥✨档湡敧Ⱗ⠠ 㸽猠瑥湁潮湵散欨‬扣挮敨正摥⤩഻ †素਍††牧摩愮灰湥䍤楨摬挨牡⥤഻ 素㬩਍ൽഊ昊湵瑣潩⁮潦浲瑡楈瑳牯呹浩獥慴灭椨潳 ൻ 椠⁦ℨ獩⥯爠瑥牵⁮ⴧ㬧਍†潣獮⁴瑤㴠渠睥䐠瑡⡥獩⥯഻ 椠⁦丨浵敢⹲獩慎⡎瑤朮瑥楔敭⤨⤩爠瑥牵⁮ⴧ㬧਍†敲畴湲搠⹴潴潌慣敬瑓楲杮挨牵敲瑮潌慣敬⤨‬⁻潨牵›㈧搭杩瑩Ⱗ洠湩瑵㩥✠ⴲ楤楧❴‬慤㩹✠ⴲ楤楧❴‬潭瑮㩨✠ⴲ楤楧❴素㬩਍ൽഊ昊湵瑣潩⁮晟牯慭䑴牵瑡潩䱮捯污猨捥湯獤 ൻ 挠湯瑳琠瑯污㴠丠浵敢⡲敳潣摮⁳籼〠㬩਍†晩⠠両浵敢⹲獩楆楮整琨瑯污 籼琠瑯污㰠‽⤰爠瑥牵⁮鎀㬧਍†潣獮⁴業獮㴠䴠瑡⹨汦潯⡲潴慴⁬ 〶 ‥〶഻ 挠湯瑳栠畯獲㴠䴠瑡⹨汦潯⡲潴慴⁬ 㘳〰㬩਍†敲畴湲怠笤潨牵⹳潴瑓楲杮⤨瀮摡瑓牡⡴ⰲ✠✰紩␺浻湩⹳潴瑓楲杮⤨瀮摡瑓牡⡴ⰲ✠✰紩㭠਍ൽഊ昊湵瑣潩⁮潦浲瑡敓䡴獩潴祲敓浧湥⡴敳䑴瑡⥡笠਍†晩⠠猡瑥慄慴簠⁼祴数景猠瑥慄慴℠㴽✠扯敪瑣⤧爠瑥牵⁮畮汬഻ 挠湯瑳爠睡⁁‽畎扭牥瀮牡敳湉⡴敳䑴瑡⹡⁁㼿猠瑥慄慴愮㼠‿ⰰㄠ⤰഻ 挠湯瑳爠睡⁂‽畎扭牥瀮牡敳湉⡴敳䑴瑡⹡⁂㼿猠瑥慄慴戮㼠‿ⰰㄠ⤰഻ 挠湯瑳朠浡獥⁁‽畎扭牥椮乳乡爨睡⥁㼠〠㨠爠睡㭁਍†潣獮⁴慧敭䉳㴠丠浵敢⹲獩慎⡎慲䉷 ‿‰›慲䉷഻ 椠⁦木浡獥⁁㴽‽‰☦朠浡獥⁂㴽‽⤰爠瑥牵⁮畮汬഻ 挠湯瑳戠獡⁥‽①杻浡獥絁胢⒓杻浡獥終㭠਍†潣獮⁴扴㴠猠瑥慄慴琮㭢਍†晩⠠扴☠…祴数景琠⁢㴽‽漧橢捥❴ ൻ †挠湯瑳爠睡扔⁁‽畎扭牥瀮牡敳湉⡴扴䄮㼠‿扴愮㼠‿ⰰㄠ⤰഻ †挠湯瑳爠睡扔⁂‽畎扭牥瀮牡敳湉⡴扴䈮㼠‿扴戮㼠‿ⰰㄠ⤰഻ †挠湯瑳琠敩⁁‽畎扭牥椮乳乡爨睡扔⥁㼠〠㨠爠睡扔㭁਍††潣獮⁴楴䉥㴠丠浵敢⹲獩慎⡎慲呷䉢 ‿‰›慲呷䉢഻ †挠湯瑳瀠慬敹⁤‽潂汯慥⡮扴瀮慬敹⁤㼿⠠楴䅥簠⁼楴䉥⤩഻ †椠⁦瀨慬敹⁤☦⠠楴䅥簠⁼楴䉥⤩笠਍†††敲畴湲怠笤慢敳⡽笤楴䅥㩽笤楴䉥⥽㭠਍††ൽ 素਍†敲畴湲戠獡㭥਍ൽഊ昊湵瑣潩⁮敲摮牥汇扯污楈瑳牯⡹楨瑳牯⁹‽嵛 ൻ 挠湯瑳猠捥楴湯㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨楨瑳牯⵹敳瑣潩❮㬩਍†潣獮⁴潢祤㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨楨瑳牯⵹潢祤⤧഻ 挠湯瑳琠瑩敬㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨楨瑳牯⵹楴汴❥㬩਍†晩⠠猡捥楴湯簠⁼戡摯⥹爠瑥牵㭮਍਍†潣獮⁴⁴‽畣牲湥呴⤨഻ 椠⁦琨瑩敬☠…⹴楨瑳牯㽹琮瑩敬 楴汴⹥整瑸潃瑮湥⁴‽⹴楨瑳牯⹹楴汴㭥਍਍†潣獮⁴䅐䕇㴠眠湩潤⹷彟楨瑳慐敧簠⁼㬱਍†潣獮⁴䥓䕚㴠眠湩潤⹷彟楨瑳慐敧楓敺簠⁼〱഻ 挠湯瑳琠瑯污㴠䄠牲祡椮䅳牲祡栨獩潴祲 ‿楨瑳牯⹹敬杮桴㨠〠഻ 挠湯瑳瀠条獥㴠䴠瑡⹨慭⡸ⰱ䴠瑡⹨散汩琨瑯污⼠匠婉⥅㬩਍†潣獮⁴慰敧㴠䴠瑡⹨業⡮慍桴洮硡ㄨ‬䅐䕇Ⱙ瀠条獥㬩਍†楷摮睯弮桟獩側条⁥‽慰敧഻ഊ 戠摯⹹湩敮䡲䵔⁌‽✧഻ 椠⁦ℨ楨瑳牯⁹籼℠楨瑳牯⹹敬杮桴 ൻ †猠捥楴湯挮慬獳楌瑳愮摤✨獩攭灭祴⤧഻ †挠湯瑳攠灭祴㴠搠捯浵湥⹴牣慥整汅浥湥⡴瀧⤧഻ †攠灭祴挮慬獳慎敭㴠✠楨瑳牯⵹浥瑰❹഻ †攠灭祴琮硥䍴湯整瑮㴠琠栮獩潴祲⸿浥瑰⁹籼✠牂歡稠灡獩湡捹⁨祷楮썫瞳✮഻ †戠摯⹹灡数摮桃汩⡤浥瑰⥹഻ †爠瑥牵㭮਍†ൽഊ 猠捥楴湯挮慬獳楌瑳爮浥癯⡥椧⵳浥瑰❹㬩਍†潣獮⁴潣畬湭牔湡汳瑡潩獮㴠琠栮獩潴祲⸿潣畬湭⁳籼笠㭽਍†潣獮⁴潣畬湭⁳‽ൻ †搠獥牣灩楴湯›潣畬湭牔湡汳瑡潩獮搮獥牣灩楴湯簠⁼䴧捥❺ബ †挠瑡来牯㩹挠汯浵呮慲獮慬楴湯⹳慣整潧祲簠⁼䬧瑡来牯慩Ⱗ਍††桰獡㩥挠汯浵呮慲獮慬楴湯⹳桰獡⁥籼✠慆慺Ⱗ਍††畤慲楴湯›潣畬湭牔湡汳瑡潩獮搮牵瑡潩⁮籼✠穃獡ധ 素഻ 挠湯瑳氠獩⁴‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨楤❶㬩਍†楬瑳挮慬獳慎敭㴠✠楨瑳牯⵹楬瑳㬧਍†潣獮⁴瑳牡⁴‽瀨条⁥‭⤱⨠匠婉㭅਍†潣獮⁴汳捩⁥‽楨瑳牯⹹汳捩⡥瑳牡ⱴ猠慴瑲⬠匠婉⥅഻ 猠楬散昮牯慅档⠨湥牴⥹㴠‾ൻ †挠湯瑳椠整⁭‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨汤⤧഻ †椠整⹭汣獡乳浡⁥‽栧獩潴祲椭整❭഻ †挠湯瑳瀠慬敹䅲㴠爠獥汯敶汐祡牥慎敭攨瑮祲瀮慬敹獲⸿⁁籼笠ⱽ✠敤慦汵䅴Ⱗ挠牵敲瑮慌杮㬩਍††潣獮⁴汰祡牥⁂‽敲潳癬健慬敹乲浡⡥湥牴⹹汰祡牥㽳䈮簠⁼絻‬搧晥畡瑬❂‬畣牲湥䱴湡⥧഻ †挠湯瑳猠瑥敓浧湥獴㴠嬠㭝਍††潣獮⁴敳ㅴ㴠映牯慭却瑥楈瑳牯卹来敭瑮攨瑮祲献瑥㽳献瑥⤱഻ †挠湯瑳猠瑥′‽潦浲瑡敓䡴獩潴祲敓浧湥⡴湥牴⹹敳獴⸿敳㉴㬩਍††晩⠠敳ㅴ 敳却来敭瑮⹳異桳猨瑥⤱഻ †椠⁦猨瑥⤲猠瑥敓浧湥獴瀮獵⡨敳㉴㬩਍††潣獮⁴楴⁥‽湥牴⹹敳獴⸿楴⁥籼笠㭽਍††潣獮⁴畤慲楴湯㴠攠瑮祲搮牵瑡潩彮整瑸簠⁼晟牯慭䑴牵瑡潩䱮捯污攨瑮祲搮牵瑡潩彮敳潣摮⁳籼〠㬩਍††潣獮⁴慲䍷瑡来牯⁹‽祴数景攠瑮祲挮瑡来牯⁹㴽‽猧牴湩❧㼠攠瑮祲挮瑡来牯⹹牴浩⤨㨠✠㬧਍††潣獮⁴慣整潧祲敔瑸㴠爠睡慃整潧祲簠⁼钀㬧਍††潣獮⁴慲偷慨敳㴠琠灹潥⁦湥牴⹹桰獡⁥㴽‽猧牴湩❧㼠攠瑮祲瀮慨敳琮楲⡭ ›✧഻ †挠湯瑳瀠慨敳敔瑸㴠爠睡桐獡⁥籼✠胢➔഻ †挠湯瑳攠摮摥瑁㴠映牯慭䡴獩潴祲楔敭瑳浡⡰湥牴⹹湥敤彤瑡㬩਍਍††潣獮⁴潣牵䱴扡汥㴠映牯慭⡴畣牲湥呴⤨挮畯瑲慌敢ⱬ笠挠畯瑲›湥牴⹹潫瑲素㬩਍††潣獮⁴敶獲獵敔瑸㴠琠瘮牥畳⁳籼✠獶㬧਍††潣獮⁴敨摡㴠怠笤潣牵䱴扡汥ⱽ␠灻慬敹䅲⁽笤敶獲獵敔瑸⁽笤汰祡牥終㭠਍††潣獮⁴敳浧湥獴㴠嬠⸮献瑥敓浧湥獴㭝਍††晩⠠楴⹥汰祡摥 ൻ ††挠湯瑳氠扡汥㴠琠栮獩潴祲⸿慬敢獬⸿畳数瑲⁢籼✠啓䕐呒❂഻ ††猠来敭瑮⹳異桳怨笤慬敢絬›笤琨敩䄮㼠‿⤰鎀笤楴⹥⁂㼿〠恽㬩਍††ൽ †挠湯瑳搠獥牣灩楴湯㴠猠来敭瑮⹳敬杮桴㼠怠笤敨摡⁽笤敳浧湥獴樮楯⡮Ⱗ✠紩⁠›敨摡഻ഊ †挠湯瑳琠牥獭㴠嬠਍†††⁻慬敢㩬挠汯浵獮搮獥牣灩楴湯‬慶畬㩥搠獥牣灩楴湯‬汣獡乳浡㩥✠敤捳楲瑰潩❮素ബ ††⼠ ⁻慬敢㩬挠汯浵獮挮瑡来牯ⱹ瘠污敵›慣整潧祲敔瑸‬汣獡乳浡㩥✠慣整潧祲‧ⱽ਍†††⁻慬敢㩬挠汯浵獮瀮慨敳‬慶畬㩥瀠慨敳敔瑸‬汣獡乳浡㩥✠桰獡❥素ബ ††笠氠扡汥›潣畬湭⹳畤慲楴湯‬慶畬㩥搠牵瑡潩Ɱ挠慬獳慎敭›搧牵瑡潩❮素ബ ††笠氠扡汥›潣畬湭⹳慤整簠⁼䐧瑡❡‬慶畬㩥攠摮摥瑁‬汣獡乳浡㩥✠慤整‧ൽ †崠഻ †琠牥獭昮牯慅档⠨⁻慬敢ⱬ瘠污敵‬汣獡乳浡⁥⥽㴠‾ൻ ††挠湯瑳搠⁴‽潤畣敭瑮挮敲瑡䕥敬敭瑮✨瑤⤧഻ ††搠⹴汣獡乳浡⁥‽桠獩潴祲琭牥⁭楨瑳牯⵹整浲␭捻慬獳慎敭恽഻ ††搠⹴整瑸潃瑮湥⁴‽慬敢㭬਍†††潣獮⁴摤㴠搠捯浵湥⹴牣慥整汅浥湥⡴搧❤㬩਍†††摤挮慬獳慎敭㴠怠楨瑳牯⵹慶畬⁥楨瑳牯⵹慶畬ⵥ笤汣獡乳浡絥㭠਍†††摤琮硥䍴湯整瑮㴠琠灹潥⁦慶畬⁥㴽‽猧牴湩❧㼠瘠污敵㨠匠牴湩⡧慶畬⁥㼿✠⤧഻ ††椠整⹭灡数摮桃汩⡤瑤㬩਍†††瑩浥愮灰湥䍤楨摬搨⥤഻ †素㬩਍††楬瑳愮灰湥䍤楨摬椨整⥭഻ 素㬩਍਍†潢祤愮灰湥䍤楨摬氨獩⥴഻ 挠湯瑳瀠条牥㴠搠捯浵湥⹴牣慥整汅浥湥⡴搧癩⤧഻ 瀠条牥挮慬獳慎敭㴠✠楨瑳牯⵹潣瑮潲獬㬧਍†慰敧⹲湩敮䡲䵔⁌‽ൠ †㰠畢瑴湯挠慬獳∽瑢⁮楨瑳瀭敲≶␠灻条⁥㴼ㄠ㼠✠楤慳汢摥‧›✧㹽氦煡潵㰻戯瑵潴㹮਍††猼慰⁮汣獡㵳栢獩⵴慰敧㸢笤慰敧⁽ 笤慰敧絳⼼灳湡ാ †㰠畢瑴湯挠慬獳∽瑢⁮楨瑳渭硥≴␠灻条⁥㴾瀠条獥㼠✠楤慳汢摥‧›✧㹽爦煡潵㰻戯瑵潴㹮਍†㭠਍†潢祤愮灰湥䍤楨摬瀨条牥㬩਍†潣獮⁴瑢偮敲⁶‽慰敧⹲畱牥卹汥捥潴⡲⸧楨瑳瀭敲❶㬩਍†潣獮⁴瑢乮硥⁴‽慰敧⹲畱牥卹汥捥潴⡲⸧楨瑳渭硥❴㬩਍†晩⠠瑢偮敲⥶戠湴牐癥愮摤癅湥䱴獩整敮⡲挧楬正Ⱗ⠠ 㸽笠椠⁦眨湩潤⹷彟楨瑳慐敧㸠ㄠ ⁻楷摮睯弮桟獩側条ⵥ㬭爠湥敤䝲潬慢䡬獩潴祲栨獩潴祲㬩素素㬩਍†晩⠠瑢乮硥⥴戠湴敎瑸愮摤癅湥䱴獩整敮⡲挧楬正Ⱗ⠠ 㸽笠椠⁦眨湩潤⹷彟楨瑳慐敧㰠瀠条獥 ⁻楷摮睯弮桟獩側条⭥㬫爠湥敤䝲潬慢䡬獩潴祲栨獩潴祲㬩素素㬩਍ൽഊ昊湵瑣潩⁮敲摮牥牅潲⡲ ൻ 椠⁦ℨ慬瑳牅潲⥲笠਍††牥䱲湩⹥整瑸潃瑮湥⁴‽✧഻ †爠瑥牵㭮਍†ൽ 挠湯瑳琠㴠挠牵敲瑮⡔㬩਍†晩⠠慬瑳牅潲⹲祴数㴠㴽✠敦捴❨簠⁼慬瑳牅潲⹲祴数㴠㴽✠獳❥ ൻ †攠牲楌敮琮硥䍴湯整瑮㴠映牯慭⡴⹴牥潲獲昮瑥档‬⁻敭獳条㩥氠獡䕴牲牯洮獥慳敧素㬩਍††敲畴湲഻ 素਍†牥䱲湩⹥整瑸潃瑮湥⁴‽慬瑳牅潲⹲敭獳条⁥籼✠㬧਍ൽഊ愊祳据映湵瑣潩⁮敦捴卨慮獰潨⡴ ൻ 琠祲笠਍††潣獮⁴⁲‽睡楡⁴敦捴⡨⼧灡⽩湳灡桳瑯Ⱗ笠挠捡敨›渧ⵯ瑳牯❥素㬩਍††晩⠠爡漮⥫琠牨睯渠睥䔠牲牯✨呈偔✠⬠爠献慴畴⥳഻ †挠湯瑳搠瑡⁡‽睡楡⁴⹲獪湯⤨഻ †氠獡䕴牲牯㴠渠汵㭬਍††敲摮牥牅潲⡲㬩਍††敲畴湲搠瑡㭡਍†⁽慣捴⁨攨 ൻ †氠獡䕴牲牯㴠笠琠灹㩥✠敦捴❨‬敭獳条㩥攠洮獥慳敧素഻ †爠湥敤䕲牲牯⤨഻ †爠瑥牵⁮畮汬഻ 素਍ൽഊ昊湵瑣潩⁮汣慥割捥湯敮瑣楔敭⡲ ൻ 椠⁦爨捥湯敮瑣楔敭⥲笠਍††汣慥呲浩潥瑵爨捥湯敮瑣楔敭⥲഻ †爠捥湯敮瑣楔敭⁲‽畮汬഻ 素਍ൽഊ昊湵瑣潩⁮汣獯䕥敶瑮潓牵散⤨笠਍†晩⠠癥湥却畯捲⥥笠਍††癥湥却畯捲⹥汣獯⡥㬩਍††癥湥却畯捲⁥‽畮汬഻ 素਍ൽഊ昊湵瑣潩⁮捳敨畤敬敒潣湮捥⡴敲獡湯 ൻ 挠敬牡敒潣湮捥呴浩牥⤨഻ 椠⁦瀨畡敳⥤爠瑥牵㭮਍†潣獮⁴敳潣摮⁳‽慍桴爮畯摮爨捥湯敮瑣敄慬⁹ 〱〰㬩਍†慬瑳牅潲⁲‽⁻祴数›猧敳Ⱗ洠獥慳敧›①牻慥潳絮※敲牴楹杮椠⁮笤敳潣摮絳恳素഻ 爠湥敤䕲牲牯⤨഻ 爠捥湯敮瑣楔敭⁲‽敳呴浩潥瑵⠨ 㸽笠਍††敲潣湮捥呴浩牥㴠渠汵㭬਍††潣湮捥却牴慥⡭㬩਍†ⱽ爠捥湯敮瑣敄慬⥹഻ 爠捥湯敮瑣敄慬⁹‽慍桴洮湩爨捥湯敮瑣敄慬⁹‪ⰲ䴠塁剟䍅乏䕎呃䑟䱅奁㬩਍ൽഊ昊湵瑣潩⁮慰獲呥浩獥慴灭琨⥳笠਍†晩⠠琡⥳爠瑥牵⁮畮汬഻ 挠湯瑳搠瑡⁥‽敮⁷慄整琨⥳഻ 爠瑥牵⁮畎扭牥椮乳乡搨瑡⹥敧呴浩⡥⤩㼠渠汵⁬›慤整഻紊਍਍畦据楴湯栠湡汤卥牴慥偭祡潬摡瀨祡潬摡 ൻ 椠⁦ℨ慰汹慯⁤籼瀠畡敳⥤爠瑥牵㭮਍਍†潣獮汯⹥敤畢⡧嬧捳牯⹥敶瑳敭楤嵡匠䕓瀠祡潬摡Ⱗ瀠祡潬摡㬩਍਍†晩⠠慰汹慯⹤祴数㴠㴽✠湳灡桳瑯⤧笠਍††潣獮⁴瑳瑡⁥‽慰汹慯⹤瑳瑡⁥籼笠㭽਍††慬整瑳楈瑳牯⁹‽牁慲⹹獩牁慲⡹慰汹慯⹤楨瑳牯⥹㼠瀠祡潬摡栮獩潴祲㨠氠瑡獥䡴獩潴祲഻ †爠湥敤䝲潬慢䡬獩潴祲氨瑡獥䡴獩潴祲㬩਍††湥畳敲慃摲䙳潲卭慮獰潨⡴瑳瑡⥥഻ †挠湯瑳欠祥⁳‽潣灭瑵䍥畯瑲⡳瑳瑡⥥഻ †䌠問呒⁓‽敫獹഻ †甠摰瑡卥潨瑲畣獴敄捳楲瑰潩⡮㬩਍††敫獹昮牯慅档欨㴠‾ൻ ††椠⁦猨慴整歛⥝甠摰瑡䍥畯瑲欨‬瑳瑡孥嵫‬牰癥‬畣牲湥䱴湡Ⱨ笠愠湮畯据䍥㩢栠湡汤䅥湮畯据浥湥⁴⥽഻ †素㬩਍††牰癥㴠猠慴整഻ †挠湯瑳猠慮獰潨呴浩⁥‽慰獲呥浩獥慴灭瀨祡潬摡琮⥳簠⁼敮⁷慄整⤨഻ †甠摰瑡䱥獡剴晥敲桳猨慮獰潨呴浩⥥഻ †瀠牥楳瑳湓灡桳瑯瀨敲ⱶ氠瑡獥䡴獩潴祲‬湳灡桳瑯楔敭琮䥯体瑓楲杮⤨㬩਍††敲畴湲഻ 素਍਍†潣獮⁴潫瑲㴠瀠祡潬摡欮牯㭴਍†潣獮⁴瑳瑡⁥‽慰汹慯⹤瑳瑡㭥਍†晩⠠次牯⁴籼℠瑳瑡⥥爠瑥牵㭮਍†਍†⼯䐠扥杵›潬⁧瑳瑡⁥潴猠敥椠⁦潰湩獴愠敲瀠敲敳瑮਍†晩⠠瑳瑡⹥⁁籼猠慴整䈮 ൻ †挠湯潳敬氮杯怨歛牯㵴笤潫瑲嵽䄠瀮楯瑮㵳笤瑳瑡⹥㽁瀮楯瑮絳‬⹂潰湩獴␽獻慴整䈮⸿潰湩獴恽㬩਍†ൽഊ 椠⁦ℨ佃剕協椮据畬敤⡳潫瑲⤩笠਍††潣獮⁴敭杲摥㴠笠⸠⸮牰癥‬歛牯嵴›瑳瑡⁥㭽਍††湥畳敲慃摲䙳潲卭慮獰潨⡴敭杲摥㬩਍††潣獮⁴敫獹㴠挠浯異整潃牵獴洨牥敧⥤഻ †䌠問呒⁓‽敫獹഻ †甠摰瑡卥潨瑲畣獴敄捳楲瑰潩⡮㬩਍††敫獹昮牯慅档欨㴠‾ൻ ††挠湯瑳挠畯瑲瑓瑡⁥‽敭杲摥歛㭝਍†††晩⠠潣牵却慴整 灵慤整潃牵⡴Ⱬ挠畯瑲瑓瑡ⱥ瀠敲ⱶ挠牵敲瑮慌杮‬⁻湡潮湵散扃›慨摮敬湁潮湵散敭瑮素㬩਍††⥽഻ †瀠敲⁶‽敭杲摥഻ 素攠獬⁥ൻ †甠摰瑡䍥畯瑲欨牯ⱴ猠慴整‬牰癥‬畣牲湥䱴湡Ⱨ笠愠湮畯据䍥㩢栠湡汤䅥湮畯据浥湥⁴⥽഻ †瀠敲⁶‽⁻⸮瀮敲ⱶ嬠潫瑲㩝猠慴整素഻ 素਍਍†晩⠠牁慲⹹獩牁慲⡹慰汹慯⹤楨瑳牯⥹ ൻ †氠瑡獥䡴獩潴祲㴠瀠祡潬摡栮獩潴祲഻ †爠湥敤䝲潬慢䡬獩潴祲氨瑡獥䡴獩潴祲㬩਍†ൽഊ 挠湯瑳甠摰瑡呥浩⁥‽慰獲呥浩獥慴灭瀨祡潬摡琮⥳簠⁼敮⁷慄整⤨഻ 甠摰瑡䱥獡剴晥敲桳用摰瑡呥浩⥥഻ 瀠牥楳瑳湓灡桳瑯瀨敲ⱶ氠瑡獥䡴獩潴祲‬灵慤整楔敭琮䥯体瑓楲杮⤨㬩਍ൽഊ昊湵瑣潩⁮慨摮敬湁潮湵散敭瑮欨‬祴数‬⸮愮杲⥳笠਍††晩⠠朡瑥湁潮湵散欨⤩爠瑥牵㭮਍††潣獮⁴⁴‽畣牲湥呴⤨഻ †猠楷捴⁨琨灹⥥笠਍††††慣敳✠湡潮湵散潐湩獴㨧਍††††††湡潮湵散潐湩獴欨‬⸮愮杲ⱳ挠牵敲瑮慌杮㬩਍††††††牢慥㭫਍††††慣敳✠湡潮湵散慇敭❳ഺ †††††愠湮畯据䝥浡獥欨‬⸮愮杲ⱳ挠牵敲瑮慌杮㬩਍††††††牢慥㭫਍††ൽ紊਍਍਍畦据楴湯栠湡汤卥牴慥䵭獥慳敧攨敶瑮 ൻ 椠⁦ℨ癥湥⁴籼℠癥湥⹴慤慴 敲畴湲഻ 氠瑥瀠祡潬摡㴠渠汵㭬਍†牴⁹ൻ †瀠祡潬摡㴠䨠体⹎慰獲⡥癥湥⹴慤慴㬩਍†⁽慣捴⁨攨牲 ൻ †挠湯潳敬攮牲牯✨湉慶楬⁤卓⁅慰汹慯❤‬牥Ⱳ攠敶瑮搮瑡⥡഻ †爠瑥牵㭮਍†ൽ 栠湡汤卥牴慥偭祡潬摡瀨祡潬摡㬩਍ൽഊ昊湵瑣潩⁮潣湮捥却牴慥⡭ ൻ 椠⁦瀨畡敳⥤爠瑥牵㭮਍†汣慥割捥湯敮瑣楔敭⡲㬩਍†汣獯䕥敶瑮潓牵散⤨഻ 琠祲笠਍††癥湥却畯捲⁥‽敮⁷癅湥却畯捲⡥⼧灡⽩瑳敲浡⤧഻ 素挠瑡档⠠牥⥲笠਍††捳敨畤敬敒潣湮捥⡴匧䕓挠湯敮瑣潩⁮牥潲❲㬩਍††敲畴湲഻ 素਍਍†癥湥却畯捲⹥摡䕤敶瑮楌瑳湥牥✨灯湥Ⱗ⠠ 㸽笠਍††敲潣湮捥䑴汥祡㴠䤠䥎䥔䱁剟䍅乏䕎呃䑟䱅奁഻ †氠獡䕴牲牯㴠渠汵㭬਍††敲摮牥牅潲⡲㬩਍†⥽഻ 攠敶瑮潓牵散愮摤癅湥䱴獩整敮⡲洧獥慳敧Ⱗ栠湡汤卥牴慥䵭獥慳敧㬩਍†癥湥却畯捲⹥摡䕤敶瑮楌瑳湥牥✨楰杮Ⱗ⠠ 㸽笠素㬩਍†癥湥却畯捲⹥摡䕤敶瑮楌瑳湥牥✨牥潲❲‬⤨㴠‾ൻ †挠潬敳癅湥却畯捲⡥㬩਍††捳敨畤敬敒潣湮捥⡴匧䕓搠獩潣湮捥整❤㬩਍†⥽഻紊਍਍楷摮睯愮摤癅湥䱴獩整敮⡲戧晥牯略汮慯❤‬⤨㴠‾ൻ 挠敬牡敒潣湮捥呴浩牥⤨഻ 挠潬敳癅湥却畯捲⡥㬩਍⥽഻ഊ昊湵瑣潩⁮湥畳敲楈瑳牯呹杯汧⡥ ൻ 挠湯瑳猠捥楴湯㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨楨瑳牯⵹敳瑣潩❮㬩਍†潣獮⁴楴汴⁥‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤栧獩潴祲琭瑩敬⤧഻ 椠⁦ℨ敳瑣潩⁮籼℠楴汴⥥爠瑥牵㭮਍†晩⠠楴汴⹥畱牥卹汥捥潴⡲⌧楨瑳牯⵹潴杧敬⤧ 敲畴湲഻ 挠湯瑳戠湴㴠搠捯浵湥⹴牣慥整汅浥湥⡴戧瑵潴❮㬩਍†瑢⹮摩㴠✠楨瑳牯⵹潴杧敬㬧਍†瑢⹮汣獡乳浡⁥‽戧湴㬧਍†瑢⹮祴数㴠✠畢瑴湯㬧਍†瑢⹮瑳汹⹥慭杲湩敌瑦㴠✠瀸❸഻ 戠湴献瑥瑁牴扩瑵⡥愧楲ⵡ硥慰摮摥Ⱗ✠牴敵⤧഻ 戠湴琮硥䍴湯整瑮㴠✠離➼഻ 戠湴愮摤癅湥䱴獩整敮⡲挧楬正Ⱗ⠠ 㸽笠਍††潣獮⁴潣汬灡敳⁤‽敳瑣潩⹮汣獡䱳獩⹴潴杧敬✨獩挭汯慬獰摥⤧഻ †戠湴献瑥瑁牴扩瑵⡥愧楲ⵡ硥慰摮摥Ⱗ匠牴湩⡧挡汯慬獰摥⤩഻ †戠湴琮硥䍴湯整瑮㴠挠汯慬獰摥㼠✠離➺㨠✠離➼഻ 素㬩਍†楴汴⹥灡数摮桃汩⡤瑢⥮഻紊਍਍畦据楴湯挠浯異整潃牵獴搨瑡⥡笠਍†敲畴湲传橢捥⹴敫獹搨瑡⥡献牯⡴愨‬⥢㴠‾畎扭牥愨 ‭畎扭牥戨⤩഻紊਍਍畦据楴湯挠潬敮瑓瑡䙥牯瑓牯条⡥瑳瑡⥥笠਍†牴⁹ൻ †爠瑥牵⁮半乏瀮牡敳䨨体⹎瑳楲杮晩⡹瑳瑡ⱥ⠠敫ⱹ瘠污敵 㸽⠠敫⁹㴽‽氧杯‧‿湵敤楦敮⁤›慶畬⥥⤩഻ 素挠瑡档⠠牥⥲笠਍††潣獮汯⹥慷湲✨獛潣敲⁝湳灡桳瑯挠潬敮映楡敬❤‬牥⥲഻ †爠瑥牵⁮畮汬഻ 素਍ൽഊ昊湵瑣潩⁮汣湯䡥獩潴祲潆卲潴慲敧栨獩潴祲 ൻ 琠祲笠਍††敲畴湲䨠体⹎慰獲⡥半乏献牴湩楧祦栨獩潴祲簠⁼嵛⤩഻ 素挠瑡档⠠牥⥲笠਍††潣獮汯⹥慷湲✨獛潣敲⁝楨瑳牯⁹汣湯⁥慦汩摥Ⱗ攠牲㬩਍††敲畴湲嬠㭝਍†ൽ紊਍਍畦据楴湯瀠牥楳瑳湓灡桳瑯猨慴整‬楨瑳牯ⱹ琠⥳笠਍†晩⠠猡慴整簠⁼祴数景猠慴整℠㴽✠扯敪瑣⤧爠瑥牵㭮਍†潣獮⁴汣湯⁥‽汣湯卥慴整潆卲潴慲敧猨慴整㬩਍†晩⠠挡潬敮 敲畴湲഻ 挠湯瑳栠獩䍴潬敮㴠挠潬敮楈瑳牯䙹牯瑓牯条⡥楨瑳牯⥹഻ 琠祲笠਍††潣獮⁴慰汹慯⁤‽ൻ ††琠㩳琠⁳籼渠睥䐠瑡⡥⸩潴卉协牴湩⡧Ⱙ਍†††瑳瑡㩥挠潬敮ബ ††栠獩潴祲›楨瑳汃湯൥ †素഻ †氠捯污瑓牯条⹥敳䥴整⡭乓偁䡓呏卟佔䅒䕇䭟奅‬半乏献牴湩楧祦瀨祡潬摡⤩഻ 素挠瑡档⠠牥⥲笠਍††潣獮汯⹥慷湲✨獛潣敲⁝湳灡桳瑯瀠牥楳瑳映楡敬❤‬牥⥲഻ 素਍ൽഊ昊湵瑣潩⁮票牤瑡䙥潲卭潴慲敧⤨笠਍†牴⁹ൻ †挠湯瑳爠睡㴠氠捯污瑓牯条⹥敧䥴整⡭乓偁䡓呏卟佔䅒䕇䭟奅㬩਍††晩⠠爡睡 敲畴湲映污敳഻ †挠湯瑳瀠牡敳⁤‽半乏瀮牡敳爨睡㬩਍††晩⠠瀡牡敳⁤籼琠灹潥⁦慰獲摥℠㴽✠扯敪瑣‧籼℠慰獲摥献慴整簠⁼祴数景瀠牡敳⹤瑳瑡⁥㴡‽漧橢捥❴ ൻ ††爠瑥牵⁮慦獬㭥਍††ൽ †挠湯瑳猠慴整㴠瀠牡敳⹤瑳瑡㭥਍††慬整瑳楈瑳牯⁹‽牁慲⹹獩牁慲⡹慰獲摥栮獩潴祲 ‿慰獲摥栮獩潴祲㨠嬠㭝਍††湥畳敲慃摲䙳潲卭慮獰潨⡴瑳瑡⥥഻ †挠湯瑳挠畯瑲⁳‽潣灭瑵䍥畯瑲⡳瑳瑡⥥഻ †䌠問呒⁓‽潣牵獴഻ †甠摰瑡卥潨瑲畣獴敄捳楲瑰潩⡮㬩਍††潣獮⁴牰癥慂正灵㴠瀠敲㭶਍††牰癥㴠瀠敲䉶捡畫⁰籼笠㭽਍††潣牵獴昮牯慅档欨㴠‾ൻ ††椠⁦猨慴整歛⥝甠摰瑡䍥畯瑲欨‬瑳瑡孥嵫‬牰癥‬畣牲湥䱴湡Ⱨ笠愠湮畯据䍥㩢栠湡汤䅥湮畯据浥湥⁴⥽഻ †素㬩਍††牰癥㴠猠慴整഻ †爠湥敤䝲潬慢䡬獩潴祲氨瑡獥䡴獩潴祲㬩਍††晩⠠慰獲摥琮⥳笠਍†††潣獮⁴瑤㴠渠睥䐠瑡⡥慰獲摥琮⥳഻ ††椠⁦ℨ畎扭牥椮乳乡搨⹴敧呴浩⡥⤩ ൻ †††甠摰瑡䱥獡剴晥敲桳搨⥴഻ ††素਍††ൽ †爠瑥牵⁮牴敵഻ 素挠瑡档⠠牥⥲笠਍††潣獮汯⹥慷湲✨獛潣敲⁝湳灡桳瑯栠摹慲整映楡敬❤‬牥⥲഻ †爠瑥牵⁮慦獬㭥਍†ൽ紊਍਍畦据楴湯甠摰瑡䱥獡剴晥敲桳渨睯 ൻ 椠⁦渨睯 ൻ †氠獡剴晥敲桳慄整㴠渠睯഻ 素਍†潣獮⁴⁴‽畣牲湥呴⤨഻ 椠⁦ℨ慬瑳敒牦獥䑨瑡⥥笠਍††慬瑳敒牦獥周硥⹴整瑸潃瑮湥⁴‽⹴敭慴氮獡剴晥敲桳敎敶㭲਍††敲畴湲഻ 素਍†潣獮⁴楴敭㴠氠獡剴晥敲桳慄整琮䱯捯污呥浩卥牴湩⡧畣牲湥䱴捯污⡥⤩഻ 氠獡剴晥敲桳敔瑸琮硥䍴湯整瑮㴠映牯慭⡴⹴敭慴氮獡剴晥敲桳‬⁻楴敭素㬩਍ൽഊ昊湵瑣潩⁮敲牦獥乨癡慌杮慵敧⤨笠਍†潣獮⁴⁴‽畣牲湥呴⤨഻ 挠湯瑳氠湩獫㴠渠癡楬瑳焮敵祲敓敬瑣牯汁⡬愧⤧഻ 氠湩獫昮牯慅档⠨楬歮‬摩⥸㴠‾ൻ †挠湯瑳挠畯瑲㴠䌠問呒孓摩嵸഻ †椠⁦挨畯瑲 ൻ ††氠湩⹫整瑸潃瑮湥⁴‽潦浲瑡琨挮畯瑲慌敢ⱬ笠挠畯瑲素㬩਍††ൽ 素㬩਍†潣獮⁴楨瑳楌歮㴠渠癡楬瑳焮敵祲敓敬瑣牯✨孡牨晥∽栣獩潴祲猭捥楴湯崢⤧഻ 椠⁦栨獩䱴湩⁫☦琠栮獩潴祲⸿楴汴⥥栠獩䱴湩⹫整瑸潃瑮湥⁴‽⹴楨瑳牯⹹楴汴㭥਍ൽഊ昊湵瑣潩⁮敲牦獥䍨牡獤慌杮慵敧⤨笠਍†潣獮⁴⁴‽畣牲湥呴⤨഻ 䌠問呒⹓潦䕲捡⡨⁫㸽笠਍††潣獮⁴慣摲㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨潫瑲␭死恽㬩਍††晩⠠慣摲 ൻ ††挠湯瑳渠睥慃摲㴠洠歡䍥畯瑲慃摲欨‬畣牲湥䱴湡Ⱨ笠猠潨䅷湮畯据㩥琠畲⁥⥽഻ ††挠牡⹤湩敮䡲䵔⁌‽敮䍷牡⹤湩敮䡲䵔㭌਍†††潣獮⁴扣㴠挠牡⹤畱牥卹汥捥潴⡲⍠湡潮湵散␭死恽㬩਍†††晩⠠扣 ൻ †††挠⹢档捥敫⁤‽敧䅴湮畯据⡥⥫഻ †††挠⹢摡䕤敶瑮楌瑳湥牥✨档湡敧Ⱗ⠠ 㸽猠瑥湁潮湵散欨‬扣挮敨正摥⤩഻ ††素਍††ൽ †椠⁦瀨敲孶嵫 ൻ ††甠摰瑡䍥畯瑲欨‬牰癥歛ⱝ笠ⱽ挠牵敲瑮慌杮‬⁻湡潮湵散扃›慨摮敬湁潮湵散敭瑮素㬩਍††ൽ 素㬩਍਍†晩⠠楨瑳牯呹瑩敬☠…⹴楨瑳牯㽹琮瑩敬 楨瑳牯呹瑩敬琮硥䍴湯整瑮㴠琠栮獩潴祲琮瑩敬഻ 爠湥敤䝲潬慢䡬獩潴祲氨瑡獥䡴獩潴祲㬩਍ൽഊ昊湵瑣潩⁮敲摮牥慌杮慵敧⤨笠਍†潣獮⁴⁴‽畣牲湥呴⤨഻ 搠捯浵湥⹴潤畣敭瑮汅浥湥⹴慬杮㴠琠栮浴䱬湡㭧਍†潤畣敭瑮琮瑩敬㴠琠琮瑩敬഻ 椠⁦栨慥敤呲瑩敬 敨摡牥楔汴⹥整瑸潃瑮湥⁴‽⹴楴汴㭥਍†灵慤整桓牯捴瑵䑳獥牣灩楴湯⤨഻ 挠湯瑳氠癩䉥摡敧㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉✨楬敶戭摡敧⤧഻ 椠⁦氨癩䉥摡敧 楬敶慂杤⹥整瑸潃瑮湥⁴‽⹴楬敶慂杤⁥籼✠䥌䕖㬧਍†晩⠠慮⥶渠癡献瑥瑁牴扩瑵⡥愧楲ⵡ慬敢❬‬⹴慮䱶扡汥㬩਍†晩⠠慬杮慌敢⥬氠湡䱧扡汥琮硥䍴湯整瑮㴠琠氮湡畧条䱥扡汥഻ 椠⁦瀨畡敳瑂⥮瀠畡敳瑂⹮整瑸潃瑮湥⁴‽慰獵摥㼠琠瀮畡敳爮獥浵⁥›⹴慰獵⹥慰獵㭥਍†敲牦獥乨癡慌杮慵敧⤨഻ 爠晥敲桳慃摲䱳湡畧条⡥㬩਍†灵慤整慌瑳敒牦獥⡨㬩਍†敲摮牥牅潲⡲㬩਍†湥畳敲楈瑳牯呹杯汧⡥㬩਍ൽഊ昊湵瑣潩⁮灡汰䱹湡畧条⡥慬杮‬⁻歳灩慓敶㴠映污敳‬歳灩敓敬瑣㴠映污敳素㴠笠⥽笠਍†晩⠠吡䅒华䅌䥔乏孓慬杮⥝氠湡⁧‽䕄䅆䱕彔䅌䝎഻ 挠牵敲瑮慌杮㴠氠湡㭧਍†晩⠠猡楫印癡⥥氠捯污瑓牯条⹥敳䥴整⡭瀧敲敦牲摥氭湡畧条❥‬慬杮㬩਍†晩⠠猡楫印汥捥⁴☦氠湡卧汥捥⥴氠湡卧汥捥⹴慶畬⁥‽慬杮഻ 爠湥敤䱲湡畧条⡥㬩਍ൽഊ愊祳据映湵瑣潩⁮潢瑯瑳慲⡰ ൻ 挠湯瑳猠慮獰潨⁴‽睡楡⁴敦捴卨慮獰潨⡴㬩਍†晩⠠猡慮獰潨⥴笠਍††灵慤整慌瑳敒牦獥⡨㬩਍††敲畴湲഻ 素਍†潣獮⁴瑳瑡⁥‽湳灡桳瑯献慴整簠⁼絻഻ 氠瑡獥䡴獩潴祲㴠䄠牲祡椮䅳牲祡猨慮獰潨⹴楨瑳牯⥹㼠猠慮獰潨⹴楨瑳牯⁹›嵛഻ 爠湥敤䝲潬慢䡬獩潴祲氨瑡獥䡴獩潴祲㬩਍†湥畳敲慃摲䙳潲卭慮獰潨⡴瑳瑡⥥഻ 挠湯瑳挠浯異整䍤畯瑲⁳‽潣灭瑵䍥畯瑲⡳瑳瑡⥥഻ 䌠問呒⁓‽潣灭瑵摥潃牵獴഻ 甠摰瑡卥潨瑲畣獴敄捳楲瑰潩⡮㬩਍†潣灭瑵摥潃牵獴昮牯慅档欨㴠‾ൻ †椠⁦猨慴整歛⥝甠摰瑡䍥畯瑲欨‬瑳瑡孥嵫‬牰癥‬畣牲湥䱴湡Ⱨ笠愠湮畯据䍥㩢栠湡汤䅥湮畯据浥湥⁴⥽഻ 素㬩਍†牰癥㴠猠慴整഻ 挠湯瑳渠睯㴠渠睥䐠瑡⡥㬩਍†灵慤整慌瑳敒牦獥⡨潮⥷഻ 瀠牥楳瑳湓灡桳瑯瀨敲ⱶ氠瑡獥䡴獩潴祲‬潮⹷潴卉协牴湩⡧⤩഻紊਍਍晩⠠慰獵䉥湴 ൻ 瀠畡敳瑂⹮摡䕤敶瑮楌瑳湥牥✨汣捩❫‬⤨㴠‾ൻ †瀠畡敳⁤‽瀡畡敳㭤਍††慰獵䉥湴献瑥瑁牴扩瑵⡥愧楲ⵡ牰獥敳❤‬瑓楲杮瀨畡敳⥤㬩਍††潣獮⁴⁴‽畣牲湥呴⤨഻ †瀠畡敳瑂⹮整瑸潃瑮湥⁴‽慰獵摥㼠琠瀮畡敳爮獥浵⁥›⹴慰獵⹥慰獵㭥਍††晩⠠慰獵摥 ൻ ††挠敬牡敒潣湮捥呴浩牥⤨഻ ††挠潬敳癅湥却畯捲⡥㬩਍†††慬瑳牅潲⁲‽畮汬഻ ††爠湥敤䕲牲牯⤨഻ †素攠獬⁥ൻ ††爠捥湯敮瑣敄慬⁹‽义呉䅉彌䕒佃乎䍅彔䕄䅌㭙਍†††潣湮捥却牴慥⡭㬩਍††ൽ 素㬩਍⁽汥敳笠਍†慰獵摥㴠映污敳഻ 爠捥湯敮瑣敄慬⁹‽义呉䅉彌䕒佃乎䍅彔䕄䅌㭙਍†潣湮捥却牴慥⡭㬩਍ൽഊ椊⁦氨湡卧汥捥⥴笠਍†慬杮敓敬瑣愮摤癅湥䱴獩整敮⡲挧慨杮❥‬⤨㴠‾ൻ †愠灰祬慌杮慵敧氨湡卧汥捥⹴慶畬⥥഻ 素㬩਍ൽഊ愊灰祬慌杮慵敧挨牵敲瑮慌杮‬⁻歳灩慓敶›牴敵‬歳灩敓敬瑣›牴敵素㬩਍晩⠠慬杮敓敬瑣 慬杮敓敬瑣瘮污敵㴠挠牵敲瑮慌杮഻ഊ栊摹慲整牆浯瑓牯条⡥㬩਍਍潢瑯瑳慲⡰ഩ ⸠慣捴⡨牥⁲㸽笠਍††潣獮汯⹥牥潲⡲䈧潯獴牴灡映楡敬❤‬牥⥲഻ 素ഩ ⸠楦慮汬⡹⤨㴠‾ൻ †爠湥敤䱲湡畧条⡥㬩਍††潣湮捥却牴慥⡭㬩਍†⥽഻ഊ⼊ 牐癥湥⁴畦汬瀠条⁥敲潬摡漠⁮慮楶慧楴湯氠湩⁫汣捩獫਍晩⠠慮⥶笠਍†慮⹶摡䕤敶瑮楌瑳湥牥✨汣捩❫‬攨 㸽笠਍††潣獮⁴楬歮㴠攠琮牡敧⹴汣獯獥⡴愧桛敲幦∽∣❝㬩਍††晩⠠氡湩⥫爠瑥牵㭮਍††⹥牰癥湥䑴晥畡瑬⤨഻ †挠湯瑳栠獡⁨‽楬歮朮瑥瑁牴扩瑵⡥栧敲❦㬩਍††潣獮⁴慴杲瑥摉㴠栠獡⹨畳獢牴湩⡧⤱※⼯爠浥癯⁥ണ †挠湯瑳琠牡敧⁴‽潤畣敭瑮朮瑥汅浥湥䉴䥹⡤慴杲瑥摉㬩਍††晩⠠慴杲瑥 ൻ ††琠牡敧⹴捳潲汬湉潴楖睥笨戠桥癡潩㩲✠浳潯桴Ⱗ戠潬正›猧慴瑲‧⥽഻ ††⼠ 灕慤整唠䱒眠瑩潨瑵爠汥慯൤ ††眠湩潤⹷楨瑳牯⹹異桳瑓瑡⡥畮汬‬✧‬慨桳㬩਍††ൽ 素㬩਍ൽഊ搊捯浵湥⹴摡䕤敶瑮楌瑳湥牥✨敫摹睯❮‬攨 㸽笠਍†晩⠠⹥污䭴祥簠⁼⹥瑣汲敋⁹籼攠洮瑥䭡祥 敲畴湲഻ 挠湯瑳琠牡敧⁴‽⹥慴杲瑥഻ 挠湯瑳椠䙳敩摬㴠琠牡敧⁴☦⠠慴杲瑥琮条慎敭㴠㴽✠义啐❔簠⁼慴杲瑥琮条慎敭㴠㴽✠䕔员剁䅅‧籼琠牡敧⹴慴乧浡⁥㴽‽匧䱅䍅❔簠⁼慴杲瑥椮䍳湯整瑮摅瑩扡敬㬩਍†晩⠠獩楆汥⥤爠瑥牵㭮਍†潣獮⁴敫⁹‽⹥敫㭹਍†晩⠠帯ㅛ㤭⑝ⸯ整瑳欨祥⤩笠਍††潣獮⁴摩⁸‽畎扭牥欨祥 ‭㬱਍††潣獮⁴潣牵⁴‽佃剕協楛硤㭝਍††晩⠠潣牵⥴笠਍†††潣獮⁴汥㴠搠捯浵湥⹴敧䕴敬敭瑮祂摉怨潫瑲␭捻畯瑲恽㬩਍†††晩⠠汥 汥献牣汯䥬瑮噯敩⡷⁻敢慨楶牯›猧潭瑯❨‬汢捯㩫✠瑳牡❴素㬩਍††ൽ 素਍⥽഻
