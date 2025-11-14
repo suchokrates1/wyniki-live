@@ -33,7 +33,7 @@
         <h2>Panel wyłączony</h2>
         <p>{{ admin_disabled_message }}</p>
         <p>
-          Ustaw zmienną ┼Ťrodowiskową <code>ADMIN_PASSWORD</code>, a nastĘpnie zrestartuj usługĘ,
+          Ustaw zmienną środowiskową <code>ADMIN_PASSWORD</code>, a następnie zrestartuj usługę,
           aby włączyć logowanie administratora.
         </p>
       </section>
@@ -42,8 +42,8 @@
         id="login-section"
         {% if is_authenticated or not admin_enabled %}hidden{% endif %}
       >
-        <h2>DostĘp chroniony</h2>
-        <p>Podaj hasło administratora, aby uzyskać dostĘp do historii spotkań.</p>
+        <h2>Dostęp chroniony</h2>
+        <p>Podaj hasło administratora, aby uzyskać dostęp do historii spotkań.</p>
         <form id="admin-login-form">
           <label for="admin-password">Hasło</label>
           <input id="admin-password" name="password" type="password" required />
@@ -56,7 +56,7 @@
         <header class="section-header">
           <h2>Dashboard Kortów</h2>
           <div class="section-actions">
-            <button id="dashboard-refresh" type="button" data-tooltip="Od┼Ťwież widok kortów">­čöä Od┼Ťwież</button>
+            <button id="dashboard-refresh" type="button" data-tooltip="Odśwież widok kortów">­čöä Odśwież</button>
           </div>
         </header>
         <div id="courts-grid" class="courts-grid">
@@ -68,7 +68,7 @@
         <header class="section-header">
           <h2>Transmisja YouTube</h2>
           <div class="section-actions">
-            <button id="refresh-viewers" type="button" data-tooltip="Pobierz aktualną liczbę widzów">Od┼Ťwież widzów</button>
+            <button id="refresh-viewers" type="button" data-tooltip="Pobierz aktualną liczbę widzów">Odśwież widzów</button>
           </div>
         </header>
         <form id="youtube-config-form" class="youtube-config-form">
@@ -81,7 +81,7 @@
           <p class="youtube-config-note">
             Wprowadź klucz API oraz identyfikator transmisji, aby pobierać liczbę widzów.
           </p>
-          <button type="submit">Zapisz konfiguracjĘ</button>
+          <button type="submit">Zapisz konfigurację</button>
         </form>
         <p class="viewer-info">
           Aktualna liczba widzów: <strong id="viewer-count">0</strong>
@@ -116,9 +116,9 @@
                 <dd class="uno-metric__hint">Dane z nagłówka UNO</dd>
               </div>
               <div class="uno-metric">
-                <dt>Godzinowy limit <span class="live-indicator" style="color: #4CAF50; font-size: 0.8em;">ÔŚĆ</span></dt>
+                <dt>Godzinowy limit <span class="live-indicator" style="color: #4CAF50; font-size: 0.8em;">●</span></dt>
                 <dd id="uno-hourly-summary">—</dd>
-                <dd class="uno-metric__hint">Okno przesuwne 60 min ÔÇó Od┼Ťwieżane co 2s</dd>
+                <dd class="uno-metric__hint">Okno przesuwne 60 min ÔÇó Odświeżane co 2s</dd>
               </div>
               <div class="uno-metric">
                 <dt>Status</dt>
@@ -142,7 +142,7 @@
                     max="100"
                     step="1"
                   />
-                  <label for="uno-slowdown-factor">Przepu┼Ťć co n-te zapytanie</label>
+                  <label for="uno-slowdown-factor">Przepuść co n-te zapytanie</label>
                   <input id="uno-slowdown-factor" name="slowdown_factor" type="number" min="1" step="1" />
                   <label for="uno-slowdown-sleep">Dodatkowa pauza (s)</label>
                   <input id="uno-slowdown-sleep" name="slowdown_sleep" type="number" min="0" step="0.5" />
@@ -181,12 +181,12 @@
         <header class="section-header">
           <h2>Listy zawodników</h2>
           <div class="section-actions">
-            <button id="refresh-players" type="button" data-tooltip="Od┼Ťwież listĘ graczy z serwera">Od┼Ťwież</button>
+            <button id="refresh-players" type="button" data-tooltip="Odśwież listę graczy z serwera">Odśwież</button>
           </div>
         </header>
         <form id="player-form" class="player-form">
           <div class="player-form-grid">
-            <label for="player-name-input">ImiĘ i nazwisko</label>
+            <label for="player-name-input">Imię i nazwisko</label>
             <input id="player-name-input" name="name" type="text" required />
             <label for="player-list-input">Lista</label>
             <input id="player-list-input" name="list_name" type="text" placeholder="default" />
@@ -210,7 +210,7 @@
             <input id="player-flag-url-input" name="flag_url" type="url" placeholder="https://" />
           </div>
           <p class="player-form-note">
-            Grupa i kod kraju są opcjonalne. Format importu: <code>ImiĘ Nazwisko Grupa KOD</code> (np. John Smith B1 us)
+            Grupa i kod kraju są opcjonalne. Format importu: <code>Imię Nazwisko Grupa KOD</code> (np. John Smith B1 us)
           </p>
           <button type="submit">Dodaj zawodnika</button>
         </form>
@@ -224,7 +224,7 @@
             required
           />
           <button type="submit">Importuj</button>
-          <p class="player-import-note">Format: ImiĘ Nazwisko kod_kraju (np. Jan Kowalski PL).</p>
+          <p class="player-import-note">Format: Imię Nazwisko kod_kraju (np. Jan Kowalski PL).</p>
         </form>
         <datalist id="flag-code-options"></datalist>
         
@@ -244,7 +244,7 @@
             <option value="B3">B3</option>
             <option value="B4">B4</option>
           </select>
-          <button id="players-clear-filters" class="button-secondary" type="button">Wyczy┼Ťć filtry</button>
+          <button id="players-clear-filters" class="button-secondary" type="button">Wyczyść filtry</button>
         </div>
         
         <div class="players-table-wrapper">
@@ -253,13 +253,13 @@
               <tr>
                 <th style="width: 48px;">Flaga</th>
                 <th class="sortable" data-sort="name">
-                  ImiĘ i nazwisko <span class="sort-icon">Ôçů</span>
+                  Imię i nazwisko <span class="sort-icon">↕</span>
                 </th>
                 <th class="sortable" data-sort="list">
-                  Lista <span class="sort-icon">Ôçů</span>
+                  Lista <span class="sort-icon">↕</span>
                 </th>
                 <th class="sortable" data-sort="group">
-                  Grupa <span class="sort-icon">Ôçů</span>
+                  Grupa <span class="sort-icon">↕</span>
                 </th>
                 <th>Kod kraju</th>
                 <th>URL flagi</th>
@@ -309,7 +309,7 @@
         <header class="section-header">
           <h2>Korty</h2>
           <div class="section-actions">
-            <button id="refresh-courts" type="button">Od┼Ťwież</button>
+            <button id="refresh-courts" type="button">Odśwież</button>
           </div>
         </header>
         <form id="court-form" class="court-form">
@@ -351,7 +351,7 @@
         <header class="section-header">
           <h2>Historia spotkań</h2>
           <div class="section-actions">
-            <button id="refresh-history" type="button">Od┼Ťwież</button>
+            <button id="refresh-history" type="button">Odśwież</button>
           </div>
         </header>
         <div class="history-table-wrapper">
