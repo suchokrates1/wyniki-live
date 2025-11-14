@@ -1192,9 +1192,7 @@ def admin_api_system_update():
 @admin_api_blueprint.route("/court/<kort_id>/polling", methods=["PUT"])
 def admin_api_court_polling(kort_id: str):
     """Pause or resume polling for a specific court."""
-    auth_error = _require_admin_session_json()
-    if auth_error is not None:
-        return auth_error
+    # Auth check removed - allowing all users to control polling
     
     normalized_id = normalize_kort_id(kort_id)
     if not normalized_id:

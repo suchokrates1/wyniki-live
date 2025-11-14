@@ -128,6 +128,11 @@ function ensureCardsFromSnapshot(snap) {
       cb.checked = getAnnounce(k);
       cb.addEventListener('change', () => setAnnounce(k, cb.checked));
     }
+    // Add event listener for pause button
+    const pauseBtn = card.querySelector('.court-pause-btn');
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', () => toggleCourtPolling(k));
+    }
     grid.appendChild(card);
   });
 }
@@ -295,6 +300,68 @@ async function fetchSnapshot() {
     lastError = { type: 'fetch', message: e.message };
     renderError();
     return null;
+  }
+}
+
+async function toggleCourtPolling(kortId) {
+  const btn = document.querySelector(`.court-pause-btn[data-kort-id="${kortId}"]`);
+  if (!btn) return;
+  
+  const currentlyPaused = btn.getAttribute('aria-pressed') === 'true';
+  const newPausedState = !currentlyPaused;
+  
+  // Optimistic UI update
+  btn.setAttribute('aria-pressed', String(newPausedState));
+  btn.disabled = true;
+  const icon = btn.querySelector('.btn-icon');
+  const text = btn.querySelector('.btn-text');
+  const t = currentT();
+  
+  if (newPausedState) {
+    if (icon) icon.textContent = '▶️';
+    if (text) text.textContent = t.resumePolling || 'Resume';
+  } else {
+    if (icon) icon.textContent = '⏸️';
+    if (text) text.textContent = t.pausePolling || 'Pause';
+  }
+  
+  try {
+    const r = await fetch(`/api/admin/court/${kortId}/polling`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paused: newPausedState })
+    });
+    
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    
+    if (!data.ok) {
+      throw new Error(data.error || 'Failed to toggle polling');
+    }
+    
+    // Update button state based on server response
+    btn.setAttribute('aria-pressed', String(data.paused));
+    if (data.paused) {
+      if (icon) icon.textContent = '▶️';
+      if (text) text.textContent = t.resumePolling || 'Resume';
+    } else {
+      if (icon) icon.textContent = '⏸️';
+      if (text) text.textContent = t.pausePolling || 'Pause';
+    }
+  } catch (err) {
+    console.error('Toggle polling failed:', err);
+    // Revert optimistic UI update
+    btn.setAttribute('aria-pressed', String(currentlyPaused));
+    if (currentlyPaused) {
+      if (icon) icon.textContent = '▶️';
+      if (text) text.textContent = t.resumePolling || 'Resume';
+    } else {
+      if (icon) icon.textContent = '⏸️';
+      if (text) text.textContent = t.pausePolling || 'Pause';
+    }
+    alert(t.errors?.togglePolling || 'Failed to toggle polling: ' + err.message);
+  } finally {
+    btn.disabled = false;
   }
 }
 
