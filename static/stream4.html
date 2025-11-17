@@ -98,7 +98,7 @@
 
         <div class="video-wrapper">
             <video id="player" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto">
-                                <source src="http://100.110.194.46:8089/hls/stream4/live.m3u8" type="application/x-mpegURL">
+                                <source src="/hls/stream4/live.m3u8" type="application/x-mpegURL">
             </video>
             
             <div class="status">
@@ -147,7 +147,7 @@
             setTimeout(() => {
                 console.log('Sprawdzam dostępność streamu...');
                 player.src({
-                    src: `http://100.110.194.46:8089/hls/stream${currentCourt}/live.m3u8`,
+                    src: `/hls/stream${currentCourt}/live.m3u8`,
                     type: 'application/x-mpegURL'
                 });
             }, 10000);
@@ -185,7 +185,7 @@
             
             // Switch stream
             player.src({
-                src: `http://100.110.194.46:8089/hls/stream${court}/live.m3u8`,
+                src: `/hls/stream${court}/live.m3u8`,
                 type: 'application/x-mpegURL'
             });
             player.play();
