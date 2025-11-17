@@ -98,7 +98,7 @@
 
         <div class="video-wrapper">
             <video id="player" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto">
-                <source src="https://stream.vestmedia.pl/stream2/live.m3u8" type="application/x-mpegURL">
+                <source src="http://100.110.194.46:8089/hls/stream2/live.m3u8" type="application/x-mpegURL">
             </video>
             
             <div class="status">
@@ -142,15 +142,15 @@
 
         player.on('error', (e) => {
             console.error('Błąd streama:', e);
-            document.getElementById('bitrate').textContent = 'Stream niedostępny';
-            // Retry after 5 seconds
+            document.getElementById('bitrate').textContent = 'Stream niedostępny - Czekam na transmisję...';
+            player.poster('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDgwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMUUyOTNCIi8+Cjx0ZXh0IHg9IjQwMCIgeT0iMjI1IiBmaWxsPSIjNjY3RUVBIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0Ij7wn46+IFN0cmVhbSBuaWVkb3N0xJlwbnk8L3RleHQ+Cjx0ZXh0IHg9IjQwMCIgeT0iMjY1IiBmaWxsPSIjOTRBM0I4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2Ij5DemVrYW0gbmEgdHJhbnNtaXNqxJkuLi48L3RleHQ+Cjwvc3ZnPgo=');
             setTimeout(() => {
-                console.log('Ponowna próba połączenia...');
+                console.log('Sprawdzam dostępność streamu...');
                 player.src({
-                    src: `https://stream.vestmedia.pl/stream${currentCourt}/live.m3u8`,
+                    src: `http://100.110.194.46:8089/hls/stream${currentCourt}/live.m3u8`,
                     type: 'application/x-mpegURL'
                 });
-            }, 5000);
+            }, 10000);
         });
 
         // Add waiting/loading handler
