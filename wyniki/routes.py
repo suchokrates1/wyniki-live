@@ -2012,22 +2012,18 @@ def api_uno_exec(kort_id: str):
 
 @blueprint.route("/stream<int:court_num>")
 def stream_player(court_num):
-    """Proxy dla video streamu - zwraca HTML player."""
+    """Serve stream player HTML for court."""
     if court_num not in [1, 2, 3, 4]:
         abort(404)
     
-    # Proxy do nginx-rtmp kontenera
-    import requests
+    # Serve stream HTML files from static directory
     try:
-        resp = requests.get(
-            f"http://nginx-rtmp/stream{court_num}",
-            timeout=5,
-            headers={"Host": request.host}
-        )
-        return Response(resp.content, status=resp.status_code, content_type=resp.headers.get('content-type', 'text/html'))
-    except requests.RequestException as e:
-        log.error(f"Stream proxy error: {e}")
-        abort(502)
+        response = send_from_directory(STATIC_DIR, f'stream{court_num}.html')
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+    except FileNotFoundError:
+        log.error(f"Stream HTML file not found: stream{court_num}.html")
+        abort(404)
 
 
 @blueprint.route("/hls/<path:subpath>")
