@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Stream - Kort 4</title>
+    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            color: #fff;
+            padding: 1rem;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { 
+            text-align: center; 
+            margin-bottom: 1.5rem; 
+            font-size: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .video-wrapper {
+            position: relative;
+            background: #1e293b;
+            border-radius: 1rem;
+            padding: 1rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .video-js { 
+            width: 100%; 
+            height: 70vh;
+            border-radius: 0.5rem;
+        }
+        .status {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #334155;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            flex-wrap: wrap;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .court-selector {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        .court-btn {
+            padding: 0.5rem 1rem;
+            background: #334155;
+            border: 2px solid transparent;
+            border-radius: 0.5rem;
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .court-btn:hover {
+            background: #475569;
+        }
+        .court-btn.active {
+            background: #667eea;
+            border-color: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎾 Live Stream - Kort 4</h1>
+        
+        <div class="court-selector">
+            <button class="court-btn" onclick="switchCourt(1)">Kort 1</button>
+            <button class="court-btn" onclick="switchCourt(2)">Kort 2</button>
+            <button class="court-btn" onclick="switchCourt(3)">Kort 3</button>
+            <button class="court-btn active" onclick="switchCourt(4)">Kort 4</button>
+        </div>
+
+        <div class="video-wrapper">
+            <video id="player" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto">
+                <source src="https://stream.vestmedia.pl/stream4/live.m3u8" type="application/x-mpegURL">
+            </video>
+            
+            <div class="status">
+                <div class="status-item">
+                    <div class="status-dot"></div>
+                    <span>Na żywo</span>
+                </div>
+                <div class="status-item">
+                    <span id="bitrate">Ładowanie...</span>
+                </div>
+                <div class="status-item">
+                    <span id="latency">Opóźnienie: ~5s</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+    <script>
+        let currentCourt = 4;
+        const player = videojs('player', {
+            liveui: true,
+            controls: true,
+            autoplay: true,
+            preload: 'auto',
+            fluid: false,
+            html5: {
+                vhs: {
+                    enableLowInitialPlaylist: true,
+                    smoothQualityChange: true,
+                    overrideNative: true
+                },
+                nativeAudioTracks: false,
+                nativeVideoTracks: false
+            }
+        });
+
+        player.on('loadedmetadata', () => {
+            console.log('Stream załadowany');
+        });
+
+        player.on('error', (e) => {
+            console.error('Błąd streama:', e);
+            document.getElementById('bitrate').textContent = 'Stream niedostępny';
+            // Retry after 5 seconds
+            setTimeout(() => {
+                console.log('Ponowna próba połączenia...');
+                player.src({
+                    src: `https://stream.vestmedia.pl/stream${currentCourt}/live.m3u8`,
+                    type: 'application/x-mpegURL'
+                });
+            }, 5000);
+        });
+
+        // Add waiting/loading handler
+        player.on('waiting', () => {
+            document.getElementById('bitrate').textContent = 'Buforowanie...';
+        });
+
+        player.on('playing', () => {
+            console.log('Stream odtwarzany');
+        });
+
+        // Bitrate monitoring
+        setInterval(() => {
+            const tech = player.tech({ IWillNotUseThisInPlugins: true });
+            if (tech && tech.vhs && tech.vhs.playlists && tech.vhs.playlists.media_) {
+                const bandwidth = tech.vhs.playlists.media_.attributes.BANDWIDTH;
+                if (bandwidth) {
+                    document.getElementById('bitrate').textContent = 
+                        `${(bandwidth / 1000000).toFixed(2)} Mbps`;
+                }
+            }
+        }, 2000);
+
+        function switchCourt(court) {
+            currentCourt = court;
+            document.querySelector('h1').textContent = `🎾 Live Stream - Kort ${court}`;
+            
+            // Update active button
+            document.querySelectorAll('.court-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx + 1 === court);
+            });
+            
+            // Switch stream
+            player.src({
+                src: `https://stream.vestmedia.pl/stream${court}/live.m3u8`,
+                type: 'application/x-mpegURL'
+            });
+            player.play();
+        }
+    </script>
+</body>
+</html>
