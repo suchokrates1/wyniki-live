@@ -27,24 +27,6 @@ class Settings(BaseSettings):
     # Admin
     admin_password: Optional[str] = None
     
-    # UNO API
-    uno_rate_limit_hourly: int = 600
-    uno_rate_limit_warn: int = 500
-    uno_requests_enabled: bool = True
-    
-    # Polling intervals
-    point_interval_await_names: float = 30.0
-    point_interval_prematch: float = 12.0
-    point_interval_in_match: float = 10.0
-    name_interval_await_names: float = 5.0
-    name_interval_prematch: float = 30.0
-    name_interval_in_match: float = 600.0
-    
-    # Throttling
-    global_activity_multiplier_30min: float = 1.2
-    global_activity_multiplier_60min: float = 1.5
-    global_activity_multiplier_90min: float = 2.0
-    
     # Logging
     log_level: str = "INFO"
     log_format: str = "json"  # "json" or "console"
@@ -52,12 +34,6 @@ class Settings(BaseSettings):
     # History
     match_history_size: int = 100
     log_entries_per_court: int = 50
-    
-    # UNO Throttling (from original config)
-    uno_hourly_limit_per_court: int = 100
-    uno_hourly_slowdown_threshold: float = 0.8
-    uno_hourly_slowdown_factor: int = 2
-    uno_hourly_slowdown_sleep_seconds: float = 1.0
     
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent
