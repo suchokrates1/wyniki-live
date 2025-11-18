@@ -1,262 +1,199 @@
-# wyniki-live
+# Wyniki Live - Tennis Score Display System
 
-System do wyświetlania wyników tenisowych na żywo z integracją UNO API, panelem administracyjnym i wsparciem dla wielu języków.
+Live tennis scoring system with UNO API integration, admin panel, multilingual support, and live streaming.
 
-## ✨ Funkcje
+## 🎯 Quick Links
 
-- 🎾 **Wyświetlanie wyników na żywo** - Real-time scores dla wielu kortów
-- 🌍 **Wielojęzyczność** - PL, EN, DE, IT, ES
-- 👨‍💼 **Panel administratora** - Zarządzanie historią, kortami, graczami
-- 🚀 **UNO API Integration** - Polling, rate limiting, activity tracking
-- 🏁 **195+ flag krajów** - Predefiniowany katalog flag dla wszystkich graczy
-- ♿ **Accessibility** - ARIA labels, screen reader support
-- 📺 **YouTube viewers** - Integracja z YouTube API
-- 🐳 **Docker ready** - Gotowa konteneryzacja
+- **📖 [Deployment Guide](DEPLOYMENT.md)** - SSH access, deployment, troubleshooting
+- **🌐 Live Site**: https://score.vestmedia.pl
+- **🎥 Streaming**: https://score.vestmedia.pl/stream1-4
+- **📚 [API Documentation](API.md)** - Complete API reference
 
-## 📋 Wymagania
+## ✨ Features
 
-- Python 3.10+
-- Flask 3.0+
-- SQLite3
-- (Opcjonalnie) Docker & Docker Compose
+- 🎾 **Real-time Scores** - Live updates for 4 courts
+- 🎥 **Live Streaming** - HLS streaming with Video.js players
+- 🌍 **Multilingual** - PL, EN, DE, IT, ES
+- 👨‍💼 **Admin Panel** - Match history, court management, player database
+- 🚀 **UNO API Integration** - Smart polling with rate limiting
+- 🏁 **195+ Country Flags** - Complete flag database
+- 🐳 **Docker Ready** - Production-ready containerization
 
-## 🚀 Szybki start
+## 🏗️ Architecture
 
-### Instalacja lokalna
+### Stack
+- **Backend**: Flask 3.0 + Python 3.11
+- **Database**: SQLite3
+- **Streaming**: nginx-rtmp + HLS
+- **Proxy**: Cloudflare + Traefik
+- **Deployment**: Docker Compose
 
-1. **Sklonuj repozytorium:**
-   ```bash
-   git clone https://github.com/suchokrates1/wyniki-live.git
-   cd wyniki-live
-   ```
+### Services
+- **wyniki-tenis** - Main Flask app (port 8087)
+- **wyniki-rtmp** - nginx-rtmp server (ports 1935, 8089)
 
-2. **Zainstaluj zależności:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 🚀 Quick Start
 
-3. **Skonfiguruj środowisko:**
-   ```bash
-   cp .env.example .env
-   # Edytuj .env i uzupełnij wymagane wartości
-   ```
-
-4. **Uruchom aplikację:**
-   ```bash
-   python app.py
-   ```
-
-5. **Otwórz w przeglądarce:**
-   ```
-   http://localhost:5000
-   ```
-
-### Docker
+### Local Development
 
 ```bash
-docker-compose up -d
+# Clone repository
+git clone https://github.com/suchokrates1/wyniki-live.git
+cd wyniki-live
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# Run locally
+python app.py
 ```
 
-## ⚙️ Konfiguracja
+Open http://localhost:5000 in your browser.
 
-- `ADMIN_PASSWORD` – hasło umożliwiające zalogowanie do panelu administracyjnego. Po uwierzytelnieniu administrator może edytować oraz usuwać rekordy historii poprzez interfejs webowy lub dedykowane endpointy API. Gdy zmienna nie jest ustawiona, panel `/admin` pozostaje dostępny, ale wyświetla informację o konieczności konfiguracji zamiast błędu 404.
+### Docker Deployment
 
-Aby rozpocząć konfigurację środowiska:
-
-1. Skopiuj plik przykładowy: `cp .env.example .env`.
-2. Uzupełnij wartości zmiennych środowiskowych w `.env` zgodnie z potrzebami instalacji.
-
-Zobacz `.env.example` dla pełnej listy dostępnych opcji konfiguracji.
-
-## Usuwanie wpisów z historii
-
-Publiczny endpoint `/delete` został usunięty. Aby skasować wpis z historii należy:
-
-1. Zalogować się w panelu `/admin` używając hasła administratora.
-2. Skorzystać z przycisku „Usuń” przy wybranym rekordzie lub wysłać żądanie `DELETE /api/admin/history/<id>` z aktywną sesją administracyjną.
-
-Żądania API bez poprawnej sesji otrzymają odpowiedź `401 Unauthorized`, a próba usunięcia nieistniejącego rekordu zakończy się statusem `404 Not Found`.
-
-## Pliki do pobrania
-
-- Endpoint `/download` udostępnia pierwszy (alfabetycznie) archiwalny plik `.zip` znajdujący się w katalogu `download/`. Jeśli katalog jest pusty lub zawiera wyłącznie pliki o innych rozszerzeniach, żądanie zwróci `404 Not Found`.
-
-## ♿ Dostępność
-
-- Każda karta kortu otrzymuje dynamiczny `aria-label` zbudowany ze zsumowanych wyników meczu. Tekst jest nadpisywany jednocześnie na elemencie `<section>` oraz liście `<dl class="score-list">`, dzięki czemu czytniki ekranu odczytują pełne podsumowanie w momencie przejścia fokusem na kartę – niezależnie od ustawienia opcji „Automatyczny odczyt".
-- Przełącznik „Automatyczny odczyt" jedynie zapisuje preferencję w `localStorage`; ponieważ moduł `announce()` został pozostawiony jako no-op (brak aktywnego regionu live), samo zaznaczenie pola nie zmienia sposobu, w jaki screen reader odczytuje `aria-label`.
-
-## 📚 Dokumentacja
-
-- **[API.md](API.md)** - Kompletna dokumentacja API endpoints
-- **[.cursorrules](.cursorrules)** - Informacje architektoniczne dla AI (wzorce kodowania, kluczowe decyzje)
-
-## 🧪 Testowanie
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete deployment guide.
 
 ```bash
-# Uruchom testy
+# Quick deployment to server
+ssh -i ~/.ssh/wyniki_minipc suchokrates1@100.110.194.46 \
+  "cd ~/count && git pull && docker compose build wyniki && docker compose up -d wyniki"
+```
+
+## 📡 API Endpoints
+
+### Public
+- `GET /` - Main scoreboard
+- `GET /stream1-4` - Stream players
+- `GET /api/match-data` - Current match data
+- `GET /hls/streamX/live.m3u8` - HLS streams (proxied)
+
+### Admin (requires authentication)
+- `POST /admin/login` - Admin login
+- `GET /admin` - Admin panel
+- `GET /api/admin/history` - Match history
+- `POST /api/admin/history` - Create history entry
+- `PUT /api/admin/history/<id>` - Update entry
+- `DELETE /api/admin/history/<id>` - Delete entry
+
+See **[API.md](API.md)** for complete API documentation.
+
+## 🎥 Streaming
+
+### RTMP Ingest (OBS Studio)
+```
+Server: rtmp://100.110.194.46/live
+Stream Key: stream1, stream2, stream3, or stream4
+```
+
+### HLS Playback
+Streams available at:
+- https://score.vestmedia.pl/hls/stream1/live.m3u8
+- https://score.vestmedia.pl/hls/stream2/live.m3u8
+- https://score.vestmedia.pl/hls/stream3/live.m3u8
+- https://score.vestmedia.pl/hls/stream4/live.m3u8
+
+## ⚙️ Configuration
+
+Key environment variables in `.env`:
+
+```bash
+# UNO API Configuration
+UNO_BASE=https://app.overlays.uno/apiv2/controlapps
+KORT1_ID=your_court1_id
+KORT2_ID=your_court2_id
+KORT3_ID=your_court3_id
+KORT4_ID=your_court4_id
+UNO_AUTH_BEARER=your_bearer_token
+
+# Rate Limiting
+RPM_PER_COURT=55  # Requests per minute per court
+BURST=8           # Burst allowance
+
+# Admin Panel
+ADMIN_PASSWORD=your_secure_password
+
+# Domain
+PUBLIC_HOST=score.vestmedia.pl
+```
+
+See `.env.example` for all configuration options.
+
+## 🧪 Testing
+
+```bash
+# Run all tests
 pytest
 
-# Z pokryciem kodu
+# With coverage report
 pytest --cov=wyniki --cov-report=html
 
-# Testy konkretnego modułu
+# Specific test file
 pytest tests/test_match_time.py
+
+# Watch mode
+pytest-watch
 ```
 
-## 🛠️ Development
-
-### Instalacja narzędzi developerskich
+## 🛠️ Development Tools
 
 ```bash
+# Install dev dependencies
 pip install -r requirements-dev.txt
-```
 
-### Code Quality Tools
-
-```bash
 # Type checking
 mypy wyniki/
 
 # Code formatting
 black wyniki/ tests/
 
-# Import sorting
-isort wyniki/ tests/
-
 # Linting
-flake8 wyniki/ tests/
+flake8 wyniki/
 
-# Security checks
+# Security scan
 bandit -r wyniki/
-```
 
-### Pre-commit hooks
-
-```bash
-# Zainstaluj pre-commit hooks
+# Pre-commit hooks
 pre-commit install
-
-# Uruchom manualnie
 pre-commit run --all-files
 ```
 
-## 🧩 UNO Player Picker - Wtyczka Chrome v0.3.11
-
-Projekt zawiera wtyczkę Chrome do integracji z UNO Overlays:
-
-### Funkcje wtyczki
-- 🎯 **Dynamiczne pobieranie graczy** - Integracja z `/api/players`
-- 🎾 **Tryb debla** - Wybór 2 zawodników z formatowaniem `Nazwisko1/Nazwisko2`
-- 🏴 **Automatyczne flagi** - Ustawianie flag przez API
-- 🔍 **Wyszukiwanie** - Szybkie filtrowanie listy
-- 💾 **Cache** - 5-minutowy cache dla optymalizacji
-
-### Pobierz wtyczkę
-
-**Bezpośredni link:** `https://score.vestmedia.pl/download`
-
-Plik: `uno-picker-v0.3.11.crx` (17.8 KB)  
-**Wsparcie:** Edge Canary na tabletach ✅
-
-### Instalacja wtyczki
-
-```bash
-# Metoda 1: Z repozytorium (dev)
-1. Wejdź na chrome://extensions/
-2. Włącz "Tryb developera"
-3. Kliknij "Załaduj rozpakowane rozszerzenie"
-4. Wybierz folder: wyniki-live/uno-picker/
-
-# Metoda 2: Z pliku .crx (production)
-1. Pobierz: https://score.vestmedia.pl/download
-2. Rozpakuj uno-picker-v0.3.11.crx (to archiwum ZIP)
-3. Chrome → chrome://extensions/ → "Załaduj rozpakowane"
-4. Wybierz rozpakowany folder
-```
-
-### Dokumentacja wtyczki
-- **[uno-picker/README.md](uno-picker/README.md)** - Pełna dokumentacja funkcji
-- **[uno-picker/INSTALLATION.md](uno-picker/INSTALLATION.md)** - Szczegółowa instrukcja instalacji
-- **[uno-picker/CHANGELOG.md](uno-picker/CHANGELOG.md)** - Historia zmian
-
-### Wymagania
-- Backend wyniki-live uruchomiony (API dostępne)
-- Chrome/Edge 88+ (Manifest v3)
-- Dostęp do `app.overlays.uno`
-
-Szczegóły: Zobacz [uno-picker/README.md](uno-picker/README.md)
-
-## 🏗️ Architektura
+## 📁 Project Structure
 
 ```
 wyniki-live/
-├── app.py                 # Entrypoint aplikacji
-├── wyniki/                # Główny pakiet
-│   ├── __init__.py
-│   ├── web.py            # Flask app factory
-│   ├── routes.py         # Wszystkie endpointy (1850+ LOC)
-│   ├── database.py       # Warstwa dostępu do SQLite
-│   ├── state.py          # Zarządzanie stanem, SSE, UNO API
-│   ├── query_system.py   # System zapytań
-│   ├── poller.py         # UNO API poller
-│   ├── config.py         # Konfiguracja
-│   └── utils.py          # Funkcje pomocnicze
-├── static/
-│   ├── js/
-│   │   ├── app.js        # Główna aplikacja (lista kortów)
-│   │   ├── admin.js      # Panel administratora
-│   │   ├── embed.js      # Widok embedded
-│   │   ├── common.js     # Współdzielone funkcje
-│   │   └── translations.js
-│   └── styles.css
-├── tests/                # Testy jednostkowe
-├── uno-picker/           # Wtyczka Chrome (v1.0.0)
-│   ├── manifest.json     # Konfiguracja Manifest v3
-│   ├── content.js        # Główna logika (605 LOC)
-│   ├── picker.css        # Style popovera
-│   ├── README.md         # Dokumentacja wtyczki
-│   ├── INSTALLATION.md   # Instrukcja instalacji
-│   └── CHANGELOG.md      # Historia zmian
-├── download/             # Pliki do pobrania (.zip, .crx)
-└── docker-compose.yml    # Orchestracja
-
+├── app.py                 # Flask application entry point
+├── wyniki/                # Main application package
+│   ├── routes.py         # Route handlers
+│   ├── database.py       # Database operations
+│   ├── config.py         # Configuration
+│   └── poller.py         # UNO API polling
+├── static/               # Static files (stream players)
+├── tests/                # Test suite
+├── docker-compose.yml    # Container orchestration
+├── nginx-rtmp.conf      # Streaming server config
+├── Dockerfile           # Container definition
+└── requirements.txt     # Python dependencies
 ```
 
-## 🔐 Bezpieczeństwo
+## 🔐 Security
 
-- Hasła przechowywane jako zmienne środowiskowe
-- Session-based authentication dla admin panel
-- HMAC comparison dla weryfikacji hasła
-- Rate limiting dla UNO API
-- Input sanitization i validation
+- Admin panel protected by password authentication
+- Session-based authentication for admin API
+- HTTPS-only in production (enforced by Cloudflare)
+- Rate limiting on UNO API requests
+- CORS configured for streaming endpoints
 
-## 🌟 Kluczowe Funkcje
+## 📄 License
 
-**Ultra-Smart Hierarchical Polling** (60% redukcja zapytań vs naive approach):
-- Tier 1: Punkty zawsze co 10s
-- Tier 2: Gemy tylko przy 40/ADV
-- Tier 3: Sety tylko gdy gemy ≥ 3
-- Tie-break mode: Dedykowany polling z obsługą przewagi 2 punktów
+This project is proprietary software. All rights reserved.
 
-**Capacity**: 4 korty równocześnie (70% limitu dziennego API)
+## 🤝 Support
 
-**Testy**: 11/11 passing - scenariusze realistyczne + edge cases
+For deployment issues, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
----
-
-## 📄 Licencja
-
-[Dodaj licencję tutaj]
-
-## 👥 Autorzy
-
-- [@suchokrates1](https://github.com/suchokrates1)
-
-## 🤝 Contributing
-
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
-
-## 📧 Kontakt
-
-W razie pytań lub problemów, otwórz issue na GitHubie.
+For API questions, see [API.md](API.md).
