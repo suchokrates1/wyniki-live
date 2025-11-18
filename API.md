@@ -65,6 +65,77 @@
 }
 ```
 
+### GET `/api/courts`
+**Opis:** Publiczna lista kortów (bez PIN-ów)  
+**Auth:** Brak (publiczny endpoint)
+
+**Response:**
+```json
+{
+  "ok": true,
+  "generated_at": "2025-11-06T12:00:00.000Z",
+  "count": 3,
+  "courts": [
+    {
+      "kort_id": "kort1",
+      "overlay_id": "app_abc123xyz"
+    },
+    {
+      "kort_id": "kort2",
+      "overlay_id": "app_def456uvw"
+    }
+  ]
+}
+```
+
+### POST `/api/courts/<kort_id>/authorize`
+**Opis:** Autoryzacja dostępu do kortu przez PIN  
+**Auth:** Brak (publiczny endpoint)  
+**Content-Type:** `application/json`
+
+**Request Body:**
+```json
+{
+  "pin": "1234"
+}
+```
+
+**Response (sukces - PIN poprawny):**
+```json
+{
+  "ok": true,
+  "authorized": true,
+  "kort_id": "kort1"
+}
+```
+
+**Response (błąd - PIN niepoprawny):**
+```json
+{
+  "ok": true,
+  "authorized": false,
+  "kort_id": "kort1",
+  "error": "invalid-pin"
+}
+```
+
+**Response (błąd - kort nie istnieje):**
+```json
+{
+  "ok": false,
+  "authorized": false,
+  "error": "court-not-found"
+}
+```
+
+**Status codes:**
+- `200 OK` - PIN poprawny
+- `400 Bad Request` - Nieprawidłowe dane (brak PIN, nieprawidłowy kort_id)
+- `403 Forbidden` - PIN niepoprawny
+- `404 Not Found` - Kort nie istnieje
+
+**CORS:** Wszystkie originy (`*`)
+
 ### POST `/api/set_flag`
 **Opis:** Ustawia flagę dla gracza (endpoint dla wtyczki UNO Picker)  
 **Auth:** Brak (publiczny endpoint)  
@@ -243,17 +314,66 @@ data: {"kort_id": "kort2", "event": "update", ...}
 **Auth:** Session required
 
 ### GET `/api/admin/courts`
-**Opis:** Lista kortów  
+**Opis:** Lista kortów z PIN-ami  
 **Auth:** Session required
 
+**Response:**
+```json
+{
+  "ok": true,
+  "courts": [
+    {
+      "kort_id": "kort1",
+      "overlay_id": "app_abc123",
+      "pin": "1234",
+      "polling_paused": false
+    }
+  ]
+}
+```
+
 ### POST `/api/admin/courts`
-**Opis:** Dodanie kortu  
+**Opis:** Dodanie lub aktualizacja kortu  
 **Auth:** Session required  
 **Body:**
 ```json
 {
   "kort_id": "kort1",
-  "overlay_id": "abc123"
+  "overlay_id": "abc123",
+  "pin": "1234"
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "created": true,
+  "court": {
+    "kort_id": "kort1",
+    "overlay_id": "app_abc123"
+  },
+  "courts": [...]
+}
+```
+
+### PUT `/api/admin/courts/<kort_id>`
+**Opis:** Aktualizacja kortu (overlay_id lub PIN)  
+**Auth:** Session required  
+**Body:**
+```json
+{
+  "overlay_id": "new_overlay",
+  "pin": "5678"
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "updated": true,
+  "courts": [...]
 }
 ```
 

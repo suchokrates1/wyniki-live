@@ -41,10 +41,19 @@ def init_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS courts (
               kort_id TEXT PRIMARY KEY,
-              overlay_id TEXT
+              overlay_id TEXT,
+              pin TEXT DEFAULT '0000'
             );
             """
         )
+        
+        # Add pin column if it doesn't exist
+        cursor.execute("PRAGMA table_info(courts)")
+        court_columns = {row["name"] for row in cursor.fetchall()}
+        if "pin" not in court_columns:
+            cursor.execute("ALTER TABLE courts ADD COLUMN pin TEXT DEFAULT '0000'")
+            cursor.execute("UPDATE courts SET pin = '0000' WHERE pin IS NULL")
+            connection.commit()
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS app_settings (
@@ -339,14 +348,18 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
         cursor = connection.cursor()
         cursor.execute(
             """
-            SELECT kort_id, overlay_id
+            SELECT kort_id, overlay_id, pin
             FROM courts
             ORDER BY CAST(kort_id AS INTEGER), kort_id
             """
         )
         rows = cursor.fetchall()
     return [
-        {"kort_id": str(row["kort_id"]), "overlay_id": row["overlay_id"] or None}
+        {
+            "kort_id": str(row["kort_id"]),
+            "overlay_id": row["overlay_id"] or None,
+            "pin": row["pin"] or "0000"
+        }
         for row in rows
     ]
 
@@ -355,25 +368,31 @@ def fetch_court(kort_id: str) -> Optional[Dict[str, Optional[str]]]:
     with db_conn() as connection:
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT kort_id, overlay_id FROM courts WHERE kort_id = ? LIMIT 1",
+            "SELECT kort_id, overlay_id, pin FROM courts WHERE kort_id = ? LIMIT 1",
             (kort_id,),
         )
         row = cursor.fetchone()
     if not row:
         return None
-    return {"kort_id": str(row["kort_id"]), "overlay_id": row["overlay_id"] or None}
+    return {
+        "kort_id": str(row["kort_id"]),
+        "overlay_id": row["overlay_id"] or None,
+        "pin": row["pin"] or "0000"
+    }
 
 
-def upsert_court(kort_id: str, overlay_id: Optional[str]) -> None:
+def upsert_court(kort_id: str, overlay_id: Optional[str], pin: str = "0000") -> None:
     with db_conn() as connection:
         cursor = connection.cursor()
         cursor.execute(
             """
-            INSERT INTO courts (kort_id, overlay_id)
-            VALUES (?, ?)
-            ON CONFLICT(kort_id) DO UPDATE SET overlay_id=excluded.overlay_id
+            INSERT INTO courts (kort_id, overlay_id, pin)
+            VALUES (?, ?, ?)
+            ON CONFLICT(kort_id) DO UPDATE SET
+                overlay_id=excluded.overlay_id,
+                pin=excluded.pin
             """,
-            (kort_id, overlay_id),
+            (kort_id, overlay_id, pin),
         )
         connection.commit()
 

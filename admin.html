@@ -328,6 +328,7 @@
               <tr>
                 <th>Kort</th>
                 <th>Overlay ID</th>
+                <th>PIN</th>
                 <th>Akcje</th>
               </tr>
             </thead>
@@ -336,6 +337,10 @@
               <tr data-kort-id="{{ court.kort_id }}">
                 <td class="kort-id">{{ court.kort_id }}</td>
                 <td class="overlay-id">{{ court.overlay_id or '' }}</td>
+                <td class="pin-cell">
+                  <input type="text" class="pin-input" value="{{ court.pin or '0000' }}" maxlength="10" style="width: 80px;" />
+                  <button class="save-pin" type="button" style="margin-left: 5px;">Zapisz</button>
+                </td>
                 <td class="actions">
                   <button class="reset-court" type="button">Resetuj</button>
                   <button class="delete-court" type="button">Usuń</button>
