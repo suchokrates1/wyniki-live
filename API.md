@@ -42,6 +42,7 @@
 
 ### GET `/api/players`
 **Opis:** Lista graczy z flagami  
+**Auth:** Brak (publiczny endpoint)  
 **Parametry query:**
 - `list` (opcjonalny) - filtr po liście (domyślnie wszystkie)
 
@@ -63,6 +64,105 @@
     }
   ]
 }
+```
+
+### POST `/api/players`
+**Opis:** Dodanie nowego gracza (weryfikacja przez PIN kortu)  
+**Auth:** PIN kortu (publiczny endpoint z weryfikacją)  
+**Content-Type:** `application/json`
+
+**Request Body:**
+```json
+{
+  "kort_id": "kort1",
+  "pin": "1234",
+  "name": "Jan Kowalski",
+  "list_name": "default",
+  "flag_code": "pl",
+  "flag_url": "https://flagcdn.com/w80/pl.png",
+  "group_category": "Juniorzy U16"
+}
+```
+
+**Pola wymagane:**
+- `kort_id` - identyfikator kortu (do weryfikacji PIN)
+- `pin` - PIN kortu
+- `name` - imię i nazwisko gracza
+
+**Pola opcjonalne:**
+- `list_name` - nazwa listy (domyślnie "default")
+- `flag_code` - kod flagi kraju (np. "pl")
+- `flag_url` - URL do obrazu flagi
+- `group_category` - kategoria/grupa gracza
+
+**Response (sukces):**
+```json
+{
+  "ok": true,
+  "created": true,
+  "authorized": true,
+  "player": {
+    "id": 123,
+    "name": "Jan Kowalski",
+    "flag": "pl",
+    "flagUrl": "https://flagcdn.com/w80/pl.png",
+    "list": "default"
+  }
+}
+```
+
+**Response (błąd - niepoprawny PIN):**
+```json
+{
+  "ok": false,
+  "error": "invalid-pin",
+  "authorized": false
+}
+```
+
+**Response (błąd - kort nie istnieje):**
+```json
+{
+  "ok": false,
+  "error": "court-not-found"
+}
+```
+
+**Response (błąd - brak wymaganych pól):**
+```json
+{
+  "ok": false,
+  "error": "kort_id and pin required"
+}
+```
+lub
+```json
+{
+  "ok": false,
+  "error": "name required"
+}
+```
+
+**Status codes:**
+- `201 Created` - Gracz dodany pomyślnie
+- `400 Bad Request` - Nieprawidłowe dane (brak kort_id, PIN, name)
+- `403 Forbidden` - PIN niepoprawny
+- `404 Not Found` - Kort nie istnieje
+- `500 Internal Server Error` - Błąd serwera
+
+**CORS:** Wszystkie originy (`*`)
+
+**Przykład użycia (curl):**
+```bash
+curl -X POST https://score.vestmedia.pl/api/players \
+  -H "Content-Type: application/json" \
+  -d '{
+    "kort_id": "kort1",
+    "pin": "1234",
+    "name": "Jan Kowalski",
+    "flag_code": "pl",
+    "flag_url": "https://flagcdn.com/w80/pl.png"
+  }'
 ```
 
 ### GET `/api/courts`
