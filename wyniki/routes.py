@@ -1319,14 +1319,86 @@ def download_plugin():
     return send_from_directory(DOWNLOAD_DIR, archive_names[0], as_attachment=True)
 
 
-@blueprint.route("/api/players", methods=["GET", "OPTIONS"])
+@blueprint.route("/api/players", methods=["GET", "POST", "OPTIONS"])
 def api_players():
     if request.method == "OPTIONS":
         response = make_response("", 204)
         response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         return response
+    
+    # POST - dodanie nowego gracza z weryfikacją PIN kortu
+    if request.method == "POST":
+        try:
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict):
+                response = jsonify({"ok": False, "error": "invalid-payload"})
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response, 400
+            
+            # Weryfikacja PIN kortu
+            kort_id = payload.get("kort_id")
+            provided_pin = str(payload.get("pin", "")).strip()
+            
+            if not kort_id or not provided_pin:
+                response = jsonify({"ok": False, "error": "kort_id and pin required"})
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response, 400
+            
+            normalized_id = normalize_kort_id(kort_id)
+            if not normalized_id or not is_known_kort(normalized_id):
+                response = jsonify({"ok": False, "error": "court-not-found"})
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response, 404
+            
+            court_data = fetch_court(normalized_id)
+            if not court_data:
+                response = jsonify({"ok": False, "error": "court-not-found"})
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response, 404
+            
+            correct_pin = court_data.get("pin", "0000")
+            if provided_pin != correct_pin:
+                response = jsonify({"ok": False, "error": "invalid-pin", "authorized": False})
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response, 403
+            
+            # PIN poprawny - dodaj gracza
+            name = payload.get("name", "").strip()
+            if not name:
+                response = jsonify({"ok": False, "error": "name required"})
+                response.headers["Access-Control-Allow-Origin"] = "*"
+                return response, 400
+            
+            list_name = payload.get("list_name", "default").strip() or "default"
+            flag_code = payload.get("flag_code", "").strip() or None
+            flag_url = payload.get("flag_url", "").strip() or None
+            group_category = payload.get("group_category", "").strip() or None
+            
+            player_id = insert_player(name, list_name, flag_code, flag_url, group_category)
+            new_player = fetch_player(player_id)
+            
+            response_payload = {
+                "ok": True,
+                "created": True,
+                "player": _public_player_payload(new_player or {}),
+                "authorized": True
+            }
+            
+            log.info(f"Player added via public API: {name} (kort={normalized_id})")
+            
+            response = jsonify(response_payload)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response, 201
+            
+        except Exception as e:
+            log.exception(f"Error adding player via public API: {e}")
+            response = jsonify({"ok": False, "error": "internal-error"})
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response, 500
+    
+    # GET - lista graczy
     list_name = request.args.get("list")
     all_players = fetch_players()
     normalized_list = None
@@ -1354,7 +1426,7 @@ def api_players():
         payload["list"] = normalized_list
     response = jsonify(payload)
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
 
