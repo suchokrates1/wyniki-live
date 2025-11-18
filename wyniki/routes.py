@@ -1394,59 +1394,75 @@ def api_courts():
 @blueprint.route("/api/courts/<kort_id>/authorize", methods=["POST", "OPTIONS"])
 def api_court_authorize(kort_id: str):
     """Public endpoint - autoryzacja dostępu do kortu przez PIN"""
-    if request.method == "OPTIONS":
-        response = make_response("", 204)
+    try:
+        if request.method == "OPTIONS":
+            response = make_response("", 204)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+            return response
+        
+        log.info(f"Court authorize request: kort_id={kort_id}")
+        
+        normalized_id = normalize_kort_id(kort_id)
+        if not normalized_id:
+            log.warning(f"Invalid kort_id: {kort_id}")
+            response = jsonify({"ok": False, "error": "invalid-kort-id", "authorized": False})
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response, 400
+        
+        if not is_known_kort(normalized_id):
+            log.warning(f"Court not found: {normalized_id}")
+            response = jsonify({"ok": False, "error": "court-not-found", "authorized": False})
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response, 404
+        
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            log.warning(f"Invalid payload for kort {normalized_id}: {payload}")
+            response = jsonify({"ok": False, "error": "invalid-payload", "authorized": False})
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response, 400
+        
+        provided_pin = str(payload.get("pin", "")).strip()
+        if not provided_pin:
+            log.warning(f"Missing PIN for kort {normalized_id}")
+            response = jsonify({"ok": False, "error": "pin-required", "authorized": False})
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response, 400
+        
+        log.info(f"Fetching court data for kort {normalized_id}")
+        court_data = fetch_court(normalized_id)
+        if not court_data:
+            log.error(f"Court data not found in DB for kort {normalized_id}")
+            response = jsonify({"ok": False, "error": "court-not-found", "authorized": False})
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response, 404
+        
+        correct_pin = court_data.get("pin", "0000")
+        authorized = provided_pin == correct_pin
+        
+        log.info(f"PIN check for kort {normalized_id}: authorized={authorized}")
+        
+        response_payload = {
+            "ok": True,
+            "authorized": authorized,
+            "kort_id": normalized_id
+        }
+        
+        if not authorized:
+            response_payload["error"] = "invalid-pin"
+        
+        response = jsonify(response_payload)
         response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-        return response
+        status_code = 200 if authorized else 403
+        return response, status_code
     
-    normalized_id = normalize_kort_id(kort_id)
-    if not normalized_id:
-        response = jsonify({"ok": False, "error": "invalid-kort-id", "authorized": False})
+    except Exception as e:
+        log.exception(f"Error in court authorize for kort {kort_id}: {e}")
+        response = jsonify({"ok": False, "error": "internal-error", "authorized": False})
         response.headers["Access-Control-Allow-Origin"] = "*"
-        return response, 400
-    
-    if not is_known_kort(normalized_id):
-        response = jsonify({"ok": False, "error": "court-not-found", "authorized": False})
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        return response, 404
-    
-    payload = request.get_json(silent=True)
-    if not isinstance(payload, dict):
-        response = jsonify({"ok": False, "error": "invalid-payload", "authorized": False})
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        return response, 400
-    
-    provided_pin = str(payload.get("pin", "")).strip()
-    if not provided_pin:
-        response = jsonify({"ok": False, "error": "pin-required", "authorized": False})
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        return response, 400
-    
-    court_data = fetch_court(normalized_id)
-    if not court_data:
-        response = jsonify({"ok": False, "error": "court-not-found", "authorized": False})
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        return response, 404
-        return response, 404
-    
-    correct_pin = court_data.get("pin", "0000")
-    authorized = provided_pin == correct_pin
-    
-    response_payload = {
-        "ok": True,
-        "authorized": authorized,
-        "kort_id": normalized_id
-    }
-    
-    if not authorized:
-        response_payload["error"] = "invalid-pin"
-    
-    response = jsonify(response_payload)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    status_code = 200 if authorized else 403
-    return response, status_code
+        return response, 500
 
 
 @blueprint.route("/api/set_flag", methods=["POST"])
