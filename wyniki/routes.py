@@ -33,6 +33,7 @@ from .database import (
     delete_player,
     fetch_all_history,
     fetch_app_settings,
+    fetch_court,
     fetch_history_entry,
     fetch_player,
     fetch_players,
@@ -1423,11 +1424,11 @@ def api_court_authorize(kort_id: str):
         response.headers["Access-Control-Allow-Origin"] = "*"
         return response, 400
     
-    from .database import fetch_court
     court_data = fetch_court(normalized_id)
     if not court_data:
         response = jsonify({"ok": False, "error": "court-not-found", "authorized": False})
         response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 404
         return response, 404
     
     correct_pin = court_data.get("pin", "0000")
