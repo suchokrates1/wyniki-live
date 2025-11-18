@@ -1417,7 +1417,14 @@ def api_court_authorize(kort_id: str):
             response.headers["Access-Control-Allow-Origin"] = "*"
             return response, 404
         
+        # Debug request details
+        log.info(f"Request Content-Type: {request.content_type}")
+        log.info(f"Request headers: {dict(request.headers)}")
+        log.info(f"Request data (raw): {request.get_data(as_text=True)}")
+        
         payload = request.get_json(silent=True)
+        log.info(f"Parsed payload: {payload}, type: {type(payload)}")
+        
         if not isinstance(payload, dict):
             log.warning(f"Invalid payload for kort {normalized_id}: {payload}")
             response = jsonify({"ok": False, "error": "invalid-payload", "authorized": False})
