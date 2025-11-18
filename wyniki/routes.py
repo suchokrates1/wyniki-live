@@ -226,10 +226,13 @@ def _sanitize_history_payload(payload: Dict[str, object]) -> Dict[str, object]:
 
 
 def _serialize_courts() -> List[Dict[str, Any]]:
+    from .database import fetch_courts
+    courts_data = {c["kort_id"]: c for c in fetch_courts()}
     return [
         {
             "kort_id": kort_id,
             "overlay_id": overlay_id,
+            "pin": courts_data.get(kort_id, {}).get("pin", "0000"),
             "polling_paused": is_court_polling_paused(kort_id)
         }
         for kort_id, overlay_id in available_courts()
@@ -496,19 +499,26 @@ def _serialize_flags_catalog() -> List[Dict[str, str]]:
     ]
 
 
-def _sanitize_court_payload(payload: Dict[str, object]) -> Tuple[str, Optional[str]]:
+def _sanitize_court_payload(payload: Dict[str, object]) -> Tuple[str, Optional[str], str]:
     raw_kort = payload.get("kort_id") or payload.get("kort")
     kort_id = normalize_kort_id(raw_kort) if raw_kort is not None else None
     if not kort_id:
         raise ValueError("kort_id")
     overlay_raw = payload.get("overlay_id") or payload.get("overlay")
-    if overlay_raw is None:
-        return kort_id, None
-    overlay_text = str(overlay_raw).strip()
-    if not overlay_text:
-        return kort_id, None
-    normalized_overlay = normalize_overlay_id(overlay_text) or overlay_text
-    return kort_id, normalized_overlay
+    overlay_id = None
+    if overlay_raw is not None:
+        overlay_text = str(overlay_raw).strip()
+        if overlay_text:
+            overlay_id = normalize_overlay_id(overlay_text) or overlay_text
+    
+    pin_raw = payload.get("pin")
+    pin = "0000"
+    if pin_raw is not None:
+        pin_text = str(pin_raw).strip()
+        if pin_text:
+            pin = pin_text
+    
+    return kort_id, overlay_id, pin
 
 
 def _sanitize_player_payload(payload: Dict[str, object], *, partial: bool = False) -> Dict[str, Optional[str]]:
@@ -769,11 +779,11 @@ def admin_api_courts_create():
     if not isinstance(payload, dict):
         return jsonify({"ok": False, "error": "invalid-payload"}), 400
     try:
-        kort_id, overlay_id = _sanitize_court_payload(payload)
+        kort_id, overlay_id, pin = _sanitize_court_payload(payload)
     except ValueError as exc:
         return jsonify({"ok": False, "error": "invalid-field", "field": str(exc)}), 400
     existed_before = is_known_kort(kort_id)
-    upsert_court(kort_id, overlay_id)
+    upsert_court(kort_id, overlay_id, pin)
     refresh_courts_from_db()
     sync_poller_state()
     broadcast_snapshot(include_history=True)
@@ -783,6 +793,40 @@ def admin_api_courts_create():
             "ok": True,
             "created": not existed_before,
             "court": court_record,
+            "courts": _serialize_courts(),
+        }
+    )
+
+
+@admin_api_blueprint.route("/courts/<kort_id>", methods=["PUT"])
+def admin_api_courts_update(kort_id: str):
+    auth_error = _require_admin_session_json()
+    if auth_error is not None:
+        return auth_error
+    normalized_id = normalize_kort_id(kort_id)
+    if not normalized_id:
+        return jsonify({"ok": False, "error": "invalid-field", "field": "kort_id"}), 400
+    if not is_known_kort(normalized_id):
+        return jsonify({"ok": False, "error": "not-found"}), 404
+    
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid-payload"}), 400
+    
+    try:
+        _, overlay_id, pin = _sanitize_court_payload({**payload, "kort_id": normalized_id})
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": "invalid-field", "field": str(exc)}), 400
+    
+    upsert_court(normalized_id, overlay_id, pin)
+    refresh_courts_from_db()
+    sync_poller_state()
+    broadcast_snapshot(include_history=True)
+    
+    return jsonify(
+        {
+            "ok": True,
+            "updated": True,
             "courts": _serialize_courts(),
         }
     )
@@ -1312,6 +1356,96 @@ def api_players():
     response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
+
+
+@blueprint.route("/api/courts", methods=["GET", "OPTIONS"])
+def api_courts():
+    """Public endpoint - lista kortów z ID i overlay ID (bez PIN)"""
+    if request.method == "OPTIONS":
+        response = make_response("", 204)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+    
+    courts = [
+        {
+            "kort_id": kort_id,
+            "overlay_id": overlay_id
+        }
+        for kort_id, overlay_id in available_courts()
+    ]
+    
+    payload = {
+        "ok": True,
+        "generated_at": now_iso(),
+        "count": len(courts),
+        "courts": courts
+    }
+    
+    response = jsonify(payload)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+@blueprint.route("/api/courts/<kort_id>/authorize", methods=["POST", "OPTIONS"])
+def api_court_authorize(kort_id: str):
+    """Public endpoint - autoryzacja dostępu do kortu przez PIN"""
+    if request.method == "OPTIONS":
+        response = make_response("", 204)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+    
+    normalized_id = normalize_kort_id(kort_id)
+    if not normalized_id:
+        response = jsonify({"ok": False, "error": "invalid-kort-id", "authorized": False})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 400
+    
+    if not is_known_kort(normalized_id):
+        response = jsonify({"ok": False, "error": "court-not-found", "authorized": False})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 404
+    
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        response = jsonify({"ok": False, "error": "invalid-payload", "authorized": False})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 400
+    
+    provided_pin = str(payload.get("pin", "")).strip()
+    if not provided_pin:
+        response = jsonify({"ok": False, "error": "pin-required", "authorized": False})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 400
+    
+    from .database import fetch_court
+    court_data = fetch_court(normalized_id)
+    if not court_data:
+        response = jsonify({"ok": False, "error": "court-not-found", "authorized": False})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response, 404
+    
+    correct_pin = court_data.get("pin", "0000")
+    authorized = provided_pin == correct_pin
+    
+    response_payload = {
+        "ok": True,
+        "authorized": authorized,
+        "kort_id": normalized_id
+    }
+    
+    if not authorized:
+        response_payload["error"] = "invalid-pin"
+    
+    response = jsonify(response_payload)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    status_code = 200 if authorized else 403
+    return response, status_code
 
 
 @blueprint.route("/api/set_flag", methods=["POST"])
