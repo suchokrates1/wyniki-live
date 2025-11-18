@@ -63,3 +63,17 @@ def stream4():
     response = send_from_directory(APP_ROOT / 'static', 'stream4.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
     return response
+
+
+@blueprint.route('/overlay/<int:kort_id>')
+def overlay_single(kort_id):
+    """Serve overlay page for a single court."""
+    if kort_id < 1 or kort_id > 4:
+        return "Court must be between 1 and 4", 404
+    return send_from_directory(APP_ROOT, 'overlay.html')
+
+
+@blueprint.route('/overlay/all')
+def overlay_all():
+    """Serve overlay page showing all 4 courts."""
+    return send_from_directory(APP_ROOT, 'overlay_all.html')

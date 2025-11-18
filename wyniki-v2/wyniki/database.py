@@ -32,6 +32,7 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS courts (
                 kort_id TEXT PRIMARY KEY,
                 overlay_id TEXT,
+                pin TEXT,
                 active INTEGER DEFAULT 1
             )
         """)
@@ -84,6 +85,13 @@ def init_db() -> None:
                 value TEXT
             )
         """)
+        
+        # Migration: Add pin column to courts if it doesn't exist
+        cursor.execute("PRAGMA table_info(courts)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'pin' not in columns:
+            cursor.execute("ALTER TABLE courts ADD COLUMN pin TEXT")
+            logger.info("database_migration", action="added_pin_column_to_courts")
         
         conn.commit()
     

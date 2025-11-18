@@ -1,7 +1,7 @@
 """Health check endpoints."""
 from flask import Blueprint, jsonify
 
-from wyniki_v2.config import settings
+from wyniki.config import settings
 
 blueprint = Blueprint('health', __name__)
 
