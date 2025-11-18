@@ -34,9 +34,6 @@ services:
       - "traefik.http.routers.wyniki.tls=true"
       # Service (Traefik łączy po IP:port, bez sieci proxy)
       - "traefik.http.services.wyniki.loadbalancer.server.port=8080"
-      # Opcjonalnie: nagłówki bezpieczeństwa
-      - "traefik.http.middlewares.wyniki-headers.headers.stsSeconds=31536000"
-      - "traefik.http.routers.wyniki.middlewares=wyniki-headers@docker"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
       interval: 20s
@@ -58,8 +55,8 @@ services:
       - rtmp_hls:/tmp/hls
     labels:
       - "traefik.enable=true"
-      # Router dla HLS playback
-      - "traefik.http.routers.rtmp.rule=Host(`${PUBLIC_HOST}`) && PathPrefix(`/hls`, `/stream`)"
+      # Router dla HLS playback - poprawiona składnia dla Traefik v3
+      - "traefik.http.routers.rtmp.rule=Host(`${PUBLIC_HOST}`) && (PathPrefix(`/hls`) || PathPrefix(`/stream`))"
       - "traefik.http.routers.rtmp.entrypoints=https"
       - "traefik.http.routers.rtmp.tls=true"
       - "traefik.http.services.rtmp.loadbalancer.server.port=80"
