@@ -226,10 +226,10 @@ players_public_bp = Blueprint('players_public', __name__, url_prefix='/api/playe
 
 @players_public_bp.route('/active', methods=['GET'])
 def get_active_players():
-    """Get players from active tournament (for UNO picker extension)."""
+    """Get players from active tournament (for Umpire App)."""
     players = fetch_active_tournament_players()
     
-    # Format for UNO picker extension
+    # Format for Umpire mobile app
     result = [
         {
             "name": p["name"],
