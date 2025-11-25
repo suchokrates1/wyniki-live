@@ -223,10 +223,10 @@
 
         // Create scoreboard HTML
         function createScoreboard(kortId, isSmall = false, label = '') {
-            const court = courts[kortId] || { players: { A: {}, B: {} }, serve: null, match_active: false };
-            const playerA = court.players.A;
-            const playerB = court.players.B;
-            const matchActive = court.match_active;
+            const court = courts[kortId] || { A: {}, B: {}, serve: null, match_status: { active: false } };
+            const playerA = court.A || {};
+            const playerB = court.B || {};
+            const matchActive = court.match_status?.active || false;
             
             const sizeClass = isSmall ? 'small' : '';
             const activeClass = matchActive ? '' : 'match-inactive';
@@ -238,23 +238,23 @@
                     <div class="player-row ${court.serve === 'A' ? 'serving' : ''}">
                         <div class="serve-indicator"></div>
                         ${playerA.flag_url ? `<img src="${playerA.flag_url}" alt="${playerA.flag_code}" class="flag" onerror="this.style.display='none'">` : ''}
-                        <div class="player-name">${playerA.name || '-'}</div>
+                        <div class="player-name">${playerA.surname || playerA.full_name || '-'}</div>
                         <div class="scores">
                             <div class="score">${playerA.set1 || 0}</div>
                             <div class="score">${playerA.set2 || 0}</div>
                             <div class="score">${playerA.set3 || 0}</div>
-                            ${court.tiebreak?.active ? `<div class="score highlight">${court.tiebreak.A || 0}</div>` : `<div class="score">${playerA.points || '0'}</div>`}
+                            ${court.tie?.visible ? `<div class="score highlight">${court.tie.A || 0}</div>` : `<div class="score">${playerA.points || '0'}</div>`}
                         </div>
                     </div>
                     <div class="player-row ${court.serve === 'B' ? 'serving' : ''}">
                         <div class="serve-indicator"></div>
                         ${playerB.flag_url ? `<img src="${playerB.flag_url}" alt="${playerB.flag_code}" class="flag" onerror="this.style.display='none'">` : ''}
-                        <div class="player-name">${playerB.name || '-'}</div>
+                        <div class="player-name">${playerB.surname || playerB.full_name || '-'}</div>
                         <div class="scores">
                             <div class="score">${playerB.set1 || 0}</div>
                             <div class="score">${playerB.set2 || 0}</div>
                             <div class="score">${playerB.set3 || 0}</div>
-                            ${court.tiebreak?.active ? `<div class="score highlight">${court.tiebreak.B || 0}</div>` : `<div class="score">${playerB.points || '0'}</div>`}
+                            ${court.tie?.visible ? `<div class="score highlight">${court.tie.B || 0}</div>` : `<div class="score">${playerB.points || '0'}</div>`}
                         </div>
                     </div>
                 </div>
@@ -292,33 +292,40 @@
             }
         }
 
-        // Connect to SSE stream for a court
-        function connectSSE(kortId) {
-            const eventSource = new EventSource(`/api/stream/${kortId}`);
+        // Connect to SSE stream
+        function connectSSE() {
+            const eventSource = new EventSource('/api/stream');
             
             eventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'state_update' && data.kort_id === kortId) {
-                        courts[kortId] = data.data;
+                    
+                    if (data.type === 'snapshot' && data.payload) {
+                        // Initial snapshot - update all courts
+                        Object.keys(data.payload).forEach(kortId => {
+                            courts[kortId] = data.payload[kortId];
+                        });
+                        render();
+                    } else if (data.type === 'state_update' && data.kort_id) {
+                        // Single court update
+                        courts[data.kort_id] = data.data;
                         render();
                     }
                 } catch (error) {
-                    console.error(`Error parsing SSE data for court ${kortId}:`, error);
+                    console.error('Error parsing SSE data:', error);
                 }
             };
             
             eventSource.onerror = (error) => {
-                console.error(`SSE connection error for court ${kortId}:`, error);
+                console.error('SSE connection error:', error);
                 // Attempt reconnection after 5 seconds
                 setTimeout(() => {
                     eventSource.close();
-                    delete eventSources[kortId];
-                    connectSSE(kortId);
+                    connectSSE();
                 }, 5000);
             };
             
-            eventSources[kortId] = eventSource;
+            return eventSource;
         }
 
         // Load initial data
@@ -327,17 +334,18 @@
                 const response = await fetch('/api/snapshot');
                 const data = await response.json();
                 
-                // Initialize courts from snapshot
-                if (data.courts) {
-                    data.courts.forEach(court => {
-                        courts[court.kort_id] = court;
+                // Initialize courts from snapshot (snapshot is a dict kort_id -> state)
+                if (data) {
+                    Object.keys(data).forEach(kortId => {
+                        courts[kortId] = data[kortId];
                     });
                 }
                 
                 render();
                 
-                // Connect SSE streams
-                courtIds.forEach(id => connectSSE(id));
+                // Connect single SSE stream
+                const eventSource = connectSSE();
+                eventSources.main = eventSource;
                 
             } catch (error) {
                 console.error('Failed to load initial data:', error);

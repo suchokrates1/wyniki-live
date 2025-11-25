@@ -8,8 +8,10 @@ from flask import Flask
 from prometheus_flask_exporter import PrometheusMetrics
 
 from wyniki.config import logger, settings
+from wyniki.db_models import db
 from wyniki.api import courts, admin, health, stream, web, events
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp
+from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
 from wyniki.init_state import initialize_state
 
 
@@ -24,9 +26,15 @@ def create_app() -> Flask:
     # Configure Flask
     app.config['SECRET_KEY'] = settings.secret_key
     app.config['DEBUG'] = settings.debug
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{settings.database_path}'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
-    # Initialize application state
+    # Initialize SQLAlchemy
+    db.init_app(app)
+    
+    # Create tables
     with app.app_context():
+        db.create_all()
         initialize_state()
     
     # Initialize Prometheus metrics
@@ -42,6 +50,7 @@ def create_app() -> Flask:
     app.register_blueprint(health.blueprint)
     app.register_blueprint(stream.blueprint)
     app.register_blueprint(events.blueprint)
+    app.register_blueprint(umpire_api_blueprint)
     
     logger.info(
         "application_started",

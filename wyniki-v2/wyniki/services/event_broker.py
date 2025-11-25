@@ -39,3 +39,17 @@ class EventBroker:
 # Global singleton instance
 event_broker = EventBroker()
 
+
+def emit_score_update(kort_id: str, court_state: Dict[str, Any]) -> None:
+    """Emit score update event to all SSE listeners."""
+    from .court_manager import serialize_public_court_state
+    
+    payload = {
+        "type": "state_update",
+        "kort_id": kort_id,
+        "data": serialize_public_court_state(court_state)
+    }
+    
+    event_broker.broadcast(payload)
+
+
