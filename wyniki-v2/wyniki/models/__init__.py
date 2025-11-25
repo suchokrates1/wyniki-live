@@ -110,27 +110,6 @@ class AppSettings(BaseModel):
     youtube_stream_id: Optional[str] = None
 
 
-class UnoRateLimitInfo(BaseModel):
-    """UNO API rate limit information."""
-    mode: str  # "normal", "slowdown", "limit"
-    count: int
-    limit: int
-    window_minutes: int = 60
-
-
-class UnoCommand(BaseModel):
-    """UNO API command."""
-    command: str
-    player: Optional[str] = None  # "A" or "B"
-    value: Optional[str] = None
-
-    @validator('player')
-    def validate_player(cls, v):
-        if v is not None and v not in ["A", "B"]:
-            raise ValueError("Player must be 'A' or 'B'")
-        return v
-
-
 class SnapshotResponse(BaseModel):
     """API snapshot response."""
     courts: Dict[str, CourtState]
