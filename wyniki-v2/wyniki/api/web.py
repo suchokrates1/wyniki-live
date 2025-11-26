@@ -13,6 +13,9 @@ def index():
     """Serve main page."""
     response = send_from_directory(APP_ROOT, 'index.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     return response
 
 
@@ -22,6 +25,9 @@ def admin():
     """Serve admin page."""
     response = send_from_directory(APP_ROOT, 'admin.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     return response
 
 
@@ -32,6 +38,9 @@ def embed(lang=None, court=None):
     """Serve embed page with optional language and court parameters."""
     response = send_from_directory(APP_ROOT, 'embed.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     return response
 
 
