@@ -31,6 +31,7 @@
               <thead>
                 <tr>
                   <th>ID Kortu</th>
+                  <th>PIN</th>
                   <th>Status</th>
                   <th>Akcje</th>
                 </tr>
@@ -39,6 +40,15 @@
                 <template x-for="court in courts" :key="court.kort_id">
                   <tr>
                     <td><span class="font-bold" x-text="'Kort ' + court.kort_id"></span></td>
+                    <td>
+                      <input type="text"
+                             x-model="court.pin"
+                             @change="updateCourtPin(court.kort_id, $event.target.value)"
+                             class="input input-sm input-bordered w-24"
+                             placeholder="PIN"
+                             maxlength="4"
+                             pattern="[0-9]{4}">
+                    </td>
                     <td>
                       <span class="badge" :class="court.active ? 'badge-success' : 'badge-ghost'" 
                             x-text="court.active ? 'Aktywny' : 'Nieaktywny'"></span>
@@ -54,6 +64,7 @@
 
           <div class="mt-4 flex gap-2">
             <input type="text" x-model="newCourtId" placeholder="ID nowego kortu (np. 6)" class="input input-bordered input-sm">
+            <input type="text" x-model="newCourtPin" placeholder="PIN (4 cyfry)" class="input input-bordered input-sm w-32" maxlength="4" pattern="[0-9]{4}">
             <button @click="addCourt()" class="btn btn-primary btn-sm">+ Dodaj kort</button>
           </div>
         </div>

@@ -11,15 +11,9 @@ blueprint = Blueprint('admin', __name__, url_prefix='/admin')
 def get_courts():
     """Get all courts."""
     try:
-        from ..services import court_manager
+        from .. import database
         
-        courts_data = []
-        for kort_id in court_manager.available_courts():
-            state = court_manager.COURTS.get(kort_id, {})
-            courts_data.append({
-                "kort_id": kort_id,
-                "active": state.get("active", False)
-            })
+        courts_data = database.fetch_courts()
         return jsonify(courts_data)
     except Exception as e:
         logger.error(f"Failed to get courts: {e}")
@@ -35,6 +29,7 @@ def add_court():
         
         data = request.get_json() or {}
         kort_id = data.get("kort_id")
+        pin = data.get("pin")
         
         if not kort_id:
             return jsonify({"error": "kort_id required"}), 400
@@ -42,12 +37,34 @@ def add_court():
         court_manager.ensure_court_state(kort_id)
         
         # Save to database
-        database.upsert_court(kort_id)
+        database.upsert_court(kort_id, pin)
         
-        logger.info(f"Court added: kort={kort_id}")
+        logger.info(f"Court added: kort={kort_id}, pin={'set' if pin else 'none'}")
         return jsonify({"status": "ok", "kort_id": kort_id}), 201
     except Exception as e:
         logger.error(f"Failed to add court: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/courts/<kort_id>/pin', methods=['PUT'])
+def update_court_pin(kort_id):
+    """Update PIN for a court."""
+    try:
+        from .. import database
+        
+        data = request.get_json() or {}
+        pin = data.get("pin")
+        
+        # Validate PIN format (4 digits or null)
+        if pin and (len(pin) != 4 or not pin.isdigit()):
+            return jsonify({"error": "PIN must be 4 digits"}), 400
+        
+        database.upsert_court(kort_id, pin)
+        
+        logger.info(f"Court PIN updated: kort={kort_id}")
+        return jsonify({"status": "ok", "kort_id": kort_id})
+    except Exception as e:
+        logger.error(f"Failed to update court PIN: {e}")
         return jsonify({"error": str(e)}), 500
 
 
