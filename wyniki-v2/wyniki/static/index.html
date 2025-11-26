@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wyniki tenisowe na żywo</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎾</text></svg>">
+    <meta name="description" content="Live tennis scores - wyniki na żywo">
+  <script type="module" crossorigin src="/assets/main-BwoPs4af.js"></script>
+  <script type="module" crossorigin src="/assets/main-DDgcazDb.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/main-BonIMzDW.css">
+</head>
+<body class="min-h-screen bg-base-200">
+    <div x-data="tennisApp" x-cloak class="container mx-auto px-4 py-8 max-w-7xl">
+        
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="navbar bg-base-100 rounded-box shadow-lg">
+                <div class="flex-1">
+                    <h1 class="text-2xl font-bold flex items-center gap-3">
+                        🎾 Wyniki tenisowe
+                        <span x-show="Object.values(courts).some(c => c.match_status?.active)" 
+                              class="live-indicator">
+                            <span class="relative flex h-3 w-3">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
+                            </span>
+                            LIVE
+                        </span>
+                    </h1>
+                </div>
+                
+                <div class="flex-none gap-2">
+                    <!-- Language Selector -->
+                    <div class="dropdown dropdown-end">
+                        <label tabindex="0" class="btn btn-ghost btn-sm">
+                            <span x-text="lang.toUpperCase()"></span>
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </label>
+                        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-24 mt-2">
+                            <li><a @click="lang = 'pl'">Polski</a></li>
+                            <li><a @click="lang = 'en'">English</a></li>
+                            <li><a @click="lang = 'de'">Deutsch</a></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Theme Toggle -->
+                    <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle">
+                        <input type="checkbox" @change="Alpine.store('theme').toggle()" />
+                        <svg class="swap-on fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"/>
+                        </svg>
+                        <svg class="swap-off fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"/>
+                        </svg>
+                    </label>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Stats Bar -->
+        <div class="stats stats-horizontal shadow mt-4 w-full bg-base-100">
+            <div class="stat">
+                <div class="stat-figure text-primary">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/>
+                    </svg>
+                </div>
+                <div class="stat-title">Aktywne korty</div>
+                <div class="stat-value text-primary" x-text="Object.values(courts).filter(c => c.match_status?.active).length"></div>
+            </div>
+            
+            <div class="stat">
+                <div class="stat-figure text-secondary">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="stat-title">Ostatnia aktualizacja</div>
+                <div class="stat-value text-sm" x-text="lastUpdate ? lastUpdate.toLocaleTimeString('pl-PL') : '-'"></div>
+            </div>
+        </div>
+        
+        <!-- Loading State -->
+        <div x-show="loading" class="flex items-center justify-center py-20">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+        </div>
+        
+        <!-- Error State -->
+        <div x-show="error && !loading" class="alert alert-error shadow-lg mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span x-text="error"></span>
+        </div>
+        
+        <!-- Courts Grid -->
+        <div x-show="!loading && getCourtIds().length === 0" 
+             class="text-center py-20">
+            <div class="text-8xl mb-6">🎾</div>
+            <h2 class="text-3xl font-bold mb-2">Brak kortów</h2>
+            <p class="text-base-content/60">Skonfiguruj korty w panelu administratora</p>
+        </div>
+        
+        <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            <template x-for="courtId in getCourtIds()" :key="courtId">
+                <div class="court-card animate-fade-in">
+                    <div class="card-body">
+                        <!-- Card Header -->
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="card-title text-2xl">
+                                🎾 Kort <span x-text="courtId"></span>
+                                <span x-show="isMatchActive(courtId)" class="badge badge-success gap-2">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                    </span>
+                                    LIVE
+                                </span>
+                            </h2>
+                        </div>
+                        
+                        <!-- Match Status -->
+                        <template x-if="!isMatchActive(courtId)">
+                            <div>
+                                <div class="text-center py-8 text-base-content/50">
+                                    <div class="text-6xl mb-4">🎾</div>
+                                    <p>Brak aktywnego meczu</p>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <template x-if="isMatchActive(courtId)">
+                            <div>
+                                <!-- Player A -->
+                                <div class="flex justify-between items-center p-4 bg-base-200 rounded-lg mb-2">
+                                    <div class="flex items-center gap-3">
+                                        <img :src="courts[courtId].A.flag_url || '/api/placeholder/32/24'" 
+                                             :alt="Flag" 
+                                             class="w-8 h-6 object-cover rounded shadow"
+                                             onerror="this.style.display='none'">
+                                        <span class="font-bold text-lg" x-text="courts[courtId].A.full_name || '-'"></span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <template x-for="(setScore, idx) in getScore(courtId, 'A').sets" :key="idx">
+                                            <span class="score-badge badge-neutral" x-text="setScore"></span>
+                                        </template>
+                                        <span class="text-3xl font-bold w-16 text-right" x-text="getScore(courtId, 'A').points"></span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Player B -->
+                                <div class="flex justify-between items-center p-4 bg-base-200 rounded-lg">
+                                    <div class="flex items-center gap-3">
+                                        <img :src="courts[courtId].B.flag_url || '/api/placeholder/32/24'" 
+                                             :alt="Flag" 
+                                             class="w-8 h-6 object-cover rounded shadow"
+                                             onerror="this.style.display='none'">
+                                        <span class="font-bold text-lg" x-text="courts[courtId].B.full_name || '-'"></span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <template x-for="(setScore, idx) in getScore(courtId, 'B').sets" :key="idx">
+                                            <span class="score-badge badge-neutral" x-text="setScore"></span>
+                                        </template>
+                                        <span class="text-3xl font-bold w-16 text-right" x-text="getScore(courtId, 'B').points"></span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Match Info -->
+                                <div class="flex justify-between items-center mt-4 text-sm text-base-content/70">
+                                    <span>Set <span x-text="courts[courtId].current_set || 1"></span></span>
+                                    <span x-show="courts[courtId].match_time?.seconds">
+                                        🕒 <span x-text="formatTime(courts[courtId].match_time?.seconds)"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+</body>
+</html>
