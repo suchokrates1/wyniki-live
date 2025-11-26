@@ -52,6 +52,15 @@ def create_app() -> Flask:
     app.register_blueprint(events.blueprint)
     app.register_blueprint(umpire_api_blueprint)
     
+    # Add /assets route as alias to /static/assets for Vite compatibility
+    from flask import send_from_directory
+    import os
+    
+    @app.route('/assets/<path:filename>')
+    def serve_assets(filename):
+        assets_path = os.path.join(settings.static_dir, 'assets')
+        return send_from_directory(assets_path, filename)
+    
     logger.info(
         "application_started",
         version="2.0.0",
