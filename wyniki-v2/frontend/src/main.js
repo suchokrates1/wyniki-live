@@ -1,1 +1,96 @@
-﻿浩潰瑲䄠灬湩⁥牦浯✠污楰敮獪㬧਍浩潰瑲✠⸮猯捲洯楡⹮獣❳഻ഊ⼊ 湉瑩慩楬敺䄠灬湩⹥獪਍楷摮睯䄮灬湩⁥‽汁楰敮഻ഊ⼊ 浉潰瑲挠浯潰慳汢獥਍浩潰瑲笠甠敳卓⁅⁽牦浯✠⼮潣灭獯扡敬⽳獵卥䕓㬧਍浩潰瑲笠甠敳潃牵䑴瑡⁡⁽牦浯✠⼮潣灭獯扡敬⽳獵䍥畯瑲慄慴㬧਍浩潰瑲笠甠敳牔湡汳瑡潩獮素映潲⁭⸧振浯潰慳汢獥甯敳牔湡汳瑡潩獮㬧਍浩潰瑲笠甠敳桔浥⁥⁽牦浯✠⼮潣灭獯扡敬⽳獵呥敨敭㬧਍਍⼯䄠灬湩⹥獪洠楡⁮潣灭湯湥൴䄊灬湩⹥慤慴✨整湮獩灁❰‬⤨㴠‾笨਍†潣牵獴›絻ബ 栠獩潴祲›嵛ബ 氠慯楤杮›牴敵ബ 攠牲牯›畮汬ബ 氠獡啴摰瑡㩥渠汵ⱬ਍†慰獵摥›慦獬ⱥ਍†慬杮›瀧❬ബ ഠ 椠楮⡴ ൻ †挠湯潳敬氮杯✨鿰뺎吠湥楮⁳楌敶匠潣敲⁳‭湉瑩慩楬楺杮⸮✮㬩਍††਍††⼯䤠楮楴污穩⁥桴浥൥ †挠湯瑳琠敨敭㴠甠敳桔浥⡥㬩਍††桴浥⹥湩瑩⤨഻ †ഠ †⼠ 湉瑩慩楬敺琠慲獮慬楴湯൳ †挠湯瑳琠慲獮慬楴湯⁳‽獵呥慲獮慬楴湯⡳㬩਍††桴獩氮湡⁧‽牴湡汳瑡潩獮朮瑥畃牲湥䱴湡⡧㬩਍††਍††⼯䤠楮楴污穩⁥卓⁅潣湮捥楴湯਍††潣獮⁴獳⁥‽獵卥䕓⤨഻ †猠敳挮湯敮瑣⠨慤慴 㸽笠਍†††晩⠠慤慴挮畯瑲⥳笠਍††††桴獩挮畯瑲⁳‽慤慴挮畯瑲㭳਍††††桴獩氮獡啴摰瑡⁥‽敮⁷慄整⤨഻ †††琠楨⹳潬摡湩⁧‽慦獬㭥਍†††ൽ ††椠⁦搨瑡⹡楨瑳牯⥹笠਍††††桴獩栮獩潴祲㴠搠瑡⹡楨瑳牯㭹਍†††ൽ †素‬攨牲牯 㸽笠਍†††桴獩攮牲牯㴠攠牲牯഻ ††琠楨⹳潬摡湩⁧‽慦獬㭥਍††⥽഻ †ഠ †⼠ 潌摡椠楮楴污搠瑡ൡ †琠楨⹳潬摡湓灡桳瑯⤨഻ 素ബ ഠ 愠祳据氠慯卤慮獰潨⡴ ൻ †琠祲笠਍†††潣獮⁴敲灳湯敳㴠愠慷瑩映瑥档✨愯楰猯慮獰潨❴㬩਍†††潣獮⁴慤慴㴠愠慷瑩爠獥潰獮⹥獪湯⤨഻ ††琠楨⹳潣牵獴㴠搠瑡㭡਍†††桴獩氮獡啴摰瑡⁥‽敮⁷慄整⤨഻ ††琠楨⹳潬摡湩⁧‽慦獬㭥਍††⁽慣捴⁨攨牲 ൻ ††琠楨⹳牥潲⁲‽䘧楡敬⁤潴氠慯⁤湩瑩慩⁬慤慴㬧਍†††潣獮汯⹥牥潲⡲牥⥲഻ †素਍†ⱽ਍†਍†獡湹⁣潬摡楈瑳牯⡹ ൻ †琠祲笠਍†††潣獮⁴敲灳湯敳㴠愠慷瑩映瑥档✨愯楰栯獩潴祲⤧഻ ††挠湯瑳搠瑡⁡‽睡楡⁴敲灳湯敳樮潳⡮㬩਍†††桴獩栮獩潴祲㴠搠瑡㭡਍††⁽慣捴⁨攨牲 ൻ ††挠湯潳敬攮牲牯✨慆汩摥琠⁯潬摡栠獩潴祲✺‬牥⥲഻ †素਍†ⱽ਍†਍†敧䍴畯瑲摉⡳ ൻ †爠瑥牵⁮扏敪瑣欮祥⡳桴獩挮畯瑲⥳献牯⡴愨‬⥢㴠‾ൻ ††挠湯瑳渠⁡‽畎扭牥愨㬩਍†††潣獮⁴扮㴠丠浵敢⡲⥢഻ ††椠⁦椨乳乡渨⥡☠…獩慎⡎扮⤩爠瑥牵⁮⹡潬慣敬潃灭牡⡥⥢഻ ††椠⁦椨乳乡渨⥡ 敲畴湲ㄠ഻ ††椠⁦椨乳乡渨⥢ 敲畴湲ⴠ㬱਍†††敲畴湲渠⁡‭扮഻ †素㬩਍†ⱽ਍†਍†獩慍捴䅨瑣癩⡥潣牵䥴⥤笠਍††敲畴湲琠楨⹳潣牵獴捛畯瑲摉㽝洮瑡档獟慴畴㽳愮瑣癩⁥籼映污敳഻ 素ബ ഠ 朠瑥捓牯⡥潣牵䥴Ɽ瀠慬敹⥲笠਍††潣獮⁴潣牵⁴‽桴獩挮畯瑲孳潣牵䥴嵤഻ †椠⁦ℨ潣牵⥴爠瑥牵⁮⁻潰湩獴›〧Ⱗ朠浡獥›ⰰ猠瑥㩳嬠⁝㭽਍††਍††潣獮⁴汰祡牥慄慴㴠挠畯瑲灛慬敹嵲഻ †爠瑥牵⁮ൻ ††瀠楯瑮㩳瀠慬敹䑲瑡㽡瀮楯瑮⁳籼✠✰ബ ††朠浡獥›汰祡牥慄慴⸿畣牲湥彴慧敭⁳籼〠ബ ††猠瑥㩳嬠਍††††汰祡牥慄慴⸿敳ㅴ簠⁼ⰰ਍††††汰祡牥慄慴⸿敳㉴簠⁼ⰰ਍††††汰祡牥慄慴⸿敳㍴簠⁼ര ††崠昮汩整⡲⁳㸽猠㸠〠簠⁼潣牵孴汰祡牥㴠㴽✠❁㼠✠❂㨠✠❁㽝嬮獠瑥笤ㅛ㈬㌬⹝湩敤佸⡦⥳ㄫ恽⁝‾⤰਍††㭽਍†ⱽ਍†਍†潦浲瑡楔敭猨捥湯獤 ൻ †椠⁦ℨ敳潣摮⥳爠瑥牵⁮〧㨰〰㬧਍††潣獮⁴潨牵⁳‽慍桴昮潬牯猨捥湯獤⼠㌠〶⤰഻ †挠湯瑳洠湩⁳‽慍桴昮潬牯⠨敳潣摮⁳‥㘳〰  〶㬩਍††敲畴湲怠笤瑓楲杮栨畯獲⸩慰卤慴瑲㈨‬〧⤧㩽笤瑓楲杮洨湩⥳瀮摡瑓牡⡴ⰲ✠✰紩㭠਍†ⱽ਍†਍†潴杧敬慐獵⡥ ൻ †琠楨⹳慰獵摥㴠℠桴獩瀮畡敳㭤਍††⼯䤠灭敬敭瑮瀠畡敳氠杯捩਍†ൽ紊⤩഻ഊ⼊ 瑓牡⁴汁楰敮਍汁楰敮献慴瑲⤨഻ഊ挊湯潳敬氮杯✨鳢₅汁楰敮樮⁳湩瑩慩楬敺❤㬩਍
+import Alpine from 'alpinejs';
+import './main.css';
+
+// Initialize Alpine.js
+window.Alpine = Alpine;
+
+// Tennis App Component
+Alpine.data('tennisApp', () => ({
+  courts: {},
+  loading: true,
+  error: null,
+  lastUpdate: null,
+  lang: 'pl',
+  
+  init() {
+    this.connectSSE();
+    this.fetchInitialData();
+  },
+  
+  async fetchInitialData() {
+    try {
+      const response = await fetch('/api/courts');
+      if (!response.ok) throw new Error('Failed to fetch courts');
+      const data = await response.json();
+      this.courts = data.courts || {};
+      this.loading = false;
+      this.lastUpdate = new Date();
+    } catch (err) {
+      this.error = err.message;
+      this.loading = false;
+    }
+  },
+  
+  connectSSE() {
+    const eventSource = new EventSource('/api/stream');
+    
+    eventSource.addEventListener('court_update', (e) => {
+      const data = JSON.parse(e.data);
+      this.courts[data.court_id] = data;
+      this.lastUpdate = new Date();
+    });
+    
+    eventSource.onerror = () => {
+      this.error = 'Połączenie przerwane';
+      setTimeout(() => this.connectSSE(), 5000);
+    };
+  },
+  
+  getCourtIds() {
+    return Object.keys(this.courts).sort();
+  },
+  
+  isMatchActive(courtId) {
+    return this.courts[courtId]?.match_status?.active || false;
+  },
+  
+  getScore(courtId, player) {
+    const court = this.courts[courtId];
+    if (!court) return { sets: [], points: '-' };
+    
+    const playerData = court[player];
+    if (!playerData) return { sets: [], points: '-' };
+    
+    return {
+      sets: playerData.sets || [],
+      points: playerData.points || '0'
+    };
+  },
+  
+  formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+}));
+
+// Theme Store
+Alpine.store('theme', {
+  current: localStorage.getItem('theme') || 'light',
+  
+  toggle() {
+    this.current = this.current === 'light' ? 'dark' : 'light';
+    localStorage.setItem('theme', this.current);
+    document.documentElement.setAttribute('data-theme', this.current);
+  },
+  
+  init() {
+    document.documentElement.setAttribute('data-theme', this.current);
+  }
+});
+
+// Start Alpine
+Alpine.start();
+
+// Initialize theme
+Alpine.store('theme').init();

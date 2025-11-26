@@ -62,7 +62,7 @@
             <div class="stat">
                 <div class="stat-figure text-primary">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4l2 4-6-2 4 2 6 9 0 1-18 0 9 9 0 0 11 8y0"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/>
                     </svg>
                 </div>
                 <div class="stat-title">Aktywne korty</div>
@@ -72,7 +72,7 @@
             <div class="stat">
                 <div class="stat-figure text-secondary">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13l-3-3 6 3 9 0 1-18 0 9 9 0 0 11 8v0"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
                 <div class="stat-title">Ostatnia aktualizacja</div>
@@ -120,10 +120,10 @@
                         </div>
                         
                         <!-- Match Status -->
-                        <template x-if="isMatchActive(courtId)">
+                        <template x-if="!isMatchActive(courtId)">
                             <div>
-                                <div class="text-center py-1 text-base-content/50">
-                                    <div class="text-6xl mb-4辟₾/div>
+                                <div class="text-center py-8 text-base-content/50">
+                                    <div class="text-6xl mb-4">🎾</div>
                                     <p>Brak aktywnego meczu</p>
                                 </div>
                             </div>
