@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent
-    static_dir: Path = Path(__file__).parent.parent / "static"  # Changed for Docker
+    static_dir: Path = Path(__file__).parent / "static"  # wyniki/static
     download_dir: Path = Path(__file__).parent.parent.parent / "download"
     
     model_config = SettingsConfigDict(
