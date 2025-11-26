@@ -7,27 +7,27 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy backend requirements (v2 requirements)
-COPY backend/requirements.txt .
+# Copy requirements and install
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend v2 code
-COPY backend/wyniki_v2 ./wyniki_v2
-COPY backend/app_v2.py ./app.py
+# Copy backend code
+COPY wyniki ./wyniki
+COPY app.py .
 
-# Copy built frontend (includes HTML files and assets)
-COPY static_v2 ./static
-
-# Copy built HTML files to root for web.py routes
-COPY static_v2/index.html ./index.html
-COPY static_v2/admin.html ./admin.html  
-COPY static_v2/embed.html ./embed.html
+# Copy HTML files
+COPY overlay.html .
+COPY overlay_all.html .
+COPY frontend/index.html .
+COPY frontend/admin.html .
+COPY frontend/embed.html .
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/api/snapshot || exit 1
+    CMD curl -f http://localhost:8080/health || exit 1
 
-# Run gunicorn
-CMD ["gunicorn", "--workers", "3", "--threads", "2", "--bind", "0.0.0.0:8080", \
+# Run gunicorn with gevent worker class for async SSE support
+# gevent allows thousands of concurrent SSE connections without blocking
+CMD ["gunicorn", "--worker-class", "gevent", "--workers", "4", "--bind", "0.0.0.0:8080", \
      "--access-logfile", "-", "--error-logfile", "-", \
      "--log-level", "info", "app:app"]
