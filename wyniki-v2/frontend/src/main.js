@@ -19,7 +19,7 @@ Alpine.data('tennisApp', () => ({
   
   async fetchInitialData() {
     try {
-      const response = await fetch('/api/courts');
+      const response = await fetch('/api/snapshot');
       if (!response.ok) throw new Error('Failed to fetch courts');
       const data = await response.json();
       this.courts = data.courts || {};
@@ -47,7 +47,11 @@ Alpine.data('tennisApp', () => ({
   },
   
   getCourtIds() {
-    return Object.keys(this.courts).sort();
+    return Object.keys(this.courts)
+      .map(id => parseInt(id))
+      .filter(id => !isNaN(id) && id > 0)
+      .sort((a, b) => a - b)
+      .map(id => id.toString());
   },
   
   isMatchActive(courtId) {
