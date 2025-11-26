@@ -49,7 +49,10 @@ def embed(lang=None, court=None):
 @blueprint.route('/assets/<path:filename>')
 def assets(filename):
     """Serve static assets (JS, CSS, etc.)."""
-    return send_from_directory(STATIC_DIR / 'assets', filename)
+    response = send_from_directory(STATIC_DIR / 'assets', filename)
+    # Cache static assets for 1 hour (they have hashed names)
+    response.headers['Cache-Control'] = 'public, max-age=3600, immutable'
+    return response
 
 
 @blueprint.route('/stream1')
