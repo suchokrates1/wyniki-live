@@ -31,7 +31,6 @@ def init_db() -> None:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS courts (
                 kort_id TEXT PRIMARY KEY,
-                overlay_id TEXT,
                 pin TEXT,
                 active INTEGER DEFAULT 1
             )
@@ -161,10 +160,10 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT kort_id, overlay_id FROM courts")
+            cursor.execute("SELECT kort_id FROM courts")
             rows = cursor.fetchall()
         
-        courts = [{"kort_id": row["kort_id"], "overlay_id": row["overlay_id"]} for row in rows]
+        courts = [{"kort_id": row["kort_id"]} for row in rows]
         logger.debug("courts_fetched", count=len(courts))
         return courts
     except Exception as e:
@@ -172,31 +171,31 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
         return []
 
 
-def insert_court(kort_id: str, overlay_id: Optional[str] = None) -> None:
+def insert_court(kort_id: str) -> None:
     """Insert a new court."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT OR IGNORE INTO courts (kort_id, overlay_id, active)
-                VALUES (?, ?, 1)
-            """, (kort_id, overlay_id))
+                INSERT OR IGNORE INTO courts (kort_id, active)
+                VALUES (?, 1)
+            """, (kort_id,))
             conn.commit()
         logger.info("court_inserted", kort_id=kort_id)
     except Exception as e:
         logger.error("insert_court_error", kort_id=kort_id, error=str(e))
 
 
-def upsert_court(kort_id: str, overlay_id: Optional[str]) -> None:
+def upsert_court(kort_id: str) -> None:
     """Insert or update court configuration."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO courts (kort_id, overlay_id, active)
-                VALUES (?, ?, 1)
-                ON CONFLICT(kort_id) DO UPDATE SET overlay_id=excluded.overlay_id
-            """, (kort_id, overlay_id))
+                INSERT INTO courts (kort_id, active)
+                VALUES (?, 1)
+                ON CONFLICT(kort_id) DO NOTHING
+            """, (kort_id,))
             conn.commit()
         logger.info("court_upserted", kort_id=kort_id, overlay_id=overlay_id)
     except Exception as e:

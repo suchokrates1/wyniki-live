@@ -60,14 +60,12 @@ class Court(db.Model):
     __tablename__ = 'courts'
     
     kort_id = db.Column(db.String(50), primary_key=True)
-    overlay_id = db.Column(db.String(50))
     pin = db.Column(db.String(10))
     active = db.Column(db.Integer, default=1)
     
     def to_dict(self):
         return {
             'kort_id': self.kort_id,
-            'overlay_id': self.overlay_id,
             'pin': self.pin,
             'active': self.active
         }

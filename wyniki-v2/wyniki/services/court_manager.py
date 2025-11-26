@@ -11,7 +11,6 @@ from ..config import settings, logger
 # Thread-safe state storage
 STATE_LOCK = threading.Lock()
 COURTS: Dict[str, Dict[str, Any]] = {}  # kort_id -> state
-COURTS_OVERLAY_MAP: Dict[str, Optional[str]] = {}  # kort_id -> overlay_id
 GLOBAL_LOG: Deque[Dict[str, Any]] = deque()
 GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size)
 
@@ -106,44 +105,17 @@ def ensure_court_state(kort_id: str) -> Dict[str, Any]:
         return COURTS[kort_id]
 
 
-def available_courts() -> List[Tuple[str, Optional[str]]]:
-    """Get list of (kort_id, overlay_id) tuples."""
+def available_courts() -> List[str]:
+    """Get list of court IDs."""
     with STATE_LOCK:
-        return [(k, COURTS_OVERLAY_MAP.get(k)) for k in _sorted_court_ids(COURTS.keys())]
+        return _sorted_court_ids(COURTS.keys())
 
 
-def courts_map() -> Dict[str, Optional[str]]:
-    """Get mapping of kort_id -> overlay_id."""
-    with STATE_LOCK:
-        return dict(COURTS_OVERLAY_MAP)
-
-
-def get_overlay_for_kort(kort_id: str) -> Optional[str]:
-    """Get overlay ID for court."""
-    with STATE_LOCK:
-        return COURTS_OVERLAY_MAP.get(kort_id)
-
-
-def get_kort_for_overlay(overlay_id: Optional[str]) -> Optional[str]:
-    """Find court by overlay ID."""
-    if not overlay_id:
-        return None
-    with STATE_LOCK:
-        for kort, ov in COURTS_OVERLAY_MAP.items():
-            if ov == overlay_id:
-                return kort
-    return None
-
-
-def refresh_courts_from_db(db_courts: Dict[str, Optional[str]], seed_if_empty: bool = False) -> Dict[str, Optional[str]]:
+def refresh_courts_from_db(db_courts: List[str], seed_if_empty: bool = False) -> None:
     """Update court configuration from database."""
     from ..models import CourtState
     
     with STATE_LOCK:
-        # Update mapping
-        COURTS_OVERLAY_MAP.clear()
-        COURTS_OVERLAY_MAP.update(db_courts)
-        
         # Ensure all courts have state
         for kort_id in db_courts:
             if kort_id not in COURTS:
@@ -161,8 +133,6 @@ def refresh_courts_from_db(db_courts: Dict[str, Optional[str]], seed_if_empty: b
             global GLOBAL_LOG
             new_log = deque(GLOBAL_LOG, maxlen=max_size)
             GLOBAL_LOG = new_log
-        
-        return dict(COURTS_OVERLAY_MAP)
 
 
 def serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:

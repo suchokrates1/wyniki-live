@@ -9,7 +9,6 @@ Alpine.data('adminApp', () => ({
   // Courts
   courts: [],
   newCourtId: '',
-  newCourtOverlay: '',
   
   // Tournaments
   tournaments: [],
@@ -80,24 +79,6 @@ Alpine.data('adminApp', () => ({
     this.showToast('Korty odświeżone', 'success');
   },
   
-  async updateCourtOverlay(kortId, overlayId) {
-    try {
-      const response = await fetch(`/admin/api/courts/${kortId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ overlay_id: overlayId || null }),
-      });
-      
-      if (!response.ok) throw new Error('Failed to update court');
-      
-      this.showToast(`Kort ${kortId} zaktualizowany`, 'success');
-      await this.loadCourts();
-    } catch (err) {
-      console.error('Failed to update court:', err);
-      this.showToast('Błąd aktualizacji kortu', 'error');
-    }
-  },
-  
   async addCourt() {
     if (!this.newCourtId) {
       this.showToast('Wprowadź ID kortu', 'warning');
@@ -110,7 +91,6 @@ Alpine.data('adminApp', () => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kort_id: this.newCourtId,
-          overlay_id: this.newCourtOverlay || null,
         }),
       });
       
@@ -118,7 +98,6 @@ Alpine.data('adminApp', () => ({
       
       this.showToast(`Kort ${this.newCourtId} dodany`, 'success');
       this.newCourtId = '';
-      this.newCourtOverlay = '';
       await this.loadCourts();
     } catch (err) {
       console.error('Failed to add court:', err);

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Administracyjny - Wyniki Live</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
-  <script type="module" crossorigin src="/assets/admin-i4b34-ZK.js"></script>
+  <script type="module" crossorigin src="/assets/admin-DGTWk111.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/main-Daz3_axt.js">
   <link rel="stylesheet" crossorigin href="/assets/main-pGCOd6yf.css">
 </head>
@@ -34,7 +34,6 @@
               <thead>
                 <tr>
                   <th>ID Kortu</th>
-                  <th>Overlay ID</th>
                   <th>Status</th>
                   <th>Akcje</th>
                 </tr>
@@ -43,13 +42,6 @@
                 <template x-for="court in courts" :key="court.kort_id">
                   <tr>
                     <td><span class="font-bold" x-text="'Kort ' + court.kort_id"></span></td>
-                    <td>
-                      <input type="text"
-                             x-model="court.overlay_id"
-                             @change="updateCourtOverlay(court.kort_id, $event.target.value)"
-                             class="input input-sm input-bordered w-full max-w-xs"
-                             placeholder="Brak overlay ID">
-                    </td>
                     <td>
                       <span class="badge" :class="court.active ? 'badge-success' : 'badge-ghost'" 
                             x-text="court.active ? 'Aktywny' : 'Nieaktywny'"></span>
@@ -65,7 +57,6 @@
 
           <div class="mt-4 flex gap-2">
             <input type="text" x-model="newCourtId" placeholder="ID nowego kortu (np. 6)" class="input input-bordered input-sm">
-            <input type="text" x-model="newCourtOverlay" placeholder="Overlay ID (opcjonalnie)" class="input input-bordered input-sm">
             <button @click="addCourt()" class="btn btn-primary btn-sm">+ Dodaj kort</button>
           </div>
         </div>
