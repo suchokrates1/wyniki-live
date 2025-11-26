@@ -11,14 +11,18 @@ APP_ROOT = Path(__file__).parent.parent.parent
 @blueprint.route('/')
 def index():
     """Serve main page."""
-    return send_from_directory(APP_ROOT, 'index.html')
+    response = send_from_directory(APP_ROOT, 'index.html')
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return response
 
 
 @blueprint.route('/admin')
 @blueprint.route('/admin.html')
 def admin():
     """Serve admin page."""
-    return send_from_directory(APP_ROOT, 'admin.html')
+    response = send_from_directory(APP_ROOT, 'admin.html')
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return response
 
 
 @blueprint.route('/embed')
@@ -26,7 +30,9 @@ def admin():
 @blueprint.route('/embed/<lang>/<int:court>')
 def embed(lang=None, court=None):
     """Serve embed page with optional language and court parameters."""
-    return send_from_directory(APP_ROOT, 'embed.html')
+    response = send_from_directory(APP_ROOT, 'embed.html')
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return response
 
 
 @blueprint.route('/stream1')
@@ -70,10 +76,14 @@ def overlay_single(kort_id):
     """Serve overlay page for a single court."""
     if kort_id < 1 or kort_id > 4:
         return "Court must be between 1 and 4", 404
-    return send_from_directory(APP_ROOT, 'overlay.html')
+    response = send_from_directory(APP_ROOT, 'overlay.html')
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return response
 
 
 @blueprint.route('/overlay/all')
 def overlay_all():
     """Serve overlay page showing all 4 courts."""
-    return send_from_directory(APP_ROOT, 'overlay_all.html')
+    response = send_from_directory(APP_ROOT, 'overlay_all.html')
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return response
