@@ -1,56 +1,260 @@
 <!DOCTYPE html>
 <html lang="pl" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel administratora - Wyniki</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Administracyjny - Wyniki Live</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
 </head>
 <body class="min-h-screen bg-base-200">
-    <div x-data="adminApp" x-cloak>
-        <h1 class="text-3xl font-bold p-8">⚙️ Panel administratora</h1>
-        
-        <!-- Tournament Selection -->
-        <div class="p-8">
-            <select x-model="selectedTournament" class="select select-bordered w-full max-w-xs">
-                <option disabled selected>Wybierz turniej</option>
-                <template x-for="tournament in tournaments" :key="tournament.id">
-                    <option :value="tournament.id" x-text="tournament.name"></option>
-                </template>
-            </select>
-        </div>
-        
-        <!-- Courts Management -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-8">
-            <template x-for="courtId in [1, 2, 3, 4]" :key="courtId">
-                <div class="card bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title">Kort <span x-text="courtId"></span></h2>
-                        
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Zawodnik A</span>
-                            </label>
-                            <input type="text" placeholder="Imię i nazwisko" class="input input-bordered">
-                        </div>
-                        
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Zawodnik B</span>
-                            </label>
-                            <input type="text" placeholder="Imię i nazwisko" class="input input-bordered">
-                        </div>
-                        
-                        <div class="card-actions justify-end mt-4">
-                            <button class="btn btn-primary">Zapisz</button>
-                            <button class="btn btn-ghost">Anuluj</button>
-                        </div>
-                    </div>
-                </div>
-            </template>
-        </div>
-    </div>
+  <div x-data="adminApp" class="container mx-auto px-4 py-8 max-w-7xl">
     
-    <script type="module" src="/src/admin.js"></script>
+    <header class="mb-8">
+      <div class="flex justify-between items-center">
+        <h1 class="text-4xl font-bold">⚙️ Panel Administracyjny</h1>
+        <div class="flex gap-2">
+          <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
+          <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
+          <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Courts Tab -->
+    <div x-show="activeTab === 'courts'" x-cloak>
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Zarządzanie kortami</h2>
+          
+          <div class="overflow-x-auto">
+            <table class="table table-zebra">
+              <thead>
+                <tr>
+                  <th>ID Kortu</th>
+                  <th>Overlay ID</th>
+                  <th>Status</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="court in courts" :key="court.kort_id">
+                  <tr>
+                    <td><span class="font-bold" x-text="'Kort ' + court.kort_id"></span></td>
+                    <td>
+                      <input type="text"
+                             x-model="court.overlay_id"
+                             @change="updateCourtOverlay(court.kort_id, $event.target.value)"
+                             class="input input-sm input-bordered w-full max-w-xs"
+                             placeholder="Brak overlay ID">
+                    </td>
+                    <td>
+                      <span class="badge" :class="court.active ? 'badge-success' : 'badge-ghost'" 
+                            x-text="court.active ? 'Aktywny' : 'Nieaktywny'"></span>
+                    </td>
+                    <td>
+                      <button @click="refreshCourts()" class="btn btn-sm btn-ghost">Odśwież</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-4 flex gap-2">
+            <input type="text" x-model="newCourtId" placeholder="ID nowego kortu (np. 6)" class="input input-bordered input-sm">
+            <input type="text" x-model="newCourtOverlay" placeholder="Overlay ID (opcjonalnie)" class="input input-bordered input-sm">
+            <button @click="addCourt()" class="btn btn-primary btn-sm">+ Dodaj kort</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tournaments Tab -->
+    <div x-show="activeTab === 'tournaments'" x-cloak>
+      
+      <!-- Add Tournament Form -->
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <h2 class="card-title">Dodaj nowy turniej</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div class="form-control">
+              <label class="label"><span class="label-text">Nazwa turnieju</span></label>
+              <input type="text" x-model="newTournament.name" class="input input-bordered" placeholder="np. IPC WIMCO 2025">
+            </div>
+
+            <div class="form-control">
+              <label class="label"><span class="label-text">Data rozpoczęcia</span></label>
+              <input type="date" x-model="newTournament.start_date" class="input input-bordered">
+            </div>
+
+            <div class="form-control">
+              <label class="label"><span class="label-text">Data zakończenia</span></label>
+              <input type="date" x-model="newTournament.end_date" class="input input-bordered">
+            </div>
+          </div>
+
+          <div class="card-actions justify-end mt-4">
+            <button @click="createTournament()" class="btn btn-primary">Utwórz turniej</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tournaments List -->
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Lista turniejów</h2>
+          
+          <!-- Loading Skeleton -->
+          <div x-show="loading.tournaments" class="space-y-4">
+            <div class="skeleton h-12 w-full"></div>
+            <div class="skeleton h-12 w-full"></div>
+            <div class="skeleton h-12 w-full"></div>
+          </div>
+
+          <div x-show="!loading.tournaments" class="overflow-x-auto">
+            <table class="table table-zebra">
+              <thead>
+                <tr>
+                  <th>Nazwa</th>
+                  <th>Rozpoczęcie</th>
+                  <th>Zakończenie</th>
+                  <th>Status</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="tournament in tournaments" :key="tournament.id">
+                  <tr :class="{'bg-success bg-opacity-10': tournament.active}">
+                    <td>
+                      <span class="font-semibold" x-text="tournament.name"></span>
+                      <span x-if="tournament.active" class="badge badge-success badge-sm ml-2">Aktywny</span>
+                    </td>
+                    <td x-text="tournament.start_date"></td>
+                    <td x-text="tournament.end_date"></td>
+                    <td>
+                      <span x-if="!tournament.active" @click="activateTournament(tournament.id)" class="badge badge-ghost cursor-pointer hover:badge-primary">Ustaw aktywny</span>
+                    </td>
+                    <td class="flex gap-2">
+                      <button @click="selectTournament(tournament.id)" class="btn btn-xs btn-ghost">📋 Gracze</button>
+                      <button @click="deleteTournament(tournament.id)" class="btn btn-xs btn-error">Usuń</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert alert-info mt-4" x-show="tournaments.length === 0">
+            <span>Brak turniejów. Dodaj pierwszy turniej powyżej.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Players Tab -->
+    <div x-show="activeTab === 'players'" x-cloak>
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Gracze w turnieju</h2>
+          
+          <div x-show="!selectedTournament" class="alert alert-warning">
+            <span>Wybierz turniej z zakładki "Turnieje" aby zarządzać graczami</span>
+          </div>
+
+          <div x-show="selectedTournament">
+            <!-- Add Player Form -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div class="form-control">
+                <label class="label"><span class="label-text">Imię i nazwisko</span></label>
+                <input type="text" x-model="newPlayer.name" class="input input-bordered input-sm" placeholder="Jan Kowalski">
+              </div>
+
+              <div class="form-control">
+                <label class="label"><span class="label-text">Kategoria</span></label>
+                <input type="text" x-model="newPlayer.category" class="input input-bordered input-sm" placeholder="B1">
+              </div>
+
+              <div class="form-control">
+                <label class="label"><span class="label-text">Kraj</span></label>
+                <input type="text" x-model="newPlayer.country" class="input input-bordered input-sm" placeholder="pl" maxlength="2">
+              </div>
+
+              <div class="form-control">
+                <label class="label">&nbsp;</label>
+                <button @click="addPlayer()" class="btn btn-primary btn-sm">Dodaj gracza</button>
+              </div>
+            </div>
+
+            <!-- Bulk Import -->
+            <div class="collapse collapse-arrow bg-base-200 mb-4">
+              <input type="checkbox" /> 
+              <div class="collapse-title font-medium">
+                📥 Import graczy z pliku tekstowego
+              </div>
+              <div class="collapse-content">
+                <p class="text-sm mb-2">Format: <code>Imię Nazwisko Kategoria Kraj</code> (jeden gracz na linię)</p>
+                <textarea x-model="importText" class="textarea textarea-bordered w-full" rows="6" placeholder="John Doe B1 us&#10;Jane Smith A1&#10;Jana Nowak B2 pl&#10;..."></textarea>
+                <button @click="importPlayers()" class="btn btn-primary btn-sm mt-2">Importuj graczy</button>
+              </div>
+            </div>
+
+            <!-- Players Table -->
+            <div class="overflow-x-auto">
+              <table class="table table-zebra table-sm">
+                <thead>
+                  <tr>
+                    <th>Imię i nazwisko</th>
+                    <th>Kategoria</th>
+                    <th>Kraj</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="player in filteredPlayers" :key="player.id">
+                    <tr>
+                      <td x-text="player.name"></td>
+                      <td><span class="badge badge-sm" x-text="player.category"></span></td>
+                      <td x-text="player.country"></td>
+                      <td>
+                        <button @click="deletePlayer(player.id)" class="btn btn-xs btn-error">Usuń</button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="alert alert-info mt-4" x-show="players.length === 0 && !loading.players">
+              <span>Brak graczy w tym turnieju</span>
+            </div>
+
+            <div class="stats stats-vertical lg:stats-horizontal shadow mt-4">
+              <div class="stat">
+                <div class="stat-title">Liczba graczy</div>
+                <div class="stat-value" x-text="players.length"></div>
+              </div>
+
+              <div class="stat">
+                <div class="stat-title">Wyfiltrowani</div>
+                <div class="stat-value" x-text="filteredPlayers.length"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast notifications -->
+  <div class="toast toast-end" x-show="toast.show" x-cloak>
+    <div class="alert" :class="'alert-' + toast.type">
+      <span x-text="toast.message"></span>
+    </div>
+  </div>
+
+
+  <script type="module" src="/src/admin.js"></script>
 </body>
 </html>
