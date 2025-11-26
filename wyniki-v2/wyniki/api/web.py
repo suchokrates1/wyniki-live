@@ -4,14 +4,16 @@ from pathlib import Path
 
 blueprint = Blueprint('web', __name__)
 
-# Get the app root directory (where index.html, admin.html are located)
+# Get the static directory (where built HTML files are located)
+STATIC_DIR = Path(__file__).parent.parent / 'static'
+# Get the app root directory (for overlay files)
 APP_ROOT = Path(__file__).parent.parent.parent
 
 
 @blueprint.route('/')
 def index():
     """Serve main page."""
-    response = send_from_directory(APP_ROOT, 'index.html')
+    response = send_from_directory(STATIC_DIR, 'index.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
@@ -23,7 +25,7 @@ def index():
 @blueprint.route('/admin.html')
 def admin():
     """Serve admin page."""
-    response = send_from_directory(APP_ROOT, 'admin.html')
+    response = send_from_directory(STATIC_DIR, 'admin.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
@@ -36,12 +38,18 @@ def admin():
 @blueprint.route('/embed/<lang>/<int:court>')
 def embed(lang=None, court=None):
     """Serve embed page with optional language and court parameters."""
-    response = send_from_directory(APP_ROOT, 'embed.html')
+    response = send_from_directory(STATIC_DIR, 'embed.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+
+@blueprint.route('/assets/<path:filename>')
+def assets(filename):
+    """Serve static assets (JS, CSS, etc.)."""
+    return send_from_directory(STATIC_DIR / 'assets', filename)
 
 
 @blueprint.route('/stream1')
