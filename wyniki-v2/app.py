@@ -4,6 +4,11 @@ Refactored with Alpine.js, Tailwind CSS, and modular backend
 """
 from __future__ import annotations
 
+# Monkey-patch standard library for gevent compatibility
+# Must be done before any other imports
+from gevent import monkey
+monkey.patch_all()
+
 from flask import Flask
 from prometheus_flask_exporter import PrometheusMetrics
 
