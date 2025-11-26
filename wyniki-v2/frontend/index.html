@@ -119,61 +119,50 @@
                             </h2>
                         </div>
                         
-                        <!-- Match Status -->
-                        <template x-if="!isMatchActive(courtId)">
-                            <div>
-                                <div class="text-center py-8 text-base-content/50">
-                                    <div class="text-6xl mb-4">🎾</div>
-                                    <p>Brak aktywnego meczu</p>
+                        <!-- Scoreboard - Always Visible -->
+                        <div>
+                            <!-- Player A -->
+                            <div class="flex justify-between items-center p-4 bg-base-200 rounded-lg mb-2">
+                                <div class="flex items-center gap-3">
+                                    <img :src="courts[courtId]?.A?.flag_url || '/api/placeholder/32/24'" 
+                                         alt="Flag" 
+                                         class="w-8 h-6 object-cover rounded shadow"
+                                         onerror="this.style.display='none'">
+                                    <span class="font-bold text-lg" x-text="courts[courtId]?.A?.full_name || 'Gracz A'"></span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <template x-for="(setScore, idx) in getScore(courtId, 'A').sets" :key="idx">
+                                        <span class="score-badge badge-neutral" x-text="setScore"></span>
+                                    </template>
+                                    <span class="text-3xl font-bold w-16 text-right" x-text="getScore(courtId, 'A').points"></span>
                                 </div>
                             </div>
-                        </template>
-                        
-                        <template x-if="isMatchActive(courtId)">
-                            <div>
-                                <!-- Player A -->
-                                <div class="flex justify-between items-center p-4 bg-base-200 rounded-lg mb-2">
-                                    <div class="flex items-center gap-3">
-                                        <img :src="courts[courtId].A.flag_url || '/api/placeholder/32/24'" 
-                                             :alt="Flag" 
-                                             class="w-8 h-6 object-cover rounded shadow"
-                                             onerror="this.style.display='none'">
-                                        <span class="font-bold text-lg" x-text="courts[courtId].A.full_name || '-'"></span>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <template x-for="(setScore, idx) in getScore(courtId, 'A').sets" :key="idx">
-                                            <span class="score-badge badge-neutral" x-text="setScore"></span>
-                                        </template>
-                                        <span class="text-3xl font-bold w-16 text-right" x-text="getScore(courtId, 'A').points"></span>
-                                    </div>
+                            
+                            <!-- Player B -->
+                            <div class="flex justify-between items-center p-4 bg-base-200 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <img :src="courts[courtId]?.B?.flag_url || '/api/placeholder/32/24'" 
+                                         alt="Flag" 
+                                         class="w-8 h-6 object-cover rounded shadow"
+                                         onerror="this.style.display='none'">
+                                    <span class="font-bold text-lg" x-text="courts[courtId]?.B?.full_name || 'Gracz B'"></span>
                                 </div>
-                                
-                                <!-- Player B -->
-                                <div class="flex justify-between items-center p-4 bg-base-200 rounded-lg">
-                                    <div class="flex items-center gap-3">
-                                        <img :src="courts[courtId].B.flag_url || '/api/placeholder/32/24'" 
-                                             :alt="Flag" 
-                                             class="w-8 h-6 object-cover rounded shadow"
-                                             onerror="this.style.display='none'">
-                                        <span class="font-bold text-lg" x-text="courts[courtId].B.full_name || '-'"></span>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <template x-for="(setScore, idx) in getScore(courtId, 'B').sets" :key="idx">
-                                            <span class="score-badge badge-neutral" x-text="setScore"></span>
-                                        </template>
-                                        <span class="text-3xl font-bold w-16 text-right" x-text="getScore(courtId, 'B').points"></span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Match Info -->
-                                <div class="flex justify-between items-center mt-4 text-sm text-base-content/70">
-                                    <span>Set <span x-text="courts[courtId].current_set || 1"></span></span>
-                                    <span x-show="courts[courtId].match_time?.seconds">
-                                        🕒 <span x-text="formatTime(courts[courtId].match_time?.seconds)"></span>
-                                    </span>
+                                <div class="flex items-center gap-3">
+                                    <template x-for="(setScore, idx) in getScore(courtId, 'B').sets" :key="idx">
+                                        <span class="score-badge badge-neutral" x-text="setScore"></span>
+                                    </template>
+                                    <span class="text-3xl font-bold w-16 text-right" x-text="getScore(courtId, 'B').points"></span>
                                 </div>
                             </div>
-                        </template>
+                            
+                            <!-- Match Info -->
+                            <div class="flex justify-between items-center mt-4 text-sm text-base-content/70">
+                                <span>Set <span x-text="courts[courtId]?.current_set || 1"></span></span>
+                                <span x-show="courts[courtId]?.match_time?.seconds">
+                                    🕒 <span x-text="formatTime(courts[courtId].match_time?.seconds)"></span>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </template>
