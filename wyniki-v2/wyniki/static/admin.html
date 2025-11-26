@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Administracyjny - Wyniki Live</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
-  <script type="module" crossorigin src="/assets/admin-DGTWk111.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/main-Daz3_axt.js">
-  <link rel="stylesheet" crossorigin href="/assets/main-pGCOd6yf.css">
+  <script type="module" crossorigin src="/assets/admin-D2Mmx0Xc.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/main-BpI38gtK.js">
+  <link rel="stylesheet" crossorigin href="/assets/main-CssX_ddR.css">
 </head>
 <body class="min-h-screen bg-base-200">
   <div x-data="adminApp" class="container mx-auto px-4 py-8 max-w-7xl">
@@ -34,6 +34,7 @@
               <thead>
                 <tr>
                   <th>ID Kortu</th>
+                  <th>PIN</th>
                   <th>Status</th>
                   <th>Akcje</th>
                 </tr>
@@ -42,6 +43,15 @@
                 <template x-for="court in courts" :key="court.kort_id">
                   <tr>
                     <td><span class="font-bold" x-text="'Kort ' + court.kort_id"></span></td>
+                    <td>
+                      <input type="text"
+                             x-model="court.pin"
+                             @change="updateCourtPin(court.kort_id, $event.target.value)"
+                             class="input input-sm input-bordered w-24"
+                             placeholder="PIN"
+                             maxlength="4"
+                             pattern="[0-9]{4}">
+                    </td>
                     <td>
                       <span class="badge" :class="court.active ? 'badge-success' : 'badge-ghost'" 
                             x-text="court.active ? 'Aktywny' : 'Nieaktywny'"></span>
@@ -57,6 +67,7 @@
 
           <div class="mt-4 flex gap-2">
             <input type="text" x-model="newCourtId" placeholder="ID nowego kortu (np. 6)" class="input input-bordered input-sm">
+            <input type="text" x-model="newCourtPin" placeholder="PIN (4 cyfry)" class="input input-bordered input-sm w-32" maxlength="4" pattern="[0-9]{4}">
             <button @click="addCourt()" class="btn btn-primary btn-sm">+ Dodaj kort</button>
           </div>
         </div>

@@ -160,10 +160,10 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT kort_id FROM courts")
+            cursor.execute("SELECT kort_id, pin, active FROM courts")
             rows = cursor.fetchall()
         
-        courts = [{"kort_id": row["kort_id"]} for row in rows]
+        courts = [{"kort_id": row["kort_id"], "pin": row["pin"], "active": row["active"]} for row in rows]
         logger.debug("courts_fetched", count=len(courts))
         return courts
     except Exception as e:
@@ -171,33 +171,33 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
         return []
 
 
-def insert_court(kort_id: str) -> None:
+def insert_court(kort_id: str, pin: Optional[str] = None) -> None:
     """Insert a new court."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT OR IGNORE INTO courts (kort_id, active)
-                VALUES (?, 1)
-            """, (kort_id,))
+                INSERT OR IGNORE INTO courts (kort_id, pin, active)
+                VALUES (?, ?, 1)
+            """, (kort_id, pin))
             conn.commit()
         logger.info("court_inserted", kort_id=kort_id)
     except Exception as e:
         logger.error("insert_court_error", kort_id=kort_id, error=str(e))
 
 
-def upsert_court(kort_id: str) -> None:
+def upsert_court(kort_id: str, pin: Optional[str] = None) -> None:
     """Insert or update court configuration."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO courts (kort_id, active)
-                VALUES (?, 1)
-                ON CONFLICT(kort_id) DO NOTHING
-            """, (kort_id,))
+                INSERT INTO courts (kort_id, pin, active)
+                VALUES (?, ?, 1)
+                ON CONFLICT(kort_id) DO UPDATE SET pin=excluded.pin
+            """, (kort_id, pin))
             conn.commit()
-        logger.info("court_upserted", kort_id=kort_id, overlay_id=overlay_id)
+        logger.info("court_upserted", kort_id=kort_id, pin=pin)
     except Exception as e:
         logger.error("upsert_court_error", kort_id=kort_id, error=str(e))
 

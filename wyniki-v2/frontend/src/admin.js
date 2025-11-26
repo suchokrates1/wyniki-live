@@ -9,6 +9,7 @@ Alpine.data('adminApp', () => ({
   // Courts
   courts: [],
   newCourtId: '',
+  newCourtPin: '',
   
   // Tournaments
   tournaments: [],
@@ -79,9 +80,40 @@ Alpine.data('adminApp', () => ({
     this.showToast('Korty odświeżone', 'success');
   },
   
+  async updateCourtPin(kortId, pin) {
+    try {
+      // Validate PIN format
+      if (pin && (pin.length !== 4 || !/^\d{4}$/.test(pin))) {
+        this.showToast('PIN musi mieć 4 cyfry', 'warning');
+        await this.loadCourts(); // Reload to reset invalid input
+        return;
+      }
+      
+      const response = await fetch(`/admin/api/courts/${kortId}/pin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pin || null }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to update PIN');
+      
+      this.showToast(`PIN dla kortu ${kortId} zaktualizowany`, 'success');
+      await this.loadCourts();
+    } catch (err) {
+      console.error('Failed to update PIN:', err);
+      this.showToast('Błąd aktualizacji PIN', 'error');
+    }
+  },
+  
   async addCourt() {
     if (!this.newCourtId) {
       this.showToast('Wprowadź ID kortu', 'warning');
+      return;
+    }
+    
+    // Validate PIN if provided
+    if (this.newCourtPin && (this.newCourtPin.length !== 4 || !/^\d{4}$/.test(this.newCourtPin))) {
+      this.showToast('PIN musi mieć 4 cyfry', 'warning');
       return;
     }
     
@@ -91,6 +123,7 @@ Alpine.data('adminApp', () => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kort_id: this.newCourtId,
+          pin: this.newCourtPin || null,
         }),
       });
       
@@ -98,6 +131,7 @@ Alpine.data('adminApp', () => ({
       
       this.showToast(`Kort ${this.newCourtId} dodany`, 'success');
       this.newCourtId = '';
+      this.newCourtPin = '';
       await this.loadCourts();
     } catch (err) {
       console.error('Failed to add court:', err);
