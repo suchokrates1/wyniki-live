@@ -12,8 +12,8 @@ blueprint = Blueprint('courts', __name__, url_prefix='/api')
 def snapshot():
     """Get current state of all courts."""
     try:
-        snapshot = serialize_public_snapshot()
-        return jsonify(snapshot)
+        courts_data = serialize_public_snapshot()
+        return jsonify({"courts": courts_data})
     except Exception as e:
         logger.error(f"Failed to get snapshot: {e}")
         return jsonify({"error": str(e)}), 500

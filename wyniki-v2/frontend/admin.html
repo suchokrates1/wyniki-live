@@ -39,7 +39,14 @@
               <tbody>
                 <template x-for="court in courts" :key="court.kort_id">
                   <tr>
-                    <td><span class="font-bold" x-text="'Kort ' + court.kort_id"></span></td>
+                    <td>
+                      <template x-if="editingCourt !== court.kort_id">
+                        <span class="font-bold" x-text="'Kort ' + court.kort_id"></span>
+                      </template>
+                      <template x-if="editingCourt === court.kort_id">
+                        <input type="text" x-model="editCourtId" class="input input-sm input-bordered w-24" @keyup.enter="saveCourt(court.kort_id)" @keyup.escape="cancelEdit()">
+                      </template>
+                    </td>
                     <td>
                       <input type="text"
                              x-model="court.pin"
@@ -53,8 +60,17 @@
                       <span class="badge" :class="court.active ? 'badge-success' : 'badge-ghost'" 
                             x-text="court.active ? 'Aktywny' : 'Nieaktywny'"></span>
                     </td>
-                    <td>
-                      <button @click="refreshCourts()" class="btn btn-sm btn-ghost">Odśwież</button>
+                    <td class="flex gap-1">
+                      <template x-if="editingCourt !== court.kort_id">
+                        <button @click="startEdit(court.kort_id)" class="btn btn-sm btn-ghost" title="Edytuj">✏️</button>
+                      </template>
+                      <template x-if="editingCourt === court.kort_id">
+                        <div class="flex gap-1">
+                          <button @click="saveCourt(court.kort_id)" class="btn btn-sm btn-success">✓</button>
+                          <button @click="cancelEdit()" class="btn btn-sm btn-ghost">✗</button>
+                        </div>
+                      </template>
+                      <button @click="deleteCourt(court.kort_id)" class="btn btn-sm btn-ghost text-error" title="Usuń">🗑️</button>
                     </td>
                   </tr>
                 </template>
