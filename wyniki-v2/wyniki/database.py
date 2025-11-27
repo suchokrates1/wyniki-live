@@ -202,6 +202,43 @@ def upsert_court(kort_id: str, pin: Optional[str] = None) -> None:
         logger.error("upsert_court_error", kort_id=kort_id, error=str(e))
 
 
+def delete_court(kort_id: str) -> bool:
+    """Delete a court from database."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM courts WHERE kort_id = ?", (kort_id,))
+            conn.commit()
+            deleted = cursor.rowcount > 0
+        if deleted:
+            logger.info("court_deleted", kort_id=kort_id)
+        return deleted
+    except Exception as e:
+        logger.error("delete_court_error", kort_id=kort_id, error=str(e))
+        return False
+
+
+def rename_court(old_kort_id: str, new_kort_id: str) -> bool:
+    """Rename a court (change kort_id)."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            # Check if new ID already exists
+            cursor.execute("SELECT 1 FROM courts WHERE kort_id = ?", (new_kort_id,))
+            if cursor.fetchone():
+                logger.warning("rename_court_conflict", old_kort_id=old_kort_id, new_kort_id=new_kort_id)
+                return False
+            cursor.execute("UPDATE courts SET kort_id = ? WHERE kort_id = ?", (new_kort_id, old_kort_id))
+            conn.commit()
+            renamed = cursor.rowcount > 0
+        if renamed:
+            logger.info("court_renamed", old_kort_id=old_kort_id, new_kort_id=new_kort_id)
+        return renamed
+    except Exception as e:
+        logger.error("rename_court_error", old_kort_id=old_kort_id, new_kort_id=new_kort_id, error=str(e))
+        return False
+
+
 def fetch_app_settings(keys: List[str]) -> Dict[str, Any]:
     """Fetch app settings from database."""
     try:

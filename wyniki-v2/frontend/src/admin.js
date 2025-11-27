@@ -10,6 +10,8 @@ Alpine.data('adminApp', () => ({
   courts: [],
   newCourtId: '',
   newCourtPin: '',
+  editingCourt: null,
+  editCourtId: '',
   
   // Tournaments
   tournaments: [],
@@ -136,6 +138,68 @@ Alpine.data('adminApp', () => ({
     } catch (err) {
       console.error('Failed to add court:', err);
       this.showToast('Błąd dodawania kortu', 'error');
+    }
+  },
+  
+  startEdit(kortId) {
+    this.editingCourt = kortId;
+    this.editCourtId = kortId;
+  },
+  
+  cancelEdit() {
+    this.editingCourt = null;
+    this.editCourtId = '';
+  },
+  
+  async saveCourt(oldKortId) {
+    if (!this.editCourtId) {
+      this.showToast('ID kortu nie może być puste', 'warning');
+      return;
+    }
+    
+    if (this.editCourtId === oldKortId) {
+      this.cancelEdit();
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/admin/api/courts/${oldKortId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kort_id: this.editCourtId }),
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to rename court');
+      }
+      
+      this.showToast(`Kort ${oldKortId} zmieniono na ${this.editCourtId}`, 'success');
+      this.cancelEdit();
+      await this.loadCourts();
+    } catch (err) {
+      console.error('Failed to rename court:', err);
+      this.showToast(err.message || 'Błąd zmiany nazwy kortu', 'error');
+    }
+  },
+  
+  async deleteCourt(kortId) {
+    if (!confirm(`Czy na pewno chcesz usunąć Kort ${kortId}?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/admin/api/courts/${kortId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete court');
+      
+      this.showToast(`Kort ${kortId} usunięty`, 'success');
+      await this.loadCourts();
+    } catch (err) {
+      console.error('Failed to delete court:', err);
+      this.showToast('Błąd usuwania kortu', 'error');
     }
   },
   

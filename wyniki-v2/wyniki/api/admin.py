@@ -68,6 +68,65 @@ def update_court_pin(kort_id):
         return jsonify({"error": str(e)}), 500
 
 
+@blueprint.route('/api/courts/<kort_id>', methods=['DELETE'])
+def delete_court(kort_id):
+    """Delete a court."""
+    try:
+        from ..services import court_manager
+        from .. import database
+        
+        # Delete from database
+        deleted = database.delete_court(kort_id)
+        
+        if not deleted:
+            return jsonify({"error": "Court not found"}), 404
+        
+        # Refresh in-memory state
+        db_courts_list = database.fetch_courts()
+        db_courts = [row["kort_id"] for row in db_courts_list]
+        court_manager.refresh_courts_from_db(db_courts)
+        
+        logger.info(f"Court deleted: kort={kort_id}")
+        return jsonify({"status": "ok", "kort_id": kort_id})
+    except Exception as e:
+        logger.error(f"Failed to delete court: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/courts/<kort_id>', methods=['PUT'])
+def update_court(kort_id):
+    """Update court (rename kort_id)."""
+    try:
+        from ..services import court_manager
+        from .. import database
+        
+        data = request.get_json() or {}
+        new_kort_id = data.get("kort_id")
+        
+        if not new_kort_id:
+            return jsonify({"error": "New kort_id required"}), 400
+        
+        if new_kort_id == kort_id:
+            return jsonify({"status": "ok", "kort_id": kort_id})
+        
+        # Rename in database
+        renamed = database.rename_court(kort_id, new_kort_id)
+        
+        if not renamed:
+            return jsonify({"error": "Court not found or new ID already exists"}), 400
+        
+        # Refresh in-memory state
+        db_courts_list = database.fetch_courts()
+        db_courts = [row["kort_id"] for row in db_courts_list]
+        court_manager.refresh_courts_from_db(db_courts)
+        
+        logger.info(f"Court renamed: {kort_id} -> {new_kort_id}")
+        return jsonify({"status": "ok", "kort_id": new_kort_id})
+    except Exception as e:
+        logger.error(f"Failed to update court: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @blueprint.route('/api/history/latest', methods=['DELETE'])
 def delete_latest_history():
     """Delete the latest history entry."""
