@@ -38,9 +38,83 @@ def get_courts():
         return jsonify({"error": str(e)}), 500
 
 
-@blueprint.route('/players', methods=['GET'])
+@blueprint.route('/players', methods=['GET', 'POST', 'OPTIONS'])
 def get_players():
-    """Get list of available players for app."""
+    """Get list of available players for app, or add a new player (POST)."""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response, 204
+    
+    # POST - add new player (requires court PIN)
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"ok": False, "error": "invalid-payload"}), 400
+            
+            # Verify court PIN for authorization
+            kort_id = data.get("kort_id")
+            provided_pin = str(data.get("pin", "")).strip()
+            
+            if not kort_id or not provided_pin:
+                return jsonify({"ok": False, "error": "kort_id and pin required"}), 400
+            
+            # Check court and PIN
+            court = Court.query.get(kort_id)
+            if not court:
+                return jsonify({"ok": False, "error": "court-not-found"}), 404
+            
+            if court.pin and provided_pin != court.pin:
+                return jsonify({"ok": False, "error": "invalid-pin", "authorized": False}), 403
+            
+            # Get player data
+            surname = data.get("surname", "").strip()
+            if not surname:
+                return jsonify({"ok": False, "error": "surname required"}), 400
+            
+            country_code = data.get("country_code", "").strip() or None
+            category = data.get("category", "").strip() or None
+            
+            # Get active tournament
+            tournament = Tournament.query.filter_by(active=1).first()
+            if not tournament:
+                return jsonify({"ok": False, "error": "no active tournament"}), 400
+            
+            # Create player
+            player = Player(
+                tournament_id=tournament.id,
+                name=surname,
+                country=country_code,
+                category=category
+            )
+            db.session.add(player)
+            db.session.commit()
+            
+            logger.info(f"Player created: {player.id} - {surname}")
+            
+            return jsonify({
+                "ok": True,
+                "player": {
+                    "id": str(player.id),
+                    "surname": player.name,
+                    "full_name": player.name,
+                    "country_code": player.country,
+                    "category": player.category,
+                    "flag_url": f"https://flagcdn.com/w80/{player.country.lower()}.png" if player.country else None
+                }
+            }), 201
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating player: {e}", exc_info=True)
+            return jsonify({"ok": False, "error": str(e)}), 500
+    
+    # GET - list players
     try:
         # Get active tournament
         tournament = Tournament.query.filter_by(active=1).first()
@@ -61,7 +135,7 @@ def get_players():
                 "surname": player.name,
                 "full_name": player.name,
                 "country_code": player.country,
-                "flag_url": None
+                "flag_url": f"https://flagcdn.com/w80/{player.country.lower()}.png" if player.country else None
             })
         
         return jsonify({
