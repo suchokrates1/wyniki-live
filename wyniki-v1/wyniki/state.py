@@ -905,6 +905,15 @@ def available_courts() -> List[Tuple[str, Optional[str]]]:
         return [(kort_id, COURT_OVERLAYS.get(kort_id)) for kort_id in INITIAL_COURTS]
 
 
+def is_court_in_match(kort_id: str) -> bool:
+    """Check if a court currently has an active match."""
+    with STATE_LOCK:
+        state = snapshots.get(kort_id)
+        if not state:
+            return False
+        return bool(state.get("in_match", False))
+
+
 def normalize_kort_id(raw: Any) -> Optional[str]:
     if raw is None:
         return None
@@ -2445,6 +2454,7 @@ __all__ = [
     "get_uno_hourly_config",
     "get_uno_hourly_status",
     "get_uno_hourly_usage_summary",
+    "is_court_in_match",
     "is_court_polling_paused",
     "is_uno_requests_enabled",
     "is_known_kort",

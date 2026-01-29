@@ -91,6 +91,7 @@ from .state import (
     get_uno_hourly_config,
     get_uno_hourly_usage_summary,
     get_uno_rate_limit_info,
+    is_court_in_match,
     is_known_kort,
     is_plugin_enabled,
     is_uno_requests_enabled,
@@ -1444,7 +1445,8 @@ def api_courts():
     courts = [
         {
             "kort_id": kort_id,
-            "overlay_id": overlay_id
+            "overlay_id": overlay_id,
+            "is_available": not is_court_in_match(kort_id)
         }
         for kort_id, overlay_id in available_courts()
     ]
