@@ -65,6 +65,8 @@ services:
 
 volumes:
   wyniki_data:
+    external: true
+    name: count_wyniki_data
   rtmp_hls:
 
 networks:
