@@ -1307,7 +1307,7 @@ def static_files(filename: str):
 def download_plugin():
     if not os.path.isdir(DOWNLOAD_DIR):
         abort(404)
-    allowed_extensions = {".zip", ".crx"}
+    allowed_extensions = {".zip", ".crx", ".apk"}
     archive_names = sorted(
         (filename
          for filename in os.listdir(DOWNLOAD_DIR)
@@ -1318,6 +1318,23 @@ def download_plugin():
     if not archive_names:
         abort(404)
     return send_from_directory(DOWNLOAD_DIR, archive_names[0], as_attachment=True)
+
+
+@blueprint.route("/download/apk")
+def download_apk():
+    """Pobierz aplikację Android Tennis Referee"""
+    if not os.path.isdir(DOWNLOAD_DIR):
+        abort(404)
+    apk_files = sorted(
+        (filename
+         for filename in os.listdir(DOWNLOAD_DIR)
+         if filename.lower().endswith(".apk")
+         and os.path.isfile(os.path.join(DOWNLOAD_DIR, filename))),
+        reverse=True
+    )
+    if not apk_files:
+        abort(404)
+    return send_from_directory(DOWNLOAD_DIR, apk_files[0], as_attachment=True)
 
 
 @blueprint.route("/api/players", methods=["GET", "POST", "OPTIONS"])
