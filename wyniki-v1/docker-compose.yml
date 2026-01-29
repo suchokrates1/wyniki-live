@@ -24,6 +24,9 @@ services:
       # Ścieżka bazy (w kontenerze)
       DB_PATH: /data/wyniki_archive.sqlite3
       PORT: 8080
+      # Admin panel
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      HISTORY_DELETE_PASSWORD: ${HISTORY_DELETE_PASSWORD:-}
     volumes:
       - wyniki_data:/data
     labels:
