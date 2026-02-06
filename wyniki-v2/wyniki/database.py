@@ -160,7 +160,7 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT kort_id, pin, active FROM courts")
+            cursor.execute("SELECT kort_id, pin, active FROM courts ORDER BY CAST(kort_id AS INTEGER)")
             rows = cursor.fetchall()
         
         courts = [{"kort_id": row["kort_id"], "pin": row["pin"], "active": row["active"]} for row in rows]

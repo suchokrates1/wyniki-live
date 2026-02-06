@@ -153,25 +153,60 @@ def authorize_court(kort_id: str):
     """Verify PIN for court access."""
     try:
         data = request.get_json()
-        pin = data.get('pin', '')
-        
-        # TODO: Implement proper PIN verification from database
-        # For now, accept any 4-digit PIN
-        if len(pin) == 4 and pin.isdigit():
+        if not data:
             return jsonify({
+                "ok": False,
+                "authorized": False,
+                "error": "invalid-payload"
+            }), 400
+        
+        provided_pin = str(data.get('pin', '')).strip()
+        
+        if not provided_pin:
+            return jsonify({
+                "ok": False,
+                "authorized": False,
+                "error": "pin-required"
+            }), 400
+        
+        # Get court from database
+        court = Court.query.get(kort_id)
+        
+        if not court:
+            logger.warning(f"Court not found: {kort_id}")
+            return jsonify({
+                "ok": False,
+                "authorized": False,
+                "error": "court-not-found"
+            }), 404
+        
+        # Verify PIN
+        correct_pin = court.pin or "0000"
+        authorized = provided_pin == correct_pin
+        
+        logger.info(f"PIN check for kort {kort_id}: authorized={authorized}")
+        
+        if authorized:
+            return jsonify({
+                "ok": True,
                 "authorized": True,
                 "court_id": kort_id,
                 "message": "Access granted"
             }), 200
         else:
             return jsonify({
+                "ok": False,
                 "authorized": False,
-                "error": "Invalid PIN"
-            }), 401
+                "error": "invalid-pin"
+            }), 403
             
     except Exception as e:
         logger.error(f"Error authorizing court: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "ok": False,
+            "authorized": False,
+            "error": "internal-error"
+        }), 500
 
 
 @blueprint.route('/matches', methods=['POST'])
