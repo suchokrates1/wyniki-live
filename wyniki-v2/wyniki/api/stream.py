@@ -17,13 +17,18 @@ def event_stream():
         try:
             # Send initial snapshot
             snapshot = serialize_public_snapshot()
-            yield f"data: {json.dumps({'type': 'snapshot', 'payload': snapshot})}\n\n"
+            for kort_id, state in snapshot.items():
+                payload = json.dumps({"court_id": kort_id, **state})
+                yield f"event: court_update\ndata: {payload}\n\n"
             
             # Stream updates
             while True:
                 try:
                     event = listener.get(timeout=30)  # 30s timeout for heartbeat
-                    yield f"data: {json.dumps(event)}\n\n"
+                    kort_id = event.get("kort_id", "")
+                    state = event.get("data", {})
+                    payload = json.dumps({"court_id": kort_id, **state})
+                    yield f"event: court_update\ndata: {payload}\n\n"
                 except:
                     # Send heartbeat
                     yield f": heartbeat\n\n"

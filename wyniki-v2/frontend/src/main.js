@@ -7,6 +7,7 @@ import './main.css';
 const TRANSLATIONS = {
   pl: {
     htmlLang: 'pl',
+    pageTitle: 'Wyniki tenisowe \u2013 na \u017cywo',
     navLabel: 'Szybka nawigacja po kortach',
     courtLabel: 'Kort {court}',
     liveBadge: 'LIVE',
@@ -29,12 +30,14 @@ const TRANSLATIONS = {
       tieBreak: 'tie-break',
       superTieBreak: 'super tie-break',
       set: 'Set {number}',
-      active: 'aktywny'
+      active: 'aktywny',
+      serving: 'serwuje'
     },
     history: { title: 'Historia meczów' }
   },
   de: {
     htmlLang: 'de',
+    pageTitle: 'Tennis-Ergebnisse – live',
     navLabel: 'Schnellnavigation zu den Plätzen',
     courtLabel: 'Platz {court}',
     liveBadge: 'LIVE',
@@ -57,12 +60,14 @@ const TRANSLATIONS = {
       tieBreak: 'Tiebreak',
       superTieBreak: 'Super-Tiebreak',
       set: 'Satz {number}',
-      active: 'aktiv'
+      active: 'aktiv',
+      serving: 'Aufschlag'
     },
     history: { title: 'Match-Historie' }
   },
   en: {
     htmlLang: 'en',
+    pageTitle: 'Tennis Scores \u2013 Live',
     navLabel: 'Quick court navigation',
     courtLabel: 'Court {court}',
     liveBadge: 'LIVE',
@@ -85,12 +90,14 @@ const TRANSLATIONS = {
       tieBreak: 'tie-break',
       superTieBreak: 'super tie-break',
       set: 'Set {number}',
-      active: 'active'
+      active: 'active',
+      serving: 'serving'
     },
     history: { title: 'Match history' }
   },
   it: {
     htmlLang: 'it',
+    pageTitle: 'Risultati tennis \u2013 in diretta',
     navLabel: 'Navigazione rapida dei campi',
     courtLabel: 'Campo {court}',
     liveBadge: 'LIVE',
@@ -113,12 +120,14 @@ const TRANSLATIONS = {
       tieBreak: 'tie-break',
       superTieBreak: 'super tie-break',
       set: 'Set {number}',
-      active: 'attivo'
+      active: 'attivo',
+      serving: 'al servizio'
     },
     history: { title: 'Storico incontri' }
   },
   es: {
     htmlLang: 'es',
+    pageTitle: 'Resultados de tenis – en vivo',
     navLabel: 'Navegación rápida por canchas',
     courtLabel: 'Cancha {court}',
     liveBadge: 'EN VIVO',
@@ -141,12 +150,14 @@ const TRANSLATIONS = {
       tieBreak: 'tie-break',
       superTieBreak: 'super tie-break',
       set: 'Set {number}',
-      active: 'activo'
+      active: 'activo',
+      serving: 'al servicio'
     },
     history: { title: 'Historial de partidos' }
   },
   fr: {
     htmlLang: 'fr',
+    pageTitle: 'R\u00e9sultats tennis \u2013 en direct',
     navLabel: 'Navigation rapide des courts',
     courtLabel: 'Court {court}',
     liveBadge: 'EN DIRECT',
@@ -169,7 +180,8 @@ const TRANSLATIONS = {
       tieBreak: 'jeu décisif',
       superTieBreak: 'super jeu décisif',
       set: 'Set {number}',
-      active: 'actif'
+      active: 'actif',
+      serving: 'au service'
     },
     history: { title: 'Historique des matchs' }
   }
@@ -276,6 +288,7 @@ Alpine.data('tennisApp', () => ({
 
   onLangChange() {
     document.documentElement.lang = this.tr().htmlLang || this.lang;
+    document.title = this.tr().pageTitle || 'Wyniki tenisowe – na żywo';
   },
 
   /* --- Dark mode --- */
@@ -421,7 +434,11 @@ Alpine.data('tennisApp', () => ({
     const nameA = this.getPlayerName(courtId, 'A');
     const nameB = this.getPlayerName(courtId, 'B');
     const vs = this.acc().versus || 'kontra';
-    return `${courtLabel}: ${nameA} ${vs} ${nameB}`;
+    const serve = this.courts[courtId]?.serve;
+    const servingText = this.acc().serving || 'serwuje';
+    const labelA = serve === 'A' ? `${nameA} (${servingText})` : nameA;
+    const labelB = serve === 'B' ? `${nameB} (${servingText})` : nameB;
+    return `${courtLabel}: ${labelA} ${vs} ${labelB}`;
   },
 
   /* --- Tiebreak detection --- */
@@ -478,6 +495,15 @@ Alpine.data('tennisApp', () => ({
     const isSuper = this.isSuperTiebreak(courtId);
     const currentSet = parseInt(court.current_set) || 1;
 
+    // Serving info
+    const serve = court.serve;
+    const servingText = a.serving || 'serwuje';
+    const servingPart = serve === 'A'
+      ? `${this.getPlayerName(courtId, 'A')} ${servingText}`
+      : serve === 'B'
+        ? `${this.getPlayerName(courtId, 'B')} ${servingText}`
+        : null;
+
     // Points label
     const pointsLabel = isTie
       ? (isSuper ? (a.superTieBreak || 'super tie-break') : (a.tieBreak || 'tie-break'))
@@ -486,7 +512,9 @@ Alpine.data('tennisApp', () => ({
     const ptsA = this.getDisplayPoints(courtId, 'A');
     const ptsB = this.getDisplayPoints(courtId, 'B');
 
-    const parts = [`${pointsLabel} ${ptsA}:${ptsB}`];
+    const parts = [];
+    if (servingPart) parts.push(servingPart);
+    parts.push(`${pointsLabel} ${ptsA}:${ptsB}`);
 
     // Set scores
     const setIndices = this.getSetIndices(courtId);

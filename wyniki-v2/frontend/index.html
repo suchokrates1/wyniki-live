@@ -8,7 +8,7 @@
     <meta name="description" content="Live tennis scores - wyniki na żywo">
 </head>
 <body>
-    <div x-data="tennisApp" x-cloak class="wrap">
+    <div x-data="tennisApp" x-cloak class="wrap" x-effect="document.title = tr().pageTitle || 'Wyniki tenisowe – na żywo'">
         
         <!-- Header -->
         <header class="header">
@@ -107,6 +107,7 @@
                                               :style="courts[courtId]?.A?.flag_url ? 'background-image:url('+courts[courtId].A.flag_url+')' : ''"
                                               x-text="!courts[courtId]?.A?.flag_url ? (courts[courtId]?.A?.flag_code || '').toUpperCase() : ''"></span>
                                         <span class="player-name" :id="'k'+courtId+'-name-A'" x-text="getPlayerName(courtId, 'A')"></span>
+                                        <span class="serve-indicator" x-show="courts[courtId]?.serve === 'A'" aria-hidden="true">🎾</span>
                                     </dt>
                                     <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-A'">
                                         <span class="metric-label" :id="'k'+courtId+'-label-points'"
@@ -138,6 +139,7 @@
                                               :style="courts[courtId]?.B?.flag_url ? 'background-image:url('+courts[courtId].B.flag_url+')' : ''"
                                               x-text="!courts[courtId]?.B?.flag_url ? (courts[courtId]?.B?.flag_code || '').toUpperCase() : ''"></span>
                                         <span class="player-name" :id="'k'+courtId+'-name-B'" x-text="getPlayerName(courtId, 'B')"></span>
+                                        <span class="serve-indicator" x-show="courts[courtId]?.serve === 'B'" aria-hidden="true">🎾</span>
                                     </dt>
                                     <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-B'">
                                         <span class="metric-value points"
@@ -193,6 +195,15 @@
                 </template>
             </div>
         </section>
+
+        <!-- Vestmedia Footer -->
+        <footer class="vm-footer">
+            <span>Powered by</span>
+            <a href="https://vestmedia.pl" target="_blank" rel="noopener noreferrer" class="vm-footer__link">
+                <img src="https://vestmedia.pl/wp-content/uploads/2024/12/Vest-Media-5.png"
+                     alt="Vest Media" class="vm-footer__logo" loading="lazy">
+            </a>
+        </footer>
     </div>
     
     <script type="module" src="/src/main.js"></script>

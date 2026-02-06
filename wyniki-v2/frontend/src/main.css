@@ -418,6 +418,61 @@ main { padding: 16px 0; }
   color: transparent;
 }
 
+/* === Serve Indicator === */
+.serve-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: auto;
+  filter: drop-shadow(0 0 4px rgba(53,196,106,.6));
+  animation: serve-pulse 2s ease-in-out infinite;
+}
+@keyframes serve-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .7; transform: scale(.88); }
+}
+
+/* === Vestmedia Footer === */
+.vm-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  backdrop-filter: saturate(140%) blur(6px);
+  opacity: .95;
+}
+body {
+  padding-bottom: 48px;
+}
+.vm-footer__link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  transition: opacity .2s ease;
+}
+.vm-footer__link:hover { opacity: .75; }
+.vm-footer__logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+[data-theme="dark"] .vm-footer__logo {
+  filter: brightness(1.2);
+}
+
 /* ============================================================
    ACCESSIBILITY: Screen reader only
    ============================================================ */
