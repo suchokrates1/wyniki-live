@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court
-from ..services.court_manager import ensure_court_state, STATE_LOCK
+from ..services.court_manager import ensure_court_state, normalize_kort_id, STATE_LOCK
 from ..services.event_broker import emit_score_update
 from ..config import logger
 
@@ -442,24 +442,108 @@ def receive_statistics():
         return jsonify({"error": str(e)}), 500
 
 
+def _raw_points_to_tennis(raw_a: int, raw_b: int) -> tuple[str, str]:
+    """Convert raw point integers to tennis display values.
+
+    Normal game: 0→"0", 1→"15", 2→"30", 3→"40", deuce/advantage logic.
+    """
+    DISPLAY = ["0", "15", "30", "40"]
+    if raw_a <= 3 and raw_b <= 3 and not (raw_a == 3 and raw_b == 3):
+        return DISPLAY[raw_a], DISPLAY[raw_b]
+    # Deuce territory (both >= 3)
+    if raw_a == raw_b:
+        return "40", "40"
+    if raw_a > raw_b:
+        return "ADV", "40"
+    return "40", "ADV"
+
+
 @blueprint.route('/match-events', methods=['POST'])
 def log_match_event():
-    """Log match event (point, game, set, etc.)."""
+    """Process match event and push real-time score update via SSE."""
     try:
         data = request.get_json()
-        
-        # Log event for analytics
-        logger.info(f"Match event: {data.get('event_type')} on court {data.get('court_id')}")
-        
-        # TODO: Store events in database for detailed analysis
-        
+        event_type = data.get('event_type', '')
+        kort_id = normalize_kort_id(data.get('court_id'))
+
+        logger.info(f"Match event: {event_type} on court {kort_id}")
+
+        if not kort_id:
+            return jsonify({"success": True, "message": "No court_id, event logged only"}), 200
+
+        score = data.get('score', {})
+        player1 = data.get('player1', {})
+        player2 = data.get('player2', {})
+
+        raw_pts_a = int(score.get('player1_points', 0))
+        raw_pts_b = int(score.get('player2_points', 0))
+        is_tiebreak = bool(score.get('is_tiebreak', False))
+        is_super_tiebreak = bool(score.get('is_super_tiebreak', False))
+
+        court_state = ensure_court_state(kort_id)
+        with STATE_LOCK:
+            # --- Serve ---
+            if player1.get('is_serving'):
+                court_state["serve"] = "A"
+            elif player2.get('is_serving'):
+                court_state["serve"] = "B"
+
+            # --- Player names (keep up-to-date) ---
+            if player1.get('name'):
+                court_state["A"]["surname"] = player1["name"]
+                if not court_state["A"].get("full_name"):
+                    court_state["A"]["full_name"] = player1["name"]
+            if player2.get('name'):
+                court_state["B"]["surname"] = player2["name"]
+                if not court_state["B"].get("full_name"):
+                    court_state["B"]["full_name"] = player2["name"]
+
+            # --- Points ---
+            if is_tiebreak or is_super_tiebreak:
+                # Tiebreak: raw integers displayed as-is
+                court_state["A"]["points"] = "0"
+                court_state["B"]["points"] = "0"
+                court_state["tie"]["A"] = raw_pts_a
+                court_state["tie"]["B"] = raw_pts_b
+                court_state["tie"]["visible"] = True
+            else:
+                # Normal game: convert raw → tennis display
+                disp_a, disp_b = _raw_points_to_tennis(raw_pts_a, raw_pts_b)
+                court_state["A"]["points"] = disp_a
+                court_state["B"]["points"] = disp_b
+                court_state["tie"]["A"] = 0
+                court_state["tie"]["B"] = 0
+                court_state["tie"]["visible"] = None
+
+            # --- Games ---
+            court_state["A"]["current_games"] = int(score.get('player1_games', 0))
+            court_state["B"]["current_games"] = int(score.get('player2_games', 0))
+
+            # --- Sets ---
+            sets_a = int(score.get('player1_sets', 0))
+            sets_b = int(score.get('player2_sets', 0))
+            current_set = sets_a + sets_b + 1
+            court_state["current_set"] = current_set
+
+            # --- Match status ---
+            match_finished = bool(score.get('match_finished', False))
+            court_state["match_status"]["active"] = not match_finished
+            if match_finished:
+                court_state["match_status"]["last_completed"] = datetime.utcnow().isoformat()
+
+            court_state["updated"] = datetime.utcnow().isoformat()
+
+        # Emit SSE update to all listeners
+        emit_score_update(kort_id, court_state)
+
         return jsonify({
-            "message": "Event logged successfully",
+            "success": True,
+            "message": "Event processed",
             "event_id": f"evt_{datetime.utcnow().timestamp()}"
         }), 200
-        
+
     except Exception as e:
-        logger.error(f"Error logging event: {e}", exc_info=True)
+        logger.error(f"Error processing match event: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
