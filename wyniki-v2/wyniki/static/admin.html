@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Administracyjny - Wyniki Live</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
-  <script type="module" crossorigin src="/assets/admin-D2Mmx0Xc.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/main-BpI38gtK.js">
-  <link rel="stylesheet" crossorigin href="/assets/main-CssX_ddR.css">
+  <script type="module" crossorigin src="/assets/admin-B0AGdAvE.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/main-CAm489Hn.js">
+  <link rel="stylesheet" crossorigin href="/assets/main-DUa-svWj.css">
 </head>
 <body class="min-h-screen bg-base-200">
   <div x-data="adminApp" class="container mx-auto px-4 py-8 max-w-7xl">
@@ -42,7 +42,14 @@
               <tbody>
                 <template x-for="court in courts" :key="court.kort_id">
                   <tr>
-                    <td><span class="font-bold" x-text="'Kort ' + court.kort_id"></span></td>
+                    <td>
+                      <template x-if="editingCourt !== court.kort_id">
+                        <span class="font-bold" x-text="'Kort ' + court.kort_id"></span>
+                      </template>
+                      <template x-if="editingCourt === court.kort_id">
+                        <input type="text" x-model="editCourtId" class="input input-sm input-bordered w-24" @keyup.enter="saveCourt(court.kort_id)" @keyup.escape="cancelEdit()">
+                      </template>
+                    </td>
                     <td>
                       <input type="text"
                              x-model="court.pin"
@@ -56,8 +63,17 @@
                       <span class="badge" :class="court.active ? 'badge-success' : 'badge-ghost'" 
                             x-text="court.active ? 'Aktywny' : 'Nieaktywny'"></span>
                     </td>
-                    <td>
-                      <button @click="refreshCourts()" class="btn btn-sm btn-ghost">Odśwież</button>
+                    <td class="flex gap-1">
+                      <template x-if="editingCourt !== court.kort_id">
+                        <button @click="startEdit(court.kort_id)" class="btn btn-sm btn-ghost" title="Edytuj">✏️</button>
+                      </template>
+                      <template x-if="editingCourt === court.kort_id">
+                        <div class="flex gap-1">
+                          <button @click="saveCourt(court.kort_id)" class="btn btn-sm btn-success">✓</button>
+                          <button @click="cancelEdit()" class="btn btn-sm btn-ghost">✗</button>
+                        </div>
+                      </template>
+                      <button @click="deleteCourt(court.kort_id)" class="btn btn-sm btn-ghost text-error" title="Usuń">🗑️</button>
                     </td>
                   </tr>
                 </template>
@@ -259,6 +275,6 @@
     </div>
   </div>
 
-
+
 </body>
 </html>
