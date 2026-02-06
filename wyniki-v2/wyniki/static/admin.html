@@ -149,12 +149,12 @@
                   <tr :class="{'bg-success bg-opacity-10': tournament.active}">
                     <td>
                       <span class="font-semibold" x-text="tournament.name"></span>
-                      <span x-if="tournament.active" class="badge badge-success badge-sm ml-2">Aktywny</span>
+                      <span x-show="tournament.active" class="badge badge-success badge-sm ml-2">Aktywny</span>
                     </td>
                     <td x-text="tournament.start_date"></td>
                     <td x-text="tournament.end_date"></td>
                     <td>
-                      <span x-if="!tournament.active" @click="activateTournament(tournament.id)" class="badge badge-ghost cursor-pointer hover:badge-primary">Ustaw aktywny</span>
+                      <span x-show="!tournament.active" @click="activateTournament(tournament.id)" class="badge badge-ghost cursor-pointer hover:badge-primary">Ustaw aktywny</span>
                     </td>
                     <td class="flex gap-2">
                       <button @click="selectTournament(tournament.id)" class="btn btn-xs btn-ghost">📋 Gracze</button>
