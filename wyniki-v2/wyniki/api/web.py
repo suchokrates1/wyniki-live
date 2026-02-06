@@ -22,6 +22,7 @@ def index():
 
 
 @blueprint.route('/admin')
+@blueprint.route('/admin/')
 @blueprint.route('/admin.html')
 def admin():
     """Serve admin page."""
