@@ -42,33 +42,66 @@
     .drag-el.is-selected { outline-color: #2196F3; }
     .drag-el.el-hidden { opacity: 0.15; }
 
-    /* scoreboard – all sizes in em so font-size on .sb controls scale */
-    .sb { display:flex; width:100%; box-sizing:border-box;
-      border-radius:0.7em; padding:0.82em 1.06em; box-shadow:0 4px 24px rgba(0,0,0,0.5);
-      border:2px solid rgba(255,255,255,0.15); overflow:hidden; color:white;
-      font-family:'Segoe UI',Arial,sans-serif; }
-    .sb.match-inactive .sb-players { opacity:0.4; }
+    /* scoreboard – dark grid matching main page */
+    .sb-wrap { display:flex; width:100%; align-items:stretch; gap:8px; }
+    .sb-wrap.match-inactive .sb-table { opacity:0.4; }
     .sb-logo { flex-shrink:0; display:flex; align-items:center; justify-content:center;
-      margin-right:0.82em; overflow:hidden; border-radius:0.35em; }
+      overflow:hidden; border-radius:6px; }
     .sb-logo img { width:100%; height:100%; -o-object-fit:cover; object-fit:cover; }
     .sb-logo-ph { display:flex; align-items:center; justify-content:center;
-      width:100%; height:100%; background:rgba(255,255,255,0.1); border-radius:0.35em; font-size:1.8em; }
-    .sb-players { flex:1; min-width:0; }
-    .sb-row { display:flex; align-items:center; gap:0.59em; margin-bottom:0.35em; }
-    .sb-row:last-child { margin-bottom:0; }
-    .sb-serve { width:0.47em; height:0.47em; border-radius:50%; background:#4CAF50; flex-shrink:0; opacity:0; }
-    .sb-row.serving .sb-serve { opacity:1; }
-    .sb-flag { width:1.76em; height:1.29em; -o-object-fit:cover; object-fit:cover; border-radius:0.18em; flex-shrink:0;
-      box-shadow:0 1px 4px rgba(0,0,0,0.3); }
-    .sb-name { flex:1; font-size:1em; font-weight:600; white-space:nowrap;
-      overflow:hidden; text-overflow:ellipsis; min-width:0; }
-    .sb-scores { display:flex; gap:0.35em; align-items:center; flex-shrink:0; }
-    .sb-sc { min-width:1.88em; text-align:center; font-size:1.18em; font-weight:700;
-      padding:0.18em 0.35em; background:rgba(0,0,0,0.3); border-radius:0.29em; color:white; }
-    .sb-sc.pts { background:rgba(255,255,255,0.15); min-width:2.24em; }
-    .sb-sc.tb { background:rgba(76,175,80,0.5); }
+      width:100%; height:100%; background:rgba(255,255,255,0.1); border-radius:6px; font-size:22px; }
+    .sb-table {
+      flex:1; min-width:0; display:grid; gap:0;
+      border-radius:14px; overflow:hidden;
+      background:linear-gradient(180deg,#1d1d1d 0%,#090909 100%);
+      box-shadow:0 12px 24px rgba(0,0,0,0.35);
+      border:1px solid rgba(0,0,0,0.8);
+    }
+    .sb-row { display:grid; align-items:stretch; color:#fdfdfd; }
+    .sb-row + .sb-row { border-top:1px solid rgba(255,255,255,0.08); }
+    .sb-player-cell {
+      display:flex; align-items:center; gap:8px; padding:6px 10px;
+      background:linear-gradient(90deg,rgba(255,255,255,0.06) 0%,rgba(0,0,0,0) 100%);
+      font-weight:700; letter-spacing:0.6px; text-transform:uppercase;
+      border-right:1px solid rgba(0,0,0,0.65);
+      text-shadow:0 1px 0 rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden;
+      font-size:13px; color:white;
+    }
+    .sb-row.side-b .sb-player-cell {
+      background:linear-gradient(90deg,rgba(255,255,255,0.03) 0%,rgba(0,0,0,0) 100%);
+    }
+    .sb-player-cell .sb-name { flex:1; overflow:hidden; text-overflow:ellipsis; color:#fefefe; }
+    .sb-flag {
+      width:24px; height:15px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+      font-size:8px; font-weight:700; border-radius:2px;
+      background:#2f2f2f; color:#111; text-transform:uppercase;
+      background-size:cover; background-position:center;
+      box-shadow:0 0 0 1px rgba(255,255,255,0.45);
+    }
+    .sb-flag.has-image { color:transparent; }
+    .sb-serve {
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:10px; line-height:1; flex-shrink:0; margin-left:auto;
+      filter:drop-shadow(0 0 3px rgba(53,196,106,.6));
+      animation:sb-pulse 2s ease-in-out infinite;
+    }
+    @keyframes sb-pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:.7; transform:scale(.88); }
+    }
+    .sb-metric {
+      display:flex; align-items:center; justify-content:center;
+      min-height:36px; font-size:15px; font-weight:700;
+      letter-spacing:0.5px; text-shadow:0 1px 0 rgba(0,0,0,0.45);
+      color:white;
+    }
+    .sb-metric + .sb-metric { border-left:1px solid rgba(0,0,0,0.6); }
+    .sb-metric.pts { background:linear-gradient(180deg,#141414 0%,#050505 100%); color:#fafafa; }
+    .sb-metric.pts.is-tiebreak { background:linear-gradient(180deg,#ffe6a7 0%,#f3c34a 100%); color:#261200; text-shadow:none; }
+    .sb-metric.set { background:linear-gradient(180deg,#ff7a1c 0%,#d64900 100%); color:#fff9f2; }
+    .sb-metric.set.is-active { box-shadow:inset 0 0 0 2px rgba(255,255,255,0.35); }
     .sb-label-bar { text-align:center; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.1em; padding:0.29em 0.86em; white-space:nowrap; color:white; }
+      letter-spacing:0.1em; padding:4px 12px; white-space:nowrap; color:white; }
 
     /* stats panel inside preview */
     .sp { width:100%; background:linear-gradient(135deg,rgba(30,30,30,0.95),rgba(50,50,50,0.92));
@@ -94,7 +127,7 @@
       border-radius:8px; border:2px solid rgba(255,255,255,0.2); background:#111; margin:0 auto; }
     .crop-area img { position:absolute; cursor:move; -webkit-user-select:none; -moz-user-select:none; user-select:none; }
   </style>
-  <script type="module" crossorigin src="/assets/admin-4BNghlnz.js"></script>
+  <script type="module" crossorigin src="/assets/admin-Cr-amyup.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/main-DtaNp4HT.js">
   <link rel="stylesheet" crossorigin href="/assets/main-BLJcpgew.css">
 </head>
@@ -283,14 +316,12 @@
                       <!-- court scoreboard -->
                       <template x-if="el.type === 'court'">
                         <div>
-                          <div x-show="(el.label_position || 'above') === 'above' && el.label_text"
+                          <div x-show="el.label_text && el.label_position !== 'none' && el.label_position !== 'below'"
                                class="sb-label-bar"
                                :style="'background:rgba(0,0,0,'+(el.label_bg_opacity!=null?el.label_bg_opacity:0.7)+');font-size:'+(el.label_font_size||14)+'px;margin-bottom:'+(el.label_gap!=null?el.label_gap:4)+'px;border-radius:6px 6px 0 0;'"
                                x-text="el.label_text"></div>
-                          <div class="sb"
-                               :style="'font-size:'+(el.font_size||17)+'px;background:linear-gradient(135deg,rgba(26,35,126,'+(el.bg_opacity!=null?el.bg_opacity:0.95)+'),rgba(13,71,161,'+(el.bg_opacity!=null?el.bg_opacity:0.95)+'));'"
-                               x-html="renderLiveScoreboard(el)"></div>
-                          <div x-show="el.label_position === 'below' && el.label_text"
+                          <div x-html="renderLiveScoreboard(el)"></div>
+                          <div x-show="el.label_text && el.label_position === 'below'"
                                class="sb-label-bar"
                                :style="'background:rgba(0,0,0,'+(el.label_bg_opacity!=null?el.label_bg_opacity:0.7)+');font-size:'+(el.label_font_size||14)+'px;margin-top:'+(el.label_gap!=null?el.label_gap:4)+'px;border-radius:0 0 6px 6px;'"
                                x-text="el.label_text"></div>
@@ -399,15 +430,8 @@
                     </label>
                   </div>
 
-                  <!-- Scoreboard font size -->
+                  <!-- Scoreboard options -->
                   <div class="divider my-1 text-xs opacity-50">Scoreboard</div>
-                  <div class="prop-row">
-                    <span class="prop-label">Czcionka</span>
-                    <input type="range" class="range range-xs range-info flex-1" min="8" max="40" step="1"
-                           :value="selectedEl()?.font_size || 17"
-                           @input="setElProp('font_size', +$event.target.value)">
-                    <span class="text-xs opacity-50 w-10 text-right" x-text="(selectedEl()?.font_size || 17) + 'px'"></span>
-                  </div>
 
                   <!-- Scoreboard bg opacity -->
                   <div class="prop-row">
