@@ -636,32 +636,53 @@ Alpine.data('adminApp', () => ({
     const active = court.match_status?.active || false;
     const curSet = court.current_set || 1;
     const logoSize = el.logo_size || 60;
+    const bgOpacity = el.bg_opacity != null ? el.bg_opacity : 0.95;
     const sets = [];
     for (let s = 1; s <= 3; s++) {
       const a = pA['set' + s], b = pB['set' + s];
-      if (s <= curSet || a > 0 || b > 0) sets.push({ a: a || 0, b: b || 0 });
+      if (s <= curSet || a > 0 || b > 0) sets.push({ idx: s, a: a || 0, b: b || 0 });
     }
-    if (!sets.length) sets.push({ a: 0, b: 0 });
+    if (!sets.length) sets.push({ idx: 1, a: 0, b: 0 });
     const isTie = court.tie?.visible || false;
     const ptA = isTie ? (court.tie?.A || 0) : (pA.points || '0');
     const ptB = isTie ? (court.tie?.B || 0) : (pB.points || '0');
-    const ptCls = isTie ? 'sb-sc pts tb' : 'sb-sc pts';
+    const tbCls = isTie ? ' is-tiebreak' : '';
     const logo = this.overlaySettings.tournament_logo;
     const showLogo = el.show_logo;
+    const inactiveClass = active ? '' : 'match-inactive';
 
-    function pRow(p, serveKey) {
-      const serving = court.serve === serveKey ? 'serving' : '';
-      const flagUrl = p.flag_url;
-      const flagHtml = flagUrl
-        ? '<img src="' + flagUrl + '" alt="" class="sb-flag" onerror="this.style.display=\'none\'">'
-        : '<div style="width:0"></div>';
-      const setsHtml = sets.map(s => '<div class="sb-sc">' + s[serveKey === 'A' ? 'a' : 'b'] + '</div>').join('');
-      const ptsHtml = active ? '<div class="' + ptCls + '">' + (serveKey === 'A' ? ptA : ptB) + '</div>' : '';
-      return '<div class="sb-row ' + serving + '">'
-        + '<div class="sb-serve"></div>'
-        + flagHtml
-        + '<div class="sb-name">' + (p.surname || p.full_name || '\u2014') + '</div>'
-        + '<div class="sb-scores">' + setsHtml + ptsHtml + '</div></div>';
+    // Grid template: player + points + N sets
+    const gridCols = 'grid-template-columns:minmax(0,2.3fr) minmax(0,1.2fr) repeat(' + sets.length + ',minmax(0,0.95fr));';
+
+    function pRow(p, serveKey, sideClass) {
+      const isServing = court.serve === serveKey;
+      let flagHtml = '';
+      if (p.flag_url) {
+        flagHtml = '<span class="sb-flag has-image" style="background-image:url(' + p.flag_url + ')"></span>';
+      } else {
+        const code = (p.flag_code || '').toUpperCase();
+        flagHtml = '<span class="sb-flag">' + code + '</span>';
+      }
+      const serveHtml = isServing ? '<span class="sb-serve">\uD83C\uDFBE</span>' : '';
+      const playerCell = '<div class="sb-player-cell">' + flagHtml
+        + '<span class="sb-name">' + (p.surname || p.full_name || '\u2014') + '</span>'
+        + serveHtml + '</div>';
+
+      // Points cell
+      const ptsVal = serveKey === 'A' ? ptA : ptB;
+      const ptsCell = active
+        ? '<div class="sb-metric pts' + tbCls + '">' + ptsVal + '</div>'
+        : '<div class="sb-metric pts">\u2014</div>';
+
+      // Set cells
+      const setCells = sets.map(s => {
+        const val = serveKey === 'A' ? s.a : s.b;
+        const activeCls = s.idx === curSet ? ' is-active' : '';
+        return '<div class="sb-metric set' + activeCls + '">' + val + '</div>';
+      }).join('');
+
+      return '<div class="sb-row ' + sideClass + '" style="' + gridCols + '">'
+        + playerCell + ptsCell + setCells + '</div>';
     }
 
     let logoHtml = '';
@@ -673,11 +694,13 @@ Alpine.data('adminApp', () => ({
       }
     }
 
-    return logoHtml
-      + '<div class="sb-players">'
-      + pRow(pA, 'A')
-      + pRow(pB, 'B')
-      + '</div>';
+    const opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
+    return '<div class="sb-wrap ' + inactiveClass + '">'
+      + logoHtml
+      + '<div class="sb-table" style="' + opacityStyle + '">'
+      + pRow(pA, 'A', 'side-a')
+      + pRow(pB, 'B', 'side-b')
+      + '</div></div>';
   },
 
   // ===== LOGO UPLOAD =====

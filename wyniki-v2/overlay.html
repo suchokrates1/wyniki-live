@@ -25,54 +25,122 @@
         .element-wrapper.el-hidden {
             opacity: 0; pointer-events: none; transform: translateY(-30px);
         }
+
+        /* ---- Court label bar ---- */
         .court-label-bar {
             text-align: center; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.1em; padding: 0.29em 0.86em;
+            letter-spacing: 0.1em; padding: 6px 16px;
             white-space: nowrap; color: white;
         }
-        .label-below .court-label-bar { border-radius: 0 0 6px 6px; }
-        .scoreboard {
-            display: flex; width: 100%; box-sizing: border-box;
-            border-radius: 0.7em; padding: 0.82em 1.06em;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
-            border: 2px solid rgba(255,255,255,0.15);
-            transition: opacity 0.5s ease, transform 0.5s ease;
-            overflow: hidden; color: white;
-            font-family: 'Segoe UI', 'Arial', sans-serif;
+
+        /* ---- Dark grid scoreboard (matches main page) ---- */
+        .sb-wrap {
+            display: flex; align-items: stretch; gap: 10px;
+            transition: opacity 0.5s ease;
         }
-        .scoreboard.match-inactive .players-area { opacity: 0.4; }
+        .sb-wrap.match-inactive .score-table { opacity: 0.4; }
+
+        /* Logo area (optional, left of table) */
         .logo-area {
             flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-            margin-right: 0.82em; overflow: hidden; border-radius: 0.35em;
+            overflow: hidden; border-radius: 8px;
         }
-        .logo-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 0.35em; }
-        .logo-ph { display: flex; align-items: center; justify-content: center;
-            width: 100%; height: 100%; background: rgba(255,255,255,0.1); border-radius: 0.35em; font-size: 1.8em; }
-        .players-area { flex: 1; min-width: 0; }
-        .player-row { display: flex; align-items: center; gap: 0.59em; margin-bottom: 0.35em; }
-        .player-row:last-child { margin-bottom: 0; }
-        .serve-dot {
-            width: 0.47em; height: 0.47em; border-radius: 50%;
-            background: #4CAF50; flex-shrink: 0; opacity: 0;
-            transition: opacity 0.3s ease;
+        .logo-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+        .logo-ph {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%; background: rgba(255,255,255,0.1);
+            border-radius: 8px; font-size: 28px;
         }
-        .player-row.serving .serve-dot { opacity: 1; }
-        .flag {
-            width: 1.76em; height: 1.29em; object-fit: cover;
-            border-radius: 0.18em; box-shadow: 0 1px 4px rgba(0,0,0,0.3); flex-shrink: 0;
+
+        /* Score grid table */
+        .score-table {
+            flex: 1; min-width: 0;
+            display: grid; gap: 0;
+            border-radius: 14px; overflow: hidden;
+            background: linear-gradient(180deg, #1d1d1d 0%, #090909 100%);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+            border: 1px solid rgba(0,0,0,0.8);
         }
-        .player-name {
-            flex: 1; font-size: 1em; font-weight: 600;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+        .score-row {
+            display: grid; align-items: stretch; color: #fdfdfd;
         }
-        .scores { display: flex; gap: 0.35em; align-items: center; flex-shrink: 0; }
-        .score {
-            min-width: 1.88em; text-align: center; font-size: 1.18em;
-            font-weight: 700; padding: 0.18em 0.35em;
-            background: rgba(0,0,0,0.3); border-radius: 0.29em;
+        .score-row + .score-row {
+            border-top: 1px solid rgba(255,255,255,0.08);
         }
-        .score.points { background: rgba(255,255,255,0.15); min-width: 2.24em; }
-        .score.tiebreak { background: rgba(76,175,80,0.5); }
+
+        /* Player cell (left side) */
+        .player-cell {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0) 100%);
+            font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+            border-right: 1px solid rgba(0,0,0,0.65);
+            text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+            white-space: nowrap; overflow: hidden;
+        }
+        .score-row.side-b .player-cell {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 100%);
+        }
+        .player-cell .player-name {
+            flex: 1; overflow: hidden; text-overflow: ellipsis; color: #fefefe;
+        }
+
+        /* Flag */
+        .player-flag {
+            width: 32px; height: 20px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 700; border-radius: 3px;
+            background: #2f2f2f; color: #111; text-transform: uppercase;
+            background-size: cover; background-position: center;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.45);
+        }
+        .player-flag.has-image { color: transparent; }
+
+        /* Serve indicator */
+        .serve-indicator {
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 14px; line-height: 1; flex-shrink: 0; margin-left: auto;
+            filter: drop-shadow(0 0 4px rgba(53,196,106,.6));
+            animation: serve-pulse 2s ease-in-out infinite;
+        }
+        @keyframes serve-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%      { opacity: .7; transform: scale(.88); }
+        }
+
+        /* Metric cells (score columns) */
+        .metric-cell {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 54px; font-size: 22px; font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 0 rgba(0,0,0,0.45);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .metric-cell + .metric-cell {
+            border-left: 1px solid rgba(0,0,0,0.6);
+        }
+
+        /* Points column - dark */
+        .metric-cell.pts {
+            background: linear-gradient(180deg, #141414 0%, #050505 100%);
+            color: #fafafa;
+        }
+        /* Points in tiebreak - golden */
+        .metric-cell.pts.is-tiebreak {
+            background: linear-gradient(180deg, #ffe6a7 0%, #f3c34a 100%);
+            color: #261200; text-shadow: none;
+        }
+        /* Set scores - orange */
+        .metric-cell.set {
+            background: linear-gradient(180deg, #ff7a1c 0%, #d64900 100%);
+            color: #fff9f2;
+        }
+        /* Active set - glowing border */
+        .metric-cell.set.is-active {
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35);
+        }
+
+        /* ---- Stats panel ---- */
         .stats-panel {
             width: 100%;
             background: linear-gradient(135deg, rgba(30,30,30,0.95), rgba(50,50,50,0.92));
@@ -125,21 +193,22 @@
         const active = court.match_status?.active || false;
         const inactiveClass = active ? '' : 'match-inactive';
         const curSet = court.current_set || 1;
-        const fontSize = el.font_size || 17;
         const bgOpacity = el.bg_opacity != null ? el.bg_opacity : 0.95;
         const logoSize = el.logo_size || 60;
         const sets = [];
         for (let s = 1; s <= 3; s++) {
             const a = pA['set'+s], b = pB['set'+s];
-            if (s <= curSet || (a > 0 || b > 0)) sets.push({ a: a||0, b: b||0 });
+            if (s <= curSet || (a > 0 || b > 0)) sets.push({ idx: s, a: a||0, b: b||0 });
         }
-        if (!sets.length) sets.push({ a:0, b:0 });
+        if (!sets.length) sets.push({ idx: 1, a: 0, b: 0 });
         const isTie = court.tie?.visible || false;
         const ptA = isTie ? (court.tie?.A||0) : (pA.points||'0');
         const ptB = isTie ? (court.tie?.B||0) : (pB.points||'0');
-        const ptCls = isTie ? 'score points tiebreak' : 'score points';
+        const tbCls = isTie ? ' is-tiebreak' : '';
         const logo = settings.tournament_logo;
         const showLogo = el.show_logo;
+
+        // Logo HTML
         var logoHtml = '';
         if (showLogo) {
             if (logo) {
@@ -148,22 +217,45 @@
                 logoHtml = '<div class="logo-area" style="width:'+logoSize+'px;height:'+logoSize+'px;"><div class="logo-ph">\uD83C\uDFBE</div></div>';
             }
         }
-        function pRow(p, serve, side) {
-            return '<div class="player-row '+(court.serve===serve?'serving':'')+'">'
-                +'<div class="serve-dot"></div>'
-                +(p.flag_url ? '<img src="'+p.flag_url+'" alt="'+(p.flag_code||'')+'" class="flag" onerror="this.style.display=\'none\'">' : '<div style="width:0"></div>')
-                +'<div class="player-name">'+(p.surname||p.full_name||'\u2014')+'</div>'
-                +'<div class="scores">'
-                +sets.map(function(s){return '<div class="score">'+s[side]+'</div>';}).join('')
-                +(active ? '<div class="'+ptCls+'">'+(side==='a'?ptA:ptB)+'</div>' : '')
-                +'</div></div>';
+
+        // Grid template: player-cell | points | set1 | set2 | [set3]
+        var nCols = 1 + 1 + sets.length; // player + points + sets
+        var gridCols = 'grid-template-columns: minmax(0,2.3fr) minmax(0,1.2fr) repeat('+sets.length+',minmax(0,0.95fr));';
+
+        function pRow(p, serveKey, sideClass) {
+            var isServing = court.serve === serveKey;
+            var flagHtml = '';
+            if (p.flag_url) {
+                flagHtml = '<span class="player-flag has-image" style="background-image:url('+p.flag_url+')"></span>';
+            } else {
+                var code = (p.flag_code || '').toUpperCase();
+                flagHtml = '<span class="player-flag">'+code+'</span>';
+            }
+            var serveHtml = isServing ? '<span class="serve-indicator">\uD83C\uDFBE</span>' : '';
+            var playerCell = '<div class="player-cell">'+flagHtml
+                +'<span class="player-name">'+(p.surname||p.full_name||'\u2014')+'</span>'
+                +serveHtml+'</div>';
+
+            // Points cell
+            var ptsVal = serveKey === 'A' ? ptA : ptB;
+            var ptsCell = active ? '<div class="metric-cell pts'+tbCls+'">'+ptsVal+'</div>' : '<div class="metric-cell pts">\u2014</div>';
+
+            // Set cells
+            var setCells = sets.map(function(s) {
+                var val = serveKey === 'A' ? s.a : s.b;
+                var activeCls = s.idx === curSet ? ' is-active' : '';
+                return '<div class="metric-cell set'+activeCls+'">'+val+'</div>';
+            }).join('');
+
+            return '<div class="score-row '+sideClass+'" style="'+gridCols+'">'+playerCell+ptsCell+setCells+'</div>';
         }
-        var bgStyle = 'font-size:'+fontSize+'px;background:linear-gradient(135deg,rgba(26,35,126,'+bgOpacity+'),rgba(13,71,161,'+bgOpacity+'));';
-        return '<div class="scoreboard '+inactiveClass+'" style="'+bgStyle+'">'
+
+        var opacityStyle = bgOpacity < 1 ? 'opacity:'+bgOpacity+';' : '';
+        return '<div class="sb-wrap '+inactiveClass+'">'
             +logoHtml
-            +'<div class="players-area">'
-            +pRow(pA,'A','a')
-            +pRow(pB,'B','b')
+            +'<div class="score-table" style="'+opacityStyle+'">'
+            +pRow(pA, 'A', 'side-a')
+            +pRow(pB, 'B', 'side-b')
             +'</div></div>';
     }
 
