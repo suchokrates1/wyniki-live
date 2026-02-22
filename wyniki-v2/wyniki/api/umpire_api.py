@@ -4,8 +4,9 @@ from datetime import datetime
 import json
 
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court
-from ..services.court_manager import ensure_court_state, normalize_kort_id, STATE_LOCK
+from ..services.court_manager import ensure_court_state, normalize_kort_id, STATE_LOCK, _empty_player_state
 from ..services.event_broker import emit_score_update
+from ..services.history_manager import add_match_to_history
 from ..config import logger
 
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
@@ -377,7 +378,24 @@ def finish_match(match_id: int):
                 court_state["match_status"]["active"] = False
                 court_state["match_status"]["last_completed"] = datetime.utcnow().isoformat()
             
+            # Add match to history for frontend display
+            add_match_to_history(kort_id, court_state)
+            
             emit_score_update(kort_id, court_state)
+            
+            # Clear court state for next match (keep structure, reset data)
+            with STATE_LOCK:
+                court_state["A"] = _empty_player_state()
+                court_state["B"] = _empty_player_state()
+                court_state["current_set"] = 1
+                court_state["serve"] = None
+                court_state["tie"] = {"A": 0, "B": 0, "visible": None, "locked": False}
+            
+            # Emit cleared state after a short delay so frontend sees final score first
+            import threading
+            def emit_cleared():
+                emit_score_update(kort_id, court_state)
+            threading.Timer(5.0, emit_cleared).start()
         
         logger.info(f"Match {match_id} finished on court {kort_id}")
         
@@ -553,6 +571,26 @@ def log_match_event():
             court_state["match_status"]["active"] = not match_finished
             if match_finished:
                 court_state["match_status"]["last_completed"] = datetime.utcnow().isoformat()
+
+            # --- Live stats (for overlay) ---
+            live_stats = data.get('stats')
+            if live_stats:
+                court_state["stats"] = {
+                    "player_a": {
+                        "aces": live_stats.get("player1_aces", 0),
+                        "double_faults": live_stats.get("player1_double_faults", 0),
+                        "winners": live_stats.get("player1_winners", 0),
+                        "unforced_errors": live_stats.get("player1_unforced_errors", 0),
+                        "first_serve_pct": live_stats.get("player1_first_serve_pct", 0),
+                    },
+                    "player_b": {
+                        "aces": live_stats.get("player2_aces", 0),
+                        "double_faults": live_stats.get("player2_double_faults", 0),
+                        "winners": live_stats.get("player2_winners", 0),
+                        "unforced_errors": live_stats.get("player2_unforced_errors", 0),
+                        "first_serve_pct": live_stats.get("player2_first_serve_pct", 0),
+                    },
+                }
 
             court_state["updated"] = datetime.utcnow().isoformat()
 

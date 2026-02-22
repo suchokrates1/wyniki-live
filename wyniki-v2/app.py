@@ -17,6 +17,7 @@ from wyniki.db_models import db
 from wyniki.api import courts, admin, health, stream, web, events
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp
 from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
+from wyniki.api.overlay_api import blueprint as overlay_api_blueprint
 from wyniki.init_state import initialize_state
 
 
@@ -56,6 +57,7 @@ def create_app() -> Flask:
     app.register_blueprint(stream.blueprint)
     app.register_blueprint(events.blueprint)
     app.register_blueprint(umpire_api_blueprint)
+    app.register_blueprint(overlay_api_blueprint)
     
     # Add /assets route as alias to /static/assets for Vite compatibility
     from flask import send_from_directory
