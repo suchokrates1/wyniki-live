@@ -127,7 +127,7 @@
       border-radius:8px; border:2px solid rgba(255,255,255,0.2); background:#111; margin:0 auto; }
     .crop-area img { position:absolute; cursor:move; -webkit-user-select:none; -moz-user-select:none; user-select:none; }
   </style>
-  <script type="module" crossorigin src="/assets/admin-Cr-amyup.js"></script>
+  <script type="module" crossorigin src="/assets/admin-B9fO291f.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/main-DtaNp4HT.js">
   <link rel="stylesheet" crossorigin href="/assets/main-BLJcpgew.css">
 </head>
@@ -313,19 +313,9 @@
                          :style="'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;'"
                          @pointerdown.prevent="startDrag($event, idx)"
                          @click.stop="selectedElIdx = idx">
-                      <!-- court scoreboard -->
+                      <!-- court scoreboard (label rendered inside JS to avoid Alpine x-show bug) -->
                       <template x-if="el.type === 'court'">
-                        <div>
-                          <div x-show="el.label_text && el.label_position !== 'none' && el.label_position !== 'below'"
-                               class="sb-label-bar"
-                               :style="'background:rgba(0,0,0,'+(el.label_bg_opacity!=null?el.label_bg_opacity:0.7)+');font-size:'+(el.label_font_size||14)+'px;margin-bottom:'+(el.label_gap!=null?el.label_gap:4)+'px;border-radius:6px 6px 0 0;'"
-                               x-text="el.label_text"></div>
-                          <div x-html="renderLiveScoreboard(el)"></div>
-                          <div x-show="el.label_text && el.label_position === 'below'"
-                               class="sb-label-bar"
-                               :style="'background:rgba(0,0,0,'+(el.label_bg_opacity!=null?el.label_bg_opacity:0.7)+');font-size:'+(el.label_font_size||14)+'px;margin-top:'+(el.label_gap!=null?el.label_gap:4)+'px;border-radius:0 0 6px 6px;'"
-                               x-text="el.label_text"></div>
-                        </div>
+                        <div x-html="renderCourtElement(el)"></div>
                       </template>
                       <!-- stats panel -->
                       <template x-if="el.type === 'stats'">

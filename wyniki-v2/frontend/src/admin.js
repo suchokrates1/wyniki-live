@@ -703,6 +703,20 @@ Alpine.data('adminApp', () => ({
       + '</div></div>';
   },
 
+  // Render full court element with label (avoids Alpine x-show bug in nested templates)
+  renderCourtElement(el) {
+    const sb = this.renderLiveScoreboard(el);
+    if (!el.label_text || el.label_position === 'none') return sb;
+    const pos = el.label_position || 'above';
+    const bg = 'rgba(0,0,0,' + (el.label_bg_opacity != null ? el.label_bg_opacity : 0.7) + ')';
+    const fs = el.label_font_size || 14;
+    const gap = el.label_gap != null ? el.label_gap : 4;
+    const marginProp = pos === 'above' ? 'margin-bottom' : 'margin-top';
+    const radius = pos === 'above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
+    const label = '<div class="sb-label-bar" style="background:' + bg + ';font-size:' + fs + 'px;' + marginProp + ':' + gap + 'px;' + radius + '">' + el.label_text + '</div>';
+    return pos === 'above' ? label + sb : sb + label;
+  },
+
   // ===== LOGO UPLOAD =====
   onLogoFileSelect(event) {
     const file = event.target.files?.[0];
