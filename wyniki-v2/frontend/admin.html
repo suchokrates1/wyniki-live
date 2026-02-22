@@ -7,6 +7,118 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .overlay-preview {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #0d1117;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.08);
+      cursor: crosshair;
+      box-shadow: inset 0 0 60px rgba(0,0,0,0.5);
+    }
+    .preview-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 10% 10%;
+      pointer-events: none;
+    }
+    .preview-safe-area {
+      position: absolute;
+      left: 5%; top: 5%; right: 5%; bottom: 5%;
+      border: 1px dashed rgba(255,255,255,0.06);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .preview-court {
+      position: absolute;
+      background: linear-gradient(135deg, rgba(26,35,126,0.95), rgba(13,71,161,0.95));
+      border-radius: 6px;
+      padding: 3px 5px;
+      color: white;
+      cursor: grab;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+      user-select: none;
+      touch-action: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      overflow: hidden;
+      z-index: 10;
+    }
+    .preview-court:hover { border-color: rgba(100,180,255,0.6); box-shadow: 0 0 16px rgba(100,180,255,0.2); }
+    .preview-court.is-dragging { border-color: #4CAF50; box-shadow: 0 0 20px rgba(76,175,80,0.4); cursor: grabbing; z-index: 100; }
+    .preview-court.preview-hidden { opacity: 0.2; }
+    .preview-court-label {
+      text-align: center;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      opacity: 0.8;
+      font-size: clamp(5px, 0.7vw, 10px);
+      margin-bottom: 1px;
+    }
+    .preview-court-rows { display: flex; flex-direction: column; gap: 1px; }
+    .preview-player-row {
+      display: flex; align-items: center; gap: 2px;
+      font-size: clamp(4px, 0.55vw, 8px);
+      background: rgba(0,0,0,0.2);
+      border-radius: 3px;
+      padding: 1px 3px;
+    }
+    .preview-flag { font-size: clamp(5px, 0.5vw, 8px); }
+    .preview-name { flex: 1; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .preview-score { font-weight: 700; min-width: 1em; text-align: center; background: rgba(0,0,0,0.3); border-radius: 2px; padding: 0 2px; }
+    .preview-stats {
+      position: absolute;
+      background: linear-gradient(135deg, rgba(30,30,30,0.95), rgba(50,50,50,0.92));
+      border-radius: 6px;
+      padding: 3px 5px;
+      color: white;
+      cursor: grab;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+      user-select: none;
+      touch-action: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      overflow: hidden;
+      z-index: 10;
+    }
+    .preview-stats:hover { border-color: rgba(255,180,50,0.5); box-shadow: 0 0 16px rgba(255,180,50,0.15); }
+    .preview-stats.is-dragging { border-color: #FF9800; box-shadow: 0 0 20px rgba(255,152,0,0.4); cursor: grabbing; z-index: 100; }
+    .preview-stats.preview-hidden { opacity: 0.2; }
+    .preview-stats-label {
+      text-align: center;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.65;
+      font-size: clamp(4px, 0.5vw, 8px);
+      margin-bottom: 1px;
+    }
+    .preview-stats-rows { display: flex; flex-direction: column; gap: 1px; }
+    .preview-stat-row {
+      display: flex; justify-content: space-between;
+      font-size: clamp(3px, 0.4vw, 7px);
+      opacity: 0.6;
+      padding: 0 2px;
+    }
+    .preview-coords {
+      position: absolute;
+      bottom: 8px; right: 8px;
+      background: rgba(0,0,0,0.8);
+      color: #4CAF50;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 200;
+    }
+  </style>
 </head>
 <body class="min-h-screen bg-base-200">
   <div x-data="adminApp" class="container mx-auto px-4 py-8 max-w-7xl">
@@ -18,6 +130,7 @@
           <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
           <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
           <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze</button>
+          <button @click="activeTab = 'settings'" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">📺 Ustawienia</button>
         </div>
       </div>
     </header>
@@ -259,6 +372,152 @@
                 <div class="stat-title">Wyfiltrowani</div>
                 <div class="stat-value" x-text="filteredPlayers.length"></div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings / Overlay Editor Tab -->
+    <div x-show="activeTab === 'settings'" x-cloak>
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">📺 Edytor Overlay OBS</h2>
+          <p class="text-sm opacity-60 mb-4">Przeciągnij elementy na podglądzie 16:9 aby ułożyć overlay. Zmiany zapisują się automatycznie.</p>
+
+          <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+            <!-- Left: 16:9 Preview -->
+            <div class="xl:col-span-3">
+              <div class="overlay-preview"
+                   x-ref="preview"
+                   @pointermove="onDrag($event)"
+                   @pointerup="endDrag($event)"
+                   @pointerleave="endDrag($event)">
+                <!-- Grid lines -->
+                <div class="preview-grid"></div>
+                <!-- Safe area indicator -->
+                <div class="preview-safe-area"></div>
+
+                <!-- Court scoreboards -->
+                <template x-for="cId in ['1','2','3','4']" :key="'pc_' + cId">
+                  <div class="preview-court"
+                       :class="{
+                         'preview-large': overlaySettings.court_positions?.[cId]?.size === 'large',
+                         'preview-hidden': !overlaySettings.courts_visible[cId],
+                         'is-dragging': dragging?.id === cId
+                       }"
+                       :style="getPreviewStyle(cId)"
+                       @pointerdown.prevent="startDrag($event, cId)">
+                    <div class="preview-court-label" x-text="'KORT ' + cId"></div>
+                    <div class="preview-court-rows">
+                      <div class="preview-player-row">
+                        <span class="preview-flag">🏴</span>
+                        <span class="preview-name">Gracz A</span>
+                        <span class="preview-score">0</span>
+                      </div>
+                      <div class="preview-player-row">
+                        <span class="preview-flag">🏴</span>
+                        <span class="preview-name">Gracz B</span>
+                        <span class="preview-score">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Stats panel -->
+                <div class="preview-stats"
+                     :class="{
+                       'preview-hidden': !overlaySettings.show_stats,
+                       'is-dragging': dragging?.id === 'stats'
+                     }"
+                     :style="getPreviewStyle('stats')"
+                     @pointerdown.prevent="startDrag($event, 'stats')">
+                  <div class="preview-stats-label">STATYSTYKI</div>
+                  <div class="preview-stats-rows">
+                    <div class="preview-stat-row"><span>Asy</span><span>— —</span></div>
+                    <div class="preview-stat-row"><span>Winnery</span><span>— —</span></div>
+                    <div class="preview-stat-row"><span>1. serwis %</span><span>— —</span></div>
+                  </div>
+                </div>
+
+                <!-- Coordinates tooltip -->
+                <div class="preview-coords" x-show="dragging" x-cloak
+                     x-text="dragging ? `x: ${getDragPos().x}  y: ${getDragPos().y}` : ''">
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Controls -->
+            <div>
+              <!-- Court visibility -->
+              <h3 class="font-bold text-sm mb-3 uppercase tracking-wider opacity-70">Widoczność</h3>
+              <template x-for="id in ['1','2','3','4']" :key="'tv_' + id">
+                <div class="form-control">
+                  <label class="label cursor-pointer py-1">
+                    <span class="label-text font-medium" x-text="'Kort ' + id"></span>
+                    <input type="checkbox" class="toggle toggle-primary toggle-sm"
+                           :checked="overlaySettings.courts_visible[id]"
+                           @change="toggleCourt(id)">
+                  </label>
+                </div>
+              </template>
+
+              <div class="divider my-2"></div>
+
+              <!-- Options -->
+              <h3 class="font-bold text-sm mb-3 uppercase tracking-wider opacity-70">Opcje</h3>
+              <div class="form-control">
+                <label class="label cursor-pointer py-1">
+                  <span class="label-text text-sm">Autoukrywanie</span>
+                  <input type="checkbox" class="toggle toggle-warning toggle-sm"
+                         :checked="overlaySettings.auto_hide"
+                         @change="toggleAutoHide()">
+                </label>
+                <span class="text-xs opacity-40 ml-1 -mt-1">Ukryj gdy brak meczy</span>
+              </div>
+              <div class="form-control mt-1">
+                <label class="label cursor-pointer py-1">
+                  <span class="label-text text-sm">Panel statystyk</span>
+                  <input type="checkbox" class="toggle toggle-accent toggle-sm"
+                         :checked="overlaySettings.show_stats"
+                         @change="toggleShowStats()">
+                </label>
+              </div>
+
+              <div class="divider my-2"></div>
+
+              <!-- Court sizes -->
+              <h3 class="font-bold text-sm mb-3 uppercase tracking-wider opacity-70">Rozmiar</h3>
+              <template x-for="id in ['1','2','3','4']" :key="'sz_' + id">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm" x-text="'Kort ' + id"></span>
+                  <select class="select select-xs select-bordered w-24"
+                          :value="overlaySettings.court_positions?.[id]?.size || 'small'"
+                          @change="setCourtSize(id, $event.target.value)">
+                    <option value="large">Duży</option>
+                    <option value="small">Mały</option>
+                  </select>
+                </div>
+              </template>
+
+              <div class="divider my-2"></div>
+
+              <!-- Overlay URLs -->
+              <h3 class="font-bold text-sm mb-3 uppercase tracking-wider opacity-70">URL do OBS</h3>
+              <div class="space-y-1">
+                <template x-for="id in ['1','2','3','4','all']" :key="'ou_' + id">
+                  <div class="flex items-center gap-1">
+                    <span class="text-xs opacity-50 w-8" x-text="id === 'all' ? 'Wsz.' : id"></span>
+                    <span class="text-[10px] font-mono flex-1 truncate opacity-70" x-text="getOverlayUrl(id)"></span>
+                    <button @click="copyUrl(getOverlayUrl(id))" class="btn btn-xs btn-ghost px-1" title="Kopiuj">📋</button>
+                  </div>
+                </template>
+              </div>
+
+              <div class="divider my-2"></div>
+              <button @click="resetPositions()" class="btn btn-outline btn-xs btn-warning w-full">
+                🔄 Resetuj układ
+              </button>
             </div>
           </div>
         </div>

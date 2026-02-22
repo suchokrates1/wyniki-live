@@ -36,7 +36,17 @@ Alpine.data('adminApp', () => ({
     courts_visible: { '1': true, '2': true, '3': true, '4': true },
     auto_hide: false,
     show_stats: false,
+    court_positions: {
+      '1': { x: 24, y: 896, w: 420, size: 'large' },
+      '2': { x: 20, y: 20, w: 260, size: 'small' },
+      '3': { x: 292, y: 20, w: 260, size: 'small' },
+      '4': { x: 564, y: 20, w: 260, size: 'small' },
+    },
+    stats_position: { x: 460, y: 836, w: 360 },
   },
+  
+  // Drag state
+  dragging: null,
   
   // UI State
   loading: {
@@ -397,10 +407,23 @@ Alpine.data('adminApp', () => ({
     try {
       const response = await fetch('/api/overlay/settings');
       if (response.ok) {
-        this.overlaySettings = await response.json();
+        const data = await response.json();
+        this.overlaySettings = data;
       }
     } catch (err) {
       console.error('Failed to load overlay settings:', err);
+    }
+    // Ensure position defaults
+    if (!this.overlaySettings.court_positions) {
+      this.overlaySettings.court_positions = {
+        '1': { x: 24, y: 896, w: 420, size: 'large' },
+        '2': { x: 20, y: 20, w: 260, size: 'small' },
+        '3': { x: 292, y: 20, w: 260, size: 'small' },
+        '4': { x: 564, y: 20, w: 260, size: 'small' },
+      };
+    }
+    if (!this.overlaySettings.stats_position) {
+      this.overlaySettings.stats_position = { x: 460, y: 836, w: 360 };
     }
   },
   
@@ -436,6 +459,112 @@ Alpine.data('adminApp', () => ({
     this.overlaySettings.show_stats = !this.overlaySettings.show_stats;
     await this.saveOverlaySettings();
     this.showToast(this.overlaySettings.show_stats ? 'Statystyki włączone' : 'Statystyki wyłączone', 'success');
+  },
+  
+  // ===== PREVIEW / DRAG-AND-DROP =====
+  getPreviewStyle(elementId) {
+    let pos, w, h;
+    if (elementId === 'stats') {
+      pos = this.overlaySettings.stats_position || { x: 460, y: 836, w: 360 };
+      w = pos.w || 360;
+      h = 220;
+    } else {
+      pos = (this.overlaySettings.court_positions || {})[elementId] || { x: 20, y: 20, w: 260, size: 'small' };
+      w = pos.w || (pos.size === 'large' ? 420 : 260);
+      h = pos.size === 'large' ? 160 : 100;
+    }
+    return `left:${pos.x / 1920 * 100}%;top:${pos.y / 1080 * 100}%;width:${w / 1920 * 100}%;height:${h / 1080 * 100}%;`;
+  },
+  
+  startDrag(event, elementId) {
+    const preview = this.$refs.preview;
+    if (!preview) return;
+    const rect = preview.getBoundingClientRect();
+    const scaleX = 1920 / rect.width;
+    const scaleY = 1080 / rect.height;
+    
+    let pos;
+    if (elementId === 'stats') {
+      pos = this.overlaySettings.stats_position || { x: 460, y: 836, w: 360 };
+    } else {
+      pos = (this.overlaySettings.court_positions || {})[elementId] || { x: 20, y: 20, w: 260, size: 'small' };
+    }
+    
+    const w = pos.w || (elementId === 'stats' ? 360 : (pos.size === 'large' ? 420 : 260));
+    const h = elementId === 'stats' ? 220 : ((pos.size === 'large') ? 160 : 100);
+    
+    const elScreenX = pos.x / scaleX;
+    const elScreenY = pos.y / scaleY;
+    
+    this.dragging = {
+      id: elementId,
+      offsetX: event.clientX - rect.left - elScreenX,
+      offsetY: event.clientY - rect.top - elScreenY,
+      w,
+      h,
+    };
+    event.target.setPointerCapture(event.pointerId);
+  },
+  
+  onDrag(event) {
+    if (!this.dragging) return;
+    const preview = this.$refs.preview;
+    if (!preview) return;
+    const rect = preview.getBoundingClientRect();
+    const scaleX = 1920 / rect.width;
+    const scaleY = 1080 / rect.height;
+    
+    let newX = (event.clientX - rect.left - this.dragging.offsetX) * scaleX;
+    let newY = (event.clientY - rect.top - this.dragging.offsetY) * scaleY;
+    
+    newX = Math.max(0, Math.min(1920 - this.dragging.w, Math.round(newX)));
+    newY = Math.max(0, Math.min(1080 - this.dragging.h, Math.round(newY)));
+    
+    if (this.dragging.id === 'stats') {
+      this.overlaySettings.stats_position.x = newX;
+      this.overlaySettings.stats_position.y = newY;
+    } else {
+      this.overlaySettings.court_positions[this.dragging.id].x = newX;
+      this.overlaySettings.court_positions[this.dragging.id].y = newY;
+    }
+  },
+  
+  async endDrag(event) {
+    if (!this.dragging) return;
+    this.dragging = null;
+    await this.saveOverlaySettings();
+    this.showToast('Pozycja zapisana', 'success');
+  },
+  
+  getDragPos() {
+    if (!this.dragging) return { x: 0, y: 0 };
+    if (this.dragging.id === 'stats') {
+      const p = this.overlaySettings.stats_position;
+      return { x: p.x, y: p.y };
+    }
+    const p = this.overlaySettings.court_positions[this.dragging.id];
+    return { x: p.x, y: p.y };
+  },
+  
+  async setCourtSize(courtId, size) {
+    const cp = this.overlaySettings.court_positions;
+    if (!cp || !cp[courtId]) return;
+    cp[courtId].size = size;
+    cp[courtId].w = size === 'large' ? 420 : 260;
+    await this.saveOverlaySettings();
+    this.showToast(`Kort ${courtId}: ${size === 'large' ? 'Duży' : 'Mały'}`, 'success');
+  },
+  
+  async resetPositions() {
+    this.overlaySettings.court_positions = {
+      '1': { x: 24, y: 896, w: 420, size: 'large' },
+      '2': { x: 20, y: 20, w: 260, size: 'small' },
+      '3': { x: 292, y: 20, w: 260, size: 'small' },
+      '4': { x: 564, y: 20, w: 260, size: 'small' },
+    };
+    this.overlaySettings.stats_position = { x: 460, y: 836, w: 360 };
+    await this.saveOverlaySettings();
+    this.showToast('Układ zresetowany do domyślnego', 'success');
   },
   
   getOverlayUrl(courtId) {

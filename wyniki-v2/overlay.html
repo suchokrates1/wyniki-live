@@ -174,31 +174,19 @@
             transition: opacity 1s ease;
         }
 
-        .main-court {
+        .court-wrapper {
             position: absolute;
-            bottom: 24px;
-            left: 24px;
-            width: 420px;
+            transition: left 0.3s ease, top 0.3s ease, width 0.3s ease;
         }
 
-        .other-courts {
+        .stats-wrapper {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            display: flex;
-            gap: 12px;
-        }
-
-        .other-courts .scoreboard {
-            width: 260px;
+            transition: left 0.3s ease, top 0.3s ease, width 0.3s ease;
         }
 
         /* ========== STATS PANEL ========== */
         .stats-panel {
-            position: absolute;
-            bottom: 24px;
-            left: 460px;
-            width: 360px;
+            width: 100%;
             background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(50, 50, 50, 0.92));
             border-radius: 12px;
             padding: 16px 20px;
@@ -407,21 +395,35 @@
         // ============================================================
         function render() {
             const app = document.getElementById('app');
+
+            // Dynamic positions from settings
+            const positions = overlaySettings.court_positions || {};
+            const defaultPositions = {};
             const otherCourts = allCourtIds.filter(id => id !== focusCourtId);
+            defaultPositions[focusCourtId] = { x: 24, y: 896, w: 420, size: 'large' };
+            otherCourts.forEach((id, i) => {
+                defaultPositions[id] = { x: 20 + i * 272, y: 20, w: 260, size: 'small' };
+            });
 
             // Auto-hide check
             const anyActive = allCourtIds.some(id => courts[id]?.match_status?.active);
             const autoHidden = overlaySettings.auto_hide && !anyActive;
 
+            const statsPos = overlaySettings.stats_position || { x: 460, y: 836, w: 360 };
+
             app.innerHTML = `
                 <div class="layout ${autoHidden ? 'auto-hidden' : ''}">
-                    <div class="other-courts">
-                        ${otherCourts.map(id => renderScoreboard(id, true, `Kort ${id}`)).join('')}
+                    ${allCourtIds.map(id => {
+                        const p = positions[id] || defaultPositions[id];
+                        const isSmall = p.size === 'small';
+                        const w = p.w || (isSmall ? 260 : 420);
+                        return `<div class="court-wrapper" style="left:${p.x}px;top:${p.y}px;width:${w}px;">
+                            ${renderScoreboard(id, isSmall, 'Kort ' + id)}
+                        </div>`;
+                    }).join('')}
+                    <div class="stats-wrapper" style="left:${statsPos.x}px;top:${statsPos.y}px;width:${statsPos.w || 360}px;">
+                        ${renderStatsPanel()}
                     </div>
-                    <div class="main-court">
-                        ${renderScoreboard(focusCourtId, false, `Kort ${focusCourtId}`)}
-                    </div>
-                    ${renderStatsPanel()}
                 </div>
             `;
         }

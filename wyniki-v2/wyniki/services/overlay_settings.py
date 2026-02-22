@@ -19,6 +19,13 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     },
     "auto_hide": False,
     "show_stats": False,
+    "court_positions": {
+        "1": {"x": 24, "y": 896, "w": 420, "size": "large"},
+        "2": {"x": 20, "y": 20, "w": 260, "size": "small"},
+        "3": {"x": 292, "y": 20, "w": 260, "size": "small"},
+        "4": {"x": 564, "y": 20, "w": 260, "size": "small"},
+    },
+    "stats_position": {"x": 460, "y": 836, "w": 360},
 }
 
 # Current settings (in-memory)
@@ -58,6 +65,25 @@ def update_overlay_settings(new_settings: Dict[str, Any]) -> Dict[str, Any]:
 
         if "show_stats" in new_settings:
             _overlay_settings["show_stats"] = bool(new_settings["show_stats"])
+
+        if "court_positions" in new_settings:
+            cp = new_settings["court_positions"]
+            if isinstance(cp, dict):
+                if "court_positions" not in _overlay_settings:
+                    _overlay_settings["court_positions"] = {}
+                for k, v in cp.items():
+                    if isinstance(v, dict):
+                        if str(k) in _overlay_settings["court_positions"]:
+                            _overlay_settings["court_positions"][str(k)].update(v)
+                        else:
+                            _overlay_settings["court_positions"][str(k)] = v
+
+        if "stats_position" in new_settings:
+            sp = new_settings["stats_position"]
+            if isinstance(sp, dict):
+                if "stats_position" not in _overlay_settings:
+                    _overlay_settings["stats_position"] = {}
+                _overlay_settings["stats_position"].update(sp)
 
         logger.info("overlay_settings_updated", settings=_overlay_settings)
 
