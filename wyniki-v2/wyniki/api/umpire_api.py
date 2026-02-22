@@ -23,7 +23,7 @@ def get_courts():
         courts_data = []
         for kort_id in courts_list:
             courts_data.append({
-                "id": kort_id,
+                "kort_id": kort_id,
                 "name": f"Kort {kort_id}",
                 "status": "available"  # TODO: Check if court is occupied
             })
