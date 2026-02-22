@@ -501,8 +501,10 @@ def log_match_event():
             # --- Flags (Android sends 'flag' as ISO country code) ---
             if player1.get('flag'):
                 court_state["A"]["flag_code"] = player1["flag"]
+                court_state["A"]["flag_url"] = f"https://flagcdn.com/w80/{player1['flag'].lower()}.png"
             if player2.get('flag'):
                 court_state["B"]["flag_code"] = player2["flag"]
+                court_state["B"]["flag_url"] = f"https://flagcdn.com/w80/{player2['flag'].lower()}.png"
 
             # --- Points ---
             if is_tiebreak or is_super_tiebreak:

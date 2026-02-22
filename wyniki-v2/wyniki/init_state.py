@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .config import logger, settings
-from .database import init_db, fetch_courts
+from .database import init_db, fetch_courts, fetch_tournaments
 from .services.court_manager import refresh_courts_from_db
 
 
@@ -16,6 +16,23 @@ def initialize_state() -> None:
         logger.info("Database schema initialized")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
+    
+    # Ensure at least one active tournament exists
+    try:
+        tournaments = fetch_tournaments()
+        if not tournaments:
+            from datetime import date
+            from .database import get_db_connection
+            conn = get_db_connection()
+            conn.execute(
+                "INSERT INTO tournaments (name, start_date, end_date, active) VALUES (?, ?, ?, ?)",
+                ("Turniej domyślny", date.today().isoformat(), "2099-12-31", 1)
+            )
+            conn.commit()
+            conn.close()
+            logger.info("Seeded default tournament")
+    except Exception as e:
+        logger.error(f"Failed to seed tournament: {e}")
     
     # Load courts from database
     try:
