@@ -31,22 +31,35 @@ Alpine.data('adminApp', () => ({
   },
   importText: '',
   
-  // Overlay settings
+  // Overlay settings (new preset-based model)
   overlaySettings: {
-    courts_visible: { '1': true, '2': true, '3': true, '4': true },
-    auto_hide: false,
-    show_stats: false,
-    court_positions: {
-      '1': { x: 24, y: 896, w: 420, size: 'large' },
-      '2': { x: 20, y: 20, w: 260, size: 'small' },
-      '3': { x: 292, y: 20, w: 260, size: 'small' },
-      '4': { x: 564, y: 20, w: 260, size: 'small' },
-    },
-    stats_position: { x: 460, y: 836, w: 360 },
+    tournament_logo: null,
+    tournament_name: '',
+    overlays: {},
   },
-  
+  currentOverlayId: '1',
+  selectedElIdx: -1,
+
+  // Canvas scale
+  canvasScale: 1,
+
   // Drag state
   dragging: null,
+  
+  // Court live data from SSE
+  courtData: {},
+  _settingsSSE: null,
+
+  // Add element defaults
+  addElCourtId: '1',
+  addElSize: 'large',
+
+  // Logo crop state
+  cropImgSrc: '',
+  cropZoom: 100,
+  _cropDragging: false,
+  _cropStart: { x: 0, y: 0 },
+  _cropOffset: { x: 0, y: 0 },
   
   // UI State
   loading: {
@@ -70,6 +83,9 @@ Alpine.data('adminApp', () => ({
     this.loadCourts();
     this.loadTournaments();
     this.loadOverlaySettings();
+    // Recalc canvas scale on resize
+    window.addEventListener('resize', () => this.updateCanvasScale());
+    this.$nextTick(() => this.updateCanvasScale());
   },
   
   // ===== TOAST =====
@@ -407,26 +423,18 @@ Alpine.data('adminApp', () => ({
     try {
       const response = await fetch('/api/overlay/settings');
       if (response.ok) {
-        const data = await response.json();
-        this.overlaySettings = data;
+        this.overlaySettings = await response.json();
+        // Auto-select first overlay if current is missing
+        const ids = Object.keys(this.overlaySettings.overlays || {});
+        if (ids.length && !this.overlaySettings.overlays[this.currentOverlayId]) {
+          this.currentOverlayId = ids[0];
+        }
       }
     } catch (err) {
       console.error('Failed to load overlay settings:', err);
     }
-    // Ensure position defaults
-    if (!this.overlaySettings.court_positions) {
-      this.overlaySettings.court_positions = {
-        '1': { x: 24, y: 896, w: 420, size: 'large' },
-        '2': { x: 20, y: 20, w: 260, size: 'small' },
-        '3': { x: 292, y: 20, w: 260, size: 'small' },
-        '4': { x: 564, y: 20, w: 260, size: 'small' },
-      };
-    }
-    if (!this.overlaySettings.stats_position) {
-      this.overlaySettings.stats_position = { x: 460, y: 836, w: 360 };
-    }
   },
-  
+
   async saveOverlaySettings() {
     try {
       const response = await fetch('/api/overlay/settings', {
@@ -441,143 +449,310 @@ Alpine.data('adminApp', () => ({
       this.showToast('Błąd zapisu ustawień overlay', 'error');
     }
   },
-  
-  async toggleCourt(courtId) {
-    this.overlaySettings.courts_visible[courtId] = !this.overlaySettings.courts_visible[courtId];
-    await this.saveOverlaySettings();
-    const state = this.overlaySettings.courts_visible[courtId] ? 'widoczny' : 'ukryty';
-    this.showToast(`Kort ${courtId}: ${state}`, 'success');
+
+  // ===== SSE FOR LIVE DATA IN SETTINGS =====
+  initSettingsSSE() {
+    if (this._settingsSSE) return;
+    // Load snapshot first
+    fetch('/api/snapshot').then(r => r.json()).then(d => {
+      const c = d.courts || d;
+      Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
+    }).catch(() => {});
+    // Connect SSE
+    this._settingsSSE = new EventSource('/api/stream');
+    this._settingsSSE.addEventListener('court_update', (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.court_id) {
+          const cid = d.court_id;
+          delete d.court_id;
+          this.courtData[cid] = d;
+        }
+      } catch (err) { console.error('SSE parse:', err); }
+    });
+    this._settingsSSE.onerror = () => {
+      this._settingsSSE.close();
+      this._settingsSSE = null;
+      setTimeout(() => { if (this.activeTab === 'settings') this.initSettingsSSE(); }, 5000);
+    };
   },
-  
-  async toggleAutoHide() {
-    this.overlaySettings.auto_hide = !this.overlaySettings.auto_hide;
-    await this.saveOverlaySettings();
-    this.showToast(this.overlaySettings.auto_hide ? 'Autoukrywanie włączone' : 'Autoukrywanie wyłączone', 'success');
+
+  // ===== CANVAS HELPERS =====
+  updateCanvasScale() {
+    const outer = this.$refs?.canvasOuter;
+    if (!outer) return;
+    this.canvasScale = outer.clientWidth / 1920;
   },
-  
-  async toggleShowStats() {
-    this.overlaySettings.show_stats = !this.overlaySettings.show_stats;
-    await this.saveOverlaySettings();
-    this.showToast(this.overlaySettings.show_stats ? 'Statystyki włączone' : 'Statystyki wyłączone', 'success');
+
+  currentOverlay() {
+    return (this.overlaySettings.overlays || {})[this.currentOverlayId] || null;
   },
-  
-  // ===== PREVIEW / DRAG-AND-DROP =====
-  getPreviewStyle(elementId) {
-    let pos, w, h;
-    if (elementId === 'stats') {
-      pos = this.overlaySettings.stats_position || { x: 460, y: 836, w: 360 };
-      w = pos.w || 360;
-      h = 220;
-    } else {
-      pos = (this.overlaySettings.court_positions || {})[elementId] || { x: 20, y: 20, w: 260, size: 'small' };
-      w = pos.w || (pos.size === 'large' ? 420 : 260);
-      h = pos.size === 'large' ? 160 : 100;
+
+  currentElements() {
+    return this.currentOverlay()?.elements || [];
+  },
+
+  selectedEl() {
+    const els = this.currentElements();
+    return this.selectedElIdx >= 0 && this.selectedElIdx < els.length ? els[this.selectedElIdx] : null;
+  },
+
+  // ===== OVERLAY PRESET CRUD =====
+  addOverlay() {
+    const ids = Object.keys(this.overlaySettings.overlays || {});
+    let newId = 'custom_1';
+    let n = 1;
+    while (ids.includes(newId)) { n++; newId = 'custom_' + n; }
+    if (!this.overlaySettings.overlays) this.overlaySettings.overlays = {};
+    this.overlaySettings.overlays[newId] = {
+      name: 'Nowy overlay ' + n,
+      auto_hide: false,
+      elements: [
+        { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460, size: 'large', show_logo: true,
+          label_text: 'KORT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
+      ],
+    };
+    this.currentOverlayId = newId;
+    this.selectedElIdx = -1;
+    this.saveOverlaySettings();
+    this.showToast('Overlay dodany', 'success');
+  },
+
+  async removeOverlay() {
+    if (!this.currentOverlayId) return;
+    if (!confirm('Usunąć overlay "' + (this.currentOverlay()?.name || this.currentOverlayId) + '"?')) return;
+    try {
+      const r = await fetch('/api/overlay/overlays/' + encodeURIComponent(this.currentOverlayId), { method: 'DELETE' });
+      if (!r.ok) throw new Error('Failed');
+      delete this.overlaySettings.overlays[this.currentOverlayId];
+      const ids = Object.keys(this.overlaySettings.overlays || {});
+      this.currentOverlayId = ids[0] || '';
+      this.selectedElIdx = -1;
+      this.showToast('Overlay usunięty', 'success');
+    } catch (err) {
+      this.showToast('Błąd usuwania overlay', 'error');
     }
-    return `left:${pos.x / 1920 * 100}%;top:${pos.y / 1080 * 100}%;width:${w / 1920 * 100}%;height:${h / 1080 * 100}%;`;
   },
-  
-  startDrag(event, elementId) {
-    const preview = this.$refs.preview;
-    if (!preview) return;
-    const rect = preview.getBoundingClientRect();
-    const scaleX = 1920 / rect.width;
-    const scaleY = 1080 / rect.height;
-    
-    let pos;
-    if (elementId === 'stats') {
-      pos = this.overlaySettings.stats_position || { x: 460, y: 836, w: 360 };
+
+  updateOverlayProp(prop, value) {
+    const ov = this.currentOverlay();
+    if (ov) { ov[prop] = value; this.saveOverlaySettings(); }
+  },
+
+  // ===== ELEMENT CRUD =====
+  addElement(type) {
+    const ov = this.currentOverlay();
+    if (!ov) return;
+    if (type === 'court') {
+      ov.elements.push({
+        type: 'court',
+        court_id: this.addElCourtId || '1',
+        visible: true,
+        x: 100, y: 100, w: this.addElSize === 'large' ? 460 : 260,
+        size: this.addElSize || 'small',
+        show_logo: this.addElSize === 'large',
+        label_text: 'KORT ' + (this.addElCourtId || '1'),
+        label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14,
+      });
     } else {
-      pos = (this.overlaySettings.court_positions || {})[elementId] || { x: 20, y: 20, w: 260, size: 'small' };
+      ov.elements.push({
+        type: 'stats', court_id: this.addElCourtId || '1',
+        visible: true, x: 100, y: 400, w: 360,
+      });
     }
-    
-    const w = pos.w || (elementId === 'stats' ? 360 : (pos.size === 'large' ? 420 : 260));
-    const h = elementId === 'stats' ? 220 : ((pos.size === 'large') ? 160 : 100);
-    
-    const elScreenX = pos.x / scaleX;
-    const elScreenY = pos.y / scaleY;
-    
+    this.selectedElIdx = ov.elements.length - 1;
+    this.saveOverlaySettings();
+  },
+
+  removeElement() {
+    const ov = this.currentOverlay();
+    if (!ov || this.selectedElIdx < 0) return;
+    ov.elements.splice(this.selectedElIdx, 1);
+    this.selectedElIdx = -1;
+    this.saveOverlaySettings();
+  },
+
+  setElProp(prop, value) {
+    const el = this.selectedEl();
+    if (!el) return;
+    el[prop] = value;
+    this.saveOverlaySettings();
+  },
+
+  // ===== DRAG AND DROP =====
+  startDrag(event, idx) {
+    const outer = this.$refs.canvasOuter;
+    if (!outer) return;
+    const rect = outer.getBoundingClientRect();
+    const scale = this.canvasScale;
+    const el = this.currentElements()[idx];
+    if (!el) return;
+
+    const elScreenX = el.x * scale;
+    const elScreenY = el.y * scale;
+
     this.dragging = {
-      id: elementId,
+      idx,
       offsetX: event.clientX - rect.left - elScreenX,
       offsetY: event.clientY - rect.top - elScreenY,
-      w,
-      h,
     };
-    event.target.setPointerCapture(event.pointerId);
+    this.selectedElIdx = idx;
+    event.target.setPointerCapture?.(event.pointerId);
   },
-  
+
   onDrag(event) {
     if (!this.dragging) return;
-    const preview = this.$refs.preview;
-    if (!preview) return;
-    const rect = preview.getBoundingClientRect();
-    const scaleX = 1920 / rect.width;
-    const scaleY = 1080 / rect.height;
-    
-    let newX = (event.clientX - rect.left - this.dragging.offsetX) * scaleX;
-    let newY = (event.clientY - rect.top - this.dragging.offsetY) * scaleY;
-    
-    newX = Math.max(0, Math.min(1920 - this.dragging.w, Math.round(newX)));
-    newY = Math.max(0, Math.min(1080 - this.dragging.h, Math.round(newY)));
-    
-    if (this.dragging.id === 'stats') {
-      this.overlaySettings.stats_position.x = newX;
-      this.overlaySettings.stats_position.y = newY;
-    } else {
-      this.overlaySettings.court_positions[this.dragging.id].x = newX;
-      this.overlaySettings.court_positions[this.dragging.id].y = newY;
-    }
+    const outer = this.$refs.canvasOuter;
+    if (!outer) return;
+    const rect = outer.getBoundingClientRect();
+    const scale = this.canvasScale;
+    const el = this.currentElements()[this.dragging.idx];
+    if (!el) return;
+
+    let newX = (event.clientX - rect.left - this.dragging.offsetX) / scale;
+    let newY = (event.clientY - rect.top - this.dragging.offsetY) / scale;
+
+    el.x = Math.max(0, Math.min(1920 - (el.w || 260), Math.round(newX)));
+    el.y = Math.max(0, Math.min(1080 - 80, Math.round(newY)));
   },
-  
+
   async endDrag(event) {
     if (!this.dragging) return;
     this.dragging = null;
     await this.saveOverlaySettings();
-    this.showToast('Pozycja zapisana', 'success');
   },
-  
-  getDragPos() {
-    if (!this.dragging) return { x: 0, y: 0 };
-    if (this.dragging.id === 'stats') {
-      const p = this.overlaySettings.stats_position;
-      return { x: p.x, y: p.y };
+
+  // ===== LIVE SCOREBOARD RENDER IN PREVIEW =====
+  renderLiveScoreboard(courtId, size, showLogo) {
+    const court = this.courtData[courtId] || {};
+    const pA = court.A || {}, pB = court.B || {};
+    const active = court.match_status?.active || false;
+    const curSet = court.current_set || 1;
+    const sets = [];
+    for (let s = 1; s <= 3; s++) {
+      const a = pA['set' + s], b = pB['set' + s];
+      if (s <= curSet || a > 0 || b > 0) sets.push({ a: a || 0, b: b || 0 });
     }
-    const p = this.overlaySettings.court_positions[this.dragging.id];
-    return { x: p.x, y: p.y };
+    if (!sets.length) sets.push({ a: 0, b: 0 });
+    const isTie = court.tie?.visible || false;
+    const ptA = isTie ? (court.tie?.A || 0) : (pA.points || '0');
+    const ptB = isTie ? (court.tie?.B || 0) : (pB.points || '0');
+    const ptCls = isTie ? 'sb-sc pts tb' : 'sb-sc pts';
+    const logo = this.overlaySettings.tournament_logo;
+    const hasLogo = showLogo && size === 'large' && logo;
+    const logoH = 80;
+
+    function pRow(p, serveKey) {
+      const serving = court.serve === serveKey ? 'serving' : '';
+      const flagUrl = p.flag_url;
+      const flagHtml = flagUrl
+        ? '<img src="' + flagUrl + '" alt="" class="sb-flag" onerror="this.style.display=\'none\'">'
+        : '<div style="width:0"></div>';
+      const setsHtml = sets.map(s => '<div class="sb-sc">' + s[serveKey === 'A' ? 'a' : 'b'] + '</div>').join('');
+      const ptsHtml = active ? '<div class="' + ptCls + '">' + (serveKey === 'A' ? ptA : ptB) + '</div>' : '';
+      return '<div class="sb-row ' + serving + '">'
+        + '<div class="sb-serve"></div>'
+        + flagHtml
+        + '<div class="sb-name">' + (p.surname || p.full_name || '\u2014') + '</div>'
+        + '<div class="sb-scores">' + setsHtml + ptsHtml + '</div></div>';
+    }
+
+    const logoHtml = hasLogo
+      ? '<div class="sb-logo" style="width:' + logoH + 'px;height:' + logoH + 'px;"><img src="' + logo + '" alt=""></div>'
+      : '';
+
+    return logoHtml
+      + '<div class="sb-players">'
+      + pRow(pA, 'A')
+      + pRow(pB, 'B')
+      + '</div>';
   },
-  
-  async setCourtSize(courtId, size) {
-    const cp = this.overlaySettings.court_positions;
-    if (!cp || !cp[courtId]) return;
-    cp[courtId].size = size;
-    cp[courtId].w = size === 'large' ? 420 : 260;
-    await this.saveOverlaySettings();
-    this.showToast(`Kort ${courtId}: ${size === 'large' ? 'Duży' : 'Mały'}`, 'success');
-  },
-  
-  async resetPositions() {
-    this.overlaySettings.court_positions = {
-      '1': { x: 24, y: 896, w: 420, size: 'large' },
-      '2': { x: 20, y: 20, w: 260, size: 'small' },
-      '3': { x: 292, y: 20, w: 260, size: 'small' },
-      '4': { x: 564, y: 20, w: 260, size: 'small' },
+
+  // ===== LOGO UPLOAD =====
+  onLogoFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.cropImgSrc = e.target.result;
+      this.cropZoom = 100;
+      this._cropOffset = { x: 0, y: 0 };
+      this.$refs.cropModal.showModal();
+      this.$nextTick(() => this.updateCropTransform());
     };
-    this.overlaySettings.stats_position = { x: 460, y: 836, w: 360 };
-    await this.saveOverlaySettings();
-    this.showToast('Układ zresetowany do domyślnego', 'success');
+    reader.readAsDataURL(file);
   },
-  
-  getOverlayUrl(courtId) {
-    const base = window.location.origin;
-    return courtId === 'all' ? `${base}/overlay/all` : `${base}/overlay/${courtId}`;
+
+  updateCropTransform() {
+    const img = this.$refs.cropImg;
+    if (!img) return;
+    const s = this.cropZoom / 100;
+    img.style.width = (200 * s) + 'px';
+    img.style.height = 'auto';
+    img.style.left = this._cropOffset.x + 'px';
+    img.style.top = this._cropOffset.y + 'px';
   },
-  
+
+  startCropDrag(e) {
+    this._cropDragging = true;
+    this._cropStart = { x: e.clientX - this._cropOffset.x, y: e.clientY - this._cropOffset.y };
+    e.target.setPointerCapture?.(e.pointerId);
+  },
+
+  onCropDrag(e) {
+    if (!this._cropDragging) return;
+    this._cropOffset = { x: e.clientX - this._cropStart.x, y: e.clientY - this._cropStart.y };
+    this.updateCropTransform();
+  },
+
+  endCropDrag() {
+    this._cropDragging = false;
+  },
+
+  async applyCrop() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 200; canvas.height = 200;
+    const ctx = canvas.getContext('2d');
+    const img = this.$refs.cropImg;
+    if (!img) return;
+    const s = this.cropZoom / 100;
+    const w = 200 * s;
+    const h = img.naturalHeight * (w / img.naturalWidth);
+    ctx.drawImage(img, this._cropOffset.x, this._cropOffset.y, w, h);
+    const dataUrl = canvas.toDataURL('image/png');
+    this.$refs.cropModal.close();
+
+    try {
+      const r = await fetch('/api/overlay/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo: dataUrl }),
+      });
+      if (!r.ok) throw new Error('Upload failed');
+      const d = await r.json();
+      this.overlaySettings.tournament_logo = d.tournament_logo || dataUrl;
+      this.showToast('Logo zapisane', 'success');
+    } catch (err) {
+      this.showToast('Błąd uploadu logo', 'error');
+    }
+  },
+
+  async removeLogo() {
+    try {
+      await fetch('/api/overlay/logo', { method: 'DELETE' });
+      this.overlaySettings.tournament_logo = null;
+      this.showToast('Logo usunięte', 'success');
+    } catch (err) {
+      this.showToast('Błąd usuwania logo', 'error');
+    }
+  },
+
+  // ===== UTILS =====
   async copyUrl(url) {
     try {
       await navigator.clipboard.writeText(url);
       this.showToast('URL skopiowany do schowka', 'success');
     } catch (err) {
-      // Fallback
       const el = document.createElement('textarea');
       el.value = url;
       document.body.appendChild(el);

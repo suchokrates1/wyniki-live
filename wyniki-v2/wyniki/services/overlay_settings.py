@@ -1,91 +1,129 @@
-"""Overlay settings management for OBS stream overlays."""
+"""Overlay settings management for OBS stream overlays.
+
+Supports multiple overlay presets (e.g. "kort1 focus", "split 1+2"),
+each with independently positioned court scoreboards and stats panels.
+Also stores tournament branding (logo + name) and court label settings.
+"""
 from __future__ import annotations
 
+import copy
 import threading
-from typing import Dict, Any
+from typing import Any, Dict
 
 from ..config import logger
 
-# Thread-safe lock for overlay settings
+# ---------- thread-safety ----------
 _OVERLAY_LOCK = threading.Lock()
 
-# Default settings
+
+# ---------- element builders ----------
+
+def _court_el(court_id: str, x: int, y: int, w: int,
+              size: str = "small", show_logo: bool = False,
+              label_text: str = "") -> Dict[str, Any]:
+    """Build a court-scoreboard element dict."""
+    return {
+        "type": "court",
+        "court_id": str(court_id),
+        "visible": True,
+        "x": x, "y": y, "w": w,
+        "size": size,
+        "show_logo": show_logo,
+        "label_text": label_text or f"KORT {court_id}",
+        "label_position": "above",
+        "label_gap": 4 if size == "large" else 2,
+        "label_bg_opacity": 0.85 if size == "large" else 0.6,
+        "label_font_size": 14 if size == "large" else 10,
+    }
+
+
+def _stats_el(court_id: str, x: int, y: int, w: int = 360) -> Dict[str, Any]:
+    """Build a stats-panel element dict."""
+    return {
+        "type": "stats",
+        "court_id": str(court_id),
+        "visible": False,
+        "x": x, "y": y, "w": w,
+    }
+
+
+# ---------- default overlays ----------
+
+def _overlay_focus(focus: str, name: str) -> Dict[str, Any]:
+    others = [c for c in ("1", "2", "3", "4") if c != focus]
+    elements = [_court_el(focus, 24, 860, 460, "large", True)]
+    for i, cid in enumerate(others):
+        elements.append(_court_el(cid, 20 + i * 280, 20, 260, "small"))
+    elements.append(_stats_el(focus, 500, 830))
+    return {"name": name, "auto_hide": False, "elements": elements}
+
+
+def _overlay_all() -> Dict[str, Any]:
+    positions = [(20, 20), (980, 20), (20, 560), (980, 560)]
+    elements = [
+        _court_el(str(i + 1), x, y, 440, "large", True)
+        for i, (x, y) in enumerate(positions)
+    ]
+    return {"name": "Wszystkie korty", "auto_hide": False, "elements": elements}
+
+
+# ---------- canonical defaults ----------
+
 _DEFAULT_SETTINGS: Dict[str, Any] = {
-    "courts_visible": {
-        "1": True,
-        "2": True,
-        "3": True,
-        "4": True,
+    "tournament_logo": None,
+    "tournament_name": "",
+    "overlays": {
+        "1": _overlay_focus("1", "Kort 1 \u2013 g\u0142\u00f3wny"),
+        "2": _overlay_focus("2", "Kort 2 \u2013 g\u0142\u00f3wny"),
+        "3": _overlay_focus("3", "Kort 3 \u2013 g\u0142\u00f3wny"),
+        "4": _overlay_focus("4", "Kort 4 \u2013 g\u0142\u00f3wny"),
+        "all": _overlay_all(),
     },
-    "auto_hide": False,
-    "show_stats": False,
-    "court_positions": {
-        "1": {"x": 24, "y": 896, "w": 420, "size": "large"},
-        "2": {"x": 20, "y": 20, "w": 260, "size": "small"},
-        "3": {"x": 292, "y": 20, "w": 260, "size": "small"},
-        "4": {"x": 564, "y": 20, "w": 260, "size": "small"},
-    },
-    "stats_position": {"x": 460, "y": 836, "w": 360},
 }
 
-# Current settings (in-memory)
+# ---------- live state ----------
 _overlay_settings: Dict[str, Any] = {}
 
 
 def _ensure_defaults() -> None:
-    """Ensure settings dict has all default keys."""
     global _overlay_settings
     if not _overlay_settings:
-        import copy
         _overlay_settings = copy.deepcopy(_DEFAULT_SETTINGS)
 
 
+# ---------- public API ----------
+
 def get_overlay_settings() -> Dict[str, Any]:
-    """Get current overlay settings (thread-safe)."""
+    """Return a deep-copy of current overlay settings."""
     with _OVERLAY_LOCK:
         _ensure_defaults()
-        import copy
         return copy.deepcopy(_overlay_settings)
 
 
-def update_overlay_settings(new_settings: Dict[str, Any]) -> Dict[str, Any]:
-    """Update overlay settings (thread-safe). Returns updated settings."""
+def update_overlay_settings(new: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge *new* into current settings and return updated copy."""
     global _overlay_settings
     with _OVERLAY_LOCK:
         _ensure_defaults()
-
-        if "courts_visible" in new_settings:
-            cv = new_settings["courts_visible"]
-            if isinstance(cv, dict):
-                for k, v in cv.items():
-                    _overlay_settings["courts_visible"][str(k)] = bool(v)
-
-        if "auto_hide" in new_settings:
-            _overlay_settings["auto_hide"] = bool(new_settings["auto_hide"])
-
-        if "show_stats" in new_settings:
-            _overlay_settings["show_stats"] = bool(new_settings["show_stats"])
-
-        if "court_positions" in new_settings:
-            cp = new_settings["court_positions"]
-            if isinstance(cp, dict):
-                if "court_positions" not in _overlay_settings:
-                    _overlay_settings["court_positions"] = {}
-                for k, v in cp.items():
-                    if isinstance(v, dict):
-                        if str(k) in _overlay_settings["court_positions"]:
-                            _overlay_settings["court_positions"][str(k)].update(v)
-                        else:
-                            _overlay_settings["court_positions"][str(k)] = v
-
-        if "stats_position" in new_settings:
-            sp = new_settings["stats_position"]
-            if isinstance(sp, dict):
-                if "stats_position" not in _overlay_settings:
-                    _overlay_settings["stats_position"] = {}
-                _overlay_settings["stats_position"].update(sp)
-
-        logger.info("overlay_settings_updated", settings=_overlay_settings)
-
-        import copy
+        for key in ("tournament_logo", "tournament_name"):
+            if key in new:
+                _overlay_settings[key] = new[key]
+        if "overlays" in new and isinstance(new["overlays"], dict):
+            for oid, odata in new["overlays"].items():
+                if isinstance(odata, dict):
+                    _overlay_settings.setdefault("overlays", {})[oid] = odata
+        logger.info("overlay_settings_updated")
         return copy.deepcopy(_overlay_settings)
+
+
+def delete_overlay(overlay_id: str) -> bool:
+    """Remove a single overlay preset. Returns True if found & deleted."""
+    global _overlay_settings
+    with _OVERLAY_LOCK:
+        _ensure_defaults()
+        overlays = _overlay_settings.get("overlays", {})
+        if overlay_id in overlays:
+            del overlays[overlay_id]
+            logger.info("overlay_deleted", overlay_id=overlay_id)
+            return True
+        return False
