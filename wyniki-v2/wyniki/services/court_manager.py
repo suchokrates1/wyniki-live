@@ -111,6 +111,12 @@ def available_courts() -> List[str]:
         return _sorted_court_ids(COURTS.keys())
 
 
+def get_court_state(kort_id: str) -> Optional[Dict[str, Any]]:
+    """Get court state without creating it."""
+    with STATE_LOCK:
+        return COURTS.get(kort_id)
+
+
 def refresh_courts_from_db(db_courts: List[str], seed_if_empty: bool = False) -> None:
     """Update court configuration from database."""
     from ..models import CourtState
