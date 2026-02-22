@@ -52,7 +52,6 @@ Alpine.data('adminApp', () => ({
 
   // Add element defaults
   addElCourtId: '1',
-  addElSize: 'large',
 
   // Logo crop state
   cropImgSrc: '',
@@ -512,7 +511,8 @@ Alpine.data('adminApp', () => ({
       name: 'Nowy overlay ' + n,
       auto_hide: false,
       elements: [
-        { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460, size: 'large', show_logo: true,
+        { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460,
+          show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
           label_text: 'KORT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
       ],
     };
@@ -552,9 +552,11 @@ Alpine.data('adminApp', () => ({
         type: 'court',
         court_id: this.addElCourtId || '1',
         visible: true,
-        x: 100, y: 100, w: this.addElSize === 'large' ? 460 : 260,
-        size: this.addElSize || 'small',
-        show_logo: this.addElSize === 'large',
+        x: 100, y: 100, w: 460,
+        show_logo: true,
+        font_size: 17,
+        bg_opacity: 0.95,
+        logo_size: 60,
         label_text: 'KORT ' + (this.addElCourtId || '1'),
         label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14,
       });
@@ -627,11 +629,13 @@ Alpine.data('adminApp', () => ({
   },
 
   // ===== LIVE SCOREBOARD RENDER IN PREVIEW =====
-  renderLiveScoreboard(courtId, size, showLogo) {
+  renderLiveScoreboard(el) {
+    const courtId = el.court_id;
     const court = this.courtData[courtId] || {};
     const pA = court.A || {}, pB = court.B || {};
     const active = court.match_status?.active || false;
     const curSet = court.current_set || 1;
+    const logoSize = el.logo_size || 60;
     const sets = [];
     for (let s = 1; s <= 3; s++) {
       const a = pA['set' + s], b = pB['set' + s];
@@ -643,8 +647,7 @@ Alpine.data('adminApp', () => ({
     const ptB = isTie ? (court.tie?.B || 0) : (pB.points || '0');
     const ptCls = isTie ? 'sb-sc pts tb' : 'sb-sc pts';
     const logo = this.overlaySettings.tournament_logo;
-    const hasLogo = showLogo && size === 'large' && logo;
-    const logoH = 80;
+    const showLogo = el.show_logo;
 
     function pRow(p, serveKey) {
       const serving = court.serve === serveKey ? 'serving' : '';
@@ -661,9 +664,14 @@ Alpine.data('adminApp', () => ({
         + '<div class="sb-scores">' + setsHtml + ptsHtml + '</div></div>';
     }
 
-    const logoHtml = hasLogo
-      ? '<div class="sb-logo" style="width:' + logoH + 'px;height:' + logoH + 'px;"><img src="' + logo + '" alt=""></div>'
-      : '';
+    let logoHtml = '';
+    if (showLogo) {
+      if (logo) {
+        logoHtml = '<div class="sb-logo" style="width:' + logoSize + 'px;height:' + logoSize + 'px;"><img src="' + logo + '" alt=""></div>';
+      } else {
+        logoHtml = '<div class="sb-logo" style="width:' + logoSize + 'px;height:' + logoSize + 'px;"><div class="sb-logo-ph">\uD83C\uDFBE</div></div>';
+      }
+    }
 
     return logoHtml
       + '<div class="sb-players">'

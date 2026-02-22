@@ -19,21 +19,25 @@ _OVERLAY_LOCK = threading.Lock()
 # ---------- element builders ----------
 
 def _court_el(court_id: str, x: int, y: int, w: int,
-              size: str = "small", show_logo: bool = False,
-              label_text: str = "") -> Dict[str, Any]:
+              size: str = "large", show_logo: bool = False,
+              label_text: str = "",
+              font_size: int = 17, bg_opacity: float = 0.95,
+              logo_size: int = 60) -> Dict[str, Any]:
     """Build a court-scoreboard element dict."""
     return {
         "type": "court",
         "court_id": str(court_id),
         "visible": True,
         "x": x, "y": y, "w": w,
-        "size": size,
         "show_logo": show_logo,
+        "font_size": font_size,
+        "bg_opacity": bg_opacity,
+        "logo_size": logo_size,
         "label_text": label_text or f"KORT {court_id}",
         "label_position": "above",
-        "label_gap": 4 if size == "large" else 2,
-        "label_bg_opacity": 0.85 if size == "large" else 0.6,
-        "label_font_size": 14 if size == "large" else 10,
+        "label_gap": 4,
+        "label_bg_opacity": 0.85,
+        "label_font_size": 14,
     }
 
 
@@ -53,7 +57,9 @@ def _overlay_focus(focus: str, name: str) -> Dict[str, Any]:
     others = [c for c in ("1", "2", "3", "4") if c != focus]
     elements = [_court_el(focus, 24, 860, 460, "large", True)]
     for i, cid in enumerate(others):
-        elements.append(_court_el(cid, 20 + i * 280, 20, 260, "small"))
+        elements.append(_court_el(cid, 20 + i * 280, 20, 260,
+                                  show_logo=False, font_size=12,
+                                  logo_size=40))
     elements.append(_stats_el(focus, 500, 830))
     return {"name": name, "auto_hide": False, "elements": elements}
 

@@ -27,56 +27,51 @@
         }
         .court-label-bar {
             text-align: center; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 1.5px; padding: 4px 12px;
-            border-radius: 6px 6px 0 0; white-space: nowrap;
+            letter-spacing: 0.1em; padding: 0.29em 0.86em;
+            white-space: nowrap; color: white;
         }
         .label-below .court-label-bar { border-radius: 0 0 6px 6px; }
         .scoreboard {
-            display: flex;
-            background: linear-gradient(135deg, rgba(26,35,126,0.95), rgba(13,71,161,0.95));
-            border-radius: 12px; padding: 14px 18px;
+            display: flex; width: 100%; box-sizing: border-box;
+            border-radius: 0.7em; padding: 0.82em 1.06em;
             box-shadow: 0 4px 24px rgba(0,0,0,0.5);
             border: 2px solid rgba(255,255,255,0.15);
             transition: opacity 0.5s ease, transform 0.5s ease;
-            overflow: hidden;
+            overflow: hidden; color: white;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
         }
-        .scoreboard.small { padding: 8px 12px; }
         .scoreboard.match-inactive .players-area { opacity: 0.4; }
         .logo-area {
             flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-            margin-right: 14px; overflow: hidden; border-radius: 6px;
+            margin-right: 0.82em; overflow: hidden; border-radius: 0.35em;
         }
-        .logo-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+        .logo-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 0.35em; }
+        .logo-ph { display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%; background: rgba(255,255,255,0.1); border-radius: 0.35em; font-size: 1.8em; }
         .players-area { flex: 1; min-width: 0; }
-        .player-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-        .scoreboard.small .player-row { gap: 6px; margin-bottom: 3px; }
+        .player-row { display: flex; align-items: center; gap: 0.59em; margin-bottom: 0.35em; }
+        .player-row:last-child { margin-bottom: 0; }
         .serve-dot {
-            width: 8px; height: 8px; border-radius: 50%;
+            width: 0.47em; height: 0.47em; border-radius: 50%;
             background: #4CAF50; flex-shrink: 0; opacity: 0;
             transition: opacity 0.3s ease;
         }
         .player-row.serving .serve-dot { opacity: 1; }
-        .scoreboard.small .serve-dot { width: 6px; height: 6px; }
         .flag {
-            width: 30px; height: 22px; object-fit: cover;
-            border-radius: 3px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); flex-shrink: 0;
+            width: 1.76em; height: 1.29em; object-fit: cover;
+            border-radius: 0.18em; box-shadow: 0 1px 4px rgba(0,0,0,0.3); flex-shrink: 0;
         }
-        .scoreboard.small .flag { width: 20px; height: 15px; }
         .player-name {
-            flex: 1; font-size: 17px; font-weight: 600;
+            flex: 1; font-size: 1em; font-weight: 600;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
         }
-        .scoreboard.small .player-name { font-size: 12px; }
-        .scores { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-        .scoreboard.small .scores { gap: 3px; }
+        .scores { display: flex; gap: 0.35em; align-items: center; flex-shrink: 0; }
         .score {
-            min-width: 32px; text-align: center; font-size: 20px;
-            font-weight: 700; padding: 3px 6px;
-            background: rgba(0,0,0,0.3); border-radius: 5px;
+            min-width: 1.88em; text-align: center; font-size: 1.18em;
+            font-weight: 700; padding: 0.18em 0.35em;
+            background: rgba(0,0,0,0.3); border-radius: 0.29em;
         }
-        .scoreboard.small .score { min-width: 22px; font-size: 13px; padding: 2px 4px; }
-        .score.points { background: rgba(255,255,255,0.15); min-width: 38px; }
-        .scoreboard.small .score.points { min-width: 26px; }
+        .score.points { background: rgba(255,255,255,0.15); min-width: 2.24em; }
         .score.tiebreak { background: rgba(76,175,80,0.5); }
         .stats-panel {
             width: 100%;
@@ -128,10 +123,11 @@
         const court = courts[cid] || {};
         const pA = court.A || {}, pB = court.B || {};
         const active = court.match_status?.active || false;
-        const isSmall = el.size === 'small';
-        const sizeClass = isSmall ? 'small' : '';
         const inactiveClass = active ? '' : 'match-inactive';
         const curSet = court.current_set || 1;
+        const fontSize = el.font_size || 17;
+        const bgOpacity = el.bg_opacity != null ? el.bg_opacity : 0.95;
+        const logoSize = el.logo_size || 60;
         const sets = [];
         for (let s = 1; s <= 3; s++) {
             const a = pA['set'+s], b = pB['set'+s];
@@ -143,11 +139,15 @@
         const ptB = isTie ? (court.tie?.B||0) : (pB.points||'0');
         const ptCls = isTie ? 'score points tiebreak' : 'score points';
         const logo = settings.tournament_logo;
-        const showLogo = el.show_logo && el.size === 'large' && logo;
-        const logoH = 80;
-        const logoHtml = showLogo
-            ? '<div class="logo-area" style="width:'+logoH+'px;height:'+logoH+'px;"><img src="'+logo+'" alt=""></div>'
-            : '';
+        const showLogo = el.show_logo;
+        var logoHtml = '';
+        if (showLogo) {
+            if (logo) {
+                logoHtml = '<div class="logo-area" style="width:'+logoSize+'px;height:'+logoSize+'px;"><img src="'+logo+'" alt=""></div>';
+            } else {
+                logoHtml = '<div class="logo-area" style="width:'+logoSize+'px;height:'+logoSize+'px;"><div class="logo-ph">\uD83C\uDFBE</div></div>';
+            }
+        }
         function pRow(p, serve, side) {
             return '<div class="player-row '+(court.serve===serve?'serving':'')+'">'
                 +'<div class="serve-dot"></div>'
@@ -158,7 +158,8 @@
                 +(active ? '<div class="'+ptCls+'">'+(side==='a'?ptA:ptB)+'</div>' : '')
                 +'</div></div>';
         }
-        return '<div class="scoreboard '+sizeClass+' '+inactiveClass+'">'
+        var bgStyle = 'font-size:'+fontSize+'px;background:linear-gradient(135deg,rgba(26,35,126,'+bgOpacity+'),rgba(13,71,161,'+bgOpacity+'));';
+        return '<div class="scoreboard '+inactiveClass+'" style="'+bgStyle+'">'
             +logoHtml
             +'<div class="players-area">'
             +pRow(pA,'A','a')
@@ -192,11 +193,12 @@
     function renderLabel(el) {
         if (!el.label_text || el.label_position === 'none') return '';
         var bg = 'rgba(0,0,0,'+(el.label_bg_opacity != null ? el.label_bg_opacity : 0.7)+')';
-        var fs = el.label_font_size || 13;
-        var gap = el.label_gap || 4;
+        var fs = el.label_font_size || 14;
+        var gap = el.label_gap != null ? el.label_gap : 4;
         var pos = el.label_position || 'above';
         var marginProp = pos==='above' ? 'margin-bottom' : 'margin-top';
-        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;color:white;">'+el.label_text+'</div>';
+        var radius = pos==='above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
+        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;">'+el.label_text+'</div>';
     }
 
     function render() {
@@ -213,9 +215,10 @@
             if (el.type === 'stats') {
                 return '<div class="element-wrapper '+hidden+'" style="'+style+'">'+renderStats(el)+'</div>';
             }
-            var labelAbove = el.label_position !== 'below' ? renderLabel(el) : '';
-            var labelBelow = el.label_position === 'below' ? renderLabel(el) : '';
-            var wrapClass = el.label_position === 'below' ? 'label-below' : '';
+            var pos = el.label_position || 'above';
+            var labelAbove = pos === 'above' ? renderLabel(el) : '';
+            var labelBelow = pos === 'below' ? renderLabel(el) : '';
+            var wrapClass = pos === 'below' ? 'label-below' : '';
             return '<div class="element-wrapper '+hidden+' '+wrapClass+'" style="'+style+'">'
                 +labelAbove+renderScoreboard(el)+labelBelow+'</div>';
         }).join('');
