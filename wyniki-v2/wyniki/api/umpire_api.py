@@ -14,7 +14,7 @@ blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
 @blueprint.route('/courts', methods=['GET'])
 def get_courts():
     """Get list of available courts for app."""
-    from ..services.court_manager import available_courts
+    from ..services.court_manager import available_courts, get_court_state
     
     try:
         courts_list = available_courts()
@@ -22,15 +22,24 @@ def get_courts():
         # Format for mobile app
         courts_data = []
         for kort_id in courts_list:
+            # Check if court has an active match
+            state = get_court_state(kort_id)
+            is_active = False
+            if state:
+                match_status = state.get("match_status", {})
+                is_active = match_status.get("active", False)
+            
             courts_data.append({
                 "kort_id": kort_id,
                 "name": f"Kort {kort_id}",
-                "status": "available"  # TODO: Check if court is occupied
+                "status": "occupied" if is_active else "available",
+                "is_available": not is_active
             })
         
         return jsonify({
             "courts": courts_data,
-            "count": len(courts_data)
+            "count": len(courts_data),
+            "total_count": len(courts_data)
         }), 200
         
     except Exception as e:
