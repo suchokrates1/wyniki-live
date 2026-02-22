@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
+
+@layer components {
+  .court-card {
+    @apply card bg-base-100 shadow-xl transition-all duration-300 hover:shadow-2xl;
+  }
+  
+  .score-badge {
+    @apply badge badge-lg font-bold text-lg min-w-[3rem];
+  }
+  
+  .live-indicator {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full bg-success text-success-content text-sm font-semibold;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+}
+
+@layer utilities {
+  [x-cloak] {
+    display: none !important;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

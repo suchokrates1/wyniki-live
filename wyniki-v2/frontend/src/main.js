@@ -482,6 +482,12 @@ Alpine.data('tennisApp', () => ({
   getSetScore(courtId, side, setIdx) {
     const court = this.courts[courtId];
     if (!court) return '0';
+    const currentSet = parseInt(court.current_set) || 1;
+    // Active set: prefer current_games (updated in real-time via match-events)
+    if (setIdx === currentSet) {
+      const cg = court[side]?.current_games;
+      if (cg !== undefined && cg !== null) return String(cg);
+    }
     const val = court[side]?.[`set${setIdx}`];
     return val !== undefined && val !== null ? String(val) : '0';
   },

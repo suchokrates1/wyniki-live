@@ -533,14 +533,20 @@ def log_match_event():
                 court_state["tie"]["visible"] = None
 
             # --- Games ---
-            court_state["A"]["current_games"] = int(score.get('player1_games', 0))
-            court_state["B"]["current_games"] = int(score.get('player2_games', 0))
+            games_a = int(score.get('player1_games', 0))
+            games_b = int(score.get('player2_games', 0))
+            court_state["A"]["current_games"] = games_a
+            court_state["B"]["current_games"] = games_b
 
             # --- Sets ---
             sets_a = int(score.get('player1_sets', 0))
             sets_b = int(score.get('player2_sets', 0))
             current_set = sets_a + sets_b + 1
             court_state["current_set"] = current_set
+
+            # Write current games to set{N} for frontend display
+            court_state["A"][f"set{current_set}"] = games_a
+            court_state["B"][f"set{current_set}"] = games_b
 
             # --- Match status ---
             match_finished = bool(score.get('match_finished', False))
