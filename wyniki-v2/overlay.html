@@ -40,6 +40,11 @@
         }
         .sb-wrap.match-inactive .score-table { opacity: 0.4; }
 
+        /* Height fill (when H is set) */
+        .element-wrapper.has-h { display: flex; flex-direction: column; }
+        .sb-wrap.h-fill { flex: 1; min-height: 0; }
+        .sb-wrap.h-fill .score-table { flex: 1; grid-template-rows: 1fr 1fr; }
+
         /* Logo area (optional, left of table) */
         .logo-area {
             flex-shrink: 0; display: flex; align-items: center; justify-content: center;
@@ -251,7 +256,8 @@
         }
 
         var opacityStyle = bgOpacity < 1 ? 'opacity:'+bgOpacity+';' : '';
-        return '<div class="sb-wrap '+inactiveClass+'">'
+        var hFill = el.h ? ' h-fill' : '';
+        return '<div class="sb-wrap '+inactiveClass+hFill+'">'
             +logoHtml
             +'<div class="score-table" style="'+opacityStyle+'">'
             +pRow(pA, 'A', 'side-a')
@@ -304,12 +310,19 @@
         var html = elems.map(function(el) {
             var hidden = el.visible === false ? 'el-hidden' : '';
             var style = 'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;';
+            if (el.h) style += 'height:'+el.h+'px;';
+            var hClass = el.h ? ' has-h' : '';
             if (el.type === 'stats') {
-                return '<div class="element-wrapper '+hidden+'" style="'+style+'">'+renderStats(el)+'</div>';
+                return '<div class="element-wrapper '+hidden+hClass+'" style="'+style+'">'+renderStats(el)+'</div>';
             }
             var pos = el.label_position || 'above';
             var labelAbove = pos === 'above' ? renderLabel(el) : '';
             var labelBelow = pos === 'below' ? renderLabel(el) : '';
+            if (el.h) {
+                var sbWrap = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'+renderScoreboard(el)+'</div>';
+                return '<div class="element-wrapper '+hidden+' has-h" style="'+style+'">'
+                    +labelAbove+sbWrap+labelBelow+'</div>';
+            }
             var wrapClass = pos === 'below' ? 'label-below' : '';
             return '<div class="element-wrapper '+hidden+' '+wrapClass+'" style="'+style+'">'
                 +labelAbove+renderScoreboard(el)+labelBelow+'</div>';

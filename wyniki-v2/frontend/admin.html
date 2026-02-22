@@ -103,6 +103,24 @@
     .sb-label-bar { text-align:center; font-weight:700; text-transform:uppercase;
       letter-spacing:0.1em; padding:4px 12px; white-space:nowrap; color:white; }
 
+    /* Height fill (when H is set) */
+    .drag-el.has-h { display:flex; flex-direction:column; }
+    .drag-el.has-h > div { flex:1; min-height:0; display:flex; flex-direction:column; }
+    .sb-wrap.h-fill { flex:1; min-height:0; }
+    .sb-wrap.h-fill .sb-table { flex:1; grid-template-rows:1fr 1fr; }
+
+    /* Resize handles */
+    .resize-handle { position:absolute; z-index:10; opacity:0; transition:opacity 0.15s; pointer-events:none; }
+    .drag-el.is-selected .resize-handle { opacity:1; pointer-events:auto; }
+    .rh-e { right:-3px; top:10%; bottom:10%; width:6px; cursor:e-resize; background:rgba(33,150,243,0.7); border-radius:3px; }
+    .rh-w { left:-3px; top:10%; bottom:10%; width:6px; cursor:w-resize; background:rgba(33,150,243,0.7); border-radius:3px; }
+    .rh-s { bottom:-3px; left:10%; right:10%; height:6px; cursor:s-resize; background:rgba(33,150,243,0.7); border-radius:3px; }
+    .rh-n { top:-3px; left:10%; right:10%; height:6px; cursor:n-resize; background:rgba(33,150,243,0.7); border-radius:3px; }
+    .rh-se { bottom:-5px; right:-5px; width:10px; height:10px; cursor:se-resize; background:#2196F3; border-radius:2px; }
+    .rh-sw { bottom:-5px; left:-5px; width:10px; height:10px; cursor:sw-resize; background:#2196F3; border-radius:2px; }
+    .rh-ne { top:-5px; right:-5px; width:10px; height:10px; cursor:ne-resize; background:#2196F3; border-radius:2px; }
+    .rh-nw { top:-5px; left:-5px; width:10px; height:10px; cursor:nw-resize; background:#2196F3; border-radius:2px; }
+
     /* stats panel inside preview */
     .sp { width:100%; background:linear-gradient(135deg,rgba(30,30,30,0.95),rgba(50,50,50,0.92));
       border-radius:12px; padding:16px 20px; box-shadow:0 4px 24px rgba(0,0,0,0.5);
@@ -305,12 +323,13 @@
                          :class="{
                            'is-dragging': dragging?.idx === idx,
                            'is-selected': selectedElIdx === idx,
-                           'el-hidden': el.visible === false
+                           'el-hidden': el.visible === false,
+                           'has-h': !!el.h
                          }"
-                         :style="'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;'"
+                         :style="'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;'+(el.h ? 'height:'+el.h+'px;' : '')"
                          @pointerdown.prevent="startDrag($event, idx)"
                          @click.stop="selectedElIdx = idx">
-                      <!-- court scoreboard (label rendered inside JS to avoid Alpine x-show bug) -->
+                      <!-- court scoreboard -->
                       <template x-if="el.type === 'court'">
                         <div x-html="renderCourtElement(el)"></div>
                       </template>
@@ -320,12 +339,21 @@
                           <div class="sp-title">Statystyki</div>
                         </div>
                       </template>
+                      <!-- resize handles -->
+                      <div class="resize-handle rh-n" @pointerdown.stop.prevent="startResize($event, idx, 'n')"></div>
+                      <div class="resize-handle rh-s" @pointerdown.stop.prevent="startResize($event, idx, 's')"></div>
+                      <div class="resize-handle rh-e" @pointerdown.stop.prevent="startResize($event, idx, 'e')"></div>
+                      <div class="resize-handle rh-w" @pointerdown.stop.prevent="startResize($event, idx, 'w')"></div>
+                      <div class="resize-handle rh-ne" @pointerdown.stop.prevent="startResize($event, idx, 'ne')"></div>
+                      <div class="resize-handle rh-nw" @pointerdown.stop.prevent="startResize($event, idx, 'nw')"></div>
+                      <div class="resize-handle rh-se" @pointerdown.stop.prevent="startResize($event, idx, 'se')"></div>
+                      <div class="resize-handle rh-sw" @pointerdown.stop.prevent="startResize($event, idx, 'sw')"></div>
                     </div>
                   </template>
                 </div>
                 <!-- Coords -->
-                <div class="canvas-coords" x-show="dragging" x-cloak
-                     x-text="dragging ? 'x:'+currentElements()[dragging.idx]?.x+' y:'+currentElements()[dragging.idx]?.y : ''"></div>
+                <div class="canvas-coords" x-show="dragging || resizing" x-cloak
+                     x-text="resizing ? currentElements()[resizing.idx]?.w+'&#215;'+(currentElements()[resizing.idx]?.h||'auto') : (dragging ? 'x:'+currentElements()[dragging.idx]?.x+' y:'+currentElements()[dragging.idx]?.y : '')"></div>
               </div>
             </div>
           </div>
@@ -386,8 +414,8 @@
                 <button @click="removeElement()" class="btn btn-xs btn-ghost text-error">&#128465;</button>
               </div>
 
-              <!-- Position inputs -->
-              <div class="grid grid-cols-3 gap-2 mb-2">
+              <!-- Position & size -->
+              <div class="grid grid-cols-4 gap-2 mb-1">
                 <div class="prop-row"><span class="prop-label">X</span>
                   <input type="number" class="input input-xs input-bordered w-full prop-input" min="0" max="1920"
                          :value="selectedEl()?.x" @change="setElProp('x', +$event.target.value)"></div>
@@ -396,8 +424,16 @@
                          :value="selectedEl()?.y" @change="setElProp('y', +$event.target.value)"></div>
                 <div class="prop-row"><span class="prop-label">W</span>
                   <input type="number" class="input input-xs input-bordered w-full prop-input" min="100" max="1920"
-                         :value="selectedEl()?.w" @change="setElProp('w', +$event.target.value)"></div>
+                         :value="selectedEl()?.w" @change="setDimension('w', +$event.target.value)"></div>
+                <div class="prop-row"><span class="prop-label">H</span>
+                  <input type="number" class="input input-xs input-bordered w-full prop-input" min="0" max="1080"
+                         :value="selectedEl()?.h || ''" placeholder="auto"
+                         @change="setDimension('h', $event.target.value ? +$event.target.value : null)"></div>
               </div>
+              <label class="label cursor-pointer gap-1 py-0 justify-start mb-2">
+                <input type="checkbox" class="checkbox checkbox-xs checkbox-info" x-model="keepAspectRatio">
+                <span class="label-text text-xs">&#128279; Zachowaj proporcje</span>
+              </label>
 
               <!-- Visibility & size (court only) -->
               <template x-if="selectedEl()?.type === 'court'">

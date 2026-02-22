@@ -43,8 +43,10 @@ Alpine.data('adminApp', () => ({
   // Canvas scale
   canvasScale: 1,
 
-  // Drag state
+  // Drag & resize state
   dragging: null,
+  resizing: null,
+  keepAspectRatio: false,
   
   // Court live data from SSE
   courtData: {},
@@ -585,8 +587,34 @@ Alpine.data('adminApp', () => ({
     this.saveOverlaySettings();
   },
 
+  setDimension(prop, value) {
+    const el = this.selectedEl();
+    if (!el) return;
+    if (prop === 'h' && !value) { delete el.h; this.saveOverlaySettings(); return; }
+    if (this.keepAspectRatio && value != null) {
+      const curW = el.w || 460;
+      const curH = el.h || this._measureElHeight() || 80;
+      const aspect = curW / curH;
+      if (prop === 'w') { el.w = value; el.h = Math.round(value / aspect); }
+      else { el.h = value; el.w = Math.round(value * aspect); }
+    } else {
+      el[prop] = value;
+    }
+    this.saveOverlaySettings();
+  },
+
+  _measureElHeight() {
+    if (this.selectedElIdx < 0) return null;
+    const inner = this.$refs.canvasInner;
+    if (!inner) return null;
+    const dragEls = inner.querySelectorAll('.drag-el');
+    const dragEl = dragEls[this.selectedElIdx];
+    return dragEl ? Math.round(dragEl.offsetHeight) : null;
+  },
+
   // ===== DRAG AND DROP =====
   startDrag(event, idx) {
+    if (this.resizing) return; // don't drag while resizing
     const outer = this.$refs.canvasOuter;
     if (!outer) return;
     const rect = outer.getBoundingClientRect();
@@ -607,6 +635,7 @@ Alpine.data('adminApp', () => ({
   },
 
   onDrag(event) {
+    if (this.resizing) { this._onResize(event); return; }
     if (!this.dragging) return;
     const outer = this.$refs.canvasOuter;
     if (!outer) return;
@@ -623,9 +652,53 @@ Alpine.data('adminApp', () => ({
   },
 
   async endDrag(event) {
+    if (this.resizing) { this.resizing = null; await this.saveOverlaySettings(); return; }
     if (!this.dragging) return;
     this.dragging = null;
     await this.saveOverlaySettings();
+  },
+
+  // ===== RESIZE HANDLES =====
+  startResize(event, idx, handle) {
+    const el = this.currentElements()[idx];
+    if (!el) return;
+    const inner = this.$refs.canvasInner;
+    const dragEls = inner ? inner.querySelectorAll('.drag-el') : [];
+    const dragEl = dragEls[idx];
+    const curH = el.h || (dragEl ? Math.round(dragEl.offsetHeight) : 80);
+    this.resizing = {
+      idx, handle,
+      startMouseX: event.clientX, startMouseY: event.clientY,
+      startW: el.w, startH: curH, startX: el.x, startY: el.y,
+    };
+    this.selectedElIdx = idx;
+    event.target.setPointerCapture?.(event.pointerId);
+  },
+
+  _onResize(event) {
+    const r = this.resizing;
+    if (!r) return;
+    const scale = this.canvasScale;
+    const dx = (event.clientX - r.startMouseX) / scale;
+    const dy = (event.clientY - r.startMouseY) / scale;
+    const el = this.currentElements()[r.idx];
+    if (!el) return;
+    const h = r.handle;
+    let nW = r.startW, nH = r.startH, nX = r.startX, nY = r.startY;
+    if (h.includes('e')) nW = r.startW + dx;
+    if (h.includes('w')) { nW = r.startW - dx; nX = r.startX + dx; }
+    if (h.includes('s')) nH = r.startH + dy;
+    if (h.includes('n')) { nH = r.startH - dy; nY = r.startY + dy; }
+    if (this.keepAspectRatio && r.startW > 0 && r.startH > 0) {
+      const a = r.startW / r.startH;
+      if (h === 'e' || h === 'w') nH = nW / a;
+      else if (h === 'n' || h === 's') nW = nH * a;
+      else nH = nW / a; // corner: W leads
+    }
+    el.w = Math.max(100, Math.min(1920, Math.round(nW)));
+    el.h = Math.max(30, Math.min(1080, Math.round(nH)));
+    el.x = Math.max(0, Math.min(1920 - el.w, Math.round(nX)));
+    el.y = Math.max(0, Math.min(1080 - el.h, Math.round(nY)));
   },
 
   // ===== LIVE SCOREBOARD RENDER IN PREVIEW =====
@@ -694,8 +767,9 @@ Alpine.data('adminApp', () => ({
       }
     }
 
+    const hFill = el.h ? ' h-fill' : '';
     const opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
-    return '<div class="sb-wrap ' + inactiveClass + '">'
+    return '<div class="sb-wrap ' + inactiveClass + hFill + '">'
       + logoHtml
       + '<div class="sb-table" style="' + opacityStyle + '">'
       + pRow(pA, 'A', 'side-a')
@@ -706,7 +780,10 @@ Alpine.data('adminApp', () => ({
   // Render full court element with label (avoids Alpine x-show bug in nested templates)
   renderCourtElement(el) {
     const sb = this.renderLiveScoreboard(el);
-    if (!el.label_text || el.label_position === 'none') return sb;
+    const hasH = !!el.h;
+    if (!el.label_text || el.label_position === 'none') {
+      return hasH ? '<div style="height:100%;display:flex;flex-direction:column;">' + sb + '</div>' : sb;
+    }
     const pos = el.label_position || 'above';
     const bg = 'rgba(0,0,0,' + (el.label_bg_opacity != null ? el.label_bg_opacity : 0.7) + ')';
     const fs = el.label_font_size || 14;
@@ -714,6 +791,10 @@ Alpine.data('adminApp', () => ({
     const marginProp = pos === 'above' ? 'margin-bottom' : 'margin-top';
     const radius = pos === 'above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
     const label = '<div class="sb-label-bar" style="background:' + bg + ';font-size:' + fs + 'px;' + marginProp + ':' + gap + 'px;' + radius + '">' + el.label_text + '</div>';
+    if (hasH) {
+      const sbW = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">' + sb + '</div>';
+      return '<div style="height:100%;display:flex;flex-direction:column;">' + (pos === 'above' ? label + sbW : sbW + label) + '</div>';
+    }
     return pos === 'above' ? label + sb : sb + label;
   },
 
