@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel administratora - Wyniki</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
+</head>
+<body class="min-h-screen bg-base-200">
+    <div x-data="adminApp" x-cloak>
+        <h1 class="text-3xl font-bold p-8">⚙️ Panel administratora</h1>
+        
+        <!-- Tournament Selection -->
+        <div class="p-8">
+            <select x-model="selectedTournament" class="select select-bordered w-full max-w-xs">
+                <option disabled selected>Wybierz turniej</option>
+                <template x-for="tournament in tournaments" :key="tournament.id">
+                    <option :value="tournament.id" x-text="tournament.name"></option>
+                </template>
+            </select>
+        </div>
+        
+        <!-- Courts Management -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-8">
+            <template x-for="courtId in [1, 2, 3, 4]" :key="courtId">
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title">Kort <span x-text="courtId"></span></h2>
+                        
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Zawodnik A</span>
+                            </label>
+                            <input type="text" placeholder="Imię i nazwisko" class="input input-bordered">
+                        </div>
+                        
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Zawodnik B</span>
+                            </label>
+                            <input type="text" placeholder="Imię i nazwisko" class="input input-bordered">
+                        </div>
+                        
+                        <div class="card-actions justify-end mt-4">
+                            <button class="btn btn-primary">Zapisz</button>
+                            <button class="btn btn-ghost">Anuluj</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <script type="module" src="/src/admin.js"></script>
+</body>
+</html>

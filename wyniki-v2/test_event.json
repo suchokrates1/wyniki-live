@@ -1,0 +1,30 @@
+{
+  "court_id": "1",
+  "pin": "0000",
+  "event_type": "point",
+  "player1": {
+    "name": "Kowalski",
+    "serving": true
+  },
+  "player2": {
+    "name": "Nowak",
+    "serving": false
+  },
+  "score": {
+    "points": {
+      "player1": "15",
+      "player2": "0"
+    },
+    "games": {
+      "player1": 3,
+      "player2": 2
+    },
+    "sets": {
+      "player1_set1": 6,
+      "player1_set2": 2,
+      "player2_set1": 4,
+      "player2_set2": 4
+    },
+    "current_set": 2
+  }
+}

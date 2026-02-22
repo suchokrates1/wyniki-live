@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wyniki - Embed</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background: transparent;
+        }
+        .embed-container {
+            padding: 1rem;
+        }
+        .court {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .score {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div x-data="embedApp" class="embed-container">
+        <template x-for="courtId in [1, 2, 3, 4]" :key="courtId">
+            <div class="court" x-show="isMatchActive(courtId)">
+                <h3>Kort <span x-text="courtId"></span></h3>
+                <div class="score" x-text="getScore(courtId)"></div>
+            </div>
+        </template>
+    </div>
+    
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

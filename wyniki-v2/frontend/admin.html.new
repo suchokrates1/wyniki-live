@@ -1,0 +1,421 @@
+﻿<!DOCTYPE html>
+<html lang="pl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Administracyjny - Wyniki Live</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>­čÄż</text></svg>">
+</head>
+<body class="min-h-screen bg-base-200">
+  <div x-data="adminApp" class="container mx-auto px-4 py-8 max-w-7xl">
+    
+    <header class="mb-8">
+      <div class="flex justify-between items-center">
+        <h1 class="text-4xl font-bold">­čÄż Panel Administracyjny</h1>
+        <div class="flex gap-2">
+          <button @click="activeTab = 'uno'" :class="{'btn-primary': activeTab === 'uno'}" class="btn btn-sm">UNO Throttling</button>
+          <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
+          <button @click="activeTab = 'history'" :class="{'btn-primary': activeTab === 'history'}" class="btn btn-sm">Historia</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- UNO Throttling Tab -->
+    <div x-show="activeTab === 'uno'" x-cloak>
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <h2 class="card-title">Konfiguracja UNO Throttling</h2>
+          
+          <div class="alert" :class="unoStatus.enabled ? 'alert-success' : 'alert-warning'">
+            <span x-text="unoStatus.enabled ? 'Ôťô UNO zapytania w┼é─ůczone' : 'ÔÜá UNO zapytania wy┼é─ůczone'"></span>
+            <button @click="toggleUno()" class="btn btn-sm" x-text="unoStatus.enabled ? 'Wy┼é─ůcz' : 'W┼é─ůcz'"></button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Limit zapyta┼ä/godzin─Ö (na kort)</span>
+              </label>
+              <input type="number" v-model.number="unoConfig.limit" class="input input-bordered" min="0">
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Pr├│g spowolnienia (%)</span>
+              </label>
+              <input type="number" v-model.number="unoConfig.threshold" class="input input-bordered" min="0" max="100" step="5">
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Wsp├│┼éczynnik spowolnienia</span>
+              </label>
+              <input type="number" v-model.number="unoConfig.slowdown_factor" class="input input-bordered" min="1" step="0.5">
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Sleep przy spowolnieniu (s)</span>
+              </label>
+              <input type="number" v-model.number="unoConfig.slowdown_sleep" class="input input-bordered" min="0" step="0.1">
+            </div>
+          </div>
+
+          <div class="card-actions justify-end mt-4">
+            <button @click="saveUnoConfig()" class="btn btn-primary">Zapisz konfiguracj─Ö</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- UNO Status per Court -->
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Status zapyta┼ä UNO</h2>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra">
+              <thead>
+                <tr>
+                  <th>Kort</th>
+                  <th>Zapytania/h</th>
+                  <th>Limit</th>
+                  <th>Pozosta┼éo</th>
+                  <th>Status</th>
+                  <th>Reset</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="[kortId, status] in Object.entries(unoCourtStatus)" :key="kortId">
+                  <tr>
+                    <td x-text="'Kort ' + kortId"></td>
+                    <td x-text="status.count"></td>
+                    <td x-text="status.limit"></td>
+                    <td x-text="status.remaining"></td>
+                    <td>
+                      <span class="badge" 
+                            :class="{
+                              'badge-success': status.mode === 'normal',
+                              'badge-warning': status.mode === 'slowdown',
+                              'badge-error': status.mode === 'limit',
+                              'badge-ghost': status.mode === 'disabled'
+                            }"
+                            x-text="status.mode"></span>
+                    </td>
+                    <td x-text="formatResetTime(status.next_reset)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Courts Tab -->
+    <div x-show="activeTab === 'courts'" x-cloak>
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Zarz─ůdzanie kortami</h2>
+          
+          <div class="overflow-x-auto">
+            <table class="table table-zebra">
+              <thead>
+                <tr>
+                  <th>ID Kortu</th>
+                  <th>Overlay ID</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="court in courts" :key="court.kort_id">
+                  <tr>
+                    <td x-text="'Kort ' + court.kort_id"></td>
+                    <td>
+                      <input type="text" 
+                             :value="court.overlay_id || ''" 
+                             @change="updateCourtOverlay(court.kort_id, $event.target.value)"
+                             class="input input-sm input-bordered"
+                             placeholder="Brak overlay">
+                    </td>
+                    <td>
+                      <button @click="testCourt(court.kort_id)" class="btn btn-sm btn-ghost">Test</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-4">
+            <button @click="addCourt()" class="btn btn-primary btn-sm">+ Dodaj kort</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div x-show="activeTab === 'history'" x-cloak>
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Historia mecz├│w</h2>
+          
+          <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm">
+              <thead>
+                <tr>
+                  <th>Kort</th>
+                  <th>Gracz A</th>
+                  <th>Wynik</th>
+                  <th>Gracz B</th>
+                  <th>Czas</th>
+                  <th>Faza</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(match, idx) in history" :key="idx">
+                  <tr>
+                    <td x-text="match.kort_id"></td>
+                    <td x-text="match.player_a"></td>
+                    <td>
+                      <span x-text="formatScore(match.score_a)"></span>
+                      :
+                      <span x-text="formatScore(match.score_b)"></span>
+                    </td>
+                    <td x-text="match.player_b"></td>
+                    <td x-text="match.duration"></td>
+                    <td x-text="match.phase"></td>
+                    <td>
+                      <button @click="deleteMatch(idx)" class="btn btn-xs btn-error">Usu┼ä</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert alert-info mt-4" x-show="history.length === 0">
+            <span>Brak historii mecz├│w</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div class="toast toast-end" x-show="toast.show" x-cloak>
+      <div class="alert" :class="'alert-' + toast.type">
+        <span x-text="toast.message"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import Alpine from 'alpinejs'
+    
+    Alpine.data('adminApp', () => ({
+      activeTab: 'uno',
+      unoStatus: { enabled: false },
+      unoConfig: { limit: 100, threshold: 80, slowdown_factor: 2, slowdown_sleep: 1 },
+      unoCourtStatus: {},
+      courts: [],
+      history: [],
+      toast: { show: false, message: '', type: 'info' },
+
+      async init() {
+        await this.loadUnoStatus()
+        await this.loadCourts()
+        await this.loadHistory()
+        
+        // Refresh UNO status every 10s
+        setInterval(() => this.loadUnoStatus(), 10000)
+      },
+
+      async loadUnoStatus() {
+        try {
+          const [configRes, statusRes] = await Promise.all([
+            fetch('/admin/api/uno/config'),
+            fetch('/admin/api/uno/status')
+          ])
+          
+          if (configRes.ok) {
+            const config = await configRes.json()
+            this.unoConfig = {
+              limit: config.limit,
+              threshold: config.threshold_percent || config.threshold * 100,
+              slowdown_factor: config.slowdown_factor,
+              slowdown_sleep: config.slowdown_sleep
+            }
+          }
+          
+          if (statusRes.ok) {
+            const status = await statusRes.json()
+            this.unoStatus.enabled = status.enabled
+            this.unoCourtStatus = status.courts || {}
+          }
+        } catch (e) {
+          console.error('Failed to load UNO status:', e)
+        }
+      },
+
+      async saveUnoConfig() {
+        try {
+          const res = await fetch('/admin/api/uno/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              limit: parseInt(this.unoConfig.limit),
+              threshold: parseFloat(this.unoConfig.threshold) / 100,
+              slowdown_factor: parseFloat(this.unoConfig.slowdown_factor),
+              slowdown_sleep: parseFloat(this.unoConfig.slowdown_sleep)
+            })
+          })
+          
+          if (res.ok) {
+            this.showToast('Konfiguracja zapisana', 'success')
+            await this.loadUnoStatus()
+          } else {
+            this.showToast('B┼é─ůd zapisu konfiguracji', 'error')
+          }
+        } catch (e) {
+          this.showToast('B┼é─ůd po┼é─ůczenia', 'error')
+        }
+      },
+
+      async toggleUno() {
+        try {
+          const res = await fetch('/admin/api/uno/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              enabled: !this.unoStatus.enabled,
+              reason: 'manual toggle from admin panel'
+            })
+          })
+          
+          if (res.ok) {
+            await this.loadUnoStatus()
+            this.showToast('Status UNO zmieniony', 'success')
+          } else {
+            this.showToast('B┼é─ůd zmiany statusu', 'error')
+          }
+        } catch (e) {
+          this.showToast('B┼é─ůd po┼é─ůczenia', 'error')
+        }
+      },
+
+      async loadCourts() {
+        try {
+          const res = await fetch('/admin/api/courts')
+          if (res.ok) {
+            this.courts = await res.json()
+          }
+        } catch (e) {
+          console.error('Failed to load courts:', e)
+        }
+      },
+
+      async updateCourtOverlay(kortId, overlayId) {
+        try {
+          const res = await fetch(`/admin/api/courts/${kortId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ overlay_id: overlayId || null })
+          })
+          
+          if (res.ok) {
+            this.showToast('Overlay zaktualizowane', 'success')
+            await this.loadCourts()
+          } else {
+            this.showToast('B┼é─ůd aktualizacji', 'error')
+          }
+        } catch (e) {
+          this.showToast('B┼é─ůd po┼é─ůczenia', 'error')
+        }
+      },
+
+      async addCourt() {
+        const newId = prompt('Podaj ID nowego kortu (np. 5):')
+        if (!newId) return
+        
+        try {
+          const res = await fetch('/admin/api/courts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kort_id: newId, overlay_id: null })
+          })
+          
+          if (res.ok) {
+            this.showToast('Kort dodany', 'success')
+            await this.loadCourts()
+          } else {
+            this.showToast('B┼é─ůd dodawania kortu', 'error')
+          }
+        } catch (e) {
+          this.showToast('B┼é─ůd po┼é─ůczenia', 'error')
+        }
+      },
+
+      async testCourt(kortId) {
+        this.showToast(`Test kortu ${kortId}...`, 'info')
+      },
+
+      async loadHistory() {
+        try {
+          const res = await fetch('/api/history')
+          if (res.ok) {
+            this.history = await res.json()
+          }
+        } catch (e) {
+          console.error('Failed to load history:', e)
+        }
+      },
+
+      async deleteMatch(idx) {
+        if (!confirm('Czy na pewno usun─ů─ç ten mecz z historii?')) return
+        
+        try {
+          const res = await fetch('/admin/api/history/latest', {
+            method: 'DELETE'
+          })
+          
+          if (res.ok) {
+            this.showToast('Mecz usuni─Öty', 'success')
+            await this.loadHistory()
+          } else {
+            this.showToast('B┼é─ůd usuwania', 'error')
+          }
+        } catch (e) {
+          this.showToast('B┼é─ůd po┼é─ůczenia', 'error')
+        }
+      },
+
+      formatScore(scoreArray) {
+        return scoreArray ? scoreArray.join('-') : '0-0-0'
+      },
+
+      formatResetTime(isoString) {
+        if (!isoString) return '-'
+        const date = new Date(isoString)
+        return date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+      },
+
+      showToast(message, type = 'info') {
+        this.toast = { show: true, message, type }
+        setTimeout(() => { this.toast.show = false }, 3000)
+      }
+    }))
+
+    Alpine.start()
+  </script>
+</body>
+</html>
+
+    <div class="mt-8">
+      <a href="/" class="btn btn-ghost">ÔćÉ Powr├│t do strony g┼é├│wnej</a>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

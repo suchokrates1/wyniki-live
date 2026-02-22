@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  wyniki:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wyniki-tenis-v2
+    image: count-wyniki-v2:latest
+    ports:
+      - "8087:8080"
+    volumes:
+      - wyniki_data:/data
+      - ../wyniki-v1/download:/app/download:ro
+    environment:
+      # Flask
+      - SECRET_KEY=${SECRET_KEY:-prod-secret-key-change-me}
+      - FLASK_ENV=production
+      - DEBUG=false
+      
+      # Database - używamy tej samej co v1
+      - DATABASE_PATH=/data/wyniki_archive.sqlite3
+      
+      # Admin
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      
+      # Logging
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      
+      # UNO Overlays (dla zgodności z v1)
+      - UNO_BASE=${UNO_BASE:-https://app.overlays.uno/apiv2/controlapps}
+      - KORT1_ID=${KORT1_ID}
+      - KORT2_ID=${KORT2_ID}
+      - KORT3_ID=${KORT3_ID}
+      - KORT4_ID=${KORT4_ID}
+      - UNO_AUTH_BEARER=${UNO_AUTH_BEARER:-}
+      
+    restart: unless-stopped
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wyniki.rule=Host(`${PUBLIC_HOST}`)"
+      - "traefik.http.routers.wyniki.entrypoints=https"
+      - "traefik.http.routers.wyniki.tls=true"
+      - "traefik.http.services.wyniki.loadbalancer.server.port=8080"
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/snapshot"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    networks:
+      - wyniki_net
+
+volumes:
+  wyniki_data:
+    external: true
+    name: count_wyniki_data
+
+networks:
+  wyniki_net:
+    driver: bridge
