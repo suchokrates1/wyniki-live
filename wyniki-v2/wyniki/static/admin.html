@@ -96,7 +96,7 @@
       border-radius:8px; border:2px solid rgba(255,255,255,0.2); background:#111; margin:0 auto; }
     .crop-area img { position:absolute; cursor:move; -webkit-user-select:none; -moz-user-select:none; user-select:none; }
   </style>
-  <script type="module" crossorigin src="/assets/admin-CWURGWZK.js"></script>
+  <script type="module" crossorigin src="/assets/admin-BNMThpwt.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/main-DtaNp4HT.js">
   <link rel="stylesheet" crossorigin href="/assets/main-BLJcpgew.css">
 </head>
@@ -110,7 +110,7 @@
           <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
           <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
           <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze</button>
-          <button @click="activeTab = 'settings'; initSettingsSSE();" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
+          <button @click="activeTab = 'settings'; initSettingsSSE(); $nextTick(() => updateCanvasScale())" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
         </div>
       </div>
     </header>
