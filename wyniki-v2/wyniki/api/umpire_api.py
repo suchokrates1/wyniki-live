@@ -498,6 +498,12 @@ def log_match_event():
                 if not court_state["B"].get("full_name"):
                     court_state["B"]["full_name"] = player2["name"]
 
+            # --- Flags (Android sends 'flag' as ISO country code) ---
+            if player1.get('flag'):
+                court_state["A"]["flag_code"] = player1["flag"]
+            if player2.get('flag'):
+                court_state["B"]["flag_code"] = player2["flag"]
+
             # --- Points ---
             if is_tiebreak or is_super_tiebreak:
                 # Tiebreak: raw integers displayed as-is
