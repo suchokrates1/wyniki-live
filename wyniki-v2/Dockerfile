@@ -17,7 +17,6 @@ COPY app.py .
 
 # Copy HTML files
 COPY overlay.html .
-COPY overlay_all.html .
 COPY frontend/index.html .
 COPY frontend/admin.html .
 COPY frontend/embed.html .
