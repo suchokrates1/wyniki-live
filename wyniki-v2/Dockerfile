@@ -28,6 +28,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Run gunicorn with gevent worker class for async SSE support
 # gevent allows thousands of concurrent SSE connections without blocking
-CMD ["gunicorn", "--worker-class", "gevent", "--workers", "4", "--bind", "0.0.0.0:8080", \
+CMD ["gunicorn", "--worker-class", "gevent", "--workers", "1", "--bind", "0.0.0.0:8080", \
      "--access-logfile", "-", "--error-logfile", "-", \
      "--log-level", "info", "app:app"]
