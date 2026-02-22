@@ -92,19 +92,10 @@ def stream4():
     return response
 
 
-@blueprint.route('/overlay/<int:kort_id>')
-def overlay_single(kort_id):
-    """Serve overlay page for a single court."""
-    if kort_id < 1 or kort_id > 4:
-        return "Court must be between 1 and 4", 404
+@blueprint.route('/overlay/<overlay_id>')
+def overlay_page(overlay_id):
+    """Serve overlay page for any preset (e.g. /overlay/1, /overlay/all, /overlay/split_1_2)."""
     response = send_from_directory(APP_ROOT, 'overlay.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    return response
-
-
-@blueprint.route('/overlay/all')
-def overlay_all():
-    """Serve overlay page showing all 4 courts."""
-    response = send_from_directory(APP_ROOT, 'overlay_all.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
