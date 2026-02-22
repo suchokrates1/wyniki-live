@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     port: int = 8088
     
     # Database
-    database_path: str = "/data/wyniki_test.sqlite3"
+    database_path: str = "/data/wyniki_v2_prod.sqlite3"
     
     # Admin
     admin_password: Optional[str] = None
