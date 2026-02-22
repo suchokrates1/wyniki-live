@@ -31,6 +31,13 @@ Alpine.data('adminApp', () => ({
   },
   importText: '',
   
+  // Overlay settings
+  overlaySettings: {
+    courts_visible: { '1': true, '2': true, '3': true, '4': true },
+    auto_hide: false,
+    show_stats: false,
+  },
+  
   // UI State
   loading: {
     courts: false,
@@ -52,6 +59,7 @@ Alpine.data('adminApp', () => ({
   init() {
     this.loadCourts();
     this.loadTournaments();
+    this.loadOverlaySettings();
   },
   
   // ===== TOAST =====
@@ -381,6 +389,73 @@ Alpine.data('adminApp', () => ({
     } catch (err) {
       console.error('Failed to import players:', err);
       this.showToast('Błąd importu graczy', 'error');
+    }
+  },
+  
+  // ===== OVERLAY SETTINGS =====
+  async loadOverlaySettings() {
+    try {
+      const response = await fetch('/api/overlay/settings');
+      if (response.ok) {
+        this.overlaySettings = await response.json();
+      }
+    } catch (err) {
+      console.error('Failed to load overlay settings:', err);
+    }
+  },
+  
+  async saveOverlaySettings() {
+    try {
+      const response = await fetch('/api/overlay/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.overlaySettings),
+      });
+      if (!response.ok) throw new Error('Failed to save settings');
+      this.overlaySettings = await response.json();
+    } catch (err) {
+      console.error('Failed to save overlay settings:', err);
+      this.showToast('Błąd zapisu ustawień overlay', 'error');
+    }
+  },
+  
+  async toggleCourt(courtId) {
+    this.overlaySettings.courts_visible[courtId] = !this.overlaySettings.courts_visible[courtId];
+    await this.saveOverlaySettings();
+    const state = this.overlaySettings.courts_visible[courtId] ? 'widoczny' : 'ukryty';
+    this.showToast(`Kort ${courtId}: ${state}`, 'success');
+  },
+  
+  async toggleAutoHide() {
+    this.overlaySettings.auto_hide = !this.overlaySettings.auto_hide;
+    await this.saveOverlaySettings();
+    this.showToast(this.overlaySettings.auto_hide ? 'Autoukrywanie włączone' : 'Autoukrywanie wyłączone', 'success');
+  },
+  
+  async toggleShowStats() {
+    this.overlaySettings.show_stats = !this.overlaySettings.show_stats;
+    await this.saveOverlaySettings();
+    this.showToast(this.overlaySettings.show_stats ? 'Statystyki włączone' : 'Statystyki wyłączone', 'success');
+  },
+  
+  getOverlayUrl(courtId) {
+    const base = window.location.origin;
+    return courtId === 'all' ? `${base}/overlay/all` : `${base}/overlay/${courtId}`;
+  },
+  
+  async copyUrl(url) {
+    try {
+      await navigator.clipboard.writeText(url);
+      this.showToast('URL skopiowany do schowka', 'success');
+    } catch (err) {
+      // Fallback
+      const el = document.createElement('textarea');
+      el.value = url;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      this.showToast('URL skopiowany', 'success');
     }
   },
 }));

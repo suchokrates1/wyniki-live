@@ -269,6 +269,7 @@ Alpine.data('tennisApp', () => ({
     }
     this.connectSSE();
     this.fetchInitialData();
+    this.fetchHistory();
   },
 
   /* --- Translation helpers --- */
@@ -314,6 +315,15 @@ Alpine.data('tennisApp', () => ({
     }
   },
 
+  async fetchHistory() {
+    try {
+      const response = await fetch('/api/history');
+      if (!response.ok) return;
+      const data = await response.json();
+      this.history = Array.isArray(data) ? data : [];
+    } catch { /* ignore */ }
+  },
+
   connectSSE() {
     const eventSource = new EventSource('/api/stream');
 
@@ -331,6 +341,10 @@ Alpine.data('tennisApp', () => ({
         this.prevCourts[courtId] = prev ? { ...prev } : {};
         this.courts[courtId] = data;
         this.lastUpdate = new Date();
+        // Refresh history when a match finishes
+        if (prev?.match_status?.active && !data?.match_status?.active) {
+          this.fetchHistory();
+        }
       } catch { /* ignore parse errors */ }
     });
 
