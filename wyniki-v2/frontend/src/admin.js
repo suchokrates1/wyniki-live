@@ -480,7 +480,11 @@ Alpine.data('adminApp', () => ({
   // ===== CANVAS HELPERS =====
   updateCanvasScale() {
     const outer = this.$refs?.canvasOuter;
-    if (!outer) return;
+    if (!outer || !outer.clientWidth) {
+      // Element not visible yet, retry after a short delay
+      setTimeout(() => this.updateCanvasScale(), 100);
+      return;
+    }
     this.canvasScale = outer.clientWidth / 1920;
   },
 
