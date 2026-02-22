@@ -42,35 +42,33 @@
     .drag-el.is-selected { outline-color: #2196F3; }
     .drag-el.el-hidden { opacity: 0.15; }
 
-    /* scoreboard styles inside preview (same as overlay.html) */
-    .sb { display:flex; background:linear-gradient(135deg,rgba(26,35,126,0.95),rgba(13,71,161,0.95));
-      border-radius:12px; padding:14px 18px; box-shadow:0 4px 24px rgba(0,0,0,0.5);
-      border:2px solid rgba(255,255,255,0.15); overflow:hidden; color:white; font-family:'Segoe UI',Arial,sans-serif; }
-    .sb.small { padding:8px 12px; }
+    /* scoreboard – all sizes in em so font-size on .sb controls scale */
+    .sb { display:flex; width:100%; box-sizing:border-box;
+      border-radius:0.7em; padding:0.82em 1.06em; box-shadow:0 4px 24px rgba(0,0,0,0.5);
+      border:2px solid rgba(255,255,255,0.15); overflow:hidden; color:white;
+      font-family:'Segoe UI',Arial,sans-serif; }
     .sb.match-inactive .sb-players { opacity:0.4; }
     .sb-logo { flex-shrink:0; display:flex; align-items:center; justify-content:center;
-      margin-right:14px; overflow:hidden; border-radius:6px; }
+      margin-right:0.82em; overflow:hidden; border-radius:0.35em; }
     .sb-logo img { width:100%; height:100%; object-fit:cover; }
+    .sb-logo-ph { display:flex; align-items:center; justify-content:center;
+      width:100%; height:100%; background:rgba(255,255,255,0.1); border-radius:0.35em; font-size:1.8em; }
     .sb-players { flex:1; min-width:0; }
-    .sb-row { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
-    .sb.small .sb-row { gap:6px; margin-bottom:3px; }
-    .sb-serve { width:8px; height:8px; border-radius:50%; background:#4CAF50; flex-shrink:0; opacity:0; }
+    .sb-row { display:flex; align-items:center; gap:0.59em; margin-bottom:0.35em; }
+    .sb-row:last-child { margin-bottom:0; }
+    .sb-serve { width:0.47em; height:0.47em; border-radius:50%; background:#4CAF50; flex-shrink:0; opacity:0; }
     .sb-row.serving .sb-serve { opacity:1; }
-    .sb.small .sb-serve { width:6px; height:6px; }
-    .sb-flag { width:30px; height:22px; object-fit:cover; border-radius:3px; flex-shrink:0; }
-    .sb.small .sb-flag { width:20px; height:15px; }
-    .sb-name { flex:1; font-size:17px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sb.small .sb-name { font-size:12px; }
-    .sb-scores { display:flex; gap:6px; align-items:center; flex-shrink:0; }
-    .sb.small .sb-scores { gap:3px; }
-    .sb-sc { min-width:32px; text-align:center; font-size:20px; font-weight:700;
-      padding:3px 6px; background:rgba(0,0,0,0.3); border-radius:5px; color:white; }
-    .sb.small .sb-sc { min-width:22px; font-size:13px; padding:2px 4px; }
-    .sb-sc.pts { background:rgba(255,255,255,0.15); min-width:38px; }
-    .sb.small .sb-sc.pts { min-width:26px; }
+    .sb-flag { width:1.76em; height:1.29em; object-fit:cover; border-radius:0.18em; flex-shrink:0;
+      box-shadow:0 1px 4px rgba(0,0,0,0.3); }
+    .sb-name { flex:1; font-size:1em; font-weight:600; white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis; min-width:0; }
+    .sb-scores { display:flex; gap:0.35em; align-items:center; flex-shrink:0; }
+    .sb-sc { min-width:1.88em; text-align:center; font-size:1.18em; font-weight:700;
+      padding:0.18em 0.35em; background:rgba(0,0,0,0.3); border-radius:0.29em; color:white; }
+    .sb-sc.pts { background:rgba(255,255,255,0.15); min-width:2.24em; }
     .sb-sc.tb { background:rgba(76,175,80,0.5); }
     .sb-label-bar { text-align:center; font-weight:700; text-transform:uppercase;
-      letter-spacing:1.5px; padding:4px 12px; border-radius:6px 6px 0 0; white-space:nowrap; color:white; }
+      letter-spacing:0.1em; padding:0.29em 0.86em; white-space:nowrap; color:white; }
 
     /* stats panel inside preview */
     .sp { width:100%; background:linear-gradient(135deg,rgba(30,30,30,0.95),rgba(50,50,50,0.92));
@@ -282,15 +280,16 @@
                       <!-- court scoreboard -->
                       <template x-if="el.type === 'court'">
                         <div>
-                          <div x-show="el.label_position !== 'below' && el.label_position !== 'none' && el.label_text"
+                          <div x-show="(el.label_position || 'above') === 'above' && el.label_text"
                                class="sb-label-bar"
-                               :style="'background:rgba(0,0,0,'+(el.label_bg_opacity||0.7)+');font-size:'+(el.label_font_size||13)+'px;margin-bottom:'+(el.label_gap||4)+'px;'"
+                               :style="'background:rgba(0,0,0,'+(el.label_bg_opacity!=null?el.label_bg_opacity:0.7)+');font-size:'+(el.label_font_size||14)+'px;margin-bottom:'+(el.label_gap!=null?el.label_gap:4)+'px;border-radius:6px 6px 0 0;'"
                                x-text="el.label_text"></div>
-                          <div class="sb" :class="el.size === 'small' ? 'small' : ''"
-                               x-html="renderLiveScoreboard(el.court_id, el.size, el.show_logo)"></div>
+                          <div class="sb"
+                               :style="'font-size:'+(el.font_size||17)+'px;background:linear-gradient(135deg,rgba(26,35,126,'+(el.bg_opacity!=null?el.bg_opacity:0.95)+'),rgba(13,71,161,'+(el.bg_opacity!=null?el.bg_opacity:0.95)+'));'"
+                               x-html="renderLiveScoreboard(el)"></div>
                           <div x-show="el.label_position === 'below' && el.label_text"
                                class="sb-label-bar"
-                               :style="'background:rgba(0,0,0,'+(el.label_bg_opacity||0.7)+');font-size:'+(el.label_font_size||13)+'px;margin-top:'+(el.label_gap||4)+'px;border-radius:0 0 6px 6px;'"
+                               :style="'background:rgba(0,0,0,'+(el.label_bg_opacity!=null?el.label_bg_opacity:0.7)+');font-size:'+(el.label_font_size||14)+'px;margin-top:'+(el.label_gap!=null?el.label_gap:4)+'px;border-radius:0 0 6px 6px;'"
                                x-text="el.label_text"></div>
                         </div>
                       </template>
@@ -319,9 +318,6 @@
                 <select x-model="addElCourtId" class="select select-xs select-bordered w-20">
                   <option value="1">Kort 1</option><option value="2">Kort 2</option>
                   <option value="3">Kort 3</option><option value="4">Kort 4</option>
-                </select>
-                <select x-model="addElSize" class="select select-xs select-bordered w-20">
-                  <option value="large">Du&#380;y</option><option value="small">Ma&#322;y</option>
                 </select>
                 <button @click="addElement('court')" class="btn btn-xs btn-success">+ Kort</button>
                 <button @click="addElement('stats')" class="btn btn-xs btn-accent">+ Statystyki</button>
@@ -385,25 +381,47 @@
               <!-- Visibility & size (court only) -->
               <template x-if="selectedEl()?.type === 'court'">
                 <div>
-                  <div class="flex gap-3 mb-2">
+                  <div class="flex gap-3 mb-2 flex-wrap">
                     <label class="label cursor-pointer gap-2 py-0">
                       <span class="label-text text-xs">Widoczny</span>
                       <input type="checkbox" class="toggle toggle-primary toggle-xs"
                              :checked="selectedEl()?.visible !== false"
                              @change="setElProp('visible', $event.target.checked)">
                     </label>
-                    <select class="select select-xs select-bordered"
-                            :value="selectedEl()?.size || 'small'"
-                            @change="setElProp('size', $event.target.value)">
-                      <option value="large">Du&#380;y</option>
-                      <option value="small">Ma&#322;y</option>
-                    </select>
-                    <label class="label cursor-pointer gap-2 py-0" x-show="selectedEl()?.size === 'large'">
+                    <label class="label cursor-pointer gap-2 py-0">
                       <span class="label-text text-xs">Logo</span>
                       <input type="checkbox" class="toggle toggle-success toggle-xs"
                              :checked="selectedEl()?.show_logo"
                              @change="setElProp('show_logo', $event.target.checked)">
                     </label>
+                  </div>
+
+                  <!-- Scoreboard font size -->
+                  <div class="divider my-1 text-xs opacity-50">Scoreboard</div>
+                  <div class="prop-row">
+                    <span class="prop-label">Czcionka</span>
+                    <input type="range" class="range range-xs range-info flex-1" min="8" max="40" step="1"
+                           :value="selectedEl()?.font_size || 17"
+                           @input="setElProp('font_size', +$event.target.value)">
+                    <span class="text-xs opacity-50 w-10 text-right" x-text="(selectedEl()?.font_size || 17) + 'px'"></span>
+                  </div>
+
+                  <!-- Scoreboard bg opacity -->
+                  <div class="prop-row">
+                    <span class="prop-label">T&#322;o SB</span>
+                    <input type="range" class="range range-xs range-info flex-1" min="0" max="100" step="5"
+                           :value="Math.round((selectedEl()?.bg_opacity != null ? selectedEl().bg_opacity : 0.95) * 100)"
+                           @input="setElProp('bg_opacity', +$event.target.value / 100)">
+                    <span class="text-xs opacity-50 w-10 text-right" x-text="Math.round((selectedEl()?.bg_opacity != null ? selectedEl().bg_opacity : 0.95) * 100) + '%'"></span>
+                  </div>
+
+                  <!-- Logo size (only when logo enabled) -->
+                  <div class="prop-row" x-show="selectedEl()?.show_logo">
+                    <span class="prop-label">Logo px</span>
+                    <input type="range" class="range range-xs range-success flex-1" min="20" max="200" step="5"
+                           :value="selectedEl()?.logo_size || 60"
+                           @input="setElProp('logo_size', +$event.target.value)">
+                    <span class="text-xs opacity-50 w-10 text-right" x-text="(selectedEl()?.logo_size || 60) + 'px'"></span>
                   </div>
 
                   <!-- Label settings -->
