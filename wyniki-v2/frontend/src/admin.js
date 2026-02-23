@@ -469,6 +469,21 @@ Alpine.data('adminApp', () => ({
   },
 
   // ===== DEMO DATA =====
+  async _loadDemoStatus() {
+    try {
+      const r = await fetch('/admin/api/demo/status');
+      if (r.ok) {
+        const d = await r.json();
+        this.demoOverlayActive = d.demo_overlay_active || false;
+        if (d.demo_loaded && d.demo_courts) {
+          this.demoPreview = true;
+          Object.keys(d.demo_courts).forEach(id => { this.courtData[id] = d.demo_courts[id]; });
+          this._fitPreviewNames();
+        }
+      }
+    } catch (e) { /* ignore */ }
+  },
+
   async loadDemoData() {
     try {
       const r = await fetch('/admin/api/demo', { method: 'POST' });
@@ -477,15 +492,62 @@ Alpine.data('adminApp', () => ({
         this.showToast(data.error || 'Błąd ładowania demo', 'error');
         return;
       }
-      // Re-fetch snapshot to update preview
-      const snap = await fetch('/api/snapshot').then(r2 => r2.json());
-      const c = snap.courts || snap;
-      Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
+      // Store demo courts in preview (does NOT affect production overlays)
+      if (data.demo_courts) {
+        Object.keys(data.demo_courts).forEach(id => { this.courtData[id] = data.demo_courts[id]; });
+      }
+      this.demoPreview = true;
+      this.demoOverlayActive = data.demo_overlay_active || false;
       this._fitPreviewNames();
-      this.showToast('Demo dane załadowane', 'success');
+      this.showToast(data.message || 'Demo załadowane (tylko podgląd)', 'success');
     } catch (err) {
       console.error('Demo load error:', err);
       this.showToast('Błąd ładowania demo', 'error');
+    }
+  },
+
+  async toggleDemoOverlay() {
+    const newState = !this.demoOverlayActive;
+    try {
+      const r = await fetch('/admin/api/demo/overlay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: newState }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        this.showToast(data.error || 'Błąd przełączania demo', 'error');
+        return;
+      }
+      this.demoOverlayActive = data.active;
+      this.showToast(data.message, data.active ? 'warning' : 'success');
+    } catch (err) {
+      console.error('Demo overlay toggle error:', err);
+      this.showToast('Błąd przełączania demo', 'error');
+    }
+  },
+
+  async clearDemo() {
+    try {
+      const r = await fetch('/admin/api/demo', { method: 'DELETE' });
+      const data = await r.json();
+      if (!r.ok) {
+        this.showToast(data.error || 'Błąd czyszczenia demo', 'error');
+        return;
+      }
+      this.demoPreview = false;
+      this.demoOverlayActive = false;
+      // Restore real court data
+      try {
+        const snap = await fetch('/api/snapshot').then(r2 => r2.json());
+        const c = snap.courts || snap;
+        Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
+        this._fitPreviewNames();
+      } catch (e) { /* best effort */ }
+      this.showToast('Demo wyczyszczone', 'success');
+    } catch (err) {
+      console.error('Demo clear error:', err);
+      this.showToast('Błąd czyszczenia demo', 'error');
     }
   },
 
