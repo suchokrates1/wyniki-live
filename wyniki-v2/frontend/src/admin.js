@@ -39,9 +39,13 @@ Alpine.data('adminApp', () => ({
   },
   currentOverlayId: '1',
   selectedElIdx: -1,
+  selectedElIdxSet: [],   // multi-select: array of indices
 
   // Canvas scale
   canvasScale: 1,
+
+  // Ruler / distance guides
+  hoveredElIdx: -1,
 
   // Drag & resize state
   dragging: null,
@@ -91,6 +95,8 @@ Alpine.data('adminApp', () => ({
     // Recalc canvas scale on resize
     window.addEventListener('resize', () => this.updateCanvasScale());
     this.$nextTick(() => this.updateCanvasScale());
+    // Keyboard nudge for selected element(s)
+    window.addEventListener('keydown', (e) => this._handleKeyNudge(e));
   },
   
   // ===== TOAST =====
@@ -510,6 +516,60 @@ Alpine.data('adminApp', () => ({
     return this.selectedElIdx >= 0 && this.selectedElIdx < els.length ? els[this.selectedElIdx] : null;
   },
 
+  // ===== KEYBOARD NUDGE =====
+  _handleKeyNudge(e) {
+    if (this.activeTab !== 'settings') return;
+    if (this.selectedElIdx < 0) return;
+    // Don't capture if focus is in an input/select/textarea
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    const dir = arrows[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 1;
+    const indices = this.selectedElIdxSet.length > 0 ? this.selectedElIdxSet : [this.selectedElIdx];
+    const els = this.currentElements();
+    indices.forEach(idx => {
+      const el = els[idx];
+      if (!el) return;
+      if (el.zone === 'top' && this.currentOverlay()?.top_bar?.enabled) return;
+      el.x = Math.round(el.x + dir[0] * step);
+      el.y = Math.round(el.y + dir[1] * step);
+    });
+    this.saveOverlaySettings();
+  },
+
+  // ===== MULTI-SELECT =====
+  toggleMultiSelect(idx, event) {
+    if (event.shiftKey) {
+      // Toggle in set
+      const pos = this.selectedElIdxSet.indexOf(idx);
+      if (pos >= 0) {
+        this.selectedElIdxSet.splice(pos, 1);
+      } else {
+        this.selectedElIdxSet.push(idx);
+      }
+      this.selectedElIdx = idx;
+    } else {
+      this.selectedElIdx = idx;
+      this.selectedElIdxSet = [idx];
+    }
+  },
+
+  isMultiSelected(idx) {
+    return this.selectedElIdxSet.includes(idx);
+  },
+
+  /** Get elements affected by alignment/distribute: multi-select or all visible free */
+  _getAlignTargets() {
+    const els = this.currentElements();
+    if (this.selectedElIdxSet.length >= 2) {
+      return this.selectedElIdxSet.map(i => els[i]).filter(Boolean);
+    }
+    return els.filter(el => el.visible !== false && el.zone === 'free');
+  },
+
   // ===== GRID & ALIGNMENT SYSTEM =====
   _ensureGridDefaults(ov) {
     if (!ov.top_bar) {
@@ -597,9 +657,9 @@ Alpine.data('adminApp', () => ({
     this.saveOverlaySettings();
   },
 
-  /** Alignment tools - align all visible elements */
+  /** Alignment tools - align multi-selected or all visible free elements */
   alignElements(direction) {
-    const els = this.currentElements().filter(el => el.visible !== false && el.zone === 'free');
+    const els = this._getAlignTargets();
     if (els.length < 2) return;
     switch (direction) {
       case 'left':     { const v = Math.min(...els.map(e => e.x)); els.forEach(e => e.x = v); break; }
@@ -614,7 +674,7 @@ Alpine.data('adminApp', () => ({
 
   /** Distribute elements evenly */
   distributeElements(axis) {
-    const els = this.currentElements().filter(el => el.visible !== false && el.zone === 'free');
+    const els = this._getAlignTargets();
     if (els.length < 3) return;
     if (axis === 'horizontal') {
       els.sort((a, b) => a.x - b.x);
@@ -632,27 +692,198 @@ Alpine.data('adminApp', () => ({
     this.saveOverlaySettings();
   },
 
-  /** Snap drag position to grid/guides */
+  /** Snap drag position to grid/guides and other element edges */
   _snapPosition(x, y, w, h) {
     if (!this.snapEnabled) return { x, y };
     const t = this.snapThreshold;
     const guides = [0, 960, 1920, 1920 / 3, 1920 * 2 / 3, 1920 / 4, 1920 * 3 / 4]; // vertical guides
     const hGuides = [0, 540, 1080]; // horizontal guides
 
+    // Add other element edges as guides
+    const els = this.currentElements();
+    const dragIdx = this.dragging?.idx ?? -1;
+    els.forEach((el, i) => {
+      if (i === dragIdx || el.visible === false) return;
+      const ew = el.w || 460, eh = el.h || 80;
+      guides.push(el.x, el.x + ew, el.x + ew / 2);
+      hGuides.push(el.y, el.y + eh, el.y + eh / 2);
+    });
+
     let sx = x, sy = y;
-    // Snap left edge
+    let bestDx = t + 1, bestDy = t + 1;
+    // Snap X: left edge, right edge, center
     for (const g of guides) {
-      if (Math.abs(x - g) < t) { sx = g; break; }
-      if (Math.abs(x + w - g) < t) { sx = g - w; break; }
-      if (Math.abs(x + w / 2 - g) < t) { sx = g - w / 2; break; }
+      const dL = Math.abs(x - g);
+      const dR = Math.abs(x + w - g);
+      const dC = Math.abs(x + w / 2 - g);
+      if (dL < bestDx) { bestDx = dL; sx = g; }
+      if (dR < bestDx) { bestDx = dR; sx = g - w; }
+      if (dC < bestDx) { bestDx = dC; sx = g - w / 2; }
     }
-    // Snap top edge
+    if (bestDx > t) sx = x; // no snap found within threshold
+    // Snap Y: top edge, bottom edge, center
     for (const g of hGuides) {
-      if (Math.abs(y - g) < t) { sy = g; break; }
-      if (Math.abs(y + h - g) < t) { sy = g - h; break; }
-      if (Math.abs(y + h / 2 - g) < t) { sy = g - h / 2; break; }
+      const dT = Math.abs(y - g);
+      const dB = Math.abs(y + h - g);
+      const dC2 = Math.abs(y + h / 2 - g);
+      if (dT < bestDy) { bestDy = dT; sy = g; }
+      if (dB < bestDy) { bestDy = dB; sy = g - h; }
+      if (dC2 < bestDy) { bestDy = dC2; sy = g - h / 2; }
     }
+    if (bestDy > t) sy = y;
     return { x: Math.round(sx), y: Math.round(sy) };
+  },
+
+  // ===== COPY LAYOUT / TEMPLATES =====
+  copyLayoutTo(targetOverlayId) {
+    const src = this.currentOverlay();
+    const tgt = (this.overlaySettings.overlays || {})[targetOverlayId];
+    if (!src || !tgt) return;
+    tgt.elements = JSON.parse(JSON.stringify(src.elements));
+    tgt.top_bar = JSON.parse(JSON.stringify(src.top_bar || { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 }));
+    this.saveOverlaySettings();
+    this.showToast('Layout skopiowany do "' + (tgt.name || targetOverlayId) + '"', 'success');
+  },
+
+  applyTemplate(tplName) {
+    const ov = this.currentOverlay();
+    if (!ov) return;
+    const templates = {
+      '3kort-top': {
+        top_bar: { enabled: true, columns: 3, margin_x: 20, margin_top: 10, gap: 12 },
+        elements: [
+          { type:'court', court_id:'1', visible:true, x:20,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 1', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
+          { type:'court', court_id:'2', visible:true, x:654,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 2', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
+          { type:'court', court_id:'3', visible:true, x:1286,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 3', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
+        ],
+      },
+      '4kort-top': {
+        top_bar: { enabled: true, columns: 4, margin_x: 10, margin_top: 10, gap: 10 },
+        elements: [
+          { type:'court', court_id:'1', visible:true, x:10,y:10,w:467, zone:'top', show_logo:false, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 1', label_position:'above', label_gap:3, label_bg_opacity:0.85, label_font_size:11 },
+          { type:'court', court_id:'2', visible:true, x:487,y:10,w:467, zone:'top', show_logo:false, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 2', label_position:'above', label_gap:3, label_bg_opacity:0.85, label_font_size:11 },
+          { type:'court', court_id:'3', visible:true, x:964,y:10,w:467, zone:'top', show_logo:false, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 3', label_position:'above', label_gap:3, label_bg_opacity:0.85, label_font_size:11 },
+          { type:'court', court_id:'4', visible:true, x:1441,y:10,w:467, zone:'top', show_logo:false, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 4', label_position:'above', label_gap:3, label_bg_opacity:0.85, label_font_size:11 },
+        ],
+      },
+      'main+stats': {
+        top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 },
+        elements: [
+          { type:'court', court_id:'1', visible:true, x:24,y:860,w:520, zone:'free', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'', label_position:'none', label_gap:4, label_bg_opacity:0.85, label_font_size:14 },
+          { type:'stats', court_id:'1', visible:true, x:1540,y:860,w:360, zone:'free' },
+        ],
+      },
+      'broadcast': {
+        top_bar: { enabled: true, columns: 3, margin_x: 20, margin_top: 10, gap: 12 },
+        elements: [
+          { type:'court', court_id:'1', visible:true, x:20,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 1', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
+          { type:'court', court_id:'2', visible:true, x:654,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 2', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
+          { type:'court', court_id:'3', visible:true, x:1286,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 3', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
+          { type:'court', court_id:'1', visible:true, x:24,y:860,w:520, zone:'free', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'', label_position:'none', label_gap:4, label_bg_opacity:0.85, label_font_size:14 },
+          { type:'stats', court_id:'1', visible:true, x:1540,y:860,w:360, zone:'free' },
+        ],
+      },
+    };
+    const tpl = templates[tplName];
+    if (!tpl) return;
+    if (!confirm('Zastosować szablon? Obecne elementy zostaną zastąpione.')) return;
+    ov.elements = JSON.parse(JSON.stringify(tpl.elements));
+    ov.top_bar = JSON.parse(JSON.stringify(tpl.top_bar));
+    if (ov.top_bar.enabled) this.applyTopBarGrid();
+    this.selectedElIdx = -1;
+    this.selectedElIdxSet = [];
+    this.saveOverlaySettings();
+    this.showToast('Szablon zastosowany', 'success');
+  },
+
+  /** Duplicate selected element */
+  duplicateElement() {
+    const ov = this.currentOverlay();
+    const el = this.selectedEl();
+    if (!ov || !el) return;
+    const clone = JSON.parse(JSON.stringify(el));
+    clone.x += 30;
+    clone.y += 30;
+    clone.zone = 'free';
+    ov.elements.push(clone);
+    this.selectedElIdx = ov.elements.length - 1;
+    this.selectedElIdxSet = [this.selectedElIdx];
+    this.saveOverlaySettings();
+    this.showToast('Element zduplikowany', 'success');
+  },
+
+  /** Match selected element size to the first in multi-select */
+  matchSize() {
+    if (this.selectedElIdxSet.length < 2) return;
+    const els = this.currentElements();
+    const ref = els[this.selectedElIdxSet[0]];
+    if (!ref) return;
+    for (let i = 1; i < this.selectedElIdxSet.length; i++) {
+      const el = els[this.selectedElIdxSet[i]];
+      if (el) { el.w = ref.w; if (ref.h) el.h = ref.h; }
+    }
+    this.saveOverlaySettings();
+    this.showToast('Rozmiary wyrównane', 'success');
+  },
+
+  /** Center selected element on screen */
+  centerOnScreen(axis) {
+    const el = this.selectedEl();
+    if (!el) return;
+    if (axis === 'h' || axis === 'both') el.x = Math.round((1920 - (el.w || 460)) / 2);
+    if (axis === 'v' || axis === 'both') el.y = Math.round((1080 - (el.h || 80)) / 2);
+    this.saveOverlaySettings();
+  },
+
+  /** Get distance info between hovered and selected element for ruler */
+  getRulerInfo() {
+    if (this.hoveredElIdx < 0 || this.selectedElIdx < 0 || this.hoveredElIdx === this.selectedElIdx) return null;
+    const els = this.currentElements();
+    const a = els[this.selectedElIdx];
+    const b = els[this.hoveredElIdx];
+    if (!a || !b) return null;
+    const ax = a.x, ay = a.y, aw = a.w || 460, ah = a.h || 80;
+    const bx = b.x, by = b.y, bw = b.w || 460, bh = b.h || 80;
+    // Distances between edges
+    const dx = bx - (ax + aw); // gap right
+    const dy = by - (ay + ah); // gap bottom
+    const dxL = ax - (bx + bw); // gap left
+    const dyT = ay - (by + bh); // gap top
+    return { ax, ay, aw, ah, bx, by, bw, bh, gapRight: dx, gapBottom: dy, gapLeft: dxL, gapTop: dyT };
+  },
+
+  /** Render ruler SVG as HTML string (avoids <template> inside SVG for Vite) */
+  renderRulerSVG() {
+    const r = this.getRulerInfo();
+    if (!r) return '';
+    const s = this.canvasScale;
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" style="width:${1920*s}px;height:${1080*s}px;position:absolute;inset:0;pointer-events:none;z-index:300;">`;
+    // Horizontal gap
+    if (r.gapRight > 5 || r.gapLeft > 5) {
+      const useRight = r.gapRight > 5;
+      const x1 = (useRight ? (r.ax+r.aw) : r.bx+r.bw)*s;
+      const x2 = (useRight ? r.bx : r.ax)*s;
+      const cy = Math.max(r.ay+r.ah/2, r.by+r.bh/2)*s;
+      const gap = Math.abs(useRight ? r.gapRight : r.gapLeft);
+      const mx = (x1+x2)/2;
+      svg += `<line x1="${x1}" y1="${cy}" x2="${x2}" y2="${cy}" class="ruler-line"/>`;
+      svg += `<rect x="${mx-16*s}" y="${cy-8*s}" width="${32*s}" height="${16*s}" class="ruler-bg"/>`;
+      svg += `<text x="${mx}" y="${cy+4*s}" class="ruler-text">${gap}px</text>`;
+    }
+    // Vertical gap
+    if (r.gapBottom > 5 || r.gapTop > 5) {
+      const useBottom = r.gapBottom > 5;
+      const y1 = (useBottom ? (r.ay+r.ah) : r.by+r.bh)*s;
+      const y2 = (useBottom ? r.by : r.ay)*s;
+      const cx = Math.max(r.ax+r.aw/2, r.bx+r.bw/2)*s;
+      const gap = Math.abs(useBottom ? r.gapBottom : r.gapTop);
+      const my = (y1+y2)/2;
+      svg += `<line x1="${cx}" y1="${y1}" x2="${cx}" y2="${y2}" class="ruler-line"/>`;
+      svg += `<rect x="${cx-16*s}" y="${my-8*s}" width="${32*s}" height="${16*s}" class="ruler-bg"/>`;
+      svg += `<text x="${cx}" y="${my+4*s}" class="ruler-text">${gap}px</text>`;
+    }
+    svg += '</svg>';
+    return svg;
   },
 
   // ===== OVERLAY PRESET CRUD =====

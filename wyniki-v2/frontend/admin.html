@@ -49,6 +49,7 @@
     .drag-el:hover { outline-color: rgba(100,180,255,0.5); }
     .drag-el.is-dragging { cursor: grabbing; outline-color: #4CAF50; z-index: 100; }
     .drag-el.is-selected { outline-color: #2196F3; }
+    .drag-el.multi-selected { outline-color: #FF9800; outline-style: dashed; }
     .drag-el.el-hidden { opacity: 0.15; }
     .drag-el.zone-top { outline-color: rgba(0,255,150,0.3); }
     .drag-el.zone-top.is-selected { outline-color: rgba(0,255,150,0.7); }
@@ -158,6 +159,12 @@
     .crop-area { width:200px; height:200px; overflow:hidden; position:relative;
       border-radius:8px; border:2px solid rgba(255,255,255,0.2); background:#111; margin:0 auto; }
     .crop-area img { position:absolute; cursor:move; user-select:none; }
+
+    /* ruler distance lines */
+    .ruler-overlay { position:absolute; inset:0; pointer-events:none; z-index:300; }
+    .ruler-line { stroke:rgba(255,200,0,0.7); stroke-width:1; stroke-dasharray:4 3; }
+    .ruler-text { fill:#FFD54F; font-size:11px; font-family:monospace; text-anchor:middle; }
+    .ruler-bg { fill:rgba(0,0,0,0.7); rx:3; }
   </style>
 </head>
 <body class="min-h-screen bg-base-200">
@@ -326,7 +333,7 @@
             <div class="card-body p-3">
               <div class="canvas-outer" x-ref="canvasOuter"
                    @pointermove="onDrag($event)" @pointerup="endDrag($event)" @pointerleave="endDrag($event)"
-                   @click.self="selectedElIdx = -1">
+                   @click.self="selectedElIdx = -1; selectedElIdxSet = []">
                 <div class="canvas-inner" x-ref="canvasInner" :style="'transform:scale('+canvasScale+')'">
                   <div class="canvas-grid"></div>
                   <div class="canvas-safe"></div>
@@ -354,13 +361,16 @@
                          :class="{
                            'is-dragging': dragging?.idx === idx,
                            'is-selected': selectedElIdx === idx,
+                           'multi-selected': isMultiSelected(idx) && selectedElIdxSet.length > 1,
                            'el-hidden': el.visible === false,
                            'has-h': !!el.h,
                            'zone-top': el.zone === 'top'
                          }"
                          :style="'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;'+(el.h ? 'height:'+el.h+'px;' : '')"
                          @pointerdown.prevent="startDrag($event, idx)"
-                         @click.stop="selectedElIdx = idx">
+                         @click.stop="toggleMultiSelect(idx, $event)"
+                         @pointerenter="hoveredElIdx = idx"
+                         @pointerleave="hoveredElIdx = -1">
                       <span x-show="el.zone === 'top'" class="zone-badge">G&Oacute;RA</span>
                       <!-- court scoreboard -->
                       <template x-if="el.type === 'court'">
@@ -387,6 +397,8 @@
                 <!-- Coords -->
                 <div class="canvas-coords" x-show="dragging || resizing" x-cloak
                      x-text="resizing ? currentElements()[resizing.idx]?.w+'&#215;'+(currentElements()[resizing.idx]?.h||'auto') : (dragging ? 'x:'+currentElements()[dragging.idx]?.x+' y:'+currentElements()[dragging.idx]?.y : '')"></div>
+                <!-- Ruler distance overlay (rendered via JS into a plain div) -->
+                <div class="ruler-overlay" x-html="renderRulerSVG()"></div>
               </div>
             </div>
           </div>
@@ -486,21 +498,42 @@
           <div class="card bg-base-100 shadow-xl mb-3">
             <div class="card-body p-3">
               <h3 class="font-bold text-sm mb-2">&#128295; Narz&#281;dzia</h3>
+
+              <!-- Preset templates -->
               <div class="flex gap-1 flex-wrap mb-2">
-                <span class="text-xs opacity-50 self-center w-full mb-1">Wyr&oacute;wnaj wolne elementy:</span>
+                <span class="text-xs opacity-50 self-center w-full mb-1">&#128196; Szablony uk&#322;adu:</span>
+                <button @click="applyTemplate('3kort-top')" class="btn btn-xs btn-outline">3 korty g&oacute;ra</button>
+                <button @click="applyTemplate('4kort-top')" class="btn btn-xs btn-outline">4 korty g&oacute;ra</button>
+                <button @click="applyTemplate('main+stats')" class="btn btn-xs btn-outline">G&#322;&oacute;wny+Stats</button>
+                <button @click="applyTemplate('broadcast')" class="btn btn-xs btn-outline">Broadcast</button>
+              </div>
+
+              <!-- Copy layout to other overlay -->
+              <div class="flex gap-1 flex-wrap mb-2" x-show="Object.keys(overlaySettings.overlays||{}).length > 1">
+                <span class="text-xs opacity-50 self-center w-full mb-1">&#128203; Kopiuj uk&#322;ad do:</span>
+                <template x-for="(ov, oid) in (overlaySettings.overlays || {})" :key="'cpy_'+oid">
+                  <button x-show="oid !== currentOverlayId" @click="copyLayoutTo(oid)" class="btn btn-xs btn-ghost" x-text="ov.name || oid"></button>
+                </template>
+              </div>
+
+              <div class="divider my-1 text-xs opacity-50">Zaznaczenie</div>
+              <div class="flex gap-1 flex-wrap mb-2">
+                <span class="text-xs opacity-50 self-center w-full mb-1">Wyr&oacute;wnaj <span class="badge badge-ghost badge-xs">Shift+klik = wielokrotny wyb&oacute;r</span>:</span>
                 <button @click="alignElements('left')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do lewej">&#9475;&#9615;</button>
                 <button @click="alignElements('center-h')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj centr. poziomo">&#9475;&#9608;&#9475;</button>
                 <button @click="alignElements('right')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do prawej">&#9615;&#9475;</button>
                 <span class="opacity-20">|</span>
                 <button @click="alignElements('top')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do g&oacute;ry">&#9581;&#9472;</button>
                 <button @click="alignElements('center-v')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj centr. pionowo">&#9472;&#9608;&#9472;</button>
-                <button @click="alignElements('bottom')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do do&lstrok;u">&#9472;&#9583;</button>
+                <button @click="alignElements('bottom')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do do&#322;u">&#9472;&#9583;</button>
               </div>
               <div class="flex gap-1 flex-wrap mb-2">
-                <span class="text-xs opacity-50 self-center w-full mb-1">Rozłóż r&oacute;wnomiernie:</span>
-                <button @click="distributeElements('horizontal')" class="btn btn-xs btn-ghost" title="Rozło&lstrok; poziomo">&#8596; Poziomo</button>
-                <button @click="distributeElements('vertical')" class="btn btn-xs btn-ghost" title="Rozło&lstrok; pionowo">&#8597; Pionowo</button>
+                <button @click="distributeElements('horizontal')" class="btn btn-xs btn-ghost" title="Rozło&#380; poziomo">&#8596; Roz&#322;&oacute;&#380; H</button>
+                <button @click="distributeElements('vertical')" class="btn btn-xs btn-ghost" title="Rozło&#380; pionowo">&#8597; Roz&#322;&oacute;&#380; V</button>
+                <button @click="matchSize()" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj rozmiar do pierwszego z zaznaczonych">&#9632; Ten sam rozmiar</button>
               </div>
+
+              <div class="divider my-1 text-xs opacity-50">Wybrany element</div>
               <div class="flex gap-1 flex-wrap mb-2">
                 <span class="text-xs opacity-50 self-center w-full mb-1">Przypnij do kraw&#281;dzi:</span>
                 <button @click="snapToEdge('top-left')" class="btn btn-xs btn-ghost">&#8598;</button>
@@ -510,10 +543,17 @@
                 <button @click="snapToEdge('bottom-center')" class="btn btn-xs btn-ghost">&#8595;</button>
                 <button @click="snapToEdge('bottom-right')" class="btn btn-xs btn-ghost">&#8600;</button>
               </div>
-              <label class="label cursor-pointer gap-1 py-0 justify-start">
+              <div class="flex gap-1 flex-wrap mb-2">
+                <button @click="centerOnScreen('h')" class="btn btn-xs btn-ghost" title="Wycentruj poziomo">&#9644; Centr. H</button>
+                <button @click="centerOnScreen('v')" class="btn btn-xs btn-ghost" title="Wycentruj pionowo">&#9612; Centr. V</button>
+                <button @click="centerOnScreen('both')" class="btn btn-xs btn-ghost" title="Wycentruj na ekranie">&#9673; Centr. oba</button>
+                <button @click="duplicateElement()" class="btn btn-xs btn-ghost" title="Duplikuj element">&#128464; Duplikuj</button>
+              </div>
+              <label class="label cursor-pointer gap-1 py-0 justify-start mb-1">
                 <input type="checkbox" class="checkbox checkbox-xs checkbox-accent" x-model="snapEnabled">
-                <span class="label-text text-xs">&#128459; Magnetyczny snap (siatka + kraw&#281;dzie)</span>
+                <span class="label-text text-xs">&#128459; Magnetyczny snap</span>
               </label>
+              <div class="text-xs opacity-40 mt-1">&#9000; Strza&#322;ki = przesun 1px &bull; Shift+strza&#322;ki = 10px &bull; Najecha&#322; + zaznaczony = linia z odleg&#322;o&#347;ci&#261;</div>
             </div>
           </div>
 
