@@ -458,6 +458,7 @@ Alpine.data('adminApp', () => ({
     fetch('/api/snapshot').then(r => r.json()).then(d => {
       const c = d.courts || d;
       Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
+      this._fitPreviewNames();
     }).catch(() => {});
     // Connect SSE
     this._settingsSSE = new EventSource('/api/stream');
@@ -468,6 +469,7 @@ Alpine.data('adminApp', () => ({
           const cid = d.court_id;
           delete d.court_id;
           this.courtData[cid] = d;
+          this._fitPreviewNames();
         }
       } catch (err) { console.error('SSE parse:', err); }
     });
@@ -761,9 +763,9 @@ Alpine.data('adminApp', () => ({
     let logoHtml = '';
     if (showLogo) {
       if (logo) {
-        logoHtml = '<div class="sb-logo" style="width:' + logoSize + 'px;height:' + logoSize + 'px;"><img src="' + logo + '" alt=""></div>';
+        logoHtml = '<div class="sb-logo"><img src="' + logo + '" alt=""></div>';
       } else {
-        logoHtml = '<div class="sb-logo" style="width:' + logoSize + 'px;height:' + logoSize + 'px;"><div class="sb-logo-ph">\uD83C\uDFBE</div></div>';
+        logoHtml = '<div class="sb-logo"><div class="sb-logo-ph">\uD83C\uDFBE</div></div>';
       }
     }
 
@@ -796,6 +798,27 @@ Alpine.data('adminApp', () => ({
       return '<div style="height:100%;display:flex;flex-direction:column;">' + (pos === 'above' ? label + sbW : sbW + label) + '</div>';
     }
     return pos === 'above' ? label + sb : sb + label;
+  },
+
+  // Auto-scale long player names in preview
+  _fitPreviewNames() {
+    this.$nextTick(() => {
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.sb-name').forEach(el => {
+          el.style.transform = '';
+          const sw = el.scrollWidth;
+          const cw = el.clientWidth;
+          if (sw > cw + 1) {
+            const scale = cw / sw;
+            el.style.overflow = 'visible';
+            el.style.transform = 'scaleX(' + Math.max(scale, 0.45) + ')';
+            el.style.transformOrigin = 'left center';
+          } else {
+            el.style.overflow = 'hidden';
+          }
+        });
+      });
+    });
   },
 
   // ===== LOGO UPLOAD =====

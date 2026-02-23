@@ -45,10 +45,11 @@
         .sb-wrap.h-fill { flex: 1; min-height: 0; }
         .sb-wrap.h-fill .score-table { flex: 1; grid-template-rows: 1fr 1fr; }
 
-        /* Logo area (optional, left of table) */
+        /* Logo area (optional, left of table) – auto-matches scoreboard height, keeps square */
         .logo-area {
             flex-shrink: 0; display: flex; align-items: center; justify-content: center;
             overflow: hidden; border-radius: 8px;
+            align-self: stretch; aspect-ratio: 1;
         }
         .logo-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
         .logo-ph {
@@ -87,7 +88,8 @@
             background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 100%);
         }
         .player-cell .player-name {
-            flex: 1; overflow: hidden; text-overflow: ellipsis; color: #fefefe;
+            flex: 1; min-width: 0; overflow: hidden; color: #fefefe;
+            white-space: nowrap;
         }
 
         /* Flag */
@@ -213,13 +215,13 @@
         const logo = settings.tournament_logo;
         const showLogo = el.show_logo;
 
-        // Logo HTML
+        // Logo HTML (auto-sized to scoreboard height, square)
         var logoHtml = '';
         if (showLogo) {
             if (logo) {
-                logoHtml = '<div class="logo-area" style="width:'+logoSize+'px;height:'+logoSize+'px;"><img src="'+logo+'" alt=""></div>';
+                logoHtml = '<div class="logo-area"><img src="'+logo+'" alt=""></div>';
             } else {
-                logoHtml = '<div class="logo-area" style="width:'+logoSize+'px;height:'+logoSize+'px;"><div class="logo-ph">\uD83C\uDFBE</div></div>';
+                logoHtml = '<div class="logo-area"><div class="logo-ph">\uD83C\uDFBE</div></div>';
             }
         }
 
@@ -342,6 +344,7 @@
                     delete d.court_id;
                     courts[cid] = d;
                     render();
+                    requestAnimationFrame(fitPlayerNames);
                 }
             } catch(err) { console.error('SSE parse:', err); }
         });
@@ -364,12 +367,29 @@
         } catch(e) { /* defaults */ }
     }
 
+    function fitPlayerNames() {
+        document.querySelectorAll('.player-name').forEach(function(el) {
+            el.style.transform = '';
+            var sw = el.scrollWidth;
+            var cw = el.clientWidth;
+            if (sw > cw + 1) {
+                var scale = cw / sw;
+                el.style.overflow = 'visible';
+                el.style.transform = 'scaleX(' + Math.max(scale, 0.45) + ')';
+                el.style.transformOrigin = 'left center';
+            } else {
+                el.style.overflow = 'hidden';
+            }
+        });
+    }
+
     async function init() {
         await Promise.all([loadSnapshot(), loadSettings()]);
         render();
+        requestAnimationFrame(fitPlayerNames);
         connectSSE();
-        setInterval(async function() { await loadSettings(); render(); }, SETTINGS_POLL_MS);
-        window.addEventListener('resize', render);
+        setInterval(async function() { await loadSettings(); render(); requestAnimationFrame(fitPlayerNames); }, SETTINGS_POLL_MS);
+        window.addEventListener('resize', function() { render(); requestAnimationFrame(fitPlayerNames); });
     }
     init();
     window.addEventListener('beforeunload', function() { if (eventSource) eventSource.close(); });
