@@ -122,6 +122,7 @@
             letter-spacing: 0.5px;
             text-shadow: 0 1px 0 rgba(0,0,0,0.45);
             transition: background-color 0.3s ease, color 0.3s ease;
+            min-width: 1.5em;
         }
         .metric-cell + .metric-cell {
             border-left: 1px solid rgba(0,0,0,0.6);
@@ -131,6 +132,7 @@
         .metric-cell.pts {
             background: linear-gradient(180deg, #141414 0%, #050505 100%);
             color: #fafafa;
+            min-width: 2.2em;
         }
         /* Points in tiebreak - golden */
         .metric-cell.pts.is-tiebreak {
@@ -228,7 +230,7 @@
 
         // Grid template: player-cell | points | set1 | set2 | [set3]
         var nCols = 1 + 1 + sets.length; // player + points + sets
-        var gridCols = 'grid-template-columns: minmax(0,2.3fr) minmax(0,1.2fr) repeat('+sets.length+',minmax(0,0.95fr));';
+        var gridCols = 'grid-template-columns: 1fr auto repeat('+sets.length+', auto);';
 
         function pRow(p, serveKey, sideClass) {
             var isServing = court.serve === serveKey;
@@ -240,8 +242,9 @@
                 flagHtml = '<span class="player-flag">'+code+'</span>';
             }
             var serveHtml = isServing ? '<span class="serve-indicator">\uD83C\uDFBE</span>' : '';
+            var dName = p.surname||p.full_name||'\u2014';
             var playerCell = '<div class="player-cell">'+flagHtml
-                +'<span class="player-name">'+(p.surname||p.full_name||'\u2014')+'</span>'
+                +'<span class="player-name" data-full="'+dName.replace(/"/g,'&quot;')+'">'+dName+'</span>'
                 +serveHtml+'</div>';
 
             // Points cell
@@ -368,18 +371,42 @@
         } catch(e) { /* defaults */ }
     }
 
+    function abbreviateName(name) {
+        var parts = name.trim().split(/\s+/);
+        if (parts.length < 2) return name;
+        var surname = parts[parts.length - 1];
+        var initials = parts.slice(0, -1).map(function(p) { return p.charAt(0).toUpperCase() + '.'; }).join(' ');
+        return initials + ' ' + surname;
+    }
+
     function fitPlayerNames() {
         document.querySelectorAll('.player-name').forEach(function(el) {
             el.style.transform = '';
+            el.style.overflow = 'hidden';
+            var fullName = el.getAttribute('data-full') || el.textContent;
+            el.textContent = fullName;
             var sw = el.scrollWidth;
             var cw = el.clientWidth;
-            if (sw > cw + 1) {
-                var scale = cw / sw;
+            if (sw <= cw + 1) return;
+            var scale = cw / sw;
+            // Moderate overflow – just compress
+            if (scale >= 0.75) {
                 el.style.overflow = 'visible';
-                el.style.transform = 'scaleX(' + Math.max(scale, 0.45) + ')';
+                el.style.transform = 'scaleX(' + scale + ')';
                 el.style.transformOrigin = 'left center';
-            } else {
-                el.style.overflow = 'hidden';
+                return;
+            }
+            // Heavy overflow – abbreviate first name(s) to initials
+            var abbr = abbreviateName(fullName);
+            if (abbr !== fullName) {
+                el.textContent = abbr;
+                sw = el.scrollWidth;
+            }
+            if (sw > cw + 1) {
+                scale = cw / sw;
+                el.style.overflow = 'visible';
+                el.style.transform = 'scaleX(' + Math.max(scale, 0.55) + ')';
+                el.style.transformOrigin = 'left center';
             }
         });
     }
