@@ -56,6 +56,10 @@ Alpine.data('adminApp', () => ({
   courtData: {},
   _settingsSSE: null,
 
+  // Demo mode
+  demoPreview: false,       // admin is showing demo data in preview
+  demoOverlayActive: false,  // demo pushed to production overlays
+
   // Add element defaults
   addElCourtId: '1',
 
@@ -92,6 +96,7 @@ Alpine.data('adminApp', () => ({
     this.loadCourts();
     this.loadTournaments();
     this.loadOverlaySettings();
+    this._loadDemoStatus();
     // Recalc canvas scale on resize
     window.addEventListener('resize', () => this.updateCanvasScale());
     this.$nextTick(() => this.updateCanvasScale());
@@ -487,18 +492,23 @@ Alpine.data('adminApp', () => ({
   // ===== SSE FOR LIVE DATA IN SETTINGS =====
   initSettingsSSE() {
     if (this._settingsSSE) return;
-    // Load snapshot first
-    fetch('/api/snapshot').then(r => r.json()).then(d => {
-      const c = d.courts || d;
-      Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
-      this._fitPreviewNames();
-    }).catch(() => {});
+    // Load snapshot first (but not if viewing demo preview)
+    if (!this.demoPreview) {
+      fetch('/api/snapshot').then(r => r.json()).then(d => {
+        if (this.demoPreview) return; // race guard
+        const c = d.courts || d;
+        Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
+        this._fitPreviewNames();
+      }).catch(() => {});
+    }
     // Connect SSE
     this._settingsSSE = new EventSource('/api/stream');
     this._settingsSSE.addEventListener('court_update', (e) => {
       try {
         const d = JSON.parse(e.data);
         if (d.court_id) {
+          // Skip SSE updates while admin is in demo preview mode
+          if (this.demoPreview) return;
           const cid = d.court_id;
           delete d.court_id;
           this.courtData[cid] = d;

@@ -147,25 +147,108 @@ def delete_latest_history():
 
 @blueprint.route('/api/demo', methods=['POST'])
 def seed_demo():
-    """Seed courts 1-4 with realistic demo match data for preview."""
+    """Seed demo data for admin preview. Does NOT affect production overlays."""
     try:
         from ..services import court_manager
-        from ..services.event_broker import emit_score_update
 
-        ok, msg = court_manager.seed_demo_data()
+        ok, msg, demo_courts = court_manager.seed_demo_data()
         if not ok:
             return jsonify({"error": msg}), 400
 
-        # Broadcast updates via SSE so overlays refresh immediately
-        for kort_id in court_manager.available_courts()[:4]:
-            state = court_manager.get_court_state(kort_id)
-            if state:
-                emit_score_update(kort_id, state)
-
-        logger.info("Demo data seeded via API")
-        return jsonify({"status": "ok", "message": msg})
+        logger.info("Demo data seeded via API (admin preview only)")
+        return jsonify({
+            "status": "ok",
+            "message": msg,
+            "demo_courts": demo_courts,
+            "demo_overlay_active": court_manager.is_demo_overlay_active(),
+        })
     except Exception as e:
         logger.error(f"Failed to seed demo data: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/demo', methods=['DELETE'])
+def clear_demo():
+    """Clear demo data and deactivate demo overlay."""
+    try:
+        from ..services import court_manager
+        from ..services.event_broker import event_broker
+
+        was_active = court_manager.is_demo_overlay_active()
+        court_manager.clear_demo_data()
+
+        # If demo overlay was active, broadcast real courts so overlays recover
+        if was_active:
+            real_snapshot = court_manager.serialize_all_states()
+            for kort_id, state in real_snapshot.items():
+                payload = {
+                    "type": "state_update",
+                    "kort_id": kort_id,
+                    "data": court_manager.serialize_public_court_state(
+                        court_manager.get_court_state(kort_id) or {}
+                    ),
+                }
+                event_broker.broadcast(payload)
+
+        return jsonify({"status": "ok", "message": "Demo wyczyszczone"})
+    except Exception as e:
+        logger.error(f"Failed to clear demo: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/demo/overlay', methods=['POST'])
+def toggle_demo_overlay():
+    """Toggle demo data visibility in production overlays (OBS)."""
+    try:
+        from ..services import court_manager
+        from ..services.event_broker import event_broker
+
+        data = request.get_json(silent=True) or {}
+        active = bool(data.get("active", False))
+
+        if active and not court_manager.has_demo_data():
+            return jsonify({"error": "Najpierw załaduj dane demo"}), 400
+
+        court_manager.set_demo_overlay(active)
+
+        # Broadcast appropriate courts so overlays update immediately
+        if active:
+            demo_snapshot = court_manager.get_demo_courts_snapshot()
+            for kort_id, state in demo_snapshot.items():
+                payload = {
+                    "type": "state_update",
+                    "kort_id": kort_id,
+                    "data": state,
+                }
+                event_broker.broadcast(payload)
+        else:
+            # Restore real courts in overlays
+            for kort_id in court_manager.available_courts():
+                real_state = court_manager.get_court_state(kort_id)
+                if real_state:
+                    payload = {
+                        "type": "state_update",
+                        "kort_id": kort_id,
+                        "data": court_manager.serialize_public_court_state(real_state),
+                    }
+                    event_broker.broadcast(payload)
+
+        msg = "Demo widoczne w overlayach" if active else "Overlaye przywrócone do danych produkcyjnych"
+        logger.info(f"Demo overlay toggled: {active}")
+        return jsonify({"status": "ok", "active": active, "message": msg})
+    except Exception as e:
+        logger.error(f"Failed to toggle demo overlay: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/demo/status', methods=['GET'])
+def demo_status():
+    """Get current demo state."""
+    from ..services import court_manager
+    return jsonify({
+        "demo_loaded": court_manager.has_demo_data(),
+        "demo_overlay_active": court_manager.is_demo_overlay_active(),
+        "demo_courts": court_manager.get_demo_courts_snapshot() if court_manager.has_demo_data() else {},
+    })
 
 

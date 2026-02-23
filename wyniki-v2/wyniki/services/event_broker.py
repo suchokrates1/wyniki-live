@@ -41,9 +41,16 @@ event_broker = EventBroker()
 
 
 def emit_score_update(kort_id: str, court_state: Dict[str, Any]) -> None:
-    """Emit score update event to all SSE listeners."""
-    from .court_manager import serialize_public_court_state
-    
+    """Emit score update event to all SSE listeners.
+
+    When DEMO_OVERLAY_ACTIVE is True, real court updates are suppressed
+    to avoid conflicting with demo data in overlays.
+    """
+    from .court_manager import serialize_public_court_state, is_demo_overlay_active
+
+    if is_demo_overlay_active():
+        return  # suppress real updates while demo overlay is active
+
     payload = {
         "type": "state_update",
         "kort_id": kort_id,
