@@ -3,17 +3,25 @@
 Supports multiple overlay presets (e.g. "kort1 focus", "split 1+2"),
 each with independently positioned court scoreboards and stats panels.
 Also stores tournament branding (logo + name) and court label settings.
+
+Settings are persisted to the SQLite database (app_settings table)
+so they survive container restarts.
 """
 from __future__ import annotations
 
 import copy
+import json
 import threading
 from typing import Any, Dict
 
 from ..config import logger
+from ..database import fetch_app_settings, upsert_app_settings
 
 # ---------- thread-safety ----------
 _OVERLAY_LOCK = threading.Lock()
+
+# ---------- DB persistence key ----------
+_DB_KEY = "overlay_settings"
 
 
 # ---------- element builders ----------
@@ -119,14 +127,42 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
     },
 }
 
-# ---------- live state ----------
+# ---------- live state (cache) ----------
 _overlay_settings: Dict[str, Any] = {}
+_loaded_from_db: bool = False
+
+
+def _save_to_db() -> None:
+    """Persist current settings to the database. Must be called under _OVERLAY_LOCK."""
+    try:
+        upsert_app_settings({_DB_KEY: json.dumps(_overlay_settings, ensure_ascii=False)})
+    except Exception as e:
+        logger.error("overlay_settings_save_error", error=str(e))
+
+
+def _load_from_db() -> None:
+    """Load settings from DB once, falling back to defaults."""
+    global _overlay_settings, _loaded_from_db
+    if _loaded_from_db:
+        return
+    try:
+        row = fetch_app_settings([_DB_KEY])
+        raw = row.get(_DB_KEY)
+        if raw:
+            _overlay_settings = json.loads(raw)
+            logger.info("overlay_settings_loaded_from_db")
+        else:
+            _overlay_settings = copy.deepcopy(_DEFAULT_SETTINGS)
+            _save_to_db()
+            logger.info("overlay_settings_initialized_defaults")
+    except Exception as e:
+        logger.error("overlay_settings_load_error", error=str(e))
+        _overlay_settings = copy.deepcopy(_DEFAULT_SETTINGS)
+    _loaded_from_db = True
 
 
 def _ensure_defaults() -> None:
-    global _overlay_settings
-    if not _overlay_settings:
-        _overlay_settings = copy.deepcopy(_DEFAULT_SETTINGS)
+    _load_from_db()
 
 
 # ---------- public API ----------
@@ -139,7 +175,7 @@ def get_overlay_settings() -> Dict[str, Any]:
 
 
 def update_overlay_settings(new: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge *new* into current settings and return updated copy."""
+    """Merge *new* into current settings, persist, and return updated copy."""
     global _overlay_settings
     with _OVERLAY_LOCK:
         _ensure_defaults()
@@ -150,6 +186,7 @@ def update_overlay_settings(new: Dict[str, Any]) -> Dict[str, Any]:
             for oid, odata in new["overlays"].items():
                 if isinstance(odata, dict):
                     _overlay_settings.setdefault("overlays", {})[oid] = odata
+        _save_to_db()
         logger.info("overlay_settings_updated")
         return copy.deepcopy(_overlay_settings)
 
@@ -162,6 +199,7 @@ def delete_overlay(overlay_id: str) -> bool:
         overlays = _overlay_settings.get("overlays", {})
         if overlay_id in overlays:
             del overlays[overlay_id]
+            _save_to_db()
             logger.info("overlay_deleted", overlay_id=overlay_id)
             return True
         return False
