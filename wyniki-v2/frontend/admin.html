@@ -385,9 +385,7 @@
                       </template>
                       <!-- stats panel -->
                       <template x-if="el.type === 'stats'">
-                        <div class="sp">
-                          <div class="sp-title">Statystyki</div>
-                        </div>
+                        <div class="sp" x-html="renderStatsPanel(el)"></div>
                       </template>
                       <!-- resize handles -->
                       <div class="resize-handle rh-n" @pointerdown.stop.prevent="startResize($event, idx, 'n')"></div>
