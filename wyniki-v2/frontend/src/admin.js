@@ -4,9 +4,8 @@ import './main.css';
 window.Alpine = Alpine;
 
 function codeToFlag(code) {
-  if (!code || code.length < 2) return code || '';
-  const cc = code.toUpperCase().slice(0, 2);
-  return String.fromCodePoint(...[...cc].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  if (!code || code.length < 2) return '';
+  return 'https://flagcdn.com/w40/' + code.toLowerCase().slice(0, 2) + '.png';
 }
 
 Alpine.data('adminApp', () => ({
@@ -1253,10 +1252,9 @@ Alpine.data('adminApp', () => ({
     function pRow(p, serveKey, sideClass) {
       const isServing = court.serve === serveKey;
       let flagHtml = '';
-      if (p.flag_url) {
-        flagHtml = '<span class="sb-flag has-image" style="background-image:url(' + p.flag_url + ')"></span>';
-      } else if (p.flag_code) {
-        flagHtml = '<span class="sb-flag has-emoji">' + codeToFlag(p.flag_code) + '</span>';
+      const flagUrl = p.flag_url || (p.flag_code ? codeToFlag(p.flag_code) : '');
+      if (flagUrl) {
+        flagHtml = '<span class="sb-flag has-image" style="background-image:url(' + flagUrl + ')"></span>';
       }
       const serveHtml = isServing ? '<span class="sb-serve">\uD83C\uDFBE</span>' : '';
       const dName = p.surname || p.full_name || '\u2014';

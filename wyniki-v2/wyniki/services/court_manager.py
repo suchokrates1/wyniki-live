@@ -361,38 +361,42 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
         p_a = selected[i * 2]
         p_b = selected[i * 2 + 1]
 
-        # Extract surname (last word of name, uppercased)
+        # Player names
         name_a = p_a.get("name", "Player A")
         name_b = p_b.get("name", "Player B")
-        surname_a = name_a.split()[-1].upper() if name_a.strip() else "PLAYER_A"
-        surname_b = name_b.split()[-1].upper() if name_b.strip() else "PLAYER_B"
+
+        # Flag image URLs from CDN (2-letter ISO code)
+        cc_a = (p_a.get("country") or "")[:2].lower()
+        cc_b = (p_b.get("country") or "")[:2].lower()
+        flag_url_a = f"https://flagcdn.com/w40/{cc_a}.png" if len(cc_a) == 2 else None
+        flag_url_b = f"https://flagcdn.com/w40/{cc_b}.png" if len(cc_b) == 2 else None
 
         # Generate IBTA-legal score
         score = _generate_ibta_score(scenarios[i % len(scenarios)])
 
         demo_matches[kort_id] = {
             "A": {
-                "surname": surname_a,
+                "surname": name_a,
                 "full_name": name_a,
                 "points": score["points_a"],
                 "set1": score["set1_a"],
                 "set2": score["set2_a"],
                 "set3": score["set3_a"],
                 "current_games": score["current_games_a"],
-                "flag_url": None,
-                "flag_code": (p_a.get("country") or "")[:3].upper() or None,
+                "flag_url": flag_url_a,
+                "flag_code": cc_a.upper() or None,
                 "flag_lookup_surname": None,
             },
             "B": {
-                "surname": surname_b,
+                "surname": name_b,
                 "full_name": name_b,
                 "points": score["points_b"],
                 "set1": score["set1_b"],
                 "set2": score["set2_b"],
                 "set3": score["set3_b"],
                 "current_games": score["current_games_b"],
-                "flag_url": None,
-                "flag_code": (p_b.get("country") or "")[:3].upper() or None,
+                "flag_url": flag_url_b,
+                "flag_code": cc_b.upper() or None,
                 "flag_lookup_surname": None,
             },
             "current_set": score["current_set"],

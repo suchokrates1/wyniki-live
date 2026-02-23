@@ -417,13 +417,6 @@ main { padding: 16px 0; }
 .player-flag.has-image {
   color: transparent;
 }
-.player-flag.has-emoji {
-  background: transparent;
-  font-size: 20px;
-  box-shadow: none;
-  color: white;
-  line-height: 1;
-}
 
 /* === Serve Indicator === */
 .serve-indicator {
