@@ -692,10 +692,10 @@
                 </div>
               </template>
 
-              <!-- Stats: court selector + visibility -->
+              <!-- Stats: court selector + visibility + mode -->
               <template x-if="selectedEl()?.type === 'stats'">
                 <div>
-                  <div class="flex gap-3">
+                  <div class="flex gap-3 mb-2">
                     <label class="label cursor-pointer gap-2 py-0">
                       <span class="label-text text-xs">Widoczny</span>
                       <input type="checkbox" class="toggle toggle-accent toggle-xs"
@@ -711,6 +711,15 @@
                         <option value="3">Kort 3</option><option value="4">Kort 4</option>
                       </select>
                     </div>
+                  </div>
+                  <div class="prop-row mb-1">
+                    <span class="prop-label">Tryb</span>
+                    <select class="select select-xs select-bordered flex-1"
+                            :value="selectedEl()?.stats_mode || 'simple'"
+                            @change="setElProp('stats_mode', $event.target.value)">
+                      <option value="simple">Uproszczone</option>
+                      <option value="advanced">Zaawansowane</option>
+                    </select>
                   </div>
                 </div>
               </template>

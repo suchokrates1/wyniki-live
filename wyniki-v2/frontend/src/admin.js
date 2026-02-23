@@ -1343,6 +1343,12 @@ Alpine.data('adminApp', () => ({
   },
 
   // ===== STATS PANEL RENDER IN PREVIEW =====
+  _sv(val, suffix) { return val != null ? val + (suffix || '') : '\u2014'; },
+  _serveRatio(si, st) { return (si != null && st != null) ? si + '/' + st : '\u2014'; },
+  _totalPtsWon(own, opp) {
+    return (own.aces || 0) + (own.winners || 0) + (opp.double_faults || 0) + (opp.forced_errors || 0) + (opp.unforced_errors || 0);
+  },
+
   renderStatsPanel(el) {
     const court = this.courtData[el.court_id] || {};
     const active = court.match_status?.active || false;
@@ -1352,16 +1358,28 @@ Alpine.data('adminApp', () => ({
     const nA = pA.surname || pA.full_name || 'A';
     const nB = pB.surname || pB.full_name || 'B';
     const sA = st.player_a || {}, sB = st.player_b || {};
+    const mode = el.stats_mode || 'simple';
     const rows = [
-      { l: 'Asy', a: sA.aces != null ? sA.aces : '\u2014', b: sB.aces != null ? sB.aces : '\u2014' },
-      { l: 'Podw. b\u0142\u0119dy', a: sA.double_faults != null ? sA.double_faults : '\u2014', b: sB.double_faults != null ? sB.double_faults : '\u2014' },
-      { l: 'Winnery', a: sA.winners != null ? sA.winners : '\u2014', b: sB.winners != null ? sB.winners : '\u2014' },
-      { l: 'B\u0142. niewymuszone', a: sA.unforced_errors != null ? sA.unforced_errors : '\u2014', b: sB.unforced_errors != null ? sB.unforced_errors : '\u2014' },
-      { l: '1. serwis %', a: sA.first_serve_pct != null ? sA.first_serve_pct + '%' : '\u2014', b: sB.first_serve_pct != null ? sB.first_serve_pct + '%' : '\u2014' },
+      { l: 'Asy', a: this._sv(sA.aces), b: this._sv(sB.aces) },
+      { l: 'Podw. b\u0142\u0119dy', a: this._sv(sA.double_faults), b: this._sv(sB.double_faults) },
+      { l: 'Winnery', a: this._sv(sA.winners), b: this._sv(sB.winners) },
     ];
+    if (mode === 'advanced') {
+      rows.push({ l: 'B\u0142. wymuszone', a: this._sv(sA.forced_errors), b: this._sv(sB.forced_errors) });
+    }
+    rows.push({ l: 'B\u0142. niewymuszone', a: this._sv(sA.unforced_errors), b: this._sv(sB.unforced_errors) });
+    if (mode === 'advanced') {
+      rows.push({ l: '1. serwis', a: this._serveRatio(sA.first_serves_in, sA.first_serves_total), b: this._serveRatio(sB.first_serves_in, sB.first_serves_total) });
+    }
+    rows.push({ l: '1. serwis %', a: this._sv(sA.first_serve_pct, '%'), b: this._sv(sB.first_serve_pct, '%') });
+    if (mode === 'advanced') {
+      rows.push({ l: '2. serwis %', a: this._sv(sA.second_serve_pct, '%'), b: this._sv(sB.second_serve_pct, '%') });
+      rows.push({ l: 'Pkt wygrane', a: this._totalPtsWon(sA, sB), b: this._totalPtsWon(sB, sA) });
+    }
+    const title = mode === 'advanced' ? 'Statystyki zaawansowane' : 'Statystyki';
     const header = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:10px;font-weight:700;margin-bottom:6px;opacity:0.7;"><div></div><div style="text-align:center;">' + this._abbreviateName(nA) + '</div><div style="text-align:center;">' + this._abbreviateName(nB) + '</div></div>';
     const body = rows.map(r => '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:11px;padding:2px 0;"><div style="opacity:0.7;">' + r.l + '</div><div style="text-align:center;font-weight:600;">' + r.a + '</div><div style="text-align:center;font-weight:600;">' + r.b + '</div></div>').join('');
-    return '<div class="sp-title">Statystyki</div>' + header + body;
+    return '<div class="sp-title">' + title + '</div>' + header + body;
   },
 
   _fitPreviewNames() {

@@ -303,17 +303,32 @@ def _generate_ibta_score(scenario: str) -> Dict[str, Any]:
 
 
 def _generate_demo_stats() -> Dict[str, Any]:
-    """Generate realistic match statistics for one player."""
+    """Generate realistic match statistics for one player.
+
+    Includes all fields tracked by the Android app in advanced mode:
+    raw counters + derived percentages.
+    """
     import random
-    first_serves = random.randint(15, 40)
-    first_serves_in = random.randint(int(first_serves * 0.4), int(first_serves * 0.75))
-    pct = round(first_serves_in / first_serves * 100) if first_serves > 0 else 0
+    first_serves_total = random.randint(15, 40)
+    first_serves_in = random.randint(int(first_serves_total * 0.4), int(first_serves_total * 0.75))
+    first_serve_pct = round(first_serves_in / first_serves_total * 100) if first_serves_total > 0 else 0
+
+    second_serves_total = first_serves_total - first_serves_in  # each missed 1st serve → 2nd attempt
+    second_serves_in = random.randint(int(second_serves_total * 0.5), second_serves_total) if second_serves_total > 0 else 0
+    second_serve_pct = round(second_serves_in / second_serves_total * 100) if second_serves_total > 0 else 0
+
     return {
         "aces": random.randint(0, 3),
         "double_faults": random.randint(0, 5),
         "winners": random.randint(2, 10),
+        "forced_errors": random.randint(1, 8),
         "unforced_errors": random.randint(3, 12),
-        "first_serve_pct": pct,
+        "first_serves_in": first_serves_in,
+        "first_serves_total": first_serves_total,
+        "first_serve_pct": first_serve_pct,
+        "second_serves_in": second_serves_in,
+        "second_serves_total": second_serves_total,
+        "second_serve_pct": second_serve_pct,
     }
 
 
