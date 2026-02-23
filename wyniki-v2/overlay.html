@@ -205,9 +205,10 @@
         const sets = [];
         for (let s = 1; s <= 3; s++) {
             const a = pA['set'+s], b = pB['set'+s];
-            if (s <= curSet || (a > 0 || b > 0)) sets.push({ idx: s, a: a||0, b: b||0 });
+            if (s <= curSet || a > 0 || b > 0) sets.push({ idx: s, a: a||0, b: b||0 });
         }
-        if (!sets.length) sets.push({ idx: 1, a: 0, b: 0 });
+        // Always show at least 2 set columns
+        while (sets.length < 2) sets.push({ idx: sets.length + 1, a: 0, b: 0 });
         const isTie = court.tie?.visible || false;
         const ptA = isTie ? (court.tie?.A||0) : (pA.points||'0');
         const ptB = isTie ? (court.tie?.B||0) : (pB.points||'0');
