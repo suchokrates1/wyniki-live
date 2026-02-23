@@ -55,6 +55,10 @@ Alpine.data('adminApp', () => ({
   // Add element defaults
   addElCourtId: '1',
 
+  // Snap & alignment
+  snapEnabled: true,
+  snapThreshold: 10,  // px snap distance
+
   // Logo crop state
   cropImgSrc: '',
   cropZoom: 100,
@@ -425,6 +429,8 @@ Alpine.data('adminApp', () => ({
       const response = await fetch('/api/overlay/settings');
       if (response.ok) {
         this.overlaySettings = await response.json();
+        // Migrate: ensure grid defaults exist on each overlay
+        Object.values(this.overlaySettings.overlays || {}).forEach(ov => this._ensureGridDefaults(ov));
         // Auto-select first overlay if current is missing
         const ids = Object.keys(this.overlaySettings.overlays || {});
         if (ids.length && !this.overlaySettings.overlays[this.currentOverlayId]) {
@@ -504,6 +510,151 @@ Alpine.data('adminApp', () => ({
     return this.selectedElIdx >= 0 && this.selectedElIdx < els.length ? els[this.selectedElIdx] : null;
   },
 
+  // ===== GRID & ALIGNMENT SYSTEM =====
+  _ensureGridDefaults(ov) {
+    if (!ov.top_bar) {
+      ov.top_bar = { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 };
+    }
+    (ov.elements || []).forEach(el => {
+      if (!el.zone) el.zone = 'free';
+    });
+  },
+
+  /** Recompute positions for all elements in the top-bar grid */
+  applyTopBarGrid() {
+    const ov = this.currentOverlay();
+    if (!ov?.top_bar?.enabled) return;
+    const topEls = (ov.elements || []).filter(el => el.zone === 'top');
+    if (topEls.length === 0) return;
+    const cols = ov.top_bar.columns || 3;
+    const mx = ov.top_bar.margin_x || 0;
+    const mt = ov.top_bar.margin_top || 0;
+    const gap = ov.top_bar.gap || 10;
+    const totalW = 1920 - 2 * mx;
+    const usable = topEls.length > cols ? cols : topEls.length;
+    const colW = Math.round((totalW - (usable - 1) * gap) / usable);
+
+    // Use first element's H as reference for linked sizing
+    const refH = topEls[0].h || null;
+
+    topEls.forEach((el, i) => {
+      if (i >= cols) return; // max cols elements
+      // Center within its column slot
+      const slotX = mx + i * (colW + gap);
+      el.x = Math.round(slotX);
+      el.y = mt;
+      el.w = colW;
+      if (refH) el.h = refH;
+    });
+  },
+
+  /** Apply linked sizing: when one top-bar element is resized, sync all others */
+  _syncTopBarSizes(changedEl) {
+    const ov = this.currentOverlay();
+    if (!ov?.top_bar?.enabled) return;
+    if (changedEl.zone !== 'top') return;
+    const topEls = (ov.elements || []).filter(el => el.zone === 'top');
+    topEls.forEach(el => {
+      if (el !== changedEl) {
+        el.w = changedEl.w;
+        if (changedEl.h) el.h = changedEl.h;
+      }
+    });
+    this.applyTopBarGrid();
+  },
+
+  setTopBarProp(prop, value) {
+    const ov = this.currentOverlay();
+    if (!ov) return;
+    if (!ov.top_bar) ov.top_bar = { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 };
+    ov.top_bar[prop] = value;
+    if (ov.top_bar.enabled) this.applyTopBarGrid();
+    this.saveOverlaySettings();
+  },
+
+  setElZone(zone) {
+    const el = this.selectedEl();
+    if (!el) return;
+    el.zone = zone;
+    if (zone === 'top') this.applyTopBarGrid();
+    this.saveOverlaySettings();
+  },
+
+  /** Edge snap for bottom zone elements */
+  snapToEdge(edge) {
+    const el = this.selectedEl();
+    if (!el) return;
+    const w = el.w || 460;
+    const h = el.h || 80;
+    switch (edge) {
+      case 'bottom-left':   el.x = 0; el.y = 1080 - h; break;
+      case 'bottom-center': el.x = Math.round((1920 - w) / 2); el.y = 1080 - h; break;
+      case 'bottom-right':  el.x = 1920 - w; el.y = 1080 - h; break;
+      case 'top-left':      el.x = 0; el.y = 0; break;
+      case 'top-center':    el.x = Math.round((1920 - w) / 2); el.y = 0; break;
+      case 'top-right':     el.x = 1920 - w; el.y = 0; break;
+    }
+    this.saveOverlaySettings();
+  },
+
+  /** Alignment tools - align all visible elements */
+  alignElements(direction) {
+    const els = this.currentElements().filter(el => el.visible !== false && el.zone === 'free');
+    if (els.length < 2) return;
+    switch (direction) {
+      case 'left':     { const v = Math.min(...els.map(e => e.x)); els.forEach(e => e.x = v); break; }
+      case 'right':    { const v = Math.max(...els.map(e => e.x + (e.w || 460))); els.forEach(e => e.x = v - (e.w || 460)); break; }
+      case 'center-h': { const v = Math.round(els.reduce((s, e) => s + e.x + (e.w || 460) / 2, 0) / els.length); els.forEach(e => e.x = Math.round(v - (e.w || 460) / 2)); break; }
+      case 'top':      { const v = Math.min(...els.map(e => e.y)); els.forEach(e => e.y = v); break; }
+      case 'bottom':   { const v = Math.max(...els.map(e => e.y + (e.h || 80))); els.forEach(e => e.y = v - (e.h || 80)); break; }
+      case 'center-v': { const v = Math.round(els.reduce((s, e) => s + e.y + (e.h || 80) / 2, 0) / els.length); els.forEach(e => e.y = Math.round(v - (e.h || 80) / 2)); break; }
+    }
+    this.saveOverlaySettings();
+  },
+
+  /** Distribute elements evenly */
+  distributeElements(axis) {
+    const els = this.currentElements().filter(el => el.visible !== false && el.zone === 'free');
+    if (els.length < 3) return;
+    if (axis === 'horizontal') {
+      els.sort((a, b) => a.x - b.x);
+      const first = els[0].x;
+      const last = els[els.length - 1].x;
+      const step = (last - first) / (els.length - 1);
+      els.forEach((e, i) => { e.x = Math.round(first + i * step); });
+    } else {
+      els.sort((a, b) => a.y - b.y);
+      const first = els[0].y;
+      const last = els[els.length - 1].y;
+      const step = (last - first) / (els.length - 1);
+      els.forEach((e, i) => { e.y = Math.round(first + i * step); });
+    }
+    this.saveOverlaySettings();
+  },
+
+  /** Snap drag position to grid/guides */
+  _snapPosition(x, y, w, h) {
+    if (!this.snapEnabled) return { x, y };
+    const t = this.snapThreshold;
+    const guides = [0, 960, 1920, 1920 / 3, 1920 * 2 / 3, 1920 / 4, 1920 * 3 / 4]; // vertical guides
+    const hGuides = [0, 540, 1080]; // horizontal guides
+
+    let sx = x, sy = y;
+    // Snap left edge
+    for (const g of guides) {
+      if (Math.abs(x - g) < t) { sx = g; break; }
+      if (Math.abs(x + w - g) < t) { sx = g - w; break; }
+      if (Math.abs(x + w / 2 - g) < t) { sx = g - w / 2; break; }
+    }
+    // Snap top edge
+    for (const g of hGuides) {
+      if (Math.abs(y - g) < t) { sy = g; break; }
+      if (Math.abs(y + h - g) < t) { sy = g - h; break; }
+      if (Math.abs(y + h / 2 - g) < t) { sy = g - h / 2; break; }
+    }
+    return { x: Math.round(sx), y: Math.round(sy) };
+  },
+
   // ===== OVERLAY PRESET CRUD =====
   addOverlay() {
     const ids = Object.keys(this.overlaySettings.overlays || {});
@@ -514,8 +665,9 @@ Alpine.data('adminApp', () => ({
     this.overlaySettings.overlays[newId] = {
       name: 'Nowy overlay ' + n,
       auto_hide: false,
+      top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 },
       elements: [
-        { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460,
+        { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460, zone: 'free',
           show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
           label_text: 'KORT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
       ],
@@ -561,13 +713,14 @@ Alpine.data('adminApp', () => ({
         font_size: 17,
         bg_opacity: 0.95,
         logo_size: 60,
+        zone: 'free',
         label_text: 'KORT ' + (this.addElCourtId || '1'),
         label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14,
       });
     } else {
       ov.elements.push({
         type: 'stats', court_id: this.addElCourtId || '1',
-        visible: true, x: 100, y: 400, w: 360,
+        visible: true, x: 100, y: 400, w: 360, zone: 'free',
       });
     }
     this.selectedElIdx = ov.elements.length - 1;
@@ -646,11 +799,17 @@ Alpine.data('adminApp', () => ({
     const el = this.currentElements()[this.dragging.idx];
     if (!el) return;
 
+    // Grid-locked elements: prevent free dragging
+    const ov = this.currentOverlay();
+    if (el.zone === 'top' && ov?.top_bar?.enabled) return;
+
     let newX = (event.clientX - rect.left - this.dragging.offsetX) / scale;
     let newY = (event.clientY - rect.top - this.dragging.offsetY) / scale;
 
-    el.x = Math.max(0, Math.min(1920 - (el.w || 260), Math.round(newX)));
-    el.y = Math.max(0, Math.min(1080 - 80, Math.round(newY)));
+    // Apply snap
+    const snapped = this._snapPosition(newX, newY, el.w || 460, el.h || 80);
+    el.x = Math.max(-200, Math.min(1920 + 200, snapped.x));
+    el.y = Math.max(-200, Math.min(1080 + 200, snapped.y));
   },
 
   async endDrag(event) {
@@ -699,8 +858,10 @@ Alpine.data('adminApp', () => ({
     }
     el.w = Math.max(100, Math.min(1920, Math.round(nW)));
     el.h = Math.max(30, Math.min(1080, Math.round(nH)));
-    el.x = Math.max(0, Math.min(1920 - el.w, Math.round(nX)));
-    el.y = Math.max(0, Math.min(1080 - el.h, Math.round(nY)));
+    el.x = Math.max(-200, Math.min(1920 + 200, Math.round(nX)));
+    el.y = Math.max(-200, Math.min(1080 + 200, Math.round(nY)));
+    // Linked sizing for top-bar grid elements
+    this._syncTopBarSizes(el);
   },
 
   // ===== LIVE SCOREBOARD RENDER IN PREVIEW =====

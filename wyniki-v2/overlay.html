@@ -313,6 +313,29 @@
         var sy = window.innerHeight / 1080;
         var scale = Math.min(sx, sy);
         var elems = preset.elements || [];
+
+        // Apply top-bar grid positioning (mirrors admin.js logic)
+        if (preset.top_bar?.enabled) {
+            var topEls = elems.filter(function(e){ return e.zone === 'top'; });
+            if (topEls.length > 0) {
+                var cols = preset.top_bar.columns || 3;
+                var mx = preset.top_bar.margin_x || 0;
+                var mt = preset.top_bar.margin_top || 0;
+                var gap = preset.top_bar.gap || 10;
+                var totalW = 1920 - 2 * mx;
+                var usable = topEls.length > cols ? cols : topEls.length;
+                var colW = Math.round((totalW - (usable - 1) * gap) / usable);
+                var refH = topEls[0].h || null;
+                topEls.forEach(function(el, i) {
+                    if (i >= cols) return;
+                    el.x = Math.round(mx + i * (colW + gap));
+                    el.y = mt;
+                    el.w = colW;
+                    if (refH) el.h = refH;
+                });
+            }
+        }
+
         var html = elems.map(function(el) {
             var hidden = el.visible === false ? 'el-hidden' : '';
             var style = 'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;';
