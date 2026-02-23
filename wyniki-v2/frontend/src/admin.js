@@ -1288,14 +1288,28 @@ Alpine.data('adminApp', () => ({
       }
     }
 
+    // Match time bar
+    let timeHtml = '';
+    if (active && court.match_time) {
+      const mt = court.match_time;
+      let secs = mt.seconds || 0;
+      if (mt.running && mt.resume_ts) secs += (Date.now() / 1000 - mt.resume_ts);
+      secs += (mt.offset_seconds || 0);
+      secs = Math.max(0, Math.floor(secs));
+      const hh = String(Math.floor(secs / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
+      timeHtml = '<div class="sb-time-bar"><span class="time-icon">&#9201;</span> ' + hh + ':' + mm + '</div>';
+    }
+
     const hFill = el.h ? ' h-fill' : '';
     const opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
     return '<div class="sb-wrap ' + inactiveClass + hFill + '">'
       + logoHtml
+      + '<div style="flex:1;min-width:0;">'
       + '<div class="sb-table" style="' + opacityStyle + '">'
       + pRow(pA, 'A', 'side-a')
       + pRow(pB, 'B', 'side-b')
-      + '</div></div>';
+      + '</div>' + timeHtml + '</div></div>';
   },
 
   // Render full court element with label (avoids Alpine x-show bug in nested templates)

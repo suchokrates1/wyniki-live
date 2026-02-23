@@ -152,6 +152,17 @@
             box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35);
         }
 
+        /* ---- Match time bar ---- */
+        .match-time-bar {
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+            color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 600;
+            letter-spacing: 1px; padding: 2px 0;
+            border-radius: 0 0 10px 10px; margin-top: -1px;
+            font-family: 'Courier New', monospace;
+        }
+        .match-time-bar .time-icon { opacity: 0.5; margin-right: 4px; }
+
         /* ---- Stats panel ---- */
         .stats-panel {
             width: 100%;
@@ -267,14 +278,28 @@
             return '<div class="score-row '+sideClass+'" style="'+gridCols+'">'+playerCell+ptsCell+setCells+'</div>';
         }
 
+        // Match time bar
+        var timeHtml = '';
+        if (active && court.match_time) {
+            var mt = court.match_time;
+            var secs = mt.seconds || 0;
+            if (mt.running && mt.resume_ts) secs += (Date.now()/1000 - mt.resume_ts);
+            secs += (mt.offset_seconds || 0);
+            secs = Math.max(0, Math.floor(secs));
+            var hh = String(Math.floor(secs/3600)).padStart(2,'0');
+            var mm = String(Math.floor((secs%3600)/60)).padStart(2,'0');
+            timeHtml = '<div class="match-time-bar" data-court="'+cid+'"><span class="time-icon">&#9201;</span> '+hh+':'+mm+'</div>';
+        }
+
         var opacityStyle = bgOpacity < 1 ? 'opacity:'+bgOpacity+';' : '';
         var hFill = el.h ? ' h-fill' : '';
         return '<div class="sb-wrap '+inactiveClass+hFill+'">'
             +logoHtml
+            +'<div style="flex:1;min-width:0;">'
             +'<div class="score-table" style="'+opacityStyle+'">'
             +pRow(pA, 'A', 'side-a')
             +pRow(pB, 'B', 'side-b')
-            +'</div></div>';
+            +'</div>'+timeHtml+'</div></div>';
     }
 
     function renderStats(el) {
@@ -446,6 +471,22 @@
         requestAnimationFrame(fitPlayerNames);
         connectSSE();
         setInterval(async function() { await loadSettings(); render(); requestAnimationFrame(fitPlayerNames); }, SETTINGS_POLL_MS);
+        // Tick match timers every minute
+        setInterval(function() {
+            document.querySelectorAll('.match-time-bar').forEach(function(el) {
+                var cid = el.getAttribute('data-court');
+                var court = cid ? courts[cid] : null;
+                if (!court || !court.match_time) return;
+                var mt = court.match_time;
+                var secs = mt.seconds || 0;
+                if (mt.running && mt.resume_ts) secs += (Date.now()/1000 - mt.resume_ts);
+                secs += (mt.offset_seconds || 0);
+                secs = Math.max(0, Math.floor(secs));
+                var hh = String(Math.floor(secs/3600)).padStart(2,'0');
+                var mm = String(Math.floor((secs%3600)/60)).padStart(2,'0');
+                el.innerHTML = '<span class="time-icon">&#9201;</span> '+hh+':'+mm;
+            });
+        }, 60000);
         window.addEventListener('resize', function() { render(); requestAnimationFrame(fitPlayerNames); });
     }
     init();
