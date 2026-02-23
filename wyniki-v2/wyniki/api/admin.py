@@ -150,7 +150,7 @@ def seed_demo():
     """Seed courts 1-4 with realistic demo match data for preview."""
     try:
         from ..services import court_manager
-        from ..services.event_broker import event_broker
+        from ..services.event_broker import emit_score_update
 
         court_manager.seed_demo_data()
 
@@ -158,10 +158,7 @@ def seed_demo():
         for kort_id in ("1", "2", "3", "4"):
             state = court_manager.get_court_state(kort_id)
             if state:
-                event_broker.publish({
-                    "event": "court_update",
-                    "data": {**court_manager.serialize_court_state(state), "court_id": kort_id},
-                })
+                emit_score_update(kort_id, state)
 
         logger.info("Demo data seeded via API")
         return jsonify({"status": "ok", "message": "Demo data loaded for courts 1-4"})
