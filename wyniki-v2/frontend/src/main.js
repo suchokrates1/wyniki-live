@@ -1,6 +1,12 @@
 import Alpine from 'alpinejs';
 import './main.css';
 
+function codeToFlag(code) {
+  if (!code || code.length < 2) return code || '';
+  const cc = code.toUpperCase().slice(0, 2);
+  return String.fromCodePoint(...[...cc].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+
 /* ============================================================
    TRANSLATIONS (ported from v1 translations.js)
    ============================================================ */
@@ -271,6 +277,9 @@ Alpine.data('tennisApp', () => ({
     this.fetchInitialData();
     this.fetchHistory();
   },
+
+  /* --- Flag helper --- */
+  codeToFlag(code) { return codeToFlag(code); },
 
   /* --- Translation helpers --- */
   tr() { return getTranslation(this.lang); },
