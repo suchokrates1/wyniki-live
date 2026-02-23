@@ -728,7 +728,7 @@ Alpine.data('adminApp', () => ({
     const inactiveClass = active ? '' : 'match-inactive';
 
     // Grid template: player + points + N sets
-    const gridCols = 'grid-template-columns:minmax(0,2.3fr) minmax(0,1.2fr) repeat(' + sets.length + ',minmax(0,0.95fr));';
+    const gridCols = 'grid-template-columns:1fr auto repeat(' + sets.length + ', auto);';
 
     function pRow(p, serveKey, sideClass) {
       const isServing = court.serve === serveKey;
@@ -740,8 +740,9 @@ Alpine.data('adminApp', () => ({
         flagHtml = '<span class="sb-flag">' + code + '</span>';
       }
       const serveHtml = isServing ? '<span class="sb-serve">\uD83C\uDFBE</span>' : '';
+      const dName = p.surname || p.full_name || '\u2014';
       const playerCell = '<div class="sb-player-cell">' + flagHtml
-        + '<span class="sb-name">' + (p.surname || p.full_name || '\u2014') + '</span>'
+        + '<span class="sb-name" data-full="' + dName.replace(/"/g, '&quot;') + '">' + dName + '</span>'
         + serveHtml + '</div>';
 
       // Points cell
@@ -802,20 +803,42 @@ Alpine.data('adminApp', () => ({
   },
 
   // Auto-scale long player names in preview
+  _abbreviateName(name) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length < 2) return name;
+    const surname = parts[parts.length - 1];
+    const initials = parts.slice(0, -1).map(p => p.charAt(0).toUpperCase() + '.').join(' ');
+    return initials + ' ' + surname;
+  },
+
   _fitPreviewNames() {
     this.$nextTick(() => {
       requestAnimationFrame(() => {
         document.querySelectorAll('.sb-name').forEach(el => {
           el.style.transform = '';
-          const sw = el.scrollWidth;
+          el.style.overflow = 'hidden';
+          const fullName = el.getAttribute('data-full') || el.textContent;
+          el.textContent = fullName;
+          let sw = el.scrollWidth;
           const cw = el.clientWidth;
-          if (sw > cw + 1) {
-            const scale = cw / sw;
+          if (sw <= cw + 1) return;
+          let scale = cw / sw;
+          if (scale >= 0.75) {
             el.style.overflow = 'visible';
-            el.style.transform = 'scaleX(' + Math.max(scale, 0.45) + ')';
+            el.style.transform = 'scaleX(' + scale + ')';
             el.style.transformOrigin = 'left center';
-          } else {
-            el.style.overflow = 'hidden';
+            return;
+          }
+          const abbr = this._abbreviateName(fullName);
+          if (abbr !== fullName) {
+            el.textContent = abbr;
+            sw = el.scrollWidth;
+          }
+          if (sw > cw + 1) {
+            scale = cw / sw;
+            el.style.overflow = 'visible';
+            el.style.transform = 'scaleX(' + Math.max(scale, 0.55) + ')';
+            el.style.transformOrigin = 'left center';
           }
         });
       });
