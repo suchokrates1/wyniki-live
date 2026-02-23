@@ -1345,7 +1345,7 @@ Alpine.data('adminApp', () => ({
       { l: 'B\u0142. niewymuszone', a: sA.unforced_errors != null ? sA.unforced_errors : '\u2014', b: sB.unforced_errors != null ? sB.unforced_errors : '\u2014' },
       { l: '1. serwis %', a: sA.first_serve_pct != null ? sA.first_serve_pct + '%' : '\u2014', b: sB.first_serve_pct != null ? sB.first_serve_pct + '%' : '\u2014' },
     ];
-    const header = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:10px;font-weight:700;margin-bottom:6px;opacity:0.7;"><div></div><div style="text-align:center;">' + this._shortenName(nA) + '</div><div style="text-align:center;">' + this._shortenName(nB) + '</div></div>';
+    const header = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:10px;font-weight:700;margin-bottom:6px;opacity:0.7;"><div></div><div style="text-align:center;">' + this._abbreviateName(nA) + '</div><div style="text-align:center;">' + this._abbreviateName(nB) + '</div></div>';
     const body = rows.map(r => '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:11px;padding:2px 0;"><div style="opacity:0.7;">' + r.l + '</div><div style="text-align:center;font-weight:600;">' + r.a + '</div><div style="text-align:center;font-weight:600;">' + r.b + '</div></div>').join('');
     return '<div class="sp-title">Statystyki</div>' + header + body;
   },
