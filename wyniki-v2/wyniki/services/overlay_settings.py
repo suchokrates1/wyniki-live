@@ -19,12 +19,14 @@ _OVERLAY_LOCK = threading.Lock()
 # ---------- element builders ----------
 
 def _court_el(court_id: str, x: int, y: int, w: int,
-              size: str = "large", show_logo: bool = False,
+              zone: str = "free", show_logo: bool = False,
               label_text: str = "",
+              label_position: str = "above",
               font_size: int = 17, bg_opacity: float = 0.95,
-              logo_size: int = 60) -> Dict[str, Any]:
+              logo_size: int = 60,
+              h: int | None = None) -> Dict[str, Any]:
     """Build a court-scoreboard element dict."""
-    return {
+    el: Dict[str, Any] = {
         "type": "court",
         "court_id": str(court_id),
         "visible": True,
@@ -33,12 +35,16 @@ def _court_el(court_id: str, x: int, y: int, w: int,
         "font_size": font_size,
         "bg_opacity": bg_opacity,
         "logo_size": logo_size,
+        "zone": zone,
         "label_text": label_text or f"KORT {court_id}",
-        "label_position": "above",
+        "label_position": label_position,
         "label_gap": 4,
         "label_bg_opacity": 0.85,
-        "label_font_size": 14,
+        "label_font_size": 14 if zone == "free" else 12,
     }
+    if h is not None:
+        el["h"] = h
+    return el
 
 
 def _stats_el(court_id: str, x: int, y: int, w: int = 360) -> Dict[str, Any]:
@@ -54,20 +60,46 @@ def _stats_el(court_id: str, x: int, y: int, w: int = 360) -> Dict[str, Any]:
 # ---------- default overlays ----------
 
 def _overlay_focus(focus: str, name: str) -> Dict[str, Any]:
+    """Court-specific overlay: main court big bottom-left, 3 others top bar.
+
+    - Main court: bottom-left, big (w=600), no logo, label ABOVE scoreboard.
+    - Top 3 courts: zone='top', no logo, label BELOW scoreboard.
+    All symmetrical, no logos.
+    """
     others = [c for c in ("1", "2", "3", "4") if c != focus]
-    elements = [_court_el(focus, 24, 860, 460, "large", True)]
+    elements = []
+    # Main court — big, bottom-left, label above
+    elements.append(
+        _court_el(focus, 30, 890, 600, zone="free", show_logo=False,
+                  label_position="above")
+    )
+    # Top 3 courts in grid, label below
     for i, cid in enumerate(others):
-        elements.append(_court_el(cid, 20 + i * 280, 20, 260,
-                                  show_logo=False, font_size=12,
-                                  logo_size=40))
-    elements.append(_stats_el(focus, 500, 830))
-    return {"name": name, "auto_hide": False, "elements": elements}
+        elements.append(
+            _court_el(cid, 20 + i * 634, 10, 620,
+                      zone="top", show_logo=False,
+                      label_position="below", font_size=14)
+        )
+    return {
+        "name": name,
+        "auto_hide": False,
+        "top_bar": {
+            "enabled": True,
+            "columns": 3,
+            "margin_x": 20,
+            "margin_top": 10,
+            "gap": 12,
+        },
+        "elements": elements,
+    }
 
 
 def _overlay_all() -> Dict[str, Any]:
+    """4 courts in a 2x2 grid — no logos, labels above."""
     positions = [(20, 20), (980, 20), (20, 560), (980, 560)]
     elements = [
-        _court_el(str(i + 1), x, y, 440, "large", True)
+        _court_el(str(i + 1), x, y, 440, zone="free",
+                  show_logo=False, label_position="above")
         for i, (x, y) in enumerate(positions)
     ]
     return {"name": "Wszystkie korty", "auto_hide": False, "elements": elements}
