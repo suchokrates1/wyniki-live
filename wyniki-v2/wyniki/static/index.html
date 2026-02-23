@@ -110,7 +110,7 @@
                                               :style="'background-image:url('+(courts[courtId]?.A?.flag_url || codeToFlag(courts[courtId]?.A?.flag_code))+')'">
                                         </span>
                                         <span class="player-name" :id="'k'+courtId+'-name-A'" x-text="getPlayerName(courtId, 'A')"></span>
-                                        <span class="serve-indicator" x-show="courts[courtId]?.serve === 'A'" aria-hidden="true">🎾</span>
+                                        <span class="serve-indicator" x-show="courts[courtId]?.serve === 'A'" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:14px;height:14px;"></span>
                                     </dt>
                                     <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-A'">
                                         <span class="metric-label" :id="'k'+courtId+'-label-points'"
@@ -142,7 +142,7 @@
                                               :style="'background-image:url('+(courts[courtId]?.B?.flag_url || codeToFlag(courts[courtId]?.B?.flag_code))+')'">
                                         </span>
                                         <span class="player-name" :id="'k'+courtId+'-name-B'" x-text="getPlayerName(courtId, 'B')"></span>
-                                        <span class="serve-indicator" x-show="courts[courtId]?.serve === 'B'" aria-hidden="true">🎾</span>
+                                        <span class="serve-indicator" x-show="courts[courtId]?.serve === 'B'" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:14px;height:14px;"></span>
                                     </dt>
                                     <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-B'">
                                         <span class="metric-value points"

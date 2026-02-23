@@ -1256,7 +1256,7 @@ Alpine.data('adminApp', () => ({
       if (flagUrl) {
         flagHtml = '<span class="sb-flag has-image" style="background-image:url(' + flagUrl + ')"></span>';
       }
-      const serveHtml = isServing ? '<span class="sb-serve">\uD83C\uDFBE</span>' : '';
+      const serveHtml = isServing ? '<span class="sb-serve"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:16px;height:16px;"></span>' : '';
       const dName = p.surname || p.full_name || '\u2014';
       const playerCell = '<div class="sb-player-cell">' + flagHtml
         + '<span class="sb-name" data-full="' + dName.replace(/"/g, '&quot;') + '">' + dName + '</span>'
@@ -1326,6 +1326,28 @@ Alpine.data('adminApp', () => ({
     const surname = parts[parts.length - 1];
     const initials = parts.slice(0, -1).map(p => p.charAt(0).toUpperCase() + '.').join(' ');
     return initials + ' ' + surname;
+  },
+
+  // ===== STATS PANEL RENDER IN PREVIEW =====
+  renderStatsPanel(el) {
+    const court = this.courtData[el.court_id] || {};
+    const active = court.match_status?.active || false;
+    if (!active) return '<div class="sp-title">Statystyki</div><div style="text-align:center;opacity:0.4;font-size:11px;">Brak aktywnego meczu</div>';
+    const st = court.stats || {};
+    const pA = court.A || {}, pB = court.B || {};
+    const nA = pA.surname || pA.full_name || 'A';
+    const nB = pB.surname || pB.full_name || 'B';
+    const sA = st.player_a || {}, sB = st.player_b || {};
+    const rows = [
+      { l: 'Asy', a: sA.aces != null ? sA.aces : '\u2014', b: sB.aces != null ? sB.aces : '\u2014' },
+      { l: 'Podw. b\u0142\u0119dy', a: sA.double_faults != null ? sA.double_faults : '\u2014', b: sB.double_faults != null ? sB.double_faults : '\u2014' },
+      { l: 'Winnery', a: sA.winners != null ? sA.winners : '\u2014', b: sB.winners != null ? sB.winners : '\u2014' },
+      { l: 'B\u0142. niewymuszone', a: sA.unforced_errors != null ? sA.unforced_errors : '\u2014', b: sB.unforced_errors != null ? sB.unforced_errors : '\u2014' },
+      { l: '1. serwis %', a: sA.first_serve_pct != null ? sA.first_serve_pct + '%' : '\u2014', b: sB.first_serve_pct != null ? sB.first_serve_pct + '%' : '\u2014' },
+    ];
+    const header = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:10px;font-weight:700;margin-bottom:6px;opacity:0.7;"><div></div><div style="text-align:center;">' + this._shortenName(nA) + '</div><div style="text-align:center;">' + this._shortenName(nB) + '</div></div>';
+    const body = rows.map(r => '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:11px;padding:2px 0;"><div style="opacity:0.7;">' + r.l + '</div><div style="text-align:center;font-weight:600;">' + r.a + '</div><div style="text-align:center;font-weight:600;">' + r.b + '</div></div>').join('');
+    return '<div class="sp-title">Statystyki</div>' + header + body;
   },
 
   _fitPreviewNames() {
