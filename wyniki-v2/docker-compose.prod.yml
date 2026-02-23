@@ -44,6 +44,7 @@ services:
       - "traefik.http.routers.wyniki.entrypoints=https"
       - "traefik.http.routers.wyniki.tls=true"
       - "traefik.http.services.wyniki.loadbalancer.server.port=8080"
+      - "traefik.docker.network=proxy"
     
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/snapshot"]
@@ -54,6 +55,7 @@ services:
     
     networks:
       - wyniki_net
+      - proxy
 
 volumes:
   wyniki_data:
@@ -63,3 +65,5 @@ volumes:
 networks:
   wyniki_net:
     driver: bridge
+  proxy:
+    external: true
