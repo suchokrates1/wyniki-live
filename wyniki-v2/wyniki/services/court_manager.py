@@ -11,6 +11,8 @@ from ..config import settings, logger
 # Thread-safe state storage
 STATE_LOCK = threading.Lock()
 COURTS: Dict[str, Dict[str, Any]] = {}  # kort_id -> state
+DEMO_COURTS: Dict[str, Dict[str, Any]] = {}  # separate demo storage (never pollutes real data)
+DEMO_OVERLAY_ACTIVE: bool = False  # when True, public APIs serve DEMO_COURTS
 GLOBAL_LOG: Deque[Dict[str, Any]] = deque()
 GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size)
 
@@ -162,9 +164,52 @@ def serialize_all_states() -> Dict[str, Any]:
 
 
 def serialize_public_snapshot() -> Dict[str, Any]:
-    """Get public snapshot of all courts."""
+    """Get public snapshot of all courts.
+
+    When DEMO_OVERLAY_ACTIVE is True, returns DEMO_COURTS data.
+    Otherwise returns real COURTS data.
+    """
     with STATE_LOCK:
-        return {kort_id: serialize_public_court_state(state) for kort_id, state in COURTS.items()}
+        source = DEMO_COURTS if (DEMO_OVERLAY_ACTIVE and DEMO_COURTS) else COURTS
+        return {kort_id: serialize_public_court_state(state) for kort_id, state in source.items()}
+
+
+# ============ DEMO DATA MANAGEMENT ============
+
+def set_demo_overlay(active: bool) -> None:
+    """Toggle demo overlay mode."""
+    global DEMO_OVERLAY_ACTIVE
+    with STATE_LOCK:
+        DEMO_OVERLAY_ACTIVE = active
+    logger.info("demo_overlay_toggled", active=active)
+
+
+def is_demo_overlay_active() -> bool:
+    """Check if demo data is being served to overlays."""
+    with STATE_LOCK:
+        return DEMO_OVERLAY_ACTIVE
+
+
+def has_demo_data() -> bool:
+    """Check if demo data is loaded."""
+    with STATE_LOCK:
+        return bool(DEMO_COURTS)
+
+
+def get_demo_courts_snapshot() -> Dict[str, Any]:
+    """Get snapshot of demo courts for admin preview."""
+    with STATE_LOCK:
+        return {kort_id: serialize_public_court_state(state)
+                for kort_id, state in DEMO_COURTS.items()}
+
+
+def clear_demo_data() -> None:
+    """Clear all demo data and deactivate demo overlay."""
+    global DEMO_OVERLAY_ACTIVE
+    with STATE_LOCK:
+        DEMO_COURTS.clear()
+        DEMO_OVERLAY_ACTIVE = False
+    logger.info("demo_data_cleared")
 
 
 def _generate_ibta_score(scenario: str) -> Dict[str, Any]:
@@ -272,15 +317,16 @@ def _generate_demo_stats() -> Dict[str, Any]:
     }
 
 
-def seed_demo_data() -> Tuple[bool, str]:
-    """Populate courts 1-4 with realistic IBTA blind tennis match data.
+def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
+    """Generate IBTA blind tennis demo data and store in DEMO_COURTS.
 
     Uses real players from the active tournament database.
     Generates IBTA-legal scores (short sets to 4, max 2 sets).
     Fills match statistics for overlay display.
+    Does NOT touch real COURTS — demo data is stored separately.
 
     Returns:
-        (success, message) tuple.
+        (success, message, demo_courts_dict) tuple.
     """
     import random
     import time
@@ -289,23 +335,25 @@ def seed_demo_data() -> Tuple[bool, str]:
     # Fetch real players from active tournament
     db_players = fetch_active_tournament_players()
 
-    # Need at least 8 players for 4 courts
-    if len(db_players) < 8:
-        msg = f"Za mało zawodników w aktywnym turnieju ({len(db_players)}/8). Dodaj zawodników lub ustaw aktywny turniej."
+    # Need at least 2 players for 1 court
+    if len(db_players) < 2:
+        msg = f"Za mało zawodników w aktywnym turnieju ({len(db_players)}/2). Dodaj zawodników lub ustaw aktywny turniej."
         logger.warning("demo_data_not_enough_players",
-                        available=len(db_players), required=8)
-        return (False, msg)
+                        available=len(db_players), required=2)
+        return (False, msg, {})
 
-    # Shuffle and pick 8 players for 4 courts
+    # Shuffle and pick players for available courts (2 per court)
     random.shuffle(db_players)
-    selected = db_players[:8]
+    max_pairs = len(db_players) // 2
+    num_courts = min(max_pairs, 4)
+    selected = db_players[:num_courts * 2]
 
     # Match scenarios for variety
     scenarios = ["set1_in_progress", "set2_in_progress", "set2_deuce", "set1_in_progress"]
     phases = ["Grupowa", "Półfinał", "Grupowa", "Grupowa"]
 
     court_ids = _sorted_court_ids(COURTS.keys()) if COURTS else ["1", "2", "3", "4"]
-    court_ids = court_ids[:4]  # max 4 courts for demo
+    court_ids = court_ids[:num_courts]  # fill as many courts as we have players for
 
     demo_matches: Dict[str, Dict[str, Any]] = {}
 
@@ -374,9 +422,14 @@ def seed_demo_data() -> Tuple[bool, str]:
         }
 
     with STATE_LOCK:
+        DEMO_COURTS.clear()
         for kort_id, state in demo_matches.items():
-            COURTS[kort_id] = state
+            DEMO_COURTS[kort_id] = state
     logger.info("demo_data_seeded", courts=list(demo_matches.keys()),
                 source="database")
-    return (True, f"Demo data loaded for courts {', '.join(demo_matches.keys())}")
+
+    # Return serialized demo data so admin can preview immediately
+    from copy import deepcopy
+    serialized = {k: deepcopy(v) for k, v in demo_matches.items()}
+    return (True, f"Demo: korty {', '.join(demo_matches.keys())}", serialized)
 
