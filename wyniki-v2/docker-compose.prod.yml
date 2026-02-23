@@ -54,7 +54,6 @@ services:
       start_period: 10s
     
     networks:
-      - wyniki_net
       - proxy
 
 volumes:
@@ -63,7 +62,5 @@ volumes:
     name: count_wyniki_data
 
 networks:
-  wyniki_net:
-    driver: bridge
   proxy:
     external: true
