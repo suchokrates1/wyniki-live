@@ -467,13 +467,17 @@ Alpine.data('adminApp', () => ({
   async loadDemoData() {
     try {
       const r = await fetch('/admin/api/demo', { method: 'POST' });
-      if (!r.ok) throw new Error('Failed');
+      const data = await r.json();
+      if (!r.ok) {
+        this.showToast(data.error || 'Błąd ładowania demo', 'error');
+        return;
+      }
       // Re-fetch snapshot to update preview
       const snap = await fetch('/api/snapshot').then(r2 => r2.json());
       const c = snap.courts || snap;
       Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
       this._fitPreviewNames();
-      this.showToast('Demo dane załadowane (korty 1-4)', 'success');
+      this.showToast('Demo dane załadowane', 'success');
     } catch (err) {
       console.error('Demo load error:', err);
       this.showToast('Błąd ładowania demo', 'error');

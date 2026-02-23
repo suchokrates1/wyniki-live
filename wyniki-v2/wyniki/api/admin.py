@@ -152,16 +152,18 @@ def seed_demo():
         from ..services import court_manager
         from ..services.event_broker import emit_score_update
 
-        court_manager.seed_demo_data()
+        ok, msg = court_manager.seed_demo_data()
+        if not ok:
+            return jsonify({"error": msg}), 400
 
         # Broadcast updates via SSE so overlays refresh immediately
-        for kort_id in ("1", "2", "3", "4"):
+        for kort_id in court_manager.available_courts()[:4]:
             state = court_manager.get_court_state(kort_id)
             if state:
                 emit_score_update(kort_id, state)
 
         logger.info("Demo data seeded via API")
-        return jsonify({"status": "ok", "message": "Demo data loaded for courts 1-4"})
+        return jsonify({"status": "ok", "message": msg})
     except Exception as e:
         logger.error(f"Failed to seed demo data: {e}")
         return jsonify({"error": str(e)}), 500

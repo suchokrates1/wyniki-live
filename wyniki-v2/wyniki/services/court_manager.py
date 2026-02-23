@@ -167,155 +167,192 @@ def serialize_public_snapshot() -> Dict[str, Any]:
         return {kort_id: serialize_public_court_state(state) for kort_id, state in COURTS.items()}
 
 
-def seed_demo_data() -> None:
-    """Populate courts 1-4 with realistic tennis match data for preview."""
-    import time
+def _generate_ibta_score(scenario: str) -> Dict[str, Any]:
+    """Generate IBTA-legal score for a given match scenario.
 
-    demo_matches = {
-        "1": {
-            "A": {
-                "surname": "NADAL",
-                "full_name": "Rafael Nadal",
-                "points": "30",
-                "set1": 6, "set2": 4, "set3": 0,
-                "current_games": 4,
-                "flag_url": None,
-                "flag_code": "ES",
-                "flag_lookup_surname": None,
-            },
-            "B": {
-                "surname": "DJOKOVIC",
-                "full_name": "Novak Djokovic",
-                "points": "15",
-                "set1": 3, "set2": 5, "set3": 0,
-                "current_games": 5,
-                "flag_url": None,
-                "flag_code": "RS",
-                "flag_lookup_surname": None,
-            },
-            "current_set": 2,
-            "serve": "A",
-            "mode": None,
-            "tie": {"A": 0, "B": 0, "visible": None, "locked": False},
-            "match_time": {
-                "seconds": 4320,
-                "running": True,
-                "offset_seconds": 0,
-                "started_ts": None,
-                "finished_ts": None,
-                "resume_ts": time.time(),
-                "auto_resume": True,
-            },
-            "match_status": {"active": True, "last_completed": None},
-            "history_meta": {"phase": "Grupowa", "category": "B1"},
-            "overlay_visible": None,
-            "updated": None,
-        },
-        "2": {
-            "A": {
-                "surname": "ŚWIĄTEK",
-                "full_name": "Iga Świątek",
-                "points": "40",
-                "set1": 6, "set2": 6, "set3": 2,
-                "current_games": 2,
-                "flag_url": None,
-                "flag_code": "PL",
-                "flag_lookup_surname": None,
-            },
-            "B": {
-                "surname": "SABALENKA",
-                "full_name": "Aryna Sabalenka",
-                "points": "ADV",
-                "set1": 4, "set2": 7, "set3": 3,
-                "current_games": 3,
-                "flag_url": None,
-                "flag_code": "BY",
-                "flag_lookup_surname": None,
-            },
-            "current_set": 3,
-            "serve": "B",
-            "mode": None,
-            "tie": {"A": 0, "B": 0, "visible": None, "locked": False},
-            "match_time": {
-                "seconds": 6840,
-                "running": True,
-                "offset_seconds": 0,
-                "started_ts": None,
-                "finished_ts": None,
-                "resume_ts": time.time(),
-                "auto_resume": True,
-            },
-            "match_status": {"active": True, "last_completed": None},
-            "history_meta": {"phase": "Półfinał", "category": "A1"},
-            "overlay_visible": None,
-            "updated": None,
-        },
-        "3": {
-            "A": {
-                "surname": "KOWALSKI",
-                "full_name": "Jan Kowalski",
-                "points": "0",
-                "set1": 6, "set2": 3, "set3": 0,
-                "current_games": 3,
-                "flag_url": None,
-                "flag_code": "PL",
-                "flag_lookup_surname": None,
-            },
-            "B": {
-                "surname": "MÜLLER",
-                "full_name": "Hans Müller",
-                "points": "15",
-                "set1": 4, "set2": 5, "set3": 0,
-                "current_games": 5,
-                "flag_url": None,
-                "flag_code": "DE",
-                "flag_lookup_surname": None,
-            },
-            "current_set": 2,
-            "serve": "A",
-            "mode": None,
-            "tie": {"A": 0, "B": 0, "visible": None, "locked": False},
-            "match_time": {
-                "seconds": 3120,
-                "running": True,
-                "offset_seconds": 0,
-                "started_ts": None,
-                "finished_ts": None,
-                "resume_ts": time.time(),
-                "auto_resume": True,
-            },
-            "match_status": {"active": True, "last_completed": None},
-            "history_meta": {"phase": "Grupowa", "category": "B2"},
-            "overlay_visible": None,
-            "updated": None,
-        },
-        "4": {
-            "A": {
-                "surname": "WILLIAMS",
-                "full_name": "Serena Williams",
-                "points": "0",
-                "set1": 2, "set2": 0, "set3": 0,
-                "current_games": 2,
-                "flag_url": None,
-                "flag_code": "US",
-                "flag_lookup_surname": None,
-            },
-            "B": {
-                "surname": "OSAKA",
-                "full_name": "Naomi Osaka",
-                "points": "0",
-                "set1": 3, "set2": 0, "set3": 0,
-                "current_games": 3,
-                "flag_url": None,
-                "flag_code": "JP",
-                "flag_lookup_surname": None,
-            },
+    IBTA blind tennis rules:
+    - Short sets: first to 4 games, win by 2
+    - Best of 3 sets (match ends at 2 set wins)
+    - Tiebreak at 4-4 in games
+    """
+    import random
+
+    points_options = ["0", "15", "30", "40"]
+
+    def _random_completed_set(winner: str) -> Tuple[int, int]:
+        """Generate a completed set score where `winner` won (A or B)."""
+        patterns = [
+            (4, 0), (4, 1), (4, 2),  # straight wins
+            (5, 3),                    # win by 2 after 3-3
+        ]
+        w_games, l_games = random.choice(patterns)
+        if winner == "A":
+            return (w_games, l_games)
+        return (l_games, w_games)
+
+    def _random_in_progress_set() -> Tuple[int, int]:
+        """Generate an in-progress set score (no winner yet)."""
+        options = [
+            (0, 0), (1, 0), (0, 1), (1, 1), (2, 0), (0, 2),
+            (2, 1), (1, 2), (2, 2), (3, 0), (0, 3), (3, 1),
+            (1, 3), (3, 2), (2, 3), (3, 3),
+        ]
+        return random.choice(options)
+
+    if scenario == "set1_in_progress":
+        # First set in progress
+        g_a, g_b = _random_in_progress_set()
+        return {
+            "set1_a": g_a, "set1_b": g_b,
+            "set2_a": 0, "set2_b": 0,
+            "set3_a": 0, "set3_b": 0,
             "current_set": 1,
-            "serve": "A",
+            "current_games_a": g_a, "current_games_b": g_b,
+            "points_a": random.choice(points_options),
+            "points_b": random.choice(points_options),
+            "time_seconds": random.randint(600, 2400),
+        }
+    elif scenario == "set2_in_progress":
+        # First set completed, second in progress
+        winner = random.choice(["A", "B"])
+        s1a, s1b = _random_completed_set(winner)
+        g_a, g_b = _random_in_progress_set()
+        return {
+            "set1_a": s1a, "set1_b": s1b,
+            "set2_a": g_a, "set2_b": g_b,
+            "set3_a": 0, "set3_b": 0,
+            "current_set": 2,
+            "current_games_a": g_a, "current_games_b": g_b,
+            "points_a": random.choice(points_options),
+            "points_b": random.choice(points_options),
+            "time_seconds": random.randint(2400, 4800),
+        }
+    elif scenario == "set2_deuce":
+        # Second set, deuce situation (40-40)
+        winner = random.choice(["A", "B"])
+        s1a, s1b = _random_completed_set(winner)
+        g_a, g_b = _random_in_progress_set()
+        pts = random.choice([("40", "40"), ("ADV", "40"), ("40", "ADV")])
+        return {
+            "set1_a": s1a, "set1_b": s1b,
+            "set2_a": g_a, "set2_b": g_b,
+            "set3_a": 0, "set3_b": 0,
+            "current_set": 2,
+            "current_games_a": g_a, "current_games_b": g_b,
+            "points_a": pts[0], "points_b": pts[1],
+            "time_seconds": random.randint(3000, 5400),
+        }
+    else:
+        # Default: early first set
+        g_a, g_b = random.choice([(0, 0), (1, 0), (0, 1), (1, 1)])
+        return {
+            "set1_a": g_a, "set1_b": g_b,
+            "set2_a": 0, "set2_b": 0,
+            "set3_a": 0, "set3_b": 0,
+            "current_set": 1,
+            "current_games_a": g_a, "current_games_b": g_b,
+            "points_a": random.choice(points_options),
+            "points_b": random.choice(points_options),
+            "time_seconds": random.randint(300, 1200),
+        }
+
+
+def _generate_demo_stats() -> Dict[str, Any]:
+    """Generate realistic match statistics for one player."""
+    import random
+    first_serves = random.randint(15, 40)
+    first_serves_in = random.randint(int(first_serves * 0.4), int(first_serves * 0.75))
+    pct = round(first_serves_in / first_serves * 100) if first_serves > 0 else 0
+    return {
+        "aces": random.randint(0, 3),
+        "double_faults": random.randint(0, 5),
+        "winners": random.randint(2, 10),
+        "unforced_errors": random.randint(3, 12),
+        "first_serve_pct": pct,
+    }
+
+
+def seed_demo_data() -> Tuple[bool, str]:
+    """Populate courts 1-4 with realistic IBTA blind tennis match data.
+
+    Uses real players from the active tournament database.
+    Generates IBTA-legal scores (short sets to 4, max 2 sets).
+    Fills match statistics for overlay display.
+
+    Returns:
+        (success, message) tuple.
+    """
+    import random
+    import time
+    from ..database import fetch_active_tournament_players
+
+    # Fetch real players from active tournament
+    db_players = fetch_active_tournament_players()
+
+    # Need at least 8 players for 4 courts
+    if len(db_players) < 8:
+        msg = f"Za mało zawodników w aktywnym turnieju ({len(db_players)}/8). Dodaj zawodników lub ustaw aktywny turniej."
+        logger.warning("demo_data_not_enough_players",
+                        available=len(db_players), required=8)
+        return (False, msg)
+
+    # Shuffle and pick 8 players for 4 courts
+    random.shuffle(db_players)
+    selected = db_players[:8]
+
+    # Match scenarios for variety
+    scenarios = ["set1_in_progress", "set2_in_progress", "set2_deuce", "set1_in_progress"]
+    phases = ["Grupowa", "Półfinał", "Grupowa", "Grupowa"]
+
+    court_ids = _sorted_court_ids(COURTS.keys()) if COURTS else ["1", "2", "3", "4"]
+    court_ids = court_ids[:4]  # max 4 courts for demo
+
+    demo_matches: Dict[str, Dict[str, Any]] = {}
+
+    for i, kort_id in enumerate(court_ids):
+        p_a = selected[i * 2]
+        p_b = selected[i * 2 + 1]
+
+        # Extract surname (last word of name, uppercased)
+        name_a = p_a.get("name", "Player A")
+        name_b = p_b.get("name", "Player B")
+        surname_a = name_a.split()[-1].upper() if name_a.strip() else "PLAYER_A"
+        surname_b = name_b.split()[-1].upper() if name_b.strip() else "PLAYER_B"
+
+        # Generate IBTA-legal score
+        score = _generate_ibta_score(scenarios[i % len(scenarios)])
+
+        demo_matches[kort_id] = {
+            "A": {
+                "surname": surname_a,
+                "full_name": name_a,
+                "points": score["points_a"],
+                "set1": score["set1_a"],
+                "set2": score["set2_a"],
+                "set3": score["set3_a"],
+                "current_games": score["current_games_a"],
+                "flag_url": None,
+                "flag_code": (p_a.get("country") or "")[:3].upper() or None,
+                "flag_lookup_surname": None,
+            },
+            "B": {
+                "surname": surname_b,
+                "full_name": name_b,
+                "points": score["points_b"],
+                "set1": score["set1_b"],
+                "set2": score["set2_b"],
+                "set3": score["set3_b"],
+                "current_games": score["current_games_b"],
+                "flag_url": None,
+                "flag_code": (p_b.get("country") or "")[:3].upper() or None,
+                "flag_lookup_surname": None,
+            },
+            "current_set": score["current_set"],
+            "serve": random.choice(["A", "B"]),
             "mode": None,
             "tie": {"A": 0, "B": 0, "visible": None, "locked": False},
             "match_time": {
-                "seconds": 1560,
+                "seconds": score["time_seconds"],
                 "running": True,
                 "offset_seconds": 0,
                 "started_ts": None,
@@ -324,14 +361,22 @@ def seed_demo_data() -> None:
                 "auto_resume": True,
             },
             "match_status": {"active": True, "last_completed": None},
-            "history_meta": {"phase": "Grupowa", "category": "A2"},
+            "history_meta": {
+                "phase": phases[i % len(phases)],
+                "category": p_a.get("category") or p_b.get("category") or None,
+            },
             "overlay_visible": None,
             "updated": None,
-        },
-    }
+            "stats": {
+                "player_a": _generate_demo_stats(),
+                "player_b": _generate_demo_stats(),
+            },
+        }
 
     with STATE_LOCK:
         for kort_id, state in demo_matches.items():
             COURTS[kort_id] = state
-    logger.info("demo_data_seeded", courts=list(demo_matches.keys()))
+    logger.info("demo_data_seeded", courts=list(demo_matches.keys()),
+                source="database")
+    return (True, f"Demo data loaded for courts {', '.join(demo_matches.keys())}")
 
