@@ -463,6 +463,23 @@ Alpine.data('adminApp', () => ({
     }
   },
 
+  // ===== DEMO DATA =====
+  async loadDemoData() {
+    try {
+      const r = await fetch('/admin/api/demo', { method: 'POST' });
+      if (!r.ok) throw new Error('Failed');
+      // Re-fetch snapshot to update preview
+      const snap = await fetch('/api/snapshot').then(r2 => r2.json());
+      const c = snap.courts || snap;
+      Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
+      this._fitPreviewNames();
+      this.showToast('Demo dane załadowane (korty 1-4)', 'success');
+    } catch (err) {
+      console.error('Demo load error:', err);
+      this.showToast('Błąd ładowania demo', 'error');
+    }
+  },
+
   // ===== SSE FOR LIVE DATA IN SETTINGS =====
   initSettingsSSE() {
     if (this._settingsSSE) return;
@@ -748,39 +765,68 @@ Alpine.data('adminApp', () => ({
   applyTemplate(tplName) {
     const ov = this.currentOverlay();
     if (!ov) return;
+
+    // Helper: build a court element
+    const mkCourt = (cid, x, y, w, opts = {}) => ({
+      type:'court', court_id:String(cid), visible:true, x, y, w,
+      zone:opts.zone||'free', show_logo:opts.logo||false,
+      font_size:opts.fs||17, bg_opacity:0.95, logo_size:60,
+      label_text:opts.label||(opts.noLabel?'':'KORT '+cid),
+      label_position:opts.labelPos||'above',
+      label_gap:4, label_bg_opacity:0.85, label_font_size:opts.lfs||14,
+    });
+
+    // Template: per-court focus (main bottom-left, 3 others top, labels inverted)
+    const mkFocus = (focus) => {
+      const others = ['1','2','3','4'].filter(c => c !== String(focus));
+      return {
+        top_bar: { enabled:true, columns:3, margin_x:20, margin_top:10, gap:12 },
+        elements: [
+          mkCourt(focus, 30, 890, 600, { zone:'free', logo:false, labelPos:'above' }),
+          ...others.map((c, i) =>
+            mkCourt(c, 20+i*634, 10, 620, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:12 })
+          ),
+        ],
+      };
+    };
+
     const templates = {
+      'kort1-focus': mkFocus('1'),
+      'kort2-focus': mkFocus('2'),
+      'kort3-focus': mkFocus('3'),
+      'kort4-focus': mkFocus('4'),
       '3kort-top': {
         top_bar: { enabled: true, columns: 3, margin_x: 20, margin_top: 10, gap: 12 },
         elements: [
-          { type:'court', court_id:'1', visible:true, x:20,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 1', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
-          { type:'court', court_id:'2', visible:true, x:654,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 2', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
-          { type:'court', court_id:'3', visible:true, x:1286,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 3', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
+          mkCourt('1', 20, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
+          mkCourt('2', 654, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
+          mkCourt('3', 1286, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
         ],
       },
       '4kort-top': {
         top_bar: { enabled: true, columns: 4, margin_x: 10, margin_top: 10, gap: 10 },
         elements: [
-          { type:'court', court_id:'1', visible:true, x:10,y:10,w:467, zone:'top', show_logo:false, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 1', label_position:'above', label_gap:3, label_bg_opacity:0.85, label_font_size:11 },
-          { type:'court', court_id:'2', visible:true, x:487,y:10,w:467, zone:'top', show_logo:false, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 2', label_position:'above', label_gap:3, label_bg_opacity:0.85, label_font_size:11 },
-          { type:'court', court_id:'3', visible:true, x:964,y:10,w:467, zone:'top', show_logo:false, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 3', label_position:'above', label_gap:3, label_bg_opacity:0.85, label_font_size:11 },
-          { type:'court', court_id:'4', visible:true, x:1441,y:10,w:467, zone:'top', show_logo:false, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 4', label_position:'above', label_gap:3, label_bg_opacity:0.85, label_font_size:11 },
+          mkCourt('1', 10, 10, 467, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:11 }),
+          mkCourt('2', 487, 10, 467, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:11 }),
+          mkCourt('3', 964, 10, 467, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:11 }),
+          mkCourt('4', 1441, 10, 467, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:11 }),
         ],
       },
       'main+stats': {
         top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 },
         elements: [
-          { type:'court', court_id:'1', visible:true, x:24,y:860,w:520, zone:'free', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'', label_position:'none', label_gap:4, label_bg_opacity:0.85, label_font_size:14 },
-          { type:'stats', court_id:'1', visible:true, x:1540,y:860,w:360, zone:'free' },
+          mkCourt('1', 30, 890, 600, { logo:false, labelPos:'above' }),
+          { type:'stats', court_id:'1', visible:true, x:1540, y:860, w:360, zone:'free' },
         ],
       },
       'broadcast': {
         top_bar: { enabled: true, columns: 3, margin_x: 20, margin_top: 10, gap: 12 },
         elements: [
-          { type:'court', court_id:'1', visible:true, x:20,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 1', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
-          { type:'court', court_id:'2', visible:true, x:654,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 2', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
-          { type:'court', court_id:'3', visible:true, x:1286,y:10,w:620, zone:'top', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'KORT 3', label_position:'above', label_gap:4, label_bg_opacity:0.85, label_font_size:12 },
-          { type:'court', court_id:'1', visible:true, x:24,y:860,w:520, zone:'free', show_logo:true, font_size:17, bg_opacity:0.95, logo_size:60, label_text:'', label_position:'none', label_gap:4, label_bg_opacity:0.85, label_font_size:14 },
-          { type:'stats', court_id:'1', visible:true, x:1540,y:860,w:360, zone:'free' },
+          mkCourt('2', 20, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
+          mkCourt('3', 654, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
+          mkCourt('4', 1286, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
+          mkCourt('1', 30, 890, 600, { logo:false, labelPos:'above' }),
+          { type:'stats', court_id:'1', visible:true, x:1540, y:860, w:360, zone:'free' },
         ],
       },
     };

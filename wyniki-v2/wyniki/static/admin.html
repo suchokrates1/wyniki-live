@@ -166,7 +166,7 @@
     .ruler-text { fill:#FFD54F; font-size:11px; font-family:monospace; text-anchor:middle; }
     .ruler-bg { fill:rgba(0,0,0,0.7); rx:3; }
   </style>
-  <script type="module" crossorigin src="/assets/admin-Q1tCPjo3.js"></script>
+  <script type="module" crossorigin src="/assets/admin-DauSb9_e.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/main-DtaNp4HT.js">
   <link rel="stylesheet" crossorigin href="/assets/main-BLJcpgew.css">
 </head>
@@ -323,6 +323,7 @@
         <button @click="addOverlay()" class="btn btn-sm btn-outline btn-success">+ Nowy</button>
         <button x-show="currentOverlayId && Object.keys(overlaySettings.overlays||{}).length > 1"
                 @click="removeOverlay()" class="btn btn-sm btn-outline btn-error">&#128465; Usu&#324;</button>
+        <button @click="loadDemoData()" class="btn btn-sm btn-outline btn-warning">&#127934; Demo dane</button>
         <div class="flex-1"></div>
         <span class="text-xs font-mono opacity-50" x-text="currentOverlayId ? (location.origin+'/overlay/'+currentOverlayId) : ''"></span>
         <button x-show="currentOverlayId" @click="copyUrl(location.origin+'/overlay/'+currentOverlayId)" class="btn btn-xs btn-ghost">&#128203;</button>
@@ -505,6 +506,10 @@
               <!-- Preset templates -->
               <div class="flex gap-1 flex-wrap mb-2">
                 <span class="text-xs opacity-50 self-center w-full mb-1">&#128196; Szablony uk&#322;adu:</span>
+                <button @click="applyTemplate('kort1-focus')" class="btn btn-xs btn-outline">Kort 1 focus</button>
+                <button @click="applyTemplate('kort2-focus')" class="btn btn-xs btn-outline">Kort 2 focus</button>
+                <button @click="applyTemplate('kort3-focus')" class="btn btn-xs btn-outline">Kort 3 focus</button>
+                <button @click="applyTemplate('kort4-focus')" class="btn btn-xs btn-outline">Kort 4 focus</button>
                 <button @click="applyTemplate('3kort-top')" class="btn btn-xs btn-outline">3 korty g&oacute;ra</button>
                 <button @click="applyTemplate('4kort-top')" class="btn btn-xs btn-outline">4 korty g&oacute;ra</button>
                 <button @click="applyTemplate('main+stats')" class="btn btn-xs btn-outline">G&#322;&oacute;wny+Stats</button>
