@@ -103,9 +103,9 @@
                                 <div class="score-row" data-side="A">
                                     <dt class="player-cell">
                                         <span class="player-flag" aria-hidden="true"
-                                              :class="{ 'has-image': courts[courtId]?.A?.flag_url }"
+                                              :class="{ 'has-image': courts[courtId]?.A?.flag_url, 'has-emoji': !courts[courtId]?.A?.flag_url && courts[courtId]?.A?.flag_code }"
                                               :style="courts[courtId]?.A?.flag_url ? 'background-image:url('+courts[courtId].A.flag_url+')' : ''"
-                                              x-text="!courts[courtId]?.A?.flag_url ? (courts[courtId]?.A?.flag_code || '').toUpperCase() : ''"></span>
+                                              x-text="!courts[courtId]?.A?.flag_url ? codeToFlag(courts[courtId]?.A?.flag_code) : ''"></span>
                                         <span class="player-name" :id="'k'+courtId+'-name-A'" x-text="getPlayerName(courtId, 'A')"></span>
                                         <span class="serve-indicator" x-show="courts[courtId]?.serve === 'A'" aria-hidden="true">🎾</span>
                                     </dt>
@@ -135,9 +135,9 @@
                                 <div class="score-row" data-side="B">
                                     <dt class="player-cell">
                                         <span class="player-flag" aria-hidden="true"
-                                              :class="{ 'has-image': courts[courtId]?.B?.flag_url }"
+                                              :class="{ 'has-image': courts[courtId]?.B?.flag_url, 'has-emoji': !courts[courtId]?.B?.flag_url && courts[courtId]?.B?.flag_code }"
                                               :style="courts[courtId]?.B?.flag_url ? 'background-image:url('+courts[courtId].B.flag_url+')' : ''"
-                                              x-text="!courts[courtId]?.B?.flag_url ? (courts[courtId]?.B?.flag_code || '').toUpperCase() : ''"></span>
+                                              x-text="!courts[courtId]?.B?.flag_url ? codeToFlag(courts[courtId]?.B?.flag_code) : ''"></span>
                                         <span class="player-name" :id="'k'+courtId+'-name-B'" x-text="getPlayerName(courtId, 'B')"></span>
                                         <span class="serve-indicator" x-show="courts[courtId]?.serve === 'B'" aria-hidden="true">🎾</span>
                                     </dt>

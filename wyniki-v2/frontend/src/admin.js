@@ -3,6 +3,12 @@ import './main.css';
 
 window.Alpine = Alpine;
 
+function codeToFlag(code) {
+  if (!code || code.length < 2) return code || '';
+  const cc = code.toUpperCase().slice(0, 2);
+  return String.fromCodePoint(...[...cc].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+
 Alpine.data('adminApp', () => ({
   activeTab: 'courts',
   
@@ -1249,9 +1255,8 @@ Alpine.data('adminApp', () => ({
       let flagHtml = '';
       if (p.flag_url) {
         flagHtml = '<span class="sb-flag has-image" style="background-image:url(' + p.flag_url + ')"></span>';
-      } else {
-        const code = (p.flag_code || '').toUpperCase();
-        flagHtml = '<span class="sb-flag">' + code + '</span>';
+      } else if (p.flag_code) {
+        flagHtml = '<span class="sb-flag has-emoji">' + codeToFlag(p.flag_code) + '</span>';
       }
       const serveHtml = isServing ? '<span class="sb-serve">\uD83C\uDFBE</span>' : '';
       const dName = p.surname || p.full_name || '\u2014';

@@ -102,6 +102,7 @@
             box-shadow: 0 0 0 1px rgba(255,255,255,0.45);
         }
         .player-flag.has-image { color: transparent; }
+        .player-flag.has-emoji { background: transparent; font-size: 20px; box-shadow: none; color: white; line-height: 1; }
 
         /* Serve indicator */
         .serve-indicator {
@@ -187,6 +188,12 @@
     const overlayId = window.location.pathname.split('/').pop() || '1';
     const SETTINGS_POLL_MS = 2000;
     const ALL_COURT_IDS = ['1','2','3','4'];
+
+    function codeToFlag(code) {
+        if (!code || code.length < 2) return code || '';
+        var cc = code.toUpperCase().slice(0, 2);
+        return String.fromCodePoint.apply(null, Array.from(cc).map(function(c) { return 0x1F1E6 + c.charCodeAt(0) - 65; }));
+    }
     let courts = {};
     let settings = { tournament_logo: null, tournament_name: '', overlays: {} };
     let eventSource = null;
@@ -237,9 +244,8 @@
             var flagHtml = '';
             if (p.flag_url) {
                 flagHtml = '<span class="player-flag has-image" style="background-image:url('+p.flag_url+')"></span>';
-            } else {
-                var code = (p.flag_code || '').toUpperCase();
-                flagHtml = '<span class="player-flag">'+code+'</span>';
+            } else if (p.flag_code) {
+                flagHtml = '<span class="player-flag has-emoji">' + codeToFlag(p.flag_code) + '</span>';
             }
             var serveHtml = isServing ? '<span class="serve-indicator">\uD83C\uDFBE</span>' : '';
             var dName = p.surname||p.full_name||'\u2014';
