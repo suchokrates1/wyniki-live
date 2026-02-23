@@ -11,13 +11,22 @@
     /* 16:9 preview canvas */
     .canvas-outer {
       width: 100%; aspect-ratio: 16/9; background: #0d1117;
-      border-radius: 12px; position: relative; overflow: hidden;
+      border-radius: 12px; position: relative; overflow: visible;
       border: 2px solid rgba(255,255,255,0.08);
       box-shadow: inset 0 0 60px rgba(0,0,0,0.5);
     }
     .canvas-inner {
       width: 1920px; height: 1080px;
       transform-origin: top left; position: absolute; top: 0; left: 0;
+    }
+    /* Off-canvas zone: visible but dimmed area outside 1920x1080 */
+    .canvas-offscreen {
+      position: absolute; inset: -200px; pointer-events: none; z-index: -1;
+    }
+    .canvas-inner::after {
+      content: ''; position: absolute; inset: 0;
+      border: 1px solid rgba(100,180,255,0.15);
+      pointer-events: none; z-index: 999;
     }
     .canvas-grid {
       position: absolute; inset: 0; pointer-events: none;
@@ -41,6 +50,11 @@
     .drag-el.is-dragging { cursor: grabbing; outline-color: #4CAF50; z-index: 100; }
     .drag-el.is-selected { outline-color: #2196F3; }
     .drag-el.el-hidden { opacity: 0.15; }
+    .drag-el.zone-top { outline-color: rgba(0,255,150,0.3); }
+    .drag-el.zone-top.is-selected { outline-color: rgba(0,255,150,0.7); }
+    .zone-badge { position:absolute; top:-14px; right:4px; font-size:9px; padding:1px 5px;
+      background:rgba(0,200,120,0.8); color:#fff; border-radius:3px; pointer-events:none;
+      text-transform:uppercase; letter-spacing:0.5px; font-weight:700; z-index:20; }
 
     /* scoreboard – dark grid matching main page */
     .sb-wrap { display:flex; width:100%; align-items:stretch; gap:8px; }
@@ -316,6 +330,23 @@
                 <div class="canvas-inner" x-ref="canvasInner" :style="'transform:scale('+canvasScale+')'">
                   <div class="canvas-grid"></div>
                   <div class="canvas-safe"></div>
+                  <!-- Top-bar grid column guides -->
+                  <template x-if="currentOverlay()?.top_bar?.enabled">
+                    <div style="position:absolute;inset:0;pointer-events:none;z-index:50;">
+                      <template x-for="i in (currentOverlay()?.top_bar?.columns || 3)" :key="'gc_'+i">
+                        <div :style="(() => {
+                          const tb = currentOverlay().top_bar;
+                          const cols = tb.columns || 3;
+                          const mx = tb.margin_x || 0;
+                          const gap = tb.gap || 10;
+                          const totalW = 1920 - 2*mx;
+                          const colW = (totalW - (cols-1)*gap) / cols;
+                          const x = mx + (i-1)*(colW+gap);
+                          return 'position:absolute;left:'+x+'px;top:0;width:'+colW+'px;height:60px;border:1px dashed rgba(0,255,150,0.35);border-radius:6px;background:rgba(0,255,150,0.04);';
+                        })()" class="pointer-events-none"></div>
+                      </template>
+                    </div>
+                  </template>
 
                   <!-- Elements -->
                   <template x-for="(el, idx) in currentElements()" :key="'el_'+idx">
@@ -324,11 +355,13 @@
                            'is-dragging': dragging?.idx === idx,
                            'is-selected': selectedElIdx === idx,
                            'el-hidden': el.visible === false,
-                           'has-h': !!el.h
+                           'has-h': !!el.h,
+                           'zone-top': el.zone === 'top'
                          }"
                          :style="'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;'+(el.h ? 'height:'+el.h+'px;' : '')"
                          @pointerdown.prevent="startDrag($event, idx)"
                          @click.stop="selectedElIdx = idx">
+                      <span x-show="el.zone === 'top'" class="zone-badge">G&Oacute;RA</span>
                       <!-- court scoreboard -->
                       <template x-if="el.type === 'court'">
                         <div x-html="renderCourtElement(el)"></div>
@@ -406,6 +439,84 @@
             </div>
           </div>
 
+          <!-- Top-bar grid mode -->
+          <div class="card bg-base-100 shadow-xl mb-3">
+            <div class="card-body p-3">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="font-bold text-sm">&#9638; Siatka g&oacute;rna</h3>
+                <input type="checkbox" class="toggle toggle-accent toggle-xs"
+                       :checked="currentOverlay()?.top_bar?.enabled"
+                       @change="setTopBarProp('enabled', $event.target.checked)">
+              </div>
+              <template x-if="currentOverlay()?.top_bar?.enabled">
+                <div>
+                  <div class="flex gap-2 mb-2">
+                    <span class="text-xs opacity-70 self-center">Kolumny</span>
+                    <div class="btn-group">
+                      <button class="btn btn-xs" :class="currentOverlay()?.top_bar?.columns === 3 ? 'btn-primary' : ''" @click="setTopBarProp('columns', 3)">3</button>
+                      <button class="btn btn-xs" :class="currentOverlay()?.top_bar?.columns === 4 ? 'btn-primary' : ''" @click="setTopBarProp('columns', 4)">4</button>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div class="prop-row">
+                      <span class="prop-label text-xs">Margines X</span>
+                      <input type="number" class="input input-xs input-bordered w-14 prop-input" min="0" max="200"
+                             :value="currentOverlay()?.top_bar?.margin_x || 0"
+                             @change="setTopBarProp('margin_x', +$event.target.value)">
+                    </div>
+                    <div class="prop-row">
+                      <span class="prop-label text-xs">G&oacute;ra</span>
+                      <input type="number" class="input input-xs input-bordered w-14 prop-input" min="0" max="200"
+                             :value="currentOverlay()?.top_bar?.margin_top || 0"
+                             @change="setTopBarProp('margin_top', +$event.target.value)">
+                    </div>
+                    <div class="prop-row">
+                      <span class="prop-label text-xs">Odst&#281;p</span>
+                      <input type="number" class="input input-xs input-bordered w-14 prop-input" min="0" max="100"
+                             :value="currentOverlay()?.top_bar?.gap ?? 10"
+                             @change="setTopBarProp('gap', +$event.target.value)">
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Alignment & tools -->
+          <div class="card bg-base-100 shadow-xl mb-3">
+            <div class="card-body p-3">
+              <h3 class="font-bold text-sm mb-2">&#128295; Narz&#281;dzia</h3>
+              <div class="flex gap-1 flex-wrap mb-2">
+                <span class="text-xs opacity-50 self-center w-full mb-1">Wyr&oacute;wnaj wolne elementy:</span>
+                <button @click="alignElements('left')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do lewej">&#9475;&#9615;</button>
+                <button @click="alignElements('center-h')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj centr. poziomo">&#9475;&#9608;&#9475;</button>
+                <button @click="alignElements('right')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do prawej">&#9615;&#9475;</button>
+                <span class="opacity-20">|</span>
+                <button @click="alignElements('top')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do g&oacute;ry">&#9581;&#9472;</button>
+                <button @click="alignElements('center-v')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj centr. pionowo">&#9472;&#9608;&#9472;</button>
+                <button @click="alignElements('bottom')" class="btn btn-xs btn-ghost" title="Wyr&oacute;wnaj do do&lstrok;u">&#9472;&#9583;</button>
+              </div>
+              <div class="flex gap-1 flex-wrap mb-2">
+                <span class="text-xs opacity-50 self-center w-full mb-1">Rozłóż r&oacute;wnomiernie:</span>
+                <button @click="distributeElements('horizontal')" class="btn btn-xs btn-ghost" title="Rozło&lstrok; poziomo">&#8596; Poziomo</button>
+                <button @click="distributeElements('vertical')" class="btn btn-xs btn-ghost" title="Rozło&lstrok; pionowo">&#8597; Pionowo</button>
+              </div>
+              <div class="flex gap-1 flex-wrap mb-2">
+                <span class="text-xs opacity-50 self-center w-full mb-1">Przypnij do kraw&#281;dzi:</span>
+                <button @click="snapToEdge('top-left')" class="btn btn-xs btn-ghost">&#8598;</button>
+                <button @click="snapToEdge('top-center')" class="btn btn-xs btn-ghost">&#8593;</button>
+                <button @click="snapToEdge('top-right')" class="btn btn-xs btn-ghost">&#8599;</button>
+                <button @click="snapToEdge('bottom-left')" class="btn btn-xs btn-ghost">&#8601;</button>
+                <button @click="snapToEdge('bottom-center')" class="btn btn-xs btn-ghost">&#8595;</button>
+                <button @click="snapToEdge('bottom-right')" class="btn btn-xs btn-ghost">&#8600;</button>
+              </div>
+              <label class="label cursor-pointer gap-1 py-0 justify-start">
+                <input type="checkbox" class="checkbox checkbox-xs checkbox-accent" x-model="snapEnabled">
+                <span class="label-text text-xs">&#128459; Magnetyczny snap (siatka + kraw&#281;dzie)</span>
+              </label>
+            </div>
+          </div>
+
           <!-- Selected element properties -->
           <div class="card bg-base-100 shadow-xl mb-3" x-show="selectedElIdx >= 0">
             <div class="card-body p-3">
@@ -434,6 +545,18 @@
                 <input type="checkbox" class="checkbox checkbox-xs checkbox-info" x-model="keepAspectRatio">
                 <span class="label-text text-xs">&#128279; Zachowaj proporcje</span>
               </label>
+
+              <!-- Zone selector -->
+              <div class="prop-row mb-2">
+                <span class="prop-label">Strefa</span>
+                <select class="select select-xs select-bordered flex-1"
+                        :value="selectedEl()?.zone || 'free'"
+                        @change="setElZone($event.target.value)">
+                  <option value="free">Swobodny</option>
+                  <option value="top">G&oacute;rny pasek</option>
+                </select>
+                <span x-show="selectedEl()?.zone === 'top' && currentOverlay()?.top_bar?.enabled" class="badge badge-accent badge-xs ml-1">siatka</span>
+              </div>
 
               <!-- Visibility & size (court only) -->
               <template x-if="selectedEl()?.type === 'court'">
