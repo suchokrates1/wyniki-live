@@ -2,9 +2,8 @@ import Alpine from 'alpinejs';
 import './main.css';
 
 function codeToFlag(code) {
-  if (!code || code.length < 2) return code || '';
-  const cc = code.toUpperCase().slice(0, 2);
-  return String.fromCodePoint(...[...cc].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+  if (!code || code.length < 2) return '';
+  return 'https://flagcdn.com/w40/' + code.toLowerCase().slice(0, 2) + '.png';
 }
 
 /* ============================================================
