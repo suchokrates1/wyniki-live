@@ -28,9 +28,13 @@
 
         /* ---- Court label bar ---- */
         .court-label-bar {
-            text-align: center; font-weight: 700; text-transform: uppercase;
+            display: flex; align-items: center;
+            font-weight: 700; text-transform: uppercase;
             letter-spacing: 0.1em; padding: 6px 16px;
             white-space: nowrap; color: white;
+        }
+        .court-label-bar .label-half {
+            flex: 1; text-align: center;
         }
 
         /* ---- Dark grid scoreboard (matches main page) ---- */
@@ -162,6 +166,7 @@
             font-family: 'Courier New', monospace;
         }
         .match-time-bar .time-icon { opacity: 0.5; margin-right: 4px; }
+        .label-time { font-family: 'Courier New', monospace; }
 
         /* ---- Stats panel ---- */
         .stats-panel {
@@ -212,6 +217,18 @@
 
     function getPreset() {
         return settings.overlays?.[overlayId] || { name: '', auto_hide: false, elements: [] };
+    }
+
+    function calcMatchTime(court) {
+        if (!court || !court.match_status?.active || !court.match_time) return null;
+        var mt = court.match_time;
+        var secs = mt.seconds || 0;
+        if (mt.running && mt.resume_ts) secs += (Date.now()/1000 - mt.resume_ts);
+        secs += (mt.offset_seconds || 0);
+        secs = Math.max(0, Math.floor(secs));
+        var hh = String(Math.floor(secs/3600)).padStart(2,'0');
+        var mm = String(Math.floor((secs%3600)/60)).padStart(2,'0');
+        return hh+':'+mm;
     }
 
     function renderScoreboard(el) {
@@ -295,11 +312,18 @@
         var hFill = el.h ? ' h-fill' : '';
         return '<div class="sb-wrap '+inactiveClass+hFill+'">'
             +logoHtml
-            +'<div style="flex:1;min-width:0;">'
             +'<div class="score-table" style="'+opacityStyle+'">'
             +pRow(pA, 'A', 'side-a')
             +pRow(pB, 'B', 'side-b')
-            +'</div>'+timeHtml+'</div></div>';
+            +'</div></div>';
+    }
+
+    function _v(val, suffix) { return val != null ? val + (suffix||'') : '\u2014'; }
+    function _serveRatio(si, st) { return (si != null && st != null) ? si+'/'+st : '\u2014'; }
+    function _totalPtsWon(own, opp) {
+        var a = (own.aces||0) + (own.winners||0);
+        var b = (opp.double_faults||0) + (opp.forced_errors||0) + (opp.unforced_errors||0);
+        return a + b;
     }
 
     function renderStats(el) {
@@ -311,15 +335,27 @@
         var nA = pA.surname||pA.full_name||'A';
         var nB = pB.surname||pB.full_name||'B';
         var sA = st.player_a||{}, sB = st.player_b||{};
+        var mode = el.stats_mode || 'simple';
         var rows = [
-            {l:'Asy', a:sA.aces!=null?sA.aces:'\u2014', b:sB.aces!=null?sB.aces:'\u2014'},
-            {l:'Podw. b\u0142\u0119dy', a:sA.double_faults!=null?sA.double_faults:'\u2014', b:sB.double_faults!=null?sB.double_faults:'\u2014'},
-            {l:'Winnery', a:sA.winners!=null?sA.winners:'\u2014', b:sB.winners!=null?sB.winners:'\u2014'},
-            {l:'B\u0142. niewymuszone', a:sA.unforced_errors!=null?sA.unforced_errors:'\u2014', b:sB.unforced_errors!=null?sB.unforced_errors:'\u2014'},
-            {l:'1. serwis %', a:sA.first_serve_pct!=null?sA.first_serve_pct+'%':'\u2014', b:sB.first_serve_pct!=null?sB.first_serve_pct+'%':'\u2014'},
+            {l:'Asy', a:_v(sA.aces), b:_v(sB.aces)},
+            {l:'Podw. b\u0142\u0119dy', a:_v(sA.double_faults), b:_v(sB.double_faults)},
+            {l:'Winnery', a:_v(sA.winners), b:_v(sB.winners)},
         ];
+        if (mode === 'advanced') {
+            rows.push({l:'B\u0142. wymuszone', a:_v(sA.forced_errors), b:_v(sB.forced_errors)});
+        }
+        rows.push({l:'B\u0142. niewymuszone', a:_v(sA.unforced_errors), b:_v(sB.unforced_errors)});
+        if (mode === 'advanced') {
+            rows.push({l:'1. serwis', a:_serveRatio(sA.first_serves_in, sA.first_serves_total), b:_serveRatio(sB.first_serves_in, sB.first_serves_total)});
+        }
+        rows.push({l:'1. serwis %', a:_v(sA.first_serve_pct,'%'), b:_v(sB.first_serve_pct,'%')});
+        if (mode === 'advanced') {
+            rows.push({l:'2. serwis %', a:_v(sA.second_serve_pct,'%'), b:_v(sB.second_serve_pct,'%')});
+            rows.push({l:'Pkt wygrane', a:_totalPtsWon(sA,sB), b:_totalPtsWon(sB,sA)});
+        }
+        var title = mode === 'advanced' ? 'Statystyki zaawansowane' : 'Statystyki';
         return '<div class="stats-panel">'
-            +'<div class="stats-title">Statystyki</div>'
+            +'<div class="stats-title">'+title+'</div>'
             +'<div class="stats-header"><div></div><div class="player-col">'+nA+'</div><div class="player-col">'+nB+'</div></div>'
             +rows.map(function(r){return '<div class="stats-row"><div class="stat-label">'+r.l+'</div><div class="stat-value">'+r.a+'</div><div class="stat-value">'+r.b+'</div></div>';}).join('')
             +'</div>';
@@ -333,7 +369,10 @@
         var pos = el.label_position || 'above';
         var marginProp = pos==='above' ? 'margin-bottom' : 'margin-top';
         var radius = pos==='above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
-        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;">'+el.label_text+'</div>';
+        var court = courts[el.court_id] || {};
+        var timeStr = calcMatchTime(court);
+        var timeHalf = timeStr ? '<span class="label-half label-time" data-court="'+el.court_id+'">&#9201; '+timeStr+'</span>' : '<span class="label-half"></span>';
+        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;"><span class="label-half">'+el.label_text+'</span>'+timeHalf+'</div>';
     }
 
     function render() {
@@ -473,18 +512,11 @@
         setInterval(async function() { await loadSettings(); render(); requestAnimationFrame(fitPlayerNames); }, SETTINGS_POLL_MS);
         // Tick match timers every minute
         setInterval(function() {
-            document.querySelectorAll('.match-time-bar').forEach(function(el) {
+            document.querySelectorAll('.label-time').forEach(function(el) {
                 var cid = el.getAttribute('data-court');
                 var court = cid ? courts[cid] : null;
-                if (!court || !court.match_time) return;
-                var mt = court.match_time;
-                var secs = mt.seconds || 0;
-                if (mt.running && mt.resume_ts) secs += (Date.now()/1000 - mt.resume_ts);
-                secs += (mt.offset_seconds || 0);
-                secs = Math.max(0, Math.floor(secs));
-                var hh = String(Math.floor(secs/3600)).padStart(2,'0');
-                var mm = String(Math.floor((secs%3600)/60)).padStart(2,'0');
-                el.innerHTML = '<span class="time-icon">&#9201;</span> '+hh+':'+mm;
+                var timeStr = calcMatchTime(court);
+                if (timeStr) el.innerHTML = '&#9201; '+timeStr;
             });
         }, 60000);
         window.addEventListener('resize', function() { render(); requestAnimationFrame(fitPlayerNames); });
