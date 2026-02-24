@@ -11,15 +11,14 @@ services:
       - "8087:8080"
     volumes:
       - wyniki_data:/data
-      - ../wyniki-v1/download:/app/download:ro
     environment:
       # Flask
       - SECRET_KEY=${SECRET_KEY:-prod-secret-key-change-me}
       - FLASK_ENV=production
       - DEBUG=false
       
-      # Database - używamy tej samej co v1
-      - DATABASE_PATH=/data/wyniki_archive.sqlite3
+      # Database
+      - DATABASE_PATH=/data/wyniki.sqlite3
       
       # Admin
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
@@ -28,7 +27,7 @@ services:
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
       
-      # UNO Overlays (dla zgodności z v1)
+      # UNO Overlays
       - UNO_BASE=${UNO_BASE:-https://app.overlays.uno/apiv2/controlapps}
       - KORT1_ID=${KORT1_ID}
       - KORT2_ID=${KORT2_ID}
