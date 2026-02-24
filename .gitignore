@@ -6,7 +6,6 @@
 # Database
 *.sqlite3
 wyniki.db
-wyniki_archive.sqlite3
 
 # Logs
 cookies.txt
