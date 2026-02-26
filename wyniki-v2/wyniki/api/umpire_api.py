@@ -374,9 +374,55 @@ def finish_match(match_id: int):
         kort_id = match.court_id
         if kort_id:
             court_state = ensure_court_state(kort_id)
+
+            # Ensure set scores are correct from Match DB record (belt-and-suspenders)
+            sets_history = json.loads(match.sets_history) if match.sets_history else []
             with STATE_LOCK:
                 court_state["match_status"]["active"] = False
                 court_state["match_status"]["last_completed"] = datetime.utcnow().isoformat()
+                
+                # Overwrite set scores from authoritative sets_history
+                if sets_history:
+                    for idx, set_score in enumerate(sets_history):
+                        set_num = idx + 1
+                        court_state["A"][f"set{set_num}"] = set_score.get("player1_games", 0)
+                        court_state["B"][f"set{set_num}"] = set_score.get("player2_games", 0)
+                    court_state["current_set"] = len(sets_history)
+                    # Clear phantom set data beyond actual sets played
+                    for i in range(len(sets_history) + 1, 4):
+                        court_state["A"][f"set{i}"] = 0
+                        court_state["B"][f"set{i}"] = 0
+                
+                # Store match_id for history linkage
+                court_state["history_meta"] = court_state.get("history_meta", {})
+                court_state["history_meta"]["match_id"] = match_id
+                court_state["history_meta"]["stats_mode"] = court_state.get("stats_mode")
+
+                # Auto-detect category from player DB records
+                # If both players share the same category, include it
+                try:
+                    active_tournament = Tournament.query.filter_by(active=1).first()
+                    if active_tournament:
+                        p1 = Player.query.filter_by(
+                            tournament_id=active_tournament.id,
+                            name=match.player1_name
+                        ).first()
+                        p2 = Player.query.filter_by(
+                            tournament_id=active_tournament.id,
+                            name=match.player2_name
+                        ).first()
+                        if p1 and p2 and p1.category and p2.category:
+                            if p1.category == p2.category:
+                                court_state["history_meta"]["category"] = p1.category
+                except Exception as e:
+                    logger.warning(f"Could not detect category: {e}")
+
+                # Store match duration from Match record
+                if match.statistics:
+                    duration_ms = match.statistics.match_duration_ms or 0
+                    court_state["match_time"] = court_state.get("match_time", {})
+                    if duration_ms > 0:
+                        court_state["match_time"]["seconds"] = duration_ms // 1000
             
             # Add match to history for frontend display
             add_match_to_history(kort_id, court_state)
@@ -390,6 +436,9 @@ def finish_match(match_id: int):
                 court_state["current_set"] = 1
                 court_state["serve"] = None
                 court_state["tie"] = {"A": 0, "B": 0, "visible": None, "locked": False}
+                court_state["stats"] = {}
+                court_state["stats_mode"] = None
+                court_state["history_meta"] = {}
             
             # Emit cleared state after a short delay so frontend sees final score first
             import threading
@@ -453,6 +502,7 @@ def receive_statistics():
         # Update match info
         stats.match_duration_ms = data.get("match_duration_ms", 0)
         stats.winner = data.get("winner")
+        stats.stats_mode = data.get("stats_mode")
         stats.received_at = datetime.utcnow().isoformat()
         
         db.session.commit()
@@ -562,9 +612,27 @@ def log_match_event():
             current_set = sets_a + sets_b + 1
             court_state["current_set"] = current_set
 
-            # Write current games to set{N} for frontend display
-            court_state["A"][f"set{current_set}"] = games_a
-            court_state["B"][f"set{current_set}"] = games_b
+            # --- Sets history (from Android >= vC4) ---
+            # Populate completed set scores from sets_history if available
+            sets_history = score.get('sets_history', [])
+            if sets_history:
+                for sh in sets_history:
+                    sn = int(sh.get('set_number', 0))
+                    if 1 <= sn <= 3:
+                        court_state["A"][f"set{sn}"] = int(sh.get('player1_games', 0))
+                        court_state["B"][f"set{sn}"] = int(sh.get('player2_games', 0))
+
+            # Write current games to set{N} for the active set
+            # Only write if this set is not already finalized in sets_history
+            completed_set_nums = {int(sh.get('set_number', 0)) for sh in sets_history} if sets_history else set()
+            if current_set not in completed_set_nums:
+                court_state["A"][f"set{current_set}"] = games_a
+                court_state["B"][f"set{current_set}"] = games_b
+
+            # Store stats_mode for later use
+            stats_mode = score.get('stats_mode')
+            if stats_mode:
+                court_state["stats_mode"] = stats_mode
 
             # --- Match status ---
             match_finished = bool(score.get('match_finished', False))

@@ -38,7 +38,15 @@ const TRANSLATIONS = {
       active: 'aktywny',
       serving: 'serwuje'
     },
-    history: { title: 'Historia meczów' }
+    history: { title: 'Historia meczów' },
+    historyDetail: {
+      details: 'Szczegóły',
+      collapse: 'Zwiń',
+      loading: 'Ładowanie...',
+      noStats: 'Brak statystyk',
+      category: 'Kategoria',
+      duration: 'Czas'
+    }
   },
   de: {
     htmlLang: 'de',
@@ -68,7 +76,15 @@ const TRANSLATIONS = {
       active: 'aktiv',
       serving: 'Aufschlag'
     },
-    history: { title: 'Match-Historie' }
+    history: { title: 'Match-Historie' },
+    historyDetail: {
+      details: 'Details',
+      collapse: 'Einklappen',
+      loading: 'Laden...',
+      noStats: 'Keine Statistiken',
+      category: 'Kategorie',
+      duration: 'Dauer'
+    }
   },
   en: {
     htmlLang: 'en',
@@ -98,7 +114,15 @@ const TRANSLATIONS = {
       active: 'active',
       serving: 'serving'
     },
-    history: { title: 'Match history' }
+    history: { title: 'Match history' },
+    historyDetail: {
+      details: 'Details',
+      collapse: 'Collapse',
+      loading: 'Loading...',
+      noStats: 'No statistics',
+      category: 'Category',
+      duration: 'Duration'
+    }
   },
   it: {
     htmlLang: 'it',
@@ -128,7 +152,15 @@ const TRANSLATIONS = {
       active: 'attivo',
       serving: 'al servizio'
     },
-    history: { title: 'Storico incontri' }
+    history: { title: 'Storico incontri' },
+    historyDetail: {
+      details: 'Dettagli',
+      collapse: 'Chiudi',
+      loading: 'Caricamento...',
+      noStats: 'Nessuna statistica',
+      category: 'Categoria',
+      duration: 'Durata'
+    }
   },
   es: {
     htmlLang: 'es',
@@ -158,7 +190,15 @@ const TRANSLATIONS = {
       active: 'activo',
       serving: 'al servicio'
     },
-    history: { title: 'Historial de partidos' }
+    history: { title: 'Historial de partidos' },
+    historyDetail: {
+      details: 'Detalles',
+      collapse: 'Cerrar',
+      loading: 'Cargando...',
+      noStats: 'Sin estadísticas',
+      category: 'Categoría',
+      duration: 'Duración'
+    }
   },
   fr: {
     htmlLang: 'fr',
@@ -188,7 +228,15 @@ const TRANSLATIONS = {
       active: 'actif',
       serving: 'au service'
     },
-    history: { title: 'Historique des matchs' }
+    history: { title: 'Historique des matchs' },
+    historyDetail: {
+      details: 'Détails',
+      collapse: 'Réduire',
+      loading: 'Chargement...',
+      noStats: 'Pas de statistiques',
+      category: 'Catégorie',
+      duration: 'Durée'
+    }
   }
 };
 
@@ -264,6 +312,7 @@ Alpine.data('tennisApp', () => ({
   lang: 'pl',
   darkMode: false,
   history: [],
+  expandedMatchStats: {},  // match_id -> stats data (for Details button)
 
   init() {
     // Restore dark mode preference
@@ -582,6 +631,137 @@ Alpine.data('tennisApp', () => ({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  },
+
+  /* --- History formatting helpers --- */
+  /**
+   * Format score arrays into tennis-friendly display.
+   * e.g., [4,1,0] vs [1,4,0] → "4:1, 1:4" (skip unplayed sets with 0:0)
+   */
+  formatHistoryScore(scoreA, scoreB) {
+    if (!scoreA || !scoreB) return '–';
+    const parts = [];
+    const numSets = Math.max(scoreA.length, scoreB.length);
+    for (let i = 0; i < numSets; i++) {
+      const a = scoreA[i] ?? 0;
+      const b = scoreB[i] ?? 0;
+      if (a === 0 && b === 0 && i > 0) continue; // Skip unplayed sets
+      // Detect super tiebreak (set 3, usually lower scores like 10:7)
+      const isSuperTB = i === 2 && parts.length === 2;
+      if (isSuperTB) {
+        parts.push(`STB ${a}:${b}`);
+      } else {
+        parts.push(`${a}:${b}`);
+      }
+    }
+    return parts.join(', ') || '–';
+  },
+
+  /**
+   * Build accessible single-string description for NVDA.
+   * e.g., "Kort 1: Kowalski vs Nowak — Kategoria B1, wynik 4:1, 1:4, Super TB: 7:5, czas 12:30"
+   */
+  getHistoryAriaLabel(match) {
+    const court = `Kort ${match.kort_id}`;
+    const players = `${match.player_a || '-'} vs ${match.player_b || '-'}`;
+    const parts = [court, players];
+
+    if (match.category) {
+      parts.push(`Kategoria ${match.category}`);
+    }
+
+    // Build score string
+    const scoreA = match.score_a || [];
+    const scoreB = match.score_b || [];
+    const scoreParts = [];
+    for (let i = 0; i < Math.max(scoreA.length, scoreB.length); i++) {
+      const a = scoreA[i] ?? 0;
+      const b = scoreB[i] ?? 0;
+      if (a === 0 && b === 0 && i > 0) continue;
+      const isSuperTB = i === 2 && scoreParts.length === 2;
+      if (isSuperTB) {
+        scoreParts.push(`Super TB ${a}:${b}`);
+      } else {
+        scoreParts.push(`${a}:${b}`);
+      }
+    }
+    if (scoreParts.length > 0) {
+      parts.push(`wynik ${scoreParts.join(', ')}`);
+    }
+
+    if (match.duration_seconds) {
+      parts.push(`czas ${this.formatTime(match.duration_seconds)}`);
+    }
+
+    return parts.join(', ');
+  },
+
+  /**
+   * Toggle details panel for a history match.
+   * Fetches stats from server if not already loaded.
+   */
+  async toggleMatchDetails(matchId) {
+    if (!matchId) return;
+    const key = String(matchId);
+    
+    if (this.expandedMatchStats[key]) {
+      // Collapse: remove entry
+      delete this.expandedMatchStats[key];
+      this.expandedMatchStats = { ...this.expandedMatchStats };
+      return;
+    }
+
+    // Fetch stats from server
+    try {
+      this.expandedMatchStats = { ...this.expandedMatchStats, [key]: { loading: true } };
+      const response = await fetch(`/api/match-stats/${matchId}`);
+      if (!response.ok) {
+        this.expandedMatchStats = { ...this.expandedMatchStats, [key]: { error: true } };
+        return;
+      }
+      const data = await response.json();
+      this.expandedMatchStats = { ...this.expandedMatchStats, [key]: data };
+    } catch {
+      this.expandedMatchStats = { ...this.expandedMatchStats, [key]: { error: true } };
+    }
+  },
+
+  isMatchExpanded(matchId) {
+    return matchId && !!this.expandedMatchStats[String(matchId)];
+  },
+
+  getMatchStats(matchId) {
+    return matchId ? this.expandedMatchStats[String(matchId)] : null;
+  },
+
+  /**
+   * Get stats rows to display, filtered by stats_mode.
+   * BASIC: only winners (Win), double faults, first serve %
+   * ADVANCED: all stats
+   */
+  getStatsRows(stats, playerKey) {
+    if (!stats || !stats[playerKey]) return [];
+    const s = stats[playerKey];
+    const mode = stats.stats_mode || 'ADVANCED';
+    const rows = [];
+
+    if (mode === 'ADVANCED') {
+      rows.push({ label: 'Asy', value: s.aces ?? 0 });
+    }
+    rows.push({ label: 'Podwójne błędy', value: s.double_faults ?? 0 });
+    rows.push({ label: 'Winnery', value: s.winners ?? 0 });
+    if (mode === 'ADVANCED') {
+      rows.push({ label: 'Wymuszone błędy', value: s.forced_errors ?? 0 });
+      rows.push({ label: 'Niewymuszone błędy', value: s.unforced_errors ?? 0 });
+    }
+    if (s.first_serves > 0 || s.first_serve_percentage > 0) {
+      const pct = s.first_serve_percentage != null
+        ? Math.round(s.first_serve_percentage) + '%'
+        : (s.first_serves > 0 ? Math.round((s.first_serves_in / s.first_serves) * 100) + '%' : '–');
+      rows.push({ label: '1. serwis %', value: pct });
+    }
+
+    return rows;
   }
 }));
 

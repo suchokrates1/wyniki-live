@@ -73,7 +73,9 @@ def init_db() -> None:
                 score_a TEXT,
                 score_b TEXT,
                 category TEXT,
-                phase TEXT DEFAULT 'Grupowa'
+                phase TEXT DEFAULT 'Grupowa',
+                match_id INTEGER,
+                stats_mode TEXT
             )
         """)
         
@@ -92,6 +94,16 @@ def init_db() -> None:
             cursor.execute("ALTER TABLE courts ADD COLUMN pin TEXT")
             logger.info("database_migration", action="added_pin_column_to_courts")
         
+        # Migration: Add match_id and stats_mode columns to match_history
+        cursor.execute("PRAGMA table_info(match_history)")
+        mh_columns = [row[1] for row in cursor.fetchall()]
+        if 'match_id' not in mh_columns:
+            cursor.execute("ALTER TABLE match_history ADD COLUMN match_id INTEGER")
+            logger.info("database_migration", action="added_match_id_to_match_history")
+        if 'stats_mode' not in mh_columns:
+            cursor.execute("ALTER TABLE match_history ADD COLUMN stats_mode TEXT")
+            logger.info("database_migration", action="added_stats_mode_to_match_history")
+        
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)
@@ -106,8 +118,8 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
                 INSERT INTO match_history (
                     kort_id, ended_ts, duration_seconds,
                     player_a, player_b, score_a, score_b,
-                    category, phase
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    category, phase, match_id, stats_mode
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 entry.get("kort_id"),
                 entry.get("ended_ts"),
@@ -117,7 +129,9 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
                 json.dumps(entry.get("score_a", [])),
                 json.dumps(entry.get("score_b", [])),
                 entry.get("category"),
-                entry.get("phase", "Grupowa")
+                entry.get("phase", "Grupowa"),
+                entry.get("match_id"),
+                entry.get("stats_mode"),
             ))
             conn.commit()
         logger.info("match_history_inserted", kort_id=entry.get("kort_id"))
@@ -300,7 +314,7 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
             
             result = []
             for row in rows:
-                result.append({
+                entry = {
                     "id": row["id"],
                     "kort_id": row["kort_id"],
                     "ended_ts": row["ended_ts"],
@@ -310,8 +324,16 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
                     "score_a": json.loads(row["score_a"]) if row["score_a"] else [],
                     "score_b": json.loads(row["score_b"]) if row["score_b"] else [],
                     "category": row["category"],
-                    "phase": row["phase"]
-                })
+                    "phase": row["phase"],
+                }
+                # New columns (may not exist in older DBs before migration runs)
+                try:
+                    entry["match_id"] = row["match_id"]
+                    entry["stats_mode"] = row["stats_mode"]
+                except (IndexError, KeyError):
+                    entry["match_id"] = None
+                    entry["stats_mode"] = None
+                result.append(entry)
             return result
     except Exception as e:
         logger.error("fetch_match_history_error", error=str(e))

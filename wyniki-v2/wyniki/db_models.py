@@ -178,6 +178,7 @@ class MatchStatistics(db.Model):
     
     match_duration_ms = db.Column(db.BigInteger, default=0)
     winner = db.Column(db.String(200))
+    stats_mode = db.Column(db.String(20))
     received_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
     
     # Relationships
@@ -186,6 +187,7 @@ class MatchStatistics(db.Model):
     def to_dict(self):
         return {
             'match_id': self.match_id,
+            'stats_mode': self.stats_mode,
             'player1_stats': {
                 'aces': self.player1_aces,
                 'double_faults': self.player1_double_faults,
