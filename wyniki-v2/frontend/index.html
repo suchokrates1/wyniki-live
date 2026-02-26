@@ -184,14 +184,64 @@
         <!-- History Section -->
         <section id="history-section" x-show="history.length > 0" aria-labelledby="history-title">
             <h3 id="history-title" class="history-title" x-text="tr().history?.title || 'Historia meczów'"></h3>
-            <div id="history-body" class="history-list">
+            <div id="history-body" class="history-list" role="list">
                 <template x-for="match in history" :key="match.id">
-                    <div class="history-item">
-                        <div class="history-term" x-text="'Kort ' + match.kort_id"></div>
-                        <div class="history-value" x-text="match.player_a + ' vs ' + match.player_b + ' — ' + match.score_a + ':' + match.score_b"></div>
-                        <div class="history-term" x-show="match.category" x-text="match.category"></div>
-                        <div class="history-value" x-show="match.duration_seconds" x-text="formatTime(match.duration_seconds)"></div>
-                    </div>
+                    <article class="history-item" role="listitem"
+                             :aria-label="getHistoryAriaLabel(match)">
+                        <!-- Main row: court, players, score, category, time -->
+                        <div class="history-main" aria-hidden="true">
+                            <span class="history-court" x-text="'Kort ' + match.kort_id"></span>
+                            <span class="history-players">
+                                <strong x-text="match.player_a || '-'"></strong>
+                                <span class="history-vs">vs</span>
+                                <strong x-text="match.player_b || '-'"></strong>
+                            </span>
+                            <span class="history-score" x-text="formatHistoryScore(match.score_a, match.score_b)"></span>
+                            <span class="history-category" x-show="match.category" x-text="match.category"></span>
+                            <span class="history-duration" x-show="match.duration_seconds" x-text="formatTime(match.duration_seconds)"></span>
+                            <button class="history-details-btn"
+                                    x-show="match.match_id"
+                                    @click="toggleMatchDetails(match.match_id)"
+                                    :aria-expanded="isMatchExpanded(match.match_id)"
+                                    x-text="isMatchExpanded(match.match_id) ? (tr().historyDetail?.collapse || 'Zwiń') : (tr().historyDetail?.details || 'Szczegóły')">
+                            </button>
+                        </div>
+
+                        <!-- Details panel (expandable stats) -->
+                        <div class="history-stats-panel" x-show="isMatchExpanded(match.match_id)" x-transition>
+                            <template x-if="getMatchStats(match.match_id)?.loading">
+                                <div class="stats-loading" x-text="tr().historyDetail?.loading || 'Ładowanie...'"></div>
+                            </template>
+                            <template x-if="getMatchStats(match.match_id)?.error">
+                                <div class="stats-error" x-text="tr().historyDetail?.noStats || 'Brak statystyk'"></div>
+                            </template>
+                            <template x-if="getMatchStats(match.match_id)?.player1_stats">
+                                <div class="stats-grid">
+                                    <div class="stats-column">
+                                        <h4 class="stats-player-name" x-text="match.player_a || 'Gracz A'"></h4>
+                                        <template x-for="row in getStatsRows(getMatchStats(match.match_id), 'player1_stats')" :key="row.label">
+                                            <div class="stats-row">
+                                                <span class="stats-label" x-text="row.label"></span>
+                                                <span class="stats-value" x-text="row.value"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div class="stats-column">
+                                        <h4 class="stats-player-name" x-text="match.player_b || 'Gracz B'"></h4>
+                                        <template x-for="row in getStatsRows(getMatchStats(match.match_id), 'player2_stats')" :key="row.label">
+                                            <div class="stats-row">
+                                                <span class="stats-label" x-text="row.label"></span>
+                                                <span class="stats-value" x-text="row.value"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div class="stats-winner" x-show="getMatchStats(match.match_id)?.winner">
+                                        🏆 <span x-text="getMatchStats(match.match_id)?.winner"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </article>
                 </template>
             </div>
         </section>

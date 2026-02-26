@@ -41,6 +41,9 @@ def _build_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
         "duration_seconds": match_time.get("seconds", 0),
         "phase": history_meta.get("phase", "Grupowa"),
         "category": history_meta.get("category"),
+        "match_id": history_meta.get("match_id"),
+        "stats_mode": history_meta.get("stats_mode"),
+        "ended_ts": datetime.now(timezone.utc).isoformat(),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "completed_at": match_time.get("finished_ts"),
     }
