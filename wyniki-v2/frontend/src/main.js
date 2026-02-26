@@ -39,6 +39,9 @@ const TRANSLATIONS = {
       serving: 'serwuje'
     },
     history: { title: 'Historia meczów' },
+    emptyTitle: 'Brak aktywnych kortów',
+    emptyText: 'Skonfiguruj korty w panelu administratora',
+    loading: 'Ładowanie wyników...',
     historyDetail: {
       details: 'Szczegóły',
       collapse: 'Zwiń',
@@ -77,6 +80,9 @@ const TRANSLATIONS = {
       serving: 'Aufschlag'
     },
     history: { title: 'Match-Historie' },
+    emptyTitle: 'Keine aktiven Plätze',
+    emptyText: 'Plätze im Adminbereich konfigurieren',
+    loading: 'Ergebnisse werden geladen...',
     historyDetail: {
       details: 'Details',
       collapse: 'Einklappen',
@@ -115,6 +121,9 @@ const TRANSLATIONS = {
       serving: 'serving'
     },
     history: { title: 'Match history' },
+    emptyTitle: 'No active courts',
+    emptyText: 'Configure courts in the admin panel',
+    loading: 'Loading scores...',
     historyDetail: {
       details: 'Details',
       collapse: 'Collapse',
@@ -153,6 +162,9 @@ const TRANSLATIONS = {
       serving: 'al servizio'
     },
     history: { title: 'Storico incontri' },
+    emptyTitle: 'Nessun campo attivo',
+    emptyText: 'Configura i campi nel pannello di amministrazione',
+    loading: 'Caricamento risultati...',
     historyDetail: {
       details: 'Dettagli',
       collapse: 'Chiudi',
@@ -191,6 +203,9 @@ const TRANSLATIONS = {
       serving: 'al servicio'
     },
     history: { title: 'Historial de partidos' },
+    emptyTitle: 'No hay canchas activas',
+    emptyText: 'Configure las canchas en el panel de administración',
+    loading: 'Cargando resultados...',
     historyDetail: {
       details: 'Detalles',
       collapse: 'Cerrar',
@@ -229,6 +244,9 @@ const TRANSLATIONS = {
       serving: 'au service'
     },
     history: { title: 'Historique des matchs' },
+    emptyTitle: 'Aucun court actif',
+    emptyText: 'Configurez les courts dans le panneau d\'administration',
+    loading: 'Chargement des résultats...',
     historyDetail: {
       details: 'Détails',
       collapse: 'Réduire',
