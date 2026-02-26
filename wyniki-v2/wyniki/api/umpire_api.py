@@ -32,7 +32,7 @@ def get_courts():
             
             courts_data.append({
                 "kort_id": kort_id,
-                "name": f"Kort {kort_id}",
+                "name": None,
                 "status": "occupied" if is_active else "available",
                 "is_available": not is_active
             })

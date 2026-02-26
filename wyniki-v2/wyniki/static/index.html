@@ -7,7 +7,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎾</text></svg>">
     <meta name="description" content="Live tennis scores - wyniki na żywo">
   <script type="module" crossorigin src="/assets/main-DMhJiYTJ.js"></script>
-  <script type="module" crossorigin src="/assets/main-UAYGF0DZ.js"></script>
+  <script type="module" crossorigin src="/assets/main-DWrs37kF.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/main-BdwIWKBG.css">
 </head>
 <body>
@@ -49,7 +49,7 @@
         <!-- Loading State -->
         <div x-show="loading" class="loading-state" role="status">
             <span class="spinner spinner--large"></span>
-            <span class="sr-only">Ładowanie wyników...</span>
+            <span class="sr-only" x-text="t('loading')">Ładowanie wyników...</span>
         </div>
         
         <!-- Error State -->
@@ -62,8 +62,8 @@
             <!-- Empty State -->
             <div x-show="!loading && getCourtIds().length === 0" class="empty-state">
                 <div class="empty-state__icon">🎾</div>
-                <h2 class="empty-state__title">Brak aktywnych kortów</h2>
-                <p class="empty-state__text">Skonfiguruj korty w panelu administratora</p>
+                <h2 class="empty-state__title" x-text="t('emptyTitle')">Brak aktywnych kortów</h2>
+                <p class="empty-state__text" x-text="t('emptyText')">Skonfiguruj korty w panelu administratora</p>
             </div>
             
             <!-- Courts Grid -->
