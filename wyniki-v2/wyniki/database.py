@@ -54,6 +54,8 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tournament_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
+                first_name TEXT DEFAULT '',
+                last_name TEXT DEFAULT '',
                 category TEXT,
                 country TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -116,6 +118,27 @@ def init_db() -> None:
                     sb = json.dumps([row['set1_b'] or 0, row['set2_b'] or 0, row['tie_b'] or 0])
                     cursor.execute("UPDATE match_history SET score_a=?, score_b=? WHERE id=?", (sa, sb, row['id']))
             logger.info("database_migration", action="added_score_a_score_b_to_match_history")
+        
+        # Migration: Add first_name/last_name columns to players
+        cursor.execute("PRAGMA table_info(players)")
+        player_columns = [row[1] for row in cursor.fetchall()]
+        if 'first_name' not in player_columns:
+            cursor.execute("ALTER TABLE players ADD COLUMN first_name TEXT DEFAULT ''")
+            cursor.execute("ALTER TABLE players ADD COLUMN last_name TEXT DEFAULT ''")
+            # Backfill: split existing 'name' into first_name + last_name
+            cursor.execute("SELECT id, name FROM players")
+            for row in cursor.fetchall():
+                full = (row['name'] or '').strip()
+                parts = full.rsplit(' ', 1)
+                if len(parts) == 2:
+                    fn, ln = parts[0], parts[1]
+                else:
+                    fn, ln = '', full  # single word → last name
+                cursor.execute(
+                    "UPDATE players SET first_name=?, last_name=? WHERE id=?",
+                    (fn, ln, row['id'])
+                )
+            logger.info("database_migration", action="added_first_name_last_name_to_players")
         
         conn.commit()
     
@@ -473,16 +496,16 @@ def fetch_players(tournament_id: Optional[int] = None) -> List[Dict]:
             cursor = conn.cursor()
             if tournament_id:
                 cursor.execute("""
-                    SELECT id, tournament_id, name, category, country, created_at
+                    SELECT id, tournament_id, name, first_name, last_name, category, country, created_at
                     FROM players
                     WHERE tournament_id = ?
-                    ORDER BY name
+                    ORDER BY last_name, first_name
                 """, (tournament_id,))
             else:
                 cursor.execute("""
-                    SELECT id, tournament_id, name, category, country, created_at
+                    SELECT id, tournament_id, name, first_name, last_name, category, country, created_at
                     FROM players
-                    ORDER BY tournament_id DESC, name
+                    ORDER BY tournament_id DESC, last_name, first_name
                 """)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
@@ -497,11 +520,12 @@ def fetch_active_tournament_players() -> List[Dict]:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT p.id, p.tournament_id, p.name, p.category, p.country, p.created_at
+                SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
+                       p.category, p.country, p.created_at
                 FROM players p
                 INNER JOIN tournaments t ON p.tournament_id = t.id
                 WHERE t.active = 1
-                ORDER BY p.name
+                ORDER BY p.last_name, p.first_name
             """)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
@@ -510,15 +534,26 @@ def fetch_active_tournament_players() -> List[Dict]:
         return []
 
 
-def insert_player(tournament_id: int, name: str, category: str = "", country: str = "") -> Optional[int]:
+def insert_player(tournament_id: int, name: str, category: str = "", country: str = "",
+                  first_name: str = "", last_name: str = "") -> Optional[int]:
     """Insert a new player."""
+    # If first_name/last_name not provided, split from name
+    if not first_name and not last_name and name:
+        parts = name.strip().rsplit(' ', 1)
+        if len(parts) == 2:
+            first_name, last_name = parts[0], parts[1]
+        else:
+            first_name, last_name = '', name.strip()
+    # Ensure name is set (for backward compat)
+    if not name:
+        name = f"{first_name} {last_name}".strip()
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO players (tournament_id, name, category, country)
-                VALUES (?, ?, ?, ?)
-            """, (tournament_id, name, category, country))
+                INSERT INTO players (tournament_id, name, first_name, last_name, category, country)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (tournament_id, name, first_name, last_name, category, country))
             conn.commit()
             logger.info("player_inserted", id=cursor.lastrowid, name=name, tournament_id=tournament_id)
             return cursor.lastrowid
@@ -527,16 +562,26 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
         return None
 
 
-def update_player(player_id: int, name: str, category: str, country: str) -> bool:
+def update_player(player_id: int, name: str, category: str, country: str,
+                  first_name: str = "", last_name: str = "") -> bool:
     """Update a player."""
+    # If first_name/last_name not provided, split from name
+    if not first_name and not last_name and name:
+        parts = name.strip().rsplit(' ', 1)
+        if len(parts) == 2:
+            first_name, last_name = parts[0], parts[1]
+        else:
+            first_name, last_name = '', name.strip()
+    if not name:
+        name = f"{first_name} {last_name}".strip()
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE players
-                SET name = ?, category = ?, country = ?
+                SET name = ?, first_name = ?, last_name = ?, category = ?, country = ?
                 WHERE id = ?
-            """, (name, category, country, player_id))
+            """, (name, first_name, last_name, category, country, player_id))
             conn.commit()
             logger.info("player_updated", id=player_id)
             return True
@@ -566,12 +611,26 @@ def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
             cursor = conn.cursor()
             count = 0
             for player in players_data:
+                p_name = player.get("name", "")
+                fn = player.get("first_name", "")
+                ln = player.get("last_name", "")
+                # Split name if first/last not provided
+                if not fn and not ln and p_name:
+                    parts = p_name.strip().rsplit(' ', 1)
+                    if len(parts) == 2:
+                        fn, ln = parts[0], parts[1]
+                    else:
+                        fn, ln = '', p_name.strip()
+                if not p_name:
+                    p_name = f"{fn} {ln}".strip()
                 cursor.execute("""
-                    INSERT INTO players (tournament_id, name, category, country)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO players (tournament_id, name, first_name, last_name, category, country)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 """, (
                     tournament_id,
-                    player.get("name", ""),
+                    p_name,
+                    fn,
+                    ln,
                     player.get("category", ""),
                     player.get("country", "")
                 ))

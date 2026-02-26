@@ -83,9 +83,22 @@ def get_players():
                 return jsonify({"ok": False, "error": "invalid-pin", "authorized": False}), 403
             
             # Get player data
-            surname = data.get("surname", "").strip()
-            if not surname:
-                return jsonify({"ok": False, "error": "surname required"}), 400
+            surname = data.get("surname", "").strip() or data.get("name", "").strip()
+            first_name = data.get("first_name", "").strip()
+            last_name = data.get("last_name", "").strip()
+            
+            # If first/last not provided but surname is, split it
+            if not first_name and not last_name and surname:
+                parts = surname.rsplit(' ', 1)
+                if len(parts) == 2:
+                    first_name, last_name = parts[0], parts[1]
+                else:
+                    first_name, last_name = '', surname
+            
+            if not last_name and not surname:
+                return jsonify({"ok": False, "error": "last_name or surname required"}), 400
+            
+            full_name = f"{first_name} {last_name}".strip() if first_name else last_name
             
             country_code = data.get("country_code", "").strip() or None
             category = data.get("category", "").strip() or None
@@ -98,21 +111,26 @@ def get_players():
             # Create player
             player = Player(
                 tournament_id=tournament.id,
-                name=surname,
+                name=full_name,
+                first_name=first_name,
+                last_name=last_name,
                 country=country_code,
                 category=category
             )
             db.session.add(player)
             db.session.commit()
             
-            logger.info(f"Player created: {player.id} - {surname}")
+            logger.info(f"Player created: {player.id} - {full_name}")
             
             return jsonify({
                 "ok": True,
                 "player": {
                     "id": str(player.id),
-                    "surname": player.name,
-                    "full_name": player.name,
+                    "first_name": player.first_name or '',
+                    "last_name": player.last_name or '',
+                    "surname": player.last_name or player.name,
+                    "full_name": player.full_name,
+                    "name": player.full_name,
                     "country_code": player.country,
                     "category": player.category,
                     "flag_url": f"https://flagcdn.com/w80/{player.country.lower()}.png" if player.country else None
@@ -140,10 +158,16 @@ def get_players():
         
         players_data = []
         for player in players:
+            fn = player.first_name or ''
+            ln = player.last_name or ''
+            full = player.full_name
             players_data.append({
                 "id": str(player.id),
-                "surname": player.name,
-                "full_name": player.name,
+                "first_name": fn,
+                "last_name": ln,
+                "surname": ln or player.name,
+                "full_name": full,
+                "name": full,
                 "country_code": player.country,
                 "flag_url": f"https://flagcdn.com/w80/{player.country.lower()}.png" if player.country else None
             })
