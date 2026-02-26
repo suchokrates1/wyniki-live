@@ -104,6 +104,19 @@ def init_db() -> None:
             cursor.execute("ALTER TABLE match_history ADD COLUMN stats_mode TEXT")
             logger.info("database_migration", action="added_stats_mode_to_match_history")
         
+        # Migration: Add score_a/score_b TEXT columns (replaces old set1_a/set1_b/... columns)
+        if 'score_a' not in mh_columns:
+            cursor.execute("ALTER TABLE match_history ADD COLUMN score_a TEXT")
+            cursor.execute("ALTER TABLE match_history ADD COLUMN score_b TEXT")
+            # Backfill from old per-set columns if they exist
+            if 'set1_a' in mh_columns:
+                cursor.execute("SELECT id, set1_a, set1_b, set2_a, set2_b, tie_a, tie_b FROM match_history")
+                for row in cursor.fetchall():
+                    sa = json.dumps([row['set1_a'] or 0, row['set2_a'] or 0, row['tie_a'] or 0])
+                    sb = json.dumps([row['set1_b'] or 0, row['set2_b'] or 0, row['tie_b'] or 0])
+                    cursor.execute("UPDATE match_history SET score_a=?, score_b=? WHERE id=?", (sa, sb, row['id']))
+            logger.info("database_migration", action="added_score_a_score_b_to_match_history")
+        
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)
@@ -312,6 +325,9 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
             """, (limit,))
             rows = cursor.fetchall()
             
+            # Detect available columns
+            col_names = [desc[0] for desc in cursor.description] if cursor.description else []
+            
             result = []
             for row in rows:
                 entry = {
@@ -321,18 +337,25 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
                     "duration_seconds": row["duration_seconds"],
                     "player_a": row["player_a"],
                     "player_b": row["player_b"],
-                    "score_a": json.loads(row["score_a"]) if row["score_a"] else [],
-                    "score_b": json.loads(row["score_b"]) if row["score_b"] else [],
-                    "category": row["category"],
-                    "phase": row["phase"],
+                    "category": row["category"] if "category" in col_names else None,
+                    "phase": row["phase"] if "phase" in col_names else "Grupowa",
                 }
-                # New columns (may not exist in older DBs before migration runs)
-                try:
-                    entry["match_id"] = row["match_id"]
-                    entry["stats_mode"] = row["stats_mode"]
-                except (IndexError, KeyError):
-                    entry["match_id"] = None
-                    entry["stats_mode"] = None
+                
+                # Read scores - prefer score_a/score_b JSON, fall back to old per-set columns
+                if "score_a" in col_names and row["score_a"]:
+                    entry["score_a"] = json.loads(row["score_a"])
+                    entry["score_b"] = json.loads(row["score_b"]) if row["score_b"] else []
+                elif "set1_a" in col_names:
+                    entry["score_a"] = [row["set1_a"] or 0, row["set2_a"] or 0, row["tie_a"] or 0]
+                    entry["score_b"] = [row["set1_b"] or 0, row["set2_b"] or 0, row["tie_b"] or 0]
+                else:
+                    entry["score_a"] = []
+                    entry["score_b"] = []
+                
+                # Optional columns
+                entry["match_id"] = row["match_id"] if "match_id" in col_names else None
+                entry["stats_mode"] = row["stats_mode"] if "stats_mode" in col_names else None
+                
                 result.append(entry)
             return result
     except Exception as e:
@@ -560,28 +583,4 @@ def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
         logger.error("bulk_insert_players_error", error=str(e))
         return 0
 
-    try:
-        with db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM match_history
-                ORDER BY id DESC
-                LIMIT ?
-            """, (limit,))
-            rows = cursor.fetchall()
-        
-        history = []
-        for row in rows:
-            entry = dict(row)
-            # Parse JSON score arrays
-            if entry.get("score_a"):
-                entry["score_a"] = json.loads(entry["score_a"])
-            if entry.get("score_b"):
-                entry["score_b"] = json.loads(entry["score_b"])
-            history.append(entry)
-        
-        logger.debug("match_history_fetched", count=len(history))
-        return history
-    except Exception as e:
-        logger.error("fetch_match_history_error", error=str(e))
-        return []
+
