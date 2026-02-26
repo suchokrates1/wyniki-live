@@ -30,7 +30,8 @@ Alpine.data('adminApp', () => ({
   // Players
   players: [],
   newPlayer: {
-    name: '',
+    first_name: '',
+    last_name: '',
     category: '',
     country: '',
   },
@@ -363,8 +364,8 @@ Alpine.data('adminApp', () => ({
   },
   
   async addPlayer() {
-    if (!this.selectedTournament || !this.newPlayer.name) {
-      this.showToast('Wprowadź imię i nazwisko gracza', 'warning');
+    if (!this.selectedTournament || !this.newPlayer.last_name) {
+      this.showToast('Wprowadź nazwisko gracza', 'warning');
       return;
     }
     
@@ -378,7 +379,7 @@ Alpine.data('adminApp', () => ({
       if (!response.ok) throw new Error('Failed to add player');
       
       this.showToast('Gracz dodany', 'success');
-      this.newPlayer = { name: '', category: '', country: '' };
+      this.newPlayer = { first_name: '', last_name: '', category: '', country: '' };
       await this.loadPlayers(this.selectedTournament);
     } catch (err) {
       console.error('Failed to add player:', err);

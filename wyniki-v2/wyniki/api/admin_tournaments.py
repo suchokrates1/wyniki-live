@@ -115,14 +115,28 @@ def create_player(tournament_id: int):
     """Add a player to a tournament."""
     data = request.get_json()
     
-    name = data.get('name')
+    first_name = data.get('first_name', '').strip()
+    last_name = data.get('last_name', '').strip()
+    name = data.get('name', '').strip()
+    
+    # Backward compat: if only name provided, split it
+    if not first_name and not last_name:
+        if not name:
+            return jsonify({"error": "Name is required"}), 400
+        parts = name.rsplit(' ', 1)
+        if len(parts) == 2:
+            first_name, last_name = parts[0], parts[1]
+        else:
+            first_name, last_name = '', name
+    
     if not name:
-        return jsonify({"error": "Name is required"}), 400
+        name = f"{first_name} {last_name}".strip()
     
     category = data.get('category', '')
     country = data.get('country', '')
     
-    player_id = insert_player(tournament_id, name, category, country)
+    player_id = insert_player(tournament_id, name, category, country,
+                              first_name=first_name, last_name=last_name)
     
     if player_id:
         return jsonify({"id": player_id, "message": "Player added"}), 201
@@ -135,14 +149,27 @@ def update_player_route(tournament_id: int, player_id: int):
     """Update a player."""
     data = request.get_json()
     
-    name = data.get('name')
+    first_name = data.get('first_name', '').strip()
+    last_name = data.get('last_name', '').strip()
+    name = data.get('name', '').strip()
+    
+    if not first_name and not last_name:
+        if not name:
+            return jsonify({"error": "Name is required"}), 400
+        parts = name.rsplit(' ', 1)
+        if len(parts) == 2:
+            first_name, last_name = parts[0], parts[1]
+        else:
+            first_name, last_name = '', name
+    
     if not name:
-        return jsonify({"error": "Name is required"}), 400
+        name = f"{first_name} {last_name}".strip()
     
     category = data.get('category', '')
     country = data.get('country', '')
     
-    success = update_player(player_id, name, category, country)
+    success = update_player(player_id, name, category, country,
+                            first_name=first_name, last_name=last_name)
     
     if success:
         return jsonify({"message": "Player updated"})
@@ -188,25 +215,28 @@ def import_players(tournament_id: int):
         
         if len(parts) == 3:
             name, category, country = parts
-            players_data.append({
-                "name": name.strip(),
-                "category": category.strip(),
-                "country": country.strip()
-            })
         elif len(parts) == 2:
             name, category = parts
-            players_data.append({
-                "name": name.strip(),
-                "category": category.strip(),
-                "country": ""
-            })
+            country = ""
         else:
-            # Just name
-            players_data.append({
-                "name": line,
-                "category": "",
-                "country": ""
-            })
+            name = line
+            category = ""
+            country = ""
+        
+        name = name.strip()
+        name_parts = name.rsplit(' ', 1)
+        if len(name_parts) == 2:
+            first_name, last_name = name_parts[0], name_parts[1]
+        else:
+            first_name, last_name = '', name
+        
+        players_data.append({
+            "name": name,
+            "first_name": first_name,
+            "last_name": last_name,
+            "category": category.strip(),
+            "country": country.strip()
+        })
     
     if not players_data:
         return jsonify({"error": "No valid players found"}), 400
@@ -232,7 +262,11 @@ def get_active_players():
     # Format for Umpire mobile app
     result = [
         {
-            "name": p["name"],
+            "name": f"{p.get('first_name', '')} {p.get('last_name', '')}".strip() or p["name"],
+            "first_name": p.get("first_name", ""),
+            "last_name": p.get("last_name", ""),
+            "surname": p.get("last_name", ""),
+            "full_name": f"{p.get('first_name', '')} {p.get('last_name', '')}".strip() or p["name"],
             "category": p.get("category", ""),
             "country": p.get("country", "")
         }

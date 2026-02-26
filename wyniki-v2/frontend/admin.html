@@ -275,8 +275,9 @@
           <h2 class="card-title">Gracze w turnieju</h2>
           <div x-show="!selectedTournament" class="alert alert-warning"><span>Wybierz turniej z zak&#322;adki "Turnieje" aby zarz&#261;dza&#263; graczami</span></div>
           <div x-show="selectedTournament">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <div class="form-control"><label class="label"><span class="label-text">Imi&#281; i nazwisko</span></label><input type="text" x-model="newPlayer.name" class="input input-bordered input-sm" placeholder="Jan Kowalski"></div>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+              <div class="form-control"><label class="label"><span class="label-text">Imi&#281;</span></label><input type="text" x-model="newPlayer.first_name" class="input input-bordered input-sm" placeholder="Jan"></div>
+              <div class="form-control"><label class="label"><span class="label-text">Nazwisko</span></label><input type="text" x-model="newPlayer.last_name" class="input input-bordered input-sm" placeholder="Kowalski"></div>
               <div class="form-control"><label class="label"><span class="label-text">Kategoria</span></label><input type="text" x-model="newPlayer.category" class="input input-bordered input-sm" placeholder="B1"></div>
               <div class="form-control"><label class="label"><span class="label-text">Kraj</span></label><input type="text" x-model="newPlayer.country" class="input input-bordered input-sm" placeholder="pl" maxlength="2"></div>
               <div class="form-control"><label class="label">&nbsp;</label><button @click="addPlayer()" class="btn btn-primary btn-sm">Dodaj gracza</button></div>
@@ -292,11 +293,12 @@
             </div>
             <div class="overflow-x-auto">
               <table class="table table-zebra table-sm">
-                <thead><tr><th>Imi&#281; i nazwisko</th><th>Kategoria</th><th>Kraj</th><th>Akcje</th></tr></thead>
+                <thead><tr><th>Imi&#281;</th><th>Nazwisko</th><th>Kategoria</th><th>Kraj</th><th>Akcje</th></tr></thead>
                 <tbody>
                   <template x-for="player in filteredPlayers" :key="player.id">
                     <tr>
-                      <td x-text="player.name"></td>
+                      <td x-text="player.first_name"></td>
+                      <td x-text="player.last_name"></td>
                       <td><span class="badge badge-sm" x-text="player.category"></span></td>
                       <td x-text="player.country"></td>
                       <td><button @click="deletePlayer(player.id)" class="btn btn-xs btn-error">Usu&#324;</button></td>

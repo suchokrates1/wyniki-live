@@ -36,7 +36,9 @@ class Player(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id', ondelete='CASCADE'), nullable=False)
-    name = db.Column(db.String(200), nullable=False)
+    name = db.Column(db.String(200), nullable=False)  # legacy: full name
+    first_name = db.Column(db.String(100), nullable=True, default='')  # imię
+    last_name = db.Column(db.String(100), nullable=True, default='')   # nazwisko
     category = db.Column(db.String(100))
     country = db.Column(db.String(10))
     created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
@@ -44,11 +46,26 @@ class Player(db.Model):
     # Relationships
     tournament = db.relationship('Tournament', back_populates='players')
     
+    @property
+    def full_name(self) -> str:
+        """Return 'first_name last_name', fallback to name."""
+        fn = (self.first_name or '').strip()
+        ln = (self.last_name or '').strip()
+        if fn and ln:
+            return f"{fn} {ln}"
+        if ln:
+            return ln
+        if fn:
+            return fn
+        return self.name or ''
+    
     def to_dict(self):
         return {
             'id': self.id,
             'tournament_id': self.tournament_id,
-            'name': self.name,
+            'name': self.full_name,
+            'first_name': self.first_name or '',
+            'last_name': self.last_name or '',
             'category': self.category,
             'country': self.country,
             'created_at': self.created_at
