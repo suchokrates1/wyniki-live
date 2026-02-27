@@ -140,6 +140,13 @@ def init_db() -> None:
                 )
             logger.info("database_migration", action="added_first_name_last_name_to_players")
         
+        # Migration: Add sets_history column to match_history (for tiebreak scores)
+        cursor.execute("PRAGMA table_info(match_history)")
+        mh_cols2 = [row[1] for row in cursor.fetchall()]
+        if 'sets_history' not in mh_cols2:
+            cursor.execute("ALTER TABLE match_history ADD COLUMN sets_history TEXT")
+            logger.info("database_migration", action="added_sets_history_to_match_history")
+        
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)
@@ -154,8 +161,8 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
                 INSERT INTO match_history (
                     kort_id, ended_ts, duration_seconds,
                     player_a, player_b, score_a, score_b,
-                    category, phase, match_id, stats_mode
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    category, phase, match_id, stats_mode, sets_history
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 entry.get("kort_id"),
                 entry.get("ended_ts"),
@@ -168,6 +175,7 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
                 entry.get("phase", "Grupowa"),
                 entry.get("match_id"),
                 entry.get("stats_mode"),
+                json.dumps(entry.get("sets_history")) if entry.get("sets_history") else None,
             ))
             conn.commit()
         logger.info("match_history_inserted", kort_id=entry.get("kort_id"))
@@ -378,6 +386,12 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
                 # Optional columns
                 entry["match_id"] = row["match_id"] if "match_id" in col_names else None
                 entry["stats_mode"] = row["stats_mode"] if "stats_mode" in col_names else None
+                
+                # Sets history with tiebreak scores
+                if "sets_history" in col_names and row["sets_history"]:
+                    entry["sets_history"] = json.loads(row["sets_history"])
+                else:
+                    entry["sets_history"] = None
                 
                 result.append(entry)
             return result

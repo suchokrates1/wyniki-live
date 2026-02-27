@@ -653,10 +653,11 @@ Alpine.data('tennisApp', () => ({
 
   /* --- History formatting helpers --- */
   /**
-   * Format score arrays into tennis-friendly display.
-   * e.g., [4,1,0] vs [1,4,0] → "4:1, 1:4" (skip unplayed sets with 0:0)
+   * Format score arrays into tennis-friendly display with tiebreak scores.
+   * Uses sets_history (from Android) to show full TB scores.
+   * e.g., [7,4,0] vs [6,4,0] with TB → "7:6(3:7), 4:1" or "6:4, 6:7(5:7), STB 10:7"
    */
-  formatHistoryScore(scoreA, scoreB) {
+  formatHistoryScore(scoreA, scoreB, setsHistory) {
     if (!scoreA || !scoreB) return '–';
     const parts = [];
     const numSets = Math.max(scoreA.length, scoreB.length);
@@ -664,10 +665,31 @@ Alpine.data('tennisApp', () => ({
       const a = scoreA[i] ?? 0;
       const b = scoreB[i] ?? 0;
       if (a === 0 && b === 0 && i > 0) continue; // Skip unplayed sets
+      
+      // Check for tiebreak info from sets_history
+      const setInfo = setsHistory?.find(sh => sh.set_number === i + 1);
+      const tbLoser = setInfo?.tiebreak_loser_points;
+      
       // Detect super tiebreak (set 3, usually lower scores like 10:7)
       const isSuperTB = i === 2 && parts.length === 2;
+      
       if (isSuperTB) {
         parts.push(`STB ${a}:${b}`);
+      } else if (tbLoser != null && tbLoser >= 0) {
+        // Tiebreak was played — compute full TB score
+        // The set winner (more games) won the tiebreak
+        const tbTarget = 7; // regular TB to 7
+        const winnerTB = Math.max(tbTarget, tbLoser + 2);
+        let tbA, tbB;
+        if (a > b) {
+          // Player A won this set's tiebreak
+          tbA = winnerTB;
+          tbB = tbLoser;
+        } else {
+          tbA = tbLoser;
+          tbB = winnerTB;
+        }
+        parts.push(`${a}:${b}(${tbA}:${tbB})`);
       } else {
         parts.push(`${a}:${b}`);
       }
@@ -677,7 +699,6 @@ Alpine.data('tennisApp', () => ({
 
   /**
    * Build accessible single-string description for NVDA.
-   * e.g., "Kort 1: Kowalski vs Nowak — Kategoria B1, wynik 4:1, 1:4, Super TB: 7:5, czas 12:30"
    */
   getHistoryAriaLabel(match) {
     const court = `Kort ${match.kort_id}`;
@@ -687,24 +708,10 @@ Alpine.data('tennisApp', () => ({
     if (match.category) {
       parts.push(`Kategoria ${match.category}`);
     }
-
-    // Build score string
-    const scoreA = match.score_a || [];
-    const scoreB = match.score_b || [];
-    const scoreParts = [];
-    for (let i = 0; i < Math.max(scoreA.length, scoreB.length); i++) {
-      const a = scoreA[i] ?? 0;
-      const b = scoreB[i] ?? 0;
-      if (a === 0 && b === 0 && i > 0) continue;
-      const isSuperTB = i === 2 && scoreParts.length === 2;
-      if (isSuperTB) {
-        scoreParts.push(`Super TB ${a}:${b}`);
-      } else {
-        scoreParts.push(`${a}:${b}`);
-      }
-    }
-    if (scoreParts.length > 0) {
-      parts.push(`wynik ${scoreParts.join(', ')}`);
+    
+    const scoreStr = this.formatHistoryScore(match.score_a, match.score_b, match.sets_history);
+    if (scoreStr && scoreStr !== '–') {
+      parts.push(`wynik ${scoreStr}`);
     }
 
     if (match.duration_seconds) {
@@ -754,13 +761,15 @@ Alpine.data('tennisApp', () => ({
 
   /**
    * Get stats rows to display, filtered by stats_mode.
-   * BASIC: only winners (Win), double faults, first serve %
-   * ADVANCED: all stats
+   * SIMPLE: double faults, winners, first serve %
+   * ADVANCED: aces, double faults, winners, forced errors, unforced errors,
+   *           first serve (ratio + %), second serve %, points won
    */
-  getStatsRows(stats, playerKey) {
+  getStatsRows(stats, playerKey, otherPlayerKey) {
     if (!stats || !stats[playerKey]) return [];
     const s = stats[playerKey];
-    const mode = stats.stats_mode || 'ADVANCED';
+    const opp = stats[otherPlayerKey] || {};
+    const mode = (stats.stats_mode || 'ADVANCED').toUpperCase();
     const rows = [];
 
     if (mode === 'ADVANCED') {
@@ -772,11 +781,20 @@ Alpine.data('tennisApp', () => ({
       rows.push({ label: 'Wymuszone błędy', value: s.forced_errors ?? 0 });
       rows.push({ label: 'Niewymuszone błędy', value: s.unforced_errors ?? 0 });
     }
+    // First serve percentage
     if (s.first_serves > 0 || s.first_serve_percentage > 0) {
+      if (mode === 'ADVANCED' && s.first_serves > 0) {
+        rows.push({ label: '1. serwis', value: `${s.first_serves_in ?? 0}/${s.first_serves}` });
+      }
       const pct = s.first_serve_percentage != null
         ? Math.round(s.first_serve_percentage) + '%'
-        : (s.first_serves > 0 ? Math.round((s.first_serves_in / s.first_serves) * 100) + '%' : '–');
+        : (s.first_serves > 0 ? Math.round(((s.first_serves_in ?? 0) / s.first_serves) * 100) + '%' : '–');
       rows.push({ label: '1. serwis %', value: pct });
+    }
+    // Advanced: points won (aces + winners + opponent's errors)
+    if (mode === 'ADVANCED') {
+      const ptsWon = (s.aces ?? 0) + (s.winners ?? 0) + (opp.double_faults ?? 0) + (opp.forced_errors ?? 0) + (opp.unforced_errors ?? 0);
+      rows.push({ label: 'Pkt wygrane', value: ptsWon });
     }
 
     return rows;

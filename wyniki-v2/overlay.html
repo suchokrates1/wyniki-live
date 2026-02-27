@@ -26,6 +26,15 @@
             opacity: 0; pointer-events: none; transform: translateY(-30px);
         }
 
+        /* ---- Unified overlay container ---- */
+        .overlay-container {
+            display: flex; flex-direction: column;
+            background: linear-gradient(180deg, #1d1d1d 0%, #090909 100%);
+            border-radius: 14px; overflow: hidden;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+            border: 1px solid rgba(0,0,0,0.8);
+        }
+
         /* ---- Court label bar ---- */
         .court-label-bar {
             display: flex; align-items: center;
@@ -35,6 +44,21 @@
         }
         .court-label-bar .label-half {
             flex: 1; text-align: center;
+        }
+        /* Inside unified container: label has subtle bg, no separate rounding */
+        .overlay-container .court-label-bar {
+            background: rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0; margin: 0;
+        }
+        .overlay-container .court-label-bar .label-text {
+            flex: 0 0 auto;
+        }
+        .overlay-container .court-label-bar .label-sep {
+            margin: 0 10px; opacity: 0.3; font-weight: 400;
+        }
+        .overlay-container .court-label-bar .label-time {
+            flex: 0 0 auto;
         }
 
         /* ---- Dark grid scoreboard (matches main page) ---- */
@@ -70,6 +94,16 @@
             background: linear-gradient(180deg, #1d1d1d 0%, #090909 100%);
             box-shadow: 0 12px 24px rgba(0,0,0,0.35);
             border: 1px solid rgba(0,0,0,0.8);
+        }
+        /* Inside unified container: score-table shares container bg */
+        .overlay-container .score-table {
+            border-radius: 0; box-shadow: none; border: none;
+            background: transparent;
+        }
+        /* Logo inside unified container */
+        .overlay-container .sb-wrap { gap: 0; }
+        .overlay-container .logo-area {
+            border-radius: 0; margin: 0;
         }
         .score-row {
             display: grid; align-items: stretch; color: #fdfdfd;
@@ -295,19 +329,6 @@
             return '<div class="score-row '+sideClass+'" style="'+gridCols+'">'+playerCell+ptsCell+setCells+'</div>';
         }
 
-        // Match time bar
-        var timeHtml = '';
-        if (active && court.match_time) {
-            var mt = court.match_time;
-            var secs = mt.seconds || 0;
-            if (mt.running && mt.resume_ts) secs += (Date.now()/1000 - mt.resume_ts);
-            secs += (mt.offset_seconds || 0);
-            secs = Math.max(0, Math.floor(secs));
-            var hh = String(Math.floor(secs/3600)).padStart(2,'0');
-            var mm = String(Math.floor((secs%3600)/60)).padStart(2,'0');
-            timeHtml = '<div class="match-time-bar" data-court="'+cid+'"><span class="time-icon">&#9201;</span> '+hh+':'+mm+'</div>';
-        }
-
         var opacityStyle = bgOpacity < 1 ? 'opacity:'+bgOpacity+';' : '';
         var hFill = el.h ? ' h-fill' : '';
         return '<div class="sb-wrap '+inactiveClass+hFill+'">'
@@ -371,8 +392,8 @@
         var radius = pos==='above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
         var court = courts[el.court_id] || {};
         var timeStr = calcMatchTime(court);
-        var timeHalf = timeStr ? '<span class="label-half label-time" data-court="'+el.court_id+'">&#9201; '+timeStr+'</span>' : '<span class="label-half"></span>';
-        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;"><span class="label-half">'+el.label_text+'</span>'+timeHalf+'</div>';
+        var timeHtml = timeStr ? '<span class="label-sep">|</span><span class="label-time" data-court="'+el.court_id+'">&#9201; '+timeStr+'</span>' : '';
+        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;"><span class="label-text">'+el.label_text+'</span>'+timeHtml+'</div>';
     }
 
     function render() {
@@ -417,14 +438,15 @@
             var pos = el.label_position || 'above';
             var labelAbove = pos === 'above' ? renderLabel(el) : '';
             var labelBelow = pos === 'below' ? renderLabel(el) : '';
+            // Wrap label + scoreboard in unified overlay-container
             if (el.h) {
                 var sbWrap = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'+renderScoreboard(el)+'</div>';
                 return '<div class="element-wrapper '+hidden+' has-h" style="'+style+'">'
-                    +labelAbove+sbWrap+labelBelow+'</div>';
+                    +'<div class="overlay-container" style="display:flex;flex-direction:column;height:100%;">'
+                    +labelAbove+sbWrap+labelBelow+'</div></div>';
             }
-            var wrapClass = pos === 'below' ? 'label-below' : '';
-            return '<div class="element-wrapper '+hidden+' '+wrapClass+'" style="'+style+'">'
-                +labelAbove+renderScoreboard(el)+labelBelow+'</div>';
+            return '<div class="element-wrapper '+hidden+'" style="'+style+'">'
+                +'<div class="overlay-container">'+labelAbove+renderScoreboard(el)+labelBelow+'</div></div>';
         }).join('');
         document.getElementById('app').innerHTML =
             '<div class="layout '+(autoHidden?'auto-hidden':'')+'" style="transform:scale('+scale+')">'+html+'</div>';

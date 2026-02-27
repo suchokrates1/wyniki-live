@@ -196,7 +196,7 @@
                                 <span class="history-vs">vs</span>
                                 <strong x-text="match.player_b || '-'"></strong>
                             </span>
-                            <span class="history-score" x-text="formatHistoryScore(match.score_a, match.score_b)"></span>
+                            <span class="history-score" x-text="formatHistoryScore(match.score_a, match.score_b, match.sets_history)"></span>
                             <span class="history-category" x-show="match.category" x-text="match.category"></span>
                             <span class="history-duration" x-show="match.duration_seconds" x-text="formatTime(match.duration_seconds)"></span>
                             <button class="history-details-btn"
@@ -217,9 +217,12 @@
                             </template>
                             <template x-if="getMatchStats(match.match_id)?.player1_stats">
                                 <div class="stats-grid">
+                                    <div class="stats-mode-label" x-show="getMatchStats(match.match_id)?.stats_mode"
+                                         x-text="(getMatchStats(match.match_id)?.stats_mode || '').toUpperCase() === 'ADVANCED' ? 'Statystyki zaawansowane' : 'Statystyki podstawowe'">
+                                    </div>
                                     <div class="stats-column">
                                         <h4 class="stats-player-name" x-text="match.player_a || 'Gracz A'"></h4>
-                                        <template x-for="row in getStatsRows(getMatchStats(match.match_id), 'player1_stats')" :key="row.label">
+                                        <template x-for="row in getStatsRows(getMatchStats(match.match_id), 'player1_stats', 'player2_stats')" :key="row.label">
                                             <div class="stats-row">
                                                 <span class="stats-label" x-text="row.label"></span>
                                                 <span class="stats-value" x-text="row.value"></span>
@@ -228,7 +231,7 @@
                                     </div>
                                     <div class="stats-column">
                                         <h4 class="stats-player-name" x-text="match.player_b || 'Gracz B'"></h4>
-                                        <template x-for="row in getStatsRows(getMatchStats(match.match_id), 'player2_stats')" :key="row.label">
+                                        <template x-for="row in getStatsRows(getMatchStats(match.match_id), 'player2_stats', 'player1_stats')" :key="row.label">
                                             <div class="stats-row">
                                                 <span class="stats-label" x-text="row.label"></span>
                                                 <span class="stats-value" x-text="row.value"></span>
@@ -237,6 +240,9 @@
                                     </div>
                                     <div class="stats-winner" x-show="getMatchStats(match.match_id)?.winner">
                                         🏆 <span x-text="getMatchStats(match.match_id)?.winner"></span>
+                                    </div>
+                                    <div class="stats-duration" x-show="getMatchStats(match.match_id)?.match_duration_ms > 0">
+                                        🕒 <span x-text="formatTime(Math.floor((getMatchStats(match.match_id)?.match_duration_ms || 0) / 1000))"></span>
                                     </div>
                                 </div>
                             </template>
