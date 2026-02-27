@@ -1,6 +1,7 @@
 """Match history tracking and persistence."""
 from __future__ import annotations
 
+import json
 from collections import deque
 from datetime import datetime, timezone
 from typing import Any, Deque, Dict, List, Optional
@@ -31,12 +32,25 @@ def _build_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
     match_time = state.get("match_time", {})
     history_meta = state.get("history_meta", {})
     
+    # Try to get sets_history from Match DB record (includes tiebreak scores)
+    sets_history_data = None
+    match_id = history_meta.get("match_id")
+    if match_id:
+        try:
+            from ..db_models import Match
+            match_record = Match.query.get(match_id)
+            if match_record and match_record.sets_history:
+                sets_history_data = json.loads(match_record.sets_history)
+        except Exception:
+            pass
+
     return {
         "kort_id": kort_id,
-        "player_a": a_data.get("surname", "-"),
-        "player_b": b_data.get("surname", "-"),
+        "player_a": a_data.get("full_name") or a_data.get("surname", "-"),
+        "player_b": b_data.get("full_name") or b_data.get("surname", "-"),
         "score_a": [a_data.get(f"set{i}", 0) for i in [1, 2, 3]],
         "score_b": [b_data.get(f"set{i}", 0) for i in [1, 2, 3]],
+        "sets_history": sets_history_data,
         "duration": format_duration(match_time.get("seconds", 0)),
         "duration_seconds": match_time.get("seconds", 0),
         "phase": history_meta.get("phase", "Grupowa"),
