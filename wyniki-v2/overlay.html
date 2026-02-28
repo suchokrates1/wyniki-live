@@ -239,7 +239,7 @@
     <script>
     const overlayId = window.location.pathname.split('/').pop() || '1';
     const SETTINGS_POLL_MS = 2000;
-    const ALL_COURT_IDS = ['1','2','3','4'];
+    let allCourtIds = [];  // Will be populated from snapshot
 
     function codeToFlag(code) {
         if (!code || code.length < 2) return '';
@@ -398,7 +398,7 @@
 
     function render() {
         var preset = getPreset();
-        var anyActive = ALL_COURT_IDS.some(function(id){return courts[id]?.match_status?.active;});
+        var anyActive = allCourtIds.some(function(id){return courts[id]?.match_status?.active;});
         var autoHidden = preset.auto_hide && !anyActive;
         var sx = window.innerWidth / 1920;
         var sy = window.innerHeight / 1080;
@@ -462,6 +462,11 @@
                     var cid = d.court_id;
                     delete d.court_id;
                     courts[cid] = d;
+                    // Track new court IDs dynamically
+                    if (allCourtIds.indexOf(cid) < 0) {
+                        allCourtIds.push(cid);
+                        allCourtIds.sort(function(a,b){ return (+a) - (+b); });
+                    }
                     render();
                     requestAnimationFrame(fitPlayerNames);
                 }
@@ -476,6 +481,8 @@
             var d = await r.json();
             var c = d.courts || d;
             Object.keys(c).forEach(function(id){ courts[id] = c[id]; });
+            // Update dynamic court ID list
+            allCourtIds = Object.keys(c).sort(function(a,b){ return (+a) - (+b); });
         } catch(e) { console.error('Snapshot:', e); }
     }
 
