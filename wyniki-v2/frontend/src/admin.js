@@ -125,6 +125,10 @@ Alpine.data('adminApp', () => ({
       const response = await fetch('/admin/api/courts');
       if (!response.ok) throw new Error('Failed to load courts');
       this.courts = await response.json();
+      // Set default addElCourtId to first court if not set
+      if (this.courts.length && !this.courts.find(c => String(c.kort_id) === this.addElCourtId)) {
+        this.addElCourtId = String(this.courts[0].kort_id);
+      }
     } catch (err) {
       console.error('Failed to load courts:', err);
       this.showToast('Błąd ładowania kortów', 'error');
@@ -187,10 +191,14 @@ Alpine.data('adminApp', () => ({
       
       if (!response.ok) throw new Error('Failed to add court');
       
-      this.showToast(`Kort ${this.newCourtId} dodany`, 'success');
+      const addedId = this.newCourtId;
+      this.showToast(`Kort ${addedId} dodany`, 'success');
       this.newCourtId = '';
       this.newCourtPin = '';
       await this.loadCourts();
+
+      // Auto-add scoreboard element to all overlay presets
+      this._addCourtToOverlays(addedId);
     } catch (err) {
       console.error('Failed to add court:', err);
       this.showToast('Błąd dodawania kortu', 'error');
@@ -253,6 +261,9 @@ Alpine.data('adminApp', () => ({
       
       this.showToast(`Kort ${kortId} usunięty`, 'success');
       await this.loadCourts();
+
+      // Auto-remove elements for this court from all overlay presets
+      this._removeCourtFromOverlays(kortId);
     } catch (err) {
       console.error('Failed to delete court:', err);
       this.showToast('Błąd usuwania kortu', 'error');
@@ -848,6 +859,13 @@ Alpine.data('adminApp', () => ({
     const ov = this.currentOverlay();
     if (!ov) return;
 
+    // Get dynamic court IDs from loaded courts
+    const courtIds = this.courts.map(c => String(c.kort_id)).sort((a, b) => +a - +b);
+    if (courtIds.length === 0) {
+      this.showToast('Brak kortów — dodaj korty najpierw', 'warning');
+      return;
+    }
+
     // Helper: build a court element
     const mkCourt = (cid, x, y, w, opts = {}) => ({
       type:'court', court_id:String(cid), visible:true, x, y, w,
@@ -858,62 +876,70 @@ Alpine.data('adminApp', () => ({
       label_gap:4, label_bg_opacity:0.85, label_font_size:opts.lfs||14,
     });
 
-    // Template: per-court focus (main bottom-left, 3 others top, labels inverted)
+    // Template: per-court focus (main at bottom-left, rest at the top)
     const mkFocus = (focus) => {
-      const others = ['1','2','3','4'].filter(c => c !== String(focus));
+      const others = courtIds.filter(c => c !== String(focus));
+      const topCols = Math.min(others.length, 4);
       return {
-        top_bar: { enabled:true, columns:3, margin_x:20, margin_top:10, gap:12 },
+        top_bar: { enabled:true, columns:topCols, margin_x:20, margin_top:10, gap:12 },
         elements: [
           mkCourt(focus, 30, 890, 600, { zone:'free', logo:false, labelPos:'above' }),
-          ...others.map((c, i) =>
+          ...others.slice(0, topCols).map((c, i) =>
             mkCourt(c, 20+i*634, 10, 620, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:12 })
           ),
         ],
       };
     };
 
-    const templates = {
-      'kort1-focus': mkFocus('1'),
-      'kort2-focus': mkFocus('2'),
-      'kort3-focus': mkFocus('3'),
-      'kort4-focus': mkFocus('4'),
-      '3kort-top': {
-        top_bar: { enabled: true, columns: 3, margin_x: 20, margin_top: 10, gap: 12 },
-        elements: [
-          mkCourt('1', 20, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
-          mkCourt('2', 654, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
-          mkCourt('3', 1286, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
-        ],
-      },
-      '4kort-top': {
-        top_bar: { enabled: true, columns: 4, margin_x: 10, margin_top: 10, gap: 10 },
-        elements: [
-          mkCourt('1', 10, 10, 467, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:11 }),
-          mkCourt('2', 487, 10, 467, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:11 }),
-          mkCourt('3', 964, 10, 467, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:11 }),
-          mkCourt('4', 1441, 10, 467, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:11 }),
-        ],
-      },
-      'main+stats': {
-        top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 },
-        elements: [
-          mkCourt('1', 30, 890, 600, { logo:false, labelPos:'above' }),
-          { type:'stats', court_id:'1', visible:true, x:1540, y:860, w:360, zone:'free' },
-        ],
-      },
-      'broadcast': {
-        top_bar: { enabled: true, columns: 3, margin_x: 20, margin_top: 10, gap: 12 },
-        elements: [
-          mkCourt('2', 20, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
-          mkCourt('3', 654, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
-          mkCourt('4', 1286, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 }),
-          mkCourt('1', 30, 890, 600, { logo:false, labelPos:'above' }),
-          { type:'stats', court_id:'1', visible:true, x:1540, y:860, w:360, zone:'free' },
-        ],
-      },
+    // Build dynamic focus templates for all courts
+    const templates = {};
+    courtIds.forEach(cid => {
+      templates['kort'+cid+'-focus'] = mkFocus(cid);
+    });
+
+    // N-courts top bar
+    const topN = (n) => {
+      const ids = courtIds.slice(0, n);
+      return {
+        top_bar: { enabled: true, columns: ids.length, margin_x: 20, margin_top: 10, gap: 12 },
+        elements: ids.map((c, i) =>
+          mkCourt(c, 20+i*634, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 })
+        ),
+      };
     };
+    templates['3kort-top'] = topN(3);
+    templates['4kort-top'] = topN(4);
+
+    // All courts top bar
+    templates['all-top'] = topN(courtIds.length);
+
+    const mainCourt = courtIds[0];
+    const otherCourts = courtIds.slice(1);
+    templates['main+stats'] = {
+      top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 },
+      elements: [
+        mkCourt(mainCourt, 30, 890, 600, { logo:false, labelPos:'above' }),
+        { type:'stats', court_id:mainCourt, visible:true, x:1540, y:860, w:360, zone:'free' },
+      ],
+    };
+
+    const broadcastTopCols = Math.min(otherCourts.length, 4);
+    templates['broadcast'] = {
+      top_bar: { enabled: true, columns: broadcastTopCols || 3, margin_x: 20, margin_top: 10, gap: 12 },
+      elements: [
+        ...otherCourts.slice(0, broadcastTopCols).map((c, i) =>
+          mkCourt(c, 20+i*634, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 })
+        ),
+        mkCourt(mainCourt, 30, 890, 600, { logo:false, labelPos:'above' }),
+        { type:'stats', court_id:mainCourt, visible:true, x:1540, y:860, w:360, zone:'free' },
+      ],
+    };
+
     const tpl = templates[tplName];
-    if (!tpl) return;
+    if (!tpl) {
+      this.showToast('Nieznany szablon: ' + tplName, 'warning');
+      return;
+    }
     if (!confirm('Zastosować szablon? Obecne elementy zostaną zastąpione.')) return;
     ov.elements = JSON.parse(JSON.stringify(tpl.elements));
     ov.top_bar = JSON.parse(JSON.stringify(tpl.top_bar));
@@ -1015,6 +1041,57 @@ Alpine.data('adminApp', () => ({
   },
 
   // ===== OVERLAY PRESET CRUD =====
+
+  /** Auto-add scoreboard element for a new court to all overlay presets */
+  _addCourtToOverlays(courtId) {
+    const overlays = this.overlaySettings.overlays || {};
+    const cid = String(courtId);
+    let changed = false;
+    Object.values(overlays).forEach(ov => {
+      // Skip if this court already has an element in this overlay
+      const hasElement = (ov.elements || []).some(el => el.court_id === cid);
+      if (hasElement) return;
+
+      // Find reference element to copy style from (first court-type element)
+      const refEl = (ov.elements || []).find(el => el.type === 'court');
+      const newEl = refEl ? JSON.parse(JSON.stringify(refEl)) : {
+        type: 'court', visible: true, x: 100, y: 100, w: 460,
+        show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
+        zone: 'free', label_position: 'above', label_gap: 4,
+        label_bg_opacity: 0.85, label_font_size: 14,
+      };
+      newEl.court_id = cid;
+      newEl.label_text = 'KORT ' + cid;
+      // Offset position so it doesn't overlap exactly
+      if (refEl) {
+        newEl.x = Math.min(1920 - (newEl.w || 460), (refEl.x || 0) + 40);
+        newEl.y = Math.min(1080 - 80, (refEl.y || 0) + 40);
+      }
+      newEl.zone = 'free';
+      if (!ov.elements) ov.elements = [];
+      ov.elements.push(newEl);
+      changed = true;
+    });
+    if (changed) this.saveOverlaySettings();
+  },
+
+  /** Auto-remove elements for a deleted court from all overlay presets */
+  _removeCourtFromOverlays(courtId) {
+    const overlays = this.overlaySettings.overlays || {};
+    const cid = String(courtId);
+    let changed = false;
+    Object.values(overlays).forEach(ov => {
+      const before = (ov.elements || []).length;
+      ov.elements = (ov.elements || []).filter(el => el.court_id !== cid);
+      if (ov.elements.length !== before) changed = true;
+    });
+    if (changed) {
+      this.selectedElIdx = -1;
+      this.selectedElIdxSet = [];
+      this.saveOverlaySettings();
+    }
+  },
+
   addOverlay() {
     const ids = Object.keys(this.overlaySettings.overlays || {});
     let newId = 'custom_1';
@@ -1313,25 +1390,46 @@ Alpine.data('adminApp', () => ({
       + '</div>' + timeHtml + '</div></div>';
   },
 
-  // Render full court element with label (avoids Alpine x-show bug in nested templates)
+  // Calculate match time string (mirrors overlay.html calcMatchTime)
+  _calcMatchTime(court) {
+    if (!court || !court.match_status?.active || !court.match_time) return null;
+    const mt = court.match_time;
+    let secs = mt.seconds || 0;
+    if (mt.running && mt.resume_ts) secs += (Date.now() / 1000 - mt.resume_ts);
+    secs += (mt.offset_seconds || 0);
+    secs = Math.max(0, Math.floor(secs));
+    const hh = String(Math.floor(secs / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
+    return hh + ':' + mm;
+  },
+
+  // Render full court element with label, wrapped in overlay-container (matches OBS overlay)
   renderCourtElement(el) {
     const sb = this.renderLiveScoreboard(el);
     const hasH = !!el.h;
-    if (!el.label_text || el.label_position === 'none') {
-      return hasH ? '<div style="height:100%;display:flex;flex-direction:column;">' + sb + '</div>' : sb;
-    }
     const pos = el.label_position || 'above';
-    const bg = 'rgba(0,0,0,' + (el.label_bg_opacity != null ? el.label_bg_opacity : 0.7) + ')';
-    const fs = el.label_font_size || 14;
-    const gap = el.label_gap != null ? el.label_gap : 4;
-    const marginProp = pos === 'above' ? 'margin-bottom' : 'margin-top';
-    const radius = pos === 'above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
-    const label = '<div class="sb-label-bar" style="background:' + bg + ';font-size:' + fs + 'px;' + marginProp + ':' + gap + 'px;' + radius + '">' + el.label_text + '</div>';
+    const showLabel = el.label_text && pos !== 'none';
+
+    // Build label with inline time (matching OBS overlay)
+    let label = '';
+    if (showLabel) {
+      const bg = 'rgba(0,0,0,' + (el.label_bg_opacity != null ? el.label_bg_opacity : 0.7) + ')';
+      const fs = el.label_font_size || 14;
+      const belowCls = pos === 'below' ? ' label-below' : '';
+      const court = this.courtData[el.court_id] || {};
+      const timeStr = this._calcMatchTime(court);
+      const timeHtml = timeStr ? '<span class="label-sep">|</span><span class="label-time">⏱ ' + timeStr + '</span>' : '';
+      label = '<div class="sb-label-bar' + belowCls + '" style="background:' + bg + ';font-size:' + fs + 'px;">'
+        + '<span class="label-text">' + el.label_text + '</span>' + timeHtml + '</div>';
+    }
+
+    // Wrap in overlay-container (unified dark bg, matching OBS)
     if (hasH) {
       const sbW = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">' + sb + '</div>';
-      return '<div style="height:100%;display:flex;flex-direction:column;">' + (pos === 'above' ? label + sbW : sbW + label) + '</div>';
+      return '<div class="overlay-container" style="height:100%;display:flex;flex-direction:column;">'
+        + (pos === 'above' ? label + sbW : sbW + label) + '</div>';
     }
-    return pos === 'above' ? label + sb : sb + label;
+    return '<div class="overlay-container">' + (pos === 'above' ? label + sb : sb + label) + '</div>';
   },
 
   // Auto-scale long player names in preview

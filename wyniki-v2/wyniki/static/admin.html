@@ -103,6 +103,36 @@
       font-family:'Courier New',monospace;
     }
     .sb-time-bar .time-icon { opacity:0.5; margin-right:3px; }
+
+    /* ---- Unified overlay container (matches OBS overlay.html) ---- */
+    .overlay-container {
+      display:flex; flex-direction:column;
+      background:linear-gradient(180deg,#1d1d1d 0%,#090909 100%);
+      border-radius:14px; overflow:hidden;
+      box-shadow:0 12px 24px rgba(0,0,0,0.35);
+      border:1px solid rgba(0,0,0,0.8);
+    }
+    .overlay-container .sb-table {
+      border-radius:0; box-shadow:none; border:none; background:transparent;
+    }
+    .overlay-container .sb-wrap { gap:0; }
+    .overlay-container .sb-logo { border-radius:0; margin:0; }
+    .overlay-container .sb-label-bar {
+      background:rgba(255,255,255,0.06);
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      border-radius:0; margin:0;
+    }
+    .overlay-container .sb-label-bar.label-below {
+      border-bottom:none;
+      border-top:1px solid rgba(255,255,255,0.08);
+    }
+    .overlay-container .sb-label-bar .label-sep {
+      margin:0 10px; opacity:0.3; font-weight:400;
+    }
+    .overlay-container .sb-label-bar .label-time {
+      flex:0 0 auto; font-family:'Courier New',monospace;
+    }
+    .overlay-container .sb-time-bar { display:none; }
     .sb-serve {
       display:inline-flex; align-items:center; justify-content:center;
       font-size:14px; line-height:1; flex-shrink:0; margin-left:auto;
@@ -175,7 +205,7 @@
     .ruler-text { fill:#FFD54F; font-size:11px; font-family:monospace; text-anchor:middle; }
     .ruler-bg { fill:rgba(0,0,0,0.7); rx:3; }
   </style>
-  <script type="module" crossorigin src="/assets/admin-C5Aa5Lh1.js"></script>
+  <script type="module" crossorigin src="/assets/admin-bYQCjF3j.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/main-CbaNQPvU.js">
   <link rel="stylesheet" crossorigin href="/assets/main-Ccyj2bC3.css">
 </head>
@@ -429,8 +459,9 @@
                 <h3 class="font-bold text-sm">Elementy</h3>
                 <div class="flex-1"></div>
                 <select x-model="addElCourtId" class="select select-xs select-bordered w-20">
-                  <option value="1">Kort 1</option><option value="2">Kort 2</option>
-                  <option value="3">Kort 3</option><option value="4">Kort 4</option>
+                  <template x-for="c in courts" :key="'addel_'+c.kort_id">
+                    <option :value="c.kort_id" x-text="'Kort '+c.kort_id"></option>
+                  </template>
                 </select>
                 <button @click="addElement('court')" class="btn btn-xs btn-success">+ Kort</button>
                 <button @click="addElement('stats')" class="btn btn-xs btn-accent">+ Statystyki</button>
@@ -521,12 +552,12 @@
               <!-- Preset templates -->
               <div class="flex gap-1 flex-wrap mb-2">
                 <span class="text-xs opacity-50 self-center w-full mb-1">&#128196; Szablony uk&#322;adu:</span>
-                <button @click="applyTemplate('kort1-focus')" class="btn btn-xs btn-outline">Kort 1 focus</button>
-                <button @click="applyTemplate('kort2-focus')" class="btn btn-xs btn-outline">Kort 2 focus</button>
-                <button @click="applyTemplate('kort3-focus')" class="btn btn-xs btn-outline">Kort 3 focus</button>
-                <button @click="applyTemplate('kort4-focus')" class="btn btn-xs btn-outline">Kort 4 focus</button>
+                <template x-for="c in courts" :key="'tpl_focus_'+c.kort_id">
+                  <button @click="applyTemplate('kort'+c.kort_id+'-focus')" class="btn btn-xs btn-outline" x-text="'Kort '+c.kort_id+' focus'"></button>
+                </template>
                 <button @click="applyTemplate('3kort-top')" class="btn btn-xs btn-outline">3 korty g&oacute;ra</button>
                 <button @click="applyTemplate('4kort-top')" class="btn btn-xs btn-outline">4 korty g&oacute;ra</button>
+                <button @click="applyTemplate('all-top')" class="btn btn-xs btn-outline">Wszystkie g&oacute;ra</button>
                 <button @click="applyTemplate('main+stats')" class="btn btn-xs btn-outline">G&#322;&oacute;wny+Stats</button>
                 <button @click="applyTemplate('broadcast')" class="btn btn-xs btn-outline">Broadcast</button>
               </div>
@@ -712,8 +743,9 @@
                       <select class="select select-xs select-bordered flex-1"
                               :value="selectedEl()?.court_id || '1'"
                               @change="setElProp('court_id', $event.target.value)">
-                        <option value="1">Kort 1</option><option value="2">Kort 2</option>
-                        <option value="3">Kort 3</option><option value="4">Kort 4</option>
+                        <template x-for="c in courts" :key="'statsc_'+c.kort_id">
+                          <option :value="c.kort_id" x-text="'Kort '+c.kort_id"></option>
+                        </template>
                       </select>
                     </div>
                   </div>
