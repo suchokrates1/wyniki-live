@@ -96,11 +96,15 @@ def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
         player1 = event_data['player1']
         player2 = event_data['player2']
         
-        state['A']['surname'] = player1.get('full_name') or player1.get('name', '-')
+        full_a = player1.get('full_name') or player1.get('name', '-')
+        state['A']['surname'] = full_a
+        state['A']['full_name'] = full_a
         state['A']['flag_code'] = player1.get('flag_code')
         state['A']['flag_url'] = player1.get('flag_url')
         
-        state['B']['surname'] = player2.get('full_name') or player2.get('name', '-')
+        full_b = player2.get('full_name') or player2.get('name', '-')
+        state['B']['surname'] = full_b
+        state['B']['full_name'] = full_b
         state['B']['flag_code'] = player2.get('flag_code')
         state['B']['flag_url'] = player2.get('flag_url')
         
@@ -164,9 +168,7 @@ def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
             state['match_status']['active'] = False
             state['match_time']['running'] = False
             state['match_time']['finished_ts'] = datetime.now(timezone.utc).isoformat()
-            
-            # Save to match history
-            save_match_to_history(kort_id, state, event_data)
+            # History is saved by finish_match() in umpire_api.py via history_manager
             logger.info(f"Match ended on court {kort_id}")
         
         # Update timestamp
