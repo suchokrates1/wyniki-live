@@ -169,7 +169,7 @@
                             <span class="match-time" x-show="courts[courtId]?.match_time?.seconds">
                                 🕒 <span x-text="formatTime(courts[courtId]?.match_time?.seconds)"></span>
                             </span>
-                            <span class="match-set" x-text="'Set ' + (courts[courtId]?.current_set || 1)"></span>
+                            <span class="match-set" x-text="(tr().footer?.set || 'Set') + ' ' + (courts[courtId]?.current_set || 1)"></span>
                         </div>
                     </section>
                 </template>
@@ -190,10 +190,10 @@
                              :aria-label="getHistoryAriaLabel(match)">
                         <!-- Main row: court, players, score, category, time -->
                         <div class="history-main" aria-hidden="true">
-                            <span class="history-court" x-text="'Kort ' + match.kort_id"></span>
+                            <span class="history-court" x-text="(tr().history?.court || 'Kort') + ' ' + match.kort_id"></span>
                             <span class="history-players">
                                 <strong x-text="match.player_a || '-'"></strong>
-                                <span class="history-vs">vs</span>
+                                <span class="history-vs" x-text="tr().history?.vs || 'vs'"></span>
                                 <strong x-text="match.player_b || '-'"></strong>
                             </span>
                             <span class="history-score" x-text="formatHistoryScore(match.score_a, match.score_b, match.sets_history)"></span>
@@ -218,10 +218,10 @@
                             <template x-if="getMatchStats(match.match_id)?.player1_stats">
                                 <div class="stats-grid">
                                     <div class="stats-mode-label" x-show="getMatchStats(match.match_id)?.stats_mode"
-                                         x-text="(getMatchStats(match.match_id)?.stats_mode || '').toUpperCase() === 'ADVANCED' ? 'Statystyki zaawansowane' : 'Statystyki podstawowe'">
+                                         x-text="(getMatchStats(match.match_id)?.stats_mode || '').toUpperCase() === 'ADVANCED' ? (tr().stats?.advanced || 'Statystyki zaawansowane') : (tr().stats?.simple || 'Statystyki podstawowe')">
                                     </div>
                                     <div class="stats-column">
-                                        <h4 class="stats-player-name" x-text="match.player_a || 'Gracz A'"></h4>
+                                        <h4 class="stats-player-name" x-text="match.player_a || tr().players?.defaultA || 'Gracz A'"></h4>
                                         <template x-for="row in getStatsRows(getMatchStats(match.match_id), 'player1_stats', 'player2_stats')" :key="row.label">
                                             <div class="stats-row">
                                                 <span class="stats-label" x-text="row.label"></span>
@@ -230,7 +230,7 @@
                                         </template>
                                     </div>
                                     <div class="stats-column">
-                                        <h4 class="stats-player-name" x-text="match.player_b || 'Gracz B'"></h4>
+                                        <h4 class="stats-player-name" x-text="match.player_b || tr().players?.defaultB || 'Gracz B'"></h4>
                                         <template x-for="row in getStatsRows(getMatchStats(match.match_id), 'player2_stats', 'player1_stats')" :key="row.label">
                                             <div class="stats-row">
                                                 <span class="stats-label" x-text="row.label"></span>

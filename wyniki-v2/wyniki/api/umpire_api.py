@@ -279,6 +279,14 @@ def create_match():
             with STATE_LOCK:
                 court_state["A"]["surname"] = match.player1_name
                 court_state["B"]["surname"] = match.player2_name
+                if data.get("player1_full_name"):
+                    court_state["A"]["full_name"] = data["player1_full_name"]
+                else:
+                    court_state["A"]["full_name"] = match.player1_name
+                if data.get("player2_full_name"):
+                    court_state["B"]["full_name"] = data["player2_full_name"]
+                else:
+                    court_state["B"]["full_name"] = match.player2_name
                 court_state["match_status"]["active"] = True
                 court_state["updated"] = datetime.utcnow().isoformat()
             
@@ -594,10 +602,14 @@ def log_match_event():
                 court_state["A"]["surname"] = player1["name"]
                 if not court_state["A"].get("full_name"):
                     court_state["A"]["full_name"] = player1["name"]
+            if player1.get('full_name'):
+                court_state["A"]["full_name"] = player1["full_name"]
             if player2.get('name'):
                 court_state["B"]["surname"] = player2["name"]
                 if not court_state["B"].get("full_name"):
                     court_state["B"]["full_name"] = player2["name"]
+            if player2.get('full_name'):
+                court_state["B"]["full_name"] = player2["full_name"]
 
             # --- Flags (Android sends 'flag' as ISO country code) ---
             if player1.get('flag'):

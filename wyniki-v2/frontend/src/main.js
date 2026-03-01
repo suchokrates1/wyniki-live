@@ -38,7 +38,14 @@ const TRANSLATIONS = {
       active: 'aktywny',
       serving: 'serwuje'
     },
-    history: { title: 'Historia meczów' },
+    history: { title: 'Historia meczów', court: 'Kort', vs: 'vs', score: 'wynik', time: 'czas', category: 'Kategoria' },
+    footer: { set: 'Set' },
+    stats: {
+      aces: 'Asy', doubleFaults: 'Podwójne błędy', winners: 'Winnery',
+      forcedErrors: 'Wymuszone błędy', unforcedErrors: 'Niewymuszone błędy',
+      firstServe: '1. serwis', firstServePct: '1. serwis %', pointsWon: 'Pkt wygrane',
+      advanced: 'Statystyki zaawansowane', simple: 'Statystyki podstawowe'
+    },
     emptyTitle: 'Brak aktywnych kortów',
     emptyText: 'Skonfiguruj korty w panelu administratora',
     loading: 'Ładowanie wyników...',
@@ -79,7 +86,14 @@ const TRANSLATIONS = {
       active: 'aktiv',
       serving: 'Aufschlag'
     },
-    history: { title: 'Match-Historie' },
+    history: { title: 'Match-Historie', court: 'Platz', vs: 'gegen', score: 'Ergebnis', time: 'Zeit', category: 'Kategorie' },
+    footer: { set: 'Satz' },
+    stats: {
+      aces: 'Asse', doubleFaults: 'Doppelfehler', winners: 'Winner',
+      forcedErrors: 'Erzwungene Fehler', unforcedErrors: 'Unerzwungene Fehler',
+      firstServe: '1. Aufschlag', firstServePct: '1. Aufschlag %', pointsWon: 'Gew. Punkte',
+      advanced: 'Erweiterte Statistiken', simple: 'Einfache Statistiken'
+    },
     emptyTitle: 'Keine aktiven Plätze',
     emptyText: 'Plätze im Adminbereich konfigurieren',
     loading: 'Ergebnisse werden geladen...',
@@ -120,7 +134,14 @@ const TRANSLATIONS = {
       active: 'active',
       serving: 'serving'
     },
-    history: { title: 'Match history' },
+    history: { title: 'Match history', court: 'Court', vs: 'vs', score: 'score', time: 'time', category: 'Category' },
+    footer: { set: 'Set' },
+    stats: {
+      aces: 'Aces', doubleFaults: 'Double faults', winners: 'Winners',
+      forcedErrors: 'Forced errors', unforcedErrors: 'Unforced errors',
+      firstServe: '1st serve', firstServePct: '1st serve %', pointsWon: 'Points won',
+      advanced: 'Advanced statistics', simple: 'Basic statistics'
+    },
     emptyTitle: 'No active courts',
     emptyText: 'Configure courts in the admin panel',
     loading: 'Loading scores...',
@@ -161,7 +182,14 @@ const TRANSLATIONS = {
       active: 'attivo',
       serving: 'al servizio'
     },
-    history: { title: 'Storico incontri' },
+    history: { title: 'Storico incontri', court: 'Campo', vs: 'contro', score: 'risultato', time: 'tempo', category: 'Categoria' },
+    footer: { set: 'Set' },
+    stats: {
+      aces: 'Ace', doubleFaults: 'Doppi falli', winners: 'Vincenti',
+      forcedErrors: 'Errori forzati', unforcedErrors: 'Errori non forzati',
+      firstServe: '1° servizio', firstServePct: '1° servizio %', pointsWon: 'Punti vinti',
+      advanced: 'Statistiche avanzate', simple: 'Statistiche base'
+    },
     emptyTitle: 'Nessun campo attivo',
     emptyText: 'Configura i campi nel pannello di amministrazione',
     loading: 'Caricamento risultati...',
@@ -202,7 +230,14 @@ const TRANSLATIONS = {
       active: 'activo',
       serving: 'al servicio'
     },
-    history: { title: 'Historial de partidos' },
+    history: { title: 'Historial de partidos', court: 'Cancha', vs: 'contra', score: 'resultado', time: 'tiempo', category: 'Categoría' },
+    footer: { set: 'Set' },
+    stats: {
+      aces: 'Aces', doubleFaults: 'Dobles faltas', winners: 'Ganadores',
+      forcedErrors: 'Errores forzados', unforcedErrors: 'Errores no forzados',
+      firstServe: '1er servicio', firstServePct: '1er servicio %', pointsWon: 'Puntos ganados',
+      advanced: 'Estadísticas avanzadas', simple: 'Estadísticas básicas'
+    },
     emptyTitle: 'No hay canchas activas',
     emptyText: 'Configure las canchas en el panel de administración',
     loading: 'Cargando resultados...',
@@ -243,7 +278,14 @@ const TRANSLATIONS = {
       active: 'actif',
       serving: 'au service'
     },
-    history: { title: 'Historique des matchs' },
+    history: { title: 'Historique des matchs', court: 'Court', vs: 'contre', score: 'score', time: 'temps', category: 'Catégorie' },
+    footer: { set: 'Set' },
+    stats: {
+      aces: 'Aces', doubleFaults: 'Doubles fautes', winners: 'Coups gagnants',
+      forcedErrors: 'Fautes provoquées', unforcedErrors: 'Fautes directes',
+      firstServe: '1er service', firstServePct: '1er service %', pointsWon: 'Points gagnés',
+      advanced: 'Statistiques avancées', simple: 'Statistiques de base'
+    },
     emptyTitle: 'Aucun court actif',
     emptyText: 'Configurez les courts dans le panneau d\'administration',
     loading: 'Chargement des résultats...',
@@ -646,9 +688,9 @@ Alpine.data('tennisApp', () => ({
 
   formatTime(seconds) {
     if (!seconds) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
   },
 
   /* --- History formatting helpers --- */
@@ -701,21 +743,22 @@ Alpine.data('tennisApp', () => ({
    * Build accessible single-string description for NVDA.
    */
   getHistoryAriaLabel(match) {
-    const court = `Kort ${match.kort_id}`;
-    const players = `${match.player_a || '-'} vs ${match.player_b || '-'}`;
+    const h = this.tr().history || {};
+    const court = `${h.court || 'Kort'} ${match.kort_id}`;
+    const players = `${match.player_a || '-'} ${h.vs || 'vs'} ${match.player_b || '-'}`;
     const parts = [court, players];
 
     if (match.category) {
-      parts.push(`Kategoria ${match.category}`);
+      parts.push(`${h.category || 'Kategoria'} ${match.category}`);
     }
     
     const scoreStr = this.formatHistoryScore(match.score_a, match.score_b, match.sets_history);
     if (scoreStr && scoreStr !== '–') {
-      parts.push(`wynik ${scoreStr}`);
+      parts.push(`${h.score || 'wynik'} ${scoreStr}`);
     }
 
     if (match.duration_seconds) {
-      parts.push(`czas ${this.formatTime(match.duration_seconds)}`);
+      parts.push(`${h.time || 'czas'} ${this.formatTime(match.duration_seconds)}`);
     }
 
     return parts.join(', ');
@@ -770,31 +813,32 @@ Alpine.data('tennisApp', () => ({
     const s = stats[playerKey];
     const opp = stats[otherPlayerKey] || {};
     const mode = (stats.stats_mode || 'ADVANCED').toUpperCase();
+    const st = this.tr().stats || {};
     const rows = [];
 
     if (mode === 'ADVANCED') {
-      rows.push({ label: 'Asy', value: s.aces ?? 0 });
+      rows.push({ label: st.aces || 'Aces', value: s.aces ?? 0 });
     }
-    rows.push({ label: 'Podwójne błędy', value: s.double_faults ?? 0 });
-    rows.push({ label: 'Winnery', value: s.winners ?? 0 });
+    rows.push({ label: st.doubleFaults || 'Double faults', value: s.double_faults ?? 0 });
+    rows.push({ label: st.winners || 'Winners', value: s.winners ?? 0 });
     if (mode === 'ADVANCED') {
-      rows.push({ label: 'Wymuszone błędy', value: s.forced_errors ?? 0 });
-      rows.push({ label: 'Niewymuszone błędy', value: s.unforced_errors ?? 0 });
+      rows.push({ label: st.forcedErrors || 'Forced errors', value: s.forced_errors ?? 0 });
+      rows.push({ label: st.unforcedErrors || 'Unforced errors', value: s.unforced_errors ?? 0 });
     }
     // First serve percentage
     if (s.first_serves > 0 || s.first_serve_percentage > 0) {
       if (mode === 'ADVANCED' && s.first_serves > 0) {
-        rows.push({ label: '1. serwis', value: `${s.first_serves_in ?? 0}/${s.first_serves}` });
+        rows.push({ label: st.firstServe || '1st serve', value: `${s.first_serves_in ?? 0}/${s.first_serves}` });
       }
       const pct = s.first_serve_percentage != null
         ? Math.round(s.first_serve_percentage) + '%'
         : (s.first_serves > 0 ? Math.round(((s.first_serves_in ?? 0) / s.first_serves) * 100) + '%' : '–');
-      rows.push({ label: '1. serwis %', value: pct });
+      rows.push({ label: st.firstServePct || '1st serve %', value: pct });
     }
     // Advanced: points won (aces + winners + opponent's errors)
     if (mode === 'ADVANCED') {
       const ptsWon = (s.aces ?? 0) + (s.winners ?? 0) + (opp.double_faults ?? 0) + (opp.forced_errors ?? 0) + (opp.unforced_errors ?? 0);
-      rows.push({ label: 'Pkt wygrane', value: ptsWon });
+      rows.push({ label: st.pointsWon || 'Points won', value: ptsWon });
     }
 
     return rows;
