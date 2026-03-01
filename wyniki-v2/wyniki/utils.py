@@ -6,10 +6,10 @@ from typing import Any, Optional
 
 
 def format_duration(seconds: int) -> str:
-    """Format seconds as MM:SS."""
-    minutes = seconds // 60
-    secs = seconds % 60
-    return f"{minutes:02d}:{secs:02d}"
+    """Format seconds as HH:MM (rounded to minutes)."""
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    return f"{hours:02d}:{minutes:02d}"
 
 
 def parse_iso_datetime(iso_string: str) -> datetime:
