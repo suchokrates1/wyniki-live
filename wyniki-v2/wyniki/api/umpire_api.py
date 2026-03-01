@@ -1,6 +1,6 @@
 """API endpoints for receiving data from Umpire mobile app."""
 from flask import Blueprint, jsonify, request
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court
@@ -449,12 +449,20 @@ def finish_match(match_id: int):
                 except Exception as e:
                     logger.warning(f"Could not detect category: {e}")
 
-                # Store match duration from Match record
-                if match.statistics:
-                    duration_ms = match.statistics.match_duration_ms or 0
-                    court_state["match_time"] = court_state.get("match_time", {})
-                    if duration_ms > 0:
-                        court_state["match_time"]["seconds"] = duration_ms // 1000
+                # Store match duration from Match record or timestamps
+                court_state["match_time"] = court_state.get("match_time", {})
+                if match.statistics and getattr(match.statistics, 'match_duration_ms', None):
+                    duration_ms = match.statistics.match_duration_ms
+                    court_state["match_time"]["seconds"] = duration_ms // 1000
+                else:
+                    # Fallback: compute from started_ts → now
+                    started_ts = court_state["match_time"].get("started_ts")
+                    if started_ts:
+                        from ..utils import parse_iso_datetime
+                        started = parse_iso_datetime(started_ts)
+                        court_state["match_time"]["seconds"] = int(
+                            (datetime.now(timezone.utc) - started).total_seconds()
+                        )
             
             # Add match to history for frontend display
             add_match_to_history(kort_id, court_state)
