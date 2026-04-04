@@ -374,6 +374,15 @@ Alpine.data('tennisApp', () => ({
   history: [],
   expandedMatchStats: {},  // match_id -> stats data (for Details button)
 
+  /* --- Sorted history (newest first) --- */
+  get sortedHistory() {
+    return [...this.history].sort((a, b) => {
+      const ta = a.ended_ts || a.timestamp || '';
+      const tb = b.ended_ts || b.timestamp || '';
+      return tb.localeCompare(ta);
+    });
+  },
+
   init() {
     // Restore dark mode preference
     const savedTheme = localStorage.getItem('theme');
@@ -740,7 +749,101 @@ Alpine.data('tennisApp', () => ({
   },
 
   /**
-   * Build accessible single-string description for NVDA.
+   * Determine match winner from set scores.
+   * Returns 'A', 'B', or null.
+   */
+  getMatchWinner(match) {
+    if (!match.score_a || !match.score_b) return null;
+    let setsA = 0, setsB = 0;
+    for (let i = 0; i < Math.max(match.score_a.length, match.score_b.length); i++) {
+      const a = match.score_a[i] ?? 0;
+      const b = match.score_b[i] ?? 0;
+      if (a === 0 && b === 0 && i > 0) continue;
+      if (a > b) setsA++;
+      else if (b > a) setsB++;
+    }
+    if (setsA > setsB) return 'A';
+    if (setsB > setsA) return 'B';
+    return null;
+  },
+
+  /**
+   * Parse match into per-set data objects for tabular scoreboard.
+   * Returns: [{ a, b, tb, isSuperTB }, ...]
+   */
+  getMatchSets(match) {
+    if (!match.score_a || !match.score_b) return [];
+    const sets = [];
+    const numSets = Math.max(match.score_a.length, match.score_b.length);
+    for (let i = 0; i < numSets; i++) {
+      const a = match.score_a[i] ?? 0;
+      const b = match.score_b[i] ?? 0;
+      if (a === 0 && b === 0 && i > 0) continue;
+      const setInfo = match.sets_history?.find(sh => sh.set_number === i + 1);
+      const tb = setInfo?.tiebreak_loser_points ?? null;
+      const isSuperTB = i === 2 && sets.length === 2;
+      sets.push({ a, b, tb, isSuperTB });
+    }
+    return sets;
+  },
+
+  /**
+   * Build stats rows as paired comparison (P1 value | label | P2 value).
+   * Used in the centered comparison table.
+   */
+  getStatsRowsPaired(stats) {
+    if (!stats || !stats.player1_stats) return [];
+    const s1 = stats.player1_stats;
+    const s2 = stats.player2_stats || {};
+    const mode = (stats.stats_mode || 'ADVANCED').toUpperCase();
+    const st = this.tr().stats || {};
+    const rows = [];
+
+    const push = (label, v1, v2, lowerIsBetter = false) => {
+      const n1 = typeof v1 === 'string' ? parseFloat(v1) : v1;
+      const n2 = typeof v2 === 'string' ? parseFloat(v2) : v2;
+      const cmp = lowerIsBetter ? -1 : 1;
+      rows.push({
+        label,
+        p1: v1,
+        p2: v2,
+        p1Better: !isNaN(n1) && !isNaN(n2) && (n1 - n2) * cmp > 0,
+        p2Better: !isNaN(n1) && !isNaN(n2) && (n2 - n1) * cmp > 0
+      });
+    };
+
+    if (mode === 'ADVANCED') {
+      push(st.aces || 'Aces', s1.aces ?? 0, s2.aces ?? 0);
+    }
+    push(st.doubleFaults || 'Double faults', s1.double_faults ?? 0, s2.double_faults ?? 0, true);
+    push(st.winners || 'Winners', s1.winners ?? 0, s2.winners ?? 0);
+    if (mode === 'ADVANCED') {
+      push(st.forcedErrors || 'Forced errors', s1.forced_errors ?? 0, s2.forced_errors ?? 0, true);
+      push(st.unforcedErrors || 'Unforced errors', s1.unforced_errors ?? 0, s2.unforced_errors ?? 0, true);
+    }
+    if (s1.first_serves > 0 || s1.first_serve_percentage > 0) {
+      if (mode === 'ADVANCED' && s1.first_serves > 0) {
+        push(st.firstServe || '1st serve', `${s1.first_serves_in ?? 0}/${s1.first_serves}`, `${s2.first_serves_in ?? 0}/${s2.first_serves || 0}`);
+      }
+      const pct1 = s1.first_serve_percentage != null
+        ? Math.round(s1.first_serve_percentage) + '%'
+        : (s1.first_serves > 0 ? Math.round(((s1.first_serves_in ?? 0) / s1.first_serves) * 100) + '%' : '–');
+      const pct2 = s2.first_serve_percentage != null
+        ? Math.round(s2.first_serve_percentage) + '%'
+        : (s2.first_serves > 0 ? Math.round(((s2.first_serves_in ?? 0) / s2.first_serves) * 100) + '%' : '–');
+      push(st.firstServePct || '1st serve %', pct1, pct2);
+    }
+    if (mode === 'ADVANCED') {
+      const pw1 = (s1.aces ?? 0) + (s1.winners ?? 0) + (s2.double_faults ?? 0) + (s2.forced_errors ?? 0) + (s2.unforced_errors ?? 0);
+      const pw2 = (s2.aces ?? 0) + (s2.winners ?? 0) + (s1.double_faults ?? 0) + (s1.forced_errors ?? 0) + (s1.unforced_errors ?? 0);
+      push(st.pointsWon || 'Points won', pw1, pw2);
+    }
+
+    return rows;
+  },
+
+  /**
+   * Build accessible single-string description for screen readers (NVDA, VoiceOver).
    */
   getHistoryAriaLabel(match) {
     const h = this.tr().history || {};
@@ -756,6 +859,10 @@ Alpine.data('tennisApp', () => ({
     if (scoreStr && scoreStr !== '–') {
       parts.push(`${h.score || 'wynik'} ${scoreStr}`);
     }
+
+    const winner = this.getMatchWinner(match);
+    if (winner === 'A') parts.push(`zwycięzca ${match.player_a}`);
+    else if (winner === 'B') parts.push(`zwycięzca ${match.player_b}`);
 
     if (match.duration_seconds) {
       parts.push(`${h.time || 'czas'} ${this.formatTime(match.duration_seconds)}`);

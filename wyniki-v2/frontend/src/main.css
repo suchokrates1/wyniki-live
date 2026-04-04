@@ -635,145 +635,330 @@ body {
   font-size: 14px;
 }
 
-/* === History === */
+/* ============================================================
+   HISTORY – PROFESSIONAL SCOREBOARD LAYOUT
+   Inspired by FlashScore / SofaScore / ATP Tour
+   ============================================================ */
 #history-section {
-  margin-top: 18px;
+  margin-top: 24px;
+  padding-bottom: 48px;
 }
-.history-title {
-  margin: 0 0 8px;
-  font-size: 15px;
-  color: var(--muted);
+.hm-heading {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.2px;
 }
-.history-list {
-  display: grid;
-  gap: 12px;
+.hm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.history-item {
-  padding: 12px 16px;
+
+/* --- Match card --- */
+.hm-card {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
-  font-size: 14px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
 }
-.history-main {
+.hm-card:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+[data-theme="dark"] .hm-card:hover {
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+
+/* --- Scoreboard (two player rows) --- */
+.hm-scoreboard {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
+  flex-direction: column;
+  padding: 0;
 }
-.history-court {
-  font-size: 12px;
+
+/* --- Player row --- */
+.hm-player {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 8px 14px;
+  min-height: 38px;
+  color: var(--muted);
+  font-size: 14px;
+  transition: color 0.15s;
+}
+.hm-player + .hm-player {
+  border-top: 1px solid var(--line);
+}
+.hm-player--winner {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Winner mark (green dot) */
+.hm-winner-mark {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+.hm-winner-mark--empty {
+  background: transparent;
+}
+
+/* Player name – full first + last name */
+.hm-player-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.15px;
+}
+
+/* Set scores container */
+.hm-sets {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Individual set cell */
+.hm-set-cell {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.hm-player--winner .hm-set-cell {
+  color: var(--text);
+}
+.hm-set-cell--won {
+  font-weight: 700;
+}
+
+/* Tiebreak superscript */
+.hm-tb {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--muted);
+  vertical-align: super;
+  line-height: 1;
+  margin-left: 1px;
+}
+
+/* --- Meta footer --- */
+.hm-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 14px 8px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.hm-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hm-court-badge {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  min-width: 60px;
 }
-.history-players {
-  color: var(--text);
-}
-.history-vs {
-  color: var(--muted);
-  margin: 0 2px;
-}
-.history-score {
+.hm-cat-badge {
+  font-size: 11px;
   font-weight: 600;
-  color: var(--accent, #0078d4);
-  font-variant-numeric: tabular-nums;
-}
-.history-category {
-  font-size: 12px;
-  color: var(--muted);
-  background: var(--bg);
-  padding: 2px 8px;
-  border-radius: 6px;
+  color: var(--accent);
+  background: rgba(11, 110, 253, 0.1);
+  padding: 1px 7px;
+  border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
-.history-duration {
-  font-size: 12px;
+[data-theme="dark"] .hm-cat-badge {
+  background: rgba(154, 209, 255, 0.12);
+}
+.hm-phase {
+  font-size: 11px;
   color: var(--muted);
 }
-.history-details-btn {
-  font-size: 12px;
-  padding: 3px 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
-  margin-left: auto;
-  transition: background 0.2s;
+.hm-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted);
 }
-.history-details-btn:hover {
-  background: var(--line);
+.hm-time-icon {
+  opacity: 0.6;
 }
 
-/* Stats panel */
-.history-stats-panel {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-.stats-loading, .stats-error {
-  font-size: 13px;
-  color: var(--muted);
-  padding: 6px 0;
-}
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.stats-column {
-  display: flex;
-  flex-direction: column;
+/* Expand/collapse button */
+.hm-details-btn {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
-}
-.stats-player-name {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0 0 4px;
-  color: var(--text);
-}
-.stats-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  padding: 2px 0;
-}
-.stats-label {
-  color: var(--muted);
-}
-.stats-value {
+  font-size: 12px;
   font-weight: 500;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
   color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
 }
-.stats-winner {
-  grid-column: 1 / -1;
-  text-align: center;
+.hm-details-btn:hover {
+  background: var(--line);
+}
+.hm-details-btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.hm-chevron {
+  transition: transform 0.2s ease;
+}
+.hm-chevron--open {
+  transform: rotate(180deg);
+}
+
+/* --- Details panel --- */
+.hm-details-panel {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.hm-details-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
-  padding: 6px 0 0;
-  color: var(--text);
+  color: var(--muted);
+  padding: 4px 0;
 }
-.stats-mode-label {
-  grid-column: 1 / -1;
+
+/* Stats mode label */
+.hm-stats-mode {
   text-align: center;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--muted);
-  margin-bottom: 4px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+/* Stats comparison table (3-column: P1 | Stat | P2) */
+.hm-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.hm-stats-th {
+  padding: 4px 6px 8px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+}
+.hm-stats-th--name {
+  width: 30%;
+}
+.hm-stats-th--name:first-child {
+  text-align: right;
+}
+.hm-stats-th--name:last-child {
+  text-align: left;
+}
+.hm-stats-th--label {
+  text-align: center;
+}
+.hm-stats-row td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.hm-stats-val {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-weight: 400;
+}
+.hm-stats-row td:first-child {
+  text-align: right;
+}
+.hm-stats-row td:last-child {
+  text-align: left;
+}
+.hm-stats-val--better {
+  color: var(--text);
   font-weight: 600;
 }
-.stats-duration {
-  grid-column: 1 / -1;
+.hm-stats-label {
   text-align: center;
-  font-size: 12px;
   color: var(--muted);
-  padding: 2px 0 0;
+  font-size: 12px;
+  white-space: nowrap;
 }
-@media (max-width: 700px) {
-  .history-main { flex-direction: column; align-items: flex-start; }
-  .history-details-btn { margin-left: 0; }
-  .stats-grid { grid-template-columns: 1fr; }
+
+/* Stats footer (winner + duration) */
+.hm-stats-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 0 2px;
+  font-size: 13px;
+  color: var(--text);
+}
+.hm-stats-winner {
+  font-weight: 600;
+}
+.hm-stats-duration {
+  color: var(--muted);
+}
+
+/* --- Responsive --- */
+@media (max-width: 520px) {
+  .hm-player {
+    padding: 6px 10px;
+    font-size: 13px;
+    min-height: 34px;
+  }
+  .hm-set-cell {
+    min-width: 22px;
+    font-size: 13px;
+  }
+  .hm-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 6px 10px 8px;
+  }
+  .hm-details-btn {
+    align-self: flex-end;
+  }
+  .hm-stats-table {
+    font-size: 12px;
+  }
+  .hm-stats-th {
+    font-size: 11px;
+  }
 }
