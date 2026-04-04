@@ -1,3 +1,12 @@
+## Stage 1: Build frontend with Vite
+FROM node:22-alpine AS frontend-build
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+## Stage 2: Python app
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -15,11 +24,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY wyniki ./wyniki
 COPY app.py .
 
-# Copy HTML files
+# Overlay page (standalone)
 COPY overlay.html .
-COPY frontend/index.html .
-COPY frontend/admin.html .
-COPY frontend/embed.html .
+
+# Copy Vite-built frontend (overwrites any stale static/ files)
+COPY --from=frontend-build /wyniki/static ./wyniki/static
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

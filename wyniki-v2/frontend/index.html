@@ -182,10 +182,10 @@
         </div>
 
         <!-- History Section -->
-        <section id="history-section" x-show="sortedHistory.length > 0" aria-labelledby="history-title">
+        <section id="history-section" x-show="sortedHistory().length > 0" aria-labelledby="history-title">
             <h3 id="history-title" class="hm-heading" x-text="tr().history?.title || 'Historia meczów'"></h3>
             <div class="hm-list" role="list">
-                <template x-for="match in sortedHistory" :key="match.match_id || match.ended_ts">
+                <template x-for="match in sortedHistory()" :key="match.id || match.match_id || match.ended_ts">
                     <article class="hm-card" role="listitem">
                         <!-- Screen reader summary (hidden visually) -->
                         <p class="sr-only" x-text="getHistoryAriaLabel(match)"></p>
