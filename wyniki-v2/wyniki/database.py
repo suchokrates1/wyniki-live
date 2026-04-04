@@ -362,6 +362,7 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
             # Build lookup: match_id -> (player1_name, player2_name, created_at)
             match_ids = [r["match_id"] for r in rows if "match_id" in col_names and r["match_id"]]
             match_lookup: Dict[int, Dict] = {}
+            duration_lookup: Dict[int, int] = {}
             if match_ids:
                 placeholders = ",".join("?" for _ in match_ids)
                 cursor.execute(
@@ -374,6 +375,14 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
                         "p2": mr["player2_name"],
                         "started_at": mr["created_at"],
                     }
+                # Fetch duration from match_statistics for entries with duration=0
+                cursor.execute(
+                    f"SELECT match_id, match_duration_ms FROM match_statistics WHERE match_id IN ({placeholders})",
+                    match_ids,
+                )
+                for sr in cursor.fetchall():
+                    if sr["match_duration_ms"]:
+                        duration_lookup[sr["match_id"]] = sr["match_duration_ms"] // 1000
 
             # Build lookup: last_name -> full_name from players table
             cursor.execute("SELECT first_name, last_name, name FROM players")
@@ -433,6 +442,10 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
                     entry["started_at"] = None
                 entry["player_a"] = _resolve_name(raw_a, player_name_map)
                 entry["player_b"] = _resolve_name(raw_b, player_name_map)
+
+                # Fallback duration from match_statistics
+                if not entry["duration_seconds"] and mid and mid in duration_lookup:
+                    entry["duration_seconds"] = duration_lookup[mid]
 
                 result.append(entry)
             return result
