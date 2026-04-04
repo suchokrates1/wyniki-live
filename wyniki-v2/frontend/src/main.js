@@ -375,7 +375,7 @@ Alpine.data('tennisApp', () => ({
   expandedMatchStats: {},  // match_id -> stats data (for Details button)
 
   /* --- Sorted history (newest first) --- */
-  get sortedHistory() {
+  sortedHistory() {
     return [...this.history].sort((a, b) => {
       const ta = a.ended_ts || a.timestamp || '';
       const tb = b.ended_ts || b.timestamp || '';
