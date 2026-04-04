@@ -710,6 +710,14 @@ Alpine.data('tennisApp', () => ({
     } catch { return isoStr; }
   },
 
+  formatDate(isoStr) {
+    if (!isoStr) return '';
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch { return isoStr; }
+  },
+
   /* --- History formatting helpers --- */
   /**
    * Format score arrays into tennis-friendly display with tiebreak scores.
