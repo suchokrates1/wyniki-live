@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify
 
 from ..services.court_manager import serialize_public_snapshot
 from ..services.history_manager import get_history
-from ..db_models import Match, MatchStatistics
+from ..db_models import Match, MatchStatistics, Player
 from ..config import logger
 
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
@@ -44,6 +44,12 @@ def match_stats(match_id: int):
         if match_record:
             data["started_at"] = match_record.created_at
             data["ended_at"] = match_record.updated_at
+        # Resolve winner surname to full name via Player DB
+        if data.get("winner"):
+            winner_name = data["winner"].strip()
+            player = Player.query.filter_by(last_name=winner_name).first()
+            if player:
+                data["winner"] = player.full_name
         return jsonify(data)
     except Exception as e:
         logger.error(f"Failed to get match stats: {e}")

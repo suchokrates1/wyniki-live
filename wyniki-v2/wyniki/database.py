@@ -420,17 +420,19 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
                 else:
                     entry["sets_history"] = None
 
-                # Enrich names — prefer Match table (full names), fallback Player lookup
+                # Enrich names — always resolve through player DB
+                # Start with best available raw name, then resolve
                 ml = match_lookup.get(mid) if mid else None
+                raw_a = entry["player_a"]
+                raw_b = entry["player_b"]
                 if ml:
-                    entry["player_a"] = ml["p1"] or entry["player_a"]
-                    entry["player_b"] = ml["p2"] or entry["player_b"]
+                    raw_a = ml["p1"] or raw_a
+                    raw_b = ml["p2"] or raw_b
                     entry["started_at"] = ml["started_at"]
                 else:
-                    # Try player lookup by surname (handles doubles "X / Y")
-                    entry["player_a"] = _resolve_name(entry["player_a"], player_name_map)
-                    entry["player_b"] = _resolve_name(entry["player_b"], player_name_map)
                     entry["started_at"] = None
+                entry["player_a"] = _resolve_name(raw_a, player_name_map)
+                entry["player_b"] = _resolve_name(raw_b, player_name_map)
 
                 result.append(entry)
             return result
