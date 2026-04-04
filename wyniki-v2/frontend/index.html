@@ -284,6 +284,16 @@
                                             🕒 <span x-text="formatTime(Math.floor((getMatchStats(match.match_id)?.match_duration_ms || 0) / 1000))"></span>
                                         </span>
                                     </div>
+                                    <div class="hm-stats-times" x-show="getMatchStats(match.match_id)?.started_at || getMatchStats(match.match_id)?.ended_at">
+                                        <span x-show="getMatchStats(match.match_id)?.started_at">
+                                            <span class="hm-stats-times__label" x-text="tr().historyDetail?.startedAt || 'Rozpoczęcie:'"></span>
+                                            <span x-text="formatDateTime(getMatchStats(match.match_id)?.started_at)"></span>
+                                        </span>
+                                        <span x-show="getMatchStats(match.match_id)?.ended_at">
+                                            <span class="hm-stats-times__label" x-text="tr().historyDetail?.endedAt || 'Zakończenie:'"></span>
+                                            <span x-text="formatDateTime(getMatchStats(match.match_id)?.ended_at)"></span>
+                                        </span>
+                                    </div>
                                 </div>
                             </template>
                         </div>

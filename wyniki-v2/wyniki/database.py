@@ -345,7 +345,7 @@ def upsert_app_settings(settings_dict: Dict[str, str]) -> None:
 
 
 def fetch_match_history(limit: int = 100) -> List[Dict]:
-    """Fetch match history from database."""
+    """Fetch match history from database, enriched with full names."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -358,7 +358,33 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
             
             # Detect available columns
             col_names = [desc[0] for desc in cursor.description] if cursor.description else []
-            
+
+            # Build lookup: match_id -> (player1_name, player2_name, created_at)
+            match_ids = [r["match_id"] for r in rows if "match_id" in col_names and r["match_id"]]
+            match_lookup: Dict[int, Dict] = {}
+            if match_ids:
+                placeholders = ",".join("?" for _ in match_ids)
+                cursor.execute(
+                    f"SELECT id, player1_name, player2_name, created_at FROM matches WHERE id IN ({placeholders})",
+                    match_ids,
+                )
+                for mr in cursor.fetchall():
+                    match_lookup[mr["id"]] = {
+                        "p1": mr["player1_name"],
+                        "p2": mr["player2_name"],
+                        "started_at": mr["created_at"],
+                    }
+
+            # Build lookup: last_name -> full_name from players table
+            cursor.execute("SELECT first_name, last_name, name FROM players")
+            player_name_map: Dict[str, str] = {}
+            for pr in cursor.fetchall():
+                fn = (pr["first_name"] or "").strip()
+                ln = (pr["last_name"] or "").strip()
+                full = f"{fn} {ln}".strip() if fn else (pr["name"] or ln)
+                if ln:
+                    player_name_map[ln] = full
+
             result = []
             for row in rows:
                 entry = {
@@ -384,7 +410,8 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
                     entry["score_b"] = []
                 
                 # Optional columns
-                entry["match_id"] = row["match_id"] if "match_id" in col_names else None
+                mid = row["match_id"] if "match_id" in col_names else None
+                entry["match_id"] = mid
                 entry["stats_mode"] = row["stats_mode"] if "stats_mode" in col_names else None
                 
                 # Sets history with tiebreak scores
@@ -392,12 +419,35 @@ def fetch_match_history(limit: int = 100) -> List[Dict]:
                     entry["sets_history"] = json.loads(row["sets_history"])
                 else:
                     entry["sets_history"] = None
-                
+
+                # Enrich names — prefer Match table (full names), fallback Player lookup
+                ml = match_lookup.get(mid) if mid else None
+                if ml:
+                    entry["player_a"] = ml["p1"] or entry["player_a"]
+                    entry["player_b"] = ml["p2"] or entry["player_b"]
+                    entry["started_at"] = ml["started_at"]
+                else:
+                    # Try player lookup by surname (handles doubles "X / Y")
+                    entry["player_a"] = _resolve_name(entry["player_a"], player_name_map)
+                    entry["player_b"] = _resolve_name(entry["player_b"], player_name_map)
+                    entry["started_at"] = None
+
                 result.append(entry)
             return result
     except Exception as e:
         logger.error("fetch_match_history_error", error=str(e))
         return []
+
+
+def _resolve_name(raw: Optional[str], lookup: Dict[str, str]) -> str:
+    """Try to resolve a surname or 'X / Y' doubles pair to full names."""
+    if not raw or raw == "-":
+        return raw or "-"
+    # Doubles format: "Surname1 / Surname2"
+    if " / " in raw:
+        parts = [lookup.get(p.strip(), p.strip()) for p in raw.split(" / ")]
+        return " / ".join(parts)
+    return lookup.get(raw.strip(), raw)
 
 
 # ==================== TOURNAMENTS ====================
