@@ -230,6 +230,10 @@
                                     <svg class="hm-time-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v4.5l3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                     <span x-text="formatTime(match.duration_seconds)"></span>
                                 </span>
+                                <span class="hm-date" x-show="match.ended_ts">
+                                    <svg class="hm-time-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                    <span x-text="formatDate(match.ended_ts)"></span>
+                                </span>
                             </div>
                             <button class="hm-details-btn"
                                     x-show="match.match_id"
