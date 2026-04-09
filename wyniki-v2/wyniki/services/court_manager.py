@@ -65,6 +65,8 @@ def _empty_court_state() -> Dict[str, Any]:
             "category": None,
         },
         "overlay_visible": None,
+        "battery_level": None,
+        "is_charging": None,
         "updated": None,
     }
 
