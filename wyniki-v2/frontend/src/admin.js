@@ -105,6 +105,13 @@ Alpine.data('adminApp', () => ({
     this.loadTournaments();
     this.loadOverlaySettings();
     this._loadDemoStatus();
+    // Load live court data (battery, scores) for courts tab
+    fetch('/api/snapshot').then(r => r.json()).then(d => {
+      const c = d.courts || d;
+      Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
+    }).catch(() => {});
+    // Start SSE for live updates (battery, scores)
+    this._initGlobalSSE();
     // Recalc canvas scale on resize
     window.addEventListener('resize', () => this.updateCanvasScale());
     this.$nextTick(() => this.updateCanvasScale());
@@ -594,6 +601,27 @@ Alpine.data('adminApp', () => ({
       console.error('Demo clear error:', err);
       this.showToast('Błąd czyszczenia demo', 'error');
     }
+  },
+
+  // ===== SSE FOR LIVE COURT DATA (battery, scores) =====
+  _initGlobalSSE() {
+    if (this._globalSSE) return;
+    this._globalSSE = new EventSource('/api/stream');
+    this._globalSSE.addEventListener('court_update', (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.court_id && !this.demoPreview) {
+          const cid = d.court_id;
+          delete d.court_id;
+          this.courtData[cid] = d;
+        }
+      } catch (err) { console.error('SSE parse:', err); }
+    });
+    this._globalSSE.onerror = () => {
+      this._globalSSE.close();
+      this._globalSSE = null;
+      setTimeout(() => this._initGlobalSSE(), 5000);
+    };
   },
 
   // ===== SSE FOR LIVE DATA IN SETTINGS =====
