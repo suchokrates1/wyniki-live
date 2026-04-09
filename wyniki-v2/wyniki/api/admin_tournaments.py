@@ -249,6 +249,48 @@ def import_players(tournament_id: int):
     })
 
 
+@blueprint.route('/<int:tournament_id>/players/bulk', methods=['POST'])
+def bulk_import_players(tournament_id: int):
+    """Bulk import pre-parsed players from JSON array.
+    
+    Expected JSON: { "players": [{"name": "...", "category": "...", "country": "..."}] }
+    """
+    data = request.get_json()
+    players = data.get('players', [])
+    
+    if not players:
+        return jsonify({"error": "No players provided"}), 400
+    
+    players_data = []
+    for p in players:
+        name = p.get('name', '').strip()
+        if not name:
+            continue
+        name_parts = name.rsplit(' ', 1)
+        if len(name_parts) == 2:
+            first_name, last_name = name_parts[0], name_parts[1]
+        else:
+            first_name, last_name = '', name
+        
+        players_data.append({
+            "name": name,
+            "first_name": first_name,
+            "last_name": last_name,
+            "category": p.get('category', '').strip(),
+            "country": p.get('country', '').strip()
+        })
+    
+    if not players_data:
+        return jsonify({"error": "No valid players found"}), 400
+    
+    count = bulk_insert_players(tournament_id, players_data)
+    
+    return jsonify({
+        "message": f"Imported {count} players",
+        "count": count
+    })
+
+
 # ==================== PUBLIC API ====================
 
 players_public_bp = Blueprint('players_public', __name__, url_prefix='/api/players')
