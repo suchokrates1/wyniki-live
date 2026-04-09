@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .config import logger, settings
-from .database import init_db, fetch_courts, fetch_tournaments, fetch_match_history
+from .database import init_db, fetch_courts, fetch_tournaments, fetch_match_history, get_active_tournament_id
 from .services.court_manager import refresh_courts_from_db
 from .services.history_manager import load_history_from_db
 
@@ -53,10 +53,11 @@ def initialize_state() -> None:
     
     # Load match history from database
     try:
-        history = fetch_match_history(limit=settings.match_history_size)
+        tid = get_active_tournament_id()
+        history = fetch_match_history(limit=settings.match_history_size, tournament_id=tid)
         # fetch returns newest first, load oldest first so deque order is correct
         load_history_from_db(list(reversed(history)))
-        logger.info(f"Loaded {len(history)} match history entries from database")
+        logger.info(f"Loaded {len(history)} match history entries for tournament {tid}")
     except Exception as e:
         logger.error(f"Failed to load match history: {e}")
     
