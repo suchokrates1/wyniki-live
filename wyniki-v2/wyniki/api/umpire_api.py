@@ -718,6 +718,14 @@ def log_match_event():
 
             court_state["updated"] = datetime.utcnow().isoformat()
 
+            # --- Battery level from tablet ---
+            battery_level = data.get('battery_level')
+            if battery_level is not None:
+                court_state["battery_level"] = int(battery_level)
+            is_charging = data.get('is_charging')
+            if is_charging is not None:
+                court_state["is_charging"] = bool(is_charging)
+
         # Emit SSE update to all listeners
         emit_score_update(kort_id, court_state)
 
