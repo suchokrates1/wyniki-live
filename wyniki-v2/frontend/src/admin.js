@@ -29,6 +29,8 @@ Alpine.data('adminApp', () => ({
   
   // Players
   players: [],
+  editingPlayerId: null,
+  editPlayerData: { first_name: '', last_name: '', category: '', country: '' },
   newPlayer: {
     first_name: '',
     last_name: '',
@@ -413,6 +415,32 @@ Alpine.data('adminApp', () => ({
     } catch (err) {
       console.error('Failed to delete player:', err);
       this.showToast('Błąd usuwania gracza', 'error');
+    }
+  },
+
+  editPlayer(player) {
+    this.editingPlayerId = player.id;
+    this.editPlayerData = { first_name: player.first_name || '', last_name: player.last_name || '', category: player.category || '', country: player.country || '' };
+  },
+
+  cancelEditPlayer() {
+    this.editingPlayerId = null;
+  },
+
+  async savePlayer(playerId) {
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/${playerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.editPlayerData),
+      });
+      if (!response.ok) throw new Error('Failed to update player');
+      this.editingPlayerId = null;
+      this.showToast('Gracz zaktualizowany', 'success');
+      await this.loadPlayers(this.selectedTournament);
+    } catch (err) {
+      console.error('Failed to update player:', err);
+      this.showToast('Błąd edycji gracza', 'error');
     }
   },
   
