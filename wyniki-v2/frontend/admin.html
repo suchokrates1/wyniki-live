@@ -216,7 +216,7 @@
           <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
           <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
           <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze</button>
-          <button @click="activeTab = 'settings'; initSettingsSSE(); $nextTick(() => updateCanvasScale())" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
+          <button @click="activeTab = 'settings'; $nextTick(() => { updateCanvasScale(); _fitPreviewNames(); })" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
         </div>
       </div>
     </header>
@@ -228,7 +228,7 @@
           <h2 class="card-title">Zarz&#261;dzanie kortami</h2>
           <div class="overflow-x-auto">
             <table class="table table-zebra">
-              <thead><tr><th>ID Kortu</th><th>PIN</th><th>Status</th><th>Bateria</th><th>Akcje</th></tr></thead>
+              <thead><tr><th>ID Kortu</th><th>PIN</th><th>Status / Mecz</th><th>Bateria</th><th>Akcje</th></tr></thead>
               <tbody>
                 <template x-for="court in courts" :key="court.kort_id">
                   <tr>
@@ -237,11 +237,12 @@
                       <template x-if="editingCourt === court.kort_id"><input type="text" x-model="editCourtId" class="input input-sm input-bordered w-24" @keyup.enter="saveCourt(court.kort_id)" @keyup.escape="cancelEdit()"></template>
                     </td>
                     <td><input type="text" x-model="court.pin" @change="updateCourtPin(court.kort_id, $event.target.value)" class="input input-sm input-bordered w-24" placeholder="PIN" maxlength="4" pattern="[0-9]{4}"></td>
-                    <td><span class="badge" :class="court.active ? 'badge-success' : 'badge-ghost'" x-text="court.active ? 'Aktywny' : 'Nieaktywny'"></span></td>
+                    <td x-html="courtStatusInfo(court.kort_id)"></td>
                     <td x-html="batteryIndicator(courtData[court.kort_id])"></td>
                     <td class="flex gap-1">
                       <template x-if="editingCourt !== court.kort_id"><button @click="startEdit(court.kort_id)" class="btn btn-sm btn-ghost" title="Edytuj">&#9999;&#65039;</button></template>
                       <template x-if="editingCourt === court.kort_id"><div class="flex gap-1"><button @click="saveCourt(court.kort_id)" class="btn btn-sm btn-success">&#10003;</button><button @click="cancelEdit()" class="btn btn-sm btn-ghost">&#10007;</button></div></template>
+                      <template x-if="courtData[court.kort_id]?.match_status?.active"><button @click="resetCourt(court.kort_id)" class="btn btn-sm btn-ghost text-warning" title="Resetuj mecz">&#128260;</button></template>
                       <button @click="deleteCourt(court.kort_id)" class="btn btn-sm btn-ghost text-error" title="Usu&#324;">&#128465;&#65039;</button>
                     </td>
                   </tr>
