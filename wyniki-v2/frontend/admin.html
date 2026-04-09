@@ -328,11 +328,44 @@
                 <tbody>
                   <template x-for="player in filteredPlayers" :key="player.id">
                     <tr>
-                      <td x-text="player.first_name"></td>
-                      <td x-text="player.last_name"></td>
-                      <td><span class="badge badge-sm" x-text="player.category"></span></td>
-                      <td x-text="player.country"></td>
-                      <td><button @click="deletePlayer(player.id)" class="btn btn-xs btn-error">Usu&#324;</button></td>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td x-text="player.first_name"></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td><input type="text" x-model="editPlayerData.first_name" class="input input-xs input-bordered w-full" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td x-text="player.last_name"></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td><input type="text" x-model="editPlayerData.last_name" class="input input-xs input-bordered w-full" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td><span class="badge badge-sm" x-text="player.category"></span></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td><input type="text" x-model="editPlayerData.category" class="input input-xs input-bordered w-20" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td x-text="player.country"></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td><input type="text" x-model="editPlayerData.country" class="input input-xs input-bordered w-16" maxlength="2" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <td class="flex gap-1">
+                        <template x-if="editingPlayerId !== player.id">
+                          <div class="flex gap-1">
+                            <button @click="editPlayer(player)" class="btn btn-xs btn-ghost" title="Edytuj">&#9999;&#65039;</button>
+                            <button @click="deletePlayer(player.id)" class="btn btn-xs btn-error">Usu&#324;</button>
+                          </div>
+                        </template>
+                        <template x-if="editingPlayerId === player.id">
+                          <div class="flex gap-1">
+                            <button @click="savePlayer(player.id)" class="btn btn-xs btn-success">&#10003;</button>
+                            <button @click="cancelEditPlayer()" class="btn btn-xs btn-ghost">&#10007;</button>
+                          </div>
+                        </template>
+                      </td>
                     </tr>
                   </template>
                 </tbody>
