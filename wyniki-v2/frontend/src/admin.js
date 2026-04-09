@@ -62,7 +62,6 @@ Alpine.data('adminApp', () => ({
   
   // Court live data from SSE
   courtData: {},
-  _settingsSSE: null,
 
   // Demo mode
   demoPreview: false,       // admin is showing demo data in preview
@@ -603,7 +602,7 @@ Alpine.data('adminApp', () => ({
     }
   },
 
-  // ===== SSE FOR LIVE COURT DATA (battery, scores) =====
+  // ===== SSE FOR LIVE COURT DATA (battery, scores, overlay preview) =====
   _initGlobalSSE() {
     if (this._globalSSE) return;
     this._globalSSE = new EventSource('/api/stream');
@@ -614,6 +613,8 @@ Alpine.data('adminApp', () => ({
           const cid = d.court_id;
           delete d.court_id;
           this.courtData[cid] = d;
+          // Update overlay preview names if on settings tab
+          if (this.activeTab === 'settings') this._fitPreviewNames();
         }
       } catch (err) { console.error('SSE parse:', err); }
     });
@@ -621,40 +622,6 @@ Alpine.data('adminApp', () => ({
       this._globalSSE.close();
       this._globalSSE = null;
       setTimeout(() => this._initGlobalSSE(), 5000);
-    };
-  },
-
-  // ===== SSE FOR LIVE DATA IN SETTINGS =====
-  initSettingsSSE() {
-    if (this._settingsSSE) return;
-    // Load snapshot first (but not if viewing demo preview)
-    if (!this.demoPreview) {
-      fetch('/api/snapshot').then(r => r.json()).then(d => {
-        if (this.demoPreview) return; // race guard
-        const c = d.courts || d;
-        Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
-        this._fitPreviewNames();
-      }).catch(() => {});
-    }
-    // Connect SSE
-    this._settingsSSE = new EventSource('/api/stream');
-    this._settingsSSE.addEventListener('court_update', (e) => {
-      try {
-        const d = JSON.parse(e.data);
-        if (d.court_id) {
-          // Skip SSE updates while admin is in demo preview mode
-          if (this.demoPreview) return;
-          const cid = d.court_id;
-          delete d.court_id;
-          this.courtData[cid] = d;
-          this._fitPreviewNames();
-        }
-      } catch (err) { console.error('SSE parse:', err); }
-    });
-    this._settingsSSE.onerror = () => {
-      this._settingsSSE.close();
-      this._settingsSSE = null;
-      setTimeout(() => { if (this.activeTab === 'settings') this.initSettingsSSE(); }, 5000);
     };
   },
 
@@ -1468,6 +1435,42 @@ Alpine.data('adminApp', () => ({
       ? '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="10" x2="23" y2="14"/><polyline points="11 10 9 13 13 13 11 16" fill="' + color + '" stroke="' + color + '"/></svg>'
       : '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><line x1="23" y1="10" x2="23" y2="14"/><rect x="2" y="7" width="' + Math.round(lvl * 16 / 100) + '" height="10" fill="' + color + '" rx="1" opacity="0.5"/></svg>';
     return '<span class="inline-flex items-center gap-1" title="' + lvl + '%' + (charging ? ' (ładowanie)' : '') + '">' + icon + ' <span style="color:' + color + ';font-weight:600;font-size:0.85rem">' + lvl + '%</span></span>';
+  },
+
+  courtStatusInfo(kortId) {
+    const cd = this.courtData[kortId];
+    if (!cd || !cd.match_status || !cd.match_status.active) {
+      return '<span class="badge badge-ghost">Wolny</span>';
+    }
+    const a = cd.A || {};
+    const b = cd.B || {};
+    const nameA = a.surname || '-';
+    const nameB = b.surname || '-';
+    // Build score string: sets (e.g. "6:3 4:2") + current games
+    let sets = [];
+    if ((a.set1 || 0) + (b.set1 || 0) > 0) sets.push(a.set1 + ':' + b.set1);
+    if ((a.set2 || 0) + (b.set2 || 0) > 0) sets.push(a.set2 + ':' + b.set2);
+    if ((a.set3 || 0) + (b.set3 || 0) > 0) sets.push(a.set3 + ':' + b.set3);
+    const games = (a.current_games || 0) + ':' + (b.current_games || 0);
+    const pts = (a.points || '0') + ':' + (b.points || '0');
+    const score = (sets.length ? sets.join(' ') + ' / ' : '') + games + ' (' + pts + ')';
+    return '<div class="flex flex-col gap-0.5">'
+      + '<span class="badge badge-success badge-sm">W grze</span>'
+      + '<span class="text-xs font-semibold">' + nameA + ' vs ' + nameB + '</span>'
+      + '<span class="text-xs opacity-70">' + score + '</span>'
+      + '</div>';
+  },
+
+  async resetCourt(kortId) {
+    if (!confirm('Czy na pewno chcesz zresetować mecz na korcie ' + kortId + '? Wszystkie dane meczu zostaną usunięte.')) return;
+    try {
+      const r = await fetch('/admin/api/courts/' + kortId + '/reset', { method: 'POST' });
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error || 'Reset failed'); }
+      this.showToast('Kort ' + kortId + ' zresetowany', 'success');
+    } catch (err) {
+      console.error('Reset court failed:', err);
+      this.showToast('Błąd resetowania kortu: ' + err.message, 'error');
+    }
   },
 
   // Render full court element with label, wrapped in overlay-container (matches OBS overlay)

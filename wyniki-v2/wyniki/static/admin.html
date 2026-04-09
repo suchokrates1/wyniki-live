@@ -205,9 +205,9 @@
     .ruler-text { fill:#FFD54F; font-size:11px; font-family:monospace; text-anchor:middle; }
     .ruler-bg { fill:rgba(0,0,0,0.7); rx:3; }
   </style>
-  <script type="module" crossorigin src="/assets/admin-bYQCjF3j.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/main-CbaNQPvU.js">
-  <link rel="stylesheet" crossorigin href="/assets/main-Ccyj2bC3.css">
+  <script type="module" crossorigin src="/assets/admin-DFHS2TNr.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/main-BEDxGw_-.js">
+  <link rel="stylesheet" crossorigin href="/assets/main-DfmKoIDZ.css">
 </head>
 <body class="min-h-screen bg-base-200">
   <div x-data="adminApp" class="container mx-auto px-4 py-8 max-w-7xl">
@@ -219,7 +219,7 @@
           <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
           <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
           <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze</button>
-          <button @click="activeTab = 'settings'; initSettingsSSE(); $nextTick(() => updateCanvasScale())" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
+          <button @click="activeTab = 'settings'; $nextTick(() => { updateCanvasScale(); _fitPreviewNames(); })" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
         </div>
       </div>
     </header>
@@ -231,7 +231,7 @@
           <h2 class="card-title">Zarz&#261;dzanie kortami</h2>
           <div class="overflow-x-auto">
             <table class="table table-zebra">
-              <thead><tr><th>ID Kortu</th><th>PIN</th><th>Status</th><th>Akcje</th></tr></thead>
+              <thead><tr><th>ID Kortu</th><th>PIN</th><th>Status / Mecz</th><th>Bateria</th><th>Akcje</th></tr></thead>
               <tbody>
                 <template x-for="court in courts" :key="court.kort_id">
                   <tr>
@@ -240,10 +240,12 @@
                       <template x-if="editingCourt === court.kort_id"><input type="text" x-model="editCourtId" class="input input-sm input-bordered w-24" @keyup.enter="saveCourt(court.kort_id)" @keyup.escape="cancelEdit()"></template>
                     </td>
                     <td><input type="text" x-model="court.pin" @change="updateCourtPin(court.kort_id, $event.target.value)" class="input input-sm input-bordered w-24" placeholder="PIN" maxlength="4" pattern="[0-9]{4}"></td>
-                    <td><span class="badge" :class="court.active ? 'badge-success' : 'badge-ghost'" x-text="court.active ? 'Aktywny' : 'Nieaktywny'"></span></td>
+                    <td x-html="courtStatusInfo(court.kort_id)"></td>
+                    <td x-html="batteryIndicator(courtData[court.kort_id])"></td>
                     <td class="flex gap-1">
                       <template x-if="editingCourt !== court.kort_id"><button @click="startEdit(court.kort_id)" class="btn btn-sm btn-ghost" title="Edytuj">&#9999;&#65039;</button></template>
                       <template x-if="editingCourt === court.kort_id"><div class="flex gap-1"><button @click="saveCourt(court.kort_id)" class="btn btn-sm btn-success">&#10003;</button><button @click="cancelEdit()" class="btn btn-sm btn-ghost">&#10007;</button></div></template>
+                      <template x-if="courtData[court.kort_id]?.match_status?.active"><button @click="resetCourt(court.kort_id)" class="btn btn-sm btn-ghost text-warning" title="Resetuj mecz">&#128260;</button></template>
                       <button @click="deleteCourt(court.kort_id)" class="btn btn-sm btn-ghost text-error" title="Usu&#324;">&#128465;&#65039;</button>
                     </td>
                   </tr>
@@ -330,11 +332,44 @@
                 <tbody>
                   <template x-for="player in filteredPlayers" :key="player.id">
                     <tr>
-                      <td x-text="player.first_name"></td>
-                      <td x-text="player.last_name"></td>
-                      <td><span class="badge badge-sm" x-text="player.category"></span></td>
-                      <td x-text="player.country"></td>
-                      <td><button @click="deletePlayer(player.id)" class="btn btn-xs btn-error">Usu&#324;</button></td>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td x-text="player.first_name"></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td><input type="text" x-model="editPlayerData.first_name" class="input input-xs input-bordered w-full" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td x-text="player.last_name"></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td><input type="text" x-model="editPlayerData.last_name" class="input input-xs input-bordered w-full" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td><span class="badge badge-sm" x-text="player.category"></span></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td><input type="text" x-model="editPlayerData.category" class="input input-xs input-bordered w-20" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td x-text="player.country"></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td><input type="text" x-model="editPlayerData.country" class="input input-xs input-bordered w-16" maxlength="2" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <td class="flex gap-1">
+                        <template x-if="editingPlayerId !== player.id">
+                          <div class="flex gap-1">
+                            <button @click="editPlayer(player)" class="btn btn-xs btn-ghost" title="Edytuj">&#9999;&#65039;</button>
+                            <button @click="deletePlayer(player.id)" class="btn btn-xs btn-error">Usu&#324;</button>
+                          </div>
+                        </template>
+                        <template x-if="editingPlayerId === player.id">
+                          <div class="flex gap-1">
+                            <button @click="savePlayer(player.id)" class="btn btn-xs btn-success">&#10003;</button>
+                            <button @click="cancelEditPlayer()" class="btn btn-xs btn-ghost">&#10007;</button>
+                          </div>
+                        </template>
+                      </td>
                     </tr>
                   </template>
                 </tbody>

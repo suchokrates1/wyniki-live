@@ -93,6 +93,30 @@ def delete_court(kort_id):
         return jsonify({"error": str(e)}), 500
 
 
+@blueprint.route('/api/courts/<kort_id>/reset', methods=['POST'])
+def reset_court(kort_id):
+    """Reset court state - clear all match data."""
+    try:
+        from ..services import court_manager
+        from ..services.event_broker import emit_score_update
+
+        state = court_manager.get_court_state(kort_id)
+        if state is None:
+            return jsonify({"error": "Court not found"}), 404
+
+        with court_manager.STATE_LOCK:
+            fresh = court_manager._empty_court_state()
+            state.clear()
+            state.update(fresh)
+
+        emit_score_update(kort_id, state)
+        logger.info(f"Court reset: kort={kort_id}")
+        return jsonify({"status": "ok", "kort_id": kort_id})
+    except Exception as e:
+        logger.error(f"Failed to reset court: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @blueprint.route('/api/courts/<kort_id>', methods=['PUT'])
 def update_court(kort_id):
     """Update court (rename kort_id)."""
