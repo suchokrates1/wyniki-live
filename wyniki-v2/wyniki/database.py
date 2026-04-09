@@ -147,6 +147,18 @@ def init_db() -> None:
             cursor.execute("ALTER TABLE match_history ADD COLUMN sets_history TEXT")
             logger.info("database_migration", action="added_sets_history_to_match_history")
         
+        # Migration: Add tournament_id column to match_history
+        cursor.execute("PRAGMA table_info(match_history)")
+        mh_cols3 = [row[1] for row in cursor.fetchall()]
+        if 'tournament_id' not in mh_cols3:
+            cursor.execute("ALTER TABLE match_history ADD COLUMN tournament_id INTEGER")
+            # Assign existing history to the first tournament (default)
+            cursor.execute("SELECT id FROM tournaments ORDER BY id ASC LIMIT 1")
+            first_t = cursor.fetchone()
+            if first_t:
+                cursor.execute("UPDATE match_history SET tournament_id = ? WHERE tournament_id IS NULL", (first_t["id"],))
+            logger.info("database_migration", action="added_tournament_id_to_match_history")
+        
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)
@@ -161,8 +173,9 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
                 INSERT INTO match_history (
                     kort_id, ended_ts, duration_seconds,
                     player_a, player_b, score_a, score_b,
-                    category, phase, match_id, stats_mode, sets_history
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    category, phase, match_id, stats_mode, sets_history,
+                    tournament_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 entry.get("kort_id"),
                 entry.get("ended_ts"),
@@ -176,6 +189,7 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
                 entry.get("match_id"),
                 entry.get("stats_mode"),
                 json.dumps(entry.get("sets_history")) if entry.get("sets_history") else None,
+                entry.get("tournament_id"),
             ))
             conn.commit()
         logger.info("match_history_inserted", kort_id=entry.get("kort_id"))
@@ -344,16 +358,24 @@ def upsert_app_settings(settings_dict: Dict[str, str]) -> None:
         logger.error("upsert_app_settings_error", error=str(e))
 
 
-def fetch_match_history(limit: int = 100) -> List[Dict]:
+def fetch_match_history(limit: int = 100, tournament_id: Optional[int] = None) -> List[Dict]:
     """Fetch match history from database, enriched with full names."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM match_history
-                ORDER BY ended_ts DESC
-                LIMIT ?
-            """, (limit,))
+            if tournament_id is not None:
+                cursor.execute("""
+                    SELECT * FROM match_history
+                    WHERE tournament_id = ?
+                    ORDER BY ended_ts DESC
+                    LIMIT ?
+                """, (tournament_id, limit))
+            else:
+                cursor.execute("""
+                    SELECT * FROM match_history
+                    ORDER BY ended_ts DESC
+                    LIMIT ?
+                """, (limit,))
             rows = cursor.fetchall()
             
             # Detect available columns
@@ -466,6 +488,19 @@ def _resolve_name(raw: Optional[str], lookup: Dict[str, str]) -> str:
 
 
 # ==================== TOURNAMENTS ====================
+
+def get_active_tournament_id() -> Optional[int]:
+    """Get the ID of the currently active tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM tournaments WHERE active = 1 LIMIT 1")
+            row = cursor.fetchone()
+            return row["id"] if row else None
+    except Exception as e:
+        logger.error("get_active_tournament_id_error", error=str(e))
+        return None
+
 
 def fetch_tournaments() -> List[Dict]:
     """Fetch all tournaments."""

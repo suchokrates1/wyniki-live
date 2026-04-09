@@ -22,9 +22,13 @@ def snapshot():
 
 @blueprint.route('/history')
 def history():
-    """Get match history."""
+    """Get match history for the active tournament."""
     try:
-        history_data = get_history()
+        from ..database import get_active_tournament_id, fetch_match_history
+        from ..config import settings
+        tid = get_active_tournament_id()
+        # Serve from DB filtered by tournament
+        history_data = fetch_match_history(limit=settings.match_history_size, tournament_id=tid)
         return jsonify(history_data)
     except Exception as e:
         logger.error(f"Failed to get history: {e}")
