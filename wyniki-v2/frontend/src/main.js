@@ -17,13 +17,13 @@ const TRANSLATIONS = {
     courtLabel: 'Kort {court}',
     liveBadge: 'LIVE',
     versus: 'vs',
-    tieBreakLabel: 'TIE-BREAK',
-    superTieBreakLabel: 'SUPER TIE-BREAK',
+    tieBreakLabel: 'TB',
+    superTieBreakLabel: 'STB',
     table: {
       columns: {
         points: 'Punkty',
-        tieBreak: 'Tie Break',
-        superTieBreak: 'Super TB',
+        tieBreak: 'TB',
+        superTieBreak: 'STB',
         set1: 'Set 1', set2: 'Set 2', set3: 'Set 3'
       }
     },
@@ -65,13 +65,13 @@ const TRANSLATIONS = {
     courtLabel: 'Platz {court}',
     liveBadge: 'LIVE',
     versus: 'gegen',
-    tieBreakLabel: 'TIEBREAK',
-    superTieBreakLabel: 'SUPER-TIEBREAK',
+    tieBreakLabel: 'TB',
+    superTieBreakLabel: 'STB',
     table: {
       columns: {
         points: 'Punkte',
-        tieBreak: 'Tiebreak',
-        superTieBreak: 'Super-Tiebreak',
+        tieBreak: 'TB',
+        superTieBreak: 'STB',
         set1: 'Satz 1', set2: 'Satz 2', set3: 'Satz 3'
       }
     },
@@ -113,13 +113,13 @@ const TRANSLATIONS = {
     courtLabel: 'Court {court}',
     liveBadge: 'LIVE',
     versus: 'vs',
-    tieBreakLabel: 'TIE-BREAK',
-    superTieBreakLabel: 'SUPER TIE-BREAK',
+    tieBreakLabel: 'TB',
+    superTieBreakLabel: 'STB',
     table: {
       columns: {
         points: 'Points',
-        tieBreak: 'Tie-break',
-        superTieBreak: 'Super tie-break',
+        tieBreak: 'TB',
+        superTieBreak: 'STB',
         set1: 'Set 1', set2: 'Set 2', set3: 'Set 3'
       }
     },
@@ -161,13 +161,13 @@ const TRANSLATIONS = {
     courtLabel: 'Campo {court}',
     liveBadge: 'LIVE',
     versus: 'contro',
-    tieBreakLabel: 'TIE-BREAK',
-    superTieBreakLabel: 'SUPER TIE-BREAK',
+    tieBreakLabel: 'TB',
+    superTieBreakLabel: 'STB',
     table: {
       columns: {
         points: 'Punti',
-        tieBreak: 'Tie-break',
-        superTieBreak: 'Super tie-break',
+        tieBreak: 'TB',
+        superTieBreak: 'STB',
         set1: 'Set 1', set2: 'Set 2', set3: 'Set 3'
       }
     },
@@ -209,13 +209,13 @@ const TRANSLATIONS = {
     courtLabel: 'Cancha {court}',
     liveBadge: 'EN VIVO',
     versus: 'contra',
-    tieBreakLabel: 'TIE BREAK',
-    superTieBreakLabel: 'SUPER TIE BREAK',
+    tieBreakLabel: 'TB',
+    superTieBreakLabel: 'STB',
     table: {
       columns: {
         points: 'Puntos',
-        tieBreak: 'Tie break',
-        superTieBreak: 'Súper tie break',
+        tieBreak: 'TB',
+        superTieBreak: 'STB',
         set1: 'Set 1', set2: 'Set 2', set3: 'Set 3'
       }
     },
@@ -257,13 +257,13 @@ const TRANSLATIONS = {
     courtLabel: 'Court {court}',
     liveBadge: 'EN DIRECT',
     versus: 'contre',
-    tieBreakLabel: 'JEU DÉCISIF',
-    superTieBreakLabel: 'SUPER JEU DÉCISIF',
+    tieBreakLabel: 'TB',
+    superTieBreakLabel: 'STB',
     table: {
       columns: {
         points: 'Points',
-        tieBreak: 'Jeu décisif',
-        superTieBreak: 'Super jeu décisif',
+        tieBreak: 'TB',
+        superTieBreak: 'STB',
         set1: 'Set 1', set2: 'Set 2', set3: 'Set 3'
       }
     },

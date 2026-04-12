@@ -92,10 +92,10 @@
                             <div class="score-labels">
                                 <div class="score-label score-label-tb"
                                      :class="{ 'is-visible': isTiebreak(courtId) && !isSuperTiebreak(courtId) }"
-                                     aria-hidden="true" x-text="tr().tieBreakLabel || 'TIE-BREAK'"></div>
+                                     aria-hidden="true" x-text="tr().tieBreakLabel || 'TB'"></div>
                                 <div class="score-label score-label-stb"
                                      :class="{ 'is-visible': isSuperTiebreak(courtId) }"
-                                     aria-hidden="true" x-text="tr().superTieBreakLabel || 'SUPER TIE-BREAK'"></div>
+                                     aria-hidden="true" x-text="tr().superTieBreakLabel || 'STB'"></div>
                             </div>
 
                             <!-- Score table (visual, hidden from screen readers) -->
