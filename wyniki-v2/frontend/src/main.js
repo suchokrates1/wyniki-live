@@ -613,35 +613,24 @@ Alpine.data('tennisApp', () => ({
     const currentSet = parseInt(court.current_set) || 1;
     const detail = court.sets_detail || [];
     
-    // Include all sets from sets_detail (regular + super TB)
+    // Only count regular (non-STB) sets for columns
+    const regularSets = detail.filter(s => !s.stb).length;
     const indices = [];
-    for (let i = 0; i < detail.length; i++) indices.push(i + 1);
+    for (let i = 1; i <= Math.max(regularSets, 2); i++) indices.push(i);
     
-    // Ensure minimum 2 columns
-    while (indices.length < 2) indices.push(indices.length + 1);
-    
-    // If match is active and current set is beyond completed sets, add active set
-    // But NOT during live super tiebreak (points shown in Points column)
+    // Show current set column if match is active and not in super tiebreak
     const isActive = court.match_status?.active;
     if (isActive && !this.isSuperTiebreak(courtId) && currentSet > indices.length) {
       while (indices.length < currentSet) indices.push(indices.length + 1);
     }
     
     // Fallback for courts without sets_detail
-    if (!detail.length) {
+    if (!detail.length && !this.isSuperTiebreak(courtId)) {
       if (currentSet >= 3 || court.A?.set3 || court.B?.set3) {
         if (!indices.includes(3)) indices.push(3);
       }
     }
     return indices;
-  },
-
-  /** Check if a set column is a super tiebreak */
-  isSetSuperTiebreak(courtId, setIdx) {
-    const court = this.courts[courtId];
-    const detail = court?.sets_detail;
-    if (!detail || !detail[setIdx - 1]) return false;
-    return detail[setIdx - 1].stb === true;
   },
 
   /** Returns true if this court has a super tiebreak entry in sets_detail */
