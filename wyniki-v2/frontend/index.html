@@ -8,6 +8,7 @@
     <meta name="description" content="Live tennis scores - wyniki na żywo">
 </head>
 <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
     <div x-data="tennisApp" x-cloak class="wrap" x-effect="document.title = tr().pageTitle || 'Wyniki tenisowe – na żywo'">
         
         <!-- Header -->
@@ -121,12 +122,13 @@
                                         <dd class="metric" :class="'set-'+setIdx"
                                             :aria-labelledby="'k'+courtId+'-label-set'+setIdx+' k'+courtId+'-name-A'">
                                             <span class="metric-label" :id="'k'+courtId+'-label-set'+setIdx"
-                                                  x-text="t('setLabel', {number: setIdx})"
+                                                  x-text="isSetSuperTiebreak(courtId, setIdx) ? 'STB' : t('setLabel', {number: setIdx})"
                                                   x-show="$el.closest('.score-row[data-side=A]')"></span>
                                             <span class="metric-value set"
                                                   :id="'k'+courtId+'-s'+setIdx+'-A'"
-                                                  :class="{ 'is-active': courts[courtId]?.current_set == setIdx }"
-                                                  x-text="getSetScore(courtId, 'A', setIdx)"></span>
+                                                  :class="{ 'is-active': courts[courtId]?.current_set == setIdx }">
+                                                <span x-text="getSetScore(courtId, 'A', setIdx)"></span><sup class="tb-sup" x-show="getTiebreakInfo(courtId, setIdx) !== null && parseInt(getSetScore(courtId, 'A', setIdx)) < parseInt(getSetScore(courtId, 'B', setIdx))" x-text="getTiebreakInfo(courtId, setIdx)"></sup>
+                                            </span>
                                         </dd>
                                     </template>
                                 </div>
@@ -152,8 +154,9 @@
                                             :aria-labelledby="'k'+courtId+'-label-set'+setIdx+' k'+courtId+'-name-B'">
                                             <span class="metric-value set"
                                                   :id="'k'+courtId+'-s'+setIdx+'-B'"
-                                                  :class="{ 'is-active': courts[courtId]?.current_set == setIdx }"
-                                                  x-text="getSetScore(courtId, 'B', setIdx)"></span>
+                                                  :class="{ 'is-active': courts[courtId]?.current_set == setIdx }">
+                                                <span x-text="getSetScore(courtId, 'B', setIdx)"></span><sup class="tb-sup" x-show="getTiebreakInfo(courtId, setIdx) !== null && parseInt(getSetScore(courtId, 'B', setIdx)) < parseInt(getSetScore(courtId, 'A', setIdx))" x-text="getTiebreakInfo(courtId, setIdx)"></sup>
+                                            </span>
                                         </dd>
                                     </template>
                                 </div>
@@ -200,7 +203,7 @@
                                 <span class="hm-sets">
                                     <template x-for="(set, i) in getMatchSets(match)" :key="'a-'+i">
                                         <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b }">
-                                            <span x-text="set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a > set.b" x-text="set.tb"></sup>
+                                            <span x-text="set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a < set.b" x-text="set.tb"></sup>
                                         </span>
                                     </template>
                                 </span>
@@ -213,7 +216,7 @@
                                 <span class="hm-sets">
                                     <template x-for="(set, i) in getMatchSets(match)" :key="'b-'+i">
                                         <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a }">
-                                            <span x-text="set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b > set.a" x-text="set.tb"></sup>
+                                            <span x-text="set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b < set.a" x-text="set.tb"></sup>
                                         </span>
                                     </template>
                                 </span>
