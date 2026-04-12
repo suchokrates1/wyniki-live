@@ -611,12 +611,61 @@ Alpine.data('tennisApp', () => ({
     const court = this.courts[courtId];
     if (!court) return [1, 2];
     const currentSet = parseInt(court.current_set) || 1;
-    const indices = [1, 2];
-    // Show set 3 if we're in it or if either player has set3 data
-    if (currentSet >= 3 || court.A?.set3 || court.B?.set3) {
-      indices.push(3);
+    const detail = court.sets_detail || [];
+    
+    // Include all sets from sets_detail (regular + super TB)
+    const indices = [];
+    for (let i = 0; i < detail.length; i++) indices.push(i + 1);
+    
+    // Ensure minimum 2 columns
+    while (indices.length < 2) indices.push(indices.length + 1);
+    
+    // If match is active and current set is beyond completed sets, add active set
+    // But NOT during live super tiebreak (points shown in Points column)
+    const isActive = court.match_status?.active;
+    if (isActive && !this.isSuperTiebreak(courtId) && currentSet > indices.length) {
+      while (indices.length < currentSet) indices.push(indices.length + 1);
+    }
+    
+    // Fallback for courts without sets_detail
+    if (!detail.length) {
+      if (currentSet >= 3 || court.A?.set3 || court.B?.set3) {
+        if (!indices.includes(3)) indices.push(3);
+      }
     }
     return indices;
+  },
+
+  /** Check if a set column is a super tiebreak */
+  isSetSuperTiebreak(courtId, setIdx) {
+    const court = this.courts[courtId];
+    const detail = court?.sets_detail;
+    if (!detail || !detail[setIdx - 1]) return false;
+    return detail[setIdx - 1].stb === true;
+  },
+
+  /** Returns true if this court has a super tiebreak entry in sets_detail */
+  hasSuperTiebreak(courtId) {
+    const court = this.courts[courtId];
+    return court?.sets_detail?.some(s => s.stb) || false;
+  },
+
+  /** Get super tiebreak scores {a, b} or null */
+  getSuperTiebreakScore(courtId) {
+    const court = this.courts[courtId];
+    const stb = court?.sets_detail?.find(s => s.stb);
+    if (!stb) return null;
+    return { a: stb.p1, b: stb.p2 };
+  },
+
+  /** Get tiebreak loser points for a specific set index (1-based) */
+  getTiebreakInfo(courtId, setIdx) {
+    const court = this.courts[courtId];
+    const detail = court?.sets_detail;
+    if (!detail || !detail[setIdx - 1]) return null;
+    const entry = detail[setIdx - 1];
+    if (entry.stb) return null; // No TB superscript on super tiebreak
+    return entry.tb;
   },
 
   getSetScore(courtId, side, setIdx) {

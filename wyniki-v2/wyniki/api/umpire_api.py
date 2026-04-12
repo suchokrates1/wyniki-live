@@ -362,18 +362,30 @@ def update_match(match_id: int):
                 
                 # Handle sets history
                 sets_history = json.loads(match.sets_history) if match.sets_history else []
+                sets_detail = []  # For frontend: includes TB info
                 for idx, set_score in enumerate(sets_history):
                     set_num = idx + 1
+                    p1g = set_score.get("player1_games", 0)
+                    p2g = set_score.get("player2_games", 0)
+                    tb_loser = set_score.get("tiebreak_loser_points")
+                    is_stb = set_score.get("is_super_tiebreak", False)
+                    
+                    sets_detail.append({
+                        "p1": p1g, "p2": p2g,
+                        "tb": tb_loser, "stb": is_stb
+                    })
+                    
                     if set_num == 1:
-                        court_state["A"]["set1"] = set_score.get("player1_games", 0)
-                        court_state["B"]["set1"] = set_score.get("player2_games", 0)
+                        court_state["A"]["set1"] = p1g
+                        court_state["B"]["set1"] = p2g
                     elif set_num == 2:
-                        court_state["A"]["set2"] = set_score.get("player1_games", 0)
-                        court_state["B"]["set2"] = set_score.get("player2_games", 0)
+                        court_state["A"]["set2"] = p1g
+                        court_state["B"]["set2"] = p2g
                     elif set_num == 3:
-                        court_state["A"]["set3"] = set_score.get("player1_games", 0)
-                        court_state["B"]["set3"] = set_score.get("player2_games", 0)
+                        court_state["A"]["set3"] = p1g
+                        court_state["B"]["set3"] = p2g
                 
+                court_state["sets_detail"] = sets_detail
                 court_state["current_set"] = len(sets_history) + 1
                 court_state["updated"] = datetime.utcnow().isoformat()
             
@@ -415,10 +427,23 @@ def finish_match(match_id: int):
                 
                 # Overwrite set scores from authoritative sets_history
                 if sets_history:
+                    sets_detail = []
                     for idx, set_score in enumerate(sets_history):
                         set_num = idx + 1
-                        court_state["A"][f"set{set_num}"] = set_score.get("player1_games", 0)
-                        court_state["B"][f"set{set_num}"] = set_score.get("player2_games", 0)
+                        p1g = set_score.get("player1_games", 0)
+                        p2g = set_score.get("player2_games", 0)
+                        tb_loser = set_score.get("tiebreak_loser_points")
+                        is_stb = set_score.get("is_super_tiebreak", False)
+                        
+                        sets_detail.append({
+                            "p1": p1g, "p2": p2g,
+                            "tb": tb_loser, "stb": is_stb
+                        })
+                        
+                        court_state["A"][f"set{set_num}"] = p1g
+                        court_state["B"][f"set{set_num}"] = p2g
+                    
+                    court_state["sets_detail"] = sets_detail
                     court_state["current_set"] = len(sets_history)
                     # Clear phantom set data beyond actual sets played
                     for i in range(len(sets_history) + 1, 4):
@@ -666,6 +691,17 @@ def log_match_event():
                         court_state["A"][f"set{sn}"] = int(sh.get('player1_games', 0))
                         court_state["B"][f"set{sn}"] = int(sh.get('player2_games', 0))
 
+            # Build sets_detail for frontend (TB info)
+            if sets_history:
+                sets_detail = []
+                for sh in sets_history:
+                    sh_p1g = int(sh.get('player1_games', 0))
+                    sh_p2g = int(sh.get('player2_games', 0))
+                    sh_tb = sh.get('tiebreak_loser_points')
+                    sh_stb = bool(sh.get('is_super_tiebreak', False))
+                    sets_detail.append({"p1": sh_p1g, "p2": sh_p2g, "tb": sh_tb, "stb": sh_stb})
+                court_state["sets_detail"] = sets_detail
+
             # Write current games to set{N} for the active set
             # Only write if this set is not already finalized in sets_history
             completed_set_nums = {int(sh.get('set_number', 0)) for sh in sets_history} if sets_history else set()
@@ -794,4 +830,43 @@ def add_player():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error adding player: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/umpire-heartbeat', methods=['POST'])
+def umpire_heartbeat():
+    """Receive periodic heartbeat from umpire tablet (battery, online status).
+    
+    Sent every ~2 min regardless of match state, so we always know
+    tablet battery level even during breaks between matches.
+    """
+    try:
+        data = request.get_json() or {}
+        kort_id = normalize_kort_id(data.get('court_id', ''))
+        battery_level = data.get('battery_level')
+        is_charging = data.get('is_charging')
+        screen = data.get('screen', '')
+        app_version = data.get('app_version', '')
+
+        logger.info(
+            f"Heartbeat: court={kort_id} battery={battery_level}% "
+            f"charging={is_charging} screen={screen} ver={app_version}"
+        )
+
+        # Update court state with battery info if court is assigned
+        if kort_id:
+            court_state = ensure_court_state(kort_id)
+            with STATE_LOCK:
+                if battery_level:
+                    court_state["battery_level"] = int(battery_level)
+                if is_charging is not None:
+                    court_state["is_charging"] = is_charging in (True, "true", "True")
+                court_state["last_heartbeat"] = datetime.utcnow().isoformat()
+                court_state["app_version"] = app_version
+                court_state["umpire_screen"] = screen
+
+        return jsonify({"status": "ok"}), 200
+
+    except Exception as e:
+        logger.error(f"Error processing heartbeat: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
