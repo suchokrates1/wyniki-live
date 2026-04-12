@@ -502,6 +502,19 @@ def get_active_tournament_id() -> Optional[int]:
         return None
 
 
+def get_active_tournament_name() -> Optional[str]:
+    """Get the name of the currently active tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM tournaments WHERE active = 1 LIMIT 1")
+            row = cursor.fetchone()
+            return row["name"] if row else None
+    except Exception as e:
+        logger.error("get_active_tournament_name_error", error=str(e))
+        return None
+
+
 def fetch_tournaments() -> List[Dict]:
     """Fetch all tournaments."""
     try:
