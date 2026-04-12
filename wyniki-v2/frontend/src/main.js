@@ -372,6 +372,7 @@ Alpine.data('tennisApp', () => ({
   lang: 'pl',
   darkMode: false,
   history: [],
+  tournamentName: null,
   expandedMatchStats: {},  // match_id -> stats data (for Details button)
 
   /* --- Sorted history (newest first) --- */
@@ -433,6 +434,7 @@ Alpine.data('tennisApp', () => ({
       if (!response.ok) throw new Error('Failed to fetch courts');
       const data = await response.json();
       this.courts = data.courts || {};
+      this.tournamentName = data.tournament_name || null;
       this.loading = false;
       this.lastUpdate = new Date();
     } catch (err) {

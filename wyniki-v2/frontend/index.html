@@ -15,7 +15,7 @@
         <header class="header">
             <div class="header-bar">
                 <h1 class="header-title">
-                    Wyniki tenisowe – na żywo
+                    <span x-text="tournamentName || 'Wyniki tenisowe – na żywo'">Wyniki tenisowe – na żywo</span>
                     <span x-show="hasActiveCourts()" class="live-badge">LIVE</span>
                 </h1>
                 <div class="header-actions">
