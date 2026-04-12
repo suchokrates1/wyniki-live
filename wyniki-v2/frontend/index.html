@@ -122,7 +122,7 @@
                                         <dd class="metric" :class="'set-'+setIdx"
                                             :aria-labelledby="'k'+courtId+'-label-set'+setIdx+' k'+courtId+'-name-A'">
                                             <span class="metric-label" :id="'k'+courtId+'-label-set'+setIdx"
-                                                  x-text="isSetSuperTiebreak(courtId, setIdx) ? 'STB' : t('setLabel', {number: setIdx})"
+                                                  x-text="t('setLabel', {number: setIdx})"
                                                   x-show="$el.closest('.score-row[data-side=A]')"></span>
                                             <span class="metric-value set"
                                                   :id="'k'+courtId+'-s'+setIdx+'-A'"

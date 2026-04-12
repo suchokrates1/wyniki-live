@@ -375,18 +375,25 @@ def update_match(match_id: int):
                         "tb": tb_loser, "stb": is_stb
                     })
                     
-                    if set_num == 1:
-                        court_state["A"]["set1"] = p1g
-                        court_state["B"]["set1"] = p2g
-                    elif set_num == 2:
-                        court_state["A"]["set2"] = p1g
-                        court_state["B"]["set2"] = p2g
-                    elif set_num == 3:
-                        court_state["A"]["set3"] = p1g
-                        court_state["B"]["set3"] = p2g
+                    if is_stb:
+                        # Super tiebreak: show in Points column (tie)
+                        court_state["tie"]["A"] = p1g
+                        court_state["tie"]["B"] = p2g
+                        court_state["tie"]["visible"] = True
+                    else:
+                        if set_num == 1:
+                            court_state["A"]["set1"] = p1g
+                            court_state["B"]["set1"] = p2g
+                        elif set_num == 2:
+                            court_state["A"]["set2"] = p1g
+                            court_state["B"]["set2"] = p2g
+                        elif set_num == 3:
+                            court_state["A"]["set3"] = p1g
+                            court_state["B"]["set3"] = p2g
                 
                 court_state["sets_detail"] = sets_detail
-                court_state["current_set"] = len(sets_history) + 1
+                non_stb_count = sum(1 for s in sets_history if not s.get("is_super_tiebreak", False))
+                court_state["current_set"] = non_stb_count + 1
                 court_state["updated"] = datetime.utcnow().isoformat()
             
             # Emit SSE update
@@ -440,13 +447,20 @@ def finish_match(match_id: int):
                             "tb": tb_loser, "stb": is_stb
                         })
                         
-                        court_state["A"][f"set{set_num}"] = p1g
-                        court_state["B"][f"set{set_num}"] = p2g
+                        if is_stb:
+                            # Super tiebreak: show in Points column (tie)
+                            court_state["tie"]["A"] = p1g
+                            court_state["tie"]["B"] = p2g
+                            court_state["tie"]["visible"] = True
+                        else:
+                            court_state["A"][f"set{set_num}"] = p1g
+                            court_state["B"][f"set{set_num}"] = p2g
                     
                     court_state["sets_detail"] = sets_detail
-                    court_state["current_set"] = len(sets_history)
-                    # Clear phantom set data beyond actual sets played
-                    for i in range(len(sets_history) + 1, 4):
+                    non_stb_count = sum(1 for s in sets_history if not s.get("is_super_tiebreak", False))
+                    court_state["current_set"] = non_stb_count + 1
+                    # Clear phantom set data beyond regular sets
+                    for i in range(non_stb_count + 1, 4):
                         court_state["A"][f"set{i}"] = 0
                         court_state["B"][f"set{i}"] = 0
                 
@@ -678,7 +692,8 @@ def log_match_event():
             # --- Sets ---
             sets_a = int(score.get('player1_sets', 0))
             sets_b = int(score.get('player2_sets', 0))
-            current_set = sets_a + sets_b + 1
+            match_finished = bool(score.get('match_finished', False))
+            current_set = (sets_a + sets_b) if match_finished else (sets_a + sets_b + 1)
             court_state["current_set"] = current_set
 
             # --- Sets history (from Android >= vC4) ---
@@ -687,7 +702,8 @@ def log_match_event():
             if sets_history:
                 for sh in sets_history:
                     sn = int(sh.get('set_number', 0))
-                    if 1 <= sn <= 3:
+                    is_stb = bool(sh.get('is_super_tiebreak', False))
+                    if 1 <= sn <= 3 and not is_stb:
                         court_state["A"][f"set{sn}"] = int(sh.get('player1_games', 0))
                         court_state["B"][f"set{sn}"] = int(sh.get('player2_games', 0))
 
@@ -715,7 +731,6 @@ def log_match_event():
                 court_state["stats_mode"] = stats_mode
 
             # --- Match status ---
-            match_finished = bool(score.get('match_finished', False))
             court_state["match_status"]["active"] = not match_finished
             if match_finished:
                 court_state["match_status"]["last_completed"] = datetime.utcnow().isoformat()
