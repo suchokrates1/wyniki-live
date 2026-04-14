@@ -260,55 +260,26 @@
                             </template>
                         </div>
 
-                        <!-- Knockout Bracket -->
+                        <!-- Knockout / Classification -->
                         <div class="bracket-knockout" x-show="bracketData.knockout && Object.keys(bracketData.knockout).length > 0">
-                            <h3 class="bracket-knockout__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'"></h3>
-                            <div class="knockout-grid">
-                                <!-- Semifinals -->
-                                <div class="knockout-round knockout-semis">
-                                    <h4 class="knockout-round__title" x-text="tr().bracket?.semifinal || 'Półfinał'"></h4>
-                                    <template x-for="slot in (bracketData.knockout?.semifinal || [])" :key="'sf-'+slot.position">
-                                        <div class="knockout-match">
-                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player1 }">
-                                                <span x-text="resolveBracketName(slot.player1) || '?'"></span>
+                            <h3 class="bracket-knockout__title" x-text="tr().bracket?.knockoutTitle || 'Faza klasyfikacyjna'"></h3>
+                            <div class="knockout-phases">
+                                <template x-for="[phase, slots] in Object.entries(bracketData.knockout || {})" :key="'ko-'+phase">
+                                    <div class="knockout-round">
+                                        <h4 class="knockout-round__title" x-text="phase"></h4>
+                                        <template x-for="slot in slots" :key="'ko-'+phase+'-'+slot.position">
+                                            <div class="knockout-match" :class="{ 'knockout-match--final': phase.includes('Finał') }">
+                                                <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player1 }">
+                                                    <span x-text="resolveBracketName(slot.player1) || '?'"></span>
+                                                </div>
+                                                <div class="km-score" x-text="slot.score || 'vs'"></div>
+                                                <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player2 }">
+                                                    <span x-text="resolveBracketName(slot.player2) || '?'"></span>
+                                                </div>
                                             </div>
-                                            <div class="km-score" x-text="slot.score || 'vs'"></div>
-                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player2 }">
-                                                <span x-text="resolveBracketName(slot.player2) || '?'"></span>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                                <!-- Final -->
-                                <div class="knockout-round knockout-final" x-show="bracketData.knockout?.final">
-                                    <h4 class="knockout-round__title" x-text="tr().bracket?.finalLabel || 'Finał'"></h4>
-                                    <template x-for="slot in (bracketData.knockout?.final || [])" :key="'f-'+slot.position">
-                                        <div class="knockout-match knockout-match--final">
-                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player1 }">
-                                                <span x-text="resolveBracketName(slot.player1) || '?'"></span>
-                                            </div>
-                                            <div class="km-score" x-text="slot.score || 'vs'"></div>
-                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player2 }">
-                                                <span x-text="resolveBracketName(slot.player2) || '?'"></span>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
-                                <!-- 3rd place -->
-                                <div class="knockout-round knockout-third" x-show="bracketData.knockout?.third_place">
-                                    <h4 class="knockout-round__title" x-text="tr().bracket?.thirdPlace || 'Mecz o 3. miejsce'"></h4>
-                                    <template x-for="slot in (bracketData.knockout?.third_place || [])" :key="'tp-'+slot.position">
-                                        <div class="knockout-match">
-                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player1 }">
-                                                <span x-text="resolveBracketName(slot.player1) || '?'"></span>
-                                            </div>
-                                            <div class="km-score" x-text="slot.score || 'vs'"></div>
-                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player2 }">
-                                                <span x-text="resolveBracketName(slot.player2) || '?'"></span>
-                                            </div>
-                                        </div>
-                                    </template>
-                                </div>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
