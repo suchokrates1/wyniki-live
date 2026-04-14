@@ -426,6 +426,7 @@ Alpine.data('tennisApp', () => ({
   bracketData: null,
   bracketLoading: false,
   bracketNameMap: {},  // surname -> full_name lookup
+  bracketCategory: null, // active bracket category tab
 
   /* --- Sorted history (newest first) --- */
   sortedHistory() {
@@ -535,6 +536,43 @@ Alpine.data('tennisApp', () => ({
   resolveBracketName(surname) {
     if (!surname) return '';
     return this.bracketNameMap[surname] || surname;
+  },
+
+  /* --- Bracket category helpers --- */
+  bracketCategories() {
+    if (!this.bracketData || !this.bracketData.groups) return [];
+    const cats = new Map();
+    for (const g of this.bracketData.groups) {
+      // Extract category prefix: "B4M — A" → "B4M", "B1 Kobiety" → "B1 Kobiety"
+      const sep = g.name.indexOf(' — ');
+      const cat = sep > -1 ? g.name.substring(0, sep) : g.name;
+      if (!cats.has(cat)) cats.set(cat, { name: cat, groups: [], knockout: [] });
+      cats.get(cat).groups.push(g);
+    }
+    // Assign knockout slots to categories by phase prefix
+    if (this.bracketData.knockout) {
+      for (const [phase, slots] of Object.entries(this.bracketData.knockout)) {
+        // "B4M Finał" → "B4M"
+        const prefix = phase.split(' ')[0];
+        for (const [, cat] of cats) {
+          if (cat.name === prefix || cat.name.startsWith(prefix)) {
+            cat.knockout.push({ phase, slots });
+            break;
+          }
+        }
+      }
+    }
+    return [...cats.values()];
+  },
+
+  activeBracketCategory() {
+    const cats = this.bracketCategories();
+    if (cats.length === 0) return null;
+    if (this.bracketCategory && cats.find(c => c.name === this.bracketCategory)) {
+      return cats.find(c => c.name === this.bracketCategory);
+    }
+    this.bracketCategory = cats[0].name;
+    return cats[0];
   },
 
   connectSSE() {
