@@ -35,8 +35,18 @@
             </div>
         </header>
 
+        <!-- Tab Navigation -->
+        <div class="tab-bar">
+            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="activeTab = 'live'"
+                    x-text="tr().tabs?.live || 'Na żywo'"></button>
+            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'bracket' }" @click="switchToBracket()"
+                    x-text="tr().tabs?.bracket || 'Drabinka'"></button>
+            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'history' }" @click="activeTab = 'history'"
+                    x-text="tr().tabs?.history || 'Historia'"></button>
+        </div>
+
         <!-- Quick court navigation -->
-        <nav x-show="getCourtIds().length > 0" :aria-label="t('navLabel')">
+        <nav x-show="activeTab === 'live' && getCourtIds().length > 0" :aria-label="t('navLabel')">
             <ul>
                 <template x-for="courtId in getCourtIds()" :key="'nav-'+courtId">
                     <li><a :href="'#kort-'+courtId" x-text="t('courtLabel', {court: courtId})"></a></li>
@@ -57,6 +67,9 @@
 
         <!-- Main content -->
         <main id="main" tabindex="-1">
+
+            <!-- ======= TAB: LIVE ======= -->
+            <div x-show="activeTab === 'live'">
             <!-- Empty State -->
             <div x-show="!loading && getCourtIds().length === 0" class="empty-state">
                 <div class="empty-state__icon">🎾</div>
@@ -177,12 +190,133 @@
                     </section>
                 </template>
             </div>
-        </main>
+            </div><!-- end TAB: LIVE -->
 
-        <!-- Meta -->
-        <div class="meta">
-            <span x-show="lastUpdate" x-text="(tr().meta?.lastRefresh || 'Ostatnia aktualizacja: {time}').replace('{time}', lastUpdate ? lastUpdate.toLocaleTimeString('pl-PL') : '')"></span>
-        </div>
+            <!-- ======= TAB: BRACKET ======= -->
+            <div x-show="activeTab === 'bracket'">
+                <!-- Loading -->
+                <div x-show="bracketLoading" class="loading-state" role="status">
+                    <span class="spinner spinner--large"></span>
+                </div>
+
+                <!-- No bracket configured -->
+                <div x-show="!bracketLoading && (!bracketData || !bracketData.groups || bracketData.groups.length === 0)" class="empty-state">
+                    <div class="empty-state__icon">🏆</div>
+                    <h2 class="empty-state__title" x-text="tr().bracket?.emptyTitle || 'Brak drabinki'"></h2>
+                    <p class="empty-state__text" x-text="tr().bracket?.emptyText || 'Drabinka turniejowa nie została jeszcze skonfigurowana'"></p>
+                </div>
+
+                <!-- Groups -->
+                <template x-if="bracketData && bracketData.groups && bracketData.groups.length > 0">
+                    <div class="bracket-content">
+                        <div class="bracket-groups">
+                            <template x-for="(group, gi) in bracketData.groups" :key="'g-'+gi">
+                                <div class="bracket-group">
+                                    <h3 class="bracket-group__title">
+                                        <span x-text="(tr().bracket?.group || 'Grupa') + ' ' + group.name"></span>
+                                    </h3>
+
+                                    <!-- Standings table -->
+                                    <table class="bracket-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="bt-pos">#</th>
+                                                <th class="bt-name" x-text="tr().bracket?.player || 'Zawodnik'"></th>
+                                                <th class="bt-stat" x-text="tr().bracket?.wins || 'W'"></th>
+                                                <th class="bt-stat" x-text="tr().bracket?.losses || 'L'"></th>
+                                                <th class="bt-stat" x-text="tr().bracket?.setsHeader || 'S'"></th>
+                                                <th class="bt-stat" x-text="tr().bracket?.gamesHeader || 'G'"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-for="(row, ri) in group.standings" :key="'gs-'+gi+'-'+ri">
+                                                <tr :class="{ 'bt-qualify': ri < 2 && group.standings.length > 2 }">
+                                                    <td class="bt-pos" x-text="ri + 1"></td>
+                                                    <td class="bt-name" x-text="resolveBracketName(row.name)"></td>
+                                                    <td class="bt-stat bt-stat--wins" x-text="row.wins"></td>
+                                                    <td class="bt-stat bt-stat--losses" x-text="row.losses"></td>
+                                                    <td class="bt-stat" x-text="row.sets_won + ':' + row.sets_lost"></td>
+                                                    <td class="bt-stat" x-text="row.games_won + ':' + row.games_lost"></td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+
+                                    <!-- Group matches -->
+                                    <div class="bracket-matches" x-show="group.matches && group.matches.length > 0">
+                                        <h4 class="bracket-matches__title" x-text="tr().bracket?.matchesTitle || 'Mecze'"></h4>
+                                        <div class="bracket-match-list">
+                                            <template x-for="(m, mi) in group.matches" :key="'gm-'+gi+'-'+mi">
+                                                <div class="bracket-match-item">
+                                                    <span class="bm-player" :class="{ 'bm-winner': m.winner === m.player_a }" x-text="resolveBracketName(m.player_a)"></span>
+                                                    <span class="bm-score" x-text="m.sets_a + ':' + m.sets_b"></span>
+                                                    <span class="bm-player" :class="{ 'bm-winner': m.winner === m.player_b }" x-text="resolveBracketName(m.player_b)"></span>
+                                                    <span class="bm-detail" x-text="m.score"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Knockout Bracket -->
+                        <div class="bracket-knockout" x-show="bracketData.knockout && Object.keys(bracketData.knockout).length > 0">
+                            <h3 class="bracket-knockout__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'"></h3>
+                            <div class="knockout-grid">
+                                <!-- Semifinals -->
+                                <div class="knockout-round knockout-semis">
+                                    <h4 class="knockout-round__title" x-text="tr().bracket?.semifinal || 'Półfinał'"></h4>
+                                    <template x-for="slot in (bracketData.knockout?.semifinal || [])" :key="'sf-'+slot.position">
+                                        <div class="knockout-match">
+                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player1 }">
+                                                <span x-text="resolveBracketName(slot.player1) || '?'"></span>
+                                            </div>
+                                            <div class="km-score" x-text="slot.score || 'vs'"></div>
+                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player2 }">
+                                                <span x-text="resolveBracketName(slot.player2) || '?'"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <!-- Final -->
+                                <div class="knockout-round knockout-final" x-show="bracketData.knockout?.final">
+                                    <h4 class="knockout-round__title" x-text="tr().bracket?.finalLabel || 'Finał'"></h4>
+                                    <template x-for="slot in (bracketData.knockout?.final || [])" :key="'f-'+slot.position">
+                                        <div class="knockout-match knockout-match--final">
+                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player1 }">
+                                                <span x-text="resolveBracketName(slot.player1) || '?'"></span>
+                                            </div>
+                                            <div class="km-score" x-text="slot.score || 'vs'"></div>
+                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player2 }">
+                                                <span x-text="resolveBracketName(slot.player2) || '?'"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <!-- 3rd place -->
+                                <div class="knockout-round knockout-third" x-show="bracketData.knockout?.third_place">
+                                    <h4 class="knockout-round__title" x-text="tr().bracket?.thirdPlace || 'Mecz o 3. miejsce'"></h4>
+                                    <template x-for="slot in (bracketData.knockout?.third_place || [])" :key="'tp-'+slot.position">
+                                        <div class="knockout-match">
+                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player1 }">
+                                                <span x-text="resolveBracketName(slot.player1) || '?'"></span>
+                                            </div>
+                                            <div class="km-score" x-text="slot.score || 'vs'"></div>
+                                            <div class="km-player" :class="{ 'km-winner': slot.winner === slot.player2 }">
+                                                <span x-text="resolveBracketName(slot.player2) || '?'"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div><!-- end TAB: BRACKET -->
+
+            <!-- ======= TAB: HISTORY ======= -->
+            <div x-show="activeTab === 'history'">
 
         <!-- History Section -->
         <section id="history-section" x-show="sortedHistory().length > 0" aria-labelledby="history-title">
@@ -308,6 +442,14 @@
                 </template>
             </div>
         </section>
+
+            </div><!-- end TAB: HISTORY -->
+        </main>
+
+        <!-- Meta -->
+        <div class="meta">
+            <span x-show="lastUpdate" x-text="(tr().meta?.lastRefresh || 'Ostatnia aktualizacja: {time}').replace('{time}', lastUpdate ? lastUpdate.toLocaleTimeString('pl-PL') : '')"></span>
+        </div>
 
         <!-- Vestmedia Footer -->
         <footer class="vm-footer">
