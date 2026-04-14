@@ -56,6 +56,14 @@ const TRANSLATIONS = {
       noStats: 'Brak statystyk',
       category: 'Kategoria',
       duration: 'Czas'
+    },
+    tabs: { live: 'Na żywo', bracket: 'Drabinka', history: 'Historia' },
+    bracket: {
+      emptyTitle: 'Brak drabinki', emptyText: 'Drabinka turniejowa nie została jeszcze skonfigurowana',
+      group: 'Grupa', player: 'Zawodnik', wins: 'W', losses: 'L',
+      setsHeader: 'Sety', gamesHeader: 'Gemy', matchesTitle: 'Mecze grupowe',
+      knockoutTitle: 'Faza pucharowa', semifinal: 'Półfinał',
+      finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce'
     }
   },
   de: {
@@ -104,6 +112,14 @@ const TRANSLATIONS = {
       noStats: 'Keine Statistiken',
       category: 'Kategorie',
       duration: 'Dauer'
+    },
+    tabs: { live: 'Live', bracket: 'Turnierbaum', history: 'Historie' },
+    bracket: {
+      emptyTitle: 'Kein Turnierbaum', emptyText: 'Der Turnierbaum wurde noch nicht konfiguriert',
+      group: 'Gruppe', player: 'Spieler', wins: 'S', losses: 'N',
+      setsHeader: 'Sätze', gamesHeader: 'Spiele', matchesTitle: 'Gruppenspiele',
+      knockoutTitle: 'K.O.-Phase', semifinal: 'Halbfinale',
+      finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3'
     }
   },
   en: {
@@ -152,6 +168,14 @@ const TRANSLATIONS = {
       noStats: 'No statistics',
       category: 'Category',
       duration: 'Duration'
+    },
+    tabs: { live: 'Live', bracket: 'Bracket', history: 'History' },
+    bracket: {
+      emptyTitle: 'No bracket', emptyText: 'Tournament bracket has not been configured yet',
+      group: 'Group', player: 'Player', wins: 'W', losses: 'L',
+      setsHeader: 'Sets', gamesHeader: 'Games', matchesTitle: 'Group matches',
+      knockoutTitle: 'Knockout stage', semifinal: 'Semifinal',
+      finalLabel: 'Final', thirdPlace: 'Third place match'
     }
   },
   it: {
@@ -200,6 +224,14 @@ const TRANSLATIONS = {
       noStats: 'Nessuna statistica',
       category: 'Categoria',
       duration: 'Durata'
+    },
+    tabs: { live: 'Live', bracket: 'Tabellone', history: 'Cronologia' },
+    bracket: {
+      emptyTitle: 'Nessun tabellone', emptyText: 'Il tabellone del torneo non è ancora stato configurato',
+      group: 'Girone', player: 'Giocatore', wins: 'V', losses: 'S',
+      setsHeader: 'Set', gamesHeader: 'Game', matchesTitle: 'Partite del girone',
+      knockoutTitle: 'Fase a eliminazione', semifinal: 'Semifinale',
+      finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto'
     }
   },
   es: {
@@ -248,6 +280,14 @@ const TRANSLATIONS = {
       noStats: 'Sin estadísticas',
       category: 'Categoría',
       duration: 'Duración'
+    },
+    tabs: { live: 'En vivo', bracket: 'Cuadro', history: 'Historial' },
+    bracket: {
+      emptyTitle: 'Sin cuadro', emptyText: 'El cuadro del torneo aún no ha sido configurado',
+      group: 'Grupo', player: 'Jugador', wins: 'V', losses: 'D',
+      setsHeader: 'Sets', gamesHeader: 'Juegos', matchesTitle: 'Partidos del grupo',
+      knockoutTitle: 'Fase eliminatoria', semifinal: 'Semifinal',
+      finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar'
     }
   },
   fr: {
@@ -296,6 +336,14 @@ const TRANSLATIONS = {
       noStats: 'Pas de statistiques',
       category: 'Catégorie',
       duration: 'Durée'
+    },
+    tabs: { live: 'En direct', bracket: 'Tableau', history: 'Historique' },
+    bracket: {
+      emptyTitle: 'Pas de tableau', emptyText: 'Le tableau du tournoi n\'a pas encore été configuré',
+      group: 'Groupe', player: 'Joueur', wins: 'V', losses: 'D',
+      setsHeader: 'Sets', gamesHeader: 'Jeux', matchesTitle: 'Matchs de groupe',
+      knockoutTitle: 'Phase à élimination', semifinal: 'Demi-finale',
+      finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place'
     }
   }
 };
@@ -374,6 +422,10 @@ Alpine.data('tennisApp', () => ({
   history: [],
   tournamentName: null,
   expandedMatchStats: {},  // match_id -> stats data (for Details button)
+  activeTab: 'live',
+  bracketData: null,
+  bracketLoading: false,
+  bracketNameMap: {},  // surname -> full_name lookup
 
   /* --- Sorted history (newest first) --- */
   sortedHistory() {
@@ -449,7 +501,40 @@ Alpine.data('tennisApp', () => ({
       if (!response.ok) return;
       const data = await response.json();
       this.history = Array.isArray(data) ? data : [];
+      // Build surname -> full_name lookup from history data
+      for (const m of this.history) {
+        if (m.player_a && m.player_a.includes(' ')) {
+          const parts = m.player_a.trim().split(/\s+/);
+          const surname = parts[parts.length - 1];
+          this.bracketNameMap[surname] = m.player_a;
+        }
+        if (m.player_b && m.player_b.includes(' ')) {
+          const parts = m.player_b.trim().split(/\s+/);
+          const surname = parts[parts.length - 1];
+          this.bracketNameMap[surname] = m.player_b;
+        }
+      }
     } catch { /* ignore */ }
+  },
+
+  async fetchBracket() {
+    this.bracketLoading = true;
+    try {
+      const response = await fetch('/api/tournament/bracket');
+      if (!response.ok) { this.bracketData = null; return; }
+      this.bracketData = await response.json();
+    } catch { this.bracketData = null; }
+    finally { this.bracketLoading = false; }
+  },
+
+  switchToBracket() {
+    this.activeTab = 'bracket';
+    if (!this.bracketData) this.fetchBracket();
+  },
+
+  resolveBracketName(surname) {
+    if (!surname) return '';
+    return this.bracketNameMap[surname] || surname;
   },
 
   connectSSE() {

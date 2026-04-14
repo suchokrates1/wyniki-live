@@ -159,6 +159,39 @@ def init_db() -> None:
                 cursor.execute("UPDATE match_history SET tournament_id = ? WHERE tournament_id IS NULL", (first_t["id"],))
             logger.info("database_migration", action="added_tournament_id_to_match_history")
         
+        # Bracket tables
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bracket_groups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tournament_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                order_num INTEGER DEFAULT 0,
+                FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bracket_group_players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                player_id INTEGER,
+                player_name TEXT NOT NULL,
+                FOREIGN KEY (group_id) REFERENCES bracket_groups(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bracket_knockout (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tournament_id INTEGER NOT NULL,
+                phase TEXT NOT NULL,
+                position INTEGER DEFAULT 1,
+                player1_name TEXT,
+                player2_name TEXT,
+                winner_name TEXT,
+                score_summary TEXT,
+                FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+            )
+        """)
+        
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)
@@ -768,5 +801,351 @@ def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
     except Exception as e:
         logger.error("bulk_insert_players_error", error=str(e))
         return 0
+
+
+# ==================== BRACKET ====================
+
+def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
+    """Replace all bracket groups for a tournament.
+    groups: [{"name": "A", "players": [player_id, ...]}, ...]
+    """
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            # Delete existing groups (cascade deletes players)
+            cursor.execute(
+                "DELETE FROM bracket_group_players WHERE group_id IN "
+                "(SELECT id FROM bracket_groups WHERE tournament_id = ?)",
+                (tournament_id,)
+            )
+            cursor.execute("DELETE FROM bracket_groups WHERE tournament_id = ?", (tournament_id,))
+
+            # Build player_id -> last_name lookup
+            cursor.execute(
+                "SELECT id, last_name, name FROM players WHERE tournament_id = ?",
+                (tournament_id,)
+            )
+            name_map = {}
+            for row in cursor.fetchall():
+                ln = (row["last_name"] or "").strip()
+                name_map[row["id"]] = ln if ln else (row["name"] or "").strip()
+
+            for idx, g in enumerate(groups):
+                cursor.execute(
+                    "INSERT INTO bracket_groups (tournament_id, name, order_num) VALUES (?, ?, ?)",
+                    (tournament_id, g["name"], idx)
+                )
+                gid = cursor.lastrowid
+                for pid in g.get("players", []):
+                    pname = name_map.get(pid, "")
+                    if pname:
+                        cursor.execute(
+                            "INSERT INTO bracket_group_players (group_id, player_id, player_name) VALUES (?, ?, ?)",
+                            (gid, pid, pname)
+                        )
+            conn.commit()
+            logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
+            return True
+    except Exception as e:
+        logger.error("save_bracket_groups_error", error=str(e))
+        return False
+
+
+def fetch_bracket_groups(tournament_id: int) -> List[Dict]:
+    """Get all bracket groups with players for a tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, name, order_num FROM bracket_groups WHERE tournament_id = ? ORDER BY order_num",
+                (tournament_id,)
+            )
+            groups = []
+            for g in cursor.fetchall():
+                cursor.execute(
+                    "SELECT player_id, player_name FROM bracket_group_players WHERE group_id = ?",
+                    (g["id"],)
+                )
+                players = [{"player_id": r["player_id"], "name": r["player_name"]} for r in cursor.fetchall()]
+                groups.append({"id": g["id"], "name": g["name"], "players": players})
+            return groups
+    except Exception as e:
+        logger.error("fetch_bracket_groups_error", error=str(e))
+        return []
+
+
+def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str) -> List[Dict]:
+    """Find finished matches between a set of players within a date range."""
+    if len(player_names) < 2:
+        return []
+    placeholders = ",".join("?" for _ in player_names)
+    end_ts = end_date + "T23:59:59"
+    cursor.execute(f"""
+        SELECT id, player1_name, player2_name, player1_sets, player2_sets,
+               sets_history, created_at
+        FROM matches
+        WHERE status = 'finished'
+          AND player1_name IN ({placeholders})
+          AND player2_name IN ({placeholders})
+          AND created_at >= ?
+          AND created_at <= ?
+        ORDER BY created_at
+    """, (*player_names, *player_names, start_date, end_ts))
+    return cursor.fetchall()
+
+
+def _compute_standings(player_names: List[str], matches) -> tuple:
+    """Compute standings from a list of matches. Returns (standings, match_results)."""
+    stats = {name: {"wins": 0, "losses": 0, "sets_won": 0, "sets_lost": 0,
+                     "games_won": 0, "games_lost": 0, "played": 0}
+             for name in player_names}
+
+    match_results = []
+    for m in matches:
+        p1, p2 = m["player1_name"], m["player2_name"]
+        s1, s2 = m["player1_sets"], m["player2_sets"]
+        sh = json.loads(m["sets_history"]) if m["sets_history"] else []
+
+        if p1 not in stats or p2 not in stats:
+            continue
+
+        stats[p1]["played"] += 1
+        stats[p2]["played"] += 1
+
+        winner = None
+        if s1 > s2:
+            stats[p1]["wins"] += 1
+            stats[p2]["losses"] += 1
+            winner = p1
+        elif s2 > s1:
+            stats[p2]["wins"] += 1
+            stats[p1]["losses"] += 1
+            winner = p2
+
+        stats[p1]["sets_won"] += s1
+        stats[p1]["sets_lost"] += s2
+        stats[p2]["sets_won"] += s2
+        stats[p2]["sets_lost"] += s1
+
+        for s in sh:
+            if not s.get("is_super_tiebreak", False):
+                stats[p1]["games_won"] += s.get("player1_games", 0)
+                stats[p1]["games_lost"] += s.get("player2_games", 0)
+                stats[p2]["games_won"] += s.get("player2_games", 0)
+                stats[p2]["games_lost"] += s.get("player1_games", 0)
+
+        # Build score string
+        score_parts = []
+        for s in sh:
+            g1 = s.get("player1_games", 0)
+            g2 = s.get("player2_games", 0)
+            tb = s.get("tiebreak_loser_points")
+            if s.get("is_super_tiebreak", False):
+                score_parts.append(f"STB {g1}:{g2}")
+            elif tb is not None:
+                score_parts.append(f"{g1}:{g2}({tb})")
+            else:
+                score_parts.append(f"{g1}:{g2}")
+
+        match_results.append({
+            "match_id": m["id"],
+            "player_a": p1,
+            "player_b": p2,
+            "score": "  ".join(score_parts),
+            "winner": winner,
+            "sets_a": s1,
+            "sets_b": s2,
+        })
+
+    # Sort: wins desc, set_diff desc, game_diff desc
+    standings = []
+    for name, s in stats.items():
+        standings.append({
+            "name": name,
+            **s,
+            "set_diff": s["sets_won"] - s["sets_lost"],
+            "game_diff": s["games_won"] - s["games_lost"],
+        })
+    standings.sort(key=lambda x: (x["wins"], x["set_diff"], x["game_diff"]), reverse=True)
+    return standings, match_results
+
+
+def save_bracket_knockout(tournament_id: int, slots: List[Dict]) -> bool:
+    """Save knockout bracket slots."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bracket_knockout WHERE tournament_id = ?", (tournament_id,))
+            for slot in slots:
+                cursor.execute(
+                    "INSERT INTO bracket_knockout (tournament_id, phase, position, "
+                    "player1_name, player2_name, winner_name, score_summary) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (tournament_id, slot["phase"], slot.get("position", 1),
+                     slot.get("player1_name"), slot.get("player2_name"),
+                     slot.get("winner_name"), slot.get("score_summary"))
+                )
+            conn.commit()
+            logger.info("bracket_knockout_saved", tournament_id=tournament_id, count=len(slots))
+            return True
+    except Exception as e:
+        logger.error("save_bracket_knockout_error", error=str(e))
+        return False
+
+
+def fetch_bracket_knockout(tournament_id: int) -> List[Dict]:
+    """Get knockout bracket slots."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT phase, position, player1_name, player2_name, winner_name, score_summary "
+                "FROM bracket_knockout WHERE tournament_id = ? ORDER BY phase, position",
+                (tournament_id,)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+    except Exception as e:
+        logger.error("fetch_bracket_knockout_error", error=str(e))
+        return []
+
+
+def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date: str) -> Optional[Dict]:
+    """Try to find a finished match between two specific players."""
+    if not p1 or not p2:
+        return None
+    end_ts = end_date + "T23:59:59"
+    cursor.execute("""
+        SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history
+        FROM matches
+        WHERE status = 'finished'
+          AND ((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))
+          AND created_at >= ? AND created_at <= ?
+        ORDER BY created_at DESC LIMIT 1
+    """, (p1, p2, p2, p1, start_date, end_ts))
+    row = cursor.fetchone()
+    if not row:
+        return None
+
+    sh = json.loads(row["sets_history"]) if row["sets_history"] else []
+    score_parts = []
+    for s in sh:
+        g1 = s.get("player1_games", 0)
+        g2 = s.get("player2_games", 0)
+        tb = s.get("tiebreak_loser_points")
+        if s.get("is_super_tiebreak", False):
+            score_parts.append(f"STB {g1}:{g2}")
+        elif tb is not None:
+            score_parts.append(f"{g1}:{g2}({tb})")
+        else:
+            score_parts.append(f"{g1}:{g2}")
+
+    winner = row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"]
+    return {"winner": winner, "score": "  ".join(score_parts)}
+
+
+def get_full_bracket(tournament_id: int) -> Dict:
+    """Get complete bracket data for a tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+
+            # Tournament info
+            cursor.execute("SELECT name, start_date, end_date FROM tournaments WHERE id = ?", (tournament_id,))
+            t = cursor.fetchone()
+            if not t:
+                return {"error": "Tournament not found"}
+
+            start_date = t["start_date"]
+            end_date = t["end_date"]
+
+            # Groups + standings
+            cursor.execute(
+                "SELECT id, name FROM bracket_groups WHERE tournament_id = ? ORDER BY order_num",
+                (tournament_id,)
+            )
+            group_rows = cursor.fetchall()
+
+            groups_data = []
+            for g in group_rows:
+                cursor.execute(
+                    "SELECT player_name FROM bracket_group_players WHERE group_id = ?",
+                    (g["id"],)
+                )
+                player_names = [r["player_name"] for r in cursor.fetchall()]
+                matches = _find_group_matches(cursor, player_names, start_date, end_date)
+                standings, match_results = _compute_standings(player_names, matches)
+                groups_data.append({
+                    "name": g["name"],
+                    "standings": standings,
+                    "matches": match_results,
+                })
+
+            # Knockout
+            cursor.execute(
+                "SELECT phase, position, player1_name, player2_name, winner_name, score_summary "
+                "FROM bracket_knockout WHERE tournament_id = ? ORDER BY phase, position",
+                (tournament_id,)
+            )
+            knockout_rows = cursor.fetchall()
+
+            knockout = {}
+            for r in knockout_rows:
+                phase = r["phase"]
+                slot = {
+                    "position": r["position"],
+                    "player1": r["player1_name"],
+                    "player2": r["player2_name"],
+                    "winner": r["winner_name"],
+                    "score": r["score_summary"],
+                }
+                # Auto-detect result from match data if not manually set
+                if slot["player1"] and slot["player2"] and not slot["winner"]:
+                    result = _detect_knockout_result(
+                        cursor, slot["player1"], slot["player2"], start_date, end_date
+                    )
+                    if result:
+                        slot["winner"] = result["winner"]
+                        slot["score"] = result["score"]
+
+                knockout.setdefault(phase, []).append(slot)
+
+            return {
+                "tournament": {"id": tournament_id, "name": t["name"]},
+                "groups": groups_data,
+                "knockout": knockout,
+            }
+    except Exception as e:
+        logger.error("get_full_bracket_error", error=str(e))
+        return {"error": str(e)}
+
+
+def generate_knockout_from_standings(tournament_id: int) -> Dict:
+    """Auto-generate knockout bracket from group standings (1A vs 2B, 1B vs 2A)."""
+    try:
+        bracket = get_full_bracket(tournament_id)
+        groups = bracket.get("groups", [])
+        if len(groups) < 2:
+            return {"error": "Need at least 2 groups"}
+
+        g_a = groups[0]["standings"]
+        g_b = groups[1]["standings"]
+        if len(g_a) < 2 or len(g_b) < 2:
+            return {"error": "Groups need at least 2 players with standings"}
+
+        slots = [
+            {"phase": "semifinal", "position": 1,
+             "player1_name": g_a[0]["name"], "player2_name": g_b[1]["name"]},
+            {"phase": "semifinal", "position": 2,
+             "player1_name": g_b[0]["name"], "player2_name": g_a[1]["name"]},
+            {"phase": "final", "position": 1,
+             "player1_name": None, "player2_name": None},
+            {"phase": "third_place", "position": 1,
+             "player1_name": None, "player2_name": None},
+        ]
+        save_bracket_knockout(tournament_id, slots)
+        return {"status": "ok", "knockout": slots}
+    except Exception as e:
+        logger.error("generate_knockout_error", error=str(e))
+        return {"error": str(e)}
 
 
