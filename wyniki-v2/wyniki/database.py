@@ -894,6 +894,34 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
     return cursor.fetchall()
 
 
+def _is_stb(s: dict) -> bool:
+    """Detect super tiebreak set (set 3+ with low games and TB points)."""
+    if s.get("is_super_tiebreak", False):
+        return True
+    g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+    return (s.get("set_number", 0) >= 3 and max(g1, g2) <= 1
+            and s.get("tiebreak_loser_points") is not None)
+
+
+def _is_empty_set(s: dict) -> bool:
+    """Skip junk 0:0 sets (app initialised set 3 but match ended in 2)."""
+    g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+    return g1 == 0 and g2 == 0 and s.get("tiebreak_loser_points") is None
+
+
+def _format_set_score(s: dict, flipped: bool = False) -> str:
+    """Format a single set score string."""
+    g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+    if flipped:
+        g1, g2 = g2, g1
+    tb = s.get("tiebreak_loser_points")
+    if _is_stb(s):
+        return f"STB {g1}:{g2}" if tb is None else f"STB [{g1}:{g2}({tb})]"
+    if tb is not None:
+        return f"{g1}:{g2}({tb})"
+    return f"{g1}:{g2}"
+
+
 def _compute_standings(player_names: List[str], matches) -> tuple:
     """Compute standings from a list of matches. Returns (standings, match_results)."""
     stats = {name: {"wins": 0, "losses": 0, "sets_won": 0, "sets_lost": 0,
@@ -905,6 +933,7 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
         p1, p2 = m["player1_name"], m["player2_name"]
         s1, s2 = m["player1_sets"], m["player2_sets"]
         sh = json.loads(m["sets_history"]) if m["sets_history"] else []
+        sh = [s for s in sh if not _is_empty_set(s)]
 
         if p1 not in stats or p2 not in stats:
             continue
@@ -928,7 +957,7 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
         stats[p2]["sets_lost"] += s1
 
         for s in sh:
-            if not s.get("is_super_tiebreak", False):
+            if not _is_stb(s):
                 stats[p1]["games_won"] += s.get("player1_games", 0)
                 stats[p1]["games_lost"] += s.get("player2_games", 0)
                 stats[p2]["games_won"] += s.get("player2_games", 0)
@@ -937,15 +966,7 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
         # Build score string
         score_parts = []
         for s in sh:
-            g1 = s.get("player1_games", 0)
-            g2 = s.get("player2_games", 0)
-            tb = s.get("tiebreak_loser_points")
-            if s.get("is_super_tiebreak", False):
-                score_parts.append(f"STB {g1}:{g2}")
-            elif tb is not None:
-                score_parts.append(f"{g1}:{g2}({tb})")
-            else:
-                score_parts.append(f"{g1}:{g2}")
+            score_parts.append(_format_set_score(s))
 
         match_results.append({
             "match_id": m["id"],
@@ -1030,19 +1051,8 @@ def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date:
     flipped = (row["player1_name"] != p1)
 
     sh = json.loads(row["sets_history"]) if row["sets_history"] else []
-    score_parts = []
-    for s in sh:
-        g1 = s.get("player1_games", 0)
-        g2 = s.get("player2_games", 0)
-        if flipped:
-            g1, g2 = g2, g1
-        tb = s.get("tiebreak_loser_points")
-        if s.get("is_super_tiebreak", False):
-            score_parts.append(f"STB {g1}:{g2}")
-        elif tb is not None:
-            score_parts.append(f"{g1}:{g2}({tb})")
-        else:
-            score_parts.append(f"{g1}:{g2}")
+    sh = [s for s in sh if not _is_empty_set(s)]
+    score_parts = [_format_set_score(s, flipped) for s in sh]
 
     winner = row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"]
     return {"winner": winner, "score": "  ".join(score_parts)}

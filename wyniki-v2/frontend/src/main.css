@@ -1320,15 +1320,25 @@ body {
 /* Seed row (player) */
 .bt-seed {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
   font-size: 13px;
   color: var(--text);
-  min-height: 38px;
+  min-height: 34px;
 }
-.bt-seed + .bt-seed {
-  border-top: 1px solid var(--line);
+/* Score row between players */
+.bt-matchup-score {
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  background: rgba(0,0,0,.03);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+}
+[data-theme="dark"] .bt-matchup-score {
+  background: rgba(255,255,255,.03);
 }
 .bt-seed--won {
   font-weight: 700;
@@ -1344,14 +1354,6 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
-}
-.bt-seed-score {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  white-space: nowrap;
-  margin-left: 8px;
 }
 
 /* Connector lines between rounds */
