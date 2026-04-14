@@ -1026,11 +1026,16 @@ def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date:
     if not row:
         return None
 
+    # Flip score if match player order doesn't match requested order
+    flipped = (row["player1_name"] != p1)
+
     sh = json.loads(row["sets_history"]) if row["sets_history"] else []
     score_parts = []
     for s in sh:
         g1 = s.get("player1_games", 0)
         g2 = s.get("player2_games", 0)
+        if flipped:
+            g1, g2 = g2, g1
         tb = s.get("tiebreak_loser_points")
         if s.get("is_super_tiebreak", False):
             score_parts.append(f"STB {g1}:{g2}")
