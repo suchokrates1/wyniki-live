@@ -290,7 +290,7 @@
                                     <section class="bracket-tree" :aria-label="'Drabinka ' + cat.name">
                                         <h3 class="bracket-tree__title">Faza klasyfikacyjna</h3>
 
-                                        <div class="bt-ladder" role="img" :aria-label="'Drabinka eliminacyjna ' + cat.name">
+                                        <div class="bt-ladder">
                                             <template x-for="(ko, ki) in cat.knockout" :key="'ko-'+cat.name+'-'+ki">
                                                 <div class="bt-round" :class="{ 'bt-round--final': ko.phase.includes('Finał') }">
                                                     <div class="bt-round-label" x-text="ko.phase"></div>
@@ -298,14 +298,13 @@
                                                         <div class="bt-matchup"
                                                              :class="{ 'bt-matchup--final': ko.phase.includes('Finał') }"
                                                              role="group"
-                                                             :aria-label="(resolveBracketName(slot.player1)||'?') + ' vs ' + (resolveBracketName(slot.player2)||'?') + (slot.winner ? (', zwycięzca: ' + resolveBracketName(slot.winner)) : '')">
+                                                             :aria-label="(resolveBracketName(slot.player1)||'?') + ' vs ' + (resolveBracketName(slot.player2)||'?') + (slot.winner ? (', zwycięzca: ' + resolveBracketName(slot.winner) + ', wynik: ' + slot.score) : '')">
                                                             <div class="bt-seed" :class="{ 'bt-seed--won': slot.winner === slot.player1 }">
                                                                 <span class="bt-seed-name" x-text="resolveBracketName(slot.player1) || '—'"></span>
-                                                                <span class="bt-seed-score" x-text="slot.score ? slot.score.split('  ')[0] : ''"></span>
                                                             </div>
+                                                            <div class="bt-matchup-score" x-text="slot.score || 'vs'" aria-hidden="true"></div>
                                                             <div class="bt-seed" :class="{ 'bt-seed--won': slot.winner === slot.player2 }">
                                                                 <span class="bt-seed-name" x-text="resolveBracketName(slot.player2) || '—'"></span>
-                                                                <span class="bt-seed-score" x-text="slot.score ? slot.score.split('  ').slice(1).join(' ') : ''"></span>
                                                             </div>
                                                         </div>
                                                     </template>
