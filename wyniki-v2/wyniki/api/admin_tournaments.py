@@ -377,3 +377,221 @@ def get_all_players():
         })
     
     return jsonify(result)
+
+
+@players_public_bp.route('/<int:player_id>/profile', methods=['GET'])
+def get_player_profile(player_id: int):
+    """Get full player profile: info, tournament history, matches, medals."""
+    import json
+    from wyniki.db_models import Player, Tournament, MatchHistory
+    from wyniki.database import get_full_bracket
+    from sqlalchemy import or_
+
+    player = Player.query.get(player_id)
+    if not player:
+        return jsonify({'error': 'Player not found'}), 404
+
+    full_name = player.full_name
+    last_name = (player.last_name or '').strip()
+
+    # Find all Player entries with same last_name (player may appear in multiple tournaments)
+    if last_name:
+        siblings = Player.query.filter_by(last_name=last_name).filter(
+            Player.first_name == player.first_name
+        ).all()
+    else:
+        siblings = [player]
+
+    tournament_ids = list({s.tournament_id for s in siblings if s.tournament_id})
+
+    # Fetch all matches for this player across all tournaments
+    all_matches = MatchHistory.query.filter(
+        or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
+    ).order_by(MatchHistory.ended_ts.desc()).all()
+
+    # Also try matching by last_name alone (match_history stores surnames)
+    if last_name and last_name != full_name:
+        surname_matches = MatchHistory.query.filter(
+            or_(MatchHistory.player_a == last_name, MatchHistory.player_b == last_name)
+        ).order_by(MatchHistory.ended_ts.desc()).all()
+        existing_ids = {m.id for m in all_matches}
+        for sm in surname_matches:
+            if sm.id not in existing_ids:
+                all_matches.append(sm)
+
+    def parse_sets_history(m):
+        """Parse sets_history from a MatchHistory entry."""
+        sets = []
+        if m.sets_history:
+            try:
+                sh = json.loads(m.sets_history) if isinstance(m.sets_history, str) else m.sets_history
+                for s in sh:
+                    sets.append({
+                        'g1': s.get('player1_games', 0),
+                        'g2': s.get('player2_games', 0),
+                        'tb': s.get('tiebreak_loser_points'),
+                        'stb': bool(s.get('is_super_tiebreak', False))
+                    })
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if not sets and m.score_a and m.score_b:
+            try:
+                sa = json.loads(m.score_a) if isinstance(m.score_a, str) else m.score_a
+                sb = json.loads(m.score_b) if isinstance(m.score_b, str) else m.score_b
+                for i in range(max(len(sa), len(sb))):
+                    sets.append({
+                        'g1': sa[i] if i < len(sa) else 0,
+                        'g2': sb[i] if i < len(sb) else 0,
+                        'tb': None, 'stb': False
+                    })
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return sets
+
+    def determine_winner(m):
+        """Determine winner of a MatchHistory entry."""
+        try:
+            sa = json.loads(m.score_a) if isinstance(m.score_a, str) else (m.score_a or [])
+            sb = json.loads(m.score_b) if isinstance(m.score_b, str) else (m.score_b or [])
+            sets_a = sum(1 for i in range(min(len(sa), len(sb))) if sa[i] > sb[i])
+            sets_b = sum(1 for i in range(min(len(sa), len(sb))) if sb[i] > sa[i])
+            if sets_a > sets_b:
+                return m.player_a
+            elif sets_b > sets_a:
+                return m.player_b
+        except (json.JSONDecodeError, TypeError):
+            pass
+        return None
+
+    def is_this_player(name):
+        """Check if a name refers to this player."""
+        if not name:
+            return False
+        return name == full_name or name == last_name
+
+    # Build per-tournament data
+    tournaments_data = []
+    for tid in tournament_ids:
+        tourn = Tournament.query.get(tid)
+        if not tourn:
+            continue
+
+        # Get bracket data for this tournament
+        bracket = get_full_bracket(tid)
+
+        # Find player's group placement
+        group_name = None
+        group_position = None
+        group_total = None
+        if bracket and 'groups' in bracket:
+            for g in bracket['groups']:
+                for si, st in enumerate(g.get('standings', [])):
+                    sname = st.get('name', '')
+                    if sname == last_name or sname == full_name:
+                        group_name = g['name']
+                        group_position = si + 1
+                        group_total = len(g['standings'])
+                        break
+                if group_name:
+                    break
+
+        # Find knockout placement (medals)
+        medal = None  # '🥇','🥈','🥉' or None
+        knockout_phase = None
+        if bracket and 'knockout' in bracket:
+            for phase, slots in bracket['knockout'].items():
+                for slot in slots:
+                    winner = slot.get('winner', '')
+                    p1 = slot.get('player1', '')
+                    p2 = slot.get('player2', '')
+                    is_participant = (last_name and (last_name in p1 or last_name in p2)) or \
+                                    (full_name and (full_name in p1 or full_name in p2))
+                    if not is_participant:
+                        continue
+                    is_winner = winner and (last_name in winner or full_name in winner)
+                    phase_lc = phase.lower()
+                    if 'finał' in phase_lc or 'final' in phase_lc:
+                        if is_winner:
+                            medal = 'gold'
+                        else:
+                            medal = 'silver'
+                        knockout_phase = phase
+                    elif '3.' in phase or 'trzecie' in phase_lc or 'third' in phase_lc:
+                        if is_winner:
+                            medal = medal or 'bronze'
+                        knockout_phase = phase
+                    elif '5.' in phase or 'piąte' in phase_lc or 'fifth' in phase_lc:
+                        if is_winner and not medal:
+                            medal = '5th'
+                        if not knockout_phase:
+                            knockout_phase = phase
+
+        # Filter matches for this tournament
+        tourn_matches = [m for m in all_matches if m.tournament_id == tid]
+        matches_detail = []
+        wins = 0
+        losses = 0
+        for m in sorted(tourn_matches, key=lambda x: x.ended_ts or ''):
+            winner = determine_winner(m)
+            is_player_a = is_this_player(m.player_a)
+            opponent = m.player_b if is_player_a else m.player_a
+            won = (is_player_a and winner == m.player_a) or \
+                  (not is_player_a and winner == m.player_b)
+            if won:
+                wins += 1
+            else:
+                losses += 1
+
+            matches_detail.append({
+                'opponent': opponent,
+                'score': parse_sets_history(m),
+                'won': won,
+                'phase': m.phase or '',
+                'category': m.category or '',
+                'date': m.ended_ts or '',
+                'duration': m.duration_seconds or 0
+            })
+
+        tournaments_data.append({
+            'tournament_id': tid,
+            'tournament_name': tourn.name,
+            'start_date': tourn.start_date or '',
+            'end_date': tourn.end_date or '',
+            'group_name': group_name,
+            'group_position': group_position,
+            'group_total': group_total,
+            'medal': medal,
+            'knockout_phase': knockout_phase,
+            'matches_played': len(matches_detail),
+            'wins': wins,
+            'losses': losses,
+            'matches': matches_detail
+        })
+
+    # Career totals
+    total_matches = sum(t['matches_played'] for t in tournaments_data)
+    total_wins = sum(t['wins'] for t in tournaments_data)
+    medals = {'gold': 0, 'silver': 0, 'bronze': 0}
+    for t in tournaments_data:
+        if t['medal'] in medals:
+            medals[t['medal']] += 1
+
+    return jsonify({
+        'player': {
+            'id': player.id,
+            'first_name': player.first_name or '',
+            'last_name': player.last_name or '',
+            'full_name': full_name,
+            'gender': player.gender or '',
+            'category': player.category or '',
+            'country': (player.country or '').upper(),
+        },
+        'career': {
+            'tournaments': len(tournaments_data),
+            'matches': total_matches,
+            'wins': total_wins,
+            'losses': total_matches - total_wins,
+            'medals': medals
+        },
+        'tournaments': sorted(tournaments_data, key=lambda t: t.get('start_date', ''), reverse=True)
+    })

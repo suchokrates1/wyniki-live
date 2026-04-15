@@ -1792,6 +1792,126 @@ body {
   color: var(--text-dim);
 }
 
+/* Player card clickable */
+.player-card--clickable { cursor: pointer; transition: transform 0.1s, box-shadow 0.15s; }
+.player-card--clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.player-card--clickable:active { transform: translateY(0); }
+
+/* ============ Player Profile (pp-*) ============ */
+.pp-back {
+  background: none; border: none; color: var(--accent); cursor: pointer;
+  font-size: 14px; font-weight: 600; padding: 6px 0; margin-bottom: 12px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.pp-back:hover { text-decoration: underline; }
+
+.pp-header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px; background: var(--card); border-radius: var(--r);
+  border: 1px solid var(--line); margin-bottom: 16px;
+}
+.pp-avatar {
+  position: relative; width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #1565c0);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pp-avatar__initials {
+  font-size: 22px; font-weight: 700; color: #fff; text-transform: uppercase;
+}
+.pp-avatar__flag {
+  position: absolute; bottom: -2px; right: -2px;
+  width: 22px; height: 16px; border-radius: 3px; border: 2px solid var(--card);
+}
+.pp-info__name { font-size: 22px; font-weight: 700; color: var(--text); margin: 0; }
+.pp-info__details { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.pp-badge {
+  font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+  background: var(--line); color: var(--text-dim);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.pp-badge--cat { background: rgba(33,150,243,0.15); color: var(--accent); }
+.pp-badge--gender { background: rgba(156,39,176,0.12); color: #9c27b0; }
+.pp-badge--country img { border-radius: 2px; }
+
+.pp-career {
+  background: var(--card); border-radius: var(--r); border: 1px solid var(--line);
+  padding: 16px 20px; margin-bottom: 16px;
+}
+.pp-stat-grid {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+}
+.pp-stat {
+  flex: 1 1 80px; text-align: center; padding: 10px 8px;
+  background: var(--bg); border-radius: 8px; min-width: 70px;
+}
+.pp-stat__val { font-size: 22px; font-weight: 700; color: var(--text); }
+.pp-stat__label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; margin-top: 2px; }
+.pp-stat--wins .pp-stat__val { color: var(--accent); }
+.pp-stat--losses .pp-stat__val { color: #e53935; }
+
+.pp-medals {
+  display: flex; gap: 16px; justify-content: center; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--line);
+}
+.pp-medal { font-size: 18px; display: flex; align-items: center; gap: 4px; }
+.pp-medal span { font-size: 16px; font-weight: 700; color: var(--text); }
+
+.pp-section-title {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--accent);
+}
+
+.pp-tournaments { display: flex; flex-direction: column; gap: 8px; }
+
+.pp-tourn {
+  background: var(--card); border-radius: var(--r); border: 1px solid var(--line);
+  overflow: hidden;
+}
+.pp-tourn__header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; cursor: pointer; gap: 12px;
+  transition: background 0.15s;
+}
+.pp-tourn__header:hover { background: rgba(33,150,243,0.04); }
+.pp-tourn__left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pp-tourn__medal { font-size: 22px; flex-shrink: 0; }
+.pp-tourn__name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-tourn__dates { font-size: 11px; color: var(--text-dim); }
+.pp-tourn__right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.pp-tourn__record { font-size: 13px; font-weight: 600; }
+.pp-tourn__w { color: var(--accent); }
+.pp-tourn__l { color: #e53935; }
+.pp-tourn__group { font-size: 11px; color: var(--text-dim); background: var(--bg); padding: 2px 6px; border-radius: 4px; }
+.pp-tourn__chevron {
+  font-size: 14px; color: var(--text-dim); transition: transform 0.2s;
+  display: inline-block;
+}
+.pp-tourn__chevron--open { transform: rotate(90deg); }
+
+.pp-tourn__matches {
+  border-top: 1px solid var(--line); padding: 8px 12px;
+  background: var(--bg);
+}
+.pp-tourn__no-matches { text-align: center; padding: 12px; color: var(--text-dim); font-size: 13px; }
+
+.pp-match {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  border-radius: 6px; font-size: 13px;
+}
+.pp-match:nth-child(odd) { background: rgba(255,255,255,0.03); }
+.pp-match__result { font-size: 14px; font-weight: 700; width: 18px; text-align: center; }
+.pp-match--won .pp-match__result { color: var(--accent); }
+.pp-match--lost .pp-match__result { color: #e53935; }
+.pp-match__opponent { font-weight: 500; color: var(--text); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.pp-match__sets { display: flex; gap: 6px; flex-shrink: 0; }
+.pp-match__set { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+.pp-match__set--stb { color: var(--accent); }
+.pp-match__tb { font-size: 9px; color: var(--text-dim); vertical-align: super; }
+.pp-match__phase {
+  font-size: 10px; color: var(--text-dim); background: var(--line);
+  padding: 1px 5px; border-radius: 4px; flex-shrink: 0;
+}
+
 @media (max-width: 520px) {
   .tournament-grid { grid-template-columns: 1fr; }
   .live-subnav { gap: 6px; }
@@ -1802,4 +1922,13 @@ body {
   .player-search { max-width: 100%; }
   .player-card { flex-direction: column; align-items: flex-start; gap: 8px; }
   .player-card__stats { width: 100%; justify-content: space-around; }
+  .pp-header { flex-direction: column; text-align: center; padding: 16px; }
+  .pp-info__details { justify-content: center; }
+  .pp-stat { flex: 1 1 60px; min-width: 60px; padding: 8px 4px; }
+  .pp-stat__val { font-size: 18px; }
+  .pp-tourn__header { flex-direction: column; align-items: flex-start; }
+  .pp-tourn__right { width: 100%; justify-content: space-between; }
+  .pp-match { flex-wrap: wrap; }
+  .pp-match__opponent { flex-basis: 100%; order: 2; }
+  .pp-match__sets { order: 3; }
 }
