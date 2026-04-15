@@ -1220,12 +1220,6 @@ body {
   color: var(--muted);
   margin-bottom: 8px;
 }
-.bracket-match-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 /* Scoreboard table (shared: group + knockout) */
 .bm-scoreboard {
   width: 100%;
@@ -1235,6 +1229,16 @@ body {
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
+}
+/* Group variant: fixed column layout for aligned sets */
+.bm-scoreboard--group {
+  table-layout: fixed;
+}
+.bm-col-name { width: auto; }
+.bm-col-set { width: 52px; }
+/* Visual separation between matches */
+.bm-match-body + .bm-match-body {
+  border-top: 2px solid var(--line);
 }
 .bm-scoreboard tr {
   color: var(--muted);
@@ -1251,7 +1255,6 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
   text-align: left;
 }
 .bm-scoreboard .bm-set {

@@ -558,6 +558,14 @@ Alpine.data('tennisApp', () => ({
     } catch { /* ignore */ }
   },
 
+  /* --- Pad sets to 3 columns for consistent table alignment --- */
+  padSets(sets) {
+    const arr = sets || [];
+    const padded = arr.map(s => ({ ...s, played: true }));
+    while (padded.length < 3) padded.push({ g1: 0, g2: 0, tb: null, stb: false, played: false });
+    return padded;
+  },
+
   async fetchBracket() {
     this.bracketLoading = true;
     try {
