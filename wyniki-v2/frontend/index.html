@@ -807,10 +807,10 @@
 
             <!-- ======= TAB: PLAYERS ======= -->
             <div x-show="activeTab === 'players'">
-                <h2 class="section-heading" x-text="tr().playerSection?.title || 'Baza zawodników'"></h2>
+                <h2 x-show="!selectedPlayerId" class="section-heading" x-text="tr().playerSection?.title || 'Baza zawodników'"></h2>
 
-                <!-- Search + filters -->
-                <div class="player-filters">
+                <!-- Search + filters (hidden when profile is open) -->
+                <div x-show="!selectedPlayerId" class="player-filters">
                     <input type="search" class="player-search"
                            :placeholder="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika...'"
                            x-model="playerSearch"
@@ -824,7 +824,7 @@
                                 x-text="tr().playerSection?.women || 'Kobiety'"></button>
                     </div>
                 </div>
-                <div class="player-filters player-filters--row2">
+                <div x-show="!selectedPlayerId" class="player-filters player-filters--row2">
                     <select class="player-dropdown" x-model="playerCountry" @change="filterPlayers()">
                         <option value="" x-text="(tr().playerSection?.allCountries || 'Wszystkie kraje') + ' (' + allPlayers.length + ')'"></option>
                         <template x-for="opt in playerCountryOptions()" :key="'pc-'+opt.code">
@@ -840,9 +840,9 @@
                 </div>
 
                 <!-- Players list -->
-                <div class="player-list">
+                <div class="player-list" x-show="!selectedPlayerId">
                     <template x-for="p in filteredPlayers" :key="'pl-'+p.id">
-                        <div class="player-card">
+                        <div class="player-card player-card--clickable" @click="openPlayerProfile(p.id)" role="button" tabindex="0" @keydown.enter="openPlayerProfile(p.id)">
                             <div class="player-card__main">
                                 <img class="player-card__flag" x-show="p.country" :src="codeToFlag(p.country)" :alt="p.country" width="20" height="15">
                                 <span class="player-card__name" x-text="p.name"></span>
@@ -870,6 +870,130 @@
                     </div>
                     <div x-show="playersLoading" class="loading-state"><span class="spinner spinner--large"></span></div>
                 </div>
+
+                <!-- Player Profile View -->
+                <div x-show="selectedPlayerId" class="pp">
+                    <!-- Back button -->
+                    <button class="pp-back" @click="closePlayerProfile()">
+                        ← <span x-text="tr().playerProfile?.back || 'Powrót do listy'"></span>
+                    </button>
+
+                    <div x-show="playerProfileLoading" class="loading-state"><span class="spinner spinner--large"></span></div>
+
+                    <template x-if="playerProfile && !playerProfileLoading">
+                        <div>
+                            <!-- Header: Avatar + Info -->
+                            <div class="pp-header">
+                                <div class="pp-avatar">
+                                    <img x-show="playerProfile.player.country" :src="codeToFlag(playerProfile.player.country)" :alt="playerProfile.player.country" class="pp-avatar__flag">
+                                    <span class="pp-avatar__initials" x-text="(playerProfile.player.first_name?.[0] || '') + (playerProfile.player.last_name?.[0] || '')"></span>
+                                </div>
+                                <div class="pp-info">
+                                    <h2 class="pp-info__name" x-text="playerProfile.player.full_name"></h2>
+                                    <div class="pp-info__details">
+                                        <span x-show="playerProfile.player.category" class="pp-badge pp-badge--cat" x-text="playerProfile.player.category"></span>
+                                        <span x-show="playerProfile.player.gender" class="pp-badge pp-badge--gender" x-text="playerProfile.player.gender === 'M' ? (tr().playerProfile?.male || 'Mężczyzna') : (tr().playerProfile?.female || 'Kobieta')"></span>
+                                        <span x-show="playerProfile.player.country" class="pp-badge pp-badge--country">
+                                            <img :src="codeToFlag(playerProfile.player.country)" width="16" height="12" :alt="playerProfile.player.country">
+                                            <span x-text="playerProfile.player.country"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Career Stats -->
+                            <div class="pp-career">
+                                <div class="pp-stat-grid">
+                                    <div class="pp-stat">
+                                        <div class="pp-stat__val" x-text="playerProfile.career.tournaments"></div>
+                                        <div class="pp-stat__label" x-text="tr().playerProfile?.tournaments || 'Turnieje'"></div>
+                                    </div>
+                                    <div class="pp-stat">
+                                        <div class="pp-stat__val" x-text="playerProfile.career.matches"></div>
+                                        <div class="pp-stat__label" x-text="tr().playerProfile?.matches || 'Mecze'"></div>
+                                    </div>
+                                    <div class="pp-stat pp-stat--wins">
+                                        <div class="pp-stat__val" x-text="playerProfile.career.wins"></div>
+                                        <div class="pp-stat__label" x-text="tr().playerProfile?.wins || 'Wygrane'"></div>
+                                    </div>
+                                    <div class="pp-stat pp-stat--losses">
+                                        <div class="pp-stat__val" x-text="playerProfile.career.losses"></div>
+                                        <div class="pp-stat__label" x-text="tr().playerProfile?.losses || 'Przegrane'"></div>
+                                    </div>
+                                    <div class="pp-stat">
+                                        <div class="pp-stat__val" x-text="profileWinRate()"></div>
+                                        <div class="pp-stat__label" x-text="tr().playerProfile?.winRate || 'Skuteczność'"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Medals row -->
+                                <div class="pp-medals" x-show="playerProfile.career.medals.gold || playerProfile.career.medals.silver || playerProfile.career.medals.bronze">
+                                    <span class="pp-medal" x-show="playerProfile.career.medals.gold">🥇 <span x-text="playerProfile.career.medals.gold"></span></span>
+                                    <span class="pp-medal" x-show="playerProfile.career.medals.silver">🥈 <span x-text="playerProfile.career.medals.silver"></span></span>
+                                    <span class="pp-medal" x-show="playerProfile.career.medals.bronze">🥉 <span x-text="playerProfile.career.medals.bronze"></span></span>
+                                </div>
+                            </div>
+
+                            <!-- Tournament History -->
+                            <h3 class="pp-section-title" x-text="tr().playerProfile?.tournamentHistory || 'Historia turniejów'"></h3>
+
+                            <div x-show="!playerProfile.tournaments || playerProfile.tournaments.length === 0" class="bracket-empty">
+                                <p x-text="tr().playerProfile?.noTournaments || 'Brak turniejów'"></p>
+                            </div>
+
+                            <div class="pp-tournaments">
+                                <template x-for="t in playerProfile.tournaments" :key="'ppt-'+t.tournament_id">
+                                    <div class="pp-tourn">
+                                        <!-- Tournament header (clickable) -->
+                                        <div class="pp-tourn__header" @click="toggleProfileTournament(t.tournament_id)" role="button" tabindex="0" @keydown.enter="toggleProfileTournament(t.tournament_id)">
+                                            <div class="pp-tourn__left">
+                                                <span class="pp-tourn__medal" x-show="t.medal" x-text="profileMedalEmoji(t.medal)"></span>
+                                                <div>
+                                                    <div class="pp-tourn__name" x-text="t.tournament_name"></div>
+                                                    <div class="pp-tourn__dates" x-text="t.start_date + (t.end_date && t.end_date !== t.start_date ? ' – ' + t.end_date : '')"></div>
+                                                </div>
+                                            </div>
+                                            <div class="pp-tourn__right">
+                                                <span class="pp-tourn__record">
+                                                    <span class="pp-tourn__w" x-text="t.wins + (tr().playerProfile?.won || 'W')"></span> /
+                                                    <span class="pp-tourn__l" x-text="t.losses + (tr().playerProfile?.lost || 'P')"></span>
+                                                </span>
+                                                <span class="pp-tourn__group" x-show="t.group_name" x-text="(tr().playerProfile?.group || 'Grupa') + ' ' + t.group_name + ': ' + t.group_position + '/' + t.group_total"></span>
+                                                <span class="pp-tourn__chevron" :class="{ 'pp-tourn__chevron--open': profileExpandedTournaments[t.tournament_id] }">▸</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Expanded: match list -->
+                                        <div x-show="profileExpandedTournaments[t.tournament_id]" class="pp-tourn__matches">
+                                            <template x-for="(m, mi) in t.matches" :key="'ppm-'+t.tournament_id+'-'+mi">
+                                                <div class="pp-match" :class="{ 'pp-match--won': m.won, 'pp-match--lost': !m.won }">
+                                                    <span class="pp-match__result" x-text="m.won ? '✓' : '✗'"></span>
+                                                    <span class="pp-match__opponent" x-text="(tr().playerProfile?.vs || 'vs') + ' ' + m.opponent"></span>
+                                                    <span class="pp-match__sets">
+                                                        <template x-for="(s, si) in m.score" :key="'ppms-'+mi+'-'+si">
+                                                            <span class="pp-match__set" :class="{ 'pp-match__set--stb': s.stb }">
+                                                                <span x-text="s.stb ? '['+s.g1+':'+s.g2+']' : s.g1+':'+s.g2"></span><sup class="pp-match__tb" x-show="s.tb !== null && s.tb !== undefined" x-text="s.tb"></sup>
+                                                            </span>
+                                                        </template>
+                                                    </span>
+                                                    <span class="pp-match__phase" x-show="m.phase" x-text="m.phase"></span>
+                                                </div>
+                                            </template>
+                                            <div x-show="!t.matches || t.matches.length === 0" class="pp-tourn__no-matches">
+                                                <p x-text="tr().playerProfile?.noTournaments || 'Brak meczów'"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div x-show="!playerProfile && !playerProfileLoading" class="empty-state">
+                        <p>Player not found</p>
+                    </div>
+                </div>
+
             </div><!-- end TAB: PLAYERS -->
 
         </main>
