@@ -1,8 +1,62 @@
 """SQLAlchemy models for database."""
-from datetime import datetime
+from datetime import datetime, date
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+
+class GlobalPlayer(db.Model):
+    """Universal player — one record per real person, across all tournaments."""
+    __tablename__ = 'global_players'
+
+    id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(100), nullable=False, default='')
+    last_name = db.Column(db.String(100), nullable=False, default='')
+    gender = db.Column(db.String(1), nullable=True, default='')
+    birth_date = db.Column(db.String(10), nullable=True)  # YYYY-MM-DD
+    country = db.Column(db.String(10), nullable=True, default='')
+    category = db.Column(db.String(100), nullable=True, default='')
+    photo_url = db.Column(db.String(500), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
+
+    # Relationships
+    tournament_entries = db.relationship('Player', back_populates='global_player', lazy='dynamic')
+
+    @property
+    def full_name(self) -> str:
+        fn = (self.first_name or '').strip()
+        ln = (self.last_name or '').strip()
+        if fn and ln:
+            return f"{fn} {ln}"
+        return ln or fn or ''
+
+    @property
+    def age(self):
+        if not self.birth_date:
+            return None
+        try:
+            bd = date.fromisoformat(self.birth_date)
+            today = date.today()
+            return today.year - bd.year - ((today.month, today.day) < (bd.month, bd.day))
+        except (ValueError, TypeError):
+            return None
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'first_name': self.first_name or '',
+            'last_name': self.last_name or '',
+            'full_name': self.full_name,
+            'gender': self.gender or '',
+            'birth_date': self.birth_date or '',
+            'age': self.age,
+            'country': (self.country or '').upper(),
+            'category': self.category or '',
+            'photo_url': self.photo_url or '',
+            'notes': self.notes or '',
+            'created_at': self.created_at,
+        }
 
 
 class Tournament(db.Model):
@@ -33,11 +87,12 @@ class Tournament(db.Model):
 
 
 class Player(db.Model):
-    """Player model."""
+    """Player model — tournament entry linked to a GlobalPlayer."""
     __tablename__ = 'players'
     
     id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id', ondelete='CASCADE'), nullable=False)
+    global_player_id = db.Column(db.Integer, db.ForeignKey('global_players.id', ondelete='SET NULL'), nullable=True)
     name = db.Column(db.String(200), nullable=False)  # legacy: full name
     first_name = db.Column(db.String(100), nullable=True, default='')  # imię
     last_name = db.Column(db.String(100), nullable=True, default='')   # nazwisko
@@ -48,6 +103,7 @@ class Player(db.Model):
     
     # Relationships
     tournament = db.relationship('Tournament', back_populates='players')
+    global_player = db.relationship('GlobalPlayer', back_populates='tournament_entries')
     
     @property
     def full_name(self) -> str:
@@ -66,6 +122,7 @@ class Player(db.Model):
         return {
             'id': self.id,
             'tournament_id': self.tournament_id,
+            'global_player_id': self.global_player_id,
             'name': self.full_name,
             'first_name': self.first_name or '',
             'last_name': self.last_name or '',

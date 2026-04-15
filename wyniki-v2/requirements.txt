@@ -8,6 +8,7 @@ pydantic==2.5.3
 pydantic-settings==2.1.0
 structlog==24.1.0
 prometheus-flask-exporter==0.23.0
+Pillow>=10.0.0
 
 # Development dependencies (optional)
 # Uncomment to enable code quality tools:

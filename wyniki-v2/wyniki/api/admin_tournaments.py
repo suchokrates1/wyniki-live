@@ -363,6 +363,7 @@ def get_all_players():
         
         result.append({
             'id': p.id,
+            'global_player_id': p.global_player_id,
             'name': full_name,
             'first_name': p.first_name or '',
             'last_name': p.last_name or '',
@@ -381,26 +382,60 @@ def get_all_players():
 
 @players_public_bp.route('/<int:player_id>/profile', methods=['GET'])
 def get_player_profile(player_id: int):
-    """Get full player profile: info, tournament history, matches, medals."""
+    """Get full player profile: info, tournament history, matches, medals.
+    Accepts either a Player id (tournament entry) or a GlobalPlayer id via ?global=1
+    """
     import json
-    from wyniki.db_models import Player, Tournament, MatchHistory
+    from wyniki.db_models import Player, GlobalPlayer, Tournament, MatchHistory
     from wyniki.database import get_full_bracket
     from sqlalchemy import or_
 
-    player = Player.query.get(player_id)
-    if not player:
-        return jsonify({'error': 'Player not found'}), 404
+    is_global = request.args.get('global', '0') == '1'
 
-    full_name = player.full_name
-    last_name = (player.last_name or '').strip()
-
-    # Find all Player entries with same last_name (player may appear in multiple tournaments)
-    if last_name:
-        siblings = Player.query.filter_by(last_name=last_name).filter(
-            Player.first_name == player.first_name
-        ).all()
+    if is_global:
+        gp = GlobalPlayer.query.get(player_id)
+        if not gp:
+            return jsonify({'error': 'Player not found'}), 404
+        full_name = gp.full_name
+        last_name = (gp.last_name or '').strip()
+        first_name_val = gp.first_name or ''
+        gender_val = gp.gender or ''
+        category_val = gp.category or ''
+        country_val = (gp.country or '').upper()
+        photo_url = gp.photo_url or ''
+        birth_date = gp.birth_date or ''
+        age_val = gp.age
+        siblings = Player.query.filter_by(global_player_id=gp.id).all()
+        if not siblings and last_name:
+            siblings = Player.query.filter_by(last_name=last_name, first_name=gp.first_name).all()
     else:
-        siblings = [player]
+        player = Player.query.get(player_id)
+        if not player:
+            return jsonify({'error': 'Player not found'}), 404
+        full_name = player.full_name
+        last_name = (player.last_name or '').strip()
+        first_name_val = player.first_name or ''
+        gender_val = player.gender or ''
+        category_val = player.category or ''
+        country_val = (player.country or '').upper()
+        photo_url = ''
+        birth_date = ''
+        age_val = None
+
+        # If player has global_player_id, use it for cross-tournament lookup
+        if player.global_player_id:
+            gp = GlobalPlayer.query.get(player.global_player_id)
+            if gp:
+                photo_url = gp.photo_url or ''
+                birth_date = gp.birth_date or ''
+                age_val = gp.age
+            siblings = Player.query.filter_by(global_player_id=player.global_player_id).all()
+        elif last_name:
+            siblings = Player.query.filter_by(last_name=last_name).filter(
+                Player.first_name == player.first_name
+            ).all()
+        else:
+            siblings = [player]
 
     tournament_ids = list({s.tournament_id for s in siblings if s.tournament_id})
 
@@ -583,13 +618,16 @@ def get_player_profile(player_id: int):
 
     return jsonify({
         'player': {
-            'id': player.id,
-            'first_name': player.first_name or '',
-            'last_name': player.last_name or '',
+            'id': player_id,
+            'first_name': first_name_val,
+            'last_name': last_name,
             'full_name': full_name,
-            'gender': player.gender or '',
-            'category': player.category or '',
-            'country': (player.country or '').upper(),
+            'gender': gender_val,
+            'category': category_val,
+            'country': country_val,
+            'photo_url': photo_url,
+            'birth_date': birth_date,
+            'age': age_val,
         },
         'career': {
             'tournaments': len(tournaments_data),
