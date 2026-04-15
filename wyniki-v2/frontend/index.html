@@ -37,11 +37,11 @@
 
         <!-- Tab Navigation -->
         <div class="tab-bar">
-            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="activeTab = 'live'; liveSubTab = 'scores'; _updateHash()"
+            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="activeTab = 'live'; liveSubTab = 'scores'; selectedPlayerId = null; selectedTournamentId = ''; _updateHash()"
                     x-text="tr().tabs?.live || 'Na żywo'"></button>
-            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="activeTab = 'tournaments'; selectedTournamentId = ''; _updateHash()"
+            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="activeTab = 'tournaments'; selectedTournamentId = ''; selectedPlayerId = null; _updateHash()"
                     x-text="tr().tabs?.tournaments || 'Historia'"></button>
-            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="activeTab = 'players'; fetchAllPlayers(); _updateHash()"
+            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="activeTab = 'players'; selectedPlayerId = null; playerProfile = null; _profileIsGlobal = false; fetchAllPlayers(); _updateHash()"
                     x-text="tr().tabs?.players || 'Zawodnicy'"></button>
         </div>
 
