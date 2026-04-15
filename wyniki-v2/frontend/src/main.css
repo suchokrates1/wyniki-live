@@ -1236,9 +1236,11 @@ body {
 }
 .bm-col-name { width: auto; }
 .bm-col-set { width: 52px; }
-/* Visual separation between matches */
-.bm-match-body + .bm-match-body {
-  border-top: 2px solid var(--line);
+/* Match list: separate card per match */
+.bm-match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .bm-scoreboard tr {
   color: var(--muted);
