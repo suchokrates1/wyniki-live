@@ -241,7 +241,7 @@
                                         :aria-selected="bracketCategory === cat.name"
                                         :aria-controls="'cat-panel-'+cat.name.replace(/\s+/g,'-')"
                                         :class="{ 'cat-tab--active': bracketCategory === cat.name }"
-                                        @click="bracketCategory = cat.name; _updateHash()"
+                                        @click="bracketCategory = cat.name; _updateHash(true)"
                                         x-text="cat.name">
                                 </button>
                             </template>
@@ -532,10 +532,10 @@
                     <!-- Sub-tabs: Podium+Bracket / Match History -->
                     <div class="th-subtabs">
                         <button class="th-subtab" :class="{ 'th-subtab--active': historySubTab === 'bracket' }"
-                                @click="historySubTab = 'bracket'; _updateHash()"
+                                @click="historySubTab = 'bracket'; _updateHash(true)"
                                 x-text="tr().tournamentHistory?.bracket || 'Drabinka'"></button>
                         <button class="th-subtab" :class="{ 'th-subtab--active': historySubTab === 'matches' }"
-                                @click="historySubTab = 'matches'; _updateHash()"
+                                @click="historySubTab = 'matches'; _updateHash(true)"
                                 x-text="tr().tournamentHistory?.matchHistory || 'Historia meczów'"></button>
                     </div>
 
