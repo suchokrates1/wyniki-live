@@ -529,6 +529,8 @@ Alpine.data('tennisApp', () => ({
   playerProfile: null,
   playerProfileLoading: false,
   profileExpandedTournaments: {},
+  _navigating: false,
+  _profileIsGlobal: false,
 
   /* --- Sorted history (newest first) --- */
   sortedHistory() {
@@ -557,6 +559,7 @@ Alpine.data('tennisApp', () => ({
     }
     this._applyHash();
     window.addEventListener('hashchange', () => this._applyHash());
+    window.addEventListener('popstate', () => this._applyHash());
     this.connectSSE();
     this.fetchInitialData();
     this.fetchHistory();
@@ -567,34 +570,65 @@ Alpine.data('tennisApp', () => ({
   /* --- Hash routing --- */
   _applyHash() {
     const hash = decodeURIComponent(location.hash.replace(/^#/, ''));
-    if (!hash) return;
+    if (!hash) {
+      this.activeTab = 'live';
+      this.liveSubTab = 'scores';
+      this.selectedTournamentId = '';
+      this.selectedPlayerId = null;
+      this._profileIsGlobal = false;
+      this.playerProfile = null;
+      return;
+    }
+    this._navigating = true;
     const parts = hash.split('/');
     const tab = parts[0];
     if (tab === 'bracket' || tab === 'drabinka') {
       this.activeTab = 'live';
       this.liveSubTab = 'bracket';
+      this.selectedPlayerId = null;
+      this.selectedTournamentId = '';
       if (!this.bracketData) this.fetchBracket();
       if (parts[1]) this._pendingCategory = parts.slice(1).join('/');
     } else if (tab === 'tournaments' || tab === 'history' || tab === 'historia') {
       this.activeTab = 'tournaments';
+      this.selectedPlayerId = null;
       if (parts[1]) {
         // #tournaments/3/bracket or #tournaments/3/matches
         this.selectedTournamentId = parts[1];
         if (parts[2] === 'matches') this.historySubTab = 'matches';
         else this.historySubTab = 'bracket';
         this.onTournamentSelected();
+      } else {
+        this.selectedTournamentId = '';
       }
     } else if (tab === 'players' || tab === 'zawodnicy') {
       this.activeTab = 'players';
+      this.selectedTournamentId = '';
       if (parts[1]) {
-        this.openPlayerProfile(parseInt(parts[1], 10));
+        const pid = parseInt(parts[1], 10);
+        if (this.selectedPlayerId !== pid) {
+          this.selectedPlayerId = pid;
+          this._profileIsGlobal = true;
+          this.playerProfile = null;
+          this.profileExpandedTournaments = {};
+          this.fetchPlayerProfile(pid, true);
+        }
+      } else {
+        this.selectedPlayerId = null;
+        this._profileIsGlobal = false;
+        this.playerProfile = null;
       }
     } else if (tab === 'live') {
       this.activeTab = 'live';
+      this.selectedPlayerId = null;
+      this.selectedTournamentId = '';
       if (parts[1]) this.liveSubTab = parts[1];
+      else this.liveSubTab = 'scores';
     }
+    this._navigating = false;
   },
-  _updateHash() {
+  _updateHash(replace = false) {
+    if (this._navigating) return;
     let hash = this.activeTab;
     if (this.activeTab === 'live' && this.liveSubTab !== 'scores') {
       hash = 'live/' + this.liveSubTab;
@@ -605,7 +639,11 @@ Alpine.data('tennisApp', () => ({
     }
     const encoded = '#' + encodeURIComponent(hash);
     if (location.hash !== encoded) {
-      history.replaceState(null, '', encoded);
+      if (replace) {
+        history.replaceState(null, '', encoded);
+      } else {
+        history.pushState(null, '', encoded);
+      }
     }
   },
 
@@ -702,7 +740,7 @@ Alpine.data('tennisApp', () => ({
 
   closeTournamentDetail() {
     this.selectedTournamentId = '';
-    this._updateHash();
+    history.back();
   },
 
   async onTournamentSelected() {
@@ -837,7 +875,7 @@ Alpine.data('tennisApp', () => ({
     this._profileIsGlobal = false;
     this.playerProfile = null;
     this.profileExpandedTournaments = {};
-    this._updateHash();
+    history.back();
   },
 
   async fetchPlayerProfile(id, isGlobal = false) {
