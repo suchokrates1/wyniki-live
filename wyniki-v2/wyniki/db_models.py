@@ -41,6 +41,7 @@ class Player(db.Model):
     name = db.Column(db.String(200), nullable=False)  # legacy: full name
     first_name = db.Column(db.String(100), nullable=True, default='')  # imię
     last_name = db.Column(db.String(100), nullable=True, default='')   # nazwisko
+    gender = db.Column(db.String(1), nullable=True, default='')  # M or F
     category = db.Column(db.String(100))
     country = db.Column(db.String(10))
     created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
@@ -68,6 +69,7 @@ class Player(db.Model):
             'name': self.full_name,
             'first_name': self.first_name or '',
             'last_name': self.last_name or '',
+            'gender': self.gender or '',
             'category': self.category,
             'country': self.country,
             'created_at': self.created_at

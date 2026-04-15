@@ -213,6 +213,13 @@ def init_db() -> None:
             cursor.execute("ALTER TABLE tournaments ADD COLUMN location TEXT DEFAULT ''")
             logger.info("database_migration", action="added_location_to_tournaments")
         
+        # Migration: Add gender column to players
+        cursor.execute("PRAGMA table_info(players)")
+        p_cols2 = [row[1] for row in cursor.fetchall()]
+        if 'gender' not in p_cols2:
+            cursor.execute("ALTER TABLE players ADD COLUMN gender TEXT DEFAULT ''")
+            logger.info("database_migration", action="added_gender_to_players")
+        
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)
@@ -851,7 +858,7 @@ def fetch_active_tournament_players() -> List[Dict]:
 
 
 def insert_player(tournament_id: int, name: str, category: str = "", country: str = "",
-                  first_name: str = "", last_name: str = "") -> Optional[int]:
+                  first_name: str = "", last_name: str = "", gender: str = "") -> Optional[int]:
     """Insert a new player."""
     # If first_name/last_name not provided, split from name
     if not first_name and not last_name and name:
@@ -867,9 +874,9 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO players (tournament_id, name, first_name, last_name, category, country)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (tournament_id, name, first_name, last_name, category, country))
+                INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (tournament_id, name, first_name, last_name, category, country, gender))
             conn.commit()
             logger.info("player_inserted", id=cursor.lastrowid, name=name, tournament_id=tournament_id)
             return cursor.lastrowid
@@ -879,7 +886,7 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
 
 
 def update_player(player_id: int, name: str, category: str, country: str,
-                  first_name: str = "", last_name: str = "") -> bool:
+                  first_name: str = "", last_name: str = "", gender: str = "") -> bool:
     """Update a player."""
     # If first_name/last_name not provided, split from name
     if not first_name and not last_name and name:
@@ -895,9 +902,9 @@ def update_player(player_id: int, name: str, category: str, country: str,
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE players
-                SET name = ?, first_name = ?, last_name = ?, category = ?, country = ?
+                SET name = ?, first_name = ?, last_name = ?, category = ?, country = ?, gender = ?
                 WHERE id = ?
-            """, (name, first_name, last_name, category, country, player_id))
+            """, (name, first_name, last_name, category, country, gender, player_id))
             conn.commit()
             logger.info("player_updated", id=player_id)
             return True

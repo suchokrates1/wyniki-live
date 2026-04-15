@@ -134,9 +134,11 @@ def create_player(tournament_id: int):
     
     category = data.get('category', '')
     country = data.get('country', '')
+    gender = data.get('gender', '')
     
     player_id = insert_player(tournament_id, name, category, country,
-                              first_name=first_name, last_name=last_name)
+                              first_name=first_name, last_name=last_name,
+                              gender=gender)
     
     if player_id:
         return jsonify({"id": player_id, "message": "Player added"}), 201
@@ -167,9 +169,11 @@ def update_player_route(tournament_id: int, player_id: int):
     
     category = data.get('category', '')
     country = data.get('country', '')
+    gender = data.get('gender', '')
     
     success = update_player(player_id, name, category, country,
-                            first_name=first_name, last_name=last_name)
+                            first_name=first_name, last_name=last_name,
+                            gender=gender)
     
     if success:
         return jsonify({"message": "Player updated"})
@@ -362,8 +366,9 @@ def get_all_players():
             'name': full_name,
             'first_name': p.first_name or '',
             'last_name': p.last_name or '',
+            'gender': p.gender or '',
             'category': p.category or '',
-            'country': p.country or '',
+            'country': (p.country or '').upper(),
             'tournament_id': p.tournament_id,
             'tournament_name': p.tournament.name if p.tournament else '',
             'matches_played': match_count,
