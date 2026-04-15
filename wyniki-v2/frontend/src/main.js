@@ -55,7 +55,9 @@ const TRANSLATIONS = {
       loading: 'Ładowanie...',
       noStats: 'Brak statystyk',
       category: 'Kategoria',
-      duration: 'Czas'
+      duration: 'Czas',
+      startedAt: 'Rozpoczęcie:',
+      endedAt: 'Zakończenie:'
     },
     tabs: { live: 'Na żywo', bracket: 'Drabinka', history: 'Historia' },
     bracket: {
@@ -111,7 +113,9 @@ const TRANSLATIONS = {
       loading: 'Laden...',
       noStats: 'Keine Statistiken',
       category: 'Kategorie',
-      duration: 'Dauer'
+      duration: 'Dauer',
+      startedAt: 'Beginn:',
+      endedAt: 'Ende:'
     },
     tabs: { live: 'Live', bracket: 'Turnierbaum', history: 'Historie' },
     bracket: {
@@ -167,7 +171,9 @@ const TRANSLATIONS = {
       loading: 'Loading...',
       noStats: 'No statistics',
       category: 'Category',
-      duration: 'Duration'
+      duration: 'Duration',
+      startedAt: 'Started:',
+      endedAt: 'Ended:'
     },
     tabs: { live: 'Live', bracket: 'Bracket', history: 'History' },
     bracket: {
@@ -223,7 +229,9 @@ const TRANSLATIONS = {
       loading: 'Caricamento...',
       noStats: 'Nessuna statistica',
       category: 'Categoria',
-      duration: 'Durata'
+      duration: 'Durata',
+      startedAt: 'Inizio:',
+      endedAt: 'Fine:'
     },
     tabs: { live: 'Live', bracket: 'Tabellone', history: 'Cronologia' },
     bracket: {
@@ -279,7 +287,9 @@ const TRANSLATIONS = {
       loading: 'Cargando...',
       noStats: 'Sin estadísticas',
       category: 'Categoría',
-      duration: 'Duración'
+      duration: 'Duración',
+      startedAt: 'Inicio:',
+      endedAt: 'Fin:'
     },
     tabs: { live: 'En vivo', bracket: 'Cuadro', history: 'Historial' },
     bracket: {
@@ -335,7 +345,9 @@ const TRANSLATIONS = {
       loading: 'Chargement...',
       noStats: 'Pas de statistiques',
       category: 'Catégorie',
-      duration: 'Durée'
+      duration: 'Durée',
+      startedAt: 'Début:',
+      endedAt: 'Fin:'
     },
     tabs: { live: 'En direct', bracket: 'Tableau', history: 'Historique' },
     bracket: {
@@ -524,6 +536,11 @@ Alpine.data('tennisApp', () => ({
       const response = await fetch('/api/tournament/bracket');
       if (!response.ok) { this.bracketData = null; return; }
       this.bracketData = await response.json();
+      // Auto-select first category
+      const cats = this.bracketCategories();
+      if (cats.length > 0 && !this.bracketCategory) {
+        this.bracketCategory = cats[0].name;
+      }
     } catch { this.bracketData = null; }
     finally { this.bracketLoading = false; }
   },

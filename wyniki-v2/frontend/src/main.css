@@ -499,6 +499,13 @@ main { padding: 16px 0; }
   backdrop-filter: saturate(140%) blur(6px);
   opacity: .95;
 }
+.vm-footer__refresh {
+  font-size: 12px;
+}
+.vm-footer__sep {
+  font-size: 10px;
+  opacity: .4;
+}
 body {
   padding-bottom: 48px;
 }
@@ -719,14 +726,6 @@ body {
 .empty-state__text {
   font-size: 14px;
   margin: 0;
-}
-
-/* === Meta === */
-.meta {
-  padding: 8px 0;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 14px;
 }
 
 /* ============================================================
@@ -1226,37 +1225,44 @@ body {
   flex-direction: column;
   gap: 6px;
 }
-.bracket-match-item {
+.bm-card {
+  background: rgba(0,0,0,.03);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+[data-theme="dark"] .bm-card {
+  background: rgba(255,255,255,.03);
+}
+.bm-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  padding: 6px 10px;
-  background: rgba(0,0,0,.02);
-  border-radius: 6px;
+  padding: 5px 12px;
+  color: var(--muted);
 }
-[data-theme="dark"] .bracket-match-item {
-  background: rgba(255,255,255,.02);
-}
-.bm-player {
-  flex: 1;
+.bm-row--won {
   color: var(--text);
+  font-weight: 700;
+}
+.bm-name {
+  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.bm-player:last-of-type { text-align: right; }
-.bm-winner { font-weight: 700; }
-.bm-score {
+.bm-sets {
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: var(--accent);
-  min-width: 30px;
-  text-align: center;
+  min-width: 18px;
+  text-align: right;
 }
+.bm-row--won .bm-sets { color: var(--ok); }
 .bm-detail {
   font-size: 11px;
   color: var(--muted);
+  padding: 0 12px 5px;
   white-space: nowrap;
+  border-top: 1px solid var(--line);
 }
 
 /* ============================================================
@@ -1419,7 +1425,7 @@ body {
   }
   .bracket-table { font-size: 12px; }
   .bracket-table th, .bracket-table td { padding: 6px 6px; }
-  .bracket-match-item { font-size: 12px; gap: 4px; }
+  .bracket-match-item, .bm-card { font-size: 12px; }
   .bm-detail { display: none; }
   .tab-btn { font-size: 13px; padding: 8px 8px; }
 }
