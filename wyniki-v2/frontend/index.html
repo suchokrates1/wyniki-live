@@ -37,11 +37,11 @@
 
         <!-- Tab Navigation -->
         <div class="tab-bar">
-            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="activeTab = 'live'"
+            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="activeTab = 'live'; _updateHash()"
                     x-text="tr().tabs?.live || 'Na żywo'"></button>
             <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'bracket' }" @click="switchToBracket()"
                     x-text="tr().tabs?.bracket || 'Drabinka'"></button>
-            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'history' }" @click="activeTab = 'history'"
+            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'history' }" @click="activeTab = 'history'; _updateHash()"
                     x-text="tr().tabs?.history || 'Historia'"></button>
         </div>
 
@@ -219,7 +219,7 @@
                                         :aria-selected="bracketCategory === cat.name"
                                         :aria-controls="'cat-panel-'+cat.name.replace(/\s+/g,'-')"
                                         :class="{ 'cat-tab--active': bracketCategory === cat.name }"
-                                        @click="bracketCategory = cat.name"
+                                        @click="bracketCategory = cat.name; _updateHash()"
                                         x-text="cat.name">
                                 </button>
                             </template>

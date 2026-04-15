@@ -456,9 +456,37 @@ Alpine.data('tennisApp', () => ({
       this.darkMode = true;
       document.documentElement.setAttribute('data-theme', 'dark');
     }
+    this._applyHash();
+    window.addEventListener('hashchange', () => this._applyHash());
     this.connectSSE();
     this.fetchInitialData();
     this.fetchHistory();
+  },
+
+  /* --- Hash routing --- */
+  _applyHash() {
+    const hash = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (!hash) return;
+    const parts = hash.split('/');
+    const tab = parts[0];
+    if (tab === 'bracket' || tab === 'drabinka') {
+      this.switchToBracket();
+      if (parts[1]) this._pendingCategory = parts.slice(1).join('/');
+    } else if (tab === 'history' || tab === 'historia') {
+      this.activeTab = 'history';
+    } else if (tab === 'live') {
+      this.activeTab = 'live';
+    }
+  },
+  _updateHash() {
+    let hash = this.activeTab;
+    if (this.activeTab === 'bracket' && this.bracketCategory) {
+      hash = 'bracket/' + this.bracketCategory;
+    }
+    const encoded = '#' + encodeURIComponent(hash);
+    if (location.hash !== encoded) {
+      history.replaceState(null, '', encoded);
+    }
   },
 
   /* --- Flag helper --- */
@@ -536,18 +564,23 @@ Alpine.data('tennisApp', () => ({
       const response = await fetch('/api/tournament/bracket');
       if (!response.ok) { this.bracketData = null; return; }
       this.bracketData = await response.json();
-      // Auto-select first category
+      // Auto-select category from pending hash or first
       const cats = this.bracketCategories();
-      if (cats.length > 0 && !this.bracketCategory) {
+      if (this._pendingCategory && cats.find(c => c.name === this._pendingCategory)) {
+        this.bracketCategory = this._pendingCategory;
+        this._pendingCategory = null;
+      } else if (cats.length > 0 && !this.bracketCategory) {
         this.bracketCategory = cats[0].name;
       }
     } catch { this.bracketData = null; }
     finally { this.bracketLoading = false; }
   },
 
-  switchToBracket() {
+  switchToBracket(cat) {
     this.activeTab = 'bracket';
+    if (cat) this.bracketCategory = cat;
     if (!this.bracketData) this.fetchBracket();
+    this._updateHash();
   },
 
   resolveBracketName(surname) {
