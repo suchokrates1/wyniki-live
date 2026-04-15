@@ -542,9 +542,14 @@ def get_player_profile(player_id: int):
             else:
                 losses += 1
 
+            raw_sets = parse_sets_history(m)
+            # Flip scores when profile player is player_b
+            if not is_player_a:
+                raw_sets = [{'g1': s['g2'], 'g2': s['g1'], 'tb': s.get('tb'), 'stb': s.get('stb', False)} for s in raw_sets]
+
             matches_detail.append({
                 'opponent': opponent,
-                'score': parse_sets_history(m),
+                'score': raw_sets,
                 'won': won,
                 'phase': m.phase or '',
                 'category': m.category or '',
