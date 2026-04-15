@@ -909,6 +909,25 @@ def _is_empty_set(s: dict) -> bool:
     return g1 == 0 and g2 == 0 and s.get("tiebreak_loser_points") is None
 
 
+def _build_set_detail(s: dict, flipped: bool = False) -> dict:
+    """Build per-set scoreboard data. For STB, use actual TB points."""
+    g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+    tb = s.get("tiebreak_loser_points")
+    stb = _is_stb(s)
+    if stb and tb is not None:
+        # STB: convert games 0/1 → actual tiebreak points
+        # Winner gets max(10, tb+2), loser gets tb
+        winner_pts = max(10, tb + 2)
+        if g1 > g2:  # player1 won STB
+            g1, g2 = winner_pts, tb
+        else:
+            g1, g2 = tb, winner_pts
+        tb = None  # no separate TB display needed
+    if flipped:
+        g1, g2 = g2, g1
+    return {"g1": g1, "g2": g2, "tb": tb, "stb": stb}
+
+
 def _format_set_score(s: dict, flipped: bool = False) -> str:
     """Format a single set score string."""
     g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
@@ -964,12 +983,7 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
                 stats[p2]["games_lost"] += s.get("player1_games", 0)
 
         # Build per-set score arrays for scoreboard display
-        sets_detail = []
-        for s in sh:
-            g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
-            tb = s.get("tiebreak_loser_points")
-            stb = _is_stb(s)
-            sets_detail.append({"g1": g1, "g2": g2, "tb": tb, "stb": stb})
+        sets_detail = [_build_set_detail(s) for s in sh]
 
         # Build score string
         score_parts = []
@@ -1064,14 +1078,7 @@ def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date:
     score_parts = [_format_set_score(s, flipped) for s in sh]
 
     # Per-set detail for scoreboard
-    sets_detail = []
-    for s in sh:
-        g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
-        if flipped:
-            g1, g2 = g2, g1
-        tb = s.get("tiebreak_loser_points")
-        stb = _is_stb(s)
-        sets_detail.append({"g1": g1, "g2": g2, "tb": tb, "stb": stb})
+    sets_detail = [_build_set_detail(s, flipped) for s in sh]
 
     winner = row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"]
     return {"winner": winner, "score": "  ".join(score_parts), "sets": sets_detail}
