@@ -220,6 +220,29 @@ def init_db() -> None:
             cursor.execute("ALTER TABLE players ADD COLUMN gender TEXT DEFAULT ''")
             logger.info("database_migration", action="added_gender_to_players")
         
+        # Migration: Create global_players table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS global_players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT NOT NULL DEFAULT '',
+                last_name TEXT NOT NULL DEFAULT '',
+                gender TEXT DEFAULT '',
+                birth_date TEXT,
+                country TEXT DEFAULT '',
+                category TEXT DEFAULT '',
+                photo_url TEXT,
+                notes TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Migration: Add global_player_id column to players
+        cursor.execute("PRAGMA table_info(players)")
+        p_cols3 = [row[1] for row in cursor.fetchall()]
+        if 'global_player_id' not in p_cols3:
+            cursor.execute("ALTER TABLE players ADD COLUMN global_player_id INTEGER REFERENCES global_players(id) ON DELETE SET NULL")
+            logger.info("database_migration", action="added_global_player_id_to_players")
+
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)

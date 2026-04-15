@@ -842,7 +842,7 @@
                 <!-- Players list -->
                 <div class="player-list" x-show="!selectedPlayerId">
                     <template x-for="p in filteredPlayers" :key="'pl-'+p.id">
-                        <div class="player-card player-card--clickable" @click="openPlayerProfile(p.id)" role="button" tabindex="0" @keydown.enter="openPlayerProfile(p.id)">
+                        <div class="player-card player-card--clickable" @click="openPlayerProfile(p.global_player_id || p.id, !!p.global_player_id)" role="button" tabindex="0" @keydown.enter="openPlayerProfile(p.global_player_id || p.id, !!p.global_player_id)">
                             <div class="player-card__main">
                                 <img class="player-card__flag" x-show="p.country" :src="codeToFlag(p.country)" :alt="p.country" width="20" height="15">
                                 <span class="player-card__name" x-text="p.name"></span>
@@ -885,8 +885,9 @@
                             <!-- Header: Avatar + Info -->
                             <div class="pp-header">
                                 <div class="pp-avatar">
-                                    <img x-show="playerProfile.player.country" :src="codeToFlag(playerProfile.player.country)" :alt="playerProfile.player.country" class="pp-avatar__flag">
-                                    <span class="pp-avatar__initials" x-text="(playerProfile.player.first_name?.[0] || '') + (playerProfile.player.last_name?.[0] || '')"></span>
+                                    <img x-show="playerProfile.player.photo_url" :src="playerProfile.player.photo_url" class="pp-avatar__photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                                    <img x-show="!playerProfile.player.photo_url && playerProfile.player.country" :src="codeToFlag(playerProfile.player.country)" :alt="playerProfile.player.country" class="pp-avatar__flag">
+                                    <span x-show="!playerProfile.player.photo_url" class="pp-avatar__initials" x-text="(playerProfile.player.first_name?.[0] || '') + (playerProfile.player.last_name?.[0] || '')"></span>
                                 </div>
                                 <div class="pp-info">
                                     <h2 class="pp-info__name" x-text="playerProfile.player.full_name"></h2>
@@ -897,6 +898,7 @@
                                             <img :src="codeToFlag(playerProfile.player.country)" width="16" height="12" :alt="playerProfile.player.country">
                                             <span x-text="playerProfile.player.country"></span>
                                         </span>
+                                        <span x-show="playerProfile.player.age" class="pp-badge" x-text="playerProfile.player.age + ' lat'"></span>
                                     </div>
                                 </div>
                             </div>

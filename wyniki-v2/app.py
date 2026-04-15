@@ -16,6 +16,7 @@ from wyniki.config import logger, settings
 from wyniki.db_models import db
 from wyniki.api import courts, admin, health, stream, web, events
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp
+from wyniki.api.admin_global_players import blueprint as global_players_blueprint
 from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
 from wyniki.api.overlay_api import blueprint as overlay_api_blueprint
 from wyniki.api.brackets import bracket_public_bp, bracket_admin_bp
@@ -54,6 +55,7 @@ def create_app() -> Flask:
     app.register_blueprint(admin.blueprint)
     app.register_blueprint(tournaments_blueprint)
     app.register_blueprint(players_public_bp)
+    app.register_blueprint(global_players_blueprint)
     app.register_blueprint(health.blueprint)
     app.register_blueprint(stream.blueprint)
     app.register_blueprint(events.blueprint)
@@ -70,6 +72,13 @@ def create_app() -> Flask:
     def serve_assets(filename):
         assets_path = os.path.join(settings.static_dir, 'assets')
         return send_from_directory(assets_path, filename)
+
+    # Serve player photos from persistent data volume
+    @app.route('/data/photos/<path:filename>')
+    def serve_photos(filename):
+        data_dir = os.path.dirname(settings.database_path)
+        photos_path = os.path.join(data_dir, 'photos')
+        return send_from_directory(photos_path, filename)
     
     logger.info(
         "application_started",

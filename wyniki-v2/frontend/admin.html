@@ -215,7 +215,8 @@
         <div class="flex gap-2">
           <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
           <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
-          <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze</button>
+          <button @click="activeTab = 'global_players'" :class="{'btn-primary': activeTab === 'global_players'}" class="btn btn-sm">&#127941; Zawodnicy</button>
+          <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze turnieju</button>
           <button @click="activeTab = 'settings'; $nextTick(() => { updateCanvasScale(); _fitPreviewNames(); })" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
         </div>
       </div>
@@ -296,6 +297,125 @@
             </table>
           </div>
           <div class="alert alert-info mt-4" x-show="tournaments.length === 0"><span>Brak turniej&#243;w. Dodaj pierwszy turniej powy&#380;ej.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Players Tab -->
+    <div x-show="activeTab === 'global_players'" x-cloak>
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="card-title">&#127941; Baza zawodnik&oacute;w (globalna)</h2>
+            <div class="flex gap-2">
+              <button @click="migrateGlobalPlayers()" class="btn btn-sm btn-warning" x-show="globalPlayers.length === 0">&#128260; Migruj istniej&#261;cych</button>
+              <span class="badge badge-lg" x-text="globalPlayers.length + ' zawodnik&oacute;w'"></span>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+            <input type="text" x-model="globalPlayersFilter.q" @input.debounce.300ms="loadGlobalPlayers()" placeholder="Szukaj..." class="input input-sm input-bordered">
+            <select x-model="globalPlayersFilter.gender" @change="loadGlobalPlayers()" class="select select-sm select-bordered">
+              <option value="">P&#322;e&#263;</option>
+              <option value="M">M&#281;&#380;czyzna</option>
+              <option value="F">Kobieta</option>
+            </select>
+            <input type="text" x-model="globalPlayersFilter.category" @input.debounce.300ms="loadGlobalPlayers()" placeholder="Kategoria" class="input input-sm input-bordered">
+            <input type="text" x-model="globalPlayersFilter.country" @input.debounce.300ms="loadGlobalPlayers()" placeholder="Kraj" class="input input-sm input-bordered" maxlength="2">
+            <button @click="globalPlayersFilter = {q:'',gender:'',category:'',country:''}; loadGlobalPlayers()" class="btn btn-sm btn-ghost">Wyczy&#347;&#263;</button>
+          </div>
+
+          <!-- Add new global player form -->
+          <div class="collapse collapse-arrow bg-base-200 mb-4">
+            <input type="checkbox" />
+            <div class="collapse-title font-medium">+ Dodaj nowego zawodnika</div>
+            <div class="collapse-content">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                <div class="form-control"><label class="label py-0"><span class="label-text text-xs">Imi&#281;</span></label><input type="text" x-model="newGlobalPlayer.first_name" class="input input-sm input-bordered"></div>
+                <div class="form-control"><label class="label py-0"><span class="label-text text-xs">Nazwisko *</span></label><input type="text" x-model="newGlobalPlayer.last_name" class="input input-sm input-bordered"></div>
+                <div class="form-control"><label class="label py-0"><span class="label-text text-xs">P&#322;e&#263;</span></label>
+                  <select x-model="newGlobalPlayer.gender" class="select select-sm select-bordered">
+                    <option value="">--</option><option value="M">M</option><option value="F">F</option>
+                  </select>
+                </div>
+                <div class="form-control"><label class="label py-0"><span class="label-text text-xs">Data urodzenia</span></label><input type="date" x-model="newGlobalPlayer.birth_date" class="input input-sm input-bordered"></div>
+                <div class="form-control"><label class="label py-0"><span class="label-text text-xs">Kategoria</span></label><input type="text" x-model="newGlobalPlayer.category" class="input input-sm input-bordered" placeholder="B1"></div>
+                <div class="form-control"><label class="label py-0"><span class="label-text text-xs">Kraj</span></label><input type="text" x-model="newGlobalPlayer.country" class="input input-sm input-bordered" maxlength="2" placeholder="pl"></div>
+                <div class="form-control"><label class="label py-0"><span class="label-text text-xs">Notatki</span></label><input type="text" x-model="newGlobalPlayer.notes" class="input input-sm input-bordered"></div>
+                <div class="form-control justify-end"><button @click="createGlobalPlayer()" class="btn btn-primary btn-sm">Dodaj</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Global players table -->
+          <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm">
+              <thead>
+                <tr><th></th><th>Imi&#281;</th><th>Nazwisko</th><th>P&#322;e&#263;</th><th>Wiek</th><th>Kategoria</th><th>Kraj</th><th>Turnieje</th><th>Zdj&#281;cie</th><th>Akcje</th></tr>
+              </thead>
+              <tbody>
+                <template x-for="gp in filteredGlobalPlayers" :key="'gp_'+gp.id">
+                  <tr>
+                    <!-- Photo -->
+                    <td class="w-10">
+                      <div class="w-8 h-8 rounded-full overflow-hidden bg-base-300 flex items-center justify-center">
+                        <img x-show="gp.photo_url" :src="gp.photo_url" class="w-full h-full object-cover">
+                        <span x-show="!gp.photo_url" class="text-xs opacity-50" x-text="(gp.first_name?.[0]||'')+(gp.last_name?.[0]||'')"></span>
+                      </div>
+                    </td>
+                    <!-- First name -->
+                    <template x-if="editingGlobalId !== gp.id"><td x-text="gp.first_name"></td></template>
+                    <template x-if="editingGlobalId === gp.id"><td><input type="text" x-model="editGlobalData.first_name" class="input input-xs input-bordered w-full"></td></template>
+                    <!-- Last name -->
+                    <template x-if="editingGlobalId !== gp.id"><td class="font-semibold" x-text="gp.last_name"></td></template>
+                    <template x-if="editingGlobalId === gp.id"><td><input type="text" x-model="editGlobalData.last_name" class="input input-xs input-bordered w-full"></td></template>
+                    <!-- Gender -->
+                    <template x-if="editingGlobalId !== gp.id"><td><span class="badge badge-sm" :class="gp.gender==='F'?'badge-secondary':'badge-primary'" x-text="gp.gender || '-'"></span></td></template>
+                    <template x-if="editingGlobalId === gp.id"><td><select x-model="editGlobalData.gender" class="select select-xs select-bordered"><option value="">--</option><option value="M">M</option><option value="F">F</option></select></td></template>
+                    <!-- Age / Birth date -->
+                    <template x-if="editingGlobalId !== gp.id"><td><span x-text="gp.age ?? '-'" class="text-sm"></span></td></template>
+                    <template x-if="editingGlobalId === gp.id"><td><input type="date" x-model="editGlobalData.birth_date" class="input input-xs input-bordered w-32"></td></template>
+                    <!-- Category -->
+                    <template x-if="editingGlobalId !== gp.id"><td><span class="badge badge-sm badge-outline" x-text="gp.category || '-'"></span></td></template>
+                    <template x-if="editingGlobalId === gp.id"><td><input type="text" x-model="editGlobalData.category" class="input input-xs input-bordered w-16"></td></template>
+                    <!-- Country -->
+                    <template x-if="editingGlobalId !== gp.id"><td x-text="gp.country || '-'"></td></template>
+                    <template x-if="editingGlobalId === gp.id"><td><input type="text" x-model="editGlobalData.country" class="input input-xs input-bordered w-12" maxlength="2"></td></template>
+                    <!-- Tournaments count -->
+                    <td><span class="badge badge-ghost badge-sm" x-text="gp.tournaments_count || 0"></span></td>
+                    <!-- Photo upload -->
+                    <td>
+                      <template x-if="editingGlobalId === gp.id">
+                        <div class="flex gap-1">
+                          <input type="file" accept="image/*" @change="uploadGlobalPhoto(gp.id, $event)" class="file-input file-input-xs w-28">
+                          <button x-show="gp.photo_url" @click="deleteGlobalPhoto(gp.id)" class="btn btn-xs btn-ghost text-error">X</button>
+                        </div>
+                      </template>
+                      <template x-if="editingGlobalId !== gp.id"><span class="text-xs opacity-40" x-text="gp.photo_url ? '&#10003;' : ''"></span></template>
+                    </td>
+                    <!-- Actions -->
+                    <td>
+                      <template x-if="editingGlobalId !== gp.id">
+                        <div class="flex gap-1">
+                          <button @click="editGlobal(gp)" class="btn btn-xs btn-ghost" title="Edytuj">&#9999;&#65039;</button>
+                          <button @click="deleteGlobal(gp.id)" class="btn btn-xs btn-ghost text-error" title="Usu&#324;">&#128465;</button>
+                          <button x-show="selectedTournament" @click="addGlobalToTournament(gp.id)" class="btn btn-xs btn-accent" title="Dodaj do turnieju">+&#127942;</button>
+                        </div>
+                      </template>
+                      <template x-if="editingGlobalId === gp.id">
+                        <div class="flex gap-1">
+                          <button @click="saveGlobal(gp.id)" class="btn btn-xs btn-success">&#10003;</button>
+                          <button @click="cancelEditGlobal()" class="btn btn-xs btn-ghost">&#10007;</button>
+                        </div>
+                      </template>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="alert alert-info mt-4" x-show="globalPlayers.length === 0"><span>Brak zawodnik&oacute;w w bazie globalnej. Kliknij "Migruj istniej&#261;cych" lub dodaj r&#281;cznie.</span></div>
         </div>
       </div>
     </div>

@@ -823,25 +823,28 @@ Alpine.data('tennisApp', () => ({
   },
 
   /* --- Player Profile --- */
-  openPlayerProfile(id) {
+  openPlayerProfile(id, isGlobal = false) {
     this.selectedPlayerId = id;
+    this._profileIsGlobal = isGlobal;
     this.playerProfile = null;
     this.profileExpandedTournaments = {};
-    this.fetchPlayerProfile(id);
+    this.fetchPlayerProfile(id, isGlobal);
     this._updateHash();
   },
 
   closePlayerProfile() {
     this.selectedPlayerId = null;
+    this._profileIsGlobal = false;
     this.playerProfile = null;
     this.profileExpandedTournaments = {};
     this._updateHash();
   },
 
-  async fetchPlayerProfile(id) {
+  async fetchPlayerProfile(id, isGlobal = false) {
     this.playerProfileLoading = true;
     try {
-      const response = await fetch(`/api/players/${encodeURIComponent(id)}/profile`);
+      const qs = isGlobal ? '?global=1' : '';
+      const response = await fetch(`/api/players/${encodeURIComponent(id)}/profile${qs}`);
       if (!response.ok) { this.playerProfile = null; return; }
       this.playerProfile = await response.json();
     } catch { this.playerProfile = null; }
