@@ -9,7 +9,7 @@
 </head>
 <body>
     <a href="#main" class="skip-link">Skip to main content</a>
-    <div x-data="tennisApp" x-cloak class="wrap" x-effect="document.title = 'Blind Tennis Polska'">
+    <div x-data="tennisApp" x-cloak class="wrap" x-effect="document.title = 'Blind Tennis Polska'; document.documentElement.lang = lang || 'pl'">>
         
         <!-- Header -->
         <header class="header">
@@ -36,22 +36,13 @@
         </header>
 
         <!-- Tab Navigation -->
-        <div class="tab-bar">
-            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="activeTab = 'live'; liveSubTab = 'scores'; selectedPlayerId = null; selectedTournamentId = ''; _updateHash()"
+        <nav class="tab-bar" role="tablist" :aria-label="tr().tabs?.navLabel || 'Główna nawigacja'">
+            <button class="tab-btn" role="tab" :aria-selected="activeTab === 'live'" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="activeTab = 'live'; liveSubTab = 'scores'; selectedPlayerId = null; selectedTournamentId = ''; _updateHash()"
                     x-text="tr().tabs?.live || 'Na żywo'"></button>
-            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="activeTab = 'tournaments'; selectedTournamentId = ''; selectedPlayerId = null; _updateHash()"
+            <button class="tab-btn" role="tab" :aria-selected="activeTab === 'tournaments'" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="activeTab = 'tournaments'; selectedTournamentId = ''; selectedPlayerId = null; _updateHash()"
                     x-text="tr().tabs?.tournaments || 'Historia'"></button>
-            <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="activeTab = 'players'; selectedPlayerId = null; playerProfile = null; _profileIsGlobal = false; fetchAllPlayers(); _updateHash()"
+            <button class="tab-btn" role="tab" :aria-selected="activeTab === 'players'" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="activeTab = 'players'; selectedPlayerId = null; playerProfile = null; _profileIsGlobal = false; fetchAllPlayers(); _updateHash()"
                     x-text="tr().tabs?.players || 'Zawodnicy'"></button>
-        </div>
-
-        <!-- Quick court navigation -->
-        <nav x-show="activeTab === 'live' && getCourtIds().length > 0" :aria-label="t('navLabel')">
-            <ul>
-                <template x-for="courtId in getCourtIds()" :key="'nav-'+courtId">
-                    <li><a :href="'#kort-'+courtId" x-text="t('courtLabel', {court: courtId})"></a></li>
-                </template>
-            </ul>
         </nav>
         
         <!-- Loading State -->
@@ -75,26 +66,36 @@
             <h2 class="live-tournament-name" x-show="tournamentName" x-text="tournamentName"></h2>
 
             <!-- Live sub-navigation cards -->
-            <div class="live-subnav">
-                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="liveSubTab = 'scores'; _updateHash()">
-                    <span class="live-subnav__icon">🎾</span>
+            <div class="live-subnav" role="tablist" :aria-label="tr().liveSub?.navLabel || 'Podzakładki Na żywo'">
+                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'scores'" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="liveSubTab = 'scores'; _updateHash()">
+                    <span class="live-subnav__icon" aria-hidden="true">🎾</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.scores || 'Wyniki live'"></span>
                 </button>
-                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="liveSubTab = 'bracket'; if(!bracketData) fetchBracket(); _updateHash()">
-                    <span class="live-subnav__icon">🏆</span>
+                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'bracket'" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="liveSubTab = 'bracket'; if(!bracketData) fetchBracket(); _updateHash()">
+                    <span class="live-subnav__icon" aria-hidden="true">🏆</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.bracket || 'Drabinka'"></span>
                 </button>
-                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'history' }" @click="liveSubTab = 'history'; _updateHash()">
-                    <span class="live-subnav__icon">📋</span>
+                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'history'" :class="{ 'live-subnav__card--active': liveSubTab === 'history' }" @click="liveSubTab = 'history'; _updateHash()">
+                    <span class="live-subnav__icon" aria-hidden="true">📋</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.history || 'Historia'"></span>
                 </button>
             </div>
 
             <!-- SUB: Live Scores -->
-            <div x-show="liveSubTab === 'scores'">
+            <div x-show="liveSubTab === 'scores'" role="tabpanel">
+
+            <!-- Quick court navigation (screen readers) -->
+            <nav x-show="getCourtIds().length > 0" :aria-label="t('navLabel')" class="sr-only">
+                <ul>
+                    <template x-for="courtId in getCourtIds()" :key="'nav-'+courtId">
+                        <li><a :href="'#kort-'+courtId" x-text="t('courtLabel', {court: courtId})"></a></li>
+                    </template>
+                </ul>
+            </nav>
+
             <!-- Empty State -->
-            <div x-show="!loading && getCourtIds().length === 0" class="empty-state">
-                <div class="empty-state__icon">🎾</div>
+            <div x-show="!loading && getCourtIds().length === 0" class="empty-state" role="status">
+                <div class="empty-state__icon" aria-hidden="true">🎾</div>
                 <h2 class="empty-state__title" x-text="t('emptyTitle')">Brak aktywnych kortów</h2>
                 <p class="empty-state__text" x-text="t('emptyText')">Skonfiguruj korty w panelu administratora</p>
             </div>
@@ -205,7 +206,7 @@
                         <!-- Match info footer -->
                         <div class="card-footer" x-show="isMatchActive(courtId)">
                             <span class="match-time" x-show="courts[courtId]?.match_time?.seconds">
-                                🕒 <span x-text="formatTime(courts[courtId]?.match_time?.seconds)"></span>
+                                <span aria-hidden="true">🕒</span> <span x-text="formatTime(courts[courtId]?.match_time?.seconds)"></span>
                             </span>
                             <span class="match-set" x-text="(tr().footer?.set || 'Set') + ' ' + (courts[courtId]?.current_set || 1)"></span>
                         </div>
@@ -215,7 +216,7 @@
             </div><!-- end SUB: scores -->
 
             <!-- SUB: Live Bracket (active tournament) -->
-            <div x-show="liveSubTab === 'bracket'">
+            <div x-show="liveSubTab === 'bracket'" role="tabpanel">
                 <!-- Loading -->
                 <div x-show="bracketLoading" class="loading-state" role="status">
                     <span class="spinner spinner--large"></span>
@@ -404,7 +405,7 @@
             </div><!-- end SUB: bracket -->
 
             <!-- SUB: Live History (active tournament) -->
-            <div x-show="liveSubTab === 'history'">
+            <div x-show="liveSubTab === 'history'" role="tabpanel">
                 <section x-show="sortedHistory().length > 0" aria-labelledby="live-history-title">
                     <h3 id="live-history-title" class="hm-heading" x-text="tr().history?.title || 'Historia meczów'"></h3>
                     <div class="hm-list" role="list">
@@ -501,7 +502,7 @@
                 <!-- Tournament list (cards) -->
                 <div x-show="!selectedTournamentId" class="tournament-grid">
                     <template x-for="t in tournaments" :key="'tc-'+t.id">
-                        <button class="tournament-card" @click="openTournament(t.id)">
+                        <button class="tournament-card" @click="openTournament(t.id)" :aria-label="t.name + (t.location ? ', ' + t.location : '') + ', ' + t.start_date">
                             <h3 class="tournament-card__name" x-text="t.name"></h3>
                             <div class="tournament-card__meta">
                                 <span class="tournament-card__location" x-show="t.location" x-text="t.location"></span>
@@ -524,17 +525,17 @@
 
                 <!-- Tournament detail view -->
                 <div x-show="selectedTournamentId">
-                    <button class="back-btn" @click="closeTournamentDetail()">
-                        ← <span x-text="tr().tournamentCard?.backToList || 'Powrót do listy'"></span>
+                    <button class="back-btn" @click="closeTournamentDetail()" :aria-label="tr().tournamentCard?.backToList || 'Powrót do listy turniejów'">
+                        <span aria-hidden="true">←</span> <span x-text="tr().tournamentCard?.backToList || 'Powrót do listy'"></span>
                     </button>
                     <h2 class="tournament-detail__name" x-text="selectedTournamentName()"></h2>
 
                     <!-- Sub-tabs: Podium+Bracket / Match History -->
-                    <div class="th-subtabs">
-                        <button class="th-subtab" :class="{ 'th-subtab--active': historySubTab === 'bracket' }"
+                    <div class="th-subtabs" role="tablist" :aria-label="tr().tournamentHistory?.navLabel || 'Szczegóły turnieju'">
+                        <button class="th-subtab" role="tab" :aria-selected="historySubTab === 'bracket'" :class="{ 'th-subtab--active': historySubTab === 'bracket' }"
                                 @click="historySubTab = 'bracket'; _updateHash(true)"
                                 x-text="tr().tournamentHistory?.bracket || 'Drabinka'"></button>
-                        <button class="th-subtab" :class="{ 'th-subtab--active': historySubTab === 'matches' }"
+                        <button class="th-subtab" role="tab" :aria-selected="historySubTab === 'matches'" :class="{ 'th-subtab--active': historySubTab === 'matches' }"
                                 @click="historySubTab = 'matches'; _updateHash(true)"
                                 x-text="tr().tournamentHistory?.matchHistory || 'Historia meczów'"></button>
                     </div>
@@ -811,11 +812,12 @@
 
                 <!-- Search + filters (hidden when profile is open) -->
                 <div x-show="!selectedPlayerId" class="player-filters">
-                    <input type="search" class="player-search"
+                    <label for="player-search-input" class="sr-only" x-text="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika'"></label>
+                    <input type="search" id="player-search-input" class="player-search"
                            :placeholder="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika...'"
                            x-model="playerSearch"
                            @input="filterPlayers()">
-                    <div class="player-filter-btns">
+                    <div class="player-filter-btns" role="group" :aria-label="tr().playerSection?.genderFilter || 'Filtr płci'">
                         <button class="filter-btn" :class="{ 'filter-btn--active': playerGender === '' }" @click="playerGender = ''; filterPlayers()"
                                 x-text="tr().playerSection?.all || 'Wszyscy'"></button>
                         <button class="filter-btn" :class="{ 'filter-btn--active': playerGender === 'M' }" @click="playerGender = 'M'; filterPlayers()"
@@ -825,13 +827,15 @@
                     </div>
                 </div>
                 <div x-show="!selectedPlayerId" class="player-filters player-filters--row2">
-                    <select class="player-dropdown" x-model="playerCountry" @change="filterPlayers()">
+                    <label for="player-country-select" class="sr-only" x-text="tr().playerSection?.allCountries || 'Kraj'"></label>
+                    <select id="player-country-select" class="player-dropdown" x-model="playerCountry" @change="filterPlayers()">
                         <option value="" x-text="(tr().playerSection?.allCountries || 'Wszystkie kraje') + ' (' + allPlayers.length + ')'"></option>
                         <template x-for="opt in playerCountryOptions()" :key="'pc-'+opt.code">
                             <option :value="opt.code" x-text="opt.code + ' (' + opt.count + ')'"></option>
                         </template>
                     </select>
-                    <select class="player-dropdown" x-model="playerCategory" @change="filterPlayers()">
+                    <label for="player-category-select" class="sr-only" x-text="tr().playerSection?.allCategories || 'Kategoria'"></label>
+                    <select id="player-category-select" class="player-dropdown" x-model="playerCategory" @change="filterPlayers()">
                         <option value="" x-text="(tr().playerSection?.allCategories || 'Wszystkie kategorie') + ' (' + allPlayers.length + ')'"></option>
                         <template x-for="opt in playerCategoryOptions()" :key="'pcat-'+opt.name">
                             <option :value="opt.name" x-text="opt.name + ' (' + opt.count + ')'"></option>
@@ -842,7 +846,7 @@
                 <!-- Players list -->
                 <div class="player-list" x-show="!selectedPlayerId">
                     <template x-for="p in filteredPlayers" :key="'pl-'+p.id">
-                        <div class="player-card player-card--clickable" @click="openPlayerProfile(p.global_player_id || p.id, !!p.global_player_id)" role="button" tabindex="0" @keydown.enter="openPlayerProfile(p.global_player_id || p.id, !!p.global_player_id)">
+                        <div class="player-card player-card--clickable" @click="openPlayerProfile(p.global_player_id || p.id, !!p.global_player_id)" role="button" tabindex="0" @keydown.enter="openPlayerProfile(p.global_player_id || p.id, !!p.global_player_id)" :aria-label="p.name + ' – ' + p.category + ' – ' + p.matches_played + ' ' + (tr().playerSection?.matchesPlayed || 'meczów')">
                             <div class="player-card__main">
                                 <img class="player-card__flag" x-show="p.country" :src="codeToFlag(p.country)" :alt="p.country" width="20" height="15">
                                 <span class="player-card__name" x-text="p.name"></span>
@@ -874,8 +878,8 @@
                 <!-- Player Profile View -->
                 <div x-show="selectedPlayerId" class="pp">
                     <!-- Back button -->
-                    <button class="pp-back" @click="closePlayerProfile()">
-                        ← <span x-text="tr().playerProfile?.back || 'Powrót do listy'"></span>
+                    <button class="pp-back" @click="closePlayerProfile()" :aria-label="tr().playerProfile?.back || 'Powrót do listy zawodników'">
+                        <span aria-hidden="true">←</span> <span x-text="tr().playerProfile?.back || 'Powrót do listy'"></span>
                     </button>
 
                     <div x-show="playerProfileLoading" class="loading-state"><span class="spinner spinner--large"></span></div>
@@ -885,9 +889,9 @@
                             <!-- Header: Avatar + Info -->
                             <div class="pp-header">
                                 <div class="pp-avatar">
-                                    <img x-show="playerProfile.player.photo_url" :src="playerProfile.player.photo_url" class="pp-avatar__photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
-                                    <img x-show="!playerProfile.player.photo_url && playerProfile.player.country" :src="codeToFlag(playerProfile.player.country)" :alt="playerProfile.player.country" class="pp-avatar__flag">
-                                    <span x-show="!playerProfile.player.photo_url" class="pp-avatar__initials" x-text="(playerProfile.player.first_name?.[0] || '') + (playerProfile.player.last_name?.[0] || '')"></span>
+                                    <img x-show="playerProfile.player.photo_url" :src="playerProfile.player.photo_url" class="pp-avatar__photo" :alt="playerProfile.player.full_name" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                                    <img x-show="!playerProfile.player.photo_url && playerProfile.player.country" :src="codeToFlag(playerProfile.player.country)" :alt="playerProfile.player.country + ' flag'" class="pp-avatar__flag">
+                                    <span x-show="!playerProfile.player.photo_url" class="pp-avatar__initials" aria-hidden="true" x-text="(playerProfile.player.first_name?.[0] || '') + (playerProfile.player.last_name?.[0] || '')"></span></span>
                                 </div>
                                 <div class="pp-info">
                                     <h2 class="pp-info__name" x-text="playerProfile.player.full_name"></h2>
@@ -947,7 +951,7 @@
                                 <template x-for="t in playerProfile.tournaments" :key="'ppt-'+t.tournament_id">
                                     <div class="pp-tourn">
                                         <!-- Tournament header (clickable) -->
-                                        <div class="pp-tourn__header" @click="toggleProfileTournament(t.tournament_id)" role="button" tabindex="0" @keydown.enter="toggleProfileTournament(t.tournament_id)">
+                                        <div class="pp-tourn__header" @click="toggleProfileTournament(t.tournament_id)" role="button" tabindex="0" @keydown.enter="toggleProfileTournament(t.tournament_id)" :aria-expanded="!!profileExpandedTournaments[t.tournament_id]" :aria-label="t.tournament_name + ' – ' + t.wins + ' ' + (tr().playerProfile?.won || 'W') + ' / ' + t.losses + ' ' + (tr().playerProfile?.lost || 'P')">
                                             <div class="pp-tourn__left">
                                                 <span class="pp-tourn__medal" x-show="t.medal" x-text="profileMedalEmoji(t.medal)"></span>
                                                 <div>
