@@ -639,6 +639,37 @@ body {
   min-height: 44px;
   min-width: 44px;
 }
+.tab-btn {
+  min-height: 44px;
+}
+.live-subnav__card {
+  min-height: 44px;
+}
+.cat-tab {
+  min-height: 36px; /* dense tabs, spacing satisfies 2.5.8 */
+}
+.filter-btn {
+  min-height: 44px;
+}
+.back-btn,
+.pp-back {
+  min-height: 44px;
+}
+.player-search {
+  min-height: 44px;
+}
+.player-dropdown {
+  min-height: 44px;
+}
+.player-card {
+  min-height: 44px;
+}
+.th-subtab {
+  min-height: 44px;
+}
+.tournament-card {
+  min-height: 44px;
+}
 
 /* === Score grid mobile responsiveness === */
 @media (max-width: 520px) {
