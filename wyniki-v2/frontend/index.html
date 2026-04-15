@@ -278,7 +278,7 @@
                                                                     <td class="bm-name" x-text="resolveBracketName(m.player_a)"></td>
                                                                     <template x-for="(s, si) in (m.sets || [])" :key="'gms1-'+mi+'-'+si">
                                                                         <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
-                                                                            <span x-text="s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup>
+                                                                            <span x-text="s.stb ? '['+s.g1+']' : s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup>
                                                                         </td>
                                                                     </template>
                                                                 </tr>
@@ -286,7 +286,7 @@
                                                                     <td class="bm-name" x-text="resolveBracketName(m.player_b)"></td>
                                                                     <template x-for="(s, si) in (m.sets || [])" :key="'gms2-'+mi+'-'+si">
                                                                         <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
-                                                                            <span x-text="s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup>
+                                                                            <span x-text="s.stb ? '['+s.g2+']' : s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup>
                                                                         </td>
                                                                     </template>
                                                                 </tr>
@@ -318,7 +318,7 @@
                                                                     <td class="bm-name" x-text="resolveBracketName(slot.player1) || '—'"></td>
                                                                     <template x-for="(s, si) in (slot.sets || [])" :key="'kos1-'+ki+'-'+si+'-'+si">
                                                                         <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
-                                                                            <span x-text="s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup>
+                                                                            <span x-text="s.stb ? '['+s.g1+']' : s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup>
                                                                         </td>
                                                                     </template>
                                                                     <template x-if="!slot.sets || slot.sets.length === 0">
@@ -329,7 +329,7 @@
                                                                     <td class="bm-name" x-text="resolveBracketName(slot.player2) || '—'"></td>
                                                                     <template x-for="(s, si) in (slot.sets || [])" :key="'kos2-'+ki+'-'+si+'-'+si">
                                                                         <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
-                                                                            <span x-text="s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup>
+                                                                            <span x-text="s.stb ? '['+s.g2+']' : s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup>
                                                                         </td>
                                                                     </template>
                                                                     <template x-if="!slot.sets || slot.sets.length === 0">
