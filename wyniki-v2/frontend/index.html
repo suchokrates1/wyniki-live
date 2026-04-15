@@ -76,15 +76,15 @@
 
             <!-- Live sub-navigation cards -->
             <div class="live-subnav">
-                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="liveSubTab = 'scores'">
+                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="liveSubTab = 'scores'; _updateHash()">
                     <span class="live-subnav__icon">🎾</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.scores || 'Wyniki live'"></span>
                 </button>
-                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="liveSubTab = 'bracket'; if(!bracketData) fetchBracket()">
+                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="liveSubTab = 'bracket'; if(!bracketData) fetchBracket(); _updateHash()">
                     <span class="live-subnav__icon">🏆</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.bracket || 'Drabinka'"></span>
                 </button>
-                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'history' }" @click="liveSubTab = 'history'">
+                <button class="live-subnav__card" :class="{ 'live-subnav__card--active': liveSubTab === 'history' }" @click="liveSubTab = 'history'; _updateHash()">
                     <span class="live-subnav__icon">📋</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.history || 'Historia'"></span>
                 </button>
@@ -524,7 +524,7 @@
 
                 <!-- Tournament detail view -->
                 <div x-show="selectedTournamentId">
-                    <button class="back-btn" @click="selectedTournamentId = ''">
+                    <button class="back-btn" @click="closeTournamentDetail()">
                         ← <span x-text="tr().tournamentCard?.backToList || 'Powrót do listy'"></span>
                     </button>
                     <h2 class="tournament-detail__name" x-text="selectedTournamentName()"></h2>
@@ -532,10 +532,10 @@
                     <!-- Sub-tabs: Podium+Bracket / Match History -->
                     <div class="th-subtabs">
                         <button class="th-subtab" :class="{ 'th-subtab--active': historySubTab === 'bracket' }"
-                                @click="historySubTab = 'bracket'"
+                                @click="historySubTab = 'bracket'; _updateHash()"
                                 x-text="tr().tournamentHistory?.bracket || 'Drabinka'"></button>
                         <button class="th-subtab" :class="{ 'th-subtab--active': historySubTab === 'matches' }"
-                                @click="historySubTab = 'matches'"
+                                @click="historySubTab = 'matches'; _updateHash()"
                                 x-text="tr().tournamentHistory?.matchHistory || 'Historia meczów'"></button>
                     </div>
 
@@ -545,107 +545,178 @@
                             <h3 x-text="tr().bracket?.emptyTitle || 'Brak drabinki'"></h3>
                             <p x-text="tr().bracket?.emptyText || 'Drabinka nie została skonfigurowana'"></p>
                         </div>
-                        <div x-show="tournamentBracket && (tournamentBracket.groups?.length || tournamentBracket.knockout?.length)">
-                            <template x-for="(cat, ci) in (tournamentBracket.categories || [{name: '', groups: tournamentBracket.groups || [], knockout: tournamentBracket.knockout || []}])" :key="'thcat-'+ci">
-                                <div>
-                                    <template x-for="(group, gi) in cat.groups" :key="'thg-'+ci+'-'+gi">
-                                        <section class="bracket-group" :aria-label="group.name">
-                                            <h4 class="bracket-group__title" x-text="(tr().bracket?.group || 'Grupa') + ' ' + group.name"></h4>
-                                            <table class="bracket-standings" :aria-label="group.name + ' – tabela'">
-                                                <thead><tr>
-                                                    <th scope="col">#</th>
-                                                    <th scope="col" x-text="tr().bracket?.player || 'Zawodnik'"></th>
-                                                    <th scope="col" x-text="tr().bracket?.wins || 'W'"></th>
-                                                    <th scope="col" x-text="tr().bracket?.losses || 'L'"></th>
-                                                    <th scope="col" x-text="tr().bracket?.setsHeader || 'Sety'"></th>
-                                                    <th scope="col" x-text="tr().bracket?.gamesHeader || 'Gemy'"></th>
-                                                </tr></thead>
-                                                <tbody>
-                                                    <template x-for="(p, pi) in group.standings" :key="'ths-'+ci+'-'+gi+'-'+pi">
-                                                        <tr :class="{ 'bracket-standings--qualified': pi < 2 }">
-                                                            <td x-text="pi+1"></td>
-                                                            <td class="bracket-standings__name" x-text="resolveBracketName(p.name)"></td>
-                                                            <td x-text="p.wins"></td>
-                                                            <td x-text="p.losses"></td>
-                                                            <td x-text="p.sets_won + ':' + p.sets_lost"></td>
-                                                            <td x-text="p.games_won + ':' + p.games_lost"></td>
-                                                        </tr>
-                                                    </template>
-                                                </tbody>
-                                            </table>
-                                            <div x-show="group.matches && group.matches.length > 0">
-                                                <h5 class="bracket-matches__title" x-text="tr().bracket?.matchesTitle || 'Mecze grupowe'"></h5>
-                                                <div class="bm-match-list">
-                                                    <template x-for="(m, mi) in group.matches" :key="'thgm-'+ci+'-'+gi+'-'+mi">
-                                                        <table class="bm-scoreboard bm-scoreboard--group"
-                                                               :aria-label="resolveBracketName(m.player_a)+' vs '+resolveBracketName(m.player_b)">
-                                                            <colgroup><col class="bm-col-name"><col class="bm-col-set"><col class="bm-col-set"><col class="bm-col-set"></colgroup>
-                                                            <tbody>
-                                                                <tr :class="{ 'bm-row--won': m.winner === m.player_a }">
-                                                                    <td class="bm-name" x-text="resolveBracketName(m.player_a)"></td>
-                                                                    <template x-for="(s, si) in padSets(m.sets)" :key="'thgms1-'+mi+'-'+si">
-                                                                        <td class="bm-set" :class="{ 'bm-set--stb': s.stb }"><template x-if="s.played"><span><span x-text="s.stb ? '['+s.g1+']' : s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup></span></template></td>
-                                                                    </template>
-                                                                </tr>
-                                                                <tr :class="{ 'bm-row--won': m.winner === m.player_b }">
-                                                                    <td class="bm-name" x-text="resolveBracketName(m.player_b)"></td>
-                                                                    <template x-for="(s, si) in padSets(m.sets)" :key="'thgms2-'+mi+'-'+si">
-                                                                        <td class="bm-set" :class="{ 'bm-set--stb': s.stb }"><template x-if="s.played"><span><span x-text="s.stb ? '['+s.g2+']' : s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup></span></template></td>
-                                                                    </template>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
-                                                    </template>
-                                                </div>
-                                            </div>
-                                        </section>
-                                    </template>
-                                    <!-- Knockout -->
-                                    <template x-if="cat.knockout && cat.knockout.length > 0">
-                                        <section class="bracket-tree">
-                                            <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'"></h3>
-                                            <div class="bt-ladder">
-                                                <template x-for="(ko, ki) in cat.knockout" :key="'thko-'+ci+'-'+ki">
-                                                    <div class="bt-round" :class="{ 'bt-round--final': ko.phase.includes('Finał') || ko.phase.includes('Final') }">
-                                                        <div class="bt-round-label" x-text="ko.phase"></div>
-                                                        <template x-for="(slot, si) in ko.slots" :key="'thkos-'+ci+'-'+ki+'-'+si">
-                                                            <table class="bm-scoreboard bt-matchup" :class="{ 'bt-matchup--final': ko.phase.includes('Finał') || ko.phase.includes('Final') }">
-                                                                <tbody>
-                                                                    <tr :class="{ 'bm-row--won': slot.winner === slot.player1 }">
-                                                                        <td class="bm-name" x-text="resolveBracketName(slot.player1) || '—'"></td>
-                                                                        <template x-for="(s, ssi) in (slot.sets || [])" :key="'thkos1-'+ki+'-'+si+'-'+ssi">
-                                                                            <td class="bm-set" :class="{ 'bm-set--stb': s.stb }"><span x-text="s.stb ? '['+s.g1+']' : s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup></td>
-                                                                        </template>
-                                                                        <template x-if="!slot.sets || slot.sets.length === 0"><td class="bm-set bm-set--empty"></td></template>
-                                                                    </tr>
-                                                                    <tr :class="{ 'bm-row--won': slot.winner === slot.player2 }">
-                                                                        <td class="bm-name" x-text="resolveBracketName(slot.player2) || '—'"></td>
-                                                                        <template x-for="(s, ssi) in (slot.sets || [])" :key="'thkos2-'+ki+'-'+si+'-'+ssi">
-                                                                            <td class="bm-set" :class="{ 'bm-set--stb': s.stb }"><span x-text="s.stb ? '['+s.g2+']' : s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup></td>
-                                                                        </template>
-                                                                        <template x-if="!slot.sets || slot.sets.length === 0"><td class="bm-set bm-set--empty"></td></template>
-                                                                    </tr>
-                                                                </tbody>
-                                                            </table>
-                                                        </template>
-                                                    </div>
-                                                </template>
-                                            </div>
-                                            <div class="bt-podium" role="list">
-                                                <template x-for="(ko, ki) in cat.knockout" :key="'thpod-'+ci+'-'+ki">
-                                                    <template x-if="ko.slots[0] && ko.slots[0].winner">
-                                                        <div class="bt-podium-item" role="listitem">
-                                                            <span class="bt-podium-medal" x-text="ko.phase.includes('Finał') || ko.phase.includes('Final') ? '🥇' : ko.phase.includes('3.') ? '🥈' : ko.phase.includes('5.') ? '🥉' : ''"></span>
-                                                            <span class="bt-podium-result"><strong x-text="resolveBracketName(ko.slots[0].winner)"></strong> <small x-text="ko.phase"></small></span>
-                                                        </div>
-                                                    </template>
-                                                </template>
-                                            </div>
-                                        </section>
+
+                        <template x-if="tournamentBracket && tournamentBracket.groups && tournamentBracket.groups.length > 0">
+                            <div class="bracket-content">
+
+                                <!-- Category sub-tabs -->
+                                <div class="cat-tabs" role="tablist" aria-label="Kategorie turniejowe">
+                                    <template x-for="cat in tournamentBracketCategories()" :key="'tct-'+cat.name">
+                                        <button class="cat-tab"
+                                                role="tab"
+                                                :id="'tcat-tab-'+cat.name.replace(/\s+/g,'-')"
+                                                :aria-selected="tournamentBracketCategory === cat.name"
+                                                :aria-controls="'tcat-panel-'+cat.name.replace(/\s+/g,'-')"
+                                                :class="{ 'cat-tab--active': tournamentBracketCategory === cat.name }"
+                                                @click="tournamentBracketCategory = cat.name"
+                                                x-text="cat.name">
+                                        </button>
                                     </template>
                                 </div>
-                            </template>
-                        </div>
+
+                                <!-- Category panel -->
+                                <template x-for="cat in tournamentBracketCategories()" :key="'tcp-'+cat.name">
+                                    <div x-show="tournamentBracketCategory === cat.name"
+                                         role="tabpanel"
+                                         :id="'tcat-panel-'+cat.name.replace(/\s+/g,'-')"
+                                         :aria-labelledby="'tcat-tab-'+cat.name.replace(/\s+/g,'-')">
+
+                                        <!-- Group tables -->
+                                        <div class="bracket-groups" :class="{ 'bracket-groups--pair': cat.groups.length === 2 }">
+                                            <template x-for="(group, gi) in cat.groups" :key="'tg-'+cat.name+'-'+gi">
+                                                <section class="bracket-group" :aria-label="group.name">
+                                                    <h3 class="bracket-group__title">
+                                                        <span x-text="group.name"></span>
+                                                    </h3>
+
+                                                    <table class="bracket-table" :aria-label="'Tabela grupy ' + group.name">
+                                                        <thead>
+                                                            <tr>
+                                                                <th class="bt-pos" scope="col">#</th>
+                                                                <th class="bt-name" scope="col" x-text="tr().bracket?.player || 'Zawodnik'"></th>
+                                                                <th class="bt-stat" scope="col" x-text="tr().bracket?.wins || 'W'"></th>
+                                                                <th class="bt-stat" scope="col" x-text="tr().bracket?.losses || 'L'"></th>
+                                                                <th class="bt-stat" scope="col" x-text="tr().bracket?.setsHeader || 'S'"></th>
+                                                                <th class="bt-stat" scope="col" x-text="tr().bracket?.gamesHeader || 'G'"></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <template x-for="(row, ri) in group.standings" :key="'tgs-'+cat.name+'-'+gi+'-'+ri">
+                                                                <tr :class="{ 'bt-qualify': ri < 2 && group.standings.length > 2 }">
+                                                                    <td class="bt-pos" x-text="ri + 1"></td>
+                                                                    <td class="bt-name" x-text="resolveBracketName(row.name)"></td>
+                                                                    <td class="bt-stat bt-stat--wins" x-text="row.wins"></td>
+                                                                    <td class="bt-stat bt-stat--losses" x-text="row.losses"></td>
+                                                                    <td class="bt-stat" x-text="row.sets_won + ':' + row.sets_lost"></td>
+                                                                    <td class="bt-stat" x-text="row.games_won + ':' + row.games_lost"></td>
+                                                                </tr>
+                                                            </template>
+                                                        </tbody>
+                                                    </table>
+
+                                                    <!-- Group matches -->
+                                                    <div class="bracket-matches" x-show="group.matches && group.matches.length > 0">
+                                                        <h4 class="bracket-matches__title" x-text="tr().bracket?.matchesTitle || 'Mecze grupowe'"></h4>
+                                                        <div class="bm-match-list">
+                                                            <template x-for="(m, mi) in group.matches" :key="'tgm-'+cat.name+'-'+gi+'-'+mi">
+                                                                <table class="bm-scoreboard bm-scoreboard--group"
+                                                                       :aria-label="resolveBracketName(m.player_a)+' vs '+resolveBracketName(m.player_b)">
+                                                                    <colgroup>
+                                                                        <col class="bm-col-name">
+                                                                        <col class="bm-col-set">
+                                                                        <col class="bm-col-set">
+                                                                        <col class="bm-col-set">
+                                                                    </colgroup>
+                                                                    <tbody>
+                                                                        <tr :class="{ 'bm-row--won': m.winner === m.player_a }">
+                                                                            <td class="bm-name" x-text="resolveBracketName(m.player_a)"></td>
+                                                                            <template x-for="(s, si) in padSets(m.sets)" :key="'tgms1-'+mi+'-'+si">
+                                                                                <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
+                                                                                    <template x-if="s.played">
+                                                                                        <span>
+                                                                                            <span x-text="s.stb ? '['+s.g1+']' : s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup>
+                                                                                        </span>
+                                                                                    </template>
+                                                                                </td>
+                                                                            </template>
+                                                                        </tr>
+                                                                        <tr :class="{ 'bm-row--won': m.winner === m.player_b }">
+                                                                            <td class="bm-name" x-text="resolveBracketName(m.player_b)"></td>
+                                                                            <template x-for="(s, si) in padSets(m.sets)" :key="'tgms2-'+mi+'-'+si">
+                                                                                <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
+                                                                                    <template x-if="s.played">
+                                                                                        <span>
+                                                                                            <span x-text="s.stb ? '['+s.g2+']' : s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup>
+                                                                                        </span>
+                                                                                    </template>
+                                                                                </td>
+                                                                            </template>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </section>
+                                            </template>
+                                        </div>
+
+                                        <!-- Knockout -->
+                                        <template x-if="cat.knockout.length > 0">
+                                            <section class="bracket-tree" :aria-label="'Drabinka ' + cat.name">
+                                                <h3 class="bracket-tree__title">Faza klasyfikacyjna</h3>
+
+                                                <div class="bt-ladder">
+                                                    <template x-for="(ko, ki) in cat.knockout" :key="'tko-'+cat.name+'-'+ki">
+                                                        <div class="bt-round" :class="{ 'bt-round--final': ko.phase.includes('Finał') }">
+                                                            <div class="bt-round-label" x-text="ko.phase"></div>
+                                                            <template x-for="(slot, si) in ko.slots" :key="'tkos-'+cat.name+'-'+ki+'-'+si">
+                                                                <table class="bm-scoreboard bt-matchup"
+                                                                     :class="{ 'bt-matchup--final': ko.phase.includes('Finał') }"
+                                                                     role="group"
+                                                                     :aria-label="(resolveBracketName(slot.player1)||'?') + ' vs ' + (resolveBracketName(slot.player2)||'?')">
+                                                                    <tbody>
+                                                                        <tr :class="{ 'bm-row--won': slot.winner === slot.player1 }">
+                                                                            <td class="bm-name" x-text="resolveBracketName(slot.player1) || '—'"></td>
+                                                                            <template x-for="(s, ssi) in (slot.sets || [])" :key="'tkos1-'+ki+'-'+ssi">
+                                                                                <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
+                                                                                    <span x-text="s.stb ? '['+s.g1+']' : s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup>
+                                                                                </td>
+                                                                            </template>
+                                                                            <template x-if="!slot.sets || slot.sets.length === 0">
+                                                                                <td class="bm-set bm-set--empty"></td>
+                                                                            </template>
+                                                                        </tr>
+                                                                        <tr :class="{ 'bm-row--won': slot.winner === slot.player2 }">
+                                                                            <td class="bm-name" x-text="resolveBracketName(slot.player2) || '—'"></td>
+                                                                            <template x-for="(s, ssi) in (slot.sets || [])" :key="'tkos2-'+ki+'-'+ssi">
+                                                                                <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
+                                                                                    <span x-text="s.stb ? '['+s.g2+']' : s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup>
+                                                                                </td>
+                                                                            </template>
+                                                                            <template x-if="!slot.sets || slot.sets.length === 0">
+                                                                                <td class="bm-set bm-set--empty"></td>
+                                                                            </template>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                </div>
+
+                                                <!-- Podium -->
+                                                <div class="bt-podium" role="list" aria-label="Podium">
+                                                    <template x-for="(ko, ki) in cat.knockout" :key="'tpod-'+cat.name+'-'+ki">
+                                                        <template x-if="ko.slots[0] && ko.slots[0].winner">
+                                                            <div class="bt-podium-item" role="listitem">
+                                                                <span class="bt-podium-medal" x-text="ko.phase.includes('Finał') ? '🥇' : ko.phase.includes('3.') ? '🥈' : ko.phase.includes('5.') ? '🥉' : ''"></span>
+                                                                <span class="bt-podium-result">
+                                                                    <strong x-text="resolveBracketName(ko.slots[0].winner)"></strong>
+                                                                    <small x-text="ko.phase"></small>
+                                                                </span>
+                                                            </div>
+                                                        </template>
+                                                    </template>
+                                                </div>
+                                            </section>
+                                        </template>
+
+                                    </div>
+                                </template>
+
+                            </div>
+                        </template>
                     </section>
 
                     <!-- Sub: Match History for selected tournament -->
@@ -749,9 +820,23 @@
                                 x-text="tr().playerSection?.all || 'Wszyscy'"></button>
                         <button class="filter-btn" :class="{ 'filter-btn--active': playerGender === 'M' }" @click="playerGender = 'M'; filterPlayers()"
                                 x-text="tr().playerSection?.men || 'Mężczyźni'"></button>
-                        <button class="filter-btn" :class="{ 'filter-btn--active': playerGender === 'K' }" @click="playerGender = 'K'; filterPlayers()"
+                        <button class="filter-btn" :class="{ 'filter-btn--active': playerGender === 'F' }" @click="playerGender = 'F'; filterPlayers()"
                                 x-text="tr().playerSection?.women || 'Kobiety'"></button>
                     </div>
+                </div>
+                <div class="player-filters player-filters--row2">
+                    <select class="player-dropdown" x-model="playerCountry" @change="filterPlayers()">
+                        <option value="" x-text="(tr().playerSection?.allCountries || 'Wszystkie kraje') + ' (' + allPlayers.length + ')'"></option>
+                        <template x-for="opt in playerCountryOptions()" :key="'pc-'+opt.code">
+                            <option :value="opt.code" x-text="opt.code + ' (' + opt.count + ')'"></option>
+                        </template>
+                    </select>
+                    <select class="player-dropdown" x-model="playerCategory" @change="filterPlayers()">
+                        <option value="" x-text="(tr().playerSection?.allCategories || 'Wszystkie kategorie') + ' (' + allPlayers.length + ')'"></option>
+                        <template x-for="opt in playerCategoryOptions()" :key="'pcat-'+opt.name">
+                            <option :value="opt.name" x-text="opt.name + ' (' + opt.count + ')'"></option>
+                        </template>
+                    </select>
                 </div>
 
                 <!-- Players list -->
@@ -759,8 +844,10 @@
                     <template x-for="p in filteredPlayers" :key="'pl-'+p.id">
                         <div class="player-card">
                             <div class="player-card__main">
+                                <img class="player-card__flag" x-show="p.country" :src="codeToFlag(p.country)" :alt="p.country" width="20" height="15">
                                 <span class="player-card__name" x-text="p.name"></span>
                                 <span class="player-card__cat" x-show="p.category" x-text="p.category"></span>
+                                <span class="player-card__gender" x-show="p.gender" x-text="p.gender"></span>
                             </div>
                             <div class="player-card__stats">
                                 <span class="player-card__stat">
