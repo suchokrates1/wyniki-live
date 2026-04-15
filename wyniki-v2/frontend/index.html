@@ -269,17 +269,22 @@
                                             <!-- Group matches -->
                                             <div class="bracket-matches" x-show="group.matches && group.matches.length > 0">
                                                 <h4 class="bracket-matches__title" x-text="tr().bracket?.matchesTitle || 'Mecze grupowe'"></h4>
-                                                <ul class="bracket-match-list" role="list">
+                                                <div class="bracket-match-list">
                                                     <template x-for="(m, mi) in group.matches" :key="'gm-'+cat.name+'-'+gi+'-'+mi">
-                                                        <li class="bracket-match-item"
-                                                            :aria-label="resolveBracketName(m.player_a) + ' ' + m.sets_a + ':' + m.sets_b + ' ' + resolveBracketName(m.player_b)">
-                                                            <span class="bm-player" :class="{ 'bm-winner': m.winner === m.player_a }" x-text="resolveBracketName(m.player_a)"></span>
-                                                            <span class="bm-score" aria-hidden="true" x-text="m.sets_a + ':' + m.sets_b"></span>
-                                                            <span class="bm-player" :class="{ 'bm-winner': m.winner === m.player_b }" x-text="resolveBracketName(m.player_b)"></span>
-                                                            <span class="bm-detail" aria-hidden="true" x-text="m.score"></span>
-                                                        </li>
+                                                        <div class="bm-card"
+                                                             :aria-label="resolveBracketName(m.player_a) + ' ' + m.sets_a + ':' + m.sets_b + ' ' + resolveBracketName(m.player_b)">
+                                                            <div class="bm-row" :class="{ 'bm-row--won': m.winner === m.player_a }">
+                                                                <span class="bm-name" x-text="resolveBracketName(m.player_a)"></span>
+                                                                <span class="bm-sets" x-text="m.sets_a"></span>
+                                                            </div>
+                                                            <div class="bm-row" :class="{ 'bm-row--won': m.winner === m.player_b }">
+                                                                <span class="bm-name" x-text="resolveBracketName(m.player_b)"></span>
+                                                                <span class="bm-sets" x-text="m.sets_b"></span>
+                                                            </div>
+                                                            <div class="bm-detail" x-text="m.score"></div>
+                                                        </div>
                                                     </template>
-                                                </ul>
+                                                </div>
                                             </div>
                                         </section>
                                     </template>
@@ -467,13 +472,10 @@
             </div><!-- end TAB: HISTORY -->
         </main>
 
-        <!-- Meta -->
-        <div class="meta">
-            <span x-show="lastUpdate" x-text="(tr().meta?.lastRefresh || 'Ostatnia aktualizacja: {time}').replace('{time}', lastUpdate ? lastUpdate.toLocaleTimeString('pl-PL') : '')"></span>
-        </div>
-
         <!-- Vestmedia Footer -->
         <footer class="vm-footer">
+            <span class="vm-footer__refresh" x-show="lastUpdate" x-text="(tr().meta?.lastRefresh || 'Ostatnia aktualizacja: {time}').replace('{time}', lastUpdate ? lastUpdate.toLocaleTimeString('pl-PL') : '')"></span>
+            <span class="vm-footer__sep" x-show="lastUpdate" aria-hidden="true">|</span>
             <span>Powered by</span>
             <a href="https://vestmedia.pl" target="_blank" rel="noopener noreferrer" class="vm-footer__link">
                 <img src="https://vestmedia.pl/wp-content/uploads/2024/12/Vest-Media-5.png"
