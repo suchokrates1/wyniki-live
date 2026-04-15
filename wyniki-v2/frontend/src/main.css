@@ -1225,45 +1225,55 @@ body {
   flex-direction: column;
   gap: 6px;
 }
-.bm-card {
+
+/* Scoreboard table (shared: group + knockout) */
+.bm-scoreboard {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
   background: rgba(0,0,0,.03);
   border-radius: 8px;
   overflow: hidden;
-  font-size: 13px;
 }
-[data-theme="dark"] .bm-card {
+[data-theme="dark"] .bm-scoreboard {
   background: rgba(255,255,255,.03);
 }
-.bm-row {
-  display: flex;
-  align-items: center;
-  padding: 5px 12px;
+.bm-scoreboard tr {
   color: var(--muted);
 }
 .bm-row--won {
   color: var(--text);
   font-weight: 700;
 }
-.bm-name {
-  flex: 1;
+.bm-scoreboard .bm-name {
+  padding: 5px 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 180px;
+  text-align: left;
 }
-.bm-sets {
+.bm-scoreboard .bm-set {
+  padding: 5px 8px;
+  text-align: center;
   font-variant-numeric: tabular-nums;
+  min-width: 28px;
   font-weight: 700;
-  min-width: 18px;
-  text-align: right;
+  position: relative;
 }
-.bm-row--won .bm-sets { color: var(--ok); }
-.bm-detail {
+.bm-row--won .bm-set { color: var(--text); }
+.bm-set--stb {
+  font-style: italic;
   font-size: 11px;
-  color: var(--muted);
-  padding: 0 12px 5px;
-  white-space: nowrap;
-  border-top: 1px solid var(--line);
 }
+.bm-tb {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--muted);
+  vertical-align: super;
+  margin-left: 1px;
+}
+.bm-set--empty { min-width: 28px; }
 
 /* ============================================================
    BRACKET: Tree / Ladder
@@ -1307,7 +1317,7 @@ body {
   border-bottom-color: var(--accent);
 }
 
-/* Individual matchup card */
+/* Individual matchup card (knockout uses bm-scoreboard table) */
 .bt-matchup {
   background: var(--card);
   border: 1px solid var(--line);
@@ -1322,44 +1332,18 @@ body {
 [data-theme="dark"] .bt-matchup--final {
   box-shadow: 0 0 12px rgba(154,209,255,.08);
 }
-
-/* Seed row (player) */
-.bt-seed {
-  display: flex;
-  align-items: center;
+.bt-matchup .bm-name {
   padding: 8px 12px;
-  font-size: 13px;
-  color: var(--text);
   min-height: 34px;
 }
-/* Score row between players */
-.bt-matchup-score {
-  padding: 3px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  text-align: center;
-  background: rgba(0,0,0,.03);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .02em;
-}
-[data-theme="dark"] .bt-matchup-score {
-  background: rgba(255,255,255,.03);
-}
-.bt-seed--won {
-  font-weight: 700;
+.bt-matchup .bm-row--won {
   background: rgba(53,196,106,.06);
 }
-[data-theme="dark"] .bt-seed--won {
+[data-theme="dark"] .bt-matchup .bm-row--won {
   background: rgba(53,196,106,.1);
 }
-.bt-seed--won .bt-seed-name {
+.bt-matchup .bm-row--won .bm-name {
   color: var(--ok);
-}
-.bt-seed-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Connector lines between rounds */
@@ -1414,8 +1398,9 @@ body {
 @media (max-width: 520px) {
   .bt-ladder { gap: 10px; }
   .bt-round { min-width: 180px; }
-  .bt-seed { padding: 6px 8px; font-size: 12px; }
-  .bt-seed-name { max-width: 110px; }
+  .bm-scoreboard { font-size: 12px; }
+  .bm-scoreboard .bm-name { max-width: 120px; }
+  .bm-scoreboard .bm-set { padding: 5px 5px; min-width: 22px; }
   .cat-tab { padding: 6px 10px; font-size: 12px; }
 }
 
@@ -1425,7 +1410,6 @@ body {
   }
   .bracket-table { font-size: 12px; }
   .bracket-table th, .bracket-table td { padding: 6px 6px; }
-  .bracket-match-item, .bm-card { font-size: 12px; }
-  .bm-detail { display: none; }
+  .bracket-match-item, .bm-scoreboard { font-size: 12px; }
   .tab-btn { font-size: 13px; padding: 8px 8px; }
 }

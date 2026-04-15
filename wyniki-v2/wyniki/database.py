@@ -963,6 +963,14 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
                 stats[p2]["games_won"] += s.get("player2_games", 0)
                 stats[p2]["games_lost"] += s.get("player1_games", 0)
 
+        # Build per-set score arrays for scoreboard display
+        sets_detail = []
+        for s in sh:
+            g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+            tb = s.get("tiebreak_loser_points")
+            stb = _is_stb(s)
+            sets_detail.append({"g1": g1, "g2": g2, "tb": tb, "stb": stb})
+
         # Build score string
         score_parts = []
         for s in sh:
@@ -973,6 +981,7 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
             "player_a": p1,
             "player_b": p2,
             "score": "  ".join(score_parts),
+            "sets": sets_detail,
             "winner": winner,
             "sets_a": s1,
             "sets_b": s2,
@@ -1054,8 +1063,18 @@ def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date:
     sh = [s for s in sh if not _is_empty_set(s)]
     score_parts = [_format_set_score(s, flipped) for s in sh]
 
+    # Per-set detail for scoreboard
+    sets_detail = []
+    for s in sh:
+        g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+        if flipped:
+            g1, g2 = g2, g1
+        tb = s.get("tiebreak_loser_points")
+        stb = _is_stb(s)
+        sets_detail.append({"g1": g1, "g2": g2, "tb": tb, "stb": stb})
+
     winner = row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"]
-    return {"winner": winner, "score": "  ".join(score_parts)}
+    return {"winner": winner, "score": "  ".join(score_parts), "sets": sets_detail}
 
 
 def get_full_bracket(tournament_id: int) -> Dict:
@@ -1112,6 +1131,7 @@ def get_full_bracket(tournament_id: int) -> Dict:
                     "player2": r["player2_name"],
                     "winner": r["winner_name"],
                     "score": r["score_summary"],
+                    "sets": None,
                 }
                 # Auto-detect result from match data if not manually set
                 if slot["player1"] and slot["player2"] and not slot["winner"]:
@@ -1121,6 +1141,7 @@ def get_full_bracket(tournament_id: int) -> Dict:
                     if result:
                         slot["winner"] = result["winner"]
                         slot["score"] = result["score"]
+                        slot["sets"] = result.get("sets")
 
                 knockout.setdefault(phase, []).append(slot)
 

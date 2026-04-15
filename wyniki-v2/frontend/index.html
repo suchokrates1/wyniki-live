@@ -271,18 +271,27 @@
                                                 <h4 class="bracket-matches__title" x-text="tr().bracket?.matchesTitle || 'Mecze grupowe'"></h4>
                                                 <div class="bracket-match-list">
                                                     <template x-for="(m, mi) in group.matches" :key="'gm-'+cat.name+'-'+gi+'-'+mi">
-                                                        <div class="bm-card"
-                                                             :aria-label="resolveBracketName(m.player_a) + ' ' + m.sets_a + ':' + m.sets_b + ' ' + resolveBracketName(m.player_b)">
-                                                            <div class="bm-row" :class="{ 'bm-row--won': m.winner === m.player_a }">
-                                                                <span class="bm-name" x-text="resolveBracketName(m.player_a)"></span>
-                                                                <span class="bm-sets" x-text="m.sets_a"></span>
-                                                            </div>
-                                                            <div class="bm-row" :class="{ 'bm-row--won': m.winner === m.player_b }">
-                                                                <span class="bm-name" x-text="resolveBracketName(m.player_b)"></span>
-                                                                <span class="bm-sets" x-text="m.sets_b"></span>
-                                                            </div>
-                                                            <div class="bm-detail" x-text="m.score"></div>
-                                                        </div>
+                                                        <table class="bm-scoreboard"
+                                                               :aria-label="resolveBracketName(m.player_a) + ' vs ' + resolveBracketName(m.player_b)">
+                                                            <tbody>
+                                                                <tr :class="{ 'bm-row--won': m.winner === m.player_a }">
+                                                                    <td class="bm-name" x-text="resolveBracketName(m.player_a)"></td>
+                                                                    <template x-for="(s, si) in (m.sets || [])" :key="'gms1-'+mi+'-'+si">
+                                                                        <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
+                                                                            <span x-text="s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup>
+                                                                        </td>
+                                                                    </template>
+                                                                </tr>
+                                                                <tr :class="{ 'bm-row--won': m.winner === m.player_b }">
+                                                                    <td class="bm-name" x-text="resolveBracketName(m.player_b)"></td>
+                                                                    <template x-for="(s, si) in (m.sets || [])" :key="'gms2-'+mi+'-'+si">
+                                                                        <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
+                                                                            <span x-text="s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup>
+                                                                        </td>
+                                                                    </template>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
                                                     </template>
                                                 </div>
                                             </div>
@@ -300,18 +309,35 @@
                                                 <div class="bt-round" :class="{ 'bt-round--final': ko.phase.includes('Finał') }">
                                                     <div class="bt-round-label" x-text="ko.phase"></div>
                                                     <template x-for="(slot, si) in ko.slots" :key="'kos-'+cat.name+'-'+ki+'-'+si">
-                                                        <div class="bt-matchup"
+                                                        <table class="bm-scoreboard bt-matchup"
                                                              :class="{ 'bt-matchup--final': ko.phase.includes('Finał') }"
                                                              role="group"
-                                                             :aria-label="(resolveBracketName(slot.player1)||'?') + ' vs ' + (resolveBracketName(slot.player2)||'?') + (slot.winner ? (', zwycięzca: ' + resolveBracketName(slot.winner) + ', wynik: ' + slot.score) : '')">
-                                                            <div class="bt-seed" :class="{ 'bt-seed--won': slot.winner === slot.player1 }">
-                                                                <span class="bt-seed-name" x-text="resolveBracketName(slot.player1) || '—'"></span>
-                                                            </div>
-                                                            <div class="bt-matchup-score" x-text="slot.score || 'vs'" aria-hidden="true"></div>
-                                                            <div class="bt-seed" :class="{ 'bt-seed--won': slot.winner === slot.player2 }">
-                                                                <span class="bt-seed-name" x-text="resolveBracketName(slot.player2) || '—'"></span>
-                                                            </div>
-                                                        </div>
+                                                             :aria-label="(resolveBracketName(slot.player1)||'?') + ' vs ' + (resolveBracketName(slot.player2)||'?')">
+                                                            <tbody>
+                                                                <tr :class="{ 'bm-row--won': slot.winner === slot.player1 }">
+                                                                    <td class="bm-name" x-text="resolveBracketName(slot.player1) || '—'"></td>
+                                                                    <template x-for="(s, si) in (slot.sets || [])" :key="'kos1-'+ki+'-'+si+'-'+si">
+                                                                        <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
+                                                                            <span x-text="s.g1"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g1 < s.g2" x-text="s.tb"></sup>
+                                                                        </td>
+                                                                    </template>
+                                                                    <template x-if="!slot.sets || slot.sets.length === 0">
+                                                                        <td class="bm-set bm-set--empty"></td>
+                                                                    </template>
+                                                                </tr>
+                                                                <tr :class="{ 'bm-row--won': slot.winner === slot.player2 }">
+                                                                    <td class="bm-name" x-text="resolveBracketName(slot.player2) || '—'"></td>
+                                                                    <template x-for="(s, si) in (slot.sets || [])" :key="'kos2-'+ki+'-'+si+'-'+si">
+                                                                        <td class="bm-set" :class="{ 'bm-set--stb': s.stb }">
+                                                                            <span x-text="s.g2"></span><sup class="bm-tb" x-show="s.tb !== null && s.tb !== undefined && s.g2 < s.g1" x-text="s.tb"></sup>
+                                                                        </td>
+                                                                    </template>
+                                                                    <template x-if="!slot.sets || slot.sets.length === 0">
+                                                                        <td class="bm-set bm-set--empty"></td>
+                                                                    </template>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
                                                     </template>
                                                 </div>
                                             </template>
