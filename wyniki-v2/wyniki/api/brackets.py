@@ -9,6 +9,7 @@ from wyniki.database import (
     generate_knockout_from_standings,
     save_bracket_knockout,
     fetch_bracket_knockout,
+    fetch_match_history,
 )
 
 # Public API
@@ -27,6 +28,41 @@ def public_bracket():
     if not tid:
         return jsonify({"error": "No active tournament"}), 404
     return jsonify(get_full_bracket(tid))
+
+
+@bracket_public_bp.route('/list')
+def public_tournament_list():
+    """List all tournaments (for history/bracket browsing)."""
+    from wyniki.db_models import Tournament, Player
+    from sqlalchemy import func
+    tournaments = (
+        Tournament.query
+        .outerjoin(Player, Player.tournament_id == Tournament.id)
+        .add_columns(func.count(Player.id).label('player_count'))
+        .group_by(Tournament.id)
+        .order_by(Tournament.start_date.desc())
+        .all()
+    )
+    result = []
+    for t, player_count in tournaments:
+        d = t.to_dict()
+        d['player_count'] = player_count
+        result.append(d)
+    return jsonify(result)
+
+
+@bracket_public_bp.route('/<int:tid>/bracket')
+def public_tournament_bracket(tid: int):
+    """Full bracket for a specific tournament."""
+    return jsonify(get_full_bracket(tid))
+
+
+@bracket_public_bp.route('/<int:tid>/history')
+def public_tournament_history(tid: int):
+    """Match history for a specific tournament."""
+    from wyniki.config import settings
+    history_data = fetch_match_history(limit=500, tournament_id=tid)
+    return jsonify(history_data)
 
 
 # ==================== ADMIN ====================

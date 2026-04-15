@@ -255,12 +255,28 @@ def create_match():
         if kort_id:
             ensure_court_state(kort_id)
         
+        # Detect bracket context (tournament, group, phase)
+        from ..database import detect_bracket_context, get_active_tournament_id
+        tournament_id = get_active_tournament_id()
+        bracket_warning = None
+        bracket_ctx = {"group_id": None, "phase": None, "warning": None}
+        
+        p1_name = data.get("player1_name")
+        p2_name = data.get("player2_name")
+        
+        if tournament_id and p1_name and p2_name:
+            bracket_ctx = detect_bracket_context(p1_name, p2_name, tournament_id)
+            bracket_warning = bracket_ctx.get("warning")
+        
         # Create match
         match = Match(
             court_id=kort_id,
-            player1_name=data.get("player1_name"),
-            player2_name=data.get("player2_name"),
+            player1_name=p1_name,
+            player2_name=p2_name,
             status=data.get("status", "in_progress"),
+            tournament_id=tournament_id,
+            bracket_group_id=bracket_ctx.get("group_id"),
+            phase=bracket_ctx.get("phase"),
             player1_sets=score.get("player1_sets", 0),
             player2_sets=score.get("player2_sets", 0),
             player1_games=score.get("player1_games", 0),
@@ -289,12 +305,16 @@ def create_match():
                     court_state["B"]["full_name"] = match.player2_name
                 court_state["match_status"]["active"] = True
                 court_state["updated"] = datetime.utcnow().isoformat()
+                # Store phase for history
+                if bracket_ctx.get("phase"):
+                    court_state["history_meta"] = court_state.get("history_meta", {})
+                    court_state["history_meta"]["phase"] = bracket_ctx["phase"]
             
             emit_score_update(kort_id, court_state)
         
-        logger.info(f"Match created: {match.id} on court {kort_id}")
+        logger.info(f"Match created: {match.id} on court {kort_id}, phase={bracket_ctx.get('phase')}, warning={bracket_warning}")
         
-        return jsonify(match.to_dict()), 201
+        return jsonify(match.to_dict(bracket_warning=bracket_warning)), 201
         
     except Exception as e:
         db.session.rollback()
@@ -504,7 +524,18 @@ def finish_match(match_id: int):
                         )
             
             # Add match to history for frontend display
+            # Set phase from match record if available
+            if match.phase:
+                court_state["history_meta"]["phase"] = match.phase
             add_match_to_history(kort_id, court_state)
+            
+            # Auto-advance knockout bracket
+            if match.phase == "Pucharowa" and match.tournament_id:
+                try:
+                    from ..database import advance_knockout
+                    advance_knockout(match_id, match.tournament_id)
+                except Exception as e:
+                    logger.warning(f"Could not advance knockout: {e}")
             
             emit_score_update(kort_id, court_state)
             

@@ -316,3 +316,59 @@ def get_active_players():
     ]
     
     return jsonify(result)
+
+
+@players_public_bp.route('/all', methods=['GET'])
+def get_all_players():
+    """Get all players across all tournaments with match stats."""
+    from wyniki.db_models import Player, Tournament, MatchHistory
+    from sqlalchemy import func, or_
+    
+    # Query all players
+    players = Player.query.join(Tournament).order_by(Player.last_name, Player.first_name).all()
+    
+    result = []
+    for p in players:
+        full_name = p.full_name
+        
+        # Count matches where player appeared (as player_a or player_b)
+        match_count = MatchHistory.query.filter(
+            or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
+        ).count()
+        
+        # Count wins
+        wins = 0
+        matches = MatchHistory.query.filter(
+            or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
+        ).all()
+        for m in matches:
+            if not m.score_a or not m.score_b:
+                continue
+            try:
+                import json
+                sa = json.loads(m.score_a) if isinstance(m.score_a, str) else m.score_a
+                sb = json.loads(m.score_b) if isinstance(m.score_b, str) else m.score_b
+                sets_a = sum(1 for i in range(len(sa)) for _ in [1] if i < len(sb) and sa[i] > sb[i])
+                sets_b = sum(1 for i in range(len(sb)) for _ in [1] if i < len(sa) and sb[i] > sa[i])
+                if m.player_a == full_name and sets_a > sets_b:
+                    wins += 1
+                elif m.player_b == full_name and sets_b > sets_a:
+                    wins += 1
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        result.append({
+            'id': p.id,
+            'name': full_name,
+            'first_name': p.first_name or '',
+            'last_name': p.last_name or '',
+            'category': p.category or '',
+            'country': p.country or '',
+            'tournament_id': p.tournament_id,
+            'tournament_name': p.tournament.name if p.tournament else '',
+            'matches_played': match_count,
+            'wins': wins,
+            'losses': match_count - wins
+        })
+    
+    return jsonify(result)

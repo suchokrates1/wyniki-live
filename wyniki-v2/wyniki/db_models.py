@@ -14,6 +14,7 @@ class Tournament(db.Model):
     start_date = db.Column(db.String(50), nullable=False)
     end_date = db.Column(db.String(50), nullable=False)
     active = db.Column(db.Integer, default=0)
+    location = db.Column(db.String(200), nullable=True, default='')
     created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
     
     # Relationships
@@ -26,6 +27,7 @@ class Tournament(db.Model):
             'start_date': self.start_date,
             'end_date': self.end_date,
             'active': self.active,
+            'location': self.location or '',
             'created_at': self.created_at
         }
 
@@ -128,6 +130,10 @@ class Match(db.Model):
     player2_name = db.Column(db.String(200), nullable=False)
     status = db.Column(db.String(20), default='in_progress')
     
+    tournament_id = db.Column(db.Integer, nullable=True)
+    bracket_group_id = db.Column(db.Integer, nullable=True)
+    phase = db.Column(db.String(50), nullable=True)
+    
     # Score data stored as JSON strings
     player1_sets = db.Column(db.Integer, default=0)
     player2_sets = db.Column(db.Integer, default=0)
@@ -144,9 +150,9 @@ class Match(db.Model):
     # Relationships
     statistics = db.relationship('MatchStatistics', back_populates='match', uselist=False, cascade='all, delete-orphan')
     
-    def to_dict(self):
+    def to_dict(self, bracket_warning=None):
         import json
-        return {
+        result = {
             'id': self.id,
             'court_id': self.court_id,
             'player1_name': self.player1_name,
@@ -161,9 +167,15 @@ class Match(db.Model):
                 'sets_history': json.loads(self.sets_history) if self.sets_history else []
             },
             'status': self.status,
+            'tournament_id': self.tournament_id,
+            'bracket_group_id': self.bracket_group_id,
+            'phase': self.phase,
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
+        if bracket_warning:
+            result['bracket_warning'] = bracket_warning
+        return result
 
 
 class MatchStatistics(db.Model):

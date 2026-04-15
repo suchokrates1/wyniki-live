@@ -44,6 +44,7 @@ def init_db() -> None:
                 start_date TEXT NOT NULL,
                 end_date TEXT NOT NULL,
                 active INTEGER DEFAULT 0,
+                location TEXT DEFAULT '',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -192,9 +193,164 @@ def init_db() -> None:
             )
         """)
         
+        # Migration: Add tournament_id, bracket_group_id, phase to matches
+        cursor.execute("PRAGMA table_info(matches)")
+        m_cols = [row[1] for row in cursor.fetchall()]
+        if 'tournament_id' not in m_cols:
+            cursor.execute("ALTER TABLE matches ADD COLUMN tournament_id INTEGER")
+            logger.info("database_migration", action="added_tournament_id_to_matches")
+        if 'bracket_group_id' not in m_cols:
+            cursor.execute("ALTER TABLE matches ADD COLUMN bracket_group_id INTEGER")
+            logger.info("database_migration", action="added_bracket_group_id_to_matches")
+        if 'phase' not in m_cols:
+            cursor.execute("ALTER TABLE matches ADD COLUMN phase TEXT")
+            logger.info("database_migration", action="added_phase_to_matches")
+        
+        # Migration: Add location column to tournaments
+        cursor.execute("PRAGMA table_info(tournaments)")
+        t_cols = [row[1] for row in cursor.fetchall()]
+        if 'location' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN location TEXT DEFAULT ''")
+            logger.info("database_migration", action="added_location_to_tournaments")
+        
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)
+
+
+def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: int) -> Dict[str, Any]:
+    """Detect bracket group/phase for a match based on player names.
+    
+    Returns dict with:
+      - group_id: int or None
+      - phase: 'Grupowa' | 'Pucharowa' | None
+      - warning: str code or None ('different_groups' | 'no_bracket')
+    """
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            # Find groups for player1
+            cursor.execute("""
+                SELECT bgp.group_id, bg.name
+                FROM bracket_group_players bgp
+                JOIN bracket_groups bg ON bg.id = bgp.group_id
+                WHERE bg.tournament_id = ? AND bgp.player_name = ?
+            """, (tournament_id, player1_name))
+            p1_groups = cursor.fetchall()
+
+            # Find groups for player2
+            cursor.execute("""
+                SELECT bgp.group_id, bg.name
+                FROM bracket_group_players bgp
+                JOIN bracket_groups bg ON bg.id = bgp.group_id
+                WHERE bg.tournament_id = ? AND bgp.player_name = ?
+            """, (tournament_id, player2_name))
+            p2_groups = cursor.fetchall()
+
+            if not p1_groups and not p2_groups:
+                return {"group_id": None, "phase": None, "warning": "no_bracket"}
+
+            p1_gids = {r["group_id"] for r in p1_groups}
+            p2_gids = {r["group_id"] for r in p2_groups}
+            common = p1_gids & p2_gids
+
+            if common:
+                gid = next(iter(common))
+                return {"group_id": gid, "phase": "Grupowa", "warning": None}
+            else:
+                return {"group_id": None, "phase": "Pucharowa", "warning": "different_groups"}
+
+    except Exception as e:
+        logger.error("detect_bracket_context_error", error=str(e))
+        return {"group_id": None, "phase": None, "warning": None}
+
+
+def advance_knockout(match_id: int, tournament_id: int) -> bool:
+    """After a knockout match finishes, find the matching slot, persist the result,
+    and auto-advance winners to the next round (SF→Final/3rd place)."""
+    try:
+        from .db_models import Match as MatchModel
+        match = MatchModel.query.get(match_id)
+        if not match or match.status != "finished":
+            return False
+
+        p1 = match.player1_name
+        p2 = match.player2_name
+        winner = p1 if match.player1_sets > match.player2_sets else p2
+
+        sets_history = json.loads(match.sets_history) if match.sets_history else []
+        score_parts = []
+        for s in sets_history:
+            g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+            if g1 == 0 and g2 == 0 and s.get("tiebreak_loser_points") is None:
+                continue
+            score_parts.append(f"{g1}:{g2}")
+        score_summary = " ".join(score_parts)
+
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            # Find the knockout slot matching these two players
+            cursor.execute("""
+                SELECT id, phase, position FROM bracket_knockout
+                WHERE tournament_id = ?
+                  AND ((player1_name = ? AND player2_name = ?)
+                    OR (player1_name = ? AND player2_name = ?))
+                  AND winner_name IS NULL
+            """, (tournament_id, p1, p2, p2, p1))
+            slot = cursor.fetchone()
+            if not slot:
+                return False
+
+            # Update the slot with winner and score
+            cursor.execute("""
+                UPDATE bracket_knockout SET winner_name = ?, score_summary = ?
+                WHERE id = ?
+            """, (winner, score_summary, slot["id"]))
+
+            loser = p2 if winner == p1 else p1
+
+            # Auto-advance: if semifinal, populate final and 3rd place
+            if slot["phase"] == "semifinal":
+                _advance_to_next_round(cursor, tournament_id, slot["position"], winner, loser)
+
+            conn.commit()
+            logger.info("knockout_advanced", match_id=match_id, winner=winner, phase=slot["phase"])
+            return True
+
+    except Exception as e:
+        logger.error("advance_knockout_error", error=str(e), match_id=match_id)
+        return False
+
+
+def _advance_to_next_round(cursor, tournament_id: int, sf_position: int, winner: str, loser: str) -> None:
+    """Fill in final/3rd-place slots based on semifinal results."""
+    # Put winner into final
+    cursor.execute("""
+        SELECT id, player1_name, player2_name FROM bracket_knockout
+        WHERE tournament_id = ? AND phase = 'final' AND position = 1
+    """, (tournament_id,))
+    final_slot = cursor.fetchone()
+    if final_slot:
+        if not final_slot["player1_name"]:
+            cursor.execute("UPDATE bracket_knockout SET player1_name = ? WHERE id = ?",
+                           (winner, final_slot["id"]))
+        elif not final_slot["player2_name"]:
+            cursor.execute("UPDATE bracket_knockout SET player2_name = ? WHERE id = ?",
+                           (winner, final_slot["id"]))
+
+    # Put loser into 3rd place match
+    cursor.execute("""
+        SELECT id, player1_name, player2_name FROM bracket_knockout
+        WHERE tournament_id = ? AND phase = 'third_place' AND position = 1
+    """, (tournament_id,))
+    third_slot = cursor.fetchone()
+    if third_slot:
+        if not third_slot["player1_name"]:
+            cursor.execute("UPDATE bracket_knockout SET player1_name = ? WHERE id = ?",
+                           (loser, third_slot["id"]))
+        elif not third_slot["player2_name"]:
+            cursor.execute("UPDATE bracket_knockout SET player2_name = ? WHERE id = ?",
+                           (loser, third_slot["id"]))
 
 
 def insert_match_history(entry: Dict[str, Any]) -> None:
