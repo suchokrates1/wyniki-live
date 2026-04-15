@@ -106,6 +106,10 @@ class MatchHistory(db.Model):
     score_b = db.Column(db.String(50))
     category = db.Column(db.String(100))
     phase = db.Column(db.String(100), default='Grupowa')
+    match_id = db.Column(db.Integer, nullable=True)
+    stats_mode = db.Column(db.String(20), nullable=True)
+    sets_history = db.Column(db.Text, nullable=True)
+    tournament_id = db.Column(db.Integer, nullable=True)
     
     def to_dict(self):
         return {
