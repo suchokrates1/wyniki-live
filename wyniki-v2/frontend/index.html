@@ -28,7 +28,7 @@
                         <option value="es">Español</option>
                         <option value="fr">Français</option>
                     </select>
-                    <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? 'Tryb jasny' : 'Tryb ciemny'">
+                    <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')" :title="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')">
                         <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="darkMode ? '☀️' : '🌙'"></span>
                     </button>
                 </div>
@@ -339,7 +339,7 @@
                                 <!-- Bracket tree (only for categories with knockout) -->
                                 <template x-if="cat.knockout.length > 0">
                                     <section class="bracket-tree" :aria-label="'Drabinka ' + cat.name">
-                                        <h3 class="bracket-tree__title">Faza klasyfikacyjna</h3>
+                                        <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'">Faza pucharowa</h3>
 
                                         <div class="bt-ladder">
                                             <template x-for="(ko, ki) in cat.knockout" :key="'ko-'+cat.name+'-'+ki">
@@ -382,13 +382,38 @@
 
                                         <!-- Trophy / podium -->
                                         <div class="bt-podium" role="list" aria-label="Podium">
-                                            <template x-for="(ko, ki) in cat.knockout" :key="'pod-'+cat.name+'-'+ki">
-                                                <template x-if="ko.slots[0] && ko.slots[0].winner">
-                                                    <div class="bt-podium-item" role="listitem">
-                                                        <span class="bt-podium-medal" x-text="ko.phase.includes('Finał') ? '🥇' : ko.phase.includes('3.') ? '🥈' : ko.phase.includes('5.') ? '🥉' : ''"></span>
+                                            <!-- 1st place: winner of Final -->
+                                            <template x-for="(ko, ki) in cat.knockout" :key="'pod1-'+cat.name+'-'+ki">
+                                                <template x-if="ko.phase.includes('Finał') && ko.slots[0] && ko.slots[0].winner">
+                                                    <div class="bt-podium-item bt-podium-item--gold" role="listitem">
+                                                        <span class="bt-podium-medal">🥇</span>
                                                         <span class="bt-podium-result">
                                                             <strong x-text="resolveBracketName(ko.slots[0].winner)"></strong>
-                                                            <small x-text="ko.phase"></small>
+                                                            <small x-text="'1. ' + (tr().playerProfile?.place || 'miejsce')"></small>
+                                                        </span>
+                                                    </div>
+                                                </template>
+                                            </template>
+                                            <!-- 2nd place: loser of Final -->
+                                            <template x-for="(ko, ki) in cat.knockout" :key="'pod2-'+cat.name+'-'+ki">
+                                                <template x-if="ko.phase.includes('Finał') && ko.slots[0] && ko.slots[0].winner">
+                                                    <div class="bt-podium-item bt-podium-item--silver" role="listitem">
+                                                        <span class="bt-podium-medal">🥈</span>
+                                                        <span class="bt-podium-result">
+                                                            <strong x-text="resolveBracketName(ko.slots[0].winner === ko.slots[0].player1 ? ko.slots[0].player2 : ko.slots[0].player1)"></strong>
+                                                            <small x-text="'2. ' + (tr().playerProfile?.place || 'miejsce')"></small>
+                                                        </span>
+                                                    </div>
+                                                </template>
+                                            </template>
+                                            <!-- 3rd place: winner of 3rd place match -->
+                                            <template x-for="(ko, ki) in cat.knockout" :key="'pod3-'+cat.name+'-'+ki">
+                                                <template x-if="ko.phase.includes('3.') && ko.slots[0] && ko.slots[0].winner">
+                                                    <div class="bt-podium-item bt-podium-item--bronze" role="listitem">
+                                                        <span class="bt-podium-medal">🥉</span>
+                                                        <span class="bt-podium-result">
+                                                            <strong x-text="resolveBracketName(ko.slots[0].winner)"></strong>
+                                                            <small x-text="'3. ' + (tr().playerProfile?.place || 'miejsce')"></small>
                                                         </span>
                                                     </div>
                                                 </template>
@@ -655,7 +680,7 @@
                                         <!-- Knockout -->
                                         <template x-if="cat.knockout.length > 0">
                                             <section class="bracket-tree" :aria-label="'Drabinka ' + cat.name">
-                                                <h3 class="bracket-tree__title">Faza klasyfikacyjna</h3>
+                                                <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'">Faza pucharowa</h3>
 
                                                 <div class="bt-ladder">
                                                     <template x-for="(ko, ki) in cat.knockout" :key="'tko-'+cat.name+'-'+ki">
@@ -698,13 +723,38 @@
 
                                                 <!-- Podium -->
                                                 <div class="bt-podium" role="list" aria-label="Podium">
-                                                    <template x-for="(ko, ki) in cat.knockout" :key="'tpod-'+cat.name+'-'+ki">
-                                                        <template x-if="ko.slots[0] && ko.slots[0].winner">
-                                                            <div class="bt-podium-item" role="listitem">
-                                                                <span class="bt-podium-medal" x-text="ko.phase.includes('Finał') ? '🥇' : ko.phase.includes('3.') ? '🥈' : ko.phase.includes('5.') ? '🥉' : ''"></span>
+                                                    <!-- 1st place: winner of Final -->
+                                                    <template x-for="(ko, ki) in cat.knockout" :key="'tpod1-'+cat.name+'-'+ki">
+                                                        <template x-if="ko.phase.includes('Finał') && ko.slots[0] && ko.slots[0].winner">
+                                                            <div class="bt-podium-item bt-podium-item--gold" role="listitem">
+                                                                <span class="bt-podium-medal">🥇</span>
                                                                 <span class="bt-podium-result">
                                                                     <strong x-text="resolveBracketName(ko.slots[0].winner)"></strong>
-                                                                    <small x-text="ko.phase"></small>
+                                                                    <small x-text="'1. ' + (tr().playerProfile?.place || 'miejsce')"></small>
+                                                                </span>
+                                                            </div>
+                                                        </template>
+                                                    </template>
+                                                    <!-- 2nd place: loser of Final -->
+                                                    <template x-for="(ko, ki) in cat.knockout" :key="'tpod2-'+cat.name+'-'+ki">
+                                                        <template x-if="ko.phase.includes('Finał') && ko.slots[0] && ko.slots[0].winner">
+                                                            <div class="bt-podium-item bt-podium-item--silver" role="listitem">
+                                                                <span class="bt-podium-medal">🥈</span>
+                                                                <span class="bt-podium-result">
+                                                                    <strong x-text="resolveBracketName(ko.slots[0].winner === ko.slots[0].player1 ? ko.slots[0].player2 : ko.slots[0].player1)"></strong>
+                                                                    <small x-text="'2. ' + (tr().playerProfile?.place || 'miejsce')"></small>
+                                                                </span>
+                                                            </div>
+                                                        </template>
+                                                    </template>
+                                                    <!-- 3rd place: winner of 3rd place match -->
+                                                    <template x-for="(ko, ki) in cat.knockout" :key="'tpod3-'+cat.name+'-'+ki">
+                                                        <template x-if="ko.phase.includes('3.') && ko.slots[0] && ko.slots[0].winner">
+                                                            <div class="bt-podium-item bt-podium-item--bronze" role="listitem">
+                                                                <span class="bt-podium-medal">🥉</span>
+                                                                <span class="bt-podium-result">
+                                                                    <strong x-text="resolveBracketName(ko.slots[0].winner)"></strong>
+                                                                    <small x-text="'3. ' + (tr().playerProfile?.place || 'miejsce')"></small>
                                                                 </span>
                                                             </div>
                                                         </template>
@@ -851,7 +901,7 @@
                                 <img class="player-card__flag" x-show="p.country" :src="codeToFlag(p.country)" :alt="p.country" width="20" height="15">
                                 <span class="player-card__name" x-text="p.name"></span>
                                 <span class="player-card__cat" x-show="p.category" x-text="p.category"></span>
-                                <span class="player-card__gender" x-show="p.gender" x-text="p.gender"></span>
+                                <span class="player-card__gender" x-show="p.gender" x-text="p.gender === 'M' ? (tr().playerSection?.genderShortM || 'M') : (tr().playerSection?.genderShortF || 'K')"></span>
                             </div>
                             <div class="player-card__stats">
                                 <span class="player-card__stat">

@@ -1061,11 +1061,16 @@ def fetch_bracket_groups(tournament_id: int) -> List[Dict]:
 
 
 def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str) -> List[Dict]:
-    """Find finished matches between a set of players within a date range."""
+    """Find finished matches between a set of players within a date range.
+    
+    Uses exact name matching first, then falls back to surname-based matching
+    to handle cases where bracket uses surnames but matches store full names.
+    """
     if len(player_names) < 2:
         return []
     placeholders = ",".join("?" for _ in player_names)
     end_ts = end_date + "T23:59:59"
+    # Try exact match first
     cursor.execute(f"""
         SELECT id, player1_name, player2_name, player1_sets, player2_sets,
                sets_history, created_at
@@ -1077,7 +1082,67 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
           AND created_at <= ?
         ORDER BY created_at
     """, (*player_names, *player_names, start_date, end_ts))
-    return cursor.fetchall()
+    results = cursor.fetchall()
+    if results:
+        return results
+
+    # Fallback: surname-based matching (bracket stores "Kowalski" but match has "Jan Kowalski")
+    # Build a map of surname -> bracket_name for renaming results
+    surnames = []
+    for name in player_names:
+        parts = name.strip().split()
+        surname = parts[-1] if parts else name
+        surnames.append(surname)
+
+    like_conditions = []
+    like_params = []
+    for surname in surnames:
+        like_conditions.append("player1_name LIKE ?")
+        like_params.append(f"%{surname}")
+    p1_cond = " OR ".join(like_conditions)
+
+    like_conditions2 = []
+    like_params2 = []
+    for surname in surnames:
+        like_conditions2.append("player2_name LIKE ?")
+        like_params2.append(f"%{surname}")
+    p2_cond = " OR ".join(like_conditions2)
+
+    cursor.execute(f"""
+        SELECT id, player1_name, player2_name, player1_sets, player2_sets,
+               sets_history, created_at
+        FROM matches
+        WHERE status = 'finished'
+          AND ({p1_cond})
+          AND ({p2_cond})
+          AND created_at >= ?
+          AND created_at <= ?
+        ORDER BY created_at
+    """, (*like_params, *like_params2, start_date, end_ts))
+    raw_results = cursor.fetchall()
+    if not raw_results:
+        return []
+
+    # Build surname -> bracket_name lookup
+    surname_to_bracket = {}
+    for name in player_names:
+        parts = name.strip().split()
+        surname = parts[-1].lower() if parts else name.lower()
+        surname_to_bracket[surname] = name
+
+    # Remap match player names to bracket names
+    remapped = []
+    for row in raw_results:
+        r = dict(row)
+        p1_surname = r["player1_name"].strip().split()[-1].lower() if r["player1_name"] else ""
+        p2_surname = r["player2_name"].strip().split()[-1].lower() if r["player2_name"] else ""
+        bracket_p1 = surname_to_bracket.get(p1_surname)
+        bracket_p2 = surname_to_bracket.get(p2_surname)
+        if bracket_p1 and bracket_p2 and bracket_p1 != bracket_p2:
+            r["player1_name"] = bracket_p1
+            r["player2_name"] = bracket_p2
+            remapped.append(r)
+    return remapped
 
 
 def _is_stb(s: dict) -> bool:
@@ -1240,10 +1305,14 @@ def fetch_bracket_knockout(tournament_id: int) -> List[Dict]:
 
 
 def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date: str) -> Optional[Dict]:
-    """Try to find a finished match between two specific players."""
+    """Try to find a finished match between two specific players.
+    
+    Falls back to surname-based matching if exact match not found.
+    """
     if not p1 or not p2:
         return None
     end_ts = end_date + "T23:59:59"
+    # Exact match first
     cursor.execute("""
         SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history
         FROM matches
@@ -1253,11 +1322,31 @@ def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date:
         ORDER BY created_at DESC LIMIT 1
     """, (p1, p2, p2, p1, start_date, end_ts))
     row = cursor.fetchone()
+
+    if not row:
+        # Fallback: surname-based matching
+        surname1 = p1.strip().split()[-1] if p1.strip() else p1
+        surname2 = p2.strip().split()[-1] if p2.strip() else p2
+        cursor.execute("""
+            SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history
+            FROM matches
+            WHERE status = 'finished'
+              AND ((player1_name LIKE ? AND player2_name LIKE ?)
+                OR (player1_name LIKE ? AND player2_name LIKE ?))
+              AND created_at >= ? AND created_at <= ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (f"%{surname1}", f"%{surname2}", f"%{surname2}", f"%{surname1}",
+              start_date, end_ts))
+        row = cursor.fetchone()
+
     if not row:
         return None
 
     # Flip score if match player order doesn't match requested order
-    flipped = (row["player1_name"] != p1)
+    # Use surname comparison for matching when names differ in format
+    p1_surname = p1.strip().split()[-1].lower() if p1.strip() else ""
+    match_p1_surname = row["player1_name"].strip().split()[-1].lower() if row["player1_name"] else ""
+    flipped = (match_p1_surname != p1_surname)
 
     sh = json.loads(row["sets_history"]) if row["sets_history"] else []
     sh = [s for s in sh if not _is_empty_set(s)]
@@ -1266,7 +1355,16 @@ def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date:
     # Per-set detail for scoreboard
     sets_detail = [_build_set_detail(s, flipped) for s in sh]
 
-    winner = row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"]
+    # Determine winner and map back to bracket name
+    match_winner = row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"]
+    winner_surname = match_winner.strip().split()[-1].lower() if match_winner else ""
+    # Map winner back to bracket player name
+    if winner_surname == p1.strip().split()[-1].lower():
+        winner = p1
+    elif winner_surname == p2.strip().split()[-1].lower():
+        winner = p2
+    else:
+        winner = match_winner
     return {"winner": winner, "score": "  ".join(score_parts), "sets": sets_detail}
 
 
