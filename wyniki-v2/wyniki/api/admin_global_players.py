@@ -408,3 +408,109 @@ def import_file_to_tournament(tid: int):
         'matched_global': matched_global,
         'created_global': created_global,
     })
+
+
+@blueprint.route('/duplicates', methods=['GET'])
+def find_duplicates():
+    """Find duplicate global players (same last_name or same first+last)."""
+    from sqlalchemy import func as sqf
+
+    # Find by same last_name
+    dupes_by_lastname = (
+        db.session.query(sqf.lower(sqf.trim(GlobalPlayer.last_name)).label('ln'),
+                         sqf.count(GlobalPlayer.id).label('cnt'))
+        .filter(GlobalPlayer.last_name.isnot(None), sqf.trim(GlobalPlayer.last_name) != '')
+        .group_by(sqf.lower(sqf.trim(GlobalPlayer.last_name)))
+        .having(sqf.count(GlobalPlayer.id) > 1)
+        .all()
+    )
+
+    result = []
+    for ln, cnt in dupes_by_lastname:
+        players = GlobalPlayer.query.filter(
+            sqf.lower(sqf.trim(GlobalPlayer.last_name)) == ln
+        ).all()
+        entries = []
+        for gp in players:
+            tournament_count = Player.query.filter_by(global_player_id=gp.id).count()
+            entries.append({
+                **gp.to_dict(),
+                'tournaments_count': tournament_count,
+            })
+        result.append({
+            'last_name': ln,
+            'count': cnt,
+            'players': entries,
+        })
+
+    return jsonify(result)
+
+
+@blueprint.route('/no-first-name', methods=['GET'])
+def find_no_first_name():
+    """Find global players without first names."""
+    from sqlalchemy import func as sqf
+
+    players = GlobalPlayer.query.filter(
+        or_(GlobalPlayer.first_name.is_(None), sqf.trim(GlobalPlayer.first_name) == '')
+    ).order_by(GlobalPlayer.last_name).all()
+
+    result = []
+    for gp in players:
+        d = gp.to_dict()
+        d['tournaments_count'] = Player.query.filter_by(global_player_id=gp.id).count()
+        result.append(d)
+
+    return jsonify(result)
+
+
+@blueprint.route('/merge', methods=['POST'])
+def merge_players():
+    """Merge duplicate global players. Keep target, transfer entries from source.
+    Body: { target_id: int, source_ids: [int, ...] }
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    target_id = data.get('target_id')
+    source_ids = data.get('source_ids', [])
+
+    if not target_id or not source_ids:
+        return jsonify({'error': 'target_id and source_ids are required'}), 400
+
+    target = GlobalPlayer.query.get(target_id)
+    if not target:
+        return jsonify({'error': 'Target player not found'}), 404
+
+    transferred = 0
+    deleted = 0
+    for src_id in source_ids:
+        if src_id == target_id:
+            continue
+        source = GlobalPlayer.query.get(src_id)
+        if not source:
+            continue
+
+        # Transfer all tournament entries from source to target
+        entries = Player.query.filter_by(global_player_id=src_id).all()
+        for entry in entries:
+            entry.global_player_id = target_id
+            entry.first_name = target.first_name
+            entry.last_name = target.last_name
+            entry.name = target.full_name
+            transferred += 1
+
+        # Delete source global player
+        db.session.delete(source)
+        deleted += 1
+
+    db.session.commit()
+    logger.info("global_players_merged", target_id=target_id, source_ids=source_ids,
+                transferred=transferred, deleted=deleted)
+    return jsonify({
+        'message': f'Merged {deleted} duplicates into ID {target_id}, transferred {transferred} entries',
+        'target': target.to_dict(),
+        'transferred': transferred,
+        'deleted': deleted,
+    })

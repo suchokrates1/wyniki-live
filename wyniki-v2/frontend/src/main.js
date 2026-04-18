@@ -61,8 +61,9 @@ const TRANSLATIONS = {
     },
     tabs: { live: 'Na żywo', tournaments: 'Historia', players: 'Zawodnicy' },
     tournamentCard: { players: 'zawodników', active: 'Aktywny', noTournaments: 'Brak turniejów', backToList: 'Powrót do listy' },
-    playerSection: { title: 'Baza zawodników', searchPlaceholder: 'Szukaj zawodnika...', all: 'Wszyscy', men: 'Mężczyźni', women: 'Kobiety', matchesPlayed: 'meczów', winsLabel: 'W', lossesLabel: 'L', noResults: 'Brak wyników', allCountries: 'Wszystkie kraje', allCategories: 'Wszystkie kategorie' },
+    playerSection: { title: 'Baza zawodników', searchPlaceholder: 'Szukaj zawodnika...', all: 'Wszyscy', men: 'Mężczyźni', women: 'Kobiety', matchesPlayed: 'meczów', winsLabel: 'W', lossesLabel: 'L', noResults: 'Brak wyników', allCountries: 'Wszystkie kraje', allCategories: 'Wszystkie kategorie', genderShortM: 'M', genderShortF: 'K' },
     playerProfile: { back: 'Powrót do listy', category: 'Kategoria', country: 'Kraj', gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', career: 'Kariera', tournaments: 'Turnieje', matches: 'Mecze', wins: 'Wygrane', losses: 'Przegrane', winRate: 'Skuteczność', medals: 'Medale', gold: 'Złoto', silver: 'Srebro', bronze: 'Brąz', tournamentHistory: 'Historia turniejów', group: 'Grupa', place: 'miejsce', of: 'z', groupPhase: 'Faza grupowa', knockoutPhase: 'Faza pucharowa', noTournaments: 'Brak turniejów', matchesInTournament: 'Mecze w turnieju', won: 'W', lost: 'P', vs: 'vs', duration: 'Czas' },
+    darkModeTooltip: { light: 'Zmień na tryb jasny', dark: 'Zmień na tryb ciemny' },
     liveSub: { scores: 'Wyniki live', bracket: 'Drabinka', history: 'Historia' },
     bracket: {
       emptyTitle: 'Brak drabinki', emptyText: 'Drabinka turniejowa nie została jeszcze skonfigurowana',
@@ -130,8 +131,9 @@ const TRANSLATIONS = {
     },
     tabs: { live: 'Live', tournaments: 'Turniere', players: 'Spieler' },
     tournamentCard: { players: 'Spieler', active: 'Aktiv', noTournaments: 'Keine Turniere', backToList: 'Zurück zur Liste' },
-    playerSection: { title: 'Spielerdatenbank', searchPlaceholder: 'Spieler suchen...', all: 'Alle', men: 'Männer', women: 'Frauen', matchesPlayed: 'Spiele', winsLabel: 'S', lossesLabel: 'N', noResults: 'Keine Ergebnisse', allCountries: 'Alle Länder', allCategories: 'Alle Kategorien' },
+    playerSection: { title: 'Spielerdatenbank', searchPlaceholder: 'Spieler suchen...', all: 'Alle', men: 'Männer', women: 'Frauen', matchesPlayed: 'Spiele', winsLabel: 'S', lossesLabel: 'N', noResults: 'Keine Ergebnisse', allCountries: 'Alle Länder', allCategories: 'Alle Kategorien', genderShortM: 'M', genderShortF: 'W' },
     playerProfile: { back: 'Zurück zur Liste', category: 'Kategorie', country: 'Land', gender: 'Geschlecht', male: 'Mann', female: 'Frau', career: 'Karriere', tournaments: 'Turniere', matches: 'Spiele', wins: 'Siege', losses: 'Niederlagen', winRate: 'Siegquote', medals: 'Medaillen', gold: 'Gold', silver: 'Silber', bronze: 'Bronze', tournamentHistory: 'Turniergeschichte', group: 'Gruppe', place: 'Platz', of: 'von', groupPhase: 'Gruppenphase', knockoutPhase: 'K.-o.-Phase', noTournaments: 'Keine Turniere', matchesInTournament: 'Spiele im Turnier', won: 'S', lost: 'N', vs: 'vs', duration: 'Dauer' },
+    darkModeTooltip: { light: 'Zum hellen Modus wechseln', dark: 'Zum dunklen Modus wechseln' },
     liveSub: { scores: 'Live-Ergebnisse', bracket: 'Turnierbaum', history: 'Historie' },
     bracket: {
       emptyTitle: 'Kein Turnierbaum', emptyText: 'Der Turnierbaum wurde noch nicht konfiguriert',
@@ -199,8 +201,9 @@ const TRANSLATIONS = {
     },
     tabs: { live: 'Live', tournaments: 'Tournaments', players: 'Players' },
     tournamentCard: { players: 'players', active: 'Active', noTournaments: 'No tournaments', backToList: 'Back to list' },
-    playerSection: { title: 'Player database', searchPlaceholder: 'Search player...', all: 'All', men: 'Men', women: 'Women', matchesPlayed: 'matches', winsLabel: 'W', lossesLabel: 'L', noResults: 'No results', allCountries: 'All countries', allCategories: 'All categories' },
+    playerSection: { title: 'Player database', searchPlaceholder: 'Search player...', all: 'All', men: 'Men', women: 'Women', matchesPlayed: 'matches', winsLabel: 'W', lossesLabel: 'L', noResults: 'No results', allCountries: 'All countries', allCategories: 'All categories', genderShortM: 'M', genderShortF: 'F' },
     playerProfile: { back: 'Back to list', category: 'Category', country: 'Country', gender: 'Gender', male: 'Male', female: 'Female', career: 'Career', tournaments: 'Tournaments', matches: 'Matches', wins: 'Wins', losses: 'Losses', winRate: 'Win rate', medals: 'Medals', gold: 'Gold', silver: 'Silver', bronze: 'Bronze', tournamentHistory: 'Tournament history', group: 'Group', place: 'place', of: 'of', groupPhase: 'Group phase', knockoutPhase: 'Knockout phase', noTournaments: 'No tournaments', matchesInTournament: 'Tournament matches', won: 'W', lost: 'L', vs: 'vs', duration: 'Duration' },
+    darkModeTooltip: { light: 'Switch to light mode', dark: 'Switch to dark mode' },
     liveSub: { scores: 'Live scores', bracket: 'Bracket', history: 'History' },
     bracket: {
       emptyTitle: 'No bracket', emptyText: 'Tournament bracket has not been configured yet',
@@ -268,8 +271,9 @@ const TRANSLATIONS = {
     },
     tabs: { live: 'Live', tournaments: 'Tornei', players: 'Giocatori' },
     tournamentCard: { players: 'giocatori', active: 'Attivo', noTournaments: 'Nessun torneo', backToList: 'Torna alla lista' },
-    playerSection: { title: 'Database giocatori', searchPlaceholder: 'Cerca giocatore...', all: 'Tutti', men: 'Uomini', women: 'Donne', matchesPlayed: 'partite', winsLabel: 'V', lossesLabel: 'S', noResults: 'Nessun risultato', allCountries: 'Tutti i paesi', allCategories: 'Tutte le categorie' },
+    playerSection: { title: 'Database giocatori', searchPlaceholder: 'Cerca giocatore...', all: 'Tutti', men: 'Uomini', women: 'Donne', matchesPlayed: 'partite', winsLabel: 'V', lossesLabel: 'S', noResults: 'Nessun risultato', allCountries: 'Tutti i paesi', allCategories: 'Tutte le categorie', genderShortM: 'M', genderShortF: 'F' },
     playerProfile: { back: 'Torna alla lista', category: 'Categoria', country: 'Paese', gender: 'Genere', male: 'Uomo', female: 'Donna', career: 'Carriera', tournaments: 'Tornei', matches: 'Partite', wins: 'Vittorie', losses: 'Sconfitte', winRate: 'Percentuale', medals: 'Medaglie', gold: 'Oro', silver: 'Argento', bronze: 'Bronzo', tournamentHistory: 'Storico tornei', group: 'Girone', place: 'posto', of: 'di', groupPhase: 'Fase a gironi', knockoutPhase: 'Fase a eliminazione', noTournaments: 'Nessun torneo', matchesInTournament: 'Partite nel torneo', won: 'V', lost: 'S', vs: 'vs', duration: 'Durata' },
+    darkModeTooltip: { light: 'Passa alla modalità chiara', dark: 'Passa alla modalità scura' },
     liveSub: { scores: 'Risultati live', bracket: 'Tabellone', history: 'Cronologia' },
     bracket: {
       emptyTitle: 'Nessun tabellone', emptyText: 'Il tabellone del torneo non è ancora stato configurato',
@@ -337,8 +341,9 @@ const TRANSLATIONS = {
     },
     tabs: { live: 'En vivo', tournaments: 'Torneos', players: 'Jugadores' },
     tournamentCard: { players: 'jugadores', active: 'Activo', noTournaments: 'Sin torneos', backToList: 'Volver a la lista' },
-    playerSection: { title: 'Base de jugadores', searchPlaceholder: 'Buscar jugador...', all: 'Todos', men: 'Hombres', women: 'Mujeres', matchesPlayed: 'partidos', winsLabel: 'V', lossesLabel: 'D', noResults: 'Sin resultados', allCountries: 'Todos los países', allCategories: 'Todas las categorías' },
+    playerSection: { title: 'Base de jugadores', searchPlaceholder: 'Buscar jugador...', all: 'Todos', men: 'Hombres', women: 'Mujeres', matchesPlayed: 'partidos', winsLabel: 'V', lossesLabel: 'D', noResults: 'Sin resultados', allCountries: 'Todos los países', allCategories: 'Todas las categorías', genderShortM: 'M', genderShortF: 'F' },
     playerProfile: { back: 'Volver a la lista', category: 'Categoría', country: 'País', gender: 'Género', male: 'Hombre', female: 'Mujer', career: 'Carrera', tournaments: 'Torneos', matches: 'Partidos', wins: 'Victorias', losses: 'Derrotas', winRate: 'Efectividad', medals: 'Medallas', gold: 'Oro', silver: 'Plata', bronze: 'Bronce', tournamentHistory: 'Historial de torneos', group: 'Grupo', place: 'puesto', of: 'de', groupPhase: 'Fase de grupos', knockoutPhase: 'Fase eliminatoria', noTournaments: 'Sin torneos', matchesInTournament: 'Partidos del torneo', won: 'V', lost: 'D', vs: 'vs', duration: 'Duración' },
+    darkModeTooltip: { light: 'Cambiar a modo claro', dark: 'Cambiar a modo oscuro' },
     liveSub: { scores: 'En vivo', bracket: 'Cuadro', history: 'Historial' },
     bracket: {
       emptyTitle: 'Sin cuadro', emptyText: 'El cuadro del torneo aún no ha sido configurado',
@@ -406,8 +411,9 @@ const TRANSLATIONS = {
     },
     tabs: { live: 'En direct', tournaments: 'Tournois', players: 'Joueurs' },
     tournamentCard: { players: 'joueurs', active: 'Actif', noTournaments: 'Aucun tournoi', backToList: 'Retour à la liste' },
-    playerSection: { title: 'Base de joueurs', searchPlaceholder: 'Rechercher un joueur...', all: 'Tous', men: 'Hommes', women: 'Femmes', matchesPlayed: 'matchs', winsLabel: 'V', lossesLabel: 'D', noResults: 'Aucun résultat', allCountries: 'Tous les pays', allCategories: 'Toutes les catégories' },
+    playerSection: { title: 'Base de joueurs', searchPlaceholder: 'Rechercher un joueur...', all: 'Tous', men: 'Hommes', women: 'Femmes', matchesPlayed: 'matchs', winsLabel: 'V', lossesLabel: 'D', noResults: 'Aucun résultat', allCountries: 'Tous les pays', allCategories: 'Toutes les catégories', genderShortM: 'H', genderShortF: 'F' },
     playerProfile: { back: 'Retour à la liste', category: 'Catégorie', country: 'Pays', gender: 'Genre', male: 'Homme', female: 'Femme', career: 'Carrière', tournaments: 'Tournois', matches: 'Matchs', wins: 'Victoires', losses: 'Défaites', winRate: 'Taux de victoire', medals: 'Médailles', gold: 'Or', silver: 'Argent', bronze: 'Bronze', tournamentHistory: 'Historique des tournois', group: 'Groupe', place: 'place', of: 'sur', groupPhase: 'Phase de groupes', knockoutPhase: 'Phase éliminatoire', noTournaments: 'Aucun tournoi', matchesInTournament: 'Matchs du tournoi', won: 'V', lost: 'D', vs: 'vs', duration: 'Durée' },
+    darkModeTooltip: { light: 'Passer au mode clair', dark: 'Passer au mode sombre' },
     liveSub: { scores: 'En direct', bracket: 'Tableau', history: 'Historique' },
     bracket: {
       emptyTitle: 'Pas de tableau', emptyText: 'Le tableau du tournoi n\'a pas encore été configuré',
@@ -770,6 +776,7 @@ Alpine.data('tennisApp', () => ({
       const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/bracket`);
       if (!response.ok) { this.tournamentBracket = null; return; }
       this.tournamentBracket = await response.json();
+      this._buildBracketNameMap(this.tournamentBracket);
       const cats = this.tournamentBracketCategories();
       if (cats.length > 0) this.tournamentBracketCategory = cats[0].name;
     } catch { this.tournamentBracket = null; }
@@ -789,6 +796,8 @@ Alpine.data('tennisApp', () => ({
       const response = await fetch('/api/tournament/bracket');
       if (!response.ok) { this.bracketData = null; return; }
       this.bracketData = await response.json();
+      // Build name map from bracket group matches (match names → surname lookup)
+      this._buildBracketNameMap(this.bracketData);
       // Auto-select category from pending hash or first
       const cats = this.bracketCategories();
       if (this._pendingCategory && cats.find(c => c.name === this._pendingCategory)) {
@@ -817,6 +826,15 @@ Alpine.data('tennisApp', () => ({
       if (!response.ok) { this.allPlayers = []; this.filteredPlayers = []; return; }
       const data = await response.json();
       this.allPlayers = Array.isArray(data) ? data : [];
+      // Build name map from all players (surname -> full name)
+      for (const p of this.allPlayers) {
+        const name = p.name || '';
+        if (name.includes(' ')) {
+          const parts = name.trim().split(/\s+/);
+          const surname = parts[parts.length - 1];
+          this.bracketNameMap[surname] = name;
+        }
+      }
       this.filterPlayers();
     } catch { this.allPlayers = []; this.filteredPlayers = []; }
     finally { this.playersLoading = false; }
@@ -910,6 +928,36 @@ Alpine.data('tennisApp', () => ({
   resolveBracketName(surname) {
     if (!surname) return '';
     return this.bracketNameMap[surname] || surname;
+  },
+
+  _buildBracketNameMap(data) {
+    if (!data) return;
+    // From group matches: map player names to surnames for lookup
+    for (const g of (data.groups || [])) {
+      for (const m of (g.matches || [])) {
+        for (const pName of [m.player_a, m.player_b]) {
+          if (pName && pName.includes(' ')) {
+            const parts = pName.trim().split(/\s+/);
+            const surname = parts[parts.length - 1];
+            this.bracketNameMap[surname] = pName;
+          }
+        }
+      }
+    }
+    // From knockout slots
+    if (data.knockout) {
+      for (const slots of Object.values(data.knockout)) {
+        for (const slot of (Array.isArray(slots) ? slots : [])) {
+          for (const pName of [slot.player1, slot.player2, slot.winner]) {
+            if (pName && pName.includes(' ')) {
+              const parts = pName.trim().split(/\s+/);
+              const surname = parts[parts.length - 1];
+              this.bracketNameMap[surname] = pName;
+            }
+          }
+        }
+      }
+    }
   },
 
   /* --- Bracket category helpers --- */

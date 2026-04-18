@@ -117,6 +117,16 @@ body {
   border: 1px solid rgba(255,255,255,0.25);
   border-radius: 10px;
   padding: 8px 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.lang-select option {
+  background: var(--bg, #fff);
+  color: var(--text, #0f1419);
+}
+[data-theme="dark"] .lang-select option {
+  background: #1a2332;
+  color: #e6edf3;
 }
 
 /* === Dark Mode Toggle === */
