@@ -324,15 +324,21 @@ def get_active_players():
 
 @players_public_bp.route('/all', methods=['GET'])
 def get_all_players():
-    """Get all players across all tournaments with match stats."""
+    """Get all players across all tournaments with match stats.
+    Deduplicates by global_player_id, aggregating stats across tournaments.
+    """
+    import json
     from wyniki.db_models import Player, Tournament, MatchHistory
     from sqlalchemy import func, or_
     
     # Query all players
     players = Player.query.join(Tournament).order_by(Player.last_name, Player.first_name).all()
     
+    # Deduplicate by global_player_id — aggregate stats across tournaments
+    seen_global = {}
     result = []
     for p in players:
+        gid = p.global_player_id
         full_name = p.full_name
         
         # Count matches where player appeared (as player_a or player_b)
@@ -349,7 +355,6 @@ def get_all_players():
             if not m.score_a or not m.score_b:
                 continue
             try:
-                import json
                 sa = json.loads(m.score_a) if isinstance(m.score_a, str) else m.score_a
                 sb = json.loads(m.score_b) if isinstance(m.score_b, str) else m.score_b
                 sets_a = sum(1 for i in range(len(sa)) for _ in [1] if i < len(sb) and sa[i] > sb[i])
@@ -361,9 +366,16 @@ def get_all_players():
             except (json.JSONDecodeError, TypeError):
                 pass
         
+        if gid and gid in seen_global:
+            # Already seen this global player — skip (stats are same since same full_name)
+            continue
+        
+        if gid:
+            seen_global[gid] = True
+        
         result.append({
             'id': p.id,
-            'global_player_id': p.global_player_id,
+            'global_player_id': gid,
             'name': full_name,
             'first_name': p.first_name or '',
             'last_name': p.last_name or '',

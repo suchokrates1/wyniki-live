@@ -400,7 +400,7 @@
                                                     <div class="bt-podium-item bt-podium-item--silver" role="listitem">
                                                         <span class="bt-podium-medal">🥈</span>
                                                         <span class="bt-podium-result">
-                                                            <strong x-text="resolveBracketName(ko.slots[0].winner === ko.slots[0].player1 ? ko.slots[0].player2 : ko.slots[0].player1)"></strong>
+                                                            <strong x-text="resolveBracketName(ko.slots[0].winner.includes(ko.slots[0].player1) ? ko.slots[0].player2 : ko.slots[0].player1)"></strong>
                                                             <small x-text="'2. ' + (tr().playerProfile?.place || 'miejsce')"></small>
                                                         </span>
                                                     </div>
@@ -741,7 +741,7 @@
                                                             <div class="bt-podium-item bt-podium-item--silver" role="listitem">
                                                                 <span class="bt-podium-medal">🥈</span>
                                                                 <span class="bt-podium-result">
-                                                                    <strong x-text="resolveBracketName(ko.slots[0].winner === ko.slots[0].player1 ? ko.slots[0].player2 : ko.slots[0].player1)"></strong>
+                                                                    <strong x-text="resolveBracketName(ko.slots[0].winner.includes(ko.slots[0].player1) ? ko.slots[0].player2 : ko.slots[0].player1)"></strong>
                                                                     <small x-text="'2. ' + (tr().playerProfile?.place || 'miejsce')"></small>
                                                                 </span>
                                                             </div>
@@ -1024,7 +1024,7 @@
                                             <template x-for="(m, mi) in t.matches" :key="'ppm-'+t.tournament_id+'-'+mi">
                                                 <div class="pp-match" :class="{ 'pp-match--won': m.won, 'pp-match--lost': !m.won }">
                                                     <span class="pp-match__result" x-text="m.won ? '✓' : '✗'"></span>
-                                                    <span class="pp-match__opponent" x-text="(tr().playerProfile?.vs || 'vs') + ' ' + m.opponent"></span>
+                                                    <span class="pp-match__opponent" x-text="(tr().playerProfile?.vs || 'vs') + ' ' + resolveBracketName(m.opponent)"></span>
                                                     <span class="pp-match__sets">
                                                         <template x-for="(s, si) in m.score" :key="'ppms-'+mi+'-'+si">
                                                             <span class="pp-match__set" :class="{ 'pp-match__set--stb': s.stb }">
