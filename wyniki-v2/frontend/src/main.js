@@ -557,6 +557,15 @@ Alpine.data('tennisApp', () => ({
   },
 
   init() {
+    // Restore language from URL param or localStorage
+    const urlLang = new URLSearchParams(location.search).get('lang');
+    if (urlLang && TRANSLATIONS[urlLang]) {
+      this.lang = urlLang;
+    } else {
+      const savedLang = localStorage.getItem('lang');
+      if (savedLang && TRANSLATIONS[savedLang]) this.lang = savedLang;
+    }
+    this.onLangChange();
     // Restore dark mode preference
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -674,6 +683,11 @@ Alpine.data('tennisApp', () => ({
   onLangChange() {
     document.documentElement.lang = this.tr().htmlLang || this.lang;
     document.title = this.tr().pageTitle || 'Wyniki tenisowe – na żywo';
+    localStorage.setItem('lang', this.lang);
+    // Update ?lang= URL parameter
+    const url = new URL(location.href);
+    url.searchParams.set('lang', this.lang);
+    history.replaceState(null, '', url.toString());
   },
 
   /* --- Dark mode --- */

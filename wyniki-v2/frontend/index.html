@@ -41,7 +41,7 @@
                     x-text="tr().tabs?.live || 'Na żywo'"></button>
             <button class="tab-btn" role="tab" :aria-selected="activeTab === 'tournaments'" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="activeTab = 'tournaments'; selectedTournamentId = ''; selectedPlayerId = null; _updateHash()"
                     x-text="tr().tabs?.tournaments || 'Historia'"></button>
-            <button class="tab-btn" role="tab" :aria-selected="activeTab === 'players'" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="activeTab = 'players'; selectedPlayerId = null; playerProfile = null; _profileIsGlobal = false; fetchAllPlayers(); _updateHash()"
+            <button class="tab-btn" role="tab" :aria-selected="activeTab === 'players'" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="activeTab = 'players'; selectedPlayerId = null; playerProfile = null; _profileIsGlobal = false; playerSearch = ''; playerGender = ''; playerCountry = ''; playerCategory = ''; fetchAllPlayers(); _updateHash()"
                     x-text="tr().tabs?.players || 'Zawodnicy'"></button>
         </nav>
         
