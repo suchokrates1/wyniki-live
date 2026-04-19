@@ -243,7 +243,7 @@
                                         :aria-controls="'cat-panel-'+cat.name.replace(/\s+/g,'-')"
                                         :class="{ 'cat-tab--active': bracketCategory === cat.name }"
                                         @click="bracketCategory = cat.name; _updateHash(true)"
-                                        x-text="cat.name">
+                                        x-text="translateCategory(cat.name)">
                                 </button>
                             </template>
                         </div>
@@ -444,8 +444,8 @@
                                         <span class="hm-player-name" x-text="match.player_a || '-'"></span>
                                         <span class="hm-sets">
                                             <template x-for="(set, i) in getMatchSets(match)" :key="'lha-'+i">
-                                                <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b }">
-                                                    <span x-text="set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a < set.b" x-text="set.tb"></sup>
+                                                <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b, 'hm-set-cell--stb': set.isSuperTB }">
+                                                    <span x-text="set.isSuperTB ? '['+set.a+']' : set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a < set.b" x-text="set.tb"></sup>
                                                 </span>
                                             </template>
                                         </span>
@@ -456,8 +456,8 @@
                                         <span class="hm-player-name" x-text="match.player_b || '-'"></span>
                                         <span class="hm-sets">
                                             <template x-for="(set, i) in getMatchSets(match)" :key="'lhb-'+i">
-                                                <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a }">
-                                                    <span x-text="set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b < set.a" x-text="set.tb"></sup>
+                                                <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a, 'hm-set-cell--stb': set.isSuperTB }">
+                                                    <span x-text="set.isSuperTB ? '['+set.b+']' : set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b < set.a" x-text="set.tb"></sup>
                                                 </span>
                                             </template>
                                         </span>
@@ -466,8 +466,8 @@
                                 <div class="hm-meta">
                                     <div class="hm-meta-left">
                                         <span class="hm-court-badge" x-text="(tr().history?.court || 'Kort') + ' ' + match.kort_id"></span>
-                                        <span class="hm-cat-badge" x-show="match.category" x-text="match.category"></span>
-                                        <span class="hm-phase" x-show="match.phase" x-text="match.phase"></span>
+                                        <span class="hm-cat-badge" x-show="match.category" x-text="translateCategory(match.category)"></span>
+                                        <span class="hm-phase" x-show="match.phase" x-text="translatePhase(match.phase)"></span>
                                         <span class="hm-time" x-show="match.duration_seconds">
                                             <svg class="hm-time-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v4.5l3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                             <span x-text="formatTime(match.duration_seconds)"></span>
@@ -585,7 +585,7 @@
                                                 :aria-controls="'tcat-panel-'+cat.name.replace(/\s+/g,'-')"
                                                 :class="{ 'cat-tab--active': tournamentBracketCategory === cat.name }"
                                                 @click="tournamentBracketCategory = cat.name"
-                                                x-text="cat.name">
+                                                x-text="translateCategory(cat.name)">
                                         </button>
                                     </template>
                                 </div>
@@ -808,8 +808,8 @@
                                     <div class="hm-meta">
                                         <div class="hm-meta-left">
                                             <span class="hm-court-badge" x-text="(tr().history?.court || 'Kort') + ' ' + match.kort_id"></span>
-                                            <span class="hm-cat-badge" x-show="match.category" x-text="match.category"></span>
-                                            <span class="hm-phase" x-show="match.phase" x-text="match.phase"></span>
+                                            <span class="hm-cat-badge" x-show="match.category" x-text="translateCategory(match.category)"></span>
+                                            <span class="hm-phase" x-show="match.phase" x-text="translatePhase(match.phase)"></span>
                                             <span class="hm-time" x-show="match.duration_seconds">
                                                 <svg class="hm-time-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v4.5l3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                                 <span x-text="formatTime(match.duration_seconds)"></span>
