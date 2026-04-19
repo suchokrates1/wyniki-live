@@ -70,7 +70,7 @@ const TRANSLATIONS = {
       group: 'Grupa', player: 'Zawodnik', wins: 'W', losses: 'L',
       setsHeader: 'Sety', gamesHeader: 'Gemy', matchesTitle: 'Mecze grupowe',
       knockoutTitle: 'Faza pucharowa', semifinal: 'Półfinał',
-      finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce'
+      finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce', forPlace: 'o'
     },
     tournamentHistory: {
       selectTournament: 'Wybierz turniej',
@@ -140,7 +140,7 @@ const TRANSLATIONS = {
       group: 'Gruppe', player: 'Spieler', wins: 'S', losses: 'N',
       setsHeader: 'Sätze', gamesHeader: 'Spiele', matchesTitle: 'Gruppenspiele',
       knockoutTitle: 'K.O.-Phase', semifinal: 'Halbfinale',
-      finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3'
+      finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3', forPlace: 'um Platz'
     },
     tournamentHistory: {
       selectTournament: 'Turnier auswählen',
@@ -210,7 +210,7 @@ const TRANSLATIONS = {
       group: 'Group', player: 'Player', wins: 'W', losses: 'L',
       setsHeader: 'Sets', gamesHeader: 'Games', matchesTitle: 'Group matches',
       knockoutTitle: 'Knockout stage', semifinal: 'Semifinal',
-      finalLabel: 'Final', thirdPlace: 'Third place match'
+      finalLabel: 'Final', thirdPlace: 'Third place match', forPlace: 'for'
     },
     tournamentHistory: {
       selectTournament: 'Select tournament',
@@ -280,7 +280,7 @@ const TRANSLATIONS = {
       group: 'Girone', player: 'Giocatore', wins: 'V', losses: 'S',
       setsHeader: 'Set', gamesHeader: 'Game', matchesTitle: 'Partite del girone',
       knockoutTitle: 'Fase a eliminazione', semifinal: 'Semifinale',
-      finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto'
+      finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto', forPlace: 'per il'
     },
     tournamentHistory: {
       selectTournament: 'Seleziona torneo',
@@ -350,7 +350,7 @@ const TRANSLATIONS = {
       group: 'Grupo', player: 'Jugador', wins: 'V', losses: 'D',
       setsHeader: 'Sets', gamesHeader: 'Juegos', matchesTitle: 'Partidos del grupo',
       knockoutTitle: 'Fase eliminatoria', semifinal: 'Semifinal',
-      finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar'
+      finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar', forPlace: 'por el'
     },
     tournamentHistory: {
       selectTournament: 'Seleccionar torneo',
@@ -420,7 +420,7 @@ const TRANSLATIONS = {
       group: 'Groupe', player: 'Joueur', wins: 'V', losses: 'D',
       setsHeader: 'Sets', gamesHeader: 'Jeux', matchesTitle: 'Matchs de groupe',
       knockoutTitle: 'Phase à élimination', semifinal: 'Demi-finale',
-      finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place'
+      finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place', forPlace: 'pour la'
     },
     tournamentHistory: {
       selectTournament: 'Sélectionner le tournoi',
@@ -945,9 +945,14 @@ Alpine.data('tennisApp', () => ({
     const t = this.tr();
     const women = t.history?.catWomen || 'Women';
     const men = t.history?.catMen || 'Men';
+    const final_ = t.bracket?.finalLabel || 'Final';
+    const forPlace = t.bracket?.forPlace || 'for';
+    const place = t.playerProfile?.place || 'place';
     return name
       .replace(/Kobiety/g, women)
-      .replace(/Mężczyźni/g, men);
+      .replace(/Mężczyźni/g, men)
+      .replace(/Finał/g, final_)
+      .replace(/o (\d+)\. miejsce/g, `${forPlace} $1. ${place}`);
   },
 
   _buildBracketNameMap(data) {

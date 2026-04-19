@@ -343,11 +343,11 @@
 
                                         <div class="bt-ladder">
                                             <template x-for="(ko, ki) in cat.knockout" :key="'ko-'+cat.name+'-'+ki">
-                                                <div class="bt-round" :class="{ 'bt-round--final': ko.phase.includes('Finał') }">
-                                                    <div class="bt-round-label" x-text="ko.phase"></div>
+                                                <div class="bt-round" :class="{ 'bt-round--final': ko.phase.includes('Fina') }">
+                                                    <div class="bt-round-label" x-text="translateCategory(ko.phase)"></div>
                                                     <template x-for="(slot, si) in ko.slots" :key="'kos-'+cat.name+'-'+ki+'-'+si">
                                                         <table class="bm-scoreboard bt-matchup"
-                                                             :class="{ 'bt-matchup--final': ko.phase.includes('Finał') }"
+                                                             :class="{ 'bt-matchup--final': ko.phase.includes('Fina') }"
                                                              role="group"
                                                              :aria-label="(resolveBracketName(slot.player1)||'?') + ' vs ' + (resolveBracketName(slot.player2)||'?')">
                                                             <tbody>
@@ -684,11 +684,11 @@
 
                                                 <div class="bt-ladder">
                                                     <template x-for="(ko, ki) in cat.knockout" :key="'tko-'+cat.name+'-'+ki">
-                                                        <div class="bt-round" :class="{ 'bt-round--final': ko.phase.includes('Finał') }">
-                                                            <div class="bt-round-label" x-text="ko.phase"></div>
+                                                        <div class="bt-round" :class="{ 'bt-round--final': ko.phase.includes('Fina') }">
+                                                            <div class="bt-round-label" x-text="translateCategory(ko.phase)"></div>
                                                             <template x-for="(slot, si) in ko.slots" :key="'tkos-'+cat.name+'-'+ki+'-'+si">
                                                                 <table class="bm-scoreboard bt-matchup"
-                                                                     :class="{ 'bt-matchup--final': ko.phase.includes('Finał') }"
+                                                                     :class="{ 'bt-matchup--final': ko.phase.includes('Fina') }"
                                                                      role="group"
                                                                      :aria-label="(resolveBracketName(slot.player1)||'?') + ' vs ' + (resolveBracketName(slot.player2)||'?')">
                                                                     <tbody>
