@@ -1006,15 +1006,15 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
             )
             cursor.execute("DELETE FROM bracket_groups WHERE tournament_id = ?", (tournament_id,))
 
-            # Build player_id -> last_name lookup
+            # Build player_id -> full name lookup
             cursor.execute(
                 "SELECT id, last_name, name FROM players WHERE tournament_id = ?",
                 (tournament_id,)
             )
             name_map = {}
             for row in cursor.fetchall():
-                ln = (row["last_name"] or "").strip()
-                name_map[row["id"]] = ln if ln else (row["name"] or "").strip()
+                full = (row["name"] or "").strip()
+                name_map[row["id"]] = full if full else (row["last_name"] or "").strip()
 
             for idx, g in enumerate(groups):
                 cursor.execute(
@@ -1424,14 +1424,15 @@ def get_full_bracket(tournament_id: int) -> Dict:
                     "score": r["score_summary"],
                     "sets": None,
                 }
-                # Auto-detect result from match data if not manually set
-                if slot["player1"] and slot["player2"] and not slot["winner"]:
+                # Auto-detect result from match data (always, to populate sets)
+                if slot["player1"] and slot["player2"]:
                     result = _detect_knockout_result(
                         cursor, slot["player1"], slot["player2"], start_date, end_date
                     )
                     if result:
-                        slot["winner"] = result["winner"]
-                        slot["score"] = result["score"]
+                        if not slot["winner"]:
+                            slot["winner"] = result["winner"]
+                            slot["score"] = result["score"]
                         slot["sets"] = result.get("sets")
 
                 knockout.setdefault(phase, []).append(slot)

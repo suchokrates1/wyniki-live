@@ -38,7 +38,7 @@ const TRANSLATIONS = {
       active: 'aktywny',
       serving: 'serwuje'
     },
-    history: { title: 'Historia meczów', court: 'Kort', vs: 'vs', score: 'wynik', time: 'czas', category: 'Kategoria' },
+    history: { title: 'Historia meczów', court: 'Kort', vs: 'vs', score: 'wynik', time: 'czas', category: 'Kategoria', phaseGroup: 'Grupowa', phaseKnockout: 'Pucharowa', catWomen: 'Kobiety', catMen: 'Mężczyźni' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Asy', doubleFaults: 'Podwójne błędy', winners: 'Winnery',
@@ -108,7 +108,7 @@ const TRANSLATIONS = {
       active: 'aktiv',
       serving: 'Aufschlag'
     },
-    history: { title: 'Match-Historie', court: 'Platz', vs: 'gegen', score: 'Ergebnis', time: 'Zeit', category: 'Kategorie' },
+    history: { title: 'Match-Historie', court: 'Platz', vs: 'gegen', score: 'Ergebnis', time: 'Zeit', category: 'Kategorie', phaseGroup: 'Gruppenphase', phaseKnockout: 'K.O.-Phase', catWomen: 'Frauen', catMen: 'Männer' },
     footer: { set: 'Satz' },
     stats: {
       aces: 'Asse', doubleFaults: 'Doppelfehler', winners: 'Winner',
@@ -178,7 +178,7 @@ const TRANSLATIONS = {
       active: 'active',
       serving: 'serving'
     },
-    history: { title: 'Match history', court: 'Court', vs: 'vs', score: 'score', time: 'time', category: 'Category' },
+    history: { title: 'Match history', court: 'Court', vs: 'vs', score: 'score', time: 'time', category: 'Category', phaseGroup: 'Group stage', phaseKnockout: 'Knockout', catWomen: 'Women', catMen: 'Men' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Double faults', winners: 'Winners',
@@ -248,7 +248,7 @@ const TRANSLATIONS = {
       active: 'attivo',
       serving: 'al servizio'
     },
-    history: { title: 'Storico incontri', court: 'Campo', vs: 'contro', score: 'risultato', time: 'tempo', category: 'Categoria' },
+    history: { title: 'Storico incontri', court: 'Campo', vs: 'contro', score: 'risultato', time: 'tempo', category: 'Categoria', phaseGroup: 'Fase a gironi', phaseKnockout: 'Eliminazione', catWomen: 'Donne', catMen: 'Uomini' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Ace', doubleFaults: 'Doppi falli', winners: 'Vincenti',
@@ -318,7 +318,7 @@ const TRANSLATIONS = {
       active: 'activo',
       serving: 'al servicio'
     },
-    history: { title: 'Historial de partidos', court: 'Cancha', vs: 'contra', score: 'resultado', time: 'tiempo', category: 'Categoría' },
+    history: { title: 'Historial de partidos', court: 'Cancha', vs: 'contra', score: 'resultado', time: 'tiempo', category: 'Categoría', phaseGroup: 'Fase de grupos', phaseKnockout: 'Eliminatoria', catWomen: 'Mujeres', catMen: 'Hombres' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Dobles faltas', winners: 'Ganadores',
@@ -388,7 +388,7 @@ const TRANSLATIONS = {
       active: 'actif',
       serving: 'au service'
     },
-    history: { title: 'Historique des matchs', court: 'Court', vs: 'contre', score: 'score', time: 'temps', category: 'Catégorie' },
+    history: { title: 'Historique des matchs', court: 'Court', vs: 'contre', score: 'score', time: 'temps', category: 'Catégorie', phaseGroup: 'Phase de groupes', phaseKnockout: 'Phase éliminatoire', catWomen: 'Femmes', catMen: 'Hommes' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Doubles fautes', winners: 'Coups gagnants',
@@ -930,6 +930,26 @@ Alpine.data('tennisApp', () => ({
     return this.bracketNameMap[surname] || surname;
   },
 
+  translatePhase(phase) {
+    if (!phase) return '';
+    const t = this.tr();
+    const map = {
+      'Grupowa': t.history?.phaseGroup || 'Group',
+      'Pucharowa': t.history?.phaseKnockout || 'Knockout',
+    };
+    return map[phase] || phase;
+  },
+
+  translateCategory(name) {
+    if (!name) return '';
+    const t = this.tr();
+    const women = t.history?.catWomen || 'Women';
+    const men = t.history?.catMen || 'Men';
+    return name
+      .replace(/Kobiety/g, women)
+      .replace(/Mężczyźni/g, men);
+  },
+
   _buildBracketNameMap(data) {
     if (!data) return;
     // From group matches: map player names to surnames for lookup
@@ -1347,19 +1367,22 @@ Alpine.data('tennisApp', () => ({
     const parts = [];
     const numSets = Math.max(scoreA.length, scoreB.length);
     for (let i = 0; i < numSets; i++) {
-      const a = scoreA[i] ?? 0;
-      const b = scoreB[i] ?? 0;
+      let a = scoreA[i] ?? 0;
+      let b = scoreB[i] ?? 0;
       if (a === 0 && b === 0 && i > 0) continue; // Skip unplayed sets
       
       // Check for tiebreak info from sets_history
       const setInfo = setsHistory?.find(sh => sh.set_number === i + 1);
       const tbLoser = setInfo?.tiebreak_loser_points;
       
-      // Detect super tiebreak (set 3, usually lower scores like 10:7)
-      const isSuperTB = i === 2 && parts.length === 2;
+      // Detect super tiebreak
+      const isSuperTB = setInfo?.is_super_tiebreak || (i === 2 && parts.length === 2 && Math.abs(a - b) <= 1);
       
-      if (isSuperTB) {
-        parts.push(`STB ${a}:${b}`);
+      if (isSuperTB && tbLoser != null) {
+        const winnerPts = Math.max(10, tbLoser + 2);
+        if (a > b) { a = winnerPts; b = tbLoser; }
+        else { a = tbLoser; b = winnerPts; }
+        parts.push(`[${a}:${b}]`);
       } else if (tbLoser != null && tbLoser >= 0) {
         // Tiebreak was played — compute full TB score
         // The set winner (more games) won the tiebreak
@@ -1404,19 +1427,25 @@ Alpine.data('tennisApp', () => ({
   /**
    * Parse match into per-set data objects for tabular scoreboard.
    * Returns: [{ a, b, tb, isSuperTB }, ...]
+   * For STB sets, converts raw games (1:0) to actual STB points.
    */
   getMatchSets(match) {
     if (!match.score_a || !match.score_b) return [];
     const sets = [];
     const numSets = Math.max(match.score_a.length, match.score_b.length);
     for (let i = 0; i < numSets; i++) {
-      const a = match.score_a[i] ?? 0;
-      const b = match.score_b[i] ?? 0;
+      let a = match.score_a[i] ?? 0;
+      let b = match.score_b[i] ?? 0;
       if (a === 0 && b === 0 && i > 0) continue;
       const setInfo = match.sets_history?.find(sh => sh.set_number === i + 1);
       const tb = setInfo?.tiebreak_loser_points ?? null;
-      const isSuperTB = i === 2 && sets.length === 2;
-      sets.push({ a, b, tb, isSuperTB });
+      const isSuperTB = setInfo?.is_super_tiebreak || (i === 2 && sets.length === 2 && Math.abs(a - b) <= 1);
+      if (isSuperTB && tb !== null && tb !== undefined) {
+        const winnerPts = Math.max(10, tb + 2);
+        if (a > b) { a = winnerPts; b = tb; }
+        else { a = tb; b = winnerPts; }
+      }
+      sets.push({ a, b, tb: isSuperTB ? null : tb, isSuperTB });
     }
     return sets;
   },
