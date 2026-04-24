@@ -549,8 +549,8 @@
                       :value="selectedTournament || ''"
                       @change="selectedTournament = (+$event.target.value || null); if (selectedTournament) { loadPlayers(selectedTournament); } else { players = []; }">
                 <option value="">Wybierz turniej</option>
-                <template x-for="tournament in tournaments" :key="'players_tournament_'+tournament.id">
-                  <option :value="tournament.id" x-text="tournament.name + (tournament.active ? ' (active)' : '')"></option>
+                <template x-for="tournament in activeTournamentsList()" :key="'players_tournament_'+tournament.id">
+                  <option :value="tournament.id" x-text="tournament.name"></option>
                 </template>
               </select>
             </div>
@@ -779,8 +779,8 @@
                         :value="currentOverlay()?.tournament_id || ''"
                         @change="setCurrentOverlayTournament($event.target.value)">
                   <option value="">Bez przypisania</option>
-                  <template x-for="tournament in tournaments" :key="'overlay_tournament_'+tournament.id">
-                    <option :value="tournament.id" x-text="tournament.name + (tournament.active ? ' (slot ' + activeTournamentSlot(tournament.id) + ')' : ' (inactive)')"></option>
+                  <template x-for="tournament in activeTournamentsList()" :key="'overlay_tournament_'+tournament.id">
+                    <option :value="tournament.id" x-text="tournament.name + ' (slot ' + activeTournamentSlot(tournament.id) + ')' "></option>
                   </template>
                 </select>
               </div>

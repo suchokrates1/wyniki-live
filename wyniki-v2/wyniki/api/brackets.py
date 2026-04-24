@@ -32,11 +32,12 @@ def public_bracket():
 
 @bracket_public_bp.route('/list')
 def public_tournament_list():
-    """List all tournaments (for history/bracket browsing)."""
+    """List active tournaments for public live/history browsing."""
     from wyniki.db_models import Tournament, Player
     from sqlalchemy import func
     tournaments = (
         Tournament.query
+        .filter(Tournament.active == 1)
         .outerjoin(Player, Player.tournament_id == Tournament.id)
         .add_columns(func.count(Player.id).label('player_count'))
         .group_by(Tournament.id)

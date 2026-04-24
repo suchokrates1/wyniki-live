@@ -31,7 +31,7 @@ def initialize_state() -> None:
     
     # Load courts from database
     try:
-        db_courts_list = fetch_courts()
+        db_courts_list = fetch_courts(active_only=True)
         db_courts = [row["kort_id"] for row in db_courts_list]
         
         if not db_courts:
@@ -40,7 +40,7 @@ def initialize_state() -> None:
             tournament_id = get_active_tournament_id()
             if tournament_id:
                 db_courts = create_tournament_courts(tournament_id, 5)
-                db_courts_list = fetch_courts()
+                db_courts_list = fetch_courts(active_only=True)
         
         refresh_courts_from_db(db_courts_list, seed_if_empty=False)
         logger.info(f"Loaded {len(db_courts)} courts from database")
