@@ -621,7 +621,7 @@ def upsert_court(
                 INSERT INTO courts (kort_id, pin, name, tournament_id, display_order, active)
                 VALUES (?, ?, ?, ?, ?, 1)
                 ON CONFLICT(kort_id) DO UPDATE SET
-                    pin=excluded.pin,
+                    pin=COALESCE(excluded.pin, courts.pin),
                     name=COALESCE(excluded.name, courts.name),
                     tournament_id=COALESCE(excluded.tournament_id, courts.tournament_id),
                     display_order=COALESCE(excluded.display_order, courts.display_order)
@@ -1056,10 +1056,18 @@ def create_tournament_courts(tournament_id: int, court_count: int) -> List[str]:
     if total <= 0:
         return created_courts
 
+    existing_ids = {
+        str(court.get("kort_id") or "")
+        for court in fetch_courts_for_tournament(tournament_id)
+    }
+
     for index in range(1, total + 1):
         kort_id = f"t{tournament_id}-{index}"
+        if kort_id in existing_ids:
+            continue
         upsert_court(
             kort_id=kort_id,
+            pin="0000",
             name=str(index),
             tournament_id=tournament_id,
             display_order=index,

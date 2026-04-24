@@ -527,7 +527,7 @@ Alpine.data('adminApp', () => ({
     try {
       const payload = new FormData();
       Object.entries(this.editTournament).forEach(([key, value]) => {
-        if (['id', 'logo', 'logo_path', 'court_count'].includes(key)) return;
+        if (['id', 'logo', 'logo_path'].includes(key)) return;
         payload.append(key, value ?? '');
       });
       if (this.editTournament.logo) {
@@ -559,7 +559,7 @@ Alpine.data('adminApp', () => ({
       }
     } catch (err) {
       console.error('Failed to update tournament:', err);
-      this.showToast('Błąd zapisu turnieju', 'error');
+      this.showToast(err.message || 'Błąd zapisu turnieju', 'error');
     }
   },
 
