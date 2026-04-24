@@ -17,6 +17,8 @@ Alpine.data('adminApp', () => ({
   newCourtPin: '',
   editingCourt: null,
   editCourtId: '',
+  courtTournamentFilterOpen: false,
+  selectedCourtTournamentIds: [],
   
   // Tournaments
   tournaments: [],
@@ -138,6 +140,67 @@ Alpine.data('adminApp', () => ({
   get filteredPlayers() {
     return this.players;
   },
+
+  get availableCourtTournamentOptions() {
+    const counts = new Map();
+    this.courts.forEach((court) => {
+      const rawId = court.tournament_id;
+      const tournamentId = rawId == null ? '__none__' : String(rawId);
+      const existing = counts.get(tournamentId);
+      if (existing) {
+        existing.count += 1;
+        return;
+      }
+      counts.set(tournamentId, {
+        id: tournamentId,
+        name: court.tournament_name || 'Bez turnieju',
+        count: 1,
+      });
+    });
+    return Array.from(counts.values())
+      .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  },
+
+  get visibleCourtGroups() {
+    const selected = new Set(this.selectedCourtTournamentIds.map(String));
+    const groups = new Map();
+    this.courts.forEach((court) => {
+      const tournamentId = court.tournament_id == null ? '__none__' : String(court.tournament_id);
+      if (selected.size && !selected.has(tournamentId)) return;
+      if (!groups.has(tournamentId)) {
+        groups.set(tournamentId, {
+          id: tournamentId,
+          name: court.tournament_name || 'Bez turnieju',
+          courts: [],
+        });
+      }
+      groups.get(tournamentId).courts.push(court);
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        courts: group.courts.sort((a, b) => {
+          const orderA = Number(a.display_order || 0);
+          const orderB = Number(b.display_order || 0);
+          if (orderA !== orderB) return orderA - orderB;
+          return String(a.name || a.kort_id).localeCompare(String(b.name || b.kort_id), 'pl');
+        }),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  },
+
+  get selectedCourtTournamentSummary() {
+    if (!this.selectedCourtTournamentIds.length) {
+      return 'Wszystkie turnieje';
+    }
+    if (this.selectedCourtTournamentIds.length === 1) {
+      const selectedId = String(this.selectedCourtTournamentIds[0]);
+      const selected = this.availableCourtTournamentOptions.find(option => option.id === selectedId);
+      return selected?.name || '1 turniej';
+    }
+    return `${this.selectedCourtTournamentIds.length} turnieje`;
+  },
   
   init() {
     this.loadCourts();
@@ -175,6 +238,7 @@ Alpine.data('adminApp', () => ({
       const response = await fetch('/admin/api/courts');
       if (!response.ok) throw new Error('Failed to load courts');
       this.courts = await response.json();
+      this.syncSelectedCourtTournamentIds();
       // Set default addElCourtId to first court if not set
       if (this.courts.length && !this.courts.find(c => String(c.kort_id) === this.addElCourtId)) {
         this.addElCourtId = String(this.courts[0].kort_id);
@@ -190,6 +254,33 @@ Alpine.data('adminApp', () => ({
   async refreshCourts() {
     await this.loadCourts();
     this.showToast('Korty odświeżone', 'success');
+  },
+
+  syncSelectedCourtTournamentIds() {
+    const availableIds = new Set(this.availableCourtTournamentOptions.map(option => String(option.id)));
+    this.selectedCourtTournamentIds = this.selectedCourtTournamentIds.filter(id => availableIds.has(String(id)));
+    if (!this.selectedCourtTournamentIds.length) {
+      this.selectedCourtTournamentIds = this.availableCourtTournamentOptions
+        .filter(option => option.id !== '__none__')
+        .map(option => String(option.id));
+    }
+  },
+
+  toggleCourtTournamentSelection(tournamentId) {
+    const normalizedId = String(tournamentId);
+    if (this.selectedCourtTournamentIds.includes(normalizedId)) {
+      this.selectedCourtTournamentIds = this.selectedCourtTournamentIds.filter(id => id !== normalizedId);
+      return;
+    }
+    this.selectedCourtTournamentIds = [...this.selectedCourtTournamentIds, normalizedId];
+  },
+
+  selectAllCourtTournaments() {
+    this.selectedCourtTournamentIds = this.availableCourtTournamentOptions.map(option => String(option.id));
+  },
+
+  clearCourtTournamentSelection() {
+    this.selectedCourtTournamentIds = [];
   },
   
   async updateCourtPin(kortId, pin) {

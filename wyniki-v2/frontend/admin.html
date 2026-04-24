@@ -226,36 +226,79 @@
     <div x-show="activeTab === 'courts'" x-cloak>
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-          <h2 class="card-title">Zarz&#261;dzanie kortami</h2>
-          <div class="overflow-x-auto">
-            <table class="table table-zebra">
-              <thead><tr><th>Kort</th><th>Turniej</th><th>PIN</th><th>Status / Mecz</th><th>Bateria</th><th>Akcje</th></tr></thead>
-              <tbody>
-                <template x-for="court in courts" :key="court.kort_id">
-                  <tr>
-                    <td>
-                      <template x-if="editingCourt !== court.kort_id">
-                        <div>
-                          <div class="font-bold" x-text="'Kort ' + (court.name || court.kort_id)"></div>
-                          <div class="text-xs opacity-60" x-text="court.kort_id"></div>
-                        </div>
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <h2 class="card-title">Zarz&#261;dzanie kortami</h2>
+            <div class="dropdown dropdown-end" :class="{'dropdown-open': courtTournamentFilterOpen}">
+              <button @click="courtTournamentFilterOpen = !courtTournamentFilterOpen" class="btn btn-outline btn-sm min-w-56 justify-between">
+                <span x-text="selectedCourtTournamentSummary"></span>
+                <span class="opacity-70">▼</span>
+              </button>
+              <div x-show="courtTournamentFilterOpen" @click.outside="courtTournamentFilterOpen = false" x-cloak class="dropdown-content z-[20] mt-2 w-80 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                  <span class="text-sm font-semibold">Pokaż korty turniejów</span>
+                  <div class="flex gap-2">
+                    <button @click="selectAllCourtTournaments()" class="btn btn-ghost btn-xs">Wszystkie</button>
+                    <button @click="clearCourtTournamentSelection()" class="btn btn-ghost btn-xs">Wyczyść</button>
+                  </div>
+                </div>
+                <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  <template x-for="option in availableCourtTournamentOptions" :key="option.id">
+                    <label class="label cursor-pointer justify-start gap-3 rounded-lg px-2 py-1 hover:bg-base-200">
+                      <input type="checkbox" class="checkbox checkbox-sm" :checked="selectedCourtTournamentIds.includes(String(option.id))" @change="toggleCourtTournamentSelection(option.id)">
+                      <span class="label-text flex-1">
+                        <span x-text="option.name"></span>
+                        <span class="text-xs opacity-60 ml-2" x-text="'(' + option.count + ')' "></span>
+                      </span>
+                    </label>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 space-y-6">
+            <template x-for="group in visibleCourtGroups" :key="group.id">
+              <section class="rounded-box border border-base-300 bg-base-100">
+                <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-base-300 bg-base-200/60">
+                  <div>
+                    <h3 class="font-bold text-lg" x-text="group.name"></h3>
+                    <p class="text-xs opacity-70" x-text="group.courts.length + ' kortów'"></p>
+                  </div>
+                  <span class="badge badge-outline" x-text="group.id === '__none__' ? 'bez przypisania' : 'turniej'"></span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="table table-zebra">
+                    <thead><tr><th>Kort</th><th>PIN</th><th>Status / Mecz</th><th>Bateria</th><th>Akcje</th></tr></thead>
+                    <tbody>
+                      <template x-for="court in group.courts" :key="court.kort_id">
+                        <tr>
+                          <td>
+                            <template x-if="editingCourt !== court.kort_id">
+                              <div>
+                                <div class="font-bold" x-text="'Kort ' + (court.name || court.kort_id)"></div>
+                                <div class="text-xs opacity-60" x-text="court.kort_id"></div>
+                              </div>
+                            </template>
+                            <template x-if="editingCourt === court.kort_id"><input type="text" x-model="editCourtId" class="input input-sm input-bordered w-24" @keyup.enter="saveCourt(court.kort_id)" @keyup.escape="cancelEdit()"></template>
+                          </td>
+                          <td><input type="text" x-model="court.pin" @change="updateCourtPin(court.kort_id, $event.target.value)" class="input input-sm input-bordered w-24" placeholder="PIN" maxlength="4" pattern="[0-9]{4}"></td>
+                          <td x-html="courtStatusInfo(court.kort_id)"></td>
+                          <td x-html="batteryIndicator(courtData[court.kort_id])"></td>
+                          <td class="flex gap-1">
+                            <template x-if="editingCourt !== court.kort_id"><button @click="startEdit(court.kort_id)" class="btn btn-sm btn-ghost" title="Edytuj">&#9999;&#65039;</button></template>
+                            <template x-if="editingCourt === court.kort_id"><div class="flex gap-1"><button @click="saveCourt(court.kort_id)" class="btn btn-sm btn-success">&#10003;</button><button @click="cancelEdit()" class="btn btn-sm btn-ghost">&#10007;</button></div></template>
+                            <template x-if="courtData[court.kort_id]?.match_status?.active"><button @click="resetCourt(court.kort_id)" class="btn btn-sm btn-ghost text-warning" title="Resetuj mecz">&#128260;</button></template>
+                            <button @click="deleteCourt(court.kort_id)" class="btn btn-sm btn-ghost text-error" title="Usu&#324;">&#128465;&#65039;</button>
+                          </td>
+                        </tr>
                       </template>
-                      <template x-if="editingCourt === court.kort_id"><input type="text" x-model="editCourtId" class="input input-sm input-bordered w-24" @keyup.enter="saveCourt(court.kort_id)" @keyup.escape="cancelEdit()"></template>
-                    </td>
-                    <td x-text="court.tournament_name || '-' "></td>
-                    <td><input type="text" x-model="court.pin" @change="updateCourtPin(court.kort_id, $event.target.value)" class="input input-sm input-bordered w-24" placeholder="PIN" maxlength="4" pattern="[0-9]{4}"></td>
-                    <td x-html="courtStatusInfo(court.kort_id)"></td>
-                    <td x-html="batteryIndicator(courtData[court.kort_id])"></td>
-                    <td class="flex gap-1">
-                      <template x-if="editingCourt !== court.kort_id"><button @click="startEdit(court.kort_id)" class="btn btn-sm btn-ghost" title="Edytuj">&#9999;&#65039;</button></template>
-                      <template x-if="editingCourt === court.kort_id"><div class="flex gap-1"><button @click="saveCourt(court.kort_id)" class="btn btn-sm btn-success">&#10003;</button><button @click="cancelEdit()" class="btn btn-sm btn-ghost">&#10007;</button></div></template>
-                      <template x-if="courtData[court.kort_id]?.match_status?.active"><button @click="resetCourt(court.kort_id)" class="btn btn-sm btn-ghost text-warning" title="Resetuj mecz">&#128260;</button></template>
-                      <button @click="deleteCourt(court.kort_id)" class="btn btn-sm btn-ghost text-error" title="Usu&#324;">&#128465;&#65039;</button>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </template>
+
+            <div class="alert alert-info" x-show="visibleCourtGroups.length === 0"><span>Brak kortów dla wybranych turniejów.</span></div>
           </div>
           <div class="mt-4 flex gap-2">
             <input type="text" x-model="newCourtId" placeholder="ID nowego kortu (np. 6)" class="input input-bordered input-sm">
