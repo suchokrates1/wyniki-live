@@ -93,7 +93,8 @@ def stream4():
 
 
 @blueprint.route('/overlay/<overlay_id>')
-def overlay_page(overlay_id):
+@blueprint.route('/overlay/<int:tournament_slot>/<overlay_id>')
+def overlay_page(overlay_id, tournament_slot=None):
     """Serve overlay page for any preset (e.g. /overlay/1, /overlay/all, /overlay/split_1_2)."""
     response = send_from_directory(APP_ROOT, 'overlay.html')
     response.headers['Content-Type'] = 'text/html; charset=utf-8'

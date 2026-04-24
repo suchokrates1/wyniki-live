@@ -928,12 +928,18 @@ Alpine.data('adminApp', () => ({
       if (response.ok) {
         this.overlaySettings = await response.json();
         // Migrate: ensure grid defaults exist on each overlay
-        Object.values(this.overlaySettings.overlays || {}).forEach(ov => this._ensureGridDefaults(ov));
+        Object.values(this.overlaySettings.overlays || {}).forEach(ov => {
+          this._ensureGridDefaults(ov);
+          if (ov.tournament_id != null && ov.tournament_id !== '') {
+            ov.tournament_id = Number(ov.tournament_id) || null;
+          }
+        });
         // Auto-select first overlay if current is missing
         const ids = Object.keys(this.overlaySettings.overlays || {});
         if (ids.length && !this.overlaySettings.overlays[this.currentOverlayId]) {
           this.currentOverlayId = ids[0];
         }
+        this.addElCourtId = this.overlayCourtOptions()[0]?.value || '1';
       }
     } catch (err) {
       console.error('Failed to load overlay settings:', err);
@@ -953,6 +959,116 @@ Alpine.data('adminApp', () => ({
       console.error('Failed to save overlay settings:', err);
       this.showToast('Błąd zapisu ustawień overlay', 'error');
     }
+  },
+
+  getTournamentById(tournamentId) {
+    const normalizedId = Number(tournamentId);
+    if (!normalizedId) return null;
+    return this.tournaments.find(tournament => Number(tournament.id) === normalizedId) || null;
+  },
+
+  activeTournamentsList() {
+    return (this.tournaments || []).filter(tournament => tournament.active);
+  },
+
+  activeTournamentSlot(tournamentId) {
+    const normalizedId = Number(tournamentId);
+    if (!normalizedId) return null;
+    const index = this.activeTournamentsList().findIndex(tournament => Number(tournament.id) === normalizedId);
+    return index >= 0 ? index + 1 : null;
+  },
+
+  currentOverlayTournamentId(overlay = null) {
+    const targetOverlay = overlay || this.currentOverlay();
+    const normalizedId = Number(targetOverlay?.tournament_id);
+    return normalizedId > 0 ? normalizedId : null;
+  },
+
+  currentOverlayTournament() {
+    return this.getTournamentById(this.currentOverlayTournamentId());
+  },
+
+  overlayBrandingLogo(overlay = null) {
+    const tournament = this.getTournamentById(this.currentOverlayTournamentId(overlay));
+    return tournament?.logo_path || this.overlaySettings.tournament_logo || null;
+  },
+
+  overlayBrandingName(overlay = null) {
+    const tournament = this.getTournamentById(this.currentOverlayTournamentId(overlay));
+    return tournament?.name || this.overlaySettings.tournament_name || '';
+  },
+
+  overlayUrl(overlayId = null) {
+    const targetOverlayId = overlayId || this.currentOverlayId;
+    if (!targetOverlayId) return '';
+    const overlay = (this.overlaySettings.overlays || {})[targetOverlayId];
+    if (!overlay) return '';
+    const tournamentId = this.currentOverlayTournamentId(overlay);
+    if (tournamentId) {
+      const slot = this.activeTournamentSlot(tournamentId);
+      if (!slot) return '';
+      return location.origin + '/overlay/' + slot + '/' + targetOverlayId;
+    }
+    return location.origin + '/overlay/' + targetOverlayId;
+  },
+
+  overlayCourtEntries(overlay = null) {
+    const targetOverlay = overlay || this.currentOverlay();
+    const tournamentId = this.currentOverlayTournamentId(targetOverlay);
+    if (!tournamentId) {
+      return (this.courts || []).map(court => ({
+        value: String(court.kort_id),
+        label: 'Kort ' + (court.name || court.kort_id),
+        court,
+      }));
+    }
+    return (this.courts || [])
+      .filter(court => Number(court.tournament_id) === tournamentId)
+      .sort((a, b) => {
+        const orderA = Number(a.display_order || 0);
+        const orderB = Number(b.display_order || 0);
+        if (orderA !== orderB) return orderA - orderB;
+        return String(a.name || a.kort_id).localeCompare(String(b.name || b.kort_id), undefined, { numeric: true, sensitivity: 'base' });
+      })
+      .map((court, index) => ({
+        value: String(index + 1),
+        label: 'Kort ' + (court.name || index + 1),
+        court,
+      }));
+  },
+
+  overlayCourtOptions(overlay = null) {
+    const entries = this.overlayCourtEntries(overlay);
+    return entries.length ? entries : [{ value: '1', label: 'Kort 1', court: null }];
+  },
+
+  resolveOverlayCourt(overlay, courtToken) {
+    const entries = this.overlayCourtEntries(overlay);
+    const token = String(courtToken ?? '');
+    const exact = entries.find(entry => String(entry.value) === token || String(entry.court?.kort_id || '') === token);
+    if (exact) return exact.court;
+    const ordinal = Number.parseInt(token, 10);
+    if (!Number.isNaN(ordinal) && ordinal > 0 && ordinal <= entries.length) {
+      return entries[ordinal - 1]?.court || null;
+    }
+    return null;
+  },
+
+  resolveOverlayCourtData(courtToken, overlay = null) {
+    const targetOverlay = overlay || this.currentOverlay();
+    const court = this.resolveOverlayCourt(targetOverlay, courtToken);
+    if (!court?.kort_id) return {};
+    return this.courtData[String(court.kort_id)] || {};
+  },
+
+  setCurrentOverlayTournament(tournamentId) {
+    const overlay = this.currentOverlay();
+    if (!overlay) return;
+    const normalizedId = Number(tournamentId);
+    overlay.tournament_id = normalizedId > 0 ? normalizedId : null;
+    this.addElCourtId = this.overlayCourtOptions(overlay)[0]?.value || '1';
+    this.saveOverlaySettings();
+    this._fitPreviewNames();
   },
 
   // ===== DEMO DATA =====
@@ -1318,8 +1434,8 @@ Alpine.data('adminApp', () => ({
     const ov = this.currentOverlay();
     if (!ov) return;
 
-    // Get dynamic court IDs from loaded courts
-    const courtIds = this.courts.map(c => String(c.kort_id)).sort((a, b) => +a - +b);
+    // Get dynamic court IDs scoped to the selected overlay tournament
+    const courtIds = this.overlayCourtOptions(ov).map(option => String(option.value));
     if (courtIds.length === 0) {
       this.showToast('Brak kortów — dodaj korty najpierw', 'warning');
       return;
@@ -1503,52 +1619,14 @@ Alpine.data('adminApp', () => ({
 
   /** Auto-add scoreboard element for a new court to all overlay presets */
   _addCourtToOverlays(courtId) {
-    const overlays = this.overlaySettings.overlays || {};
-    const cid = String(courtId);
-    let changed = false;
-    Object.values(overlays).forEach(ov => {
-      // Skip if this court already has an element in this overlay
-      const hasElement = (ov.elements || []).some(el => el.court_id === cid);
-      if (hasElement) return;
-
-      // Find reference element to copy style from (first court-type element)
-      const refEl = (ov.elements || []).find(el => el.type === 'court');
-      const newEl = refEl ? JSON.parse(JSON.stringify(refEl)) : {
-        type: 'court', visible: true, x: 100, y: 100, w: 460,
-        show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
-        zone: 'free', label_position: 'above', label_gap: 4,
-        label_bg_opacity: 0.85, label_font_size: 14,
-      };
-      newEl.court_id = cid;
-      newEl.label_text = 'KORT ' + cid;
-      // Offset position so it doesn't overlap exactly
-      if (refEl) {
-        newEl.x = Math.min(1920 - (newEl.w || 460), (refEl.x || 0) + 40);
-        newEl.y = Math.min(1080 - 80, (refEl.y || 0) + 40);
-      }
-      newEl.zone = 'free';
-      if (!ov.elements) ov.elements = [];
-      ov.elements.push(newEl);
-      changed = true;
-    });
-    if (changed) this.saveOverlaySettings();
+    // Overlay layouts are now scoped per tournament and use court ordinals,
+    // so court additions do not mutate existing presets automatically.
   },
 
   /** Auto-remove elements for a deleted court from all overlay presets */
   _removeCourtFromOverlays(courtId) {
-    const overlays = this.overlaySettings.overlays || {};
-    const cid = String(courtId);
-    let changed = false;
-    Object.values(overlays).forEach(ov => {
-      const before = (ov.elements || []).length;
-      ov.elements = (ov.elements || []).filter(el => el.court_id !== cid);
-      if (ov.elements.length !== before) changed = true;
-    });
-    if (changed) {
-      this.selectedElIdx = -1;
-      this.selectedElIdxSet = [];
-      this.saveOverlaySettings();
-    }
+    // Overlay layouts are now scoped per tournament and use court ordinals,
+    // so court removals do not mutate existing presets automatically.
   },
 
   addOverlay() {
@@ -1556,10 +1634,12 @@ Alpine.data('adminApp', () => ({
     let newId = 'custom_1';
     let n = 1;
     while (ids.includes(newId)) { n++; newId = 'custom_' + n; }
+    const defaultTournamentId = this.selectedTournament || this.activeTournamentsList()[0]?.id || null;
     if (!this.overlaySettings.overlays) this.overlaySettings.overlays = {};
     this.overlaySettings.overlays[newId] = {
       name: 'Nowy overlay ' + n,
       auto_hide: false,
+      tournament_id: defaultTournamentId,
       top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 },
       elements: [
         { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460, zone: 'free',
@@ -1569,6 +1649,7 @@ Alpine.data('adminApp', () => ({
     };
     this.currentOverlayId = newId;
     this.selectedElIdx = -1;
+    this.addElCourtId = this.overlayCourtOptions(this.overlaySettings.overlays[newId])[0]?.value || '1';
     this.saveOverlaySettings();
     this.showToast('Overlay dodany', 'success');
   },
@@ -1598,10 +1679,11 @@ Alpine.data('adminApp', () => ({
   addElement(type) {
     const ov = this.currentOverlay();
     if (!ov) return;
+    const defaultCourtId = this.addElCourtId || this.overlayCourtOptions(ov)[0]?.value || '1';
     if (type === 'court') {
       ov.elements.push({
         type: 'court',
-        court_id: this.addElCourtId || '1',
+        court_id: defaultCourtId,
         visible: true,
         x: 100, y: 100, w: 460,
         show_logo: true,
@@ -1609,12 +1691,12 @@ Alpine.data('adminApp', () => ({
         bg_opacity: 0.95,
         logo_size: 60,
         zone: 'free',
-        label_text: 'KORT ' + (this.addElCourtId || '1'),
+        label_text: 'KORT ' + defaultCourtId,
         label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14,
       });
     } else {
       ov.elements.push({
-        type: 'stats', court_id: this.addElCourtId || '1',
+        type: 'stats', court_id: defaultCourtId,
         visible: true, x: 100, y: 400, w: 360, zone: 'free',
       });
     }
@@ -1762,7 +1844,7 @@ Alpine.data('adminApp', () => ({
   // ===== LIVE SCOREBOARD RENDER IN PREVIEW =====
   renderLiveScoreboard(el) {
     const courtId = el.court_id;
-    const court = this.courtData[courtId] || {};
+    const court = this.resolveOverlayCourtData(courtId);
     const pA = court.A || {}, pB = court.B || {};
     const active = court.match_status?.active || false;
     const curSet = court.current_set || 1;
@@ -1779,7 +1861,7 @@ Alpine.data('adminApp', () => ({
     const ptA = isTie ? (court.tie?.A || 0) : (pA.points || '0');
     const ptB = isTie ? (court.tie?.B || 0) : (pB.points || '0');
     const tbCls = isTie ? ' is-tiebreak' : '';
-    const logo = this.overlaySettings.tournament_logo;
+    const logo = this.overlayBrandingLogo();
     const showLogo = el.show_logo;
     const inactiveClass = active ? '' : 'match-inactive';
 
@@ -1922,7 +2004,7 @@ Alpine.data('adminApp', () => ({
       const bg = 'rgba(0,0,0,' + (el.label_bg_opacity != null ? el.label_bg_opacity : 0.7) + ')';
       const fs = el.label_font_size || 14;
       const belowCls = pos === 'below' ? ' label-below' : '';
-      const court = this.courtData[el.court_id] || {};
+      const court = this.resolveOverlayCourtData(el.court_id);
       const timeStr = this._calcMatchTime(court);
       const timeHtml = timeStr ? '<span class="label-sep">|</span><span class="label-time">⏱ ' + timeStr + '</span>' : '';
       label = '<div class="sb-label-bar' + belowCls + '" style="background:' + bg + ';font-size:' + fs + 'px;">'
@@ -1955,7 +2037,7 @@ Alpine.data('adminApp', () => ({
   },
 
   renderStatsPanel(el) {
-    const court = this.courtData[el.court_id] || {};
+    const court = this.resolveOverlayCourtData(el.court_id);
     const active = court.match_status?.active || false;
     if (!active) return '<div class="sp-title">Statystyki</div><div style="text-align:center;opacity:0.4;font-size:11px;">Brak aktywnego meczu</div>';
     const st = court.stats || {};

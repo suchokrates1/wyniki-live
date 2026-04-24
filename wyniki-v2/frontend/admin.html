@@ -542,7 +542,21 @@
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
           <h2 class="card-title">Gracze w turnieju</h2>
-          <div x-show="!selectedTournament" class="alert alert-warning"><span>Wybierz turniej z zak&#322;adki "Turnieje" aby zarz&#261;dza&#263; graczami</span></div>
+          <div class="flex flex-col md:flex-row gap-3 md:items-end mb-4">
+            <div class="form-control md:w-80">
+              <label class="label"><span class="label-text">Turniej</span></label>
+              <select class="select select-bordered select-sm"
+                      :value="selectedTournament || ''"
+                      @change="selectedTournament = (+$event.target.value || null); if (selectedTournament) { loadPlayers(selectedTournament); } else { players = []; }">
+                <option value="">Wybierz turniej</option>
+                <template x-for="tournament in tournaments" :key="'players_tournament_'+tournament.id">
+                  <option :value="tournament.id" x-text="tournament.name + (tournament.active ? ' (active)' : '')"></option>
+                </template>
+              </select>
+            </div>
+            <div x-show="selectedTournament" class="badge badge-outline badge-primary md:mb-2" x-text="getTournamentById(selectedTournament)?.name || ''"></div>
+          </div>
+          <div x-show="!selectedTournament" class="alert alert-warning"><span>Wybierz turniej tutaj, aby zarz&#261;dza&#263; zawodnikami tego turnieju</span></div>
           <div x-show="selectedTournament">
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
               <div class="form-control"><label class="label"><span class="label-text">Imi&#281;</span></label><input type="text" x-model="newPlayer.first_name" class="input input-bordered input-sm" placeholder="Jan"></div>
@@ -626,7 +640,7 @@
       <div class="flex items-center gap-3 mb-4 flex-wrap">
         <span class="font-bold text-sm opacity-70">OVERLAY:</span>
         <template x-for="(ov, oid) in (overlaySettings.overlays || {})" :key="'otab_'+oid">
-          <button @click="currentOverlayId = oid; selectedElIdx = -1;"
+          <button @click="currentOverlayId = oid; selectedElIdx = -1; addElCourtId = overlayCourtOptions((overlaySettings.overlays || {})[oid])[0]?.value || '1';"
                   :class="currentOverlayId === oid ? 'btn-primary' : 'btn-ghost'"
                   class="btn btn-sm" x-text="ov.name || oid"></button>
         </template>
@@ -641,8 +655,8 @@
         </button>
         <button x-show="demoPreview" @click="clearDemo()" class="btn btn-sm btn-outline btn-ghost">&times; Wyczy&#347;&#263;</button>
         <div class="flex-1"></div>
-        <span class="text-xs font-mono opacity-50" x-text="currentOverlayId ? (location.origin+'/overlay/'+currentOverlayId) : ''"></span>
-        <button x-show="currentOverlayId" @click="copyUrl(location.origin+'/overlay/'+currentOverlayId)" class="btn btn-xs btn-ghost">&#128203;</button>
+        <span class="text-xs font-mono opacity-50" x-text="overlayUrl() || 'Wybierz aktywny turniej dla overlayu'"></span>
+        <button x-show="overlayUrl()" @click="copyUrl(overlayUrl())" class="btn btn-xs btn-ghost">&#128203;</button>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-4" x-show="currentOverlayId">
@@ -728,8 +742,8 @@
                 <h3 class="font-bold text-sm">Elementy</h3>
                 <div class="flex-1"></div>
                 <select x-model="addElCourtId" class="select select-xs select-bordered w-20">
-                  <template x-for="c in courts" :key="'addel_'+c.kort_id">
-                    <option :value="c.kort_id" x-text="'Kort '+c.kort_id"></option>
+                  <template x-for="option in overlayCourtOptions()" :key="'addel_'+option.value">
+                    <option :value="option.value" x-text="option.label"></option>
                   </template>
                 </select>
                 <button @click="addElement('court')" class="btn btn-xs btn-success">+ Kort</button>
@@ -758,6 +772,17 @@
                 <input type="text" class="input input-xs input-bordered flex-1 prop-input"
                        :value="currentOverlay()?.name || ''"
                        @change="updateOverlayProp('name', $event.target.value)">
+              </div>
+              <div class="prop-row mb-2">
+                <span class="prop-label">Turniej</span>
+                <select class="select select-xs select-bordered flex-1"
+                        :value="currentOverlay()?.tournament_id || ''"
+                        @change="setCurrentOverlayTournament($event.target.value)">
+                  <option value="">Bez przypisania</option>
+                  <template x-for="tournament in tournaments" :key="'overlay_tournament_'+tournament.id">
+                    <option :value="tournament.id" x-text="tournament.name + (tournament.active ? ' (slot ' + activeTournamentSlot(tournament.id) + ')' : ' (inactive)')"></option>
+                  </template>
+                </select>
               </div>
               <div class="form-control">
                 <label class="label cursor-pointer py-0">
@@ -821,8 +846,8 @@
               <!-- Preset templates -->
               <div class="flex gap-1 flex-wrap mb-2">
                 <span class="text-xs opacity-50 self-center w-full mb-1">&#128196; Szablony uk&#322;adu:</span>
-                <template x-for="c in courts" :key="'tpl_focus_'+c.kort_id">
-                  <button @click="applyTemplate('kort'+c.kort_id+'-focus')" class="btn btn-xs btn-outline" x-text="'Kort '+c.kort_id+' focus'"></button>
+                <template x-for="option in overlayCourtOptions()" :key="'tpl_focus_'+option.value">
+                  <button @click="applyTemplate('kort'+option.value+'-focus')" class="btn btn-xs btn-outline" x-text="option.label + ' focus'"></button>
                 </template>
                 <button @click="applyTemplate('3kort-top')" class="btn btn-xs btn-outline">3 korty g&oacute;ra</button>
                 <button @click="applyTemplate('4kort-top')" class="btn btn-xs btn-outline">4 korty g&oacute;ra</button>
@@ -1012,8 +1037,8 @@
                       <select class="select select-xs select-bordered flex-1"
                               :value="selectedEl()?.court_id || '1'"
                               @change="setElProp('court_id', $event.target.value)">
-                        <template x-for="c in courts" :key="'statsc_'+c.kort_id">
-                          <option :value="c.kort_id" x-text="'Kort '+c.kort_id"></option>
+                        <template x-for="option in overlayCourtOptions()" :key="'statsc_'+option.value">
+                          <option :value="option.value" x-text="option.label"></option>
                         </template>
                       </select>
                     </div>
@@ -1037,20 +1062,22 @@
             <div class="card-body p-3">
               <h3 class="font-bold text-sm mb-2">Logo turnieju</h3>
               <div class="flex items-center gap-3 mb-2">
-                <div x-show="overlaySettings.tournament_logo" class="w-16 h-16 rounded-lg overflow-hidden bg-base-300 flex-shrink-0">
-                  <img :src="overlaySettings.tournament_logo" class="w-full h-full object-cover">
+                <div x-show="overlayBrandingLogo()" class="w-16 h-16 rounded-lg overflow-hidden bg-base-300 flex-shrink-0">
+                  <img :src="overlayBrandingLogo()" class="w-full h-full object-cover">
                 </div>
-                <div x-show="!overlaySettings.tournament_logo" class="w-16 h-16 rounded-lg bg-base-300 flex items-center justify-center text-2xl flex-shrink-0">&#127934;</div>
+                <div x-show="!overlayBrandingLogo()" class="w-16 h-16 rounded-lg bg-base-300 flex items-center justify-center text-2xl flex-shrink-0">&#127934;</div>
                 <div class="flex-1">
+                  <div class="text-xs opacity-60 mb-1" x-text="currentOverlayTournament() ? 'Logo z edycji turnieju: ' + (currentOverlayTournament()?.name || '') : 'Fallback globalny dla overlayów bez przypisanego turnieju'"></div>
                   <input type="file" accept="image/*" @change="onLogoFileSelect($event)" class="file-input file-input-xs file-input-bordered w-full">
-                  <button x-show="overlaySettings.tournament_logo" @click="removeLogo()" class="btn btn-xs btn-ghost text-error mt-1">Usu&#324; logo</button>
+                  <button x-show="overlaySettings.tournament_logo && !currentOverlayTournament()?.logo_path" @click="removeLogo()" class="btn btn-xs btn-ghost text-error mt-1">Usu&#324; fallback logo</button>
                 </div>
               </div>
               <div class="prop-row">
                 <span class="prop-label">Nazwa</span>
                 <input type="text" class="input input-xs input-bordered flex-1 prop-input"
-                       :value="overlaySettings.tournament_name || ''"
-                       @change="overlaySettings.tournament_name = $event.target.value; saveOverlaySettings()">
+                       :value="overlayBrandingName()"
+                       :disabled="!!currentOverlayTournament()"
+                       @change="if (!currentOverlayTournament()) { overlaySettings.tournament_name = $event.target.value; saveOverlaySettings(); }">
               </div>
             </div>
           </div>
@@ -1062,8 +1089,8 @@
               <div class="space-y-1">
                 <template x-for="(ov, oid) in (overlaySettings.overlays || {})" :key="'url_'+oid">
                   <div class="flex items-center gap-1">
-                    <span class="text-xs font-mono opacity-60 truncate flex-1" x-text="location.origin + '/overlay/' + oid"></span>
-                    <button @click="copyUrl(location.origin+'/overlay/'+oid)" class="btn btn-xs btn-ghost">&#128203;</button>
+                    <span class="text-xs font-mono opacity-60 truncate flex-1" x-text="overlayUrl(oid) || ('Brak aktywnego slotu dla: ' + (getTournamentById(ov.tournament_id)?.name || 'nieprzypisany turniej'))"></span>
+                    <button x-show="overlayUrl(oid)" @click="copyUrl(overlayUrl(oid))" class="btn btn-xs btn-ghost">&#128203;</button>
                   </div>
                 </template>
               </div>
