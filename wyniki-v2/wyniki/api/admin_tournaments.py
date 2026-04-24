@@ -118,6 +118,8 @@ def create_tournament():
         created_courts = create_tournament_courts(tournament_id, court_count)
         if active:
             set_active_tournament(tournament_id)
+        from ..services.court_manager import refresh_courts_from_db
+        refresh_courts_from_db(fetch_courts(active_only=True))
         return jsonify({
             "id": tournament_id,
             "message": "Tournament created",
@@ -191,7 +193,7 @@ def update_tournament_route(tournament_id: int):
     if success:
         court_changes = sync_tournament_courts(tournament_id, requested_court_count)
         from ..services.court_manager import refresh_courts_from_db
-        refresh_courts_from_db(fetch_courts())
+        refresh_courts_from_db(fetch_courts(active_only=True))
         if active:
             set_active_tournament(tournament_id)
         return jsonify({
@@ -209,6 +211,8 @@ def delete_tournament_route(tournament_id: int):
     success = delete_tournament(tournament_id)
     
     if success:
+        from ..services.court_manager import refresh_courts_from_db
+        refresh_courts_from_db(fetch_courts(active_only=True))
         return jsonify({"message": "Tournament deleted"})
     else:
         return jsonify({"error": "Failed to delete tournament"}), 500
@@ -233,6 +237,8 @@ def update_tournament_active_state(tournament_id: int):
     success = set_tournament_active_state(tournament_id, active)
 
     if success:
+        from ..services.court_manager import refresh_courts_from_db
+        refresh_courts_from_db(fetch_courts(active_only=True))
         return jsonify({"message": "Tournament state updated", "active": active})
     return jsonify({"error": "Failed to update tournament state"}), 500
 

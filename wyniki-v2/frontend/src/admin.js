@@ -418,13 +418,16 @@ Alpine.data('adminApp', () => ({
       const response = await fetch('/admin/api/tournaments');
       if (!response.ok) throw new Error('Failed to load tournaments');
       this.tournaments = await response.json();
-      // Auto-select active tournament if none selected
-      if (!this.selectedTournament) {
-        const active = this.tournaments.find(t => t.active);
-        if (active) {
-          this.selectedTournament = active.id;
-          await this.loadPlayers(active.id);
-        }
+      const activeTournaments = this.activeTournamentsList();
+      const selectedStillActive = activeTournaments.some(t => Number(t.id) === Number(this.selectedTournament));
+
+      if (!selectedStillActive) {
+        this.selectedTournament = activeTournaments[0]?.id || null;
+        this.players = [];
+      }
+
+      if (this.selectedTournament) {
+        await this.loadPlayers(this.selectedTournament);
       }
     } catch (err) {
       console.error('Failed to load tournaments:', err);

@@ -495,12 +495,12 @@ def delete_latest_history_entry() -> Optional[Dict]:
         return None
 
 
-def fetch_courts() -> List[Dict[str, Optional[str]]]:
-    """Fetch all courts from database."""
+def fetch_courts(active_only: bool = False) -> List[Dict[str, Optional[str]]]:
+    """Fetch courts from database, optionally limited to active tournaments."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            query = """
                 SELECT
                     c.kort_id,
                     c.pin,
@@ -511,8 +511,11 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
                     t.name AS tournament_name
                 FROM courts c
                 LEFT JOIN tournaments t ON t.id = c.tournament_id
-                ORDER BY COALESCE(c.tournament_id, 0), c.display_order, c.kort_id
-            """)
+            """
+            if active_only:
+                query += " WHERE COALESCE(t.active, 0) = 1"
+            query += " ORDER BY COALESCE(c.tournament_id, 0), c.display_order, c.kort_id"
+            cursor.execute(query)
             rows = cursor.fetchall()
         
         courts = [
@@ -527,7 +530,7 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
             }
             for row in rows
         ]
-        logger.debug("courts_fetched", count=len(courts))
+        logger.debug("courts_fetched", count=len(courts), active_only=active_only)
         return courts
     except Exception as e:
         logger.error("fetch_courts_error", error=str(e))

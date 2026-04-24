@@ -82,7 +82,7 @@ def delete_court(kort_id):
             return jsonify({"error": "Court not found"}), 404
         
         # Refresh in-memory state
-        db_courts_list = database.fetch_courts()
+        db_courts_list = database.fetch_courts(active_only=True)
         court_manager.refresh_courts_from_db(db_courts_list)
         
         logger.info(f"Court deleted: kort={kort_id}")
@@ -139,7 +139,7 @@ def update_court(kort_id):
             return jsonify({"error": "Court not found or new ID already exists"}), 400
         
         # Refresh in-memory state
-        db_courts_list = database.fetch_courts()
+        db_courts_list = database.fetch_courts(active_only=True)
         court_manager.refresh_courts_from_db(db_courts_list)
         
         logger.info(f"Court renamed: {kort_id} -> {new_kort_id}")

@@ -15,7 +15,7 @@ def snapshot():
     try:
         from ..database import fetch_courts, get_active_tournament_name
         courts_data = serialize_public_snapshot()
-        configured_courts = fetch_courts()
+        configured_courts = fetch_courts(active_only=True)
         tournament_names = sorted({
             court.get("tournament_name") for court in configured_courts if court.get("tournament_name")
         })
