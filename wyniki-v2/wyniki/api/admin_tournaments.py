@@ -16,6 +16,9 @@ from ..database import (
     set_active_tournament,
     set_tournament_active_state,
     create_tournament_courts,
+    sync_tournament_courts,
+    fetch_courts_for_tournament,
+    fetch_courts,
     fetch_players,
     fetch_active_tournament_players,
     fetch_players_for_active_tournaments,
@@ -140,12 +143,38 @@ def update_tournament_route(tournament_id: int):
     city = (data.get('city') or '').strip()
     country = (data.get('country') or '').strip().upper()
     report_email = (data.get('report_email') or '').strip()
+    requested_court_count = _normalize_int(data.get('court_count'), existing.get('court_count') or 0)
     logo_path = existing.get('logo_path')
     if request.files.get('logo'):
         logo_path = _save_tournament_logo(request.files.get('logo'), name)
     
     if not all([name, start_date, end_date]):
         return jsonify({"error": "Missing required fields"}), 400
+
+    if requested_court_count < 0:
+        return jsonify({"error": "Court count cannot be negative"}), 400
+
+    current_courts = fetch_courts_for_tournament(tournament_id)
+    current_count = len(current_courts)
+    if requested_court_count < current_count:
+        from ..services.court_manager import get_court_state
+
+        removable_candidates = sorted(
+            current_courts,
+            key=lambda court: (int(court.get('display_order') or 0), str(court.get('kort_id') or '')),
+            reverse=True,
+        )[: current_count - requested_court_count]
+        busy_courts = []
+        for court in removable_candidates:
+            kort_id = str(court.get('kort_id') or '')
+            state = get_court_state(kort_id)
+            if state and state.get('match_status', {}).get('active'):
+                busy_courts.append(kort_id)
+
+        if busy_courts:
+            return jsonify({
+                "error": f"Cannot remove active courts: {', '.join(busy_courts)}",
+            }), 400
     
     success = update_tournament(
         tournament_id,
@@ -160,9 +189,16 @@ def update_tournament_route(tournament_id: int):
     )
     
     if success:
+        court_changes = sync_tournament_courts(tournament_id, requested_court_count)
+        from ..services.court_manager import refresh_courts_from_db
+        refresh_courts_from_db(fetch_courts())
         if active:
             set_active_tournament(tournament_id)
-        return jsonify({"message": "Tournament updated"})
+        return jsonify({
+            "message": "Tournament updated",
+            "created_courts": court_changes["created"],
+            "deleted_courts": court_changes["deleted"],
+        })
     else:
         return jsonify({"error": "Failed to update tournament"}), 500
 

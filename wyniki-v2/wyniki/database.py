@@ -1068,6 +1068,41 @@ def create_tournament_courts(tournament_id: int, court_count: int) -> List[str]:
     return created_courts
 
 
+def sync_tournament_courts(tournament_id: int, court_count: int) -> Dict[str, List[str]]:
+    """Adjust tournament courts to the requested count.
+
+    Adds missing trailing courts or removes trailing inactive ones.
+    Courts with active matches must be handled by the caller before removal.
+    """
+    requested_total = max(0, int(court_count or 0))
+    existing_courts = fetch_courts_for_tournament(tournament_id)
+    existing_total = len(existing_courts)
+
+    if requested_total == existing_total:
+        return {"created": [], "deleted": []}
+
+    if requested_total > existing_total:
+        created = create_tournament_courts(tournament_id, requested_total)
+        created = created[existing_total:]
+        return {"created": created, "deleted": []}
+
+    courts_to_delete = sorted(
+        existing_courts,
+        key=lambda court: (int(court.get("display_order") or 0), str(court.get("kort_id") or "")),
+        reverse=True,
+    )[: existing_total - requested_total]
+
+    deleted_ids: List[str] = []
+    for court in courts_to_delete:
+        kort_id = str(court.get("kort_id") or "")
+        if not kort_id:
+            continue
+        if delete_court(kort_id):
+            deleted_ids.append(kort_id)
+
+    return {"created": [], "deleted": deleted_ids}
+
+
 def mark_tournament_summary_sent(tournament_id: int, sent_at: Optional[str] = None) -> bool:
     """Persist the timestamp of a sent tournament summary email."""
     from datetime import datetime, timezone

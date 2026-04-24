@@ -268,7 +268,42 @@
 
     <!-- Tournaments Tab -->
     <div x-show="activeTab === 'tournaments'" x-cloak>
-      <div class="card bg-base-100 shadow-xl mb-6">
+      <div x-show="editingTournamentId" class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 class="card-title">Edycja turnieju</h2>
+              <p class="text-sm opacity-70 mt-1">Edytujesz dane turnieju i opcjonalnie podmieniasz logo.</p>
+            </div>
+            <button @click="cancelTournamentEdit()" class="btn btn-ghost">Powrót do listy</button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div class="form-control"><label class="label"><span class="label-text">Nazwa turnieju</span></label><input type="text" x-model="editTournament.name" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Data rozpoczęcia</span></label><input type="date" x-model="editTournament.start_date" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Data zakończenia</span></label><input type="date" x-model="editTournament.end_date" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Liczba kortów</span></label><input type="number" min="0" x-model="editTournament.court_count" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Miasto</span></label><input type="text" x-model="editTournament.city" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Kraj</span></label><input type="text" x-model="editTournament.country" class="input input-bordered" maxlength="2"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Email raportów</span></label><input type="email" x-model="editTournament.report_email" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Nowe logo</span></label><input type="file" accept="image/*" @change="onEditTournamentLogoSelected" class="file-input file-input-bordered"></div>
+          </div>
+
+          <div class="flex items-center gap-3 mt-4">
+            <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-success" x-model="editTournament.active"><span class="label-text">Turniej aktywny</span></label>
+            <template x-if="editTournament.logo_path">
+              <a :href="editTournament.logo_path" target="_blank" class="link link-primary text-sm">Obecne logo</a>
+            </template>
+          </div>
+
+          <div class="card-actions justify-end mt-6">
+            <button @click="cancelTournamentEdit()" class="btn btn-ghost">Anuluj</button>
+            <button @click="saveTournamentEdit()" class="btn btn-primary">Zapisz turniej</button>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="!editingTournamentId" class="card bg-base-100 shadow-xl mb-6">
         <div class="card-body">
           <h2 class="card-title">Dodaj nowy turniej</h2>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
@@ -284,7 +319,7 @@
           <div class="card-actions justify-end mt-4"><button @click="createTournament()" class="btn btn-primary">Utw&#243;rz turniej</button></div>
         </div>
       </div>
-      <div class="card bg-base-100 shadow-xl mb-6">
+      <div x-show="!editingTournamentId" class="card bg-base-100 shadow-xl mb-6">
         <div class="card-body">
           <h2 class="card-title">Ustawienia email / SMTP</h2>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
@@ -301,7 +336,7 @@
           <div class="card-actions justify-end mt-4"><button @click="saveEmailSettings()" class="btn btn-primary">Zapisz SMTP</button></div>
         </div>
       </div>
-      <div class="card bg-base-100 shadow-xl">
+      <div x-show="!editingTournamentId" class="card bg-base-100 shadow-xl">
         <div class="card-body">
           <h2 class="card-title">Lista turniej&#243;w</h2>
           <div x-show="loading.tournaments" class="space-y-4"><div class="skeleton h-12 w-full"></div><div class="skeleton h-12 w-full"></div></div>
@@ -326,6 +361,7 @@
                       >
                     </td>
                     <td class="flex gap-2">
+                      <button @click="openTournamentEditor(tournament)" class="btn btn-xs btn-outline">Edytuj</button>
                       <button @click="selectTournament(tournament.id)" class="btn btn-xs btn-ghost">&#128203; Gracze</button>
                       <button @click="deleteTournament(tournament.id)" class="btn btn-xs btn-error">Usu&#324;</button>
                     </td>
