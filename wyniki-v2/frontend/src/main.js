@@ -1159,11 +1159,23 @@ Alpine.data('tennisApp', () => ({
 
   /* --- Court helpers --- */
   getCourtIds() {
-    return Object.keys(this.courts)
-      .map(id => parseInt(id))
-      .filter(id => !isNaN(id) && id > 0)
-      .sort((a, b) => a - b)
-      .map(id => id.toString());
+    return Object.entries(this.courts)
+      .sort(([, a], [, b]) => {
+        const tournamentA = String(a?.tournament_name || '');
+        const tournamentB = String(b?.tournament_name || '');
+        if (tournamentA !== tournamentB) return tournamentA.localeCompare(tournamentB);
+        const orderA = Number(a?.display_order || 0);
+        const orderB = Number(b?.display_order || 0);
+        if (orderA !== orderB) return orderA - orderB;
+        return String(a?.court_name || '').localeCompare(String(b?.court_name || ''));
+      })
+      .map(([id]) => id);
+  },
+
+  getCourtDisplayLabel(courtId) {
+    const court = this.courts[courtId] || {};
+    const display = court.court_name || courtId;
+    return this.t('courtLabel', { court: display });
   },
 
   hasActiveCourts() {
@@ -1189,7 +1201,10 @@ Alpine.data('tennisApp', () => ({
 
   /* --- Heading aria for screen readers --- */
   getHeadingAria(courtId) {
-    const courtLabel = this.t('courtLabel', { court: courtId });
+    const court = this.courts[courtId] || {};
+    const courtLabel = court.tournament_name
+      ? `${court.tournament_name}: ${this.getCourtDisplayLabel(courtId)}`
+      : this.getCourtDisplayLabel(courtId);
     const nameA = this.getPlayerName(courtId, 'A');
     const nameB = this.getPlayerName(courtId, 'B');
     const vs = this.acc().versus || 'kontra';
@@ -1529,7 +1544,10 @@ Alpine.data('tennisApp', () => ({
    */
   getHistoryAriaLabel(match) {
     const h = this.tr().history || {};
-    const court = `${h.court || 'Kort'} ${match.kort_id}`;
+    const courtName = match.court_name || match.kort_id;
+    const court = match.tournament_name
+      ? `${match.tournament_name}: ${h.court || 'Kort'} ${courtName}`
+      : `${h.court || 'Kort'} ${courtName}`;
     const players = `${match.player_a || '-'} ${h.vs || 'vs'} ${match.player_b || '-'}`;
     const parts = [court, players];
 

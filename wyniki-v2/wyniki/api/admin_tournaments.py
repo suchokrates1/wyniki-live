@@ -1,24 +1,69 @@
 """Admin API routes for tournaments and players management."""
 from flask import Blueprint, jsonify, request
+from pathlib import Path
 from typing import Dict, Any
+from uuid import uuid4
+
+from werkzeug.utils import secure_filename
 
 from ..database import (
     fetch_tournaments,
+    fetch_active_tournaments,
     fetch_tournament,
     insert_tournament,
     update_tournament,
     delete_tournament,
     set_active_tournament,
+    set_tournament_active_state,
+    create_tournament_courts,
     fetch_players,
     fetch_active_tournament_players,
+    fetch_players_for_active_tournaments,
     insert_player,
     update_player,
     delete_player,
     bulk_insert_players
 )
-from ..config import logger
+from ..config import logger, settings
 
 blueprint = Blueprint('admin_tournaments', __name__, url_prefix='/admin/api/tournaments')
+
+
+def _request_payload() -> Dict[str, Any]:
+    """Read tournament payload from JSON or multipart form."""
+    if request.is_json:
+        return request.get_json(silent=True) or {}
+    return request.form.to_dict()
+
+
+def _normalize_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _save_tournament_logo(uploaded_file, tournament_name: str) -> str | None:
+    """Save uploaded tournament logo and return public path."""
+    if not uploaded_file or not uploaded_file.filename:
+        return None
+
+    data_dir = Path(settings.database_path).parent
+    logos_dir = data_dir / 'tournament-logos'
+    logos_dir.mkdir(parents=True, exist_ok=True)
+
+    extension = Path(secure_filename(uploaded_file.filename)).suffix.lower() or '.png'
+    stem = secure_filename(tournament_name) or 'tournament'
+    file_name = f"{stem}-{uuid4().hex[:8]}{extension}"
+    target = logos_dir / file_name
+    uploaded_file.save(target)
+    return f"/data/tournament-logos/{file_name}"
 
 
 @blueprint.route('', methods=['GET'])
@@ -40,20 +85,41 @@ def get_tournament(tournament_id: int):
 @blueprint.route('', methods=['POST'])
 def create_tournament():
     """Create a new tournament."""
-    data = request.get_json()
+    data = _request_payload()
     
-    name = data.get('name')
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
-    active = data.get('active', False)
+    name = (data.get('name') or '').strip()
+    start_date = (data.get('start_date') or '').strip()
+    end_date = (data.get('end_date') or '').strip()
+    active = _normalize_bool(data.get('active', False))
+    city = (data.get('city') or '').strip()
+    country = (data.get('country') or '').strip().upper()
+    report_email = (data.get('report_email') or '').strip()
+    court_count = _normalize_int(data.get('court_count'), 0)
+    logo_path = _save_tournament_logo(request.files.get('logo'), name)
     
     if not all([name, start_date, end_date]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    tournament_id = insert_tournament(name, start_date, end_date, active)
+    tournament_id = insert_tournament(
+        name,
+        start_date,
+        end_date,
+        active=active,
+        city=city,
+        country=country,
+        logo_path=logo_path,
+        report_email=report_email,
+    )
     
     if tournament_id:
-        return jsonify({"id": tournament_id, "message": "Tournament created"}), 201
+        created_courts = create_tournament_courts(tournament_id, court_count)
+        if active:
+            set_active_tournament(tournament_id)
+        return jsonify({
+            "id": tournament_id,
+            "message": "Tournament created",
+            "created_courts": created_courts,
+        }), 201
     else:
         return jsonify({"error": "Failed to create tournament"}), 500
 
@@ -61,19 +127,41 @@ def create_tournament():
 @blueprint.route('/<int:tournament_id>', methods=['PUT'])
 def update_tournament_route(tournament_id: int):
     """Update a tournament."""
-    data = request.get_json()
+    existing = fetch_tournament(tournament_id)
+    if not existing:
+        return jsonify({"error": "Tournament not found"}), 404
+
+    data = _request_payload()
     
-    name = data.get('name')
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
-    active = data.get('active', False)
+    name = (data.get('name') or '').strip()
+    start_date = (data.get('start_date') or '').strip()
+    end_date = (data.get('end_date') or '').strip()
+    active = _normalize_bool(data.get('active', False))
+    city = (data.get('city') or '').strip()
+    country = (data.get('country') or '').strip().upper()
+    report_email = (data.get('report_email') or '').strip()
+    logo_path = existing.get('logo_path')
+    if request.files.get('logo'):
+        logo_path = _save_tournament_logo(request.files.get('logo'), name)
     
     if not all([name, start_date, end_date]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    success = update_tournament(tournament_id, name, start_date, end_date, active)
+    success = update_tournament(
+        tournament_id,
+        name,
+        start_date,
+        end_date,
+        active,
+        city=city,
+        country=country,
+        logo_path=logo_path,
+        report_email=report_email,
+    )
     
     if success:
+        if active:
+            set_active_tournament(tournament_id)
         return jsonify({"message": "Tournament updated"})
     else:
         return jsonify({"error": "Failed to update tournament"}), 500
@@ -99,6 +187,18 @@ def activate_tournament(tournament_id: int):
         return jsonify({"message": "Tournament activated"})
     else:
         return jsonify({"error": "Failed to activate tournament"}), 500
+
+
+@blueprint.route('/<int:tournament_id>/active', methods=['PUT'])
+def update_tournament_active_state(tournament_id: int):
+    """Toggle active state for a single tournament without affecting others."""
+    data = request.get_json(silent=True) or {}
+    active = _normalize_bool(data.get('active', False))
+    success = set_tournament_active_state(tournament_id, active)
+
+    if success:
+        return jsonify({"message": "Tournament state updated", "active": active})
+    return jsonify({"error": "Failed to update tournament state"}), 500
 
 
 # ==================== PLAYERS ====================
@@ -300,10 +400,25 @@ def bulk_import_players(tournament_id: int):
 players_public_bp = Blueprint('players_public', __name__, url_prefix='/api/players')
 
 
+@blueprint.route('/active', methods=['GET'])
+def get_active_tournaments_admin():
+    """Get only active tournaments for admin integrations."""
+    return jsonify(fetch_active_tournaments())
+
+
+tournaments_public_bp = Blueprint('tournaments_public', __name__, url_prefix='/api/tournaments')
+
+
+@tournaments_public_bp.route('/active', methods=['GET'])
+def get_active_tournaments_public():
+    """Get active tournaments for the Android app selection screen."""
+    return jsonify(fetch_active_tournaments())
+
+
 @players_public_bp.route('/active', methods=['GET'])
 def get_active_players():
-    """Get players from active tournament (for Umpire App)."""
-    players = fetch_active_tournament_players()
+    """Get players from all active tournaments (for Umpire App)."""
+    players = fetch_players_for_active_tournaments()
     
     # Format for Umpire mobile app
     result = [

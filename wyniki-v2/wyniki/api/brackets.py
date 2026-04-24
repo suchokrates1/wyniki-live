@@ -23,8 +23,8 @@ bracket_admin_bp = Blueprint('bracket_admin', __name__, url_prefix='/admin/api/t
 
 @bracket_public_bp.route('/bracket')
 def public_bracket():
-    """Full bracket for active tournament (groups + standings + knockout)."""
-    tid = get_active_tournament_id()
+    """Full bracket for a requested tournament or the first active one."""
+    tid = request.args.get('tournament_id', type=int) or get_active_tournament_id()
     if not tid:
         return jsonify({"error": "No active tournament"}), 404
     return jsonify(get_full_bracket(tid))

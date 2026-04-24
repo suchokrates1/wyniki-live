@@ -69,10 +69,16 @@ class Tournament(db.Model):
     end_date = db.Column(db.String(50), nullable=False)
     active = db.Column(db.Integer, default=0)
     location = db.Column(db.String(200), nullable=True, default='')
+    city = db.Column(db.String(200), nullable=True, default='')
+    country = db.Column(db.String(50), nullable=True, default='')
+    logo_path = db.Column(db.String(500), nullable=True)
+    report_email = db.Column(db.String(255), nullable=True, default='')
+    summary_sent_at = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
     
     # Relationships
     players = db.relationship('Player', back_populates='tournament', cascade='all, delete-orphan')
+    courts = db.relationship('Court', back_populates='tournament', lazy='dynamic')
     
     def to_dict(self):
         return {
@@ -82,6 +88,12 @@ class Tournament(db.Model):
             'end_date': self.end_date,
             'active': self.active,
             'location': self.location or '',
+            'city': self.city or '',
+            'country': self.country or '',
+            'logo_path': self.logo_path,
+            'report_email': self.report_email or '',
+            'summary_sent_at': self.summary_sent_at,
+            'court_count': self.courts.count() if self.courts is not None else 0,
             'created_at': self.created_at
         }
 
@@ -139,12 +151,21 @@ class Court(db.Model):
     
     kort_id = db.Column(db.String(50), primary_key=True)
     pin = db.Column(db.String(10))
+    name = db.Column(db.String(200), nullable=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id', ondelete='SET NULL'), nullable=True)
+    display_order = db.Column(db.Integer, default=0)
     active = db.Column(db.Integer, default=1)
+
+    tournament = db.relationship('Tournament', back_populates='courts')
     
     def to_dict(self):
         return {
             'kort_id': self.kort_id,
             'pin': self.pin,
+            'name': self.name or self.kort_id,
+            'tournament_id': self.tournament_id,
+            'display_order': self.display_order,
+            'tournament_name': self.tournament.name if self.tournament else None,
             'active': self.active
         }
 

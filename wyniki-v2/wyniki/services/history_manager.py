@@ -14,9 +14,8 @@ def add_match_to_history(kort_id: str, state: Dict[str, Any]) -> None:
     """Add completed match to history."""
     entry = _build_history_entry(kort_id, state)
     
-    # Attach active tournament ID
-    from ..database import get_active_tournament_id
-    entry["tournament_id"] = get_active_tournament_id()
+    from ..database import get_tournament_id_for_court, get_active_tournament_id
+    entry["tournament_id"] = get_tournament_id_for_court(kort_id) or get_active_tournament_id()
     
     with STATE_LOCK:
         GLOBAL_HISTORY.append(entry)

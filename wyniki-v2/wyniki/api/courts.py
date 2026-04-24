@@ -1,5 +1,5 @@
 """Courts API endpoints."""
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from ..services.court_manager import serialize_public_snapshot
 from ..services.history_manager import get_history
@@ -13,9 +13,18 @@ blueprint = Blueprint('courts', __name__, url_prefix='/api')
 def snapshot():
     """Get current state of all courts."""
     try:
-        from ..database import get_active_tournament_name
+        from ..database import fetch_courts, get_active_tournament_name
         courts_data = serialize_public_snapshot()
-        return jsonify({"courts": courts_data, "tournament_name": get_active_tournament_name()})
+        configured_courts = fetch_courts()
+        tournament_names = sorted({
+            court.get("tournament_name") for court in configured_courts if court.get("tournament_name")
+        })
+        tournament_name = tournament_names[0] if len(tournament_names) == 1 else get_active_tournament_name()
+        return jsonify({
+            "courts": courts_data,
+            "tournament_name": tournament_name,
+            "tournament_names": tournament_names,
+        })
     except Exception as e:
         logger.error(f"Failed to get snapshot: {e}")
         return jsonify({"error": str(e)}), 500
@@ -23,13 +32,17 @@ def snapshot():
 
 @blueprint.route('/history')
 def history():
-    """Get match history for the active tournament."""
+    """Get match history, optionally filtered by tournament."""
     try:
         from ..database import get_active_tournament_id, fetch_match_history
         from ..config import settings
-        tid = get_active_tournament_id()
+        tournament_id = request.args.get("tournament_id", type=int)
+        tid = tournament_id if tournament_id is not None else get_active_tournament_id()
         # Serve from DB filtered by tournament
-        history_data = fetch_match_history(limit=settings.match_history_size, tournament_id=tid)
+        history_data = fetch_match_history(
+            limit=settings.match_history_size,
+            tournament_id=tid if tournament_id is not None else None,
+        )
         return jsonify(history_data)
     except Exception as e:
         logger.error(f"Failed to get history: {e}")
