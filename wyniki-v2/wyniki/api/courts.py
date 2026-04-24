@@ -14,6 +14,8 @@ def snapshot():
     """Get current state of all courts."""
     try:
         from ..database import fetch_courts, get_active_tournament_name
+        from ..services.court_manager import refresh_courts_from_db
+        refresh_courts_from_db(fetch_courts(active_only=True))
         courts_data = serialize_public_snapshot()
         configured_courts = fetch_courts(active_only=True)
         tournament_names = sorted({
