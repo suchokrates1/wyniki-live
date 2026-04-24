@@ -237,7 +237,10 @@
 <body>
     <div id="app"></div>
     <script>
-    const overlayId = window.location.pathname.split('/').pop() || '1';
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const hasTournamentSlot = pathParts[0] === 'overlay' && pathParts.length >= 3;
+    const overlayId = hasTournamentSlot ? (pathParts[2] || '1') : (pathParts[pathParts.length - 1] || '1');
+    const requestedTournamentSlot = hasTournamentSlot ? (parseInt(pathParts[1], 10) || 1) : null;
     const SETTINGS_POLL_MS = 2000;
     let allCourtIds = [];  // Will be populated from snapshot
 
@@ -247,10 +250,83 @@
     }
     let courts = {};
     let settings = { tournament_logo: null, tournament_name: '', overlays: {} };
+    let activeTournaments = [];
+    let activeTournament = null;
     let eventSource = null;
 
     function getPreset() {
         return settings.overlays?.[overlayId] || { name: '', auto_hide: false, elements: [] };
+    }
+
+    function sortCourtIds(ids) {
+        return ids.slice().sort(function(a, b) {
+            return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }
+
+    function syncTournamentContext() {
+        var resolved = null;
+        if (requestedTournamentSlot != null) {
+            resolved = activeTournaments[requestedTournamentSlot - 1] || null;
+        }
+        if (!resolved) {
+            var presetTournamentId = getPreset()?.tournament_id;
+            if (presetTournamentId != null) {
+                resolved = activeTournaments.find(function(tournament) {
+                    return String(tournament.id) === String(presetTournamentId);
+                }) || null;
+            }
+        }
+        activeTournament = resolved || activeTournaments[0] || null;
+        if (activeTournament?.name) {
+            document.title = activeTournament.name + ' - Tennis Score Overlay';
+        }
+    }
+
+    function getTournamentBranding() {
+        return {
+            logo: activeTournament?.logo_path || settings.tournament_logo || null,
+            name: activeTournament?.name || settings.tournament_name || '',
+        };
+    }
+
+    function getTournamentCourtEntries() {
+        var entries = Object.keys(courts).map(function(kortId) {
+            return { kortId: kortId, court: courts[kortId] || {} };
+        });
+        if (activeTournament?.id != null) {
+            entries = entries.filter(function(entry) {
+                return String(entry.court?.tournament_id) === String(activeTournament.id);
+            });
+            entries.sort(function(a, b) {
+                var orderA = parseInt(a.court?.display_order, 10);
+                var orderB = parseInt(b.court?.display_order, 10);
+                if (!Number.isNaN(orderA) || !Number.isNaN(orderB)) {
+                    return (Number.isNaN(orderA) ? Number.MAX_SAFE_INTEGER : orderA) - (Number.isNaN(orderB) ? Number.MAX_SAFE_INTEGER : orderB);
+                }
+                return String(a.court?.name || a.kortId).localeCompare(String(b.court?.name || b.kortId), undefined, { numeric: true, sensitivity: 'base' });
+            });
+            return entries;
+        }
+        return sortCourtIds(entries.map(function(entry) { return entry.kortId; })).map(function(kortId) {
+            return { kortId: kortId, court: courts[kortId] || {} };
+        });
+    }
+
+    function resolveCourtState(courtToken) {
+        if (activeTournament?.id != null) {
+            var ordinal = parseInt(courtToken, 10);
+            if (!Number.isNaN(ordinal) && ordinal > 0) {
+                var mapped = getTournamentCourtEntries()[ordinal - 1];
+                if (mapped) return mapped.court || {};
+            }
+        }
+        return courts[courtToken] || {};
+    }
+
+    function getTrackedCourtIds() {
+        var tournamentCourtIds = getTournamentCourtEntries().map(function(entry) { return entry.kortId; });
+        return tournamentCourtIds.length ? tournamentCourtIds : allCourtIds;
     }
 
     function calcMatchTime(court) {
@@ -267,7 +343,7 @@
 
     function renderScoreboard(el) {
         const cid = el.court_id;
-        const court = courts[cid] || {};
+        const court = resolveCourtState(cid);
         const pA = court.A || {}, pB = court.B || {};
         const active = court.match_status?.active || false;
         const inactiveClass = active ? '' : 'match-inactive';
@@ -285,7 +361,7 @@
         const ptA = isTie ? (court.tie?.A||0) : (pA.points||'0');
         const ptB = isTie ? (court.tie?.B||0) : (pB.points||'0');
         const tbCls = isTie ? ' is-tiebreak' : '';
-        const logo = settings.tournament_logo;
+        const logo = getTournamentBranding().logo;
         const showLogo = el.show_logo;
 
         // Logo HTML (auto-sized to scoreboard height, square)
@@ -348,7 +424,7 @@
     }
 
     function renderStats(el) {
-        var court = courts[el.court_id] || {};
+        var court = resolveCourtState(el.court_id);
         var active = court.match_status?.active || false;
         if (!active) return '';
         var st = court.stats || {};
@@ -390,7 +466,7 @@
         var pos = el.label_position || 'above';
         var marginProp = pos==='above' ? 'margin-bottom' : 'margin-top';
         var radius = pos==='above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
-        var court = courts[el.court_id] || {};
+        var court = resolveCourtState(el.court_id);
         var timeStr = calcMatchTime(court);
         var timeHtml = timeStr ? '<span class="label-sep">|</span><span class="label-time" data-court="'+el.court_id+'">&#9201; '+timeStr+'</span>' : '';
         return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;"><span class="label-text">'+el.label_text+'</span>'+timeHtml+'</div>';
@@ -398,7 +474,7 @@
 
     function render() {
         var preset = getPreset();
-        var anyActive = allCourtIds.some(function(id){return courts[id]?.match_status?.active;});
+        var anyActive = getTrackedCourtIds().some(function(id){return courts[id]?.match_status?.active;});
         var autoHidden = preset.auto_hide && !anyActive;
         var sx = window.innerWidth / 1920;
         var sy = window.innerHeight / 1080;
@@ -465,7 +541,7 @@
                     // Track new court IDs dynamically
                     if (allCourtIds.indexOf(cid) < 0) {
                         allCourtIds.push(cid);
-                        allCourtIds.sort(function(a,b){ return (+a) - (+b); });
+                        allCourtIds = sortCourtIds(allCourtIds);
                     }
                     render();
                     requestAnimationFrame(fitPlayerNames);
@@ -482,15 +558,28 @@
             var c = d.courts || d;
             Object.keys(c).forEach(function(id){ courts[id] = c[id]; });
             // Update dynamic court ID list
-            allCourtIds = Object.keys(c).sort(function(a,b){ return (+a) - (+b); });
+            allCourtIds = sortCourtIds(Object.keys(c));
         } catch(e) { console.error('Snapshot:', e); }
     }
 
     async function loadSettings() {
         try {
             var r = await fetch('/api/overlay/settings');
-            if (r.ok) settings = await r.json();
+            if (r.ok) {
+                settings = await r.json();
+                syncTournamentContext();
+            }
         } catch(e) { /* defaults */ }
+    }
+
+    async function loadActiveTournaments() {
+        try {
+            var r = await fetch('/api/tournaments/active');
+            if (r.ok) {
+                activeTournaments = await r.json();
+            }
+        } catch(e) { /* defaults */ }
+        syncTournamentContext();
     }
 
     function abbreviateName(name) {
@@ -534,16 +623,20 @@
     }
 
     async function init() {
-        await Promise.all([loadSnapshot(), loadSettings()]);
+        await Promise.all([loadSnapshot(), loadSettings(), loadActiveTournaments()]);
         render();
         requestAnimationFrame(fitPlayerNames);
         connectSSE();
-        setInterval(async function() { await loadSettings(); render(); requestAnimationFrame(fitPlayerNames); }, SETTINGS_POLL_MS);
+        setInterval(async function() {
+            await Promise.all([loadSettings(), loadActiveTournaments()]);
+            render();
+            requestAnimationFrame(fitPlayerNames);
+        }, SETTINGS_POLL_MS);
         // Tick match timers every minute
         setInterval(function() {
             document.querySelectorAll('.label-time').forEach(function(el) {
                 var cid = el.getAttribute('data-court');
-                var court = cid ? courts[cid] : null;
+                var court = cid ? resolveCourtState(cid) : null;
                 var timeStr = calcMatchTime(court);
                 if (timeStr) el.innerHTML = '&#9201; '+timeStr;
             });
