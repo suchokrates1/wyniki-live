@@ -739,7 +739,7 @@ Alpine.data('tennisApp', () => ({
   /* --- Tournament history methods --- */
   async fetchTournaments() {
     try {
-      const response = await fetch('/api/tournament/list');
+      const response = await fetch('/api/tournaments/active');
       if (!response.ok) return;
       const data = await response.json();
       this.tournaments = Array.isArray(data) ? data : [];
