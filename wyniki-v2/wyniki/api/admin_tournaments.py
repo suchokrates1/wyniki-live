@@ -32,6 +32,15 @@ from ..config import logger, settings
 blueprint = Blueprint('admin_tournaments', __name__, url_prefix='/admin/api/tournaments')
 
 
+def _json_no_cache(payload, status: int = 200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
 def _request_payload() -> Dict[str, Any]:
     """Read tournament payload from JSON or multipart form."""
     if request.is_json:
@@ -445,7 +454,7 @@ players_public_bp = Blueprint('players_public', __name__, url_prefix='/api/playe
 @blueprint.route('/active', methods=['GET'])
 def get_active_tournaments_admin():
     """Get only active tournaments for admin integrations."""
-    return jsonify(fetch_active_tournaments())
+    return _json_no_cache(fetch_active_tournaments())
 
 
 tournaments_public_bp = Blueprint('tournaments_public', __name__, url_prefix='/api/tournaments')
@@ -454,7 +463,7 @@ tournaments_public_bp = Blueprint('tournaments_public', __name__, url_prefix='/a
 @tournaments_public_bp.route('/active', methods=['GET'])
 def get_active_tournaments_public():
     """Get active tournaments for the Android app selection screen."""
-    return jsonify(fetch_active_tournaments())
+    return _json_no_cache(fetch_active_tournaments())
 
 
 @players_public_bp.route('/active', methods=['GET'])
