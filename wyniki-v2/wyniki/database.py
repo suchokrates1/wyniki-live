@@ -32,6 +32,9 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS courts (
                 kort_id TEXT PRIMARY KEY,
                 pin TEXT,
+                name TEXT,
+                tournament_id INTEGER,
+                display_order INTEGER DEFAULT 0,
                 active INTEGER DEFAULT 1
             )
         """)
@@ -45,6 +48,11 @@ def init_db() -> None:
                 end_date TEXT NOT NULL,
                 active INTEGER DEFAULT 0,
                 location TEXT DEFAULT '',
+                city TEXT DEFAULT '',
+                country TEXT DEFAULT '',
+                logo_path TEXT,
+                report_email TEXT DEFAULT '',
+                summary_sent_at TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -96,6 +104,26 @@ def init_db() -> None:
         if 'pin' not in columns:
             cursor.execute("ALTER TABLE courts ADD COLUMN pin TEXT")
             logger.info("database_migration", action="added_pin_column_to_courts")
+        if 'name' not in columns:
+            cursor.execute("ALTER TABLE courts ADD COLUMN name TEXT")
+            cursor.execute("UPDATE courts SET name = kort_id WHERE name IS NULL OR TRIM(name) = ''")
+            logger.info("database_migration", action="added_name_to_courts")
+        if 'tournament_id' not in columns:
+            cursor.execute("ALTER TABLE courts ADD COLUMN tournament_id INTEGER")
+            cursor.execute("SELECT id FROM tournaments ORDER BY id ASC LIMIT 1")
+            first_tournament = cursor.fetchone()
+            if first_tournament:
+                cursor.execute(
+                    "UPDATE courts SET tournament_id = ? WHERE tournament_id IS NULL",
+                    (first_tournament["id"],),
+                )
+            logger.info("database_migration", action="added_tournament_id_to_courts")
+        if 'display_order' not in columns:
+            cursor.execute("ALTER TABLE courts ADD COLUMN display_order INTEGER DEFAULT 0")
+            cursor.execute(
+                "UPDATE courts SET display_order = CAST(kort_id AS INTEGER) WHERE display_order IS NULL OR display_order = 0"
+            )
+            logger.info("database_migration", action="added_display_order_to_courts")
         
         # Migration: Add match_id and stats_mode columns to match_history
         cursor.execute("PRAGMA table_info(match_history)")
@@ -212,6 +240,27 @@ def init_db() -> None:
         if 'location' not in t_cols:
             cursor.execute("ALTER TABLE tournaments ADD COLUMN location TEXT DEFAULT ''")
             logger.info("database_migration", action="added_location_to_tournaments")
+        if 'city' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN city TEXT DEFAULT ''")
+            logger.info("database_migration", action="added_city_to_tournaments")
+        if 'country' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN country TEXT DEFAULT ''")
+            logger.info("database_migration", action="added_country_to_tournaments")
+        if 'logo_path' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN logo_path TEXT")
+            logger.info("database_migration", action="added_logo_path_to_tournaments")
+        if 'report_email' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN report_email TEXT DEFAULT ''")
+            logger.info("database_migration", action="added_report_email_to_tournaments")
+        if 'summary_sent_at' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN summary_sent_at TEXT")
+            logger.info("database_migration", action="added_summary_sent_at_to_tournaments")
+        cursor.execute(
+            "UPDATE tournaments SET city = COALESCE(NULLIF(TRIM(location), ''), city, '') WHERE TRIM(COALESCE(city, '')) = '' AND TRIM(COALESCE(location, '')) != ''"
+        )
+        cursor.execute(
+            "UPDATE tournaments SET location = TRIM(COALESCE(city, '') || CASE WHEN TRIM(COALESCE(city, '')) != '' AND TRIM(COALESCE(country, '')) != '' THEN ', ' ELSE '' END || COALESCE(country, ''))"
+        )
         
         # Migration: Add gender column to players
         cursor.execute("PRAGMA table_info(players)")
@@ -451,10 +500,33 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT kort_id, pin, active FROM courts ORDER BY CAST(kort_id AS INTEGER)")
+            cursor.execute("""
+                SELECT
+                    c.kort_id,
+                    c.pin,
+                    c.name,
+                    c.tournament_id,
+                    c.display_order,
+                    c.active,
+                    t.name AS tournament_name
+                FROM courts c
+                LEFT JOIN tournaments t ON t.id = c.tournament_id
+                ORDER BY COALESCE(c.tournament_id, 0), c.display_order, c.kort_id
+            """)
             rows = cursor.fetchall()
         
-        courts = [{"kort_id": row["kort_id"], "pin": row["pin"], "active": row["active"]} for row in rows]
+        courts = [
+            {
+                "kort_id": row["kort_id"],
+                "pin": row["pin"],
+                "name": row["name"],
+                "tournament_id": row["tournament_id"],
+                "display_order": row["display_order"],
+                "active": row["active"],
+                "tournament_name": row["tournament_name"],
+            }
+            for row in rows
+        ]
         logger.debug("courts_fetched", count=len(courts))
         return courts
     except Exception as e:
@@ -462,33 +534,106 @@ def fetch_courts() -> List[Dict[str, Optional[str]]]:
         return []
 
 
-def insert_court(kort_id: str, pin: Optional[str] = None) -> None:
+def fetch_courts_for_tournament(tournament_id: int) -> List[Dict[str, Optional[str]]]:
+    """Fetch courts assigned to a specific tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT kort_id, pin, name, tournament_id, display_order, active
+                FROM courts
+                WHERE tournament_id = ?
+                ORDER BY display_order, kort_id
+            """, (tournament_id,))
+            return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        logger.error("fetch_courts_for_tournament_error", error=str(e), tournament_id=tournament_id)
+        return []
+
+
+def fetch_court(kort_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch a single court by ID."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT c.kort_id, c.pin, c.name, c.tournament_id, c.display_order, c.active,
+                       t.name AS tournament_name
+                FROM courts c
+                LEFT JOIN tournaments t ON t.id = c.tournament_id
+                WHERE c.kort_id = ?
+                LIMIT 1
+            """, (kort_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+    except Exception as e:
+        logger.error("fetch_court_error", error=str(e), kort_id=kort_id)
+        return None
+
+
+def get_tournament_id_for_court(kort_id: str) -> Optional[int]:
+    """Resolve tournament ID from a court ID."""
+    court = fetch_court(kort_id)
+    if not court:
+        return None
+    return court.get("tournament_id")
+
+
+def insert_court(
+    kort_id: str,
+    pin: Optional[str] = None,
+    tournament_id: Optional[int] = None,
+    name: Optional[str] = None,
+    display_order: Optional[int] = None,
+) -> None:
     """Insert a new court."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT OR IGNORE INTO courts (kort_id, pin, active)
-                VALUES (?, ?, 1)
-            """, (kort_id, pin))
+                INSERT OR IGNORE INTO courts (kort_id, pin, name, tournament_id, display_order, active)
+                VALUES (?, ?, ?, ?, ?, 1)
+            """, (
+                kort_id,
+                pin,
+                name or kort_id,
+                tournament_id,
+                display_order if display_order is not None else 0,
+            ))
             conn.commit()
         logger.info("court_inserted", kort_id=kort_id)
     except Exception as e:
         logger.error("insert_court_error", kort_id=kort_id, error=str(e))
 
 
-def upsert_court(kort_id: str, pin: Optional[str] = None) -> None:
+def upsert_court(
+    kort_id: str,
+    pin: Optional[str] = None,
+    tournament_id: Optional[int] = None,
+    name: Optional[str] = None,
+    display_order: Optional[int] = None,
+) -> None:
     """Insert or update court configuration."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO courts (kort_id, pin, active)
-                VALUES (?, ?, 1)
-                ON CONFLICT(kort_id) DO UPDATE SET pin=excluded.pin
-            """, (kort_id, pin))
+                INSERT INTO courts (kort_id, pin, name, tournament_id, display_order, active)
+                VALUES (?, ?, ?, ?, ?, 1)
+                ON CONFLICT(kort_id) DO UPDATE SET
+                    pin=excluded.pin,
+                    name=COALESCE(excluded.name, courts.name),
+                    tournament_id=COALESCE(excluded.tournament_id, courts.tournament_id),
+                    display_order=COALESCE(excluded.display_order, courts.display_order)
+            """, (
+                kort_id,
+                pin,
+                name or kort_id,
+                tournament_id,
+                display_order,
+            ))
             conn.commit()
-        logger.info("court_upserted", kort_id=kort_id, pin=pin)
+        logger.info("court_upserted", kort_id=kort_id, pin=pin, tournament_id=tournament_id)
     except Exception as e:
         logger.error("upsert_court_error", kort_id=kort_id, error=str(e))
 
@@ -635,6 +780,19 @@ def fetch_match_history(limit: int = 100, tournament_id: Optional[int] = None) -
                 if ln:
                     player_name_map[ln] = full
 
+            cursor.execute("""
+                SELECT c.kort_id, c.name, t.name AS tournament_name
+                FROM courts c
+                LEFT JOIN tournaments t ON t.id = c.tournament_id
+            """)
+            court_lookup = {
+                row["kort_id"]: {
+                    "court_name": row["name"] or row["kort_id"],
+                    "tournament_name": row["tournament_name"],
+                }
+                for row in cursor.fetchall()
+            }
+
             result = []
             for row in rows:
                 entry = {
@@ -688,6 +846,10 @@ def fetch_match_history(limit: int = 100, tournament_id: Optional[int] = None) -
                 if not entry["duration_seconds"] and mid and mid in duration_lookup:
                     entry["duration_seconds"] = duration_lookup[mid]
 
+                court_meta = court_lookup.get(entry["kort_id"], {})
+                entry["court_name"] = court_meta.get("court_name")
+                entry["tournament_name"] = court_meta.get("tournament_name")
+
                 result.append(entry)
             return result
     except Exception as e:
@@ -734,14 +896,39 @@ def get_active_tournament_name() -> Optional[str]:
         return None
 
 
+def fetch_active_tournaments() -> List[Dict]:
+    """Fetch all active tournaments."""
+    try:
+        return [t for t in fetch_tournaments() if t.get("active") == 1]
+    except Exception as e:
+        logger.error("fetch_active_tournaments_error", error=str(e))
+        return []
+
+
 def fetch_tournaments() -> List[Dict]:
     """Fetch all tournaments."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, name, start_date, end_date, active, created_at
-                FROM tournaments
+                SELECT
+                    t.id,
+                    t.name,
+                    t.start_date,
+                    t.end_date,
+                    t.active,
+                    t.location,
+                    t.city,
+                    t.country,
+                    t.logo_path,
+                    t.report_email,
+                    t.summary_sent_at,
+                    t.created_at,
+                    COUNT(c.kort_id) AS court_count
+                FROM tournaments t
+                LEFT JOIN courts c ON c.tournament_id = t.id
+                GROUP BY t.id, t.name, t.start_date, t.end_date, t.active, t.location, t.city, t.country,
+                         t.logo_path, t.report_email, t.summary_sent_at, t.created_at
                 ORDER BY start_date DESC
             """)
             rows = cursor.fetchall()
@@ -757,8 +944,25 @@ def fetch_tournament(tournament_id: int) -> Optional[Dict]:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, name, start_date, end_date, active, created_at
-                FROM tournaments WHERE id = ?
+                SELECT
+                    t.id,
+                    t.name,
+                    t.start_date,
+                    t.end_date,
+                    t.active,
+                    t.location,
+                    t.city,
+                    t.country,
+                    t.logo_path,
+                    t.report_email,
+                    t.summary_sent_at,
+                    t.created_at,
+                    COUNT(c.kort_id) AS court_count
+                FROM tournaments t
+                LEFT JOIN courts c ON c.tournament_id = t.id
+                WHERE t.id = ?
+                GROUP BY t.id, t.name, t.start_date, t.end_date, t.active, t.location, t.city, t.country,
+                         t.logo_path, t.report_email, t.summary_sent_at, t.created_at
             """, (tournament_id,))
             row = cursor.fetchone()
             return dict(row) if row else None
@@ -767,15 +971,35 @@ def fetch_tournament(tournament_id: int) -> Optional[Dict]:
         return None
 
 
-def insert_tournament(name: str, start_date: str, end_date: str, active: bool = False) -> Optional[int]:
+def insert_tournament(
+    name: str,
+    start_date: str,
+    end_date: str,
+    active: bool = False,
+    city: str = "",
+    country: str = "",
+    logo_path: Optional[str] = None,
+    report_email: str = "",
+) -> Optional[int]:
     """Insert a new tournament."""
     try:
+        location = ", ".join(part for part in [city.strip(), country.strip()] if part.strip())
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO tournaments (name, start_date, end_date, active)
-                VALUES (?, ?, ?, ?)
-            """, (name, start_date, end_date, 1 if active else 0))
+                INSERT INTO tournaments (name, start_date, end_date, active, location, city, country, logo_path, report_email)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                name,
+                start_date,
+                end_date,
+                1 if active else 0,
+                location,
+                city.strip(),
+                country.strip().upper(),
+                logo_path,
+                report_email.strip(),
+            ))
             conn.commit()
             logger.info("tournament_inserted", id=cursor.lastrowid, name=name)
             return cursor.lastrowid
@@ -784,21 +1008,83 @@ def insert_tournament(name: str, start_date: str, end_date: str, active: bool = 
         return None
 
 
-def update_tournament(tournament_id: int, name: str, start_date: str, end_date: str, active: bool) -> bool:
+def update_tournament(
+    tournament_id: int,
+    name: str,
+    start_date: str,
+    end_date: str,
+    active: bool,
+    city: str = "",
+    country: str = "",
+    logo_path: Optional[str] = None,
+    report_email: str = "",
+) -> bool:
     """Update a tournament."""
     try:
+        location = ", ".join(part for part in [city.strip(), country.strip()] if part.strip())
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE tournaments
-                SET name = ?, start_date = ?, end_date = ?, active = ?
+                SET name = ?, start_date = ?, end_date = ?, active = ?, location = ?, city = ?, country = ?,
+                    logo_path = ?, report_email = ?
                 WHERE id = ?
-            """, (name, start_date, end_date, 1 if active else 0, tournament_id))
+            """, (
+                name,
+                start_date,
+                end_date,
+                1 if active else 0,
+                location,
+                city.strip(),
+                country.strip().upper(),
+                logo_path,
+                report_email.strip(),
+                tournament_id,
+            ))
             conn.commit()
             logger.info("tournament_updated", id=tournament_id)
             return True
     except Exception as e:
         logger.error("update_tournament_error", error=str(e), tournament_id=tournament_id)
+        return False
+
+
+def create_tournament_courts(tournament_id: int, court_count: int) -> List[str]:
+    """Create tournament courts with unique IDs and human-friendly names."""
+    created_courts: List[str] = []
+    total = max(0, int(court_count or 0))
+    if total <= 0:
+        return created_courts
+
+    for index in range(1, total + 1):
+        kort_id = f"t{tournament_id}-{index}"
+        upsert_court(
+            kort_id=kort_id,
+            name=str(index),
+            tournament_id=tournament_id,
+            display_order=index,
+        )
+        created_courts.append(kort_id)
+    return created_courts
+
+
+def mark_tournament_summary_sent(tournament_id: int, sent_at: Optional[str] = None) -> bool:
+    """Persist the timestamp of a sent tournament summary email."""
+    from datetime import datetime, timezone
+
+    try:
+        value = sent_at or datetime.now(timezone.utc).isoformat()
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE tournaments SET summary_sent_at = ? WHERE id = ?",
+                (value, tournament_id),
+            )
+            conn.commit()
+        logger.info("tournament_summary_marked", tournament_id=tournament_id, sent_at=value)
+        return True
+    except Exception as e:
+        logger.error("mark_tournament_summary_sent_error", error=str(e), tournament_id=tournament_id)
         return False
 
 
@@ -817,19 +1103,33 @@ def delete_tournament(tournament_id: int) -> bool:
 
 
 def set_active_tournament(tournament_id: int) -> bool:
-    """Set a tournament as active (deactivates all others)."""
+    """Mark a tournament as active without deactivating others."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            # Deactivate all
-            cursor.execute("UPDATE tournaments SET active = 0")
-            # Activate the selected one
             cursor.execute("UPDATE tournaments SET active = 1 WHERE id = ?", (tournament_id,))
             conn.commit()
             logger.info("active_tournament_set", id=tournament_id)
             return True
     except Exception as e:
         logger.error("set_active_tournament_error", error=str(e), tournament_id=tournament_id)
+        return False
+
+
+def set_tournament_active_state(tournament_id: int, active: bool) -> bool:
+    """Set active state for a single tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE tournaments SET active = ? WHERE id = ?",
+                (1 if active else 0, tournament_id),
+            )
+            conn.commit()
+            logger.info("tournament_active_state_set", id=tournament_id, active=active)
+            return cursor.rowcount > 0
+    except Exception as e:
+        logger.error("set_tournament_active_state_error", error=str(e), tournament_id=tournament_id, active=active)
         return False
 
 
@@ -877,6 +1177,26 @@ def fetch_active_tournament_players() -> List[Dict]:
             return [dict(row) for row in rows]
     except Exception as e:
         logger.error("fetch_active_tournament_players_error", error=str(e))
+        return []
+
+
+def fetch_players_for_active_tournaments() -> List[Dict]:
+    """Fetch players belonging to any active tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
+                       p.category, p.country, p.created_at
+                FROM players p
+                INNER JOIN tournaments t ON p.tournament_id = t.id
+                WHERE t.active = 1
+                ORDER BY t.start_date DESC, p.last_name, p.first_name
+            """)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error("fetch_players_for_active_tournaments_error", error=str(e))
         return []
 
 

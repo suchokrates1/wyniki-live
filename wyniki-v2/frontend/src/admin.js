@@ -25,6 +25,21 @@ Alpine.data('adminApp', () => ({
     name: '',
     start_date: '',
     end_date: '',
+    city: '',
+    country: '',
+    report_email: '',
+    court_count: 1,
+    logo: null,
+  },
+
+  emailSettings: {
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_username: '',
+    smtp_password: '',
+    smtp_use_tls: true,
+    smtp_from_email: '',
+    smtp_from_name: 'Wyniki Live',
   },
   
   // Players
@@ -113,6 +128,7 @@ Alpine.data('adminApp', () => ({
   init() {
     this.loadCourts();
     this.loadTournaments();
+    this.loadEmailSettings();
     this.loadOverlaySettings();
     this.loadGlobalPlayers();
     this._loadDemoStatus();
@@ -320,20 +336,67 @@ Alpine.data('adminApp', () => ({
     }
     
     try {
+      const payload = new FormData();
+      Object.entries(this.newTournament).forEach(([key, value]) => {
+        if (key === 'logo') return;
+        payload.append(key, value ?? '');
+      });
+      if (this.newTournament.logo) {
+        payload.append('logo', this.newTournament.logo);
+      }
+
       const response = await fetch('/admin/api/tournaments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.newTournament),
+        body: payload,
       });
       
       if (!response.ok) throw new Error('Failed to create tournament');
       
       this.showToast('Turniej utworzony', 'success');
-      this.newTournament = { name: '', start_date: '', end_date: '' };
+      this.newTournament = {
+        name: '',
+        start_date: '',
+        end_date: '',
+        city: '',
+        country: '',
+        report_email: '',
+        court_count: 1,
+        logo: null,
+      };
       await this.loadTournaments();
     } catch (err) {
       console.error('Failed to create tournament:', err);
       this.showToast('Błąd tworzenia turnieju', 'error');
+    }
+  },
+
+  onTournamentLogoSelected(event) {
+    this.newTournament.logo = event.target.files?.[0] || null;
+  },
+
+  async loadEmailSettings() {
+    try {
+      const response = await fetch('/admin/api/settings/email');
+      if (!response.ok) throw new Error('Failed to load email settings');
+      this.emailSettings = { ...this.emailSettings, ...(await response.json()) };
+    } catch (err) {
+      console.error('Failed to load email settings:', err);
+      this.showToast('Błąd ładowania ustawień SMTP', 'error');
+    }
+  },
+
+  async saveEmailSettings() {
+    try {
+      const response = await fetch('/admin/api/settings/email', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.emailSettings),
+      });
+      if (!response.ok) throw new Error('Failed to save email settings');
+      this.showToast('Ustawienia SMTP zapisane', 'success');
+    } catch (err) {
+      console.error('Failed to save email settings:', err);
+      this.showToast('Błąd zapisu ustawień SMTP', 'error');
     }
   },
   
@@ -355,19 +418,23 @@ Alpine.data('adminApp', () => ({
     }
   },
   
-  async activateTournament(tournamentId) {
+  async toggleTournamentActive(tournamentId, active) {
     try {
-      const response = await fetch(`/admin/api/tournaments/${tournamentId}/activate`, {
-        method: 'POST',
+      const response = await fetch(`/admin/api/tournaments/${tournamentId}/active`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ active }),
       });
       
-      if (!response.ok) throw new Error('Failed to activate tournament');
+      if (!response.ok) throw new Error('Failed to update tournament state');
       
-      this.showToast('Turniej aktywowany', 'success');
+      this.showToast(active ? 'Turniej aktywowany' : 'Turniej dezaktywowany', 'success');
       await this.loadTournaments();
     } catch (err) {
-      console.error('Failed to activate tournament:', err);
-      this.showToast('Błąd aktywacji turnieju', 'error');
+      console.error('Failed to update tournament state:', err);
+      this.showToast('Błąd zmiany statusu turnieju', 'error');
     }
   },
   

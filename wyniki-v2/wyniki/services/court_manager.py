@@ -36,6 +36,10 @@ def _empty_player_state() -> Dict[str, Any]:
 def _empty_court_state() -> Dict[str, Any]:
     """Create empty court state structure."""
     return {
+        "court_name": None,
+        "display_order": 0,
+        "tournament_id": None,
+        "tournament_name": None,
         "A": _empty_player_state(),
         "B": _empty_player_state(),
         "current_set": 1,
@@ -121,18 +125,36 @@ def get_court_state(kort_id: str) -> Optional[Dict[str, Any]]:
         return COURTS.get(kort_id)
 
 
-def refresh_courts_from_db(db_courts: List[str], seed_if_empty: bool = False) -> None:
+def refresh_courts_from_db(db_courts: List[Any], seed_if_empty: bool = False) -> None:
     """Update court configuration from database."""
     from ..models import CourtState
     
     with STATE_LOCK:
+        configured_ids: List[str] = []
         # Ensure all courts have state
-        for kort_id in db_courts:
+        for court in db_courts:
+            if isinstance(court, dict):
+                kort_id = str(court.get("kort_id"))
+                court_name = court.get("name")
+                display_order = court.get("display_order") or 0
+                tournament_id = court.get("tournament_id")
+                tournament_name = court.get("tournament_name")
+            else:
+                kort_id = str(court)
+                court_name = kort_id
+                display_order = 0
+                tournament_id = None
+                tournament_name = None
+            configured_ids.append(kort_id)
             if kort_id not in COURTS:
                 COURTS[kort_id] = _empty_court_state()
+            COURTS[kort_id]["court_name"] = court_name or kort_id
+            COURTS[kort_id]["display_order"] = display_order
+            COURTS[kort_id]["tournament_id"] = tournament_id
+            COURTS[kort_id]["tournament_name"] = tournament_name
         
         # Remove courts no longer in config
-        removed = [k for k in COURTS if k not in db_courts]
+        removed = [k for k in COURTS if k not in configured_ids]
         for k in removed:
             del COURTS[k]
             logger.info(f"Removed court {k} from memory")
@@ -347,10 +369,10 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
     """
     import random
     import time
-    from ..database import fetch_active_tournament_players
+    from ..database import fetch_players_for_active_tournaments
 
     # Fetch real players from active tournament
-    db_players = fetch_active_tournament_players()
+    db_players = fetch_players_for_active_tournaments()
 
     # Need at least 2 players for 1 court
     if len(db_players) < 2:

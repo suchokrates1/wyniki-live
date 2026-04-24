@@ -24,7 +24,7 @@ def initialize_state() -> None:
         if not tournaments:
             from datetime import date
             from .database import insert_tournament
-            insert_tournament("Turniej domyślny", date.today().isoformat(), "2099-12-31", active=True)
+            insert_tournament("test tournament", date.today().isoformat(), "2099-12-31", active=True)
             logger.info("Seeded default tournament")
     except Exception as e:
         logger.error(f"Failed to seed tournament: {e}")
@@ -35,14 +35,14 @@ def initialize_state() -> None:
         db_courts = [row["kort_id"] for row in db_courts_list]
         
         if not db_courts:
-            # Seed with production court IDs (1-5)
-            logger.info("Seeding default courts (1-5)")
-            from .database import insert_court
-            for kort_id in ['1', '2', '3', '4', '5']:
-                insert_court(kort_id)
-            db_courts = [str(i) for i in range(1, 6)]
+            logger.info("Seeding default tournament courts (1-5)")
+            from .database import create_tournament_courts
+            tournament_id = get_active_tournament_id()
+            if tournament_id:
+                db_courts = create_tournament_courts(tournament_id, 5)
+                db_courts_list = fetch_courts()
         
-        refresh_courts_from_db(db_courts, seed_if_empty=False)
+        refresh_courts_from_db(db_courts_list, seed_if_empty=False)
         logger.info(f"Loaded {len(db_courts)} courts from database")
     except Exception as e:
         logger.error(f"Failed to load courts: {e}")
@@ -53,11 +53,10 @@ def initialize_state() -> None:
     
     # Load match history from database
     try:
-        tid = get_active_tournament_id()
-        history = fetch_match_history(limit=settings.match_history_size, tournament_id=tid)
+        history = fetch_match_history(limit=settings.match_history_size, tournament_id=None)
         # fetch returns newest first, load oldest first so deque order is correct
         load_history_from_db(list(reversed(history)))
-        logger.info(f"Loaded {len(history)} match history entries for tournament {tid}")
+        logger.info(f"Loaded {len(history)} match history entries")
     except Exception as e:
         logger.error(f"Failed to load match history: {e}")
     

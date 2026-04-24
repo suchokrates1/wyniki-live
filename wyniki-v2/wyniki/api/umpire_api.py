@@ -12,27 +12,49 @@ from ..config import logger
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
 
 
+def _resolve_tournament_for_court(kort_id: str | None) -> Tournament | None:
+    """Resolve tournament from court, with active tournament fallback."""
+    normalized = normalize_kort_id(kort_id)
+    if normalized:
+        court = Court.query.get(normalized)
+        if court and court.tournament_id:
+            return Tournament.query.get(court.tournament_id)
+    return Tournament.query.filter_by(active=1).first()
+
+
 @blueprint.route('/courts', methods=['GET'])
 def get_courts():
     """Get list of available courts for app."""
-    from ..services.court_manager import available_courts, get_court_state
+    from ..database import fetch_courts
+    from ..services.court_manager import get_court_state
     
     try:
-        courts_list = available_courts()
+        selected_tournament_id = request.args.get("tournament_id", type=int)
+        courts_list = fetch_courts()
+        if selected_tournament_id is not None:
+            courts_list = [court for court in courts_list if court.get("tournament_id") == selected_tournament_id]
         
         # Format for mobile app
         courts_data = []
-        for kort_id in courts_list:
+        for court in courts_list:
+            kort_id = court["kort_id"]
             # Check if court has an active match
             state = get_court_state(kort_id)
             is_active = False
             if state:
                 match_status = state.get("match_status", {})
                 is_active = match_status.get("active", False)
+            display_name = court.get("name") or kort_id
+            if court.get("tournament_name"):
+                display_name = f"{court['tournament_name']} • Kort {display_name}"
+            elif display_name != kort_id:
+                display_name = f"Kort {display_name}"
             
             courts_data.append({
                 "kort_id": kort_id,
-                "name": None,
+                "name": display_name,
+                "tournament_id": court.get("tournament_id"),
+                "tournament_name": court.get("tournament_name"),
                 "status": "occupied" if is_active else "available",
                 "is_available": not is_active
             })
@@ -103,10 +125,9 @@ def get_players():
             country_code = data.get("country_code", "").strip() or None
             category = data.get("category", "").strip() or None
             
-            # Get active tournament
-            tournament = Tournament.query.filter_by(active=1).first()
+            tournament = _resolve_tournament_for_court(kort_id)
             if not tournament:
-                return jsonify({"ok": False, "error": "no active tournament"}), 400
+                return jsonify({"ok": False, "error": "no tournament for court"}), 400
             
             # Create player
             player = Player(
@@ -144,14 +165,14 @@ def get_players():
     
     # GET - list players
     try:
-        # Get active tournament
-        tournament = Tournament.query.filter_by(active=1).first()
+        kort_id = request.args.get("court_id") or request.args.get("kort_id")
+        tournament = _resolve_tournament_for_court(kort_id)
         
         if not tournament:
             return jsonify({
                 "players": [],
                 "count": 0,
-                "message": "No active tournament"
+                "message": "No tournament for selected court"
             }), 200
         
         players = Player.query.filter_by(tournament_id=tournament.id).order_by(Player.name).all()
@@ -256,8 +277,8 @@ def create_match():
             ensure_court_state(kort_id)
         
         # Detect bracket context (tournament, group, phase)
-        from ..database import detect_bracket_context, get_active_tournament_id
-        tournament_id = get_active_tournament_id()
+        from ..database import detect_bracket_context, get_tournament_id_for_court, get_active_tournament_id
+        tournament_id = get_tournament_id_for_court(kort_id) or get_active_tournament_id()
         bracket_warning = None
         bracket_ctx = {"group_id": None, "phase": None, "warning": None}
         
@@ -492,14 +513,13 @@ def finish_match(match_id: int):
                 # Auto-detect category from player DB records
                 # If both players share the same category, include it
                 try:
-                    active_tournament = Tournament.query.filter_by(active=1).first()
-                    if active_tournament:
+                    if match.tournament_id:
                         p1 = Player.query.filter_by(
-                            tournament_id=active_tournament.id,
+                            tournament_id=match.tournament_id,
                             name=match.player1_name
                         ).first()
                         p2 = Player.query.filter_by(
-                            tournament_id=active_tournament.id,
+                            tournament_id=match.tournament_id,
                             name=match.player2_name
                         ).first()
                         if p1 and p2 and p1.category and p2.category:
@@ -528,6 +548,17 @@ def finish_match(match_id: int):
             if match.phase:
                 court_state["history_meta"]["phase"] = match.phase
             add_match_to_history(kort_id, court_state)
+
+            if match.tournament_id:
+                try:
+                    from ..database import fetch_tournament
+                    from ..services.email_reports import maybe_send_tournament_summary, send_match_report
+
+                    tournament = fetch_tournament(match.tournament_id)
+                    send_match_report(match, court_state, tournament)
+                    maybe_send_tournament_summary(match.tournament_id)
+                except Exception as e:
+                    logger.warning(f"Could not send email report: {e}")
             
             # Auto-advance knockout bracket
             if match.phase == "Pucharowa" and match.tournament_id:
@@ -829,13 +860,13 @@ def add_player():
         data = request.get_json()
         
         surname = data.get("surname", "").strip()
+        kort_id = data.get("kort_id")
         if not surname:
             return jsonify({"error": "surname is required"}), 400
         
-        # Get active tournament
-        tournament = Tournament.query.filter_by(active=1).first()
+        tournament = _resolve_tournament_for_court(kort_id)
         if not tournament:
-            return jsonify({"error": "No active tournament"}), 400
+            return jsonify({"error": "No tournament for selected court"}), 400
         
         # Check if player exists
         existing = Player.query.filter_by(

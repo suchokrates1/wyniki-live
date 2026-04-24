@@ -229,14 +229,20 @@
           <h2 class="card-title">Zarz&#261;dzanie kortami</h2>
           <div class="overflow-x-auto">
             <table class="table table-zebra">
-              <thead><tr><th>ID Kortu</th><th>PIN</th><th>Status / Mecz</th><th>Bateria</th><th>Akcje</th></tr></thead>
+              <thead><tr><th>Kort</th><th>Turniej</th><th>PIN</th><th>Status / Mecz</th><th>Bateria</th><th>Akcje</th></tr></thead>
               <tbody>
                 <template x-for="court in courts" :key="court.kort_id">
                   <tr>
                     <td>
-                      <template x-if="editingCourt !== court.kort_id"><span class="font-bold" x-text="'Kort ' + court.kort_id"></span></template>
+                      <template x-if="editingCourt !== court.kort_id">
+                        <div>
+                          <div class="font-bold" x-text="'Kort ' + (court.name || court.kort_id)"></div>
+                          <div class="text-xs opacity-60" x-text="court.kort_id"></div>
+                        </div>
+                      </template>
                       <template x-if="editingCourt === court.kort_id"><input type="text" x-model="editCourtId" class="input input-sm input-bordered w-24" @keyup.enter="saveCourt(court.kort_id)" @keyup.escape="cancelEdit()"></template>
                     </td>
+                    <td x-text="court.tournament_name || '-' "></td>
                     <td><input type="text" x-model="court.pin" @change="updateCourtPin(court.kort_id, $event.target.value)" class="input input-sm input-bordered w-24" placeholder="PIN" maxlength="4" pattern="[0-9]{4}"></td>
                     <td x-html="courtStatusInfo(court.kort_id)"></td>
                     <td x-html="batteryIndicator(courtData[court.kort_id])"></td>
@@ -265,12 +271,34 @@
       <div class="card bg-base-100 shadow-xl mb-6">
         <div class="card-body">
           <h2 class="card-title">Dodaj nowy turniej</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <div class="form-control"><label class="label"><span class="label-text">Nazwa turnieju</span></label><input type="text" x-model="newTournament.name" class="input input-bordered" placeholder="np. IPC WIMCO 2025"></div>
             <div class="form-control"><label class="label"><span class="label-text">Data rozpocz&#281;cia</span></label><input type="date" x-model="newTournament.start_date" class="input input-bordered"></div>
             <div class="form-control"><label class="label"><span class="label-text">Data zako&#324;czenia</span></label><input type="date" x-model="newTournament.end_date" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Liczba kort&#243;w</span></label><input type="number" min="1" x-model="newTournament.court_count" class="input input-bordered" placeholder="np. 5"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Miasto</span></label><input type="text" x-model="newTournament.city" class="input input-bordered" placeholder="np. Zielona G&#243;ra"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Kraj</span></label><input type="text" x-model="newTournament.country" class="input input-bordered" maxlength="2" placeholder="PL"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Email raport&#243;w</span></label><input type="email" x-model="newTournament.report_email" class="input input-bordered" placeholder="np. turniej@vestmedia.pl"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Logo turnieju</span></label><input type="file" accept="image/*" @change="onTournamentLogoSelected" class="file-input file-input-bordered"></div>
           </div>
           <div class="card-actions justify-end mt-4"><button @click="createTournament()" class="btn btn-primary">Utw&#243;rz turniej</button></div>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <h2 class="card-title">Ustawienia email / SMTP</h2>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div class="form-control"><label class="label"><span class="label-text">Host SMTP</span></label><input type="text" x-model="emailSettings.smtp_host" class="input input-bordered" placeholder="smtp.example.com"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Port</span></label><input type="number" x-model="emailSettings.smtp_port" class="input input-bordered" placeholder="587"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Login</span></label><input type="text" x-model="emailSettings.smtp_username" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Has&#322;o</span></label><input type="password" x-model="emailSettings.smtp_password" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Email nadawcy</span></label><input type="email" x-model="emailSettings.smtp_from_email" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Nazwa nadawcy</span></label><input type="text" x-model="emailSettings.smtp_from_name" class="input input-bordered"></div>
+            <div class="form-control justify-end">
+              <label class="label cursor-pointer justify-start gap-3 mt-8"><input type="checkbox" class="toggle toggle-primary" x-model="emailSettings.smtp_use_tls"><span class="label-text">U&#380;yj STARTTLS</span></label>
+            </div>
+          </div>
+          <div class="card-actions justify-end mt-4"><button @click="saveEmailSettings()" class="btn btn-primary">Zapisz SMTP</button></div>
         </div>
       </div>
       <div class="card bg-base-100 shadow-xl">
@@ -279,14 +307,24 @@
           <div x-show="loading.tournaments" class="space-y-4"><div class="skeleton h-12 w-full"></div><div class="skeleton h-12 w-full"></div></div>
           <div x-show="!loading.tournaments" class="overflow-x-auto">
             <table class="table table-zebra">
-              <thead><tr><th>Nazwa</th><th>Rozpocz&#281;cie</th><th>Zako&#324;czenie</th><th>Status</th><th>Akcje</th></tr></thead>
+              <thead><tr><th>Nazwa</th><th>Lokalizacja</th><th>Korty</th><th>Email</th><th>Rozpocz&#281;cie</th><th>Zako&#324;czenie</th><th>Status</th><th>Akcje</th></tr></thead>
               <tbody>
                 <template x-for="tournament in tournaments" :key="tournament.id">
                   <tr :class="{'bg-success bg-opacity-10': tournament.active}">
                     <td><span class="font-semibold" x-text="tournament.name"></span><span x-show="tournament.active" class="badge badge-success badge-sm ml-2">Aktywny</span></td>
+                    <td x-text="[tournament.city, tournament.country].filter(Boolean).join(', ') || '-' "></td>
+                    <td x-text="tournament.court_count || 0"></td>
+                    <td x-text="tournament.report_email || '-' "></td>
                     <td x-text="tournament.start_date"></td>
                     <td x-text="tournament.end_date"></td>
-                    <td><span x-show="!tournament.active" @click="activateTournament(tournament.id)" class="badge badge-ghost cursor-pointer hover:badge-primary">Ustaw aktywny</span></td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        class="toggle toggle-success"
+                        :checked="!!tournament.active"
+                        @change="toggleTournamentActive(tournament.id, $event.target.checked)"
+                      >
+                    </td>
                     <td class="flex gap-2">
                       <button @click="selectTournament(tournament.id)" class="btn btn-xs btn-ghost">&#128203; Gracze</button>
                       <button @click="deleteTournament(tournament.id)" class="btn btn-xs btn-error">Usu&#324;</button>

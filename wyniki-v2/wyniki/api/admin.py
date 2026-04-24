@@ -83,8 +83,7 @@ def delete_court(kort_id):
         
         # Refresh in-memory state
         db_courts_list = database.fetch_courts()
-        db_courts = [row["kort_id"] for row in db_courts_list]
-        court_manager.refresh_courts_from_db(db_courts)
+        court_manager.refresh_courts_from_db(db_courts_list)
         
         logger.info(f"Court deleted: kort={kort_id}")
         return jsonify({"status": "ok", "kort_id": kort_id})
@@ -141,8 +140,7 @@ def update_court(kort_id):
         
         # Refresh in-memory state
         db_courts_list = database.fetch_courts()
-        db_courts = [row["kort_id"] for row in db_courts_list]
-        court_manager.refresh_courts_from_db(db_courts)
+        court_manager.refresh_courts_from_db(db_courts_list)
         
         logger.info(f"Court renamed: {kort_id} -> {new_kort_id}")
         return jsonify({"status": "ok", "kort_id": new_kort_id})
@@ -166,6 +164,32 @@ def delete_latest_history():
             return jsonify({"status": "ok", "message": "No history to delete"})
     except Exception as e:
         logger.error(f"Failed to delete history: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/settings/email', methods=['GET'])
+def get_email_settings():
+    """Get SMTP/email settings used for match and tournament reports."""
+    try:
+        from ..services.email_reports import get_email_settings as load_email_settings
+
+        return jsonify(load_email_settings())
+    except Exception as e:
+        logger.error(f"Failed to get email settings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/settings/email', methods=['PUT'])
+def update_email_settings():
+    """Persist SMTP/email settings."""
+    try:
+        from ..services.email_reports import save_email_settings
+
+        data = request.get_json(silent=True) or {}
+        save_email_settings(data)
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        logger.error(f"Failed to update email settings: {e}")
         return jsonify({"error": str(e)}), 500
 
 
