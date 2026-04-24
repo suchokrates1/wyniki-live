@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 
 from wyniki.database import (
     get_active_tournament_id,
+    fetch_active_tournaments,
     fetch_bracket_groups,
     save_bracket_groups,
     get_full_bracket,
@@ -10,6 +11,7 @@ from wyniki.database import (
     save_bracket_knockout,
     fetch_bracket_knockout,
     fetch_match_history,
+    fetch_players,
 )
 
 # Public API
@@ -33,21 +35,10 @@ def public_bracket():
 @bracket_public_bp.route('/list')
 def public_tournament_list():
     """List active tournaments for public live/history browsing."""
-    from wyniki.db_models import Tournament, Player
-    from sqlalchemy import func
-    tournaments = (
-        Tournament.query
-        .filter(Tournament.active == 1)
-        .outerjoin(Player, Player.tournament_id == Tournament.id)
-        .add_columns(func.count(Player.id).label('player_count'))
-        .group_by(Tournament.id)
-        .order_by(Tournament.start_date.desc())
-        .all()
-    )
     result = []
-    for t, player_count in tournaments:
-        d = t.to_dict()
-        d['player_count'] = player_count
+    for tournament in fetch_active_tournaments():
+        d = dict(tournament)
+        d['player_count'] = len(fetch_players(tournament['id']))
         result.append(d)
     return jsonify(result)
 
