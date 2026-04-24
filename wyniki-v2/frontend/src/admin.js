@@ -21,6 +21,7 @@ Alpine.data('adminApp', () => ({
   // Tournaments
   tournaments: [],
   selectedTournament: null,
+  editingTournamentId: null,
   newTournament: {
     name: '',
     start_date: '',
@@ -30,6 +31,19 @@ Alpine.data('adminApp', () => ({
     report_email: '',
     court_count: 1,
     logo: null,
+  },
+  editTournament: {
+    id: null,
+    name: '',
+    start_date: '',
+    end_date: '',
+    city: '',
+    country: '',
+    report_email: '',
+    court_count: 0,
+    active: false,
+    logo: null,
+    logo_path: '',
   },
 
   emailSettings: {
@@ -372,6 +386,90 @@ Alpine.data('adminApp', () => ({
 
   onTournamentLogoSelected(event) {
     this.newTournament.logo = event.target.files?.[0] || null;
+  },
+
+  openTournamentEditor(tournament) {
+    this.editingTournamentId = tournament.id;
+    this.editTournament = {
+      id: tournament.id,
+      name: tournament.name || '',
+      start_date: tournament.start_date || '',
+      end_date: tournament.end_date || '',
+      city: tournament.city || '',
+      country: tournament.country || '',
+      report_email: tournament.report_email || '',
+      court_count: tournament.court_count || 0,
+      active: !!tournament.active,
+      logo: null,
+      logo_path: tournament.logo_path || '',
+    };
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  cancelTournamentEdit() {
+    this.editingTournamentId = null;
+    this.editTournament = {
+      id: null,
+      name: '',
+      start_date: '',
+      end_date: '',
+      city: '',
+      country: '',
+      report_email: '',
+      court_count: 0,
+      active: false,
+      logo: null,
+      logo_path: '',
+    };
+  },
+
+  onEditTournamentLogoSelected(event) {
+    this.editTournament.logo = event.target.files?.[0] || null;
+  },
+
+  async saveTournamentEdit() {
+    if (!this.editTournament.id || !this.editTournament.name || !this.editTournament.start_date || !this.editTournament.end_date) {
+      this.showToast('Wypełnij wszystkie pola turnieju', 'warning');
+      return;
+    }
+
+    try {
+      const payload = new FormData();
+      Object.entries(this.editTournament).forEach(([key, value]) => {
+        if (['id', 'logo', 'logo_path', 'court_count'].includes(key)) return;
+        payload.append(key, value ?? '');
+      });
+      if (this.editTournament.logo) {
+        payload.append('logo', this.editTournament.logo);
+      }
+
+      const response = await fetch(`/admin/api/tournaments/${this.editTournament.id}`, {
+        method: 'PUT',
+        body: payload,
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Failed to update tournament');
+
+      const editedTournamentId = this.editTournament.id;
+      const parts = ['Turniej zapisany'];
+      if (result.created_courts?.length) {
+        parts.push(`dodano korty: ${result.created_courts.join(', ')}`);
+      }
+      if (result.deleted_courts?.length) {
+        parts.push(`usunięto korty: ${result.deleted_courts.join(', ')}`);
+      }
+      this.showToast(parts.join(' | '), 'success');
+      this.cancelTournamentEdit();
+      await this.loadCourts();
+      await this.loadTournaments();
+      if (this.selectedTournament === editedTournamentId) {
+        await this.loadPlayers(editedTournamentId);
+      }
+    } catch (err) {
+      console.error('Failed to update tournament:', err);
+      this.showToast('Błąd zapisu turnieju', 'error');
+    }
   },
 
   async loadEmailSettings() {
