@@ -9,6 +9,15 @@ from ..config import logger
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
 
 
+def _json_no_cache(payload, status: int = 200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
 @blueprint.route('/snapshot')
 def snapshot():
     """Get current state of all courts."""
@@ -22,14 +31,14 @@ def snapshot():
             court.get("tournament_name") for court in configured_courts if court.get("tournament_name")
         })
         tournament_name = tournament_names[0] if len(tournament_names) == 1 else get_active_tournament_name()
-        return jsonify({
+        return _json_no_cache({
             "courts": courts_data,
             "tournament_name": tournament_name,
             "tournament_names": tournament_names,
         })
     except Exception as e:
         logger.error(f"Failed to get snapshot: {e}")
-        return jsonify({"error": str(e)}), 500
+        return _json_no_cache({"error": str(e)}, 500)
 
 
 @blueprint.route('/history')

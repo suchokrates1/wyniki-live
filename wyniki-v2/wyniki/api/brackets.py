@@ -21,6 +21,15 @@ bracket_public_bp = Blueprint('bracket_public', __name__, url_prefix='/api/tourn
 bracket_admin_bp = Blueprint('bracket_admin', __name__, url_prefix='/admin/api/tournaments')
 
 
+def _json_no_cache(payload, status: int = 200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
 # ==================== PUBLIC ====================
 
 @bracket_public_bp.route('/bracket')
@@ -40,7 +49,7 @@ def public_tournament_list():
         d = dict(tournament)
         d['player_count'] = len(fetch_players(tournament['id']))
         result.append(d)
-    return jsonify(result)
+    return _json_no_cache(result)
 
 
 @bracket_public_bp.route('/<int:tid>/bracket')
