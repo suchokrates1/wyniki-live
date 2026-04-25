@@ -184,6 +184,13 @@ def cleanup_e2e_artifacts():
         like_marker = f"%{marker}%"
         prefix_marker = f"{marker}%"
 
+        tournament_ids = [row.id for row in Tournament.query.filter(Tournament.name.like(prefix_marker)).all()]
+        deleted_tournaments = 0
+        for tournament_id in tournament_ids:
+            if delete_tournament(tournament_id):
+                deleted_tournaments += 1
+        db.session.expire_all()
+
         match_ids = [
             row.id for row in Match.query.filter(
                 (Match.player1_name.like(like_marker)) |
@@ -201,12 +208,6 @@ def cleanup_e2e_artifacts():
         if match_ids:
             history_filter = history_filter | MatchHistory.match_id.in_(match_ids)
         deleted_history = MatchHistory.query.filter(history_filter).delete(synchronize_session=False)
-
-        tournament_ids = [row.id for row in Tournament.query.filter(Tournament.name.like(prefix_marker)).all()]
-        deleted_tournaments = 0
-        for tournament_id in tournament_ids:
-            if delete_tournament(tournament_id):
-                deleted_tournaments += 1
 
         deleted_global_players = GlobalPlayer.query.filter(
             (GlobalPlayer.first_name.like(like_marker)) |

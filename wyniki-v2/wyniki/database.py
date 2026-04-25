@@ -16,6 +16,7 @@ def db_conn() -> Generator[sqlite3.Connection, None, None]:
     
     connection = sqlite3.connect(str(db_path), check_same_thread=False)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     try:
         yield connection
     finally:
@@ -87,6 +88,57 @@ def init_db() -> None:
                 phase TEXT DEFAULT 'Grupowa',
                 match_id INTEGER,
                 stats_mode TEXT
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS matches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                court_id TEXT NOT NULL,
+                player1_name TEXT NOT NULL,
+                player2_name TEXT NOT NULL,
+                status TEXT DEFAULT 'in_progress',
+                tournament_id INTEGER,
+                bracket_group_id INTEGER,
+                phase TEXT,
+                player1_sets INTEGER DEFAULT 0,
+                player2_sets INTEGER DEFAULT 0,
+                player1_games INTEGER DEFAULT 0,
+                player2_games INTEGER DEFAULT 0,
+                player1_points INTEGER DEFAULT 0,
+                player2_points INTEGER DEFAULT 0,
+                sets_history TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS match_statistics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                match_id INTEGER NOT NULL UNIQUE,
+                player1_aces INTEGER DEFAULT 0,
+                player1_double_faults INTEGER DEFAULT 0,
+                player1_winners INTEGER DEFAULT 0,
+                player1_forced_errors INTEGER DEFAULT 0,
+                player1_unforced_errors INTEGER DEFAULT 0,
+                player1_first_serves INTEGER DEFAULT 0,
+                player1_first_serves_in INTEGER DEFAULT 0,
+                player1_first_serve_percentage REAL DEFAULT 0.0,
+                player2_aces INTEGER DEFAULT 0,
+                player2_double_faults INTEGER DEFAULT 0,
+                player2_winners INTEGER DEFAULT 0,
+                player2_forced_errors INTEGER DEFAULT 0,
+                player2_unforced_errors INTEGER DEFAULT 0,
+                player2_first_serves INTEGER DEFAULT 0,
+                player2_first_serves_in INTEGER DEFAULT 0,
+                player2_first_serve_percentage REAL DEFAULT 0.0,
+                match_duration_ms INTEGER DEFAULT 0,
+                winner TEXT,
+                stats_mode TEXT,
+                received_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE
             )
         """)
         
@@ -1214,14 +1266,14 @@ def fetch_players(tournament_id: Optional[int] = None) -> List[Dict]:
             cursor = conn.cursor()
             if tournament_id:
                 cursor.execute("""
-                    SELECT id, tournament_id, name, first_name, last_name, category, country, created_at
+                    SELECT id, tournament_id, name, first_name, last_name, category, country, gender, global_player_id, created_at
                     FROM players
                     WHERE tournament_id = ?
                     ORDER BY last_name, first_name
                 """, (tournament_id,))
             else:
                 cursor.execute("""
-                    SELECT id, tournament_id, name, first_name, last_name, category, country, created_at
+                    SELECT id, tournament_id, name, first_name, last_name, category, country, gender, global_player_id, created_at
                     FROM players
                     ORDER BY tournament_id DESC, last_name, first_name
                 """)
@@ -1239,7 +1291,7 @@ def fetch_active_tournament_players() -> List[Dict]:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
-                       p.category, p.country, p.created_at
+                       p.category, p.country, p.gender, p.global_player_id, p.created_at
                 FROM players p
                 INNER JOIN tournaments t ON p.tournament_id = t.id
                 WHERE t.active = 1
@@ -1259,7 +1311,7 @@ def fetch_players_for_active_tournaments() -> List[Dict]:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
-                       p.category, p.country, p.created_at
+                       p.category, p.country, p.gender, p.global_player_id, p.created_at
                 FROM players p
                 INNER JOIN tournaments t ON p.tournament_id = t.id
                 WHERE t.active = 1
@@ -1270,6 +1322,47 @@ def fetch_players_for_active_tournaments() -> List[Dict]:
     except Exception as e:
         logger.error("fetch_players_for_active_tournaments_error", error=str(e))
         return []
+
+
+def _ensure_global_player(cursor: sqlite3.Cursor, first_name: str, last_name: str,
+                          category: str = "", country: str = "", gender: str = "") -> Optional[int]:
+    first_name = (first_name or "").strip()
+    last_name = (last_name or "").strip()
+    if not first_name and not last_name:
+        return None
+
+    cursor.execute(
+        """
+        SELECT id FROM global_players
+        WHERE LOWER(TRIM(first_name)) = LOWER(TRIM(?))
+          AND LOWER(TRIM(last_name)) = LOWER(TRIM(?))
+        LIMIT 1
+        """,
+        (first_name, last_name),
+    )
+    row = cursor.fetchone()
+    if row:
+        global_player_id = row["id"]
+        cursor.execute(
+            """
+            UPDATE global_players
+            SET gender = CASE WHEN COALESCE(TRIM(gender), '') = '' THEN ? ELSE gender END,
+                country = CASE WHEN COALESCE(TRIM(country), '') = '' THEN ? ELSE country END,
+                category = CASE WHEN COALESCE(TRIM(category), '') = '' THEN ? ELSE category END
+            WHERE id = ?
+            """,
+            ((gender or "").strip(), (country or "").strip(), (category or "").strip(), global_player_id),
+        )
+        return global_player_id
+
+    cursor.execute(
+        """
+        INSERT INTO global_players (first_name, last_name, gender, country, category)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (first_name, last_name, (gender or "").strip(), (country or "").strip(), (category or "").strip()),
+    )
+    return cursor.lastrowid
 
 
 def insert_player(tournament_id: int, name: str, category: str = "", country: str = "",
@@ -1288,10 +1381,11 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
+            global_player_id = _ensure_global_player(cursor, first_name, last_name, category, country, gender)
             cursor.execute("""
-                INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (tournament_id, name, first_name, last_name, category, country, gender))
+                INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender, global_player_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (tournament_id, name, first_name, last_name, category, country, gender, global_player_id))
             conn.commit()
             logger.info("player_inserted", id=cursor.lastrowid, name=name, tournament_id=tournament_id)
             return cursor.lastrowid
@@ -1315,11 +1409,12 @@ def update_player(player_id: int, name: str, category: str, country: str,
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
+            global_player_id = _ensure_global_player(cursor, first_name, last_name, category, country, gender)
             cursor.execute("""
                 UPDATE players
-                SET name = ?, first_name = ?, last_name = ?, category = ?, country = ?, gender = ?
+                SET name = ?, first_name = ?, last_name = ?, category = ?, country = ?, gender = ?, global_player_id = ?
                 WHERE id = ?
-            """, (name, first_name, last_name, category, country, gender, player_id))
+            """, (name, first_name, last_name, category, country, gender, global_player_id, player_id))
             conn.commit()
             logger.info("player_updated", id=player_id)
             return True
@@ -1361,16 +1456,22 @@ def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
                         fn, ln = '', p_name.strip()
                 if not p_name:
                     p_name = f"{fn} {ln}".strip()
+                category = player.get("category", "")
+                country = player.get("country", "")
+                gender = player.get("gender", "")
+                global_player_id = _ensure_global_player(cursor, fn, ln, category, country, gender)
                 cursor.execute("""
-                    INSERT INTO players (tournament_id, name, first_name, last_name, category, country)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender, global_player_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     tournament_id,
                     p_name,
                     fn,
                     ln,
-                    player.get("category", ""),
-                    player.get("country", "")
+                    category,
+                    country,
+                    gender,
+                    global_player_id,
                 ))
                 count += 1
             conn.commit()

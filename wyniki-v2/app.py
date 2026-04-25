@@ -10,6 +10,7 @@ from gevent import monkey
 monkey.patch_all()
 
 from flask import Flask
+from prometheus_client import CollectorRegistry
 from prometheus_flask_exporter import PrometheusMetrics
 
 from wyniki.config import logger, settings
@@ -46,7 +47,7 @@ def create_app() -> Flask:
         initialize_state()
     
     # Initialize Prometheus metrics
-    metrics = PrometheusMetrics(app)
+    metrics = PrometheusMetrics(app, registry=CollectorRegistry())
     metrics.info('wyniki_live_v2', 'Tennis Live Scores v2', version='2.0.0')
     
     # Register blueprints
