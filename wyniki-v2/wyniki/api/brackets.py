@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from wyniki.database import (
     get_active_tournament_id,
     fetch_active_tournaments,
+    fetch_tournaments,
     fetch_bracket_groups,
     save_bracket_groups,
     get_full_bracket,
@@ -43,9 +44,9 @@ def public_bracket():
 
 @bracket_public_bp.route('/list')
 def public_tournament_list():
-    """List active tournaments for public live/history browsing."""
+    """List all tournaments for public tournament browsing."""
     result = []
-    for tournament in fetch_active_tournaments():
+    for tournament in fetch_tournaments():
         d = dict(tournament)
         d['player_count'] = len(fetch_players(tournament['id']))
         result.append(d)

@@ -221,3 +221,20 @@ def test_mobile_created_player_is_linked_to_global_player(full_app_with_temp_db)
     assert len(players) == 1
     assert players[0]["global_player_id"] is not None
     assert _count_table(database, "global_players") == 1
+
+
+def test_public_tournament_list_includes_inactive_tournaments_with_player_counts(full_app_with_temp_db):
+    from wyniki import database
+
+    active_id = database.insert_tournament("Active Public Cup", "2026-04-26", "2026-04-27", active=True)
+    inactive_id = database.insert_tournament("Inactive Public Cup", "2026-03-26", "2026-03-27", active=False)
+    database.insert_player(active_id, "Active Player", first_name="Active", last_name="Player", country="PL")
+    database.insert_player(inactive_id, "Inactive Player", first_name="Inactive", last_name="Player", country="PL")
+
+    response = full_app_with_temp_db.test_client().get("/api/tournament/list")
+
+    assert response.status_code == 200
+    tournaments = response.get_json()
+    counts = {tournament["name"]: tournament["player_count"] for tournament in tournaments}
+    assert counts["Active Public Cup"] == 1
+    assert counts["Inactive Public Cup"] == 1

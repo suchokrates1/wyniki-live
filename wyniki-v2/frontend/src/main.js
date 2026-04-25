@@ -59,7 +59,7 @@ const TRANSLATIONS = {
       startedAt: 'Rozpoczęcie:',
       endedAt: 'Zakończenie:'
     },
-    tabs: { live: 'Na żywo', tournaments: 'Historia', players: 'Zawodnicy' },
+    tabs: { live: 'Na żywo', tournaments: 'Turnieje', players: 'Zawodnicy' },
     tournamentCard: { players: 'zawodników', active: 'Aktywny', noTournaments: 'Brak turniejów', backToList: 'Powrót do listy' },
     playerSection: { title: 'Baza zawodników', searchPlaceholder: 'Szukaj zawodnika...', all: 'Wszyscy', men: 'Mężczyźni', women: 'Kobiety', matchesPlayed: 'meczów', winsLabel: 'W', lossesLabel: 'L', noResults: 'Brak wyników', allCountries: 'Wszystkie kraje', allCategories: 'Wszystkie kategorie', genderShortM: 'M', genderShortF: 'K' },
     playerProfile: { back: 'Powrót do listy', category: 'Kategoria', country: 'Kraj', gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', career: 'Kariera', tournaments: 'Turnieje', matches: 'Mecze', wins: 'Wygrane', losses: 'Przegrane', winRate: 'Skuteczność', medals: 'Medale', gold: 'Złoto', silver: 'Srebro', bronze: 'Brąz', tournamentHistory: 'Historia turniejów', group: 'Grupa', place: 'miejsce', of: 'z', groupPhase: 'Faza grupowa', knockoutPhase: 'Faza pucharowa', noTournaments: 'Brak turniejów', matchesInTournament: 'Mecze w turnieju', won: 'W', lost: 'P', vs: 'vs', duration: 'Czas' },
@@ -739,7 +739,7 @@ Alpine.data('tennisApp', () => ({
   /* --- Tournament history methods --- */
   async fetchTournaments() {
     try {
-      const response = await fetch('/api/tournaments/active');
+      const response = await fetch('/api/tournament/list');
       if (!response.ok) return;
       const data = await response.json();
       this.tournaments = Array.isArray(data) ? data : [];
