@@ -1135,14 +1135,40 @@ def mark_tournament_summary_sent(tournament_id: int, sent_at: Optional[str] = No
 
 
 def delete_tournament(tournament_id: int) -> bool:
-    """Delete a tournament and all its players."""
+    """Delete a tournament and all data owned by it."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
+            cursor.execute("SELECT id FROM tournaments WHERE id = ?", (tournament_id,))
+            if not cursor.fetchone():
+                return False
+
+            cursor.execute("SELECT id FROM matches WHERE tournament_id = ?", (tournament_id,))
+            match_ids = [row["id"] for row in cursor.fetchall()]
+            if match_ids:
+                placeholders = ",".join("?" for _ in match_ids)
+                cursor.execute(f"DELETE FROM match_statistics WHERE match_id IN ({placeholders})", match_ids)
+                cursor.execute(
+                    f"DELETE FROM match_history WHERE tournament_id = ? OR match_id IN ({placeholders})",
+                    [tournament_id, *match_ids],
+                )
+            else:
+                cursor.execute("DELETE FROM match_history WHERE tournament_id = ?", (tournament_id,))
+
+            cursor.execute("DELETE FROM matches WHERE tournament_id = ?", (tournament_id,))
+            cursor.execute(
+                "DELETE FROM bracket_group_players WHERE group_id IN "
+                "(SELECT id FROM bracket_groups WHERE tournament_id = ?)",
+                (tournament_id,),
+            )
+            cursor.execute("DELETE FROM bracket_groups WHERE tournament_id = ?", (tournament_id,))
+            cursor.execute("DELETE FROM bracket_knockout WHERE tournament_id = ?", (tournament_id,))
+            cursor.execute("DELETE FROM players WHERE tournament_id = ?", (tournament_id,))
+            cursor.execute("DELETE FROM courts WHERE tournament_id = ?", (tournament_id,))
             cursor.execute("DELETE FROM tournaments WHERE id = ?", (tournament_id,))
             conn.commit()
             logger.info("tournament_deleted", id=tournament_id)
-            return True
+            return cursor.rowcount > 0
     except Exception as e:
         logger.error("delete_tournament_error", error=str(e), tournament_id=tournament_id)
         return False

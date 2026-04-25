@@ -9,11 +9,11 @@ blueprint = Blueprint('admin', __name__, url_prefix='/admin')
 
 @blueprint.route('/api/courts', methods=['GET'])
 def get_courts():
-    """Get all courts."""
+    """Get courts for active tournaments only."""
     try:
         from .. import database
         
-        courts_data = database.fetch_courts()
+        courts_data = database.fetch_courts(active_only=True)
         return jsonify(courts_data)
     except Exception as e:
         logger.error(f"Failed to get courts: {e}")
@@ -171,8 +171,8 @@ def delete_latest_history():
 def cleanup_e2e_artifacts():
     """Delete emulator E2E artifacts created with an E2E-* marker."""
     try:
-        from ..db_models import db, Court, Match, MatchHistory, MatchStatistics, Tournament
-        from ..database import fetch_courts
+        from ..db_models import db, GlobalPlayer, Match, MatchHistory, MatchStatistics, Tournament
+        from ..database import delete_tournament, fetch_courts
         from ..services.court_manager import refresh_courts_from_db
 
         data = request.get_json(silent=True) or {}
@@ -202,13 +202,16 @@ def cleanup_e2e_artifacts():
             history_filter = history_filter | MatchHistory.match_id.in_(match_ids)
         deleted_history = MatchHistory.query.filter(history_filter).delete(synchronize_session=False)
 
-        tournaments = Tournament.query.filter(Tournament.name.like(prefix_marker)).all()
-        tournament_ids = [row.id for row in tournaments]
-        if tournament_ids:
-            Court.query.filter(Court.tournament_id.in_(tournament_ids)).update({Court.tournament_id: None}, synchronize_session=False)
-        for tournament in tournaments:
-            db.session.delete(tournament)
-        deleted_tournaments = len(tournaments)
+        tournament_ids = [row.id for row in Tournament.query.filter(Tournament.name.like(prefix_marker)).all()]
+        deleted_tournaments = 0
+        for tournament_id in tournament_ids:
+            if delete_tournament(tournament_id):
+                deleted_tournaments += 1
+
+        deleted_global_players = GlobalPlayer.query.filter(
+            (GlobalPlayer.first_name.like(like_marker)) |
+            (GlobalPlayer.last_name.like(like_marker))
+        ).delete(synchronize_session=False)
 
         db.session.commit()
         refresh_courts_from_db(fetch_courts(active_only=True))
@@ -220,6 +223,7 @@ def cleanup_e2e_artifacts():
             "deleted_statistics": deleted_statistics,
             "deleted_history": deleted_history,
             "deleted_tournaments": deleted_tournaments,
+            "deleted_global_players": deleted_global_players,
         })
     except Exception as e:
         try:
