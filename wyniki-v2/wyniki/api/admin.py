@@ -167,6 +167,110 @@ def delete_latest_history():
         return jsonify({"error": str(e)}), 500
 
 
+@blueprint.route('/api/e2e/cleanup', methods=['POST'])
+def cleanup_e2e_artifacts():
+    """Delete emulator E2E artifacts created with an E2E-* marker."""
+    try:
+        from ..db_models import db, Match, MatchHistory, MatchStatistics, Tournament
+        from ..database import fetch_courts, delete_tournament
+        from ..services.court_manager import refresh_courts_from_db
+
+        data = request.get_json(silent=True) or {}
+        marker = str(data.get("marker") or "").strip()
+
+        if not marker.startswith("E2E-"):
+            return jsonify({"error": "marker must start with E2E-"}), 400
+
+        like_marker = f"%{marker}%"
+        prefix_marker = f"{marker}%"
+
+        match_ids = [
+            row.id for row in Match.query.filter(
+                (Match.player1_name.like(like_marker)) |
+                (Match.player2_name.like(like_marker))
+            ).all()
+        ]
+
+        deleted_statistics = 0
+        deleted_matches = 0
+        if match_ids:
+            deleted_statistics = MatchStatistics.query.filter(MatchStatistics.match_id.in_(match_ids)).delete(synchronize_session=False)
+            deleted_matches = Match.query.filter(Match.id.in_(match_ids)).delete(synchronize_session=False)
+
+        history_filter = (MatchHistory.player_a.like(like_marker)) | (MatchHistory.player_b.like(like_marker))
+        if match_ids:
+            history_filter = history_filter | MatchHistory.match_id.in_(match_ids)
+        deleted_history = MatchHistory.query.filter(history_filter).delete(synchronize_session=False)
+
+        tournament_ids = [row.id for row in Tournament.query.filter(Tournament.name.like(prefix_marker)).all()]
+        deleted_tournaments = 0
+        for tournament_id in tournament_ids:
+            if delete_tournament(tournament_id):
+                deleted_tournaments += 1
+
+        db.session.commit()
+        refresh_courts_from_db(fetch_courts(active_only=True))
+
+        return jsonify({
+            "status": "ok",
+            "marker": marker,
+            "deleted_matches": deleted_matches,
+            "deleted_statistics": deleted_statistics,
+            "deleted_history": deleted_history,
+            "deleted_tournaments": deleted_tournaments,
+        })
+    except Exception as e:
+        try:
+            from ..db_models import db
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.error(f"Failed to cleanup E2E artifacts: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/e2e/artifacts', methods=['GET'])
+def get_e2e_artifacts():
+    """Return emulator E2E artifacts created with an E2E-* marker."""
+    try:
+        from ..db_models import Match, MatchHistory, MatchStatistics, Tournament
+
+        marker = str(request.args.get("marker") or "").strip()
+        if not marker.startswith("E2E-"):
+            return jsonify({"error": "marker must start with E2E-"}), 400
+
+        like_marker = f"%{marker}%"
+        prefix_marker = f"{marker}%"
+
+        matches = Match.query.filter(
+            (Match.player1_name.like(like_marker)) |
+            (Match.player2_name.like(like_marker))
+        ).order_by(Match.id.desc()).all()
+        match_ids = [match.id for match in matches]
+
+        history_filter = (MatchHistory.player_a.like(like_marker)) | (MatchHistory.player_b.like(like_marker))
+        if match_ids:
+            history_filter = history_filter | MatchHistory.match_id.in_(match_ids)
+        history = MatchHistory.query.filter(history_filter).order_by(MatchHistory.id.desc()).all()
+
+        statistics = []
+        if match_ids:
+            statistics = MatchStatistics.query.filter(MatchStatistics.match_id.in_(match_ids)).all()
+
+        tournaments = Tournament.query.filter(Tournament.name.like(prefix_marker)).order_by(Tournament.id.desc()).all()
+
+        return jsonify({
+            "marker": marker,
+            "matches": [match.to_dict() for match in matches],
+            "history": [entry.to_dict() | {"match_id": entry.match_id, "sets_history": entry.sets_history} for entry in history],
+            "statistics": [stat.to_dict() for stat in statistics],
+            "tournaments": [tournament.to_dict() for tournament in tournaments],
+        })
+    except Exception as e:
+        logger.error(f"Failed to fetch E2E artifacts: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @blueprint.route('/api/settings/email', methods=['GET'])
 def get_email_settings():
     """Get SMTP/email settings used for match and tournament reports."""
