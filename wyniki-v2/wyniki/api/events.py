@@ -86,6 +86,20 @@ def validate_event_data(data: Dict[str, Any]) -> tuple[bool, str]:
     return True, ""
 
 
+def _resolve_live_player_name(existing_state: Dict[str, Any], player_data: Dict[str, Any]) -> str:
+    """Keep doubles team labels stable when point events only carry one player name."""
+    incoming_name = str(player_data.get('full_name') or player_data.get('name') or '-').strip() or '-'
+    existing_name = str(existing_state.get('full_name') or existing_state.get('surname') or '').strip()
+
+    existing_is_team = '/' in existing_name
+    incoming_is_team = '/' in incoming_name
+
+    if existing_is_team and not incoming_is_team:
+        return existing_name
+
+    return incoming_name
+
+
 def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
     """Process match event and update court state."""
     with STATE_LOCK:
@@ -96,13 +110,13 @@ def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
         player1 = event_data['player1']
         player2 = event_data['player2']
         
-        full_a = player1.get('full_name') or player1.get('name', '-')
+        full_a = _resolve_live_player_name(state['A'], player1)
         state['A']['surname'] = full_a
         state['A']['full_name'] = full_a
         state['A']['flag_code'] = player1.get('flag_code')
         state['A']['flag_url'] = player1.get('flag_url')
         
-        full_b = player2.get('full_name') or player2.get('name', '-')
+        full_b = _resolve_live_player_name(state['B'], player2)
         state['B']['surname'] = full_b
         state['B']['full_name'] = full_b
         state['B']['flag_code'] = player2.get('flag_code')
