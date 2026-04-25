@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timezone
 import json
+import re
 
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court
 from ..services.court_manager import ensure_court_state, normalize_kort_id, STATE_LOCK, _empty_player_state
@@ -20,6 +21,24 @@ def _resolve_tournament_for_court(kort_id: str | None) -> Tournament | None:
         if court and court.tournament_id:
             return Tournament.query.get(court.tournament_id)
     return Tournament.query.filter_by(active=1).first()
+
+
+def _format_mobile_court_name(court: dict) -> str:
+    """Return the short mobile label used on the court selection screen."""
+    raw_name = str(court.get("name") or "").split("•")[-1].strip()
+    if not raw_name:
+        raw_name = str(court.get("display_order") or "").strip()
+    if not raw_name:
+        raw_name = str(court.get("kort_id") or "").strip()
+
+    normalized = re.sub(r"^(kort|court)\s+", "", raw_name, flags=re.IGNORECASE).strip()
+    match = re.fullmatch(r"t\d+-(\d+)", normalized, flags=re.IGNORECASE)
+    if match:
+        normalized = match.group(1)
+
+    if normalized.isdigit():
+        return f"Kort {normalized}"
+    return raw_name
 
 
 @blueprint.route('/courts', methods=['GET'])
@@ -44,11 +63,7 @@ def get_courts():
             if state:
                 match_status = state.get("match_status", {})
                 is_active = match_status.get("active", False)
-            display_name = court.get("name") or kort_id
-            if court.get("tournament_name"):
-                display_name = f"{court['tournament_name']} • Kort {display_name}"
-            elif display_name != kort_id:
-                display_name = f"Kort {display_name}"
+            display_name = _format_mobile_court_name(court)
             
             courts_data.append({
                 "kort_id": kort_id,
