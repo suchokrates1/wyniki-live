@@ -171,8 +171,8 @@ def delete_latest_history():
 def cleanup_e2e_artifacts():
     """Delete emulator E2E artifacts created with an E2E-* marker."""
     try:
-        from ..db_models import db, Match, MatchHistory, MatchStatistics, Tournament
-        from ..database import fetch_courts, delete_tournament
+        from ..db_models import db, Court, Match, MatchHistory, MatchStatistics, Tournament
+        from ..database import fetch_courts
         from ..services.court_manager import refresh_courts_from_db
 
         data = request.get_json(silent=True) or {}
@@ -202,11 +202,13 @@ def cleanup_e2e_artifacts():
             history_filter = history_filter | MatchHistory.match_id.in_(match_ids)
         deleted_history = MatchHistory.query.filter(history_filter).delete(synchronize_session=False)
 
-        tournament_ids = [row.id for row in Tournament.query.filter(Tournament.name.like(prefix_marker)).all()]
-        deleted_tournaments = 0
-        for tournament_id in tournament_ids:
-            if delete_tournament(tournament_id):
-                deleted_tournaments += 1
+        tournaments = Tournament.query.filter(Tournament.name.like(prefix_marker)).all()
+        tournament_ids = [row.id for row in tournaments]
+        if tournament_ids:
+            Court.query.filter(Court.tournament_id.in_(tournament_ids)).update({Court.tournament_id: None}, synchronize_session=False)
+        for tournament in tournaments:
+            db.session.delete(tournament)
+        deleted_tournaments = len(tournaments)
 
         db.session.commit()
         refresh_courts_from_db(fetch_courts(active_only=True))
