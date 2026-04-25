@@ -1,10 +1,14 @@
 """Pydantic models for type safety and validation."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, validator
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class PlayerData(BaseModel):
@@ -64,7 +68,7 @@ class CourtState(BaseModel):
     history_meta: HistoryMeta = Field(default_factory=HistoryMeta)
     overlay_visible: Optional[bool] = None
     mode: Optional[str] = None
-    updated: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "+00:00")
+    updated: str = Field(default_factory=utc_now_iso)
 
 
 class HistoryEntry(BaseModel):
@@ -113,14 +117,14 @@ class AppSettings(BaseModel):
 class SnapshotResponse(BaseModel):
     """API snapshot response."""
     courts: Dict[str, CourtState]
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "+00:00")
+    timestamp: str = Field(default_factory=utc_now_iso)
 
 
 class HealthCheckResponse(BaseModel):
     """Health check response."""
     status: str  # "healthy", "degraded", "unhealthy"
     version: str
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "+00:00")
+    timestamp: str = Field(default_factory=utc_now_iso)
     components: Dict[str, str]  # component_name -> status
 
 
@@ -128,5 +132,5 @@ class ErrorResponse(BaseModel):
     """Standard error response."""
     error: str
     message: str
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "+00:00")
+    timestamp: str = Field(default_factory=utc_now_iso)
 

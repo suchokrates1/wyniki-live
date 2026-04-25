@@ -401,7 +401,8 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
     and auto-advance winners to the next round (SF→Final/3rd place)."""
     try:
         from .db_models import Match as MatchModel
-        match = MatchModel.query.get(match_id)
+        from .db_models import db
+        match = db.session.get(MatchModel, match_id)
         if not match or match.status != "finished":
             return False
 
@@ -1395,7 +1396,8 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
 
 
 def update_player(player_id: int, name: str, category: str, country: str,
-                  first_name: str = "", last_name: str = "", gender: str = "") -> bool:
+                  first_name: str = "", last_name: str = "", gender: str = "",
+                  tournament_id: Optional[int] = None) -> bool:
     """Update a player."""
     # If first_name/last_name not provided, split from name
     if not first_name and not last_name and name:
@@ -1413,25 +1415,28 @@ def update_player(player_id: int, name: str, category: str, country: str,
             cursor.execute("""
                 UPDATE players
                 SET name = ?, first_name = ?, last_name = ?, category = ?, country = ?, gender = ?, global_player_id = ?
-                WHERE id = ?
-            """, (name, first_name, last_name, category, country, gender, global_player_id, player_id))
+                WHERE id = ? AND (? IS NULL OR tournament_id = ?)
+            """, (name, first_name, last_name, category, country, gender, global_player_id, player_id, tournament_id, tournament_id))
             conn.commit()
             logger.info("player_updated", id=player_id)
-            return True
+            return cursor.rowcount > 0
     except Exception as e:
         logger.error("update_player_error", error=str(e), player_id=player_id)
         return False
 
 
-def delete_player(player_id: int) -> bool:
+def delete_player(player_id: int, tournament_id: Optional[int] = None) -> bool:
     """Delete a player."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM players WHERE id = ?", (player_id,))
+            cursor.execute(
+                "DELETE FROM players WHERE id = ? AND (? IS NULL OR tournament_id = ?)",
+                (player_id, tournament_id, tournament_id),
+            )
             conn.commit()
             logger.info("player_deleted", id=player_id)
-            return True
+            return cursor.rowcount > 0
     except Exception as e:
         logger.error("delete_player_error", error=str(e), player_id=player_id)
         return False

@@ -12,6 +12,7 @@ monkey.patch_all()
 from flask import Flask
 from prometheus_client import CollectorRegistry
 from prometheus_flask_exporter import PrometheusMetrics
+from sqlalchemy import event
 
 from wyniki.config import logger, settings
 from wyniki.db_models import db
@@ -22,6 +23,12 @@ from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
 from wyniki.api.overlay_api import blueprint as overlay_api_blueprint
 from wyniki.api.brackets import bracket_public_bp, bracket_admin_bp
 from wyniki.init_state import initialize_state
+
+
+def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON")
+    cursor.close()
 
 
 def create_app() -> Flask:
@@ -43,6 +50,7 @@ def create_app() -> Flask:
     
     # Create tables
     with app.app_context():
+        event.listen(db.engine, "connect", _enable_sqlite_foreign_keys)
         db.create_all()
         initialize_state()
     
