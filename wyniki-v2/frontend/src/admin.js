@@ -141,11 +141,20 @@ Alpine.data('adminApp', () => ({
     return this.players;
   },
 
+  isActiveTournamentId(tournamentId) {
+    const normalizedId = Number(tournamentId);
+    if (!normalizedId) return false;
+    return this.activeTournamentsList().some(tournament => Number(tournament.id) === normalizedId);
+  },
+
   get availableCourtTournamentOptions() {
     const counts = new Map();
     this.courts.forEach((court) => {
       const rawId = court.tournament_id;
       const tournamentId = rawId == null ? '__none__' : String(rawId);
+      if (tournamentId !== '__none__' && !this.isActiveTournamentId(tournamentId)) {
+        return;
+      }
       const existing = counts.get(tournamentId);
       if (existing) {
         existing.count += 1;
@@ -166,6 +175,7 @@ Alpine.data('adminApp', () => ({
     const groups = new Map();
     this.courts.forEach((court) => {
       const tournamentId = court.tournament_id == null ? '__none__' : String(court.tournament_id);
+      if (tournamentId !== '__none__' && !this.isActiveTournamentId(tournamentId)) return;
       if (selected.size && !selected.has(tournamentId)) return;
       if (!groups.has(tournamentId)) {
         groups.set(tournamentId, {
