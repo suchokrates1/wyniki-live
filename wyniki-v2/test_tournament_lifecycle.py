@@ -14,42 +14,7 @@ def app_with_temp_db(tmp_path, monkeypatch):
     from wyniki import database
     from wyniki.api import admin
 
-    with database.db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS matches (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                court_id TEXT NOT NULL,
-                player1_name TEXT NOT NULL,
-                player2_name TEXT NOT NULL,
-                status TEXT DEFAULT 'in_progress',
-                tournament_id INTEGER,
-                bracket_group_id INTEGER,
-                phase TEXT,
-                player1_sets INTEGER DEFAULT 0,
-                player2_sets INTEGER DEFAULT 0,
-                sets_history TEXT
-            )
-            """
-        )
-        conn.commit()
-
     database.init_db()
-    with database.db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS match_statistics (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                match_id INTEGER NOT NULL UNIQUE,
-                match_duration_ms INTEGER DEFAULT 0,
-                winner TEXT,
-                stats_mode TEXT
-            )
-            """
-        )
-        conn.commit()
 
     app = Flask(__name__)
     app.register_blueprint(admin.blueprint)
@@ -145,3 +110,37 @@ def test_delete_tournament_removes_owned_data(app_with_temp_db):
     assert _count_table(database, "bracket_groups", "WHERE tournament_id = ?", (tournament_id,)) == 0
     assert _count_table(database, "bracket_group_players", "WHERE group_id = ?", (group_id,)) == 0
     assert _count_table(database, "bracket_knockout", "WHERE tournament_id = ?", (tournament_id,)) == 0
+
+
+def test_tournament_players_are_linked_to_global_players(app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Players Cup", "2026-04-26", "2026-04-27", active=True)
+
+    first_player_id = database.insert_player(
+        tournament_id,
+        "Ada Nowak",
+        "B1",
+        "PL",
+        first_name="Ada",
+        last_name="Nowak",
+        gender="F",
+    )
+    inserted_count = database.bulk_insert_players(
+        tournament_id,
+        [
+            {"first_name": "Ada", "last_name": "Nowak", "category": "B1", "country": "PL", "gender": "F"},
+            {"name": "Jan Kowalski", "category": "B2", "country": "PL", "gender": "M"},
+        ],
+    )
+
+    assert first_player_id is not None
+    assert inserted_count == 2
+    assert _count_table(database, "global_players") == 2
+
+    players = database.fetch_players(tournament_id)
+    assert len(players) == 3
+    assert all(player["global_player_id"] for player in players)
+
+    ada_global_ids = {player["global_player_id"] for player in players if player["last_name"] == "Nowak"}
+    assert len(ada_global_ids) == 1
