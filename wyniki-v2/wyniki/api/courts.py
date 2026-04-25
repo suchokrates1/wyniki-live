@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 
 from ..services.court_manager import serialize_public_snapshot
 from ..services.history_manager import get_history
-from ..db_models import Match, MatchStatistics, Player
+from ..db_models import db, Match, MatchStatistics, Player
 from ..config import logger
 
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
@@ -69,7 +69,7 @@ def match_stats(match_id: int):
             return jsonify({"error": "Statistics not found"}), 404
         data = stats.to_dict()
         # Enrich with match timestamps
-        match_record = Match.query.get(match_id)
+        match_record = db.session.get(Match, match_id)
         if match_record:
             data["started_at"] = match_record.created_at
             data["ended_at"] = match_record.updated_at

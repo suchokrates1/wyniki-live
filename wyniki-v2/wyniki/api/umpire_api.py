@@ -4,10 +4,11 @@ from datetime import datetime, timezone
 import json
 import re
 
-from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court
+from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court, utc_now_iso
 from ..services.court_manager import ensure_court_state, normalize_kort_id, STATE_LOCK, _empty_player_state
 from ..services.event_broker import emit_score_update
 from ..services.history_manager import add_match_to_history
+from ..services.player_registry import create_tournament_player, player_payload
 from ..config import logger
 
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
@@ -17,9 +18,9 @@ def _resolve_tournament_for_court(kort_id: str | None) -> Tournament | None:
     """Resolve tournament from court, with active tournament fallback."""
     normalized = normalize_kort_id(kort_id)
     if normalized:
-        court = Court.query.get(normalized)
+        court = db.session.get(Court, normalized)
         if court and court.tournament_id:
-            return Tournament.query.get(court.tournament_id)
+            return db.session.get(Tournament, court.tournament_id)
     return Tournament.query.filter_by(active=1).first()
 
 
@@ -112,51 +113,34 @@ def get_players():
                 return jsonify({"ok": False, "error": "kort_id and pin required"}), 400
             
             # Check court and PIN
-            court = Court.query.get(kort_id)
+            court = db.session.get(Court, kort_id)
             if not court:
                 return jsonify({"ok": False, "error": "court-not-found"}), 404
             
             if court.pin and provided_pin != court.pin:
                 return jsonify({"ok": False, "error": "invalid-pin", "authorized": False}), 403
             
-            # Get player data
-            surname = data.get("surname", "").strip() or data.get("name", "").strip()
-            first_name = data.get("first_name", "").strip()
-            last_name = data.get("last_name", "").strip()
-            
-            # If first/last not provided but surname is, split it
-            if not first_name and not last_name and surname:
-                parts = surname.rsplit(' ', 1)
-                if len(parts) == 2:
-                    first_name, last_name = parts[0], parts[1]
-                else:
-                    first_name, last_name = '', surname
-            
-            if not last_name and not surname:
+            normalized_player = player_payload(data)
+            if not normalized_player["last_name"] and not normalized_player["name"]:
                 return jsonify({"ok": False, "error": "last_name or surname required"}), 400
-            
-            full_name = f"{first_name} {last_name}".strip() if first_name else last_name
-            
-            country_code = data.get("country_code", "").strip() or None
-            category = data.get("category", "").strip() or None
             
             tournament = _resolve_tournament_for_court(kort_id)
             if not tournament:
                 return jsonify({"ok": False, "error": "no tournament for court"}), 400
             
-            # Create player
-            player = Player(
+            player = create_tournament_player(
+                db.session,
                 tournament_id=tournament.id,
-                name=full_name,
-                first_name=first_name,
-                last_name=last_name,
-                country=country_code,
-                category=category
+                name=normalized_player["name"],
+                first_name=normalized_player["first_name"],
+                last_name=normalized_player["last_name"],
+                country=normalized_player["country"],
+                category=normalized_player["category"],
+                gender=normalized_player["gender"],
             )
-            db.session.add(player)
             db.session.commit()
             
-            logger.info(f"Player created: {player.id} - {full_name}")
+            logger.info(f"Player created: {player.id} - {player.full_name}")
             
             return jsonify({
                 "ok": True,
@@ -240,7 +224,7 @@ def authorize_court(kort_id: str):
             }), 400
         
         # Get court from database
-        court = Court.query.get(kort_id)
+        court = db.session.get(Court, kort_id)
         
         if not court:
             logger.warning(f"Court not found: {kort_id}")
@@ -340,7 +324,7 @@ def create_match():
                 else:
                     court_state["B"]["full_name"] = match.player2_name
                 court_state["match_status"]["active"] = True
-                court_state["updated"] = datetime.utcnow().isoformat()
+                court_state["updated"] = utc_now_iso()
                 # Store phase for history
                 if bracket_ctx.get("phase"):
                     court_state["history_meta"] = court_state.get("history_meta", {})
@@ -362,7 +346,7 @@ def create_match():
 def get_match(match_id: int):
     """Get match details."""
     try:
-        match = Match.query.get(match_id)
+        match = db.session.get(Match, match_id)
         
         if not match:
             return jsonify({"error": "Match not found"}), 404
@@ -380,7 +364,7 @@ def update_match(match_id: int):
     try:
         data = request.get_json()
         
-        match = Match.query.get(match_id)
+        match = db.session.get(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
         
@@ -394,7 +378,7 @@ def update_match(match_id: int):
         match.player2_points = score.get("player2_points", 0)
         match.sets_history = json.dumps(score.get("sets_history", []))
         match.status = data.get("status", "in_progress")
-        match.updated_at = datetime.utcnow().isoformat()
+        match.updated_at = utc_now_iso()
         
         db.session.commit()
         
@@ -450,7 +434,7 @@ def update_match(match_id: int):
                 court_state["sets_detail"] = sets_detail
                 non_stb_count = sum(1 for s in sets_history if not s.get("is_super_tiebreak", False))
                 court_state["current_set"] = non_stb_count + 1
-                court_state["updated"] = datetime.utcnow().isoformat()
+                court_state["updated"] = utc_now_iso()
             
             # Emit SSE update
             emit_score_update(kort_id, court_state)
@@ -469,12 +453,12 @@ def update_match(match_id: int):
 def finish_match(match_id: int):
     """Mark match as finished."""
     try:
-        match = Match.query.get(match_id)
+        match = db.session.get(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
         
         match.status = "finished"
-        match.updated_at = datetime.utcnow().isoformat()
+        match.updated_at = utc_now_iso()
         db.session.commit()
         
         # Update court state
@@ -486,7 +470,7 @@ def finish_match(match_id: int):
             sets_history = json.loads(match.sets_history) if match.sets_history else []
             with STATE_LOCK:
                 court_state["match_status"]["active"] = False
-                court_state["match_status"]["last_completed"] = datetime.utcnow().isoformat()
+                court_state["match_status"]["last_completed"] = utc_now_iso()
                 
                 # Overwrite set scores from authoritative sets_history
                 if sets_history:
@@ -623,7 +607,7 @@ def receive_statistics():
             return jsonify({"error": "match_id required"}), 400
         
         # Check if match exists
-        match = Match.query.get(match_id)
+        match = db.session.get(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
         
@@ -659,7 +643,7 @@ def receive_statistics():
         stats.match_duration_ms = data.get("match_duration_ms", 0)
         stats.winner = data.get("winner")
         stats.stats_mode = data.get("stats_mode")
-        stats.received_at = datetime.utcnow().isoformat()
+        stats.received_at = utc_now_iso()
         
         db.session.commit()
         
@@ -810,7 +794,7 @@ def log_match_event():
             # --- Match status ---
             court_state["match_status"]["active"] = not match_finished
             if match_finished:
-                court_state["match_status"]["last_completed"] = datetime.utcnow().isoformat()
+                court_state["match_status"]["last_completed"] = utc_now_iso()
 
             # --- Live stats (for overlay) ---
             live_stats = data.get('stats')
@@ -844,7 +828,7 @@ def log_match_event():
                     },
                 }
 
-            court_state["updated"] = datetime.utcnow().isoformat()
+            court_state["updated"] = utc_now_iso()
 
             # --- Battery level from tablet ---
             battery_level = data.get('battery_level')
@@ -860,7 +844,7 @@ def log_match_event():
         return jsonify({
             "success": True,
             "message": "Event processed",
-            "event_id": f"evt_{datetime.utcnow().timestamp()}"
+            "event_id": f"evt_{datetime.now(timezone.utc).timestamp()}"
         }), 200
 
     except Exception as e:
@@ -953,7 +937,7 @@ def umpire_heartbeat():
                     court_state["battery_level"] = int(battery_level)
                 if is_charging is not None:
                     court_state["is_charging"] = is_charging in (True, "true", "True")
-                court_state["last_heartbeat"] = datetime.utcnow().isoformat()
+                court_state["last_heartbeat"] = utc_now_iso()
                 court_state["app_version"] = app_version
                 court_state["umpire_screen"] = screen
 

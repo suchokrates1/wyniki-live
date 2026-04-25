@@ -1,8 +1,12 @@
 """SQLAlchemy models for database."""
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class GlobalPlayer(db.Model):
@@ -18,7 +22,7 @@ class GlobalPlayer(db.Model):
     category = db.Column(db.String(100), nullable=True, default='')
     photo_url = db.Column(db.String(500), nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
+    created_at = db.Column(db.String(50), default=utc_now_iso)
 
     # Relationships
     tournament_entries = db.relationship('Player', back_populates='global_player', lazy='dynamic')
@@ -74,7 +78,7 @@ class Tournament(db.Model):
     logo_path = db.Column(db.String(500), nullable=True)
     report_email = db.Column(db.String(255), nullable=True, default='')
     summary_sent_at = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
+    created_at = db.Column(db.String(50), default=utc_now_iso)
     
     # Relationships
     players = db.relationship('Player', back_populates='tournament', cascade='all, delete-orphan')
@@ -111,7 +115,7 @@ class Player(db.Model):
     gender = db.Column(db.String(1), nullable=True, default='')  # M or F
     category = db.Column(db.String(100))
     country = db.Column(db.String(10))
-    created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
+    created_at = db.Column(db.String(50), default=utc_now_iso)
     
     # Relationships
     tournament = db.relationship('Tournament', back_populates='players')
@@ -228,8 +232,8 @@ class Match(db.Model):
     
     sets_history = db.Column(db.Text)  # JSON string
     
-    created_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
-    updated_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat(), onupdate=lambda: datetime.utcnow().isoformat())
+    created_at = db.Column(db.String(50), default=utc_now_iso)
+    updated_at = db.Column(db.String(50), default=utc_now_iso, onupdate=utc_now_iso)
     
     # Relationships
     statistics = db.relationship('MatchStatistics', back_populates='match', uselist=False, cascade='all, delete-orphan')
@@ -292,7 +296,7 @@ class MatchStatistics(db.Model):
     match_duration_ms = db.Column(db.BigInteger, default=0)
     winner = db.Column(db.String(200))
     stats_mode = db.Column(db.String(20))
-    received_at = db.Column(db.String(50), default=lambda: datetime.utcnow().isoformat())
+    received_at = db.Column(db.String(50), default=utc_now_iso)
     
     # Relationships
     match = db.relationship('Match', back_populates='statistics')

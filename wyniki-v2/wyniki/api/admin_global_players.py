@@ -5,6 +5,7 @@ from sqlalchemy import or_, func
 
 from ..db_models import db, GlobalPlayer, Player, MatchHistory
 from ..config import logger
+from ..services.player_registry import create_tournament_player, find_or_create_global_player, split_player_name
 
 blueprint = Blueprint('admin_global_players', __name__, url_prefix='/admin/api/global-players')
 
@@ -33,12 +34,20 @@ def list_global_players():
         query = query.filter(func.upper(GlobalPlayer.country) == country.upper())
 
     players = query.order_by(GlobalPlayer.last_name, GlobalPlayer.first_name).all()
+    player_ids = [player.id for player in players]
+    tournament_counts = {}
+    if player_ids:
+        tournament_counts = dict(
+            db.session.query(Player.global_player_id, func.count(Player.id))
+            .filter(Player.global_player_id.in_(player_ids))
+            .group_by(Player.global_player_id)
+            .all()
+        )
 
     result = []
     for gp in players:
         d = gp.to_dict()
-        # Count tournament entries
-        d['tournaments_count'] = Player.query.filter_by(global_player_id=gp.id).count()
+        d['tournaments_count'] = tournament_counts.get(gp.id, 0)
         result.append(d)
 
     return jsonify(result)
@@ -47,7 +56,7 @@ def list_global_players():
 @blueprint.route('', methods=['POST'])
 def create_global_player():
     """Create a new global player."""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     if not data:
         return jsonify({'error': 'No data provided'}), 400
 
@@ -74,7 +83,7 @@ def create_global_player():
 @blueprint.route('/<int:gp_id>', methods=['GET'])
 def get_global_player(gp_id: int):
     """Get a global player with career stats."""
-    gp = GlobalPlayer.query.get(gp_id)
+    gp = db.session.get(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -96,7 +105,7 @@ def get_global_player(gp_id: int):
 @blueprint.route('/<int:gp_id>', methods=['PUT'])
 def update_global_player(gp_id: int):
     """Update a global player."""
-    gp = GlobalPlayer.query.get(gp_id)
+    gp = db.session.get(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -127,7 +136,7 @@ def update_global_player(gp_id: int):
 @blueprint.route('/<int:gp_id>', methods=['DELETE'])
 def delete_global_player(gp_id: int):
     """Delete a global player (only if no tournament entries)."""
-    gp = GlobalPlayer.query.get(gp_id)
+    gp = db.session.get(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -146,7 +155,7 @@ def delete_global_player(gp_id: int):
 @blueprint.route('/<int:gp_id>/photo', methods=['POST'])
 def upload_photo(gp_id: int):
     """Upload a player photo (resized to max 200x200)."""
-    gp = GlobalPlayer.query.get(gp_id)
+    gp = db.session.get(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -187,7 +196,7 @@ def upload_photo(gp_id: int):
 @blueprint.route('/<int:gp_id>/photo', methods=['DELETE'])
 def delete_photo(gp_id: int):
     """Delete a player photo."""
-    gp = GlobalPlayer.query.get(gp_id)
+    gp = db.session.get(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -279,16 +288,18 @@ def add_global_to_tournament(tid: int):
     Body: { global_player_id: int, category: str (optional override) }
     """
     from ..db_models import Tournament
-    tournament = Tournament.query.get(tid)
+    tournament = db.session.get(Tournament, tid)
     if not tournament:
         return jsonify({'error': 'Tournament not found'}), 404
+    if int(tournament.active or 0) != 1:
+        return jsonify({'error': 'Tournament is inactive'}), 409
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     gp_id = data.get('global_player_id')
     if not gp_id:
         return jsonify({'error': 'global_player_id is required'}), 400
 
-    gp = GlobalPlayer.query.get(gp_id)
+    gp = db.session.get(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Global player not found'}), 404
 
@@ -299,17 +310,17 @@ def add_global_to_tournament(tid: int):
 
     category = data.get('category', '').strip() or gp.category or ''
 
-    p = Player(
+    p = create_tournament_player(
+        db.session,
         tournament_id=tid,
-        global_player_id=gp_id,
         name=gp.full_name,
         first_name=gp.first_name,
         last_name=gp.last_name,
         gender=gp.gender or '',
         category=category,
         country=gp.country or '',
+        global_player=gp,
     )
-    db.session.add(p)
     db.session.commit()
 
     logger.info("global_player_added_to_tournament", gp_id=gp_id, tournament_id=tid, player_id=p.id)
@@ -322,11 +333,13 @@ def import_file_to_tournament(tid: int):
     Body: { text: "First Last Category Country\\n..." }
     """
     from ..db_models import Tournament
-    tournament = Tournament.query.get(tid)
+    tournament = db.session.get(Tournament, tid)
     if not tournament:
         return jsonify({'error': 'Tournament not found'}), 404
+    if int(tournament.active or 0) != 1:
+        return jsonify({'error': 'Tournament is inactive'}), 409
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     text = data.get('text', '')
     if not text.strip():
         return jsonify({'error': 'No text provided'}), 400
@@ -352,35 +365,22 @@ def import_file_to_tournament(tid: int):
             category = ''
             country = ''
 
-        name = name.strip()
-        name_parts = name.rsplit(' ', 1)
-        if len(name_parts) == 2:
-            fn, ln = name_parts[0].strip(), name_parts[1].strip()
-        else:
-            fn, ln = '', name.strip()
+        name, fn, ln = split_player_name(name=name.strip())
 
         # Skip test entry
         if f"{fn} {ln}".strip().lower() == 'dawid suchodolski':
             continue
 
-        # Try to find existing global player
-        gp = GlobalPlayer.query.filter(
-            func.lower(GlobalPlayer.first_name) == fn.lower(),
-            func.lower(GlobalPlayer.last_name) == ln.lower(),
+        gp_exists = GlobalPlayer.query.filter(
+            func.lower(func.trim(GlobalPlayer.first_name)) == fn.lower(),
+            func.lower(func.trim(GlobalPlayer.last_name)) == ln.lower(),
         ).first()
-
-        if gp:
+        gp = find_or_create_global_player(db.session, fn, ln, category, country)
+        if not gp:
+            continue
+        if gp_exists:
             matched_global += 1
         else:
-            gp = GlobalPlayer(
-                first_name=fn,
-                last_name=ln,
-                gender='',
-                country=country.strip(),
-                category=category.strip(),
-            )
-            db.session.add(gp)
-            db.session.flush()
             created_global += 1
 
         # Check if already in tournament
@@ -388,17 +388,17 @@ def import_file_to_tournament(tid: int):
         if existing:
             continue
 
-        p = Player(
+        create_tournament_player(
+            db.session,
             tournament_id=tid,
-            global_player_id=gp.id,
-            name=gp.full_name,
+            name=name,
             first_name=fn,
             last_name=ln,
             gender=gp.gender or '',
             category=category.strip() or gp.category or '',
             country=country.strip() or gp.country or '',
+            global_player=gp,
         )
-        db.session.add(p)
         added_tournament += 1
 
     db.session.commit()
@@ -479,7 +479,7 @@ def merge_players():
     if not target_id or not source_ids:
         return jsonify({'error': 'target_id and source_ids are required'}), 400
 
-    target = GlobalPlayer.query.get(target_id)
+    target = db.session.get(GlobalPlayer, target_id)
     if not target:
         return jsonify({'error': 'Target player not found'}), 404
 
@@ -488,7 +488,7 @@ def merge_players():
     for src_id in source_ids:
         if src_id == target_id:
             continue
-        source = GlobalPlayer.query.get(src_id)
+        source = db.session.get(GlobalPlayer, src_id)
         if not source:
             continue
 

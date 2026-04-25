@@ -13,12 +13,28 @@ def app_with_temp_db(tmp_path, monkeypatch):
     from flask import Flask
     from wyniki import database
     from wyniki.api import admin
+    from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint
 
     database.init_db()
 
     app = Flask(__name__)
     app.register_blueprint(admin.blueprint)
+    app.register_blueprint(tournaments_blueprint)
     return app
+
+
+@pytest.fixture()
+def full_app_with_temp_db(tmp_path, monkeypatch):
+    db_path = tmp_path / "wyniki-full.sqlite3"
+    monkeypatch.setenv("DATABASE_PATH", str(db_path))
+
+    from wyniki.config import settings
+
+    settings.database_path = str(db_path)
+
+    from app import create_app
+
+    return create_app()
 
 
 def _count_table(database, table_name: str, where_clause: str = "", params=()):
@@ -144,3 +160,64 @@ def test_tournament_players_are_linked_to_global_players(app_with_temp_db):
 
     ada_global_ids = {player["global_player_id"] for player in players if player["last_name"] == "Nowak"}
     assert len(ada_global_ids) == 1
+
+
+def test_admin_player_routes_require_active_tournament(app_with_temp_db):
+    from wyniki import database
+
+    inactive_id = database.insert_tournament("Inactive Players", "2026-04-26", "2026-04-27", active=False)
+
+    response = app_with_temp_db.test_client().get(f"/admin/api/tournaments/{inactive_id}/players")
+
+    assert response.status_code == 409
+    assert response.get_json()["error"] == "Tournament is inactive"
+
+
+def test_admin_player_update_is_scoped_to_tournament(app_with_temp_db):
+    from wyniki import database
+
+    first_tournament = database.insert_tournament("First Cup", "2026-04-26", "2026-04-27", active=True)
+    second_tournament = database.insert_tournament("Second Cup", "2026-04-26", "2026-04-27", active=True)
+    player_id = database.insert_player(
+        second_tournament,
+        "Scoped Player",
+        "B1",
+        "PL",
+        first_name="Scoped",
+        last_name="Player",
+    )
+
+    response = app_with_temp_db.test_client().put(
+        f"/admin/api/tournaments/{first_tournament}/players/{player_id}",
+        json={"first_name": "Wrong", "last_name": "Tournament", "category": "B2", "country": "DE"},
+    )
+
+    assert response.status_code == 404
+    unchanged = database.fetch_players(second_tournament)[0]
+    assert unchanged["first_name"] == "Scoped"
+    assert unchanged["country"] == "PL"
+
+
+def test_mobile_created_player_is_linked_to_global_player(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Mobile Cup", "2026-04-26", "2026-04-27", active=True)
+    database.upsert_court("mobile-1", pin="1234", name="1", tournament_id=tournament_id, display_order=1)
+
+    response = full_app_with_temp_db.test_client().post(
+        "/api/players",
+        json={
+            "kort_id": "mobile-1",
+            "pin": "1234",
+            "first_name": "Mobile",
+            "last_name": "Player",
+            "category": "B1",
+            "country_code": "PL",
+        },
+    )
+
+    assert response.status_code == 201
+    players = database.fetch_players(tournament_id)
+    assert len(players) == 1
+    assert players[0]["global_player_id"] is not None
+    assert _count_table(database, "global_players") == 1

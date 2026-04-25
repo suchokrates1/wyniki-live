@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from werkzeug.utils import secure_filename
 
+from ..db_models import db
 from ..database import (
     fetch_tournaments,
     fetch_active_tournaments,
@@ -76,6 +77,15 @@ def _save_tournament_logo(uploaded_file, tournament_name: str) -> str | None:
     target = logos_dir / file_name
     uploaded_file.save(target)
     return f"/data/tournament-logos/{file_name}"
+
+
+def _require_tournament(tournament_id: int, active_only: bool = False):
+    tournament = fetch_tournament(tournament_id)
+    if not tournament:
+        return None, (jsonify({"error": "Tournament not found"}), 404)
+    if active_only and int(tournament.get("active") or 0) != 1:
+        return None, (jsonify({"error": "Tournament is inactive"}), 409)
+    return tournament, None
 
 
 @blueprint.route('', methods=['GET'])
@@ -257,6 +267,9 @@ def update_tournament_active_state(tournament_id: int):
 @blueprint.route('/<int:tournament_id>/players', methods=['GET'])
 def get_tournament_players(tournament_id: int):
     """Get all players for a tournament."""
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
     players = fetch_players(tournament_id)
     return jsonify(players)
 
@@ -264,7 +277,11 @@ def get_tournament_players(tournament_id: int):
 @blueprint.route('/<int:tournament_id>/players', methods=['POST'])
 def create_player(tournament_id: int):
     """Add a player to a tournament."""
-    data = request.get_json()
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
+
+    data = request.get_json(silent=True) or {}
     
     first_name = data.get('first_name', '').strip()
     last_name = data.get('last_name', '').strip()
@@ -300,7 +317,11 @@ def create_player(tournament_id: int):
 @blueprint.route('/<int:tournament_id>/players/<int:player_id>', methods=['PUT'])
 def update_player_route(tournament_id: int, player_id: int):
     """Update a player."""
-    data = request.get_json()
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
+
+    data = request.get_json(silent=True) or {}
     
     first_name = data.get('first_name', '').strip()
     last_name = data.get('last_name', '').strip()
@@ -324,23 +345,27 @@ def update_player_route(tournament_id: int, player_id: int):
     
     success = update_player(player_id, name, category, country,
                             first_name=first_name, last_name=last_name,
-                            gender=gender)
+                            gender=gender, tournament_id=tournament_id)
     
     if success:
         return jsonify({"message": "Player updated"})
     else:
-        return jsonify({"error": "Failed to update player"}), 500
+        return jsonify({"error": "Player not found in tournament"}), 404
 
 
 @blueprint.route('/<int:tournament_id>/players/<int:player_id>', methods=['DELETE'])
 def delete_player_route(tournament_id: int, player_id: int):
     """Delete a player."""
-    success = delete_player(player_id)
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
+
+    success = delete_player(player_id, tournament_id=tournament_id)
     
     if success:
         return jsonify({"message": "Player deleted"})
     else:
-        return jsonify({"error": "Failed to delete player"}), 500
+        return jsonify({"error": "Player not found in tournament"}), 404
 
 
 @blueprint.route('/<int:tournament_id>/players/import', methods=['POST'])
@@ -351,7 +376,11 @@ def import_players(tournament_id: int):
     Name Category Country
     Example: John Doe B1 us
     """
-    data = request.get_json()
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
+
+    data = request.get_json(silent=True) or {}
     text = data.get('text', '')
     
     if not text:
@@ -410,7 +439,11 @@ def bulk_import_players(tournament_id: int):
     
     Expected JSON: { "players": [{"name": "...", "category": "...", "country": "..."}] }
     """
-    data = request.get_json()
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
+
+    data = request.get_json(silent=True) or {}
     players = data.get('players', [])
     
     if not players:
@@ -419,20 +452,26 @@ def bulk_import_players(tournament_id: int):
     players_data = []
     for p in players:
         name = p.get('name', '').strip()
+        first_name = p.get('first_name', '').strip()
+        last_name = p.get('last_name', '').strip()
+        if not first_name and not last_name:
+            if not name:
+                continue
+            name_parts = name.rsplit(' ', 1)
+            if len(name_parts) == 2:
+                first_name, last_name = name_parts[0], name_parts[1]
+            else:
+                first_name, last_name = '', name
         if not name:
-            continue
-        name_parts = name.rsplit(' ', 1)
-        if len(name_parts) == 2:
-            first_name, last_name = name_parts[0], name_parts[1]
-        else:
-            first_name, last_name = '', name
+            name = f"{first_name} {last_name}".strip()
         
         players_data.append({
             "name": name,
             "first_name": first_name,
             "last_name": last_name,
             "category": p.get('category', '').strip(),
-            "country": p.get('country', '').strip()
+            "country": p.get('country', '').strip(),
+            "gender": p.get('gender', '').strip(),
         })
     
     if not players_data:
@@ -571,7 +610,7 @@ def get_player_profile(player_id: int):
     is_global = request.args.get('global', '0') == '1'
 
     if is_global:
-        gp = GlobalPlayer.query.get(player_id)
+        gp = db.session.get(GlobalPlayer, player_id)
         if not gp:
             return jsonify({'error': 'Player not found'}), 404
         full_name = gp.full_name
@@ -587,7 +626,7 @@ def get_player_profile(player_id: int):
         if not siblings and last_name:
             siblings = Player.query.filter_by(last_name=last_name, first_name=gp.first_name).all()
     else:
-        player = Player.query.get(player_id)
+        player = db.session.get(Player, player_id)
         if not player:
             return jsonify({'error': 'Player not found'}), 404
         full_name = player.full_name
@@ -602,7 +641,7 @@ def get_player_profile(player_id: int):
 
         # If player has global_player_id, use it for cross-tournament lookup
         if player.global_player_id:
-            gp = GlobalPlayer.query.get(player.global_player_id)
+            gp = db.session.get(GlobalPlayer, player.global_player_id)
             if gp:
                 photo_url = gp.photo_url or ''
                 birth_date = gp.birth_date or ''
@@ -685,7 +724,7 @@ def get_player_profile(player_id: int):
     # Build per-tournament data
     tournaments_data = []
     for tid in tournament_ids:
-        tourn = Tournament.query.get(tid)
+        tourn = db.session.get(Tournament, tid)
         if not tourn:
             continue
 
