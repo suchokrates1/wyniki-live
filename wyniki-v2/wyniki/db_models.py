@@ -78,6 +78,11 @@ class Tournament(db.Model):
     logo_path = db.Column(db.String(500), nullable=True)
     report_email = db.Column(db.String(255), nullable=True, default='')
     summary_sent_at = db.Column(db.String(50), nullable=True)
+    is_public = db.Column(db.Integer, default=1)
+    stats_enabled = db.Column(db.Integer, default=1)
+    is_simulation = db.Column(db.Integer, default=0)
+    access_key = db.Column(db.String(100), nullable=True, default='')
+    office_password_hash = db.Column(db.String(255), nullable=True, default='')
     created_at = db.Column(db.String(50), default=utc_now_iso)
     
     # Relationships
@@ -97,6 +102,11 @@ class Tournament(db.Model):
             'logo_path': self.logo_path,
             'report_email': self.report_email or '',
             'summary_sent_at': self.summary_sent_at,
+            'is_public': self.is_public,
+            'stats_enabled': self.stats_enabled,
+            'is_simulation': self.is_simulation,
+            'access_key': self.access_key or '',
+            'has_office_password': bool(self.office_password_hash),
             'court_count': self.courts.count() if self.courts is not None else 0,
             'created_at': self.created_at
         }
@@ -264,6 +274,58 @@ class Match(db.Model):
         if bracket_warning:
             result['bracket_warning'] = bracket_warning
         return result
+
+
+class TournamentSchedule(db.Model):
+    """Planned tournament match slot, optionally linked to a real match."""
+    __tablename__ = 'tournament_schedule'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id', ondelete='CASCADE'), nullable=False)
+    day_date = db.Column(db.String(10), nullable=False)
+    scheduled_time = db.Column(db.String(5), nullable=True, default='')
+    court_id = db.Column(db.String(50), nullable=True, default='')
+    court_label = db.Column(db.String(200), nullable=True, default='')
+    category_name = db.Column(db.String(100), nullable=True, default='')
+    bracket_group_id = db.Column(db.Integer, nullable=True)
+    group_name = db.Column(db.String(200), nullable=True, default='')
+    phase = db.Column(db.String(100), nullable=True, default='Grupowa')
+    player1_name = db.Column(db.String(200), nullable=False, default='')
+    player2_name = db.Column(db.String(200), nullable=False, default='')
+    status = db.Column(db.String(20), nullable=False, default='draft')
+    source_type = db.Column(db.String(20), nullable=False, default='manual')
+    source_ref_id = db.Column(db.Integer, nullable=True)
+    match_id = db.Column(db.Integer, nullable=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    notes_public = db.Column(db.Text, nullable=True, default='')
+    notes_internal = db.Column(db.Text, nullable=True, default='')
+    created_at = db.Column(db.String(50), default=utc_now_iso)
+    updated_at = db.Column(db.String(50), default=utc_now_iso, onupdate=utc_now_iso)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tournament_id': self.tournament_id,
+            'day_date': self.day_date,
+            'scheduled_time': self.scheduled_time or '',
+            'court_id': self.court_id or '',
+            'court_label': self.court_label or '',
+            'category_name': self.category_name or '',
+            'bracket_group_id': self.bracket_group_id,
+            'group_name': self.group_name or '',
+            'phase': self.phase or '',
+            'player1_name': self.player1_name or '',
+            'player2_name': self.player2_name or '',
+            'status': self.status or 'draft',
+            'source_type': self.source_type or 'manual',
+            'source_ref_id': self.source_ref_id,
+            'match_id': self.match_id,
+            'sort_order': self.sort_order or 0,
+            'notes_public': self.notes_public or '',
+            'notes_internal': self.notes_internal or '',
+            'created_at': self.created_at,
+            'updated_at': self.updated_at,
+        }
 
 
 class MatchStatistics(db.Model):

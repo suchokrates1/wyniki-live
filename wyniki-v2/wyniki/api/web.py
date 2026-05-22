@@ -34,6 +34,19 @@ def admin():
     return response
 
 
+@blueprint.route('/office/<int:slot>')
+@blueprint.route('/office/<int:slot>/')
+@blueprint.route('/office.html')
+def office(slot: int | None = None):
+    """Serve standalone office page."""
+    response = send_from_directory(STATIC_DIR, 'office.html')
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
 @blueprint.route('/embed')
 @blueprint.route('/embed.html')
 @blueprint.route('/embed/<lang>/<int:court>')

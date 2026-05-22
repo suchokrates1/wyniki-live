@@ -32,6 +32,11 @@ Alpine.data('adminApp', () => ({
     country: '',
     report_email: '',
     court_count: 1,
+    is_public: true,
+    stats_enabled: true,
+    is_simulation: false,
+    access_key: '',
+    office_password: '',
     logo: null,
   },
   editTournament: {
@@ -44,8 +49,56 @@ Alpine.data('adminApp', () => ({
     report_email: '',
     court_count: 0,
     active: false,
+    is_public: true,
+    stats_enabled: true,
+    is_simulation: false,
+    access_key: '',
+    office_password: '',
+    has_office_password: false,
     logo: null,
     logo_path: '',
+  },
+
+  // Tournament office dashboard
+  officeTournamentId: null,
+  officeDashboard: null,
+  officeNewMatch: {
+    group_id: '',
+    player1_name: '',
+    player2_name: '',
+    walkover: false,
+    winner_name: '',
+    set1_p1: 4,
+    set1_p2: 0,
+    set2_p1: 4,
+    set2_p2: 0,
+    stb_p1: '',
+    stb_p2: '',
+  },
+  officeEditingMatch: null,
+
+  // Tournament planning dashboard
+  planningTournamentId: null,
+  planningLoading: false,
+  planningPlayers: [],
+  planningGroups: [],
+  planningSchedule: [],
+  planningCourts: [],
+  planningSelectedDivision: '',
+  planningGroupCount: 1,
+  planningGroupAssignments: {},
+  planningScheduleFilter: { day: '', category: '', court: '' },
+  planningNewSchedule: {
+    day_date: '',
+    scheduled_time: '',
+    court_id: '',
+    category_name: '',
+    phase: 'Grupowa',
+    player1_name: '',
+    player2_name: '',
+    status: 'planned',
+    notes_public: '',
+    notes_internal: '',
   },
 
   emailSettings: {
@@ -61,14 +114,20 @@ Alpine.data('adminApp', () => ({
   // Players
   players: [],
   editingPlayerId: null,
-  editPlayerData: { first_name: '', last_name: '', category: '', country: '' },
+  editPlayerData: { first_name: '', last_name: '', category: '', gender: '', country: '' },
   newPlayer: {
     first_name: '',
     last_name: '',
     category: '',
+    gender: '',
     country: '',
   },
   importText: '',
+  importPreview: {
+    players: [],
+    count: 0,
+    needs_attention_count: 0,
+  },
 
   // Global Players
   globalPlayers: [],
@@ -128,6 +187,7 @@ Alpine.data('adminApp', () => ({
     courts: false,
     tournaments: false,
     players: false,
+    office: false,
   },
   
   toast: {
@@ -231,6 +291,11 @@ Alpine.data('adminApp', () => ({
     this.$nextTick(() => this.updateCanvasScale());
     // Keyboard nudge for selected element(s)
     window.addEventListener('keydown', (e) => this._handleKeyNudge(e));
+    window.setInterval(() => {
+      if (this.activeTab === 'office' && this.officeTournamentId) {
+        this.loadOfficeDashboard(false);
+      }
+    }, 12000);
   },
   
   // ===== TOAST =====
@@ -436,6 +501,10 @@ Alpine.data('adminApp', () => ({
         this.players = [];
       }
 
+      if (!this.officeTournamentId || !this.getTournamentById(this.officeTournamentId)) {
+        this.officeTournamentId = activeTournaments[0]?.id || null;
+      }
+
       if (this.selectedTournament) {
         await this.loadPlayers(this.selectedTournament);
       }
@@ -479,6 +548,11 @@ Alpine.data('adminApp', () => ({
         country: '',
         report_email: '',
         court_count: 1,
+        is_public: true,
+        stats_enabled: true,
+        is_simulation: false,
+        access_key: '',
+        office_password: '',
         logo: null,
       };
       await this.loadTournaments();
@@ -504,6 +578,12 @@ Alpine.data('adminApp', () => ({
       report_email: tournament.report_email || '',
       court_count: tournament.court_count || 0,
       active: !!tournament.active,
+      is_public: !!tournament.is_public,
+      stats_enabled: !!tournament.stats_enabled,
+      is_simulation: !!tournament.is_simulation,
+      access_key: tournament.access_key || '',
+      office_password: '',
+      has_office_password: !!tournament.has_office_password,
       logo: null,
       logo_path: tournament.logo_path || '',
     };
@@ -522,6 +602,12 @@ Alpine.data('adminApp', () => ({
       report_email: '',
       court_count: 0,
       active: false,
+      is_public: true,
+      stats_enabled: true,
+      is_simulation: false,
+      access_key: '',
+      office_password: '',
+      has_office_password: false,
       logo: null,
       logo_path: '',
     };
@@ -645,6 +731,527 @@ Alpine.data('adminApp', () => ({
     this.activeTab = 'players';
     await this.loadPlayers(tournamentId);
   },
+
+  // ===== TOURNAMENT OFFICE =====
+  async openOfficeDashboard(tournamentId = null) {
+    this.activeTab = 'office';
+    if (tournamentId) this.officeTournamentId = tournamentId;
+    if (!this.officeTournamentId) {
+      this.officeTournamentId = this.activeTournamentsList()[0]?.id || null;
+    }
+    if (this.officeTournamentId) {
+      await this.loadOfficeDashboard();
+    }
+  },
+
+  async loadOfficeDashboard(showLoading = true) {
+    if (!this.officeTournamentId) return;
+    if (showLoading) this.loading.office = true;
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.officeTournamentId}/office`);
+      if (!response.ok) throw new Error('Failed to load office dashboard');
+      this.officeDashboard = await response.json();
+      if (!this.officeNewMatch.group_id && this.officeDashboard.progress?.groups?.length) {
+        this.officeNewMatch.group_id = this.officeDashboard.progress.groups[0].id;
+        this.onOfficeGroupChanged();
+      }
+    } catch (err) {
+      console.error('Failed to load office dashboard:', err);
+      this.showToast('Błąd ładowania biura turnieju', 'error');
+    } finally {
+      if (showLoading) this.loading.office = false;
+    }
+  },
+
+  officeProgressPercent() {
+    const progress = this.officeDashboard?.progress;
+    if (!progress?.expected_matches) return 0;
+    return Math.min(100, Math.round((progress.finished_matches / progress.expected_matches) * 100));
+  },
+
+  officeSelectedGroup() {
+    const groupId = String(this.officeNewMatch.group_id || '');
+    return (this.officeDashboard?.progress?.groups || []).find(group => String(group.id) === groupId) || null;
+  },
+
+  officeGroupPlayers(groupId = null) {
+    const targetGroupId = String(groupId || this.officeNewMatch.group_id || '');
+    const group = (this.officeDashboard?.progress?.groups || []).find(item => String(item.id) === targetGroupId);
+    return group?.players || [];
+  },
+
+  onOfficeGroupChanged() {
+    const players = this.officeGroupPlayers();
+    this.officeNewMatch.player1_name = players[0]?.name || '';
+    this.officeNewMatch.player2_name = players[1]?.name || '';
+    this.officeNewMatch.winner_name = '';
+  },
+
+  resetOfficeNewMatch(keepGroup = true) {
+    const groupId = keepGroup ? this.officeNewMatch.group_id : '';
+    this.officeNewMatch = {
+      group_id: groupId,
+      player1_name: '',
+      player2_name: '',
+      walkover: false,
+      winner_name: '',
+      set1_p1: 4,
+      set1_p2: 0,
+      set2_p1: 4,
+      set2_p2: 0,
+      stb_p1: '',
+      stb_p2: '',
+    };
+    if (groupId) this.onOfficeGroupChanged();
+  },
+
+  officeSetsFromForm(form) {
+    const sets = [];
+    const addSet = (player1Value, player2Value, isSuperTiebreak = false) => {
+      if (player1Value === '' || player2Value === '' || player1Value === null || player2Value === null) return;
+      const player1Games = Number(player1Value);
+      const player2Games = Number(player2Value);
+      if (!Number.isFinite(player1Games) || !Number.isFinite(player2Games)) return;
+      sets.push({ player1_games: player1Games, player2_games: player2Games, is_super_tiebreak: isSuperTiebreak });
+    };
+    addSet(form.set1_p1, form.set1_p2);
+    addSet(form.set2_p1, form.set2_p2);
+    addSet(form.stb_p1, form.stb_p2, true);
+    return sets;
+  },
+
+  async addOfficeGroupMatch() {
+    if (!this.officeTournamentId || !this.officeNewMatch.group_id || !this.officeNewMatch.player1_name || !this.officeNewMatch.player2_name) {
+      this.showToast('Wybierz grupę i zawodników', 'warning');
+      return;
+    }
+    if (this.officeNewMatch.player1_name === this.officeNewMatch.player2_name) {
+      this.showToast('Wybierz dwóch różnych zawodników', 'warning');
+      return;
+    }
+    if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {
+      this.showToast('Przy walkowerze wskaż zwycięzcę', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.officeTournamentId}/office/group-matches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group_id: this.officeNewMatch.group_id,
+          player1_name: this.officeNewMatch.player1_name,
+          player2_name: this.officeNewMatch.player2_name,
+          walkover: this.officeNewMatch.walkover,
+          winner_name: this.officeNewMatch.winner_name,
+          sets: this.officeSetsFromForm(this.officeNewMatch),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Failed to add result');
+      this.officeDashboard = payload.dashboard;
+      this.resetOfficeNewMatch(true);
+      const generated = payload.knockout_generation?.status === 'ok' ? ' Drabinka pucharowa została wygenerowana.' : '';
+      this.showToast('Wynik dodany.' + generated, 'success');
+    } catch (err) {
+      console.error('Failed to add office result:', err);
+      this.showToast(err.message || 'Błąd dodawania wyniku', 'error');
+    }
+  },
+
+  startOfficeEdit(match) {
+    const sets = match.sets_history || [];
+    this.officeEditingMatch = {
+      id: match.id,
+      source: match.source || 'match',
+      player1_name: match.player1_name,
+      player2_name: match.player2_name,
+      walkover: false,
+      winner_name: match.winner_name || '',
+      set1_p1: sets[0]?.player1_games ?? '',
+      set1_p2: sets[0]?.player2_games ?? '',
+      set2_p1: sets[1]?.player1_games ?? '',
+      set2_p2: sets[1]?.player2_games ?? '',
+      stb_p1: sets[2]?.player1_games ?? '',
+      stb_p2: sets[2]?.player2_games ?? '',
+    };
+  },
+
+  cancelOfficeEdit() {
+    this.officeEditingMatch = null;
+  },
+
+  async saveOfficeMatchEdit() {
+    if (!this.officeTournamentId || !this.officeEditingMatch?.id) return;
+    if (this.officeEditingMatch.walkover && !this.officeEditingMatch.winner_name) {
+      this.showToast('Przy walkowerze wskaż zwycięzcę', 'warning');
+      return;
+    }
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.officeTournamentId}/office/matches/${this.officeEditingMatch.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: this.officeEditingMatch.source || 'match',
+          walkover: this.officeEditingMatch.walkover,
+          winner_name: this.officeEditingMatch.winner_name,
+          sets: this.officeSetsFromForm(this.officeEditingMatch),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Failed to update result');
+      this.officeDashboard = payload.dashboard;
+      this.officeEditingMatch = null;
+      this.showToast('Wynik poprawiony', 'success');
+    } catch (err) {
+      console.error('Failed to update office result:', err);
+      this.showToast(err.message || 'Błąd korekty wyniku', 'error');
+    }
+  },
+
+  officeMatchPhase(match) {
+    if (match.group_name) return match.group_name;
+    return match.phase || 'Mecz';
+  },
+
+  formatOfficeMatchTime(match) {
+    const rawValue = match?.updated_at || match?.created_at || '';
+    if (!rawValue) return '—';
+    const parsedDate = new Date(rawValue);
+    if (Number.isNaN(parsedDate.getTime())) return rawValue;
+    return new Intl.DateTimeFormat('pl-PL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(parsedDate);
+  },
+
+  officeMatchScore(match) {
+    return match.score_text || `${match.player1_sets || 0}:${match.player2_sets || 0}`;
+  },
+
+  // ===== TOURNAMENT PLANNING =====
+  async openPlanningDashboard(tournamentId = null) {
+    this.activeTab = 'planning';
+    if (tournamentId) this.planningTournamentId = tournamentId;
+    if (!this.planningTournamentId) {
+      this.planningTournamentId = this.selectedTournament || this.activeTournamentsList()[0]?.id || null;
+    }
+    if (this.planningTournamentId) {
+      await this.loadPlanningData();
+    }
+  },
+
+  async loadPlanningData() {
+    if (!this.planningTournamentId) return;
+    this.planningLoading = true;
+    try {
+      const [playersResponse, groupsResponse, scheduleResponse, courtsResponse] = await Promise.all([
+        fetch(`/admin/api/tournaments/${this.planningTournamentId}/players`),
+        fetch(`/admin/api/tournaments/${this.planningTournamentId}/bracket/groups`),
+        fetch(`/admin/api/tournaments/${this.planningTournamentId}/schedule`),
+        fetch('/admin/api/courts'),
+      ]);
+      if (!playersResponse.ok || !groupsResponse.ok || !scheduleResponse.ok || !courtsResponse.ok) {
+        throw new Error('Failed to load planning data');
+      }
+      this.planningPlayers = await playersResponse.json();
+      this.planningGroups = await groupsResponse.json();
+      const schedulePayload = await scheduleResponse.json();
+      this.planningSchedule = Array.isArray(schedulePayload.schedule) ? schedulePayload.schedule : [];
+      const allCourts = await courtsResponse.json();
+      this.courts = Array.isArray(allCourts) ? allCourts : this.courts;
+      this.planningCourts = (this.courts || [])
+        .filter(court => Number(court.tournament_id) === Number(this.planningTournamentId))
+        .sort((left, right) => {
+          const orderDelta = Number(left.display_order || 0) - Number(right.display_order || 0);
+          if (orderDelta !== 0) return orderDelta;
+          return String(left.name || left.kort_id).localeCompare(String(right.name || right.kort_id), 'pl', { numeric: true });
+        });
+      this.syncPlanningGroupAssignments();
+      this.ensurePlanningDefaults();
+    } catch (err) {
+      console.error('Failed to load planning data:', err);
+      this.showToast('Błąd ładowania planu turnieju', 'error');
+    } finally {
+      this.planningLoading = false;
+    }
+  },
+
+  ensurePlanningDefaults() {
+    const divisions = this.planningDivisions();
+    if (!divisions.find(division => division.key === this.planningSelectedDivision)) {
+      this.planningSelectedDivision = divisions[0]?.key || '';
+    }
+    const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
+    if (selectedGroups.length) {
+      this.planningGroupCount = Math.max(1, selectedGroups.length);
+    } else {
+      this.planningGroupCount = 1;
+    }
+    const tournament = this.getTournamentById(this.planningTournamentId);
+    this.planningNewSchedule.day_date = this.planningNewSchedule.day_date || tournament?.start_date || '';
+    this.planningNewSchedule.court_id = this.planningNewSchedule.court_id || this.planningCourts[0]?.kort_id || '';
+  },
+
+  syncPlanningGroupAssignments() {
+    const assignments = {};
+    for (const group of this.planningGroups || []) {
+      for (const player of group.players || []) {
+        if (player.player_id) assignments[player.player_id] = group.name;
+      }
+    }
+    this.planningGroupAssignments = assignments;
+  },
+
+  normalizePlanningGender(value) {
+    const raw = String(value || '').trim().toUpperCase();
+    if (raw === 'K' || raw === 'F' || raw === 'W') return 'K';
+    if (raw === 'M') return 'M';
+    return '';
+  },
+
+  planningDivisionKey(player) {
+    const category = this.normalizeImportCategory(player?.category || '');
+    const gender = this.normalizePlanningGender(player?.gender || '');
+    return category && gender ? `${category}${gender}` : category || gender || 'NIEPRZYPISANI';
+  },
+
+  planningDivisionLabel(key = this.planningSelectedDivision) {
+    const value = String(key || '').toUpperCase();
+    const category = (value.match(/^B\d{1,2}/) || [''])[0];
+    const gender = value.endsWith('K') ? 'Kobiety' : value.endsWith('M') ? 'Mężczyźni' : '';
+    if (category && gender) return `${category} ${gender}`;
+    return category || gender || 'Nieprzypisani';
+  },
+
+  planningDivisionFromGroupName(groupName) {
+    const label = String(groupName || '').split(' — ')[0].split(' - ')[0].trim();
+    const category = (label.toUpperCase().match(/^B\d{1,2}/) || [''])[0];
+    const lower = label.toLowerCase();
+    let gender = '';
+    if (lower.includes('kob') || label.toUpperCase().endsWith('K')) gender = 'K';
+    if (lower.includes('męż') || lower.includes('mez') || lower.includes('mężczy') || label.toUpperCase().endsWith('M')) gender = 'M';
+    return category && gender ? `${category}${gender}` : category || gender || '';
+  },
+
+  planningDivisions() {
+    const grouped = new Map();
+    for (const player of this.planningPlayers || []) {
+      const key = this.planningDivisionKey(player);
+      if (!grouped.has(key)) grouped.set(key, { key, label: this.planningDivisionLabel(key), count: 0 });
+      grouped.get(key).count += 1;
+    }
+    return [...grouped.values()].sort((left, right) => {
+      if (left.key === 'NIEPRZYPISANI') return 1;
+      if (right.key === 'NIEPRZYPISANI') return -1;
+      return left.key.localeCompare(right.key, 'pl', { numeric: true });
+    });
+  },
+
+  planningPlayersForDivision(key = this.planningSelectedDivision) {
+    return (this.planningPlayers || []).filter(player => this.planningDivisionKey(player) === key);
+  },
+
+  planningGroupsForDivision(key = this.planningSelectedDivision) {
+    return (this.planningGroups || []).filter(group => this.planningDivisionFromGroupName(group.name) === key);
+  },
+
+  planningTargetGroupNames() {
+    const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
+    const label = this.planningDivisionLabel();
+    if (!this.planningSelectedDivision) return [];
+    if (count === 1) return [label];
+    return Array.from({ length: count }, (_, index) => `${label} — Grupa ${String.fromCharCode(65 + index)}`);
+  },
+
+  planningDivisionGroupNames() {
+    const names = new Set(this.planningTargetGroupNames());
+    for (const group of this.planningGroupsForDivision()) names.add(group.name);
+    for (const player of this.planningPlayersForDivision()) {
+      const assigned = this.planningGroupAssignments[player.id];
+      if (assigned) names.add(assigned);
+    }
+    return [...names];
+  },
+
+  planningAssignedPlayers(groupName) {
+    return this.planningPlayersForDivision().filter(player => this.planningGroupAssignments[player.id] === groupName);
+  },
+
+  planningUnassignedPlayers() {
+    return this.planningPlayersForDivision().filter(player => !this.planningGroupAssignments[player.id]);
+  },
+
+  autoAssignPlanningGroups() {
+    const groupNames = this.planningTargetGroupNames();
+    if (!groupNames.length) return;
+    this.planningPlayersForDivision().forEach((player, index) => {
+      this.planningGroupAssignments[player.id] = groupNames[index % groupNames.length];
+    });
+  },
+
+  clearPlanningDivisionAssignments() {
+    for (const player of this.planningPlayersForDivision()) {
+      delete this.planningGroupAssignments[player.id];
+    }
+  },
+
+  async savePlanningGroups() {
+    if (!this.planningTournamentId || !this.planningSelectedDivision) return;
+    const otherGroups = (this.planningGroups || [])
+      .filter(group => this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision)
+      .map(group => ({ name: group.name, players: (group.players || []).map(player => player.player_id).filter(Boolean) }));
+
+    const divisionGroups = this.planningDivisionGroupNames()
+      .map(groupName => ({
+        name: groupName,
+        players: this.planningAssignedPlayers(groupName).map(player => player.id),
+      }))
+      .filter(group => group.players.length > 0);
+
+    if (!divisionGroups.length) {
+      this.showToast('Przypisz przynajmniej jednego zawodnika do grupy', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.planningTournamentId}/bracket/groups`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groups: [...otherGroups, ...divisionGroups] }),
+      });
+      if (!response.ok) throw new Error('Failed to save groups');
+      this.showToast('Grupy zapisane', 'success');
+      await this.loadPlanningData();
+      if (this.officeTournamentId && Number(this.officeTournamentId) === Number(this.planningTournamentId)) {
+        await this.loadOfficeDashboard(false);
+      }
+    } catch (err) {
+      console.error('Failed to save planning groups:', err);
+      this.showToast('Błąd zapisu grup', 'error');
+    }
+  },
+
+  planningScheduleDays() {
+    return [...new Set((this.planningSchedule || []).map(entry => entry.day_date).filter(Boolean))];
+  },
+
+  planningScheduleCategories() {
+    return [...new Set((this.planningSchedule || []).map(entry => entry.category_name || entry.group_name || entry.phase).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pl'));
+  },
+
+  planningScheduleEntries() {
+    return (this.planningSchedule || []).filter(entry => {
+      if (this.planningScheduleFilter.day && entry.day_date !== this.planningScheduleFilter.day) return false;
+      if (this.planningScheduleFilter.court && entry.court_id !== this.planningScheduleFilter.court) return false;
+      if (this.planningScheduleFilter.category) {
+        const category = entry.category_name || entry.group_name || entry.phase || '';
+        if (category !== this.planningScheduleFilter.category) return false;
+      }
+      return true;
+    });
+  },
+
+  planningScheduleStatusLabel(status) {
+    const labels = { draft: 'Roboczy', planned: 'Zaplanowany', scheduled: 'Zaplanowany', in_progress: 'W toku', completed: 'Zakończony', cancelled: 'Odwołany', moved: 'Przeniesiony' };
+    return labels[status] || status || 'Roboczy';
+  },
+
+  planningPlayerNameOptions() {
+    return (this.planningPlayers || []).map(player => player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pl'));
+  },
+
+  planningCourtLabel(courtId) {
+    const court = (this.planningCourts || []).find(item => String(item.kort_id) === String(courtId));
+    return court?.name || court?.kort_id || courtId || '';
+  },
+
+  async generatePlanningSchedule() {
+    if (!this.planningTournamentId) return;
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.planningTournamentId}/schedule/generate`, { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to generate schedule');
+      const payload = await response.json();
+      this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
+      this.showToast('Wpisy terminarza wygenerowane', 'success');
+    } catch (err) {
+      console.error('Failed to generate schedule:', err);
+      this.showToast('Błąd generowania terminarza', 'error');
+    }
+  },
+
+  async savePlanningScheduleEntry(entry) {
+    if (!this.planningTournamentId || !entry?.id) return;
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.planningTournamentId}/schedule/${entry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+      });
+      if (!response.ok) throw new Error('Failed to save schedule entry');
+      const payload = await response.json();
+      this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
+      this.showToast('Wpis terminarza zapisany', 'success');
+    } catch (err) {
+      console.error('Failed to save schedule entry:', err);
+      this.showToast('Błąd zapisu wpisu terminarza', 'error');
+    }
+  },
+
+  async addPlanningScheduleEntry() {
+    if (!this.planningTournamentId) return;
+    if (!this.planningNewSchedule.player1_name || !this.planningNewSchedule.player2_name || this.planningNewSchedule.player1_name === this.planningNewSchedule.player2_name) {
+      this.showToast('Wybierz dwóch różnych zawodników', 'warning');
+      return;
+    }
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.planningTournamentId}/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.planningNewSchedule),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Failed to add schedule entry');
+      this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
+      const dayDate = this.planningNewSchedule.day_date;
+      const courtId = this.planningNewSchedule.court_id;
+      const category = this.planningNewSchedule.category_name;
+      this.planningNewSchedule = {
+        day_date: dayDate,
+        scheduled_time: '',
+        court_id: courtId,
+        category_name: category,
+        phase: 'Grupowa',
+        player1_name: '',
+        player2_name: '',
+        status: 'planned',
+        notes_public: '',
+        notes_internal: '',
+      };
+      this.showToast('Dodano wpis terminarza', 'success');
+    } catch (err) {
+      console.error('Failed to add schedule entry:', err);
+      this.showToast(err.message || 'Błąd dodawania wpisu terminarza', 'error');
+    }
+  },
+
+  async deletePlanningScheduleEntry(entry) {
+    if (!this.planningTournamentId || !entry?.id) return;
+    if (!confirm('Usunąć ten wpis terminarza?')) return;
+    try {
+      const response = await fetch(`/admin/api/tournaments/${this.planningTournamentId}/schedule/${entry.id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete schedule entry');
+      const payload = await response.json();
+      this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
+      this.showToast('Wpis usunięty', 'success');
+    } catch (err) {
+      console.error('Failed to delete schedule entry:', err);
+      this.showToast('Błąd usuwania wpisu terminarza', 'error');
+    }
+  },
   
   // ===== PLAYERS =====
   async loadPlayers(tournamentId) {
@@ -679,7 +1286,7 @@ Alpine.data('adminApp', () => ({
       if (!response.ok) throw new Error('Failed to add player');
       
       this.showToast('Gracz dodany', 'success');
-      this.newPlayer = { first_name: '', last_name: '', category: '', country: '' };
+      this.newPlayer = { first_name: '', last_name: '', category: '', gender: '', country: '' };
       await this.loadPlayers(this.selectedTournament);
     } catch (err) {
       console.error('Failed to add player:', err);
@@ -707,7 +1314,13 @@ Alpine.data('adminApp', () => ({
 
   editPlayer(player) {
     this.editingPlayerId = player.id;
-    this.editPlayerData = { first_name: player.first_name || '', last_name: player.last_name || '', category: player.category || '', country: player.country || '' };
+    this.editPlayerData = {
+      first_name: player.first_name || '',
+      last_name: player.last_name || '',
+      category: player.category || '',
+      gender: player.gender || '',
+      country: player.country || '',
+    };
   },
 
   cancelEditPlayer() {
@@ -738,30 +1351,138 @@ Alpine.data('adminApp', () => ({
     }
     
     try {
-      const lines = this.importText.trim().split('\n');
-      const players = lines
-        .filter(line => line.trim())
-        .map(line => {
-          const parts = line.trim().split(/\s+/);
-          const name = parts.slice(0, -2).join(' ') || parts.join(' ');
-          const category = parts[parts.length - 2] || '';
-          const country = parts[parts.length - 1] || '';
-          return { name, category, country };
-        });
+      const response = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/parse-import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: this.importText }),
+      });
       
+      if (!response.ok) throw new Error('Failed to import players');
+
+      const payload = await response.json();
+      this.importPreview = {
+        players: Array.isArray(payload.players) ? payload.players : [],
+        count: Number(payload.count || 0),
+        needs_attention_count: Number(payload.needs_attention_count || 0),
+      };
+      this.$nextTick(() => this.$refs.importPreviewModal?.showModal());
+    } catch (err) {
+      console.error('Failed to import players:', err);
+      this.showToast('Błąd importu graczy', 'error');
+    }
+  },
+
+  normalizeImportGender(value) {
+    const raw = String(value || '').trim().toUpperCase();
+    if (raw === 'K' || raw === 'M') return raw;
+    return '';
+  },
+
+  normalizeImportCategory(value) {
+    return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  },
+
+  normalizeImportCountry(value) {
+    return String(value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2);
+  },
+
+  importPreviewRowKey(player, index) {
+    return `${player?.line_number || 'row'}-${player?.raw_line || ''}-${index}`;
+  },
+
+  importPreviewDisplayName(player) {
+    return `${player?.first_name || ''} ${player?.last_name || ''}`.trim() || player?.name || '';
+  },
+
+  importStartGroup(player) {
+    const category = this.normalizeImportCategory(player?.category || '');
+    const gender = this.normalizeImportGender(player?.gender || '');
+    return category && gender ? `${category}${gender}` : category || gender || 'NIEPRZYPISANI';
+  },
+
+  importPreviewSummary() {
+    const grouped = new Map();
+    for (const player of this.importPreview.players || []) {
+      const startGroup = this.importStartGroup(player);
+      if (!grouped.has(startGroup)) {
+        grouped.set(startGroup, { start_group: startGroup, count: 0, players: [] });
+      }
+      const bucket = grouped.get(startGroup);
+      bucket.count += 1;
+      bucket.players.push(this.importPreviewDisplayName(player));
+    }
+    return [...grouped.values()].sort((left, right) => {
+      if (left.start_group === 'NIEPRZYPISANI') return 1;
+      if (right.start_group === 'NIEPRZYPISANI') return -1;
+      return left.start_group.localeCompare(right.start_group, 'pl');
+    });
+  },
+
+  importPreviewWarnings(player) {
+    const warnings = [];
+    const firstName = String(player?.first_name || '').trim();
+    const lastName = String(player?.last_name || '').trim();
+    const country = String(player?.country || '').trim().toUpperCase();
+
+    if (!firstName && !lastName) warnings.push('Brak imienia i nazwiska');
+    else if (!firstName || !lastName) warnings.push('Sprawdz podzial imienia i nazwiska');
+    if (!this.normalizeImportCategory(player?.category || '')) warnings.push('Brak kategorii startowej');
+    if (!this.normalizeImportGender(player?.gender || '')) warnings.push('Brak podzialu K/M');
+    if (!country) warnings.push('Brak kraju');
+    else if (this.normalizeImportCountry(country) !== country) warnings.push('Kraj powinien miec kod 2-literowy');
+    return [...new Set(warnings)];
+  },
+
+  normalizeImportPreviewPlayer(player) {
+    player.first_name = String(player?.first_name || '').trim();
+    player.last_name = String(player?.last_name || '').trim();
+    player.category = this.normalizeImportCategory(player?.category || '');
+    player.gender = this.normalizeImportGender(player?.gender || '');
+    player.country = this.normalizeImportCountry(player?.country || '');
+  },
+
+  removeImportPreviewPlayer(index) {
+    this.importPreview.players.splice(index, 1);
+  },
+
+  closeImportPreview() {
+    this.$refs.importPreviewModal?.close();
+  },
+
+  async confirmImportPlayers() {
+    if (!this.selectedTournament || !(this.importPreview.players || []).length) {
+      this.showToast('Brak graczy do importu', 'warning');
+      return;
+    }
+
+    try {
+      const players = this.importPreview.players.map(player => {
+        this.normalizeImportPreviewPlayer(player);
+        return {
+          name: this.importPreviewDisplayName(player),
+          first_name: player.first_name || '',
+          last_name: player.last_name || '',
+          category: player.category || '',
+          gender: player.gender || '',
+          country: player.country || '',
+        };
+      });
+
       const response = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ players }),
       });
-      
+
       if (!response.ok) throw new Error('Failed to import players');
-      
+
       this.showToast(`Zaimportowano ${players.length} graczy`, 'success');
       this.importText = '';
+      this.importPreview = { players: [], count: 0, needs_attention_count: 0 };
+      this.closeImportPreview();
       await this.loadPlayers(this.selectedTournament);
     } catch (err) {
-      console.error('Failed to import players:', err);
+      console.error('Failed to confirm import players:', err);
       this.showToast('Błąd importu graczy', 'error');
     }
   },
@@ -982,6 +1703,14 @@ Alpine.data('adminApp', () => ({
 
   activeTournamentsList() {
     return (this.tournaments || []).filter(tournament => tournament.active);
+  },
+
+  officeTournamentsList() {
+    return [...(this.tournaments || [])].sort((left, right) => {
+      const activeDelta = Number(right.active || 0) - Number(left.active || 0);
+      if (activeDelta !== 0) return activeDelta;
+      return String(left.name || '').localeCompare(String(right.name || ''), 'pl');
+    });
   },
 
   activeTournamentSlot(tournamentId) {

@@ -559,6 +559,14 @@ def finish_match(match_id: int):
                 except Exception as e:
                     logger.warning(f"Could not send email report: {e}")
             
+            # Auto-generate knockout once the configured group stage is complete.
+            if match.phase == "Grupowa" and match.tournament_id:
+                try:
+                    from ..database import maybe_generate_knockout_from_completed_groups
+                    maybe_generate_knockout_from_completed_groups(match.tournament_id)
+                except Exception as e:
+                    logger.warning(f"Could not generate knockout: {e}")
+
             # Auto-advance knockout bracket
             if match.phase == "Pucharowa" and match.tournament_id:
                 try:

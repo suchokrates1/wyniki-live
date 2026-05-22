@@ -20,6 +20,11 @@ services:
       
       # Admin
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+
+      # AI-assisted player import parsing
+      - IMPORT_PLAYERS_AI_API_KEY=${IMPORT_PLAYERS_AI_API_KEY:-}
+      - IMPORT_PLAYERS_AI_MODEL=${IMPORT_PLAYERS_AI_MODEL:-gemini-2.5-flash}
+      - IMPORT_PLAYERS_AI_TIMEOUT_SECONDS=${IMPORT_PLAYERS_AI_TIMEOUT_SECONDS:-20}
       
       # Logging
       - LOG_LEVEL=INFO
