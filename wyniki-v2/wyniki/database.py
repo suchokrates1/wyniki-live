@@ -2,10 +2,18 @@
 import json
 import sqlite3
 from contextlib import contextmanager
-from typing import Dict, List, Optional, Generator, Any
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, Generator, List, Optional
+from werkzeug.security import generate_password_hash
 
 from .config import settings, logger
+
+
+def _default_simulation_office_password_hash(is_simulation: bool, office_password_hash: str) -> str:
+    if is_simulation and not (office_password_hash or '').strip():
+        return generate_password_hash('test')
+    return (office_password_hash or '').strip()
 
 
 @contextmanager
@@ -54,6 +62,11 @@ def init_db() -> None:
                 logo_path TEXT,
                 report_email TEXT DEFAULT '',
                 summary_sent_at TEXT,
+                is_public INTEGER DEFAULT 1,
+                stats_enabled INTEGER DEFAULT 1,
+                is_simulation INTEGER DEFAULT 0,
+                access_key TEXT DEFAULT '',
+                office_password_hash TEXT DEFAULT '',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -272,6 +285,36 @@ def init_db() -> None:
                 FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tournament_schedule (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tournament_id INTEGER NOT NULL,
+                day_date TEXT NOT NULL,
+                scheduled_time TEXT DEFAULT '',
+                court_id TEXT DEFAULT '',
+                court_label TEXT DEFAULT '',
+                category_name TEXT DEFAULT '',
+                bracket_group_id INTEGER,
+                group_name TEXT DEFAULT '',
+                phase TEXT DEFAULT 'Grupowa',
+                player1_name TEXT NOT NULL DEFAULT '',
+                player2_name TEXT NOT NULL DEFAULT '',
+                status TEXT DEFAULT 'draft',
+                source_type TEXT DEFAULT 'manual',
+                source_ref_id INTEGER,
+                match_id INTEGER,
+                sort_order INTEGER DEFAULT 0,
+                notes_public TEXT DEFAULT '',
+                notes_internal TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tournament_schedule_day ON tournament_schedule(tournament_id, day_date, sort_order)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tournament_schedule_court ON tournament_schedule(tournament_id, court_id, day_date, scheduled_time)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tournament_schedule_match ON tournament_schedule(match_id)")
         
         # Migration: Add tournament_id, bracket_group_id, phase to matches
         cursor.execute("PRAGMA table_info(matches)")
@@ -285,6 +328,31 @@ def init_db() -> None:
         if 'phase' not in m_cols:
             cursor.execute("ALTER TABLE matches ADD COLUMN phase TEXT")
             logger.info("database_migration", action="added_phase_to_matches")
+
+        cursor.execute("PRAGMA table_info(tournament_schedule)")
+        schedule_cols = [row[1] for row in cursor.fetchall()]
+        schedule_defaults = {
+            'scheduled_time': "TEXT DEFAULT ''",
+            'court_id': "TEXT DEFAULT ''",
+            'court_label': "TEXT DEFAULT ''",
+            'category_name': "TEXT DEFAULT ''",
+            'bracket_group_id': "INTEGER",
+            'group_name': "TEXT DEFAULT ''",
+            'phase': "TEXT DEFAULT 'Grupowa'",
+            'status': "TEXT DEFAULT 'draft'",
+            'source_type': "TEXT DEFAULT 'manual'",
+            'source_ref_id': "INTEGER",
+            'match_id': "INTEGER",
+            'sort_order': "INTEGER DEFAULT 0",
+            'notes_public': "TEXT DEFAULT ''",
+            'notes_internal': "TEXT DEFAULT ''",
+            'created_at': "TEXT DEFAULT ''",
+            'updated_at': "TEXT DEFAULT ''",
+        }
+        for column_name, ddl in schedule_defaults.items():
+            if column_name not in schedule_cols:
+                cursor.execute(f"ALTER TABLE tournament_schedule ADD COLUMN {column_name} {ddl}")
+                logger.info("database_migration", action=f"added_{column_name}_to_tournament_schedule")
         
         # Migration: Add location column to tournaments
         cursor.execute("PRAGMA table_info(tournaments)")
@@ -307,6 +375,33 @@ def init_db() -> None:
         if 'summary_sent_at' not in t_cols:
             cursor.execute("ALTER TABLE tournaments ADD COLUMN summary_sent_at TEXT")
             logger.info("database_migration", action="added_summary_sent_at_to_tournaments")
+        if 'is_public' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN is_public INTEGER DEFAULT 1")
+            logger.info("database_migration", action="added_is_public_to_tournaments")
+        if 'stats_enabled' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN stats_enabled INTEGER DEFAULT 1")
+            logger.info("database_migration", action="added_stats_enabled_to_tournaments")
+        if 'is_simulation' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN is_simulation INTEGER DEFAULT 0")
+            logger.info("database_migration", action="added_is_simulation_to_tournaments")
+        if 'access_key' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN access_key TEXT DEFAULT ''")
+            logger.info("database_migration", action="added_access_key_to_tournaments")
+        if 'office_password_hash' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN office_password_hash TEXT DEFAULT ''")
+            logger.info("database_migration", action="added_office_password_hash_to_tournaments")
+        simulation_office_password_hash = generate_password_hash('test')
+        cursor.execute(
+            """
+            UPDATE tournaments
+            SET office_password_hash = ?
+            WHERE COALESCE(is_simulation, 0) = 1
+              AND COALESCE(office_password_hash, '') = ''
+            """,
+            (simulation_office_password_hash,),
+        )
+        if cursor.rowcount:
+            logger.info("database_migration", action="backfilled_simulation_office_passwords", count=cursor.rowcount)
         cursor.execute(
             "UPDATE tournaments SET city = COALESCE(NULLIF(TRIM(location), ''), city, '') WHERE TRIM(COALESCE(city, '')) = '' AND TRIM(COALESCE(location, '')) != ''"
         )
@@ -396,6 +491,188 @@ def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: 
         return {"group_id": None, "phase": None, "warning": None}
 
 
+def _split_bracket_label(value: Optional[str]) -> tuple[str, str]:
+    """Split a bracket label into category prefix and suffix."""
+    label = (value or "").strip()
+    if not label:
+        return "", ""
+    if " — " not in label:
+        return "", label
+    prefix, suffix = label.split(" — ", 1)
+    return prefix.strip(), suffix.strip()
+
+
+def _phase_kind(phase: Optional[str]) -> Optional[str]:
+    """Map localized phase labels to a stable semantic kind."""
+    _, suffix = _split_bracket_label(phase)
+    normalized = (suffix or phase or "").strip().lower()
+    if not normalized:
+        return None
+    if "półfina" in normalized or "semif" in normalized:
+        return "semifinal"
+    if "3." in normalized or "3 " in normalized or "third" in normalized or "3rd" in normalized:
+        return "third_place"
+    if "5." in normalized or "5 " in normalized or "fifth" in normalized or "5th" in normalized:
+        return "fifth_place"
+    if "7." in normalized or "7 " in normalized or "seventh" in normalized or "7th" in normalized:
+        return "seventh_place"
+    if normalized == "pucharowa":
+        return "knockout"
+    if "fina" in normalized or normalized == "final":
+        return "final"
+    return None
+
+
+def _group_sort_key(name: str) -> tuple[int, str]:
+    """Sort groups so A/B stay in a stable order inside a category."""
+    _, suffix = _split_bracket_label(name)
+    label = (suffix or name or "").strip()
+    last_token = label.split()[-1].upper() if label else ""
+    if len(last_token) == 1 and last_token.isalpha():
+        return (0, last_token)
+    return (1, label.lower())
+
+
+def _is_knockout_placeholder_name(name: Optional[str]) -> bool:
+    """Detect generated placeholder labels that should be replaced by real players."""
+    value = (name or "").strip()
+    if not value:
+        return True
+    lowered = value.lower()
+    if lowered.startswith("zwycięzca pf") or lowered.startswith("przegrany pf"):
+        return True
+    if lowered.startswith("winner sf") or lowered.startswith("loser sf"):
+        return True
+    if len(value) == 2 and value[0].isdigit() and value[1].isalpha():
+        return True
+    return False
+
+
+def _slot_phase_matches(slot_phase: str, expected_kind: str, category_prefix: str) -> bool:
+    """Check whether a stored phase belongs to the requested category/kind."""
+    slot_prefix, _ = _split_bracket_label(slot_phase)
+    return slot_prefix == category_prefix and _phase_kind(slot_phase) == expected_kind
+
+
+def _assign_knockout_slot_player(cursor, slot: sqlite3.Row, side: int, player_name: str) -> None:
+    """Write a player into the requested side if the slot is empty or placeholder-only."""
+    column = "player1_name" if side == 1 else "player2_name"
+    current_value = slot[column]
+    if current_value and not _is_knockout_placeholder_name(current_value):
+        return
+    cursor.execute(f"UPDATE bracket_knockout SET {column} = ? WHERE id = ?", (player_name, slot["id"]))
+
+
+def _build_knockout_slots_for_category(category_prefix: str, ordered_groups: List[Dict]) -> List[Dict]:
+    """Generate semifinal/final/placement slots for one category."""
+    group_a = ordered_groups[0]["standings"]
+    group_b = ordered_groups[1]["standings"]
+
+    semifinal_phase = f"{category_prefix} — Półfinał" if category_prefix else "Półfinał"
+    final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
+    third_phase = f"{category_prefix} — o 3. miejsce" if category_prefix else "o 3. miejsce"
+    fifth_phase = f"{category_prefix} — o 5. miejsce" if category_prefix else "o 5. miejsce"
+    seventh_phase = f"{category_prefix} — o 7. miejsce" if category_prefix else "o 7. miejsce"
+
+    slots = [
+        {
+            "phase": semifinal_phase,
+            "position": 1,
+            "player1_name": group_a[0]["name"],
+            "player2_name": group_b[1]["name"],
+        },
+        {
+            "phase": semifinal_phase,
+            "position": 2,
+            "player1_name": group_b[0]["name"],
+            "player2_name": group_a[1]["name"],
+        },
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+        {
+            "phase": third_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+    ]
+
+    if len(group_a) >= 3 and len(group_b) >= 3:
+        slots.append(
+            {
+                "phase": fifth_phase,
+                "position": 1,
+                "player1_name": group_a[2]["name"],
+                "player2_name": group_b[2]["name"],
+            }
+        )
+    if len(group_a) >= 4 and len(group_b) >= 4:
+        slots.append(
+            {
+                "phase": seventh_phase,
+                "position": 1,
+                "player1_name": group_a[3]["name"],
+                "player2_name": group_b[3]["name"],
+            }
+        )
+    return slots
+
+
+def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[str, Any]:
+    """Generate knockout automatically once all configured group matches are finished."""
+    groups = fetch_bracket_groups(tournament_id)
+    if not groups:
+        return {"status": "skipped", "reason": "no_groups"}
+
+    expected_matches = 0
+    finished_matches = 0
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        for group in groups:
+            player_count = len(group.get("players", []))
+            if player_count < 2:
+                continue
+            expected_matches += player_count * (player_count - 1) // 2
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM matches
+                WHERE tournament_id = ?
+                  AND status = 'finished'
+                  AND phase = 'Grupowa'
+                  AND bracket_group_id = ?
+                """,
+                (tournament_id, group["id"]),
+            )
+            finished_matches += cursor.fetchone()["count"]
+
+    if expected_matches == 0:
+        return {"status": "skipped", "reason": "no_group_matches_expected"}
+    if finished_matches < expected_matches:
+        return {
+            "status": "pending",
+            "reason": "group_stage_incomplete",
+            "finished_matches": finished_matches,
+            "expected_matches": expected_matches,
+        }
+
+    existing_slots = fetch_bracket_knockout(tournament_id)
+    if existing_slots and any(slot.get("winner_name") or slot.get("score_summary") for slot in existing_slots):
+        return {"status": "skipped", "reason": "knockout_already_started"}
+    if existing_slots and any(
+        not _is_knockout_placeholder_name(slot.get("player1_name"))
+        or not _is_knockout_placeholder_name(slot.get("player2_name"))
+        for slot in existing_slots
+    ):
+        return {"status": "skipped", "reason": "knockout_already_configured"}
+
+    return generate_knockout_from_standings(tournament_id)
+
+
 def advance_knockout(match_id: int, tournament_id: int) -> bool:
     """After a knockout match finishes, find the matching slot, persist the result,
     and auto-advance winners to the next round (SF→Final/3rd place)."""
@@ -442,10 +719,11 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
             loser = p2 if winner == p1 else p1
 
             # Auto-advance: if semifinal, populate final and 3rd place
-            if slot["phase"] == "semifinal":
-                _advance_to_next_round(cursor, tournament_id, slot["position"], winner, loser)
+            if _phase_kind(slot["phase"]) == "semifinal":
+                _advance_to_next_round(cursor, tournament_id, slot["phase"], slot["position"], winner, loser)
 
             conn.commit()
+            ensure_knockout_schedule_entries(tournament_id)
             logger.info("knockout_advanced", match_id=match_id, winner=winner, phase=slot["phase"])
             return True
 
@@ -454,35 +732,27 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
         return False
 
 
-def _advance_to_next_round(cursor, tournament_id: int, sf_position: int, winner: str, loser: str) -> None:
+def _advance_to_next_round(cursor, tournament_id: int, semifinal_phase: str, sf_position: int, winner: str, loser: str) -> None:
     """Fill in final/3rd-place slots based on semifinal results."""
-    # Put winner into final
-    cursor.execute("""
-        SELECT id, player1_name, player2_name FROM bracket_knockout
-        WHERE tournament_id = ? AND phase = 'final' AND position = 1
-    """, (tournament_id,))
-    final_slot = cursor.fetchone()
+    category_prefix, _ = _split_bracket_label(semifinal_phase)
+    cursor.execute(
+        "SELECT id, phase, position, player1_name, player2_name FROM bracket_knockout WHERE tournament_id = ?",
+        (tournament_id,),
+    )
+    slots = cursor.fetchall()
+    final_slot = next(
+        (slot for slot in slots if _slot_phase_matches(slot["phase"], "final", category_prefix)),
+        None,
+    )
+    third_slot = next(
+        (slot for slot in slots if _slot_phase_matches(slot["phase"], "third_place", category_prefix)),
+        None,
+    )
+    target_side = 1 if int(sf_position) == 1 else 2
     if final_slot:
-        if not final_slot["player1_name"]:
-            cursor.execute("UPDATE bracket_knockout SET player1_name = ? WHERE id = ?",
-                           (winner, final_slot["id"]))
-        elif not final_slot["player2_name"]:
-            cursor.execute("UPDATE bracket_knockout SET player2_name = ? WHERE id = ?",
-                           (winner, final_slot["id"]))
-
-    # Put loser into 3rd place match
-    cursor.execute("""
-        SELECT id, player1_name, player2_name FROM bracket_knockout
-        WHERE tournament_id = ? AND phase = 'third_place' AND position = 1
-    """, (tournament_id,))
-    third_slot = cursor.fetchone()
+        _assign_knockout_slot_player(cursor, final_slot, target_side, winner)
     if third_slot:
-        if not third_slot["player1_name"]:
-            cursor.execute("UPDATE bracket_knockout SET player1_name = ? WHERE id = ?",
-                           (loser, third_slot["id"]))
-        elif not third_slot["player2_name"]:
-            cursor.execute("UPDATE bracket_knockout SET player2_name = ? WHERE id = ?",
-                           (loser, third_slot["id"]))
+        _assign_knockout_slot_player(cursor, third_slot, target_side, loser)
 
 
 def insert_match_history(entry: Dict[str, Any]) -> None:
@@ -548,7 +818,7 @@ def delete_latest_history_entry() -> Optional[Dict]:
         return None
 
 
-def fetch_courts(active_only: bool = False) -> List[Dict[str, Optional[str]]]:
+def fetch_courts(active_only: bool = False, public_only: bool = False) -> List[Dict[str, Optional[str]]]:
     """Fetch courts from database, optionally limited to active tournaments."""
     try:
         with db_conn() as conn:
@@ -565,8 +835,13 @@ def fetch_courts(active_only: bool = False) -> List[Dict[str, Optional[str]]]:
                 FROM courts c
                 LEFT JOIN tournaments t ON t.id = c.tournament_id
             """
+            conditions = []
             if active_only:
-                query += " WHERE COALESCE(t.active, 0) = 1"
+                conditions.append("COALESCE(t.active, 0) = 1")
+            if public_only:
+                conditions.append("COALESCE(t.is_public, 1) = 1")
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
             query += " ORDER BY COALESCE(c.tournament_id, 0), c.display_order, c.kort_id"
             cursor.execute(query)
             rows = cursor.fetchall()
@@ -583,7 +858,7 @@ def fetch_courts(active_only: bool = False) -> List[Dict[str, Optional[str]]]:
             }
             for row in rows
         ]
-        logger.debug("courts_fetched", count=len(courts), active_only=active_only)
+        logger.debug("courts_fetched", count=len(courts), active_only=active_only, public_only=public_only)
         return courts
     except Exception as e:
         logger.error("fetch_courts_error", error=str(e))
@@ -778,24 +1053,34 @@ def upsert_app_settings(settings_dict: Dict[str, str]) -> None:
         logger.error("upsert_app_settings_error", error=str(e))
 
 
-def fetch_match_history(limit: int = 100, tournament_id: Optional[int] = None) -> List[Dict]:
+def fetch_match_history(
+    limit: int = 100,
+    tournament_id: Optional[int] = None,
+    public_only: bool = False,
+    stats_enabled_only: bool = False,
+) -> List[Dict]:
     """Fetch match history from database, enriched with full names."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
+            conditions = []
+            params: List[Any] = []
             if tournament_id is not None:
-                cursor.execute("""
-                    SELECT * FROM match_history
-                    WHERE tournament_id = ?
-                    ORDER BY ended_ts DESC
-                    LIMIT ?
-                """, (tournament_id, limit))
-            else:
-                cursor.execute("""
-                    SELECT * FROM match_history
-                    ORDER BY ended_ts DESC
-                    LIMIT ?
-                """, (limit,))
+                conditions.append("mh.tournament_id = ?")
+                params.append(tournament_id)
+            if public_only:
+                conditions.append("(mh.tournament_id IS NULL OR COALESCE(t.is_public, 1) = 1)")
+            if stats_enabled_only:
+                conditions.append("(mh.tournament_id IS NULL OR COALESCE(t.stats_enabled, 1) = 1)")
+
+            where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+            cursor.execute(f"""
+                SELECT mh.* FROM match_history mh
+                LEFT JOIN tournaments t ON t.id = mh.tournament_id
+                {where_clause}
+                ORDER BY mh.ended_ts DESC
+                LIMIT ?
+            """, (*params, limit))
             rows = cursor.fetchall()
             
             # Detect available columns
@@ -926,12 +1211,16 @@ def _resolve_name(raw: Optional[str], lookup: Dict[str, str]) -> str:
 
 # ==================== TOURNAMENTS ====================
 
-def get_active_tournament_id() -> Optional[int]:
+def get_active_tournament_id(public_only: bool = False) -> Optional[int]:
     """Get the ID of the currently active tournament."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id FROM tournaments WHERE active = 1 LIMIT 1")
+            query = "SELECT id FROM tournaments WHERE active = 1"
+            if public_only:
+                query += " AND COALESCE(is_public, 1) = 1"
+            query += " LIMIT 1"
+            cursor.execute(query)
             row = cursor.fetchone()
             return row["id"] if row else None
     except Exception as e:
@@ -939,12 +1228,16 @@ def get_active_tournament_id() -> Optional[int]:
         return None
 
 
-def get_active_tournament_name() -> Optional[str]:
+def get_active_tournament_name(public_only: bool = False) -> Optional[str]:
     """Get the name of the currently active tournament."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT name FROM tournaments WHERE active = 1 LIMIT 1")
+            query = "SELECT name FROM tournaments WHERE active = 1"
+            if public_only:
+                query += " AND COALESCE(is_public, 1) = 1"
+            query += " LIMIT 1"
+            cursor.execute(query)
             row = cursor.fetchone()
             return row["name"] if row else None
     except Exception as e:
@@ -952,20 +1245,21 @@ def get_active_tournament_name() -> Optional[str]:
         return None
 
 
-def fetch_active_tournaments() -> List[Dict]:
+def fetch_active_tournaments(public_only: bool = False) -> List[Dict]:
     """Fetch all active tournaments."""
     try:
-        return [t for t in fetch_tournaments() if t.get("active") == 1]
+        return [t for t in fetch_tournaments(public_only=public_only) if t.get("active") == 1]
     except Exception as e:
         logger.error("fetch_active_tournaments_error", error=str(e))
         return []
 
 
-def fetch_tournaments() -> List[Dict]:
+def fetch_tournaments(public_only: bool = False) -> List[Dict]:
     """Fetch all tournaments."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
+            where_clause = "WHERE COALESCE(t.is_public, 1) = 1" if public_only else ""
             cursor.execute("""
                 SELECT
                     t.id,
@@ -979,14 +1273,21 @@ def fetch_tournaments() -> List[Dict]:
                     t.logo_path,
                     t.report_email,
                     t.summary_sent_at,
+                    COALESCE(t.is_public, 1) AS is_public,
+                    COALESCE(t.stats_enabled, 1) AS stats_enabled,
+                    COALESCE(t.is_simulation, 0) AS is_simulation,
+                    COALESCE(t.access_key, '') AS access_key,
+                    CASE WHEN COALESCE(t.office_password_hash, '') != '' THEN 1 ELSE 0 END AS has_office_password,
                     t.created_at,
                     COUNT(c.kort_id) AS court_count
                 FROM tournaments t
                 LEFT JOIN courts c ON c.tournament_id = t.id
+                {where_clause}
                 GROUP BY t.id, t.name, t.start_date, t.end_date, t.active, t.location, t.city, t.country,
-                         t.logo_path, t.report_email, t.summary_sent_at, t.created_at
+                         t.logo_path, t.report_email, t.summary_sent_at, t.is_public, t.stats_enabled,
+                         t.is_simulation, t.access_key, t.office_password_hash, t.created_at
                 ORDER BY start_date DESC
-            """)
+            """.format(where_clause=where_clause))
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
     except Exception as e:
@@ -1012,13 +1313,19 @@ def fetch_tournament(tournament_id: int) -> Optional[Dict]:
                     t.logo_path,
                     t.report_email,
                     t.summary_sent_at,
+                    COALESCE(t.is_public, 1) AS is_public,
+                    COALESCE(t.stats_enabled, 1) AS stats_enabled,
+                    COALESCE(t.is_simulation, 0) AS is_simulation,
+                    COALESCE(t.access_key, '') AS access_key,
+                    CASE WHEN COALESCE(t.office_password_hash, '') != '' THEN 1 ELSE 0 END AS has_office_password,
                     t.created_at,
                     COUNT(c.kort_id) AS court_count
                 FROM tournaments t
                 LEFT JOIN courts c ON c.tournament_id = t.id
                 WHERE t.id = ?
                 GROUP BY t.id, t.name, t.start_date, t.end_date, t.active, t.location, t.city, t.country,
-                         t.logo_path, t.report_email, t.summary_sent_at, t.created_at
+                        t.logo_path, t.report_email, t.summary_sent_at, t.is_public, t.stats_enabled,
+                        t.is_simulation, t.access_key, t.office_password_hash, t.created_at
             """, (tournament_id,))
             row = cursor.fetchone()
             return dict(row) if row else None
@@ -1036,15 +1343,27 @@ def insert_tournament(
     country: str = "",
     logo_path: Optional[str] = None,
     report_email: str = "",
+    is_public: bool = True,
+    stats_enabled: bool = True,
+    is_simulation: bool = False,
+    access_key: str = "",
+    office_password_hash: str = "",
 ) -> Optional[int]:
     """Insert a new tournament."""
     try:
+        if is_simulation:
+            is_public = False
+            stats_enabled = False
+        office_password_hash = _default_simulation_office_password_hash(is_simulation, office_password_hash)
         location = ", ".join(part for part in [city.strip(), country.strip()] if part.strip())
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO tournaments (name, start_date, end_date, active, location, city, country, logo_path, report_email)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tournaments (
+                    name, start_date, end_date, active, location, city, country, logo_path, report_email,
+                    is_public, stats_enabled, is_simulation, access_key, office_password_hash
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 name,
                 start_date,
@@ -1055,6 +1374,11 @@ def insert_tournament(
                 country.strip().upper(),
                 logo_path,
                 report_email.strip(),
+                1 if is_public else 0,
+                1 if stats_enabled else 0,
+                1 if is_simulation else 0,
+                access_key.strip(),
+                office_password_hash,
             ))
             conn.commit()
             logger.info("tournament_inserted", id=cursor.lastrowid, name=name)
@@ -1074,16 +1398,26 @@ def update_tournament(
     country: str = "",
     logo_path: Optional[str] = None,
     report_email: str = "",
+    is_public: bool = True,
+    stats_enabled: bool = True,
+    is_simulation: bool = False,
+    access_key: str = "",
+    office_password_hash: str = "",
 ) -> bool:
     """Update a tournament."""
     try:
+        if is_simulation:
+            is_public = False
+            stats_enabled = False
+        office_password_hash = _default_simulation_office_password_hash(is_simulation, office_password_hash)
         location = ", ".join(part for part in [city.strip(), country.strip()] if part.strip())
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE tournaments
                 SET name = ?, start_date = ?, end_date = ?, active = ?, location = ?, city = ?, country = ?,
-                    logo_path = ?, report_email = ?
+                    logo_path = ?, report_email = ?, is_public = ?, stats_enabled = ?, is_simulation = ?,
+                    access_key = ?, office_password_hash = ?
                 WHERE id = ?
             """, (
                 name,
@@ -1095,6 +1429,11 @@ def update_tournament(
                 country.strip().upper(),
                 logo_path,
                 report_email.strip(),
+                1 if is_public else 0,
+                1 if stats_enabled else 0,
+                1 if is_simulation else 0,
+                access_key.strip(),
+                office_password_hash,
                 tournament_id,
             ))
             conn.commit()
@@ -1209,6 +1548,7 @@ def delete_tournament(tournament_id: int) -> bool:
                 cursor.execute("DELETE FROM match_history WHERE tournament_id = ?", (tournament_id,))
 
             cursor.execute("DELETE FROM matches WHERE tournament_id = ?", (tournament_id,))
+            cursor.execute("DELETE FROM tournament_schedule WHERE tournament_id = ?", (tournament_id,))
             cursor.execute(
                 "DELETE FROM bracket_group_players WHERE group_id IN "
                 "(SELECT id FROM bracket_groups WHERE tournament_id = ?)",
@@ -1305,17 +1645,19 @@ def fetch_active_tournament_players() -> List[Dict]:
         return []
 
 
-def fetch_players_for_active_tournaments() -> List[Dict]:
+def fetch_players_for_active_tournaments(public_only: bool = False) -> List[Dict]:
     """Fetch players belonging to any active tournament."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            public_clause = "AND COALESCE(t.is_public, 1) = 1" if public_only else ""
+            cursor.execute(f"""
                 SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
                        p.category, p.country, p.gender, p.global_player_id, p.created_at
                 FROM players p
                 INNER JOIN tournaments t ON p.tournament_id = t.id
                 WHERE t.active = 1
+                {public_clause}
                 ORDER BY t.start_date DESC, p.last_name, p.first_name
             """)
             rows = cursor.fetchall()
@@ -1503,6 +1845,7 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
                 (tournament_id,)
             )
             cursor.execute("DELETE FROM bracket_groups WHERE tournament_id = ?", (tournament_id,))
+            cursor.execute("DELETE FROM tournament_schedule WHERE tournament_id = ? AND source_type = 'group'", (tournament_id,))
 
             # Build player_id -> full name lookup
             cursor.execute(
@@ -1529,7 +1872,8 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
                         )
             conn.commit()
             logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
-            return True
+        ensure_group_schedule_entries(tournament_id)
+        return True
     except Exception as e:
         logger.error("save_bracket_groups_error", error=str(e))
         return False
@@ -1558,7 +1902,418 @@ def fetch_bracket_groups(tournament_id: int) -> List[Dict]:
         return []
 
 
-def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str) -> List[Dict]:
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _schedule_day_for_tournament(cursor: sqlite3.Cursor, tournament_id: int) -> str:
+    cursor.execute("SELECT start_date FROM tournaments WHERE id = ?", (tournament_id,))
+    row = cursor.fetchone()
+    return str(row["start_date"] if row and row["start_date"] else datetime.now(timezone.utc).date().isoformat())
+
+
+def _schedule_pair_clause(player1_name: str, player2_name: str) -> tuple[str, tuple[str, str, str, str]]:
+    return (
+        "((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))",
+        (player1_name, player2_name, player2_name, player1_name),
+    )
+
+
+def _schedule_row_payload(row: sqlite3.Row | Dict[str, Any], *, public: bool = False) -> Dict[str, Any]:
+    data = dict(row)
+    payload = {
+        "id": data.get("id"),
+        "tournament_id": data.get("tournament_id"),
+        "day_date": data.get("day_date") or "",
+        "scheduled_time": data.get("scheduled_time") or "",
+        "court_id": data.get("court_id") or "",
+        "court_label": data.get("court_label") or data.get("court_name") or data.get("court_id") or "",
+        "category_name": data.get("category_name") or "",
+        "bracket_group_id": data.get("bracket_group_id"),
+        "group_name": data.get("group_name") or "",
+        "phase": data.get("phase") or "",
+        "player1_name": data.get("player1_name") or "",
+        "player2_name": data.get("player2_name") or "",
+        "status": data.get("status") or "draft",
+        "source_type": data.get("source_type") or "manual",
+        "source_ref_id": data.get("source_ref_id"),
+        "match_id": data.get("match_id"),
+        "sort_order": int(data.get("sort_order") or 0),
+        "court_display_order": int(data.get("court_display_order") or 9999),
+        "notes_public": data.get("notes_public") or "",
+        "created_at": data.get("created_at") or "",
+        "updated_at": data.get("updated_at") or "",
+    }
+    if not public:
+        payload["notes_internal"] = data.get("notes_internal") or ""
+    return payload
+
+
+def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) -> List[Dict[str, Any]]:
+    """Return flat tournament schedule entries sorted by day, time, court and order."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            status_clause = "AND ts.status != 'draft'" if public_only else ""
+            cursor.execute(
+                f"""
+                SELECT ts.*, c.name AS court_name, COALESCE(c.display_order, 9999) AS court_display_order
+                FROM tournament_schedule ts
+                LEFT JOIN courts c ON c.kort_id = ts.court_id
+                WHERE ts.tournament_id = ? {status_clause}
+                ORDER BY ts.day_date, COALESCE(NULLIF(ts.scheduled_time, ''), '99:99'),
+                         COALESCE(c.display_order, 9999), ts.sort_order, ts.id
+                """,
+                (tournament_id,),
+            )
+            return [_schedule_row_payload(row, public=public_only) for row in cursor.fetchall()]
+    except Exception as e:
+        logger.error("fetch_tournament_schedule_error", error=str(e), tournament_id=tournament_id)
+        return []
+
+
+def build_public_schedule_payload(tournament_id: int) -> Dict[str, Any]:
+    """Return schedule grouped by day and court for the public UI."""
+    tournament = fetch_tournament(tournament_id) or {}
+    entries = fetch_tournament_schedule(tournament_id, public_only=True)
+    days: Dict[str, Dict[str, Any]] = {}
+    for entry in entries:
+        day_date = entry.get("day_date") or ""
+        day = days.setdefault(day_date, {"date": day_date, "categories": {}})
+        court_name = entry.get("court_label") or entry.get("court_id") or "Kort do ustalenia"
+        court = day["categories"].setdefault(
+            court_name,
+            {
+                "name": court_name,
+                "matches": [],
+                "court_display_order": int(entry.get("court_display_order") or 9999),
+            },
+        )
+        court["matches"].append(entry)
+
+    grouped_days = []
+    for day in days.values():
+        categories = list(day["categories"].values())
+        for category in categories:
+            category["matches"].sort(
+                key=lambda item: (
+                    item.get("scheduled_time") or "99:99",
+                    item.get("sort_order") or 0,
+                    item.get("id") or 0,
+                )
+            )
+        categories.sort(
+            key=lambda item: (
+                item.get("court_display_order") or 9999,
+                str(item.get("name") or "").casefold(),
+            )
+        )
+        grouped_days.append(
+            {
+                "date": day["date"],
+                "categories": [
+                    {"name": category["name"], "matches": category["matches"]}
+                    for category in categories
+                ],
+            }
+        )
+    grouped_days.sort(key=lambda item: item["date"])
+
+    return {
+        "tournament": {
+            "id": tournament.get("id") or tournament_id,
+            "name": tournament.get("name") or "",
+            "start_date": tournament.get("start_date") or "",
+            "end_date": tournament.get("end_date") or "",
+        },
+        "days": grouped_days,
+    }
+
+
+def _coerce_schedule_entry(tournament_id: int, data: Dict[str, Any], default_order: int = 0) -> Dict[str, Any]:
+    return {
+        "tournament_id": tournament_id,
+        "day_date": str(data.get("day_date") or data.get("date") or "").strip(),
+        "scheduled_time": str(data.get("scheduled_time") or data.get("time") or "").strip(),
+        "court_id": str(data.get("court_id") or "").strip(),
+        "court_label": str(data.get("court_label") or "").strip(),
+        "category_name": str(data.get("category_name") or data.get("category") or "").strip(),
+        "bracket_group_id": data.get("bracket_group_id"),
+        "group_name": str(data.get("group_name") or "").strip(),
+        "phase": str(data.get("phase") or "Grupowa").strip(),
+        "player1_name": str(data.get("player1_name") or data.get("player_a") or "").strip(),
+        "player2_name": str(data.get("player2_name") or data.get("player_b") or "").strip(),
+        "status": str(data.get("status") or "draft").strip(),
+        "source_type": str(data.get("source_type") or "manual").strip(),
+        "source_ref_id": data.get("source_ref_id"),
+        "match_id": data.get("match_id"),
+        "sort_order": int(data.get("sort_order") or default_order),
+        "notes_public": str(data.get("notes_public") or "").strip(),
+        "notes_internal": str(data.get("notes_internal") or "").strip(),
+    }
+
+
+def upsert_tournament_schedule_entries(tournament_id: int, entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Create or update schedule entries and return the refreshed schedule."""
+    if not entries:
+        return fetch_tournament_schedule(tournament_id)
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        default_day = _schedule_day_for_tournament(cursor, tournament_id)
+        now = _utc_now()
+        for index, raw_entry in enumerate(entries):
+            entry = _coerce_schedule_entry(tournament_id, raw_entry, default_order=index)
+            if not entry["day_date"]:
+                entry["day_date"] = default_day
+            if not entry["player1_name"] or not entry["player2_name"]:
+                raise ValueError("Two player names are required for schedule entry")
+            schedule_id = raw_entry.get("id")
+            values = (
+                entry["day_date"], entry["scheduled_time"], entry["court_id"], entry["court_label"],
+                entry["category_name"], entry["bracket_group_id"], entry["group_name"], entry["phase"],
+                entry["player1_name"], entry["player2_name"], entry["status"], entry["source_type"],
+                entry["source_ref_id"], entry["match_id"], entry["sort_order"], entry["notes_public"],
+                entry["notes_internal"], now,
+            )
+            if schedule_id:
+                cursor.execute(
+                    """
+                    UPDATE tournament_schedule
+                    SET day_date = ?, scheduled_time = ?, court_id = ?, court_label = ?, category_name = ?,
+                        bracket_group_id = ?, group_name = ?, phase = ?, player1_name = ?, player2_name = ?,
+                        status = ?, source_type = ?, source_ref_id = ?, match_id = ?, sort_order = ?,
+                        notes_public = ?, notes_internal = ?, updated_at = ?
+                    WHERE id = ? AND tournament_id = ?
+                    """,
+                    (*values, schedule_id, tournament_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO tournament_schedule (
+                        tournament_id, day_date, scheduled_time, court_id, court_label, category_name,
+                        bracket_group_id, group_name, phase, player1_name, player2_name, status, source_type,
+                        source_ref_id, match_id, sort_order, notes_public, notes_internal, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (tournament_id, *values[:-1], now, now),
+                )
+        conn.commit()
+    return fetch_tournament_schedule(tournament_id)
+
+
+def update_tournament_schedule_entry(tournament_id: int, schedule_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Patch one schedule entry."""
+    allowed_fields = {
+        "day_date", "scheduled_time", "court_id", "court_label", "category_name", "bracket_group_id",
+        "group_name", "phase", "player1_name", "player2_name", "status", "source_type", "source_ref_id",
+        "match_id", "sort_order", "notes_public", "notes_internal",
+    }
+    updates = {key: value for key, value in data.items() if key in allowed_fields}
+    if not updates:
+        return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)), None)
+    if "sort_order" in updates:
+        updates["sort_order"] = int(updates.get("sort_order") or 0)
+    updates["updated_at"] = _utc_now()
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            assignments = ", ".join(f"{key} = ?" for key in updates)
+            cursor.execute(
+                f"UPDATE tournament_schedule SET {assignments} WHERE id = ? AND tournament_id = ?",
+                [*updates.values(), schedule_id, tournament_id],
+            )
+            conn.commit()
+            if cursor.rowcount == 0:
+                return None
+        return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)), None)
+    except Exception as e:
+        logger.error("update_tournament_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
+        return None
+
+
+def delete_tournament_schedule_entry(tournament_id: int, schedule_id: int) -> bool:
+    """Delete one schedule entry."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM tournament_schedule WHERE id = ? AND tournament_id = ?", (schedule_id, tournament_id))
+            conn.commit()
+            return cursor.rowcount > 0
+    except Exception as e:
+        logger.error("delete_tournament_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
+        return False
+
+
+def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
+    """Ensure every configured group round-robin pair has a schedule slot."""
+    groups = fetch_bracket_groups(tournament_id)
+    if not groups:
+        return fetch_tournament_schedule(tournament_id)
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            default_day = _schedule_day_for_tournament(cursor, tournament_id)
+            now = _utc_now()
+            cursor.execute("SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM tournament_schedule WHERE tournament_id = ?", (tournament_id,))
+            next_order = int(cursor.fetchone()["max_order"] or 0) + 1
+            for group in groups:
+                group_id = int(group["id"])
+                group_name = group.get("name") or ""
+                category_name, _ = _split_bracket_label(group_name)
+                players = group.get("players") or []
+                for left_index, player1 in enumerate(players):
+                    for player2 in players[left_index + 1:]:
+                        player1_name = player1.get("name") or ""
+                        player2_name = player2.get("name") or ""
+                        if not player1_name or not player2_name:
+                            continue
+                        pair_clause, pair_params = _schedule_pair_clause(player1_name, player2_name)
+                        cursor.execute(
+                            f"""
+                            SELECT id FROM tournament_schedule
+                            WHERE tournament_id = ? AND source_type = 'group' AND bracket_group_id = ? AND {pair_clause}
+                            """,
+                            (tournament_id, group_id, *pair_params),
+                        )
+                        if cursor.fetchone():
+                            continue
+                        cursor.execute(
+                            """
+                            INSERT INTO tournament_schedule (
+                                tournament_id, day_date, category_name, bracket_group_id, group_name, phase,
+                                player1_name, player2_name, status, source_type, source_ref_id, sort_order,
+                                notes_public, created_at, updated_at
+                            ) VALUES (?, ?, ?, ?, ?, 'Grupowa', ?, ?, 'draft', 'group', ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                tournament_id, default_day, category_name or group_name, group_id, group_name,
+                                player1_name, player2_name, group_id, next_order,
+                                "Godzina orientacyjna zostanie podana przez biuro zawodow", now, now,
+                            ),
+                        )
+                        next_order += 1
+            conn.commit()
+        return fetch_tournament_schedule(tournament_id)
+    except Exception as e:
+        logger.error("ensure_group_schedule_error", error=str(e), tournament_id=tournament_id)
+        return fetch_tournament_schedule(tournament_id)
+
+
+def ensure_knockout_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
+    """Ensure every concrete knockout slot has a schedule entry for office assignment."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            default_day = _schedule_day_for_tournament(cursor, tournament_id)
+            now = _utc_now()
+            cursor.execute("SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM tournament_schedule WHERE tournament_id = ?", (tournament_id,))
+            next_order = int(cursor.fetchone()["max_order"] or 0) + 1
+            cursor.execute(
+                """
+                SELECT id, phase, position, player1_name, player2_name, winner_name
+                FROM bracket_knockout
+                WHERE tournament_id = ?
+                ORDER BY phase, position
+                """,
+                (tournament_id,),
+            )
+            for slot in cursor.fetchall():
+                player1_name = slot["player1_name"] or ""
+                player2_name = slot["player2_name"] or ""
+                if not player1_name or not player2_name:
+                    continue
+                if _is_knockout_placeholder_name(player1_name) or _is_knockout_placeholder_name(player2_name):
+                    continue
+                category_name, phase_suffix = _split_bracket_label(slot["phase"])
+                phase_label = slot["phase"] or phase_suffix or "Pucharowa"
+                cursor.execute(
+                    "SELECT id FROM tournament_schedule WHERE tournament_id = ? AND source_type = 'knockout' AND source_ref_id = ?",
+                    (tournament_id, slot["id"]),
+                )
+                existing = cursor.fetchone()
+                status = "completed" if slot["winner_name"] else "draft"
+                if existing:
+                    cursor.execute(
+                        """
+                        UPDATE tournament_schedule
+                        SET category_name = ?, phase = ?, player1_name = ?, player2_name = ?,
+                            status = CASE WHEN ? = 'completed' THEN 'completed' ELSE status END,
+                            updated_at = ?
+                        WHERE id = ?
+                        """,
+                        (category_name or phase_label, phase_label, player1_name, player2_name, status, now, existing["id"]),
+                    )
+                    continue
+                cursor.execute(
+                    """
+                    INSERT INTO tournament_schedule (
+                        tournament_id, day_date, category_name, phase, player1_name, player2_name,
+                        status, source_type, source_ref_id, sort_order, notes_public, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'knockout', ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        tournament_id, default_day, category_name or phase_label, phase_label,
+                        player1_name, player2_name, status, slot["id"], next_order,
+                        "Mecz fazy pucharowej - godzina do potwierdzenia", now, now,
+                    ),
+                )
+                next_order += 1
+            conn.commit()
+        return fetch_tournament_schedule(tournament_id)
+    except Exception as e:
+        logger.error("ensure_knockout_schedule_error", error=str(e), tournament_id=tournament_id)
+        return fetch_tournament_schedule(tournament_id)
+
+
+def link_schedule_to_match(
+    tournament_id: int,
+    match_id: int,
+    *,
+    player1_name: str,
+    player2_name: str,
+    phase: Optional[str] = None,
+    bracket_group_id: Optional[int] = None,
+    status: str = "completed",
+) -> Optional[Dict[str, Any]]:
+    """Link a planned schedule slot to the real match row."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            pair_clause, pair_params = _schedule_pair_clause(player1_name, player2_name)
+            params: List[Any] = [tournament_id, *pair_params]
+            filters = ["tournament_id = ?", pair_clause]
+            if bracket_group_id:
+                filters.append("bracket_group_id = ?")
+                params.append(bracket_group_id)
+            elif phase:
+                filters.append("phase = ?")
+                params.append(phase)
+            cursor.execute(
+                f"""
+                SELECT id FROM tournament_schedule
+                WHERE {' AND '.join(filters)}
+                ORDER BY CASE WHEN match_id IS NULL THEN 0 ELSE 1 END, id
+                LIMIT 1
+                """,
+                params,
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            cursor.execute(
+                "UPDATE tournament_schedule SET match_id = ?, status = ?, updated_at = ? WHERE id = ?",
+                (match_id, status, _utc_now(), row["id"]),
+            )
+            conn.commit()
+            schedule_id = row["id"]
+        return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)), None)
+    except Exception as e:
+        logger.error("link_schedule_to_match_error", error=str(e), tournament_id=tournament_id, match_id=match_id)
+        return None
+
+
+def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str, tournament_id: Optional[int] = None) -> List[Dict]:
     """Find finished matches between a set of players within a date range.
     
     Uses exact name matching first, then falls back to surname-based matching
@@ -1568,18 +2323,22 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
         return []
     placeholders = ",".join("?" for _ in player_names)
     end_ts = end_date + "T23:59:59"
+    tournament_clause = "AND tournament_id = ?" if tournament_id is not None else ""
+    tournament_params = [tournament_id] if tournament_id is not None else []
     # Try exact match first
     cursor.execute(f"""
         SELECT id, player1_name, player2_name, player1_sets, player2_sets,
                sets_history, created_at
         FROM matches
         WHERE status = 'finished'
+          {tournament_clause}
+                    AND phase = 'Grupowa'
           AND player1_name IN ({placeholders})
           AND player2_name IN ({placeholders})
           AND created_at >= ?
           AND created_at <= ?
         ORDER BY created_at
-    """, (*player_names, *player_names, start_date, end_ts))
+    """, (*tournament_params, *player_names, *player_names, start_date, end_ts))
     results = cursor.fetchall()
     if results:
         return results
@@ -1611,12 +2370,14 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
                sets_history, created_at
         FROM matches
         WHERE status = 'finished'
+                    {tournament_clause}
+                    AND phase = 'Grupowa'
           AND ({p1_cond})
           AND ({p2_cond})
           AND created_at >= ?
           AND created_at <= ?
         ORDER BY created_at
-    """, (*like_params, *like_params2, start_date, end_ts))
+        """, (*tournament_params, *like_params, *like_params2, start_date, end_ts))
     raw_results = cursor.fetchall()
     if not raw_results:
         return []
@@ -1802,61 +2563,74 @@ def fetch_bracket_knockout(tournament_id: int) -> List[Dict]:
         return []
 
 
-def _detect_knockout_result(cursor, p1: str, p2: str, start_date: str, end_date: str) -> Optional[Dict]:
-    """Try to find a finished match between two specific players.
-    
-    Falls back to surname-based matching if exact match not found.
-    """
+def _detect_knockout_result(
+    cursor,
+    p1: str,
+    p2: str,
+    start_date: str,
+    end_date: str,
+    tournament_id: Optional[int] = None,
+    phase: Optional[str] = None,
+) -> Optional[Dict]:
+    """Try to find a finished match between two specific players."""
     if not p1 or not p2:
         return None
-    end_ts = end_date + "T23:59:59"
-    # Exact match first
-    cursor.execute("""
-        SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history
-        FROM matches
-        WHERE status = 'finished'
-          AND ((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))
-          AND created_at >= ? AND created_at <= ?
-        ORDER BY created_at DESC LIMIT 1
-    """, (p1, p2, p2, p1, start_date, end_ts))
-    row = cursor.fetchone()
 
-    if not row:
-        # Fallback: surname-based matching
-        surname1 = p1.strip().split()[-1] if p1.strip() else p1
-        surname2 = p2.strip().split()[-1] if p2.strip() else p2
-        cursor.execute("""
+    end_ts = end_date + "T23:59:59"
+    tournament_clause = "AND tournament_id = ?" if tournament_id is not None else ""
+    tournament_params = [tournament_id] if tournament_id is not None else []
+    surname1 = p1.strip().split()[-1] if p1.strip() else p1
+    surname2 = p2.strip().split()[-1] if p2.strip() else p2
+
+    def _fetch_finished_match(match_phase: Optional[str]) -> Optional[sqlite3.Row]:
+        phase_clause = "AND phase = ?" if match_phase else ""
+        phase_params = [match_phase] if match_phase else []
+        cursor.execute(f"""
             SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history
             FROM matches
             WHERE status = 'finished'
+              {tournament_clause}
+              {phase_clause}
+              AND ((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))
+              AND created_at >= ? AND created_at <= ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (*tournament_params, *phase_params, p1, p2, p2, p1, start_date, end_ts))
+        row = cursor.fetchone()
+        if row:
+            return row
+        cursor.execute(f"""
+            SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history
+            FROM matches
+            WHERE status = 'finished'
+              {tournament_clause}
+              {phase_clause}
               AND ((player1_name LIKE ? AND player2_name LIKE ?)
                 OR (player1_name LIKE ? AND player2_name LIKE ?))
               AND created_at >= ? AND created_at <= ?
             ORDER BY created_at DESC LIMIT 1
-        """, (f"%{surname1}", f"%{surname2}", f"%{surname2}", f"%{surname1}",
-              start_date, end_ts))
-        row = cursor.fetchone()
+        """, (*tournament_params, *phase_params, f"%{surname1}", f"%{surname2}", f"%{surname2}", f"%{surname1}", start_date, end_ts))
+        return cursor.fetchone()
+
+    row = _fetch_finished_match(phase)
+    if not row and phase and phase != "Pucharowa":
+        row = _fetch_finished_match("Pucharowa")
+    if not row and phase:
+        row = _fetch_finished_match(None)
 
     if not row:
         return None
 
-    # Flip score if match player order doesn't match requested order
-    # Use surname comparison for matching when names differ in format
     p1_surname = p1.strip().split()[-1].lower() if p1.strip() else ""
     match_p1_surname = row["player1_name"].strip().split()[-1].lower() if row["player1_name"] else ""
-    flipped = (match_p1_surname != p1_surname)
+    flipped = match_p1_surname != p1_surname
 
     sh = json.loads(row["sets_history"]) if row["sets_history"] else []
     sh = [s for s in sh if not _is_empty_set(s)]
     score_parts = [_format_set_score(s, flipped) for s in sh]
-
-    # Per-set detail for scoreboard
     sets_detail = [_build_set_detail(s, flipped) for s in sh]
 
-    # Determine winner and map back to bracket name
     match_winner = row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"]
     winner_surname = match_winner.strip().split()[-1].lower() if match_winner else ""
-    # Map winner back to bracket player name
     if winner_surname == p1.strip().split()[-1].lower():
         winner = p1
     elif winner_surname == p2.strip().split()[-1].lower():
@@ -1895,7 +2669,7 @@ def get_full_bracket(tournament_id: int) -> Dict:
                     (g["id"],)
                 )
                 player_names = [r["player_name"] for r in cursor.fetchall()]
-                matches = _find_group_matches(cursor, player_names, start_date, end_date)
+                matches = _find_group_matches(cursor, player_names, start_date, end_date, tournament_id)
                 standings, match_results = _compute_standings(player_names, matches)
                 groups_data.append({
                     "name": g["name"],
@@ -1925,7 +2699,7 @@ def get_full_bracket(tournament_id: int) -> Dict:
                 # Auto-detect result from match data (always, to populate sets)
                 if slot["player1"] and slot["player2"]:
                     result = _detect_knockout_result(
-                        cursor, slot["player1"], slot["player2"], start_date, end_date
+                        cursor, slot["player1"], slot["player2"], start_date, end_date, tournament_id, phase
                     )
                     if result:
                         if not slot["winner"]:
@@ -1946,29 +2720,40 @@ def get_full_bracket(tournament_id: int) -> Dict:
 
 
 def generate_knockout_from_standings(tournament_id: int) -> Dict:
-    """Auto-generate knockout bracket from group standings (1A vs 2B, 1B vs 2A)."""
+    """Auto-generate knockout bracket from completed group standings."""
     try:
         bracket = get_full_bracket(tournament_id)
         groups = bracket.get("groups", [])
         if len(groups) < 2:
             return {"error": "Need at least 2 groups"}
 
-        g_a = groups[0]["standings"]
-        g_b = groups[1]["standings"]
-        if len(g_a) < 2 or len(g_b) < 2:
-            return {"error": "Groups need at least 2 players with standings"}
+        categories: Dict[str, List[Dict]] = {}
+        for group in groups:
+            category_prefix, _ = _split_bracket_label(group["name"])
+            categories.setdefault(category_prefix, []).append(group)
 
-        slots = [
-            {"phase": "semifinal", "position": 1,
-             "player1_name": g_a[0]["name"], "player2_name": g_b[1]["name"]},
-            {"phase": "semifinal", "position": 2,
-             "player1_name": g_b[0]["name"], "player2_name": g_a[1]["name"]},
-            {"phase": "final", "position": 1,
-             "player1_name": None, "player2_name": None},
-            {"phase": "third_place", "position": 1,
-             "player1_name": None, "player2_name": None},
-        ]
+        slots: List[Dict] = []
+        for category_prefix, category_groups in categories.items():
+            ordered_groups = sorted(category_groups, key=lambda group: _group_sort_key(group["name"]))
+            if len(ordered_groups) < 2:
+                continue
+            if len(ordered_groups) > 2:
+                category_name = category_prefix or ordered_groups[0]["name"]
+                return {"error": f"Auto knockout supports exactly 2 groups per category: {category_name}"}
+
+            g_a = ordered_groups[0]["standings"]
+            g_b = ordered_groups[1]["standings"]
+            if len(g_a) < 2 or len(g_b) < 2:
+                category_name = category_prefix or ordered_groups[0]["name"]
+                return {"error": f"Category needs at least 2 players per group: {category_name}"}
+
+            slots.extend(_build_knockout_slots_for_category(category_prefix, ordered_groups))
+
+        if not slots:
+            return {"error": "Need at least one category with 2 groups"}
+
         save_bracket_knockout(tournament_id, slots)
+        ensure_knockout_schedule_entries(tournament_id)
         return {"status": "ok", "knockout": slots}
     except Exception as e:
         logger.error("generate_knockout_error", error=str(e))

@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request
 
 from ..services.court_manager import serialize_public_snapshot
 from ..services.history_manager import get_history
-from ..db_models import db, Match, MatchStatistics, Player
+from ..db_models import db, Match, MatchStatistics, Player, Tournament
 from ..config import logger
 
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
@@ -25,12 +25,17 @@ def snapshot():
         from ..database import fetch_courts, get_active_tournament_name
         from ..services.court_manager import refresh_courts_from_db
         refresh_courts_from_db(fetch_courts(active_only=True))
-        courts_data = serialize_public_snapshot()
-        configured_courts = fetch_courts(active_only=True)
+        configured_courts = fetch_courts(active_only=True, public_only=True)
+        public_court_ids = {str(court.get("kort_id")) for court in configured_courts}
+        courts_data = {
+            kort_id: court
+            for kort_id, court in serialize_public_snapshot().items()
+            if str(kort_id) in public_court_ids
+        }
         tournament_names = sorted({
             court.get("tournament_name") for court in configured_courts if court.get("tournament_name")
         })
-        tournament_name = tournament_names[0] if len(tournament_names) == 1 else get_active_tournament_name()
+        tournament_name = tournament_names[0] if len(tournament_names) == 1 else get_active_tournament_name(public_only=True)
         return _json_no_cache({
             "courts": courts_data,
             "tournament_name": tournament_name,
@@ -48,11 +53,12 @@ def history():
         from ..database import get_active_tournament_id, fetch_match_history
         from ..config import settings
         tournament_id = request.args.get("tournament_id", type=int)
-        tid = tournament_id if tournament_id is not None else get_active_tournament_id()
+        tid = tournament_id if tournament_id is not None else get_active_tournament_id(public_only=True)
         # Serve from DB filtered by tournament
         history_data = fetch_match_history(
             limit=settings.match_history_size,
             tournament_id=tid if tournament_id is not None else None,
+            public_only=True,
         )
         return jsonify(history_data)
     except Exception as e:
@@ -64,12 +70,17 @@ def history():
 def match_stats(match_id: int):
     """Get match statistics for Details button in history."""
     try:
+        match_record = db.session.get(Match, match_id)
+        if match_record and match_record.tournament_id:
+            tournament = db.session.get(Tournament, match_record.tournament_id)
+            if tournament and (int(tournament.is_public or 0) != 1 or int(tournament.stats_enabled or 0) != 1):
+                return jsonify({"error": "Statistics not found"}), 404
+
         stats = MatchStatistics.query.filter_by(match_id=match_id).first()
         if not stats:
             return jsonify({"error": "Statistics not found"}), 404
         data = stats.to_dict()
         # Enrich with match timestamps
-        match_record = db.session.get(Match, match_id)
         if match_record:
             data["started_at"] = match_record.created_at
             data["ended_at"] = match_record.updated_at

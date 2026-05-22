@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biuro Turnieju - Wyniki Live</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎾</text></svg>">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --office-ink: #1b2430;
+      --office-muted: #5f6b7a;
+      --office-accent: #0f766e;
+      --office-accent-soft: rgba(15, 118, 110, 0.14);
+      --office-highlight: #c2410c;
+      --office-panel: rgba(255, 252, 247, 0.92);
+      --office-line: rgba(27, 36, 48, 0.12);
+      --office-shadow: 0 30px 80px rgba(48, 37, 20, 0.14);
+    }
+
+    body.office-body {
+      min-height: 100vh;
+      font-family: 'Outfit', 'Segoe UI', sans-serif;
+      color: var(--office-ink);
+      background:
+        radial-gradient(circle at top left, rgba(194, 65, 12, 0.18), transparent 34%),
+        radial-gradient(circle at right 15% top 12%, rgba(15, 118, 110, 0.18), transparent 30%),
+        linear-gradient(180deg, #f6efe3 0%, #f2f4ef 48%, #eef3f5 100%);
+    }
+
+    .office-shell {
+      width: min(1360px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    .office-hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 30px;
+      padding: 28px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(255, 248, 240, 0.72)),
+        linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(194, 65, 12, 0.1));
+      box-shadow: var(--office-shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .office-hero::after {
+      content: '';
+      position: absolute;
+      inset: auto -120px -120px auto;
+      width: 320px;
+      height: 320px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(15, 118, 110, 0.16) 0%, transparent 70%);
+    }
+
+    .office-hero-top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 20px 28px;
+      align-items: start;
+    }
+
+    .office-hero-title {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .office-hero-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      min-width: min(100%, 520px);
+    }
+
+    .office-primary-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .office-title {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(2rem, 4vw, 3.6rem);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+      margin: 0;
+    }
+
+    .office-panel {
+      border: 1px solid var(--office-line);
+      background: var(--office-panel);
+      box-shadow: 0 18px 40px rgba(17, 24, 39, 0.06);
+      backdrop-filter: blur(14px);
+    }
+
+    .office-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .office-chip-group {
+      background: rgba(15, 118, 110, 0.12);
+      color: #0f766e;
+    }
+
+    .office-chip-knockout {
+      background: rgba(194, 65, 12, 0.12);
+      color: #c2410c;
+    }
+
+    .office-chip-neutral {
+      background: rgba(55, 65, 81, 0.1);
+      color: #374151;
+    }
+
+    .office-stat {
+      border-radius: 24px;
+      border: 1px solid var(--office-line);
+      background: rgba(255, 255, 255, 0.68);
+      padding: 18px 20px;
+      min-height: 118px;
+    }
+
+    .office-history-card {
+      border-radius: 24px;
+      padding: 20px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .office-history-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 24px 40px rgba(17, 24, 39, 0.08);
+    }
+
+    .office-history-scoreboard {
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.74);
+      overflow: hidden;
+    }
+
+    .office-history-card .hm-player {
+      padding: 12px 16px;
+      min-height: 48px;
+    }
+
+    .office-history-card .hm-player-name {
+      font-size: 1rem;
+      color: #1f2937;
+    }
+
+    .office-history-card .hm-set-cell {
+      min-width: 34px;
+      font-size: 1rem;
+      color: #475569;
+    }
+
+    .office-history-card .hm-player--winner .hm-player-name,
+    .office-history-card .hm-player--winner .hm-set-cell {
+      color: #0f172a;
+    }
+
+    .office-tab {
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-weight: 700;
+      color: var(--office-muted);
+      transition: all 0.2s ease;
+    }
+
+    .office-tab.is-active {
+      color: #fff;
+      background: linear-gradient(135deg, #0f766e, #115e59);
+      box-shadow: 0 10px 24px rgba(15, 118, 110, 0.24);
+    }
+
+    .office-alert-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      padding: 12px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      background: rgba(255, 255, 255, 0.62);
+      width: 100%;
+    }
+
+    .office-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .office-toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: #0f766e;
+    }
+
+    .office-login {
+      width: min(560px, calc(100vw - 32px));
+      margin: 12vh auto 0;
+      border-radius: 32px;
+      padding: 32px;
+    }
+
+    .office-logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 22px;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    .office-summary-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .office-match-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .office-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(10px);
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .office-modal {
+      width: min(760px, calc(100vw - 32px));
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      border-radius: 28px;
+      padding: 26px;
+    }
+
+    @media (max-width: 1024px) {
+      .office-hero-top {
+        grid-template-columns: 1fr;
+      }
+
+      .office-hero-actions {
+        min-width: 0;
+        width: 100%;
+        align-items: stretch;
+      }
+
+      .office-primary-actions {
+        justify-content: flex-start;
+      }
+
+      .office-alert-controls {
+        justify-content: flex-start;
+      }
+
+      .office-summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .office-shell {
+        width: calc(100vw - 20px);
+        padding-top: 12px;
+      }
+
+      .office-hero,
+      .office-login,
+      .office-modal {
+        padding: 20px;
+        border-radius: 24px;
+      }
+
+      .office-match-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="office-body" x-data="officeApp()" x-init="init()">
+  <div class="toast toast-top toast-end z-[80]" x-show="toast.show" x-transition.opacity x-cloak>
+    <div class="alert" :class="{
+      'alert-success': toast.type === 'success',
+      'alert-warning': toast.type === 'warning',
+      'alert-error': toast.type === 'error',
+      'alert-info': toast.type === 'info'
+    }">
+      <span x-text="toast.message"></span>
+    </div>
+  </div>
+
+  <main x-show="!isAuthenticated" x-cloak>
+    <section class="office-login office-panel">
+      <div>
+        <div>
+          <span class="office-chip office-chip-group">Biuro slot <span x-text="slot"></span></span>
+          <h1 class="office-title mt-4">Wejście do biura zawodów</h1>
+        </div>
+      </div>
+
+      <div class="mt-8 rounded-[28px] border border-white/70 bg-white/60 p-5" x-show="tournamentMeta || metaLoading" x-cloak>
+        <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Turniej przypisany do tego slotu</div>
+        <div class="mt-3" x-show="metaLoading && !tournamentMeta">Ładowanie informacji o turnieju...</div>
+        <template x-if="tournamentMeta">
+          <div>
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <div class="text-2xl font-semibold text-slate-900" x-text="tournamentMeta.name"></div>
+                <div class="mt-2 text-sm text-slate-500" x-text="(tournamentMeta.start_date || 'brak daty') + (tournamentMeta.end_date ? ' - ' + tournamentMeta.end_date : '')"></div>
+              </div>
+              <div class="flex gap-2 flex-wrap">
+                <span class="office-chip" :class="tournamentMeta.active ? 'office-chip-group' : 'office-chip-neutral'" x-text="tournamentMeta.active ? 'Aktywny turniej' : 'Podgląd spoza aktywnych'"></span>
+                <span class="office-chip office-chip-knockout" x-show="tournamentMeta.is_simulation">Symulacja / etap</span>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <form class="mt-8 space-y-5" @submit.prevent="authenticate">
+        <label class="form-control">
+          <span class="label-text text-slate-700 font-semibold mb-2">Hasło modułu biura</span>
+          <input type="password" class="input input-bordered input-lg w-full bg-white/90" x-model="authPassword" placeholder="Wpisz hasło turnieju">
+        </label>
+        <div class="text-sm text-red-700 min-h-6" x-text="authError"></div>
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <button type="submit" class="btn btn-lg border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" :class="{'btn-disabled': authLoading}">
+            <span x-show="!authLoading">Wejdź do biura</span>
+            <span x-show="authLoading">Logowanie...</span>
+          </button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <main class="office-shell" x-show="isAuthenticated" x-cloak>
+    <section class="office-hero">
+      <div class="office-hero-top relative z-10">
+        <div class="office-hero-title">
+          <template x-if="tournamentMeta?.logo_path">
+            <img :src="tournamentMeta.logo_path" alt="Logo turnieju" class="office-logo">
+          </template>
+          <template x-if="!tournamentMeta?.logo_path">
+            <div class="office-logo bg-white/60 flex items-center justify-center text-3xl">🎾</div>
+          </template>
+          <div class="min-w-0">
+            <h1 class="office-title" x-text="tournamentMeta?.name || dashboard?.tournament?.name || 'Biuro turnieju'"></h1>
+          </div>
+        </div>
+        <div class="office-hero-actions">
+          <div class="office-alert-controls">
+            <label class="office-toggle">
+              <input type="checkbox" :checked="notificationsEnabled" @change="toggleNotifications()">
+              <span>Powiadomienia o nowych meczach</span>
+            </label>
+            <button type="button" class="btn btn-sm btn-outline bg-white/85" @click="testNotifications()">Test powiadomienia</button>
+            <span class="text-xs text-slate-500" x-show="notificationPermission === 'denied'">Przeglądarka blokuje alert systemowy</span>
+          </div>
+          <div class="office-primary-actions">
+            <button type="button" class="btn btn-outline bg-white/80 border-white/70" @click="loadDashboard()">Odśwież</button>
+            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #c2410c, #9a3412);" @click="openAddMatchModal()">Dodaj wynik</button>
+            <button type="button" class="btn btn-ghost text-slate-600" @click="logout()">Wyloguj</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-4 mt-8 relative z-10">
+        <article class="office-stat">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Postęp</div>
+          <div class="mt-3 text-4xl font-semibold" x-text="`${officeProgressPercent()}%`"></div>
+          <progress class="progress mt-4" :value="officeProgressPercent()" max="100"></progress>
+        </article>
+        <article class="office-stat">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Zakończone mecze</div>
+          <div class="mt-3 text-4xl font-semibold" x-text="dashboard?.progress?.finished_matches || 0"></div>
+          <div class="mt-3 text-sm text-slate-500">z <span x-text="dashboard?.progress?.expected_matches || 0"></span> oczekiwanych</div>
+        </article>
+        <article class="office-stat">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Pozostało</div>
+          <div class="mt-3 text-4xl font-semibold" x-text="dashboard?.progress?.remaining_matches || 0"></div>
+          <div class="mt-3 text-sm text-slate-500">meczów do zamknięcia faz grupowych</div>
+        </article>
+        <article class="office-stat">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Grupy</div>
+          <div class="mt-3 text-4xl font-semibold" x-text="officeGroups.length"></div>
+          <div class="mt-3 text-sm text-slate-500">aktywnych grup w tym slocie</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="mt-8 office-panel rounded-[28px] p-4 md:p-5">
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'history'}" @click="activeTab = 'history'">Ostatnie mecze</button>
+          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'progress'}" @click="activeTab = 'progress'">Postęp grup</button>
+          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'planning'}" @click="openPlanningTab()">Plan turnieju</button>
+          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'schedule'}" @click="activeTab = 'schedule'">Terminarz</button>
+        </div>
+        <div class="text-sm text-slate-500" x-show="loading">Odświeżanie danych...</div>
+      </div>
+    </section>
+
+    <section class="mt-6 space-y-6" x-show="activeTab === 'planning'" x-cloak>
+      <div class="office-panel rounded-[28px] p-5 md:p-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Przygotowanie turnieju</div>
+            <h2 class="mt-2 text-3xl font-semibold">Grupy i terminarz</h2>
+            <p class="mt-2 text-sm text-slate-500">Biuro zawodów może tutaj rozdzielić zawodników na grupy A/B/C i ułożyć plan dnia bez wchodzenia do panelu administratora.</p>
+          </div>
+          <button type="button" class="btn btn-outline bg-white/80" @click="loadOfficePlanningData()" :class="{'btn-disabled': planningLoading}">Odśwież plan</button>
+        </div>
+        <div class="mt-5 grid gap-4 md:grid-cols-4">
+          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400">Zawodnicy</div><div class="mt-2 text-3xl font-semibold" x-text="planningPlayers.length"></div></div>
+          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400">Grupy</div><div class="mt-2 text-3xl font-semibold" x-text="planningGroups.length"></div></div>
+          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400">Wpisy</div><div class="mt-2 text-3xl font-semibold" x-text="planningSchedule.length"></div></div>
+          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400">Korty</div><div class="mt-2 text-3xl font-semibold" x-text="planningCourts.length"></div></div>
+        </div>
+      </div>
+
+      <div class="office-panel rounded-[28px] p-5 md:p-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Krok 1</div>
+            <h3 class="mt-2 text-2xl font-semibold">Grupy startowe</h3>
+          </div>
+          <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="savePlanningGroups()" :class="{'btn-disabled': !planningSelectedDivision}">Zapisz grupy</button>
+        </div>
+
+        <div class="mt-5 grid gap-4 lg:grid-cols-4">
+          <label class="form-control lg:col-span-2">
+            <span class="label-text font-semibold mb-2">Kategoria</span>
+            <select class="select select-bordered bg-white/90" x-model="planningSelectedDivision" @change="ensurePlanningDefaults()">
+              <template x-for="division in planningDivisions()" :key="division.key">
+                <option :value="division.key" x-text="division.label + ' (' + division.count + ')' "></option>
+              </template>
+            </select>
+          </label>
+          <label class="form-control">
+            <span class="label-text font-semibold mb-2">Liczba grup</span>
+            <input type="number" min="1" max="8" class="input input-bordered bg-white/90" x-model.number="planningGroupCount">
+          </label>
+          <div class="flex items-end gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline bg-white/80" @click="autoAssignPlanningGroups()" x-text="Number(planningGroupCount || 1) === 1 ? 'Przypisz wszystkich' : 'Rozdziel automatycznie'"></button>
+            <button type="button" class="btn btn-ghost" @click="clearPlanningDivisionAssignments()">Wyczyść</button>
+          </div>
+        </div>
+
+        <div class="mt-6" x-show="planningDivisions().length === 0">
+          <div class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500">Najpierw dodaj zawodników do turnieju.</div>
+        </div>
+
+        <div class="mt-6 grid gap-5 xl:grid-cols-[1.35fr_0.9fr]" x-show="planningSelectedDivision">
+          <div class="overflow-x-auto rounded-[24px] border border-slate-200/80 bg-white/65">
+            <table class="table table-zebra table-sm">
+              <thead><tr><th>Zawodnik</th><th>Kraj</th><th>Grupa</th></tr></thead>
+              <tbody>
+                <template x-for="player in planningPlayersForDivision()" :key="'office_planning_player_'+player.id">
+                  <tr>
+                    <td>
+                      <div class="font-semibold" x-text="player.name"></div>
+                      <div class="text-xs text-slate-500" x-text="planningDivisionLabel(planningDivisionKey(player))"></div>
+                    </td>
+                    <td x-text="player.country || '-' "></td>
+                    <td>
+                      <select class="select select-sm select-bordered bg-white/90 min-w-48" x-model="planningGroupAssignments[player.id]">
+                        <option value="">Nieprzypisany</option>
+                        <template x-for="groupName in planningDivisionGroupNames()" :key="'office_group_option_'+player.id+'_'+groupName">
+                          <option :value="groupName" x-text="groupName"></option>
+                        </template>
+                      </select>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="space-y-3">
+            <template x-for="groupName in planningDivisionGroupNames()" :key="'office_group_preview_'+groupName">
+              <div class="rounded-[22px] border border-slate-200/80 bg-white/70 p-4">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="font-semibold text-slate-800" x-text="groupName"></div>
+                  <span class="office-chip office-chip-group" x-text="planningAssignedPlayers(groupName).length"></span>
+                </div>
+                <ul class="mt-3 space-y-1 text-sm text-slate-600">
+                  <template x-for="player in planningAssignedPlayers(groupName)" :key="'office_group_player_'+groupName+'_'+player.id">
+                    <li x-text="player.name"></li>
+                  </template>
+                </ul>
+              </div>
+            </template>
+            <div x-show="planningUnassignedPlayers().length" class="rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" x-text="planningUnassignedPlayers().length + ' zawodników bez grupy'"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="office-panel rounded-[28px] p-5 md:p-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Krok 2</div>
+            <h3 class="mt-2 text-2xl font-semibold">Terminarz dnia</h3>
+          </div>
+          <button type="button" class="btn btn-outline bg-white/80" @click="generatePlanningSchedule()">Generuj brakujące</button>
+        </div>
+
+        <div class="mt-5 grid gap-4 md:grid-cols-3">
+          <label class="form-control">
+            <span class="label-text font-semibold mb-2">Dzień</span>
+            <select class="select select-bordered bg-white/90" x-model="planningScheduleFilter.day">
+              <option value="">Wszystkie dni</option>
+              <template x-for="day in planningScheduleDays()" :key="'office_planning_day_'+day">
+                <option :value="day" x-text="day"></option>
+              </template>
+            </select>
+          </label>
+          <label class="form-control">
+            <span class="label-text font-semibold mb-2">Kategoria</span>
+            <select class="select select-bordered bg-white/90" x-model="planningScheduleFilter.category">
+              <option value="">Wszystkie kategorie</option>
+              <template x-for="category in planningScheduleCategories()" :key="'office_planning_category_'+category">
+                <option :value="category" x-text="category"></option>
+              </template>
+            </select>
+          </label>
+          <label class="form-control">
+            <span class="label-text font-semibold mb-2">Kort</span>
+            <select class="select select-bordered bg-white/90" x-model="planningScheduleFilter.court">
+              <option value="">Wszystkie korty</option>
+              <template x-for="court in planningCourts" :key="'office_planning_filter_court_'+court.kort_id">
+                <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
+              </template>
+            </select>
+          </label>
+        </div>
+
+        <div class="mt-6 rounded-[24px] border border-slate-200/80 bg-white/65 p-4">
+          <div class="font-semibold text-slate-800 mb-3">Dodaj ręczny wpis</div>
+          <div class="grid gap-3 lg:grid-cols-6">
+            <input type="date" class="input input-bordered bg-white/90" x-model="planningNewSchedule.day_date">
+            <input type="time" class="input input-bordered bg-white/90" x-model="planningNewSchedule.scheduled_time">
+            <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.court_id">
+              <option value="">Kort?</option>
+              <template x-for="court in planningCourts" :key="'office_new_schedule_court_'+court.kort_id">
+                <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
+              </template>
+            </select>
+            <input type="text" class="input input-bordered bg-white/90" placeholder="Kategoria" x-model="planningNewSchedule.category_name">
+            <input type="text" class="input input-bordered bg-white/90" placeholder="Faza" x-model="planningNewSchedule.phase">
+            <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.status">
+              <template x-for="option in scheduleStatusOptions()" :key="'office_new_status_'+option.value">
+                <option :value="option.value" x-text="option.label"></option>
+              </template>
+            </select>
+            <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player1_name">
+              <option value="">Zawodnik 1</option>
+              <template x-for="name in planningPlayerNameOptions()" :key="'office_new_p1_'+name">
+                <option :value="name" x-text="name"></option>
+              </template>
+            </select>
+            <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player2_name">
+              <option value="">Zawodnik 2</option>
+              <template x-for="name in planningPlayerNameOptions()" :key="'office_new_p2_'+name">
+                <option :value="name" x-text="name"></option>
+              </template>
+            </select>
+            <input type="text" class="input input-bordered bg-white/90" placeholder="Uwagi" x-model="planningNewSchedule.notes_public">
+            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addPlanningScheduleEntry()">Dodaj</button>
+          </div>
+        </div>
+
+        <div class="mt-6 space-y-4">
+          <template x-for="entry in planningScheduleEntries()" :key="'office_planning_schedule_'+entry.id">
+            <article class="rounded-[24px] border border-slate-200/80 bg-white/75 p-4">
+              <div class="grid gap-4 xl:grid-cols-[1fr_0.75fr_0.7fr_0.8fr_0.75fr_auto] items-end">
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="office-chip" :class="entry.source_type === 'knockout' ? 'office-chip-knockout' : 'office-chip-group'" x-text="entry.phase || 'Mecz'"></span>
+                    <span class="text-xs text-slate-500" x-text="entry.group_name || entry.category_name || ''"></span>
+                  </div>
+                  <div class="mt-3 font-semibold text-slate-900"><span x-text="entry.player1_name"></span><span class="text-slate-400"> vs </span><span x-text="entry.player2_name"></span></div>
+                </div>
+                <label class="form-control"><span class="label-text font-semibold mb-1">Data</span><input type="date" class="input input-bordered bg-white/90" x-model="entry.day_date"></label>
+                <label class="form-control"><span class="label-text font-semibold mb-1">Godzina</span><input type="time" class="input input-bordered bg-white/90" x-model="entry.scheduled_time"></label>
+                <label class="form-control"><span class="label-text font-semibold mb-1">Kort</span><select class="select select-bordered bg-white/90" x-model="entry.court_id"><option value="">Do ustalenia</option><template x-for="court in planningCourts" :key="'office_planning_row_court_'+entry.id+'_'+court.kort_id"><option :value="court.kort_id" x-text="court.name || court.kort_id"></option></template></select></label>
+                <label class="form-control"><span class="label-text font-semibold mb-1">Status</span><select class="select select-bordered bg-white/90" x-model="entry.status"><template x-for="option in scheduleStatusOptions()" :key="'office_planning_row_status_'+entry.id+'_'+option.value"><option :value="option.value" x-text="option.label"></option></template></select></label>
+                <div class="join"><button type="button" class="btn join-item border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveOfficeScheduleEntry(entry)">Zapisz</button><button type="button" class="btn btn-outline join-item" @click="deletePlanningScheduleEntry(entry)">Usuń</button></div>
+              </div>
+              <label class="form-control mt-4"><span class="label-text font-semibold mb-1">Uwagi publiczne</span><input type="text" class="input input-bordered bg-white/90" x-model="entry.notes_public" placeholder="np. godzina orientacyjna"></label>
+            </article>
+          </template>
+          <div x-show="planningScheduleEntries().length === 0" class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500">Brak wpisów dla wybranych filtrów.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6" x-show="activeTab === 'schedule'" x-cloak>
+      <div class="office-panel rounded-[28px] p-5 md:p-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Plan dnia</div>
+            <h2 class="mt-2 text-3xl font-semibold">Terminarz meczów</h2>
+            <p class="mt-2 text-sm text-slate-500">Wpisy powstają automatycznie z grup i z konkretnych meczów fazy pucharowej.</p>
+          </div>
+          <button type="button" class="btn btn-outline bg-white/80" @click="generateOfficeSchedule()">Odśwież z grup i drabinki</button>
+        </div>
+
+        <template x-if="!officeSchedule.length">
+          <div class="mt-6 rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500">
+            Nie ma jeszcze wpisów terminarza. Utwórz grupy albo odśwież terminarz.
+          </div>
+        </template>
+
+        <div class="mt-6 space-y-4">
+          <template x-for="entry in officeSchedule" :key="entry.id">
+            <article class="rounded-[24px] border border-slate-200/80 bg-white/75 p-4">
+              <div class="grid gap-4 xl:grid-cols-[1.2fr_0.75fr_0.7fr_0.8fr_0.75fr_auto] items-end">
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="office-chip" :class="entry.source_type === 'knockout' ? 'office-chip-knockout' : 'office-chip-group'" x-text="entry.phase || 'Mecz'"></span>
+                    <span class="text-xs text-slate-500" x-text="entry.group_name || entry.category_name || ''"></span>
+                  </div>
+                  <div class="mt-3 font-semibold text-slate-900">
+                    <span x-text="entry.player1_name"></span>
+                    <span class="text-slate-400"> vs </span>
+                    <span x-text="entry.player2_name"></span>
+                  </div>
+                </div>
+
+                <label class="form-control">
+                  <span class="label-text font-semibold mb-1">Data</span>
+                  <input type="date" class="input input-bordered bg-white/90" x-model="entry.day_date">
+                </label>
+
+                <label class="form-control">
+                  <span class="label-text font-semibold mb-1">Godzina</span>
+                  <input type="time" class="input input-bordered bg-white/90" x-model="entry.scheduled_time">
+                </label>
+
+                <label class="form-control">
+                  <span class="label-text font-semibold mb-1">Kort</span>
+                  <select class="select select-bordered bg-white/90" x-model="entry.court_id">
+                    <option value="">Do ustalenia</option>
+                    <template x-for="court in officeCourts" :key="court.kort_id">
+                      <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
+                    </template>
+                  </select>
+                </label>
+
+                <label class="form-control">
+                  <span class="label-text font-semibold mb-1">Status</span>
+                  <select class="select select-bordered bg-white/90" x-model="entry.status">
+                    <template x-for="option in scheduleStatusOptions()" :key="option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                </label>
+
+                <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveOfficeScheduleEntry(entry)">Zapisz</button>
+              </div>
+              <label class="form-control mt-4">
+                <span class="label-text font-semibold mb-1">Uwagi publiczne</span>
+                <input type="text" class="input input-bordered bg-white/90" x-model="entry.notes_public" placeholder="np. godzina orientacyjna">
+              </label>
+            </article>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section class="office-summary-grid" x-show="activeTab === 'history'" x-cloak>
+      <div class="space-y-4">
+        <template x-if="!officeMatches.length">
+          <article class="office-panel rounded-[28px] p-8 text-center text-slate-500">
+            Historia jest jeszcze pusta. Dodaj pierwszy wynik z poziomu przycisku u góry.
+          </article>
+        </template>
+        <template x-for="match in officeMatches" :key="`${match.source || 'match'}-${match.id}`">
+          <article class="office-panel office-history-card">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="office-chip" :class="officePhaseTone(match)" x-text="officeMatchPhase(match)"></span>
+                  <span class="text-sm text-slate-500" x-text="formatOfficeMatchTime(match)"></span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="startOfficeEdit(match)">Popraw wynik</button>
+              </div>
+              <div class="office-history-scoreboard">
+                <div class="hm-scoreboard" aria-hidden="true">
+                  <div class="hm-player" :class="{ 'hm-player--winner': officeMatchWinner(match) === 'A' }">
+                    <span class="hm-winner-mark" x-show="officeMatchWinner(match) === 'A'" aria-hidden="true"></span>
+                    <span class="hm-winner-mark hm-winner-mark--empty" x-show="officeMatchWinner(match) !== 'A'" aria-hidden="true"></span>
+                    <span class="hm-player-name" x-text="match.player1_name || '-' "></span>
+                    <span class="hm-sets">
+                      <template x-for="(set, i) in officeMatchSets(match)" :key="'oa-'+match.id+'-'+i">
+                        <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b }">
+                          <span x-text="set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a < set.b" x-text="set.tb"></sup>
+                        </span>
+                      </template>
+                    </span>
+                  </div>
+                  <div class="hm-player" :class="{ 'hm-player--winner': officeMatchWinner(match) === 'B' }">
+                    <span class="hm-winner-mark" x-show="officeMatchWinner(match) === 'B'" aria-hidden="true"></span>
+                    <span class="hm-winner-mark hm-winner-mark--empty" x-show="officeMatchWinner(match) !== 'B'" aria-hidden="true"></span>
+                    <span class="hm-player-name" x-text="match.player2_name || '-' "></span>
+                    <span class="hm-sets">
+                      <template x-for="(set, i) in officeMatchSets(match)" :key="'ob-'+match.id+'-'+i">
+                        <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a }">
+                          <span x-text="set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b < set.a" x-text="set.tb"></sup>
+                        </span>
+                      </template>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </template>
+      </div>
+
+      <aside class="space-y-4">
+        <article class="office-panel rounded-[28px] p-6">
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Szybki podgląd grup</div>
+          <div class="mt-4 space-y-3">
+            <template x-for="group in officeGroups" :key="group.id">
+              <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <div class="font-semibold text-slate-800" x-text="group.name"></div>
+                    <div class="text-sm text-slate-500" x-text="group.category || 'Grupa'"></div>
+                  </div>
+                  <span class="office-chip" :class="group.complete ? 'office-chip-group' : 'office-chip-neutral'" x-text="groupCompletionLabel(group)"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </article>
+      </aside>
+    </section>
+
+    <section class="mt-6" x-show="activeTab === 'progress'" x-cloak>
+      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <template x-for="group in officeGroups" :key="group.id">
+          <article class="office-panel rounded-[28px] p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Grupa</div>
+                <h2 class="mt-2 text-2xl font-semibold" x-text="group.name"></h2>
+                <p class="mt-1 text-sm text-slate-500" x-text="group.category || 'Faza grupowa'"></p>
+              </div>
+              <span class="office-chip" :class="group.complete ? 'office-chip-group' : 'office-chip-knockout'" x-text="groupCompletionLabel(group)"></span>
+            </div>
+            <div class="mt-5 grid grid-cols-3 gap-3 text-center">
+              <div class="rounded-2xl bg-white/70 p-3 border border-slate-200/80">
+                <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Plan</div>
+                <div class="mt-2 text-2xl font-semibold" x-text="group.expected_matches"></div>
+              </div>
+              <div class="rounded-2xl bg-white/70 p-3 border border-slate-200/80">
+                <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Gotowe</div>
+                <div class="mt-2 text-2xl font-semibold" x-text="group.finished_matches"></div>
+              </div>
+              <div class="rounded-2xl bg-white/70 p-3 border border-slate-200/80">
+                <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Zostało</div>
+                <div class="mt-2 text-2xl font-semibold" x-text="group.remaining_matches"></div>
+              </div>
+            </div>
+            <div class="mt-5 text-sm text-slate-600">Zawodnicy</div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <template x-for="player in group.players || []" :key="player.id || player.name">
+                <span class="px-3 py-2 rounded-full bg-white/80 border border-slate-200/80 text-sm text-slate-700" x-text="player.name"></span>
+              </template>
+            </div>
+          </article>
+        </template>
+      </div>
+    </section>
+  </main>
+
+  <div class="office-modal-backdrop" x-show="addMatchOpen" x-transition.opacity x-cloak>
+    <section class="office-modal office-panel" @click.away="closeAddMatchModal()">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Nowy wynik</div>
+          <h2 class="mt-2 text-3xl font-semibold">Dodaj wynik fazy grupowej</h2>
+        </div>
+        <button type="button" class="btn btn-sm btn-ghost" @click="closeAddMatchModal()">Zamknij</button>
+      </div>
+
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <label class="form-control">
+          <span class="label-text font-semibold mb-2">Grupa</span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.group_id" @change="onOfficeGroupChanged()">
+            <template x-for="group in officeGroups" :key="group.id">
+              <option :value="group.id" x-text="group.name"></option>
+            </template>
+          </select>
+        </label>
+        <label class="form-control">
+          <span class="label-text font-semibold mb-2">Walkower</span>
+          <input type="checkbox" class="toggle toggle-success mt-3" x-model="officeNewMatch.walkover">
+        </label>
+        <label class="form-control">
+          <span class="label-text font-semibold mb-2">Zawodnik A</span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player1_name">
+            <template x-for="player in officeGroupPlayers()" :key="player.name">
+              <option :value="player.name" x-text="player.name"></option>
+            </template>
+          </select>
+        </label>
+        <label class="form-control">
+          <span class="label-text font-semibold mb-2">Zawodnik B</span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player2_name">
+            <template x-for="player in officeGroupPlayers()" :key="player.name">
+              <option :value="player.name" x-text="player.name"></option>
+            </template>
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-5" x-show="officeNewMatch.walkover">
+        <label class="form-control">
+          <span class="label-text font-semibold mb-2">Zwycięzca walkowerem</span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.winner_name">
+            <option value="">Wybierz</option>
+            <option :value="officeNewMatch.player1_name" x-text="officeNewMatch.player1_name"></option>
+            <option :value="officeNewMatch.player2_name" x-text="officeNewMatch.player2_name"></option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-6">
+        <div class="text-sm font-semibold text-slate-700 mb-3">Sety</div>
+        <div class="office-match-grid">
+          <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
+            <div class="text-sm font-semibold mb-3">Set 1</div>
+            <div class="grid grid-cols-2 gap-3">
+              <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.set1_p1" placeholder="A">
+              <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.set1_p2" placeholder="B">
+            </div>
+          </div>
+          <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
+            <div class="text-sm font-semibold mb-3">Set 2</div>
+            <div class="grid grid-cols-2 gap-3">
+              <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.set2_p1" placeholder="A">
+              <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.set2_p2" placeholder="B">
+            </div>
+          </div>
+          <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4 md:col-span-2">
+            <div class="text-sm font-semibold mb-3">Super tie-break</div>
+            <div class="grid grid-cols-2 gap-3">
+              <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.stb_p1" placeholder="A">
+              <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.stb_p2" placeholder="B">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 flex justify-end gap-3">
+        <button type="button" class="btn btn-ghost" @click="closeAddMatchModal()">Anuluj</button>
+        <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addOfficeGroupMatch()">Zapisz wynik</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="office-modal-backdrop" x-show="editMatchOpen" x-transition.opacity x-cloak>
+    <section class="office-modal office-panel" @click.away="closeEditModal()">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Korekta</div>
+          <h2 class="mt-2 text-3xl font-semibold">Popraw wynik meczu</h2>
+        </div>
+        <button type="button" class="btn btn-sm btn-ghost" @click="closeEditModal()">Zamknij</button>
+      </div>
+
+      <template x-if="officeEditingMatch">
+        <div class="mt-6 space-y-6">
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Zawodnik A</div>
+              <div class="mt-2 text-xl font-semibold" x-text="officeEditingMatch.player1_name"></div>
+            </div>
+            <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Zawodnik B</div>
+              <div class="mt-2 text-xl font-semibold" x-text="officeEditingMatch.player2_name"></div>
+            </div>
+          </div>
+
+          <div class="office-match-grid">
+            <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
+              <div class="text-sm font-semibold mb-3">Set 1</div>
+              <div class="grid grid-cols-2 gap-3">
+                <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.set1_p1">
+                <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.set1_p2">
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
+              <div class="text-sm font-semibold mb-3">Set 2</div>
+              <div class="grid grid-cols-2 gap-3">
+                <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.set2_p1">
+                <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.set2_p2">
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4 md:col-span-2">
+              <div class="text-sm font-semibold mb-3">Super tie-break</div>
+              <div class="grid grid-cols-2 gap-3">
+                <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.stb_p1">
+                <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.stb_p2">
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div class="mt-8 flex justify-end gap-3">
+        <button type="button" class="btn btn-ghost" @click="closeEditModal()">Anuluj</button>
+        <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #c2410c, #9a3412);" @click="saveOfficeMatchEdit()">Zapisz korektę</button>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="/src/office.js"></script>
+</body>
+</html>

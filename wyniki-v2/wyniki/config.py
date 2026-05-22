@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     
     # Admin
     admin_password: Optional[str] = None
+
+    # AI-assisted player import parsing
+    import_players_ai_api_key: Optional[str] = None
+    import_players_ai_model: str = "gemini-2.5-flash"
+    import_players_ai_timeout_seconds: int = 20
     
     # Logging
     log_level: str = "INFO"

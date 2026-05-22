@@ -214,6 +214,8 @@
         <h1 class="text-4xl font-bold">&#9881;&#65039; Panel Administracyjny</h1>
         <div class="flex gap-2">
           <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
+          <button @click="openOfficeDashboard()" :class="{'btn-primary': activeTab === 'office'}" class="btn btn-sm">Biuro turnieju</button>
+          <button @click="openPlanningDashboard()" :class="{'btn-primary': activeTab === 'planning'}" class="btn btn-sm">Plan turnieju</button>
           <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
           <button @click="activeTab = 'global_players'" :class="{'btn-primary': activeTab === 'global_players'}" class="btn btn-sm">&#127941; Zawodnicy</button>
           <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze turnieju</button>
@@ -309,6 +311,472 @@
       </div>
     </div>
 
+    <!-- Tournament Office Tab -->
+    <div x-show="activeTab === 'office'" x-cloak>
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div>
+              <p class="uppercase tracking-[0.25em] text-xs opacity-60">Biuro zawodów</p>
+              <h2 class="card-title text-3xl mt-1">Dashboard turnieju</h2>
+              <p class="text-sm opacity-70 mt-2">Postęp grup, historia meczów i szybkie domykanie wyników bez ustawień technicznych.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+              <div class="form-control min-w-72">
+                <label class="label"><span class="label-text">Turniej</span></label>
+                <select class="select select-bordered" x-model.number="officeTournamentId" @change="loadOfficeDashboard()">
+                  <option value="">Wybierz turniej</option>
+                  <template x-for="tournament in officeTournamentsList()" :key="'office_tournament_'+tournament.id">
+                    <option :value="tournament.id" x-text="tournament.name"></option>
+                  </template>
+                </select>
+              </div>
+              <button @click="loadOfficeDashboard()" class="btn btn-outline" :disabled="!officeTournamentId || loading.office">Odśwież</button>
+            </div>
+          </div>
+
+          <div x-show="!officeTournamentId" class="alert alert-warning mt-6">
+            <span>Wybierz aktywny turniej, aby otworzyć dashboard biura.</span>
+          </div>
+
+          <div x-show="officeTournamentId && loading.office" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="skeleton h-28"></div><div class="skeleton h-28"></div><div class="skeleton h-28"></div>
+          </div>
+
+          <div x-show="officeDashboard && !loading.office" class="mt-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="stat rounded-box bg-base-200">
+                <div class="stat-title">Mecze grupowe</div>
+                <div class="stat-value text-primary" x-text="(officeDashboard?.progress?.finished_matches || 0) + '/' + (officeDashboard?.progress?.expected_matches || 0)"></div>
+                <div class="stat-desc" x-text="(officeDashboard?.progress?.remaining_matches || 0) + ' do domknięcia'"></div>
+              </div>
+              <div class="stat rounded-box bg-base-200">
+                <div class="stat-title">Postęp</div>
+                <div class="stat-value" x-text="officeProgressPercent() + '%'"></div>
+                <progress class="progress progress-primary w-full" :value="officeProgressPercent()" max="100"></progress>
+              </div>
+              <div class="stat rounded-box bg-base-200">
+                <div class="stat-title">Historia</div>
+                <div class="stat-value" x-text="officeDashboard?.matches?.length || 0"></div>
+                <div class="stat-desc">meczów w turnieju</div>
+              </div>
+              <div class="stat rounded-box" :class="officeDashboard?.progress?.complete ? 'bg-success text-success-content' : 'bg-warning text-warning-content'">
+                <div class="stat-title opacity-80">Status grup</div>
+                <div class="stat-value text-2xl" x-text="officeDashboard?.progress?.complete ? 'Gotowe' : 'W toku'"></div>
+                <div class="stat-desc opacity-80" x-text="officeDashboard?.progress?.complete ? 'automat może tworzyć drabinkę' : 'czekamy na brakujące mecze'"></div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <section class="card bg-base-200 shadow-sm xl:col-span-1">
+                <div class="card-body">
+                  <h3 class="card-title">Grupy</h3>
+                  <div class="space-y-3 max-h-[32rem] overflow-y-auto pr-1">
+                    <template x-for="group in officeDashboard?.progress?.groups || []" :key="'office_group_'+group.id">
+                      <div class="rounded-box bg-base-100 border border-base-300 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                          <div>
+                            <h4 class="font-bold" x-text="group.name"></h4>
+                            <p class="text-xs opacity-70" x-text="group.players.length + ' zawodników'"></p>
+                          </div>
+                          <span class="badge" :class="group.complete ? 'badge-success' : 'badge-warning'" x-text="group.finished_matches + '/' + group.expected_matches"></span>
+                        </div>
+                        <progress class="progress progress-primary w-full mt-3" :value="group.expected_matches ? Math.min(100, Math.round((group.finished_matches / group.expected_matches) * 100)) : 0" max="100"></progress>
+                        <div class="text-xs opacity-70 mt-2" x-text="group.remaining_matches ? (group.remaining_matches + ' brakujące mecze') : 'komplet wyników'"></div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card bg-base-200 shadow-sm xl:col-span-2">
+                <div class="card-body">
+                  <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <h3 class="card-title">Dodaj wynik grupowy</h3>
+                      <p class="text-sm opacity-70">Użyj do walkowera albo ręcznego dopisania wyniku, aby domknąć drabinkę.</p>
+                    </div>
+                    <span class="badge badge-outline">faza grupowa</span>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div class="form-control md:col-span-3">
+                      <label class="label"><span class="label-text">Grupa</span></label>
+                      <select class="select select-bordered" x-model="officeNewMatch.group_id" @change="onOfficeGroupChanged()">
+                        <template x-for="group in officeDashboard?.progress?.groups || []" :key="'office_add_group_'+group.id">
+                          <option :value="group.id" x-text="group.name"></option>
+                        </template>
+                      </select>
+                    </div>
+                    <div class="form-control">
+                      <label class="label"><span class="label-text">Zawodnik 1</span></label>
+                      <select class="select select-bordered" x-model="officeNewMatch.player1_name">
+                        <template x-for="player in officeGroupPlayers()" :key="'office_p1_'+player.name">
+                          <option :value="player.name" x-text="player.name"></option>
+                        </template>
+                      </select>
+                    </div>
+                    <div class="form-control">
+                      <label class="label"><span class="label-text">Zawodnik 2</span></label>
+                      <select class="select select-bordered" x-model="officeNewMatch.player2_name">
+                        <template x-for="player in officeGroupPlayers()" :key="'office_p2_'+player.name">
+                          <option :value="player.name" x-text="player.name"></option>
+                        </template>
+                      </select>
+                    </div>
+                    <div class="form-control justify-end">
+                      <label class="label cursor-pointer justify-start gap-3 mt-8"><input type="checkbox" class="toggle toggle-warning" x-model="officeNewMatch.walkover"><span class="label-text">Walkower</span></label>
+                    </div>
+                  </div>
+
+                  <div x-show="officeNewMatch.walkover" class="form-control mt-4">
+                    <label class="label"><span class="label-text">Zwycięzca walkowera</span></label>
+                    <select class="select select-bordered" x-model="officeNewMatch.winner_name">
+                      <option value="">Wskaż zwycięzcę</option>
+                      <option :value="officeNewMatch.player1_name" x-text="officeNewMatch.player1_name"></option>
+                      <option :value="officeNewMatch.player2_name" x-text="officeNewMatch.player2_name"></option>
+                    </select>
+                  </div>
+
+                  <div x-show="!officeNewMatch.walkover" class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4">
+                    <div class="form-control"><label class="label"><span class="label-text">Set 1 Z1</span></label><input type="number" min="0" class="input input-bordered" x-model="officeNewMatch.set1_p1"></div>
+                    <div class="form-control"><label class="label"><span class="label-text">Set 1 Z2</span></label><input type="number" min="0" class="input input-bordered" x-model="officeNewMatch.set1_p2"></div>
+                    <div class="form-control"><label class="label"><span class="label-text">Set 2 Z1</span></label><input type="number" min="0" class="input input-bordered" x-model="officeNewMatch.set2_p1"></div>
+                    <div class="form-control"><label class="label"><span class="label-text">Set 2 Z2</span></label><input type="number" min="0" class="input input-bordered" x-model="officeNewMatch.set2_p2"></div>
+                    <div class="form-control"><label class="label"><span class="label-text">STB Z1</span></label><input type="number" min="0" class="input input-bordered" x-model="officeNewMatch.stb_p1" placeholder="opc."></div>
+                    <div class="form-control"><label class="label"><span class="label-text">STB Z2</span></label><input type="number" min="0" class="input input-bordered" x-model="officeNewMatch.stb_p2" placeholder="opc."></div>
+                  </div>
+
+                  <div class="card-actions justify-end mt-6">
+                    <button @click="resetOfficeNewMatch(true)" class="btn btn-ghost">Wyczyść</button>
+                    <button @click="addOfficeGroupMatch()" class="btn btn-primary">Dodaj wynik</button>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <section class="card bg-base-100 shadow-sm border border-base-300">
+              <div class="card-body">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h3 class="card-title">Historia meczów turnieju</h3>
+                    <p class="text-sm opacity-70">Odświeża się automatycznie podczas otwartej zakładki biura.</p>
+                  </div>
+                  <span class="badge badge-outline" x-text="(officeDashboard?.matches?.length || 0) + ' wpisów'"></span>
+                </div>
+                <div class="overflow-x-auto mt-4">
+                  <table class="table table-zebra">
+                    <thead><tr><th>Czas</th><th>Faza</th><th>Mecz</th><th>Wynik</th><th>Zwycięzca</th><th>Akcje</th></tr></thead>
+                    <tbody>
+                      <template x-for="match in officeDashboard?.matches || []" :key="'office_match_'+match.id">
+                        <tr>
+                          <td class="text-xs whitespace-nowrap" x-text="formatOfficeMatchTime(match)"></td>
+                          <td class="max-w-44">
+                            <span class="badge badge-ghost h-auto min-h-0 max-w-full whitespace-normal py-2 leading-tight text-center" x-text="officeMatchPhase(match)"></span>
+                          </td>
+                          <td>
+                            <div class="font-semibold" x-text="match.player1_name + ' vs ' + match.player2_name"></div>
+                            <template x-if="officeEditingMatch?.id === match.id">
+                              <div class="mt-3 rounded-box bg-base-200 p-3 space-y-3 min-w-[34rem]">
+                                <div class="flex items-center gap-3 flex-wrap">
+                                  <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-warning toggle-sm" x-model="officeEditingMatch.walkover"><span class="label-text">Walkower</span></label>
+                                  <select x-show="officeEditingMatch.walkover" class="select select-sm select-bordered" x-model="officeEditingMatch.winner_name">
+                                    <option value="">Zwycięzca</option>
+                                    <option :value="officeEditingMatch.player1_name" x-text="officeEditingMatch.player1_name"></option>
+                                    <option :value="officeEditingMatch.player2_name" x-text="officeEditingMatch.player2_name"></option>
+                                  </select>
+                                </div>
+                                <div x-show="!officeEditingMatch.walkover" class="grid grid-cols-2 md:grid-cols-6 gap-2">
+                                  <input type="number" min="0" class="input input-sm input-bordered" x-model="officeEditingMatch.set1_p1" placeholder="S1 Z1">
+                                  <input type="number" min="0" class="input input-sm input-bordered" x-model="officeEditingMatch.set1_p2" placeholder="S1 Z2">
+                                  <input type="number" min="0" class="input input-sm input-bordered" x-model="officeEditingMatch.set2_p1" placeholder="S2 Z1">
+                                  <input type="number" min="0" class="input input-sm input-bordered" x-model="officeEditingMatch.set2_p2" placeholder="S2 Z2">
+                                  <input type="number" min="0" class="input input-sm input-bordered" x-model="officeEditingMatch.stb_p1" placeholder="STB Z1">
+                                  <input type="number" min="0" class="input input-sm input-bordered" x-model="officeEditingMatch.stb_p2" placeholder="STB Z2">
+                                </div>
+                                <div class="flex gap-2 justify-end">
+                                  <button @click="cancelOfficeEdit()" class="btn btn-sm btn-ghost">Anuluj</button>
+                                  <button @click="saveOfficeMatchEdit()" class="btn btn-sm btn-primary">Zapisz korektę</button>
+                                </div>
+                              </div>
+                            </template>
+                          </td>
+                          <td class="font-mono" x-text="officeMatchScore(match)"></td>
+                          <td x-text="match.winner_name || '-' "></td>
+                          <td><button @click="startOfficeEdit(match)" class="btn btn-xs btn-outline">Edytuj wynik</button></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="alert alert-info mt-4" x-show="(officeDashboard?.matches || []).length === 0"><span>Brak zapisanych meczów tego turnieju.</span></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tournament Planning Tab -->
+    <div x-show="activeTab === 'planning'" x-cloak>
+      <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+          <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div>
+              <p class="uppercase tracking-[0.25em] text-xs opacity-60">Przygotowanie turnieju</p>
+              <h2 class="card-title text-3xl mt-1">Plan turnieju</h2>
+              <p class="text-sm opacity-70 mt-2">Najpierw rozdziel zawodników na grupy A/B/C, potem wygeneruj i ułóż terminarz dnia.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+              <div class="form-control min-w-72">
+                <label class="label"><span class="label-text">Turniej</span></label>
+                <select class="select select-bordered" x-model.number="planningTournamentId" @change="loadPlanningData()">
+                  <option value="">Wybierz turniej</option>
+                  <template x-for="tournament in officeTournamentsList()" :key="'planning_tournament_'+tournament.id">
+                    <option :value="tournament.id" x-text="tournament.name"></option>
+                  </template>
+                </select>
+              </div>
+              <button @click="loadPlanningData()" class="btn btn-outline" :disabled="!planningTournamentId || planningLoading">Odśwież</button>
+            </div>
+          </div>
+
+          <div x-show="!planningTournamentId" class="alert alert-warning mt-6">
+            <span>Wybierz turniej, aby przygotować grupy i terminarz.</span>
+          </div>
+
+          <div x-show="planningTournamentId && planningLoading" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div class="skeleton h-28"></div><div class="skeleton h-28"></div><div class="skeleton h-28"></div>
+          </div>
+
+          <div x-show="planningTournamentId && !planningLoading" class="mt-6 space-y-6">
+            <div class="stats stats-vertical lg:stats-horizontal shadow w-full">
+              <div class="stat"><div class="stat-title">Zawodnicy</div><div class="stat-value" x-text="planningPlayers.length"></div></div>
+              <div class="stat"><div class="stat-title">Grupy</div><div class="stat-value" x-text="planningGroups.length"></div></div>
+              <div class="stat"><div class="stat-title">Wpisy terminarza</div><div class="stat-value" x-text="planningSchedule.length"></div></div>
+              <div class="stat"><div class="stat-title">Korty</div><div class="stat-value" x-text="planningCourts.length"></div></div>
+            </div>
+
+            <section class="rounded-box border border-base-300 bg-base-100">
+              <div class="px-4 py-3 border-b border-base-300 bg-base-200/60">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h3 class="font-bold text-xl">1. Grupy startowe</h3>
+                    <p class="text-sm opacity-70">Pracujesz na jednej kategorii naraz, aby nie mieszać B1K z B1M ani kolejnymi kategoriami.</p>
+                  </div>
+                  <button @click="savePlanningGroups()" class="btn btn-primary btn-sm" :disabled="!planningSelectedDivision">Zapisz grupy</button>
+                </div>
+              </div>
+
+              <div class="p-4 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div class="form-control md:col-span-2">
+                    <label class="label"><span class="label-text">Kategoria</span></label>
+                    <select class="select select-bordered" x-model="planningSelectedDivision" @change="ensurePlanningDefaults()">
+                      <template x-for="division in planningDivisions()" :key="'planning_division_'+division.key">
+                        <option :value="division.key" x-text="division.label + ' (' + division.count + ')' "></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text">Liczba grup</span></label>
+                    <input type="number" min="1" max="8" x-model.number="planningGroupCount" class="input input-bordered">
+                  </div>
+                  <div class="form-control justify-end">
+                    <div class="join">
+                      <button @click="autoAssignPlanningGroups()" class="btn btn-outline join-item" x-text="Number(planningGroupCount || 1) === 1 ? 'Przypisz wszystkich' : 'Rozdziel automatycznie'"></button>
+                      <button @click="clearPlanningDivisionAssignments()" class="btn btn-ghost join-item">Wyczyść</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div x-show="planningDivisions().length === 0" class="alert alert-info"><span>Najpierw dodaj zawodników do turnieju.</span></div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4" x-show="planningSelectedDivision">
+                  <div class="xl:col-span-2 overflow-x-auto">
+                    <table class="table table-zebra table-sm">
+                      <thead><tr><th>Zawodnik</th><th>Kategoria</th><th>Kraj</th><th>Grupa</th></tr></thead>
+                      <tbody>
+                        <template x-for="player in planningPlayersForDivision()" :key="'planning_player_'+player.id">
+                          <tr>
+                            <td>
+                              <div class="font-semibold" x-text="player.name"></div>
+                              <div class="text-xs opacity-60" x-text="player.first_name && player.last_name ? player.first_name + ' ' + player.last_name : ''"></div>
+                            </td>
+                            <td><span class="badge badge-outline" x-text="planningDivisionLabel(planningDivisionKey(player))"></span></td>
+                            <td x-text="player.country || '-' "></td>
+                            <td>
+                              <select class="select select-sm select-bordered min-w-44" x-model="planningGroupAssignments[player.id]">
+                                <option value="">Nieprzypisany</option>
+                                <template x-for="groupName in planningDivisionGroupNames()" :key="'planning_group_option_'+player.id+'_'+groupName">
+                                  <option :value="groupName" x-text="groupName"></option>
+                                </template>
+                              </select>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="space-y-3">
+                    <template x-for="groupName in planningDivisionGroupNames()" :key="'planning_group_preview_'+groupName">
+                      <div class="rounded-box border border-base-300 bg-base-200 p-3">
+                        <div class="flex items-center justify-between gap-2">
+                          <h4 class="font-bold" x-text="groupName"></h4>
+                          <span class="badge badge-primary" x-text="planningAssignedPlayers(groupName).length"></span>
+                        </div>
+                        <ul class="mt-2 space-y-1 text-sm">
+                          <template x-for="player in planningAssignedPlayers(groupName)" :key="'planning_group_player_'+groupName+'_'+player.id">
+                            <li x-text="player.name"></li>
+                          </template>
+                        </ul>
+                      </div>
+                    </template>
+                    <div x-show="planningUnassignedPlayers().length" class="alert alert-warning py-2">
+                      <span x-text="planningUnassignedPlayers().length + ' zawodników bez grupy'"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="rounded-box border border-base-300 bg-base-100">
+              <div class="px-4 py-3 border-b border-base-300 bg-base-200/60">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h3 class="font-bold text-xl">2. Terminarz dnia</h3>
+                    <p class="text-sm opacity-70">Wygeneruj mecze z grup i drabinki, potem ustaw godziny, korty i status publikacji.</p>
+                  </div>
+                  <div class="join">
+                    <button @click="generatePlanningSchedule()" class="btn btn-outline btn-sm join-item">Generuj brakujące</button>
+                    <button @click="loadPlanningData()" class="btn btn-ghost btn-sm join-item">Odśwież</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-4 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="form-control">
+                    <label class="label"><span class="label-text">Dzień</span></label>
+                    <select class="select select-bordered" x-model="planningScheduleFilter.day">
+                      <option value="">Wszystkie dni</option>
+                      <template x-for="day in planningScheduleDays()" :key="'planning_day_'+day">
+                        <option :value="day" x-text="day"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text">Kategoria</span></label>
+                    <select class="select select-bordered" x-model="planningScheduleFilter.category">
+                      <option value="">Wszystkie kategorie</option>
+                      <template x-for="category in planningScheduleCategories()" :key="'planning_category_'+category">
+                        <option :value="category" x-text="category"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text">Kort</span></label>
+                    <select class="select select-bordered" x-model="planningScheduleFilter.court">
+                      <option value="">Wszystkie korty</option>
+                      <template x-for="court in planningCourts" :key="'planning_filter_court_'+court.kort_id">
+                        <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
+                      </template>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="rounded-box bg-base-200 p-4">
+                  <h4 class="font-bold mb-3">Dodaj ręczny wpis</h4>
+                  <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                    <input type="date" class="input input-bordered" x-model="planningNewSchedule.day_date">
+                    <input type="time" class="input input-bordered" x-model="planningNewSchedule.scheduled_time">
+                    <select class="select select-bordered" x-model="planningNewSchedule.court_id">
+                      <option value="">Kort?</option>
+                      <template x-for="court in planningCourts" :key="'planning_new_court_'+court.kort_id">
+                        <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
+                      </template>
+                    </select>
+                    <input type="text" class="input input-bordered" placeholder="Kategoria" x-model="planningNewSchedule.category_name">
+                    <input type="text" class="input input-bordered" placeholder="Faza" x-model="planningNewSchedule.phase">
+                    <select class="select select-bordered" x-model="planningNewSchedule.status">
+                      <option value="draft">Roboczy</option>
+                      <option value="planned">Zaplanowany</option>
+                      <option value="in_progress">W toku</option>
+                      <option value="completed">Zakończony</option>
+                    </select>
+                    <select class="select select-bordered md:col-span-2" x-model="planningNewSchedule.player1_name">
+                      <option value="">Zawodnik 1</option>
+                      <template x-for="name in planningPlayerNameOptions()" :key="'planning_new_p1_'+name">
+                        <option :value="name" x-text="name"></option>
+                      </template>
+                    </select>
+                    <select class="select select-bordered md:col-span-2" x-model="planningNewSchedule.player2_name">
+                      <option value="">Zawodnik 2</option>
+                      <template x-for="name in planningPlayerNameOptions()" :key="'planning_new_p2_'+name">
+                        <option :value="name" x-text="name"></option>
+                      </template>
+                    </select>
+                    <input type="text" class="input input-bordered" placeholder="Uwagi publiczne" x-model="planningNewSchedule.notes_public">
+                    <button @click="addPlanningScheduleEntry()" class="btn btn-primary">Dodaj</button>
+                  </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                  <table class="table table-zebra table-sm">
+                    <thead><tr><th>Dzień</th><th>Godzina</th><th>Kort</th><th>Kategoria / faza</th><th>Mecz</th><th>Status</th><th>Uwagi</th><th>Akcje</th></tr></thead>
+                    <tbody>
+                      <template x-for="entry in planningScheduleEntries()" :key="'planning_schedule_'+entry.id">
+                        <tr>
+                          <td><input type="date" class="input input-xs input-bordered w-36" x-model="entry.day_date"></td>
+                          <td><input type="time" class="input input-xs input-bordered w-28" x-model="entry.scheduled_time"></td>
+                          <td>
+                            <select class="select select-xs select-bordered w-32" x-model="entry.court_id">
+                              <option value="">?</option>
+                              <template x-for="court in planningCourts" :key="'planning_row_court_'+entry.id+'_'+court.kort_id">
+                                <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
+                              </template>
+                            </select>
+                          </td>
+                          <td class="min-w-56">
+                            <input type="text" class="input input-xs input-bordered w-full mb-1" x-model="entry.category_name" placeholder="Kategoria">
+                            <input type="text" class="input input-xs input-bordered w-full" x-model="entry.phase" placeholder="Faza">
+                          </td>
+                          <td class="min-w-72">
+                            <div class="font-semibold" x-text="entry.player1_name + ' vs ' + entry.player2_name"></div>
+                            <div class="text-xs opacity-60" x-text="entry.group_name || entry.source_type"></div>
+                          </td>
+                          <td>
+                            <select class="select select-xs select-bordered w-32" x-model="entry.status">
+                              <option value="draft">Roboczy</option>
+                              <option value="planned">Zaplanowany</option>
+                              <option value="scheduled">Zaplanowany</option>
+                              <option value="in_progress">W toku</option>
+                              <option value="completed">Zakończony</option>
+                              <option value="cancelled">Odwołany</option>
+                              <option value="moved">Przeniesiony</option>
+                            </select>
+                          </td>
+                          <td><input type="text" class="input input-xs input-bordered w-44" x-model="entry.notes_public" placeholder="publiczne"></td>
+                          <td>
+                            <div class="join">
+                              <button @click="savePlanningScheduleEntry(entry)" class="btn btn-xs btn-primary join-item">Zapisz</button>
+                              <button @click="deletePlanningScheduleEntry(entry)" class="btn btn-xs btn-error btn-outline join-item">Usuń</button>
+                            </div>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="alert alert-info" x-show="planningScheduleEntries().length === 0"><span>Brak wpisów dla wybranych filtrów.</span></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Tournaments Tab -->
     <div x-show="activeTab === 'tournaments'" x-cloak>
       <div x-show="editingTournamentId" class="card bg-base-100 shadow-xl mb-6">
@@ -330,10 +798,19 @@
             <div class="form-control"><label class="label"><span class="label-text">Kraj</span></label><input type="text" x-model="editTournament.country" class="input input-bordered" maxlength="2"></div>
             <div class="form-control"><label class="label"><span class="label-text">Email raportów</span></label><input type="email" x-model="editTournament.report_email" class="input input-bordered"></div>
             <div class="form-control"><label class="label"><span class="label-text">Nowe logo</span></label><input type="file" accept="image/*" @change="onEditTournamentLogoSelected" class="file-input file-input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Klucz dostępu</span></label><input type="text" x-model="editTournament.access_key" class="input input-bordered" placeholder="opcjonalnie"></div>
+            <div class="form-control">
+              <label class="label"><span class="label-text">Hasło modułu biura</span></label>
+              <input type="password" x-model="editTournament.office_password" class="input input-bordered" placeholder="nowe hasło lub puste bez zmiany">
+              <label class="label" x-show="editTournament.has_office_password"><span class="label-text-alt text-success">Hasło biura jest już ustawione</span></label>
+            </div>
           </div>
 
-          <div class="flex items-center gap-3 mt-4">
+          <div class="flex items-center gap-3 mt-4 flex-wrap">
             <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-success" x-model="editTournament.active"><span class="label-text">Turniej aktywny</span></label>
+            <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-info" x-model="editTournament.is_public" :disabled="editTournament.is_simulation"><span class="label-text">Publiczny</span></label>
+            <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-primary" x-model="editTournament.stats_enabled" :disabled="editTournament.is_simulation"><span class="label-text">Liczy statystyki</span></label>
+            <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-warning" x-model="editTournament.is_simulation"><span class="label-text">Symulacja</span></label>
             <template x-if="editTournament.logo_path">
               <a :href="editTournament.logo_path" target="_blank" class="link link-primary text-sm">Obecne logo</a>
             </template>
@@ -358,6 +835,13 @@
             <div class="form-control"><label class="label"><span class="label-text">Kraj</span></label><input type="text" x-model="newTournament.country" class="input input-bordered" maxlength="2" placeholder="PL"></div>
             <div class="form-control"><label class="label"><span class="label-text">Email raport&#243;w</span></label><input type="email" x-model="newTournament.report_email" class="input input-bordered" placeholder="np. turniej@vestmedia.pl"></div>
             <div class="form-control"><label class="label"><span class="label-text">Logo turnieju</span></label><input type="file" accept="image/*" @change="onTournamentLogoSelected" class="file-input file-input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Klucz dostępu</span></label><input type="text" x-model="newTournament.access_key" class="input input-bordered" placeholder="opcjonalnie"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Hasło modułu biura</span></label><input type="password" x-model="newTournament.office_password" class="input input-bordered" placeholder="np. biuro2026"></div>
+          </div>
+          <div class="flex items-center gap-3 mt-4 flex-wrap">
+            <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-info" x-model="newTournament.is_public" :disabled="newTournament.is_simulation"><span class="label-text">Publiczny</span></label>
+            <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-primary" x-model="newTournament.stats_enabled" :disabled="newTournament.is_simulation"><span class="label-text">Liczy statystyki</span></label>
+            <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-warning" x-model="newTournament.is_simulation"><span class="label-text">Symulacja</span></label>
           </div>
           <div class="card-actions justify-end mt-4"><button @click="createTournament()" class="btn btn-primary">Utw&#243;rz turniej</button></div>
         </div>
@@ -389,7 +873,13 @@
               <tbody>
                 <template x-for="tournament in tournaments" :key="tournament.id">
                   <tr :class="{'bg-success bg-opacity-10': tournament.active}">
-                    <td><span class="font-semibold" x-text="tournament.name"></span><span x-show="tournament.active" class="badge badge-success badge-sm ml-2">Aktywny</span></td>
+                    <td>
+                      <span class="font-semibold" x-text="tournament.name"></span>
+                      <span x-show="tournament.active" class="badge badge-success badge-sm ml-2">Aktywny</span>
+                      <span x-show="!tournament.is_public" class="badge badge-warning badge-sm ml-2">Prywatny</span>
+                      <span x-show="!tournament.stats_enabled" class="badge badge-info badge-sm ml-2">Bez statystyk</span>
+                      <span x-show="tournament.is_simulation" class="badge badge-outline badge-sm ml-2">Symulacja</span>
+                    </td>
                     <td x-text="[tournament.city, tournament.country].filter(Boolean).join(', ') || '-' "></td>
                     <td x-text="tournament.court_count || 0"></td>
                     <td x-text="tournament.report_email || '-' "></td>
@@ -404,6 +894,7 @@
                       >
                     </td>
                     <td class="flex gap-2">
+                      <button @click="openOfficeDashboard(tournament.id)" class="btn btn-xs btn-primary">Biuro</button>
                       <button @click="openTournamentEditor(tournament)" class="btn btn-xs btn-outline">Edytuj</button>
                       <button @click="selectTournament(tournament.id)" class="btn btn-xs btn-ghost">&#128203; Gracze</button>
                       <button @click="deleteTournament(tournament.id)" class="btn btn-xs btn-error">Usu&#324;</button>
@@ -558,10 +1049,18 @@
           </div>
           <div x-show="!selectedTournament" class="alert alert-warning"><span>Wybierz turniej tutaj, aby zarz&#261;dza&#263; zawodnikami tego turnieju</span></div>
           <div x-show="selectedTournament">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
               <div class="form-control"><label class="label"><span class="label-text">Imi&#281;</span></label><input type="text" x-model="newPlayer.first_name" class="input input-bordered input-sm" placeholder="Jan"></div>
               <div class="form-control"><label class="label"><span class="label-text">Nazwisko</span></label><input type="text" x-model="newPlayer.last_name" class="input input-bordered input-sm" placeholder="Kowalski"></div>
               <div class="form-control"><label class="label"><span class="label-text">Kategoria</span></label><input type="text" x-model="newPlayer.category" class="input input-bordered input-sm" placeholder="B1"></div>
+              <div class="form-control">
+                <label class="label"><span class="label-text">P&#322;e&#263;</span></label>
+                <select x-model="newPlayer.gender" class="select select-bordered select-sm">
+                  <option value="">Brak</option>
+                  <option value="K">K</option>
+                  <option value="M">M</option>
+                </select>
+              </div>
               <div class="form-control"><label class="label"><span class="label-text">Kraj</span></label><input type="text" x-model="newPlayer.country" class="input input-bordered input-sm" placeholder="pl" maxlength="2"></div>
               <div class="form-control"><label class="label">&nbsp;</label><button @click="addPlayer()" class="btn btn-primary btn-sm">Dodaj gracza</button></div>
             </div>
@@ -569,14 +1068,14 @@
               <input type="checkbox" />
               <div class="collapse-title font-medium">&#128229; Import graczy z pliku tekstowego</div>
               <div class="collapse-content">
-                <p class="text-sm mb-2">Format: <code>Imi&#281; Nazwisko Kategoria Kraj</code> (jeden gracz na lini&#281;)</p>
-                <textarea x-model="importText" class="textarea textarea-bordered w-full" rows="6" placeholder="John Doe B1 us&#10;Jane Smith A1&#10;Jana Nowak B2 pl"></textarea>
-                <button @click="importPlayers()" class="btn btn-primary btn-sm mt-2">Importuj graczy</button>
+                <p class="text-sm mb-2">Parser rozpoznaje r&#243;&#380;ne warianty: <span class="font-mono">Imi&#281; Nazwisko B1K PL</span>, <span class="font-mono">Imi&#281; Nazwisko B2 M</span>, <span class="font-mono">Imi&#281; Nazwisko kobiety B3</span>. Przed zapisem pojawi si&#281; modal z podsumowaniem i mo&#380;liwo&#347;ci&#261; korekty.</p>
+                <textarea x-model="importText" class="textarea textarea-bordered w-full" rows="6" placeholder="Jan Kowalski B1M PL&#10;Anna Nowak B1 K&#10;Maria Test kobiety B2 DE"></textarea>
+                <button @click="importPlayers()" class="btn btn-primary btn-sm mt-2">Analizuj i poka&#380; podsumowanie</button>
               </div>
             </div>
             <div class="overflow-x-auto">
               <table class="table table-zebra table-sm">
-                <thead><tr><th>Imi&#281;</th><th>Nazwisko</th><th>Kategoria</th><th>Kraj</th><th>Akcje</th></tr></thead>
+                <thead><tr><th>Imi&#281;</th><th>Nazwisko</th><th>Kategoria</th><th>P&#322;e&#263;</th><th>Kraj</th><th>Akcje</th></tr></thead>
                 <tbody>
                   <template x-for="player in filteredPlayers" :key="player.id">
                     <tr>
@@ -597,6 +1096,18 @@
                       </template>
                       <template x-if="editingPlayerId === player.id">
                         <td><input type="text" x-model="editPlayerData.category" class="input input-xs input-bordered w-20" @keyup.enter="savePlayer(player.id)" @keyup.escape="cancelEditPlayer()"></td>
+                      </template>
+                      <template x-if="editingPlayerId !== player.id">
+                        <td><span class="badge badge-sm badge-outline" x-text="player.gender || '-' "></span></td>
+                      </template>
+                      <template x-if="editingPlayerId === player.id">
+                        <td>
+                          <select x-model="editPlayerData.gender" class="select select-xs select-bordered w-20" @keyup.escape="cancelEditPlayer()">
+                            <option value="">Brak</option>
+                            <option value="K">K</option>
+                            <option value="M">M</option>
+                          </select>
+                        </td>
                       </template>
                       <template x-if="editingPlayerId !== player.id">
                         <td x-text="player.country"></td>
@@ -632,6 +1143,111 @@
         </div>
       </div>
     </div>
+
+    <dialog x-ref="importPreviewModal" class="modal">
+      <div class="modal-box max-w-6xl">
+        <h3 class="font-bold text-lg">Podsumowanie importu graczy</h3>
+        <p class="text-sm opacity-70 mt-2">Podzia&#322; dotyczy grup startowych typu <span class="font-mono">B1K</span>, <span class="font-mono">B1M</span>, <span class="font-mono">B2K</span>. Gemini mo&#380;e uzupe&#322;ni&#263; brakuj&#261;ce dane, a przed zatwierdzeniem mo&#380;esz poprawi&#263; ka&#380;dy wpis albo usun&#261;&#263; b&#322;&#281;dny wiersz.</p>
+
+        <div class="stats stats-vertical lg:stats-horizontal shadow mt-4 w-full">
+          <div class="stat">
+            <div class="stat-title">Wiersze do importu</div>
+            <div class="stat-value text-primary" x-text="importPreview.players.length"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-title">Do sprawdzenia</div>
+            <div class="stat-value text-warning" x-text="importPreview.players.filter(player => importPreviewWarnings(player).length).length"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-title">Wsparte przez Gemini</div>
+            <div class="stat-value text-info" x-text="importPreview.players.filter(player => player.ai_assisted).length"></div>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div class="font-semibold mb-2">Grupy startowe</div>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="group in importPreviewSummary()" :key="group.start_group">
+              <div class="badge badge-lg badge-outline gap-2 py-4">
+                <span x-text="group.start_group"></span>
+                <span class="opacity-70" x-text="group.count"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto mt-4 max-h-[50vh]">
+          <table class="table table-zebra table-sm">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Surowy wiersz</th>
+                <th>Imi&#281;</th>
+                <th>Nazwisko</th>
+                <th>Kategoria</th>
+                <th>P&#322;e&#263;</th>
+                <th>Grupa startowa</th>
+                <th>Kraj</th>
+                <th>AI</th>
+                <th>Uwagi</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(player, index) in importPreview.players" :key="importPreviewRowKey(player, index)">
+                <tr>
+                  <td x-text="player.line_number"></td>
+                  <td class="text-xs opacity-70" x-text="player.raw_line"></td>
+                  <td><input type="text" x-model="player.first_name" @blur="normalizeImportPreviewPlayer(player)" class="input input-xs input-bordered w-28"></td>
+                  <td><input type="text" x-model="player.last_name" @blur="normalizeImportPreviewPlayer(player)" class="input input-xs input-bordered w-32"></td>
+                  <td><input type="text" x-model="player.category" @blur="normalizeImportPreviewPlayer(player)" class="input input-xs input-bordered w-20"></td>
+                  <td>
+                    <select x-model="player.gender" @change="normalizeImportPreviewPlayer(player)" class="select select-xs select-bordered w-20">
+                      <option value="">?</option>
+                      <option value="K">K</option>
+                      <option value="M">M</option>
+                    </select>
+                  </td>
+                  <td><span class="badge badge-sm badge-primary" x-text="importStartGroup(player)"></span></td>
+                  <td><input type="text" x-model="player.country" @blur="normalizeImportPreviewPlayer(player)" class="input input-xs input-bordered w-16" maxlength="2"></td>
+                  <td>
+                    <template x-if="player.ai_assisted">
+                      <div class="flex flex-col gap-1">
+                        <span class="badge badge-info badge-sm">Gemini</span>
+                        <span class="text-[11px] opacity-70" x-show="player.ai_notes" x-text="player.ai_notes"></span>
+                      </div>
+                    </template>
+                    <template x-if="!player.ai_assisted">
+                      <span class="text-xs opacity-50">-</span>
+                    </template>
+                  </td>
+                  <td>
+                    <template x-if="importPreviewWarnings(player).length">
+                      <div class="flex flex-wrap gap-1">
+                        <template x-for="warning in importPreviewWarnings(player)" :key="warning">
+                          <span class="badge badge-warning badge-sm" x-text="warning"></span>
+                        </template>
+                      </div>
+                    </template>
+                    <template x-if="!importPreviewWarnings(player).length">
+                      <span class="badge badge-success badge-sm">OK</span>
+                    </template>
+                  </td>
+                  <td>
+                    <button @click="removeImportPreviewPlayer(index)" class="btn btn-xs btn-error btn-outline">Usu&#324;</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="modal-action">
+          <button @click="confirmImportPlayers()" class="btn btn-primary btn-sm">Zatwierd&#378; import</button>
+          <button @click="closeImportPreview()" class="btn btn-sm">Anuluj</button>
+        </div>
+      </div>
+    </dialog>
 
     <!-- ============ OVERLAY SETTINGS TAB ============ -->
     <div x-show="activeTab === 'settings'" x-cloak>

@@ -3,11 +3,17 @@ import os
 from flask import Blueprint, jsonify, request
 from sqlalchemy import or_, func
 
-from ..db_models import db, GlobalPlayer, Player, MatchHistory
+from ..db_models import db, GlobalPlayer, Player, MatchHistory, Tournament
 from ..config import logger
 from ..services.player_registry import create_tournament_player, find_or_create_global_player, split_player_name
 
 blueprint = Blueprint('admin_global_players', __name__, url_prefix='/admin/api/global-players')
+
+
+def _entry_counts_for_stats(entry: Player) -> bool:
+    if not entry.tournament:
+        return True
+    return entry.tournament.stats_enabled is None or int(entry.tournament.stats_enabled) == 1
 
 
 @blueprint.route('', methods=['GET'])
@@ -39,7 +45,9 @@ def list_global_players():
     if player_ids:
         tournament_counts = dict(
             db.session.query(Player.global_player_id, func.count(Player.id))
+            .join(Tournament, Player.tournament_id == Tournament.id)
             .filter(Player.global_player_id.in_(player_ids))
+            .filter(Tournament.stats_enabled == 1)
             .group_by(Player.global_player_id)
             .all()
         )
@@ -97,7 +105,7 @@ def get_global_player(gp_id: int):
         'tournament_name': e.tournament.name if e.tournament else '',
         'category': e.category or '',
     } for e in entries]
-    d['tournaments_count'] = len(entries)
+    d['tournaments_count'] = sum(1 for entry in entries if _entry_counts_for_stats(entry))
 
     return jsonify(d)
 
@@ -432,7 +440,11 @@ def find_duplicates():
         ).all()
         entries = []
         for gp in players:
-            tournament_count = Player.query.filter_by(global_player_id=gp.id).count()
+            tournament_count = (
+                Player.query.join(Tournament, Player.tournament_id == Tournament.id)
+                .filter(Player.global_player_id == gp.id, Tournament.stats_enabled == 1)
+                .count()
+            )
             entries.append({
                 **gp.to_dict(),
                 'tournaments_count': tournament_count,
@@ -458,7 +470,11 @@ def find_no_first_name():
     result = []
     for gp in players:
         d = gp.to_dict()
-        d['tournaments_count'] = Player.query.filter_by(global_player_id=gp.id).count()
+        d['tournaments_count'] = (
+            Player.query.join(Tournament, Player.tournament_id == Tournament.id)
+            .filter(Player.global_player_id == gp.id, Tournament.stats_enabled == 1)
+            .count()
+        )
         result.append(d)
 
     return jsonify(result)

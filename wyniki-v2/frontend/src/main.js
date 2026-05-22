@@ -64,13 +64,16 @@ const TRANSLATIONS = {
     playerSection: { title: 'Baza zawodników', searchPlaceholder: 'Szukaj zawodnika...', all: 'Wszyscy', men: 'Mężczyźni', women: 'Kobiety', matchesPlayed: 'meczów', winsLabel: 'W', lossesLabel: 'L', noResults: 'Brak wyników', allCountries: 'Wszystkie kraje', allCategories: 'Wszystkie kategorie', genderShortM: 'M', genderShortF: 'K' },
     playerProfile: { back: 'Powrót do listy', category: 'Kategoria', country: 'Kraj', gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', career: 'Kariera', tournaments: 'Turnieje', matches: 'Mecze', wins: 'Wygrane', losses: 'Przegrane', winRate: 'Skuteczność', medals: 'Medale', gold: 'Złoto', silver: 'Srebro', bronze: 'Brąz', tournamentHistory: 'Historia turniejów', group: 'Grupa', place: 'miejsce', of: 'z', groupPhase: 'Faza grupowa', knockoutPhase: 'Faza pucharowa', noTournaments: 'Brak turniejów', matchesInTournament: 'Mecze w turnieju', won: 'W', lost: 'P', vs: 'vs', duration: 'Czas' },
     darkModeTooltip: { light: 'Zmień na tryb jasny', dark: 'Zmień na tryb ciemny' },
-    liveSub: { scores: 'Wyniki live', bracket: 'Drabinka', history: 'Historia' },
+    liveSub: { scores: 'Wyniki live', bracket: 'Drabinka', schedule: 'Terminarz', history: 'Historia' },
+    schedule: { title: 'Terminarz rozgrywek', emptyTitle: 'Terminarz nie jest jeszcze opublikowany', emptyText: 'Biuro zawodów uzupełni orientacyjne godziny i korty.', loading: 'Ładowanie terminarza...', refresh: 'Odśwież', time: 'Godzina', court: 'Kort', phase: 'Etap', match: 'Mecz', status: 'Status', notes: 'Uwagi', timeTbd: 'godzina do potwierdzenia', courtTbd: 'kort do potwierdzenia', statusDraft: 'Roboczy', statusPlanned: 'Zaplanowany', statusInProgress: 'W trakcie', statusCompleted: 'Zakończony', updated: 'Terminarz zaktualizowany' },
     bracket: {
       emptyTitle: 'Brak drabinki', emptyText: 'Drabinka turniejowa nie została jeszcze skonfigurowana',
       group: 'Grupa', player: 'Zawodnik', wins: 'W', losses: 'L',
       setsHeader: 'Sety', gamesHeader: 'Gemy', matchesTitle: 'Mecze grupowe',
       knockoutTitle: 'Faza pucharowa', semifinal: 'Półfinał',
-      finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce', forPlace: 'o'
+      finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce', forPlace: 'o',
+      legendTitle: 'Legenda tabeli', legendWins: 'wygrane mecze', legendLosses: 'przegrane mecze',
+      legendSets: 'sety wygrane do przegranych', legendGames: 'gemy wygrane do przegranych'
     },
     tournamentHistory: {
       selectTournament: 'Wybierz turniej',
@@ -134,13 +137,15 @@ const TRANSLATIONS = {
     playerSection: { title: 'Spielerdatenbank', searchPlaceholder: 'Spieler suchen...', all: 'Alle', men: 'Männer', women: 'Frauen', matchesPlayed: 'Spiele', winsLabel: 'S', lossesLabel: 'N', noResults: 'Keine Ergebnisse', allCountries: 'Alle Länder', allCategories: 'Alle Kategorien', genderShortM: 'M', genderShortF: 'W' },
     playerProfile: { back: 'Zurück zur Liste', category: 'Kategorie', country: 'Land', gender: 'Geschlecht', male: 'Mann', female: 'Frau', career: 'Karriere', tournaments: 'Turniere', matches: 'Spiele', wins: 'Siege', losses: 'Niederlagen', winRate: 'Siegquote', medals: 'Medaillen', gold: 'Gold', silver: 'Silber', bronze: 'Bronze', tournamentHistory: 'Turniergeschichte', group: 'Gruppe', place: 'Platz', of: 'von', groupPhase: 'Gruppenphase', knockoutPhase: 'K.-o.-Phase', noTournaments: 'Keine Turniere', matchesInTournament: 'Spiele im Turnier', won: 'S', lost: 'N', vs: 'vs', duration: 'Dauer' },
     darkModeTooltip: { light: 'Zum hellen Modus wechseln', dark: 'Zum dunklen Modus wechseln' },
-    liveSub: { scores: 'Live-Ergebnisse', bracket: 'Turnierbaum', history: 'Historie' },
+    liveSub: { scores: 'Live-Ergebnisse', bracket: 'Turnierbaum', schedule: 'Zeitplan', history: 'Historie' },
     bracket: {
       emptyTitle: 'Kein Turnierbaum', emptyText: 'Der Turnierbaum wurde noch nicht konfiguriert',
       group: 'Gruppe', player: 'Spieler', wins: 'S', losses: 'N',
       setsHeader: 'Sätze', gamesHeader: 'Spiele', matchesTitle: 'Gruppenspiele',
       knockoutTitle: 'K.O.-Phase', semifinal: 'Halbfinale',
-      finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3', forPlace: 'um Platz'
+      finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3', forPlace: 'um Platz',
+      legendTitle: 'Tabellenlegende', legendWins: 'gewonnene Spiele', legendLosses: 'verlorene Spiele',
+      legendSets: 'gewonnene zu verlorenen Sätzen', legendGames: 'gewonnene zu verlorenen Spielen'
     },
     tournamentHistory: {
       selectTournament: 'Turnier auswählen',
@@ -204,13 +209,16 @@ const TRANSLATIONS = {
     playerSection: { title: 'Player database', searchPlaceholder: 'Search player...', all: 'All', men: 'Men', women: 'Women', matchesPlayed: 'matches', winsLabel: 'W', lossesLabel: 'L', noResults: 'No results', allCountries: 'All countries', allCategories: 'All categories', genderShortM: 'M', genderShortF: 'F' },
     playerProfile: { back: 'Back to list', category: 'Category', country: 'Country', gender: 'Gender', male: 'Male', female: 'Female', career: 'Career', tournaments: 'Tournaments', matches: 'Matches', wins: 'Wins', losses: 'Losses', winRate: 'Win rate', medals: 'Medals', gold: 'Gold', silver: 'Silver', bronze: 'Bronze', tournamentHistory: 'Tournament history', group: 'Group', place: 'place', of: 'of', groupPhase: 'Group phase', knockoutPhase: 'Knockout phase', noTournaments: 'No tournaments', matchesInTournament: 'Tournament matches', won: 'W', lost: 'L', vs: 'vs', duration: 'Duration' },
     darkModeTooltip: { light: 'Switch to light mode', dark: 'Switch to dark mode' },
-    liveSub: { scores: 'Live scores', bracket: 'Bracket', history: 'History' },
+    liveSub: { scores: 'Live scores', bracket: 'Bracket', schedule: 'Schedule', history: 'History' },
+    schedule: { title: 'Tournament schedule', emptyTitle: 'The schedule is not published yet', emptyText: 'The tournament office will add approximate times and courts.', loading: 'Loading schedule...', refresh: 'Refresh', time: 'Time', court: 'Court', phase: 'Stage', match: 'Match', status: 'Status', notes: 'Notes', timeTbd: 'time to be confirmed', courtTbd: 'court to be confirmed', statusDraft: 'Draft', statusPlanned: 'Planned', statusInProgress: 'In progress', statusCompleted: 'Finished', updated: 'Schedule updated' },
     bracket: {
       emptyTitle: 'No bracket', emptyText: 'Tournament bracket has not been configured yet',
       group: 'Group', player: 'Player', wins: 'W', losses: 'L',
       setsHeader: 'Sets', gamesHeader: 'Games', matchesTitle: 'Group matches',
       knockoutTitle: 'Knockout stage', semifinal: 'Semifinal',
-      finalLabel: 'Final', thirdPlace: 'Third place match', forPlace: 'for'
+      finalLabel: 'Final', thirdPlace: 'Third place match', forPlace: 'for',
+      legendTitle: 'Table legend', legendWins: 'matches won', legendLosses: 'matches lost',
+      legendSets: 'sets won to sets lost', legendGames: 'games won to games lost'
     },
     tournamentHistory: {
       selectTournament: 'Select tournament',
@@ -274,13 +282,15 @@ const TRANSLATIONS = {
     playerSection: { title: 'Database giocatori', searchPlaceholder: 'Cerca giocatore...', all: 'Tutti', men: 'Uomini', women: 'Donne', matchesPlayed: 'partite', winsLabel: 'V', lossesLabel: 'S', noResults: 'Nessun risultato', allCountries: 'Tutti i paesi', allCategories: 'Tutte le categorie', genderShortM: 'M', genderShortF: 'F' },
     playerProfile: { back: 'Torna alla lista', category: 'Categoria', country: 'Paese', gender: 'Genere', male: 'Uomo', female: 'Donna', career: 'Carriera', tournaments: 'Tornei', matches: 'Partite', wins: 'Vittorie', losses: 'Sconfitte', winRate: 'Percentuale', medals: 'Medaglie', gold: 'Oro', silver: 'Argento', bronze: 'Bronzo', tournamentHistory: 'Storico tornei', group: 'Girone', place: 'posto', of: 'di', groupPhase: 'Fase a gironi', knockoutPhase: 'Fase a eliminazione', noTournaments: 'Nessun torneo', matchesInTournament: 'Partite nel torneo', won: 'V', lost: 'S', vs: 'vs', duration: 'Durata' },
     darkModeTooltip: { light: 'Passa alla modalità chiara', dark: 'Passa alla modalità scura' },
-    liveSub: { scores: 'Risultati live', bracket: 'Tabellone', history: 'Cronologia' },
+    liveSub: { scores: 'Risultati live', bracket: 'Tabellone', schedule: 'Programma', history: 'Cronologia' },
     bracket: {
       emptyTitle: 'Nessun tabellone', emptyText: 'Il tabellone del torneo non è ancora stato configurato',
       group: 'Girone', player: 'Giocatore', wins: 'V', losses: 'S',
       setsHeader: 'Set', gamesHeader: 'Game', matchesTitle: 'Partite del girone',
       knockoutTitle: 'Fase a eliminazione', semifinal: 'Semifinale',
-      finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto', forPlace: 'per il'
+      finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto', forPlace: 'per il',
+      legendTitle: 'Legenda tabella', legendWins: 'partite vinte', legendLosses: 'partite perse',
+      legendSets: 'set vinti rispetto ai set persi', legendGames: 'game vinti rispetto ai game persi'
     },
     tournamentHistory: {
       selectTournament: 'Seleziona torneo',
@@ -344,13 +354,15 @@ const TRANSLATIONS = {
     playerSection: { title: 'Base de jugadores', searchPlaceholder: 'Buscar jugador...', all: 'Todos', men: 'Hombres', women: 'Mujeres', matchesPlayed: 'partidos', winsLabel: 'V', lossesLabel: 'D', noResults: 'Sin resultados', allCountries: 'Todos los países', allCategories: 'Todas las categorías', genderShortM: 'M', genderShortF: 'F' },
     playerProfile: { back: 'Volver a la lista', category: 'Categoría', country: 'País', gender: 'Género', male: 'Hombre', female: 'Mujer', career: 'Carrera', tournaments: 'Torneos', matches: 'Partidos', wins: 'Victorias', losses: 'Derrotas', winRate: 'Efectividad', medals: 'Medallas', gold: 'Oro', silver: 'Plata', bronze: 'Bronce', tournamentHistory: 'Historial de torneos', group: 'Grupo', place: 'puesto', of: 'de', groupPhase: 'Fase de grupos', knockoutPhase: 'Fase eliminatoria', noTournaments: 'Sin torneos', matchesInTournament: 'Partidos del torneo', won: 'V', lost: 'D', vs: 'vs', duration: 'Duración' },
     darkModeTooltip: { light: 'Cambiar a modo claro', dark: 'Cambiar a modo oscuro' },
-    liveSub: { scores: 'En vivo', bracket: 'Cuadro', history: 'Historial' },
+    liveSub: { scores: 'En vivo', bracket: 'Cuadro', schedule: 'Calendario', history: 'Historial' },
     bracket: {
       emptyTitle: 'Sin cuadro', emptyText: 'El cuadro del torneo aún no ha sido configurado',
       group: 'Grupo', player: 'Jugador', wins: 'V', losses: 'D',
       setsHeader: 'Sets', gamesHeader: 'Juegos', matchesTitle: 'Partidos del grupo',
       knockoutTitle: 'Fase eliminatoria', semifinal: 'Semifinal',
-      finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar', forPlace: 'por el'
+      finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar', forPlace: 'por el',
+      legendTitle: 'Leyenda de la tabla', legendWins: 'partidos ganados', legendLosses: 'partidos perdidos',
+      legendSets: 'sets ganados frente a perdidos', legendGames: 'juegos ganados frente a perdidos'
     },
     tournamentHistory: {
       selectTournament: 'Seleccionar torneo',
@@ -414,13 +426,15 @@ const TRANSLATIONS = {
     playerSection: { title: 'Base de joueurs', searchPlaceholder: 'Rechercher un joueur...', all: 'Tous', men: 'Hommes', women: 'Femmes', matchesPlayed: 'matchs', winsLabel: 'V', lossesLabel: 'D', noResults: 'Aucun résultat', allCountries: 'Tous les pays', allCategories: 'Toutes les catégories', genderShortM: 'H', genderShortF: 'F' },
     playerProfile: { back: 'Retour à la liste', category: 'Catégorie', country: 'Pays', gender: 'Genre', male: 'Homme', female: 'Femme', career: 'Carrière', tournaments: 'Tournois', matches: 'Matchs', wins: 'Victoires', losses: 'Défaites', winRate: 'Taux de victoire', medals: 'Médailles', gold: 'Or', silver: 'Argent', bronze: 'Bronze', tournamentHistory: 'Historique des tournois', group: 'Groupe', place: 'place', of: 'sur', groupPhase: 'Phase de groupes', knockoutPhase: 'Phase éliminatoire', noTournaments: 'Aucun tournoi', matchesInTournament: 'Matchs du tournoi', won: 'V', lost: 'D', vs: 'vs', duration: 'Durée' },
     darkModeTooltip: { light: 'Passer au mode clair', dark: 'Passer au mode sombre' },
-    liveSub: { scores: 'En direct', bracket: 'Tableau', history: 'Historique' },
+    liveSub: { scores: 'En direct', bracket: 'Tableau', schedule: 'Programme', history: 'Historique' },
     bracket: {
       emptyTitle: 'Pas de tableau', emptyText: 'Le tableau du tournoi n\'a pas encore été configuré',
       group: 'Groupe', player: 'Joueur', wins: 'V', losses: 'D',
       setsHeader: 'Sets', gamesHeader: 'Jeux', matchesTitle: 'Matchs de groupe',
       knockoutTitle: 'Phase à élimination', semifinal: 'Demi-finale',
-      finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place', forPlace: 'pour la'
+      finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place', forPlace: 'pour la',
+      legendTitle: 'Légende du tableau', legendWins: 'matchs gagnés', legendLosses: 'matchs perdus',
+      legendSets: 'sets gagnés contre sets perdus', legendGames: 'jeux gagnés contre jeux perdus'
     },
     tournamentHistory: {
       selectTournament: 'Sélectionner le tournoi',
@@ -511,13 +525,19 @@ Alpine.data('tennisApp', () => ({
   bracketLoading: false,
   bracketNameMap: {},  // surname -> full_name lookup
   bracketCategory: null, // active bracket category tab
+  scheduleData: null,
+  scheduleLoading: false,
+  scheduleAnnouncement: '',
 
   // Tournament history state
   tournaments: [],
   selectedTournamentId: '',
   tournamentHistory: [],
   tournamentBracket: null,
+  tournamentSchedule: null,
   tournamentBracketCategory: null,
+  privateTournamentAccessKey: '',
+  simulationStage: '',
   historySubTab: 'bracket',
 
   // Live sub-tab state
@@ -558,7 +578,11 @@ Alpine.data('tennisApp', () => ({
 
   init() {
     // Restore language from URL param or localStorage
-    const urlLang = new URLSearchParams(location.search).get('lang');
+    const urlParams = new URLSearchParams(location.search);
+    const urlLang = urlParams.get('lang');
+    const urlTournamentId = urlParams.get('tournament_id') || urlParams.get('tid');
+    this.privateTournamentAccessKey = urlParams.get('access_key') || urlParams.get('key') || '';
+    this.simulationStage = urlParams.get('etap') || urlParams.get('stage') || '';
     if (urlLang && TRANSLATIONS[urlLang]) {
       this.lang = urlLang;
     } else {
@@ -573,6 +597,14 @@ Alpine.data('tennisApp', () => ({
       document.documentElement.setAttribute('data-theme', 'dark');
     }
     this._applyHash();
+    if (urlTournamentId && !location.hash) {
+      this.activeTab = 'tournaments';
+      this.selectedTournamentId = String(urlTournamentId);
+      this.selectedPlayerId = null;
+      this.historySubTab = 'bracket';
+      this.onTournamentSelected();
+      this._updateHash(true);
+    }
     window.addEventListener('hashchange', () => this._applyHash());
     window.addEventListener('popstate', () => this._applyHash());
     this.connectSSE();
@@ -611,6 +643,7 @@ Alpine.data('tennisApp', () => ({
         // #tournaments/3/bracket or #tournaments/3/matches
         this.selectedTournamentId = parts[1];
         if (parts[2] === 'matches') this.historySubTab = 'matches';
+        else if (parts[2] === 'schedule') this.historySubTab = 'schedule';
         else this.historySubTab = 'bracket';
         this.onTournamentSelected();
       } else {
@@ -639,6 +672,7 @@ Alpine.data('tennisApp', () => ({
       this.selectedTournamentId = '';
       if (parts[1]) this.liveSubTab = parts[1];
       else this.liveSubTab = 'scores';
+      if (this.liveSubTab === 'schedule' && !this.scheduleData) this.fetchSchedule();
     }
     this._navigating = false;
   },
@@ -755,7 +789,7 @@ Alpine.data('tennisApp', () => ({
 
   selectedTournamentName() {
     const t = this.tournaments.find(t => String(t.id) === this.selectedTournamentId);
-    return t ? t.name : '';
+    return t ? t.name : (this.tournamentBracket?.tournament?.name || '');
   },
 
   closeTournamentDetail() {
@@ -768,17 +802,19 @@ Alpine.data('tennisApp', () => ({
     if (!tid) {
       this.tournamentHistory = [];
       this.tournamentBracket = null;
+      this.tournamentSchedule = null;
       return;
     }
     await Promise.all([
       this.fetchTournamentHistory(tid),
-      this.fetchTournamentBracket(tid)
+      this.fetchTournamentBracket(tid),
+      this.fetchTournamentSchedule(tid)
     ]);
   },
 
   async fetchTournamentHistory(tid) {
     try {
-      const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/history`);
+      const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/history${this._tournamentAccessQuery()}`);
       if (!response.ok) { this.tournamentHistory = []; return; }
       const data = await response.json();
       this.tournamentHistory = Array.isArray(data) ? data : [];
@@ -787,7 +823,7 @@ Alpine.data('tennisApp', () => ({
 
   async fetchTournamentBracket(tid) {
     try {
-      const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/bracket`);
+      const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/bracket${this._tournamentAccessQuery()}`);
       if (!response.ok) { this.tournamentBracket = null; return; }
       this.tournamentBracket = await response.json();
       this._buildBracketNameMap(this.tournamentBracket);
@@ -796,12 +832,127 @@ Alpine.data('tennisApp', () => ({
     } catch { this.tournamentBracket = null; }
   },
 
+  async fetchTournamentSchedule(tid) {
+    try {
+      const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/schedule${this._tournamentAccessQuery()}`);
+      if (!response.ok) { this.tournamentSchedule = null; return; }
+      this.tournamentSchedule = await response.json();
+    } catch { this.tournamentSchedule = null; }
+  },
+
+  _tournamentAccessQuery() {
+    const params = new URLSearchParams();
+    if (this.privateTournamentAccessKey) params.set('access_key', this.privateTournamentAccessKey);
+    if (this.simulationStage) params.set('etap', this.simulationStage);
+    const query = params.toString();
+    return query ? `?${query}` : '';
+  },
+
   /* --- Pad sets to 3 columns for consistent table alignment --- */
   padSets(sets) {
     const arr = sets || [];
     const padded = arr.map(s => ({ ...s, played: true }));
     while (padded.length < 3) padded.push({ g1: 0, g2: 0, tb: null, stb: false, played: false });
     return padded;
+  },
+
+  tableLegendItems() {
+    const b = this.tr().bracket || {};
+    return [
+      { term: b.wins || 'W', description: b.legendWins || 'wygrane mecze' },
+      { term: b.losses || 'L', description: b.legendLosses || 'przegrane mecze' },
+      { term: b.setsHeader || 'Sety', description: b.legendSets || 'sety wygrane do przegranych' },
+      { term: b.gamesHeader || 'Gemy', description: b.legendGames || 'gemy wygrane do przegranych' },
+    ];
+  },
+
+  groupStandingsRows(group, siblingGroups = []) {
+    const rows = Array.isArray(group?.standings) ? [...group.standings] : [];
+    const maxRows = Math.max(0, ...siblingGroups.map((entry) => Array.isArray(entry?.standings) ? entry.standings.length : 0));
+    while (rows.length < maxRows) rows.push({ _placeholder: true, _key: `placeholder-${group?.name || 'group'}-${rows.length}` });
+    return rows;
+  },
+
+  knockoutPodiumEntries(knockout = []) {
+    const entries = [];
+    const finalPhase = knockout.find((entry) => this.isFinalPhase(entry.phase) && entry.slots?.[0]?.winner);
+    const thirdPlacePhase = knockout.find((entry) => this.knockoutPlaceNumber(entry.phase) === 3 && entry.slots?.[0]?.winner);
+    const finalSlot = finalPhase?.slots?.[0];
+    if (!finalSlot?.winner) return [];
+    const secondPlace = this.knockoutSlotLoser(finalSlot);
+    const thirdPlace = thirdPlacePhase?.slots?.[0]?.winner || '';
+    if (!secondPlace || !thirdPlace) return [];
+    entries.push({ medal: '🥇', cls: 'bt-podium-item--gold', player: finalSlot.winner, place: '1.' });
+    entries.push({ medal: '🥈', cls: 'bt-podium-item--silver', player: secondPlace, place: '2.' });
+    entries.push({ medal: '🥉', cls: 'bt-podium-item--bronze', player: thirdPlace, place: '3.' });
+    return entries;
+  },
+
+  isFinalPhase(phase) {
+    const text = String(phase || '');
+    return text.includes('Finał') && !text.includes('Półfinał');
+  },
+
+  isSemifinalPhase(phase) {
+    return String(phase || '').includes('Półfinał');
+  },
+
+  isPlacementPhase(phase) {
+    return /o\s+\d+\.\s*miejsce/i.test(String(phase || ''));
+  },
+
+  knockoutPhaseClass(phase) {
+    return {
+      'bt-round--final': this.isFinalPhase(phase),
+      'bt-round--semifinal': this.isSemifinalPhase(phase),
+      'bt-round--placement': this.isPlacementPhase(phase),
+    };
+  },
+
+  knockoutPlaceNumber(phase) {
+    const match = String(phase || '').match(/o\s+(\d+)\.\s*miejsce/i);
+    return match ? Number(match[1]) : null;
+  },
+
+  knockoutSlotLoser(slot) {
+    if (!slot || !slot.winner) return '';
+    if (slot.winner === slot.player1) return slot.player2 || '';
+    if (slot.winner === slot.player2) return slot.player1 || '';
+    return '';
+  },
+
+  formatKnockoutScore(slot) {
+    const sets = slot?.sets || [];
+    if (!sets.length) return 'wynik jeszcze nieustalony';
+    return sets.map((set, index) => {
+      const first = set.g1 ?? 0;
+      const second = set.g2 ?? 0;
+      if (set.stb) return `super tie-break ${first} do ${second}`;
+      const tieBreak = set.tb !== null && set.tb !== undefined ? `, tie-break ${set.tb}` : '';
+      return `set ${index + 1}: ${first} do ${second}${tieBreak}`;
+    }).join('; ');
+  },
+
+  knockoutMatchAria(slot, phase, index = 0) {
+    const p1 = this.resolveBracketName(slot?.player1) || 'zawodnik nieustalony';
+    const p2 = this.resolveBracketName(slot?.player2) || 'zawodnik nieustalony';
+    const phaseName = this.translateCategory(phase || 'Faza pucharowa');
+    const score = this.formatKnockoutScore(slot);
+    const winner = this.resolveBracketName(slot?.winner) || '';
+    const loser = this.resolveBracketName(this.knockoutSlotLoser(slot)) || '';
+    const parts = [`${phaseName}, mecz ${index + 1}: ${p1} kontra ${p2}. Wynik: ${score}.`];
+    if (winner) parts.push(`Zwycięzca: ${winner}.`);
+    if (this.isSemifinalPhase(phase)) {
+      parts.push(`Zwycięzca półfinału przechodzi do finału${winner ? ': ' + winner : ''}.`);
+      if (loser) parts.push(`Przegrany przechodzi do meczu o 3. miejsce: ${loser}.`);
+    } else if (this.isFinalPhase(phase)) {
+      if (winner) parts.push(`Pierwsze miejsce: ${winner}.`);
+      if (loser) parts.push(`Drugie miejsce: ${loser}.`);
+    } else {
+      const place = this.knockoutPlaceNumber(phase);
+      if (place && winner) parts.push(`${place}. miejsce: ${winner}.`);
+    }
+    return parts.join(' ');
   },
 
   async fetchBracket() {
@@ -822,6 +973,68 @@ Alpine.data('tennisApp', () => ({
       }
     } catch { this.bracketData = null; }
     finally { this.bracketLoading = false; }
+  },
+
+  async fetchSchedule() {
+    this.scheduleLoading = true;
+    try {
+      const response = await fetch('/api/tournament/schedule');
+      if (!response.ok) { this.scheduleData = null; return; }
+      this.scheduleData = await response.json();
+      const matchCount = this.scheduleDays(this.scheduleData).reduce((total, day) => total + day.categories.reduce((sum, category) => sum + category.matches.length, 0), 0);
+      this.scheduleAnnouncement = `${this.scheduleText().updated}: ${matchCount}`;
+    } catch {
+      this.scheduleData = null;
+    } finally {
+      this.scheduleLoading = false;
+    }
+  },
+
+  scheduleText() {
+    const fallback = TRANSLATIONS.pl.schedule || {};
+    return { ...fallback, ...(this.tr().schedule || {}) };
+  },
+
+  scheduleDays(data = this.scheduleData) {
+    return Array.isArray(data?.days) ? data.days : [];
+  },
+
+  formatScheduleDate(value) {
+    if (!value) return '';
+    const parsed = new Date(`${value}T12:00:00`);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return new Intl.DateTimeFormat(this.lang || 'pl', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(parsed);
+  },
+
+  formatScheduleTime(value) {
+    return value || this.scheduleText().timeTbd;
+  },
+
+  scheduleCourtLabel(match) {
+    return match?.court_label || match?.court_id || this.scheduleText().courtTbd;
+  },
+
+  scheduleStatusLabel(status) {
+    const labels = this.scheduleText();
+    const map = {
+      draft: labels.statusDraft,
+      planned: labels.statusPlanned,
+      in_progress: labels.statusInProgress,
+      completed: labels.statusCompleted,
+    };
+    return map[status] || status || labels.statusPlanned;
+  },
+
+  scheduleMatchAria(match) {
+    const labels = this.scheduleText();
+    return [
+      `${labels.time}: ${this.formatScheduleTime(match?.scheduled_time)}`,
+      `${labels.court}: ${this.scheduleCourtLabel(match)}`,
+      `${labels.phase}: ${match?.phase || ''}`,
+      `${labels.match}: ${match?.player1_name || ''} ${this.acc().versus || 'kontra'} ${match?.player2_name || ''}`,
+      `${labels.status}: ${this.scheduleStatusLabel(match?.status)}`,
+      match?.notes_public ? `${labels.notes}: ${match.notes_public}` : '',
+    ].filter(Boolean).join('. ');
   },
 
   switchToBracket(cat) {
@@ -1013,10 +1226,10 @@ Alpine.data('tennisApp', () => ({
     // Assign knockout slots to categories by phase prefix
     if (this.bracketData.knockout) {
       for (const [phase, slots] of Object.entries(this.bracketData.knockout)) {
-        // "B4M Finał" → "B4M"
-        const prefix = phase.split(' ')[0];
+        const sep = phase.indexOf(' — ');
+        const prefix = sep > -1 ? phase.substring(0, sep) : phase.split(' ')[0];
         for (const [, cat] of cats) {
-          if (cat.name === prefix || cat.name.startsWith(prefix)) {
+          if (cat.name === prefix || (sep === -1 && cat.name.startsWith(prefix))) {
             cat.knockout.push({ phase, slots });
             break;
           }
@@ -1047,9 +1260,10 @@ Alpine.data('tennisApp', () => ({
     }
     if (this.tournamentBracket.knockout) {
       for (const [phase, slots] of Object.entries(this.tournamentBracket.knockout)) {
-        const prefix = phase.split(' ')[0];
+        const sep = phase.indexOf(' — ');
+        const prefix = sep > -1 ? phase.substring(0, sep) : phase.split(' ')[0];
         for (const [, cat] of cats) {
-          if (cat.name === prefix || cat.name.startsWith(prefix)) {
+          if (cat.name === prefix || (sep === -1 && cat.name.startsWith(prefix))) {
             cat.knockout.push({ phase, slots });
             break;
           }
@@ -1089,6 +1303,7 @@ Alpine.data('tennisApp', () => ({
         // Refresh history when a match finishes
         if (prev?.match_status?.active && !data?.match_status?.active) {
           this.fetchHistory();
+          if (this.liveSubTab === 'schedule') this.fetchSchedule();
         }
       } catch { /* ignore parse errors */ }
     });

@@ -1,12 +1,17 @@
 """Admin API routes for tournaments and players management."""
+import json
+import re
+
 from flask import Blueprint, jsonify, request
 from pathlib import Path
 from typing import Dict, Any
 from uuid import uuid4
 
+import requests
+from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
-from ..db_models import db
+from ..db_models import Match, MatchHistory, Tournament, db, utc_now_iso
 from ..database import (
     fetch_tournaments,
     fetch_active_tournaments,
@@ -20,13 +25,23 @@ from ..database import (
     sync_tournament_courts,
     fetch_courts_for_tournament,
     fetch_courts,
+    fetch_bracket_groups,
+    fetch_tournament_schedule,
     fetch_players,
     fetch_active_tournament_players,
     fetch_players_for_active_tournaments,
     insert_player,
     update_player,
     delete_player,
-    bulk_insert_players
+    bulk_insert_players,
+    maybe_generate_knockout_from_completed_groups,
+    advance_knockout,
+    ensure_group_schedule_entries,
+    ensure_knockout_schedule_entries,
+    upsert_tournament_schedule_entries,
+    update_tournament_schedule_entry,
+    delete_tournament_schedule_entry,
+    link_schedule_to_match,
 )
 from ..config import logger, settings
 
@@ -62,6 +77,26 @@ def _normalize_bool(value: Any) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _normalize_tournament_flags(data: Dict[str, Any]) -> tuple[bool, bool, bool, str]:
+    is_simulation = _normalize_bool(data.get('is_simulation', False))
+    is_public = _normalize_bool(data.get('is_public', not is_simulation))
+    stats_enabled = _normalize_bool(data.get('stats_enabled', not is_simulation))
+    if is_simulation:
+        is_public = False
+        stats_enabled = False
+    access_key = (data.get('access_key') or '').strip()
+    return is_public, stats_enabled, is_simulation, access_key
+
+
+def _normalize_office_password_hash(raw_password: Any, *, existing_hash: str = '', is_simulation: bool = False, is_create: bool = False) -> str:
+    password = str(raw_password or '').strip()
+    if is_simulation and not password and (is_create or not existing_hash):
+        password = 'test'
+    if password:
+        return generate_password_hash(password)
+    return existing_hash or ''
+
+
 def _save_tournament_logo(uploaded_file, tournament_name: str) -> str | None:
     """Save uploaded tournament logo and return public path."""
     if not uploaded_file or not uploaded_file.filename:
@@ -86,6 +121,786 @@ def _require_tournament(tournament_id: int, active_only: bool = False):
     if active_only and int(tournament.get("active") or 0) != 1:
         return None, (jsonify({"error": "Tournament is inactive"}), 409)
     return tournament, None
+
+
+def _json_loads(value: str | None, fallback):
+    if not value:
+        return fallback
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _normalize_import_gender(value: Any) -> str:
+    raw = str(value or '').strip().lower()
+    if not raw:
+        return ''
+    mapping = {
+        'k': 'K',
+        'kobieta': 'K',
+        'kobiety': 'K',
+        'kobiet': 'K',
+        'dziewczyna': 'K',
+        'dziewczyny': 'K',
+        'f': 'K',
+        'female': 'K',
+        'woman': 'K',
+        'women': 'K',
+        'm': 'M',
+        'mezczyzna': 'M',
+        'mężczyzna': 'M',
+        'mezczyzn': 'M',
+        'mężczyzn': 'M',
+        'mezczyzni': 'M',
+        'mężczyźni': 'M',
+        'chlopiec': 'M',
+        'chłopiec': 'M',
+        'chlopcy': 'M',
+        'chłopcy': 'M',
+        'male': 'M',
+        'man': 'M',
+        'men': 'M',
+    }
+    return mapping.get(
+        raw,
+        'K' if raw.startswith('kob') else 'M' if raw.startswith('męż') or raw.startswith('mez') else '',
+    )
+
+
+def _clean_import_line_text(line: str) -> str:
+    text = str(line or '')
+    text = re.sub(r'\s+[–—-]\s+', '-', text)
+    text = text.replace(';', ' ').replace('|', ' ').replace(',', ' ')
+    return ' '.join(text.split())
+
+
+def _should_skip_import_line(text: str) -> bool:
+    raw = (text or '').strip().lower()
+    if not raw:
+        return True
+    info_prefixes = (
+        'dzien dobry',
+        'dzień dobry',
+        'podaję',
+        'podaje',
+        'ostateczny termin',
+    )
+    if raw.startswith(info_prefixes):
+        return True
+    info_keywords = (
+        'lista startowa',
+        'mistrzostw polski',
+        'losowanie',
+        'termin odwołań',
+        'termin odwolan',
+        'zwrotu kosztów',
+        'zwrotu kosztow',
+    )
+    if len(raw.split()) >= 4 and any(keyword in raw for keyword in info_keywords):
+        return True
+    if len(raw.split()) >= 4 and sum(char.isdigit() for char in raw) >= 4:
+        return True
+    return False
+
+
+def _parse_import_section_header(line: str) -> Dict[str, str] | None:
+    text = _clean_import_line_text(line)
+    if not text:
+        return None
+    header_match = re.fullmatch(r'(B\d{1,2})\s+(.+)', text, flags=re.IGNORECASE)
+    if not header_match:
+        return None
+    category = _normalize_import_category(header_match.group(1))
+    gender = _normalize_import_gender(header_match.group(2))
+    if not category or not gender:
+        return None
+    return {'category': category, 'gender': gender}
+
+
+def _normalize_import_country(value: Any) -> str:
+    raw = str(value or '').strip()
+    if len(raw) == 2 and raw.isalpha():
+        return raw.upper()
+    return ''
+
+
+def _normalize_import_category(value: Any) -> str:
+    raw = str(value or '').strip().upper()
+    if not raw:
+        return ''
+    cleaned = ''.join(ch for ch in raw if ch.isalnum())
+    if cleaned in {'K', 'M'}:
+        return ''
+    return cleaned
+
+
+def _dedupe_import_warnings(warnings: list[str]) -> list[str]:
+    unique: list[str] = []
+    for warning in warnings:
+        normalized = str(warning or '').strip()
+        if normalized and normalized not in unique:
+            unique.append(normalized)
+    return unique
+
+
+def _build_import_player_entry(
+    *,
+    line_number: int,
+    raw_line: str,
+    first_name: str = '',
+    last_name: str = '',
+    category: str = '',
+    gender: str = '',
+    country: str = '',
+    name: str = '',
+    extra_warnings: list[str] | None = None,
+    ai_assisted: bool = False,
+    ai_notes: str = '',
+) -> Dict[str, Any]:
+    first_name = str(first_name or '').strip()
+    last_name = str(last_name or '').strip()
+    category = _normalize_import_category(category)
+    gender = _normalize_import_gender(gender)
+    country = _normalize_import_country(country)
+    name = str(name or '').strip()
+
+    warnings: list[str] = []
+
+    if not first_name and not last_name and name:
+        name_parts = name.rsplit(' ', 1)
+        if len(name_parts) == 2:
+            first_name, last_name = name_parts[0].strip(), name_parts[1].strip()
+        else:
+            last_name = name.strip()
+
+    if not name:
+        name = f'{first_name} {last_name}'.strip()
+
+    if not name:
+        warnings.append('Nie rozpoznano imienia i nazwiska')
+    elif not first_name or not last_name:
+        warnings.append('Jednoczlonowe nazwisko - sprawdz podzial imienia i nazwiska')
+
+    if not category:
+        warnings.append('Nie rozpoznano kategorii startowej')
+    if not gender:
+        warnings.append('Nie rozpoznano plci')
+
+    warnings.extend(extra_warnings or [])
+    start_group = f'{category}{gender}' if category and gender else category or gender or 'NIEPRZYPISANI'
+
+    payload = {
+        'line_number': line_number,
+        'raw_line': _clean_import_line_text(raw_line),
+        'name': name,
+        'first_name': first_name,
+        'last_name': last_name,
+        'category': category,
+        'gender': gender,
+        'country': country,
+        'start_group': start_group,
+        'warnings': _dedupe_import_warnings(warnings),
+    }
+    if ai_assisted:
+        payload['ai_assisted'] = True
+    if ai_notes:
+        payload['ai_notes'] = ai_notes.strip()
+    return payload
+
+
+def _extract_gemini_json_text(payload: Dict[str, Any]) -> str:
+    for candidate in payload.get('candidates', []):
+        content = candidate.get('content') or {}
+        for part in content.get('parts', []):
+            text = str(part.get('text') or '').strip()
+            if text:
+                return text
+    return ''
+
+
+def _needs_import_ai_help(player: Dict[str, Any]) -> bool:
+    return bool(
+        player.get('warnings')
+        or not _normalize_import_country(player.get('country'))
+        or not str(player.get('first_name') or '').strip()
+        or not str(player.get('last_name') or '').strip()
+    )
+
+
+def _apply_import_ai_suggestions(players: list[Dict[str, Any]], suggestions: Dict[int, Dict[str, Any]]) -> list[Dict[str, Any]]:
+    enriched: list[Dict[str, Any]] = []
+    for player in players:
+        suggestion = suggestions.get(int(player.get('line_number') or 0)) or {}
+        first_name = player.get('first_name') or suggestion.get('first_name') or ''
+        last_name = player.get('last_name') or suggestion.get('last_name') or ''
+        category = player.get('category') or suggestion.get('category') or ''
+        gender = player.get('gender') or suggestion.get('gender') or ''
+        country = player.get('country') or suggestion.get('country') or ''
+
+        applied_fields = []
+        for field_name, original, updated in (
+            ('first_name', player.get('first_name'), first_name),
+            ('last_name', player.get('last_name'), last_name),
+            ('category', player.get('category'), category),
+            ('gender', player.get('gender'), gender),
+            ('country', player.get('country'), country),
+        ):
+            if str(original or '').strip() != str(updated or '').strip():
+                applied_fields.append(field_name)
+
+        enriched.append(_build_import_player_entry(
+            line_number=int(player.get('line_number') or 0),
+            raw_line=player.get('raw_line') or '',
+            first_name=first_name,
+            last_name=last_name,
+            category=category,
+            gender=gender,
+            country=country,
+            name=player.get('name') or '',
+            ai_assisted=bool(applied_fields),
+            ai_notes=str(suggestion.get('notes') or '').strip(),
+        ))
+    return enriched
+
+
+def _fetch_import_ai_suggestions(text: str, players: list[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+    api_key = str(settings.import_players_ai_api_key or '').strip()
+    model = str(settings.import_players_ai_model or 'gemini-2.5-flash').strip()
+    if not api_key or not players:
+        return {}
+
+    candidates = [
+        {
+            'line_number': int(player.get('line_number') or 0),
+            'raw_line': player.get('raw_line') or '',
+            'first_name': player.get('first_name') or '',
+            'last_name': player.get('last_name') or '',
+            'category': player.get('category') or '',
+            'gender': player.get('gender') or '',
+            'country': player.get('country') or '',
+            'warnings': player.get('warnings') or [],
+        }
+        for player in players
+        if _needs_import_ai_help(player)
+    ]
+    if not candidates:
+        return {}
+
+    prompt = (
+        'You are correcting a tournament player import for blind tennis. '
+        'Return only JSON matching this schema: '
+        '{"players":[{"line_number":1,"first_name":"","last_name":"","category":"B1","gender":"K","country":"PL","notes":""}]}. '
+        'Rules: keep existing explicit values unless they are empty, split names carefully, use only categories like B1/B2/B3/B4, '
+        'use gender only K or M, use country as uppercase ISO-3166 alpha-2 or empty string. '
+        'Infer country from names and the source text when reasonably likely. If the source appears to be a Polish start list and there is no contrary signal, prefer PL. '
+        'Do not invent extra players and only return suggestions for the supplied line numbers.\n\n'
+        f'Source text:\n{text}\n\nCandidates:\n{json.dumps(candidates, ensure_ascii=False)}'
+    )
+
+    request_payload = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {
+            'temperature': 0.1,
+            'responseMimeType': 'application/json',
+        },
+    }
+    endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}'
+
+    try:
+        response = requests.post(
+            endpoint,
+            json=request_payload,
+            timeout=max(5, int(settings.import_players_ai_timeout_seconds or 20)),
+        )
+        response.raise_for_status()
+        response_payload = response.json()
+        json_text = _extract_gemini_json_text(response_payload)
+        if not json_text:
+            return {}
+        parsed = json.loads(json_text)
+    except Exception as exc:
+        logger.warning('import_players_ai_failed', error=str(exc), candidates=len(candidates))
+        return {}
+
+    suggestions: Dict[int, Dict[str, Any]] = {}
+    for item in parsed.get('players', []):
+        line_number = _normalize_int(item.get('line_number'), 0)
+        if not line_number:
+            continue
+        suggestions[line_number] = {
+            'first_name': str(item.get('first_name') or '').strip(),
+            'last_name': str(item.get('last_name') or '').strip(),
+            'category': _normalize_import_category(item.get('category') or ''),
+            'gender': _normalize_import_gender(item.get('gender') or ''),
+            'country': _normalize_import_country(item.get('country') or ''),
+            'notes': str(item.get('notes') or '').strip(),
+        }
+    return suggestions
+
+
+def _parse_import_players_with_ai(text: str) -> list[Dict[str, Any]]:
+    players = _parse_import_players_text(text)
+    suggestions = _fetch_import_ai_suggestions(text, players)
+    if not suggestions:
+        return players
+    return _apply_import_ai_suggestions(players, suggestions)
+
+
+def _parse_import_player_line(
+    line: str,
+    line_number: int,
+    default_category: str = '',
+    default_gender: str = '',
+) -> Dict[str, Any] | None:
+    text = _clean_import_line_text(line)
+    if not text:
+        return None
+
+    tokens = text.split(' ')
+    country = ''
+    explicit_gender = ''
+    explicit_category = ''
+    warnings: list[str] = []
+    name_tokens: list[str] = []
+
+    category_gender_pattern = re.compile(r'^(B\d{1,2})([KMFW])$')
+    category_pattern = re.compile(r'^(B\d{1,2})$')
+
+    for token in tokens:
+        normalized_country = _normalize_import_country(token)
+        if normalized_country and not country:
+            country = normalized_country
+            continue
+
+        normalized_gender = _normalize_import_gender(token)
+        if normalized_gender and not explicit_gender:
+            explicit_gender = normalized_gender
+            continue
+
+        compact = ''.join(ch for ch in token.upper() if ch.isalnum())
+        category_gender_match = category_gender_pattern.match(compact)
+        if category_gender_match and not explicit_category:
+            explicit_category = category_gender_match.group(1)
+            if not explicit_gender:
+                explicit_gender = _normalize_import_gender(category_gender_match.group(2))
+            continue
+
+        category_match = category_pattern.match(compact)
+        if category_match and not explicit_category:
+            explicit_category = category_match.group(1)
+            continue
+
+        if compact in {'K', 'M', 'F', 'W'} and not explicit_gender:
+            explicit_gender = _normalize_import_gender(compact)
+            continue
+
+        name_tokens.append(token)
+
+    category = explicit_category or _normalize_import_category(default_category)
+    gender = explicit_gender or _normalize_import_gender(default_gender)
+
+    name = ' '.join(name_tokens).strip()
+    if not name:
+        name = text
+
+    name_parts = name.rsplit(' ', 1)
+    if len(name_parts) == 2:
+        first_name, last_name = name_parts[0].strip(), name_parts[1].strip()
+    else:
+        first_name, last_name = '', name.strip()
+
+    return _build_import_player_entry(
+        line_number=line_number,
+        raw_line=text,
+        first_name=first_name,
+        last_name=last_name,
+        category=category,
+        gender=gender,
+        country=country,
+        name=name,
+        extra_warnings=warnings,
+    )
+
+
+def _parse_import_players_text(text: str) -> list[Dict[str, Any]]:
+    parsed: list[Dict[str, Any]] = []
+    current_category = ''
+    current_gender = ''
+    for line_number, raw_line in enumerate(str(text or '').splitlines(), start=1):
+        cleaned = _clean_import_line_text(raw_line)
+        if _should_skip_import_line(cleaned):
+            continue
+
+        header = _parse_import_section_header(cleaned)
+        if header:
+            current_category = header['category']
+            current_gender = header['gender']
+            continue
+
+        entry = _parse_import_player_line(raw_line, line_number, current_category, current_gender)
+        if entry:
+            if not current_category and not current_gender and not entry.get('category') and not entry.get('gender'):
+                continue
+            parsed.append(entry)
+    return parsed
+
+
+def _summarize_import_players(players: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    grouped: Dict[str, Dict[str, Any]] = {}
+    for player in players:
+        bucket_key = player.get('start_group') or 'NIEPRZYPISANI'
+        bucket = grouped.setdefault(bucket_key, {
+            'start_group': bucket_key,
+            'category': player.get('category') or '',
+            'gender': player.get('gender') or '',
+            'count': 0,
+            'players': [],
+        })
+        bucket['count'] += 1
+        bucket['players'].append(player.get('name') or '')
+    summary = list(grouped.values())
+    summary.sort(key=lambda item: (item['start_group'] == 'NIEPRZYPISANI', item['start_group']))
+    return summary
+
+
+def _bracket_category_from_group(group_name: str | None) -> str:
+    label = (group_name or '').strip()
+    if ' — ' in label:
+        return label.split(' — ', 1)[0].strip()
+    return label
+
+
+def _score_text(sets_history: list[Dict[str, Any]]) -> str:
+    parts = []
+    for set_score in sets_history:
+        p1 = set_score.get('player1_games', 0)
+        p2 = set_score.get('player2_games', 0)
+        if set_score.get('is_super_tiebreak'):
+            parts.append(f"STB {p1}:{p2}")
+        else:
+            tb = set_score.get('tiebreak_loser_points')
+            parts.append(f"{p1}:{p2}" + (f"({tb})" if tb is not None else ''))
+    return '  '.join(parts)
+
+
+def _normalize_name_key(value: str | None) -> str:
+    return ' '.join((value or '').strip().lower().split())
+
+
+def _player_pair_key(player1_name: str | None, player2_name: str | None) -> tuple[str, str]:
+    return tuple(sorted((_normalize_name_key(player1_name), _normalize_name_key(player2_name))))
+
+
+def _group_players_index(groups: list[Dict[str, Any]]) -> tuple[Dict[int, str], Dict[str, set[int]]]:
+    group_lookup = {int(group['id']): group['name'] for group in groups}
+    player_groups: Dict[str, set[int]] = {}
+    for group in groups:
+        group_id = int(group['id'])
+        for player in group.get('players', []):
+            player_groups.setdefault(_normalize_name_key(player.get('name')), set()).add(group_id)
+    return group_lookup, player_groups
+
+
+def _infer_group_id_for_players(player1_name: str | None, player2_name: str | None, player_groups: Dict[str, set[int]]) -> int | None:
+    player1_group_ids = player_groups.get(_normalize_name_key(player1_name), set())
+    player2_group_ids = player_groups.get(_normalize_name_key(player2_name), set())
+    common = sorted(player1_group_ids & player2_group_ids)
+    return common[0] if common else None
+
+
+def _history_sets_payload(history: MatchHistory) -> list[Dict[str, Any]]:
+    sets_history = _json_loads(history.sets_history, None)
+    if isinstance(sets_history, list) and sets_history:
+        return sets_history
+
+    score_a = _json_loads(history.score_a, [])
+    score_b = _json_loads(history.score_b, [])
+    if not isinstance(score_a, list) or not isinstance(score_b, list):
+        return []
+    sets = []
+    for index, (player1_games, player2_games) in enumerate(zip(score_a, score_b), start=1):
+        sets.append({
+            "set_number": index,
+            "player1_games": int(player1_games),
+            "player2_games": int(player2_games),
+        })
+    return sets
+
+
+def _history_sets_score(sets_history: list[Dict[str, Any]]) -> tuple[int, int]:
+    player1_sets = 0
+    player2_sets = 0
+    for set_score in sets_history:
+        if int(set_score.get('player1_games', 0)) > int(set_score.get('player2_games', 0)):
+            player1_sets += 1
+        elif int(set_score.get('player2_games', 0)) > int(set_score.get('player1_games', 0)):
+            player2_sets += 1
+    return player1_sets, player2_sets
+
+
+def _office_history_payload(history: MatchHistory, group_lookup: Dict[int, str], player_groups: Dict[str, set[int]]) -> Dict[str, Any]:
+    sets_history = _history_sets_payload(history)
+    player1_sets, player2_sets = _history_sets_score(sets_history)
+    group_id = _infer_group_id_for_players(history.player_a, history.player_b, player_groups) if history.phase == 'Grupowa' else None
+    group_name = group_lookup.get(group_id)
+    winner_name = None
+    if player1_sets != player2_sets:
+        winner_name = history.player_a if player1_sets > player2_sets else history.player_b
+    return {
+        "id": history.id,
+        "source": "history",
+        "match_id": history.match_id,
+        "court_id": history.kort_id,
+        "player1_name": history.player_a,
+        "player2_name": history.player_b,
+        "winner_name": winner_name,
+        "status": 'finished',
+        "phase": history.phase,
+        "bracket_group_id": group_id,
+        "group_name": group_name,
+        "category": history.category or _bracket_category_from_group(group_name),
+        "player1_sets": player1_sets,
+        "player2_sets": player2_sets,
+        "sets_history": sets_history,
+        "score_text": _score_text(sets_history),
+        "created_at": history.ended_ts,
+        "updated_at": history.ended_ts,
+    }
+
+
+def _normalize_office_sets(data: Dict[str, Any], player1_name: str, player2_name: str) -> tuple[list[Dict[str, Any]], int, int]:
+    if _normalize_bool(data.get('walkover', False)):
+        winner_name = (data.get('winner_name') or '').strip()
+        if winner_name not in {player1_name, player2_name}:
+            raise ValueError('Winner is required for walkover')
+        p1_wins = winner_name == player1_name
+        return [
+            {"set_number": 1, "player1_games": 4 if p1_wins else 0, "player2_games": 0 if p1_wins else 4},
+            {"set_number": 2, "player1_games": 4 if p1_wins else 0, "player2_games": 0 if p1_wins else 4},
+        ], 2 if p1_wins else 0, 0 if p1_wins else 2
+
+    raw_sets = data.get('sets') or []
+    sets_history = []
+    player1_sets = 0
+    player2_sets = 0
+    for index, raw_set in enumerate(raw_sets, start=1):
+        try:
+            p1_games = int(raw_set.get('player1_games'))
+            p2_games = int(raw_set.get('player2_games'))
+        except (TypeError, ValueError):
+            continue
+        if p1_games < 0 or p2_games < 0:
+            raise ValueError('Set scores cannot be negative')
+        if p1_games == p2_games:
+            raise ValueError('Set cannot end in a draw')
+        if p1_games > p2_games:
+            player1_sets += 1
+        else:
+            player2_sets += 1
+        set_payload = {
+            "set_number": index,
+            "player1_games": p1_games,
+            "player2_games": p2_games,
+        }
+        if raw_set.get('tiebreak_loser_points') not in (None, ''):
+            set_payload['tiebreak_loser_points'] = int(raw_set.get('tiebreak_loser_points'))
+        if _normalize_bool(raw_set.get('is_super_tiebreak', False)):
+            set_payload['is_super_tiebreak'] = True
+        sets_history.append(set_payload)
+
+    if not sets_history:
+        raise ValueError('At least one finished set is required')
+    if player1_sets == player2_sets:
+        raise ValueError('Match winner is required')
+    return sets_history, player1_sets, player2_sets
+
+
+def _sync_office_match_history(match: Match, group_name: str | None = None) -> None:
+    sets_history = _json_loads(match.sets_history, [])
+    score_a = [set_score.get('player1_games', 0) for set_score in sets_history]
+    score_b = [set_score.get('player2_games', 0) for set_score in sets_history]
+    history = MatchHistory.query.filter_by(match_id=match.id).first()
+    if not history:
+        history = MatchHistory(match_id=match.id, duration_seconds=0)
+        db.session.add(history)
+
+    history.kort_id = match.court_id or f"office-{match.tournament_id}"
+    history.ended_ts = match.updated_at or utc_now_iso()
+    history.player_a = match.player1_name
+    history.player_b = match.player2_name
+    history.score_a = json.dumps(score_a)
+    history.score_b = json.dumps(score_b)
+    history.category = _bracket_category_from_group(group_name)
+    history.phase = match.phase or 'Grupowa'
+    history.sets_history = match.sets_history
+    history.tournament_id = match.tournament_id
+
+
+def _office_match_payload(match: Match, group_lookup: Dict[int, str], player_groups: Dict[str, set[int]] | None = None) -> Dict[str, Any]:
+    sets_history = _json_loads(match.sets_history, [])
+    winner = match.player1_name if int(match.player1_sets or 0) > int(match.player2_sets or 0) else match.player2_name
+    group_id = int(match.bracket_group_id) if match.bracket_group_id else None
+    if not group_id and player_groups and match.phase == 'Grupowa':
+        group_id = _infer_group_id_for_players(match.player1_name, match.player2_name, player_groups)
+    group_name = group_lookup.get(group_id)
+    return {
+        "id": match.id,
+        "source": "match",
+        "match_id": match.id,
+        "court_id": match.court_id,
+        "player1_name": match.player1_name,
+        "player2_name": match.player2_name,
+        "winner_name": winner if match.status == 'finished' else None,
+        "status": match.status,
+        "phase": match.phase,
+        "bracket_group_id": group_id,
+        "group_name": group_name,
+        "category": _bracket_category_from_group(group_name) or match.phase,
+        "player1_sets": match.player1_sets,
+        "player2_sets": match.player2_sets,
+        "sets_history": sets_history,
+        "score_text": _score_text(sets_history),
+        "created_at": match.created_at,
+        "updated_at": match.updated_at,
+    }
+
+
+def _build_office_dashboard(tournament_id: int) -> Dict[str, Any]:
+    tournament = fetch_tournament(tournament_id)
+    ensure_group_schedule_entries(tournament_id)
+    ensure_knockout_schedule_entries(tournament_id)
+    groups = fetch_bracket_groups(tournament_id)
+    group_lookup, player_groups = _group_players_index(groups)
+    progress_groups = []
+    expected_total = 0
+    finished_total = 0
+
+    group_finished_pairs: Dict[int, set[tuple[str, str]]] = {int(group['id']): set() for group in groups}
+
+    match_rows = Match.query.filter_by(tournament_id=tournament_id).all()
+    match_by_id = {int(match.id): match for match in match_rows}
+    history_rows = MatchHistory.query.filter_by(tournament_id=tournament_id).all()
+
+    for match in match_rows:
+        if match.status != 'finished' or match.phase != 'Grupowa':
+            continue
+        group_id = int(match.bracket_group_id) if match.bracket_group_id else _infer_group_id_for_players(match.player1_name, match.player2_name, player_groups)
+        if not group_id:
+            continue
+        group_finished_pairs.setdefault(group_id, set()).add(
+            _player_pair_key(match.player1_name, match.player2_name)
+        )
+
+    for history in history_rows:
+        if history.phase != 'Grupowa':
+            continue
+        group_id = None
+        linked_match = match_by_id.get(int(history.match_id)) if history.match_id else None
+        if linked_match and linked_match.bracket_group_id:
+            group_id = int(linked_match.bracket_group_id)
+        else:
+            group_id = _infer_group_id_for_players(history.player_a, history.player_b, player_groups)
+        if not group_id:
+            continue
+        group_finished_pairs.setdefault(group_id, set()).add(_player_pair_key(history.player_a, history.player_b))
+
+    for group in groups:
+        group_id = int(group['id'])
+        player_count = len(group.get('players') or [])
+        expected = player_count * (player_count - 1) // 2 if player_count >= 2 else 0
+        finished = len(group_finished_pairs.get(group_id, set()))
+        expected_total += expected
+        finished_total += finished
+        progress_groups.append({
+            **group,
+            "category": _bracket_category_from_group(group.get('name')),
+            "expected_matches": expected,
+            "finished_matches": finished,
+            "remaining_matches": max(expected - finished, 0),
+            "complete": expected > 0 and finished >= expected,
+        })
+
+    office_matches = [_office_match_payload(match, group_lookup, player_groups) for match in match_rows]
+    included_match_ids = {int(match['match_id']) for match in office_matches if match.get('match_id')}
+    for history in history_rows:
+        if history.match_id and int(history.match_id) in included_match_ids:
+            continue
+        office_matches.append(_office_history_payload(history, group_lookup, player_groups))
+    office_matches.sort(key=lambda match: str(match.get('updated_at') or match.get('created_at') or ''), reverse=True)
+    return {
+        "tournament": tournament,
+        "progress": {
+            "expected_matches": expected_total,
+            "finished_matches": finished_total,
+            "remaining_matches": max(expected_total - finished_total, 0),
+            "complete": expected_total > 0 and finished_total >= expected_total,
+            "groups": progress_groups,
+        },
+        "matches": office_matches[:300],
+        "schedule": fetch_tournament_schedule(tournament_id),
+        "courts": fetch_courts_for_tournament(tournament_id),
+    }
+
+
+@blueprint.route('/<int:tournament_id>/schedule', methods=['GET'])
+def get_tournament_schedule(tournament_id: int):
+    """Return tournament schedule entries for admin/office planning."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    ensure_group_schedule_entries(tournament_id)
+    ensure_knockout_schedule_entries(tournament_id)
+    return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
+
+
+@blueprint.route('/<int:tournament_id>/schedule', methods=['PUT', 'POST'])
+def save_tournament_schedule(tournament_id: int):
+    """Create or update one or more schedule entries."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    raw_entries = data.get('entries') if isinstance(data.get('entries'), list) else [data]
+    try:
+        schedule = upsert_tournament_schedule_entries(tournament_id, raw_entries)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return _json_no_cache({"schedule": schedule})
+
+
+@blueprint.route('/<int:tournament_id>/schedule/generate', methods=['POST'])
+def generate_tournament_schedule(tournament_id: int):
+    """Regenerate missing schedule entries from groups and concrete knockout slots."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    ensure_group_schedule_entries(tournament_id)
+    ensure_knockout_schedule_entries(tournament_id)
+    return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
+
+
+@blueprint.route('/<int:tournament_id>/schedule/<int:schedule_id>', methods=['PUT', 'PATCH'])
+def update_tournament_schedule(tournament_id: int, schedule_id: int):
+    """Patch one schedule entry."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    entry = update_tournament_schedule_entry(tournament_id, schedule_id, request.get_json(silent=True) or {})
+    if not entry:
+        return jsonify({"error": "Schedule entry not found"}), 404
+    return _json_no_cache({"schedule_entry": entry, "schedule": fetch_tournament_schedule(tournament_id)})
+
+
+@blueprint.route('/<int:tournament_id>/schedule/<int:schedule_id>', methods=['DELETE'])
+def delete_tournament_schedule(tournament_id: int, schedule_id: int):
+    """Delete one schedule entry."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    if not delete_tournament_schedule_entry(tournament_id, schedule_id):
+        return jsonify({"error": "Schedule entry not found"}), 404
+    return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
 
 
 @blueprint.route('', methods=['GET'])
@@ -117,6 +932,8 @@ def create_tournament():
     country = (data.get('country') or '').strip().upper()
     report_email = (data.get('report_email') or '').strip()
     court_count = _normalize_int(data.get('court_count'), 0)
+    is_public, stats_enabled, is_simulation, access_key = _normalize_tournament_flags(data)
+    office_password_hash = _normalize_office_password_hash(data.get('office_password'), is_simulation=is_simulation, is_create=True)
     logo_path = _save_tournament_logo(request.files.get('logo'), name)
     
     if not all([name, start_date, end_date]):
@@ -131,6 +948,11 @@ def create_tournament():
         country=country,
         logo_path=logo_path,
         report_email=report_email,
+        is_public=is_public,
+        stats_enabled=stats_enabled,
+        is_simulation=is_simulation,
+        access_key=access_key,
+        office_password_hash=office_password_hash,
     )
     
     if tournament_id:
@@ -156,6 +978,7 @@ def update_tournament_route(tournament_id: int):
         return jsonify({"error": "Tournament not found"}), 404
 
     data = _request_payload()
+    existing_row = db.session.get(Tournament, tournament_id)
     
     name = (data.get('name') or '').strip()
     start_date = (data.get('start_date') or '').strip()
@@ -165,6 +988,13 @@ def update_tournament_route(tournament_id: int):
     country = (data.get('country') or '').strip().upper()
     report_email = (data.get('report_email') or '').strip()
     requested_court_count = _normalize_int(data.get('court_count'), existing.get('court_count') or 0)
+    is_public, stats_enabled, is_simulation, access_key = _normalize_tournament_flags(data)
+    office_password_hash = _normalize_office_password_hash(
+        data.get('office_password'),
+        existing_hash=existing_row.office_password_hash if existing_row else '',
+        is_simulation=is_simulation,
+        is_create=False,
+    )
     logo_path = existing.get('logo_path')
     if request.files.get('logo'):
         logo_path = _save_tournament_logo(request.files.get('logo'), name)
@@ -207,6 +1037,11 @@ def update_tournament_route(tournament_id: int):
         country=country,
         logo_path=logo_path,
         report_email=report_email,
+        is_public=is_public,
+        stats_enabled=stats_enabled,
+        is_simulation=is_simulation,
+        access_key=access_key,
+        office_password_hash=office_password_hash,
     )
     
     if success:
@@ -260,6 +1095,195 @@ def update_tournament_active_state(tournament_id: int):
         refresh_courts_from_db(fetch_courts(active_only=True))
         return jsonify({"message": "Tournament state updated", "active": active})
     return jsonify({"error": "Failed to update tournament state"}), 500
+
+
+# ==================== TOURNAMENT OFFICE ====================
+
+@blueprint.route('/<int:tournament_id>/office', methods=['GET'])
+def get_tournament_office_dashboard(tournament_id: int):
+    """Dashboard data for tournament office: progress and match history only."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    return _json_no_cache(_build_office_dashboard(tournament_id))
+
+
+@blueprint.route('/<int:tournament_id>/office/group-matches', methods=['POST'])
+def create_office_group_match(tournament_id: int):
+    """Add a finished group-stage result, including walkovers, from the office dashboard."""
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
+
+    data = request.get_json(silent=True) or {}
+    group_id = _normalize_int(data.get('group_id'), 0)
+    player1_name = (data.get('player1_name') or '').strip()
+    player2_name = (data.get('player2_name') or '').strip()
+    if not group_id or not player1_name or not player2_name or player1_name == player2_name:
+        return jsonify({"error": "Group and two different players are required"}), 400
+
+    groups = fetch_bracket_groups(tournament_id)
+    group = next((item for item in groups if int(item['id']) == group_id), None)
+    if not group:
+        return jsonify({"error": "Group not found"}), 404
+    group_player_names = {player['name'] for player in group.get('players', [])}
+    if player1_name not in group_player_names or player2_name not in group_player_names:
+        return jsonify({"error": "Both players must belong to the selected group"}), 400
+
+    _, player_groups = _group_players_index(groups)
+    pair_key = _player_pair_key(player1_name, player2_name)
+
+    existing_match = Match.query.filter(
+        Match.tournament_id == tournament_id,
+        Match.bracket_group_id == group_id,
+        Match.phase == 'Grupowa',
+        Match.status == 'finished',
+        (
+            ((Match.player1_name == player1_name) & (Match.player2_name == player2_name))
+            | ((Match.player1_name == player2_name) & (Match.player2_name == player1_name))
+        ),
+    ).first()
+    if existing_match:
+        return jsonify({"error": "This group match already has a result. Edit the existing result instead."}), 409
+
+    for history in MatchHistory.query.filter_by(tournament_id=tournament_id, phase='Grupowa').all():
+        if _infer_group_id_for_players(history.player_a, history.player_b, player_groups) != group_id:
+            continue
+        if _player_pair_key(history.player_a, history.player_b) == pair_key:
+            return jsonify({"error": "This group match already has a result. Edit the existing result instead."}), 409
+
+    try:
+        sets_history, player1_sets, player2_sets = _normalize_office_sets(data, player1_name, player2_name)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    now = utc_now_iso()
+    match = Match(
+        court_id=(data.get('court_id') or f"office-{tournament_id}"),
+        player1_name=player1_name,
+        player2_name=player2_name,
+        status='finished',
+        tournament_id=tournament_id,
+        bracket_group_id=group_id,
+        phase='Grupowa',
+        player1_sets=player1_sets,
+        player2_sets=player2_sets,
+        sets_history=json.dumps(sets_history),
+        created_at=data.get('ended_at') or now,
+        updated_at=now,
+    )
+    db.session.add(match)
+    db.session.flush()
+    _sync_office_match_history(match, group.get('name'))
+    db.session.commit()
+    link_schedule_to_match(
+        tournament_id,
+        match.id,
+        player1_name=player1_name,
+        player2_name=player2_name,
+        phase='Grupowa',
+        bracket_group_id=group_id,
+    )
+
+    generation = maybe_generate_knockout_from_completed_groups(tournament_id)
+    return _json_no_cache({
+        "message": "Group match added",
+        "match": _office_match_payload(match, {group_id: group.get('name')}),
+        "knockout_generation": generation,
+        "dashboard": _build_office_dashboard(tournament_id),
+    }, 201)
+
+
+@blueprint.route('/<int:tournament_id>/office/matches/<int:match_id>', methods=['PUT'])
+def update_office_match_result(tournament_id: int, match_id: int):
+    """Edit an existing finished match result from the office dashboard."""
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
+
+    data = request.get_json(silent=True) or {}
+    source = (data.get('source') or 'match').strip().lower()
+    groups = fetch_bracket_groups(tournament_id)
+    group_lookup, player_groups = _group_players_index(groups)
+
+    if source == 'history':
+        history = MatchHistory.query.filter_by(id=match_id, tournament_id=tournament_id).first()
+        if not history:
+            return jsonify({"error": "Match not found"}), 404
+        try:
+            sets_history, player1_sets, player2_sets = _normalize_office_sets(data, history.player_a, history.player_b)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        history.score_a = json.dumps([set_score.get('player1_games', 0) for set_score in sets_history])
+        history.score_b = json.dumps([set_score.get('player2_games', 0) for set_score in sets_history])
+        history.sets_history = json.dumps(sets_history)
+        if history.match_id:
+            match = Match.query.filter_by(id=history.match_id, tournament_id=tournament_id).first()
+            if match:
+                match.status = 'finished'
+                match.player1_sets = player1_sets
+                match.player2_sets = player2_sets
+                match.sets_history = json.dumps(sets_history)
+                match.updated_at = utc_now_iso()
+                group_name = group_lookup.get(int(match.bracket_group_id)) if match.bracket_group_id else None
+                _sync_office_match_history(match, group_name)
+        db.session.commit()
+        if history.match_id:
+            link_schedule_to_match(
+                tournament_id,
+                history.match_id,
+                player1_name=history.player_a,
+                player2_name=history.player_b,
+                phase=history.phase,
+                bracket_group_id=_infer_group_id_for_players(history.player_a, history.player_b, player_groups) if history.phase == 'Grupowa' else None,
+            )
+        return _json_no_cache({
+            "message": "Match result updated",
+            "match": _office_history_payload(history, group_lookup, player_groups),
+            "knockout_generation": None,
+            "dashboard": _build_office_dashboard(tournament_id),
+        })
+
+    match = Match.query.filter_by(id=match_id, tournament_id=tournament_id).first()
+    if not match:
+        return jsonify({"error": "Match not found"}), 404
+
+    try:
+        sets_history, player1_sets, player2_sets = _normalize_office_sets(data, match.player1_name, match.player2_name)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    match.status = 'finished'
+    match.player1_sets = player1_sets
+    match.player2_sets = player2_sets
+    match.sets_history = json.dumps(sets_history)
+    match.updated_at = utc_now_iso()
+
+    group_name = group_lookup.get(int(match.bracket_group_id)) if match.bracket_group_id else None
+    _sync_office_match_history(match, group_name)
+    db.session.commit()
+    link_schedule_to_match(
+        tournament_id,
+        match.id,
+        player1_name=match.player1_name,
+        player2_name=match.player2_name,
+        phase=match.phase,
+        bracket_group_id=int(match.bracket_group_id) if match.bracket_group_id else None,
+    )
+
+    generation = None
+    if match.phase == 'Grupowa':
+        generation = maybe_generate_knockout_from_completed_groups(tournament_id)
+    elif match.phase == 'Pucharowa':
+        advance_knockout(match.id, tournament_id)
+
+    return _json_no_cache({
+        "message": "Match result updated",
+        "match": _office_match_payload(match, {match.bracket_group_id: group_name} if group_name else {}),
+        "knockout_generation": generation,
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
 
 
 # ==================== PLAYERS ====================
@@ -386,41 +1410,7 @@ def import_players(tournament_id: int):
     if not text:
         return jsonify({"error": "No text provided"}), 400
     
-    # Parse text
-    players_data = []
-    lines = text.strip().split('\n')
-    
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        
-        parts = line.rsplit(' ', 2)  # Split from right to get category and country
-        
-        if len(parts) == 3:
-            name, category, country = parts
-        elif len(parts) == 2:
-            name, category = parts
-            country = ""
-        else:
-            name = line
-            category = ""
-            country = ""
-        
-        name = name.strip()
-        name_parts = name.rsplit(' ', 1)
-        if len(name_parts) == 2:
-            first_name, last_name = name_parts[0], name_parts[1]
-        else:
-            first_name, last_name = '', name
-        
-        players_data.append({
-            "name": name,
-            "first_name": first_name,
-            "last_name": last_name,
-            "category": category.strip(),
-            "country": country.strip()
-        })
+    players_data = _parse_import_players_text(text)
     
     if not players_data:
         return jsonify({"error": "No valid players found"}), 400
@@ -430,6 +1420,30 @@ def import_players(tournament_id: int):
     return jsonify({
         "message": f"Imported {count} players",
         "count": count
+    })
+
+
+@blueprint.route('/<int:tournament_id>/players/parse-import', methods=['POST'])
+def parse_import_players(tournament_id: int):
+    """Parse free-form tournament player import text and return preview data."""
+    _, error = _require_tournament(tournament_id, active_only=True)
+    if error:
+        return error
+
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '')
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+
+    players_data = _parse_import_players_with_ai(text)
+    if not players_data:
+        return jsonify({"error": "No valid players found"}), 400
+
+    return _json_no_cache({
+        'players': players_data,
+        'summary': _summarize_import_players(players_data),
+        'needs_attention_count': sum(1 for player in players_data if player.get('warnings')),
+        'count': len(players_data),
     })
 
 
@@ -469,9 +1483,9 @@ def bulk_import_players(tournament_id: int):
             "name": name,
             "first_name": first_name,
             "last_name": last_name,
-            "category": p.get('category', '').strip(),
-            "country": p.get('country', '').strip(),
-            "gender": p.get('gender', '').strip(),
+            "category": _normalize_import_category(p.get('category', '')).strip(),
+            "country": _normalize_import_country(p.get('country', '')).strip(),
+            "gender": _normalize_import_gender(p.get('gender', '')).strip(),
         })
     
     if not players_data:
@@ -502,13 +1516,13 @@ tournaments_public_bp = Blueprint('tournaments_public', __name__, url_prefix='/a
 @tournaments_public_bp.route('/active', methods=['GET'])
 def get_active_tournaments_public():
     """Get active tournaments for the Android app selection screen."""
-    return _json_no_cache(fetch_active_tournaments())
+    return _json_no_cache(fetch_active_tournaments(public_only=True))
 
 
 @players_public_bp.route('/active', methods=['GET'])
 def get_active_players():
     """Get players from all active tournaments (for Umpire App)."""
-    players = fetch_players_for_active_tournaments()
+    players = fetch_players_for_active_tournaments(public_only=True)
     
     # Format for Umpire mobile app
     result = [
@@ -536,8 +1550,16 @@ def get_all_players():
     from wyniki.db_models import Player, Tournament, MatchHistory
     from sqlalchemy import func, or_
     
-    # Query all players
-    players = Player.query.join(Tournament).order_by(Player.last_name, Player.first_name).all()
+    # Query public, stats-enabled players only.
+    players = (
+        Player.query.join(Tournament)
+        .filter(
+            Tournament.is_public == 1,
+            Tournament.stats_enabled == 1,
+        )
+        .order_by(Player.last_name, Player.first_name)
+        .all()
+    )
     
     # Deduplicate by global_player_id — aggregate stats across tournaments
     seen_global = {}
@@ -547,15 +1569,19 @@ def get_all_players():
         full_name = p.full_name
         
         # Count matches where player appeared (as player_a or player_b)
-        match_count = MatchHistory.query.filter(
-            or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
-        ).count()
+        match_filter = or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
+        public_stats_matches = (
+            MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
+            .filter(
+                match_filter,
+                (MatchHistory.tournament_id.is_(None)) | ((Tournament.is_public == 1) & (Tournament.stats_enabled == 1)),
+            )
+        )
+        match_count = public_stats_matches.count()
         
         # Count wins
         wins = 0
-        matches = MatchHistory.query.filter(
-            or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
-        ).all()
+        matches = public_stats_matches.all()
         for m in matches:
             if not m.score_a or not m.score_b:
                 continue
@@ -622,12 +1648,23 @@ def get_player_profile(player_id: int):
         photo_url = gp.photo_url or ''
         birth_date = gp.birth_date or ''
         age_val = gp.age
-        siblings = Player.query.filter_by(global_player_id=gp.id).all()
+        siblings = Player.query.join(Tournament).filter(
+            Player.global_player_id == gp.id,
+            Tournament.is_public == 1,
+            Tournament.stats_enabled == 1,
+        ).all()
         if not siblings and last_name:
-            siblings = Player.query.filter_by(last_name=last_name, first_name=gp.first_name).all()
+            siblings = Player.query.join(Tournament).filter(
+                Player.last_name == last_name,
+                Player.first_name == gp.first_name,
+                Tournament.is_public == 1,
+                Tournament.stats_enabled == 1,
+            ).all()
     else:
         player = db.session.get(Player, player_id)
         if not player:
+            return jsonify({'error': 'Player not found'}), 404
+        if player.tournament and (int(player.tournament.is_public or 0) != 1 or int(player.tournament.stats_enabled or 0) != 1):
             return jsonify({'error': 'Player not found'}), 404
         full_name = player.full_name
         last_name = (player.last_name or '').strip()
@@ -646,26 +1683,49 @@ def get_player_profile(player_id: int):
                 photo_url = gp.photo_url or ''
                 birth_date = gp.birth_date or ''
                 age_val = gp.age
-            siblings = Player.query.filter_by(global_player_id=player.global_player_id).all()
+            siblings = Player.query.join(Tournament).filter(
+                Player.global_player_id == player.global_player_id,
+                Tournament.is_public == 1,
+                Tournament.stats_enabled == 1,
+            ).all()
         elif last_name:
-            siblings = Player.query.filter_by(last_name=last_name).filter(
-                Player.first_name == player.first_name
+            siblings = Player.query.join(Tournament).filter(
+                Player.last_name == last_name,
+                Player.first_name == player.first_name,
+                Tournament.is_public == 1,
+                Tournament.stats_enabled == 1,
             ).all()
         else:
             siblings = [player]
 
+    if not siblings:
+        return jsonify({'error': 'Player not found'}), 404
+
     tournament_ids = list({s.tournament_id for s in siblings if s.tournament_id})
 
     # Fetch all matches for this player across all tournaments
-    all_matches = MatchHistory.query.filter(
-        or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
-    ).order_by(MatchHistory.ended_ts.desc()).all()
+    public_stats_filter = (MatchHistory.tournament_id.is_(None)) | ((Tournament.is_public == 1) & (Tournament.stats_enabled == 1))
+    all_matches = (
+        MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
+        .filter(
+            or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name),
+            public_stats_filter,
+        )
+        .order_by(MatchHistory.ended_ts.desc())
+        .all()
+    )
 
     # Also try matching by last_name alone (match_history stores surnames)
     if last_name and last_name != full_name:
-        surname_matches = MatchHistory.query.filter(
-            or_(MatchHistory.player_a == last_name, MatchHistory.player_b == last_name)
-        ).order_by(MatchHistory.ended_ts.desc()).all()
+        surname_matches = (
+            MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
+            .filter(
+                or_(MatchHistory.player_a == last_name, MatchHistory.player_b == last_name),
+                public_stats_filter,
+            )
+            .order_by(MatchHistory.ended_ts.desc())
+            .all()
+        )
         existing_ids = {m.id for m in all_matches}
         for sm in surname_matches:
             if sm.id not in existing_ids:
