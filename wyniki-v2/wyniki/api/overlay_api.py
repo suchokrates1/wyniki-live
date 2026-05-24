@@ -5,6 +5,7 @@ from ..services.overlay_settings import (
     get_overlay_settings,
     update_overlay_settings,
     delete_overlay,
+    set_overlay_stats_visibility,
 )
 from ..config import logger
 
@@ -72,4 +73,33 @@ def delete_logo():
         return jsonify({"ok": True})
     except Exception as e:
         logger.error(f"Failed to delete logo: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/stats', methods=['POST'])
+@blueprint.route('/stats/<action>', methods=['GET', 'POST'])
+def toggle_stats(action=None):
+    """Toggle stats panels on overlays 1-4 for StreamDeck/webhook integrations."""
+    try:
+        data = request.get_json(silent=True) or {}
+        if action is not None:
+            normalized_action = str(action).strip().lower()
+            if normalized_action not in {"on", "off"}:
+                return jsonify({"error": "Action must be 'on' or 'off'"}), 400
+            active = normalized_action == "on"
+        elif "active" in data:
+            active = bool(data.get("active"))
+        else:
+            return jsonify({"error": "Missing 'active' field or /stats/on|off action"}), 400
+
+        mode = data.get("mode") or request.args.get("mode")
+        result = set_overlay_stats_visibility(active=active, mode=mode)
+        return jsonify({
+            "ok": True,
+            "active": result["active"],
+            "overlay_ids": result["overlay_ids"],
+            "mode": result["mode"],
+        })
+    except Exception as e:
+        logger.error(f"Failed to toggle overlay stats: {e}")
         return jsonify({"error": str(e)}), 500

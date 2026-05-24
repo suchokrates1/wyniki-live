@@ -22,6 +22,7 @@ _OVERLAY_LOCK = threading.Lock()
 
 # ---------- DB persistence key ----------
 _DB_KEY = "overlay_settings"
+_STATS_TOGGLE_OVERLAY_IDS = ("1", "2", "3", "4")
 
 
 # ---------- element builders ----------
@@ -63,6 +64,45 @@ def _stats_el(court_id: str, x: int, y: int, w: int = 360) -> Dict[str, Any]:
         "visible": False,
         "x": x, "y": y, "w": w,
     }
+
+
+def _normalize_stats_mode(mode: Any) -> str | None:
+    if mode is None:
+        return None
+    normalized = str(mode).strip().lower()
+    if normalized in {"simple", "advanced"}:
+        return normalized
+    return None
+
+
+def _resolve_stats_court_id(overlay_id: str, overlay: Dict[str, Any]) -> str:
+    elements = overlay.get("elements") or []
+    for element in elements:
+        if element.get("type") == "court" and str(element.get("court_id")) == str(overlay_id):
+            return str(element["court_id"])
+    for element in elements:
+        if element.get("type") == "court" and element.get("zone") != "top" and element.get("court_id") is not None:
+            return str(element["court_id"])
+    for element in elements:
+        if element.get("type") == "court" and element.get("court_id") is not None:
+            return str(element["court_id"])
+    return str(overlay_id)
+
+
+def _ensure_stats_elements(overlay_id: str, overlay: Dict[str, Any]) -> list[Dict[str, Any]]:
+    elements = overlay.setdefault("elements", [])
+    stats_elements = [
+        element
+        for element in elements
+        if isinstance(element, dict) and element.get("type") == "stats"
+    ]
+    if stats_elements:
+        return stats_elements
+
+    stats_element = _stats_el(_resolve_stats_court_id(overlay_id, overlay), 1510, 760)
+    stats_element["stats_mode"] = "simple"
+    elements.append(stats_element)
+    return [stats_element]
 
 
 # ---------- default overlays ----------
@@ -189,6 +229,54 @@ def update_overlay_settings(new: Dict[str, Any]) -> Dict[str, Any]:
         _save_to_db()
         logger.info("overlay_settings_updated")
         return copy.deepcopy(_overlay_settings)
+
+
+def set_overlay_stats_visibility(active: bool, mode: Any = None) -> Dict[str, Any]:
+    """Toggle stats elements on overlays 1-4, excluding the all-courts preset."""
+    global _overlay_settings
+    normalized_mode = _normalize_stats_mode(mode)
+
+    with _OVERLAY_LOCK:
+        _ensure_defaults()
+        overlays = _overlay_settings.setdefault("overlays", {})
+        touched_overlay_ids: list[str] = []
+
+        for overlay_id in _STATS_TOGGLE_OVERLAY_IDS:
+            overlay = overlays.get(overlay_id)
+            if not isinstance(overlay, dict):
+                continue
+
+            stats_elements = [
+                element
+                for element in overlay.setdefault("elements", [])
+                if isinstance(element, dict) and element.get("type") == "stats"
+            ]
+            if active and not stats_elements:
+                stats_elements = _ensure_stats_elements(overlay_id, overlay)
+
+            if not stats_elements:
+                continue
+
+            for element in stats_elements:
+                element["visible"] = bool(active)
+                if normalized_mode:
+                    element["stats_mode"] = normalized_mode
+
+            touched_overlay_ids.append(overlay_id)
+
+        _save_to_db()
+        logger.info(
+            "overlay_stats_visibility_updated",
+            active=bool(active),
+            overlay_ids=touched_overlay_ids,
+            mode=normalized_mode,
+        )
+        return {
+            "active": bool(active),
+            "overlay_ids": touched_overlay_ids,
+            "mode": normalized_mode,
+            "settings": copy.deepcopy(_overlay_settings),
+        }
 
 
 def delete_overlay(overlay_id: str) -> bool:
