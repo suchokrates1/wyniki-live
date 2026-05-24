@@ -484,7 +484,7 @@
                         <p class="empty-state__text" x-text="scheduleText().noResultsText"></p>
                     </div>
 
-                    <template x-for="day in scheduleVisibleDays()" :key="day.date">
+                    <template x-for="day in schedulePrimaryDays()" :key="day.date">
                         <section class="schedule-day" :aria-labelledby="'schedule-day-' + day.date">
                             <h4 class="schedule-day__title" :id="'schedule-day-' + day.date">
                                 <time :datetime="day.date" x-text="formatScheduleDate(day.date)"></time>
@@ -605,6 +605,136 @@
                             </div>
                         </section>
                     </template>
+
+                    <details x-show="!scheduleLoading && schedulePastDays().length > 0" class="schedule-archive">
+                        <summary class="schedule-archive__summary">
+                            <span x-text="scheduleArchivedDaysLabel(schedulePastDays().length)"></span>
+                        </summary>
+
+                        <div class="schedule-archive__content">
+                            <template x-for="day in schedulePastDays()" :key="'past-' + day.date">
+                                <section class="schedule-day schedule-day--archived" :aria-labelledby="'schedule-day-past-' + day.date">
+                                    <h4 class="schedule-day__title" :id="'schedule-day-past-' + day.date">
+                                        <time :datetime="day.date" x-text="formatScheduleDate(day.date)"></time>
+                                    </h4>
+                                    <div class="schedule-switcher">
+                                        <div class="schedule-switcher__tabs" role="tablist" :aria-label="scheduleTablistLabel()">
+                                            <template x-for="group in day.groups" :key="day.date + '-' + group.id">
+                                                <button
+                                                    type="button"
+                                                    role="tab"
+                                                    class="schedule-switcher__tab"
+                                                    :class="{ 'is-active': scheduleActiveGroupId(day) === group.id }"
+                                                    :id="scheduleDomId('schedule-tab', day, group)"
+                                                    :aria-selected="scheduleActiveGroupId(day) === group.id"
+                                                    :aria-controls="scheduleDomId('schedule-panel', day, group)"
+                                                    :tabindex="scheduleActiveGroupId(day) === group.id ? 0 : -1"
+                                                    @click="selectScheduleGroup(day, group.id)"
+                                                    @keydown.right.prevent="focusScheduleAdjacentGroup(day, group.id, 1)"
+                                                    @keydown.left.prevent="focusScheduleAdjacentGroup(day, group.id, -1)"
+                                                    @keydown.down.prevent="focusScheduleAdjacentGroup(day, group.id, 1)"
+                                                    @keydown.up.prevent="focusScheduleAdjacentGroup(day, group.id, -1)"
+                                                    @keydown.home.prevent="focusScheduleEdgeGroup(day, 'first')"
+                                                    @keydown.end.prevent="focusScheduleEdgeGroup(day, 'last')"
+                                                    x-text="group.title"
+                                                ></button>
+                                            </template>
+                                        </div>
+
+                                        <template x-for="group in day.groups" :key="'panel-past-' + day.date + '-' + group.id">
+                                            <template x-if="scheduleActiveGroupId(day) === group.id">
+                                                <section
+                                                    class="schedule-panel"
+                                                    role="tabpanel"
+                                                    :id="scheduleDomId('schedule-panel', day, group)"
+                                                    :aria-labelledby="scheduleDomId('schedule-tab', day, group)"
+                                                >
+                                                    <h5 class="schedule-panel__title" x-text="group.title"></h5>
+                                                    <div class="schedule-cards" role="list">
+                                                        <template x-for="match in group.matches" :key="'card-past-' + match.id">
+                                                            <article class="schedule-card" role="listitem" :aria-label="scheduleMatchAria(match)">
+                                                                <div class="schedule-card__topline">
+                                                                    <div class="schedule-card__time">
+                                                                        <template x-if="match.scheduled_time">
+                                                                            <time :datetime="match.day_date + 'T' + match.scheduled_time" x-text="match.scheduled_time"></time>
+                                                                        </template>
+                                                                        <template x-if="!match.scheduled_time">
+                                                                            <span x-text="scheduleText().timeTbd"></span>
+                                                                        </template>
+                                                                    </div>
+                                                                    <span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span>
+                                                                </div>
+
+                                                                <div class="schedule-card__match">
+                                                                    <span class="schedule-card__player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                    <span class="schedule-card__versus" aria-hidden="true">vs</span>
+                                                                    <span class="schedule-card__player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                </div>
+
+                                                                <div class="schedule-card__meta">
+                                                                    <span class="schedule-card__badge" x-show="scheduleSortMode !== 'court'" x-text="scheduleCourtLabel(match)"></span>
+                                                                    <span class="schedule-card__badge schedule-card__badge--accent" x-text="scheduleCategoryLabel(match)"></span>
+                                                                    <span class="schedule-card__badge" x-text="translatePhase(match.phase || '')"></span>
+                                                                </div>
+
+                                                                <template x-if="match.notes_public">
+                                                                    <details class="schedule-card__notes">
+                                                                        <summary x-text="scheduleText().notes"></summary>
+                                                                        <p x-text="match.notes_public"></p>
+                                                                    </details>
+                                                                </template>
+                                                            </article>
+                                                        </template>
+                                                    </div>
+                                                    <div class="schedule-table-wrap">
+                                                        <table class="schedule-table">
+                                                            <caption class="sr-only" x-text="formatScheduleDate(day.date) + ', ' + group.title"></caption>
+                                                            <thead>
+                                                                <tr>
+                                                                    <th scope="col" x-text="scheduleText().time"></th>
+                                                                    <th scope="col" x-text="scheduleText().court"></th>
+                                                                    <th scope="col" x-text="scheduleText().category"></th>
+                                                                    <th scope="col" x-text="scheduleText().phase"></th>
+                                                                    <th scope="col" x-text="scheduleText().match"></th>
+                                                                    <th scope="col" x-text="scheduleText().status"></th>
+                                                                    <th scope="col" x-text="scheduleText().notes"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <template x-for="match in group.matches" :key="'row-past-' + match.id">
+                                                                    <tr :aria-label="scheduleMatchAria(match)">
+                                                                        <td>
+                                                                            <template x-if="match.scheduled_time">
+                                                                                <time :datetime="match.day_date + 'T' + match.scheduled_time" x-text="match.scheduled_time"></time>
+                                                                            </template>
+                                                                            <template x-if="!match.scheduled_time">
+                                                                                <span x-text="scheduleText().timeTbd"></span>
+                                                                            </template>
+                                                                        </td>
+                                                                        <td x-text="scheduleCourtLabel(match)"></td>
+                                                                        <td x-text="scheduleCategoryLabel(match)"></td>
+                                                                        <td x-text="translatePhase(match.phase || '')"></td>
+                                                                        <td>
+                                                                            <span class="schedule-player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                            <span aria-hidden="true"> vs </span>
+                                                                            <span class="sr-only" x-text="acc().versus"></span>
+                                                                            <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                        </td>
+                                                                        <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span></td>
+                                                                        <td x-text="match.notes_public || ''"></td>
+                                                                    </tr>
+                                                                </template>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </section>
+                                            </template>
+                                        </template>
+                                    </div>
+                                </section>
+                            </template>
+                        </div>
+                    </details>
                 </section>
             </div><!-- end SUB: schedule -->
 
