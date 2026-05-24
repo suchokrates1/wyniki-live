@@ -1042,9 +1042,63 @@ Alpine.data('tennisApp', () => ({
   },
 
   scheduleVisibleDays(data = this.scheduleData) {
+    return this.schedulePreparedDays(data);
+  },
+
+  schedulePreparedDays(data = this.scheduleData) {
     return this.scheduleDays(data)
-      .map((day) => ({ ...day, groups: this.scheduleGroups(day) }))
+      .map((day) => ({
+        ...day,
+        groups: this.scheduleGroups(day),
+        bucket: this.scheduleDayBucket(day),
+      }))
+      .sort((left, right) => String(left?.date || '').localeCompare(String(right?.date || '')))
       .filter((day) => day.groups.length > 0);
+  },
+
+  scheduleCurrentDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  },
+
+  scheduleDayBucket(day) {
+    const date = String(day?.date || '');
+    const today = this.scheduleCurrentDate();
+    if (!date) return 'future';
+    if (date === today) return 'today';
+    return date < today ? 'past' : 'future';
+  },
+
+  schedulePrimaryDays(data = this.scheduleData) {
+    const order = { today: 0, future: 1, past: 2 };
+    return this.schedulePreparedDays(data)
+      .filter((day) => day.bucket !== 'past')
+      .sort((left, right) => {
+        const bucketOrder = (order[left.bucket] ?? 9) - (order[right.bucket] ?? 9);
+        if (bucketOrder !== 0) return bucketOrder;
+        return String(left?.date || '').localeCompare(String(right?.date || ''));
+      });
+  },
+
+  schedulePastDays(data = this.scheduleData) {
+    return this.schedulePreparedDays(data)
+      .filter((day) => day.bucket === 'past')
+      .sort((left, right) => String(right?.date || '').localeCompare(String(left?.date || '')));
+  },
+
+  scheduleArchivedDaysLabel(count) {
+    const custom = this.tr().schedule?.archivedDaysLabel;
+    if (typeof custom === 'string' && custom.includes('{count}')) {
+      return fmt(custom, { count });
+    }
+    if (typeof custom === 'string' && custom.trim()) {
+      return `${custom} (${count})`;
+    }
+    if ((this.lang || 'pl') === 'pl') return `Zakończone dni (${count})`;
+    return `Completed days (${count})`;
   },
 
   scheduleGroups(day) {
