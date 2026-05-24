@@ -629,6 +629,7 @@ Alpine.data('tennisApp', () => ({
       this.selectedPlayerId = null;
       this._profileIsGlobal = false;
       this.playerProfile = null;
+      this.fetchInitialData();
       return;
     }
     this._navigating = true;
@@ -644,6 +645,7 @@ Alpine.data('tennisApp', () => ({
     } else if (tab === 'tournaments' || tab === 'history' || tab === 'historia') {
       this.activeTab = 'tournaments';
       this.selectedPlayerId = null;
+      this.fetchTournaments();
       if (parts[1]) {
         // #tournaments/3/bracket or #tournaments/3/matches
         this.selectedTournamentId = parts[1];
@@ -675,11 +677,13 @@ Alpine.data('tennisApp', () => ({
           this.selectedPlayerId = null;
           this._profileIsGlobal = false;
           this.playerProfile = null;
+          this.fetchAllPlayers();
         }
       } else {
         this.selectedPlayerId = null;
         this._profileIsGlobal = false;
         this.playerProfile = null;
+        this.fetchAllPlayers();
       }
     } else if (tab === 'live') {
       this.activeTab = 'live';
@@ -687,10 +691,71 @@ Alpine.data('tennisApp', () => ({
       this.selectedTournamentId = '';
       if (parts[1]) this.liveSubTab = parts[1];
       else this.liveSubTab = 'scores';
-      if (this.liveSubTab === 'schedule' && !this.scheduleData) this.fetchSchedule();
+      if (this.liveSubTab === 'bracket') this.fetchBracket();
+      else if (this.liveSubTab === 'schedule') this.fetchSchedule();
+      else if (this.liveSubTab === 'history') this.fetchHistory();
+      else this.fetchInitialData();
     }
     this._navigating = false;
   },
+
+  async openMainTab(tab) {
+    if (tab === 'live') {
+      this.activeTab = 'live';
+      this.liveSubTab = 'scores';
+      this.selectedPlayerId = null;
+      this.selectedTournamentId = '';
+      await this.fetchInitialData();
+    } else if (tab === 'tournaments') {
+      this.activeTab = 'tournaments';
+      this.selectedTournamentId = '';
+      this.selectedPlayerId = null;
+      await this.fetchTournaments();
+    } else if (tab === 'players') {
+      this.activeTab = 'players';
+      this.selectedPlayerId = null;
+      this.playerProfile = null;
+      this._profileIsGlobal = false;
+      this.playerSearch = '';
+      this.playerGender = '';
+      this.playerCountry = '';
+      this.playerCategory = '';
+      await this.fetchAllPlayers();
+    }
+    this._updateHash();
+  },
+
+  async openLiveSubTab(subTab) {
+    this.liveSubTab = subTab;
+    if (subTab === 'bracket') await this.fetchBracket();
+    else if (subTab === 'schedule') await this.fetchSchedule();
+    else if (subTab === 'history') await this.fetchHistory();
+    else await this.fetchInitialData();
+    this._updateHash();
+  },
+
+  async selectLiveBracketCategory(categoryName) {
+    this.bracketCategory = categoryName;
+    await this.fetchBracket();
+    this._updateHash(true);
+  },
+
+  async openTournamentHistorySubTab(subTab) {
+    this.historySubTab = subTab;
+    await this.fetchTournaments();
+    if (this.selectedTournamentId) {
+      if (subTab === 'schedule') await this.fetchTournamentSchedule(this.selectedTournamentId);
+      else if (subTab === 'matches') await this.fetchTournamentHistory(this.selectedTournamentId);
+      else await this.fetchTournamentBracket(this.selectedTournamentId);
+    }
+    this._updateHash(true);
+  },
+
+  async selectTournamentBracketCategory(categoryName) {
+    this.tournamentBracketCategory = categoryName;
+    if (this.selectedTournamentId) await this.fetchTournamentBracket(this.selectedTournamentId);
+  },
+
   _updateHash(replace = false) {
     if (this._navigating) return;
     let hash = this.activeTab;
@@ -751,7 +816,7 @@ Alpine.data('tennisApp', () => ({
   /* --- Data fetching --- */
   async fetchInitialData() {
     try {
-      const response = await fetch('/api/snapshot');
+      const response = await fetch(this.withNoCacheQuery('/api/snapshot'), { cache: 'no-store' });
       if (!response.ok) throw new Error('Failed to fetch courts');
       const data = await response.json();
       const courts = data.courts || {};
@@ -771,7 +836,7 @@ Alpine.data('tennisApp', () => ({
 
   async fetchHistory() {
     try {
-      const response = await fetch('/api/history');
+      const response = await fetch(this.withNoCacheQuery('/api/history'), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       this.history = Array.isArray(data) ? data : [];
@@ -794,7 +859,7 @@ Alpine.data('tennisApp', () => ({
   /* --- Tournament history methods --- */
   async fetchTournaments() {
     try {
-      const response = await fetch('/api/tournament/list');
+      const response = await fetch(this.withNoCacheQuery('/api/tournament/list'), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       this.tournaments = Array.isArray(data) ? data : [];
@@ -835,7 +900,10 @@ Alpine.data('tennisApp', () => ({
 
   async fetchTournamentHistory(tid) {
     try {
-      const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/history${this._tournamentAccessQuery()}`);
+      const response = await fetch(this.withNoCacheQuery(
+        `/api/tournament/${encodeURIComponent(tid)}/history`,
+        this._tournamentAccessQuery()
+      ), { cache: 'no-store' });
       if (!response.ok) { this.tournamentHistory = []; return; }
       const data = await response.json();
       this.tournamentHistory = Array.isArray(data) ? data : [];
@@ -862,7 +930,10 @@ Alpine.data('tennisApp', () => ({
 
   async fetchTournamentSchedule(tid) {
     try {
-      const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/schedule${this._tournamentAccessQuery()}`);
+      const response = await fetch(this.withNoCacheQuery(
+        `/api/tournament/${encodeURIComponent(tid)}/schedule`,
+        this._tournamentAccessQuery()
+      ), { cache: 'no-store' });
       if (!response.ok) { this.tournamentSchedule = null; return; }
       this.tournamentSchedule = await response.json();
     } catch { this.tournamentSchedule = null; }
@@ -1013,7 +1084,7 @@ Alpine.data('tennisApp', () => ({
   async fetchSchedule() {
     this.scheduleLoading = true;
     try {
-      const response = await fetch('/api/tournament/schedule');
+      const response = await fetch(this.withNoCacheQuery('/api/tournament/schedule'), { cache: 'no-store' });
       if (!response.ok) { this.scheduleData = null; return; }
       this.scheduleData = await response.json();
       const matchCount = this.scheduleMatchCount(this.scheduleData);
@@ -1336,7 +1407,7 @@ Alpine.data('tennisApp', () => ({
   async fetchAllPlayers() {
     this.playersLoading = true;
     try {
-      const response = await fetch('/api/players/all');
+      const response = await fetch(this.withNoCacheQuery('/api/players/all'), { cache: 'no-store' });
       if (!response.ok) { this.allPlayers = []; this.filteredPlayers = []; return; }
       const data = await response.json();
       this.allPlayers = Array.isArray(data) ? data : [];
@@ -1432,7 +1503,10 @@ Alpine.data('tennisApp', () => ({
       for (const isGlobal of candidates.filter((value, index, arr) => arr.indexOf(value) === index)) {
         try {
           const qs = isGlobal ? '?global=1' : '';
-          const response = await fetch(`/api/players/${encodeURIComponent(id)}/profile${qs}`);
+          const response = await fetch(this.withNoCacheQuery(
+            `/api/players/${encodeURIComponent(id)}/profile`,
+            qs
+          ), { cache: 'no-store' });
           if (!response.ok) continue;
           const data = await response.json();
           if (requestId !== this._playerProfileRequestId || this.selectedPlayerId !== id) return;

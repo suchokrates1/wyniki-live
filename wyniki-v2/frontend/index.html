@@ -37,11 +37,11 @@
 
         <!-- Tab Navigation -->
         <nav class="tab-bar" role="tablist" :aria-label="tr().tabs?.navLabel || 'Główna nawigacja'">
-            <button class="tab-btn" role="tab" :aria-selected="activeTab === 'live'" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="activeTab = 'live'; liveSubTab = 'scores'; selectedPlayerId = null; selectedTournamentId = ''; _updateHash()"
+                <button class="tab-btn" role="tab" :aria-selected="activeTab === 'live'" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="openMainTab('live')"
                     x-text="tr().tabs?.live || 'Na żywo'"></button>
-            <button class="tab-btn" role="tab" :aria-selected="activeTab === 'tournaments'" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="activeTab = 'tournaments'; selectedTournamentId = ''; selectedPlayerId = null; _updateHash()"
+                <button class="tab-btn" role="tab" :aria-selected="activeTab === 'tournaments'" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="openMainTab('tournaments')"
                     x-text="tr().tabs?.tournaments || 'Historia'"></button>
-            <button class="tab-btn" role="tab" :aria-selected="activeTab === 'players'" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="activeTab = 'players'; selectedPlayerId = null; playerProfile = null; _profileIsGlobal = false; playerSearch = ''; playerGender = ''; playerCountry = ''; playerCategory = ''; fetchAllPlayers(); _updateHash()"
+                <button class="tab-btn" role="tab" :aria-selected="activeTab === 'players'" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="openMainTab('players')"
                     x-text="tr().tabs?.players || 'Zawodnicy'"></button>
         </nav>
         
@@ -67,19 +67,19 @@
 
             <!-- Live sub-navigation cards -->
             <div class="live-subnav" role="tablist" :aria-label="tr().liveSub?.navLabel || 'Podzakładki Na żywo'">
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'scores'" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="liveSubTab = 'scores'; _updateHash()">
+                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'scores'" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="openLiveSubTab('scores')">
                     <span class="live-subnav__icon" aria-hidden="true">🎾</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.scores || 'Wyniki live'"></span>
                 </button>
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'bracket'" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="liveSubTab = 'bracket'; fetchBracket(); _updateHash()">
+                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'bracket'" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="openLiveSubTab('bracket')">
                     <span class="live-subnav__icon" aria-hidden="true">🏆</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.bracket || 'Drabinka'"></span>
                 </button>
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'schedule'" :class="{ 'live-subnav__card--active': liveSubTab === 'schedule' }" @click="liveSubTab = 'schedule'; if(!scheduleData) fetchSchedule(); _updateHash()">
+                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'schedule'" :class="{ 'live-subnav__card--active': liveSubTab === 'schedule' }" @click="openLiveSubTab('schedule')">
                     <span class="live-subnav__icon" aria-hidden="true">📅</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.schedule || 'Terminarz'"></span>
                 </button>
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'history'" :class="{ 'live-subnav__card--active': liveSubTab === 'history' }" @click="liveSubTab = 'history'; _updateHash()">
+                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'history'" :class="{ 'live-subnav__card--active': liveSubTab === 'history' }" @click="openLiveSubTab('history')">
                     <span class="live-subnav__icon" aria-hidden="true">📋</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.history || 'Historia'"></span>
                 </button>
@@ -250,7 +250,7 @@
                                         :aria-selected="bracketCategory === cat.name"
                                         :aria-controls="'cat-panel-'+cat.name.replace(/\s+/g,'-')"
                                         :class="{ 'cat-tab--active': bracketCategory === cat.name }"
-                                        @click="bracketCategory = cat.name; fetchBracket(); _updateHash(true)"
+                                        @click="selectLiveBracketCategory(cat.name)"
                                         x-text="bracketCategoryLabel(cat.name)">
                                 </button>
                             </template>
@@ -867,13 +867,13 @@
                     <!-- Sub-tabs: Podium+Bracket / Match History -->
                     <div class="th-subtabs" role="tablist" :aria-label="tr().tournamentHistory?.navLabel || 'Szczegóły turnieju'">
                         <button class="th-subtab" role="tab" :aria-selected="historySubTab === 'bracket'" :class="{ 'th-subtab--active': historySubTab === 'bracket' }"
-                                @click="historySubTab = 'bracket'; _updateHash(true)"
+                            @click="openTournamentHistorySubTab('bracket')"
                                 x-text="tr().tournamentHistory?.bracket || 'Drabinka'"></button>
                         <button class="th-subtab" role="tab" :aria-selected="historySubTab === 'schedule'" :class="{ 'th-subtab--active': historySubTab === 'schedule' }"
-                            @click="historySubTab = 'schedule'; if(selectedTournamentId && !tournamentSchedule) fetchTournamentSchedule(selectedTournamentId); _updateHash(true)"
+                            @click="openTournamentHistorySubTab('schedule')"
                             x-text="tr().liveSub?.schedule || 'Terminarz'"></button>
                         <button class="th-subtab" role="tab" :aria-selected="historySubTab === 'matches'" :class="{ 'th-subtab--active': historySubTab === 'matches' }"
-                                @click="historySubTab = 'matches'; _updateHash(true)"
+                            @click="openTournamentHistorySubTab('matches')"
                                 x-text="tr().tournamentHistory?.matchHistory || 'Historia meczów'"></button>
                     </div>
 
@@ -896,7 +896,7 @@
                                                 :aria-selected="tournamentBracketCategory === cat.name"
                                                 :aria-controls="'tcat-panel-'+cat.name.replace(/\s+/g,'-')"
                                                 :class="{ 'cat-tab--active': tournamentBracketCategory === cat.name }"
-                                                @click="tournamentBracketCategory = cat.name; selectedTournamentId && fetchTournamentBracket(selectedTournamentId)"
+                                                @click="selectTournamentBracketCategory(cat.name)"
                                                 x-text="bracketCategoryLabel(cat.name)">
                                         </button>
                                     </template>
