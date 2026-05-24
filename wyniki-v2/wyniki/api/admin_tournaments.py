@@ -48,6 +48,10 @@ from ..config import logger, settings
 blueprint = Blueprint('admin_tournaments', __name__, url_prefix='/admin/api/tournaments')
 
 
+def _is_knockout_phase(phase: str | None) -> bool:
+    return bool(phase and phase != 'Grupowa')
+
+
 def _json_no_cache(payload, status: int = 200):
     response = jsonify(payload)
     response.status_code = status
@@ -1275,7 +1279,7 @@ def update_office_match_result(tournament_id: int, match_id: int):
     generation = None
     if match.phase == 'Grupowa':
         generation = maybe_generate_knockout_from_completed_groups(tournament_id)
-    elif match.phase == 'Pucharowa':
+    elif _is_knockout_phase(match.phase):
         advance_knockout(match.id, tournament_id)
 
     return _json_no_cache({

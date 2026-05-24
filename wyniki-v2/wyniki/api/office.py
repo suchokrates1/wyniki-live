@@ -436,7 +436,7 @@ def office_update_match(slot: int, match_id: int):
     generation = None
     if match.phase == 'Grupowa':
         generation = maybe_generate_knockout_from_completed_groups(tournament_id)
-    elif match.phase == 'Pucharowa':
+    elif _is_knockout_phase(match.phase):
         advance_knockout(match.id, tournament_id)
 
     return _json_no_cache({
