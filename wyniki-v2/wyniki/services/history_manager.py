@@ -10,6 +10,20 @@ from ..config import settings, logger
 from .court_manager import GLOBAL_HISTORY, STATE_LOCK
 
 
+def _score_arrays_from_sets_history(sets_history: Optional[List[Dict[str, Any]]]) -> tuple[List[int], List[int]]:
+    """Build persisted score arrays from authoritative sets_history data."""
+    if not sets_history:
+        return [], []
+
+    regular_sets = [set_info for set_info in sets_history if not set_info.get("is_super_tiebreak")]
+    if not regular_sets:
+        return [], []
+
+    score_a = [int(set_info.get("player1_games", 0)) for set_info in regular_sets]
+    score_b = [int(set_info.get("player2_games", 0)) for set_info in regular_sets]
+    return score_a, score_b
+
+
 def add_match_to_history(kort_id: str, state: Dict[str, Any]) -> None:
     """Add completed match to history."""
     entry = _build_history_entry(kort_id, state)
@@ -48,12 +62,19 @@ def _build_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             pass
 
+    score_a = [a_data.get(f"set{i}", 0) for i in [1, 2, 3]]
+    score_b = [b_data.get(f"set{i}", 0) for i in [1, 2, 3]]
+    derived_score_a, derived_score_b = _score_arrays_from_sets_history(sets_history_data)
+    if derived_score_a and derived_score_b:
+        score_a = derived_score_a
+        score_b = derived_score_b
+
     return {
         "kort_id": kort_id,
         "player_a": a_data.get("full_name") or a_data.get("surname", "-"),
         "player_b": b_data.get("full_name") or b_data.get("surname", "-"),
-        "score_a": [a_data.get(f"set{i}", 0) for i in [1, 2, 3]],
-        "score_b": [b_data.get(f"set{i}", 0) for i in [1, 2, 3]],
+        "score_a": score_a,
+        "score_b": score_b,
         "sets_history": sets_history_data,
         "duration": format_duration(match_time.get("seconds", 0)),
         "duration_seconds": match_time.get("seconds", 0),

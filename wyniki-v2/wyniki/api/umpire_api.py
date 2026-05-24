@@ -14,6 +14,51 @@ from ..config import logger
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
 
 
+def _sync_court_match_timer_from_match(court_state: dict, match: Match) -> None:
+    """Keep in-memory court timer consistent for live overlay rendering."""
+    match_time = court_state.setdefault("match_time", {})
+    match_time.setdefault("seconds", 0)
+    match_time.setdefault("running", False)
+    match_time.setdefault("offset_seconds", 0)
+    match_time.setdefault("started_ts", None)
+    match_time.setdefault("finished_ts", None)
+    match_time.setdefault("resume_ts", None)
+    match_time.setdefault("auto_resume", True)
+
+    if match.status == "in_progress":
+        started_ts = match_time.get("started_ts") or match.created_at or utc_now_iso()
+        match_time["started_ts"] = started_ts
+        match_time["finished_ts"] = None
+        match_time["running"] = True
+        if not match_time.get("resume_ts"):
+            match_time["resume_ts"] = started_ts
+        return
+
+    resume_ts = match_time.get("resume_ts")
+    if match_time.get("running") and resume_ts:
+        try:
+            from ..utils import parse_iso_datetime
+
+            resumed = parse_iso_datetime(resume_ts)
+            now = datetime.now(timezone.utc)
+            elapsed = max(0, int((now - resumed).total_seconds()))
+            total = match_time.get("offset_seconds", 0) + elapsed
+            match_time["offset_seconds"] = total
+            match_time["seconds"] = total
+        except Exception as exc:
+            logger.warning(f"Could not finalize live match timer for court state: {exc}")
+
+    match_time["running"] = False
+    match_time["resume_ts"] = None
+    if not match_time.get("finished_ts") and match.status == "finished":
+        match_time["finished_ts"] = match.updated_at or utc_now_iso()
+
+
+def _set_live_super_tiebreak_flag(court_state: dict, is_active: bool) -> None:
+    """Expose whether the current live frame is in a super tiebreak."""
+    court_state["super_tiebreak_active"] = bool(is_active)
+
+
 def _resolve_tournament_for_court(kort_id: str | None) -> Tournament | None:
     """Resolve tournament from court, with active tournament fallback."""
     normalized = normalize_kort_id(kort_id)
@@ -40,6 +85,43 @@ def _format_mobile_court_name(court: dict) -> str:
     if normalized.isdigit():
         return f"Kort {normalized}"
     return raw_name
+
+
+def _maybe_backfill_match_bracket_context(match: Match) -> dict:
+    """Fill missing group/phase data for mobile-created matches."""
+    if not match.tournament_id or not match.player1_name or not match.player2_name:
+        return {"group_id": match.bracket_group_id, "phase": match.phase, "warning": None}
+    if match.bracket_group_id and match.phase:
+        return {"group_id": match.bracket_group_id, "phase": match.phase, "warning": None}
+
+    from ..database import detect_bracket_context
+
+    bracket_ctx = detect_bracket_context(match.player1_name, match.player2_name, match.tournament_id)
+    if not match.bracket_group_id and bracket_ctx.get("group_id"):
+        match.bracket_group_id = bracket_ctx["group_id"]
+    if not match.phase and bracket_ctx.get("phase"):
+        match.phase = bracket_ctx["phase"]
+    return bracket_ctx
+
+
+def _link_match_schedule_if_possible(match: Match, *, status: str) -> None:
+    """Attach the real match row to a schedule slot when bracket context is known."""
+    if not match.id or not match.tournament_id or not match.player1_name or not match.player2_name:
+        return
+    if not match.bracket_group_id and not match.phase:
+        return
+
+    from ..database import link_schedule_to_match
+
+    link_schedule_to_match(
+        match.tournament_id,
+        match.id,
+        player1_name=match.player1_name,
+        player2_name=match.player2_name,
+        phase=match.phase,
+        bracket_group_id=match.bracket_group_id,
+        status=status,
+    )
 
 
 @blueprint.route('/courts', methods=['GET'])
@@ -141,19 +223,20 @@ def get_players():
             db.session.commit()
             
             logger.info(f"Player created: {player.id} - {player.full_name}")
+            country_code = (player.country or '').strip() or None
             
             return jsonify({
                 "ok": True,
                 "player": {
-                    "id": str(player.id),
+                    "id": player.id,
                     "first_name": player.first_name or '',
                     "last_name": player.last_name or '',
                     "surname": player.last_name or player.name,
                     "full_name": player.full_name,
                     "name": player.full_name,
-                    "country_code": player.country,
+                    "country_code": country_code,
                     "category": player.category,
-                    "flag_url": f"https://flagcdn.com/w80/{player.country.lower()}.png" if player.country else None
+                    "flag_url": f"https://flagcdn.com/w80/{country_code.lower()}.png" if country_code else None
                 }
             }), 201
             
@@ -181,15 +264,16 @@ def get_players():
             fn = player.first_name or ''
             ln = player.last_name or ''
             full = player.full_name
+            country_code = (player.country or '').strip() or None
             players_data.append({
-                "id": str(player.id),
+                "id": player.id,
                 "first_name": fn,
                 "last_name": ln,
                 "surname": ln or player.name,
                 "full_name": full,
                 "name": full,
-                "country_code": player.country,
-                "flag_url": f"https://flagcdn.com/w80/{player.country.lower()}.png" if player.country else None
+                "country_code": country_code,
+                "flag_url": f"https://flagcdn.com/w80/{country_code.lower()}.png" if country_code else None
             })
         
         return jsonify({
@@ -308,6 +392,8 @@ def create_match():
         
         db.session.add(match)
         db.session.commit()
+
+        _link_match_schedule_if_possible(match, status="in_progress")
         
         # Initialize court state with match data
         if kort_id:
@@ -324,6 +410,7 @@ def create_match():
                 else:
                     court_state["B"]["full_name"] = match.player2_name
                 court_state["match_status"]["active"] = True
+                _sync_court_match_timer_from_match(court_state, match)
                 court_state["updated"] = utc_now_iso()
                 # Store phase for history
                 if bracket_ctx.get("phase"):
@@ -378,9 +465,11 @@ def update_match(match_id: int):
         match.player2_points = score.get("player2_points", 0)
         match.sets_history = json.dumps(score.get("sets_history", []))
         match.status = data.get("status", "in_progress")
+        _maybe_backfill_match_bracket_context(match)
         match.updated_at = utc_now_iso()
         
         db.session.commit()
+        _link_match_schedule_if_possible(match, status="in_progress")
         
         # Update court state for live display
         kort_id = match.court_id
@@ -399,6 +488,11 @@ def update_match(match_id: int):
                 court_state["B"]["points"] = str(match.player2_points)
                 
                 court_state["match_status"]["active"] = (match.status == "in_progress")
+                _sync_court_match_timer_from_match(court_state, match)
+                _set_live_super_tiebreak_flag(
+                    court_state,
+                    bool(score.get("is_super_tiebreak", False)) and match.status == "in_progress",
+                )
                 
                 # Handle sets history
                 sets_history = json.loads(match.sets_history) if match.sets_history else []
@@ -457,9 +551,11 @@ def finish_match(match_id: int):
         if not match:
             return jsonify({"error": "Match not found"}), 404
         
+        _maybe_backfill_match_bracket_context(match)
         match.status = "finished"
         match.updated_at = utc_now_iso()
         db.session.commit()
+        _link_match_schedule_if_possible(match, status="completed")
         
         # Update court state
         kort_id = match.court_id
@@ -471,6 +567,7 @@ def finish_match(match_id: int):
             with STATE_LOCK:
                 court_state["match_status"]["active"] = False
                 court_state["match_status"]["last_completed"] = utc_now_iso()
+                _set_live_super_tiebreak_flag(court_state, False)
                 
                 # Overwrite set scores from authoritative sets_history
                 if sets_history:
@@ -582,6 +679,7 @@ def finish_match(match_id: int):
                 court_state["A"] = _empty_player_state()
                 court_state["B"] = _empty_player_state()
                 court_state["current_set"] = 1
+                _set_live_super_tiebreak_flag(court_state, False)
                 court_state["serve"] = None
                 court_state["tie"] = {"A": 0, "B": 0, "visible": None, "locked": False}
                 court_state["stats"] = {}
@@ -764,6 +862,7 @@ def log_match_event():
             match_finished = bool(score.get('match_finished', False))
             current_set = (sets_a + sets_b) if match_finished else (sets_a + sets_b + 1)
             court_state["current_set"] = current_set
+            _set_live_super_tiebreak_flag(court_state, is_super_tiebreak and not match_finished)
 
             # --- Sets history (from Android >= vC4) ---
             # Populate completed set scores from sets_history if available
@@ -882,11 +981,12 @@ def add_player():
         ).first()
         
         if existing:
+            country_code = (existing.country or '').strip() or None
             return jsonify({
-                "id": str(existing.id),
+                "id": existing.id,
                 "surname": existing.name,
                 "full_name": existing.name,
-                "country_code": existing.country,
+                "country_code": country_code,
                 "flag_url": None
             }), 200
         
@@ -902,12 +1002,13 @@ def add_player():
         db.session.commit()
         
         logger.info(f"New player added: {surname} (ID: {player.id})")
+        country_code = (player.country or '').strip() or None
         
         return jsonify({
-            "id": str(player.id),
+            "id": player.id,
             "surname": player.name,
             "full_name": player.name,
-            "country_code": player.country,
+            "country_code": country_code,
             "flag_url": None
         }), 201
         
