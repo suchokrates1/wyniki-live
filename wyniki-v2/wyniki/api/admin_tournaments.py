@@ -1813,14 +1813,17 @@ def get_player_profile(player_id: int):
         if bracket and 'knockout' in bracket:
             for phase, slots in bracket['knockout'].items():
                 for slot in slots:
-                    winner = slot.get('winner', '')
-                    p1 = slot.get('player1', '')
-                    p2 = slot.get('player2', '')
+                    winner = slot.get('winner') or ''
+                    p1 = slot.get('player1') or ''
+                    p2 = slot.get('player2') or ''
                     is_participant = (last_name and (last_name in p1 or last_name in p2)) or \
                                     (full_name and (full_name in p1 or full_name in p2))
                     if not is_participant:
                         continue
-                    is_winner = winner and (last_name in winner or full_name in winner)
+                    is_winner = bool(winner and (
+                        (last_name and last_name in winner) or
+                        (full_name and full_name in winner)
+                    ))
                     phase_lc = phase.lower()
                     if 'finał' in phase_lc or 'final' in phase_lc:
                         if is_winner:
