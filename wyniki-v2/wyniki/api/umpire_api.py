@@ -113,6 +113,61 @@ def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict
     )
 
 
+def _match_has_recorded_progress(match: Match | None) -> bool:
+    if not match:
+        return False
+    if any(int(getattr(match, field) or 0) for field in (
+        "player1_sets",
+        "player2_sets",
+        "player1_games",
+        "player2_games",
+        "player1_points",
+        "player2_points",
+    )):
+        return True
+    if not match.sets_history:
+        return False
+    try:
+        return bool(json.loads(match.sets_history))
+    except Exception:
+        return bool(match.sets_history)
+
+
+def _score_payload_has_live_data(score: dict | None) -> bool:
+    if not isinstance(score, dict) or not score:
+        return False
+    return any(key in score for key in (
+        "player1_sets",
+        "player2_sets",
+        "player1_games",
+        "player2_games",
+        "player1_points",
+        "player2_points",
+        "sets_history",
+        "is_tiebreak",
+        "is_super_tiebreak",
+    ))
+
+
+def _score_payload_is_zeroed(score: dict | None) -> bool:
+    if not _score_payload_has_live_data(score):
+        return True
+    score = score or {}
+    numeric_fields = (
+        "player1_sets",
+        "player2_sets",
+        "player1_games",
+        "player2_games",
+        "player1_points",
+        "player2_points",
+    )
+    if any(int(score.get(field, 0) or 0) for field in numeric_fields):
+        return False
+    if score.get("sets_history"):
+        return False
+    return not bool(score.get("is_tiebreak") or score.get("is_super_tiebreak"))
+
+
 def _resolve_tournament_for_court(kort_id: str | None) -> Tournament | None:
     """Resolve tournament from court, with active tournament fallback."""
     normalized = normalize_kort_id(kort_id)
@@ -812,6 +867,15 @@ def log_match_event():
         raw_pts_b = int(score.get('player2_points', 0))
         is_tiebreak = bool(score.get('is_tiebreak', False))
         is_super_tiebreak = bool(score.get('is_super_tiebreak', False))
+        active_match = (
+            Match.query
+            .filter_by(court_id=kort_id, status='in_progress')
+            .order_by(Match.updated_at.desc(), Match.id.desc())
+            .first()
+        )
+        restore_match_score = bool(
+            active_match and _match_has_recorded_progress(active_match) and _score_payload_is_zeroed(score)
+        )
 
         court_state = ensure_court_state(kort_id)
         with STATE_LOCK:
@@ -843,75 +907,83 @@ def log_match_event():
                 court_state["B"]["flag_code"] = player2["flag"]
                 court_state["B"]["flag_url"] = f"https://flagcdn.com/w80/{player2['flag'].lower()}.png"
 
-            # --- Points ---
-            if is_tiebreak or is_super_tiebreak:
-                # Tiebreak: raw integers displayed as-is
-                court_state["A"]["points"] = "0"
-                court_state["B"]["points"] = "0"
-                court_state["tie"]["A"] = raw_pts_a
-                court_state["tie"]["B"] = raw_pts_b
-                court_state["tie"]["visible"] = True
+            if restore_match_score:
+                _sync_live_score_to_court_state(court_state, active_match, score)
+                court_state["match_status"]["active"] = True
+                _sync_court_match_timer_from_match(court_state, active_match)
+                if active_match.phase:
+                    court_state["history_meta"] = court_state.get("history_meta", {})
+                    court_state["history_meta"]["phase"] = active_match.phase
             else:
-                # Normal game: convert raw → tennis display
-                disp_a, disp_b = _raw_points_to_tennis(raw_pts_a, raw_pts_b)
-                court_state["A"]["points"] = disp_a
-                court_state["B"]["points"] = disp_b
-                court_state["tie"]["A"] = 0
-                court_state["tie"]["B"] = 0
-                court_state["tie"]["visible"] = None
+                # --- Points ---
+                if is_tiebreak or is_super_tiebreak:
+                    # Tiebreak: raw integers displayed as-is
+                    court_state["A"]["points"] = "0"
+                    court_state["B"]["points"] = "0"
+                    court_state["tie"]["A"] = raw_pts_a
+                    court_state["tie"]["B"] = raw_pts_b
+                    court_state["tie"]["visible"] = True
+                else:
+                    # Normal game: convert raw → tennis display
+                    disp_a, disp_b = _raw_points_to_tennis(raw_pts_a, raw_pts_b)
+                    court_state["A"]["points"] = disp_a
+                    court_state["B"]["points"] = disp_b
+                    court_state["tie"]["A"] = 0
+                    court_state["tie"]["B"] = 0
+                    court_state["tie"]["visible"] = None
 
-            # --- Games ---
-            games_a = int(score.get('player1_games', 0))
-            games_b = int(score.get('player2_games', 0))
-            court_state["A"]["current_games"] = games_a
-            court_state["B"]["current_games"] = games_b
+                # --- Games ---
+                games_a = int(score.get('player1_games', 0))
+                games_b = int(score.get('player2_games', 0))
+                court_state["A"]["current_games"] = games_a
+                court_state["B"]["current_games"] = games_b
 
-            # --- Sets ---
-            sets_a = int(score.get('player1_sets', 0))
-            sets_b = int(score.get('player2_sets', 0))
-            match_finished = bool(score.get('match_finished', False))
-            current_set = (sets_a + sets_b) if match_finished else (sets_a + sets_b + 1)
-            court_state["current_set"] = current_set
-            _set_live_super_tiebreak_flag(court_state, is_super_tiebreak and not match_finished)
+                # --- Sets ---
+                sets_a = int(score.get('player1_sets', 0))
+                sets_b = int(score.get('player2_sets', 0))
+                match_finished = bool(score.get('match_finished', False))
+                current_set = (sets_a + sets_b) if match_finished else (sets_a + sets_b + 1)
+                court_state["current_set"] = current_set
+                _set_live_super_tiebreak_flag(court_state, is_super_tiebreak and not match_finished)
 
-            # --- Sets history (from Android >= vC4) ---
-            # Populate completed set scores from sets_history if available
-            sets_history = score.get('sets_history', [])
-            if sets_history:
-                for sh in sets_history:
-                    sn = int(sh.get('set_number', 0))
-                    is_stb = bool(sh.get('is_super_tiebreak', False))
-                    if 1 <= sn <= 3 and not is_stb:
-                        court_state["A"][f"set{sn}"] = int(sh.get('player1_games', 0))
-                        court_state["B"][f"set{sn}"] = int(sh.get('player2_games', 0))
+                # --- Sets history (from Android >= vC4) ---
+                # Populate completed set scores from sets_history if available
+                sets_history = score.get('sets_history', [])
+                if sets_history:
+                    for sh in sets_history:
+                        sn = int(sh.get('set_number', 0))
+                        is_stb = bool(sh.get('is_super_tiebreak', False))
+                        if 1 <= sn <= 3 and not is_stb:
+                            court_state["A"][f"set{sn}"] = int(sh.get('player1_games', 0))
+                            court_state["B"][f"set{sn}"] = int(sh.get('player2_games', 0))
 
-            # Build sets_detail for frontend (TB info)
-            if sets_history:
-                sets_detail = []
-                for sh in sets_history:
-                    sh_p1g = int(sh.get('player1_games', 0))
-                    sh_p2g = int(sh.get('player2_games', 0))
-                    sh_tb = sh.get('tiebreak_loser_points')
-                    sh_stb = bool(sh.get('is_super_tiebreak', False))
-                    sets_detail.append({"p1": sh_p1g, "p2": sh_p2g, "tb": sh_tb, "stb": sh_stb})
-                court_state["sets_detail"] = sets_detail
+                # Build sets_detail for frontend (TB info)
+                if sets_history:
+                    sets_detail = []
+                    for sh in sets_history:
+                        sh_p1g = int(sh.get('player1_games', 0))
+                        sh_p2g = int(sh.get('player2_games', 0))
+                        sh_tb = sh.get('tiebreak_loser_points')
+                        sh_stb = bool(sh.get('is_super_tiebreak', False))
+                        sets_detail.append({"p1": sh_p1g, "p2": sh_p2g, "tb": sh_tb, "stb": sh_stb})
+                    court_state["sets_detail"] = sets_detail
 
-            # Write current games to set{N} for the active set
-            # Only write if this set is not already finalized in sets_history
-            completed_set_nums = {int(sh.get('set_number', 0)) for sh in sets_history} if sets_history else set()
-            if current_set not in completed_set_nums:
-                court_state["A"][f"set{current_set}"] = games_a
-                court_state["B"][f"set{current_set}"] = games_b
+                # Write current games to set{N} for the active set
+                # Only write if this set is not already finalized in sets_history
+                completed_set_nums = {int(sh.get('set_number', 0)) for sh in sets_history} if sets_history else set()
+                if current_set not in completed_set_nums:
+                    court_state["A"][f"set{current_set}"] = games_a
+                    court_state["B"][f"set{current_set}"] = games_b
 
-            # Store stats_mode for later use
-            stats_mode = score.get('stats_mode')
-            if stats_mode:
-                court_state["stats_mode"] = stats_mode
+                # Store stats_mode for later use
+                stats_mode = score.get('stats_mode')
+                if stats_mode:
+                    court_state["stats_mode"] = stats_mode
 
-            # --- Match status ---
-            court_state["match_status"]["active"] = not match_finished
-            if match_finished:
-                court_state["match_status"]["last_completed"] = utc_now_iso()
+                # --- Match status ---
+                court_state["match_status"]["active"] = not match_finished
+                if match_finished:
+                    court_state["match_status"]["last_completed"] = utc_now_iso()
 
             # --- Live stats (for overlay) ---
             live_stats = data.get('stats')

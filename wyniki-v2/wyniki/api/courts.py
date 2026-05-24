@@ -23,8 +23,10 @@ def snapshot():
     """Get current state of all courts."""
     try:
         from ..database import fetch_courts, get_active_tournament_name
+        from ..init_state import rehydrate_live_courts
         from ..services.court_manager import refresh_courts_from_db
         refresh_courts_from_db(fetch_courts(active_only=True))
+        rehydrate_live_courts()
         configured_courts = [
             court
             for court in fetch_courts(active_only=True, public_only=True)

@@ -3,8 +3,95 @@ from __future__ import annotations
 
 from .config import logger, settings
 from .database import init_db, fetch_courts, fetch_tournaments, fetch_match_history, get_active_tournament_id
-from .services.court_manager import refresh_courts_from_db
+from .db_models import Match, Player
+from .services.court_manager import STATE_LOCK, ensure_court_state, refresh_courts_from_db
 from .services.history_manager import load_history_from_db
+
+
+def _resolve_live_player_name(match: Match, raw_name: str | None) -> str:
+    candidate = (raw_name or '').strip()
+    if not candidate:
+        return ''
+    if not match.tournament_id:
+        return candidate
+
+    player = Player.query.filter_by(tournament_id=match.tournament_id, name=candidate).first()
+    if not player:
+        player = Player.query.filter_by(tournament_id=match.tournament_id, last_name=candidate).first()
+    return player.full_name if player and player.full_name else candidate
+
+
+def rehydrate_live_courts() -> int:
+    """Rebuild in-memory court state from active matches.
+
+    This keeps overlays/public live views correct after process reloads or cache loss.
+    """
+    from .api.umpire_api import _sync_court_match_timer_from_match, _sync_live_score_to_court_state
+
+    active_matches = (
+        Match.query
+        .filter_by(status='in_progress')
+        .order_by(Match.updated_at.desc(), Match.id.desc())
+        .all()
+    )
+
+    restored = 0
+    restored_courts: set[str] = set()
+    for match in active_matches:
+        kort_id = (match.court_id or '').strip()
+        if not kort_id or kort_id in restored_courts:
+            continue
+
+        court_state = ensure_court_state(kort_id)
+        with STATE_LOCK:
+            court_state["A"]["surname"] = match.player1_name
+            court_state["B"]["surname"] = match.player2_name
+            court_state["A"]["full_name"] = _resolve_live_player_name(match, match.player1_name)
+            court_state["B"]["full_name"] = _resolve_live_player_name(match, match.player2_name)
+            court_state["match_status"]["active"] = True
+            _sync_live_score_to_court_state(court_state, match)
+            _sync_court_match_timer_from_match(court_state, match)
+            if match.phase:
+                court_state["history_meta"] = court_state.get("history_meta", {})
+                court_state["history_meta"]["phase"] = match.phase
+            if match.statistics:
+                court_state["stats_mode"] = match.statistics.stats_mode
+                court_state["stats"] = {
+                    "player_a": {
+                        "aces": match.statistics.player1_aces,
+                        "double_faults": match.statistics.player1_double_faults,
+                        "winners": match.statistics.player1_winners,
+                        "forced_errors": match.statistics.player1_forced_errors,
+                        "unforced_errors": match.statistics.player1_unforced_errors,
+                        "first_serves_in": match.statistics.player1_first_serves_in,
+                        "first_serves_total": match.statistics.player1_first_serves,
+                        "first_serve_pct": match.statistics.player1_first_serve_percentage,
+                        "second_serves_in": None,
+                        "second_serves_total": None,
+                        "second_serve_pct": None,
+                    },
+                    "player_b": {
+                        "aces": match.statistics.player2_aces,
+                        "double_faults": match.statistics.player2_double_faults,
+                        "winners": match.statistics.player2_winners,
+                        "forced_errors": match.statistics.player2_forced_errors,
+                        "unforced_errors": match.statistics.player2_unforced_errors,
+                        "first_serves_in": match.statistics.player2_first_serves_in,
+                        "first_serves_total": match.statistics.player2_first_serves,
+                        "first_serve_pct": match.statistics.player2_first_serve_percentage,
+                        "second_serves_in": None,
+                        "second_serves_total": None,
+                        "second_serve_pct": None,
+                    },
+                }
+            court_state["updated"] = match.updated_at
+
+        restored += 1
+        restored_courts.add(kort_id)
+
+    if restored:
+        logger.info("rehydrated_live_courts", restored=restored)
+    return restored
 
 
 def initialize_state() -> None:
@@ -43,6 +130,7 @@ def initialize_state() -> None:
                 db_courts_list = fetch_courts(active_only=True)
         
         refresh_courts_from_db(db_courts_list, seed_if_empty=False)
+        rehydrate_live_courts()
         logger.info(f"Loaded {len(db_courts)} courts from database")
     except Exception as e:
         logger.error(f"Failed to load courts: {e}")

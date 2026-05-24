@@ -16,6 +16,9 @@ def event_stream():
         listener = event_broker.listen()
         try:
             # Send initial snapshot
+            from ..init_state import rehydrate_live_courts
+
+            rehydrate_live_courts()
             snapshot = serialize_public_snapshot()
             for kort_id, state in snapshot.items():
                 payload = json.dumps({"court_id": kort_id, **state})
