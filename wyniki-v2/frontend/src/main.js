@@ -65,7 +65,7 @@ const TRANSLATIONS = {
     playerProfile: { back: 'Powrót do listy', category: 'Kategoria', country: 'Kraj', gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', career: 'Kariera', tournaments: 'Turnieje', matches: 'Mecze', wins: 'Wygrane', losses: 'Przegrane', winRate: 'Skuteczność', medals: 'Medale', gold: 'Złoto', silver: 'Srebro', bronze: 'Brąz', tournamentHistory: 'Historia turniejów', group: 'Grupa', place: 'miejsce', of: 'z', groupPhase: 'Faza grupowa', knockoutPhase: 'Faza pucharowa', noTournaments: 'Brak turniejów', matchesInTournament: 'Mecze w turnieju', won: 'W', lost: 'P', vs: 'vs', duration: 'Czas' },
     darkModeTooltip: { light: 'Zmień na tryb jasny', dark: 'Zmień na tryb ciemny' },
     liveSub: { scores: 'Wyniki live', bracket: 'Drabinka', schedule: 'Terminarz', history: 'Historia' },
-    schedule: { title: 'Terminarz rozgrywek', emptyTitle: 'Terminarz nie jest jeszcze opublikowany', emptyText: 'Biuro zawodów uzupełni orientacyjne godziny i korty.', loading: 'Ładowanie terminarza...', refresh: 'Odśwież', time: 'Godzina', court: 'Kort', phase: 'Etap', match: 'Mecz', status: 'Status', notes: 'Uwagi', timeTbd: 'godzina do potwierdzenia', courtTbd: 'kort do potwierdzenia', statusDraft: 'Roboczy', statusPlanned: 'Zaplanowany', statusInProgress: 'W trakcie', statusCompleted: 'Zakończony', updated: 'Terminarz zaktualizowany' },
+    schedule: { title: 'Terminarz rozgrywek', emptyTitle: 'Terminarz nie jest jeszcze opublikowany', emptyText: 'Biuro zawodów uzupełni orientacyjne godziny i korty.', loading: 'Ładowanie terminarza...', refresh: 'Odśwież', time: 'Godzina', court: 'Kort', category: 'Kategoria', phase: 'Etap', match: 'Mecz', status: 'Status', notes: 'Uwagi', searchLabel: 'Szukaj po nazwisku', searchPlaceholder: 'Szukaj nazwiska...', sortLabel: 'Sortowanie', sortCourt: 'Po korcie', sortCategory: 'Po kategorii', tabsLabelCourt: 'Wybierz kort', tabsLabelCategory: 'Wybierz kategorię', noResultsTitle: 'Brak dopasowanych meczów', noResultsText: 'Zmień wyszukiwaną frazę albo przełącz sposób sortowania.', timeTbd: 'godzina do potwierdzenia', courtTbd: 'kort do potwierdzenia', categoryTbd: 'kategoria do potwierdzenia', statusDraft: 'Roboczy', statusPlanned: 'Zaplanowany', statusInProgress: 'W trakcie', statusCompleted: 'Zakończony', updated: 'Terminarz zaktualizowany' },
     bracket: {
       emptyTitle: 'Brak drabinki', emptyText: 'Drabinka turniejowa nie została jeszcze skonfigurowana',
       group: 'Grupa', player: 'Zawodnik', wins: 'W', losses: 'L',
@@ -210,7 +210,7 @@ const TRANSLATIONS = {
     playerProfile: { back: 'Back to list', category: 'Category', country: 'Country', gender: 'Gender', male: 'Male', female: 'Female', career: 'Career', tournaments: 'Tournaments', matches: 'Matches', wins: 'Wins', losses: 'Losses', winRate: 'Win rate', medals: 'Medals', gold: 'Gold', silver: 'Silver', bronze: 'Bronze', tournamentHistory: 'Tournament history', group: 'Group', place: 'place', of: 'of', groupPhase: 'Group phase', knockoutPhase: 'Knockout phase', noTournaments: 'No tournaments', matchesInTournament: 'Tournament matches', won: 'W', lost: 'L', vs: 'vs', duration: 'Duration' },
     darkModeTooltip: { light: 'Switch to light mode', dark: 'Switch to dark mode' },
     liveSub: { scores: 'Live scores', bracket: 'Bracket', schedule: 'Schedule', history: 'History' },
-    schedule: { title: 'Tournament schedule', emptyTitle: 'The schedule is not published yet', emptyText: 'The tournament office will add approximate times and courts.', loading: 'Loading schedule...', refresh: 'Refresh', time: 'Time', court: 'Court', phase: 'Stage', match: 'Match', status: 'Status', notes: 'Notes', timeTbd: 'time to be confirmed', courtTbd: 'court to be confirmed', statusDraft: 'Draft', statusPlanned: 'Planned', statusInProgress: 'In progress', statusCompleted: 'Finished', updated: 'Schedule updated' },
+    schedule: { title: 'Tournament schedule', emptyTitle: 'The schedule is not published yet', emptyText: 'The tournament office will add approximate times and courts.', loading: 'Loading schedule...', refresh: 'Refresh', time: 'Time', court: 'Court', category: 'Category', phase: 'Stage', match: 'Match', status: 'Status', notes: 'Notes', searchLabel: 'Search by surname', searchPlaceholder: 'Search surname...', sortLabel: 'Sorting', sortCourt: 'By court', sortCategory: 'By category', tabsLabelCourt: 'Choose court', tabsLabelCategory: 'Choose category', noResultsTitle: 'No matching matches', noResultsText: 'Change the search phrase or switch the sort mode.', timeTbd: 'time to be confirmed', courtTbd: 'court to be confirmed', categoryTbd: 'category to be confirmed', statusDraft: 'Draft', statusPlanned: 'Planned', statusInProgress: 'In progress', statusCompleted: 'Finished', updated: 'Schedule updated' },
     bracket: {
       emptyTitle: 'No bracket', emptyText: 'Tournament bracket has not been configured yet',
       group: 'Group', player: 'Player', wins: 'W', losses: 'L',
@@ -528,6 +528,9 @@ Alpine.data('tennisApp', () => ({
   scheduleData: null,
   scheduleLoading: false,
   scheduleAnnouncement: '',
+  scheduleSearch: '',
+  scheduleSortMode: 'court',
+  scheduleSelectedGroups: {},
 
   // Tournament history state
   tournaments: [],
@@ -634,7 +637,7 @@ Alpine.data('tennisApp', () => ({
       this.liveSubTab = 'bracket';
       this.selectedPlayerId = null;
       this.selectedTournamentId = '';
-      if (!this.bracketData) this.fetchBracket();
+      this.fetchBracket();
       if (parts[1]) this._pendingCategory = parts.slice(1).join('/');
     } else if (tab === 'tournaments' || tab === 'history' || tab === 'historia') {
       this.activeTab = 'tournaments';
@@ -823,12 +826,19 @@ Alpine.data('tennisApp', () => ({
 
   async fetchTournamentBracket(tid) {
     try {
-      const response = await fetch(`/api/tournament/${encodeURIComponent(tid)}/bracket${this._tournamentAccessQuery()}`);
+      const response = await fetch(this.withNoCacheQuery(
+        `/api/tournament/${encodeURIComponent(tid)}/bracket`,
+        this._tournamentAccessQuery()
+      ), { cache: 'no-store' });
       if (!response.ok) { this.tournamentBracket = null; return; }
       this.tournamentBracket = await response.json();
       this._buildBracketNameMap(this.tournamentBracket);
       const cats = this.tournamentBracketCategories();
-      if (cats.length > 0) this.tournamentBracketCategory = cats[0].name;
+      if (cats.length > 0) {
+        if (!cats.find(c => c.name === this.tournamentBracketCategory)) {
+          this.tournamentBracketCategory = cats[0].name;
+        }
+      }
     } catch { this.tournamentBracket = null; }
   },
 
@@ -846,6 +856,13 @@ Alpine.data('tennisApp', () => ({
     if (this.simulationStage) params.set('etap', this.simulationStage);
     const query = params.toString();
     return query ? `?${query}` : '';
+  },
+
+  withNoCacheQuery(path, existingQuery = '') {
+    const params = new URLSearchParams(String(existingQuery || '').replace(/^\?/, ''));
+    params.set('_', Date.now().toString());
+    const query = params.toString();
+    return query ? `${path}?${query}` : path;
   },
 
   /* --- Pad sets to 3 columns for consistent table alignment --- */
@@ -958,7 +975,7 @@ Alpine.data('tennisApp', () => ({
   async fetchBracket() {
     this.bracketLoading = true;
     try {
-      const response = await fetch('/api/tournament/bracket');
+      const response = await fetch(this.withNoCacheQuery('/api/tournament/bracket'), { cache: 'no-store' });
       if (!response.ok) { this.bracketData = null; return; }
       this.bracketData = await response.json();
       // Build name map from bracket group matches (match names → surname lookup)
@@ -968,7 +985,7 @@ Alpine.data('tennisApp', () => ({
       if (this._pendingCategory && cats.find(c => c.name === this._pendingCategory)) {
         this.bracketCategory = this._pendingCategory;
         this._pendingCategory = null;
-      } else if (cats.length > 0 && !this.bracketCategory) {
+      } else if (cats.length > 0 && !cats.find(c => c.name === this.bracketCategory)) {
         this.bracketCategory = cats[0].name;
       }
     } catch { this.bracketData = null; }
@@ -981,7 +998,7 @@ Alpine.data('tennisApp', () => ({
       const response = await fetch('/api/tournament/schedule');
       if (!response.ok) { this.scheduleData = null; return; }
       this.scheduleData = await response.json();
-      const matchCount = this.scheduleDays(this.scheduleData).reduce((total, day) => total + day.categories.reduce((sum, category) => sum + category.matches.length, 0), 0);
+      const matchCount = this.scheduleMatchCount(this.scheduleData);
       this.scheduleAnnouncement = `${this.scheduleText().updated}: ${matchCount}`;
     } catch {
       this.scheduleData = null;
@@ -997,6 +1014,203 @@ Alpine.data('tennisApp', () => ({
 
   scheduleDays(data = this.scheduleData) {
     return Array.isArray(data?.days) ? data.days : [];
+  },
+
+  scheduleMatchCount(data = this.scheduleData) {
+    return this.scheduleDays(data).reduce((total, day) => {
+      const categories = Array.isArray(day?.categories) ? day.categories : [];
+      return total + categories.reduce((sum, category) => sum + (Array.isArray(category?.matches) ? category.matches.length : 0), 0);
+    }, 0);
+  },
+
+  scheduleVisibleDays(data = this.scheduleData) {
+    return this.scheduleDays(data)
+      .map((day) => ({ ...day, groups: this.scheduleGroups(day) }))
+      .filter((day) => day.groups.length > 0);
+  },
+
+  scheduleGroups(day) {
+    const mode = this.scheduleSortMode === 'category' ? 'category' : 'court';
+    const query = this.normalizeScheduleText(this.scheduleSearch);
+    const groups = new Map();
+
+    for (const match of this.scheduleFlattenDay(day)) {
+      if (query && !this.scheduleMatchMatchesQuery(match, query)) continue;
+      const meta = this.scheduleGroupMeta(match, mode);
+      if (!groups.has(meta.key)) {
+        groups.set(meta.key, {
+          id: meta.key,
+          title: meta.label,
+          sortOrder: meta.sortOrder,
+          matches: [],
+        });
+      }
+      groups.get(meta.key).matches.push(match);
+    }
+
+    const result = Array.from(groups.values());
+    for (const group of result) {
+      group.matches.sort((left, right) => this.compareScheduleMatches(left, right));
+    }
+
+    result.sort((left, right) => {
+      if (mode === 'court') {
+        return (left.sortOrder - right.sortOrder)
+          || left.title.localeCompare(right.title, this.lang || 'pl', { sensitivity: 'base' });
+      }
+      return left.title.localeCompare(right.title, this.lang || 'pl', { sensitivity: 'base' });
+    });
+
+    return result;
+  },
+
+  scheduleSelectionKey(day) {
+    return `${day?.date || 'unknown'}::${this.scheduleSortMode === 'category' ? 'category' : 'court'}`;
+  },
+
+  scheduleActiveGroup(day) {
+    const groups = Array.isArray(day?.groups) ? day.groups : [];
+    if (!groups.length) return null;
+    const key = this.scheduleSelectionKey(day);
+    const selectedId = this.scheduleSelectedGroups[key];
+    return groups.find((group) => group.id === selectedId) || groups[0];
+  },
+
+  scheduleActiveGroupId(day) {
+    return this.scheduleActiveGroup(day)?.id || '';
+  },
+
+  selectScheduleGroup(day, groupId) {
+    if (!day || !groupId) return;
+    this.scheduleSelectedGroups = {
+      ...this.scheduleSelectedGroups,
+      [this.scheduleSelectionKey(day)]: groupId,
+    };
+  },
+
+  scheduleTablistLabel() {
+    return this.scheduleSortMode === 'category'
+      ? this.scheduleText().tabsLabelCategory
+      : this.scheduleText().tabsLabelCourt;
+  },
+
+  scheduleDomId(prefix, day, group) {
+    const raw = `${prefix}-${day?.date || 'unknown'}-${group?.id || 'none'}`;
+    return raw.replace(/[^a-zA-Z0-9_-]/g, '-');
+  },
+
+  focusScheduleGroupTab(day, group) {
+    if (!day || !group) return;
+    requestAnimationFrame(() => {
+      document.getElementById(this.scheduleDomId('schedule-tab', day, group))?.focus();
+    });
+  },
+
+  focusScheduleAdjacentGroup(day, currentGroupId, direction) {
+    const groups = Array.isArray(day?.groups) ? day.groups : [];
+    if (!groups.length) return;
+    let index = groups.findIndex((group) => group.id === currentGroupId);
+    if (index < 0) index = 0;
+    const nextIndex = (index + direction + groups.length) % groups.length;
+    const nextGroup = groups[nextIndex];
+    this.selectScheduleGroup(day, nextGroup.id);
+    this.focusScheduleGroupTab(day, nextGroup);
+  },
+
+  focusScheduleEdgeGroup(day, edge) {
+    const groups = Array.isArray(day?.groups) ? day.groups : [];
+    if (!groups.length) return;
+    const target = edge === 'last' ? groups[groups.length - 1] : groups[0];
+    this.selectScheduleGroup(day, target.id);
+    this.focusScheduleGroupTab(day, target);
+  },
+
+  scheduleFlattenDay(day) {
+    const matches = [];
+    for (const category of Array.isArray(day?.categories) ? day.categories : []) {
+      for (const match of Array.isArray(category?.matches) ? category.matches : []) {
+        matches.push(match);
+      }
+    }
+    return matches;
+  },
+
+  scheduleGroupMeta(match, mode) {
+    if (mode === 'category') {
+      const label = this.scheduleCategoryLabel(match);
+      return {
+        key: `category-${this.normalizeScheduleText(match?.category_name || label || 'other') || 'other'}`,
+        label,
+        sortOrder: 9999,
+      };
+    }
+
+    const label = this.scheduleCourtTabLabel(match);
+    const rawOrder = Number(match?.court_display_order);
+    return {
+      key: `court-${match?.court_id || this.normalizeScheduleText(label) || 'tbd'}`,
+      label,
+      sortOrder: Number.isFinite(rawOrder) ? rawOrder : 9999,
+    };
+  },
+
+  scheduleCourtTabLabel(match) {
+    const rawLabel = String(match?.court_label || match?.court_id || '').trim();
+    if (!rawLabel) return this.scheduleText().courtTbd;
+
+    const normalized = rawLabel
+      .replace(/^(kort|court|platz|cancha|campo)\s*/i, '')
+      .trim();
+
+    if (!normalized) return this.scheduleCourtLabel(match);
+    const pattern = this.tr().courtLabel || 'Kort {court}';
+    return pattern.replace('{court}', normalized);
+  },
+
+  scheduleCategoryLabel(match) {
+    return this.translateCategory(match?.category_name || '') || this.scheduleText().categoryTbd;
+  },
+
+  normalizeScheduleText(value) {
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  },
+
+  scheduleMatchMatchesQuery(match, query) {
+    const player1 = match?.player1_name || '';
+    const player2 = match?.player2_name || '';
+    const haystack = [
+      player1,
+      player2,
+      this.resolveBracketName(player1),
+      this.resolveBracketName(player2),
+      this.scheduleCourtLabel(match),
+      this.scheduleCategoryLabel(match),
+      match?.notes_public || '',
+    ].join(' ');
+    return this.normalizeScheduleText(haystack).includes(query);
+  },
+
+  compareScheduleMatches(left, right) {
+    const timeLeft = left?.scheduled_time || '99:99';
+    const timeRight = right?.scheduled_time || '99:99';
+    if (timeLeft !== timeRight) return timeLeft.localeCompare(timeRight);
+
+    const leftOrderRaw = Number(left?.court_display_order);
+    const rightOrderRaw = Number(right?.court_display_order);
+    const leftOrder = Number.isFinite(leftOrderRaw) ? leftOrderRaw : 9999;
+    const rightOrder = Number.isFinite(rightOrderRaw) ? rightOrderRaw : 9999;
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+
+    const courtCompare = this.scheduleCourtLabel(left).localeCompare(this.scheduleCourtLabel(right), this.lang || 'pl', { sensitivity: 'base' });
+    if (courtCompare !== 0) return courtCompare;
+
+    const leftPlayers = `${left?.player1_name || ''} ${left?.player2_name || ''}`;
+    const rightPlayers = `${right?.player1_name || ''} ${right?.player2_name || ''}`;
+    return leftPlayers.localeCompare(rightPlayers, this.lang || 'pl', { sensitivity: 'base' });
   },
 
   formatScheduleDate(value) {
@@ -1030,7 +1244,8 @@ Alpine.data('tennisApp', () => ({
     return [
       `${labels.time}: ${this.formatScheduleTime(match?.scheduled_time)}`,
       `${labels.court}: ${this.scheduleCourtLabel(match)}`,
-      `${labels.phase}: ${match?.phase || ''}`,
+      `${labels.category}: ${this.scheduleCategoryLabel(match)}`,
+      `${labels.phase}: ${this.translatePhase(match?.phase || '')}`,
       `${labels.match}: ${match?.player1_name || ''} ${this.acc().versus || 'kontra'} ${match?.player2_name || ''}`,
       `${labels.status}: ${this.scheduleStatusLabel(match?.status)}`,
       match?.notes_public ? `${labels.notes}: ${match.notes_public}` : '',
@@ -1041,7 +1256,7 @@ Alpine.data('tennisApp', () => ({
     this.activeTab = 'live';
     this.liveSubTab = 'bracket';
     if (cat) this.bracketCategory = cat;
-    if (!this.bracketData) this.fetchBracket();
+    this.fetchBracket();
     this._updateHash();
   },
 
@@ -1182,6 +1397,52 @@ Alpine.data('tennisApp', () => ({
       .replace(/o (\d+)\. miejsce/g, `${forPlace} $1. ${place}`);
   },
 
+  parseBracketCategory(name) {
+    const rawName = String(name || '').trim();
+    const baseName = rawName.split(' — ')[0].trim();
+    const divisionMatch = baseName.match(/^B\d+\+?/i);
+    const division = divisionMatch ? divisionMatch[0].toUpperCase() : '';
+    const normalized = baseName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    let gender = '';
+    if (normalized.includes('kobiet')) gender = 'women';
+    else if (normalized.includes('mezczyzn')) gender = 'men';
+    return { rawName, baseName, division, gender };
+  },
+
+  bracketCategoryLabel(name) {
+    const parsed = this.parseBracketCategory(name);
+    if (!parsed.division || !parsed.gender) return this.translateCategory(name);
+    const t = this.tr();
+    const genderLabel = parsed.gender === 'women'
+      ? (t.history?.catWomen || 'Women')
+      : (t.history?.catMen || 'Men');
+    return `${genderLabel} ${parsed.division}`;
+  },
+
+  compareBracketCategoryNames(leftName, rightName) {
+    const left = this.parseBracketCategory(leftName);
+    const right = this.parseBracketCategory(rightName);
+    const leftNum = Number.parseInt(left.division.replace(/\D/g, ''), 10);
+    const rightNum = Number.parseInt(right.division.replace(/\D/g, ''), 10);
+    const safeLeftNum = Number.isFinite(leftNum) ? leftNum : Number.MAX_SAFE_INTEGER;
+    const safeRightNum = Number.isFinite(rightNum) ? rightNum : Number.MAX_SAFE_INTEGER;
+    if (safeLeftNum !== safeRightNum) return safeLeftNum - safeRightNum;
+
+    const genderOrder = { women: 0, men: 1, '': 2 };
+    const leftGender = genderOrder[left.gender] ?? 3;
+    const rightGender = genderOrder[right.gender] ?? 3;
+    if (leftGender !== rightGender) return leftGender - rightGender;
+
+    return this.bracketCategoryLabel(leftName).localeCompare(
+      this.bracketCategoryLabel(rightName),
+      this.lang || 'pl',
+      { sensitivity: 'base', numeric: true }
+    );
+  },
+
   _buildBracketNameMap(data) {
     if (!data) return;
     // From group matches: map player names to surnames for lookup
@@ -1236,7 +1497,7 @@ Alpine.data('tennisApp', () => ({
         }
       }
     }
-    return [...cats.values()];
+    return [...cats.values()].sort((left, right) => this.compareBracketCategoryNames(left.name, right.name));
   },
 
   activeBracketCategory() {
@@ -1270,7 +1531,7 @@ Alpine.data('tennisApp', () => ({
         }
       }
     }
-    return [...cats.values()];
+    return [...cats.values()].sort((left, right) => this.compareBracketCategoryNames(left.name, right.name));
   },
 
   activeTournamentBracketCategory() {
@@ -1436,10 +1697,48 @@ Alpine.data('tennisApp', () => ({
     return computeTieVisibility(tie);
   },
 
+  getRegularSetWins(courtId) {
+    const court = this.courts[courtId];
+    if (!court) return { A: 0, B: 0 };
+
+    const wins = { A: 0, B: 0 };
+    const detail = Array.isArray(court.sets_detail) ? court.sets_detail : [];
+
+    if (detail.length) {
+      for (const setInfo of detail) {
+        if (setInfo?.stb) continue;
+        const a = Number(setInfo?.p1 ?? 0);
+        const b = Number(setInfo?.p2 ?? 0);
+        if (a > b) wins.A += 1;
+        else if (b > a) wins.B += 1;
+      }
+      return wins;
+    }
+
+    for (let setIdx = 1; setIdx <= 2; setIdx += 1) {
+      const a = this.getStoredSetScore(court, 'A', setIdx);
+      const b = this.getStoredSetScore(court, 'B', setIdx);
+      if (a > b) wins.A += 1;
+      else if (b > a) wins.B += 1;
+    }
+    return wins;
+  },
+
+  isDecidingSuperTiebreak(courtId) {
+    const court = this.courts[courtId];
+    if (!court) return false;
+    const currentSet = parseInt(court.current_set) || 1;
+    if (currentSet !== 3) return false;
+    const wins = this.getRegularSetWins(courtId);
+    return wins.A === 1 && wins.B === 1;
+  },
+
   isSuperTiebreak(courtId) {
     const court = this.courts[courtId];
     if (!court) return false;
-    return this.isTiebreak(courtId) && (court.current_set === 3 || court.current_set === '3');
+    return !!court.super_tiebreak_active
+      || this.isDecidingSuperTiebreak(courtId)
+      || (this.isTiebreak(courtId) && (court.current_set === 3 || court.current_set === '3'));
   },
 
   /* --- Points display --- */
@@ -1475,7 +1774,8 @@ Alpine.data('tennisApp', () => ({
     
     // Fallback for courts without sets_detail
     if (!detail.length && !this.isSuperTiebreak(courtId)) {
-      if (currentSet >= 3 || court.A?.set3 || court.B?.set3) {
+      const hasThirdSetScore = this.getStoredSetScore(court, 'A', 3) > 0 || this.getStoredSetScore(court, 'B', 3) > 0;
+      if (hasThirdSetScore || (isActive && currentSet >= 3)) {
         if (!indices.includes(3)) indices.push(3);
       }
     }
@@ -1506,6 +1806,15 @@ Alpine.data('tennisApp', () => ({
     return entry.tb;
   },
 
+  getStoredSetScore(court, side, setIdx) {
+    if (!court) return 0;
+    const active = court.match_status?.active;
+    const currentSet = parseInt(court.current_set) || 1;
+    const hasSetDetail = Array.isArray(court.sets_detail) && court.sets_detail.length > 0;
+    if (active && !hasSetDetail && setIdx > currentSet) return 0;
+    return Number(court[side]?.[`set${setIdx}`] ?? 0) || 0;
+  },
+
   getSetScore(courtId, side, setIdx) {
     const court = this.courts[courtId];
     if (!court) return '0';
@@ -1515,8 +1824,16 @@ Alpine.data('tennisApp', () => ({
       const cg = court[side]?.current_games;
       if (cg !== undefined && cg !== null) return String(cg);
     }
-    const val = court[side]?.[`set${setIdx}`];
-    return val !== undefined && val !== null ? String(val) : '0';
+    return String(this.getStoredSetScore(court, side, setIdx));
+  },
+
+  getCurrentSetLabel(courtId) {
+    const tr = this.tr();
+    const currentSet = this.courts[courtId]?.current_set || 1;
+    if (this.isSuperTiebreak(courtId)) {
+      return tr.table?.columns?.superTieBreak || tr.superTieBreakLabel || 'Super TB';
+    }
+    return (tr.footer?.set || 'Set') + ' ' + currentSet;
   },
 
   /* --- Screen reader summary (the key accessibility feature) --- */
@@ -1559,7 +1876,9 @@ Alpine.data('tennisApp', () => ({
       const include = idx === 1 || currentSet >= idx || numA > 0 || numB > 0;
       if (!include) return;
 
-      const setLabel = fmt(a.set || 'Set {number}', { number: idx });
+      const setLabel = isSuper && idx === currentSet
+        ? (a.superTieBreak || 'super tie-break')
+        : fmt(a.set || 'Set {number}', { number: idx });
       const isActive = currentSet === idx;
       const segment = isActive
         ? `${setLabel}, ${a.active || 'aktywny'}, ${sA}:${sB}`
