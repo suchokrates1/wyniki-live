@@ -167,6 +167,7 @@ def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
         # Update current set
         if 'current_set' in score:
             state['current_set'] = score['current_set']
+        state['super_tiebreak_active'] = bool(score.get('is_super_tiebreak', False) and not event_data.get('match_finished', False))
         
         # Update match status
         match_finished = event_data.get('match_finished', False)
@@ -277,6 +278,7 @@ def serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
         },
         'serve': state.get('serve'),
         'current_set': state.get('current_set', 1),
+        'super_tiebreak_active': state.get('super_tiebreak_active', False),
         'tiebreak': {
             'active': state['tie'].get('visible', False),
             'A': state['tie'].get('A', 0),

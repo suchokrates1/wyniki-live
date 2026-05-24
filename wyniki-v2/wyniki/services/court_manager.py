@@ -43,6 +43,7 @@ def _empty_court_state() -> Dict[str, Any]:
         "A": _empty_player_state(),
         "B": _empty_player_state(),
         "current_set": 1,
+        "super_tiebreak_active": False,
         "serve": None,
         "mode": None,
         "tie": {
