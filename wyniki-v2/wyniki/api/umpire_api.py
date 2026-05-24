@@ -63,6 +63,56 @@ def _set_live_super_tiebreak_flag(court_state: dict, is_active: bool) -> None:
     court_state["super_tiebreak_active"] = bool(is_active)
 
 
+def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict | None = None) -> None:
+    """Mirror match score payload into in-memory court state for overlays/live views."""
+    score = score or {}
+
+    court_state["A"]["current_games"] = int(match.player1_games or 0)
+    court_state["B"]["current_games"] = int(match.player2_games or 0)
+    court_state["A"]["points"] = str(match.player1_points or 0)
+    court_state["B"]["points"] = str(match.player2_points or 0)
+
+    for set_num in range(1, 4):
+        court_state["A"][f"set{set_num}"] = 0
+        court_state["B"][f"set{set_num}"] = 0
+
+    court_state["tie"]["A"] = 0
+    court_state["tie"]["B"] = 0
+    court_state["tie"]["visible"] = False
+
+    sets_history = json.loads(match.sets_history) if match.sets_history else []
+    sets_detail = []
+    for idx, set_score in enumerate(sets_history):
+        set_num = idx + 1
+        p1_games = int(set_score.get("player1_games", 0) or 0)
+        p2_games = int(set_score.get("player2_games", 0) or 0)
+        tb_loser = set_score.get("tiebreak_loser_points")
+        is_stb = bool(set_score.get("is_super_tiebreak", False))
+
+        sets_detail.append({
+            "p1": p1_games,
+            "p2": p2_games,
+            "tb": tb_loser,
+            "stb": is_stb,
+        })
+
+        if is_stb:
+            court_state["tie"]["A"] = p1_games
+            court_state["tie"]["B"] = p2_games
+            court_state["tie"]["visible"] = True
+        elif set_num <= 3:
+            court_state["A"][f"set{set_num}"] = p1_games
+            court_state["B"][f"set{set_num}"] = p2_games
+
+    court_state["sets_detail"] = sets_detail
+    non_stb_count = sum(1 for set_score in sets_history if not set_score.get("is_super_tiebreak", False))
+    court_state["current_set"] = max(1, non_stb_count + 1)
+    _set_live_super_tiebreak_flag(
+        court_state,
+        bool(score.get("is_super_tiebreak", False)) and match.status == "in_progress",
+    )
+
+
 def _resolve_tournament_for_court(kort_id: str | None) -> Tournament | None:
     """Resolve tournament from court, with active tournament fallback."""
     normalized = normalize_kort_id(kort_id)
@@ -414,6 +464,7 @@ def create_match():
                 else:
                     court_state["B"]["full_name"] = match.player2_name
                 court_state["match_status"]["active"] = True
+                _sync_live_score_to_court_state(court_state, match, score)
                 _sync_court_match_timer_from_match(court_state, match)
                 court_state["updated"] = utc_now_iso()
                 # Store phase for history
@@ -483,55 +534,10 @@ def update_match(match_id: int):
                 # Update player names
                 court_state["A"]["surname"] = match.player1_name
                 court_state["B"]["surname"] = match.player2_name
-                
-                # Update current scores
-                court_state["A"]["current_games"] = match.player1_games
-                court_state["B"]["current_games"] = match.player2_games
-                
-                court_state["A"]["points"] = str(match.player1_points)
-                court_state["B"]["points"] = str(match.player2_points)
-                
+
+                _sync_live_score_to_court_state(court_state, match, score)
                 court_state["match_status"]["active"] = (match.status == "in_progress")
                 _sync_court_match_timer_from_match(court_state, match)
-                _set_live_super_tiebreak_flag(
-                    court_state,
-                    bool(score.get("is_super_tiebreak", False)) and match.status == "in_progress",
-                )
-                
-                # Handle sets history
-                sets_history = json.loads(match.sets_history) if match.sets_history else []
-                sets_detail = []  # For frontend: includes TB info
-                for idx, set_score in enumerate(sets_history):
-                    set_num = idx + 1
-                    p1g = set_score.get("player1_games", 0)
-                    p2g = set_score.get("player2_games", 0)
-                    tb_loser = set_score.get("tiebreak_loser_points")
-                    is_stb = set_score.get("is_super_tiebreak", False)
-                    
-                    sets_detail.append({
-                        "p1": p1g, "p2": p2g,
-                        "tb": tb_loser, "stb": is_stb
-                    })
-                    
-                    if is_stb:
-                        # Super tiebreak: show in Points column (tie)
-                        court_state["tie"]["A"] = p1g
-                        court_state["tie"]["B"] = p2g
-                        court_state["tie"]["visible"] = True
-                    else:
-                        if set_num == 1:
-                            court_state["A"]["set1"] = p1g
-                            court_state["B"]["set1"] = p2g
-                        elif set_num == 2:
-                            court_state["A"]["set2"] = p1g
-                            court_state["B"]["set2"] = p2g
-                        elif set_num == 3:
-                            court_state["A"]["set3"] = p1g
-                            court_state["B"]["set3"] = p2g
-                
-                court_state["sets_detail"] = sets_detail
-                non_stb_count = sum(1 for s in sets_history if not s.get("is_super_tiebreak", False))
-                court_state["current_set"] = non_stb_count + 1
                 court_state["updated"] = utc_now_iso()
             
             # Emit SSE update
