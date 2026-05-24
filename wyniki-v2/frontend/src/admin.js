@@ -2592,17 +2592,47 @@ Alpine.data('adminApp', () => ({
     const curSet = court.current_set || 1;
     const logoSize = el.logo_size || 60;
     const bgOpacity = el.bg_opacity != null ? el.bg_opacity : 0.95;
+    const hasSetDetail = Array.isArray(court.sets_detail) && court.sets_detail.length > 0;
+    const regularSetWins = (() => {
+      const wins = { A: 0, B: 0 };
+      if (hasSetDetail) {
+        for (const setInfo of court.sets_detail) {
+          if (setInfo?.stb) continue;
+          const a = Number(setInfo?.p1 ?? 0);
+          const b = Number(setInfo?.p2 ?? 0);
+          if (a > b) wins.A += 1;
+          else if (b > a) wins.B += 1;
+        }
+        return wins;
+      }
+      for (let setIdx = 1; setIdx <= 2; setIdx += 1) {
+        const a = Number(pA['set' + setIdx] || 0);
+        const b = Number(pB['set' + setIdx] || 0);
+        if (a > b) wins.A += 1;
+        else if (b > a) wins.B += 1;
+      }
+      return wins;
+    })();
+    const isSuperTB = !!court.super_tiebreak_active || (Number(curSet) === 3 && regularSetWins.A === 1 && regularSetWins.B === 1);
+    const readSetValue = (playerState, setIdx) => {
+      if (active && !hasSetDetail && setIdx > curSet) return 0;
+      return playerState['set' + setIdx] || 0;
+    };
+    const hasThirdSetScore = readSetValue(pA, 3) > 0 || readSetValue(pB, 3) > 0;
+    const visibleSetCount = active
+      ? (isSuperTB ? 2 : Math.max(2, Math.min(3, curSet)))
+      : (hasThirdSetScore ? 3 : 2);
     const sets = [];
     for (let s = 1; s <= 3; s++) {
-      const a = pA['set' + s], b = pB['set' + s];
-      if (s <= curSet || a > 0 || b > 0) sets.push({ idx: s, a: a || 0, b: b || 0 });
+      const a = readSetValue(pA, s), b = readSetValue(pB, s);
+      if (s <= visibleSetCount || a > 0 || b > 0) sets.push({ idx: s, a: a || 0, b: b || 0 });
     }
     // Always show at least 2 set columns
     while (sets.length < 2) sets.push({ idx: sets.length + 1, a: 0, b: 0 });
     const isTie = court.tie?.visible || false;
     const ptA = isTie ? (court.tie?.A || 0) : (pA.points || '0');
     const ptB = isTie ? (court.tie?.B || 0) : (pB.points || '0');
-    const tbCls = isTie ? ' is-tiebreak' : '';
+    const tbCls = (isTie || isSuperTB) ? ' is-tiebreak' : '';
     const logo = this.overlayBrandingLogo();
     const showLogo = el.show_logo;
     const inactiveClass = active ? '' : 'match-inactive';
@@ -2704,13 +2734,20 @@ Alpine.data('adminApp', () => ({
     }
     const a = cd.A || {};
     const b = cd.B || {};
+    const active = cd.match_status?.active || false;
+    const curSet = cd.current_set || 1;
+    const hasSetDetail = Array.isArray(cd.sets_detail) && cd.sets_detail.length > 0;
+    const readSetValue = (playerState, setIdx) => {
+      if (active && !hasSetDetail && setIdx > curSet) return 0;
+      return playerState[`set${setIdx}`] || 0;
+    };
     const nameA = a.surname || '-';
     const nameB = b.surname || '-';
     // Build score string: sets (e.g. "6:3 4:2") + current games
     let sets = [];
-    if ((a.set1 || 0) + (b.set1 || 0) > 0) sets.push(a.set1 + ':' + b.set1);
-    if ((a.set2 || 0) + (b.set2 || 0) > 0) sets.push(a.set2 + ':' + b.set2);
-    if ((a.set3 || 0) + (b.set3 || 0) > 0) sets.push(a.set3 + ':' + b.set3);
+    if (readSetValue(a, 1) + readSetValue(b, 1) > 0) sets.push(readSetValue(a, 1) + ':' + readSetValue(b, 1));
+    if (readSetValue(a, 2) + readSetValue(b, 2) > 0) sets.push(readSetValue(a, 2) + ':' + readSetValue(b, 2));
+    if (readSetValue(a, 3) + readSetValue(b, 3) > 0) sets.push(readSetValue(a, 3) + ':' + readSetValue(b, 3));
     const games = (a.current_games || 0) + ':' + (b.current_games || 0);
     const pts = (a.points || '0') + ':' + (b.points || '0');
     const score = (sets.length ? sets.join(' ') + ' / ' : '') + games + ' (' + pts + ')';

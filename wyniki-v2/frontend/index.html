@@ -71,7 +71,7 @@
                     <span class="live-subnav__icon" aria-hidden="true">🎾</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.scores || 'Wyniki live'"></span>
                 </button>
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'bracket'" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="liveSubTab = 'bracket'; if(!bracketData) fetchBracket(); _updateHash()">
+                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'bracket'" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="liveSubTab = 'bracket'; fetchBracket(); _updateHash()">
                     <span class="live-subnav__icon" aria-hidden="true">🏆</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.bracket || 'Drabinka'"></span>
                 </button>
@@ -148,7 +148,9 @@
                                               :style="'background-image:url('+(courts[courtId]?.A?.flag_url || codeToFlag(courts[courtId]?.A?.flag_code))+')'">
                                         </span>
                                         <span class="player-name" :id="'k'+courtId+'-name-A'" x-text="getPlayerName(courtId, 'A')"></span>
-                                        <span class="serve-indicator" x-show="courts[courtId]?.serve === 'A'" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:14px;height:14px;"></span>
+                                        <template x-if="courts[courtId]?.serve === 'A'">
+                                            <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:14px;height:14px;"></span>
+                                        </template>
                                     </dt>
                                     <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-A'">
                                         <span class="metric-label" :id="'k'+courtId+'-label-points'"
@@ -181,7 +183,9 @@
                                               :style="'background-image:url('+(courts[courtId]?.B?.flag_url || codeToFlag(courts[courtId]?.B?.flag_code))+')'">
                                         </span>
                                         <span class="player-name" :id="'k'+courtId+'-name-B'" x-text="getPlayerName(courtId, 'B')"></span>
-                                        <span class="serve-indicator" x-show="courts[courtId]?.serve === 'B'" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:14px;height:14px;"></span>
+                                        <template x-if="courts[courtId]?.serve === 'B'">
+                                            <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:14px;height:14px;"></span>
+                                        </template>
                                     </dt>
                                     <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-B'">
                                         <span class="metric-value points"
@@ -212,7 +216,7 @@
                             <span class="match-time" x-show="courts[courtId]?.match_time?.seconds">
                                 <span aria-hidden="true">🕒</span> <span x-text="formatTime(courts[courtId]?.match_time?.seconds)"></span>
                             </span>
-                            <span class="match-set" x-text="(tr().footer?.set || 'Set') + ' ' + (courts[courtId]?.current_set || 1)"></span>
+                            <span class="match-set" x-text="getCurrentSetLabel(courtId)"></span>
                         </div>
                     </section>
                 </template>
@@ -246,8 +250,8 @@
                                         :aria-selected="bracketCategory === cat.name"
                                         :aria-controls="'cat-panel-'+cat.name.replace(/\s+/g,'-')"
                                         :class="{ 'cat-tab--active': bracketCategory === cat.name }"
-                                        @click="bracketCategory = cat.name; _updateHash(true)"
-                                        x-text="translateCategory(cat.name)">
+                                        @click="bracketCategory = cat.name; fetchBracket(); _updateHash(true)"
+                                        x-text="bracketCategoryLabel(cat.name)">
                                 </button>
                             </template>
                         </div>
@@ -428,6 +432,41 @@
                         <button type="button" class="schedule-refresh" @click="fetchSchedule()" x-text="scheduleText().refresh"></button>
                     </div>
 
+                    <div class="schedule-toolbar" x-show="!scheduleLoading && scheduleDays().length > 0">
+                        <label class="schedule-search" :aria-label="scheduleText().searchLabel">
+                            <span class="sr-only" x-text="scheduleText().searchLabel"></span>
+                            <input
+                                x-model="scheduleSearch"
+                                class="schedule-search__input"
+                                type="search"
+                                inputmode="search"
+                                autocomplete="off"
+                                :placeholder="scheduleText().searchPlaceholder"
+                            >
+                        </label>
+                        <div class="schedule-sort">
+                            <span class="schedule-sort__label" x-text="scheduleText().sortLabel"></span>
+                            <div class="schedule-sort__buttons" role="group" :aria-label="scheduleText().sortLabel">
+                                <button
+                                    type="button"
+                                    class="schedule-sort__button"
+                                    :class="{ 'is-active': scheduleSortMode === 'court' }"
+                                    :aria-pressed="scheduleSortMode === 'court'"
+                                    @click="scheduleSortMode = 'court'"
+                                    x-text="scheduleText().sortCourt"
+                                ></button>
+                                <button
+                                    type="button"
+                                    class="schedule-sort__button"
+                                    :class="{ 'is-active': scheduleSortMode === 'category' }"
+                                    :aria-pressed="scheduleSortMode === 'category'"
+                                    @click="scheduleSortMode = 'category'"
+                                    x-text="scheduleText().sortCategory"
+                                ></button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div x-show="scheduleLoading" class="loading-state" role="status">
                         <span class="spinner spinner--large"></span>
                         <span class="sr-only" x-text="scheduleText().loading"></span>
@@ -439,55 +478,131 @@
                         <p class="empty-state__text" x-text="scheduleText().emptyText"></p>
                     </div>
 
-                    <template x-for="day in scheduleDays()" :key="day.date">
+                    <div x-show="!scheduleLoading && scheduleDays().length > 0 && scheduleVisibleDays().length === 0" class="empty-state" role="status">
+                        <div class="empty-state__icon" aria-hidden="true">🔎</div>
+                        <h3 class="empty-state__title" x-text="scheduleText().noResultsTitle"></h3>
+                        <p class="empty-state__text" x-text="scheduleText().noResultsText"></p>
+                    </div>
+
+                    <template x-for="day in scheduleVisibleDays()" :key="day.date">
                         <section class="schedule-day" :aria-labelledby="'schedule-day-' + day.date">
                             <h4 class="schedule-day__title" :id="'schedule-day-' + day.date">
                                 <time :datetime="day.date" x-text="formatScheduleDate(day.date)"></time>
                             </h4>
-                            <template x-for="category in day.categories" :key="day.date + '-' + category.name">
-                                <section class="schedule-category" :aria-labelledby="'schedule-cat-' + day.date + '-' + category.name.replace(/\s+/g, '-')">
-                                    <h5 class="schedule-category__title" :id="'schedule-cat-' + day.date + '-' + category.name.replace(/\s+/g, '-')" x-text="translateCategory(category.name)"></h5>
-                                    <div class="schedule-table-wrap">
-                                        <table class="schedule-table">
-                                            <caption class="sr-only" x-text="formatScheduleDate(day.date) + ', ' + translateCategory(category.name)"></caption>
-                                            <thead>
-                                                <tr>
-                                                    <th scope="col" x-text="scheduleText().time"></th>
-                                                    <th scope="col" x-text="scheduleText().court"></th>
-                                                    <th scope="col" x-text="scheduleText().phase"></th>
-                                                    <th scope="col" x-text="scheduleText().match"></th>
-                                                    <th scope="col" x-text="scheduleText().status"></th>
-                                                    <th scope="col" x-text="scheduleText().notes"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <template x-for="match in category.matches" :key="match.id">
-                                                    <tr :aria-label="scheduleMatchAria(match)">
-                                                        <td>
-                                                            <template x-if="match.scheduled_time">
-                                                                <time :datetime="match.day_date + 'T' + match.scheduled_time" x-text="match.scheduled_time"></time>
-                                                            </template>
-                                                            <template x-if="!match.scheduled_time">
-                                                                <span x-text="scheduleText().timeTbd"></span>
-                                                            </template>
-                                                        </td>
-                                                        <td x-text="scheduleCourtLabel(match)"></td>
-                                                        <td x-text="translateCategory(match.phase || '')"></td>
-                                                        <td>
-                                                            <span class="schedule-player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
-                                                            <span aria-hidden="true"> vs </span>
-                                                            <span class="sr-only" x-text="acc().versus"></span>
-                                                            <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
-                                                        </td>
-                                                        <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span></td>
-                                                        <td x-text="match.notes_public || ''"></td>
-                                                    </tr>
+                            <div class="schedule-switcher">
+                                <div class="schedule-switcher__tabs" role="tablist" :aria-label="scheduleTablistLabel()">
+                                    <template x-for="group in day.groups" :key="day.date + '-' + group.id">
+                                        <button
+                                            type="button"
+                                            role="tab"
+                                            class="schedule-switcher__tab"
+                                            :class="{ 'is-active': scheduleActiveGroupId(day) === group.id }"
+                                            :id="scheduleDomId('schedule-tab', day, group)"
+                                            :aria-selected="scheduleActiveGroupId(day) === group.id"
+                                            :aria-controls="scheduleDomId('schedule-panel', day, group)"
+                                            :tabindex="scheduleActiveGroupId(day) === group.id ? 0 : -1"
+                                            @click="selectScheduleGroup(day, group.id)"
+                                            @keydown.right.prevent="focusScheduleAdjacentGroup(day, group.id, 1)"
+                                            @keydown.left.prevent="focusScheduleAdjacentGroup(day, group.id, -1)"
+                                            @keydown.down.prevent="focusScheduleAdjacentGroup(day, group.id, 1)"
+                                            @keydown.up.prevent="focusScheduleAdjacentGroup(day, group.id, -1)"
+                                            @keydown.home.prevent="focusScheduleEdgeGroup(day, 'first')"
+                                            @keydown.end.prevent="focusScheduleEdgeGroup(day, 'last')"
+                                            x-text="group.title"
+                                        ></button>
+                                    </template>
+                                </div>
+
+                                <template x-for="group in day.groups" :key="'panel-' + day.date + '-' + group.id">
+                                    <template x-if="scheduleActiveGroupId(day) === group.id">
+                                        <section
+                                            class="schedule-panel"
+                                            role="tabpanel"
+                                            :id="scheduleDomId('schedule-panel', day, group)"
+                                            :aria-labelledby="scheduleDomId('schedule-tab', day, group)"
+                                        >
+                                            <h5 class="schedule-panel__title" x-text="group.title"></h5>
+                                            <div class="schedule-cards" role="list">
+                                                <template x-for="match in group.matches" :key="'card-' + match.id">
+                                                    <article class="schedule-card" role="listitem" :aria-label="scheduleMatchAria(match)">
+                                                        <div class="schedule-card__topline">
+                                                            <div class="schedule-card__time">
+                                                                <template x-if="match.scheduled_time">
+                                                                    <time :datetime="match.day_date + 'T' + match.scheduled_time" x-text="match.scheduled_time"></time>
+                                                                </template>
+                                                                <template x-if="!match.scheduled_time">
+                                                                    <span x-text="scheduleText().timeTbd"></span>
+                                                                </template>
+                                                            </div>
+                                                            <span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span>
+                                                        </div>
+
+                                                        <div class="schedule-card__match">
+                                                            <span class="schedule-card__player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                            <span class="schedule-card__versus" aria-hidden="true">vs</span>
+                                                            <span class="schedule-card__player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                        </div>
+
+                                                        <div class="schedule-card__meta">
+                                                            <span class="schedule-card__badge" x-show="scheduleSortMode !== 'court'" x-text="scheduleCourtLabel(match)"></span>
+                                                            <span class="schedule-card__badge schedule-card__badge--accent" x-text="scheduleCategoryLabel(match)"></span>
+                                                            <span class="schedule-card__badge" x-text="translatePhase(match.phase || '')"></span>
+                                                        </div>
+
+                                                        <template x-if="match.notes_public">
+                                                            <details class="schedule-card__notes">
+                                                                <summary x-text="scheduleText().notes"></summary>
+                                                                <p x-text="match.notes_public"></p>
+                                                            </details>
+                                                        </template>
+                                                    </article>
                                                 </template>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </section>
-                            </template>
+                                            </div>
+                                            <div class="schedule-table-wrap">
+                                                <table class="schedule-table">
+                                                    <caption class="sr-only" x-text="formatScheduleDate(day.date) + ', ' + group.title"></caption>
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col" x-text="scheduleText().time"></th>
+                                                            <th scope="col" x-text="scheduleText().court"></th>
+                                                            <th scope="col" x-text="scheduleText().category"></th>
+                                                            <th scope="col" x-text="scheduleText().phase"></th>
+                                                            <th scope="col" x-text="scheduleText().match"></th>
+                                                            <th scope="col" x-text="scheduleText().status"></th>
+                                                            <th scope="col" x-text="scheduleText().notes"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="match in group.matches" :key="match.id">
+                                                            <tr :aria-label="scheduleMatchAria(match)">
+                                                                <td>
+                                                                    <template x-if="match.scheduled_time">
+                                                                        <time :datetime="match.day_date + 'T' + match.scheduled_time" x-text="match.scheduled_time"></time>
+                                                                    </template>
+                                                                    <template x-if="!match.scheduled_time">
+                                                                        <span x-text="scheduleText().timeTbd"></span>
+                                                                    </template>
+                                                                </td>
+                                                                <td x-text="scheduleCourtLabel(match)"></td>
+                                                                <td x-text="scheduleCategoryLabel(match)"></td>
+                                                                <td x-text="translatePhase(match.phase || '')"></td>
+                                                                <td>
+                                                                    <span class="schedule-player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                    <span aria-hidden="true"> vs </span>
+                                                                    <span class="sr-only" x-text="acc().versus"></span>
+                                                                    <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                </td>
+                                                                <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span></td>
+                                                                <td x-text="match.notes_public || ''"></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </section>
+                                    </template>
+                                </template>
+                            </div>
                         </section>
                     </template>
                 </section>
@@ -651,8 +766,8 @@
                                                 :aria-selected="tournamentBracketCategory === cat.name"
                                                 :aria-controls="'tcat-panel-'+cat.name.replace(/\s+/g,'-')"
                                                 :class="{ 'cat-tab--active': tournamentBracketCategory === cat.name }"
-                                                @click="tournamentBracketCategory = cat.name"
-                                                x-text="translateCategory(cat.name)">
+                                                @click="tournamentBracketCategory = cat.name; selectedTournamentId && fetchTournamentBracket(selectedTournamentId)"
+                                                x-text="bracketCategoryLabel(cat.name)">
                                         </button>
                                     </template>
                                 </div>
