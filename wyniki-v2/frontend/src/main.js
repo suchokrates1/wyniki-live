@@ -561,6 +561,7 @@ Alpine.data('tennisApp', () => ({
   profileExpandedTournaments: {},
   _navigating: false,
   _profileIsGlobal: false,
+  _playerProfileRequestId: 0,
 
   /* --- Sorted history (newest first) --- */
   sortedHistory() {
@@ -657,13 +658,23 @@ Alpine.data('tennisApp', () => ({
       this.activeTab = 'players';
       this.selectedTournamentId = '';
       if (parts[1]) {
-        const pid = parseInt(parts[1], 10);
-        if (this.selectedPlayerId !== pid) {
+        let mode = 'auto';
+        let idPart = parts[1];
+        if (parts[1] === 'global' || parts[1] === 'local') {
+          mode = parts[1];
+          idPart = parts[2];
+        }
+        const pid = parseInt(idPart, 10);
+        if (Number.isFinite(pid)) {
           this.selectedPlayerId = pid;
-          this._profileIsGlobal = true;
+          this._profileIsGlobal = mode === 'global';
           this.playerProfile = null;
           this.profileExpandedTournaments = {};
-          this.fetchPlayerProfile(pid, true);
+          this.fetchPlayerProfile(pid, mode);
+        } else {
+          this.selectedPlayerId = null;
+          this._profileIsGlobal = false;
+          this.playerProfile = null;
         }
       } else {
         this.selectedPlayerId = null;
@@ -688,7 +699,8 @@ Alpine.data('tennisApp', () => ({
     } else if (this.activeTab === 'tournaments' && this.selectedTournamentId) {
       hash = 'tournaments/' + this.selectedTournamentId + '/' + this.historySubTab;
     } else if (this.activeTab === 'players' && this.selectedPlayerId) {
-      hash = 'players/' + this.selectedPlayerId;
+      const mode = this._profileIsGlobal ? 'global/' : 'local/';
+      hash = 'players/' + mode + this.selectedPlayerId;
     }
     const encoded = '#' + encodeURIComponent(hash);
     if (location.hash !== encoded) {
@@ -1332,7 +1344,7 @@ Alpine.data('tennisApp', () => ({
     this._profileIsGlobal = isGlobal;
     this.playerProfile = null;
     this.profileExpandedTournaments = {};
-    this.fetchPlayerProfile(id, isGlobal);
+    this.fetchPlayerProfile(id, isGlobal ? 'global' : 'local');
     this._updateHash();
   },
 
@@ -1344,15 +1356,51 @@ Alpine.data('tennisApp', () => ({
     history.back();
   },
 
-  async fetchPlayerProfile(id, isGlobal = false) {
+  async fetchPlayerProfile(id, mode = 'auto') {
+    const requestId = ++this._playerProfileRequestId;
     this.playerProfileLoading = true;
     try {
-      const qs = isGlobal ? '?global=1' : '';
-      const response = await fetch(`/api/players/${encodeURIComponent(id)}/profile${qs}`);
-      if (!response.ok) { this.playerProfile = null; return; }
-      this.playerProfile = await response.json();
-    } catch { this.playerProfile = null; }
-    finally { this.playerProfileLoading = false; }
+      const requestedMode = mode === 'global' || mode === 'local' ? mode : 'auto';
+      const localExists = this.allPlayers.some((player) => Number(player?.id) === Number(id));
+      const globalExists = this.allPlayers.some((player) => Number(player?.global_player_id) === Number(id));
+      const candidates = [];
+
+      if (requestedMode === 'global') {
+        candidates.push(true);
+      } else if (requestedMode === 'local') {
+        candidates.push(false);
+      } else if (globalExists !== localExists) {
+        candidates.push(globalExists, localExists);
+      } else {
+        candidates.push(true, false);
+      }
+
+      for (const isGlobal of candidates.filter((value, index, arr) => arr.indexOf(value) === index)) {
+        try {
+          const qs = isGlobal ? '?global=1' : '';
+          const response = await fetch(`/api/players/${encodeURIComponent(id)}/profile${qs}`);
+          if (!response.ok) continue;
+          const data = await response.json();
+          if (requestId !== this._playerProfileRequestId || this.selectedPlayerId !== id) return;
+          this.playerProfile = data;
+          this._profileIsGlobal = isGlobal;
+          if (requestedMode === 'auto') this._updateHash(true);
+          return;
+        } catch {
+          continue;
+        }
+      }
+
+      if (requestId !== this._playerProfileRequestId || this.selectedPlayerId !== id) return;
+      this.playerProfile = null;
+      this._profileIsGlobal = false;
+    } catch {
+      if (requestId !== this._playerProfileRequestId || this.selectedPlayerId !== id) return;
+      this.playerProfile = null;
+      this._profileIsGlobal = false;
+    } finally {
+      if (requestId === this._playerProfileRequestId) this.playerProfileLoading = false;
+    }
   },
 
   toggleProfileTournament(tid) {
