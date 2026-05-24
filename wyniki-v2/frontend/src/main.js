@@ -511,6 +511,7 @@ window.Alpine = Alpine;
 
 Alpine.data('tennisApp', () => ({
   courts: {},
+  publicCourtIds: {},
   prevCourts: {},
   loading: true,
   error: null,
@@ -741,7 +742,12 @@ Alpine.data('tennisApp', () => ({
       const response = await fetch('/api/snapshot');
       if (!response.ok) throw new Error('Failed to fetch courts');
       const data = await response.json();
-      this.courts = data.courts || {};
+      const courts = data.courts || {};
+      this.courts = courts;
+      this.publicCourtIds = Object.keys(courts).reduce((acc, courtId) => {
+        acc[String(courtId)] = true;
+        return acc;
+      }, {});
       this.tournamentName = data.tournament_name || null;
       this.loading = false;
       this.lastUpdate = new Date();
@@ -1551,6 +1557,7 @@ Alpine.data('tennisApp', () => ({
       try {
         const data = JSON.parse(e.data);
         const courtId = String(data.court_id);
+        if (!this.publicCourtIds[courtId]) return;
         const prev = this.courts[courtId];
 
         // Trigger DOM animations after Alpine renders
