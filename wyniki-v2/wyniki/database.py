@@ -2935,7 +2935,7 @@ def _detect_knockout_result(
     row = _fetch_finished_match(phase)
     if not row and phase and phase != "Pucharowa":
         row = _fetch_finished_match("Pucharowa")
-    if not row and phase:
+    if not row and not phase:
         row = _fetch_finished_match(None)
 
     if not row:
