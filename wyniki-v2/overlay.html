@@ -329,12 +329,30 @@
         return tournamentCourtIds.length ? tournamentCourtIds : allCourtIds;
     }
 
+    function toFiniteSeconds(value) {
+        var numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric : null;
+    }
+
+    function parseTimestampSeconds(value) {
+        if (value == null || value === '') return null;
+        var numeric = toFiniteSeconds(value);
+        if (numeric != null) return numeric;
+        var parsed = Date.parse(value);
+        return Number.isFinite(parsed) ? parsed / 1000 : null;
+    }
+
     function calcMatchTime(court) {
         if (!court || !court.match_status?.active || !court.match_time) return null;
         var mt = court.match_time;
-        var secs = mt.seconds || 0;
-        if (mt.running && mt.resume_ts) secs += (Date.now()/1000 - mt.resume_ts);
-        secs += (mt.offset_seconds || 0);
+        var secs = toFiniteSeconds(mt.seconds);
+        if (secs == null) {
+            secs = toFiniteSeconds(mt.offset_seconds) || 0;
+            if (mt.running) {
+                var resumeTs = parseTimestampSeconds(mt.resume_ts);
+                if (resumeTs != null) secs += Math.max(0, (Date.now() / 1000) - resumeTs);
+            }
+        }
         secs = Math.max(0, Math.floor(secs));
         var hh = String(Math.floor(secs/3600)).padStart(2,'0');
         var mm = String(Math.floor((secs%3600)/60)).padStart(2,'0');
