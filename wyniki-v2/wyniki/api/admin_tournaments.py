@@ -1731,6 +1731,14 @@ def get_player_profile(player_id: int):
             if sm.id not in existing_ids:
                 all_matches.append(sm)
 
+    match_phase_lookup = {}
+    match_ids = sorted({m.match_id for m in all_matches if getattr(m, 'match_id', None)})
+    if match_ids:
+        match_phase_lookup = {
+            row.id: (row.phase or '')
+            for row in Match.query.filter(Match.id.in_(match_ids)).all()
+        }
+
     def parse_sets_history(m):
         """Parse sets_history from a MatchHistory entry."""
         sets = []
@@ -1774,6 +1782,22 @@ def get_player_profile(player_id: int):
         except (json.JSONDecodeError, TypeError):
             pass
         return None
+
+    def is_semifinal_phase_label(phase_name):
+        phase_lc = str(phase_name or '').lower()
+        return 'półfinał' in phase_lc or 'semifinal' in phase_lc
+
+    def is_final_phase_label(phase_name):
+        phase_lc = str(phase_name or '').lower()
+        return ('finał' in phase_lc or 'final' in phase_lc) and not is_semifinal_phase_label(phase_name)
+
+    def resolve_match_phase(m):
+        phase_name = (m.phase or '').strip()
+        mapped_phase = (match_phase_lookup.get(m.match_id) or '').strip()
+        if mapped_phase:
+            if not phase_name or phase_name.lower() == 'pucharowa':
+                return mapped_phase
+        return phase_name
 
     def is_this_player(name):
         """Check if a name refers to this player."""
@@ -1825,18 +1849,18 @@ def get_player_profile(player_id: int):
                         (full_name and full_name in winner)
                     ))
                     phase_lc = phase.lower()
-                    if 'finał' in phase_lc or 'final' in phase_lc:
-                        if is_winner:
-                            medal = 'gold'
-                        else:
-                            medal = 'silver'
+                    if is_semifinal_phase_label(phase):
+                        knockout_phase = knockout_phase or phase
+                    elif is_final_phase_label(phase):
                         knockout_phase = phase
+                        if winner:
+                            medal = 'gold' if is_winner else 'silver'
                     elif '3.' in phase or 'trzecie' in phase_lc or 'third' in phase_lc:
-                        if is_winner:
-                            medal = medal or 'bronze'
                         knockout_phase = phase
+                        if winner and is_winner:
+                            medal = medal or 'bronze'
                     elif '5.' in phase or 'piąte' in phase_lc or 'fifth' in phase_lc:
-                        if is_winner and not medal:
+                        if winner and is_winner and not medal:
                             medal = '5th'
                         if not knockout_phase:
                             knockout_phase = phase
@@ -1866,7 +1890,7 @@ def get_player_profile(player_id: int):
                 'opponent': opponent,
                 'score': raw_sets,
                 'won': won,
-                'phase': m.phase or '',
+                'phase': resolve_match_phase(m),
                 'category': m.category or '',
                 'date': m.ended_ts or '',
                 'duration': m.duration_seconds or 0
