@@ -14,6 +14,10 @@ from ..config import logger
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
 
 
+def _is_knockout_phase(phase: str | None) -> bool:
+    return bool(phase and phase != 'Grupowa')
+
+
 def _sync_court_match_timer_from_match(court_state: dict, match: Match) -> None:
     """Keep in-memory court timer consistent for live overlay rendering."""
     match_time = court_state.setdefault("match_time", {})
@@ -665,7 +669,7 @@ def finish_match(match_id: int):
                     logger.warning(f"Could not generate knockout: {e}")
 
             # Auto-advance knockout bracket
-            if match.phase == "Pucharowa" and match.tournament_id:
+            if _is_knockout_phase(match.phase) and match.tournament_id:
                 try:
                     from ..database import advance_knockout
                     advance_knockout(match_id, match.tournament_id)
