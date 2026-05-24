@@ -25,7 +25,11 @@ def snapshot():
         from ..database import fetch_courts, get_active_tournament_name
         from ..services.court_manager import refresh_courts_from_db
         refresh_courts_from_db(fetch_courts(active_only=True))
-        configured_courts = fetch_courts(active_only=True, public_only=True)
+        configured_courts = [
+            court
+            for court in fetch_courts(active_only=True, public_only=True)
+            if not str(court.get("kort_id") or "").lower().startswith("review-")
+        ]
         public_court_ids = {str(court.get("kort_id")) for court in configured_courts}
         courts_data = {
             kort_id: court
