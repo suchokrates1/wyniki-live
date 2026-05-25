@@ -2255,23 +2255,22 @@ def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) 
 
 
 def build_public_schedule_payload(tournament_id: int) -> Dict[str, Any]:
-    """Return schedule grouped by day and court for the public UI."""
+    """Return schedule grouped by day and category for the public UI."""
     tournament = fetch_tournament(tournament_id) or {}
     entries = fetch_tournament_schedule(tournament_id, public_only=True)
     days: Dict[str, Dict[str, Any]] = {}
     for entry in entries:
         day_date = entry.get("day_date") or ""
         day = days.setdefault(day_date, {"date": day_date, "categories": {}})
-        court_name = entry.get("court_label") or entry.get("court_id") or "Kort do ustalenia"
-        court = day["categories"].setdefault(
-            court_name,
+        category_name = entry.get("category_name") or entry.get("group_name") or "Kategoria do ustalenia"
+        category = day["categories"].setdefault(
+            category_name,
             {
-                "name": court_name,
+                "name": category_name,
                 "matches": [],
-                "court_display_order": int(entry.get("court_display_order") or 9999),
             },
         )
-        court["matches"].append(entry)
+        category["matches"].append(entry)
 
     grouped_days = []
     for day in days.values():
@@ -2286,7 +2285,6 @@ def build_public_schedule_payload(tournament_id: int) -> Dict[str, Any]:
             )
         categories.sort(
             key=lambda item: (
-                item.get("court_display_order") or 9999,
                 str(item.get("name") or "").casefold(),
             )
         )
@@ -2699,6 +2697,11 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
         surname_to_bracket[surname] = name
 
     # Remap match player names to bracket names
+    seen_pairs = {
+        tuple(sorted((row["player1_name"], row["player2_name"])))
+        for row in exact_results
+        if row.get("player1_name") and row.get("player2_name")
+    }
     remapped = []
     for row in raw_results:
         r = dict(row)
@@ -2707,9 +2710,13 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
         bracket_p1 = surname_to_bracket.get(p1_surname)
         bracket_p2 = surname_to_bracket.get(p2_surname)
         if bracket_p1 and bracket_p2 and bracket_p1 != bracket_p2:
+            pair_key = tuple(sorted((bracket_p1, bracket_p2)))
+            if pair_key in seen_pairs:
+                continue
             r["player1_name"] = bracket_p1
             r["player2_name"] = bracket_p2
             remapped.append(r)
+            seen_pairs.add(pair_key)
 
     merged = list(exact_results)
     seen_ids = {int(row["id"]) for row in exact_results if row.get("id") is not None}
