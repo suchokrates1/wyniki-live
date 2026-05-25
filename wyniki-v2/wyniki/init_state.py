@@ -1,6 +1,8 @@
 """State initialization and loading."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from .config import logger, settings
 from .database import init_db, fetch_courts, fetch_tournaments, fetch_match_history, get_active_tournament_id
 from .db_models import Match, Player
@@ -21,6 +23,29 @@ def _resolve_live_player_name(match: Match, raw_name: str | None) -> str:
     return player.full_name if player and player.full_name else candidate
 
 
+def _parse_match_timestamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _is_recent_live_match(match: Match) -> bool:
+    max_age_hours = int(settings.live_rehydrate_max_age_hours or 0)
+    if max_age_hours <= 0:
+        return True
+    reference = _parse_match_timestamp(match.updated_at) or _parse_match_timestamp(match.created_at)
+    if not reference:
+        return True
+    age_seconds = (datetime.now(timezone.utc) - reference).total_seconds()
+    return age_seconds <= max_age_hours * 3600
+
+
 def rehydrate_live_courts() -> int:
     """Rebuild in-memory court state from active matches.
 
@@ -36,10 +61,14 @@ def rehydrate_live_courts() -> int:
     )
 
     restored = 0
+    skipped_stale = 0
     restored_courts: set[str] = set()
     for match in active_matches:
         kort_id = (match.court_id or '').strip()
         if not kort_id or kort_id in restored_courts:
+            continue
+        if not _is_recent_live_match(match):
+            skipped_stale += 1
             continue
 
         court_state = ensure_court_state(kort_id)
@@ -91,6 +120,8 @@ def rehydrate_live_courts() -> int:
 
     if restored:
         logger.info("rehydrated_live_courts", restored=restored)
+    if skipped_stale:
+        logger.info("skipped_stale_live_matches", skipped=skipped_stale, max_age_hours=settings.live_rehydrate_max_age_hours)
     return restored
 
 
