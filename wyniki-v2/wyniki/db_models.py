@@ -241,6 +241,11 @@ class Match(db.Model):
     player2_points = db.Column(db.Integer, default=0)
     
     sets_history = db.Column(db.Text)  # JSON string
+
+    client_info = db.Column(db.Text, nullable=True)
+    client_ip = db.Column(db.String(100), nullable=True)
+    client_country = db.Column(db.String(10), nullable=True)
+    client_user_agent = db.Column(db.String(500), nullable=True)
     
     created_at = db.Column(db.String(50), default=utc_now_iso)
     updated_at = db.Column(db.String(50), default=utc_now_iso, onupdate=utc_now_iso)
@@ -248,7 +253,7 @@ class Match(db.Model):
     # Relationships
     statistics = db.relationship('MatchStatistics', back_populates='match', uselist=False, cascade='all, delete-orphan')
     
-    def to_dict(self, bracket_warning=None):
+    def to_dict(self, bracket_warning=None, include_client_info=False):
         import json
         result = {
             'id': self.id,
@@ -273,6 +278,14 @@ class Match(db.Model):
         }
         if bracket_warning:
             result['bracket_warning'] = bracket_warning
+        if include_client_info:
+            try:
+                result['client_info'] = json.loads(self.client_info) if self.client_info else None
+            except Exception:
+                result['client_info'] = self.client_info
+            result['client_ip'] = self.client_ip
+            result['client_country'] = self.client_country
+            result['client_user_agent'] = self.client_user_agent
         return result
 
 

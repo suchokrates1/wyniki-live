@@ -121,6 +121,10 @@ def init_db() -> None:
                 player1_points INTEGER DEFAULT 0,
                 player2_points INTEGER DEFAULT 0,
                 sets_history TEXT,
+                client_info TEXT,
+                client_ip TEXT,
+                client_country TEXT,
+                client_user_agent TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
@@ -328,6 +332,16 @@ def init_db() -> None:
         if 'phase' not in m_cols:
             cursor.execute("ALTER TABLE matches ADD COLUMN phase TEXT")
             logger.info("database_migration", action="added_phase_to_matches")
+        match_client_columns = {
+            'client_info': 'TEXT',
+            'client_ip': 'TEXT',
+            'client_country': 'TEXT',
+            'client_user_agent': 'TEXT',
+        }
+        for column_name, ddl in match_client_columns.items():
+            if column_name not in m_cols:
+                cursor.execute(f"ALTER TABLE matches ADD COLUMN {column_name} {ddl}")
+                logger.info("database_migration", action=f"added_{column_name}_to_matches")
 
         cursor.execute("PRAGMA table_info(tournament_schedule)")
         schedule_cols = [row[1] for row in cursor.fetchall()]
