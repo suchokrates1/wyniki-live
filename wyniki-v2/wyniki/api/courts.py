@@ -61,7 +61,7 @@ def history():
         # Serve from DB filtered by tournament
         history_data = fetch_match_history(
             limit=settings.match_history_size,
-            tournament_id=tid if tournament_id is not None else None,
+            tournament_id=tid,
             public_only=True,
         )
         return jsonify(history_data)

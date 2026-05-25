@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blind Tennis App</title>
+    <title>Wyniki tenisowe</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎾</text></svg>">
-    <meta name="description" content="Blind Tennis App – wyniki na żywo">
+    <meta name="description" content="Wyniki tenisowe na zywo">
 </head>
 <body>
-    <a href="#main" class="skip-link">Skip to main content</a>
-    <div x-data="tennisApp" x-cloak class="wrap" x-effect="document.title = 'Blind Tennis App'; document.documentElement.lang = lang || 'pl'">>
+    <div x-data="tennisApp" x-cloak class="wrap" x-effect="document.title = tr().pageTitle || 'Wyniki tenisowe – na zywo'; document.documentElement.lang = tr().htmlLang || lang || 'pl'">
+        <a href="#main" class="skip-link" x-text="uiText().skipToContent || 'Skip to main content'">Skip to main content</a>
         
         <!-- Header -->
         <header class="header">
             <div class="header-bar">
                 <h1 class="header-title">
-                    <span>Blind Tennis App</span>
-                    <span x-show="hasActiveCourts()" class="live-badge">LIVE</span>
+                    <span x-text="uiText().appName || (tr().pageTitle || 'Wyniki tenisowe')">Wyniki tenisowe</span>
+                    <span x-show="hasActiveCourts()" class="live-badge" x-text="tr().liveBadge || 'LIVE'">LIVE</span>
                 </h1>
                 <div class="header-actions">
-                    <label class="sr-only" for="langSelect">Wybierz język</label>
+                    <label class="sr-only" for="langSelect" x-text="uiText().languageSelect || 'Wybierz jezyk'">Wybierz jezyk</label>
                     <select id="langSelect" class="lang-select" x-model="lang" @change="onLangChange()">
                         <option value="pl">Polski</option>
                         <option value="de">Deutsch</option>
@@ -92,7 +92,7 @@
             <nav x-show="getCourtIds().length > 0" :aria-label="t('navLabel')" class="sr-only">
                 <ul>
                     <template x-for="courtId in getCourtIds()" :key="'nav-'+courtId">
-                        <li><a :href="'#kort-'+courtId" x-text="t('courtLabel', {court: courtId})"></a></li>
+                        <li><a :href="'#kort-'+courtId" x-text="getCourtDisplayLabel(courtId)"></a></li>
                     </template>
                 </ul>
             </nav>
@@ -113,7 +113,7 @@
                         <div class="card-head">
                             <h2 :id="'heading-'+courtId"
                                 :aria-label="getHeadingAria(courtId)">
-                                <span class="court-label" x-text="t('courtLabel', {court: courtId})"></span>:
+                                <span class="court-label" x-text="getCourtDisplayLabel(courtId)"></span>:
                                 <span class="match-title">
                                     <span class="match-player" x-text="getPlayerName(courtId, 'A')"></span>
                                     <span class="match-versus">
@@ -149,7 +149,7 @@
                                         </span>
                                         <span class="player-name" :id="'k'+courtId+'-name-A'" x-text="getPlayerName(courtId, 'A')"></span>
                                         <template x-if="courts[courtId]?.serve === 'A'">
-                                            <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:14px;height:14px;"></span>
+                                            <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="" style="width:14px;height:14px;"></span>
                                         </template>
                                     </dt>
                                     <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-A'">
@@ -184,7 +184,7 @@
                                         </span>
                                         <span class="player-name" :id="'k'+courtId+'-name-B'" x-text="getPlayerName(courtId, 'B')"></span>
                                         <template x-if="courts[courtId]?.serve === 'B'">
-                                            <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:14px;height:14px;"></span>
+                                            <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="" style="width:14px;height:14px;"></span>
                                         </template>
                                     </dt>
                                     <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-B'">
@@ -242,7 +242,7 @@
                     <div class="bracket-content">
 
                         <!-- Category sub-tabs -->
-                        <div class="cat-tabs" role="tablist" aria-label="Kategorie turniejowe">
+                        <div class="cat-tabs" role="tablist" :aria-label="tr().bracket?.categoryTabsLabel || 'Kategorie turniejowe'">
                             <template x-for="cat in bracketCategories()" :key="'ct-'+cat.name">
                                 <button class="cat-tab"
                                         role="tab"
@@ -263,7 +263,7 @@
                                  :id="'cat-panel-'+cat.name.replace(/\s+/g,'-')"
                                  :aria-labelledby="'cat-tab-'+cat.name.replace(/\s+/g,'-')">
 
-                                <div class="bt-podium bt-podium--top" role="list" aria-label="Podium" x-show="knockoutPodiumEntries(cat.knockout).length === 3">
+                                <div class="bt-podium bt-podium--top" role="list" :aria-label="tr().bracket?.podiumLabel || 'Podium'" x-show="knockoutPodiumEntries(cat.knockout).length === 3">
                                     <template x-for="(entry, pi) in knockoutPodiumEntries(cat.knockout)" :key="'pod-top-'+cat.name+'-'+pi">
                                         <div class="bt-podium-item" :class="entry.cls" role="listitem">
                                             <span class="bt-podium-medal" x-text="entry.medal"></span>
@@ -284,7 +284,7 @@
                                             </h3>
 
                                             <!-- Standings table -->
-                                            <table class="bracket-table" :aria-label="'Tabela grupy ' + group.name">
+                                            <table class="bracket-table" :aria-label="bracketGroupTableAriaLabel(group.name)">
                                                 <thead>
                                                     <tr>
                                                         <th class="bt-pos" scope="col">#</th>
@@ -315,7 +315,7 @@
                                                 <div class="bm-match-list">
                                                     <template x-for="(m, mi) in group.matches" :key="'gm-'+cat.name+'-'+gi+'-'+mi">
                                                         <table class="bm-scoreboard bm-scoreboard--group"
-                                                               :aria-label="resolveBracketName(m.player_a)+' vs '+resolveBracketName(m.player_b)">
+                                                            :aria-label="groupMatchAria(m, group.name, mi)">
                                                             <colgroup>
                                                                 <col class="bm-col-name">
                                                                 <col class="bm-col-set">
@@ -368,7 +368,7 @@
 
                                 <!-- Bracket tree (only for categories with knockout) -->
                                 <template x-if="cat.knockout.length > 0">
-                                    <section class="bracket-tree" :aria-label="'Drabinka ' + cat.name">
+                                    <section class="bracket-tree" :aria-label="bracketTreeAriaLabel(cat.name)">
                                         <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'">Faza pucharowa</h3>
 
                                         <div class="bt-ladder">
@@ -824,7 +824,7 @@
                 </section>
                 <div x-show="sortedHistory().length === 0" class="empty-state">
                     <div class="empty-state__icon">📋</div>
-                    <p x-text="tr().tournamentHistory?.noMatches || 'Brak meczów w tym turnieju'"></p>
+                    <p x-text="tr().history?.noMatchesActive || tr().tournamentHistory?.noMatches || 'Brak meczow w tym turnieju'"></p>
                 </div>
             </div><!-- end SUB: history -->
 
@@ -888,7 +888,7 @@
                             <div class="bracket-content">
 
                                 <!-- Category sub-tabs -->
-                                <div class="cat-tabs" role="tablist" aria-label="Kategorie turniejowe">
+                                <div class="cat-tabs" role="tablist" :aria-label="tr().bracket?.categoryTabsLabel || 'Kategorie turniejowe'">
                                     <template x-for="cat in tournamentBracketCategories()" :key="'tct-'+cat.name">
                                         <button class="cat-tab"
                                                 role="tab"
@@ -909,7 +909,7 @@
                                          :id="'tcat-panel-'+cat.name.replace(/\s+/g,'-')"
                                          :aria-labelledby="'tcat-tab-'+cat.name.replace(/\s+/g,'-')">
 
-                                        <div class="bt-podium bt-podium--top" role="list" aria-label="Podium" x-show="knockoutPodiumEntries(cat.knockout).length === 3">
+                                        <div class="bt-podium bt-podium--top" role="list" :aria-label="tr().bracket?.podiumLabel || 'Podium'" x-show="knockoutPodiumEntries(cat.knockout).length === 3">
                                             <template x-for="(entry, pi) in knockoutPodiumEntries(cat.knockout)" :key="'tpod-top-'+cat.name+'-'+pi">
                                                 <div class="bt-podium-item" :class="entry.cls" role="listitem">
                                                     <span class="bt-podium-medal" x-text="entry.medal"></span>
@@ -929,7 +929,7 @@
                                                         <span x-text="group.name"></span>
                                                     </h3>
 
-                                                    <table class="bracket-table" :aria-label="'Tabela grupy ' + group.name">
+                                                    <table class="bracket-table" :aria-label="bracketGroupTableAriaLabel(group.name)">
                                                         <thead>
                                                             <tr>
                                                                 <th class="bt-pos" scope="col">#</th>
@@ -959,8 +959,8 @@
                                                         <h4 class="bracket-matches__title" x-text="tr().bracket?.matchesTitle || 'Mecze grupowe'"></h4>
                                                         <div class="bm-match-list">
                                                             <template x-for="(m, mi) in group.matches" :key="'tgm-'+cat.name+'-'+gi+'-'+mi">
-                                                                <table class="bm-scoreboard bm-scoreboard--group"
-                                                                       :aria-label="resolveBracketName(m.player_a)+' vs '+resolveBracketName(m.player_b)">
+                                                                 <table class="bm-scoreboard bm-scoreboard--group"
+                                                                     :aria-label="groupMatchAria(m, group.name, mi)">
                                                                     <colgroup>
                                                                         <col class="bm-col-name">
                                                                         <col class="bm-col-set">
@@ -1013,7 +1013,7 @@
 
                                         <!-- Knockout -->
                                         <template x-if="cat.knockout.length > 0">
-                                            <section class="bracket-tree" :aria-label="'Drabinka ' + cat.name">
+                                            <section class="bracket-tree" :aria-label="bracketTreeAriaLabel(cat.name)">
                                                 <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'">Faza pucharowa</h3>
 
                                                 <div class="bt-ladder">
@@ -1102,7 +1102,7 @@
                                                                 <template x-if="!match.scheduled_time"><span x-text="scheduleText().timeTbd"></span></template>
                                                             </td>
                                                             <td x-text="scheduleCourtLabel(match)"></td>
-                                                            <td x-text="translateCategory(match.phase || '')"></td>
+                                                            <td x-text="translatePhase(match.phase || '')"></td>
                                                             <td>
                                                                 <span class="schedule-player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                                 <span aria-hidden="true"> vs </span>
@@ -1292,7 +1292,7 @@
                             <div class="pp-header">
                                 <div class="pp-avatar">
                                     <img x-show="playerProfile.player.photo_url" :src="playerProfile.player.photo_url" class="pp-avatar__photo" :alt="playerProfile.player.full_name" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
-                                    <img x-show="!playerProfile.player.photo_url && playerProfile.player.country" :src="codeToFlag(playerProfile.player.country)" :alt="playerProfile.player.country + ' flag'" class="pp-avatar__flag">
+                                    <img x-show="!playerProfile.player.photo_url && playerProfile.player.country" :src="codeToFlag(playerProfile.player.country)" alt="" class="pp-avatar__flag">
                                     <span x-show="!playerProfile.player.photo_url" class="pp-avatar__initials" aria-hidden="true" x-text="(playerProfile.player.first_name?.[0] || '') + (playerProfile.player.last_name?.[0] || '')"></span></span>
                                 </div>
                                 <div class="pp-info">
@@ -1301,10 +1301,10 @@
                                         <span x-show="playerProfile.player.category" class="pp-badge pp-badge--cat" x-text="playerProfile.player.category"></span>
                                         <span x-show="playerProfile.player.gender" class="pp-badge pp-badge--gender" x-text="playerProfile.player.gender === 'M' ? (tr().playerProfile?.male || 'Mężczyzna') : (tr().playerProfile?.female || 'Kobieta')"></span>
                                         <span x-show="playerProfile.player.country" class="pp-badge pp-badge--country">
-                                            <img :src="codeToFlag(playerProfile.player.country)" width="16" height="12" :alt="playerProfile.player.country">
+                                            <img :src="codeToFlag(playerProfile.player.country)" width="16" height="12" alt="">
                                             <span x-text="playerProfile.player.country"></span>
                                         </span>
-                                        <span x-show="playerProfile.player.age" class="pp-badge" x-text="playerProfile.player.age + ' lat'"></span>
+                                        <span x-show="playerProfile.player.age" class="pp-badge" x-text="formatText(tr().playerProfile?.ageLabel || '{years} lat', { years: playerProfile.player.age })"></span>
                                     </div>
                                 </div>
                             </div>
@@ -1366,7 +1366,7 @@
                                                     <span class="pp-tourn__w" x-text="t.wins + (tr().playerProfile?.won || 'W')"></span> /
                                                     <span class="pp-tourn__l" x-text="t.losses + (tr().playerProfile?.lost || 'P')"></span>
                                                 </span>
-                                                <span class="pp-tourn__group" x-show="t.group_name" x-text="(tr().playerProfile?.group || 'Grupa') + ' ' + t.group_name + ': ' + t.group_position + '/' + t.group_total"></span>
+                                                <span class="pp-tourn__group" x-show="t.group_name" x-text="(tr().playerProfile?.group || 'Grupa') + ' ' + translateCategory(t.group_name) + ': ' + t.group_position + '/' + t.group_total"></span>
                                                 <span class="pp-tourn__chevron" :class="{ 'pp-tourn__chevron--open': profileExpandedTournaments[t.tournament_id] }">▸</span>
                                             </div>
                                         </div>
@@ -1384,11 +1384,11 @@
                                                             </span>
                                                         </template>
                                                     </span>
-                                                    <span class="pp-match__phase" x-show="m.phase" x-text="m.phase"></span>
+                                                    <span class="pp-match__phase" x-show="m.phase" x-text="translatePhase(m.phase)"></span>
                                                 </div>
                                             </template>
                                             <div x-show="!t.matches || t.matches.length === 0" class="pp-tourn__no-matches">
-                                                <p x-text="tr().playerProfile?.noTournaments || 'Brak meczów'"></p>
+                                                <p x-text="tr().playerProfile?.noMatches || 'Brak meczow'"></p>
                                             </div>
                                         </div>
                                     </div>
@@ -1398,7 +1398,7 @@
                     </template>
 
                     <div x-show="!playerProfile && !playerProfileLoading" class="empty-state">
-                        <p>Player not found</p>
+                        <p x-text="tr().playerProfile?.notFound || 'Player not found'">Player not found</p>
                     </div>
                 </div>
 
@@ -1408,9 +1408,9 @@
 
         <!-- Vestmedia Footer -->
         <footer class="vm-footer">
-            <span class="vm-footer__refresh" x-show="lastUpdate" x-text="(tr().meta?.lastRefresh || 'Ostatnia aktualizacja: {time}').replace('{time}', lastUpdate ? lastUpdate.toLocaleTimeString('pl-PL') : '')"></span>
+            <span class="vm-footer__refresh" x-show="lastUpdate" x-text="(tr().meta?.lastRefresh || 'Ostatnia aktualizacja: {time}').replace('{time}', lastUpdate ? lastUpdate.toLocaleTimeString(locale()) : '')"></span>
             <span class="vm-footer__sep" x-show="lastUpdate" aria-hidden="true">|</span>
-            <span>Powered by</span>
+            <span x-text="uiText().poweredBy || 'Powered by'">Powered by</span>
             <a href="https://vestmedia.pl" target="_blank" rel="noopener noreferrer" class="vm-footer__link">
                 <img src="https://vestmedia.pl/wp-content/uploads/2024/12/Vest-Media-5.png"
                      alt="Vest Media" class="vm-footer__logo" loading="lazy">
