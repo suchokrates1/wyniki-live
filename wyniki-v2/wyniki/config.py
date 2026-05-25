@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     # History
     match_history_size: int = 100
     log_entries_per_court: int = 50
+    live_rehydrate_max_age_hours: int = 12
     
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent

@@ -1,5 +1,6 @@
 import pytest
 import json
+from datetime import datetime, timedelta, timezone
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -903,6 +904,52 @@ def test_public_history_defaults_to_active_public_tournament(full_app_with_temp_
 
     assert private_response.status_code == 200
     assert private_response.get_json() == []
+
+
+def test_rehydrate_live_courts_skips_stale_in_progress_matches(full_app_with_temp_db):
+    from wyniki import database
+    from wyniki.init_state import rehydrate_live_courts
+    from wyniki.services.court_manager import COURTS, STATE_LOCK, refresh_courts_from_db
+
+    with database.db_conn() as conn:
+        conn.execute("UPDATE tournaments SET active = 0")
+        conn.commit()
+
+    tournament_id = database.insert_tournament("Fresh Live Cup", "2026-05-25", "2026-05-25", active=True)
+    database.create_tournament_courts(tournament_id, 2)
+    now = datetime.now(timezone.utc)
+    stale_time = (now - timedelta(days=2)).isoformat()
+    fresh_time = now.isoformat()
+
+    with database.db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO matches (court_id, player1_name, player2_name, status, tournament_id, created_at, updated_at)
+            VALUES (?, ?, ?, 'in_progress', ?, ?, ?)
+            """,
+            (f"t{tournament_id}-1", "Stale A", "Stale B", tournament_id, stale_time, stale_time),
+        )
+        cursor.execute(
+            """
+            INSERT INTO matches (court_id, player1_name, player2_name, status, tournament_id, created_at, updated_at)
+            VALUES (?, ?, ?, 'in_progress', ?, ?, ?)
+            """,
+            (f"t{tournament_id}-2", "Fresh A", "Fresh B", tournament_id, fresh_time, fresh_time),
+        )
+        conn.commit()
+
+    with STATE_LOCK:
+        COURTS.clear()
+    refresh_courts_from_db(database.fetch_courts(active_only=True), seed_if_empty=False)
+
+    with full_app_with_temp_db.app_context():
+        restored = rehydrate_live_courts()
+
+    assert restored == 1
+    assert COURTS[f"t{tournament_id}-1"]["match_status"]["active"] is False
+    assert COURTS[f"t{tournament_id}-2"]["match_status"]["active"] is True
+    assert COURTS[f"t{tournament_id}-2"]["A"]["surname"] == "Fresh A"
 
 
 def test_stats_disabled_tournament_does_not_count_in_public_player_stats(full_app_with_temp_db):
