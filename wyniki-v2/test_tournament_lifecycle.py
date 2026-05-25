@@ -834,6 +834,77 @@ def test_private_simulation_is_hidden_from_public_tournament_endpoints(full_app_
     assert keyed_history_response.get_json()[0]["player_a"] == "Private Player"
 
 
+def test_public_history_defaults_to_active_public_tournament(full_app_with_temp_db):
+    from wyniki import database
+
+    with database.db_conn() as conn:
+        conn.execute("UPDATE tournaments SET active = 0")
+        conn.commit()
+
+    inactive_id = database.insert_tournament("Inactive Public Cup", "2026-04-26", "2026-04-27", active=False)
+    private_id = database.insert_tournament(
+        "Private Simulation",
+        "2026-04-26",
+        "2026-04-27",
+        active=True,
+        is_public=False,
+        stats_enabled=False,
+        is_simulation=True,
+        access_key="secret-key",
+    )
+    active_id = database.insert_tournament("Active Public Cup", "2026-04-26", "2026-04-27", active=True)
+    database.insert_match_history({
+        "kort_id": "inactive-1",
+        "ended_ts": "2026-04-26T10:00:00Z",
+        "duration_seconds": 1200,
+        "player_a": "Inactive Player",
+        "player_b": "Inactive Opponent",
+        "score_a": [4, 4],
+        "score_b": [1, 2],
+        "category": "B1",
+        "phase": "Grupowa",
+        "tournament_id": inactive_id,
+    })
+    database.insert_match_history({
+        "kort_id": "private-1",
+        "ended_ts": "2026-04-26T11:00:00Z",
+        "duration_seconds": 1200,
+        "player_a": "Private Player",
+        "player_b": "Private Opponent",
+        "score_a": [4, 4],
+        "score_b": [1, 2],
+        "category": "B1",
+        "phase": "Grupowa",
+        "tournament_id": private_id,
+    })
+    database.insert_match_history({
+        "kort_id": "active-1",
+        "ended_ts": "2026-04-26T12:00:00Z",
+        "duration_seconds": 1200,
+        "player_a": "Active Player",
+        "player_b": "Active Opponent",
+        "score_a": [4, 4],
+        "score_b": [1, 2],
+        "category": "B1",
+        "phase": "Grupowa",
+        "tournament_id": active_id,
+    })
+
+    client = full_app_with_temp_db.test_client()
+    default_response = client.get("/api/history")
+    inactive_response = client.get(f"/api/history?tournament_id={inactive_id}")
+    private_response = client.get(f"/api/history?tournament_id={private_id}")
+
+    assert default_response.status_code == 200
+    assert [match["player_a"] for match in default_response.get_json()] == ["Active Player"]
+
+    assert inactive_response.status_code == 200
+    assert [match["player_a"] for match in inactive_response.get_json()] == ["Inactive Player"]
+
+    assert private_response.status_code == 200
+    assert private_response.get_json() == []
+
+
 def test_stats_disabled_tournament_does_not_count_in_public_player_stats(full_app_with_temp_db):
     from wyniki import database
 

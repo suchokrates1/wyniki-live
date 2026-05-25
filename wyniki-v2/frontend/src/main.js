@@ -23,11 +23,7 @@ import {
   isTiebreak as isTiebreakForCourt,
   resolveDisplayPoints as resolveDisplayPointsForCourt,
 } from './modules/liveScores.js';
-import {
-  getMatchSets as getHistoryMatchSets,
-  getMatchWinner as getHistoryMatchWinner,
-  getStatsRowsPaired as getHistoryStatsRowsPaired,
-} from './modules/history.js';
+import { createHistoryView } from './modules/historyView.js';
 import {
   buildTournamentAccessQuery,
   getClearedTournamentDetailState,
@@ -155,9 +151,8 @@ Alpine.data('tennisApp', () => ({
   lastUpdate: null,
   lang: 'pl',
   darkMode: false,
-  history: [],
   tournamentName: null,
-  expandedMatchStats: {},  // match_id -> stats data (for Details button)
+  ...createHistoryView(),
   activeTab: 'live',
   bracketData: null,
   bracketLoading: false,
@@ -199,15 +194,6 @@ Alpine.data('tennisApp', () => ({
   _navigating: false,
   _profileIsGlobal: false,
   _playerProfileRequestId: 0,
-
-  /* --- Sorted history (newest first) --- */
-  sortedHistory() {
-    return [...this.history].sort((a, b) => {
-      const ta = a.ended_ts || a.timestamp || '';
-      const tb = b.ended_ts || b.timestamp || '';
-      return tb.localeCompare(ta);
-    });
-  },
 
   /* --- Sorted tournament history (newest first) --- */
   sortedTournamentHistory() {
@@ -391,27 +377,6 @@ Alpine.data('tennisApp', () => ({
       this.error = err.message;
       this.loading = false;
     }
-  },
-
-  async fetchHistory() {
-    try {
-      const data = await publicApi.getHistory();
-      if (!data) return;
-      this.history = Array.isArray(data) ? data : [];
-      // Build surname -> full_name lookup from history data
-      for (const m of this.history) {
-        if (m.player_a && m.player_a.includes(' ')) {
-          const parts = m.player_a.trim().split(/\s+/);
-          const surname = parts[parts.length - 1];
-          this.bracketNameMap[surname] = m.player_a;
-        }
-        if (m.player_b && m.player_b.includes(' ')) {
-          const parts = m.player_b.trim().split(/\s+/);
-          const surname = parts[parts.length - 1];
-          this.bracketNameMap[surname] = m.player_b;
-        }
-      }
-    } catch { /* ignore */ }
   },
 
   /* --- Tournament history methods --- */
@@ -1318,95 +1283,7 @@ Alpine.data('tennisApp', () => ({
     return formatDuration(seconds);
   },
 
-  /* --- History formatting helpers --- */
-  /**
-   * Determine match winner from set scores.
-   * Returns 'A', 'B', or null.
-   */
-  getMatchWinner(match) {
-    return getHistoryMatchWinner(match);
-  },
-
-  /**
-   * Parse match into per-set data objects for tabular scoreboard.
-   * Returns: [{ a, b, tb, isSuperTB }, ...]
-   * For STB sets, converts raw games (1:0) to actual STB points.
-   */
-  getMatchSets(match) {
-    return getHistoryMatchSets(match);
-  },
-
-  /**
-   * Build stats rows as paired comparison (P1 value | label | P2 value).
-   * Used in the centered comparison table.
-   */
-  getStatsRowsPaired(stats) {
-    return getHistoryStatsRowsPaired(stats, this.tr().stats || {});
-  },
-
-  /**
-   * Build accessible single-string description for screen readers (NVDA, VoiceOver).
-   */
-  getHistoryAriaLabel(match) {
-    const h = this.tr().history || {};
-    const courtName = match.court_name || match.kort_id || this.acc().unknownCourt || 'kort nieustalony';
-    const winner = this.getMatchWinner(match);
-    const winnerName = winner === 'A'
-      ? match.player_a
-      : winner === 'B'
-        ? match.player_b
-        : '';
-    const intro = [];
-    if (match.tournament_name) intro.push(match.tournament_name);
-    intro.push(`${h.court || this.acc().court || 'Kort'}: ${courtName}`);
-
-    return this.buildCompletedMatchAria({
-      intro,
-      playerA: match.player_a,
-      playerB: match.player_b,
-      winnerName,
-      scoreText: this.describeHistorySetsForSpeech(match),
-      details: [
-        match.category ? `${h.category || 'Kategoria'}: ${this.translateCategory(match.category)}` : '',
-        match.phase ? `${this.acc().phase || 'Etap'}: ${this.translatePhase(match.phase)}` : '',
-        match.duration_seconds ? `${h.time || this.acc().duration || 'Czas'}: ${this.formatTime(match.duration_seconds)}` : '',
-      ],
-    });
-  },
-
-  /**
-   * Toggle details panel for a history match.
-   * Fetches stats from server if not already loaded.
-   */
-  async toggleMatchDetails(matchId) {
-    if (!matchId) return;
-    const key = String(matchId);
-    
-    if (this.expandedMatchStats[key]) {
-      // Collapse: remove entry
-      delete this.expandedMatchStats[key];
-      this.expandedMatchStats = { ...this.expandedMatchStats };
-      return;
-    }
-
-    // Fetch stats from server
-    try {
-      this.expandedMatchStats = { ...this.expandedMatchStats, [key]: { loading: true } };
-      const data = await publicApi.getMatchStats(matchId);
-      if (!data) { this.expandedMatchStats = { ...this.expandedMatchStats, [key]: { error: true } }; return; }
-      this.expandedMatchStats = { ...this.expandedMatchStats, [key]: data };
-    } catch {
-      this.expandedMatchStats = { ...this.expandedMatchStats, [key]: { error: true } };
-    }
-  },
-
-  isMatchExpanded(matchId) {
-    return matchId && !!this.expandedMatchStats[String(matchId)];
-  },
-
-  getMatchStats(matchId) {
-    return matchId ? this.expandedMatchStats[String(matchId)] : null;
-  }
+  /* --- History view methods are composed from modules/historyView.js --- */
 }));
 
 Alpine.start();

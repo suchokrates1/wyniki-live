@@ -78,6 +78,9 @@ frontend/src/
   - [x] Przenieść sortowanie i lokalizację etykiet kortów do `shared/courtLabels.js`.
   - [x] Usunąć martwy adapter `withNoCacheQuery` z `main.js`.
   - [x] Przejrzeć pozostałe adaptery w `main.js` i zostawić tylko te używane przez szablony Alpine.
+- [ ] Etap 8: zacząć dzielić stan Alpine na kontrolery widoków po jednej zakładce.
+  - [x] Wydzielić mały, bezpieczny kontroler widoku historii jako pierwszy pionowy wycinek.
+  - [ ] Po każdym wycinku uruchomić `npm run check:public` i produkcyjny smoke po deployu.
 
 ## Zasady prowadzenia zmian
 
@@ -123,6 +126,11 @@ To jest dobry pierwszy krok, bo ogranicza ryzyko: logika pozostaje czysta, wejś
 - Rozpoczęto etap 7: dodano `shared/date.js` i `shared/courtLabels.js`, usunięto nieużywany adapter `withNoCacheQuery` z `main.js`.
 - Domknięto etap 7: usunięto nieużywane adaptery drabinki, historii i statystyk z `main.js`, zostawiając adaptery używane przez szablony Alpine lub wewnętrzny przepływ aplikacji.
 - Walidacja po etapach: diagnostyka plików bez błędów, `npm run build` przechodzi.
+- Utworzono checkpoint git po etapach 0-7: `1bee72d refactor public frontend modules`.
+- Dodano regresję backendową dla `/api/history`: bez `tournament_id` endpoint musi zwracać historię aktywnego publicznego turnieju, a prywatne turnieje pozostają ukryte.
+- Dodano `frontend/scripts/validate-i18n.mjs` oraz komendy `npm run test:i18n`, `npm run check:public`, `npm run smoke:production` i `npm run verify:production`.
+- Rozpoczęto etap 8: wydzielono `modules/historyView.js` z publicznym stanem i akcjami widoku historii (`history`, sortowanie, pobieranie historii, szczegóły statystyk, etykieta aria historii).
+- Dodano operacyjny `scripts/prod_ops_check.sh`: dzienny check publicznej strony, `/api/snapshot` i świeżości backupu NAS po backupie cron.
 
 ## Porządki na minipc
 

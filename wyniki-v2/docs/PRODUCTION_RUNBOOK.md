@@ -58,6 +58,35 @@ The smoke test checks:
 - `/api/tournaments/active`
 - `/api/players/active`
 
+For the public browser frontend, run the multilingual Playwright smoke after every frontend deploy:
+
+```powershell
+Set-Location "c:\Users\sucho\Wyniki\wyniki-live\wyniki-v2\frontend"
+npm run verify:production
+```
+
+This command validates translation key completeness, builds the public frontend, and checks 6 languages across the public routes on `https://score.vestmedia.pl`.
+
+## Daily Ops Check
+
+The minipc runs a lightweight daily check after the 03:00 backup:
+
+```cron
+30 4 * * * /home/suchokrates1/count/wyniki-v2/scripts/prod_ops_check.sh >> /tmp/wyniki-ops-check.log 2>&1
+```
+
+It checks:
+
+- `https://score.vestmedia.pl/`
+- `https://score.vestmedia.pl/api/snapshot`
+- the latest dated NAS backup under `/volume1/Backup/minipc`, using `NAS_*` from `~/backup.conf`
+
+Manual run:
+
+```powershell
+ssh minipc "/home/suchokrates1/count/wyniki-v2/scripts/prod_ops_check.sh"
+```
+
 ## Rollback
 
 Rollback has two moving parts:

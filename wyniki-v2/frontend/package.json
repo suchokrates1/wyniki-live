@@ -6,7 +6,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "smoke:public": "node scripts/public-smoke.mjs"
+    "test:i18n": "node scripts/validate-i18n.mjs",
+    "check:public": "npm run test:i18n && npm run build",
+    "smoke:public": "node scripts/public-smoke.mjs",
+    "smoke:production": "node scripts/public-smoke.mjs --base-url https://score.vestmedia.pl",
+    "verify:production": "npm run check:public && npm run smoke:production"
   },
   "dependencies": {
     "alpinejs": "^3.13.3",
