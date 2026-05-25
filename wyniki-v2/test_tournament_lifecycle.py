@@ -40,11 +40,90 @@ def full_app_with_temp_db(tmp_path, monkeypatch):
     return create_app()
 
 
+@pytest.fixture()
+def umpire_app_with_temp_db(tmp_path, monkeypatch):
+    db_path = tmp_path / "wyniki-umpire.sqlite3"
+    monkeypatch.setenv("DATABASE_PATH", str(db_path))
+
+    from wyniki.config import settings
+
+    settings.database_path = str(db_path)
+
+    from flask import Flask
+    from wyniki import database
+    from wyniki.db_models import db
+    from wyniki.api.umpire_api import blueprint as umpire_blueprint
+
+    database.init_db()
+
+    app = Flask(__name__)
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    db.init_app(app)
+    app.register_blueprint(umpire_blueprint)
+    return app
+
+
 def _count_table(database, table_name: str, where_clause: str = "", params=()):
     with database.db_conn() as conn:
         cursor = conn.cursor()
         cursor.execute(f"SELECT COUNT(*) AS count FROM {table_name} {where_clause}", params)
         return cursor.fetchone()["count"]
+
+
+def test_create_match_stores_mobile_client_audit(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Audit Cup", "2026-05-25", "2026-05-26", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+
+    response = umpire_app_with_temp_db.test_client().post(
+        "/api/matches",
+        json={
+            "court_id": f"t{tournament_id}-1",
+            "player1_name": "Audit Player A",
+            "player2_name": "Audit Player B",
+            "status": "in_progress",
+            "score": {
+                "player1_sets": 0,
+                "player2_sets": 0,
+                "player1_games": 0,
+                "player2_games": 0,
+                "player1_points": 0,
+                "player2_points": 0,
+                "sets_history": [],
+            },
+        },
+        headers={
+            "X-Forwarded-For": "203.0.113.42, 10.0.0.1",
+            "User-Agent": "TennisRefereeAndroid/5",
+            "X-TennisReferee-Platform": "android",
+            "X-TennisReferee-App-Version": "1.2.3",
+            "X-TennisReferee-Device": "Samsung SM-X200",
+            "X-TennisReferee-Country": "pl",
+            "X-TennisReferee-Locale": "pl-PL",
+        },
+    )
+
+    assert response.status_code == 201
+    match_id = response.get_json()["id"]
+    with database.db_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT client_info, client_ip, client_country, client_user_agent
+            FROM matches
+            WHERE id = ?
+            """,
+            (match_id,),
+        ).fetchone()
+
+    client_info = json.loads(row["client_info"])
+    assert row["client_ip"] == "203.0.113.42"
+    assert row["client_country"] == "PL"
+    assert row["client_user_agent"] == "TennisRefereeAndroid/5"
+    assert client_info["app"]["platform"] == "android"
+    assert client_info["app"]["app_version"] == "1.2.3"
+    assert client_info["app"]["device"] == "Samsung SM-X200"
 
 
 def test_admin_courts_show_active_tournaments_only(app_with_temp_db):

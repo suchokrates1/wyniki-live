@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request
 from datetime import datetime, timezone
 import json
 import re
+from typing import Any
 
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court, utc_now_iso
 from ..services.court_manager import ensure_court_state, normalize_kort_id, STATE_LOCK, _empty_player_state
@@ -12,6 +13,112 @@ from ..services.player_registry import create_tournament_player, player_payload
 from ..config import logger
 
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
+
+
+_CLIENT_HEADER_MAP = {
+    "platform": ("X-TennisReferee-Platform", 50),
+    "app_version": ("X-TennisReferee-App-Version", 50),
+    "app_version_code": ("X-TennisReferee-App-Code", 20),
+    "device": ("X-TennisReferee-Device", 160),
+    "device_manufacturer": ("X-TennisReferee-Manufacturer", 80),
+    "device_model": ("X-TennisReferee-Model", 120),
+    "android_sdk": ("X-TennisReferee-Android-Sdk", 20),
+    "android_release": ("X-TennisReferee-Android-Release", 40),
+    "locale": ("X-TennisReferee-Locale", 40),
+    "country": ("X-TennisReferee-Country", 10),
+    "timezone": ("X-TennisReferee-Timezone", 80),
+}
+
+
+def _clean_client_text(value: Any, max_length: int = 200) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    return text[:max_length]
+
+
+def _normalize_country(value: Any) -> str | None:
+    text = _clean_client_text(value, 10)
+    if not text:
+        return None
+    country = text.upper()
+    if re.fullmatch(r"[A-Z]{2}", country):
+        return country
+    return None
+
+
+def _request_client_ip() -> str | None:
+    direct_headers = ("CF-Connecting-IP", "X-Real-IP")
+    for header in direct_headers:
+        value = _clean_client_text(request.headers.get(header), 100)
+        if value:
+            return value
+
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        first_ip = _clean_client_text(forwarded_for.split(",", 1)[0], 100)
+        if first_ip:
+            return first_ip
+
+    forwarded = request.headers.get("Forwarded")
+    if forwarded:
+        for part in forwarded.split(","):
+            for item in part.split(";"):
+                key, _, value = item.strip().partition("=")
+                if key.lower() == "for":
+                    cleaned = _clean_client_text(value.strip('"[]'), 100)
+                    if cleaned:
+                        return cleaned
+
+    return _clean_client_text(request.remote_addr, 100)
+
+
+def _request_client_meta(data: dict | None) -> dict:
+    meta: dict[str, str] = {}
+    body_meta = data.get("client_meta") if isinstance(data, dict) else None
+    if isinstance(body_meta, dict):
+        for key, (_, max_length) in _CLIENT_HEADER_MAP.items():
+            value = _clean_client_text(body_meta.get(key), max_length)
+            if value:
+                meta[key] = value
+
+    for key, (header, max_length) in _CLIENT_HEADER_MAP.items():
+        value = _clean_client_text(request.headers.get(header), max_length)
+        if value:
+            meta[key] = value
+
+    country = _normalize_country(meta.get("country"))
+    if country:
+        meta["country"] = country
+    elif "country" in meta:
+        del meta["country"]
+    return meta
+
+
+def _match_client_audit(data: dict | None) -> dict[str, str | None]:
+    client_meta = _request_client_meta(data)
+    client_ip = _request_client_ip()
+    client_country = (
+        _normalize_country(request.headers.get("CF-IPCountry"))
+        or _normalize_country(request.headers.get("X-TennisReferee-Country"))
+        or _normalize_country(client_meta.get("country"))
+    )
+    user_agent = _clean_client_text(request.headers.get("User-Agent"), 500)
+    client_info = {
+        "received_at": utc_now_iso(),
+        "ip": client_ip,
+        "country": client_country,
+        "user_agent": user_agent,
+        "app": client_meta,
+    }
+    return {
+        "client_info": json.dumps(client_info, ensure_ascii=False, sort_keys=True),
+        "client_ip": client_ip,
+        "client_country": client_country,
+        "client_user_agent": user_agent,
+    }
 
 
 def _is_knockout_phase(phase: str | None) -> bool:
@@ -463,6 +570,7 @@ def create_match():
         data = request.get_json()
         score = data.get("score", {})
         kort_id = data.get("court_id")
+        client_audit = _match_client_audit(data)
         
         # Ensure court exists
         if kort_id:
@@ -496,7 +604,11 @@ def create_match():
             player2_games=score.get("player2_games", 0),
             player1_points=score.get("player1_points", 0),
             player2_points=score.get("player2_points", 0),
-            sets_history=json.dumps(score.get("sets_history", []))
+            sets_history=json.dumps(score.get("sets_history", [])),
+            client_info=client_audit["client_info"],
+            client_ip=client_audit["client_ip"],
+            client_country=client_audit["client_country"],
+            client_user_agent=client_audit["client_user_agent"],
         )
         
         db.session.add(match)
@@ -529,7 +641,10 @@ def create_match():
             
             emit_score_update(kort_id, court_state)
         
-        logger.info(f"Match created: {match.id} on court {kort_id}, phase={bracket_ctx.get('phase')}, warning={bracket_warning}")
+        logger.info(
+            f"Match created: {match.id} on court {kort_id}, phase={bracket_ctx.get('phase')}, "
+            f"warning={bracket_warning}, country={client_audit['client_country']}, ip={client_audit['client_ip']}"
+        )
         
         return jsonify(match.to_dict(bracket_warning=bracket_warning)), 201
         
