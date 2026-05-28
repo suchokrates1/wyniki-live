@@ -129,7 +129,7 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
   - [ ] Testy undo: przywrócenie punktów, gemów, setów, serwisu, statystyk i historii setów.
 - [ ] Android Etap A2: wydzielić kontrolery/renderery z `MatchActivity` bez zmiany zachowania.
   - [x] `ServerSelectionController`: mapowanie przycisków serwujących przy zamienionych stronach.
-  - [ ] `ServerSelectionController`: binding przycisków serwujących i style wyboru.
+  - [x] `ServerSelectionViewBinder`: binding przycisków serwujących i style wyboru.
   - [ ] `ScoreboardRenderer`: nazwy zawodników, sety, punkty, serwis, kolory i tryb singiel/debel.
   - [ ] `ScoringButtonsController`: akcje punktowe, tryb basic/advanced, fault/second serve.
   - [ ] `AnnouncementController`: komunikaty zmiany stron, końca gema/seta/meczu.
@@ -231,6 +231,8 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 - Rozpoczęto Android Etap A2: wydzielono `ServerSelectionController.resolveServerNumber(...)` z `MatchActivity` i dodano testy jednostkowe dla singla/debla z `sidesSwapped`.
 - Uruchomiono Android validation: wąski test `ServerSelectionControllerTest`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem.
 - Opublikowano release `1.0.0-dev.19` / `versionCode 100019` na torach `internal`, `alpha`, `beta`, `production` i potwierdzono status Google Play API.
+- Kontynuowano Android Etap A2: `ServerSelectionController` buduje teraz testowalny model stanów przycisków, a `ServerSelectionViewBinder` przejął binding listenerów, widoczność, etykiety i style przycisków serwującego.
+- Uruchomiono Android validation po drugim wycinku A2: `ServerSelectionControllerTest`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem.
 
 ## Porządki na minipc
 
