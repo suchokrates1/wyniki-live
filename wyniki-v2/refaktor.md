@@ -110,7 +110,7 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 ### Aktualne hotspoty
 
 - `ui/match/MatchActivity.kt`: po etapie A2 około 241 linii; zostały lifecycle, inicjalizacja bindingów, obserwatory i delegacje do kontrolerów/renderów.
-- `ui/match/MatchViewModel.kt`: około 1096 linii; miesza reducer meczu, undo, logowanie zdarzeń, synchronizację z backendem, baterię/diagnostykę i komunikaty UI.
+- `ui/match/MatchViewModel.kt`: po etapach A3/A4 około 485 linii; nadal orkiestruje ekran meczu i komunikaty UI, ale logika punktowania, postępu meczu, undo oraz sync/backend są już wydzielane do klas domenowych i koordynatora.
 - `data/model/MatchState.kt`: około 359 linii; pełni rolę modelu parcelable, modelu domenowego i częściowo silnika punktacji.
 - `data/model/Match.kt` oraz modele API są blisko modeli UI/domenowych, co utrudnia bezpieczne zmiany kontraktu backendu.
 
@@ -145,13 +145,14 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
   - [x] Przenieść naliczanie punktów, gemów, setów, tie-breaków i super tie-breaków do czystych funkcji/klas.
   - [x] Przenieść decyzje o zmianie stron i rotacji serwisu do jednej warstwy domenowej.
   - [x] Wydzielić `StartMatch` jako pierwszy jawny reducer komendy startu meczu.
-  - [ ] Zastąpić bezpośrednie mutacje `MatchState` w ViewModelu komendami typu `PointWon`, `Fault`, `Undo`, `StartMatch`.
+  - [x] Wydzielić `MatchActionReducer` dla komend akcji punktowych: `Ace`, `Fault`, `FootFault`, `BallInPlay`, `Winner`, `ForcedError`, `UnforcedError`, `BasicWin`, `BasicFault`.
+  - [ ] Domknąć spójny model komend dla pozostałych operacji (`PointWon`, `Undo`, `StartMatch`) i ograniczyć bezpośrednie mutacje `MatchState` w ViewModelu do wywołań reducerów.
   - [x] Zostawić `MatchState` jako kompatybilny model parcelable do czasu zakończenia migracji UI.
 - [ ] Android Etap A4: uporządkować synchronizację z backendem.
-  - [ ] ViewModel nie powinien wołać Retrofit bezpośrednio; komunikacja idzie przez repozytorium/koordynator sync.
-  - [ ] Wydzielić `MatchSyncCoordinator`: create/update/finish, retry, statusy `SYNCING/SYNCED/FAILED/OFFLINE`.
+  - [x] ViewModel nie powinien wołać Retrofit bezpośrednio; komunikacja idzie przez repozytorium/koordynator sync.
+  - [x] Wydzielić `MatchSyncCoordinator`: create/update/finish, retry, statusy `SYNCING/SYNCED/FAILED/OFFLINE`.
   - [ ] Dopisać testy lub fake repozytorium dla scenariuszy offline i błędów HTTP.
-  - [ ] Dopisać jedno miejsce budowania payloadu statystyk i stanu meczu.
+  - [x] Dopisać jedno miejsce budowania payloadu statystyk i stanu meczu.
 - [ ] Android Etap A5: oddzielić DTO API od modeli domenowych i UI.
   - [ ] Modele Retrofit trafiają do `data/api/dto`.
   - [ ] Modele domenowe meczu trafiają do `domain/match/model`.
@@ -180,8 +181,8 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 
 ### Najbliższa kolejność Android
 
-1. Domknąć ostatni podpunkt A3: wprowadzić jawne komendy akcji (`PointWon`, `Fault`, `DoubleFault`, `BallInPlay`, `Undo`) i ograniczyć bezpośrednie mutacje w `MatchViewModel` do wywołań reducerów.
-2. Po komendach A3 zacząć A4 od `MatchSyncCoordinator`, bo `MatchViewModel` nadal miesza domenę meczu z Retrofit, retry, baterią i lokalnym zapisem historii.
+1. Domknąć testy A4: fake API/repozytorium dla retry, błędów HTTP i trybu offline w `MatchSyncCoordinator`.
+2. Dokończyć spójny model komend A3 dla `PointWon`, `Undo` i `StartMatch`, żeby ViewModel znał jak najmniej szczegółów mutacji `MatchState`.
 3. Po A4 wrócić do A5: rozdzielić DTO API od modeli domenowych/UI bez zmiany kontraktu backendu.
 
 ### Zasady refaktoru Android
@@ -257,6 +258,10 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 - Przeniesiono `MatchUndoRestorer` do `domain/match`, żeby undo było częścią domenowej warstwy meczu, a nie pakietu UI.
 - Utworzono `MatchStartReducer`: wybór pierwszego serwującego, początek meczu, obsługa `manualStartTime` i ustawienie `isPlayer1Serving` są poza `MatchViewModel`.
 - Uruchomiono Android validation po pierwszym batchu A3: testy `pl.vestmedia.tennisreferee.domain.match.*`, pełne `gradlew test`, `compileDebugKotlin` oraz `gradlew clean bundleRelease` zakończyły się sukcesem; `MatchViewModel` ma teraz około 869 linii.
+- Kontynuowano Android Etap A3: dodano `MatchActionReducer` i testy dla komend akcji punktowych, dzięki czemu obsługa asa, błędów serwisowych, winnerów, błędów wymiany oraz trybu basic nie jest już ręcznie mutowana w handlerach ViewModelu.
+- Rozpoczęto Android Etap A4: dodano `MatchEventFactory` jako jedno miejsce składania payloadu `MatchEvent` z wyniku, statystyk, graczy, baterii i timestampu; dodano testy singla i debla.
+- Wydzielono `MatchSyncCoordinator`, który przejął create/update/finish, retry, statusy sync, eventy końca meczu, wysyłkę statystyk i lokalny zapis historii. `MatchViewModel` ma teraz około 485 linii i nie wykonuje bezpośrednich wywołań Retrofit.
+- Uruchomiono Android validation po batchu A3/A4: `MatchEventFactoryTest`, testy `pl.vestmedia.tennisreferee.domain.match.*` oraz `compileDebugKotlin` zakończyły się sukcesem.
 
 ## Porządki na minipc
 
