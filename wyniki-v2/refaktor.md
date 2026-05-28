@@ -80,7 +80,9 @@ frontend/src/
   - [x] Przejrzeć pozostałe adaptery w `main.js` i zostawić tylko te używane przez szablony Alpine.
 - [ ] Etap 8: zacząć dzielić stan Alpine na kontrolery widoków po jednej zakładce.
   - [x] Wydzielić mały, bezpieczny kontroler widoku historii jako pierwszy pionowy wycinek.
-  - [ ] Po każdym wycinku uruchomić `npm run check:public` i produkcyjny smoke po deployu.
+  - [x] Po pierwszym wycinku uruchomić `npm run check:public` i produkcyjny smoke po deployu.
+  - [ ] Wydzielić kolejne kontrolery widoków: live, drabinka, plan, turnieje i zawodnicy.
+  - [ ] Po każdym następnym wycinku uruchomić `npm run check:public` i produkcyjny smoke po deployu.
 
 ## Zasady prowadzenia zmian
 
@@ -98,6 +100,92 @@ Etap 1 zaczyna się od wyciągnięcia dwóch bezpiecznych elementów:
 - `a11y/scoreNarration.js`: składanie wypowiadanych wyników setów, tie-breaków i super tie-breaków.
 
 To jest dobry pierwszy krok, bo ogranicza ryzyko: logika pozostaje czysta, wejścia i wyjścia są tekstowe, a regresję łapie zwykły build Vite oraz test strony z czytnikowymi etykietami.
+
+## Plan refaktoru aplikacji Android
+
+### Cel
+
+Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki punktowania, synchronizacji i modeli API. Refaktor ma iść tak samo jak frontend: małymi pionowymi wycinkami, z buildem/testem po każdym kroku i bez przepisywania całej aplikacji naraz.
+
+### Aktualne hotspoty
+
+- `ui/match/MatchActivity.kt`: około 1193 linii; miesza lifecycle, bindingi, obsługę kliknięć, renderowanie scoreboardu, wybór serwującego, animacje, dialogi i nawigację.
+- `ui/match/MatchViewModel.kt`: około 1096 linii; miesza reducer meczu, undo, logowanie zdarzeń, synchronizację z backendem, baterię/diagnostykę i komunikaty UI.
+- `data/model/MatchState.kt`: około 359 linii; pełni rolę modelu parcelable, modelu domenowego i częściowo silnika punktacji.
+- `data/model/Match.kt` oraz modele API są blisko modeli UI/domenowych, co utrudnia bezpieczne zmiany kontraktu backendu.
+
+### Etapy Android
+
+- [x] Android Etap A0: ustalić aktualny punkt odniesienia release.
+  - [x] Zbudować czysty release AAB po zmianach: `gradlew clean bundleRelease`.
+  - [x] Wrzucić wersję `1.0.0-dev.18` / `versionCode 100018` na tory `internal`, `alpha`, `beta`, `production`.
+  - [x] Potwierdzić w Google Play API, że wszystkie tory pokazują `completed` dla `100018`.
+- [ ] Android Etap A1: dodać siatkę testów bezpieczeństwa dla logiki meczu.
+  - [ ] Testy punktacji: klasyczny gem, deuce/advantage, no-advantage.
+  - [ ] Testy setów: krótki set, standardowy set, tie-break przy granicy setu.
+  - [ ] Testy super tie-breaka jako decydującego seta.
+  - [ ] Testy debla: rotacja serwisu, `currentServer`, `isPlayer1Serving`.
+  - [ ] Testy zamiany stron: wybór serwującego po `sidesSwapped` dla singla i debla.
+  - [ ] Testy undo: przywrócenie punktów, gemów, setów, serwisu, statystyk i historii setów.
+- [ ] Android Etap A2: wydzielić kontrolery/renderery z `MatchActivity` bez zmiany zachowania.
+  - [x] `ServerSelectionController`: mapowanie przycisków serwujących przy zamienionych stronach.
+  - [ ] `ServerSelectionController`: binding przycisków serwujących i style wyboru.
+  - [ ] `ScoreboardRenderer`: nazwy zawodników, sety, punkty, serwis, kolory i tryb singiel/debel.
+  - [ ] `ScoringButtonsController`: akcje punktowe, tryb basic/advanced, fault/second serve.
+  - [ ] `AnnouncementController`: komunikaty zmiany stron, końca gema/seta/meczu.
+  - [ ] `MatchFinishController`: ekran końcowy, powrót do wyboru zawodników, finalizacja meczu.
+  - [ ] `MatchActivity` zostaje właścicielem lifecycle, bindingów i obserwatorów, a nie logiki ekranów.
+- [ ] Android Etap A3: wydzielić czysty silnik/reducer meczu.
+  - [ ] Utworzyć pakiet domenowy, np. `domain/match`.
+  - [ ] Przenieść naliczanie punktów, gemów, setów, tie-breaków i super tie-breaków do czystych funkcji/klas.
+  - [ ] Przenieść decyzje o zmianie stron i rotacji serwisu do jednej warstwy domenowej.
+  - [ ] Zastąpić bezpośrednie mutacje `MatchState` w ViewModelu komendami typu `PointWon`, `Fault`, `Undo`, `StartMatch`.
+  - [ ] Zostawić `MatchState` jako kompatybilny model parcelable do czasu zakończenia migracji UI.
+- [ ] Android Etap A4: uporządkować synchronizację z backendem.
+  - [ ] ViewModel nie powinien wołać Retrofit bezpośrednio; komunikacja idzie przez repozytorium/koordynator sync.
+  - [ ] Wydzielić `MatchSyncCoordinator`: create/update/finish, retry, statusy `SYNCING/SYNCED/FAILED/OFFLINE`.
+  - [ ] Dopisać testy lub fake repozytorium dla scenariuszy offline i błędów HTTP.
+  - [ ] Dopisać jedno miejsce budowania payloadu statystyk i stanu meczu.
+- [ ] Android Etap A5: oddzielić DTO API od modeli domenowych i UI.
+  - [ ] Modele Retrofit trafiają do `data/api/dto`.
+  - [ ] Modele domenowe meczu trafiają do `domain/match/model`.
+  - [ ] Mapowanie DTO <-> domena jest jawne i testowane.
+  - [ ] `@SerializedName` zostaje przy DTO, nie przy modelach używanych przez UI, jeśli da się to zrobić bez dużej migracji naraz.
+- [ ] Android Etap A6: wydzielić diagnostykę i metadane klienta.
+  - [ ] Utworzyć `DeviceInfoProvider` dla wersji aplikacji, urządzenia, locale i timezone.
+  - [ ] Utrzymać nagłówki audytu w jednym interceptorze, bez rozproszenia po API.
+  - [ ] Dodać prosty ekran/sekcję diagnostyczną w ustawieniach: wersja, backend URL, ostatni status sync, ostatni błąd.
+  - [ ] Rozważyć przycisk kopiowania diagnostyki dla sędziego/obsługi turnieju.
+- [ ] Android Etap A7: uporządkować nawigację i przekazywanie stanu.
+  - [ ] Ograniczyć duże obiekty w Intent extras tam, gdzie wystarczy identyfikator i odczyt z repozytorium.
+  - [ ] Ujednolicić Result API dla wyboru zawodników, turnieju i powrotu po zakończeniu meczu.
+  - [ ] Sprawdzić odtwarzanie po rotacji/ubiciu procesu dla aktywnego meczu.
+- [ ] Android Etap A8: release automation.
+  - [ ] Skrypt release ma sprawdzać lokalny `versionCode`, istniejące wersje na Play i wymuszać nowy build przed uploadem.
+  - [ ] `deploy.py`/narzędzie release powinno obsługiwać `changesNotSentForReview=True` przy commitowaniu editów Google Play.
+  - [ ] Dodać czytelny preflight: git status, wersja, rozmiar AAB, tory docelowe, release notes.
+  - [ ] Po uploadzie automatycznie uruchamiać `status` i zapisywać wynik w logu release.
+- [ ] Android Etap A9: końcowa walidacja i porządki.
+  - [ ] `gradlew test`.
+  - [ ] `gradlew clean bundleRelease`.
+  - [ ] Manualny smoke na urządzeniu/emulatorze: wybór kortu, PIN, wybór zawodników, singiel, debel, tie-break, super tie-break, zakończenie meczu.
+  - [ ] Sprawdzenie backendu po utworzeniu meczu: czy zapisują się `client_info`, `client_ip`, `client_country`, `client_user_agent`.
+  - [ ] Commit etapami, bez mieszania refaktoru UI, domeny i release automation w jednym commicie.
+
+### Najbliższa kolejność Android
+
+1. Zacząć od `ServerSelectionController`, bo ostatnia poprawka dotyczyła wyboru serwującego przy zamienionych stronach i to jest mały, dobrze izolowany wycinek.
+2. Równolegle dopisać testy mapowania serwującego po `sidesSwapped` dla singla i debla, zanim przeniesiemy większą logikę.
+3. Dopiero potem ruszyć `ScoreboardRenderer`, bo dotyka wielu elementów UI, ale nie powinien zmieniać reguł meczu.
+4. Po ustabilizowaniu UI zacząć `MatchReducer`, najpierw od punktacji i serwisu, potem od setów/tie-breaków, a na końcu od undo.
+
+### Zasady refaktoru Android
+
+- Każdy etap musi przejść przynajmniej `gradlew test` albo, jeśli testów dla wycinka jeszcze nie ma, `gradlew clean bundleRelease`.
+- Nie zmieniamy reguł tenisowych przy przenoszeniu kodu; najpierw zachowanie ma być identyczne, dopiero potem można je poprawiać.
+- `MatchActivity` ma chudnąć przez delegację do klas z jasną odpowiedzialnością, nie przez dodanie kolejnej warstwy, która dalej zna całą aplikację.
+- Nowe DTO i moduły domenowe muszą mieć nazwy odzwierciedlające kontrakt: API, domena albo UI. Nie mieszamy tych ról w jednej klasie.
+- Po zmianach release'owych zawsze sprawdzamy status Google Play API, bo Play może przyjąć bundle i odrzucić dopiero finalny commit edita.
 
 ## Dziennik prac
 
@@ -131,6 +219,18 @@ To jest dobry pierwszy krok, bo ogranicza ryzyko: logika pozostaje czysta, wejś
 - Dodano `frontend/scripts/validate-i18n.mjs` oraz komendy `npm run test:i18n`, `npm run check:public`, `npm run smoke:production` i `npm run verify:production`.
 - Rozpoczęto etap 8: wydzielono `modules/historyView.js` z publicznym stanem i akcjami widoku historii (`history`, sortowanie, pobieranie historii, szczegóły statystyk, etykieta aria historii).
 - Dodano operacyjny `scripts/prod_ops_check.sh`: dzienny check publicznej strony, `/api/snapshot` i świeżości backupu NAS po backupie cron.
+
+### 2026-05-28
+
+- Zweryfikowano dotychczasowy plan frontendu: etapy 0-7 są wykonane i mają odpowiadające pliki/moduły w `frontend/src` oraz skrypty w `frontend/scripts`.
+- Etap 8 pozostaje częściowy: pierwszy wycinek `modules/historyView.js` jest wykonany i podłączony w `main.js`, a kolejne kontrolery widoków są świadomie zostawione jako następne kroki.
+- Uruchomiono `npm run check:public`: walidacja i18n dla 6 języków i build Vite zakończone sukcesem.
+- Uruchomiono `npm run smoke:production`: produkcyjny smoke przeszedł dla 6 języków i 6 tras publicznych.
+- Dopisano pełny plan refaktoru aplikacji Android z etapami A0-A9.
+- Android Etap A0 jest wykonany: release `1.0.0-dev.18` / `versionCode 100018` został zbudowany i potwierdzony na torach `internal`, `alpha`, `beta`, `production`.
+- Rozpoczęto Android Etap A2: wydzielono `ServerSelectionController.resolveServerNumber(...)` z `MatchActivity` i dodano testy jednostkowe dla singla/debla z `sidesSwapped`.
+- Uruchomiono Android validation: wąski test `ServerSelectionControllerTest`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem.
+- Opublikowano release `1.0.0-dev.19` / `versionCode 100019` na torach `internal`, `alpha`, `beta`, `production` i potwierdzono status Google Play API.
 
 ## Porządki na minipc
 
