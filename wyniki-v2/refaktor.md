@@ -141,11 +141,12 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
   - [x] `CourtSideSwapAnimator`: animacja zamiany stron w wyborze serwującego.
   - [x] `MatchActivity` zostaje właścicielem lifecycle, bindingów i obserwatorów, a nie logiki ekranów.
 - [ ] Android Etap A3: wydzielić czysty silnik/reducer meczu.
-  - [ ] Utworzyć pakiet domenowy, np. `domain/match`.
-  - [ ] Przenieść naliczanie punktów, gemów, setów, tie-breaków i super tie-breaków do czystych funkcji/klas.
-  - [ ] Przenieść decyzje o zmianie stron i rotacji serwisu do jednej warstwy domenowej.
+  - [x] Utworzyć pakiet domenowy, np. `domain/match`.
+  - [x] Przenieść naliczanie punktów, gemów, setów, tie-breaków i super tie-breaków do czystych funkcji/klas.
+  - [x] Przenieść decyzje o zmianie stron i rotacji serwisu do jednej warstwy domenowej.
+  - [x] Wydzielić `StartMatch` jako pierwszy jawny reducer komendy startu meczu.
   - [ ] Zastąpić bezpośrednie mutacje `MatchState` w ViewModelu komendami typu `PointWon`, `Fault`, `Undo`, `StartMatch`.
-  - [ ] Zostawić `MatchState` jako kompatybilny model parcelable do czasu zakończenia migracji UI.
+  - [x] Zostawić `MatchState` jako kompatybilny model parcelable do czasu zakończenia migracji UI.
 - [ ] Android Etap A4: uporządkować synchronizację z backendem.
   - [ ] ViewModel nie powinien wołać Retrofit bezpośrednio; komunikacja idzie przez repozytorium/koordynator sync.
   - [ ] Wydzielić `MatchSyncCoordinator`: create/update/finish, retry, statusy `SYNCING/SYNCED/FAILED/OFFLINE`.
@@ -179,10 +180,9 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 
 ### Najbliższa kolejność Android
 
-1. Zacząć od `ServerSelectionController`, bo ostatnia poprawka dotyczyła wyboru serwującego przy zamienionych stronach i to jest mały, dobrze izolowany wycinek.
-2. Równolegle dopisać testy mapowania serwującego po `sidesSwapped` dla singla i debla, zanim przeniesiemy większą logikę.
-3. Dopiero potem ruszyć `ScoreboardRenderer`, bo dotyka wielu elementów UI, ale nie powinien zmieniać reguł meczu.
-4. Po ustabilizowaniu UI zacząć `MatchReducer`, najpierw od punktacji i serwisu, potem od setów/tie-breaków, a na końcu od undo.
+1. Domknąć ostatni podpunkt A3: wprowadzić jawne komendy akcji (`PointWon`, `Fault`, `DoubleFault`, `BallInPlay`, `Undo`) i ograniczyć bezpośrednie mutacje w `MatchViewModel` do wywołań reducerów.
+2. Po komendach A3 zacząć A4 od `MatchSyncCoordinator`, bo `MatchViewModel` nadal miesza domenę meczu z Retrofit, retry, baterią i lokalnym zapisem historii.
+3. Po A4 wrócić do A5: rozdzielić DTO API od modeli domenowych/UI bez zmiany kontraktu backendu.
 
 ### Zasady refaktoru Android
 
@@ -250,6 +250,13 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 - Domknięto Android Etap A1: dodano `MatchUndoRestorer` z testem przywracania punktów, gemów, setów, serwisu, flag trybu, statystyk i historii setów; `MatchViewModel.undoLastAction()` deleguje do tej klasy.
 - Domknięto Android Etap A2: wydzielono `MatchViewSwitcher`, `MatchDialogsController`, `MatchTimerRenderer`, `MatchToolbarRenderer` i `CourtSideSwapAnimator`; `MatchActivity` ma teraz 241 linii i odpowiada głównie za lifecycle, bindingi, obserwatory i delegowanie.
 - Uruchomiono Android validation po etapach A1+A2: wąskie testy `DoublesServeRotationTest`, `MatchStateTest`, `MatchUndoRestorerTest`, pełne `gradlew test` oraz `compileDebugKotlin` zakończyły się sukcesem.
+- Rozpoczęto Android Etap A3: utworzono pakiet `domain/match`.
+- Przeniesiono rotację serwisu w deblu do `domain/match/DoublesServeRotation` i zachowano testy kolejności serwisu.
+- Utworzono `MatchPointReducer`: naliczanie pojedynczego punktu, zmiana serwisu w tie-breaku/super tie-breaku i zmiana stron co 6 punktów są poza `MatchViewModel`.
+- Utworzono `MatchProgressReducer`: naliczanie gemów, setów, tie-breaków, super tie-breaków, końca meczu i efektów `game/set/sync/finalize/announcement` jest poza `MatchViewModel`.
+- Przeniesiono `MatchUndoRestorer` do `domain/match`, żeby undo było częścią domenowej warstwy meczu, a nie pakietu UI.
+- Utworzono `MatchStartReducer`: wybór pierwszego serwującego, początek meczu, obsługa `manualStartTime` i ustawienie `isPlayer1Serving` są poza `MatchViewModel`.
+- Uruchomiono Android validation po pierwszym batchu A3: testy `pl.vestmedia.tennisreferee.domain.match.*`, pełne `gradlew test`, `compileDebugKotlin` oraz `gradlew clean bundleRelease` zakończyły się sukcesem; `MatchViewModel` ma teraz około 869 linii.
 
 ## Porządki na minipc
 
