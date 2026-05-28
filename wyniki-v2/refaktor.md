@@ -109,7 +109,7 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 
 ### Aktualne hotspoty
 
-- `ui/match/MatchActivity.kt`: około 1193 linii; miesza lifecycle, bindingi, obsługę kliknięć, renderowanie scoreboardu, wybór serwującego, animacje, dialogi i nawigację.
+- `ui/match/MatchActivity.kt`: po etapie A2 około 241 linii; zostały lifecycle, inicjalizacja bindingów, obserwatory i delegacje do kontrolerów/renderów.
 - `ui/match/MatchViewModel.kt`: około 1096 linii; miesza reducer meczu, undo, logowanie zdarzeń, synchronizację z backendem, baterię/diagnostykę i komunikaty UI.
 - `data/model/MatchState.kt`: około 359 linii; pełni rolę modelu parcelable, modelu domenowego i częściowo silnika punktacji.
 - `data/model/Match.kt` oraz modele API są blisko modeli UI/domenowych, co utrudnia bezpieczne zmiany kontraktu backendu.
@@ -120,14 +120,14 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
   - [x] Zbudować czysty release AAB po zmianach: `gradlew clean bundleRelease`.
   - [x] Wrzucić wersję `1.0.0-dev.18` / `versionCode 100018` na tory `internal`, `alpha`, `beta`, `production`.
   - [x] Potwierdzić w Google Play API, że wszystkie tory pokazują `completed` dla `100018`.
-- [ ] Android Etap A1: dodać siatkę testów bezpieczeństwa dla logiki meczu.
-  - [ ] Testy punktacji: klasyczny gem, deuce/advantage, no-advantage.
-  - [ ] Testy setów: krótki set, standardowy set, tie-break przy granicy setu.
-  - [ ] Testy super tie-breaka jako decydującego seta.
-  - [ ] Testy debla: rotacja serwisu, `currentServer`, `isPlayer1Serving`.
-  - [ ] Testy zamiany stron: wybór serwującego po `sidesSwapped` dla singla i debla.
-  - [ ] Testy undo: przywrócenie punktów, gemów, setów, serwisu, statystyk i historii setów.
-- [ ] Android Etap A2: wydzielić kontrolery/renderery z `MatchActivity` bez zmiany zachowania.
+- [x] Android Etap A1: dodać siatkę testów bezpieczeństwa dla logiki meczu.
+  - [x] Testy punktacji: klasyczny gem, deuce/advantage, no-advantage.
+  - [x] Testy setów: krótki set, standardowy set, tie-break przy granicy setu.
+  - [x] Testy super tie-breaka jako decydującego seta.
+  - [x] Testy debla: rotacja serwisu, `currentServer`, `isPlayer1Serving`.
+  - [x] Testy zamiany stron: wybór serwującego po `sidesSwapped` dla singla i debla.
+  - [x] Testy undo: przywrócenie punktów, gemów, setów, serwisu, statystyk i historii setów.
+- [x] Android Etap A2: wydzielić kontrolery/renderery z `MatchActivity` bez zmiany zachowania.
   - [x] `ServerSelectionController`: mapowanie przycisków serwujących przy zamienionych stronach.
   - [x] `ServerSelectionViewBinder`: binding przycisków serwujących i style wyboru.
   - [x] `ScoreboardRenderer`: nazwy zawodników, flagi, ikony serwisu, sety, punkty, metadane meczu i tryb tie-break/super tie-break.
@@ -135,7 +135,11 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
   - [x] `AnnouncementController`: komunikaty zmiany stron, tie-breaka, super tie-breaka i deciding point.
   - [x] `MatchFinishController`: ekran końcowy, powrót do wyboru zawodników, finalizacja meczu.
   - [x] `CourtSideNamesRenderer`: nazwy zawodników po lewej/prawej stronie kortu w widokach serwisu, wymiany, basic scoring i wyboru serwującego.
-  - [ ] `MatchActivity` zostaje właścicielem lifecycle, bindingów i obserwatorów, a nie logiki ekranów.
+  - [x] `MatchViewSwitcher`: przełączanie widoków i animacje ekranów punktowania.
+  - [x] `MatchDialogsController`: dialog wyjścia, undo, zakończenia meczu i ostrzeżenia drabinki.
+  - [x] `MatchTimerRenderer` oraz `MatchToolbarRenderer`: timer meczu i status synchronizacji.
+  - [x] `CourtSideSwapAnimator`: animacja zamiany stron w wyborze serwującego.
+  - [x] `MatchActivity` zostaje właścicielem lifecycle, bindingów i obserwatorów, a nie logiki ekranów.
 - [ ] Android Etap A3: wydzielić czysty silnik/reducer meczu.
   - [ ] Utworzyć pakiet domenowy, np. `domain/match`.
   - [ ] Przenieść naliczanie punktów, gemów, setów, tie-breaków i super tie-breaków do czystych funkcji/klas.
@@ -241,6 +245,11 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 - Kontynuowano Android Etap A2: wydzielono `MatchFinishController` dla ekranu końcowego, statystyk meczu i przejścia do następnego meczu.
 - Kontynuowano Android Etap A2: wydzielono `CourtSideNamesRenderer` dla nazw zawodników po lewej/prawej stronie kortu w widokach punktowania i wyboru serwującego.
 - Uruchomiono Android validation po kolejnym batchu A2: `compileDebugKotlin`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem; `MatchActivity` ma teraz 489 linii.
+- Domknięto Android Etap A1: rozszerzono `MatchStateTest` o klasyczny gem, deuce/advantage, no-advantage, krótkie i standardowe sety, granice tie-breaka, super tie-breaka i warunek końca meczu.
+- Domknięto Android Etap A1: dodano `DoublesServeRotation` z testami kolejności 1 -> 2 -> 3 -> 4, `currentServer` i `isPlayer1Serving`, a `MatchViewModel` używa tej samej klasy.
+- Domknięto Android Etap A1: dodano `MatchUndoRestorer` z testem przywracania punktów, gemów, setów, serwisu, flag trybu, statystyk i historii setów; `MatchViewModel.undoLastAction()` deleguje do tej klasy.
+- Domknięto Android Etap A2: wydzielono `MatchViewSwitcher`, `MatchDialogsController`, `MatchTimerRenderer`, `MatchToolbarRenderer` i `CourtSideSwapAnimator`; `MatchActivity` ma teraz 241 linii i odpowiada głównie za lifecycle, bindingi, obserwatory i delegowanie.
+- Uruchomiono Android validation po etapach A1+A2: wąskie testy `DoublesServeRotationTest`, `MatchStateTest`, `MatchUndoRestorerTest`, pełne `gradlew test` oraz `compileDebugKotlin` zakończyły się sukcesem.
 
 ## Porządki na minipc
 
