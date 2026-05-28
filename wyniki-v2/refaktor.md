@@ -131,9 +131,10 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
   - [x] `ServerSelectionController`: mapowanie przycisków serwujących przy zamienionych stronach.
   - [x] `ServerSelectionViewBinder`: binding przycisków serwujących i style wyboru.
   - [x] `ScoreboardRenderer`: nazwy zawodników, flagi, ikony serwisu, sety, punkty, metadane meczu i tryb tie-break/super tie-break.
-  - [ ] `ScoringButtonsController`: akcje punktowe, tryb basic/advanced, fault/second serve.
-  - [ ] `AnnouncementController`: komunikaty zmiany stron, końca gema/seta/meczu.
-  - [ ] `MatchFinishController`: ekran końcowy, powrót do wyboru zawodników, finalizacja meczu.
+  - [x] `ScoringButtonsController`: akcje punktowe, tryb basic/advanced, fault/second serve.
+  - [x] `AnnouncementController`: komunikaty zmiany stron, tie-breaka, super tie-breaka i deciding point.
+  - [x] `MatchFinishController`: ekran końcowy, powrót do wyboru zawodników, finalizacja meczu.
+  - [x] `CourtSideNamesRenderer`: nazwy zawodników po lewej/prawej stronie kortu w widokach serwisu, wymiany, basic scoring i wyboru serwującego.
   - [ ] `MatchActivity` zostaje właścicielem lifecycle, bindingów i obserwatorów, a nie logiki ekranów.
 - [ ] Android Etap A3: wydzielić czysty silnik/reducer meczu.
   - [ ] Utworzyć pakiet domenowy, np. `domain/match`.
@@ -235,6 +236,11 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 - Uruchomiono Android validation po drugim wycinku A2: `ServerSelectionControllerTest`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem.
 - Kontynuowano Android Etap A2: wydzielono `ScoreboardRenderer`, który przejął renderowanie nazw, flag, ikon serwisu, punktów, setów, metadanych meczu, aktywnego seta oraz trybu tie-break/super tie-break.
 - Uruchomiono Android validation po `ScoreboardRenderer`: `compileDebugKotlin`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem.
+- Kontynuowano Android Etap A2: wydzielono `ScoringButtonsController`, który przejął listenery i renderowanie przycisków serwisu, wymiany oraz trybu basic scoring.
+- Kontynuowano Android Etap A2: wydzielono `AnnouncementController` dla komunikatów zmiany stron, tie-breaka, super tie-breaka i deciding point.
+- Kontynuowano Android Etap A2: wydzielono `MatchFinishController` dla ekranu końcowego, statystyk meczu i przejścia do następnego meczu.
+- Kontynuowano Android Etap A2: wydzielono `CourtSideNamesRenderer` dla nazw zawodników po lewej/prawej stronie kortu w widokach punktowania i wyboru serwującego.
+- Uruchomiono Android validation po kolejnym batchu A2: `compileDebugKotlin`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem; `MatchActivity` ma teraz 489 linii.
 
 ## Porządki na minipc
 
