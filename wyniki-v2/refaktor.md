@@ -130,7 +130,7 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 - [ ] Android Etap A2: wydzielić kontrolery/renderery z `MatchActivity` bez zmiany zachowania.
   - [x] `ServerSelectionController`: mapowanie przycisków serwujących przy zamienionych stronach.
   - [x] `ServerSelectionViewBinder`: binding przycisków serwujących i style wyboru.
-  - [ ] `ScoreboardRenderer`: nazwy zawodników, sety, punkty, serwis, kolory i tryb singiel/debel.
+  - [x] `ScoreboardRenderer`: nazwy zawodników, flagi, ikony serwisu, sety, punkty, metadane meczu i tryb tie-break/super tie-break.
   - [ ] `ScoringButtonsController`: akcje punktowe, tryb basic/advanced, fault/second serve.
   - [ ] `AnnouncementController`: komunikaty zmiany stron, końca gema/seta/meczu.
   - [ ] `MatchFinishController`: ekran końcowy, powrót do wyboru zawodników, finalizacja meczu.
@@ -233,6 +233,8 @@ Zmniejszyć ryzyko błędów na korcie przez rozdzielenie ekranu meczu, logiki p
 - Opublikowano release `1.0.0-dev.19` / `versionCode 100019` na torach `internal`, `alpha`, `beta`, `production` i potwierdzono status Google Play API.
 - Kontynuowano Android Etap A2: `ServerSelectionController` buduje teraz testowalny model stanów przycisków, a `ServerSelectionViewBinder` przejął binding listenerów, widoczność, etykiety i style przycisków serwującego.
 - Uruchomiono Android validation po drugim wycinku A2: `ServerSelectionControllerTest`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem.
+- Kontynuowano Android Etap A2: wydzielono `ScoreboardRenderer`, który przejął renderowanie nazw, flag, ikon serwisu, punktów, setów, metadanych meczu, aktywnego seta oraz trybu tie-break/super tie-break.
+- Uruchomiono Android validation po `ScoreboardRenderer`: `compileDebugKotlin`, pełne `gradlew test` oraz `gradlew clean bundleRelease` zakończyły się sukcesem.
 
 ## Porządki na minipc
 
