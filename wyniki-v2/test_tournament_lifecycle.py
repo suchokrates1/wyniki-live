@@ -21,6 +21,7 @@ def app_with_temp_db(tmp_path, monkeypatch):
     database.init_db()
 
     app = Flask(__name__)
+    app.config["TESTING"] = True
     app.register_blueprint(admin.blueprint)
     app.register_blueprint(tournaments_blueprint)
     return app
@@ -37,7 +38,9 @@ def full_app_with_temp_db(tmp_path, monkeypatch):
 
     from app import create_app
 
-    return create_app()
+    app = create_app()
+    app.config["TESTING"] = True
+    return app
 
 
 @pytest.fixture()
@@ -57,6 +60,7 @@ def umpire_app_with_temp_db(tmp_path, monkeypatch):
     database.init_db()
 
     app = Flask(__name__)
+    app.config["TESTING"] = True
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
@@ -124,6 +128,339 @@ def test_create_match_stores_mobile_client_audit(umpire_app_with_temp_db):
     assert client_info["app"]["platform"] == "android"
     assert client_info["app"]["app_version"] == "1.2.3"
     assert client_info["app"]["device"] == "Samsung SM-X200"
+
+
+def test_mobile_create_match_is_idempotent_by_client_uuid(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("UUID Cup", "2026-05-25", "2026-05-26", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+    client = umpire_app_with_temp_db.test_client()
+    payload = {
+        "client_match_uuid": "uuid-match-1",
+        "court_id": f"t{tournament_id}-1",
+        "player1_name": "UUID Player A",
+        "player2_name": "UUID Player B",
+        "status": "in_progress",
+        "score": {"sets_history": []},
+    }
+
+    first = client.post("/api/matches", json=payload)
+    second = client.post("/api/matches", json=payload)
+
+    assert first.status_code == 201
+    assert second.status_code == 200
+    assert second.get_json()["id"] == first.get_json()["id"]
+    assert _count_table(database, "matches") == 1
+
+
+def test_mobile_finish_test_match_skips_history_statistics_and_schedule(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Test Finish Cup", "2026-05-25", "2026-05-26", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+    player1_id = database.insert_player(tournament_id, "Test Player One", "B1", "PL", first_name="Test", last_name="Player One")
+    player2_id = database.insert_player(tournament_id, "Test Player Two", "B1", "PL", first_name="Test", last_name="Player Two")
+    database.save_bracket_groups(tournament_id, [{"name": "B1 — Grupa A", "players": [player1_id, player2_id]}])
+    database.ensure_group_schedule_entries(tournament_id)
+    client = umpire_app_with_temp_db.test_client()
+
+    created = client.post("/api/matches", json={
+        "client_match_uuid": "test-finish-uuid",
+        "court_id": f"t{tournament_id}-1",
+        "player1_name": "Test Player One",
+        "player2_name": "Test Player Two",
+        "status": "in_progress",
+        "score": {"sets_history": []},
+    })
+    assert created.status_code == 201
+    match_id = created.get_json()["id"]
+    assert any(entry["match_id"] == match_id and entry["status"] == "in_progress" for entry in database.fetch_tournament_schedule(tournament_id))
+
+    finished = client.post(f"/api/matches/{match_id}/finish", json={"finish_reason": "test"})
+    stats = client.post("/api/match-statistics", json={"match_id": match_id})
+
+    assert finished.status_code == 200
+    assert finished.get_json()["finish_reason"] == "test"
+    assert stats.status_code == 200
+    assert database.fetch_match_history(tournament_id=tournament_id) == []
+    assert _count_table(database, "match_statistics") == 0
+    schedule = database.fetch_tournament_schedule(tournament_id)
+    assert all(entry["match_id"] is None for entry in schedule)
+    assert any(entry["status"] == "planned" for entry in schedule)
+
+
+def test_mobile_finish_retirement_upserts_history_with_last_score(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Retirement Cup", "2026-05-25", "2026-05-26", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+    client = umpire_app_with_temp_db.test_client()
+    created = client.post("/api/matches", json={
+        "court_id": f"t{tournament_id}-1",
+        "player1_name": "Healthy Player",
+        "player2_name": "Injured Player",
+        "status": "in_progress",
+        "score": {
+            "player1_sets": 1,
+            "player2_sets": 0,
+            "player1_games": 2,
+            "player2_games": 1,
+            "sets_history": [{"set_number": 1, "player1_games": 4, "player2_games": 2}],
+        },
+    })
+    match_id = created.get_json()["id"]
+
+    first_finish = client.post(
+        f"/api/matches/{match_id}/finish",
+        json={"finish_reason": "retirement", "injured_player_name": "Injured Player"},
+    )
+    second_finish = client.post(
+        f"/api/matches/{match_id}/finish",
+        json={"finish_reason": "retirement", "injured_player_name": "Injured Player"},
+    )
+
+    assert first_finish.status_code == 200
+    assert second_finish.status_code == 200
+    history = database.fetch_match_history(tournament_id=tournament_id)
+    assert len(history) == 1
+    assert history[0]["finish_reason"] == "retirement"
+    assert history[0]["winner_name"] == "Healthy Player"
+    assert history[0]["injured_player_name"] == "Injured Player"
+    assert history[0]["sets_history"][-1]["unfinished"] is True
+    assert history[0]["score_a"] == [4, 2]
+    assert history[0]["score_b"] == [2, 1]
+
+
+def test_mobile_finish_walkover_records_four_zero_history(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Walkover Cup", "2026-05-25", "2026-05-26", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+    player1_id = database.insert_player(tournament_id, "Walk Player One", "B1", "PL", first_name="Walk", last_name="Player One")
+    player2_id = database.insert_player(tournament_id, "Walk Player Two", "B1", "PL", first_name="Walk", last_name="Player Two")
+    database.save_bracket_groups(tournament_id, [{"name": "B1 — Grupa A", "players": [player1_id, player2_id]}])
+    database.ensure_group_schedule_entries(tournament_id)
+    client = umpire_app_with_temp_db.test_client()
+    created = client.post("/api/matches", json={
+        "court_id": f"t{tournament_id}-1",
+        "player1_name": "Walk Player One",
+        "player2_name": "Walk Player Two",
+        "status": "in_progress",
+        "score": {"sets_history": []},
+    })
+    match_id = created.get_json()["id"]
+
+    finished = client.post(
+        f"/api/matches/{match_id}/finish",
+        json={"finish_reason": "walkover", "winner_name": "Walk Player Two"},
+    )
+
+    assert finished.status_code == 200
+    payload = finished.get_json()
+    assert payload["finish_reason"] == "walkover"
+    assert payload["winner_name"] == "Walk Player Two"
+    assert payload["score"]["sets_history"] == [
+        {"set_number": 1, "player1_games": 0, "player2_games": 4},
+        {"set_number": 2, "player1_games": 0, "player2_games": 4},
+    ]
+    history = database.fetch_match_history(tournament_id=tournament_id)
+    assert len(history) == 1
+    assert history[0]["finish_reason"] == "walkover"
+    assert history[0]["winner_name"] == "Walk Player Two"
+    assert history[0]["score_a"] == [0, 0]
+    assert history[0]["score_b"] == [4, 4]
+    assert any(entry["match_id"] == match_id and entry["status"] == "completed" for entry in database.fetch_tournament_schedule(tournament_id))
+
+
+def test_link_schedule_to_match_does_not_overwrite_different_match(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Schedule Guard Cup", "2026-05-25", "2026-05-26", active=True)
+    player1_id = database.insert_player(tournament_id, "Guard Player One", "B1", "PL", first_name="Guard", last_name="Player One")
+    player2_id = database.insert_player(tournament_id, "Guard Player Two", "B1", "PL", first_name="Guard", last_name="Player Two")
+    database.save_bracket_groups(tournament_id, [{"name": "B1 — Grupa A", "players": [player1_id, player2_id]}])
+    group_id = database.fetch_bracket_groups(tournament_id)[0]["id"]
+    database.ensure_group_schedule_entries(tournament_id)
+
+    first_link = database.link_schedule_to_match(
+        tournament_id,
+        101,
+        player1_name="Guard Player One",
+        player2_name="Guard Player Two",
+        phase="Grupowa",
+        bracket_group_id=group_id,
+    )
+    second_link = database.link_schedule_to_match(
+        tournament_id,
+        202,
+        player1_name="Guard Player Two",
+        player2_name="Guard Player One",
+        phase="Grupowa",
+        bracket_group_id=group_id,
+    )
+
+    assert first_link["match_id"] == 101
+    assert second_link is None
+    schedule = database.fetch_tournament_schedule(tournament_id)
+    assert len(schedule) == 1
+    assert schedule[0]["match_id"] == 101
+
+
+def test_link_schedule_to_match_uses_explicit_schedule_id_before_name_heuristic(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Explicit Schedule Cup", "2026-05-29", "2026-05-29", active=True)
+    database.upsert_tournament_schedule_entries(tournament_id, [
+        {
+            "day_date": "2026-05-29",
+            "scheduled_time": "10:00",
+            "court_id": f"t{tournament_id}-1",
+            "player1_name": "Explicit Player One",
+            "player2_name": "Explicit Player Two",
+            "status": "planned",
+            "sort_order": 1,
+        },
+        {
+            "day_date": "2026-05-29",
+            "scheduled_time": "11:00",
+            "court_id": f"t{tournament_id}-1",
+            "player1_name": "Explicit Player One",
+            "player2_name": "Explicit Player Two",
+            "status": "planned",
+            "sort_order": 2,
+        },
+    ])
+    schedule = database.fetch_tournament_schedule(tournament_id)
+    explicit_schedule_id = schedule[1]["id"]
+
+    linked = database.link_schedule_to_match(
+        tournament_id,
+        303,
+        schedule_id=explicit_schedule_id,
+        player1_name="Explicit Player One",
+        player2_name="Explicit Player Two",
+        status="in_progress",
+    )
+
+    assert linked["id"] == explicit_schedule_id
+    refreshed = database.fetch_tournament_schedule(tournament_id)
+    assert refreshed[0]["match_id"] is None
+    assert refreshed[1]["match_id"] == 303
+    assert refreshed[1]["status"] == "in_progress"
+
+
+def test_mobile_suggested_match_uses_selected_court_and_nearest_time(umpire_app_with_temp_db):
+    from wyniki import database
+
+    app = umpire_app_with_temp_db
+    tournament_id = database.insert_tournament("Suggestion Cup", "2026-05-29", "2026-05-29", active=True)
+    database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
+    database.insert_court(f"t{tournament_id}-2", pin="2222", tournament_id=tournament_id, name="Kort 2", display_order=2)
+    for first_name, last_name in [
+        ("Early", "One"),
+        ("Early", "Two"),
+        ("Nearest", "One"),
+        ("Nearest", "Two"),
+        ("OtherCourt", "One"),
+        ("OtherCourt", "Two"),
+    ]:
+        database.insert_player(
+            tournament_id,
+            f"{first_name} {last_name}",
+            "B1",
+            "PL",
+            first_name=first_name,
+            last_name=last_name,
+        )
+    database.upsert_tournament_schedule_entries(tournament_id, [
+        {
+            "day_date": "2026-05-29",
+            "scheduled_time": "09:00",
+            "court_id": f"t{tournament_id}-1",
+            "player1_name": "Early One",
+            "player2_name": "Early Two",
+            "status": "planned",
+        },
+        {
+            "day_date": "2026-05-29",
+            "scheduled_time": "10:30",
+            "court_id": f"t{tournament_id}-1",
+            "player1_name": "Nearest One",
+            "player2_name": "Nearest Two",
+            "status": "planned",
+        },
+        {
+            "day_date": "2026-05-29",
+            "scheduled_time": "10:25",
+            "court_id": f"t{tournament_id}-2",
+            "player1_name": "OtherCourt One",
+            "player2_name": "OtherCourt Two",
+            "status": "planned",
+        },
+    ])
+
+    response = app.test_client().get(
+        f"/api/courts/t{tournament_id}-1/suggested-match",
+        query_string={"tournament_id": tournament_id, "at": "2026-05-29T10:20:00+00:00"},
+    )
+
+    assert response.status_code == 200
+    suggestion = response.get_json()["suggestion"]
+    assert suggestion["court_id"] == f"t{tournament_id}-1"
+    assert suggestion["scheduled_time"] == "10:30"
+    assert suggestion["player1_name"] == "Nearest One"
+    assert suggestion["player2_name"] == "Nearest Two"
+    assert suggestion["player1"]["full_name"] == "Nearest One"
+    assert suggestion["player2"]["full_name"] == "Nearest Two"
+
+
+def test_mobile_create_match_links_explicit_schedule_id(umpire_app_with_temp_db):
+    from wyniki import database
+
+    app = umpire_app_with_temp_db
+    tournament_id = database.insert_tournament("Mobile Explicit Schedule Cup", "2026-05-29", "2026-05-29", active=True)
+    database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
+    database.upsert_tournament_schedule_entries(tournament_id, [
+        {
+            "day_date": "2026-05-29",
+            "scheduled_time": "09:00",
+            "court_id": f"t{tournament_id}-1",
+            "player1_name": "Mobile Player One",
+            "player2_name": "Mobile Player Two",
+            "status": "planned",
+            "sort_order": 1,
+        },
+        {
+            "day_date": "2026-05-29",
+            "scheduled_time": "10:30",
+            "court_id": f"t{tournament_id}-1",
+            "player1_name": "Mobile Player One",
+            "player2_name": "Mobile Player Two",
+            "status": "planned",
+            "sort_order": 2,
+        },
+    ])
+    schedule = database.fetch_tournament_schedule(tournament_id)
+    schedule_id = schedule[1]["id"]
+
+    response = app.test_client().post("/api/matches", json={
+        "court_id": f"t{tournament_id}-1",
+        "schedule_id": schedule_id,
+        "client_match_uuid": "mobile-schedule-uuid",
+        "player1_name": "Mobile Player One",
+        "player2_name": "Mobile Player Two",
+        "status": "in_progress",
+        "score": {"sets_history": []},
+    })
+
+    assert response.status_code == 201
+    created = response.get_json()
+    assert created["schedule_id"] == schedule_id
+    refreshed = database.fetch_tournament_schedule(tournament_id)
+    assert refreshed[0]["match_id"] is None
+    assert refreshed[1]["match_id"] == created["id"]
+    assert refreshed[1]["status"] == "in_progress"
 
 
 def test_admin_courts_show_active_tournaments_only(app_with_temp_db):
@@ -1425,6 +1762,82 @@ def test_schedule_office_and_knockout_flow_reaches_winners(full_app_with_temp_db
     office_schedule = office_dashboard.get_json()["schedule"]
     assert any(entry["phase"] == "B1 — Finał" and entry["status"] == "completed" for entry in office_schedule)
     assert any(entry["phase"] == "B1 — o 3. miejsce" and entry["status"] == "completed" for entry in office_schedule)
+
+
+def test_office_dashboard_exposes_and_closes_generated_knockout_slot(full_app_with_temp_db):
+    from wyniki import database
+
+    with database.db_conn() as conn:
+        conn.execute("UPDATE tournaments SET active = 0, is_simulation = 0")
+        conn.commit()
+
+    tournament_id = database.insert_tournament(
+        "Office Knockout Cup",
+        "2026-05-12",
+        "2026-05-12",
+        active=True,
+        office_password_hash=generate_password_hash("office"),
+    )
+    court_id = database.create_tournament_courts(tournament_id, 1)[0]
+    assert database.save_bracket_knockout(
+        tournament_id,
+        [
+            {
+                "phase": "B1 — Półfinał",
+                "position": 1,
+                "player1_name": "Alpha One",
+                "player2_name": "Beta Two",
+            }
+        ],
+    ) is True
+    database.ensure_knockout_schedule_entries(tournament_id)
+
+    client = full_app_with_temp_db.test_client()
+    auth_response = client.post("/api/office/1/auth", json={"password": "office"})
+    assert auth_response.status_code == 200
+    headers = {"Authorization": f"Bearer {auth_response.get_json()['token']}"}
+
+    dashboard_response = client.get("/api/office/1/dashboard", headers=headers)
+    assert dashboard_response.status_code == 200
+    dashboard = dashboard_response.get_json()
+    knockout_progress = dashboard["progress"]["knockout"]
+    assert knockout_progress["expected_matches"] == 1
+    assert knockout_progress["finished_matches"] == 0
+    assert knockout_progress["remaining_matches"] == 1
+    slot = knockout_progress["matches"][0]
+    assert slot["phase"] == "B1 — Półfinał"
+    assert slot["source_type"] == "knockout"
+    assert slot["schedule_id"]
+    assert slot["match_id"] is None
+
+    result_response = client.post(
+        "/api/office/1/knockout-matches",
+        headers=headers,
+        json={
+            "schedule_id": slot["schedule_id"],
+            "court_id": court_id,
+            "sets": [
+                {"player1_games": 4, "player2_games": 1},
+                {"player1_games": 4, "player2_games": 2},
+            ],
+        },
+    )
+    assert result_response.status_code == 201
+    result_payload = result_response.get_json()
+    assert result_payload["match"]["phase"] == "B1 — Półfinał"
+    assert result_payload["match"]["winner_name"] == "Alpha One"
+    updated_knockout = result_payload["dashboard"]["progress"]["knockout"]
+    assert updated_knockout["finished_matches"] == 1
+    assert updated_knockout["remaining_matches"] == 0
+    assert updated_knockout["matches"][0]["status"] == "completed"
+    assert updated_knockout["matches"][0]["winner_name"] == "Alpha One"
+
+    schedule = database.fetch_tournament_schedule(tournament_id)
+    linked_entry = next(entry for entry in schedule if int(entry["id"]) == int(slot["schedule_id"]))
+    assert linked_entry["status"] == "completed"
+    assert linked_entry["match_id"] == result_payload["match"]["match_id"]
+    bracket_slot = database.fetch_bracket_knockout(tournament_id)[0]
+    assert bracket_slot["winner_name"] == "Alpha One"
 
 
 def test_tournament_office_dashboard_adds_walkover_and_edits_result(full_app_with_temp_db):

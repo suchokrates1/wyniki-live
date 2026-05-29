@@ -1,5 +1,5 @@
 """API endpoints for receiving data from Umpire mobile app."""
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from datetime import datetime, timezone
 import json
 import re
@@ -37,6 +37,16 @@ def _clean_client_text(value: Any, max_length: int = 200) -> str | None:
     if not text:
         return None
     return text[:max_length]
+
+
+def _clean_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
 
 
 def _normalize_country(value: Any) -> str | None:
@@ -123,6 +133,114 @@ def _match_client_audit(data: dict | None) -> dict[str, str | None]:
 
 def _is_knockout_phase(phase: str | None) -> bool:
     return bool(phase and phase != 'Grupowa')
+
+
+FINISH_REASON_NORMAL = "normal"
+FINISH_REASON_TEST = "test"
+FINISH_REASON_RETIREMENT = "retirement"
+FINISH_REASON_WALKOVER = "walkover"
+FINISH_REASONS = {
+    FINISH_REASON_NORMAL,
+    FINISH_REASON_TEST,
+    FINISH_REASON_RETIREMENT,
+    FINISH_REASON_WALKOVER,
+}
+
+
+def _match_players(match: Match) -> set[str]:
+    return {match.player1_name, match.player2_name}
+
+
+def _winner_from_score(match: Match) -> str | None:
+    if int(match.player1_sets or 0) > int(match.player2_sets or 0):
+        return match.player1_name
+    if int(match.player2_sets or 0) > int(match.player1_sets or 0):
+        return match.player2_name
+    return None
+
+
+def _apply_walkover_score(match: Match, winner_name: str) -> None:
+    player1_wins = winner_name == match.player1_name
+    match.player1_sets = 2 if player1_wins else 0
+    match.player2_sets = 0 if player1_wins else 2
+    match.player1_games = 0
+    match.player2_games = 0
+    match.player1_points = 0
+    match.player2_points = 0
+    match.sets_history = json.dumps([
+        {
+            "set_number": 1,
+            "player1_games": 4 if player1_wins else 0,
+            "player2_games": 0 if player1_wins else 4,
+        },
+        {
+            "set_number": 2,
+            "player1_games": 4 if player1_wins else 0,
+            "player2_games": 0 if player1_wins else 4,
+        },
+    ])
+
+
+def _append_retirement_current_score(match: Match) -> None:
+    if not int(match.player1_games or 0) and not int(match.player2_games or 0):
+        return
+    try:
+        sets_history = json.loads(match.sets_history) if match.sets_history else []
+    except Exception:
+        sets_history = []
+    if any(
+        isinstance(item, dict)
+        and item.get("unfinished")
+        and item.get("finish_reason") == FINISH_REASON_RETIREMENT
+        for item in sets_history
+    ):
+        return
+    current_set_number = len(sets_history) + 1
+    if any(int(item.get("set_number", 0) or 0) == current_set_number for item in sets_history if isinstance(item, dict)):
+        return
+    sets_history.append({
+        "set_number": current_set_number,
+        "player1_games": int(match.player1_games or 0),
+        "player2_games": int(match.player2_games or 0),
+        "unfinished": True,
+        "finish_reason": FINISH_REASON_RETIREMENT,
+    })
+    match.sets_history = json.dumps(sets_history)
+
+
+def _apply_finish_outcome(match: Match, data: dict) -> None:
+    reason = str(data.get("finish_reason") or FINISH_REASON_NORMAL).strip().lower()
+    if reason not in FINISH_REASONS:
+        raise ValueError("Unsupported finish_reason")
+
+    winner_name = _clean_client_text(data.get("winner_name"), 200)
+    injured_player_name = _clean_client_text(data.get("injured_player_name"), 200)
+    result_note = _clean_client_text(data.get("result_note"), 255)
+
+    if reason == FINISH_REASON_RETIREMENT:
+        if injured_player_name not in _match_players(match):
+            raise ValueError("injured_player_name must be one of match players")
+        winner_name = match.player2_name if injured_player_name == match.player1_name else match.player1_name
+        result_note = result_note or f"Krecz: {injured_player_name}"
+        _append_retirement_current_score(match)
+    elif reason == FINISH_REASON_WALKOVER:
+        if winner_name not in _match_players(match):
+            raise ValueError("winner_name must be one of match players for walkover")
+        injured_player_name = None
+        result_note = result_note or "Walkower"
+        _apply_walkover_score(match, winner_name)
+    elif reason == FINISH_REASON_TEST:
+        winner_name = winner_name or _winner_from_score(match)
+        injured_player_name = None
+        result_note = result_note or "Mecz testowy"
+    else:
+        winner_name = winner_name or _winner_from_score(match)
+        injured_player_name = None
+
+    match.finish_reason = reason
+    match.winner_name = winner_name
+    match.injured_player_name = injured_player_name
+    match.result_note = result_note
 
 
 def _sync_court_match_timer_from_match(court_state: dict, match: Match) -> None:
@@ -303,6 +421,38 @@ def _format_mobile_court_name(court: dict) -> str:
     return raw_name
 
 
+def _mobile_player_payload_for_name(tournament_id: int, player_name: str) -> dict | None:
+    normalized_name = (player_name or '').strip()
+    if not tournament_id or not normalized_name:
+        return None
+    players = Player.query.filter_by(tournament_id=tournament_id).all()
+    player = next((item for item in players if item.full_name == normalized_name or item.name == normalized_name), None)
+    if not player:
+        return None
+    country_code = (player.country or '').strip() or None
+    return {
+        "id": player.id,
+        "first_name": player.first_name or '',
+        "last_name": player.last_name or '',
+        "surname": player.last_name or player.name,
+        "full_name": player.full_name,
+        "name": player.full_name,
+        "country_code": country_code,
+        "category": player.category,
+        "gender": player.gender,
+        "flag_url": f"https://flagcdn.com/w80/{country_code.lower()}.png" if country_code else None,
+    }
+
+
+def _mobile_schedule_suggestion_payload(entry: dict | None, tournament_id: int) -> dict | None:
+    if not entry:
+        return None
+    payload = dict(entry)
+    payload["player1"] = _mobile_player_payload_for_name(tournament_id, payload.get("player1_name") or "")
+    payload["player2"] = _mobile_player_payload_for_name(tournament_id, payload.get("player2_name") or "")
+    return payload
+
+
 def _maybe_backfill_match_bracket_context(match: Match) -> dict:
     """Fill missing group/phase data for mobile-created matches."""
     if not match.tournament_id or not match.player1_name or not match.player2_name:
@@ -320,11 +470,22 @@ def _maybe_backfill_match_bracket_context(match: Match) -> dict:
     return bracket_ctx
 
 
+def _schedule_context_for_match(tournament_id: int | None, schedule_id: int | None) -> dict | None:
+    if not tournament_id or not schedule_id:
+        return None
+    from ..database import fetch_tournament_schedule
+
+    return next(
+        (entry for entry in fetch_tournament_schedule(tournament_id) if int(entry.get("id") or 0) == int(schedule_id)),
+        None,
+    )
+
+
 def _link_match_schedule_if_possible(match: Match, *, status: str) -> None:
     """Attach the real match row to a schedule slot when bracket context is known."""
     if not match.id or not match.tournament_id or not match.player1_name or not match.player2_name:
         return
-    if not match.bracket_group_id and not match.phase:
+    if not match.schedule_id and not match.bracket_group_id and not match.phase:
         return
 
     from ..database import link_schedule_to_match
@@ -332,6 +493,7 @@ def _link_match_schedule_if_possible(match: Match, *, status: str) -> None:
     link_schedule_to_match(
         match.tournament_id,
         match.id,
+        schedule_id=match.schedule_id,
         player1_name=match.player1_name,
         player2_name=match.player2_name,
         phase=match.phase,
@@ -381,6 +543,26 @@ def get_courts():
         
     except Exception as e:
         logger.error(f"Error getting courts: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/courts/<kort_id>/suggested-match', methods=['GET'])
+def get_court_suggested_match(kort_id: str):
+    """Return nearest scheduled match for the selected court and current app time."""
+    try:
+        from ..database import find_suggested_schedule_match, get_active_tournament_id, get_tournament_id_for_court
+
+        tournament_id = request.args.get("tournament_id", type=int) or get_tournament_id_for_court(kort_id) or get_active_tournament_id()
+        if not tournament_id:
+            return jsonify({"suggestion": None}), 200
+        entry = find_suggested_schedule_match(
+            tournament_id,
+            normalize_kort_id(kort_id),
+            reference_time=request.args.get("at"),
+        )
+        return jsonify({"suggestion": _mobile_schedule_suggestion_payload(entry, tournament_id)}), 200
+    except Exception as e:
+        logger.error(f"Error getting suggested match: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -571,6 +753,8 @@ def create_match():
         score = data.get("score", {})
         kort_id = data.get("court_id")
         client_audit = _match_client_audit(data)
+        client_match_uuid = _clean_client_text(data.get("client_match_uuid"), 80)
+        schedule_id = _clean_int(data.get("schedule_id"))
         
         # Ensure court exists
         if kort_id:
@@ -584,10 +768,29 @@ def create_match():
         
         p1_name = data.get("player1_name")
         p2_name = data.get("player2_name")
+
+        if client_match_uuid:
+            existing_match = (
+                Match.query
+                .filter_by(client_match_uuid=client_match_uuid)
+                .order_by(Match.id.desc())
+                .first()
+            )
+            if existing_match:
+                logger.info(f"Idempotent match create reused: {existing_match.id} uuid={client_match_uuid}")
+                return jsonify(existing_match.to_dict()), 200
         
         if tournament_id and p1_name and p2_name:
             bracket_ctx = detect_bracket_context(p1_name, p2_name, tournament_id)
             bracket_warning = bracket_ctx.get("warning")
+        schedule_entry = _schedule_context_for_match(tournament_id, schedule_id)
+        if schedule_entry:
+            bracket_ctx = {
+                "group_id": schedule_entry.get("bracket_group_id"),
+                "phase": schedule_entry.get("phase") or bracket_ctx.get("phase"),
+                "warning": None,
+            }
+            bracket_warning = None
         
         # Create match
         match = Match(
@@ -598,6 +801,9 @@ def create_match():
             tournament_id=tournament_id,
             bracket_group_id=bracket_ctx.get("group_id"),
             phase=bracket_ctx.get("phase"),
+            client_match_uuid=client_match_uuid,
+            schedule_id=schedule_id,
+            finish_reason=FINISH_REASON_NORMAL,
             player1_sets=score.get("player1_sets", 0),
             player2_sets=score.get("player2_sets", 0),
             player1_games=score.get("player1_games", 0),
@@ -690,6 +896,16 @@ def update_match(match_id: int):
         match.player2_points = score.get("player2_points", 0)
         match.sets_history = json.dumps(score.get("sets_history", []))
         match.status = data.get("status", "in_progress")
+        if data.get("client_match_uuid") and not match.client_match_uuid:
+            match.client_match_uuid = _clean_client_text(data.get("client_match_uuid"), 80)
+        if data.get("schedule_id") and not match.schedule_id:
+            match.schedule_id = _clean_int(data.get("schedule_id"))
+        schedule_entry = _schedule_context_for_match(match.tournament_id, match.schedule_id)
+        if schedule_entry:
+            if not match.bracket_group_id and schedule_entry.get("bracket_group_id"):
+                match.bracket_group_id = schedule_entry.get("bracket_group_id")
+            if not match.phase and schedule_entry.get("phase"):
+                match.phase = schedule_entry.get("phase")
         _maybe_backfill_match_bracket_context(match)
         match.updated_at = utc_now_iso()
         
@@ -727,15 +943,21 @@ def update_match(match_id: int):
 def finish_match(match_id: int):
     """Mark match as finished."""
     try:
+        data = request.get_json(silent=True) or {}
         match = db.session.get(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
         
+        _apply_finish_outcome(match, data)
         _maybe_backfill_match_bracket_context(match)
         match.status = "finished"
         match.updated_at = utc_now_iso()
         db.session.commit()
-        _link_match_schedule_if_possible(match, status="completed")
+        if match.finish_reason == FINISH_REASON_TEST:
+            from ..database import unlink_schedule_from_match
+            unlink_schedule_from_match(match.id)
+        else:
+            _link_match_schedule_if_possible(match, status="completed")
         
         # Update court state
         kort_id = match.court_id
@@ -785,6 +1007,10 @@ def finish_match(match_id: int):
                 court_state["history_meta"] = court_state.get("history_meta", {})
                 court_state["history_meta"]["match_id"] = match_id
                 court_state["history_meta"]["stats_mode"] = court_state.get("stats_mode")
+                court_state["history_meta"]["finish_reason"] = match.finish_reason or FINISH_REASON_NORMAL
+                court_state["history_meta"]["winner_name"] = match.winner_name
+                court_state["history_meta"]["injured_player_name"] = match.injured_player_name
+                court_state["history_meta"]["result_note"] = match.result_note
 
                 # Auto-detect category from player DB records
                 # If both players share the same category, include it
@@ -823,9 +1049,10 @@ def finish_match(match_id: int):
             # Set phase from match record if available
             if match.phase:
                 court_state["history_meta"]["phase"] = match.phase
-            add_match_to_history(kort_id, court_state)
+            if match.finish_reason != FINISH_REASON_TEST:
+                add_match_to_history(kort_id, court_state)
 
-            if match.tournament_id:
+            if match.finish_reason != FINISH_REASON_TEST and match.tournament_id:
                 try:
                     from ..database import fetch_tournament
                     from ..services.email_reports import maybe_send_tournament_summary, send_match_report
@@ -837,7 +1064,7 @@ def finish_match(match_id: int):
                     logger.warning(f"Could not send email report: {e}")
             
             # Auto-generate knockout once the configured group stage is complete.
-            if match.phase == "Grupowa" and match.tournament_id:
+            if match.finish_reason != FINISH_REASON_TEST and match.phase == "Grupowa" and match.tournament_id:
                 try:
                     from ..database import maybe_generate_knockout_from_completed_groups
                     maybe_generate_knockout_from_completed_groups(match.tournament_id)
@@ -845,7 +1072,7 @@ def finish_match(match_id: int):
                     logger.warning(f"Could not generate knockout: {e}")
 
             # Auto-advance knockout bracket
-            if _is_knockout_phase(match.phase) and match.tournament_id:
+            if match.finish_reason != FINISH_REASON_TEST and _is_knockout_phase(match.phase) and match.tournament_id:
                 try:
                     from ..database import advance_knockout
                     advance_knockout(match_id, match.tournament_id)
@@ -870,12 +1097,18 @@ def finish_match(match_id: int):
             import threading
             def emit_cleared():
                 emit_score_update(kort_id, court_state)
-            threading.Timer(5.0, emit_cleared).start()
+            if current_app.config.get("TESTING"):
+                emit_cleared()
+            else:
+                threading.Timer(5.0, emit_cleared).start()
         
         logger.info(f"Match {match_id} finished on court {kort_id}")
         
         return jsonify(match.to_dict()), 200
         
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error finishing match: {e}", exc_info=True)
@@ -896,6 +1129,8 @@ def receive_statistics():
         match = db.session.get(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
+        if match.finish_reason == FINISH_REASON_TEST:
+            return jsonify({"message": "Statistics ignored for test match"}), 200
         
         # Get or create statistics
         stats = MatchStatistics.query.filter_by(match_id=match_id).first()
@@ -982,12 +1217,23 @@ def log_match_event():
         raw_pts_b = int(score.get('player2_points', 0))
         is_tiebreak = bool(score.get('is_tiebreak', False))
         is_super_tiebreak = bool(score.get('is_super_tiebreak', False))
-        active_match = (
-            Match.query
-            .filter_by(court_id=kort_id, status='in_progress')
-            .order_by(Match.updated_at.desc(), Match.id.desc())
-            .first()
-        )
+        event_match_id = data.get('match_id')
+        event_client_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
+        active_match = db.session.get(Match, event_match_id) if event_match_id else None
+        if not active_match and event_client_uuid:
+            active_match = (
+                Match.query
+                .filter_by(client_match_uuid=event_client_uuid)
+                .order_by(Match.updated_at.desc(), Match.id.desc())
+                .first()
+            )
+        if not active_match:
+            active_match = (
+                Match.query
+                .filter_by(court_id=kort_id, status='in_progress')
+                .order_by(Match.updated_at.desc(), Match.id.desc())
+                .first()
+            )
         restore_match_score = bool(
             active_match and _match_has_recorded_progress(active_match) and _score_payload_is_zeroed(score)
         )
