@@ -202,6 +202,10 @@ class MatchHistory(db.Model):
     stats_mode = db.Column(db.String(20), nullable=True)
     sets_history = db.Column(db.Text, nullable=True)
     tournament_id = db.Column(db.Integer, nullable=True)
+    finish_reason = db.Column(db.String(20), nullable=True, default='normal')
+    winner_name = db.Column(db.String(200), nullable=True)
+    injured_player_name = db.Column(db.String(200), nullable=True)
+    result_note = db.Column(db.String(255), nullable=True)
     
     def to_dict(self):
         return {
@@ -214,7 +218,11 @@ class MatchHistory(db.Model):
             'score_a': self.score_a,
             'score_b': self.score_b,
             'category': self.category,
-            'phase': self.phase
+            'phase': self.phase,
+            'finish_reason': self.finish_reason or 'normal',
+            'winner_name': self.winner_name,
+            'injured_player_name': self.injured_player_name,
+            'result_note': self.result_note,
         }
 
 
@@ -231,6 +239,12 @@ class Match(db.Model):
     tournament_id = db.Column(db.Integer, nullable=True)
     bracket_group_id = db.Column(db.Integer, nullable=True)
     phase = db.Column(db.String(50), nullable=True)
+    client_match_uuid = db.Column(db.String(80), nullable=True, index=True)
+    schedule_id = db.Column(db.Integer, nullable=True, index=True)
+    finish_reason = db.Column(db.String(20), nullable=True, default='normal')
+    winner_name = db.Column(db.String(200), nullable=True)
+    injured_player_name = db.Column(db.String(200), nullable=True)
+    result_note = db.Column(db.String(255), nullable=True)
     
     # Score data stored as JSON strings
     player1_sets = db.Column(db.Integer, default=0)
@@ -273,6 +287,12 @@ class Match(db.Model):
             'tournament_id': self.tournament_id,
             'bracket_group_id': self.bracket_group_id,
             'phase': self.phase,
+            'client_match_uuid': self.client_match_uuid,
+            'schedule_id': self.schedule_id,
+            'finish_reason': self.finish_reason or 'normal',
+            'winner_name': self.winner_name,
+            'injured_player_name': self.injured_player_name,
+            'result_note': self.result_note,
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }

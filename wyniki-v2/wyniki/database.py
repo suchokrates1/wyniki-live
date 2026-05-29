@@ -100,7 +100,11 @@ def init_db() -> None:
                 category TEXT,
                 phase TEXT DEFAULT 'Grupowa',
                 match_id INTEGER,
-                stats_mode TEXT
+                stats_mode TEXT,
+                finish_reason TEXT DEFAULT 'normal',
+                winner_name TEXT,
+                injured_player_name TEXT,
+                result_note TEXT
             )
         """)
 
@@ -114,6 +118,12 @@ def init_db() -> None:
                 tournament_id INTEGER,
                 bracket_group_id INTEGER,
                 phase TEXT,
+                client_match_uuid TEXT,
+                schedule_id INTEGER,
+                finish_reason TEXT DEFAULT 'normal',
+                winner_name TEXT,
+                injured_player_name TEXT,
+                result_note TEXT,
                 player1_sets INTEGER DEFAULT 0,
                 player2_sets INTEGER DEFAULT 0,
                 player1_games INTEGER DEFAULT 0,
@@ -256,6 +266,19 @@ def init_db() -> None:
             if first_t:
                 cursor.execute("UPDATE match_history SET tournament_id = ? WHERE tournament_id IS NULL", (first_t["id"],))
             logger.info("database_migration", action="added_tournament_id_to_match_history")
+
+        cursor.execute("PRAGMA table_info(match_history)")
+        mh_result_cols = [row[1] for row in cursor.fetchall()]
+        match_history_result_columns = {
+            'finish_reason': "TEXT DEFAULT 'normal'",
+            'winner_name': 'TEXT',
+            'injured_player_name': 'TEXT',
+            'result_note': 'TEXT',
+        }
+        for column_name, ddl in match_history_result_columns.items():
+            if column_name not in mh_result_cols:
+                cursor.execute(f"ALTER TABLE match_history ADD COLUMN {column_name} {ddl}")
+                logger.info("database_migration", action=f"added_{column_name}_to_match_history")
         
         # Bracket tables
         cursor.execute("""
@@ -286,6 +309,8 @@ def init_db() -> None:
                 player2_name TEXT,
                 winner_name TEXT,
                 score_summary TEXT,
+                finish_reason TEXT DEFAULT 'normal',
+                result_note TEXT,
                 FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
             )
         """)
@@ -333,15 +358,34 @@ def init_db() -> None:
             cursor.execute("ALTER TABLE matches ADD COLUMN phase TEXT")
             logger.info("database_migration", action="added_phase_to_matches")
         match_client_columns = {
+            'client_match_uuid': 'TEXT',
+            'schedule_id': 'INTEGER',
             'client_info': 'TEXT',
             'client_ip': 'TEXT',
             'client_country': 'TEXT',
             'client_user_agent': 'TEXT',
+            'finish_reason': "TEXT DEFAULT 'normal'",
+            'winner_name': 'TEXT',
+            'injured_player_name': 'TEXT',
+            'result_note': 'TEXT',
         }
         for column_name, ddl in match_client_columns.items():
             if column_name not in m_cols:
                 cursor.execute(f"ALTER TABLE matches ADD COLUMN {column_name} {ddl}")
                 logger.info("database_migration", action=f"added_{column_name}_to_matches")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_matches_client_uuid ON matches(client_match_uuid)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_matches_schedule_id ON matches(schedule_id)")
+
+        cursor.execute("PRAGMA table_info(bracket_knockout)")
+        knockout_cols = [row[1] for row in cursor.fetchall()]
+        knockout_result_columns = {
+            'finish_reason': "TEXT DEFAULT 'normal'",
+            'result_note': 'TEXT',
+        }
+        for column_name, ddl in knockout_result_columns.items():
+            if column_name not in knockout_cols:
+                cursor.execute(f"ALTER TABLE bracket_knockout ADD COLUMN {column_name} {ddl}")
+                logger.info("database_migration", action=f"added_{column_name}_to_bracket_knockout")
 
         cursor.execute("PRAGMA table_info(tournament_schedule)")
         schedule_cols = [row[1] for row in cursor.fetchall()]
@@ -938,6 +982,7 @@ def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[st
                 FROM matches
                 WHERE tournament_id = ?
                   AND status = 'finished'
+                                    AND COALESCE(finish_reason, 'normal') != 'test'
                   AND phase = 'Grupowa'
                   AND bracket_group_id = ?
                 """,
@@ -981,7 +1026,7 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
 
         p1 = match.player1_name
         p2 = match.player2_name
-        winner = p1 if match.player1_sets > match.player2_sets else p2
+        winner = match.winner_name or (p1 if match.player1_sets > match.player2_sets else p2)
 
         sets_history = json.loads(match.sets_history) if match.sets_history else []
         score_parts = []
@@ -1008,9 +1053,10 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
 
             # Update the slot with winner and score
             cursor.execute("""
-                UPDATE bracket_knockout SET winner_name = ?, score_summary = ?
+                UPDATE bracket_knockout
+                SET winner_name = ?, score_summary = ?, finish_reason = ?, result_note = ?
                 WHERE id = ?
-            """, (winner, score_summary, slot["id"]))
+            """, (winner, score_summary, match.finish_reason or 'normal', match.result_note, slot["id"]))
 
             loser = p2 if winner == p1 else p1
 
@@ -1056,14 +1102,7 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO match_history (
-                    kort_id, ended_ts, duration_seconds,
-                    player_a, player_b, score_a, score_b,
-                    category, phase, match_id, stats_mode, sets_history,
-                    tournament_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            values = (
                 entry.get("kort_id"),
                 entry.get("ended_ts"),
                 entry.get("duration_seconds", 0),
@@ -1077,7 +1116,38 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
                 entry.get("stats_mode"),
                 json.dumps(entry.get("sets_history")) if entry.get("sets_history") else None,
                 entry.get("tournament_id"),
-            ))
+                entry.get("finish_reason", "normal"),
+                entry.get("winner_name"),
+                entry.get("injured_player_name"),
+                entry.get("result_note"),
+            )
+            existing_id = None
+            if entry.get("match_id"):
+                cursor.execute(
+                    "SELECT id FROM match_history WHERE match_id = ? LIMIT 1",
+                    (entry.get("match_id"),),
+                )
+                existing = cursor.fetchone()
+                existing_id = existing["id"] if existing else None
+            if existing_id:
+                cursor.execute("""
+                    UPDATE match_history
+                    SET kort_id = ?, ended_ts = ?, duration_seconds = ?,
+                        player_a = ?, player_b = ?, score_a = ?, score_b = ?,
+                        category = ?, phase = ?, match_id = ?, stats_mode = ?, sets_history = ?,
+                        tournament_id = ?, finish_reason = ?, winner_name = ?,
+                        injured_player_name = ?, result_note = ?
+                    WHERE id = ?
+                """, (*values, existing_id))
+            else:
+                cursor.execute("""
+                    INSERT INTO match_history (
+                        kort_id, ended_ts, duration_seconds,
+                        player_a, player_b, score_a, score_b,
+                        category, phase, match_id, stats_mode, sets_history,
+                        tournament_id, finish_reason, winner_name, injured_player_name, result_note
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, values)
             conn.commit()
         logger.info("match_history_inserted", kort_id=entry.get("kort_id"))
     except Exception as e:
@@ -1441,6 +1511,10 @@ def fetch_match_history(
                     "player_b": row["player_b"],
                     "category": row["category"] if "category" in col_names else None,
                     "phase": row["phase"] if "phase" in col_names else "Grupowa",
+                    "finish_reason": row["finish_reason"] if "finish_reason" in col_names else "normal",
+                    "winner_name": row["winner_name"] if "winner_name" in col_names else None,
+                    "injured_player_name": row["injured_player_name"] if "injured_player_name" in col_names else None,
+                    "result_note": row["result_note"] if "result_note" in col_names else None,
                 }
                 
                 # Read scores - prefer score_a/score_b JSON, fall back to old per-set columns
@@ -2268,6 +2342,64 @@ def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) 
         return []
 
 
+def _parse_schedule_reference_datetime(value: Optional[str] = None) -> datetime:
+    if value:
+        normalized = str(value).strip().replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized).replace(tzinfo=None)
+        except ValueError:
+            pass
+    return datetime.now().replace(tzinfo=None)
+
+
+def find_suggested_schedule_match(
+    tournament_id: int,
+    court_id: str,
+    *,
+    reference_time: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Return the nearest unlinked schedule entry for a court and reference time."""
+    if not tournament_id or not court_id:
+        return None
+    reference = _parse_schedule_reference_datetime(reference_time)
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT ts.*, c.name AS court_name, COALESCE(c.display_order, 9999) AS court_display_order
+                FROM tournament_schedule ts
+                LEFT JOIN courts c ON c.kort_id = ts.court_id
+                WHERE ts.tournament_id = ?
+                  AND ts.court_id = ?
+                  AND (ts.match_id IS NULL OR ts.match_id = '')
+                  AND COALESCE(ts.status, 'planned') != 'completed'
+                  AND COALESCE(ts.day_date, '') != ''
+                  AND COALESCE(ts.scheduled_time, '') != ''
+                  AND COALESCE(ts.player1_name, '') != ''
+                  AND COALESCE(ts.player2_name, '') != ''
+                """,
+                (tournament_id, court_id),
+            )
+            candidates = []
+            for row in cursor.fetchall():
+                entry = _schedule_row_payload(row, public=False)
+                try:
+                    scheduled_at = datetime.fromisoformat(f"{entry['day_date']}T{entry['scheduled_time']}:00")
+                except ValueError:
+                    continue
+                diff_seconds = abs((scheduled_at - reference).total_seconds())
+                future_first = 0 if scheduled_at >= reference else 1
+                candidates.append((diff_seconds, future_first, entry.get("sort_order") or 0, entry.get("id") or 0, entry))
+            if not candidates:
+                return None
+            candidates.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
+            return candidates[0][4]
+    except Exception as e:
+        logger.error("find_suggested_schedule_match_error", error=str(e), tournament_id=tournament_id, court_id=court_id)
+        return None
+
+
 def build_public_schedule_payload(tournament_id: int) -> Dict[str, Any]:
     """Return schedule grouped by day and category for the public UI."""
     tournament = fetch_tournament(tournament_id) or {}
@@ -2593,6 +2725,7 @@ def link_schedule_to_match(
     tournament_id: int,
     match_id: int,
     *,
+    schedule_id: Optional[int] = None,
     player1_name: str,
     player2_name: str,
     phase: Optional[str] = None,
@@ -2603,6 +2736,25 @@ def link_schedule_to_match(
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
+            if schedule_id:
+                cursor.execute(
+                    """
+                    SELECT id FROM tournament_schedule
+                    WHERE id = ? AND tournament_id = ? AND (match_id IS NULL OR match_id = ?)
+                    LIMIT 1
+                    """,
+                    (schedule_id, tournament_id, match_id),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                cursor.execute(
+                    "UPDATE tournament_schedule SET match_id = ?, status = ?, updated_at = ? WHERE id = ?",
+                    (match_id, status, _utc_now(), row["id"]),
+                )
+                conn.commit()
+                return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(row["id"])), None)
+
             pair_clause, pair_params = _schedule_pair_clause(player1_name, player2_name)
             params: List[Any] = [tournament_id, *pair_params]
             filters = ["tournament_id = ?", pair_clause]
@@ -2612,6 +2764,8 @@ def link_schedule_to_match(
             elif phase:
                 filters.append("phase = ?")
                 params.append(phase)
+            filters.append("(match_id IS NULL OR match_id = ?)")
+            params.append(match_id)
             cursor.execute(
                 f"""
                 SELECT id FROM tournament_schedule
@@ -2636,6 +2790,32 @@ def link_schedule_to_match(
         return None
 
 
+def unlink_schedule_from_match(match_id: int, *, fallback_status: str = "planned") -> int:
+    """Detach schedule slots from a match that must not count for tournament lifecycle."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE tournament_schedule
+                SET match_id = NULL,
+                    status = CASE
+                        WHEN status IN ('in_progress', 'completed') THEN ?
+                        ELSE status
+                    END,
+                    updated_at = ?
+                WHERE match_id = ?
+                """,
+                (fallback_status, _utc_now(), match_id),
+            )
+            affected = cursor.rowcount
+            conn.commit()
+            return affected
+    except Exception as e:
+        logger.error("unlink_schedule_from_match_error", error=str(e), match_id=match_id)
+        return 0
+
+
 def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str, tournament_id: Optional[int] = None) -> List[Dict]:
     """Find finished matches between a set of players within a date range.
     
@@ -2650,10 +2830,11 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
     tournament_params = [tournament_id] if tournament_id is not None else []
     # Try exact match first
     cursor.execute(f"""
-        SELECT id, player1_name, player2_name, player1_sets, player2_sets,
-               sets_history, created_at
+         SELECT id, player1_name, player2_name, player1_sets, player2_sets,
+             sets_history, created_at, winner_name, finish_reason, result_note
         FROM matches
         WHERE status = 'finished'
+           AND COALESCE(finish_reason, 'normal') != 'test'
           {tournament_clause}
                     AND phase = 'Grupowa'
           AND player1_name IN ({placeholders})
@@ -2687,10 +2868,11 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
     p2_cond = " OR ".join(like_conditions2)
 
     cursor.execute(f"""
-        SELECT id, player1_name, player2_name, player1_sets, player2_sets,
-               sets_history, created_at
+         SELECT id, player1_name, player2_name, player1_sets, player2_sets,
+             sets_history, created_at, winner_name, finish_reason, result_note
         FROM matches
         WHERE status = 'finished'
+                  AND COALESCE(finish_reason, 'normal') != 'test'
                     {tournament_clause}
                     AND phase = 'Grupowa'
           AND ({p1_cond})
@@ -2812,8 +2994,14 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
         stats[p1]["played"] += 1
         stats[p2]["played"] += 1
 
-        winner = None
-        if s1 > s2:
+        winner = m.get("winner_name") if isinstance(m, dict) else None
+        if winner == p1:
+            stats[p1]["wins"] += 1
+            stats[p2]["losses"] += 1
+        elif winner == p2:
+            stats[p2]["wins"] += 1
+            stats[p1]["losses"] += 1
+        elif s1 > s2:
             stats[p1]["wins"] += 1
             stats[p2]["losses"] += 1
             winner = p1
@@ -2851,6 +3039,8 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
             "winner": winner,
             "sets_a": s1,
             "sets_b": s2,
+            "finish_reason": m.get("finish_reason") if isinstance(m, dict) else None,
+            "result_note": m.get("result_note") if isinstance(m, dict) else None,
         })
 
     # Sort: wins desc, set_diff desc, game_diff desc
@@ -2875,11 +3065,12 @@ def save_bracket_knockout(tournament_id: int, slots: List[Dict]) -> bool:
             for slot in slots:
                 cursor.execute(
                     "INSERT INTO bracket_knockout (tournament_id, phase, position, "
-                    "player1_name, player2_name, winner_name, score_summary) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "player1_name, player2_name, winner_name, score_summary, finish_reason, result_note) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (tournament_id, slot["phase"], slot.get("position", 1),
                      slot.get("player1_name"), slot.get("player2_name"),
-                     slot.get("winner_name"), slot.get("score_summary"))
+                     slot.get("winner_name"), slot.get("score_summary"),
+                     slot.get("finish_reason", "normal"), slot.get("result_note"))
                 )
             conn.commit()
             logger.info("bracket_knockout_saved", tournament_id=tournament_id, count=len(slots))
@@ -2895,7 +3086,7 @@ def fetch_bracket_knockout(tournament_id: int) -> List[Dict]:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT phase, position, player1_name, player2_name, winner_name, score_summary "
+                "SELECT id, phase, position, player1_name, player2_name, winner_name, score_summary, finish_reason, result_note "
                 "FROM bracket_knockout WHERE tournament_id = ? ORDER BY phase, position",
                 (tournament_id,)
             )
@@ -2928,9 +3119,11 @@ def _detect_knockout_result(
         phase_clause = "AND phase = ?" if match_phase else ""
         phase_params = [match_phase] if match_phase else []
         cursor.execute(f"""
-            SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history
+                        SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history,
+                                     winner_name, finish_reason, result_note
             FROM matches
             WHERE status = 'finished'
+                            AND COALESCE(finish_reason, 'normal') != 'test'
               {tournament_clause}
               {phase_clause}
               AND ((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))
@@ -2941,9 +3134,11 @@ def _detect_knockout_result(
         if row:
             return row
         cursor.execute(f"""
-            SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history
+                        SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history,
+                                     winner_name, finish_reason, result_note
             FROM matches
             WHERE status = 'finished'
+                            AND COALESCE(finish_reason, 'normal') != 'test'
               {tournament_clause}
               {phase_clause}
               AND ((player1_name LIKE ? AND player2_name LIKE ?)
@@ -2971,7 +3166,7 @@ def _detect_knockout_result(
     score_parts = [_format_set_score(s, flipped) for s in sh]
     sets_detail = [_build_set_detail(s, flipped) for s in sh]
 
-    match_winner = row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"]
+    match_winner = row["winner_name"] or (row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"])
     winner_surname = match_winner.strip().split()[-1].lower() if match_winner else ""
     if winner_surname == p1.strip().split()[-1].lower():
         winner = p1
@@ -2979,7 +3174,13 @@ def _detect_knockout_result(
         winner = p2
     else:
         winner = match_winner
-    return {"winner": winner, "score": "  ".join(score_parts), "sets": sets_detail}
+    return {
+        "winner": winner,
+        "score": "  ".join(score_parts),
+        "sets": sets_detail,
+        "finish_reason": row["finish_reason"],
+        "result_note": row["result_note"],
+    }
 
 
 def get_full_bracket(tournament_id: int) -> Dict:
@@ -3021,7 +3222,7 @@ def get_full_bracket(tournament_id: int) -> Dict:
 
             # Knockout
             cursor.execute(
-                "SELECT phase, position, player1_name, player2_name, winner_name, score_summary "
+                "SELECT phase, position, player1_name, player2_name, winner_name, score_summary, finish_reason, result_note "
                 "FROM bracket_knockout WHERE tournament_id = ? ORDER BY phase, position",
                 (tournament_id,)
             )
@@ -3036,6 +3237,8 @@ def get_full_bracket(tournament_id: int) -> Dict:
                     "player2": r["player2_name"],
                     "winner": r["winner_name"],
                     "score": r["score_summary"],
+                    "finish_reason": r["finish_reason"],
+                    "result_note": r["result_note"],
                     "sets": None,
                 }
                 # Auto-detect result from match data (always, to populate sets)
@@ -3047,6 +3250,8 @@ def get_full_bracket(tournament_id: int) -> Dict:
                         if not slot["winner"]:
                             slot["winner"] = result["winner"]
                             slot["score"] = result["score"]
+                            slot["finish_reason"] = result.get("finish_reason")
+                            slot["result_note"] = result.get("result_note")
                         slot["sets"] = result.get("sets")
 
                 knockout.setdefault(phase, []).append(slot)
