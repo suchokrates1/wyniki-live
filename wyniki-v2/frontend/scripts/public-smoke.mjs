@@ -45,6 +45,8 @@ async function inspectPage(page) {
 }
 
 const baseUrl = argValue('--base-url', process.env.PUBLIC_SMOKE_BASE_URL || 'http://localhost:4173');
+const navigationTimeout = Number(argValue('--navigation-timeout', process.env.PUBLIC_SMOKE_NAVIGATION_TIMEOUT || '30000'));
+const readinessTimeout = Number(argValue('--readiness-timeout', process.env.PUBLIC_SMOKE_READINESS_TIMEOUT || '10000'));
 const languages = listArg('--languages', LANGUAGES).filter((lang) => LANGUAGES.includes(lang));
 const routeNames = listArg('--routes', ROUTES.map((route) => route.name));
 const routes = ROUTES.filter((route) => routeNames.includes(route.name) || routeNames.includes(route.hash));
@@ -69,11 +71,11 @@ try {
       const routeFailures = [];
       console.log(`check ${lang.padEnd(2)} ${route.name}`);
       try {
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 });
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: navigationTimeout });
         await page.waitForFunction(
           () => document.documentElement.lang,
           undefined,
-          { timeout: 8000 }
+          { timeout: readinessTimeout }
         );
         await page.waitForTimeout(300);
         const snapshot = await inspectPage(page);

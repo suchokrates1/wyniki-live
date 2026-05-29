@@ -367,6 +367,40 @@
               </div>
             </div>
 
+            <section class="card bg-base-100 shadow-sm border border-base-300">
+              <div class="card-body">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <h3 class="card-title">Drabinka pucharowa</h3>
+                    <p class="text-sm opacity-70">Mecze wygenerowane z drabinki razem ze statusem terminarza i wynikiem.</p>
+                  </div>
+                  <div class="flex gap-2 flex-wrap">
+                    <span class="badge badge-outline" x-text="(officeKnockout().finished_matches || 0) + '/' + (officeKnockout().expected_matches || 0) + ' zakończone'"></span>
+                    <span class="badge badge-accent" x-text="(officeKnockout().ready_matches || 0) + ' gotowe'"></span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4" x-show="officeKnockoutMatches().length">
+                  <template x-for="slot in officeKnockoutMatches()" :key="'admin_office_knockout_'+slot.slot_id">
+                    <div class="rounded-box bg-base-200 border border-base-300 p-4">
+                      <div class="flex items-start justify-between gap-2">
+                        <div>
+                          <div class="font-bold" x-text="slot.phase || 'Pucharowa'"></div>
+                          <div class="text-xs opacity-70" x-text="officeScheduleLabel(slot)"></div>
+                        </div>
+                        <span class="badge" :class="slot.winner_name ? 'badge-success' : (slot.ready ? 'badge-warning' : 'badge-ghost')" x-text="officeKnockoutStatusLabel(slot)"></span>
+                      </div>
+                      <div class="mt-3 text-sm">
+                        <div x-text="slot.player1_name || 'z poprzedniej rundy'"></div>
+                        <div x-text="slot.player2_name || 'z poprzedniej rundy'"></div>
+                      </div>
+                      <div class="mt-3 text-xs font-mono" x-show="slot.score_text" x-text="slot.score_text"></div>
+                    </div>
+                  </template>
+                </div>
+                <div class="alert alert-info mt-4" x-show="!officeKnockoutMatches().length"><span>Drabinka pucharowa nie została jeszcze wygenerowana dla tego turnieju.</span></div>
+              </div>
+            </section>
+
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
               <section class="card bg-base-200 shadow-sm xl:col-span-1">
                 <div class="card-body">

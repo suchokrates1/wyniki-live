@@ -5,7 +5,12 @@ window.Alpine = Alpine;
 
 function defaultOfficeForm(groupId = '') {
   return {
+    mode: 'group',
     group_id: groupId,
+    knockout_slot_id: null,
+    schedule_id: null,
+    court_id: '',
+    phase: '',
     player1_name: '',
     player2_name: '',
     walkover: false,
@@ -78,6 +83,20 @@ Alpine.data('officeApp', () => ({
 
   get officeGroups() {
     return this.dashboard?.progress?.groups || [];
+  },
+
+  get officeKnockout() {
+    return this.dashboard?.progress?.knockout || {
+      expected_matches: 0,
+      finished_matches: 0,
+      remaining_matches: 0,
+      ready_matches: 0,
+      matches: [],
+    };
+  },
+
+  get officeKnockoutMatches() {
+    return this.officeKnockout.matches || [];
   },
 
   get officeSchedule() {
@@ -449,6 +468,20 @@ Alpine.data('officeApp', () => ({
 
   openAddMatchModal() {
     this.ensureDefaultGroupSelection();
+    this.officeNewMatch.mode = 'group';
+    this.addMatchOpen = true;
+  },
+
+  openAddKnockoutResult(slot) {
+    this.officeNewMatch = defaultOfficeForm(this.officeNewMatch.group_id);
+    this.officeNewMatch.mode = 'knockout';
+    this.officeNewMatch.knockout_slot_id = slot.slot_id || slot.id || null;
+    this.officeNewMatch.schedule_id = slot.schedule_id || null;
+    this.officeNewMatch.court_id = slot.court_id || '';
+    this.officeNewMatch.phase = slot.phase || 'Pucharowa';
+    this.officeNewMatch.player1_name = slot.player1_name || '';
+    this.officeNewMatch.player2_name = slot.player2_name || '';
+    this.officeNewMatch.winner_name = '';
     this.addMatchOpen = true;
   },
 
@@ -891,6 +924,87 @@ Alpine.data('officeApp', () => ({
     }
   },
 
+  async addOfficeKnockoutMatch() {
+    if (!this.officeNewMatch.schedule_id && !this.officeNewMatch.knockout_slot_id) {
+      this.showToast('Wybierz mecz pucharowy z drabinki', 'warning');
+      return;
+    }
+    if (!this.officeNewMatch.player1_name || !this.officeNewMatch.player2_name) {
+      this.showToast('Slot pucharowy nie ma jeszcze dwóch zawodników', 'warning');
+      return;
+    }
+    if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {
+      this.showToast('Przy walkowerze wskaż zwycięzcę', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/office/${this.slot}/knockout-matches`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({
+          schedule_id: this.officeNewMatch.schedule_id,
+          knockout_slot_id: this.officeNewMatch.knockout_slot_id,
+          court_id: this.officeNewMatch.court_id,
+          player1_name: this.officeNewMatch.player1_name,
+          player2_name: this.officeNewMatch.player2_name,
+          walkover: this.officeNewMatch.walkover,
+          winner_name: this.officeNewMatch.winner_name,
+          sets: this.officeSetsFromForm(this.officeNewMatch),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(payload.error || 'Nie udało się dodać wyniku pucharowego.');
+      }
+      this.applyDashboard(payload.dashboard, { notify: false });
+      this.closeAddMatchModal();
+      this.showToast('Wynik pucharowy zapisany', 'success');
+    } catch (error) {
+      console.error('Failed to add office knockout result:', error);
+      this.showToast(error.message || 'Błąd dodawania wyniku pucharowego', 'error');
+    }
+  },
+
+  async addOfficeMatchResult() {
+    if (this.officeNewMatch.mode === 'knockout') {
+      await this.addOfficeKnockoutMatch();
+      return;
+    }
+    await this.addOfficeGroupMatch();
+  },
+
+  officeKnockoutStatusLabel(slot) {
+    if (slot?.winner_name) return 'Zakończony';
+    if (slot?.status === 'in_progress') return 'W trakcie';
+    if (slot?.status === 'planned') return 'Zaplanowany';
+    if (slot?.ready) return 'Gotowy do rozegrania';
+    return 'Czeka na zawodników';
+  },
+
+  officeKnockoutCanAddResult(slot) {
+    return !!slot?.ready && !slot?.winner_name && (!!slot?.schedule_id || !!slot?.slot_id);
+  },
+
+  officeMatchById(matchId) {
+    const targetId = Number(matchId || 0);
+    if (!targetId) return null;
+    return this.officeMatches.find(match => Number(match.match_id || match.id || 0) === targetId) || null;
+  },
+
+  startOfficeEditFromKnockout(slot) {
+    const match = this.officeMatchById(slot?.match_id);
+    if (!match) {
+      this.showToast('Ten wynik nie ma jeszcze wpisu w historii', 'warning');
+      return;
+    }
+    this.startOfficeEdit(match);
+  },
+
   startOfficeEdit(match) {
     const sets = match.sets_history || [];
     this.officeEditingMatch = {
@@ -957,7 +1071,7 @@ Alpine.data('officeApp', () => ({
 
   officePhaseTone(match) {
     if (match.group_name) return 'office-chip-group';
-    if ((match.phase || '').toLowerCase() === 'pucharowa') return 'office-chip-knockout';
+    if ((match.phase || '') && (match.phase || '').toLowerCase() !== 'grupowa') return 'office-chip-knockout';
     return 'office-chip-neutral';
   },
 
