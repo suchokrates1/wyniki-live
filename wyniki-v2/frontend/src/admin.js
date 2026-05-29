@@ -769,6 +769,35 @@ Alpine.data('adminApp', () => ({
     return Math.min(100, Math.round((progress.finished_matches / progress.expected_matches) * 100));
   },
 
+  officeKnockout() {
+    return this.officeDashboard?.progress?.knockout || {
+      expected_matches: 0,
+      finished_matches: 0,
+      remaining_matches: 0,
+      ready_matches: 0,
+      matches: [],
+    };
+  },
+
+  officeKnockoutMatches() {
+    return this.officeKnockout().matches || [];
+  },
+
+  officeKnockoutStatusLabel(slot) {
+    if (slot?.winner_name) return 'Zakończony';
+    if (slot?.status === 'in_progress') return 'W toku';
+    if (slot?.status === 'planned') return 'Zaplanowany';
+    if (slot?.ready) return 'Gotowy';
+    return 'Czeka';
+  },
+
+  officeScheduleLabel(slot) {
+    const day = slot?.day_date || 'bez daty';
+    const time = slot?.scheduled_time ? ` ${slot.scheduled_time}` : '';
+    const court = slot?.court_label || slot?.court_id || 'kort do ustalenia';
+    return `${day}${time}, ${court}`;
+  },
+
   officeSelectedGroup() {
     const groupId = String(this.officeNewMatch.group_id || '');
     return (this.officeDashboard?.progress?.groups || []).find(group => String(group.id) === groupId) || null;
