@@ -29,6 +29,7 @@ from .admin_tournaments import (
     _create_office_knockout_match,
     _group_players_index,
     _infer_group_id_for_players,
+    _is_knockout_phase,
     _json_no_cache,
     _normalize_bool,
     _normalize_int,

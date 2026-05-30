@@ -2289,6 +2289,47 @@ def _schedule_pair_clause(player1_name: str, player2_name: str) -> tuple[str, tu
     )
 
 
+def _format_score_text(sets_history_raw: Any) -> str:
+    """Build a compact score string (e.g. '4:2 4:1 STB 10:7') from a sets_history JSON."""
+    if not sets_history_raw:
+        return ""
+    try:
+        sets_history = json.loads(sets_history_raw) if isinstance(sets_history_raw, str) else sets_history_raw
+    except (ValueError, TypeError):
+        return ""
+    if not isinstance(sets_history, list):
+        return ""
+    parts: List[str] = []
+    for set_score in sets_history:
+        if not isinstance(set_score, dict):
+            continue
+        p1 = set_score.get("player1_games", 0)
+        p2 = set_score.get("player2_games", 0)
+        if set_score.get("is_super_tiebreak"):
+            parts.append(f"STB {p1}:{p2}")
+        else:
+            tb = set_score.get("tiebreak_loser_points")
+            parts.append(f"{p1}:{p2}" + (f"({tb})" if tb is not None else ""))
+    return " ".join(parts)
+
+
+def _schedule_match_result(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract a public-friendly result for a schedule row joined with its match."""
+    has_match = data.get("match_id") not in (None, "", 0)
+    sets_history_raw = data.get("match_sets_history")
+    score_text = _format_score_text(sets_history_raw)
+    return {
+        "match_status": data.get("match_status") or "",
+        "winner_name": data.get("match_winner_name") or "",
+        "result_note": data.get("match_result_note") or "",
+        "finish_reason": data.get("match_finish_reason") or "",
+        "player1_sets": int(data.get("match_player1_sets") or 0) if has_match else None,
+        "player2_sets": int(data.get("match_player2_sets") or 0) if has_match else None,
+        "score_text": score_text,
+        "has_result": bool(has_match and (score_text or data.get("match_winner_name") or data.get("match_status") == "finished")),
+    }
+
+
 def _schedule_row_payload(row: sqlite3.Row | Dict[str, Any], *, public: bool = False) -> Dict[str, Any]:
     data = dict(row)
     payload = {
@@ -2314,6 +2355,7 @@ def _schedule_row_payload(row: sqlite3.Row | Dict[str, Any], *, public: bool = F
         "created_at": data.get("created_at") or "",
         "updated_at": data.get("updated_at") or "",
     }
+    payload.update(_schedule_match_result(data))
     if not public:
         payload["notes_internal"] = data.get("notes_internal") or ""
     return payload
@@ -2327,9 +2369,14 @@ def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) 
             status_clause = "AND ts.status != 'draft'" if public_only else ""
             cursor.execute(
                 f"""
-                SELECT ts.*, c.name AS court_name, COALESCE(c.display_order, 9999) AS court_display_order
+                SELECT ts.*, c.name AS court_name, COALESCE(c.display_order, 9999) AS court_display_order,
+                       m.status AS match_status, m.winner_name AS match_winner_name,
+                       m.result_note AS match_result_note, m.finish_reason AS match_finish_reason,
+                       m.player1_sets AS match_player1_sets, m.player2_sets AS match_player2_sets,
+                       m.sets_history AS match_sets_history
                 FROM tournament_schedule ts
                 LEFT JOIN courts c ON c.kort_id = ts.court_id
+                LEFT JOIN matches m ON m.id = ts.match_id
                 WHERE ts.tournament_id = ? {status_clause}
                 ORDER BY ts.day_date, COALESCE(NULLIF(ts.scheduled_time, ''), '99:99'),
                          COALESCE(c.display_order, 9999), ts.sort_order, ts.id

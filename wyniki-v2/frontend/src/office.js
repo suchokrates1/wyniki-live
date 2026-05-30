@@ -815,6 +815,18 @@ Alpine.data('officeApp', () => ({
     return entry?.court_label || entry?.court_id || 'Kort do ustalenia';
   },
 
+  officeScheduleHasResult(entry) {
+    return !!(entry?.has_result || entry?.score_text || (entry?.status === 'completed' && entry?.winner_name));
+  },
+
+  officeScheduleResultLabel(entry) {
+    if (!entry) return '';
+    if (entry.result_note) return entry.result_note;
+    if (entry.score_text) return entry.score_text;
+    if (entry.winner_name) return 'Zakończony';
+    return '';
+  },
+
   formatOfficeScheduleDay(entry) {
     const rawValue = entry?.day_date || '';
     if (!rawValue) return 'Bez daty';
