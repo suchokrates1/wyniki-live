@@ -2143,3 +2143,54 @@ def test_office_autoschedule_generate_apply_and_move(full_app_with_temp_db):
         if e["scheduled_time"] and "B1" in (e["category_name"] or "") and e["scheduled_time"] > "11:00"
     )
     assert later_b1 and later_b1[0] == "12:15"  # +75 cascade after the moved match
+
+
+def test_office_autoschedule_knockout_phase_with_placeholders(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Knockout Auto Cup",
+        "2026-06-10",
+        "2026-06-12",
+        active=True,
+        office_password_hash=generate_password_hash("ko"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    for idx in range(4):
+        database.insert_player(tournament_id, f"B1 P{idx}", "B1", "PL", first_name="B1", last_name=f"P{idx}", gender="M")
+
+    # Semifinal with real players (placed), final left empty (placeholder, still placed).
+    with database.db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO bracket_knockout (tournament_id, phase, position, player1_name, player2_name) VALUES (?, ?, ?, ?, ?)",
+            (tournament_id, "B1 Mężczyźni — Półfinał", 1, "B1 P0", "B1 P1"),
+        )
+        cursor.execute(
+            "INSERT INTO bracket_knockout (tournament_id, phase, position, player1_name, player2_name) VALUES (?, ?, ?, ?, ?)",
+            (tournament_id, "B1 Mężczyźni — Finał", 1, "", ""),
+        )
+        conn.commit()
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "ko"})
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    courts = [c["kort_id"] for c in database.fetch_courts_for_tournament(tournament_id)]
+    gen = client.post(
+        "/api/office/1/autoschedule/generate",
+        headers=headers,
+        json={"start_time": "09:00", "b1_court_id": courts[-1], "day_date": "2026-06-12", "phases": ["knockout"]},
+    )
+    assert gen.status_code == 200
+    placements = [p for p in gen.get_json()["placements"] if p["scheduled_time"]]
+    # Only knockout entries (no group entries exist anyway), all on the B1 court on day 2.
+    assert placements and all(p["court_id"] == courts[-1] for p in placements)
+    assert all(p["day_date"] == "2026-06-12" for p in placements)
+    phases = {p["phase"] for p in placements}
+    assert any("Półfinał" in ph for ph in phases)
+    assert any("Finał" in ph for ph in phases)
+    # The final carries placeholder players because its pair is not resolved yet.
+    final = next(p for p in placements if "Finał" in (p["phase"] or ""))
+    assert "Zwycięzca PF" in (final["player1_name"] or "")
+    assert "Zwycięzca PF" in (final["player2_name"] or "")
