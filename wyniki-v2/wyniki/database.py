@@ -2863,6 +2863,275 @@ def unlink_schedule_from_match(match_id: int, *, fallback_status: str = "planned
         return 0
 
 
+def _autoscheduler_settings_key(tournament_id: int) -> str:
+    return f"autoscheduler:{int(tournament_id)}"
+
+
+def get_autoscheduler_config(tournament_id: int) -> Dict[str, Any]:
+    """Return the auto-scheduler config for a tournament, merged over court-based defaults."""
+    from .services import auto_scheduler
+
+    courts = fetch_courts_for_tournament(tournament_id)
+    config = auto_scheduler.build_default_config(courts)
+    stored = fetch_app_settings([_autoscheduler_settings_key(tournament_id)]).get(
+        _autoscheduler_settings_key(tournament_id)
+    )
+    if stored:
+        try:
+            saved = json.loads(stored)
+            if isinstance(saved, dict):
+                config.update({k: v for k, v in saved.items() if v not in (None, "")})
+                if isinstance(saved.get("slot_minutes"), dict):
+                    merged_slots = dict(config.get("slot_minutes") or {})
+                    merged_slots.update(saved["slot_minutes"])
+                    config["slot_minutes"] = merged_slots
+                if isinstance(saved.get("category_courts"), dict):
+                    config["category_courts"] = saved["category_courts"]
+        except (ValueError, TypeError):
+            pass
+    return config
+
+
+def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dict[str, Any]:
+    """Persist the auto-scheduler config for a tournament."""
+    current = get_autoscheduler_config(tournament_id)
+    allowed = {"start_time", "b1_court_id", "category_courts", "slot_minutes", "rest_slots"}
+    for key in allowed:
+        if key in config and config[key] not in (None, ""):
+            current[key] = config[key]
+    upsert_app_settings({_autoscheduler_settings_key(tournament_id): json.dumps(current)})
+    return current
+
+
+def _schedule_entry_match_dict(entry: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": entry.get("id"),
+        "category_name": entry.get("category_name") or entry.get("group_name") or "",
+        "group_name": entry.get("group_name") or "",
+        "phase": entry.get("phase") or "",
+        "player1_name": entry.get("player1_name") or "",
+        "player2_name": entry.get("player2_name") or "",
+        "court_id": entry.get("court_id") or "",
+        "sort_order": entry.get("sort_order") or 0,
+        "source_type": entry.get("source_type") or "",
+        "status": entry.get("status") or "draft",
+    }
+
+
+def generate_autoschedule_proposal(
+    tournament_id: int,
+    *,
+    start_time: Optional[str] = None,
+    b1_court_id: Optional[str] = None,
+    day_date: Optional[str] = None,
+    phases: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Build a (non-persisted) auto-placement proposal for the tournament schedule.
+
+    Returns {config, placements, courts} where each placement carries the schedule entry
+    plus the proposed court_id/day_date/scheduled_time.
+    """
+    from .services import auto_scheduler
+
+    ensure_group_schedule_entries(tournament_id)
+    ensure_knockout_schedule_entries(tournament_id)
+
+    config = get_autoscheduler_config(tournament_id)
+    if start_time:
+        config["start_time"] = str(start_time)
+    if b1_court_id:
+        config = auto_scheduler.apply_b1_court(config, b1_court_id)
+
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        default_day = _schedule_day_for_tournament(cursor, tournament_id)
+    target_day = day_date or config.get("day_date") or default_day
+
+    entries = fetch_tournament_schedule(tournament_id)
+    if phases:
+        wanted = {str(p).strip().lower() for p in phases}
+
+        def _phase_match(entry):
+            phase = str(entry.get("phase") or "").lower()
+            if "group" in wanted or "grupowa" in wanted:
+                return "grup" in phase
+            return True
+
+        entries = [entry for entry in entries if _phase_match(entry)]
+
+    matches = [_schedule_entry_match_dict(entry) for entry in entries]
+    placements = auto_scheduler.place_matches(matches, config, target_day)
+
+    entry_by_id = {int(entry["id"]): entry for entry in entries if entry.get("id")}
+    result_placements = []
+    for placement in placements:
+        match = placement["match"]
+        entry = entry_by_id.get(int(match["id"])) if match.get("id") else None
+        result_placements.append(
+            {
+                "schedule_id": match.get("id"),
+                "court_id": placement["court_id"],
+                "day_date": placement["day_date"],
+                "scheduled_time": placement["scheduled_time"],
+                "band": placement["band"],
+                "category_name": entry.get("category_name") if entry else match.get("category_name"),
+                "phase": entry.get("phase") if entry else match.get("phase"),
+                "player1_name": entry.get("player1_name") if entry else match.get("player1_name"),
+                "player2_name": entry.get("player2_name") if entry else match.get("player2_name"),
+            }
+        )
+    return {
+        "config": config,
+        "courts": fetch_courts_for_tournament(tournament_id),
+        "placements": result_placements,
+    }
+
+
+def apply_autoschedule_placements(
+    tournament_id: int, placements: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Persist court/time/day placements onto schedule entries (publishes them as 'planned')."""
+    if not placements:
+        return fetch_tournament_schedule(tournament_id)
+    courts = {str(c.get("kort_id")): c for c in fetch_courts_for_tournament(tournament_id)}
+    now = _utc_now()
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            for placement in placements:
+                schedule_id = placement.get("schedule_id") or placement.get("id")
+                if not schedule_id:
+                    continue
+                court_id = str(placement.get("court_id") or "")
+                court_label = courts.get(court_id, {}).get("name") or court_id
+                scheduled_time = str(placement.get("scheduled_time") or "")
+                day_date = str(placement.get("day_date") or "")
+                # Only auto-publish entries that actually got a slot.
+                new_status = "planned" if (court_id and scheduled_time) else None
+                assignments = [
+                    "court_id = ?",
+                    "court_label = ?",
+                    "scheduled_time = ?",
+                    "updated_at = ?",
+                ]
+                values: List[Any] = [court_id, court_label, scheduled_time, now]
+                if day_date:
+                    assignments.insert(0, "day_date = ?")
+                    values.insert(0, day_date)
+                if new_status:
+                    assignments.append(
+                        "status = CASE WHEN status IN ('in_progress','completed') THEN status ELSE ? END"
+                    )
+                    values.append(new_status)
+                values.extend([schedule_id, tournament_id])
+                cursor.execute(
+                    f"UPDATE tournament_schedule SET {', '.join(assignments)} "
+                    f"WHERE id = ? AND tournament_id = ?",
+                    values,
+                )
+            conn.commit()
+    except Exception as e:
+        logger.error("apply_autoschedule_error", error=str(e), tournament_id=tournament_id)
+    return fetch_tournament_schedule(tournament_id)
+
+
+def move_schedule_entry_with_cascade(
+    tournament_id: int,
+    schedule_id: int,
+    *,
+    court_id: str,
+    scheduled_time: Optional[str] = None,
+    day_date: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Move one entry to a court/time and re-cascade times on the affected courts.
+
+    Moves the entry onto the target court (optionally at a requested time), then recomputes
+    sequential start times for every entry on both the source and target courts for that day,
+    using the configured slot lengths.
+    """
+    from .services import auto_scheduler
+
+    config = get_autoscheduler_config(tournament_id)
+    schedule = fetch_tournament_schedule(tournament_id)
+    moved = next((e for e in schedule if int(e["id"]) == int(schedule_id)), None)
+    if not moved:
+        return schedule
+
+    source_court = str(moved.get("court_id") or "")
+    target_court = str(court_id or source_court)
+    target_day = str(day_date or moved.get("day_date") or "")
+    courts = {str(c.get("kort_id")): c for c in fetch_courts_for_tournament(tournament_id)}
+
+    # Apply the move in-memory first.
+    moved["court_id"] = target_court
+    moved["court_label"] = courts.get(target_court, {}).get("name") or target_court
+    if day_date:
+        moved["day_date"] = target_day
+    if scheduled_time:
+        moved["scheduled_time"] = str(scheduled_time)
+
+    def _court_entries(court, day):
+        items = [
+            e
+            for e in schedule
+            if str(e.get("court_id") or "") == court and str(e.get("day_date") or "") == day
+        ]
+        items.sort(key=lambda e: (str(e.get("scheduled_time") or "99:99"), int(e.get("sort_order") or 0), int(e.get("id") or 0)))
+        return items
+
+    updates: List[Dict[str, Any]] = []
+
+    # Target court: pin the moved match at its drop time, cascade only the matches after it
+    # (matches earlier on the court keep their times). This matches the "shift by slot" mental model.
+    target_entries = _court_entries(target_court, target_day)
+    if scheduled_time:
+        pivot_index = next(
+            (i for i, e in enumerate(target_entries) if int(e["id"]) == int(schedule_id)), 0
+        )
+        cursor = str(moved.get("scheduled_time") or "")
+        for entry in target_entries[pivot_index:]:
+            band = auto_scheduler.normalize_band(entry.get("category_name") or entry.get("group_name"))
+            entry["scheduled_time"] = cursor
+            cursor = auto_scheduler.add_minutes(cursor, auto_scheduler.slot_minutes_for(band, config))
+        updates.extend(target_entries)
+    else:
+        updates.extend(auto_scheduler.recompute_court_times(target_entries, config))
+
+    # Source court (if different): close the gap left behind by cascading from its start.
+    source_day = str(moved.get("day_date") or target_day)
+    if source_court and (source_court, source_day) != (target_court, target_day):
+        updates.extend(auto_scheduler.recompute_court_times(_court_entries(source_court, source_day), config))
+
+    now = _utc_now()
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            for entry in updates:
+                cursor.execute(
+                    """
+                    UPDATE tournament_schedule
+                    SET court_id = ?, court_label = ?, day_date = ?, scheduled_time = ?,
+                        status = CASE WHEN status IN ('in_progress','completed') THEN status
+                                      WHEN status = 'draft' THEN 'planned' ELSE status END,
+                        updated_at = ?
+                    WHERE id = ? AND tournament_id = ?
+                    """,
+                    (
+                        str(entry.get("court_id") or ""),
+                        courts.get(str(entry.get("court_id") or ""), {}).get("name") or str(entry.get("court_id") or ""),
+                        str(entry.get("day_date") or ""),
+                        str(entry.get("scheduled_time") or ""),
+                        now,
+                        int(entry["id"]),
+                        tournament_id,
+                    ),
+                )
+            conn.commit()
+    except Exception as e:
+        logger.error("move_schedule_cascade_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
+    return fetch_tournament_schedule(tournament_id)
+
+
 def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str, tournament_id: Optional[int] = None) -> List[Dict]:
     """Find finished matches between a set of players within a date range.
     

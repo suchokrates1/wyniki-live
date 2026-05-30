@@ -2043,3 +2043,103 @@ def test_tournament_office_dashboard_infers_group_for_matches_without_bracket_gr
     assert payload["matches"][0]["source"] == "match"
     assert payload["matches"][0]["group_name"] == "B1 — Grupa A"
     assert payload["matches"][0]["bracket_group_id"] is not None
+
+
+def test_office_autoschedule_generate_apply_and_move(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Autoschedule Cup",
+        "2026-06-10",
+        "2026-06-12",
+        active=True,
+        office_password_hash=generate_password_hash("auto"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    # B1 (court should become the longer-slot court) and B2 players.
+    b1 = [
+        database.insert_player(tournament_id, "B1 One", "B1", "PL", first_name="B1", last_name="One", gender="M"),
+        database.insert_player(tournament_id, "B1 Two", "B1", "PL", first_name="B1", last_name="Two", gender="M"),
+        database.insert_player(tournament_id, "B1 Three", "B1", "PL", first_name="B1", last_name="Three", gender="M"),
+    ]
+    b2 = [
+        database.insert_player(tournament_id, "B2 One", "B2", "PL", first_name="B2", last_name="One", gender="M"),
+        database.insert_player(tournament_id, "B2 Two", "B2", "PL", first_name="B2", last_name="Two", gender="M"),
+    ]
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "auto"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    database.save_bracket_groups(
+        tournament_id,
+        [
+            {"name": "B1 Mężczyźni — Grupa A", "players": b1},
+            {"name": "B2 Mężczyźni — Grupa A", "players": b2},
+        ],
+    )
+
+    # Config endpoint: two courts, B1 mapped to the last court with a 75-min slot.
+    config_resp = client.get("/api/office/1/autoschedule/config", headers=headers)
+    assert config_resp.status_code == 200
+    config_payload = config_resp.get_json()
+    assert len(config_payload["courts"]) == 2
+    assert config_payload["config"]["slot_minutes"]["B1"] == 75
+    assert set(config_payload["bands"]) == {"B1", "B2"}
+
+    courts = [court["kort_id"] for court in config_payload["courts"]]
+
+    # Generate proposal.
+    gen = client.post(
+        "/api/office/1/autoschedule/generate",
+        headers=headers,
+        json={"start_time": "09:30", "b1_court_id": courts[-1], "day_date": "2026-06-10"},
+    )
+    assert gen.status_code == 200
+    proposal = gen.get_json()
+    placements = proposal["placements"]
+    assert placements, "expected placements"
+    # B1 entries should land on the chosen B1 court with 75-min cascade.
+    b1_placements = sorted(
+        [p for p in placements if (p["band"] == "B1" and p["scheduled_time"])],
+        key=lambda p: p["scheduled_time"],
+    )
+    assert len(b1_placements) == 3  # round robin of 3 players = 3 matches
+    assert all(p["court_id"] == courts[-1] for p in b1_placements)
+    assert b1_placements[0]["scheduled_time"] == "09:30"
+    assert b1_placements[1]["scheduled_time"] == "10:45"  # +75
+
+    # Apply the proposal.
+    applied = client.post(
+        "/api/office/1/autoschedule/apply",
+        headers=headers,
+        json={"placements": placements},
+    )
+    assert applied.status_code == 200
+    schedule = applied.get_json()["schedule"]
+    b1_entries = sorted(
+        [e for e in schedule if e["scheduled_time"] and "B1" in (e["category_name"] or "")],
+        key=lambda e: e["scheduled_time"],
+    )
+    assert b1_entries[0]["scheduled_time"] == "09:30"
+    assert b1_entries[0]["status"] == "planned"
+
+    # Move the first B1 entry later and check the court re-cascades.
+    target = b1_entries[0]
+    moved = client.post(
+        "/api/office/1/autoschedule/move",
+        headers=headers,
+        json={"schedule_id": target["id"], "court_id": courts[-1], "scheduled_time": "11:00"},
+    )
+    assert moved.status_code == 200
+    moved_schedule = moved.get_json()["schedule"]
+    # The moved match is pinned at its drop time; the match after it cascades by one slot.
+    moved_entry = next(e for e in moved_schedule if e["id"] == target["id"])
+    assert moved_entry["scheduled_time"] == "11:00"
+    later_b1 = sorted(
+        e["scheduled_time"]
+        for e in moved_schedule
+        if e["scheduled_time"] and "B1" in (e["category_name"] or "") and e["scheduled_time"] > "11:00"
+    )
+    assert later_b1 and later_b1[0] == "12:15"  # +75 cascade after the moved match
