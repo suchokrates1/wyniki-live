@@ -10,13 +10,19 @@ from werkzeug.security import check_password_hash
 from ..config import settings
 from ..database import (
     advance_knockout,
+    apply_autoschedule_placements,
     fetch_bracket_groups,
+    fetch_courts_for_tournament,
     fetch_players,
     fetch_tournament_schedule,
     fetch_tournaments,
+    generate_autoschedule_proposal,
+    get_autoscheduler_config,
     maybe_generate_knockout_from_completed_groups,
+    move_schedule_entry_with_cascade,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
+    save_autoscheduler_config,
     save_bracket_groups,
     upsert_tournament_schedule_entries,
     update_tournament_schedule_entry,
@@ -270,6 +276,102 @@ def office_schedule_delete(slot: int, schedule_id: int):
         return jsonify({"error": "Schedule entry not found"}), 404
     return _json_no_cache({
         "schedule": fetch_tournament_schedule(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
+
+
+@blueprint.route('/<int:slot>/autoschedule/config', methods=['GET'])
+def office_autoschedule_config(slot: int):
+    """Return auto-scheduler config plus available courts and detected category bands."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    config = get_autoscheduler_config(tournament_id)
+    courts = fetch_courts_for_tournament(tournament_id)
+    bands = sorted({
+        band
+        for player in fetch_players(tournament_id)
+        for band in [_player_band(player)]
+        if band
+    })
+    return _json_no_cache({"config": config, "courts": courts, "bands": bands})
+
+
+def _player_band(player: dict) -> str:
+    import re
+    match = re.search(r"B\s*([1-4])", str(player.get('category') or '').upper())
+    return f"B{match.group(1)}" if match else ""
+
+
+@blueprint.route('/<int:slot>/autoschedule/config', methods=['PUT'])
+def office_autoschedule_config_save(slot: int):
+    """Persist auto-scheduler config (court mapping, slot minutes, start time, rest)."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    config = save_autoscheduler_config(tournament_id, data)
+    return _json_no_cache({"config": config})
+
+
+@blueprint.route('/<int:slot>/autoschedule/generate', methods=['POST'])
+def office_autoschedule_generate(slot: int):
+    """Build a non-persisted auto-placement proposal to review on the board."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    proposal = generate_autoschedule_proposal(
+        tournament_id,
+        start_time=(data.get('start_time') or None),
+        b1_court_id=(data.get('b1_court_id') or None),
+        day_date=(data.get('day_date') or None),
+        phases=data.get('phases') if isinstance(data.get('phases'), list) else None,
+    )
+    return _json_no_cache(proposal)
+
+
+@blueprint.route('/<int:slot>/autoschedule/apply', methods=['POST'])
+def office_autoschedule_apply(slot: int):
+    """Persist a reviewed set of placements to the schedule."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    placements = data.get('placements')
+    if not isinstance(placements, list) or not placements:
+        return jsonify({"error": "No placements provided"}), 400
+    schedule = apply_autoschedule_placements(tournament_id, placements)
+    return _json_no_cache({
+        "schedule": schedule,
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
+
+
+@blueprint.route('/<int:slot>/autoschedule/move', methods=['POST'])
+def office_autoschedule_move(slot: int):
+    """Move one match to a court/time and cascade times on affected courts."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    schedule_id = _normalize_int(data.get('schedule_id'), 0)
+    if not schedule_id:
+        return jsonify({"error": "schedule_id is required"}), 400
+    schedule = move_schedule_entry_with_cascade(
+        tournament_id,
+        schedule_id,
+        court_id=str(data.get('court_id') or ''),
+        scheduled_time=(data.get('scheduled_time') or None),
+        day_date=(data.get('day_date') or None),
+    )
+    return _json_no_cache({
+        "schedule": schedule,
         "dashboard": _build_office_dashboard(tournament_id),
     })
 

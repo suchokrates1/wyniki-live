@@ -67,6 +67,15 @@ Alpine.data('officeApp', () => ({
   planningGroupAssignments: {},
   planningScheduleFilter: { day: '', category: '', court: '' },
   planningNewSchedule: defaultOfficeScheduleForm(),
+  autoConfig: null,
+  autoCourts: [],
+  autoBands: [],
+  autoStartTime: '09:30',
+  autoB1Court: '',
+  autoDayDate: '',
+  autoProposal: null,
+  autoLoading: false,
+  autoDragId: null,
   toast: {
     show: false,
     message: '',
@@ -546,6 +555,228 @@ Alpine.data('officeApp', () => ({
       this.showToast(error.message || 'Błąd ładowania planu turnieju', 'error');
     } finally {
       this.planningLoading = false;
+    }
+  },
+
+  async openAutoTab() {
+    this.activeTab = 'auto';
+    if (!this.autoConfig) {
+      await this.loadAutoConfig();
+    }
+    if (!this.planningSchedule.length && !this.planningPlayers.length) {
+      await this.loadOfficePlanningData();
+    }
+  },
+
+  async loadAutoConfig() {
+    if (!this.token) return;
+    this.autoLoading = true;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/autoschedule/config`, {
+        headers: this.officeHeaders(),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error || 'Nie udało się załadować konfiguracji.');
+      this.autoConfig = payload.config || null;
+      this.autoCourts = Array.isArray(payload.courts) ? payload.courts : [];
+      this.autoBands = Array.isArray(payload.bands) ? payload.bands : [];
+      this.autoStartTime = this.autoConfig?.start_time || '09:30';
+      this.autoB1Court = this.autoConfig?.b1_court_id || (this.autoCourts[this.autoCourts.length - 1]?.kort_id || '');
+      const days = this.autoAvailableDays();
+      this.autoDayDate = this.autoDayDate || days[0] || (this.tournament?.start_date || '');
+    } catch (error) {
+      console.error('Failed to load auto-scheduler config:', error);
+      this.showToast(error.message || 'Błąd ładowania konfiguracji', 'error');
+    } finally {
+      this.autoLoading = false;
+    }
+  },
+
+  autoAvailableDays() {
+    const days = new Set();
+    (this.planningSchedule || []).forEach(entry => {
+      if (entry.day_date) days.add(entry.day_date);
+    });
+    if (this.tournament?.start_date) days.add(this.tournament.start_date);
+    if (this.tournament?.end_date) days.add(this.tournament.end_date);
+    return Array.from(days).sort();
+  },
+
+  async autoGenerate() {
+    if (!this.token) return;
+    this.autoLoading = true;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/autoschedule/generate`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({
+          start_time: this.autoStartTime,
+          b1_court_id: this.autoB1Court,
+          day_date: this.autoDayDate,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Nie udało się wygenerować propozycji.');
+      this.autoConfig = payload.config || this.autoConfig;
+      this.autoCourts = Array.isArray(payload.courts) ? payload.courts : this.autoCourts;
+      this.autoProposal = Array.isArray(payload.placements) ? payload.placements : [];
+      const placed = this.autoProposal.filter(p => p.court_id && p.scheduled_time).length;
+      this.showToast(`Propozycja: ${placed} meczów rozmieszczonych. Sprawdź i zatwierdź.`, 'success');
+    } catch (error) {
+      console.error('Auto-generate failed:', error);
+      this.showToast(error.message || 'Błąd generowania', 'error');
+    } finally {
+      this.autoLoading = false;
+    }
+  },
+
+  async autoApply() {
+    if (!this.token || !Array.isArray(this.autoProposal)) return;
+    const placements = this.autoProposal
+      .filter(p => p.schedule_id)
+      .map(p => ({
+        schedule_id: p.schedule_id,
+        court_id: p.court_id,
+        day_date: p.day_date,
+        scheduled_time: p.scheduled_time,
+      }));
+    if (!placements.length) {
+      this.showToast('Brak placementów do zatwierdzenia.', 'warning');
+      return;
+    }
+    this.autoLoading = true;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/autoschedule/apply`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({ placements }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Nie udało się zatwierdzić.');
+      if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+      this.autoProposal = null;
+      this.showToast('Terminarz zatwierdzony.', 'success');
+    } catch (error) {
+      console.error('Auto-apply failed:', error);
+      this.showToast(error.message || 'Błąd zatwierdzania', 'error');
+    } finally {
+      this.autoLoading = false;
+    }
+  },
+
+  autoDiscardProposal() {
+    this.autoProposal = null;
+  },
+
+  autoIsPreview() {
+    return Array.isArray(this.autoProposal);
+  },
+
+  autoBandForCourt(courtId) {
+    const map = this.autoConfig?.category_courts || {};
+    return Object.keys(map).find(band => String(map[band]) === String(courtId)) || '';
+  },
+
+  autoCourtLabel(courtId) {
+    const court = (this.autoCourts || []).find(c => String(c.kort_id) === String(courtId));
+    const band = this.autoBandForCourt(courtId);
+    const name = court ? `Kort ${court.name}` : `Kort ${courtId}`;
+    return band ? `${name} · ${band}${band === 'B1' ? ' (specjalny)' : ''}` : name;
+  },
+
+  autoSlotMinutes(band) {
+    const slots = this.autoConfig?.slot_minutes || {};
+    if (band && slots[band] != null) return Number(slots[band]);
+    if (band === 'B1') return 75;
+    return Number(slots.default || 60);
+  },
+
+  autoAddMinutes(timeStr, minutes) {
+    const parts = String(timeStr || '09:30').split(':');
+    let total = (Number(parts[0]) || 9) * 60 + (Number(parts[1]) || 30) + Number(minutes || 0);
+    total = Math.max(0, Math.min(total, 23 * 60 + 59));
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  },
+
+  autoBoardEntries(courtId) {
+    const day = this.autoDayDate;
+    const sortByTime = (a, b) => String(a.scheduled_time || '').localeCompare(String(b.scheduled_time || ''));
+    if (this.autoIsPreview()) {
+      return this.autoProposal
+        .filter(p => String(p.court_id) === String(courtId) && p.day_date === day && p.scheduled_time)
+        .sort(sortByTime);
+    }
+    return (this.planningSchedule || [])
+      .filter(e => String(e.court_id) === String(courtId) && e.day_date === day && e.scheduled_time)
+      .sort(sortByTime);
+  },
+
+  autoUnplaced() {
+    const day = this.autoDayDate;
+    if (this.autoIsPreview()) {
+      return this.autoProposal.filter(p => !p.court_id || !p.scheduled_time);
+    }
+    return (this.planningSchedule || []).filter(
+      e => (!e.court_id || !e.scheduled_time) && (!e.day_date || e.day_date === day)
+    );
+  },
+
+  autoEntryId(entry) {
+    return entry?.schedule_id || entry?.id || null;
+  },
+
+  autoNextTimeForCourt(courtId) {
+    const entries = this.autoBoardEntries(courtId);
+    if (!entries.length) return this.autoStartTime;
+    const last = entries[entries.length - 1];
+    return this.autoAddMinutes(last.scheduled_time, this.autoSlotMinutes(this.autoBandForCourt(courtId)));
+  },
+
+  onAutoDragStart(entry, event) {
+    this.autoDragId = this.autoEntryId(entry);
+    if (event?.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      try { event.dataTransfer.setData('text/plain', String(this.autoDragId)); } catch (e) { /* noop */ }
+    }
+  },
+
+  async onAutoDrop(courtId, targetEntry) {
+    const scheduleId = this.autoDragId;
+    this.autoDragId = null;
+    if (!scheduleId) return;
+    const dropTime = targetEntry && targetEntry.scheduled_time
+      ? targetEntry.scheduled_time
+      : this.autoNextTimeForCourt(courtId);
+    if (this.autoIsPreview()) {
+      this.showToast('Zatwierdź propozycję, aby przesuwać mecze.', 'warning');
+      return;
+    }
+    this.autoLoading = true;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/autoschedule/move`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({
+          schedule_id: scheduleId,
+          court_id: courtId,
+          scheduled_time: dropTime,
+          day_date: this.autoDayDate,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Nie udało się przesunąć meczu.');
+      if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+    } catch (error) {
+      console.error('Auto-move failed:', error);
+      this.showToast(error.message || 'Błąd przesuwania meczu', 'error');
+    } finally {
+      this.autoLoading = false;
     }
   },
 
