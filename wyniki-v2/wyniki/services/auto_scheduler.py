@@ -11,7 +11,6 @@ All functions here are pure (no DB, no Flask) so they are easy to unit-test.
 from __future__ import annotations
 
 import re
-from collections import deque
 from typing import Any, Dict, List, Optional
 
 DEFAULT_SLOT_MINUTES = 60
@@ -118,28 +117,37 @@ def _players(match: Dict[str, Any]) -> set:
 
 
 def order_with_rest(matches: List[Dict[str, Any]], rest_slots: int = 1) -> List[Dict[str, Any]]:
-    """Order matches so that no player appears within `rest_slots` consecutive slots.
+    """Order matches to maximise rest between a player's matches on the same court.
 
-    Preserves the incoming order as a base (group round-robin pairing / phase rank) and
-    greedily picks the next match that does not clash with recently scheduled players.
-    Falls back to the next match when no conflict-free choice exists.
+    Greedy "least-recently-used" heuristic: at each step pick the match whose players
+    have waited longest since their previous match (largest minimum gap), breaking ties
+    by the incoming order. This spreads each player's matches apart and, when the math
+    allows it, eliminates back-to-back slots. `rest_slots` is the desired minimum gap.
     """
     remaining = list(matches)
     ordered: List[Dict[str, Any]] = []
-    recent: deque = deque(maxlen=max(1, int(rest_slots)))
+    last_pos: Dict[str, int] = {}
+    never = -(10 ** 6)
+    position = 0
     while remaining:
-        recent_players: set = set()
-        for player_set in recent:
-            recent_players |= player_set
-        chosen_index = next(
-            (i for i, match in enumerate(remaining) if not (_players(match) & recent_players)),
-            None,
-        )
-        if chosen_index is None:
-            chosen_index = 0
-        match = remaining.pop(chosen_index)
+        best_index = 0
+        best_key = None
+        for index, match in enumerate(remaining):
+            players = _players(match)
+            if players:
+                gap = min(position - last_pos.get(player, never) for player in players)
+            else:
+                gap = 10 ** 6
+            # Prefer the largest gap; on ties keep the earliest incoming match.
+            key = (gap, -index)
+            if best_key is None or key > best_key:
+                best_key = key
+                best_index = index
+        match = remaining.pop(best_index)
         ordered.append(match)
-        recent.append(_players(match))
+        for player in _players(match):
+            last_pos[player] = position
+        position += 1
     return ordered
 
 
@@ -184,7 +192,13 @@ def place_matches(
                 int(m.get("id") or 0),
             )
         )
-        ordered = order_with_rest(court_matches, rest_slots=rest_slots)
+        # Keep phases in order (group -> knockout), spread rest *within* each phase.
+        buckets: Dict[int, List[Dict[str, Any]]] = {}
+        for match in court_matches:
+            buckets.setdefault(_phase_rank(match.get("phase")), []).append(match)
+        ordered: List[Dict[str, Any]] = []
+        for rank in sorted(buckets):
+            ordered.extend(order_with_rest(buckets[rank], rest_slots=rest_slots))
         cursor = start_time
         for match in ordered:
             band = normalize_band(match.get("category_name") or match.get("group_name"))
