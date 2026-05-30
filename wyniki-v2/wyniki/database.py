@@ -2951,11 +2951,20 @@ def generate_autoschedule_proposal(
     if phases:
         wanted = {str(p).strip().lower() for p in phases}
 
-        def _phase_match(entry):
+        def _is_group_entry(entry) -> bool:
+            source = str(entry.get("source_type") or "").lower()
             phase = str(entry.get("phase") or "").lower()
-            if "group" in wanted or "grupowa" in wanted:
-                return "grup" in phase
-            return True
+            return source == "group" or "grup" in phase
+
+        def _phase_match(entry) -> bool:
+            is_group = _is_group_entry(entry)
+            if {"group", "grupowa", "groups"} & wanted:
+                if is_group:
+                    return True
+            if {"knockout", "pucharowa", "knockouts"} & wanted:
+                if not is_group:
+                    return True
+            return False
 
         entries = [entry for entry in entries if _phase_match(entry)]
 

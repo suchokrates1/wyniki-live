@@ -73,6 +73,7 @@ Alpine.data('officeApp', () => ({
   autoStartTime: '09:30',
   autoB1Court: '',
   autoDayDate: '',
+  autoPhaseScope: 'group',
   autoProposal: null,
   autoLoading: false,
   autoDragId: null,
@@ -606,18 +607,38 @@ Alpine.data('officeApp', () => ({
     return Array.from(days).sort();
   },
 
+  autoOnScopeChange() {
+    const days = this.autoAvailableDays();
+    if (this.autoPhaseScope === 'knockout' && days.length > 1) {
+      this.autoDayDate = days[days.length - 1];
+      this.autoStartTime = this.autoStartTime || '09:00';
+    } else if (this.autoPhaseScope === 'group' && days.length) {
+      this.autoDayDate = days[0];
+    }
+  },
+
+  autoScopeLabel() {
+    if (this.autoPhaseScope === 'knockout') return 'fazy pucharowej';
+    if (this.autoPhaseScope === 'all') return 'wszystkich faz';
+    return 'fazy grupowej';
+  },
+
   async autoGenerate() {
     if (!this.token) return;
     this.autoLoading = true;
     try {
+      const body = {
+        start_time: this.autoStartTime,
+        b1_court_id: this.autoB1Court,
+        day_date: this.autoDayDate,
+      };
+      if (this.autoPhaseScope && this.autoPhaseScope !== 'all') {
+        body.phases = [this.autoPhaseScope];
+      }
       const response = await fetch(`/api/office/${this.slot}/autoschedule/generate`, {
         method: 'POST',
         headers: this.officeHeaders(),
-        body: JSON.stringify({
-          start_time: this.autoStartTime,
-          b1_court_id: this.autoB1Court,
-          day_date: this.autoDayDate,
-        }),
+        body: JSON.stringify(body),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'Nie udało się wygenerować propozycji.');
@@ -625,13 +646,29 @@ Alpine.data('officeApp', () => ({
       this.autoCourts = Array.isArray(payload.courts) ? payload.courts : this.autoCourts;
       this.autoProposal = Array.isArray(payload.placements) ? payload.placements : [];
       const placed = this.autoProposal.filter(p => p.court_id && p.scheduled_time).length;
-      this.showToast(`Propozycja: ${placed} meczów rozmieszczonych. Sprawdź i zatwierdź.`, 'success');
+      if (!placed) {
+        this.showToast(`Brak meczów ${this.autoScopeLabel()} do rozmieszczenia. Czy drabinka jest już gotowa?`, 'warning');
+      } else {
+        const placeholders = this.autoProposal.filter(p => p.scheduled_time && this.autoIsPlaceholder(p)).length;
+        const extra = placeholders ? ` (w tym ${placeholders} z placeholderem)` : '';
+        this.showToast(`Propozycja ${this.autoScopeLabel()}: ${placed} meczów${extra}. Sprawdź i zatwierdź.`, 'success');
+      }
     } catch (error) {
       console.error('Auto-generate failed:', error);
       this.showToast(error.message || 'Błąd generowania', 'error');
     } finally {
       this.autoLoading = false;
     }
+  },
+
+  autoIsPlaceholder(entry) {
+    const isPh = (name) => {
+      const value = String(name || '').trim().toLowerCase();
+      if (!value) return true;
+      return value.startsWith('zwycięzca pf') || value.startsWith('przegrany pf')
+        || value.startsWith('zwycięzca półfinał') || value.startsWith('winner sf') || value.startsWith('loser sf');
+    };
+    return isPh(entry?.player1_name) || isPh(entry?.player2_name);
   },
 
   async autoApply() {

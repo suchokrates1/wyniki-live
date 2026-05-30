@@ -643,12 +643,20 @@
           <div>
             <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Autorozmieszczanie</div>
             <h2 class="mt-2 text-3xl font-semibold">Automatyczny terminarz</h2>
-            <p class="mt-1 text-sm text-slate-500 max-w-2xl">Wybierz godzinę startu i kort B1, wygeneruj propozycję (wzorowaną na III MP: B1 ma osobny, dłuższy kort), a potem przeciągaj mecze między kortami i godzinami. Godziny przeliczają się automatycznie o przyjęty czas slotu.</p>
+            <p class="mt-1 text-sm text-slate-500 max-w-2xl">Wybierz zakres (faza grupowa lub pucharowa), godzinę startu i kort B1, wygeneruj propozycję (wzorowaną na III MP: B1 ma osobny, dłuższy kort), a potem przeciągaj mecze między kortami i godzinami. Fazę pucharową na dzień 2 możesz wygenerować wieczorem dnia 1 — mecze bez ustalonych par (np. finał) dostają placeholdery.</p>
           </div>
           <div class="text-sm text-slate-500" x-show="autoLoading">Pracuję...</div>
         </div>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <label class="block">
+            <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Zakres</span>
+            <select class="select select-bordered bg-white/90 mt-1 w-full" x-model="autoPhaseScope" @change="autoOnScopeChange()">
+              <option value="group">Faza grupowa</option>
+              <option value="knockout">Faza pucharowa (dzień 2)</option>
+              <option value="all">Wszystko</option>
+            </select>
+          </label>
           <label class="block">
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Dzień</span>
             <select class="select select-bordered bg-white/90 mt-1 w-full" x-model="autoDayDate">
@@ -693,7 +701,8 @@
               <div class="text-[11px] text-slate-400 mb-2" x-text="'slot ' + autoSlotMinutes(autoBandForCourt(court.kort_id)) + ' min'"></div>
               <div class="space-y-2 min-h-[80px]">
                 <template x-for="entry in autoBoardEntries(court.kort_id)" :key="'autocard_'+(entry.schedule_id || entry.id)">
-                  <div class="rounded-xl bg-white border border-slate-200 shadow-sm p-2 cursor-move"
+                  <div class="rounded-xl border shadow-sm p-2 cursor-move"
+                       :class="autoIsPlaceholder(entry) ? 'bg-indigo-50 border-indigo-200 border-dashed' : 'bg-white border-slate-200'"
                        :draggable="!autoIsPreview()"
                        @dragstart="onAutoDragStart(entry, $event)"
                        @dragover.prevent
@@ -702,7 +711,7 @@
                       <span class="font-mono font-semibold text-emerald-700 tabular-nums" x-text="entry.scheduled_time"></span>
                       <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="entry.phase || ''"></span>
                     </div>
-                    <div class="mt-1 text-sm font-semibold text-slate-900 leading-tight">
+                    <div class="mt-1 text-sm font-semibold leading-tight" :class="autoIsPlaceholder(entry) ? 'text-indigo-600 italic' : 'text-slate-900'">
                       <span x-text="entry.player1_name || '—'"></span>
                       <span class="text-slate-400"> vs </span>
                       <span x-text="entry.player2_name || '—'"></span>
