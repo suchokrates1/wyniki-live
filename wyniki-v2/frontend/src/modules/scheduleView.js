@@ -224,6 +224,30 @@ export function createScheduleView() {
       return getScheduleStatusLabel(status, this.scheduleText());
     },
 
+    scheduleMatchHasResult(match) {
+      return !!(match?.has_result || match?.score_text || (match?.status === 'completed' && match?.winner_name));
+    },
+
+    scheduleMatchScore(match) {
+      if (!match) return '';
+      if (match.result_note) return match.result_note;
+      return match.score_text || '';
+    },
+
+    scheduleMatchWinnerName(match) {
+      const winner = match?.winner_name;
+      if (!winner) return '';
+      return this.resolveBracketName(winner) || winner;
+    },
+
+    scheduleStatusDisplay(match) {
+      if (this.scheduleMatchHasResult(match)) {
+        const score = this.scheduleMatchScore(match);
+        if (score) return score;
+      }
+      return this.scheduleStatusLabel(match?.status);
+    },
+
     scheduleParticipantName(name) {
       return this.resolveBracketName(name) || name || this.acc().unknownPlayer || 'zawodnik nieustalony';
     },

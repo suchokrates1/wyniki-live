@@ -534,7 +534,7 @@
                                                                     <span x-text="scheduleText().timeTbd"></span>
                                                                 </template>
                                                             </div>
-                                                            <span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span>
+                                                            <span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span>
                                                         </div>
 
                                                         <div class="schedule-card__match">
@@ -592,7 +592,7 @@
                                                                     <span class="sr-only" x-text="acc().versus"></span>
                                                                     <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                                 </td>
-                                                                <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span></td>
+                                                                <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                                 <td x-text="match.notes_public || ''"></td>
                                                             </tr>
                                                         </template>
@@ -662,7 +662,7 @@
                                                                             <span x-text="scheduleText().timeTbd"></span>
                                                                         </template>
                                                                     </div>
-                                                                    <span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span>
+                                                                    <span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span>
                                                                 </div>
 
                                                                 <div class="schedule-card__match">
@@ -720,7 +720,7 @@
                                                                             <span class="sr-only" x-text="acc().versus"></span>
                                                                             <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                                         </td>
-                                                                        <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span></td>
+                                                                        <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                                         <td x-text="match.notes_public || ''"></td>
                                                                     </tr>
                                                                 </template>
@@ -1109,7 +1109,7 @@
                                                                 <span class="sr-only" x-text="acc().versus"></span>
                                                                 <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                             </td>
-                                                            <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusLabel(match.status)"></span></td>
+                                                            <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                             <td x-text="match.notes_public || ''"></td>
                                                         </tr>
                                                     </template>
