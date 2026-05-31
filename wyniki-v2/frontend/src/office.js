@@ -587,8 +587,7 @@ Alpine.data('officeApp', () => ({
       this.autoBands = Array.isArray(payload.bands) ? payload.bands : [];
       this.autoStartTime = this.autoConfig?.start_time || '09:30';
       this.autoB1Court = this.autoConfig?.b1_court_id || (this.autoCourts[this.autoCourts.length - 1]?.kort_id || '');
-      const days = this.autoAvailableDays();
-      this.autoDayDate = this.autoDayDate || days[0] || (this.tournament?.start_date || '');
+      this.autoDayDate = this.autoDayDate || this.autoTournamentDates().start || this.autoAvailableDays()[0] || '';
     } catch (error) {
       console.error('Failed to load auto-scheduler config:', error);
       this.showToast(error.message || 'Błąd ładowania konfiguracji', 'error');
@@ -597,23 +596,31 @@ Alpine.data('officeApp', () => ({
     }
   },
 
+  autoTournamentDates() {
+    const source = this.tournamentMeta || this.dashboard?.tournament || {};
+    return { start: source.start_date || '', end: source.end_date || '' };
+  },
+
   autoAvailableDays() {
     const days = new Set();
     (this.planningSchedule || []).forEach(entry => {
       if (entry.day_date) days.add(entry.day_date);
     });
-    if (this.tournament?.start_date) days.add(this.tournament.start_date);
-    if (this.tournament?.end_date) days.add(this.tournament.end_date);
+    const { start, end } = this.autoTournamentDates();
+    if (start) days.add(start);
+    if (end && end !== start) days.add(end);
     return Array.from(days).sort();
   },
 
   autoOnScopeChange() {
-    const days = this.autoAvailableDays();
-    if (this.autoPhaseScope === 'knockout' && days.length > 1) {
-      this.autoDayDate = days[days.length - 1];
+    const { start, end } = this.autoTournamentDates();
+    if (this.autoPhaseScope === 'knockout') {
+      const days = this.autoAvailableDays();
+      this.autoDayDate = (days.length > 1 ? days[days.length - 1] : (end || start || this.autoDayDate));
       this.autoStartTime = this.autoStartTime || '09:00';
-    } else if (this.autoPhaseScope === 'group' && days.length) {
-      this.autoDayDate = days[0];
+    } else if (this.autoPhaseScope === 'group') {
+      const days = this.autoAvailableDays();
+      this.autoDayDate = start || days[0] || this.autoDayDate;
     }
   },
 
@@ -647,7 +654,10 @@ Alpine.data('officeApp', () => ({
       this.autoProposal = Array.isArray(payload.placements) ? payload.placements : [];
       const placed = this.autoProposal.filter(p => p.court_id && p.scheduled_time).length;
       if (!placed) {
-        this.showToast(`Brak meczów ${this.autoScopeLabel()} do rozmieszczenia. Czy drabinka jest już gotowa?`, 'warning');
+        const hint = this.autoPhaseScope === 'knockout'
+          ? 'Czy drabinka jest już gotowa? Generuje się po zakończeniu faz grupowych.'
+          : 'Najpierw utwórz grupy w zakładce „Plan turnieju" (losowanie), a potem wróć tutaj.';
+        this.showToast(`Brak meczów ${this.autoScopeLabel()} do rozmieszczenia. ${hint}`, 'warning');
       } else {
         const placeholders = this.autoProposal.filter(p => p.scheduled_time && this.autoIsPlaceholder(p)).length;
         const extra = placeholders ? ` (w tym ${placeholders} z placeholderem)` : '';

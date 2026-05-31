@@ -659,11 +659,7 @@
           </label>
           <label class="block">
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Dzień</span>
-            <select class="select select-bordered bg-white/90 mt-1 w-full" x-model="autoDayDate">
-              <template x-for="day in autoAvailableDays()" :key="'autoday_'+day">
-                <option :value="day" x-text="formatOfficeScheduleDay(day)"></option>
-              </template>
-            </select>
+            <input type="date" class="input input-bordered bg-white/90 mt-1 w-full" x-model="autoDayDate">
           </label>
           <label class="block">
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Start (HH:MM)</span>
