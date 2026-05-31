@@ -2145,6 +2145,44 @@ def test_office_autoschedule_generate_apply_and_move(full_app_with_temp_db):
     assert later_b1 and later_b1[0] == "12:15"  # +75 cascade after the moved match
 
 
+def test_office_schedule_publish_promotes_draft_entries(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Publish Cup",
+        "2026-06-10",
+        "2026-06-11",
+        active=True,
+        office_password_hash=generate_password_hash("pub"),
+    )
+    database.create_tournament_courts(tournament_id, 1)
+    players = [
+        database.insert_player(tournament_id, "P One", "B1", "PL", first_name="P", last_name="One", gender="M"),
+        database.insert_player(tournament_id, "P Two", "B1", "PL", first_name="P", last_name="Two", gender="M"),
+        database.insert_player(tournament_id, "P Three", "B1", "PL", first_name="P", last_name="Three", gender="M"),
+    ]
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "pub"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    database.save_bracket_groups(tournament_id, [{"name": "B1 Mężczyźni — Grupa A", "players": players}])
+
+    generated = client.post("/api/office/1/schedule/generate", headers=headers)
+    assert generated.status_code == 200
+    draft_schedule = generated.get_json()["schedule"]
+    assert draft_schedule, "expected generated draft entries"
+    assert any(entry["status"] == "draft" for entry in draft_schedule)
+
+    published = client.post("/api/office/1/schedule/publish", headers=headers, json={})
+    assert published.status_code == 200
+    payload = published.get_json()
+    assert payload["published"] >= 1
+    assert all(entry["status"] != "draft" for entry in payload["schedule"])
+    assert all(entry["status"] == "planned" for entry in payload["schedule"])
+
+
 def test_office_autoschedule_knockout_phase_with_placeholders(full_app_with_temp_db):
     from wyniki import database
 

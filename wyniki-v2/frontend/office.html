@@ -431,8 +431,6 @@
           <button type="button" class="office-tab" :class="{'is-active': activeTab === 'progress'}" @click="activeTab = 'progress'">Postęp grup</button>
           <button type="button" class="office-tab" :class="{'is-active': activeTab === 'knockout'}" @click="activeTab = 'knockout'">Drabinka</button>
           <button type="button" class="office-tab" :class="{'is-active': activeTab === 'planning'}" @click="openPlanningTab()">Plan turnieju</button>
-          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'auto'}" @click="openAutoTab()">Autorozmieszczanie</button>
-          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'schedule'}" @click="activeTab = 'schedule'">Terminarz</button>
         </div>
         <div class="text-sm text-slate-500" x-show="loading">Odświeżanie danych...</div>
       </div>
@@ -457,17 +455,26 @@
       </div>
 
       <div class="office-panel rounded-[28px] p-5 md:p-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Krok 1</div>
-            <h3 class="mt-2 text-2xl font-semibold">Grupy startowe</h3>
-            <p class="mt-1 text-sm text-slate-500">Wybierz kategorię, ustaw liczbę grup i przeciągnij zawodników do grup. Zmiany zapisują się automatycznie.</p>
+        <div class="flex items-start justify-between gap-4 flex-wrap cursor-pointer" @click="planningStep1Collapsed = !planningStep1Collapsed">
+          <div class="flex items-start gap-3">
+            <span class="mt-1 text-slate-400 transition-transform" :class="planningStep1Collapsed ? '' : 'rotate-90'">▶</span>
+            <div>
+              <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Krok 1</div>
+              <h3 class="mt-2 text-2xl font-semibold">Grupy startowe</h3>
+              <p class="mt-1 text-sm text-slate-500" x-show="!planningStep1Collapsed">Wybierz kategorię, ustaw liczbę grup i przeciągnij zawodników do grup. Zmiany zapisują się automatycznie.</p>
+              <p class="mt-1 text-sm text-emerald-700 font-semibold" x-show="planningStep1Collapsed && planningGroupsComplete()">Grupy gotowe: <span x-text="planningGroups.length"></span> grup, wszyscy przypisani.</p>
+              <p class="mt-1 text-sm text-amber-700 font-semibold" x-show="planningStep1Collapsed && !planningGroupsComplete()">Losowanie w toku — kliknij, aby rozwinąć.</p>
+            </div>
           </div>
-          <div class="flex items-center gap-2 text-sm font-semibold text-emerald-600" x-show="planningSaving">
-            <span class="loading loading-spinner loading-sm"></span> Zapisywanie…
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 text-sm font-semibold text-emerald-600" x-show="planningSaving">
+              <span class="loading loading-spinner loading-sm"></span> Zapisywanie…
+            </div>
+            <span class="btn btn-sm btn-ghost" x-text="planningStep1Collapsed ? 'Edytuj' : 'Zwiń'"></span>
           </div>
         </div>
 
+        <div x-show="!planningStep1Collapsed">
         <div class="mt-6" x-show="planningDivisions().length === 0">
           <div class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500">Najpierw dodaj zawodników do turnieju.</div>
         </div>
@@ -548,134 +555,40 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
 
       <div class="office-panel rounded-[28px] p-5 md:p-6">
         <div class="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Krok 2</div>
-            <h3 class="mt-2 text-2xl font-semibold">Terminarz dnia</h3>
+            <h3 class="mt-2 text-2xl font-semibold">Terminarz</h3>
+            <p class="mt-1 text-sm text-slate-500">Wybierz dzień, wygeneruj propozycję i przeciągaj mecze między kortami. Kliknij kartę, aby edytować szczegóły.</p>
           </div>
-          <button type="button" class="btn btn-outline bg-white/80" @click="generatePlanningSchedule()">Generuj brakujące</button>
-        </div>
-
-        <div class="mt-5 grid gap-4 md:grid-cols-3">
-          <label class="form-control">
-            <span class="label-text font-semibold mb-2">Dzień</span>
-            <select class="select select-bordered bg-white/90" x-model="planningScheduleFilter.day">
-              <option value="">Wszystkie dni</option>
-              <template x-for="day in planningScheduleDays()" :key="'office_planning_day_'+day">
-                <option :value="day" x-text="day"></option>
-              </template>
-            </select>
-          </label>
-          <label class="form-control">
-            <span class="label-text font-semibold mb-2">Kategoria</span>
-            <select class="select select-bordered bg-white/90" x-model="planningScheduleFilter.category">
-              <option value="">Wszystkie kategorie</option>
-              <template x-for="category in planningScheduleCategories()" :key="'office_planning_category_'+category">
-                <option :value="category" x-text="category"></option>
-              </template>
-            </select>
-          </label>
-          <label class="form-control">
-            <span class="label-text font-semibold mb-2">Kort</span>
-            <select class="select select-bordered bg-white/90" x-model="planningScheduleFilter.court">
-              <option value="">Wszystkie korty</option>
-              <template x-for="court in planningCourts" :key="'office_planning_filter_court_'+court.kort_id">
-                <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
-              </template>
-            </select>
-          </label>
-        </div>
-
-        <div class="mt-6 rounded-[24px] border border-slate-200/80 bg-white/65 p-4">
-          <div class="font-semibold text-slate-800 mb-3">Dodaj ręczny wpis</div>
-          <div class="grid gap-3 lg:grid-cols-6">
-            <input type="date" class="input input-bordered bg-white/90" x-model="planningNewSchedule.day_date">
-            <input type="time" class="input input-bordered bg-white/90" x-model="planningNewSchedule.scheduled_time">
-            <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.court_id">
-              <option value="">Kort?</option>
-              <template x-for="court in planningCourts" :key="'office_new_schedule_court_'+court.kort_id">
-                <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
-              </template>
-            </select>
-            <input type="text" class="input input-bordered bg-white/90" placeholder="Kategoria" x-model="planningNewSchedule.category_name">
-            <input type="text" class="input input-bordered bg-white/90" placeholder="Faza" x-model="planningNewSchedule.phase">
-            <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.status">
-              <template x-for="option in scheduleStatusOptions()" :key="'office_new_status_'+option.value">
-                <option :value="option.value" x-text="option.label"></option>
-              </template>
-            </select>
-            <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player1_name">
-              <option value="">Zawodnik 1</option>
-              <template x-for="name in planningPlayerNameOptions()" :key="'office_new_p1_'+name">
-                <option :value="name" x-text="name"></option>
-              </template>
-            </select>
-            <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player2_name">
-              <option value="">Zawodnik 2</option>
-              <template x-for="name in planningPlayerNameOptions()" :key="'office_new_p2_'+name">
-                <option :value="name" x-text="name"></option>
-              </template>
-            </select>
-            <input type="text" class="input input-bordered bg-white/90" placeholder="Uwagi" x-model="planningNewSchedule.notes_public">
-            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addPlanningScheduleEntry()">Dodaj</button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline bg-white/80" @click="generatePlanningSchedule()">Generuj brakujące</button>
+            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" :class="{'btn-disabled': planningPublishing}" @click="publishAllSchedule()">Opublikuj wszystkie</button>
           </div>
         </div>
 
-        <div class="mt-6 space-y-4">
-          <template x-for="entry in planningScheduleEntries()" :key="'office_planning_schedule_'+entry.id">
-            <article class="rounded-[24px] border border-slate-200/80 bg-white/75 p-4">
-              <div class="grid gap-4 xl:grid-cols-[1fr_0.75fr_0.7fr_0.8fr_0.75fr_auto] items-end">
-                <div>
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="office-chip" :class="entry.source_type === 'knockout' ? 'office-chip-knockout' : 'office-chip-group'" x-text="entry.phase || 'Mecz'"></span>
-                    <span class="text-xs text-slate-500" x-text="entry.group_name || entry.category_name || ''"></span>
-                  </div>
-                  <div class="mt-3 font-semibold text-slate-900"><span x-text="entry.player1_name"></span><span class="text-slate-400"> vs </span><span x-text="entry.player2_name"></span></div>
-                  <div class="mt-2" x-show="officeScheduleHasResult(entry)">
-                    <span class="office-chip office-chip-knockout font-semibold">Wynik: <span x-text="officeScheduleResultLabel(entry)"></span></span>
-                    <span class="ml-2 text-xs text-emerald-700 font-semibold" x-show="entry.winner_name">Zwycięzca: <span x-text="entry.winner_name"></span></span>
-                  </div>
-                </div>
-                <label class="form-control"><span class="label-text font-semibold mb-1">Data</span><input type="date" class="input input-bordered bg-white/90" x-model="entry.day_date"></label>
-                <label class="form-control"><span class="label-text font-semibold mb-1">Godzina</span><input type="time" class="input input-bordered bg-white/90" x-model="entry.scheduled_time"></label>
-                <label class="form-control"><span class="label-text font-semibold mb-1">Kort</span><select class="select select-bordered bg-white/90" x-model="entry.court_id"><option value="">Do ustalenia</option><template x-for="court in planningCourts" :key="'office_planning_row_court_'+entry.id+'_'+court.kort_id"><option :value="court.kort_id" x-text="court.name || court.kort_id"></option></template></select></label>
-                <label class="form-control"><span class="label-text font-semibold mb-1">Status</span><select class="select select-bordered bg-white/90" x-model="entry.status"><template x-for="option in scheduleStatusOptions()" :key="'office_planning_row_status_'+entry.id+'_'+option.value"><option :value="option.value" x-text="option.label"></option></template></select></label>
-                <div class="join"><button type="button" class="btn join-item border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveOfficeScheduleEntry(entry)">Zapisz</button><button type="button" class="btn btn-outline join-item" @click="deletePlanningScheduleEntry(entry)">Usuń</button></div>
-              </div>
-              <label class="form-control mt-4"><span class="label-text font-semibold mb-1">Uwagi publiczne</span><input type="text" class="input input-bordered bg-white/90" x-model="entry.notes_public" placeholder="np. godzina orientacyjna"></label>
-            </article>
+        <div class="mt-5 flex flex-wrap gap-2" x-show="planningTournamentDays().length">
+          <template x-for="(day, index) in planningTournamentDays()" :key="'planning_day_tab_'+day">
+            <button type="button"
+              class="rounded-full border px-4 py-1.5 text-sm font-semibold transition"
+              :class="autoDayDate === day ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300'"
+              @click="selectPlanningDay(day)"
+              x-text="planningDayLabel(day, index)"></button>
           </template>
-          <div x-show="planningScheduleEntries().length === 0" class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500">Brak wpisów dla wybranych filtrów.</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="mt-6 space-y-6" x-show="activeTab === 'auto'" x-cloak>
-      <div class="office-panel rounded-[28px] p-5 md:p-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Autorozmieszczanie</div>
-            <h2 class="mt-2 text-3xl font-semibold">Automatyczny terminarz</h2>
-            <p class="mt-1 text-sm text-slate-500 max-w-2xl">Wybierz zakres (faza grupowa lub pucharowa), godzinę startu i kort B1, wygeneruj propozycję (wzorowaną na III MP: B1 ma osobny, dłuższy kort), a potem przeciągaj mecze między kortami i godzinami. Fazę pucharową na dzień 2 możesz wygenerować wieczorem dnia 1 — mecze bez ustalonych par (np. finał) dostają placeholdery.</p>
-          </div>
-          <div class="text-sm text-slate-500" x-show="autoLoading">Pracuję...</div>
         </div>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label class="block">
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Zakres</span>
-            <select class="select select-bordered bg-white/90 mt-1 w-full" x-model="autoPhaseScope" @change="autoOnScopeChange()">
+            <select class="select select-bordered bg-white/90 mt-1 w-full" x-model="autoPhaseScope">
               <option value="group">Faza grupowa</option>
-              <option value="knockout">Faza pucharowa (dzień 2)</option>
+              <option value="knockout">Faza pucharowa</option>
               <option value="all">Wszystko</option>
             </select>
-          </label>
-          <label class="block">
-            <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Dzień</span>
-            <input type="date" class="input input-bordered bg-white/90 mt-1 w-full" x-model="autoDayDate">
           </label>
           <label class="block">
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Start (HH:MM)</span>
@@ -700,137 +613,133 @@
           <button type="button" class="btn btn-outline bg-white/80" :class="{'btn-disabled': autoLoading}" @click="autoDiscardProposal()">Odrzuć propozycję</button>
           <span class="text-xs text-slate-500">Po zatwierdzeniu możesz przeciągać mecze, aby korygować plan.</span>
         </div>
-        <div class="mt-4 text-xs text-slate-500" x-show="!autoIsPreview()">Przeciągnij kartę meczu na inny kort lub na inny mecz, aby zmienić jego pozycję. Kolejne mecze przesuną się automatycznie.</div>
-      </div>
+        <div class="mt-4 text-xs text-slate-500" x-show="!autoIsPreview()">Przeciągnij kartę meczu na inny kort lub na inny mecz, aby zmienić jego pozycję. Kliknij kartę, aby edytować szczegóły.</div>
 
-      <div class="office-panel rounded-[28px] p-4 md:p-5 overflow-x-auto">
-        <div class="flex gap-4 min-w-max">
-          <template x-for="court in autoCourts" :key="'autocol_'+court.kort_id">
-            <div class="w-64 flex-shrink-0 rounded-2xl bg-slate-50 border border-slate-200 p-3"
-                 @dragover.prevent
-                 @drop.prevent="onAutoDrop(court.kort_id, null)">
-              <div class="text-sm font-semibold text-slate-900" x-text="autoCourtLabel(court.kort_id)"></div>
-              <div class="text-[11px] text-slate-400 mb-2" x-text="'slot ' + autoSlotMinutes(autoBandForCourt(court.kort_id)) + ' min'"></div>
-              <div class="space-y-2 min-h-[80px]">
-                <template x-for="entry in autoBoardEntries(court.kort_id)" :key="'autocard_'+(entry.schedule_id || entry.id)">
-                  <div class="rounded-xl border shadow-sm p-2 cursor-move"
-                       :class="autoIsPlaceholder(entry) ? 'bg-indigo-50 border-indigo-200 border-dashed' : 'bg-white border-slate-200'"
-                       :draggable="!autoIsPreview()"
-                       @dragstart="onAutoDragStart(entry, $event)"
-                       @dragover.prevent
-                       @drop.prevent.stop="onAutoDrop(court.kort_id, entry)">
-                    <div class="flex items-center justify-between">
-                      <span class="font-mono font-semibold text-emerald-700 tabular-nums" x-text="entry.scheduled_time"></span>
-                      <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="entry.phase || ''"></span>
+        <div class="mt-4 overflow-x-auto">
+          <div class="flex gap-4 min-w-max">
+            <template x-for="court in autoCourts" :key="'autocol_'+court.kort_id">
+              <div class="w-64 flex-shrink-0 rounded-2xl bg-slate-50 border border-slate-200 p-3"
+                   @dragover.prevent
+                   @drop.prevent="onAutoDrop(court.kort_id, null)">
+                <div class="text-sm font-semibold text-slate-900" x-text="autoCourtLabel(court.kort_id)"></div>
+                <div class="text-[11px] text-slate-400 mb-2" x-text="'slot ' + autoSlotMinutes(autoBandForCourt(court.kort_id)) + ' min'"></div>
+                <div class="space-y-2 min-h-[80px]">
+                  <template x-for="entry in autoBoardEntries(court.kort_id)" :key="'autocard_'+(entry.schedule_id || entry.id)">
+                    <div class="rounded-xl border shadow-sm p-2"
+                         :class="(autoIsPlaceholder(entry) ? 'bg-indigo-50 border-indigo-200 border-dashed' : 'bg-white border-slate-200') + (planningOpenCardId === autoEntryId(entry) ? ' ring-2 ring-emerald-400' : '')">
+                      <div class="cursor-move"
+                           :draggable="!autoIsPreview()"
+                           @dragstart="onAutoDragStart(entry, $event)"
+                           @dragover.prevent
+                           @drop.prevent.stop="onAutoDrop(court.kort_id, entry)"
+                           @click="!autoIsPreview() && togglePlanningCard(entry)">
+                        <div class="flex items-center justify-between">
+                          <span class="font-mono font-semibold text-emerald-700 tabular-nums" x-text="entry.scheduled_time"></span>
+                          <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="entry.phase || ''"></span>
+                        </div>
+                        <div class="mt-1 text-sm font-semibold leading-tight" :class="autoIsPlaceholder(entry) ? 'text-indigo-600 italic' : 'text-slate-900'">
+                          <span x-text="entry.player1_name || '—'"></span>
+                          <span class="text-slate-400"> vs </span>
+                          <span x-text="entry.player2_name || '—'"></span>
+                        </div>
+                        <div class="text-[11px] text-slate-500" x-text="entry.category_name || ''"></div>
+                        <div class="text-[11px] font-semibold mt-0.5" :class="entry.status === 'draft' ? 'text-slate-400' : 'text-emerald-600'" x-text="officeScheduleStatusLabel(entry.status)"></div>
+                      </div>
+                      <div class="mt-2 pt-2 border-t border-slate-200 space-y-2" x-show="planningOpenCardId === autoEntryId(entry) && !autoIsPreview()" x-cloak @click.stop>
+                        <div class="grid grid-cols-2 gap-2">
+                          <label class="block">
+                            <span class="text-[10px] uppercase tracking-wide text-slate-400">Godzina</span>
+                            <input type="time" class="input input-bordered input-sm bg-white w-full" x-model="entry.scheduled_time">
+                          </label>
+                          <label class="block">
+                            <span class="text-[10px] uppercase tracking-wide text-slate-400">Kort</span>
+                            <select class="select select-bordered select-sm bg-white w-full" x-model="entry.court_id">
+                              <option value="">Do ustalenia</option>
+                              <template x-for="c in autoCourts" :key="'carddetail_court_'+entry.id+'_'+c.kort_id">
+                                <option :value="c.kort_id" x-text="c.name || c.kort_id"></option>
+                              </template>
+                            </select>
+                          </label>
+                        </div>
+                        <label class="block">
+                          <span class="text-[10px] uppercase tracking-wide text-slate-400">Status publikacji</span>
+                          <select class="select select-bordered select-sm bg-white w-full" x-model="entry.status">
+                            <template x-for="option in scheduleStatusOptions()" :key="'carddetail_status_'+entry.id+'_'+option.value">
+                              <option :value="option.value" x-text="option.label"></option>
+                            </template>
+                          </select>
+                        </label>
+                        <label class="block">
+                          <span class="text-[10px] uppercase tracking-wide text-slate-400">Uwagi publiczne</span>
+                          <input type="text" class="input input-bordered input-sm bg-white w-full" x-model="entry.notes_public" placeholder="np. godzina orientacyjna">
+                        </label>
+                        <div class="flex gap-2">
+                          <button type="button" class="btn btn-sm border-0 text-white flex-1" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveOfficeScheduleEntry(entry)">Zapisz</button>
+                          <button type="button" class="btn btn-sm btn-outline" @click="deletePlanningScheduleEntry(entry)">Usuń</button>
+                        </div>
+                      </div>
                     </div>
-                    <div class="mt-1 text-sm font-semibold leading-tight" :class="autoIsPlaceholder(entry) ? 'text-indigo-600 italic' : 'text-slate-900'">
-                      <span x-text="entry.player1_name || '—'"></span>
-                      <span class="text-slate-400"> vs </span>
-                      <span x-text="entry.player2_name || '—'"></span>
-                    </div>
-                    <div class="text-[11px] text-slate-500" x-text="entry.category_name || ''"></div>
-                  </div>
-                </template>
-                <div class="text-[11px] text-slate-300 text-center py-2" x-show="!autoBoardEntries(court.kort_id).length">Upuść mecz tutaj</div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <div class="office-panel rounded-[28px] p-4 md:p-5" x-show="autoUnplaced().length">
-        <div class="text-sm font-semibold text-slate-900 mb-2">Bez przypisanego kortu/godziny (<span x-text="autoUnplaced().length"></span>)</div>
-        <div class="flex flex-wrap gap-2">
-          <template x-for="entry in autoUnplaced()" :key="'autounp_'+(entry.schedule_id || entry.id)">
-            <div class="rounded-xl bg-amber-50 border border-amber-200 p-2 cursor-move"
-                 :draggable="!autoIsPreview()"
-                 @dragstart="onAutoDragStart(entry, $event)">
-              <div class="text-sm font-semibold text-slate-900">
-                <span x-text="entry.player1_name || '—'"></span>
-                <span class="text-slate-400"> vs </span>
-                <span x-text="entry.player2_name || '—'"></span>
-              </div>
-              <div class="text-[11px] text-slate-500" x-text="entry.category_name || ''"></div>
-            </div>
-          </template>
-        </div>
-      </div>
-    </section>
-
-    <section class="mt-6" x-show="activeTab === 'schedule'" x-cloak>
-      <div class="office-panel rounded-[28px] p-5 md:p-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div class="text-xs uppercase tracking-[0.24em] text-slate-500">Plan dnia</div>
-            <h2 class="mt-2 text-3xl font-semibold">Terminarz meczów</h2>
-            <p class="mt-2 text-sm text-slate-500">Wpisy powstają automatycznie z grup i z konkretnych meczów fazy pucharowej.</p>
-          </div>
-          <button type="button" class="btn btn-outline bg-white/80" @click="generateOfficeSchedule()">Odśwież z grup i drabinki</button>
-        </div>
-
-        <template x-if="!officeSchedule.length">
-          <div class="mt-6 rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500">
-            Nie ma jeszcze wpisów terminarza. Utwórz grupy albo odśwież terminarz.
-          </div>
-        </template>
-
-        <div class="mt-6 space-y-4">
-          <template x-for="entry in officeSchedule" :key="entry.id">
-            <article class="rounded-[24px] border border-slate-200/80 bg-white/75 p-4">
-              <div class="grid gap-4 xl:grid-cols-[1.2fr_0.75fr_0.7fr_0.8fr_0.75fr_auto] items-end">
-                <div>
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="office-chip" :class="entry.source_type === 'knockout' ? 'office-chip-knockout' : 'office-chip-group'" x-text="entry.phase || 'Mecz'"></span>
-                    <span class="text-xs text-slate-500" x-text="entry.group_name || entry.category_name || ''"></span>
-                  </div>
-                  <div class="mt-3 font-semibold text-slate-900">
-                    <span x-text="entry.player1_name"></span>
-                    <span class="text-slate-400"> vs </span>
-                    <span x-text="entry.player2_name"></span>
-                  </div>
-                  <div class="mt-2" x-show="officeScheduleHasResult(entry)">
-                    <span class="office-chip office-chip-knockout font-semibold">Wynik: <span x-text="officeScheduleResultLabel(entry)"></span></span>
-                    <span class="ml-2 text-xs text-emerald-700 font-semibold" x-show="entry.winner_name">Zwycięzca: <span x-text="entry.winner_name"></span></span>
-                  </div>
+                  </template>
+                  <div class="text-[11px] text-slate-300 text-center py-2" x-show="!autoBoardEntries(court.kort_id).length">Upuść mecz tutaj</div>
                 </div>
-
-                <label class="form-control">
-                  <span class="label-text font-semibold mb-1">Data</span>
-                  <input type="date" class="input input-bordered bg-white/90" x-model="entry.day_date">
-                </label>
-
-                <label class="form-control">
-                  <span class="label-text font-semibold mb-1">Godzina</span>
-                  <input type="time" class="input input-bordered bg-white/90" x-model="entry.scheduled_time">
-                </label>
-
-                <label class="form-control">
-                  <span class="label-text font-semibold mb-1">Kort</span>
-                  <select class="select select-bordered bg-white/90" x-model="entry.court_id">
-                    <option value="">Do ustalenia</option>
-                    <template x-for="court in officeCourts" :key="court.kort_id">
-                      <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
-                    </template>
-                  </select>
-                </label>
-
-                <label class="form-control">
-                  <span class="label-text font-semibold mb-1">Status</span>
-                  <select class="select select-bordered bg-white/90" x-model="entry.status">
-                    <template x-for="option in scheduleStatusOptions()" :key="option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
-                </label>
-
-                <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveOfficeScheduleEntry(entry)">Zapisz</button>
               </div>
-              <label class="form-control mt-4">
-                <span class="label-text font-semibold mb-1">Uwagi publiczne</span>
-                <input type="text" class="input input-bordered bg-white/90" x-model="entry.notes_public" placeholder="np. godzina orientacyjna">
-              </label>
-            </article>
-          </template>
+            </template>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-[20px] border border-amber-200 bg-amber-50 p-3" x-show="autoUnplaced().length">
+          <div class="text-sm font-semibold text-slate-900 mb-2">Bez przypisanego kortu/godziny (<span x-text="autoUnplaced().length"></span>)</div>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="entry in autoUnplaced()" :key="'autounp_'+(entry.schedule_id || entry.id)">
+              <div class="rounded-xl bg-white border border-amber-200 p-2 cursor-move"
+                   :draggable="!autoIsPreview()"
+                   @dragstart="onAutoDragStart(entry, $event)">
+                <div class="text-sm font-semibold text-slate-900">
+                  <span x-text="entry.player1_name || '—'"></span>
+                  <span class="text-slate-400"> vs </span>
+                  <span x-text="entry.player2_name || '—'"></span>
+                </div>
+                <div class="text-[11px] text-slate-500" x-text="entry.category_name || ''"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="mt-5">
+          <button type="button" class="text-sm font-semibold text-slate-500 hover:text-slate-800" @click="planningManualOpen = !planningManualOpen" x-text="planningManualOpen ? '− Ukryj ręczne dodawanie' : '+ Dodaj ręczny wpis'"></button>
+          <div class="mt-3 rounded-[24px] border border-slate-200/80 bg-white/65 p-4" x-show="planningManualOpen" x-cloak>
+            <div class="grid gap-3 lg:grid-cols-6">
+              <input type="date" class="input input-bordered bg-white/90" x-model="planningNewSchedule.day_date">
+              <input type="time" class="input input-bordered bg-white/90" x-model="planningNewSchedule.scheduled_time">
+              <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.court_id">
+                <option value="">Kort?</option>
+                <template x-for="court in planningCourts" :key="'office_new_schedule_court_'+court.kort_id">
+                  <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
+                </template>
+              </select>
+              <input type="text" class="input input-bordered bg-white/90" placeholder="Kategoria" x-model="planningNewSchedule.category_name">
+              <input type="text" class="input input-bordered bg-white/90" placeholder="Faza" x-model="planningNewSchedule.phase">
+              <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.status">
+                <template x-for="option in scheduleStatusOptions()" :key="'office_new_status_'+option.value">
+                  <option :value="option.value" x-text="option.label"></option>
+                </template>
+              </select>
+              <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player1_name">
+                <option value="">Zawodnik 1</option>
+                <template x-for="name in planningPlayerNameOptions()" :key="'office_new_p1_'+name">
+                  <option :value="name" x-text="name"></option>
+                </template>
+              </select>
+              <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player2_name">
+                <option value="">Zawodnik 2</option>
+                <template x-for="name in planningPlayerNameOptions()" :key="'office_new_p2_'+name">
+                  <option :value="name" x-text="name"></option>
+                </template>
+              </select>
+              <input type="text" class="input input-bordered bg-white/90" placeholder="Uwagi" x-model="planningNewSchedule.notes_public">
+              <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addPlanningScheduleEntry()">Dodaj</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>

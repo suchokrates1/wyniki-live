@@ -2618,6 +2618,24 @@ def delete_tournament_schedule_entry(tournament_id: int, schedule_id: int) -> bo
         return False
 
 
+def publish_tournament_schedule(tournament_id: int, day_date: Optional[str] = None) -> int:
+    """Promote all draft schedule entries to 'planned' (published). Returns updated count."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            params: List[Any] = [_utc_now(), tournament_id]
+            query = "UPDATE tournament_schedule SET status = 'planned', updated_at = ? WHERE tournament_id = ? AND status = 'draft'"
+            if day_date:
+                query += " AND day_date = ?"
+                params.append(day_date)
+            cursor.execute(query, params)
+            conn.commit()
+            return int(cursor.rowcount or 0)
+    except Exception as e:
+        logger.error("publish_tournament_schedule_error", error=str(e), tournament_id=tournament_id)
+        return 0
+
+
 def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
     """Ensure every configured group round-robin pair has a schedule slot."""
     groups = fetch_bracket_groups(tournament_id)
