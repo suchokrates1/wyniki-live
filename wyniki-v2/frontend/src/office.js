@@ -65,6 +65,9 @@ Alpine.data('officeApp', () => ({
   planningSelectedDivision: '',
   planningGroupCount: 1,
   planningGroupAssignments: {},
+  planningDragPlayerId: null,
+  planningSaving: false,
+  planningSaveTimer: null,
   planningScheduleFilter: { day: '', category: '', court: '' },
   planningNewSchedule: defaultOfficeScheduleForm(),
   autoConfig: null,
@@ -931,21 +934,129 @@ Alpine.data('officeApp', () => ({
     return this.planningPlayersForDivision().filter(player => this.planningGroupAssignments[player.id] === groupName);
   },
 
+  planningEffectiveGroup(player) {
+    const assigned = this.planningGroupAssignments[player.id];
+    if (!assigned) return '';
+    return this.planningTargetGroupNames().includes(assigned) ? assigned : '';
+  },
+
   planningUnassignedPlayers() {
-    return this.planningPlayersForDivision().filter(player => !this.planningGroupAssignments[player.id]);
+    return this.planningPlayersForDivision().filter(player => !this.planningEffectiveGroup(player));
+  },
+
+  planningOrdinal(player) {
+    return this.planningPlayersForDivision().findIndex(item => item.id === player.id) + 1;
+  },
+
+  planningDivisionAssignedCount(key = this.planningSelectedDivision) {
+    return this.planningPlayersForDivision(key).filter(player => this.planningGroupAssignments[player.id]).length;
+  },
+
+  selectPlanningDivision(key) {
+    this.planningSelectedDivision = key;
+    const groups = this.planningGroupsForDivision(key);
+    this.planningGroupCount = groups.length ? Math.max(1, Math.min(8, groups.length)) : 1;
+  },
+
+  planningSetGroupCount(delta) {
+    const next = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1) + Number(delta || 0)));
+    if (next === this.planningGroupCount) return;
+    this.planningGroupCount = next;
+    const valid = new Set(this.planningTargetGroupNames());
+    const assignments = { ...this.planningGroupAssignments };
+    let changed = false;
+    for (const player of this.planningPlayersForDivision()) {
+      const assigned = assignments[player.id];
+      if (assigned && !valid.has(assigned)) {
+        delete assignments[player.id];
+        changed = true;
+      }
+    }
+    if (changed) this.planningGroupAssignments = assignments;
+    this.schedulePlanningAutoSave();
+  },
+
+  onPlanningPlayerDragStart(player, event) {
+    this.planningDragPlayerId = player.id;
+    if (event?.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      try { event.dataTransfer.setData('text/plain', String(player.id)); } catch (e) { /* noop */ }
+    }
+  },
+
+  onPlanningDropToGroup(groupName) {
+    const id = this.planningDragPlayerId;
+    this.planningDragPlayerId = null;
+    if (!id || !groupName) return;
+    if (this.planningGroupAssignments[id] === groupName) return;
+    this.planningGroupAssignments = { ...this.planningGroupAssignments, [id]: groupName };
+    this.schedulePlanningAutoSave();
+  },
+
+  onPlanningDropToPool() {
+    const id = this.planningDragPlayerId;
+    this.planningDragPlayerId = null;
+    if (!id || !this.planningGroupAssignments[id]) return;
+    const assignments = { ...this.planningGroupAssignments };
+    delete assignments[id];
+    this.planningGroupAssignments = assignments;
+    this.schedulePlanningAutoSave();
   },
 
   autoAssignPlanningGroups() {
     const groupNames = this.planningTargetGroupNames();
     if (!groupNames.length) return;
+    const assignments = { ...this.planningGroupAssignments };
     this.planningPlayersForDivision().forEach((player, index) => {
-      this.planningGroupAssignments[player.id] = groupNames[index % groupNames.length];
+      assignments[player.id] = groupNames[index % groupNames.length];
     });
+    this.planningGroupAssignments = assignments;
+    this.schedulePlanningAutoSave();
   },
 
   clearPlanningDivisionAssignments() {
+    const assignments = { ...this.planningGroupAssignments };
     for (const player of this.planningPlayersForDivision()) {
-      delete this.planningGroupAssignments[player.id];
+      delete assignments[player.id];
+    }
+    this.planningGroupAssignments = assignments;
+    this.schedulePlanningAutoSave();
+  },
+
+  schedulePlanningAutoSave() {
+    if (this.planningSaveTimer) clearTimeout(this.planningSaveTimer);
+    this.planningSaveTimer = setTimeout(() => { this.autoSavePlanningGroups(); }, 500);
+  },
+
+  async autoSavePlanningGroups() {
+    if (!this.planningSelectedDivision) return;
+    this.planningSaving = true;
+    try {
+      const otherGroups = (this.planningGroups || [])
+        .filter(group => this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision)
+        .map(group => ({ name: group.name, players: (group.players || []).map(player => player.player_id).filter(Boolean) }));
+      const divisionGroups = this.planningTargetGroupNames()
+        .map(groupName => ({ name: groupName, players: this.planningAssignedPlayers(groupName).map(player => player.id) }))
+        .filter(group => group.players.length > 0);
+      const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
+        method: 'PUT',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({ groups: [...otherGroups, ...divisionGroups] }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error || 'Nie udało się zapisać grup.');
+      this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
+      this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+    } catch (error) {
+      console.error('Failed to auto-save office planning groups:', error);
+      this.showToast(error.message || 'Błąd zapisu grup', 'error');
+    } finally {
+      this.planningSaving = false;
     }
   },
 
