@@ -68,7 +68,10 @@ Alpine.data('officeApp', () => ({
   planningDragPlayerId: null,
   planningSaving: false,
   planningSaveTimer: null,
-  planningScheduleFilter: { day: '', category: '', court: '' },
+  planningStep1Collapsed: false,
+  planningOpenCardId: null,
+  planningManualOpen: false,
+  planningPublishing: false,
   planningNewSchedule: defaultOfficeScheduleForm(),
   autoConfig: null,
   autoCourts: [],
@@ -530,6 +533,9 @@ Alpine.data('officeApp', () => ({
     if (!this.planningPlayers.length) {
       await this.loadOfficePlanningData();
     }
+    if (!this.autoConfig) {
+      await this.loadAutoConfig();
+    }
   },
 
   async loadOfficePlanningData() {
@@ -559,16 +565,6 @@ Alpine.data('officeApp', () => ({
       this.showToast(error.message || 'Błąd ładowania planu turnieju', 'error');
     } finally {
       this.planningLoading = false;
-    }
-  },
-
-  async openAutoTab() {
-    this.activeTab = 'auto';
-    if (!this.autoConfig) {
-      await this.loadAutoConfig();
-    }
-    if (!this.planningSchedule.length && !this.planningPlayers.length) {
-      await this.loadOfficePlanningData();
     }
   },
 
@@ -613,18 +609,6 @@ Alpine.data('officeApp', () => ({
     if (start) days.add(start);
     if (end && end !== start) days.add(end);
     return Array.from(days).sort();
-  },
-
-  autoOnScopeChange() {
-    const { start, end } = this.autoTournamentDates();
-    if (this.autoPhaseScope === 'knockout') {
-      const days = this.autoAvailableDays();
-      this.autoDayDate = (days.length > 1 ? days[days.length - 1] : (end || start || this.autoDayDate));
-      this.autoStartTime = this.autoStartTime || '09:00';
-    } else if (this.autoPhaseScope === 'group') {
-      const days = this.autoAvailableDays();
-      this.autoDayDate = start || days[0] || this.autoDayDate;
-    }
   },
 
   autoScopeLabel() {
@@ -843,6 +827,83 @@ Alpine.data('officeApp', () => ({
     }
     this.planningNewSchedule.day_date = this.planningNewSchedule.day_date || this.tournamentMeta?.start_date || this.dashboard?.tournament?.start_date || '';
     this.planningNewSchedule.court_id = this.planningNewSchedule.court_id || this.planningCourts[0]?.kort_id || '';
+    const days = this.planningTournamentDays();
+    if (!this.autoDayDate || !days.includes(this.autoDayDate)) {
+      this.autoDayDate = days[0] || this.autoDayDate || '';
+    }
+    this.planningStep1Collapsed = this.planningGroupsComplete();
+  },
+
+  planningGroupsComplete() {
+    const players = this.planningPlayers || [];
+    if (!players.length || !(this.planningGroups || []).length) return false;
+    return players.every(player => this.planningGroupAssignments[player.id]);
+  },
+
+  planningTournamentDays() {
+    const { start, end } = this.autoTournamentDates();
+    if (start) {
+      const startDate = new Date(`${start}T00:00:00`);
+      const endDate = end ? new Date(`${end}T00:00:00`) : startDate;
+      if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime()) && endDate >= startDate) {
+        const days = [];
+        const cursor = new Date(startDate);
+        while (cursor <= endDate && days.length < 14) {
+          days.push(cursor.toISOString().slice(0, 10));
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        return days;
+      }
+      return [start];
+    }
+    const available = this.autoAvailableDays();
+    return available.length ? available : [];
+  },
+
+  planningDayLabel(day, index) {
+    const value = String(day || '');
+    const parts = value.split('-');
+    const short = parts.length === 3 ? `${parts[2]}.${parts[1]}` : value;
+    return `Dzień ${index + 1} · ${short}`;
+  },
+
+  selectPlanningDay(day) {
+    this.autoDayDate = day;
+    this.planningOpenCardId = null;
+    if (this.autoIsPreview()) this.autoDiscardProposal();
+  },
+
+  togglePlanningCard(entry) {
+    const id = this.autoEntryId(entry);
+    this.planningOpenCardId = this.planningOpenCardId === id ? null : id;
+  },
+
+  async publishAllSchedule() {
+    if (!this.token) return;
+    if (!confirm('Opublikować wszystkie robocze wpisy terminarza? Staną się widoczne publicznie.')) return;
+    this.planningPublishing = true;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/schedule/publish`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({}),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error || 'Nie udało się opublikować terminarza.');
+      if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+      const count = Number(payload.published || 0);
+      this.showToast(count ? `Opublikowano ${count} wpisów.` : 'Brak roboczych wpisów do opublikowania.', count ? 'success' : 'info');
+    } catch (error) {
+      console.error('Failed to publish schedule:', error);
+      this.showToast(error.message || 'Błąd publikacji terminarza', 'error');
+    } finally {
+      this.planningPublishing = false;
+    }
   },
 
   syncPlanningGroupAssignments() {
@@ -1093,26 +1154,6 @@ Alpine.data('officeApp', () => ({
       console.error('Failed to save office planning groups:', error);
       this.showToast(error.message || 'Błąd zapisu grup', 'error');
     }
-  },
-
-  planningScheduleDays() {
-    return [...new Set((this.planningSchedule || []).map(entry => entry.day_date).filter(Boolean))];
-  },
-
-  planningScheduleCategories() {
-    return [...new Set((this.planningSchedule || []).map(entry => entry.category_name || entry.group_name || entry.phase).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pl'));
-  },
-
-  planningScheduleEntries() {
-    return (this.planningSchedule || []).filter(entry => {
-      if (this.planningScheduleFilter.day && entry.day_date !== this.planningScheduleFilter.day) return false;
-      if (this.planningScheduleFilter.court && entry.court_id !== this.planningScheduleFilter.court) return false;
-      if (this.planningScheduleFilter.category) {
-        const category = entry.category_name || entry.group_name || entry.phase || '';
-        if (category !== this.planningScheduleFilter.category) return false;
-      }
-      return true;
-    });
   },
 
   planningPlayerNameOptions() {

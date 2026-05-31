@@ -27,6 +27,7 @@ from ..database import (
     upsert_tournament_schedule_entries,
     update_tournament_schedule_entry,
     delete_tournament_schedule_entry,
+    publish_tournament_schedule,
     link_schedule_to_match,
 )
 from ..db_models import Match, MatchHistory, Tournament, db, utc_now_iso
@@ -275,6 +276,23 @@ def office_schedule_delete(slot: int, schedule_id: int):
     if not delete_tournament_schedule_entry(tournament_id, schedule_id):
         return jsonify({"error": "Schedule entry not found"}), 404
     return _json_no_cache({
+        "schedule": fetch_tournament_schedule(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
+
+
+@blueprint.route('/<int:slot>/schedule/publish', methods=['POST'])
+def office_schedule_publish(slot: int):
+    """Promote all draft schedule entries to published (planned)."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    day_date = (data.get('day_date') or '').strip() or None
+    published = publish_tournament_schedule(tournament_id, day_date)
+    return _json_no_cache({
+        "published": published,
         "schedule": fetch_tournament_schedule(tournament_id),
         "dashboard": _build_office_dashboard(tournament_id),
     })
