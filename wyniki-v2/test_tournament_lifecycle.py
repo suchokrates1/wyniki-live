@@ -1105,6 +1105,33 @@ def test_tournament_players_are_linked_to_global_players(app_with_temp_db):
     assert len(ada_global_ids) == 1
 
 
+def test_simulation_tournament_players_are_not_linked_to_global_players(app_with_temp_db):
+    from wyniki import database
+
+    before = _count_table(database, "global_players")
+    tournament_id = database.insert_tournament(
+        "Simulation Players Cup",
+        "2026-04-26",
+        "2026-04-27",
+        active=True,
+        is_simulation=True,
+    )
+    inserted_count = database.bulk_insert_players(
+        tournament_id,
+        [
+            {"first_name": "Test", "last_name": "Alpha", "category": "B1", "country": "PL", "gender": "M"},
+            {"first_name": "Test", "last_name": "Beta", "category": "B2", "country": "PL", "gender": "K"},
+        ],
+    )
+
+    assert inserted_count == 2
+    assert _count_table(database, "global_players") == before
+
+    players = database.fetch_players(tournament_id)
+    assert len(players) == 2
+    assert all(player["global_player_id"] is None for player in players)
+
+
 def test_admin_player_routes_require_active_tournament(app_with_temp_db):
     from wyniki import database
 

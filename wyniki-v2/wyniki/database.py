@@ -2037,6 +2037,18 @@ def fetch_players_for_active_tournaments(public_only: bool = False) -> List[Dict
         return []
 
 
+def _tournament_links_global_players(cursor: sqlite3.Cursor, tournament_id: int) -> bool:
+    """Simulation tournaments keep players local to the event only."""
+    cursor.execute(
+        "SELECT COALESCE(is_simulation, 0) AS is_simulation FROM tournaments WHERE id = ?",
+        (tournament_id,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        return True
+    return int(row["is_simulation"] or 0) == 0
+
+
 def _ensure_global_player(cursor: sqlite3.Cursor, first_name: str, last_name: str,
                           category: str = "", country: str = "", gender: str = "") -> Optional[int]:
     first_name = (first_name or "").strip()
@@ -2094,7 +2106,11 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            global_player_id = _ensure_global_player(cursor, first_name, last_name, category, country, gender)
+            global_player_id = None
+            if _tournament_links_global_players(cursor, tournament_id):
+                global_player_id = _ensure_global_player(
+                    cursor, first_name, last_name, category, country, gender
+                )
             cursor.execute("""
                 INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender, global_player_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -2123,7 +2139,16 @@ def update_player(player_id: int, name: str, category: str, country: str,
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            global_player_id = _ensure_global_player(cursor, first_name, last_name, category, country, gender)
+            scoped_tournament_id = tournament_id
+            if scoped_tournament_id is None:
+                cursor.execute("SELECT tournament_id FROM players WHERE id = ?", (player_id,))
+                row = cursor.fetchone()
+                scoped_tournament_id = row["tournament_id"] if row else None
+            global_player_id = None
+            if scoped_tournament_id is None or _tournament_links_global_players(cursor, scoped_tournament_id):
+                global_player_id = _ensure_global_player(
+                    cursor, first_name, last_name, category, country, gender
+                )
             cursor.execute("""
                 UPDATE players
                 SET name = ?, first_name = ?, last_name = ?, category = ?, country = ?, gender = ?, global_player_id = ?
@@ -2176,7 +2201,9 @@ def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
                 category = player.get("category", "")
                 country = player.get("country", "")
                 gender = player.get("gender", "")
-                global_player_id = _ensure_global_player(cursor, fn, ln, category, country, gender)
+                global_player_id = None
+                if _tournament_links_global_players(cursor, tournament_id):
+                    global_player_id = _ensure_global_player(cursor, fn, ln, category, country, gender)
                 cursor.execute("""
                     INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender, global_player_id)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)

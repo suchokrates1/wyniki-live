@@ -119,6 +119,7 @@ ADMIN_PASSWORD=your_secure_password
 
 # Domain
 PUBLIC_HOST=score.vestmedia.pl
+PUBLIC_HOST_ALT=blindtennis.app
 ```
 
 See `.env.example` for all configuration options.

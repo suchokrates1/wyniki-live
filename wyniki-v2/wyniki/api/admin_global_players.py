@@ -379,22 +379,31 @@ def import_file_to_tournament(tid: int):
         if f"{fn} {ln}".strip().lower() == 'dawid suchodolski':
             continue
 
-        gp_exists = GlobalPlayer.query.filter(
-            func.lower(func.trim(GlobalPlayer.first_name)) == fn.lower(),
-            func.lower(func.trim(GlobalPlayer.last_name)) == ln.lower(),
-        ).first()
-        gp = find_or_create_global_player(db.session, fn, ln, category, country)
-        if not gp:
-            continue
-        if gp_exists:
-            matched_global += 1
-        else:
-            created_global += 1
+        gp = None
+        if int(tournament.is_simulation or 0) != 1:
+            gp_exists = GlobalPlayer.query.filter(
+                func.lower(func.trim(GlobalPlayer.first_name)) == fn.lower(),
+                func.lower(func.trim(GlobalPlayer.last_name)) == ln.lower(),
+            ).first()
+            gp = find_or_create_global_player(db.session, fn, ln, category, country)
+            if not gp:
+                continue
+            if gp_exists:
+                matched_global += 1
+            else:
+                created_global += 1
 
-        # Check if already in tournament
-        existing = Player.query.filter_by(tournament_id=tid, global_player_id=gp.id).first()
-        if existing:
-            continue
+            existing = Player.query.filter_by(tournament_id=tid, global_player_id=gp.id).first()
+            if existing:
+                continue
+        else:
+            existing = Player.query.filter(
+                Player.tournament_id == tid,
+                func.lower(func.trim(Player.first_name)) == fn.lower(),
+                func.lower(func.trim(Player.last_name)) == ln.lower(),
+            ).first()
+            if existing:
+                continue
 
         create_tournament_player(
             db.session,
@@ -402,9 +411,9 @@ def import_file_to_tournament(tid: int):
             name=name,
             first_name=fn,
             last_name=ln,
-            gender=gp.gender or '',
-            category=category.strip() or gp.category or '',
-            country=country.strip() or gp.country or '',
+            gender=(gp.gender if gp else ''),
+            category=category.strip() or ((gp.category or '') if gp else ''),
+            country=country.strip() or ((gp.country or '') if gp else ''),
             global_player=gp,
         )
         added_tournament += 1

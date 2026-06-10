@@ -1,6 +1,7 @@
 import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '../src/i18n/locale.js';
 import { applyTranslationPatches } from '../src/i18n/runtime.js';
 import { TRANSLATIONS, TRANSLATION_PATCHES } from '../src/i18n/translations.js';
+import { OFFICE_TRANSLATION_PATCHES } from '../src/i18n/officeTranslations.js';
 import { findMissingTranslationKeys } from '../src/i18n/validation.js';
 
 function collectEmptyLeaves(value, prefix = '') {
@@ -15,6 +16,7 @@ function collectEmptyLeaves(value, prefix = '') {
 }
 
 applyTranslationPatches(TRANSLATIONS, TRANSLATION_PATCHES);
+applyTranslationPatches(TRANSLATIONS, OFFICE_TRANSLATION_PATCHES);
 
 const missingLanguages = SUPPORTED_LANGUAGES.filter((lang) => !TRANSLATIONS[lang]);
 const missingKeys = findMissingTranslationKeys(TRANSLATIONS, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE);
