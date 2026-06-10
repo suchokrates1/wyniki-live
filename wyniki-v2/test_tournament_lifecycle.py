@@ -788,6 +788,49 @@ Michał\tStanisławski"""
     }
 
 
+def test_player_import_preview_groups_b34_as_mixed_only_for_configured_tournament(app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Import B34 Mixed Cup", "2026-06-10", "2026-06-12", active=True)
+    database.set_mixed_categories(tournament_id, ["B34"])
+
+    text = """B3/4 Mixed
+Anna Kowalska
+Piotr Nowak
+
+Jan Kowalski B34M PL
+Maria Test B34 K DE"""
+
+    response = app_with_temp_db.test_client().post(
+        f"/admin/api/tournaments/{tournament_id}/players/parse-import",
+        json={"text": text},
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["count"] == 4
+    assert payload["mixed_categories"] == ["B34"]
+    assert {item["start_group"]: item["count"] for item in payload["summary"]} == {"B34": 4}
+
+
+def test_player_import_preview_splits_b34_by_gender_without_mixed_config(app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Import B34 Split Cup", "2026-06-10", "2026-06-12", active=True)
+
+    response = app_with_temp_db.test_client().post(
+        f"/admin/api/tournaments/{tournament_id}/players/parse-import",
+        json={"text": "Jan Kowalski B34M PL\nMaria Test B34 K DE"},
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert {item["start_group"]: item["count"] for item in payload["summary"]} == {
+        "B34K": 1,
+        "B34M": 1,
+    }
+
+
 def test_player_import_preview_uses_ai_to_fill_missing_country(app_with_temp_db, monkeypatch):
     from wyniki import database
     from wyniki.api import admin_tournaments

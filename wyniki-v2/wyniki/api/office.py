@@ -16,6 +16,7 @@ from ..database import (
     fetch_players,
     fetch_tournament_schedule,
     fetch_tournaments,
+    get_mixed_categories,
     generate_autoschedule_proposal,
     get_autoscheduler_config,
     maybe_generate_knockout_from_completed_groups,
@@ -179,6 +180,7 @@ def office_planning(slot: int):
         "groups": fetch_bracket_groups(tournament_id),
         "schedule": fetch_tournament_schedule(tournament_id),
         "courts": dashboard.get("courts", []),
+        "mixed_categories": get_mixed_categories(tournament_id),
         "dashboard": dashboard,
     })
 
