@@ -1,4 +1,9 @@
 import Alpine from 'alpinejs';
+import {
+  isMixedCategory,
+  planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
+  planningDivisionKey as sharedPlanningDivisionKey,
+} from './shared/categories.js';
 import './main.css';
 
 window.Alpine = Alpine;
@@ -81,6 +86,7 @@ Alpine.data('adminApp', () => ({
   planningTournamentId: null,
   planningLoading: false,
   planningPlayers: [],
+  planningMixedCategories: [],
   planningGroups: [],
   planningSchedule: [],
   planningCourts: [],
@@ -977,15 +983,18 @@ Alpine.data('adminApp', () => ({
     if (!this.planningTournamentId) return;
     this.planningLoading = true;
     try {
-      const [playersResponse, groupsResponse, scheduleResponse, courtsResponse] = await Promise.all([
+      const [playersResponse, groupsResponse, scheduleResponse, courtsResponse, tournamentResponse] = await Promise.all([
         fetch(`/admin/api/tournaments/${this.planningTournamentId}/players`),
         fetch(`/admin/api/tournaments/${this.planningTournamentId}/bracket/groups`),
         fetch(`/admin/api/tournaments/${this.planningTournamentId}/schedule`),
         fetch('/admin/api/courts'),
+        fetch(`/admin/api/tournaments/${this.planningTournamentId}`),
       ]);
-      if (!playersResponse.ok || !groupsResponse.ok || !scheduleResponse.ok || !courtsResponse.ok) {
+      if (!playersResponse.ok || !groupsResponse.ok || !scheduleResponse.ok || !courtsResponse.ok || !tournamentResponse.ok) {
         throw new Error('Failed to load planning data');
       }
+      const tournamentPayload = await tournamentResponse.json();
+      this.planningMixedCategories = Array.isArray(tournamentPayload.mixed_categories) ? tournamentPayload.mixed_categories : [];
       this.planningPlayers = await playersResponse.json();
       this.planningGroups = await groupsResponse.json();
       const schedulePayload = await scheduleResponse.json();
@@ -1043,13 +1052,16 @@ Alpine.data('adminApp', () => ({
   },
 
   planningDivisionKey(player) {
-    const category = this.normalizeImportCategory(player?.category || '');
-    const gender = this.normalizePlanningGender(player?.gender || '');
-    return category && gender ? `${category}${gender}` : category || gender || 'NIEPRZYPISANI';
+    return sharedPlanningDivisionKey(
+      player?.category || '',
+      player?.gender || '',
+      this.planningMixedCategories,
+    );
   },
 
   planningDivisionLabel(key = this.planningSelectedDivision) {
     const value = String(key || '').toUpperCase();
+    if (isMixedCategory(value, this.planningMixedCategories)) return 'B3/4 Mixed';
     const category = (value.match(/^B\d{1,2}/) || [''])[0];
     const gender = value.endsWith('K') ? 'Kobiety' : value.endsWith('M') ? 'Mężczyźni' : '';
     if (category && gender) return `${category} ${gender}`;
@@ -1057,13 +1069,7 @@ Alpine.data('adminApp', () => ({
   },
 
   planningDivisionFromGroupName(groupName) {
-    const label = String(groupName || '').split(' — ')[0].split(' - ')[0].trim();
-    const category = (label.toUpperCase().match(/^B\d{1,2}/) || [''])[0];
-    const lower = label.toLowerCase();
-    let gender = '';
-    if (lower.includes('kob') || label.toUpperCase().endsWith('K')) gender = 'K';
-    if (lower.includes('męż') || lower.includes('mez') || lower.includes('mężczy') || label.toUpperCase().endsWith('M')) gender = 'M';
-    return category && gender ? `${category}${gender}` : category || gender || '';
+    return sharedPlanningDivisionFromGroupName(groupName, this.planningMixedCategories);
   },
 
   planningDivisions() {
@@ -1424,9 +1430,13 @@ Alpine.data('adminApp', () => ({
   },
 
   importStartGroup(player) {
-    const category = this.normalizeImportCategory(player?.category || '');
-    const gender = this.normalizeImportGender(player?.gender || '');
-    return category && gender ? `${category}${gender}` : category || gender || 'NIEPRZYPISANI';
+    if (player?.start_group) return player.start_group;
+    const tournament = this.getTournamentById(this.selectedTournament);
+    return sharedPlanningDivisionKey(
+      player?.category || '',
+      player?.gender || '',
+      tournament?.mixed_categories || [],
+    );
   },
 
   importPreviewSummary() {

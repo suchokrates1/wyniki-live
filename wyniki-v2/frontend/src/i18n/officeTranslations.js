@@ -168,6 +168,9 @@ export const OFFICE_TRANSLATION_PATCHES = {
         men: 'Mężczyźni',
         unassigned: 'Nieprzypisani',
       },
+      categories: {
+        b34Mixed: 'B3/4 Mixed',
+      },
       phases: {
         group: 'Grupowa',
         knockout: 'Pucharowa',
@@ -449,6 +452,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         saveCorrection: 'Korrektur speichern',
       },
       gender: { women: 'Frauen', men: 'Männer', unassigned: 'Nicht zugewiesen' },
+      categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Gruppenphase', knockout: 'K.-o.-Phase', match: 'Spiel' },
       scope: { group: 'der Gruppenphase', knockout: 'der K.-o.-Phase', all: 'aller Phasen' },
       status: {
@@ -719,6 +723,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         saveCorrection: 'Save correction',
       },
       gender: { women: 'Women', men: 'Men', unassigned: 'Unassigned' },
+      categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Group', knockout: 'Knockout', match: 'Match' },
       scope: { group: 'group phase', knockout: 'knockout phase', all: 'all phases' },
       status: {
@@ -989,6 +994,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         saveCorrection: 'Salva correzione',
       },
       gender: { women: 'Donne', men: 'Uomini', unassigned: 'Non assegnati' },
+      categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Girone', knockout: 'Eliminazione', match: 'Partita' },
       scope: { group: 'fase a gironi', knockout: 'fase a eliminazione', all: 'tutte le fasi' },
       status: {
@@ -1259,6 +1265,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         saveCorrection: 'Guardar corrección',
       },
       gender: { women: 'Mujeres', men: 'Hombres', unassigned: 'Sin asignar' },
+      categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Grupos', knockout: 'Eliminatoria', match: 'Partido' },
       scope: { group: 'fase de grupos', knockout: 'fase eliminatoria', all: 'todas las fases' },
       status: {
@@ -1529,6 +1536,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         saveCorrection: 'Enregistrer la correction',
       },
       gender: { women: 'Femmes', men: 'Hommes', unassigned: 'Non assignés' },
+      categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Poule', knockout: 'Élimination', match: 'Match' },
       scope: { group: 'phase de poules', knockout: 'phase à élimination', all: 'toutes les phases' },
       status: {

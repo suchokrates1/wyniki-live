@@ -2908,6 +2908,37 @@ def unlink_schedule_from_match(match_id: int, *, fallback_status: str = "planned
         return 0
 
 
+def _mixed_categories_settings_key(tournament_id: int) -> str:
+    return f"mixed_categories:{int(tournament_id)}"
+
+
+def get_mixed_categories(tournament_id: int) -> List[str]:
+    """Return category codes that should be played as mixed for a tournament."""
+    from .services.categories import normalize_mixed_categories
+
+    stored = fetch_app_settings([_mixed_categories_settings_key(tournament_id)]).get(
+        _mixed_categories_settings_key(tournament_id)
+    )
+    if not stored:
+        return []
+    try:
+        data = json.loads(stored)
+        if isinstance(data, list):
+            return normalize_mixed_categories(data)
+    except (ValueError, TypeError):
+        pass
+    return []
+
+
+def set_mixed_categories(tournament_id: int, categories: List[str]) -> List[str]:
+    """Persist mixed category codes for a tournament."""
+    from .services.categories import normalize_mixed_categories
+
+    normalized = normalize_mixed_categories(categories)
+    upsert_app_settings({_mixed_categories_settings_key(tournament_id): json.dumps(normalized)})
+    return normalized
+
+
 def _autoscheduler_settings_key(tournament_id: int) -> str:
     return f"autoscheduler:{int(tournament_id)}"
 
@@ -3627,7 +3658,11 @@ def get_full_bracket(tournament_id: int) -> Dict:
                 knockout.setdefault(phase, []).append(slot)
 
             return {
-                "tournament": {"id": tournament_id, "name": t["name"]},
+                "tournament": {
+                    "id": tournament_id,
+                    "name": t["name"],
+                    "mixed_categories": get_mixed_categories(tournament_id),
+                },
                 "groups": groups_data,
                 "knockout": knockout,
             }

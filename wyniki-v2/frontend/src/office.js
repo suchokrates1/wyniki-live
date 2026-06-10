@@ -1,5 +1,10 @@
 import Alpine from 'alpinejs';
 import { createOfficeI18n } from './i18n/officeI18n.js';
+import {
+  isMixedCategory,
+  planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
+  planningDivisionKey as sharedPlanningDivisionKey,
+} from './shared/categories.js';
 import './main.css';
 
 window.Alpine = Alpine;
@@ -61,6 +66,7 @@ Alpine.data('officeApp', () => ({
   officeEditingMatch: null,
   planningLoading: false,
   planningPlayers: [],
+  planningMixedCategories: [],
   planningGroups: [],
   planningSchedule: [],
   planningCourts: [],
@@ -561,6 +567,7 @@ Alpine.data('officeApp', () => ({
         throw new Error(payload.error || this.ot('errors.planningFailed'));
       }
       this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
+      this.planningMixedCategories = Array.isArray(payload.mixed_categories) ? payload.mixed_categories : [];
       this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
       this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
       this.planningCourts = Array.isArray(payload.courts) ? payload.courts : [];
@@ -962,13 +969,16 @@ Alpine.data('officeApp', () => ({
   },
 
   planningDivisionKey(player) {
-    const category = this.normalizePlanningCategory(player?.category || '');
-    const gender = this.normalizePlanningGender(player?.gender || '');
-    return category && gender ? `${category}${gender}` : category || gender || 'NIEPRZYPISANI';
+    return sharedPlanningDivisionKey(
+      player?.category || '',
+      player?.gender || '',
+      this.planningMixedCategories,
+    );
   },
 
   planningDivisionLabel(key = this.planningSelectedDivision) {
     const value = String(key || '').toUpperCase();
+    if (isMixedCategory(value, this.planningMixedCategories)) return this.ot('categories.b34Mixed');
     const category = (value.match(/^B\d{1,2}/) || [''])[0];
     const gender = value.endsWith('K')
       ? this.ot('gender.women')
@@ -980,13 +990,7 @@ Alpine.data('officeApp', () => ({
   },
 
   planningDivisionFromGroupName(groupName) {
-    const label = String(groupName || '').split(' — ')[0].split(' - ')[0].trim();
-    const category = (label.toUpperCase().match(/^B\d{1,2}/) || [''])[0];
-    const lower = label.toLowerCase();
-    let gender = '';
-    if (lower.includes('kob') || label.toUpperCase().endsWith('K')) gender = 'K';
-    if (lower.includes('męż') || lower.includes('mez') || lower.includes('mężczy') || label.toUpperCase().endsWith('M')) gender = 'M';
-    return category && gender ? `${category}${gender}` : category || gender || '';
+    return sharedPlanningDivisionFromGroupName(groupName, this.planningMixedCategories);
   },
 
   planningDivisions() {

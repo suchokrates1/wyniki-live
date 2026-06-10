@@ -168,6 +168,7 @@ export function createBracketView() {
         translateCategory: (value) => this.translateCategory(value),
         womenLabel: t.history?.catWomen || 'Women',
         menLabel: t.history?.catMen || 'Men',
+        mixedLabel: t.history?.catMixed || 'B3/4 Mixed',
       });
     },
 

@@ -12,10 +12,17 @@ from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
 from ..db_models import Match, MatchHistory, Tournament, TournamentSchedule, db, utc_now_iso
+from ..services.categories import (
+    is_mixed_category,
+    is_mixed_section_label,
+    start_group_key,
+)
 from ..database import (
     fetch_tournaments,
     fetch_active_tournaments,
     fetch_tournament,
+    get_mixed_categories,
+    set_mixed_categories,
     insert_tournament,
     update_tournament,
     delete_tournament,
@@ -216,16 +223,24 @@ def _should_skip_import_line(text: str) -> bool:
     return False
 
 
-def _parse_import_section_header(line: str) -> Dict[str, str] | None:
+def _parse_import_section_header(
+    line: str,
+    mixed_categories: list[str] | None = None,
+) -> Dict[str, str] | None:
     text = _clean_import_line_text(line)
     if not text:
         return None
-    header_match = re.fullmatch(r'(B\d{1,2})\s+(.+)', text, flags=re.IGNORECASE)
+    header_match = re.fullmatch(r'((?:B\d(?:/\d)?)|(?:B\d{2}))\s+(.+)', text, flags=re.IGNORECASE)
     if not header_match:
         return None
     category = _normalize_import_category(header_match.group(1))
-    gender = _normalize_import_gender(header_match.group(2))
-    if not category or not gender:
+    section_label = str(header_match.group(2) or '').strip()
+    if not category:
+        return None
+    if is_mixed_category(category, mixed_categories):
+        return {'category': category, 'gender': ''}
+    gender = _normalize_import_gender(section_label)
+    if not gender:
         return None
     return {'category': category, 'gender': gender}
 
@@ -269,6 +284,7 @@ def _build_import_player_entry(
     extra_warnings: list[str] | None = None,
     ai_assisted: bool = False,
     ai_notes: str = '',
+    mixed_categories: list[str] | None = None,
 ) -> Dict[str, Any]:
     first_name = str(first_name or '').strip()
     last_name = str(last_name or '').strip()
@@ -300,7 +316,7 @@ def _build_import_player_entry(
         warnings.append('Nie rozpoznano plci')
 
     warnings.extend(extra_warnings or [])
-    start_group = f'{category}{gender}' if category and gender else category or gender or 'NIEPRZYPISANI'
+    start_group = start_group_key(category, gender, mixed_categories)
 
     payload = {
         'line_number': line_number,
@@ -340,7 +356,11 @@ def _needs_import_ai_help(player: Dict[str, Any]) -> bool:
     )
 
 
-def _apply_import_ai_suggestions(players: list[Dict[str, Any]], suggestions: Dict[int, Dict[str, Any]]) -> list[Dict[str, Any]]:
+def _apply_import_ai_suggestions(
+    players: list[Dict[str, Any]],
+    suggestions: Dict[int, Dict[str, Any]],
+    mixed_categories: list[str] | None = None,
+) -> list[Dict[str, Any]]:
     enriched: list[Dict[str, Any]] = []
     for player in players:
         suggestion = suggestions.get(int(player.get('line_number') or 0)) or {}
@@ -372,6 +392,7 @@ def _apply_import_ai_suggestions(players: list[Dict[str, Any]], suggestions: Dic
             name=player.get('name') or '',
             ai_assisted=bool(applied_fields),
             ai_notes=str(suggestion.get('notes') or '').strip(),
+            mixed_categories=mixed_categories,
         ))
     return enriched
 
@@ -451,12 +472,12 @@ def _fetch_import_ai_suggestions(text: str, players: list[Dict[str, Any]]) -> Di
     return suggestions
 
 
-def _parse_import_players_with_ai(text: str) -> list[Dict[str, Any]]:
-    players = _parse_import_players_text(text)
+def _parse_import_players_with_ai(text: str, mixed_categories: list[str] | None = None) -> list[Dict[str, Any]]:
+    players = _parse_import_players_text(text, mixed_categories)
     suggestions = _fetch_import_ai_suggestions(text, players)
     if not suggestions:
         return players
-    return _apply_import_ai_suggestions(players, suggestions)
+    return _apply_import_ai_suggestions(players, suggestions, mixed_categories)
 
 
 def _parse_import_player_line(
@@ -464,6 +485,7 @@ def _parse_import_player_line(
     line_number: int,
     default_category: str = '',
     default_gender: str = '',
+    mixed_categories: list[str] | None = None,
 ) -> Dict[str, Any] | None:
     text = _clean_import_line_text(line)
     if not text:
@@ -532,10 +554,11 @@ def _parse_import_player_line(
         country=country,
         name=name,
         extra_warnings=warnings,
+        mixed_categories=mixed_categories,
     )
 
 
-def _parse_import_players_text(text: str) -> list[Dict[str, Any]]:
+def _parse_import_players_text(text: str, mixed_categories: list[str] | None = None) -> list[Dict[str, Any]]:
     parsed: list[Dict[str, Any]] = []
     current_category = ''
     current_gender = ''
@@ -544,13 +567,19 @@ def _parse_import_players_text(text: str) -> list[Dict[str, Any]]:
         if _should_skip_import_line(cleaned):
             continue
 
-        header = _parse_import_section_header(cleaned)
+        header = _parse_import_section_header(cleaned, mixed_categories)
         if header:
             current_category = header['category']
             current_gender = header['gender']
             continue
 
-        entry = _parse_import_player_line(raw_line, line_number, current_category, current_gender)
+        entry = _parse_import_player_line(
+            raw_line,
+            line_number,
+            current_category,
+            current_gender,
+            mixed_categories,
+        )
         if entry:
             if not current_category and not current_gender and not entry.get('category') and not entry.get('gender'):
                 continue
@@ -1135,6 +1164,7 @@ def get_tournament(tournament_id: int):
     tournament = fetch_tournament(tournament_id)
     if not tournament:
         return jsonify({"error": "Tournament not found"}), 404
+    tournament['mixed_categories'] = get_mixed_categories(tournament_id)
     return jsonify(tournament)
 
 
@@ -1657,7 +1687,8 @@ def import_players(tournament_id: int):
     if not text:
         return jsonify({"error": "No text provided"}), 400
     
-    players_data = _parse_import_players_text(text)
+    mixed_categories = get_mixed_categories(tournament_id)
+    players_data = _parse_import_players_text(text, mixed_categories)
     
     if not players_data:
         return jsonify({"error": "No valid players found"}), 400
@@ -1682,12 +1713,14 @@ def parse_import_players(tournament_id: int):
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    players_data = _parse_import_players_with_ai(text)
+    mixed_categories = get_mixed_categories(tournament_id)
+    players_data = _parse_import_players_with_ai(text, mixed_categories)
     if not players_data:
         return jsonify({"error": "No valid players found"}), 400
 
     return _json_no_cache({
         'players': players_data,
+        'mixed_categories': mixed_categories,
         'summary': _summarize_import_players(players_data),
         'needs_attention_count': sum(1 for player in players_data if player.get('warnings')),
         'count': len(players_data),

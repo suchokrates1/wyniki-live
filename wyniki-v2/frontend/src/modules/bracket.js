@@ -53,17 +53,25 @@ export function getKnockoutPodiumEntries(knockout = []) {
   return entries;
 }
 
+import {
+  extractCategoryCodeFromLabel,
+  formatCategoryDisplay,
+  isMixedSectionLabel,
+} from '../shared/categories.js';
+
 export function parseBracketCategory(name) {
   const rawName = String(name || '').trim();
   const baseName = rawName.split(' — ')[0].trim();
-  const divisionMatch = baseName.match(/^B\d+\+?/i);
-  const division = divisionMatch ? divisionMatch[0].toUpperCase() : '';
+  const division = extractCategoryCodeFromLabel(baseName);
   const normalized = baseName
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+  const sectionLabel = baseName.replace(/^B(?:\d(?:\/\d)?|\d{2})\s*/i, '').trim();
   let gender = '';
-  if (normalized.includes('kobiet')) gender = 'women';
+  if (isMixedSectionLabel(sectionLabel) || normalized.includes('mixed') || normalized.includes(' mix')) {
+    gender = 'mixed';
+  } else if (normalized.includes('kobiet')) gender = 'women';
   else if (normalized.includes('mezczyzn')) gender = 'men';
   return { rawName, baseName, division, gender };
 }
@@ -72,11 +80,15 @@ export function getBracketCategoryLabel(name, {
   translateCategory = (value) => value,
   womenLabel = 'Women',
   menLabel = 'Men',
+  mixedLabel = 'B3/4 Mixed',
 } = {}) {
   const parsed = parseBracketCategory(name);
+  if (parsed.gender === 'mixed' && parsed.division) {
+    return mixedLabel;
+  }
   if (!parsed.division || !parsed.gender) return translateCategory(name);
   const genderLabel = parsed.gender === 'women' ? womenLabel : menLabel;
-  return `${genderLabel} ${parsed.division}`;
+  return `${genderLabel} ${formatCategoryDisplay(parsed.division)}`;
 }
 
 export function compareBracketCategoryNames(leftName, rightName, { getCategoryLabel = (name) => String(name || ''), lang = 'pl' } = {}) {
@@ -88,7 +100,7 @@ export function compareBracketCategoryNames(leftName, rightName, { getCategoryLa
   const safeRightNum = Number.isFinite(rightNum) ? rightNum : Number.MAX_SAFE_INTEGER;
   if (safeLeftNum !== safeRightNum) return safeLeftNum - safeRightNum;
 
-  const genderOrder = { women: 0, men: 1, '': 2 };
+  const genderOrder = { women: 0, men: 1, mixed: 2, '': 3 };
   const leftGender = genderOrder[left.gender] ?? 3;
   const rightGender = genderOrder[right.gender] ?? 3;
   if (leftGender !== rightGender) return leftGender - rightGender;
