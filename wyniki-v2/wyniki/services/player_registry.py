@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from ..db_models import GlobalPlayer, Player
+from ..db_models import GlobalPlayer, Player, Tournament
 
 
 def split_player_name(name: str = "", first_name: str = "", last_name: str = "") -> tuple[str, str, str]:
@@ -91,6 +91,13 @@ def find_or_create_global_player(
     return global_player
 
 
+def tournament_links_global_players(session: Session, tournament_id: int) -> bool:
+    tournament = session.get(Tournament, tournament_id)
+    if not tournament:
+        return True
+    return not bool(int(tournament.is_simulation or 0))
+
+
 def create_tournament_player(
     session: Session,
     tournament_id: int,
@@ -102,9 +109,9 @@ def create_tournament_player(
     gender: str = "",
     global_player: GlobalPlayer | None = None,
 ) -> Player:
-    """Create a tournament entry and link it to the shared global player table."""
+    """Create a tournament entry and optionally link it to the shared global player table."""
     name, first_name, last_name = split_player_name(name, first_name, last_name)
-    if global_player is None:
+    if global_player is None and tournament_links_global_players(session, tournament_id):
         global_player = find_or_create_global_player(
             session,
             first_name=first_name,

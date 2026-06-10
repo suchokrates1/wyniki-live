@@ -42,7 +42,7 @@ services:
     
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wyniki.rule=Host(`${PUBLIC_HOST}`)"
+      - "traefik.http.routers.wyniki.rule=Host(`${PUBLIC_HOST}`) || Host(`${PUBLIC_HOST_ALT}`)"
       - "traefik.http.routers.wyniki.entrypoints=https"
       - "traefik.http.routers.wyniki.tls=true"
       - "traefik.http.services.wyniki.loadbalancer.server.port=8080"

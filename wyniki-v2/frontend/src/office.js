@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import { createOfficeI18n } from './i18n/officeI18n.js';
 import './main.css';
 
 window.Alpine = Alpine;
@@ -40,6 +41,7 @@ function defaultOfficeScheduleForm() {
 }
 
 Alpine.data('officeApp', () => ({
+  ...createOfficeI18n(),
   slot: 1,
   token: '',
   authPassword: '',
@@ -124,6 +126,7 @@ Alpine.data('officeApp', () => ({
   },
 
   init() {
+    this.initOfficeLang();
     this.slot = this.resolveSlot();
     this.token = window.sessionStorage.getItem(this.officeTokenKey()) || '';
     this.hydrateNotificationPreferences();
@@ -197,10 +200,10 @@ Alpine.data('officeApp', () => ({
     this.setNotificationsEnabled(nextValue);
     if (nextValue) {
       await this.ensureNotificationPermission(false);
-      this.showToast('Powiadomienia o nowych meczach włączone', 'success');
+      this.showToast(this.ot('toast.notificationsOn'), 'success');
       return;
     }
-    this.showToast('Powiadomienia o nowych meczach wyłączone', 'info');
+    this.showToast(this.ot('toast.notificationsOff'), 'info');
   },
 
   matchKey(match) {
@@ -231,7 +234,7 @@ Alpine.data('officeApp', () => ({
     if (typeof Notification === 'undefined') {
       this.notificationPermission = 'unsupported';
       if (showWarning) {
-        this.showToast('Ta przeglądarka nie obsługuje powiadomień systemowych.', 'warning');
+        this.showToast(this.ot('toast.notificationsUnsupported'), 'warning');
       }
       return false;
     }
@@ -240,7 +243,7 @@ Alpine.data('officeApp', () => ({
     if (Notification.permission === 'granted') return true;
     if (Notification.permission === 'denied') {
       if (showWarning) {
-        this.showToast('Powiadomienia systemowe są zablokowane w przeglądarce.', 'warning');
+        this.showToast(this.ot('toast.notificationsBlocked'), 'warning');
       }
       return false;
     }
@@ -249,13 +252,13 @@ Alpine.data('officeApp', () => ({
       const permission = await Notification.requestPermission();
       this.notificationPermission = permission;
       if (permission !== 'granted' && showWarning) {
-        this.showToast('Nie przyznano zgody na powiadomienia systemowe.', 'warning');
+        this.showToast(this.ot('toast.notificationsDenied'), 'warning');
       }
       return permission === 'granted';
     } catch (error) {
       console.error('Failed to request notification permission:', error);
       if (showWarning) {
-        this.showToast('Nie udało się uzyskać zgody na powiadomienia.', 'warning');
+        this.showToast(this.ot('toast.notificationsFailed'), 'warning');
       }
       return false;
     }
@@ -335,18 +338,18 @@ Alpine.data('officeApp', () => ({
   },
 
   buildNewMatchNotification(newMatches) {
-    const tournamentName = this.tournamentMeta?.name || this.dashboard?.tournament?.name || 'Biuro turnieju';
+    const tournamentName = this.tournamentMeta?.name || this.dashboard?.tournament?.name || this.ot('notifications.defaultTitle');
     if (newMatches.length === 1) {
       const match = newMatches[0];
       return {
-        title: `${tournamentName}: nowy wynik`,
-        body: `${match.player1_name || 'Zawodnik A'} vs ${match.player2_name || 'Zawodnik B'}${match.score_text ? `, ${match.score_text}` : ''}`,
+        title: this.ot('notifications.newResult', { tournament: tournamentName }),
+        body: `${match.player1_name || this.ot('notifications.playerA')} ${this.ot('versus')} ${match.player2_name || this.ot('notifications.playerB')}${match.score_text ? `, ${match.score_text}` : ''}`,
       };
     }
 
     return {
-      title: `${tournamentName}: ${newMatches.length} nowych wyników`,
-      body: newMatches.slice(0, 2).map(match => `${match.player1_name || 'A'} vs ${match.player2_name || 'B'}`).join(' • '),
+      title: this.ot('notifications.newResults', { tournament: tournamentName, count: newMatches.length }),
+      body: newMatches.slice(0, 2).map(match => `${match.player1_name || 'A'} ${this.ot('versus')} ${match.player2_name || 'B'}`).join(' • '),
     };
   },
 
@@ -355,16 +358,20 @@ Alpine.data('officeApp', () => ({
     const notification = this.buildNewMatchNotification(newMatches);
     await this.triggerOfficeNotification({
       ...notification,
-      toastMessage: newMatches.length === 1 ? 'Wpadł nowy zakończony mecz.' : `Wpadły ${newMatches.length} nowe zakończone mecze.`,
+      toastMessage: newMatches.length === 1
+        ? this.ot('toast.newMatchOne')
+        : this.ot('toast.newMatchMany', { count: newMatches.length }),
     });
   },
 
   async testNotifications() {
     await this.ensureNotificationPermission(false);
     await this.triggerOfficeNotification({
-      title: `${this.tournamentMeta?.name || 'Biuro turnieju'}: test powiadomienia`,
-      body: 'To jest test dźwięku i powiadomienia o nowym zakończonym meczu.',
-      toastMessage: 'Test powiadomienia został uruchomiony.',
+      title: this.ot('notifications.testTitle', {
+        tournament: this.tournamentMeta?.name || this.ot('notifications.defaultTitle'),
+      }),
+      body: this.ot('toast.testBody'),
+      toastMessage: this.ot('toast.testStarted'),
     });
   },
 
@@ -374,12 +381,12 @@ Alpine.data('officeApp', () => ({
       const response = await fetch(`/api/office/${this.slot}/meta`);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się odczytać informacji o slocie biura.');
+        throw new Error(payload.error || this.ot('errors.slotMeta'));
       }
       this.tournamentMeta = payload.tournament || null;
     } catch (error) {
       console.error('Failed to load office slot metadata:', error);
-      this.authError = error.message || 'Slot biura nie jest dostępny.';
+      this.authError = error.message || this.ot('errors.slotUnavailable');
     } finally {
       this.metaLoading = false;
     }
@@ -387,7 +394,7 @@ Alpine.data('officeApp', () => ({
 
   async authenticate() {
     if (!this.authPassword.trim()) {
-      this.authError = 'Podaj hasło biura.';
+      this.authError = this.ot('errors.passwordRequired');
       return;
     }
 
@@ -401,17 +408,17 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się zalogować do biura.');
+        throw new Error(payload.error || this.ot('errors.authFailed'));
       }
       this.setToken(payload.token || '');
       this.tournamentMeta = payload.tournament || null;
       this.applyDashboard(payload.dashboard || null, { notify: false });
       this.authPassword = '';
       this.authError = '';
-      this.showToast('Biuro turnieju odblokowane', 'success');
+      this.showToast(this.ot('toast.unlocked'), 'success');
     } catch (error) {
       console.error('Office auth failed:', error);
-      this.authError = error.message || 'Błędne hasło biura.';
+      this.authError = error.message || this.ot('errors.wrongPassword');
     } finally {
       this.authLoading = false;
     }
@@ -428,16 +435,16 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się odświeżyć biura.');
+        throw new Error(payload.error || this.ot('errors.refreshFailed'));
       }
       this.applyDashboard(payload, { notify: !showLoading });
     } catch (error) {
       console.error('Failed to load office dashboard:', error);
-      this.showToast(error.message || 'Błąd odświeżania biura', 'error');
+      this.showToast(error.message || this.ot('toast.refreshError'), 'error');
     } finally {
       if (showLoading) this.loading = false;
     }
@@ -494,7 +501,7 @@ Alpine.data('officeApp', () => ({
     this.officeNewMatch.knockout_slot_id = slot.slot_id || slot.id || null;
     this.officeNewMatch.schedule_id = slot.schedule_id || null;
     this.officeNewMatch.court_id = slot.court_id || '';
-    this.officeNewMatch.phase = slot.phase || 'Pucharowa';
+    this.officeNewMatch.phase = slot.phase || this.ot('phases.knockout');
     this.officeNewMatch.player1_name = slot.player1_name || '';
     this.officeNewMatch.player2_name = slot.player2_name || '';
     this.officeNewMatch.winner_name = '';
@@ -547,11 +554,11 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się załadować planu turnieju.');
+        throw new Error(payload.error || this.ot('errors.planningFailed'));
       }
       this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
       this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
@@ -562,7 +569,7 @@ Alpine.data('officeApp', () => ({
       this.ensurePlanningDefaults();
     } catch (error) {
       console.error('Failed to load office planning data:', error);
-      this.showToast(error.message || 'Błąd ładowania planu turnieju', 'error');
+      this.showToast(error.message || this.ot('toast.planningError'), 'error');
     } finally {
       this.planningLoading = false;
     }
@@ -577,10 +584,10 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się załadować konfiguracji.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
       this.autoConfig = payload.config || null;
       this.autoCourts = Array.isArray(payload.courts) ? payload.courts : [];
       this.autoBands = Array.isArray(payload.bands) ? payload.bands : [];
@@ -589,7 +596,7 @@ Alpine.data('officeApp', () => ({
       this.autoDayDate = this.autoDayDate || this.autoTournamentDates().start || this.autoAvailableDays()[0] || '';
     } catch (error) {
       console.error('Failed to load auto-scheduler config:', error);
-      this.showToast(error.message || 'Błąd ładowania konfiguracji', 'error');
+      this.showToast(error.message || this.ot('toast.configError'), 'error');
     } finally {
       this.autoLoading = false;
     }
@@ -612,9 +619,9 @@ Alpine.data('officeApp', () => ({
   },
 
   autoScopeLabel() {
-    if (this.autoPhaseScope === 'knockout') return 'fazy pucharowej';
-    if (this.autoPhaseScope === 'all') return 'wszystkich faz';
-    return 'fazy grupowej';
+    if (this.autoPhaseScope === 'knockout') return this.ot('scope.knockout');
+    if (this.autoPhaseScope === 'all') return this.ot('scope.all');
+    return this.ot('scope.group');
   },
 
   async autoGenerate() {
@@ -635,24 +642,30 @@ Alpine.data('officeApp', () => ({
         body: JSON.stringify(body),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się wygenerować propozycji.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.proposalFailed'));
       this.autoConfig = payload.config || this.autoConfig;
       this.autoCourts = Array.isArray(payload.courts) ? payload.courts : this.autoCourts;
       this.autoProposal = Array.isArray(payload.placements) ? payload.placements : [];
       const placed = this.autoProposal.filter(p => p.court_id && p.scheduled_time).length;
       if (!placed) {
         const hint = this.autoPhaseScope === 'knockout'
-          ? 'Czy drabinka jest już gotowa? Generuje się po zakończeniu faz grupowych.'
-          : 'Najpierw utwórz grupy w zakładce „Plan turnieju" (losowanie), a potem wróć tutaj.';
-        this.showToast(`Brak meczów ${this.autoScopeLabel()} do rozmieszczenia. ${hint}`, 'warning');
+          ? this.ot('toast.hintKnockout')
+          : this.ot('toast.hintGroups');
+        this.showToast(this.ot('toast.noMatchesScope', { scope: this.autoScopeLabel(), hint }), 'warning');
       } else {
         const placeholders = this.autoProposal.filter(p => p.scheduled_time && this.autoIsPlaceholder(p)).length;
-        const extra = placeholders ? ` (w tym ${placeholders} z placeholderem)` : '';
-        this.showToast(`Propozycja ${this.autoScopeLabel()}: ${placed} meczów${extra}. Sprawdź i zatwierdź.`, 'success');
+        const extra = placeholders
+          ? this.ot('toast.withPlaceholders', { count: placeholders })
+          : '';
+        this.showToast(this.ot('toast.proposalReady', {
+          scope: this.autoScopeLabel(),
+          placed,
+          extra,
+        }), 'success');
       }
     } catch (error) {
       console.error('Auto-generate failed:', error);
-      this.showToast(error.message || 'Błąd generowania', 'error');
+      this.showToast(error.message || this.ot('toast.generateError'), 'error');
     } finally {
       this.autoLoading = false;
     }
@@ -679,7 +692,7 @@ Alpine.data('officeApp', () => ({
         scheduled_time: p.scheduled_time,
       }));
     if (!placements.length) {
-      this.showToast('Brak placementów do zatwierdzenia.', 'warning');
+      this.showToast(this.ot('toast.noPlacements'), 'warning');
       return;
     }
     this.autoLoading = true;
@@ -690,14 +703,14 @@ Alpine.data('officeApp', () => ({
         body: JSON.stringify({ placements }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się zatwierdzić.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.approveFailed'));
       if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
       this.autoProposal = null;
-      this.showToast('Terminarz zatwierdzony.', 'success');
+      this.showToast(this.ot('toast.scheduleApproved'), 'success');
     } catch (error) {
       console.error('Auto-apply failed:', error);
-      this.showToast(error.message || 'Błąd zatwierdzania', 'error');
+      this.showToast(error.message || this.ot('toast.approveError'), 'error');
     } finally {
       this.autoLoading = false;
     }
@@ -719,8 +732,10 @@ Alpine.data('officeApp', () => ({
   autoCourtLabel(courtId) {
     const court = (this.autoCourts || []).find(c => String(c.kort_id) === String(courtId));
     const band = this.autoBandForCourt(courtId);
-    const name = court ? `Kort ${court.name}` : `Kort ${courtId}`;
-    return band ? `${name} · ${band}${band === 'B1' ? ' (specjalny)' : ''}` : name;
+    const name = court
+      ? this.ot('planning.courtPrefix', { name: court.name })
+      : this.ot('planning.courtPrefix', { name: courtId });
+    return band ? `${name} · ${band}${band === 'B1' ? this.ot('planning.specialCourt') : ''}` : name;
   },
 
   autoSlotMinutes(band) {
@@ -787,7 +802,7 @@ Alpine.data('officeApp', () => ({
       ? targetEntry.scheduled_time
       : this.autoNextTimeForCourt(courtId);
     if (this.autoIsPreview()) {
-      this.showToast('Zatwierdź propozycję, aby przesuwać mecze.', 'warning');
+      this.showToast(this.ot('toast.approveToMove'), 'warning');
       return;
     }
     this.autoLoading = true;
@@ -803,12 +818,12 @@ Alpine.data('officeApp', () => ({
         }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się przesunąć meczu.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.moveFailed'));
       if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
     } catch (error) {
       console.error('Auto-move failed:', error);
-      this.showToast(error.message || 'Błąd przesuwania meczu', 'error');
+      this.showToast(error.message || this.ot('toast.moveError'), 'error');
     } finally {
       this.autoLoading = false;
     }
@@ -860,11 +875,27 @@ Alpine.data('officeApp', () => ({
     return available.length ? available : [];
   },
 
+  planningDivisionCountLine(division) {
+    return `${this.ot('planning.playersCount', { count: division.count })} · ${this.ot('planning.inGroups', { count: this.planningDivisionAssignedCount(division.key) })}`;
+  },
+
+  planningStep1CompleteLine() {
+    return this.ot('planning.step1Complete', { count: this.planningGroups.length });
+  },
+
+  autoSlotMinutesLabel(courtId) {
+    return this.ot('planning.slotMinutes', { minutes: this.autoSlotMinutes(this.autoBandForCourt(courtId)) });
+  },
+
+  planningUnassignedTitle() {
+    return this.ot('planning.unassignedTitle', { count: this.autoUnplaced().length });
+  },
+
   planningDayLabel(day, index) {
     const value = String(day || '');
     const parts = value.split('-');
     const short = parts.length === 3 ? `${parts[2]}.${parts[1]}` : value;
-    return `Dzień ${index + 1} · ${short}`;
+    return this.ot('planning.dayLabel', { number: index + 1, date: short });
   },
 
   selectPlanningDay(day) {
@@ -880,7 +911,7 @@ Alpine.data('officeApp', () => ({
 
   async publishAllSchedule() {
     if (!this.token) return;
-    if (!confirm('Opublikować wszystkie robocze wpisy terminarza? Staną się widoczne publicznie.')) return;
+    if (!confirm(this.ot('confirm.publishAll'))) return;
     this.planningPublishing = true;
     try {
       const response = await fetch(`/api/office/${this.slot}/schedule/publish`, {
@@ -890,17 +921,20 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się opublikować terminarza.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.publishFailed'));
       if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
       const count = Number(payload.published || 0);
-      this.showToast(count ? `Opublikowano ${count} wpisów.` : 'Brak roboczych wpisów do opublikowania.', count ? 'success' : 'info');
+      this.showToast(
+        count ? this.ot('toast.publishedCount', { count }) : this.ot('toast.noDraftEntries'),
+        count ? 'success' : 'info',
+      );
     } catch (error) {
       console.error('Failed to publish schedule:', error);
-      this.showToast(error.message || 'Błąd publikacji terminarza', 'error');
+      this.showToast(error.message || this.ot('toast.publishError'), 'error');
     } finally {
       this.planningPublishing = false;
     }
@@ -936,9 +970,13 @@ Alpine.data('officeApp', () => ({
   planningDivisionLabel(key = this.planningSelectedDivision) {
     const value = String(key || '').toUpperCase();
     const category = (value.match(/^B\d{1,2}/) || [''])[0];
-    const gender = value.endsWith('K') ? 'Kobiety' : value.endsWith('M') ? 'Mężczyźni' : '';
+    const gender = value.endsWith('K')
+      ? this.ot('gender.women')
+      : value.endsWith('M')
+        ? this.ot('gender.men')
+        : '';
     if (category && gender) return `${category} ${gender}`;
-    return category || gender || 'Nieprzypisani';
+    return category || gender || this.ot('gender.unassigned');
   },
 
   planningDivisionFromGroupName(groupName) {
@@ -978,7 +1016,7 @@ Alpine.data('officeApp', () => ({
     const label = this.planningDivisionLabel();
     if (!this.planningSelectedDivision) return [];
     if (count === 1) return [label];
-    return Array.from({ length: count }, (_, index) => `${label} — Grupa ${String.fromCharCode(65 + index)}`);
+    return Array.from({ length: count }, (_, index) => `${label} — ${this.ot('planning.groupSuffix', { letter: String.fromCharCode(65 + index) })}`);
   },
 
   planningDivisionGroupNames() {
@@ -1106,16 +1144,16 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się zapisać grup.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.groupsFailed'));
       this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
       this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
     } catch (error) {
       console.error('Failed to auto-save office planning groups:', error);
-      this.showToast(error.message || 'Błąd zapisu grup', 'error');
+      this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
     } finally {
       this.planningSaving = false;
     }
@@ -1130,7 +1168,7 @@ Alpine.data('officeApp', () => ({
       .map(groupName => ({ name: groupName, players: this.planningAssignedPlayers(groupName).map(player => player.id) }))
       .filter(group => group.players.length > 0);
     if (!divisionGroups.length) {
-      this.showToast('Przypisz przynajmniej jednego zawodnika do grupy', 'warning');
+      this.showToast(this.ot('toast.assignPlayerWarning'), 'warning');
       return;
     }
     try {
@@ -1141,18 +1179,18 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się zapisać grup.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.groupsFailed'));
       this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
       this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
       this.syncPlanningGroupAssignments();
-      this.showToast('Grupy zapisane', 'success');
+      this.showToast(this.ot('toast.groupsSaved'), 'success');
     } catch (error) {
       console.error('Failed to save office planning groups:', error);
-      this.showToast(error.message || 'Błąd zapisu grup', 'error');
+      this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
     }
   },
 
@@ -1170,7 +1208,7 @@ Alpine.data('officeApp', () => ({
 
   async addPlanningScheduleEntry() {
     if (!this.planningNewSchedule.player1_name || !this.planningNewSchedule.player2_name || this.planningNewSchedule.player1_name === this.planningNewSchedule.player2_name) {
-      this.showToast('Wybierz dwóch różnych zawodników', 'warning');
+      this.showToast(this.ot('toast.pickTwoPlayers'), 'warning');
       return;
     }
     const selectedCourt = this.planningCourts.find(court => String(court.kort_id || '') === String(this.planningNewSchedule.court_id || ''));
@@ -1185,10 +1223,10 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się dodać wpisu terminarza.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.scheduleAddFailed'));
       this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
       const dayDate = this.planningNewSchedule.day_date;
@@ -1198,15 +1236,15 @@ Alpine.data('officeApp', () => ({
       this.planningNewSchedule.day_date = dayDate;
       this.planningNewSchedule.court_id = courtId;
       this.planningNewSchedule.category_name = categoryName;
-      this.showToast('Dodano wpis terminarza', 'success');
+      this.showToast(this.ot('toast.scheduleAdded'), 'success');
     } catch (error) {
       console.error('Failed to add office schedule entry:', error);
-      this.showToast(error.message || 'Błąd dodawania wpisu', 'error');
+      this.showToast(error.message || this.ot('toast.scheduleAddError'), 'error');
     }
   },
 
   async deletePlanningScheduleEntry(entry) {
-    if (!entry?.id || !confirm('Usunąć ten wpis terminarza?')) return;
+    if (!entry?.id || !confirm(this.ot('confirm.deleteEntry'))) return;
     try {
       const response = await fetch(`/api/office/${this.slot}/schedule/${entry.id}`, {
         method: 'DELETE',
@@ -1214,35 +1252,35 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
-      if (!response.ok) throw new Error(payload.error || 'Nie udało się usunąć wpisu terminarza.');
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.scheduleDeleteFailed'));
       this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
-      this.showToast('Wpis usunięty', 'success');
+      this.showToast(this.ot('toast.scheduleDeleted'), 'success');
     } catch (error) {
       console.error('Failed to delete office schedule entry:', error);
-      this.showToast(error.message || 'Błąd usuwania wpisu', 'error');
+      this.showToast(error.message || this.ot('toast.scheduleDeleteError'), 'error');
     }
   },
 
   scheduleStatusOptions() {
     return [
-      { value: 'draft', label: 'Roboczy' },
-      { value: 'planned', label: 'Opublikowany' },
-      { value: 'in_progress', label: 'W trakcie' },
-      { value: 'completed', label: 'Zakończony' },
+      { value: 'draft', label: this.ot('status.draft') },
+      { value: 'planned', label: this.ot('status.planned') },
+      { value: 'in_progress', label: this.ot('status.inProgress') },
+      { value: 'completed', label: this.ot('status.completed') },
     ];
   },
 
   officeScheduleStatusLabel(status) {
     const found = this.scheduleStatusOptions().find(option => option.value === status);
-    return found?.label || status || 'Roboczy';
+    return found?.label || status || this.ot('status.draft');
   },
 
   officeScheduleCourtLabel(entry) {
-    return entry?.court_label || entry?.court_id || 'Kort do ustalenia';
+    return entry?.court_label || entry?.court_id || this.ot('dates.courtTbd');
   },
 
   officeScheduleHasResult(entry) {
@@ -1253,16 +1291,16 @@ Alpine.data('officeApp', () => ({
     if (!entry) return '';
     if (entry.result_note) return entry.result_note;
     if (entry.score_text) return entry.score_text;
-    if (entry.winner_name) return 'Zakończony';
+    if (entry.winner_name) return this.ot('status.completed');
     return '';
   },
 
   formatOfficeScheduleDay(entry) {
     const rawValue = entry?.day_date || '';
-    if (!rawValue) return 'Bez daty';
+    if (!rawValue) return this.ot('dates.noDate');
     const parsedDate = new Date(`${rawValue}T12:00:00`);
     if (Number.isNaN(parsedDate.getTime())) return rawValue;
-    return new Intl.DateTimeFormat('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(parsedDate);
+    return new Intl.DateTimeFormat(this.officeLocale(), { weekday: 'short', day: '2-digit', month: '2-digit' }).format(parsedDate);
   },
 
   async generateOfficeSchedule() {
@@ -1273,17 +1311,17 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się utworzyć terminarza.');
+        throw new Error(payload.error || this.ot('errors.scheduleGenerateFailed'));
       }
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
-      this.showToast('Terminarz odświeżony', 'success');
+      this.showToast(this.ot('toast.scheduleRefreshed'), 'success');
     } catch (error) {
       console.error('Failed to generate schedule:', error);
-      this.showToast(error.message || 'Błąd terminarza', 'error');
+      this.showToast(error.message || this.ot('toast.scheduleError'), 'error');
     }
   },
 
@@ -1306,32 +1344,32 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się zapisać wpisu terminarza.');
+        throw new Error(payload.error || this.ot('errors.scheduleEntryFailed'));
       }
       if (payload.schedule) this.planningSchedule = payload.schedule;
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
-      this.showToast('Wpis terminarza zapisany', 'success');
+      this.showToast(this.ot('toast.scheduleSaved'), 'success');
     } catch (error) {
       console.error('Failed to save schedule entry:', error);
-      this.showToast(error.message || 'Błąd zapisu terminarza', 'error');
+      this.showToast(error.message || this.ot('toast.scheduleSaveError'), 'error');
     }
   },
 
   async addOfficeGroupMatch() {
     if (!this.officeNewMatch.group_id || !this.officeNewMatch.player1_name || !this.officeNewMatch.player2_name) {
-      this.showToast('Wybierz grupę i zawodników', 'warning');
+      this.showToast(this.ot('toast.pickGroupPlayers'), 'warning');
       return;
     }
     if (this.officeNewMatch.player1_name === this.officeNewMatch.player2_name) {
-      this.showToast('Wybierz dwóch różnych zawodników', 'warning');
+      this.showToast(this.ot('toast.pickTwoPlayers'), 'warning');
       return;
     }
     if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {
-      this.showToast('Przy walkowerze wskaż zwycięzcę', 'warning');
+      this.showToast(this.ot('toast.walkoverWinnerRequired'), 'warning');
       return;
     }
 
@@ -1350,33 +1388,33 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się dodać wyniku.');
+        throw new Error(payload.error || this.ot('errors.resultFailed'));
       }
       this.applyDashboard(payload.dashboard, { notify: false });
       this.closeAddMatchModal();
-      const generated = payload.knockout_generation?.status === 'ok' ? ' Drabinka została wygenerowana.' : '';
-      this.showToast(`Wynik zapisany.${generated}`, 'success');
+      const generated = payload.knockout_generation?.status === 'ok' ? this.ot('toast.knockoutGenerated') : '';
+      this.showToast(`${this.ot('toast.resultSaved')}${generated}`, 'success');
     } catch (error) {
       console.error('Failed to add office result:', error);
-      this.showToast(error.message || 'Błąd dodawania wyniku', 'error');
+      this.showToast(error.message || this.ot('toast.addResultError'), 'error');
     }
   },
 
   async addOfficeKnockoutMatch() {
     if (!this.officeNewMatch.schedule_id && !this.officeNewMatch.knockout_slot_id) {
-      this.showToast('Wybierz mecz pucharowy z drabinki', 'warning');
+      this.showToast(this.ot('toast.pickKnockoutMatch'), 'warning');
       return;
     }
     if (!this.officeNewMatch.player1_name || !this.officeNewMatch.player2_name) {
-      this.showToast('Slot pucharowy nie ma jeszcze dwóch zawodników', 'warning');
+      this.showToast(this.ot('toast.knockoutSlotIncomplete'), 'warning');
       return;
     }
     if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {
-      this.showToast('Przy walkowerze wskaż zwycięzcę', 'warning');
+      this.showToast(this.ot('toast.walkoverWinnerRequired'), 'warning');
       return;
     }
 
@@ -1397,18 +1435,18 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się dodać wyniku pucharowego.');
+        throw new Error(payload.error || this.ot('errors.knockoutFailed'));
       }
       this.applyDashboard(payload.dashboard, { notify: false });
       this.closeAddMatchModal();
-      this.showToast('Wynik pucharowy zapisany', 'success');
+      this.showToast(this.ot('toast.knockoutResultSaved'), 'success');
     } catch (error) {
       console.error('Failed to add office knockout result:', error);
-      this.showToast(error.message || 'Błąd dodawania wyniku pucharowego', 'error');
+      this.showToast(error.message || this.ot('toast.knockoutResultError'), 'error');
     }
   },
 
@@ -1421,11 +1459,11 @@ Alpine.data('officeApp', () => ({
   },
 
   officeKnockoutStatusLabel(slot) {
-    if (slot?.winner_name) return 'Zakończony';
-    if (slot?.status === 'in_progress') return 'W trakcie';
-    if (slot?.status === 'planned') return 'Zaplanowany';
-    if (slot?.ready) return 'Gotowy do rozegrania';
-    return 'Czeka na zawodników';
+    if (slot?.winner_name) return this.ot('status.knockoutFinished');
+    if (slot?.status === 'in_progress') return this.ot('status.inProgress');
+    if (slot?.status === 'planned') return this.ot('status.knockoutPlanned');
+    if (slot?.ready) return this.ot('status.knockoutReady');
+    return this.ot('status.knockoutWaiting');
   },
 
   officeKnockoutCanAddResult(slot) {
@@ -1441,7 +1479,7 @@ Alpine.data('officeApp', () => ({
   startOfficeEditFromKnockout(slot) {
     const match = this.officeMatchById(slot?.match_id);
     if (!match) {
-      this.showToast('Ten wynik nie ma jeszcze wpisu w historii', 'warning');
+      this.showToast(this.ot('toast.noHistoryEntry'), 'warning');
       return;
     }
     this.startOfficeEdit(match);
@@ -1474,7 +1512,7 @@ Alpine.data('officeApp', () => ({
   async saveOfficeMatchEdit() {
     if (!this.officeEditingMatch?.id) return;
     if (this.officeEditingMatch.walkover && !this.officeEditingMatch.winner_name) {
-      this.showToast('Przy walkowerze wskaż zwycięzcę', 'warning');
+      this.showToast(this.ot('toast.walkoverWinnerRequired'), 'warning');
       return;
     }
 
@@ -1491,24 +1529,24 @@ Alpine.data('officeApp', () => ({
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        this.logout('Sesja biura wygasła. Zaloguj się ponownie.');
+        this.logout(this.ot('errors.sessionExpired'));
         return;
       }
       if (!response.ok) {
-        throw new Error(payload.error || 'Nie udało się poprawić wyniku.');
+        throw new Error(payload.error || this.ot('errors.correctionFailed'));
       }
       this.applyDashboard(payload.dashboard, { notify: false });
       this.closeEditModal();
-      this.showToast('Wynik poprawiony', 'success');
+      this.showToast(this.ot('toast.resultCorrected'), 'success');
     } catch (error) {
       console.error('Failed to update office result:', error);
-      this.showToast(error.message || 'Błąd korekty wyniku', 'error');
+      this.showToast(error.message || this.ot('toast.correctionError'), 'error');
     }
   },
 
   officeMatchPhase(match) {
     if (match.group_name) return match.group_name;
-    return match.phase || 'Mecz';
+    return match.phase || this.ot('phases.match');
   },
 
   officePhaseTone(match) {
@@ -1518,8 +1556,8 @@ Alpine.data('officeApp', () => ({
   },
 
   groupCompletionLabel(group) {
-    if (!group) return 'Brak danych';
-    if (group.complete) return 'Komplet';
+    if (!group) return this.ot('status.noData');
+    if (group.complete) return this.ot('status.complete');
     return `${group.finished_matches}/${group.expected_matches}`;
   },
 
@@ -1528,7 +1566,7 @@ Alpine.data('officeApp', () => ({
     if (!rawValue) return '—';
     const parsedDate = new Date(rawValue);
     if (Number.isNaN(parsedDate.getTime())) return rawValue;
-    return new Intl.DateTimeFormat('pl-PL', {
+    return new Intl.DateTimeFormat(this.officeLocale(), {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
