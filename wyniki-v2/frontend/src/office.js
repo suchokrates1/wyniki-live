@@ -772,11 +772,19 @@ Alpine.data('officeApp', () => ({
 
   autoCourtLabel(courtId) {
     const court = (this.autoCourts || []).find(c => String(c.kort_id) === String(courtId));
-    const band = this.autoBandForCourt(courtId);
     const name = court
       ? this.ot('planning.courtPrefix', { name: court.name })
       : this.ot('planning.courtPrefix', { name: courtId });
-    return band ? `${name} · ${band}${band === 'B1' ? this.ot('planning.specialCourt') : ''}` : name;
+    if (this.autoIsB1Court(courtId)) {
+      return `${name} · B1${this.ot('planning.specialCourt')}`;
+    }
+    return name;
+  },
+
+  autoMatchBand(entry) {
+    const label = String(entry?.category_name || entry?.group_name || '');
+    const match = label.match(/B\s*([1-4])/i);
+    return match ? `B${match[1]}` : '';
   },
 
   autoSlotMinutes(band, courtId = '') {
@@ -836,6 +844,68 @@ Alpine.data('officeApp', () => ({
     }
   },
 
+  autoRecomputeProposalCourt(proposal, courtId, startTime = null) {
+    const day = this.autoDayDate;
+    const entries = proposal
+      .filter(p => String(p.court_id) === String(courtId) && p.day_date === day && p.scheduled_time)
+      .sort((a, b) => String(a.scheduled_time).localeCompare(String(b.scheduled_time)));
+    if (!entries.length) return proposal;
+    let cursor = startTime || entries[0].scheduled_time || this.autoStartTime;
+    for (const entry of entries) {
+      const index = proposal.findIndex(p => String(this.autoEntryId(p)) === String(this.autoEntryId(entry)));
+      if (index < 0) continue;
+      const band = this.autoMatchBand(entry);
+      proposal[index] = { ...proposal[index], scheduled_time: cursor, court_id: String(courtId), day_date: day };
+      cursor = this.autoAddMinutes(cursor, this.autoSlotMinutes(band, courtId));
+    }
+    return proposal;
+  },
+
+  autoRecomputeProposalFromPivot(proposal, courtId, pivotScheduleId, pivotTime) {
+    const day = this.autoDayDate;
+    const entries = proposal
+      .filter(p => String(p.court_id) === String(courtId) && p.day_date === day && p.scheduled_time)
+      .sort((a, b) => String(a.scheduled_time).localeCompare(String(b.scheduled_time)));
+    const pivotIndex = entries.findIndex(e => String(this.autoEntryId(e)) === String(pivotScheduleId));
+    if (pivotIndex < 0) return proposal;
+    let cursor = pivotTime;
+    for (let index = pivotIndex; index < entries.length; index += 1) {
+      const entry = entries[index];
+      const proposalIndex = proposal.findIndex(p => String(this.autoEntryId(p)) === String(this.autoEntryId(entry)));
+      if (proposalIndex < 0) continue;
+      const band = this.autoMatchBand(entry);
+      proposal[proposalIndex] = {
+        ...proposal[proposalIndex],
+        scheduled_time: cursor,
+        court_id: String(courtId),
+        day_date: day,
+      };
+      cursor = this.autoAddMinutes(cursor, this.autoSlotMinutes(band, courtId));
+    }
+    return proposal;
+  },
+
+  autoMoveInProposal(scheduleId, courtId, dropTime) {
+    const day = this.autoDayDate;
+    const proposal = this.autoProposal.map(entry => ({ ...entry }));
+    const index = proposal.findIndex(entry => String(this.autoEntryId(entry)) === String(scheduleId));
+    if (index < 0) return;
+    const moved = proposal[index];
+    const sourceCourt = String(moved.court_id || '');
+    const targetCourt = String(courtId);
+    proposal[index] = {
+      ...moved,
+      court_id: targetCourt,
+      day_date: day,
+      scheduled_time: dropTime,
+    };
+    this.autoRecomputeProposalFromPivot(proposal, targetCourt, scheduleId, dropTime);
+    if (sourceCourt && sourceCourt !== targetCourt) {
+      this.autoRecomputeProposalCourt(proposal, sourceCourt);
+    }
+    this.autoProposal = proposal;
+  },
+
   async onAutoDrop(courtId, targetEntry) {
     const scheduleId = this.autoDragId;
     this.autoDragId = null;
@@ -844,7 +914,7 @@ Alpine.data('officeApp', () => ({
       ? targetEntry.scheduled_time
       : this.autoNextTimeForCourt(courtId);
     if (this.autoIsPreview()) {
-      this.showToast(this.ot('toast.approveToMove'), 'warning');
+      this.autoMoveInProposal(scheduleId, courtId, dropTime);
       return;
     }
     this.autoLoading = true;
