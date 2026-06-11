@@ -344,10 +344,12 @@ def office_autoschedule_generate(slot: int):
         return error
     tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
+    b1_court_ids = data.get('b1_court_ids') if isinstance(data.get('b1_court_ids'), list) else None
     proposal = generate_autoschedule_proposal(
         tournament_id,
         start_time=(data.get('start_time') or None),
         b1_court_id=(data.get('b1_court_id') or None),
+        b1_court_ids=b1_court_ids,
         day_date=(data.get('day_date') or None),
         phases=data.get('phases') if isinstance(data.get('phases'), list) else None,
     )

@@ -48,6 +48,22 @@ def slot_minutes_for(band: str, config: Dict[str, Any]) -> int:
     return int(slot_config.get("default", DEFAULT_SLOT_MINUTES))
 
 
+def normalize_b1_court_ids(config: Dict[str, Any]) -> List[str]:
+    """Return all courts designated as B1-special for this tournament."""
+    raw_ids = config.get("b1_court_ids")
+    if isinstance(raw_ids, list):
+        ids = [str(court_id).strip() for court_id in raw_ids if str(court_id or "").strip()]
+        if ids:
+            return ids
+    single = str(config.get("b1_court_id") or "").strip()
+    return [single] if single else []
+
+
+def is_b1_court(court_id: Optional[str], config: Dict[str, Any]) -> bool:
+    value = str(court_id or "").strip()
+    return bool(value) and value in normalize_b1_court_ids(config)
+
+
 def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Build a sensible default config given the tournament courts.
 
@@ -67,6 +83,7 @@ def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {
         "start_time": DEFAULT_START_TIME,
         "b1_court_id": b1_court_id,
+        "b1_court_ids": [b1_court_id] if b1_court_id else [],
         "category_courts": category_courts,
         "slot_minutes": {"B1": B1_SLOT_MINUTES, "default": DEFAULT_SLOT_MINUTES},
         "rest_slots": 1,
@@ -74,21 +91,32 @@ def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def apply_b1_court(config: Dict[str, Any], b1_court_id: Optional[str]) -> Dict[str, Any]:
-    """Return a config copy where B1 is pinned to b1_court_id and other bands shuffle around it."""
-    if not b1_court_id:
+    """Backward-compatible helper for a single B1 court."""
+    court_id = str(b1_court_id or "").strip()
+    if not court_id:
+        return dict(config)
+    return apply_b1_courts(config, [court_id])
+
+
+def apply_b1_courts(config: Dict[str, Any], b1_court_ids: Optional[List[str]]) -> Dict[str, Any]:
+    """Pin B1 to the first selected court and mark all selected courts as B1-special."""
+    ids = [str(court_id).strip() for court_id in (b1_court_ids or []) if str(court_id or "").strip()]
+    if not ids:
         return dict(config)
     result = dict(config)
     category_courts = dict(result.get("category_courts") or {})
+    primary_b1 = ids[0]
     previous_b1 = category_courts.get("B1")
-    if previous_b1 and previous_b1 != b1_court_id:
+    if previous_b1 and previous_b1 != primary_b1:
         # Whatever band currently sits on the requested court swaps with B1's old court.
         for band, court_id in list(category_courts.items()):
-            if court_id == b1_court_id and band != "B1":
+            if court_id == primary_b1 and band != "B1":
                 category_courts[band] = previous_b1
                 break
-    category_courts["B1"] = b1_court_id
+    category_courts["B1"] = primary_b1
     result["category_courts"] = category_courts
-    result["b1_court_id"] = b1_court_id
+    result["b1_court_id"] = primary_b1
+    result["b1_court_ids"] = ids
     return result
 
 
@@ -151,13 +179,32 @@ def order_with_rest(matches: List[Dict[str, Any]], rest_slots: int = 1) -> List[
     return ordered
 
 
-def _court_for_match(match: Dict[str, Any], config: Dict[str, Any]) -> Optional[str]:
+def _court_for_match(
+    match: Dict[str, Any],
+    config: Dict[str, Any],
+    *,
+    b1_counter: Optional[List[int]] = None,
+) -> Optional[str]:
     band = normalize_band(match.get("category_name") or match.get("group_name"))
+    b1_courts = normalize_b1_court_ids(config)
+    if band == "B1" and b1_courts:
+        if len(b1_courts) == 1:
+            return b1_courts[0]
+        index = (b1_counter[0] if b1_counter else 0) % len(b1_courts)
+        if b1_counter is not None:
+            b1_counter[0] += 1
+        return b1_courts[index]
     category_courts = config.get("category_courts") or {}
     if band and band in category_courts:
         return category_courts[band]
     # Keep an already-assigned court if the band is unknown/unmapped.
     return str(match.get("court_id")) if match.get("court_id") else None
+
+
+def _slot_minutes_for_court(court_id: str, config: Dict[str, Any], band: str = "") -> int:
+    if is_b1_court(court_id, config):
+        return slot_minutes_for("B1", config)
+    return slot_minutes_for(band, config)
 
 
 def place_matches(
@@ -176,8 +223,9 @@ def place_matches(
 
     by_court: Dict[str, List[Dict[str, Any]]] = {}
     unplaced: List[Dict[str, Any]] = []
+    b1_counter = [0]
     for match in matches:
-        court_id = _court_for_match(match, config)
+        court_id = _court_for_match(match, config, b1_counter=b1_counter)
         if not court_id:
             unplaced.append(match)
             continue
@@ -211,7 +259,7 @@ def place_matches(
                     "band": band,
                 }
             )
-            cursor = add_minutes(cursor, slot_minutes_for(band, config))
+            cursor = add_minutes(cursor, _slot_minutes_for_court(court_id, config, band))
 
     for match in unplaced:
         placements.append(
@@ -245,10 +293,11 @@ def recompute_court_times(
         or str(config.get("start_time") or DEFAULT_START_TIME)
     )
     result: List[Dict[str, Any]] = []
+    court_id = str(ordered_entries[0].get("court_id") or "").strip()
     for entry in ordered_entries:
         band = normalize_band(entry.get("category_name") or entry.get("group_name"))
         updated = dict(entry)
         updated["scheduled_time"] = cursor
         result.append(updated)
-        cursor = add_minutes(cursor, slot_minutes_for(band, config))
+        cursor = add_minutes(cursor, _slot_minutes_for_court(court_id, config, band))
     return result

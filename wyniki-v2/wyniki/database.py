@@ -843,7 +843,7 @@ def _build_knockout_slots_for_category(category_prefix: str, ordered_groups: Lis
 
 
 def _build_single_group_final_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Generate a direct final for one completed 3-4 player group."""
+    """Generate a direct final for one completed 3-player group."""
     if len(standings) < 2:
         return []
     final_phase = f"{group_name} — Finał" if group_name else "Finał"
@@ -854,6 +854,41 @@ def _build_single_group_final_slots(group_name: str, standings: List[Dict[str, A
             "player1_name": standings[0]["name"],
             "player2_name": standings[1]["name"],
         }
+    ]
+
+
+def _build_four_player_group_knockout_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Generate semifinals, final and 3rd-place match for one 4-player group."""
+    if len(standings) < 4:
+        return _build_single_group_final_slots(group_name, standings)
+    semifinal_phase = f"{group_name} — Półfinał" if group_name else "Półfinał"
+    final_phase = f"{group_name} — Finał" if group_name else "Finał"
+    third_phase = f"{group_name} — o 3. miejsce" if group_name else "o 3. miejsce"
+    return [
+        {
+            "phase": semifinal_phase,
+            "position": 1,
+            "player1_name": standings[0]["name"],
+            "player2_name": standings[3]["name"],
+        },
+        {
+            "phase": semifinal_phase,
+            "position": 2,
+            "player1_name": standings[1]["name"],
+            "player2_name": standings[2]["name"],
+        },
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+        {
+            "phase": third_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
     ]
 
 
@@ -882,7 +917,9 @@ def _compute_knockout_slots_from_bracket(bracket_groups: List[Dict[str, Any]]) -
             continue
 
         standings = ordered_groups[0].get("standings") or []
-        if len(standings) in (3, 4):
+        if len(standings) == 4:
+            slots.extend(_build_four_player_group_knockout_slots(bucket_name, standings))
+        elif len(standings) == 3:
             slots.extend(_build_single_group_final_slots(bucket_name, standings))
 
     if not slots:
@@ -2963,18 +3000,30 @@ def get_autoscheduler_config(tournament_id: int) -> Dict[str, Any]:
                     config["slot_minutes"] = merged_slots
                 if isinstance(saved.get("category_courts"), dict):
                     config["category_courts"] = saved["category_courts"]
+                if isinstance(saved.get("b1_court_ids"), list):
+                    ids = [str(court_id).strip() for court_id in saved["b1_court_ids"] if str(court_id or "").strip()]
+                    if ids:
+                        config["b1_court_ids"] = ids
+                        config["b1_court_id"] = ids[0]
         except (ValueError, TypeError):
             pass
+    if not config.get("b1_court_ids") and config.get("b1_court_id"):
+        config["b1_court_ids"] = [str(config["b1_court_id"])]
     return config
 
 
 def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dict[str, Any]:
     """Persist the auto-scheduler config for a tournament."""
     current = get_autoscheduler_config(tournament_id)
-    allowed = {"start_time", "b1_court_id", "category_courts", "slot_minutes", "rest_slots"}
+    allowed = {"start_time", "b1_court_id", "b1_court_ids", "category_courts", "slot_minutes", "rest_slots"}
     for key in allowed:
         if key in config and config[key] not in (None, ""):
             current[key] = config[key]
+    if isinstance(current.get("b1_court_ids"), list):
+        ids = [str(court_id).strip() for court_id in current["b1_court_ids"] if str(court_id or "").strip()]
+        current["b1_court_ids"] = ids
+        if ids:
+            current["b1_court_id"] = ids[0]
     upsert_app_settings({_autoscheduler_settings_key(tournament_id): json.dumps(current)})
     return current
 
@@ -2999,6 +3048,7 @@ def generate_autoschedule_proposal(
     *,
     start_time: Optional[str] = None,
     b1_court_id: Optional[str] = None,
+    b1_court_ids: Optional[List[str]] = None,
     day_date: Optional[str] = None,
     phases: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
@@ -3015,8 +3065,19 @@ def generate_autoschedule_proposal(
     config = get_autoscheduler_config(tournament_id)
     if start_time:
         config["start_time"] = str(start_time)
-    if b1_court_id:
-        config = auto_scheduler.apply_b1_court(config, b1_court_id)
+    selected_b1_courts = [
+        str(court_id).strip()
+        for court_id in (b1_court_ids or [])
+        if str(court_id or "").strip()
+    ]
+    if not selected_b1_courts and b1_court_id:
+        selected_b1_courts = [str(b1_court_id).strip()]
+    if selected_b1_courts:
+        config = auto_scheduler.apply_b1_courts(config, selected_b1_courts)
+        save_autoscheduler_config(tournament_id, {
+            "b1_court_ids": selected_b1_courts,
+            "b1_court_id": selected_b1_courts[0],
+        })
 
     with db_conn() as conn:
         cursor = conn.cursor()
@@ -3177,7 +3238,10 @@ def move_schedule_entry_with_cascade(
         for entry in target_entries[pivot_index:]:
             band = auto_scheduler.normalize_band(entry.get("category_name") or entry.get("group_name"))
             entry["scheduled_time"] = cursor
-            cursor = auto_scheduler.add_minutes(cursor, auto_scheduler.slot_minutes_for(band, config))
+            cursor = auto_scheduler.add_minutes(
+                cursor,
+                auto_scheduler._slot_minutes_for_court(target_court, config, band),
+            )
         updates.extend(target_entries)
     else:
         updates.extend(auto_scheduler.recompute_court_times(target_entries, config))
