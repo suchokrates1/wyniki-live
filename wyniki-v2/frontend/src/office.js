@@ -4,6 +4,9 @@ import {
   isMixedCategory,
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
   planningDivisionKey as sharedPlanningDivisionKey,
+  planningGroupLetterFromName as sharedPlanningGroupLetterFromName,
+  planningResolveStoredGroupName as sharedPlanningResolveStoredGroupName,
+  planningStoredGroupNames as sharedPlanningStoredGroupNames,
 } from './shared/categories.js';
 import './main.css';
 
@@ -1043,11 +1046,39 @@ Alpine.data('officeApp', () => ({
   },
 
   planningTargetGroupNames() {
-    const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
-    const label = this.planningDivisionLabel();
     if (!this.planningSelectedDivision) return [];
-    if (count === 1) return [label];
-    return Array.from({ length: count }, (_, index) => `${label} — ${this.ot('planning.groupSuffix', { letter: String.fromCharCode(65 + index) })}`);
+    return sharedPlanningStoredGroupNames(
+      this.planningSelectedDivision,
+      this.planningGroupCount,
+      this.planningMixedCategories,
+    );
+  },
+
+  planningGroupDisplayName(groupName) {
+    const division = sharedPlanningDivisionFromGroupName(groupName, this.planningMixedCategories);
+    const label = this.planningDivisionLabel(division);
+    const letter = sharedPlanningGroupLetterFromName(groupName);
+    if (letter) return `${label} — ${this.ot('planning.groupSuffix', { letter })}`;
+    return label;
+  },
+
+  planningResolveGroupName(groupName, divisionKey = this.planningSelectedDivision) {
+    const groupCount = divisionKey === this.planningSelectedDivision
+      ? this.planningGroupCount
+      : this.planningGroupCountForDivision(divisionKey);
+    return sharedPlanningResolveStoredGroupName(
+      groupName,
+      divisionKey,
+      groupCount,
+      this.planningMixedCategories,
+    );
+  },
+
+  planningGroupCountForDivision(divisionKey) {
+    const groups = (this.planningGroups || []).filter(group => (
+      sharedPlanningDivisionFromGroupName(group.name, this.planningMixedCategories) === divisionKey
+    ));
+    return groups.length ? Math.max(1, Math.min(8, groups.length)) : 1;
   },
 
   planningDivisionGroupNames() {
@@ -1061,13 +1092,13 @@ Alpine.data('officeApp', () => ({
   },
 
   planningAssignedPlayers(groupName) {
-    return this.planningPlayersForDivision().filter(player => this.planningGroupAssignments[player.id] === groupName);
+    return this.planningPlayersForDivision().filter(player => (
+      this.planningResolveGroupName(this.planningGroupAssignments[player.id]) === groupName
+    ));
   },
 
   planningEffectiveGroup(player) {
-    const assigned = this.planningGroupAssignments[player.id];
-    if (!assigned) return '';
-    return this.planningTargetGroupNames().includes(assigned) ? assigned : '';
+    return this.planningResolveGroupName(this.planningGroupAssignments[player.id]);
   },
 
   planningUnassignedPlayers() {
@@ -1079,7 +1110,15 @@ Alpine.data('officeApp', () => ({
   },
 
   planningDivisionAssignedCount(key = this.planningSelectedDivision) {
-    return this.planningPlayersForDivision(key).filter(player => this.planningGroupAssignments[player.id]).length;
+    const targets = new Set(sharedPlanningStoredGroupNames(
+      key,
+      this.planningGroupCountForDivision(key),
+      this.planningMixedCategories,
+    ));
+    return this.planningPlayersForDivision(key).filter(player => {
+      const resolved = this.planningResolveGroupName(this.planningGroupAssignments[player.id], key);
+      return resolved && targets.has(resolved);
+    }).length;
   },
 
   selectPlanningDivision(key) {
@@ -1097,8 +1136,13 @@ Alpine.data('officeApp', () => ({
     let changed = false;
     for (const player of this.planningPlayersForDivision()) {
       const assigned = assignments[player.id];
-      if (assigned && !valid.has(assigned)) {
+      if (!assigned) continue;
+      const canonical = this.planningResolveGroupName(assigned);
+      if (!canonical || !valid.has(canonical)) {
         delete assignments[player.id];
+        changed = true;
+      } else if (canonical !== assigned) {
+        assignments[player.id] = canonical;
         changed = true;
       }
     }
@@ -1335,10 +1379,13 @@ Alpine.data('officeApp', () => ({
   },
 
   async generateOfficeSchedule() {
+    const { start, end } = this.autoTournamentDates();
+    const dayDate = this.autoDayDate || (end && end !== start ? end : start) || '';
     try {
       const response = await fetch(`/api/office/${this.slot}/schedule/generate`, {
         method: 'POST',
         headers: this.officeHeaders(),
+        body: JSON.stringify(dayDate ? { day_date: dayDate } : {}),
       });
       const payload = await response.json().catch(() => ({}));
       if (response.status === 401) {

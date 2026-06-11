@@ -918,7 +918,36 @@ def _compute_knockout_slots_from_bracket(bracket_groups: List[Dict[str, Any]]) -
     return {"status": "ok", "knockout": slots}
 
 
-def _merge_bracket_knockout_slots(tournament_id: int, slots: List[Dict[str, Any]]) -> Dict[str, Any]:
+def seed_provisional_knockout_from_groups(
+    tournament_id: int,
+    *,
+    schedule_day: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build or refresh knockout slots from current group standings (provisional before group play ends)."""
+    if not fetch_bracket_groups(tournament_id):
+        return {"status": "skipped", "reason": "no_groups"}
+
+    bracket = get_full_bracket(tournament_id)
+    if bracket.get("error"):
+        return {"status": "error", "error": bracket["error"]}
+
+    generated = _compute_knockout_slots_from_bracket(bracket.get("groups", []))
+    if generated.get("error"):
+        return {"status": "error", **generated}
+
+    slots = generated.get("knockout", [])
+    if not slots:
+        return {"status": "skipped", "reason": "no_eligible_categories"}
+
+    return _merge_bracket_knockout_slots(tournament_id, slots, schedule_day=schedule_day)
+
+
+def _merge_bracket_knockout_slots(
+    tournament_id: int,
+    slots: List[Dict[str, Any]],
+    *,
+    schedule_day: Optional[str] = None,
+) -> Dict[str, Any]:
     """Insert missing knockout slots and fill placeholder players without overwriting real results."""
     inserted = 0
     updated = 0
@@ -982,7 +1011,7 @@ def _merge_bracket_knockout_slots(tournament_id: int, slots: List[Dict[str, Any]
                     )
                     updated += 1
             conn.commit()
-        ensure_knockout_schedule_entries(tournament_id)
+        ensure_knockout_schedule_entries(tournament_id, schedule_day=schedule_day)
         return {"status": "ok", "inserted": inserted, "updated": updated, "knockout": slots}
     except Exception as e:
         logger.error("merge_bracket_knockout_error", error=str(e), tournament_id=tournament_id)
@@ -2337,6 +2366,24 @@ def _schedule_day_for_tournament(cursor: sqlite3.Cursor, tournament_id: int) -> 
     return str(row["start_date"] if row and row["start_date"] else datetime.now(timezone.utc).date().isoformat())
 
 
+def _knockout_schedule_day_for_tournament(cursor: sqlite3.Cursor, tournament_id: int) -> str:
+    """Prefer tournament end_date for knockout schedule entries when it differs from start_date."""
+    cursor.execute("SELECT start_date, end_date FROM tournaments WHERE id = ?", (tournament_id,))
+    row = cursor.fetchone()
+    start = str(row["start_date"] or "") if row else ""
+    end = str(row["end_date"] or "") if row else ""
+    if end and end != start:
+        return end
+    return start or datetime.now(timezone.utc).date().isoformat()
+
+
+def _autoschedule_phases_include_knockout(phases: Optional[List[str]]) -> bool:
+    if not phases:
+        return True
+    wanted = {str(phase).strip().lower() for phase in phases}
+    return bool({"knockout", "pucharowa", "knockouts", "all", "wszystko"} & wanted)
+
+
 def _schedule_pair_clause(player1_name: str, player2_name: str) -> tuple[str, tuple[str, str, str, str]]:
     return (
         "((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))",
@@ -2746,12 +2793,20 @@ def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
         return fetch_tournament_schedule(tournament_id)
 
 
-def ensure_knockout_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
+def ensure_knockout_schedule_entries(
+    tournament_id: int,
+    *,
+    schedule_day: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     """Ensure every relevant knockout slot has a schedule entry for office assignment."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            default_day = _schedule_day_for_tournament(cursor, tournament_id)
+            default_day = (
+                str(schedule_day).strip()
+                if schedule_day
+                else _knockout_schedule_day_for_tournament(cursor, tournament_id)
+            )
             now = _utc_now()
             cursor.execute("SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM tournament_schedule WHERE tournament_id = ?", (tournament_id,))
             next_order = int(cursor.fetchone()["max_order"] or 0) + 1
@@ -3051,7 +3106,6 @@ def generate_autoschedule_proposal(
     from .services import auto_scheduler
 
     ensure_group_schedule_entries(tournament_id)
-    ensure_knockout_schedule_entries(tournament_id)
 
     config = get_autoscheduler_config(tournament_id)
     if start_time:
@@ -3073,7 +3127,14 @@ def generate_autoschedule_proposal(
     with db_conn() as conn:
         cursor = conn.cursor()
         default_day = _schedule_day_for_tournament(cursor, tournament_id)
+        knockout_day = _knockout_schedule_day_for_tournament(cursor, tournament_id)
     target_day = day_date or config.get("day_date") or default_day
+
+    if _autoschedule_phases_include_knockout(phases):
+        seed_day = target_day if day_date else knockout_day
+        seed_provisional_knockout_from_groups(tournament_id, schedule_day=seed_day)
+    else:
+        ensure_knockout_schedule_entries(tournament_id)
 
     entries = fetch_tournament_schedule(tournament_id)
     if phases:

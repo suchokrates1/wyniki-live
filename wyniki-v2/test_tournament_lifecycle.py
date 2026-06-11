@@ -2302,3 +2302,45 @@ def test_office_autoschedule_knockout_phase_with_placeholders(full_app_with_temp
     final = next(p for p in placements if "Finał" in (p["phase"] or ""))
     assert "Zwycięzca PF" in (final["player1_name"] or "")
     assert "Zwycięzca PF" in (final["player2_name"] or "")
+
+
+def test_office_autoschedule_knockout_seeds_from_groups_before_group_play(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Provisional Knockout Cup",
+        "2026-06-10",
+        "2026-06-11",
+        active=True,
+        office_password_hash=generate_password_hash("seed"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    players = [
+        database.insert_player(tournament_id, f"B1 P{idx}", "B1", "PL", first_name="B1", last_name=f"P{idx}", gender="M")
+        for idx in range(4)
+    ]
+    database.save_bracket_groups(
+        tournament_id,
+        [{"name": "B1 Mężczyźni", "players": players}],
+    )
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "seed"})
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+    courts = [c["kort_id"] for c in database.fetch_courts_for_tournament(tournament_id)]
+
+    gen = client.post(
+        "/api/office/1/autoschedule/generate",
+        headers=headers,
+        json={"start_time": "10:00", "b1_court_id": courts[-1], "day_date": "2026-06-11", "phases": ["knockout"]},
+    )
+    assert gen.status_code == 200
+    placements = [p for p in gen.get_json()["placements"] if p["scheduled_time"]]
+    assert len(placements) == 2
+    assert all(p["day_date"] == "2026-06-11" for p in placements)
+    phases = {p["phase"] for p in placements}
+    assert any("Finał" in ph for ph in phases)
+    assert any("3. miejsce" in ph for ph in phases)
+
+    knockout_rows = database.fetch_bracket_knockout(tournament_id)
+    assert len(knockout_rows) == 2

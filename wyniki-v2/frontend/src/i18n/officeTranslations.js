@@ -244,7 +244,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         withPlaceholders: ' (w tym {count} z placeholderem)',
         publishedCount: 'Opublikowano {count} wpisów.',
         noDraftEntries: 'Brak roboczych wpisów do opublikowania.',
-        hintKnockout: 'Czy drabinka jest już gotowa? Generuje się po zakończeniu faz grupowych.',
+        hintKnockout: 'Zapisz grupy w Kroku 1, potem użyj „Generuj brakujące” lub ponów propozycję.',
         hintGroups: 'Najpierw utwórz grupy w zakładce „Plan turnieju" (losowanie), a potem wróć tutaj.',
       },
       notifications: {
@@ -518,7 +518,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         withPlaceholders: ' (davon {count} mit Platzhalter)',
         publishedCount: '{count} Einträge veröffentlicht.',
         noDraftEntries: 'Keine Entwurfseinträge zum Veröffentlichen.',
-        hintKnockout: 'Ist der Turnierbaum bereit? Er wird nach Abschluss der Gruppenphase erstellt.',
+        hintKnockout: 'Speichern Sie die Gruppen in Schritt 1, dann „Fehlende generieren“ oder erneut vorschlagen.',
         hintGroups: 'Erstellen Sie zuerst Gruppen im Tab „Turnierplan" (Auslosung) und kehren Sie dann hierher zurück.',
       },
       notifications: {
@@ -789,7 +789,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         withPlaceholders: ' (including {count} placeholders)',
         publishedCount: 'Published {count} entries.',
         noDraftEntries: 'No draft entries to publish.',
-        hintKnockout: 'Is the bracket ready? It is generated after group phases finish.',
+        hintKnockout: 'Save groups in Step 1, then use “Generate missing” or retry the proposal.',
         hintGroups: 'Create groups in the “Tournament plan” tab (draw) first, then return here.',
       },
       notifications: {
