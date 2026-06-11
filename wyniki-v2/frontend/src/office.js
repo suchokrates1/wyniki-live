@@ -689,10 +689,15 @@ Alpine.data('officeApp', () => ({
 
   autoIsPlaceholder(entry) {
     const isPh = (name) => {
-      const value = String(name || '').trim().toLowerCase();
+      const value = String(name || '').trim();
       if (!value) return true;
-      return value.startsWith('zwycięzca pf') || value.startsWith('przegrany pf')
-        || value.startsWith('zwycięzca półfinał') || value.startsWith('winner sf') || value.startsWith('loser sf');
+      const lowered = value.toLowerCase();
+      if (lowered.startsWith('zwycięzca pf') || lowered.startsWith('przegrany pf')
+        || lowered.startsWith('zwycięzca półfinał') || lowered.startsWith('winner sf') || lowered.startsWith('loser sf')) {
+        return true;
+      }
+      if (/^\d+\.\s+/.test(value) || /^\d+[A-Za-z]$/.test(value)) return true;
+      return false;
     };
     return isPh(entry?.player1_name) || isPh(entry?.player2_name);
   },

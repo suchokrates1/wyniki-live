@@ -2344,3 +2344,5 @@ def test_office_autoschedule_knockout_seeds_from_groups_before_group_play(full_a
 
     knockout_rows = database.fetch_bracket_knockout(tournament_id)
     assert len(knockout_rows) == 2
+    assert knockout_rows[0]["player1_name"] == "1. B1 Mężczyźni"
+    assert knockout_rows[0]["player2_name"] == "2. B1 Mężczyźni"

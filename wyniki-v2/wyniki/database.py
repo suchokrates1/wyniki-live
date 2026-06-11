@@ -1,5 +1,6 @@
 """Database access layer for v2."""
 import json
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -744,9 +745,65 @@ def _is_knockout_placeholder_name(name: Optional[str]) -> bool:
         return True
     if lowered.startswith("winner sf") or lowered.startswith("loser sf"):
         return True
-    if len(value) == 2 and value[0].isdigit() and value[1].isalpha():
+    if re.match(r"^\d+[A-Za-z]$", value):
+        return True
+    if re.match(r"^\d+\.\s+", value):
         return True
     return False
+
+
+def _standing_placeholder(rank: int, group_name: str, category_prefix: str) -> str:
+    """Stable standing placeholder, e.g. 1. B2 Mężczyźni or 1A for partitioned groups."""
+    if _is_group_partition_name(group_name):
+        _, suffix = _split_bracket_label(group_name)
+        label = (suffix or "").strip()
+        last_token = label.split()[-1].upper() if label else ""
+        if len(last_token) == 1 and last_token.isalpha():
+            return f"{rank}{last_token}"
+    prefix = (category_prefix or group_name or "").strip()
+    return f"{rank}. {prefix}"
+
+
+def _is_group_play_complete(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    group_id: int,
+    player_count: int,
+) -> bool:
+    if player_count < 2:
+        return True
+    expected = player_count * (player_count - 1) // 2
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM matches
+        WHERE tournament_id = ?
+          AND status = 'finished'
+          AND COALESCE(finish_reason, 'normal') != 'test'
+          AND phase = 'Grupowa'
+          AND bracket_group_id = ?
+        """,
+        (tournament_id, group_id),
+    )
+    return int(cursor.fetchone()["count"] or 0) >= expected
+
+
+def _bucket_groups_play_complete(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    ordered_groups: List[Dict[str, Any]],
+    group_id_by_name: Dict[str, int],
+    player_count_by_name: Dict[str, int],
+) -> bool:
+    for group in ordered_groups:
+        name = str(group.get("name") or "").strip()
+        group_id = group_id_by_name.get(name)
+        if not group_id:
+            return False
+        player_count = player_count_by_name.get(name) or len(group.get("standings") or [])
+        if not _is_group_play_complete(cursor, tournament_id, group_id, player_count):
+            return False
+    return True
 
 
 def _slot_phase_matches(slot_phase: str, expected_kind: str, category_prefix: str) -> bool:
@@ -857,6 +914,165 @@ def _build_single_group_final_slots(group_name: str, standings: List[Dict[str, A
     ]
 
 
+def _build_provisional_single_group_final_slots(group_name: str, category_prefix: str) -> List[Dict[str, Any]]:
+    final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
+    return [
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": _standing_placeholder(1, group_name, category_prefix),
+            "player2_name": _standing_placeholder(2, group_name, category_prefix),
+        }
+    ]
+
+
+def _build_provisional_four_player_group_knockout_slots(
+    group_name: str,
+    category_prefix: str,
+) -> List[Dict[str, Any]]:
+    final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
+    third_phase = f"{category_prefix} — o 3. miejsce" if category_prefix else "o 3. miejsce"
+    return [
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": _standing_placeholder(1, group_name, category_prefix),
+            "player2_name": _standing_placeholder(2, group_name, category_prefix),
+        },
+        {
+            "phase": third_phase,
+            "position": 1,
+            "player1_name": _standing_placeholder(3, group_name, category_prefix),
+            "player2_name": _standing_placeholder(4, group_name, category_prefix),
+        },
+    ]
+
+
+def _build_provisional_knockout_slots_for_category(
+    category_prefix: str,
+    ordered_groups: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    group_a = ordered_groups[0]
+    group_b = ordered_groups[1]
+    group_a_name = str(group_a.get("name") or category_prefix)
+    group_b_name = str(group_b.get("name") or category_prefix)
+    player_count_a = len(group_a.get("standings") or [])
+    player_count_b = len(group_b.get("standings") or [])
+
+    semifinal_phase = f"{category_prefix} — Półfinał" if category_prefix else "Półfinał"
+    final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
+    third_phase = f"{category_prefix} — o 3. miejsce" if category_prefix else "o 3. miejsce"
+    fifth_phase = f"{category_prefix} — o 5. miejsce" if category_prefix else "o 5. miejsce"
+    seventh_phase = f"{category_prefix} — o 7. miejsce" if category_prefix else "o 7. miejsce"
+
+    slots = [
+        {
+            "phase": semifinal_phase,
+            "position": 1,
+            "player1_name": _standing_placeholder(1, group_a_name, category_prefix),
+            "player2_name": _standing_placeholder(2, group_b_name, category_prefix),
+        },
+        {
+            "phase": semifinal_phase,
+            "position": 2,
+            "player1_name": _standing_placeholder(1, group_b_name, category_prefix),
+            "player2_name": _standing_placeholder(2, group_a_name, category_prefix),
+        },
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+        {
+            "phase": third_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+    ]
+
+    if player_count_a >= 3 and player_count_b >= 3:
+        slots.append(
+            {
+                "phase": fifth_phase,
+                "position": 1,
+                "player1_name": _standing_placeholder(3, group_a_name, category_prefix),
+                "player2_name": _standing_placeholder(3, group_b_name, category_prefix),
+            }
+        )
+    if player_count_a >= 4 and player_count_b >= 4:
+        slots.append(
+            {
+                "phase": seventh_phase,
+                "position": 1,
+                "player1_name": _standing_placeholder(4, group_a_name, category_prefix),
+                "player2_name": _standing_placeholder(4, group_b_name, category_prefix),
+            }
+        )
+    return slots
+
+
+def _compute_provisional_knockout_slots_from_bracket(
+    bracket_groups: List[Dict[str, Any]],
+    *,
+    tournament_id: int,
+    group_id_by_name: Dict[str, int],
+    player_count_by_name: Dict[str, int],
+) -> Dict[str, Any]:
+    """Build knockout slots with standing placeholders until group play is finished."""
+    buckets: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
+    for group in bracket_groups:
+        name = str(group.get("name") or "").strip()
+        if not name:
+            continue
+        buckets.setdefault(_knockout_bucket_key(name), []).append(group)
+
+    slots: List[Dict[str, Any]] = []
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        for (bucket_kind, bucket_name), bucket_groups in buckets.items():
+            ordered_groups = sorted(bucket_groups, key=lambda group: _group_sort_key(str(group.get("name") or "")))
+            complete = _bucket_groups_play_complete(
+                cursor,
+                tournament_id,
+                ordered_groups,
+                group_id_by_name,
+                player_count_by_name,
+            )
+            if bucket_kind == "multi":
+                if len(ordered_groups) < 2:
+                    continue
+                if len(ordered_groups) > 2:
+                    return {"error": f"Auto knockout supports exactly 2 groups per category: {bucket_name}"}
+                first_group = ordered_groups[0].get("standings") or []
+                second_group = ordered_groups[1].get("standings") or []
+                if len(first_group) < 2 or len(second_group) < 2:
+                    return {"error": f"Category needs at least 2 players per group: {bucket_name}"}
+                if complete:
+                    slots.extend(_build_knockout_slots_for_category(bucket_name, ordered_groups))
+                else:
+                    slots.extend(_build_provisional_knockout_slots_for_category(bucket_name, ordered_groups))
+                continue
+
+            standings = ordered_groups[0].get("standings") or []
+            group_name = str(ordered_groups[0].get("name") or bucket_name)
+            if len(standings) == 4:
+                if complete:
+                    slots.extend(_build_four_player_group_knockout_slots(bucket_name, standings))
+                else:
+                    slots.extend(_build_provisional_four_player_group_knockout_slots(group_name, bucket_name))
+            elif len(standings) == 3:
+                if complete:
+                    slots.extend(_build_single_group_final_slots(bucket_name, standings))
+                else:
+                    slots.extend(_build_provisional_single_group_final_slots(group_name, bucket_name))
+
+    if not slots:
+        return {"error": "Need at least one eligible category for knockout generation"}
+    return {"status": "ok", "knockout": slots}
+
+
 def _build_four_player_group_knockout_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Generate a direct final and 3rd-place match for one 4-player group.
 
@@ -923,15 +1139,27 @@ def seed_provisional_knockout_from_groups(
     *,
     schedule_day: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Build or refresh knockout slots from current group standings (provisional before group play ends)."""
-    if not fetch_bracket_groups(tournament_id):
+    """Build or refresh knockout slots with standing placeholders until group play ends."""
+    db_groups = fetch_bracket_groups(tournament_id)
+    if not db_groups:
         return {"status": "skipped", "reason": "no_groups"}
+
+    group_id_by_name = {str(group.get("name") or ""): int(group["id"]) for group in db_groups if group.get("id")}
+    player_count_by_name = {
+        str(group.get("name") or ""): len(group.get("players") or [])
+        for group in db_groups
+    }
 
     bracket = get_full_bracket(tournament_id)
     if bracket.get("error"):
         return {"status": "error", "error": bracket["error"]}
 
-    generated = _compute_knockout_slots_from_bracket(bracket.get("groups", []))
+    generated = _compute_provisional_knockout_slots_from_bracket(
+        bracket.get("groups", []),
+        tournament_id=tournament_id,
+        group_id_by_name=group_id_by_name,
+        player_count_by_name=player_count_by_name,
+    )
     if generated.get("error"):
         return {"status": "error", **generated}
 
@@ -939,7 +1167,12 @@ def seed_provisional_knockout_from_groups(
     if not slots:
         return {"status": "skipped", "reason": "no_eligible_categories"}
 
-    return _merge_bracket_knockout_slots(tournament_id, slots, schedule_day=schedule_day)
+    return _merge_bracket_knockout_slots(
+        tournament_id,
+        slots,
+        schedule_day=schedule_day,
+        replace_unfinished_players=True,
+    )
 
 
 def _merge_bracket_knockout_slots(
@@ -947,6 +1180,7 @@ def _merge_bracket_knockout_slots(
     slots: List[Dict[str, Any]],
     *,
     schedule_day: Optional[str] = None,
+    replace_unfinished_players: bool = False,
 ) -> Dict[str, Any]:
     """Insert missing knockout slots and fill placeholder players without overwriting real results."""
     inserted = 0
@@ -995,7 +1229,16 @@ def _merge_bracket_knockout_slots(
                 for field in ("player1_name", "player2_name"):
                     new_value = slot.get(field)
                     current_value = existing[field]
-                    if new_value and (not current_value or _is_knockout_placeholder_name(current_value)):
+                    can_replace = (
+                        replace_unfinished_players
+                        and not existing["winner_name"]
+                        and new_value is not None
+                    )
+                    if new_value and (
+                        can_replace
+                        or not current_value
+                        or _is_knockout_placeholder_name(current_value)
+                    ):
                         assignments.append(f"{field} = ?")
                         values.append(new_value)
                 if slot.get("winner_name") and not existing["winner_name"]:
@@ -2822,11 +3065,6 @@ def ensure_knockout_schedule_entries(
             for slot in cursor.fetchall():
                 player1_name, player2_name = _knockout_schedule_player_names(slot)
                 if not player1_name or not player2_name:
-                    continue
-                if (
-                    _is_knockout_placeholder_name(player1_name)
-                    or _is_knockout_placeholder_name(player2_name)
-                ) and _phase_kind(str(slot["phase"] or "")) not in {"final", "third_place"}:
                     continue
                 category_name, phase_suffix = _split_bracket_label(slot["phase"])
                 phase_label = slot["phase"] or phase_suffix or "Pucharowa"
