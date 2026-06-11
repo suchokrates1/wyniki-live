@@ -48,6 +48,30 @@ def test_apply_b1_court_swaps_bands():
     # band that was on c3 (B2) takes B1's old court c4
     assert moved["category_courts"]["B2"] == "c4"
     assert moved["b1_court_id"] == "c3"
+    assert moved["b1_court_ids"] == ["c3"]
+
+
+def test_apply_b1_courts_supports_multiple_special_courts():
+    config = sched.build_default_config(_courts())
+    moved = sched.apply_b1_courts(config, ["c3", "c4"])
+    assert moved["b1_court_ids"] == ["c3", "c4"]
+    assert moved["category_courts"]["B1"] == "c3"
+
+
+def test_place_matches_distributes_b1_across_selected_courts():
+    config = sched.apply_b1_courts(sched.build_default_config(_courts()), ["c3", "c4"])
+    matches = [
+        {"id": 1, "category_name": "B1 Mężczyźni", "phase": "Grupowa", "player1_name": "A", "player2_name": "B", "sort_order": 1},
+        {"id": 2, "category_name": "B1 Mężczyźni", "phase": "Grupowa", "player1_name": "C", "player2_name": "D", "sort_order": 2},
+        {"id": 3, "category_name": "B1 Mężczyźni", "phase": "Grupowa", "player1_name": "E", "player2_name": "F", "sort_order": 3},
+        {"id": 4, "category_name": "B1 Mężczyźni", "phase": "Grupowa", "player1_name": "G", "player2_name": "H", "sort_order": 4},
+    ]
+    placements = sched.place_matches(matches, config, "2026-05-23")
+    courts = {p["match"]["id"]: p["court_id"] for p in placements}
+    assert courts[1] == "c3"
+    assert courts[2] == "c4"
+    assert courts[3] == "c3"
+    assert courts[4] == "c4"
 
 
 def test_place_matches_assigns_courts_and_cascading_times():

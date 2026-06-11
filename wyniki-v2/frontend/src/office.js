@@ -85,7 +85,7 @@ Alpine.data('officeApp', () => ({
   autoCourts: [],
   autoBands: [],
   autoStartTime: '09:30',
-  autoB1Court: '',
+  autoB1Courts: [],
   autoDayDate: '',
   autoPhaseScope: 'group',
   autoProposal: null,
@@ -599,7 +599,11 @@ Alpine.data('officeApp', () => ({
       this.autoCourts = Array.isArray(payload.courts) ? payload.courts : [];
       this.autoBands = Array.isArray(payload.bands) ? payload.bands : [];
       this.autoStartTime = this.autoConfig?.start_time || '09:30';
-      this.autoB1Court = this.autoConfig?.b1_court_id || (this.autoCourts[this.autoCourts.length - 1]?.kort_id || '');
+      const savedB1Courts = Array.isArray(this.autoConfig?.b1_court_ids)
+        ? this.autoConfig.b1_court_ids.map(String).filter(Boolean)
+        : [];
+      const fallbackB1 = this.autoConfig?.b1_court_id || (this.autoCourts[this.autoCourts.length - 1]?.kort_id || '');
+      this.autoB1Courts = savedB1Courts.length ? savedB1Courts : (fallbackB1 ? [String(fallbackB1)] : []);
       this.autoDayDate = this.autoDayDate || this.autoTournamentDates().start || this.autoAvailableDays()[0] || '';
     } catch (error) {
       console.error('Failed to load auto-scheduler config:', error);
@@ -635,9 +639,11 @@ Alpine.data('officeApp', () => ({
     if (!this.token) return;
     this.autoLoading = true;
     try {
+      const b1Courts = (this.autoB1Courts || []).map(String).filter(Boolean);
       const body = {
         start_time: this.autoStartTime,
-        b1_court_id: this.autoB1Court,
+        b1_court_ids: b1Courts,
+        b1_court_id: b1Courts[0] || '',
         day_date: this.autoDayDate,
       };
       if (this.autoPhaseScope && this.autoPhaseScope !== 'all') {
@@ -731,7 +737,27 @@ Alpine.data('officeApp', () => ({
     return Array.isArray(this.autoProposal);
   },
 
+  autoB1CourtIds() {
+    const saved = Array.isArray(this.autoConfig?.b1_court_ids) ? this.autoConfig.b1_court_ids : [];
+    if (saved.length) return saved.map(String);
+    if (this.autoB1Courts?.length) return this.autoB1Courts.map(String);
+    return this.autoConfig?.b1_court_id ? [String(this.autoConfig.b1_court_id)] : [];
+  },
+
+  autoIsB1Court(courtId) {
+    return this.autoB1CourtIds().includes(String(courtId));
+  },
+
+  autoToggleB1Court(courtId, checked) {
+    const value = String(courtId);
+    const current = new Set((this.autoB1Courts || []).map(String));
+    if (checked) current.add(value);
+    else current.delete(value);
+    this.autoB1Courts = Array.from(current);
+  },
+
   autoBandForCourt(courtId) {
+    if (this.autoIsB1Court(courtId)) return 'B1';
     const map = this.autoConfig?.category_courts || {};
     return Object.keys(map).find(band => String(map[band]) === String(courtId)) || '';
   },
@@ -745,7 +771,8 @@ Alpine.data('officeApp', () => ({
     return band ? `${name} · ${band}${band === 'B1' ? this.ot('planning.specialCourt') : ''}` : name;
   },
 
-  autoSlotMinutes(band) {
+  autoSlotMinutes(band, courtId = '') {
+    if (courtId && this.autoIsB1Court(courtId)) return 75;
     const slots = this.autoConfig?.slot_minutes || {};
     if (band && slots[band] != null) return Number(slots[band]);
     if (band === 'B1') return 75;
@@ -891,7 +918,7 @@ Alpine.data('officeApp', () => ({
   },
 
   autoSlotMinutesLabel(courtId) {
-    return this.ot('planning.slotMinutes', { minutes: this.autoSlotMinutes(this.autoBandForCourt(courtId)) });
+    return this.ot('planning.slotMinutes', { minutes: this.autoSlotMinutes(this.autoBandForCourt(courtId), courtId) });
   },
 
   planningUnassignedTitle() {

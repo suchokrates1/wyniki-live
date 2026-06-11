@@ -630,14 +630,20 @@
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-500" x-text="ot('planning.startTime')"></span>
             <input type="time" class="input input-bordered bg-white/90 mt-1 w-full" x-model="autoStartTime">
           </label>
-          <label class="block">
+          <div class="block">
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-500" x-text="ot('planning.b1Court')"></span>
-            <select class="select select-bordered bg-white/90 mt-1 w-full" x-model="autoB1Court">
+            <div class="mt-1 rounded-xl border border-slate-200 bg-white/90 p-2 max-h-32 overflow-y-auto space-y-1">
               <template x-for="court in autoCourts" :key="'autob1_'+court.kort_id">
-                <option :value="court.kort_id" x-text="ot('planning.courtPrefix', { name: court.name })"></option>
+                <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+                  <input type="checkbox"
+                         class="checkbox checkbox-sm checkbox-primary"
+                         :checked="autoB1Courts.map(String).includes(String(court.kort_id))"
+                         @change="autoToggleB1Court(court.kort_id, $event.target.checked)">
+                  <span x-text="ot('planning.courtPrefix', { name: court.name })"></span>
+                </label>
               </template>
-            </select>
-          </label>
+            </div>
+          </div>
           <div class="flex items-end gap-2">
             <button type="button" class="btn border-0 text-white w-full" style="background: linear-gradient(135deg, #0f766e, #115e59);" :class="{'btn-disabled': autoLoading}" @click="autoGenerate()" x-text="ot('planning.generateProposal')"></button>
           </div>
