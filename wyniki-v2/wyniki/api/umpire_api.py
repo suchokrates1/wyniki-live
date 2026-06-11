@@ -444,6 +444,24 @@ def _mobile_player_payload_for_name(tournament_id: int, player_name: str) -> dic
     }
 
 
+def _apply_db_flags_to_court_state(
+    court_state: dict,
+    tournament_id: int | None,
+    player1_name: str | None,
+    player2_name: str | None,
+) -> None:
+    """Set live player flags from tournament DB; kept for the whole match."""
+    if not tournament_id:
+        return
+    for side, name in (("A", player1_name), ("B", player2_name)):
+        payload = _mobile_player_payload_for_name(tournament_id, name or "")
+        country_code = (payload or {}).get("country_code")
+        if not country_code or not re.fullmatch(r"[A-Za-z]{2}", str(country_code)):
+            continue
+        court_state[side]["flag_code"] = str(country_code).upper()
+        court_state[side]["flag_url"] = f"https://flagcdn.com/w80/{str(country_code).lower()}.png"
+
+
 def _mobile_schedule_suggestion_payload(entry: dict | None, tournament_id: int) -> dict | None:
     if not entry:
         return None
@@ -836,6 +854,12 @@ def create_match():
                     court_state["B"]["full_name"] = data["player2_full_name"]
                 else:
                     court_state["B"]["full_name"] = match.player2_name
+                _apply_db_flags_to_court_state(
+                    court_state,
+                    match.tournament_id,
+                    match.player1_name,
+                    match.player2_name,
+                )
                 court_state["match_status"]["active"] = True
                 _sync_live_score_to_court_state(court_state, match, score)
                 _sync_court_match_timer_from_match(court_state, match)
@@ -920,6 +944,12 @@ def update_match(match_id: int):
                 # Update player names
                 court_state["A"]["surname"] = match.player1_name
                 court_state["B"]["surname"] = match.player2_name
+                _apply_db_flags_to_court_state(
+                    court_state,
+                    match.tournament_id,
+                    match.player1_name,
+                    match.player2_name,
+                )
 
                 _sync_live_score_to_court_state(court_state, match, score)
                 court_state["match_status"]["active"] = (match.status == "in_progress")
@@ -1259,14 +1289,6 @@ def log_match_event():
                     court_state["B"]["full_name"] = player2["name"]
             if player2.get('full_name'):
                 court_state["B"]["full_name"] = player2["full_name"]
-
-            # --- Flags (Android sends 'flag' as ISO country code) ---
-            if player1.get('flag'):
-                court_state["A"]["flag_code"] = player1["flag"]
-                court_state["A"]["flag_url"] = f"https://flagcdn.com/w80/{player1['flag'].lower()}.png"
-            if player2.get('flag'):
-                court_state["B"]["flag_code"] = player2["flag"]
-                court_state["B"]["flag_url"] = f"https://flagcdn.com/w80/{player2['flag'].lower()}.png"
 
             if restore_match_score:
                 _sync_live_score_to_court_state(court_state, active_match, score)
