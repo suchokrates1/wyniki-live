@@ -3375,6 +3375,13 @@ def generate_autoschedule_proposal(
         ensure_knockout_schedule_entries(tournament_id)
 
     entries = fetch_tournament_schedule(tournament_id)
+    if day_date:
+        target_day_str = str(day_date).strip()
+        entries = [
+            entry
+            for entry in entries
+            if str(entry.get("day_date") or "").strip() == target_day_str
+        ]
     if phases:
         wanted = {str(p).strip().lower() for p in phases}
 
