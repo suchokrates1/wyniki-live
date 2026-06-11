@@ -176,6 +176,13 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockout: 'Pucharowa',
         match: 'Mecz',
       },
+      bracket: {
+        semifinal: 'Półfinał',
+        final: 'Finał',
+        placeFor: 'o {number}. miejsce',
+        winnerSf: 'Zwycięzca PF {number}',
+        loserSf: 'Przegrany PF {number}',
+      },
       scope: {
         group: 'fazy grupowej',
         knockout: 'fazy pucharowej',
@@ -454,6 +461,13 @@ export const OFFICE_TRANSLATION_PATCHES = {
       gender: { women: 'Frauen', men: 'Männer', unassigned: 'Nicht zugewiesen' },
       categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Gruppenphase', knockout: 'K.-o.-Phase', match: 'Spiel' },
+      bracket: {
+        semifinal: 'Halbfinale',
+        final: 'Finale',
+        placeFor: 'um Platz {number}',
+        winnerSf: 'HF-Sieger {number}',
+        loserSf: 'HF-Verlierer {number}',
+      },
       scope: { group: 'der Gruppenphase', knockout: 'der K.-o.-Phase', all: 'aller Phasen' },
       status: {
         draft: 'Entwurf',
@@ -725,6 +739,13 @@ export const OFFICE_TRANSLATION_PATCHES = {
       gender: { women: 'Women', men: 'Men', unassigned: 'Unassigned' },
       categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Group', knockout: 'Knockout', match: 'Match' },
+      bracket: {
+        semifinal: 'Semifinal',
+        final: 'Final',
+        placeFor: 'for {number}th place',
+        winnerSf: 'SF winner {number}',
+        loserSf: 'SF loser {number}',
+      },
       scope: { group: 'group phase', knockout: 'knockout phase', all: 'all phases' },
       status: {
         draft: 'Draft',
@@ -996,6 +1017,13 @@ export const OFFICE_TRANSLATION_PATCHES = {
       gender: { women: 'Donne', men: 'Uomini', unassigned: 'Non assegnati' },
       categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Girone', knockout: 'Eliminazione', match: 'Partita' },
+      bracket: {
+        semifinal: 'Semifinale',
+        final: 'Finale',
+        placeFor: 'per il {number}° posto',
+        winnerSf: 'Vincitore SF {number}',
+        loserSf: 'Perdente SF {number}',
+      },
       scope: { group: 'fase a gironi', knockout: 'fase a eliminazione', all: 'tutte le fasi' },
       status: {
         draft: 'Bozza',
@@ -1267,6 +1295,13 @@ export const OFFICE_TRANSLATION_PATCHES = {
       gender: { women: 'Mujeres', men: 'Hombres', unassigned: 'Sin asignar' },
       categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Grupos', knockout: 'Eliminatoria', match: 'Partido' },
+      bracket: {
+        semifinal: 'Semifinal',
+        final: 'Final',
+        placeFor: 'por el {number}.º puesto',
+        winnerSf: 'Ganador SF {number}',
+        loserSf: 'Perdedor SF {number}',
+      },
       scope: { group: 'fase de grupos', knockout: 'fase eliminatoria', all: 'todas las fases' },
       status: {
         draft: 'Borrador',
@@ -1538,6 +1573,13 @@ export const OFFICE_TRANSLATION_PATCHES = {
       gender: { women: 'Femmes', men: 'Hommes', unassigned: 'Non assignés' },
       categories: { b34Mixed: 'B3/4 Mixed' },
       phases: { group: 'Poule', knockout: 'Élimination', match: 'Match' },
+      bracket: {
+        semifinal: 'Demi-finale',
+        final: 'Finale',
+        placeFor: 'pour la {number}e place',
+        winnerSf: 'Vainqueur DF {number}',
+        loserSf: 'Perdant DF {number}',
+      },
       scope: { group: 'phase de poules', knockout: 'phase à élimination', all: 'toutes les phases' },
       status: {
         draft: 'Brouillon',

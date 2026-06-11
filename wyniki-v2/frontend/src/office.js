@@ -4,10 +4,10 @@ import {
   isMixedCategory,
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
   planningDivisionKey as sharedPlanningDivisionKey,
-  planningGroupLetterFromName as sharedPlanningGroupLetterFromName,
   planningResolveStoredGroupName as sharedPlanningResolveStoredGroupName,
   planningStoredGroupNames as sharedPlanningStoredGroupNames,
 } from './shared/categories.js';
+import { translateStoredScheduleLabel } from './shared/labelDisplay.js';
 import './main.css';
 
 window.Alpine = Alpine;
@@ -1054,12 +1054,24 @@ Alpine.data('officeApp', () => ({
     );
   },
 
+  officeDisplayLabel(value) {
+    return translateStoredScheduleLabel(value, {
+      women: this.ot('gender.women'),
+      men: this.ot('gender.men'),
+      mixed: this.ot('categories.b34Mixed'),
+      semifinal: this.ot('bracket.semifinal'),
+      final: this.ot('bracket.final'),
+      placeFor: this.ot('bracket.placeFor'),
+      group: this.ot('phases.group'),
+      knockout: this.ot('phases.knockout'),
+      groupSuffixLetter: this.ot('planning.groupSuffix', { letter: '{letter}' }),
+      winnerSf: this.ot('bracket.winnerSf'),
+      loserSf: this.ot('bracket.loserSf'),
+    });
+  },
+
   planningGroupDisplayName(groupName) {
-    const division = sharedPlanningDivisionFromGroupName(groupName, this.planningMixedCategories);
-    const label = this.planningDivisionLabel(division);
-    const letter = sharedPlanningGroupLetterFromName(groupName);
-    if (letter) return `${label} — ${this.ot('planning.groupSuffix', { letter })}`;
-    return label;
+    return this.officeDisplayLabel(groupName);
   },
 
   planningResolveGroupName(groupName, divisionKey = this.planningSelectedDivision) {
@@ -1623,8 +1635,8 @@ Alpine.data('officeApp', () => ({
   },
 
   officeMatchPhase(match) {
-    if (match.group_name) return match.group_name;
-    return match.phase || this.ot('phases.match');
+    if (match.group_name) return this.officeDisplayLabel(match.group_name);
+    return this.officeDisplayLabel(match.phase) || this.ot('phases.match');
   },
 
   officePhaseTone(match) {
