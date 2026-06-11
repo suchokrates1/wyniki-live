@@ -130,6 +130,43 @@ def test_create_match_stores_mobile_client_audit(umpire_app_with_temp_db):
     assert client_info["app"]["device"] == "Samsung SM-X200"
 
 
+def test_create_match_sets_flags_from_tournament_players(umpire_app_with_temp_db):
+    from wyniki import database
+    from wyniki.services.court_manager import get_court_state
+
+    tournament_id = database.insert_tournament("Flag Cup", "2026-06-10", "2026-06-11", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+    database.insert_player(tournament_id, "Jan Kowalski", "B1", "PL", first_name="Jan", last_name="Kowalski", gender="M")
+    database.insert_player(tournament_id, "Hans Mueller", "B1", "DE", first_name="Hans", last_name="Mueller", gender="M")
+
+    client = umpire_app_with_temp_db.test_client()
+    response = client.post(
+        "/api/matches",
+        json={
+            "court_id": f"t{tournament_id}-1",
+            "player1_name": "Jan Kowalski",
+            "player2_name": "Hans Mueller",
+            "status": "in_progress",
+            "score": {
+                "player1_sets": 0,
+                "player2_sets": 0,
+                "player1_games": 0,
+                "player2_games": 0,
+                "player1_points": 0,
+                "player2_points": 0,
+                "sets_history": [],
+            },
+        },
+    )
+
+    assert response.status_code == 201
+    state = get_court_state(f"t{tournament_id}-1")
+    assert state["A"]["flag_code"] == "PL"
+    assert state["B"]["flag_code"] == "DE"
+    assert "pl.png" in (state["A"]["flag_url"] or "")
+    assert "de.png" in (state["B"]["flag_url"] or "")
+
+
 def test_mobile_create_match_is_idempotent_by_client_uuid(umpire_app_with_temp_db):
     from wyniki import database
 

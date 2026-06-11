@@ -51,7 +51,11 @@ def rehydrate_live_courts() -> int:
 
     This keeps overlays/public live views correct after process reloads or cache loss.
     """
-    from .api.umpire_api import _sync_court_match_timer_from_match, _sync_live_score_to_court_state
+    from .api.umpire_api import (
+        _apply_db_flags_to_court_state,
+        _sync_court_match_timer_from_match,
+        _sync_live_score_to_court_state,
+    )
 
     active_matches = (
         Match.query
@@ -77,6 +81,12 @@ def rehydrate_live_courts() -> int:
             court_state["B"]["surname"] = match.player2_name
             court_state["A"]["full_name"] = _resolve_live_player_name(match, match.player1_name)
             court_state["B"]["full_name"] = _resolve_live_player_name(match, match.player2_name)
+            _apply_db_flags_to_court_state(
+                court_state,
+                match.tournament_id,
+                match.player1_name,
+                match.player2_name,
+            )
             court_state["match_status"]["active"] = True
             _sync_live_score_to_court_state(court_state, match)
             _sync_court_match_timer_from_match(court_state, match)
