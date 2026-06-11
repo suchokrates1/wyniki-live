@@ -858,36 +858,27 @@ def _build_single_group_final_slots(group_name: str, standings: List[Dict[str, A
 
 
 def _build_four_player_group_knockout_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Generate semifinals, final and 3rd-place match for one 4-player group."""
+    """Generate a direct final and 3rd-place match for one 4-player group.
+
+    Semifinals are only used when a category has two groups (A/B); a single group of
+    four plays 1st vs 2nd for the title and 3rd vs 4th for bronze.
+    """
     if len(standings) < 4:
         return _build_single_group_final_slots(group_name, standings)
-    semifinal_phase = f"{group_name} — Półfinał" if group_name else "Półfinał"
     final_phase = f"{group_name} — Finał" if group_name else "Finał"
     third_phase = f"{group_name} — o 3. miejsce" if group_name else "o 3. miejsce"
     return [
         {
-            "phase": semifinal_phase,
-            "position": 1,
-            "player1_name": standings[0]["name"],
-            "player2_name": standings[3]["name"],
-        },
-        {
-            "phase": semifinal_phase,
-            "position": 2,
-            "player1_name": standings[1]["name"],
-            "player2_name": standings[2]["name"],
-        },
-        {
             "phase": final_phase,
             "position": 1,
-            "player1_name": None,
-            "player2_name": None,
+            "player1_name": standings[0]["name"],
+            "player2_name": standings[1]["name"],
         },
         {
             "phase": third_phase,
             "position": 1,
-            "player1_name": None,
-            "player2_name": None,
+            "player1_name": standings[2]["name"],
+            "player2_name": standings[3]["name"],
         },
     ]
 
