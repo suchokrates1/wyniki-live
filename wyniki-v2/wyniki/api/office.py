@@ -23,6 +23,7 @@ from ..database import (
     move_schedule_entry_with_cascade,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
+    seed_provisional_knockout_from_groups,
     save_autoscheduler_config,
     save_bracket_groups,
     upsert_tournament_schedule_entries,
@@ -246,8 +247,12 @@ def office_schedule_generate(slot: int):
     if error:
         return error
     tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
     ensure_group_schedule_entries(tournament_id)
-    ensure_knockout_schedule_entries(tournament_id)
+    seed_provisional_knockout_from_groups(
+        tournament_id,
+        schedule_day=(data.get('day_date') or None),
+    )
     return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id), "dashboard": _build_office_dashboard(tournament_id)})
 
 

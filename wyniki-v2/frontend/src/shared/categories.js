@@ -69,8 +69,53 @@ export function planningDivisionFromGroupName(groupName, mixedCategories = []) {
   const upper = label.toUpperCase();
   const lower = label.toLowerCase();
   let gender = '';
-  if (lower.includes('kob') || upper.endsWith('K')) gender = 'K';
-  if (lower.includes('męż') || lower.includes('mez') || lower.includes('mężczy') || upper.endsWith('M')) gender = 'M';
+  if (lower.includes('kob') || lower.includes('frau') || lower.includes('damen') || upper.endsWith('K')) gender = 'K';
+  if (lower.includes('męż') || lower.includes('mez') || lower.includes('mężczy') || lower.includes('männer') || lower.includes('manner') || lower.includes('herren') || upper.endsWith('M')) gender = 'M';
   if (category && gender) return `${category}${gender}`;
   return category || gender || '';
+}
+
+/** Stable division label stored in DB and assignments (language-independent). */
+export function planningStoredDivisionLabel(key, mixedCategories = []) {
+  const value = String(key || '').toUpperCase();
+  if (isMixedCategory(value, mixedCategories)) return 'B3/4 Mixed';
+  const category = (value.match(/^B\d{1,2}/) || [''])[0];
+  const gender = value.endsWith('K') ? 'Kobiety' : value.endsWith('M') ? 'Mężczyźni' : '';
+  if (category && gender) return `${category} ${gender}`;
+  return category || gender || 'Nieprzypisani';
+}
+
+const PLANNING_GROUP_SUFFIX_RE = /(?:grupa|gruppe|group|girone|grupo|poule)\s+([A-Z])\s*$/i;
+
+export function planningGroupLetterFromName(groupName) {
+  const raw = String(groupName || '');
+  const suffix = (raw.includes(' — ') ? raw.split(' — ')[1] : raw.split(' - ')[1] || '').trim();
+  const match = suffix.match(PLANNING_GROUP_SUFFIX_RE) || suffix.match(/^([A-Z])$/i);
+  return match ? match[1].toUpperCase() : '';
+}
+
+/** Canonical group names for assignments and API payloads. */
+export function planningStoredGroupNames(divisionKey, count = 1, mixedCategories = []) {
+  const safeCount = Math.max(1, Math.min(8, Number(count || 1)));
+  const label = planningStoredDivisionLabel(divisionKey, mixedCategories);
+  if (!divisionKey) return [];
+  if (safeCount === 1) return [label];
+  return Array.from({ length: safeCount }, (_, index) => (
+    `${label} — Grupa ${String.fromCharCode(65 + index)}`
+  ));
+}
+
+/** Map any stored or translated group label to the canonical name for a division. */
+export function planningResolveStoredGroupName(groupName, divisionKey, count, mixedCategories = []) {
+  if (!groupName || !divisionKey) return '';
+  const targets = planningStoredGroupNames(divisionKey, count, mixedCategories);
+  if (targets.includes(groupName)) return groupName;
+  const nameDivision = planningDivisionFromGroupName(groupName, mixedCategories);
+  if (nameDivision !== divisionKey) return '';
+  const letter = planningGroupLetterFromName(groupName);
+  if (letter) {
+    const index = letter.charCodeAt(0) - 65;
+    return targets[index] || '';
+  }
+  return targets[0] || '';
 }
