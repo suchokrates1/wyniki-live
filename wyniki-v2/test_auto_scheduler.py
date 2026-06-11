@@ -88,8 +88,8 @@ def test_place_matches_assigns_courts_and_cascading_times():
     assert by_id[1]["scheduled_time"] == "09:30"
     assert by_id[2]["court_id"] == "c4"
     assert by_id[2]["scheduled_time"] == "10:45"  # +75
-    # B2 match goes to c3, own start
-    assert by_id[3]["court_id"] == "c3"
+    # B2 match is load-balanced onto the first non-B1 court (c1)
+    assert by_id[3]["court_id"] == "c1"
     assert by_id[3]["scheduled_time"] == "09:30"
 
 
@@ -107,14 +107,14 @@ def test_place_matches_respects_rest_no_back_to_back():
     assert abs(pos[1] - pos[2]) >= 2  # X's two matches separated by at least one slot
 
 
-def test_place_matches_unmapped_band_is_unplaced():
+def test_place_matches_unmapped_band_uses_flex_court():
     config = sched.build_default_config(_courts())
     matches = [
         {"id": 9, "category_name": "Senior open", "phase": "Grupowa", "player1_name": "A", "player2_name": "B"},
     ]
     placements = sched.place_matches(matches, config, "2026-05-23")
-    assert placements[0]["court_id"] is None
-    assert placements[0]["scheduled_time"] == ""
+    assert placements[0]["court_id"] == "c1"
+    assert placements[0]["scheduled_time"] == "09:30"
 
 
 def test_phase_rank_orders_group_before_final():
@@ -138,6 +138,28 @@ def test_recompute_court_times_cascade():
     ]
     result = sched.recompute_court_times(entries, config)
     assert [e["scheduled_time"] for e in result] == ["10:00", "11:15", "12:30"]  # +75 each
+
+
+def test_place_matches_load_balances_non_b1_across_flex_courts():
+    config = sched.build_default_config(_courts())
+    matches = [
+        {
+            "id": index,
+            "category_name": "B2 Mężczyźni",
+            "phase": "Grupowa",
+            "player1_name": f"P{index}A",
+            "player2_name": f"P{index}B",
+            "sort_order": index,
+        }
+        for index in range(1, 7)
+    ]
+    placements = sched.place_matches(matches, config, "2026-05-23")
+    counts = {"c1": 0, "c2": 0, "c3": 0}
+    for placement in placements:
+        court_id = placement["court_id"]
+        if court_id in counts:
+            counts[court_id] += 1
+    assert counts == {"c1": 2, "c2": 2, "c3": 2}
 
 
 def test_recompute_court_times_with_explicit_start():

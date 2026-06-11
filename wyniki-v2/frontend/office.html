@@ -670,7 +670,7 @@
                     <div class="rounded-xl border shadow-sm p-2"
                          :class="(autoIsPlaceholder(entry) ? 'bg-indigo-50 border-indigo-200 border-dashed' : 'bg-white border-slate-200') + (planningOpenCardId === autoEntryId(entry) ? ' ring-2 ring-emerald-400' : '')">
                       <div class="cursor-move"
-                           :draggable="!autoIsPreview()"
+                           :draggable="!autoLoading"
                            @dragstart="onAutoDragStart(entry, $event)"
                            @dragover.prevent
                            @drop.prevent.stop="onAutoDrop(court.kort_id, entry)"
@@ -734,7 +734,7 @@
           <div class="flex flex-wrap gap-2">
             <template x-for="entry in autoUnplaced()" :key="'autounp_'+(entry.schedule_id || entry.id)">
               <div class="rounded-xl bg-white border border-amber-200 p-2 cursor-move"
-                   :draggable="!autoIsPreview()"
+                   :draggable="!autoLoading"
                    @dragstart="onAutoDragStart(entry, $event)">
                 <div class="text-sm font-semibold text-slate-900">
                   <span x-text="entry.player1_name || '—'"></span>
