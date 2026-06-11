@@ -640,6 +640,7 @@ Alpine.data('officeApp', () => ({
 
   async autoGenerate() {
     if (!this.token) return;
+    const selectedDay = this.autoDayDate;
     this.autoLoading = true;
     try {
       const b1Courts = (this.autoB1Courts || []).map(String).filter(Boolean);
@@ -647,7 +648,7 @@ Alpine.data('officeApp', () => ({
         start_time: this.autoStartTime,
         b1_court_ids: b1Courts,
         b1_court_id: b1Courts[0] || '',
-        day_date: this.autoDayDate,
+        day_date: selectedDay,
       };
       if (this.autoPhaseScope && this.autoPhaseScope !== 'all') {
         body.phases = [this.autoPhaseScope];
@@ -662,6 +663,7 @@ Alpine.data('officeApp', () => ({
       this.autoConfig = payload.config || this.autoConfig;
       this.autoCourts = Array.isArray(payload.courts) ? payload.courts : this.autoCourts;
       this.autoProposal = Array.isArray(payload.placements) ? payload.placements : [];
+      this.autoDayDate = selectedDay || this.autoDayDate;
       const placed = this.autoProposal.filter(p => p.court_id && p.scheduled_time).length;
       if (!placed) {
         const hint = this.autoPhaseScope === 'knockout'
@@ -967,22 +969,33 @@ Alpine.data('officeApp', () => ({
     return players.every(player => this.planningGroupAssignments[player.id]);
   },
 
+  addDaysToIsoDate(isoDate, offsetDays = 1) {
+    const parts = String(isoDate || '').split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return String(isoDate || '');
+    const date = new Date(parts[0], parts[1] - 1, parts[2] + Number(offsetDays || 0));
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  },
+
   planningTournamentDays() {
+    const days = new Set();
     const { start, end } = this.autoTournamentDates();
     if (start) {
-      const startDate = new Date(`${start}T00:00:00`);
-      const endDate = end ? new Date(`${end}T00:00:00`) : startDate;
-      if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime()) && endDate >= startDate) {
-        const days = [];
-        const cursor = new Date(startDate);
-        while (cursor <= endDate && days.length < 14) {
-          days.push(cursor.toISOString().slice(0, 10));
-          cursor.setDate(cursor.getDate() + 1);
-        }
-        return days;
+      let cursor = start;
+      const last = end || start;
+      let guard = 0;
+      while (cursor <= last && guard < 14) {
+        days.add(cursor);
+        cursor = this.addDaysToIsoDate(cursor, 1);
+        guard += 1;
       }
-      return [start];
     }
+    (this.planningSchedule || []).forEach(entry => {
+      if (entry?.day_date) days.add(String(entry.day_date));
+    });
+    if (days.size) return Array.from(days).sort();
     const available = this.autoAvailableDays();
     return available.length ? available : [];
   },
