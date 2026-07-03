@@ -42,10 +42,14 @@ from ..database import (
     update_player,
     delete_player,
     bulk_insert_players,
+    is_group_stage_phase,
+    expected_group_matches_count,
+    count_finished_group_matches,
     maybe_generate_knockout_from_completed_groups,
     advance_knockout,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
+    seed_knockout_rematch_for_groups,
     upsert_tournament_schedule_entries,
     update_tournament_schedule_entry,
     delete_tournament_schedule_entry,
@@ -1022,41 +1026,18 @@ def _build_office_dashboard(tournament_id: int) -> Dict[str, Any]:
     expected_total = 0
     finished_total = 0
 
-    group_finished_pairs: Dict[int, set[tuple[str, str]]] = {int(group['id']): set() for group in groups}
+    group_finished_counts: Dict[int, int] = {int(group['id']): 0 for group in groups}
 
     match_rows = Match.query.filter_by(tournament_id=tournament_id).all()
     match_by_id = {int(match.id): match for match in match_rows}
     history_rows = MatchHistory.query.filter_by(tournament_id=tournament_id).all()
     schedule = fetch_tournament_schedule(tournament_id)
 
-    for match in match_rows:
-        if match.status != 'finished' or match.phase != 'Grupowa':
-            continue
-        group_id = int(match.bracket_group_id) if match.bracket_group_id else _infer_group_id_for_players(match.player1_name, match.player2_name, player_groups)
-        if not group_id:
-            continue
-        group_finished_pairs.setdefault(group_id, set()).add(
-            _player_pair_key(match.player1_name, match.player2_name)
-        )
-
-    for history in history_rows:
-        if history.phase != 'Grupowa':
-            continue
-        group_id = None
-        linked_match = match_by_id.get(int(history.match_id)) if history.match_id else None
-        if linked_match and linked_match.bracket_group_id:
-            group_id = int(linked_match.bracket_group_id)
-        else:
-            group_id = _infer_group_id_for_players(history.player_a, history.player_b, player_groups)
-        if not group_id:
-            continue
-        group_finished_pairs.setdefault(group_id, set()).add(_player_pair_key(history.player_a, history.player_b))
-
     for group in groups:
         group_id = int(group['id'])
         player_count = len(group.get('players') or [])
-        expected = player_count * (player_count - 1) // 2 if player_count >= 2 else 0
-        finished = len(group_finished_pairs.get(group_id, set()))
+        expected = expected_group_matches_count(tournament_id, group_id, player_count)
+        finished = count_finished_group_matches(tournament_id, group_id)
         expected_total += expected
         finished_total += finished
         progress_groups.append({
@@ -1126,6 +1107,29 @@ def generate_tournament_schedule(tournament_id: int):
     ensure_group_schedule_entries(tournament_id)
     ensure_knockout_schedule_entries(tournament_id)
     return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
+
+
+@blueprint.route('/<int:tournament_id>/schedule/generate-rematch', methods=['POST'])
+def generate_tournament_schedule_rematch(tournament_id: int):
+    """Add a second group-stage round robin for selected bracket groups."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    group_ids = data.get('group_ids') or []
+    if not isinstance(group_ids, list) or not group_ids:
+        return jsonify({"error": "group_ids required"}), 400
+    result = seed_knockout_rematch_for_groups(
+        tournament_id,
+        [int(group_id) for group_id in group_ids if group_id],
+        schedule_day=(data.get('day_date') or None),
+    )
+    if result.get("error"):
+        return jsonify(result), 400
+    return _json_no_cache({
+        "result": result,
+        "schedule": fetch_tournament_schedule(tournament_id),
+    })
 
 
 @blueprint.route('/<int:tournament_id>/schedule/<int:schedule_id>', methods=['PUT', 'PATCH'])

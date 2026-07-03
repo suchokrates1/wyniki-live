@@ -683,6 +683,26 @@ def _split_bracket_label(value: Optional[str]) -> tuple[str, str]:
     return prefix.strip(), suffix.strip()
 
 
+GROUP_PHASE = "Grupowa"
+GROUP_REMATCH_PHASE = "Grupowa — Rewanż"
+
+
+def is_group_stage_phase(phase: Optional[str]) -> bool:
+    """Return True for regular or rematch group-stage phases."""
+    value = (phase or "").strip()
+    return value in {GROUP_PHASE, GROUP_REMATCH_PHASE}
+
+
+def expected_group_matches_count(tournament_id: int, group_id: int, player_count: int) -> int:
+    with db_conn() as conn:
+        return _expected_group_matches_count(conn.cursor(), tournament_id, group_id, player_count)
+
+
+def count_finished_group_matches(tournament_id: int, group_id: int) -> int:
+    with db_conn() as conn:
+        return _count_finished_group_matches(conn.cursor(), tournament_id, group_id)
+
+
 def _phase_kind(phase: Optional[str]) -> Optional[str]:
     """Map localized phase labels to a stable semantic kind."""
     _, suffix = _split_bracket_label(phase)
@@ -772,20 +792,8 @@ def _is_group_play_complete(
 ) -> bool:
     if player_count < 2:
         return True
-    expected = player_count * (player_count - 1) // 2
-    cursor.execute(
-        """
-        SELECT COUNT(*) AS count
-        FROM matches
-        WHERE tournament_id = ?
-          AND status = 'finished'
-          AND COALESCE(finish_reason, 'normal') != 'test'
-          AND phase = 'Grupowa'
-          AND bracket_group_id = ?
-        """,
-        (tournament_id, group_id),
-    )
-    return int(cursor.fetchone()["count"] or 0) >= expected
+    expected = _expected_group_matches_count(cursor, tournament_id, group_id, player_count)
+    return _count_finished_group_matches(cursor, tournament_id, group_id) >= expected
 
 
 def _bucket_groups_play_complete(
@@ -810,6 +818,51 @@ def _slot_phase_matches(slot_phase: str, expected_kind: str, category_prefix: st
     """Check whether a stored phase belongs to the requested category/kind."""
     slot_prefix, _ = _split_bracket_label(slot_phase)
     return slot_prefix == category_prefix and _phase_kind(slot_phase) == expected_kind
+
+
+def _expected_group_matches_count(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    group_id: int,
+    player_count: int,
+) -> int:
+    """Count scheduled group-stage matches for one bracket group."""
+    if player_count < 2:
+        return 0
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM tournament_schedule
+        WHERE tournament_id = ?
+          AND bracket_group_id = ?
+          AND phase IN (?, ?)
+        """,
+        (tournament_id, group_id, GROUP_PHASE, GROUP_REMATCH_PHASE),
+    )
+    scheduled = int(cursor.fetchone()["count"] or 0)
+    if scheduled > 0:
+        return scheduled
+    return player_count * (player_count - 1) // 2
+
+
+def _count_finished_group_matches(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    group_id: int,
+) -> int:
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM matches
+        WHERE tournament_id = ?
+          AND status = 'finished'
+          AND COALESCE(finish_reason, 'normal') != 'test'
+          AND phase IN (?, ?)
+          AND bracket_group_id = ?
+        """,
+        (tournament_id, GROUP_PHASE, GROUP_REMATCH_PHASE, group_id),
+    )
+    return int(cursor.fetchone()["count"] or 0)
 
 
 def _assign_knockout_slot_player(cursor, slot: sqlite3.Row, side: int, player_name: str) -> None:
@@ -1057,12 +1110,14 @@ def _compute_provisional_knockout_slots_from_bracket(
 
             standings = ordered_groups[0].get("standings") or []
             group_name = str(ordered_groups[0].get("name") or bucket_name)
-            if len(standings) == 4:
-                if complete:
-                    slots.extend(_build_four_player_group_knockout_slots(bucket_name, standings))
+            player_count = player_count_by_name.get(group_name) or len(standings)
+            if player_count >= 4 or len(standings) >= 4:
+                top_four = standings[:4] if len(standings) >= 4 else standings
+                if complete and len(top_four) >= 4:
+                    slots.extend(_build_four_player_group_knockout_slots(bucket_name, top_four))
                 else:
                     slots.extend(_build_provisional_four_player_group_knockout_slots(group_name, bucket_name))
-            elif len(standings) == 3:
+            elif player_count == 3 or len(standings) == 3:
                 if complete:
                     slots.extend(_build_single_group_final_slots(bucket_name, standings))
                 else:
@@ -1071,6 +1126,93 @@ def _compute_provisional_knockout_slots_from_bracket(
     if not slots:
         return {"error": "Need at least one eligible category for knockout generation"}
     return {"status": "ok", "knockout": slots}
+
+
+def seed_knockout_rematch_for_groups(
+    tournament_id: int,
+    bracket_group_ids: List[int],
+    *,
+    schedule_day: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Backward-compatible alias for group-stage rematch generation."""
+    return ensure_group_rematch_schedule_entries(
+        tournament_id,
+        bracket_group_ids,
+        schedule_day=schedule_day,
+    )
+
+
+def ensure_group_rematch_schedule_entries(
+    tournament_id: int,
+    bracket_group_ids: List[int],
+    *,
+    schedule_day: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Add a second round-robin (everyone vs everyone) for selected groups."""
+    groups = fetch_bracket_groups(tournament_id)
+    group_by_id = {int(group["id"]): group for group in groups if group.get("id")}
+    requested = [int(group_id) for group_id in bracket_group_ids if group_id]
+    if not requested:
+        return {"status": "error", "error": "no_groups_selected"}
+
+    inserted = 0
+    skipped: List[Dict[str, Any]] = []
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            default_day = (
+                str(schedule_day).strip()
+                if schedule_day
+                else _schedule_day_for_tournament(cursor, tournament_id)
+            )
+            now = _utc_now()
+            cursor.execute(
+                "SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM tournament_schedule WHERE tournament_id = ?",
+                (tournament_id,),
+            )
+            next_order = int(cursor.fetchone()["max_order"] or 0) + 1
+
+            for group_id in requested:
+                group = group_by_id.get(group_id)
+                if not group:
+                    skipped.append({"group_id": group_id, "reason": "not_found"})
+                    continue
+
+                cursor.execute(
+                    """
+                    SELECT id FROM tournament_schedule
+                    WHERE tournament_id = ? AND bracket_group_id = ? AND phase = ?
+                    LIMIT 1
+                    """,
+                    (tournament_id, group_id, GROUP_REMATCH_PHASE),
+                )
+                if cursor.fetchone():
+                    skipped.append({"group_id": group_id, "reason": "rematch_exists"})
+                    continue
+
+                before_order = next_order
+                next_order = _insert_group_round_robin_schedule_entries(
+                    cursor,
+                    tournament_id,
+                    group,
+                    phase=GROUP_REMATCH_PHASE,
+                    source_type="group_rematch",
+                    default_day=default_day,
+                    start_order=next_order,
+                    now=now,
+                )
+                inserted += max(next_order - before_order, 0)
+
+            conn.commit()
+        return {
+            "status": "ok",
+            "inserted": inserted,
+            "skipped": skipped,
+            "schedule": fetch_tournament_schedule(tournament_id),
+        }
+    except Exception as e:
+        logger.error("ensure_group_rematch_schedule_error", error=str(e), tournament_id=tournament_id)
+        return {"status": "error", "error": str(e)}
 
 
 def _build_four_player_group_knockout_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1124,8 +1266,8 @@ def _compute_knockout_slots_from_bracket(bracket_groups: List[Dict[str, Any]]) -
             continue
 
         standings = ordered_groups[0].get("standings") or []
-        if len(standings) == 4:
-            slots.extend(_build_four_player_group_knockout_slots(bucket_name, standings))
+        if len(standings) >= 4:
+            slots.extend(_build_four_player_group_knockout_slots(bucket_name, standings[:4]))
         elif len(standings) == 3:
             slots.extend(_build_single_group_final_slots(bucket_name, standings))
 
@@ -1275,20 +1417,9 @@ def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[st
             player_count = len(group.get("players", []))
             if player_count < 2:
                 continue
-            expected_matches += player_count * (player_count - 1) // 2
-            cursor.execute(
-                """
-                SELECT COUNT(*) AS count
-                FROM matches
-                WHERE tournament_id = ?
-                  AND status = 'finished'
-                                    AND COALESCE(finish_reason, 'normal') != 'test'
-                  AND phase = 'Grupowa'
-                  AND bracket_group_id = ?
-                """,
-                (tournament_id, group["id"]),
-            )
-            finished_matches += cursor.fetchone()["count"]
+            group_id = int(group["id"])
+            expected_matches += _expected_group_matches_count(cursor, tournament_id, group_id, player_count)
+            finished_matches += _count_finished_group_matches(cursor, tournament_id, group_id)
 
     if expected_matches == 0:
         return {"status": "skipped", "reason": "no_group_matches_expected"}
@@ -2542,7 +2673,7 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
                 (tournament_id,)
             )
             cursor.execute("DELETE FROM bracket_groups WHERE tournament_id = ?", (tournament_id,))
-            cursor.execute("DELETE FROM tournament_schedule WHERE tournament_id = ? AND source_type = 'group'", (tournament_id,))
+            cursor.execute("DELETE FROM tournament_schedule WHERE tournament_id = ? AND source_type IN ('group', 'group_rematch')", (tournament_id,))
 
             # Build player_id -> full name lookup
             cursor.execute(
@@ -2981,6 +3112,57 @@ def publish_tournament_schedule(tournament_id: int, day_date: Optional[str] = No
         return 0
 
 
+def _insert_group_round_robin_schedule_entries(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    group: Dict[str, Any],
+    *,
+    phase: str,
+    source_type: str,
+    default_day: str,
+    start_order: int,
+    now: str,
+) -> int:
+    """Insert missing round-robin schedule rows for one group and return next sort order."""
+    group_id = int(group["id"])
+    group_name = group.get("name") or ""
+    category_name, _ = _split_bracket_label(group_name)
+    players = group.get("players") or []
+    next_order = start_order
+    for left_index, player1 in enumerate(players):
+        for player2 in players[left_index + 1:]:
+            player1_name = player1.get("name") or ""
+            player2_name = player2.get("name") or ""
+            if not player1_name or not player2_name:
+                continue
+            pair_clause, pair_params = _schedule_pair_clause(player1_name, player2_name)
+            cursor.execute(
+                f"""
+                SELECT id FROM tournament_schedule
+                WHERE tournament_id = ? AND bracket_group_id = ? AND phase = ? AND {pair_clause}
+                """,
+                (tournament_id, group_id, phase, *pair_params),
+            )
+            if cursor.fetchone():
+                continue
+            cursor.execute(
+                """
+                INSERT INTO tournament_schedule (
+                    tournament_id, day_date, category_name, bracket_group_id, group_name, phase,
+                    player1_name, player2_name, status, source_type, source_ref_id, sort_order,
+                    notes_public, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    tournament_id, default_day, category_name or group_name, group_id, group_name, phase,
+                    player1_name, player2_name, source_type, group_id, next_order,
+                    "Godzina orientacyjna zostanie podana przez biuro zawodow", now, now,
+                ),
+            )
+            next_order += 1
+    return next_order
+
+
 def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
     """Ensure every configured group round-robin pair has a schedule slot."""
     groups = fetch_bracket_groups(tournament_id)
@@ -2994,41 +3176,16 @@ def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
             cursor.execute("SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM tournament_schedule WHERE tournament_id = ?", (tournament_id,))
             next_order = int(cursor.fetchone()["max_order"] or 0) + 1
             for group in groups:
-                group_id = int(group["id"])
-                group_name = group.get("name") or ""
-                category_name, _ = _split_bracket_label(group_name)
-                players = group.get("players") or []
-                for left_index, player1 in enumerate(players):
-                    for player2 in players[left_index + 1:]:
-                        player1_name = player1.get("name") or ""
-                        player2_name = player2.get("name") or ""
-                        if not player1_name or not player2_name:
-                            continue
-                        pair_clause, pair_params = _schedule_pair_clause(player1_name, player2_name)
-                        cursor.execute(
-                            f"""
-                            SELECT id FROM tournament_schedule
-                            WHERE tournament_id = ? AND source_type = 'group' AND bracket_group_id = ? AND {pair_clause}
-                            """,
-                            (tournament_id, group_id, *pair_params),
-                        )
-                        if cursor.fetchone():
-                            continue
-                        cursor.execute(
-                            """
-                            INSERT INTO tournament_schedule (
-                                tournament_id, day_date, category_name, bracket_group_id, group_name, phase,
-                                player1_name, player2_name, status, source_type, source_ref_id, sort_order,
-                                notes_public, created_at, updated_at
-                            ) VALUES (?, ?, ?, ?, ?, 'Grupowa', ?, ?, 'draft', 'group', ?, ?, ?, ?, ?)
-                            """,
-                            (
-                                tournament_id, default_day, category_name or group_name, group_id, group_name,
-                                player1_name, player2_name, group_id, next_order,
-                                "Godzina orientacyjna zostanie podana przez biuro zawodow", now, now,
-                            ),
-                        )
-                        next_order += 1
+                next_order = _insert_group_round_robin_schedule_entries(
+                    cursor,
+                    tournament_id,
+                    group,
+                    phase=GROUP_PHASE,
+                    source_type="group",
+                    default_day=default_day,
+                    start_order=next_order,
+                    now=now,
+                )
             conn.commit()
         return fetch_tournament_schedule(tournament_id)
     except Exception as e:
@@ -3590,6 +3747,8 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
     end_ts = end_date + "T23:59:59"
     tournament_clause = "AND tournament_id = ?" if tournament_id is not None else ""
     tournament_params = [tournament_id] if tournament_id is not None else []
+    phase_clause = "AND phase IN (?, ?)"
+    phase_params = (GROUP_PHASE, GROUP_REMATCH_PHASE)
     # Try exact match first
     cursor.execute(f"""
          SELECT id, player1_name, player2_name, player1_sets, player2_sets,
@@ -3598,13 +3757,13 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
         WHERE status = 'finished'
            AND COALESCE(finish_reason, 'normal') != 'test'
           {tournament_clause}
-                    AND phase = 'Grupowa'
+          {phase_clause}
           AND player1_name IN ({placeholders})
           AND player2_name IN ({placeholders})
           AND created_at >= ?
           AND created_at <= ?
         ORDER BY created_at
-    """, (*tournament_params, *player_names, *player_names, start_date, end_ts))
+    """, (*tournament_params, *phase_params, *player_names, *player_names, start_date, end_ts))
     exact_results = [dict(row) for row in cursor.fetchall()]
 
     # Fallback: surname-based matching (bracket stores "Kowalski" but match has "Jan Kowalski")
@@ -3636,13 +3795,13 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
         WHERE status = 'finished'
                   AND COALESCE(finish_reason, 'normal') != 'test'
                     {tournament_clause}
-                    AND phase = 'Grupowa'
+                    {phase_clause}
           AND ({p1_cond})
           AND ({p2_cond})
           AND created_at >= ?
           AND created_at <= ?
         ORDER BY created_at
-        """, (*tournament_params, *like_params, *like_params2, start_date, end_ts))
+        """, (*tournament_params, *phase_params, *like_params, *like_params2, start_date, end_ts))
     raw_results = cursor.fetchall()
     if not exact_results and not raw_results:
         return []

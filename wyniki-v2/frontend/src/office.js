@@ -84,6 +84,14 @@ Alpine.data('officeApp', () => ({
   planningManualOpen: false,
   planningPublishing: false,
   planningNewSchedule: defaultOfficeScheduleForm(),
+  planningRematchGroupIds: [],
+  planningNewPlayer: {
+    first_name: '',
+    last_name: '',
+    category: '',
+    country: '',
+  },
+  planningAddPlayerOpen: false,
   autoConfig: null,
   autoCourts: [],
   autoBands: [],
@@ -1151,6 +1159,7 @@ Alpine.data('officeApp', () => ({
       final: this.ot('bracket.final'),
       placeFor: this.ot('bracket.placeFor'),
       group: this.ot('phases.group'),
+      groupRematch: this.ot('phases.groupRematch'),
       knockout: this.ot('phases.knockout'),
       groupSuffixLetter: this.ot('planning.groupSuffix', { letter: '{letter}' }),
       winnerSf: this.ot('bracket.winnerSf'),
@@ -1381,6 +1390,100 @@ Alpine.data('officeApp', () => ({
     await this.loadOfficePlanningData();
   },
 
+  planningBracketGroups() {
+    return (this.planningGroups || []).filter(group => group?.id);
+  },
+
+  isPlanningRematchGroupSelected(groupId) {
+    return (this.planningRematchGroupIds || []).map(String).includes(String(groupId));
+  },
+
+  togglePlanningRematchGroup(groupId, checked) {
+    const key = String(groupId);
+    const current = new Set((this.planningRematchGroupIds || []).map(String));
+    if (checked) current.add(key);
+    else current.delete(key);
+    this.planningRematchGroupIds = [...current];
+  },
+
+  async generatePlanningRematch() {
+    const groupIds = (this.planningRematchGroupIds || [])
+      .map(value => Number(value))
+      .filter(value => Number.isFinite(value) && value > 0);
+    if (!groupIds.length) {
+      this.showToast(this.ot('toast.pickRematchGroups'), 'warning');
+      return;
+    }
+    const { start, end } = this.autoTournamentDates();
+    const dayDate = this.autoDayDate || (end && end !== start ? end : start) || '';
+    try {
+      const response = await fetch(`/api/office/${this.slot}/schedule/generate-rematch`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({
+          group_ids: groupIds,
+          ...(dayDate ? { day_date: dayDate } : {}),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        this.logout(this.ot('errors.sessionExpired'));
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(payload.error || this.ot('errors.rematchGenerateFailed'));
+      }
+      this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+      this.showToast(this.ot('toast.rematchGenerated'), 'success');
+      await this.loadOfficePlanningData();
+    } catch (error) {
+      console.error('Failed to generate rematch schedule:', error);
+      this.showToast(error.message || this.ot('toast.rematchError'), 'error');
+    }
+  },
+
+  async addOfficePlayer() {
+    const firstName = (this.planningNewPlayer.first_name || '').trim();
+    const lastName = (this.planningNewPlayer.last_name || '').trim();
+    if (!firstName && !lastName) {
+      this.showToast(this.ot('toast.playerNameRequired'), 'warning');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/office/${this.slot}/players`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          category: (this.planningNewPlayer.category || '').trim(),
+          country: (this.planningNewPlayer.country || '').trim(),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        this.logout(this.ot('errors.sessionExpired'));
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(payload.error || this.ot('errors.playerAddFailed'));
+      }
+      this.planningPlayers = Array.isArray(payload.players) ? payload.players : this.planningPlayers;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+      this.planningNewPlayer = {
+        first_name: '',
+        last_name: '',
+        category: this.planningNewPlayer.category || '',
+        country: '',
+      };
+      this.showToast(this.ot('toast.playerAdded'), 'success');
+    } catch (error) {
+      console.error('Failed to add office player:', error);
+      this.showToast(error.message || this.ot('toast.playerAddError'), 'error');
+    }
+  },
+
   async addPlanningScheduleEntry() {
     if (!this.planningNewSchedule.player1_name || !this.planningNewSchedule.player2_name || this.planningNewSchedule.player1_name === this.planningNewSchedule.player2_name) {
       this.showToast(this.ot('toast.pickTwoPlayers'), 'warning');
@@ -1559,6 +1662,7 @@ Alpine.data('officeApp', () => ({
           group_id: this.officeNewMatch.group_id,
           player1_name: this.officeNewMatch.player1_name,
           player2_name: this.officeNewMatch.player2_name,
+          phase: this.officeNewMatch.phase || 'Grupowa',
           walkover: this.officeNewMatch.walkover,
           winner_name: this.officeNewMatch.winner_name,
           sets: this.officeSetsFromForm(this.officeNewMatch),
@@ -1728,8 +1832,9 @@ Alpine.data('officeApp', () => ({
   },
 
   officePhaseTone(match) {
-    if (match.group_name) return 'office-chip-group';
-    if ((match.phase || '') && (match.phase || '').toLowerCase() !== 'grupowa') return 'office-chip-knockout';
+    const phase = (match.phase || '').toLowerCase();
+    if (match.group_name || phase.startsWith('grupowa')) return 'office-chip-group';
+    if (phase) return 'office-chip-knockout';
     return 'office-chip-neutral';
   },
 

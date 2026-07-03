@@ -24,6 +24,7 @@ from ..database import (
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
     seed_provisional_knockout_from_groups,
+    seed_knockout_rematch_for_groups,
     save_autoscheduler_config,
     save_bracket_groups,
     upsert_tournament_schedule_entries,
@@ -31,6 +32,9 @@ from ..database import (
     delete_tournament_schedule_entry,
     publish_tournament_schedule,
     link_schedule_to_match,
+    GROUP_PHASE,
+    GROUP_REMATCH_PHASE,
+    is_group_stage_phase,
 )
 from ..db_models import Match, MatchHistory, Tournament, db, utc_now_iso
 from .admin_tournaments import (
@@ -256,6 +260,74 @@ def office_schedule_generate(slot: int):
     return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id), "dashboard": _build_office_dashboard(tournament_id)})
 
 
+@blueprint.route('/<int:slot>/schedule/generate-rematch', methods=['POST'])
+def office_schedule_generate_rematch(slot: int):
+    """Add a second group-stage round robin for selected bracket groups."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    group_ids = data.get('group_ids') or []
+    if not isinstance(group_ids, list) or not group_ids:
+        return jsonify({"error": "group_ids required"}), 400
+    result = seed_knockout_rematch_for_groups(
+        tournament_id,
+        [int(group_id) for group_id in group_ids if group_id],
+        schedule_day=(data.get('day_date') or None),
+    )
+    if result.get("error"):
+        return jsonify(result), 400
+    return _json_no_cache({
+        "result": result,
+        "schedule": fetch_tournament_schedule(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
+
+
+@blueprint.route('/<int:slot>/players', methods=['POST'])
+def office_create_player(slot: int):
+    """Add a player to the tournament from the office workflow."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+
+    first_name = str(data.get('first_name') or '').strip()
+    last_name = str(data.get('last_name') or '').strip()
+    name = str(data.get('name') or '').strip()
+    if not first_name and not last_name:
+        if not name:
+            return jsonify({"error": "Name is required"}), 400
+        parts = name.rsplit(' ', 1)
+        if len(parts) == 2:
+            first_name, last_name = parts[0], parts[1]
+        else:
+            first_name, last_name = '', name
+    if not name:
+        name = f"{first_name} {last_name}".strip()
+
+    from ..database import insert_player
+
+    player_id = insert_player(
+        tournament_id,
+        name,
+        str(data.get('category') or '').strip(),
+        str(data.get('country') or '').strip().upper()[:2],
+        first_name=first_name,
+        last_name=last_name,
+        gender=str(data.get('gender') or '').strip(),
+    )
+    if not player_id:
+        return jsonify({"error": "Failed to add player"}), 500
+    return _json_no_cache({
+        "id": player_id,
+        "players": fetch_players(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id),
+    }), 201
+
+
 @blueprint.route('/<int:slot>/schedule/<int:schedule_id>', methods=['PUT', 'PATCH'])
 def office_schedule_update(slot: int, schedule_id: int):
     """Update date, time, court, status or notes for one schedule entry."""
@@ -428,11 +500,14 @@ def office_group_match(slot: int):
 
     _, player_groups = _group_players_index(groups)
     pair_key = _player_pair_key(player1_name, player2_name)
+    phase = (data.get('phase') or GROUP_PHASE).strip()
+    if not is_group_stage_phase(phase):
+        phase = GROUP_PHASE
 
     existing_match = Match.query.filter(
         Match.tournament_id == tournament_id,
         Match.bracket_group_id == group_id,
-        Match.phase == 'Grupowa',
+        Match.phase == phase,
         Match.status == 'finished',
         (((Match.player1_name == player1_name) & (Match.player2_name == player2_name))
          | ((Match.player1_name == player2_name) & (Match.player2_name == player1_name))),
@@ -440,7 +515,9 @@ def office_group_match(slot: int):
     if existing_match:
         return jsonify({"error": "This group match already has a result. Edit the existing result instead."}), 409
 
-    for history in MatchHistory.query.filter_by(tournament_id=tournament_id, phase='Grupowa').all():
+    for history in MatchHistory.query.filter_by(tournament_id=tournament_id).all():
+        if history.phase != phase:
+            continue
         if _infer_group_id_for_players(history.player_a, history.player_b, player_groups) != group_id:
             continue
         if _player_pair_key(history.player_a, history.player_b) == pair_key:
@@ -459,7 +536,7 @@ def office_group_match(slot: int):
         status='finished',
         tournament_id=tournament_id,
         bracket_group_id=group_id,
-        phase='Grupowa',
+        phase=phase,
         finish_reason='walkover' if _normalize_bool(data.get('walkover', False)) else 'normal',
         winner_name=(data.get('winner_name') or '').strip() if _normalize_bool(data.get('walkover', False)) else None,
         result_note='Walkower' if _normalize_bool(data.get('walkover', False)) else None,
