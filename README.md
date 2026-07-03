@@ -1,19 +1,18 @@
 # Wyniki Live - Tennis Score Display System
 
-Live tennis scoring system with UNO API integration, admin panel, multilingual support, and live streaming.
+Live tennis scoring system with UNO API integration, admin panel, multilingual support, and tournament office workflow.
 
 ## 🎯 Quick Links
 
 - **📖 [Deployment Guide](DEPLOYMENT.md)** - SSH access, deployment, troubleshooting
-- **🌐 Live Site**: https://score.vestmedia.pl
-- **🎥 Streaming**: https://score.vestmedia.pl/stream1-4
+- **🌐 Live Site**: https://score.vestmedia.pl / https://blindtennis.app
+- **🏢 Tournament Office**: https://blindtennis.app/office
 - **📚 [API Documentation](API.md)** - Complete API reference
 
 ## ✨ Features
 
 - 🎾 **Real-time Scores** - Live updates for 4 courts
-- 🎥 **Live Streaming** - HLS streaming with Video.js players
-- 🌍 **Multilingual** - PL, EN, DE, IT, ES
+- 🌍 **Multilingual** - PL, EN, DE, IT, ES, FR
 - 👨‍💼 **Admin Panel** - Match history, court management, player database
 - 🚀 **UNO API Integration** - Smart polling with rate limiting
 - 🏁 **195+ Country Flags** - Complete flag database
@@ -24,13 +23,11 @@ Live tennis scoring system with UNO API integration, admin panel, multilingual s
 ### Stack
 - **Backend**: Flask 3.0 + Python 3.11
 - **Database**: SQLite3
-- **Streaming**: nginx-rtmp + HLS
 - **Proxy**: Cloudflare + Traefik
 - **Deployment**: Docker Compose
 
 ### Services
-- **wyniki-tenis** - Main Flask app (port 8087)
-- **wyniki-rtmp** - nginx-rtmp server (ports 1935, 8089)
+- **wyniki-tenis-v2** - Main Flask app (port 8087)
 
 ## 🚀 Quick Start
 
@@ -68,9 +65,10 @@ ssh -i ~/.ssh/wyniki_minipc suchokrates1@100.110.194.46 \
 
 ### Public
 - `GET /` - Main scoreboard
-- `GET /stream1-4` - Stream players
-- `GET /api/match-data` - Current match data
-- `GET /hls/streamX/live.m3u8` - HLS streams (proxied)
+- `GET /office` - Tournament office
+- `GET /admin` - Admin panel
+- `GET /api/snapshot` - Current match data
+- `GET /api/stream` - SSE live updates
 
 ### Admin (requires authentication)
 - `POST /admin/login` - Admin login
@@ -81,21 +79,6 @@ ssh -i ~/.ssh/wyniki_minipc suchokrates1@100.110.194.46 \
 - `DELETE /api/admin/history/<id>` - Delete entry
 
 See **[API.md](API.md)** for complete API documentation.
-
-## 🎥 Streaming
-
-### RTMP Ingest (OBS Studio)
-```
-Server: rtmp://100.110.194.46/live
-Stream Key: stream1, stream2, stream3, or stream4
-```
-
-### HLS Playback
-Streams available at:
-- https://score.vestmedia.pl/hls/stream1/live.m3u8
-- https://score.vestmedia.pl/hls/stream2/live.m3u8
-- https://score.vestmedia.pl/hls/stream3/live.m3u8
-- https://score.vestmedia.pl/hls/stream4/live.m3u8
 
 ## ⚙️ Configuration
 
@@ -167,18 +150,13 @@ pre-commit run --all-files
 
 ```
 wyniki-live/
-├── app.py                 # Flask application entry point
-├── wyniki/                # Main application package
-│   ├── routes.py         # Route handlers
-│   ├── database.py       # Database operations
-│   ├── config.py         # Configuration
-│   └── poller.py         # UNO API polling
-├── static/               # Static files (stream players)
-├── tests/                # Test suite
-├── docker-compose.yml    # Container orchestration
-├── nginx-rtmp.conf      # Streaming server config
-├── Dockerfile           # Container definition
-└── requirements.txt     # Python dependencies
+├── wyniki-v2/             # Current application (Flask + Vite frontend)
+│   ├── app.py             # Flask application entry point
+│   ├── wyniki/            # Backend package
+│   ├── frontend/          # HTML/JS sources
+│   └── docker-compose.yml # Container orchestration
+├── tests/                 # Test suite
+└── requirements.txt       # Python dependencies
 ```
 
 ## 🔐 Security
@@ -187,7 +165,7 @@ wyniki-live/
 - Session-based authentication for admin API
 - HTTPS-only in production (enforced by Cloudflare)
 - Rate limiting on UNO API requests
-- CORS configured for streaming endpoints
+- CORS configured for public API endpoints
 
 ## 📄 License
 

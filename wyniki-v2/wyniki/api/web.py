@@ -71,42 +71,6 @@ def assets(filename):
     return response
 
 
-@blueprint.route('/stream1')
-@blueprint.route('/stream1.html')
-def stream1():
-    """Serve stream player for court 1."""
-    response = send_from_directory(APP_ROOT / 'static', 'stream1.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    return response
-
-
-@blueprint.route('/stream2')
-@blueprint.route('/stream2.html')
-def stream2():
-    """Serve stream player for court 2."""
-    response = send_from_directory(APP_ROOT / 'static', 'stream2.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    return response
-
-
-@blueprint.route('/stream3')
-@blueprint.route('/stream3.html')
-def stream3():
-    """Serve stream player for court 3."""
-    response = send_from_directory(APP_ROOT / 'static', 'stream3.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    return response
-
-
-@blueprint.route('/stream4')
-@blueprint.route('/stream4.html')
-def stream4():
-    """Serve stream player for court 4."""
-    response = send_from_directory(APP_ROOT / 'static', 'stream4.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    return response
-
-
 @blueprint.route('/overlay/<overlay_id>')
 @blueprint.route('/overlay/<int:tournament_slot>/<overlay_id>')
 def overlay_page(overlay_id, tournament_slot=None):
