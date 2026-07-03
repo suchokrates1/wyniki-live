@@ -511,6 +511,16 @@
         </div>
 
         <div x-show="!planningStep1Collapsed">
+        <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4">
+          <button type="button" class="text-sm font-semibold text-emerald-700" @click="planningAddPlayerOpen = !planningAddPlayerOpen" x-text="planningAddPlayerOpen ? '− ' + ot('planning.addPlayerTitle') : '+ ' + ot('planning.addPlayer')"></button>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" x-show="planningAddPlayerOpen">
+            <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.firstName')" x-model="planningNewPlayer.first_name">
+            <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.lastName')" x-model="planningNewPlayer.last_name">
+            <input type="text" class="input input-bordered bg-white/90" placeholder="B1" x-model="planningNewPlayer.category">
+            <input type="text" class="input input-bordered bg-white/90" maxlength="2" :placeholder="ot('planning.countryCode')" x-model="planningNewPlayer.country">
+            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addOfficePlayer()" x-text="ot('planning.addPlayer')"></button>
+          </div>
+        </div>
         <div class="mt-6" x-show="planningDivisions().length === 0">
           <div class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500" x-text="ot('planning.addPlayersFirst')"></div>
         </div>
@@ -602,8 +612,24 @@
             <p class="mt-1 text-sm text-slate-500" x-text="ot('planning.step2Open')"></p>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" class="btn btn-outline bg-white/80" @click="generatePlanningSchedule()" x-text="ot('planning.generateMissing')"></button>
+            <button type="button" class="btn btn-outline bg-white/80" @click="generatePlanningSchedule()" x-text="ot('planning.generateMatches')"></button>
+            <button type="button" class="btn btn-outline bg-white/80" @click="generatePlanningRematch()" x-text="ot('planning.generateRematch')"></button>
             <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" :class="{'btn-disabled': planningPublishing}" @click="publishAllSchedule()" x-text="ot('planning.publishAll')"></button>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="planningBracketGroups().length">
+          <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" x-text="ot('planning.rematchGroups')"></div>
+          <p class="mt-1 text-sm text-slate-500" x-text="ot('planning.rematchHint')"></p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <template x-for="group in planningBracketGroups()" :key="'rematch_group_'+group.id">
+              <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-sm text-slate-700 cursor-pointer">
+                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                       :checked="isPlanningRematchGroupSelected(group.id)"
+                       @change="togglePlanningRematchGroup(group.id, $event.target.checked)">
+                <span x-text="group.name"></span>
+              </label>
+            </template>
           </div>
         </div>
 

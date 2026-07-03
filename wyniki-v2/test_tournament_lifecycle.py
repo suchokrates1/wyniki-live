@@ -2383,3 +2383,101 @@ def test_office_autoschedule_knockout_seeds_from_groups_before_group_play(full_a
     assert len(knockout_rows) == 2
     assert knockout_rows[0]["player1_name"] == "1. B1 Mężczyźni"
     assert knockout_rows[0]["player2_name"] == "2. B1 Mężczyźni"
+
+
+def test_office_generate_rematch_for_selected_group(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Rematch Cup",
+        "2026-07-17",
+        "2026-07-19",
+        active=True,
+        office_password_hash=generate_password_hash("rm"),
+    )
+    players = [
+        database.insert_player(tournament_id, "A One", "B34", "DE", first_name="A", last_name="One"),
+        database.insert_player(tournament_id, "B Two", "B34", "DE", first_name="B", last_name="Two"),
+        database.insert_player(tournament_id, "C Three", "B34", "DE", first_name="C", last_name="Three"),
+    ]
+    database.save_bracket_groups(tournament_id, [{"name": "B3/4 Mixed", "players": players}])
+    groups = database.fetch_bracket_groups(tournament_id)
+    group_id = groups[0]["id"]
+
+    database.ensure_group_schedule_entries(tournament_id)
+    base_schedule = [entry for entry in database.fetch_tournament_schedule(tournament_id) if entry["phase"] == database.GROUP_PHASE]
+    assert len(base_schedule) == 3
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "rm"})
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    response = client.post(
+        "/api/office/1/schedule/generate-rematch",
+        headers=headers,
+        json={"group_ids": [group_id], "day_date": "2026-07-19"},
+    )
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["result"]["inserted"] == 3
+
+    rematch_schedule = [
+        entry for entry in database.fetch_tournament_schedule(tournament_id)
+        if entry["phase"] == database.GROUP_REMATCH_PHASE
+    ]
+    assert len(rematch_schedule) == 3
+    assert {(entry["player1_name"], entry["player2_name"]) for entry in rematch_schedule} == {
+        ("A One", "B Two"),
+        ("A One", "C Three"),
+        ("B Two", "C Three"),
+    }
+
+    duplicate = client.post(
+        "/api/office/1/schedule/generate-rematch",
+        headers=headers,
+        json={"group_ids": [group_id]},
+    )
+    assert duplicate.status_code == 200
+    assert duplicate.get_json()["result"]["inserted"] == 0
+
+
+def test_provisional_knockout_for_five_player_group(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Five Group", "2026-07-17", "2026-07-19", active=True)
+    players = [
+        database.insert_player(tournament_id, f"P{i}", "B2", "DE", first_name="P", last_name=str(i))
+        for i in range(1, 6)
+    ]
+    database.save_bracket_groups(tournament_id, [{"name": "B2 Mixed", "players": players}])
+
+    generated = database.seed_provisional_knockout_from_groups(tournament_id)
+    assert generated["status"] == "ok"
+    phases = {slot["phase"] for slot in generated["knockout"]}
+    assert "B2 Mixed — Finał" in phases
+    assert "B2 Mixed — o 3. miejsce" in phases
+
+
+def test_office_create_player(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Office Players",
+        "2026-07-17",
+        "2026-07-19",
+        active=True,
+        office_password_hash=generate_password_hash("pl"),
+    )
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "pl"})
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    response = client.post(
+        "/api/office/1/players",
+        headers=headers,
+        json={"first_name": "Lars", "last_name": "Stetten", "category": "B1", "country": "DE"},
+    )
+    assert response.status_code == 201
+    players = database.fetch_players(tournament_id)
+    assert any(player["last_name"] == "Stetten" for player in players)
+

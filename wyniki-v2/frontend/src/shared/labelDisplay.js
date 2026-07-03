@@ -12,10 +12,12 @@ export function translateStoredScheduleLabel(name, labels = {}) {
   const finalLabel = labels.final || 'Finał';
   const placeFor = labels.placeFor || 'o {number}. miejsce';
   const group = labels.group || 'Grupowa';
+  const groupRematch = labels.groupRematch || 'Grupowa — Rewanż';
   const knockout = labels.knockout || 'Pucharowa';
   const groupSuffix = labels.groupSuffixLetter || 'Grupa {letter}';
 
   if (text === 'Grupowa') return group;
+  if (text === 'Grupowa — Rewanż') return groupRematch;
   if (text === 'Pucharowa') return knockout;
 
   let result = text
