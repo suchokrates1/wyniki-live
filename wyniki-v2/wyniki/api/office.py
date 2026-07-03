@@ -21,6 +21,8 @@ from ..database import (
     get_autoscheduler_config,
     maybe_generate_knockout_from_completed_groups,
     move_schedule_entry_with_cascade,
+    unassign_schedule_entry,
+    delete_unassigned_schedule_entries,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
     seed_provisional_knockout_from_groups,
@@ -471,6 +473,44 @@ def office_autoschedule_move(slot: int):
     )
     return _json_no_cache({
         "schedule": schedule,
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
+
+
+@blueprint.route('/<int:slot>/autoschedule/unassign', methods=['POST'])
+def office_autoschedule_unassign(slot: int):
+    """Return a match to the unassigned pool (clear court and time)."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    schedule_id = _normalize_int(data.get('schedule_id'), 0)
+    if not schedule_id:
+        return jsonify({"error": "schedule_id is required"}), 400
+    schedule = unassign_schedule_entry(
+        tournament_id,
+        schedule_id,
+        day_date=(data.get('day_date') or None),
+    )
+    return _json_no_cache({
+        "schedule": schedule,
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
+
+
+@blueprint.route('/<int:slot>/schedule/unassigned', methods=['DELETE'])
+def office_schedule_delete_unassigned(slot: int):
+    """Delete all unassigned schedule entries (no court or time), optionally for one day."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    day_date = (request.args.get('day_date') or '').strip() or None
+    deleted = delete_unassigned_schedule_entries(tournament_id, day_date=day_date)
+    return _json_no_cache({
+        "deleted": deleted,
+        "schedule": fetch_tournament_schedule(tournament_id),
         "dashboard": _build_office_dashboard(tournament_id),
     })
 
