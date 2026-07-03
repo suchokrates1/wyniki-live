@@ -34,6 +34,8 @@ def admin():
     return response
 
 
+@blueprint.route('/office')
+@blueprint.route('/office/')
 @blueprint.route('/office/<int:slot>')
 @blueprint.route('/office/<int:slot>/')
 @blueprint.route('/office.html')
