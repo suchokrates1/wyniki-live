@@ -772,6 +772,32 @@ Alpine.data('officeApp', () => ({
     if (checked) current.add(value);
     else current.delete(value);
     this.autoB1Courts = Array.from(current);
+    this.autoSaveB1Courts();
+  },
+
+  async autoSaveB1Courts() {
+    if (!this.token) return;
+    const b1Courts = (this.autoB1Courts || []).map(String).filter(Boolean);
+    try {
+      const response = await fetch(`/api/office/${this.slot}/autoschedule/config`, {
+        method: 'PUT',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({
+          b1_court_ids: b1Courts,
+          b1_court_id: b1Courts[0] || '',
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        this.logout(this.ot('errors.sessionExpired'));
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
+      this.autoConfig = payload.config || this.autoConfig;
+    } catch (error) {
+      console.error('Failed to save B1 courts:', error);
+      this.showToast(error.message || this.ot('toast.b1CourtsSaveError'), 'error');
+    }
   },
 
   autoBandForCourt(courtId) {
@@ -946,6 +972,72 @@ Alpine.data('officeApp', () => ({
     } catch (error) {
       console.error('Auto-move failed:', error);
       this.showToast(error.message || this.ot('toast.moveError'), 'error');
+    } finally {
+      this.autoLoading = false;
+    }
+  },
+
+  async onAutoDropToUnassigned() {
+    const scheduleId = this.autoDragId;
+    this.autoDragId = null;
+    if (!scheduleId) return;
+    if (this.autoIsPreview()) {
+      const proposal = this.autoProposal.map(entry => ({ ...entry }));
+      const index = proposal.findIndex(entry => String(this.autoEntryId(entry)) === String(scheduleId));
+      if (index < 0) return;
+      const sourceCourt = String(proposal[index].court_id || '');
+      proposal[index] = { ...proposal[index], court_id: '', scheduled_time: '' };
+      if (sourceCourt) this.autoRecomputeProposalCourt(proposal, sourceCourt);
+      this.autoProposal = proposal;
+      return;
+    }
+    this.autoLoading = true;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/autoschedule/unassign`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({
+          schedule_id: scheduleId,
+          day_date: this.autoDayDate,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.unassignFailed'));
+      if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+    } catch (error) {
+      console.error('Auto-unassign failed:', error);
+      this.showToast(error.message || this.ot('toast.unassignError'), 'error');
+    } finally {
+      this.autoLoading = false;
+    }
+  },
+
+  async deleteAllUnassigned() {
+    const count = this.autoUnplaced().length;
+    if (!count) return;
+    if (!confirm(this.ot('confirm.deleteAllUnassigned', { count }))) return;
+    this.autoLoading = true;
+    try {
+      const params = new URLSearchParams();
+      if (this.autoDayDate) params.set('day_date', this.autoDayDate);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const response = await fetch(`/api/office/${this.slot}/schedule/unassigned${query}`, {
+        method: 'DELETE',
+        headers: this.officeHeaders(),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        this.logout(this.ot('errors.sessionExpired'));
+        return;
+      }
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.deleteUnassignedFailed'));
+      if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+      this.showToast(this.ot('toast.unassignedDeleted', { count: payload.deleted || count }), 'success');
+    } catch (error) {
+      console.error('Failed to delete unassigned entries:', error);
+      this.showToast(error.message || this.ot('toast.deleteUnassignedError'), 'error');
     } finally {
       this.autoLoading = false;
     }
@@ -1521,10 +1613,12 @@ Alpine.data('officeApp', () => ({
     }
   },
 
-  async deletePlanningScheduleEntry(entry) {
-    if (!entry?.id || !confirm(this.ot('confirm.deleteEntry'))) return;
+  async deletePlanningScheduleEntry(entry, options = {}) {
+    const scheduleId = entry?.schedule_id || entry?.id;
+    if (!scheduleId) return;
+    if (!options.skipConfirm && !confirm(this.ot('confirm.deleteEntry'))) return;
     try {
-      const response = await fetch(`/api/office/${this.slot}/schedule/${entry.id}`, {
+      const response = await fetch(`/api/office/${this.slot}/schedule/${scheduleId}`, {
         method: 'DELETE',
         headers: this.officeHeaders(),
       });
@@ -1598,6 +1692,7 @@ Alpine.data('officeApp', () => ({
       if (!response.ok) {
         throw new Error(payload.error || this.ot('errors.scheduleGenerateFailed'));
       }
+      if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
       if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
       this.showToast(this.ot('toast.scheduleRefreshed'), 'success');
     } catch (error) {

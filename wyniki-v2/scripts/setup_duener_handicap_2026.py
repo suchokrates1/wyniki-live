@@ -159,7 +159,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Set up the Dürener Handicap 2026 tournament.")
     parser.add_argument("--replace", action="store_true", help="Delete and recreate if it already exists.")
     parser.add_argument("--inactive", action="store_true", help="Create tournament as inactive.")
-    parser.add_argument("--start-date", default="2026-07-17")
+    parser.add_argument("--start-date", default="2026-07-18")
     parser.add_argument("--end-date", default="2026-07-19")
     parser.add_argument("--playoff-day", default="2026-07-19", help="Default schedule day for knockout slots.")
     parser.add_argument("--report-email", default="")

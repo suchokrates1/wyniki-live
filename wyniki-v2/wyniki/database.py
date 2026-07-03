@@ -3455,6 +3455,8 @@ def get_autoscheduler_config(tournament_id: int) -> Dict[str, Any]:
 
 def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dict[str, Any]:
     """Persist the auto-scheduler config for a tournament."""
+    from .services import auto_scheduler
+
     current = get_autoscheduler_config(tournament_id)
     allowed = {"start_time", "b1_court_id", "b1_court_ids", "category_courts", "slot_minutes", "rest_slots"}
     for key in allowed:
@@ -3462,9 +3464,11 @@ def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dic
             current[key] = config[key]
     if isinstance(current.get("b1_court_ids"), list):
         ids = [str(court_id).strip() for court_id in current["b1_court_ids"] if str(court_id or "").strip()]
-        current["b1_court_ids"] = ids
         if ids:
-            current["b1_court_id"] = ids[0]
+            current = auto_scheduler.apply_b1_courts(current, ids)
+        else:
+            current["b1_court_ids"] = []
+            current["b1_court_id"] = ""
     upsert_app_settings({_autoscheduler_settings_key(tournament_id): json.dumps(current)})
     return current
 
@@ -3733,6 +3737,105 @@ def move_schedule_entry_with_cascade(
     except Exception as e:
         logger.error("move_schedule_cascade_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
     return fetch_tournament_schedule(tournament_id)
+
+
+def unassign_schedule_entry(
+    tournament_id: int,
+    schedule_id: int,
+    *,
+    day_date: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Move a schedule entry back to the unassigned pool (no court/time)."""
+    from .services import auto_scheduler
+
+    config = get_autoscheduler_config(tournament_id)
+    schedule = fetch_tournament_schedule(tournament_id)
+    moved = next((e for e in schedule if int(e["id"]) == int(schedule_id)), None)
+    if not moved:
+        return schedule
+
+    source_court = str(moved.get("court_id") or "")
+    source_day = str(day_date or moved.get("day_date") or "")
+    now = _utc_now()
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE tournament_schedule
+                SET court_id = '', court_label = '', scheduled_time = '', updated_at = ?
+                WHERE id = ? AND tournament_id = ?
+                """,
+                (now, int(schedule_id), tournament_id),
+            )
+            conn.commit()
+    except Exception as e:
+        logger.error("unassign_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
+        return schedule
+
+    if source_court and source_day:
+        remaining = [
+            e
+            for e in fetch_tournament_schedule(tournament_id)
+            if str(e.get("court_id") or "") == source_court and str(e.get("day_date") or "") == source_day
+        ]
+        remaining.sort(
+            key=lambda e: (
+                str(e.get("scheduled_time") or "99:99"),
+                int(e.get("sort_order") or 0),
+                int(e.get("id") or 0),
+            )
+        )
+        updates = auto_scheduler.recompute_court_times(remaining, config)
+        courts = {str(c.get("kort_id")): c for c in fetch_courts_for_tournament(tournament_id)}
+        now = _utc_now()
+        try:
+            with db_conn() as conn:
+                cursor = conn.cursor()
+                for entry in updates:
+                    cursor.execute(
+                        """
+                        UPDATE tournament_schedule
+                        SET scheduled_time = ?, updated_at = ?
+                        WHERE id = ? AND tournament_id = ?
+                        """,
+                        (
+                            str(entry.get("scheduled_time") or ""),
+                            now,
+                            int(entry["id"]),
+                            tournament_id,
+                        ),
+                    )
+                conn.commit()
+        except Exception as e:
+            logger.error("unassign_schedule_cascade_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
+    return fetch_tournament_schedule(tournament_id)
+
+
+def delete_unassigned_schedule_entries(
+    tournament_id: int,
+    *,
+    day_date: Optional[str] = None,
+) -> int:
+    """Delete schedule entries with no court or time assigned (optionally for one day)."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            params: List[Any] = [tournament_id]
+            query = """
+                DELETE FROM tournament_schedule
+                WHERE tournament_id = ?
+                  AND (COALESCE(court_id, '') = '' OR COALESCE(scheduled_time, '') = '')
+            """
+            if day_date:
+                query += " AND day_date = ?"
+                params.append(str(day_date).strip())
+            cursor.execute(query, params)
+            conn.commit()
+            return int(cursor.rowcount or 0)
+    except Exception as e:
+        logger.error("delete_unassigned_schedule_error", error=str(e), tournament_id=tournament_id)
+        return 0
 
 
 def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str, tournament_id: Optional[int] = None) -> List[Dict]:

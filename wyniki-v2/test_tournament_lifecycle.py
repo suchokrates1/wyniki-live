@@ -2481,3 +2481,65 @@ def test_office_create_player(full_app_with_temp_db):
     players = database.fetch_players(tournament_id)
     assert any(player["last_name"] == "Stetten" for player in players)
 
+
+def test_office_unassign_delete_unassigned_and_regenerate_schedule(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Unassign Cup",
+        "2026-07-18",
+        "2026-07-19",
+        active=True,
+        office_password_hash=generate_password_hash("unassign"),
+    )
+    courts = database.create_tournament_courts(tournament_id, 2)
+    players = [
+        database.insert_player(tournament_id, "A One", "B1", "PL", first_name="A", last_name="One", gender="M"),
+        database.insert_player(tournament_id, "A Two", "B1", "PL", first_name="A", last_name="Two", gender="M"),
+        database.insert_player(tournament_id, "A Three", "B1", "PL", first_name="A", last_name="Three", gender="M"),
+    ]
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "unassign"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    database.save_bracket_groups(tournament_id, [{"name": "B1 Mężczyźni — Grupa A", "players": players}])
+    generated = client.post("/api/office/1/schedule/generate", headers=headers)
+    assert generated.status_code == 200
+    schedule = generated.get_json()["schedule"]
+    assert len(schedule) == 3
+
+    target = schedule[0]
+    moved = client.post(
+        "/api/office/1/autoschedule/move",
+        headers=headers,
+        json={
+            "schedule_id": target["id"],
+            "court_id": courts[0],
+            "scheduled_time": "09:30",
+            "day_date": "2026-07-18",
+        },
+    )
+    assert moved.status_code == 200
+    moved_entry = next(e for e in moved.get_json()["schedule"] if e["id"] == target["id"])
+    assert moved_entry["court_id"] == courts[0]
+
+    unassigned = client.post(
+        "/api/office/1/autoschedule/unassign",
+        headers=headers,
+        json={"schedule_id": target["id"], "day_date": "2026-07-18"},
+    )
+    assert unassigned.status_code == 200
+    back = next(e for e in unassigned.get_json()["schedule"] if e["id"] == target["id"])
+    assert not back.get("court_id")
+    assert not back.get("scheduled_time")
+
+    deleted = client.delete("/api/office/1/schedule/unassigned?day_date=2026-07-18", headers=headers)
+    assert deleted.status_code == 200
+    assert deleted.get_json()["deleted"] >= 3
+
+    regenerated = client.post("/api/office/1/schedule/generate", headers=headers)
+    assert regenerated.status_code == 200
+    assert len(regenerated.get_json()["schedule"]) == 3
+
