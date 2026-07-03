@@ -5,7 +5,7 @@
 ```bash
 # SSH to minipc (backend)
 ssh -i C:\Users\sucho\.ssh\wyniki_minipc suchokrates1@100.110.194.46
-cd ~/count
+cd ~/count/wyniki-v2
 
 # SSH to RPI (Traefik + Cloudflare Tunnel)
 ssh -i C:\Users\sucho\.ssh\wyniki_rpi suchokrates1@100.66.220.72
@@ -19,10 +19,10 @@ cd ~/traefik
 
 ```bash
 # Standard
-cd ~/count && git pull && docker compose build wyniki && docker compose up -d wyniki
+cd ~/count/wyniki-v2 && git pull && docker compose build wyniki && docker compose up -d wyniki
 
 # Full rebuild
-cd ~/count && git pull && docker compose build --no-cache wyniki && docker compose up -d wyniki
+cd ~/count/wyniki-v2 && git pull && docker compose build --no-cache wyniki && docker compose up -d wyniki
 
 # Quick restart
 docker compose restart wyniki
@@ -30,8 +30,7 @@ docker compose restart wyniki
 
 ## 🐳 Containers
 
-- **wyniki-tenis** (main app)
-- **wyniki-rtmp** (streaming)
+- **wyniki-tenis-v2** (main app)
 
 ```bash
 # Status
@@ -42,42 +41,32 @@ docker compose logs -f wyniki
 docker compose logs --tail=100 wyniki
 
 # Shell
-docker exec -it wyniki-tenis bash
+docker exec -it wyniki-tenis-v2 bash
 ```
 
 ## 🌐 URLs
 
 - https://score.vestmedia.pl
-- https://score.vestmedia.pl/admin
-- https://score.vestmedia.pl/stream1-4
-- https://score.vestmedia.pl/hls/stream1/live.m3u8
+- https://blindtennis.app
+- https://blindtennis.app/admin
+- https://blindtennis.app/office
 
 ## 📁 Paths
 
 ```
 Local: C:\Users\sucho\Wyniki\wyniki-live\
-Server: /home/suchokrates1/count/
+Server: /home/suchokrates1/count/wyniki-v2/
 SSH Key: C:\Users\sucho\.ssh\wyniki_minipc
-```
-
-## 🎥 Streaming
-
-```
-RTMP: rtmp://100.110.194.46/live
-Keys: stream1, stream2, stream3, stream4
 ```
 
 ## ⚡ Common Commands
 
 ```bash
 # One-line deploy from Windows
-ssh -i C:\Users\sucho\.ssh\wyniki_minipc suchokrates1@100.110.194.46 "cd ~/count && git pull && docker compose build wyniki && docker compose up -d wyniki"
-
-# Check stream
-curl -I https://score.vestmedia.pl/hls/stream1/live.m3u8
+ssh -i C:\Users\sucho\.ssh\wyniki_minipc suchokrates1@100.110.194.46 "cd ~/count/wyniki-v2 && git pull && docker compose build wyniki && docker compose up -d wyniki"
 
 # Container health
-docker inspect --format='{{.State.Health.Status}}' wyniki-tenis
+docker inspect --format='{{.State.Health.Status}}' wyniki-tenis-v2
 
 # Cleanup orphans
 docker compose up -d --remove-orphans
@@ -111,6 +100,4 @@ chrome --pack-extension=./uno-picker --pack-extension-key=./uno-picker.pem
 
 - Always use git workflow for deployment
 - Docker rebuild required after file changes
-- Stream players at /stream1-4 use HLS proxy through Flask
-- nginx-rtmp runs on port 8089 internally
 - Main app on port 8087, proxied by Traefik
