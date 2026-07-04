@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import {
   isMixedCategory,
+  mixedCategoryDisplayLabel,
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
   planningDivisionKey as sharedPlanningDivisionKey,
 } from './shared/categories.js';
@@ -1061,7 +1062,8 @@ Alpine.data('adminApp', () => ({
 
   planningDivisionLabel(key = this.planningSelectedDivision) {
     const value = String(key || '').toUpperCase();
-    if (isMixedCategory(value, this.planningMixedCategories)) return 'B3/4 Mixed';
+    const mixedLabel = mixedCategoryDisplayLabel(value, this.planningMixedCategories);
+    if (mixedLabel) return mixedLabel;
     const category = (value.match(/^B\d{1,2}/) || [''])[0];
     const gender = value.endsWith('K') ? 'Kobiety' : value.endsWith('M') ? 'Mężczyźni' : '';
     if (category && gender) return `${category} ${gender}`;
