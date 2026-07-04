@@ -39,7 +39,7 @@ def normalize_hint_bands(values: Any) -> List[str]:
 
 def infer_mixed_player_bands(categories: List[Dict[str, Any]] | None) -> List[str]:
     """Derive legacy mixed player-band codes (B2, B34, …) from tournament categories."""
-    from .services.categories import normalize_category_code
+    from .categories import normalize_category_code
 
     bands: List[str] = []
     for cat in categories or []:
