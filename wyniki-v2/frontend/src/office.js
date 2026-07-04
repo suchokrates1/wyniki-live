@@ -2,6 +2,7 @@ import Alpine from 'alpinejs';
 import { createOfficeI18n } from './i18n/officeI18n.js';
 import {
   isMixedCategory,
+  mixedCategoryDisplayLabel,
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
   planningDivisionKey as sharedPlanningDivisionKey,
   planningResolveStoredGroupName as sharedPlanningResolveStoredGroupName,
@@ -1196,7 +1197,8 @@ Alpine.data('officeApp', () => ({
 
   planningDivisionLabel(key = this.planningSelectedDivision) {
     const value = String(key || '').toUpperCase();
-    if (isMixedCategory(value, this.planningMixedCategories)) return this.ot('categories.b34Mixed');
+    const mixedLabel = mixedCategoryDisplayLabel(value, this.planningMixedCategories);
+    if (mixedLabel) return mixedLabel;
     const category = (value.match(/^B\d{1,2}/) || [''])[0];
     const gender = value.endsWith('K')
       ? this.ot('gender.women')

@@ -25,6 +25,7 @@ def test_b34_is_mixed_only_when_configured_for_tournament():
 def test_start_group_key_respects_tournament_mixed_categories():
     assert start_group_key('B34', 'K', ['B34']) == 'B34'
     assert start_group_key('B34', 'M', ['B34']) == 'B34'
+    assert start_group_key('B2', '', ['B2', 'B34']) == 'B2'
     assert start_group_key('B34', 'K') == 'B34K'
     assert start_group_key('B34', 'M') == 'B34M'
     assert start_group_key('B1', 'K') == 'B1K'
@@ -34,6 +35,13 @@ def test_start_group_key_respects_tournament_mixed_categories():
 def test_format_category_display():
     assert format_category_display('B34') == 'B3/4'
     assert format_category_display('B1') == 'B1'
+    assert format_category_display('B2') == 'B2'
+
+
+def test_mixed_category_label_per_band():
+    from wyniki.services.categories import mixed_category_label
+    assert mixed_category_label('B2') == 'B2 Mixed'
+    assert mixed_category_label('B34') == 'B3/4 Mixed'
 
 
 def test_is_mixed_section_label():

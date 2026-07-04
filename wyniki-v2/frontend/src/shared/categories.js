@@ -45,6 +45,12 @@ export function formatCategoryDisplay(category) {
   return code;
 }
 
+export function mixedCategoryDisplayLabel(category, mixedCategories = []) {
+  const code = normalizeCategoryCode(category);
+  if (!isMixedCategory(code, mixedCategories)) return '';
+  return `${formatCategoryDisplay(code)} Mixed`;
+}
+
 export function extractCategoryCodeFromLabel(label) {
   const match = String(label || '').trim().match(/^B(?:\d(?:\/\d)?|\d{2})/i);
   return match ? normalizeCategoryCode(match[0]) : '';
@@ -78,7 +84,8 @@ export function planningDivisionFromGroupName(groupName, mixedCategories = []) {
 /** Stable division label stored in DB and assignments (language-independent). */
 export function planningStoredDivisionLabel(key, mixedCategories = []) {
   const value = String(key || '').toUpperCase();
-  if (isMixedCategory(value, mixedCategories)) return 'B3/4 Mixed';
+  const mixedLabel = mixedCategoryDisplayLabel(value, mixedCategories);
+  if (mixedLabel) return mixedLabel;
   const category = (value.match(/^B\d{1,2}/) || [''])[0];
   const gender = value.endsWith('K') ? 'Kobiety' : value.endsWith('M') ? 'Mężczyźni' : '';
   if (category && gender) return `${category} ${gender}`;
