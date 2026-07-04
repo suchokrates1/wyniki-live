@@ -121,7 +121,7 @@ def test_delete_category_soft_when_in_use(db):
 
     assert db.delete_tournament_category(category_id) is True
     row = db.fetch_tournament_category(category_id)
-    assert row["is_active"] is False
+    assert not row["is_active"]
 
 
 def test_migrate_from_legacy_groups(db):
@@ -144,3 +144,13 @@ def test_migrate_from_legacy_groups(db):
 
     groups = db.fetch_bracket_groups(tournament_id)
     assert groups[0]["tournament_category_id"] == migrated[0]["id"]
+    assert db.get_planning_mixed_bands(tournament_id) == ["B2"]
+
+
+def test_infer_mixed_player_bands_from_categories():
+    from wyniki.services.tournament_categories import infer_mixed_player_bands
+
+    assert infer_mixed_player_bands([{"label": "B2 Mixed", "hint_bands": ["B2"], "is_active": 1}]) == ["B2"]
+    assert infer_mixed_player_bands([
+        {"label": "B3/4 Mixed", "hint_bands": ["B3", "B4"], "is_active": 1},
+    ]) == ["B3", "B4", "B34"]

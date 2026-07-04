@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import { createOfficeI18n } from './i18n/officeI18n.js';
 import {
+  inferMixedPlayerBands,
   isMixedCategory,
   mixedCategoryDisplayLabel,
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
@@ -588,11 +589,8 @@ Alpine.data('officeApp', () => ({
         throw new Error(payload.error || this.ot('errors.planningFailed'));
       }
       this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
-      this.planningMixedCategories = Array.isArray(payload.mixed_categories) ? payload.mixed_categories : [];
       this.tournamentCategories = Array.isArray(payload.tournament_categories) ? payload.tournament_categories : [];
-      if (!this.tournamentCategories.length && this.planningMixedCategories.length) {
-        // legacy only — divisions derived from player bands
-      }
+      this.planningMixedCategories = inferMixedPlayerBands(this.tournamentCategories);
       this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
       this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
       this.planningCourts = Array.isArray(payload.courts) ? payload.courts : [];

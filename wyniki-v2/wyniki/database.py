@@ -3796,7 +3796,7 @@ def _mixed_categories_settings_key(tournament_id: int) -> str:
 
 
 def get_mixed_categories(tournament_id: int) -> List[str]:
-    """Return category codes that should be played as mixed for a tournament."""
+    """Legacy mixed-band settings (app_settings). Prefer get_planning_mixed_bands()."""
     from .services.categories import normalize_mixed_categories
 
     stored = fetch_app_settings([_mixed_categories_settings_key(tournament_id)]).get(
@@ -3813,8 +3813,32 @@ def get_mixed_categories(tournament_id: int) -> List[str]:
     return []
 
 
+def get_planning_mixed_bands(tournament_id: int) -> List[str]:
+    """Mixed player-band codes for import/planning — from tournament_categories, legacy fallback."""
+    from .services.tournament_categories import infer_mixed_player_bands
+
+    categories = fetch_tournament_categories(tournament_id, active_only=True)
+    if categories:
+        return infer_mixed_player_bands(categories)
+    return get_mixed_categories(tournament_id)
+
+
+def clear_legacy_mixed_categories(tournament_id: int) -> bool:
+    """Remove deprecated mixed_categories:{id} from app_settings."""
+    key = _mixed_categories_settings_key(tournament_id)
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM app_settings WHERE key = ?", (key,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except Exception as e:
+        logger.error("clear_legacy_mixed_categories_error", error=str(e), tournament_id=tournament_id)
+        return False
+
+
 def set_mixed_categories(tournament_id: int, categories: List[str]) -> List[str]:
-    """Persist mixed category codes for a tournament."""
+    """Deprecated — use confirm_tournament_categories instead."""
     from .services.categories import normalize_mixed_categories
 
     normalized = normalize_mixed_categories(categories)
@@ -4689,7 +4713,6 @@ def get_full_bracket(tournament_id: int) -> Dict:
                 "tournament": {
                     "id": tournament_id,
                     "name": t["name"],
-                    "mixed_categories": get_mixed_categories(tournament_id),
                 },
                 "groups": groups_data,
                 "knockout": knockout,

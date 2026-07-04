@@ -37,6 +37,30 @@ def normalize_hint_bands(values: Any) -> List[str]:
     return bands
 
 
+def infer_mixed_player_bands(categories: List[Dict[str, Any]] | None) -> List[str]:
+    """Derive legacy mixed player-band codes (B2, B34, …) from tournament categories."""
+    bands: List[str] = []
+    for cat in categories or []:
+        if int(cat.get("is_active") or 0) == 0:
+            continue
+        label = str(cat.get("label") or "").lower()
+        hints = normalize_hint_bands(cat.get("hint_bands") or [])
+        is_mixed = (
+            "mixed" in label
+            or "mix" in label.replace("/", " ").split()
+            or len(hints) > 1
+            or "B34" in hints
+        )
+        if not is_mixed:
+            continue
+        for hint in hints:
+            if hint not in bands:
+                bands.append(hint)
+        if "B3" in hints and "B4" in hints and "B34" not in bands:
+            bands.append("B34")
+    return bands
+
+
 def category_row_payload(row: Any) -> Dict[str, Any]:
     import json
 
