@@ -600,7 +600,7 @@ Alpine.data('adminApp', () => ({
     this.newTournament.logo = event.target.files?.[0] || null;
   },
 
-  openTournamentEditor(tournament) {
+  async openTournamentEditor(tournament) {
     this.editingTournamentId = tournament.id;
     this.editTournament = {
       id: tournament.id,
