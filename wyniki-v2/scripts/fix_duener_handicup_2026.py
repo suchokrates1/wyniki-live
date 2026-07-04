@@ -143,13 +143,18 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tournament-id", type=int, default=TOURNAMENT_ID)
     args = parser.parse_args()
-    global TOURNAMENT_ID
-    TOURNAMENT_ID = args.tournament_id
+    tid = args.tournament_id
     database.init_db()
+    _run(tid)
+    return 0
+
+
+def _run(tournament_id: int) -> None:
+    global TOURNAMENT_ID
+    TOURNAMENT_ID = tournament_id
     fix_tournament_meta()
     fix_simone_name()
     apply_schedule()
-    return 0
 
 
 if __name__ == "__main__":
