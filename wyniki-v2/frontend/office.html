@@ -512,21 +512,77 @@
         </div>
 
         <div x-show="!planningStep1Collapsed">
-        <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4">
+        <div class="mt-5 rounded-[22px] border border-emerald-200 bg-emerald-50/60 p-4" x-show="!tournamentCategories.length || categorySetupOpen">
+          <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" x-text="ot('planning.categoriesSetup')"></div>
+          <p class="mt-1 text-sm text-slate-600" x-text="ot('planning.categoriesSetupHint')"></p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <template x-for="preset in planningCategoryPresetKeys()" :key="'preset_'+preset">
+              <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-sm cursor-pointer">
+                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="categoryPresetSelected[preset]">
+                <span x-text="planningCategoryPresetLabel(preset)"></span>
+              </label>
+            </template>
+          </div>
+          <div class="mt-3 grid gap-2 sm:grid-cols-3">
+            <input type="text" class="input input-bordered bg-white/90 sm:col-span-2" :placeholder="ot('planning.customCategoryPlaceholder')" x-model="categoryCustomLabel">
+            <input type="text" class="input input-bordered bg-white/90" placeholder="B2 / B3,B4" x-model="categoryCustomHints">
+          </div>
+          <div class="mt-3 flex gap-2 flex-wrap">
+            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="confirmTournamentCategories()" x-text="ot('planning.confirmCategories')"></button>
+            <button type="button" class="btn btn-outline bg-white/80" x-show="tournamentCategories.length" @click="categorySetupOpen = false" x-text="ot('planning.cancelSetup')"></button>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="tournamentCategories.length && !categorySetupOpen">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" x-text="ot('planning.tournamentCategories')"></div>
+            <button type="button" class="text-sm font-semibold text-emerald-700" @click="categorySetupOpen = true" x-text="'+ ' + ot('planning.addCategory')"></button>
+          </div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <template x-for="cat in tournamentCategories.filter(c => c.is_active !== 0)" :key="'tcat_'+cat.id">
+              <div class="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm flex items-center gap-2">
+                <span class="font-semibold" x-text="cat.label"></span>
+                <button type="button" class="text-emerald-700 text-xs" @click="startCategoryEdit(cat)" x-text="ot('planning.edit')"></button>
+                <button type="button" class="text-rose-600 text-xs" @click="deleteTournamentCategory(cat.id)" x-text="ot('planning.delete')"></button>
+              </div>
+            </template>
+          </div>
+          <div class="mt-3 grid gap-2 sm:grid-cols-3" x-show="categoryEditId">
+            <input type="text" class="input input-bordered bg-white/90 sm:col-span-2" x-model="categoryEditLabel">
+            <button type="button" class="btn btn-sm border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveTournamentCategoryEdit()" x-text="ot('planning.save')"></button>
+          </div>
+          <div class="mt-3 grid gap-2 sm:grid-cols-4" x-show="categorySetupOpen && tournamentCategories.length">
+            <input type="text" class="input input-bordered bg-white/90 sm:col-span-2" :placeholder="ot('planning.customCategoryPlaceholder')" x-model="categoryCustomLabel">
+            <input type="text" class="input input-bordered bg-white/90" placeholder="B2" x-model="categoryCustomHints">
+            <button type="button" class="btn btn-outline" @click="addCustomTournamentCategory()" x-text="ot('planning.addCategory')"></button>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="tournamentCategories.length && !categorySetupOpen">
           <button type="button" class="text-sm font-semibold text-emerald-700" @click="planningAddPlayerOpen = !planningAddPlayerOpen" x-text="planningAddPlayerOpen ? '− ' + ot('planning.addPlayerTitle') : '+ ' + ot('planning.addPlayer')"></button>
-          <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" x-show="planningAddPlayerOpen">
+          <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" x-show="planningAddPlayerOpen">
             <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.firstName')" x-model="planningNewPlayer.first_name">
             <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.lastName')" x-model="planningNewPlayer.last_name">
-            <input type="text" class="input input-bordered bg-white/90" placeholder="B1" x-model="planningNewPlayer.category">
+            <select class="select select-bordered bg-white/90" x-model="planningNewPlayer.category">
+              <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option><option value="B4">B4</option>
+            </select>
+            <select class="select select-bordered bg-white/90" x-model="planningNewPlayer.gender">
+              <option value="" x-text="ot('planning.genderOptional')"></option>
+              <option value="M" x-text="ot('gender.men')"></option>
+              <option value="K" x-text="ot('gender.women')"></option>
+            </select>
             <input type="text" class="input input-bordered bg-white/90" maxlength="2" :placeholder="ot('planning.countryCode')" x-model="planningNewPlayer.country">
             <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addOfficePlayer()" x-text="ot('planning.addPlayer')"></button>
           </div>
         </div>
-        <div class="mt-6" x-show="planningDivisions().length === 0">
+        <div class="mt-6" x-show="!tournamentCategories.length && !categorySetupOpen">
+          <div class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500" x-text="ot('planning.confirmCategoriesFirst')"></div>
+        </div>
+        <div class="mt-6" x-show="tournamentCategories.length && !planningPlayers.length && !categorySetupOpen">
           <div class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500" x-text="ot('planning.addPlayersFirst')"></div>
         </div>
 
-        <div x-show="planningDivisions().length">
+        <div x-show="planningDivisions().length && tournamentCategories.length">
           <div class="mt-4">
             <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2" x-text="ot('planning.category')"></div>
             <div class="flex flex-wrap gap-2">
@@ -561,14 +617,17 @@
                 <span class="office-chip office-chip-group" x-text="planningUnassignedPlayers().length"></span>
               </div>
               <div class="space-y-2 min-h-[60px]">
-                <template x-for="player in planningPlayersForDivision()" :key="'office_pool_player_'+player.id">
-                  <div x-show="!planningEffectiveGroup(player)"
-                       class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 cursor-move hover:border-emerald-300"
+                <template x-for="player in planningUnassignedPlayers()" :key="'office_pool_player_'+player.id">
+                  <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 cursor-move hover:border-emerald-300"
                        draggable="true" @dragstart="onPlanningPlayerDragStart(player, $event)">
                     <span class="font-mono font-semibold text-slate-400 tabular-nums w-6 text-center" x-text="planningOrdinal(player)"></span>
                     <div class="flex-1 min-w-0">
                       <div class="font-semibold text-sm text-slate-900 truncate" x-text="player.name"></div>
-                      <div class="text-[11px] text-slate-500" x-text="player.country || ''"></div>
+                      <div class="text-[11px] text-slate-500">
+                        <span x-text="playerClassificationLabel(player)"></span>
+                        <span x-show="player.country"> · </span>
+                        <span x-text="player.country || ''"></span>
+                      </div>
                     </div>
                   </div>
                 </template>
@@ -591,7 +650,7 @@
                         <span class="font-mono font-semibold text-emerald-600 tabular-nums w-6 text-center" x-text="planningOrdinal(player)"></span>
                         <div class="flex-1 min-w-0">
                           <div class="font-semibold text-sm text-slate-900 truncate" x-text="player.name"></div>
-                          <div class="text-[11px] text-slate-500" x-text="player.country || ''"></div>
+                          <div class="text-[11px] text-slate-500" x-text="playerClassificationLabel(player)"></div>
                         </div>
                       </div>
                     </template>

@@ -71,6 +71,14 @@ Alpine.data('officeApp', () => ({
   planningLoading: false,
   planningPlayers: [],
   planningMixedCategories: [],
+  tournamentCategories: [],
+  planningSelectedCategoryId: null,
+  categoryPresetSelected: {},
+  categoryCustomLabel: '',
+  categoryCustomHints: '',
+  categoryEditId: null,
+  categoryEditLabel: '',
+  categorySetupOpen: true,
   planningGroups: [],
   planningSchedule: [],
   planningCourts: [],
@@ -89,7 +97,8 @@ Alpine.data('officeApp', () => ({
   planningNewPlayer: {
     first_name: '',
     last_name: '',
-    category: '',
+    category: 'B1',
+    gender: '',
     country: '',
   },
   planningAddPlayerOpen: false,
@@ -580,6 +589,10 @@ Alpine.data('officeApp', () => ({
       }
       this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
       this.planningMixedCategories = Array.isArray(payload.mixed_categories) ? payload.mixed_categories : [];
+      this.tournamentCategories = Array.isArray(payload.tournament_categories) ? payload.tournament_categories : [];
+      if (!this.tournamentCategories.length && this.planningMixedCategories.length) {
+        // legacy only — divisions derived from player bands
+      }
       this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
       this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
       this.planningCourts = Array.isArray(payload.courts) ? payload.courts : [];
@@ -1046,9 +1059,14 @@ Alpine.data('officeApp', () => ({
 
   ensurePlanningDefaults() {
     const divisions = this.planningDivisions();
-    if (!divisions.find(division => division.key === this.planningSelectedDivision)) {
+    if (!divisions.find(division => String(division.key) === String(this.planningSelectedDivision))) {
       this.planningSelectedDivision = divisions[0]?.key || '';
+      this.planningSelectedCategoryId = divisions[0]?.id ?? null;
     }
+    if (this.planningUsesTournamentCategories() && this.planningSelectedDivision) {
+      this.planningSelectedCategoryId = Number(this.planningSelectedDivision);
+    }
+    this.categorySetupOpen = !this.tournamentCategories.length;
     const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
     if (selectedGroups.length) {
       this.planningGroupCount = Math.max(1, selectedGroups.length);
@@ -1187,6 +1205,136 @@ Alpine.data('officeApp', () => ({
     return '';
   },
 
+  planningUsesTournamentCategories() {
+    return (this.tournamentCategories || []).some(cat => cat.is_active !== 0);
+  },
+
+  planningCategoryPresetKeys() {
+    return ['B1M', 'B1K', 'B2M', 'B2K', 'B3M', 'B3K', 'B4M', 'B4K'];
+  },
+
+  planningCategoryPresetLabel(key) {
+    const labels = {
+      B1M: 'B1 M', B1K: 'B1 K', B2M: 'B2 M', B2K: 'B2 K',
+      B3M: 'B3 M', B3K: 'B3 K', B4M: 'B4 M', B4K: 'B4 K',
+    };
+    return labels[key] || key;
+  },
+
+  planningSelectedCategory() {
+    const id = this.planningSelectedCategoryId ?? this.planningSelectedDivision;
+    return (this.tournamentCategories || []).find(cat => String(cat.id) === String(id)) || null;
+  },
+
+  playerClassificationLabel(player) {
+    const band = String(player?.category || '').trim();
+    const gender = this.normalizePlanningGender(player?.gender);
+    const genderLabel = gender === 'K' ? this.ot('gender.women') : gender === 'M' ? this.ot('gender.men') : '';
+    return [band, genderLabel].filter(Boolean).join(' · ');
+  },
+
+  async confirmTournamentCategories() {
+    const presets = this.planningCategoryPresetKeys()
+      .filter(key => this.categoryPresetSelected[key])
+      .map(key => ({ preset_key: key }));
+    const customLabel = (this.categoryCustomLabel || '').trim();
+    const entries = [...presets];
+    if (customLabel) {
+      entries.push({
+        label: customLabel,
+        hint_bands: (this.categoryCustomHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
+      });
+    }
+    if (!entries.length) {
+      this.showToast(this.ot('toast.pickCategory'), 'warning');
+      return;
+    }
+    try {
+      const response = await fetch(`/api/office/${this.slot}/categories/confirm`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({ categories: entries }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+      this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : [];
+      this.categorySetupOpen = false;
+      this.categoryCustomLabel = '';
+      this.categoryCustomHints = '';
+      this.showToast(this.ot('toast.categoriesSaved'), 'success');
+      this.ensurePlanningDefaults();
+    } catch (error) {
+      this.showToast(error.message || this.ot('toast.categoriesError'), 'error');
+    }
+  },
+
+  async addCustomTournamentCategory() {
+    const label = (this.categoryCustomLabel || '').trim();
+    if (!label) return;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/categories`, {
+        method: 'POST',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({
+          label,
+          hint_bands: (this.categoryCustomHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+      this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : this.tournamentCategories;
+      this.categoryCustomLabel = '';
+      this.categoryCustomHints = '';
+      this.showToast(this.ot('toast.categoryAdded'), 'success');
+      this.ensurePlanningDefaults();
+    } catch (error) {
+      this.showToast(error.message || this.ot('toast.categoriesError'), 'error');
+    }
+  },
+
+  async saveTournamentCategoryEdit() {
+    if (!this.categoryEditId) return;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/categories/${this.categoryEditId}`, {
+        method: 'PATCH',
+        headers: this.officeHeaders(),
+        body: JSON.stringify({ label: (this.categoryEditLabel || '').trim() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+      this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : this.tournamentCategories;
+      if (Array.isArray(payload.groups)) this.planningGroups = payload.groups;
+      if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+      this.categoryEditId = null;
+      this.categoryEditLabel = '';
+      this.showToast(this.ot('toast.categoryUpdated'), 'success');
+    } catch (error) {
+      this.showToast(error.message || this.ot('toast.categoriesError'), 'error');
+    }
+  },
+
+  async deleteTournamentCategory(categoryId) {
+    if (!categoryId || !confirm(this.ot('confirm.deleteCategory'))) return;
+    try {
+      const response = await fetch(`/api/office/${this.slot}/categories/${categoryId}`, {
+        method: 'DELETE',
+        headers: this.officeHeaders(),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+      this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : [];
+      this.ensurePlanningDefaults();
+      this.showToast(this.ot('toast.categoryDeleted'), 'success');
+    } catch (error) {
+      this.showToast(error.message || this.ot('toast.categoriesError'), 'error');
+    }
+  },
+
+  startCategoryEdit(category) {
+    this.categoryEditId = category.id;
+    this.categoryEditLabel = category.label;
+  },
+
   planningDivisionKey(player) {
     return sharedPlanningDivisionKey(
       player?.category || '',
@@ -1214,6 +1362,17 @@ Alpine.data('officeApp', () => ({
   },
 
   planningDivisions() {
+    if (this.planningUsesTournamentCategories()) {
+      return (this.tournamentCategories || [])
+        .filter(cat => cat.is_active !== 0)
+        .map(cat => ({
+          key: String(cat.id),
+          id: cat.id,
+          label: cat.label,
+          count: cat.player_count || this.planningCategoryAssignedCount(cat.id),
+          hint_bands: cat.hint_bands || [],
+        }));
+    }
     const grouped = new Map();
     for (const player of this.planningPlayers || []) {
       const key = this.planningDivisionKey(player);
@@ -1228,14 +1387,34 @@ Alpine.data('officeApp', () => ({
   },
 
   planningPlayersForDivision(key = this.planningSelectedDivision) {
+    if (this.planningUsesTournamentCategories()) return this.planningPlayers || [];
     return (this.planningPlayers || []).filter(player => this.planningDivisionKey(player) === key);
   },
 
   planningGroupsForDivision(key = this.planningSelectedDivision) {
+    if (this.planningUsesTournamentCategories()) {
+      const categoryId = Number(key || this.planningSelectedCategoryId || this.planningSelectedDivision);
+      const cat = (this.tournamentCategories || []).find(item => Number(item.id) === categoryId);
+      return (this.planningGroups || []).filter(group => {
+        if (group.tournament_category_id != null) return Number(group.tournament_category_id) === categoryId;
+        if (!cat) return false;
+        return group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`);
+      });
+    }
     return (this.planningGroups || []).filter(group => this.planningDivisionFromGroupName(group.name) === key);
   },
 
   planningTargetGroupNames() {
+    if (this.planningUsesTournamentCategories()) {
+      const cat = this.planningSelectedCategory();
+      if (!cat) return [];
+      const label = cat.label;
+      const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
+      if (count === 1) return [label];
+      return Array.from({ length: count }, (_, index) => (
+        `${label} — Grupa ${String.fromCharCode(65 + index)}`
+      ));
+    }
     if (!this.planningSelectedDivision) return [];
     return sharedPlanningStoredGroupNames(
       this.planningSelectedDivision,
@@ -1266,6 +1445,11 @@ Alpine.data('officeApp', () => ({
   },
 
   planningResolveGroupName(groupName, divisionKey = this.planningSelectedDivision) {
+    if (this.planningUsesTournamentCategories()) {
+      const valid = new Set(this.planningTargetGroupNames());
+      if (valid.has(groupName)) return groupName;
+      return '';
+    }
     const groupCount = divisionKey === this.planningSelectedDivision
       ? this.planningGroupCount
       : this.planningGroupCountForDivision(divisionKey);
@@ -1295,7 +1479,7 @@ Alpine.data('officeApp', () => ({
   },
 
   planningAssignedPlayers(groupName) {
-    return this.planningPlayersForDivision().filter(player => (
+    return (this.planningPlayers || []).filter(player => (
       this.planningResolveGroupName(this.planningGroupAssignments[player.id]) === groupName
     ));
   },
@@ -1305,14 +1489,25 @@ Alpine.data('officeApp', () => ({
   },
 
   planningUnassignedPlayers() {
-    return this.planningPlayersForDivision().filter(player => !this.planningEffectiveGroup(player));
+    return (this.planningPlayers || []).filter(player => !this.planningEffectiveGroup(player));
   },
 
   planningOrdinal(player) {
-    return this.planningPlayersForDivision().findIndex(item => item.id === player.id) + 1;
+    const pool = this.planningUsesTournamentCategories()
+      ? this.planningUnassignedPlayers()
+      : this.planningPlayersForDivision();
+    return pool.findIndex(item => item.id === player.id) + 1;
+  },
+
+  planningCategoryAssignedCount(categoryId = this.planningSelectedCategoryId) {
+    return this.planningGroupsForDivision(String(categoryId))
+      .reduce((sum, group) => sum + (group.players?.length || 0), 0);
   },
 
   planningDivisionAssignedCount(key = this.planningSelectedDivision) {
+    if (this.planningUsesTournamentCategories()) {
+      return this.planningCategoryAssignedCount(Number(key || this.planningSelectedCategoryId));
+    }
     const targets = new Set(sharedPlanningStoredGroupNames(
       key,
       this.planningGroupCountForDivision(key),
@@ -1326,6 +1521,9 @@ Alpine.data('officeApp', () => ({
 
   selectPlanningDivision(key) {
     this.planningSelectedDivision = key;
+    if (this.planningUsesTournamentCategories()) {
+      this.planningSelectedCategoryId = Number(key);
+    }
     const groups = this.planningGroupsForDivision(key);
     this.planningGroupCount = groups.length ? Math.max(1, Math.min(8, groups.length)) : 1;
   },
@@ -1384,7 +1582,7 @@ Alpine.data('officeApp', () => ({
     const groupNames = this.planningTargetGroupNames();
     if (!groupNames.length) return;
     const assignments = { ...this.planningGroupAssignments };
-    this.planningPlayersForDivision().forEach((player, index) => {
+    this.planningUnassignedPlayers().forEach((player, index) => {
       assignments[player.id] = groupNames[index % groupNames.length];
     });
     this.planningGroupAssignments = assignments;
@@ -1393,8 +1591,15 @@ Alpine.data('officeApp', () => ({
 
   clearPlanningDivisionAssignments() {
     const assignments = { ...this.planningGroupAssignments };
-    for (const player of this.planningPlayersForDivision()) {
-      delete assignments[player.id];
+    for (const player of this.planningPlayers || []) {
+      const groupName = assignments[player.id];
+      if (!groupName) continue;
+      if (this.planningUsesTournamentCategories()) {
+        const valid = new Set(this.planningTargetGroupNames());
+        if (valid.has(this.planningResolveGroupName(groupName))) delete assignments[player.id];
+      } else if (this.planningDivisionKey(player) === this.planningSelectedDivision) {
+        delete assignments[player.id];
+      }
     }
     this.planningGroupAssignments = assignments;
     this.schedulePlanningAutoSave();
@@ -1406,14 +1611,34 @@ Alpine.data('officeApp', () => ({
   },
 
   async autoSavePlanningGroups() {
-    if (!this.planningSelectedDivision) return;
+    if (!this.planningSelectedDivision && !this.planningSelectedCategoryId) return;
     this.planningSaving = true;
     try {
+      const selectedCategoryId = this.planningUsesTournamentCategories()
+        ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
+        : null;
       const otherGroups = (this.planningGroups || [])
-        .filter(group => this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision)
-        .map(group => ({ name: group.name, players: (group.players || []).map(player => player.player_id).filter(Boolean) }));
+        .filter(group => {
+          if (selectedCategoryId != null) {
+            const cat = this.planningSelectedCategory();
+            const gid = group.tournament_category_id != null ? Number(group.tournament_category_id) : null;
+            const inSelected = gid === selectedCategoryId
+              || (cat && (group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`)));
+            return !inSelected;
+          }
+          return this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision;
+        })
+        .map(group => ({
+          name: group.name,
+          tournament_category_id: group.tournament_category_id || null,
+          players: (group.players || []).map(player => player.player_id).filter(Boolean),
+        }));
       const divisionGroups = this.planningTargetGroupNames()
-        .map(groupName => ({ name: groupName, players: this.planningAssignedPlayers(groupName).map(player => player.id) }))
+        .map(groupName => ({
+          name: groupName,
+          tournament_category_id: selectedCategoryId,
+          players: this.planningAssignedPlayers(groupName).map(player => player.id),
+        }))
         .filter(group => group.players.length > 0);
       const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
         method: 'PUT',
@@ -1438,12 +1663,32 @@ Alpine.data('officeApp', () => ({
   },
 
   async savePlanningGroups() {
-    if (!this.planningSelectedDivision) return;
+    if (!this.planningSelectedDivision && !this.planningSelectedCategoryId) return;
+    const selectedCategoryId = this.planningUsesTournamentCategories()
+      ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
+      : null;
     const otherGroups = (this.planningGroups || [])
-      .filter(group => this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision)
-      .map(group => ({ name: group.name, players: (group.players || []).map(player => player.player_id).filter(Boolean) }));
-    const divisionGroups = this.planningDivisionGroupNames()
-      .map(groupName => ({ name: groupName, players: this.planningAssignedPlayers(groupName).map(player => player.id) }))
+      .filter(group => {
+        if (selectedCategoryId != null) {
+          const cat = this.planningSelectedCategory();
+          const gid = group.tournament_category_id != null ? Number(group.tournament_category_id) : null;
+          const inSelected = gid === selectedCategoryId
+            || (cat && (group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`)));
+          return !inSelected;
+        }
+        return this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision;
+      })
+      .map(group => ({
+        name: group.name,
+        tournament_category_id: group.tournament_category_id || null,
+        players: (group.players || []).map(player => player.player_id).filter(Boolean),
+      }));
+    const divisionGroups = this.planningTargetGroupNames()
+      .map(groupName => ({
+        name: groupName,
+        tournament_category_id: selectedCategoryId,
+        players: this.planningAssignedPlayers(groupName).map(player => player.id),
+      }))
       .filter(group => group.players.length > 0);
     if (!divisionGroups.length) {
       this.showToast(this.ot('toast.assignPlayerWarning'), 'warning');
@@ -1552,6 +1797,7 @@ Alpine.data('officeApp', () => ({
           first_name: firstName,
           last_name: lastName,
           category: (this.planningNewPlayer.category || '').trim(),
+          gender: (this.planningNewPlayer.gender || '').trim(),
           country: (this.planningNewPlayer.country || '').trim(),
         }),
       });
