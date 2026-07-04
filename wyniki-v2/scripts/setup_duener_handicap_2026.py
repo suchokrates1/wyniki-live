@@ -18,8 +18,13 @@ from wyniki import database
 
 TOURNAMENT_NAME = "5th Dürener Handicup 2026"
 
+TOURNAMENT_CATEGORIES: list[dict[str, Any]] = [
+    {"label": "B1 Men", "hint_bands": ["B1"]},
+    {"label": "B2 Mixed", "hint_bands": ["B2"]},
+    {"label": "B3/4 Mixed", "hint_bands": ["B3", "B4"]},
+]
+
 DIVISIONS: list[dict[str, Any]] = [
-    {
         "group_name": "B1 Men",
         "category": "B1",
         "gender": "M",
@@ -84,13 +89,18 @@ def _insert_players(tournament_id: int) -> dict[str, int]:
     return player_ids
 
 
-def _save_groups(tournament_id: int, player_ids: dict[tuple[str, str], int]) -> None:
+def _save_groups(
+    tournament_id: int,
+    player_ids: dict[tuple[str, str], int],
+    category_ids: dict[str, int],
+) -> None:
     groups = []
     for division in DIVISIONS:
         group_name = division["group_name"]
         groups.append(
             {
                 "name": group_name,
+                "tournament_category_id": category_ids.get(group_name),
                 "players": [
                     player_ids[(group_name, f"{first} {last}".strip())]
                     for first, last, _country in division["players"]
@@ -132,9 +142,10 @@ def setup_tournament(args: argparse.Namespace) -> int:
     if not tournament_id:
         raise RuntimeError("Failed to create tournament")
 
-    database.set_mixed_categories(tournament_id, ["B2", "B34"])
+    categories = database.confirm_tournament_categories(tournament_id, TOURNAMENT_CATEGORIES)
+    category_ids = {cat["label"]: int(cat["id"]) for cat in categories}
     player_ids = _insert_players(tournament_id)
-    _save_groups(tournament_id, player_ids)
+    _save_groups(tournament_id, player_ids, category_ids)
     database.seed_provisional_knockout_from_groups(tournament_id, schedule_day=args.playoff_day)
     if args.courts > 0:
         database.create_tournament_courts(tournament_id, args.courts)
