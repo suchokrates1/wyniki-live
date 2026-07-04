@@ -26,6 +26,27 @@ export function normalizeMixedCategories(values) {
   return normalized;
 }
 
+export function inferMixedPlayerBands(tournamentCategories = []) {
+  const bands = [];
+  for (const cat of tournamentCategories || []) {
+    if (cat?.is_active === 0) continue;
+    const label = String(cat?.label || '').toLowerCase();
+    const hints = normalizeMixedCategories(cat?.hint_bands || []);
+    const isMixed = label.includes('mixed')
+      || label.replace(/\//g, ' ').split(/\s+/).includes('mix')
+      || hints.length > 1
+      || hints.includes('B34');
+    if (!isMixed) continue;
+    for (const hint of hints) {
+      if (!bands.includes(hint)) bands.push(hint);
+    }
+    if (hints.includes('B3') && hints.includes('B4') && !bands.includes('B34')) {
+      bands.push('B34');
+    }
+  }
+  return bands;
+}
+
 export function isMixedCategory(category, mixedCategories = []) {
   const code = normalizeCategoryCode(category);
   if (!code) return false;

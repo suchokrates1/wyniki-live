@@ -22,7 +22,6 @@ from ..database import (
     update_tournament_category,
     delete_tournament_category,
     migrate_tournament_categories_from_legacy,
-    get_mixed_categories,
     generate_autoschedule_proposal,
     get_autoscheduler_config,
     maybe_generate_knockout_from_completed_groups,
@@ -197,7 +196,6 @@ def office_planning(slot: int):
         "schedule": fetch_tournament_schedule(tournament_id),
         "courts": dashboard.get("courts", []),
         "tournament_categories": categories,
-        "mixed_categories": get_mixed_categories(tournament_id),
         "dashboard": dashboard,
     })
 

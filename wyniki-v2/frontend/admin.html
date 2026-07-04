@@ -851,6 +851,53 @@
             </template>
           </div>
 
+          <div class="divider">Kategorie turnieju</div>
+          <p class="text-sm opacity-70 -mt-2">Standardowe kategorie (B1–B4 K/M) i własne (np. B2 Mixed, B3/4 Mixed). Zatwierdź przed dodaniem zawodników.</p>
+
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 mt-2" x-show="!adminTournamentCategories.length || adminCategorySetupOpen">
+            <div class="flex flex-wrap gap-2">
+              <template x-for="preset in adminCategoryPresetKeys()" :key="'edit_preset_'+preset">
+                <label class="inline-flex items-center gap-2 rounded-full border border-base-300 bg-base-100 px-3 py-1.5 text-sm cursor-pointer">
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="adminCategoryPresetSelected[preset]">
+                  <span x-text="adminCategoryPresetLabel(preset)"></span>
+                </label>
+              </template>
+            </div>
+            <div class="mt-3 grid gap-2 sm:grid-cols-3">
+              <input type="text" class="input input-bordered sm:col-span-2" placeholder="Np. B2 Mixed lub B3/4 Mixed" x-model="adminCategoryCustomLabel">
+              <input type="text" class="input input-bordered" placeholder="B2 / B3,B4" x-model="adminCategoryCustomHints">
+            </div>
+            <div class="mt-3 flex gap-2 flex-wrap">
+              <button type="button" class="btn btn-primary btn-sm" @click="confirmAdminTournamentCategories(editTournament.id)">Zatwierdź kategorie</button>
+              <button type="button" class="btn btn-ghost btn-sm" x-show="adminTournamentCategories.length" @click="adminCategorySetupOpen = false">Anuluj</button>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-base-300 p-4 mt-2" x-show="adminTournamentCategories.length && !adminCategorySetupOpen">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <span class="font-semibold text-sm">Kategorie w turnieju</span>
+              <button type="button" class="btn btn-ghost btn-xs" @click="adminCategorySetupOpen = true">+ Dodaj kategorię</button>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <template x-for="cat in adminTournamentCategories.filter(c => c.is_active !== 0)" :key="'edit_tcat_'+cat.id">
+                <div class="badge badge-lg gap-2 py-3 px-3">
+                  <span x-text="cat.label"></span>
+                  <button type="button" class="text-primary" @click="startAdminCategoryEdit(cat)">Edytuj</button>
+                  <button type="button" class="text-error" @click="deleteAdminTournamentCategory(editTournament.id, cat.id)">Usuń</button>
+                </div>
+              </template>
+            </div>
+            <div class="mt-3 grid gap-2 sm:grid-cols-3" x-show="adminCategoryEditId">
+              <input type="text" class="input input-bordered sm:col-span-2" x-model="adminCategoryEditLabel">
+              <button type="button" class="btn btn-primary btn-sm" @click="saveAdminCategoryEdit(editTournament.id)">Zapisz nazwę</button>
+            </div>
+            <div class="mt-3 grid gap-2 sm:grid-cols-4" x-show="adminCategorySetupOpen && adminTournamentCategories.length">
+              <input type="text" class="input input-bordered sm:col-span-2" placeholder="Własna kategoria" x-model="adminCategoryCustomLabel">
+              <input type="text" class="input input-bordered" placeholder="B2" x-model="adminCategoryCustomHints">
+              <button type="button" class="btn btn-outline btn-sm" @click="addAdminTournamentCategory(editTournament.id)">Dodaj</button>
+            </div>
+          </div>
+
           <div class="card-actions justify-end mt-6">
             <button @click="cancelTournamentEdit()" class="btn btn-ghost">Anuluj</button>
             <button @click="saveTournamentEdit()" class="btn btn-primary">Zapisz turniej</button>
@@ -878,6 +925,24 @@
             <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-primary" x-model="newTournament.stats_enabled" :disabled="newTournament.is_simulation"><span class="label-text">Liczy statystyki</span></label>
             <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-warning" x-model="newTournament.is_simulation"><span class="label-text">Symulacja</span></label>
           </div>
+
+          <div class="divider">Kategorie turnieju</div>
+          <p class="text-sm opacity-70 -mt-2">Opcjonalnie wybierz kategorie już przy tworzeniu turnieju.</p>
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 mt-2">
+            <div class="flex flex-wrap gap-2">
+              <template x-for="preset in adminCategoryPresetKeys()" :key="'new_preset_'+preset">
+                <label class="inline-flex items-center gap-2 rounded-full border border-base-300 bg-base-100 px-3 py-1.5 text-sm cursor-pointer">
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="newCategoryPresetSelected[preset]">
+                  <span x-text="adminCategoryPresetLabel(preset)"></span>
+                </label>
+              </template>
+            </div>
+            <div class="mt-3 grid gap-2 sm:grid-cols-3">
+              <input type="text" class="input input-bordered sm:col-span-2" placeholder="Np. B2 Mixed lub B3/4 Mixed" x-model="newCategoryCustomLabel">
+              <input type="text" class="input input-bordered" placeholder="B2 / B3,B4" x-model="newCategoryCustomHints">
+            </div>
+          </div>
+
           <div class="card-actions justify-end mt-4"><button @click="createTournament()" class="btn btn-primary">Utw&#243;rz turniej</button></div>
         </div>
       </div>

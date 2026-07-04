@@ -829,7 +829,10 @@ def test_player_import_preview_groups_b34_as_mixed_only_for_configured_tournamen
     from wyniki import database
 
     tournament_id = database.insert_tournament("Import B34 Mixed Cup", "2026-06-10", "2026-06-12", active=True)
-    database.set_mixed_categories(tournament_id, ["B34"])
+    database.confirm_tournament_categories(
+        tournament_id,
+        [{"label": "B3/4 Mixed", "hint_bands": ["B3", "B4"]}],
+    )
 
     text = """B3/4 Mixed
 Anna Kowalska
@@ -846,7 +849,7 @@ Maria Test B34 K DE"""
     assert response.status_code == 200
     payload = response.get_json()
     assert payload["count"] == 4
-    assert payload["mixed_categories"] == ["B34"]
+    assert len(payload["tournament_categories"]) == 1
     assert {item["start_group"]: item["count"] for item in payload["summary"]} == {"B34": 4}
 
 

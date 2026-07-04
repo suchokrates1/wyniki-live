@@ -27,8 +27,7 @@ from ..database import (
     update_tournament_category,
     delete_tournament_category,
     migrate_tournament_categories_from_legacy,
-    get_mixed_categories,
-    set_mixed_categories,
+    get_planning_mixed_bands,
     insert_tournament,
     update_tournament,
     delete_tournament,
@@ -1174,7 +1173,6 @@ def get_tournament(tournament_id: int):
     tournament = fetch_tournament(tournament_id)
     if not tournament:
         return jsonify({"error": "Tournament not found"}), 404
-    tournament['mixed_categories'] = get_mixed_categories(tournament_id)
     tournament['tournament_categories'] = fetch_tournament_categories(tournament_id)
     return jsonify(tournament)
 
@@ -1782,8 +1780,8 @@ def import_players(tournament_id: int):
     if not text:
         return jsonify({"error": "No text provided"}), 400
     
-    mixed_categories = get_mixed_categories(tournament_id)
-    players_data = _parse_import_players_text(text, mixed_categories)
+    mixed_bands = get_planning_mixed_bands(tournament_id)
+    players_data = _parse_import_players_text(text, mixed_bands)
     
     if not players_data:
         return jsonify({"error": "No valid players found"}), 400
@@ -1808,14 +1806,14 @@ def parse_import_players(tournament_id: int):
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    mixed_categories = get_mixed_categories(tournament_id)
-    players_data = _parse_import_players_with_ai(text, mixed_categories)
+    mixed_bands = get_planning_mixed_bands(tournament_id)
+    players_data = _parse_import_players_with_ai(text, mixed_bands)
     if not players_data:
         return jsonify({"error": "No valid players found"}), 400
 
     return _json_no_cache({
         'players': players_data,
-        'mixed_categories': mixed_categories,
+        'tournament_categories': fetch_tournament_categories(tournament_id),
         'summary': _summarize_import_players(players_data),
         'needs_attention_count': sum(1 for player in players_data if player.get('warnings')),
         'count': len(players_data),
