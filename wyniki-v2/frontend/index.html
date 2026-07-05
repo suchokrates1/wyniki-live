@@ -1248,7 +1248,7 @@
 
                 <!-- Players list -->
                 <div class="player-list" x-show="!selectedPlayerId">
-                    <template x-for="p in filteredPlayers" :key="'pl-'+p.id">
+                    <template x-for="p in filteredPlayers" :key="'pl-'+(p.global_player_id || p.id)">
                         <div class="player-card player-card--clickable" @click="openPlayerProfile(p.global_player_id || p.id, !!p.global_player_id)" role="button" tabindex="0" @keydown.enter="openPlayerProfile(p.global_player_id || p.id, !!p.global_player_id)" :aria-label="p.name + ' – ' + p.category + ' – ' + p.matches_played + ' ' + (tr().playerSection?.matchesPlayed || 'meczów')">
                             <div class="player-card__main">
                                 <img class="player-card__flag" x-show="p.country" :src="codeToFlag(p.country)" :alt="p.country" width="20" height="15">

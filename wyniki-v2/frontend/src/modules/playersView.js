@@ -1,5 +1,6 @@
 import { publicApi } from '../api/publicApi.js';
 import {
+  dedupePlayersList,
   filterPlayersList,
   getPlayerCategoryOptions,
   getPlayerCountryOptions,
@@ -34,7 +35,7 @@ export function createPlayersView() {
           this.filteredPlayers = [];
           return;
         }
-        this.allPlayers = Array.isArray(data) ? data : [];
+        this.allPlayers = dedupePlayersList(Array.isArray(data) ? data : []);
         for (const player of this.allPlayers) {
           const name = player.name || '';
           if (name.includes(' ')) {
