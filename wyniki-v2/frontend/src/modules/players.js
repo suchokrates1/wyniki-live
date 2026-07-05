@@ -1,3 +1,22 @@
+export function dedupePlayersList(players = []) {
+  const seen = new Map();
+  for (const player of Array.isArray(players) ? players : []) {
+    const gid = Number(player?.global_player_id);
+    const key = Number.isFinite(gid) && gid > 0
+      ? `g:${gid}`
+      : `n:${String(player?.name || '').trim().toLowerCase()}`;
+    const prev = seen.get(key);
+    if (!prev || Number(player?.tournament_id || 0) >= Number(prev?.tournament_id || 0)) {
+      seen.set(key, player);
+    }
+  }
+  return [...seen.values()].sort((a, b) => {
+    const last = String(a?.last_name || a?.name || '').localeCompare(String(b?.last_name || b?.name || ''));
+    if (last !== 0) return last;
+    return String(a?.first_name || '').localeCompare(String(b?.first_name || ''));
+  });
+}
+
 export function filterPlayersList(players = [], { search = '', gender = '', country = '', category = '' } = {}) {
   let list = Array.isArray(players) ? players : [];
   const query = String(search || '').trim().toLowerCase();

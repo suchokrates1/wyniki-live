@@ -30,7 +30,7 @@ export const TRANSLATIONS = {
       active: 'aktywny',
       serving: 'serwuje'
     },
-    history: { title: 'Historia meczów', court: 'Kort', vs: 'vs', score: 'wynik', time: 'czas', category: 'Kategoria', phaseGroup: 'Grupowa', phaseKnockout: 'Pucharowa', catWomen: 'Kobiety', catMen: 'Mężczyźni', catMixed: 'B3/4 Mixed' },
+    history: { title: 'Historia meczów', court: 'Kort', vs: 'vs', score: 'wynik', time: 'czas', category: 'Kategoria', phaseGroup: 'Grupowa', phaseKnockout: 'Pucharowa', catWomen: 'Kobiety', catMen: 'Mężczyźni', catMixed: 'Mieszane' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Asy', doubleFaults: 'Podwójne błędy', winners: 'Winnery',
@@ -103,7 +103,7 @@ export const TRANSLATIONS = {
       active: 'aktiv',
       serving: 'Aufschlag'
     },
-    history: { title: 'Match-Historie', court: 'Platz', vs: 'gegen', score: 'Ergebnis', time: 'Zeit', category: 'Kategorie', phaseGroup: 'Gruppenphase', phaseKnockout: 'K.O.-Phase', catWomen: 'Frauen', catMen: 'Männer', catMixed: 'B3/4 Mixed' },
+    history: { title: 'Match-Historie', court: 'Platz', vs: 'gegen', score: 'Ergebnis', time: 'Zeit', category: 'Kategorie', phaseGroup: 'Gruppenphase', phaseKnockout: 'K.O.-Phase', catWomen: 'Frauen', catMen: 'Männer', catMixed: 'Mixed' },
     footer: { set: 'Satz' },
     stats: {
       aces: 'Asse', doubleFaults: 'Doppelfehler', winners: 'Winner',
@@ -175,7 +175,7 @@ export const TRANSLATIONS = {
       active: 'active',
       serving: 'serving'
     },
-    history: { title: 'Match history', court: 'Court', vs: 'vs', score: 'score', time: 'time', category: 'Category', phaseGroup: 'Group stage', phaseKnockout: 'Knockout', catWomen: 'Women', catMen: 'Men', catMixed: 'B3/4 Mixed' },
+    history: { title: 'Match history', court: 'Court', vs: 'vs', score: 'score', time: 'time', category: 'Category', phaseGroup: 'Group stage', phaseKnockout: 'Knockout', catWomen: 'Women', catMen: 'Men', catMixed: 'Mixed' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Double faults', winners: 'Winners',
@@ -248,7 +248,7 @@ export const TRANSLATIONS = {
       active: 'attivo',
       serving: 'al servizio'
     },
-    history: { title: 'Storico incontri', court: 'Campo', vs: 'contro', score: 'risultato', time: 'tempo', category: 'Categoria', phaseGroup: 'Fase a gironi', phaseKnockout: 'Eliminazione', catWomen: 'Donne', catMen: 'Uomini', catMixed: 'B3/4 Mixed' },
+    history: { title: 'Storico incontri', court: 'Campo', vs: 'contro', score: 'risultato', time: 'tempo', category: 'Categoria', phaseGroup: 'Fase a gironi', phaseKnockout: 'Eliminazione', catWomen: 'Donne', catMen: 'Uomini', catMixed: 'Misto' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Ace', doubleFaults: 'Doppi falli', winners: 'Vincenti',
@@ -320,7 +320,7 @@ export const TRANSLATIONS = {
       active: 'activo',
       serving: 'al servicio'
     },
-    history: { title: 'Historial de partidos', court: 'Cancha', vs: 'contra', score: 'resultado', time: 'tiempo', category: 'Categoría', phaseGroup: 'Fase de grupos', phaseKnockout: 'Eliminatoria', catWomen: 'Mujeres', catMen: 'Hombres', catMixed: 'B3/4 Mixed' },
+    history: { title: 'Historial de partidos', court: 'Cancha', vs: 'contra', score: 'resultado', time: 'tiempo', category: 'Categoría', phaseGroup: 'Fase de grupos', phaseKnockout: 'Eliminatoria', catWomen: 'Mujeres', catMen: 'Hombres', catMixed: 'Mixto' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Dobles faltas', winners: 'Ganadores',
@@ -392,7 +392,7 @@ export const TRANSLATIONS = {
       active: 'actif',
       serving: 'au service'
     },
-    history: { title: 'Historique des matchs', court: 'Court', vs: 'contre', score: 'score', time: 'temps', category: 'Catégorie', phaseGroup: 'Phase de groupes', phaseKnockout: 'Phase éliminatoire', catWomen: 'Femmes', catMen: 'Hommes', catMixed: 'B3/4 Mixed' },
+    history: { title: 'Historique des matchs', court: 'Court', vs: 'contre', score: 'score', time: 'temps', category: 'Catégorie', phaseGroup: 'Phase de groupes', phaseKnockout: 'Phase éliminatoire', catWomen: 'Femmes', catMen: 'Hommes', catMixed: 'Mixte' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Doubles fautes', winners: 'Coups gagnants',

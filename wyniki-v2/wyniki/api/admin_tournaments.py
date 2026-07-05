@@ -2022,7 +2022,7 @@ def get_all_players():
         })
 
     result.sort(key=lambda row: (row.get('last_name', ''), row.get('first_name', '')))
-    return jsonify(result)
+    return _json_no_cache(result)
 
 
 @players_public_bp.route('/<int:player_id>/profile', methods=['GET'])

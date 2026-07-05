@@ -72,7 +72,7 @@ export function parseBracketCategory(name) {
   if (isMixedSectionLabel(sectionLabel) || normalized.includes('mixed') || normalized.includes(' mix')) {
     gender = 'mixed';
   } else if (normalized.includes('kobiet')) gender = 'women';
-  else if (normalized.includes('mezczyzn')) gender = 'men';
+  else if (normalized.includes('mezczyzn') || normalized.includes(' men') || normalized.endsWith(' men')) gender = 'men';
   return { rawName, baseName, division, gender };
 }
 
@@ -80,15 +80,15 @@ export function getBracketCategoryLabel(name, {
   translateCategory = (value) => value,
   womenLabel = 'Women',
   menLabel = 'Men',
-  mixedLabel = 'B3/4 Mixed',
+  mixedLabel = 'Mixed',
 } = {}) {
   const parsed = parseBracketCategory(name);
   if (parsed.gender === 'mixed' && parsed.division) {
-    return mixedLabel;
+    return `${formatCategoryDisplay(parsed.division)} ${mixedLabel}`.trim();
   }
   if (!parsed.division || !parsed.gender) return translateCategory(name);
   const genderLabel = parsed.gender === 'women' ? womenLabel : menLabel;
-  return `${genderLabel} ${formatCategoryDisplay(parsed.division)}`;
+  return `${formatCategoryDisplay(parsed.division)} ${genderLabel}`.trim();
 }
 
 export function compareBracketCategoryNames(leftName, rightName, { getCategoryLabel = (name) => String(name || ''), lang = 'pl' } = {}) {
