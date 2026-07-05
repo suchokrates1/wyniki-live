@@ -1253,7 +1253,7 @@
                             <div class="player-card__main">
                                 <img class="player-card__flag" x-show="p.country" :src="codeToFlag(p.country)" :alt="p.country" width="20" height="15">
                                 <span class="player-card__name" x-text="p.name"></span>
-                                <span class="player-card__cat" x-show="p.category" x-text="p.category"></span>
+                                <span class="player-card__cat" x-show="formatPlayerClassification(p.category)" x-text="formatPlayerClassification(p.category)"></span>
                                 <span class="player-card__gender" x-show="p.gender" x-text="p.gender === 'M' ? (tr().playerSection?.genderShortM || 'M') : (tr().playerSection?.genderShortF || 'K')"></span>
                             </div>
                             <div class="player-card__stats">
@@ -1299,7 +1299,7 @@
                                 <div class="pp-info">
                                     <h2 class="pp-info__name" x-text="playerProfile.player.full_name"></h2>
                                     <div class="pp-info__details">
-                                        <span x-show="playerProfile.player.category" class="pp-badge pp-badge--cat" x-text="playerProfile.player.category"></span>
+                                        <span x-show="formatPlayerClassification(playerProfile.player.category)" class="pp-badge pp-badge--cat" x-text="formatPlayerClassification(playerProfile.player.category)"></span>
                                         <span x-show="playerProfile.player.gender" class="pp-badge pp-badge--gender" x-text="playerProfile.player.gender === 'M' ? (tr().playerProfile?.male || 'Mężczyzna') : (tr().playerProfile?.female || 'Kobieta')"></span>
                                         <span x-show="playerProfile.player.country" class="pp-badge pp-badge--country">
                                             <img :src="codeToFlag(playerProfile.player.country)" width="16" height="12" alt="">

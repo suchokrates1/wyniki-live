@@ -1917,31 +1917,68 @@ def get_active_players():
 @players_public_bp.route('/all', methods=['GET'])
 def get_all_players():
     """Get all players across all tournaments with match stats.
-    Deduplicates by global_player_id, aggregating stats across tournaments.
+    Deduplicates by global_player_id (or name), preferring the latest tournament entry.
     """
     import json
-    from wyniki.db_models import Player, Tournament, MatchHistory
+    from wyniki.db_models import Player, GlobalPlayer, Tournament, MatchHistory
+    from wyniki.services.categories import normalize_player_classification
     from sqlalchemy import func, or_
-    
-    # Query public, stats-enabled players only.
+
     players = (
         Player.query.join(Tournament)
         .filter(
             Tournament.is_public == 1,
             Tournament.stats_enabled == 1,
         )
-        .order_by(Player.last_name, Player.first_name)
+        .order_by(Tournament.start_date.desc(), Tournament.id.desc(), Player.id.desc())
         .all()
     )
-    
-    # Deduplicate by global_player_id — aggregate stats across tournaments
-    seen_global = {}
+
+    def _dedup_key(player: Player) -> str:
+        if player.global_player_id:
+            return f"g:{player.global_player_id}"
+        gp = (
+            GlobalPlayer.query.filter(
+                func.lower(func.trim(GlobalPlayer.first_name)) == (player.first_name or '').strip().lower(),
+                func.lower(func.trim(GlobalPlayer.last_name)) == (player.last_name or '').strip().lower(),
+            )
+            .first()
+        )
+        if gp:
+            return f"g:{gp.id}"
+        return f"n:{player.full_name.strip().lower()}"
+
+    def _resolve_category(player: Player, global_player: GlobalPlayer | None) -> str:
+        category = normalize_player_classification(player.category or '')
+        if not category and global_player:
+            category = normalize_player_classification(global_player.category or '')
+        return category
+
+    def _resolve_gender(player: Player, global_player: GlobalPlayer | None) -> str:
+        gender = (player.gender or '').strip()
+        if not gender and global_player:
+            gender = (global_player.gender or '').strip()
+        return gender
+
+    def _resolve_country(player: Player, global_player: GlobalPlayer | None) -> str:
+        country = (player.country or '').strip().upper()
+        if not country and global_player:
+            country = (global_player.country or '').strip().upper()
+        return country
+
+    grouped: dict[str, list[Player]] = {}
+    for player in players:
+        grouped.setdefault(_dedup_key(player), []).append(player)
+
     result = []
-    for p in players:
-        gid = p.global_player_id
-        full_name = p.full_name
-        
-        # Count matches where player appeared (as player_a or player_b)
+    for _key, group in grouped.items():
+        canonical = group[0]
+        gid = canonical.global_player_id
+        if not gid and _key.startswith('g:'):
+            gid = int(_key.split(':', 1)[1])
+        global_player = db.session.get(GlobalPlayer, gid) if gid else None
+        full_name = canonical.full_name
+
         match_filter = or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
         public_stats_matches = (
             MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
@@ -1951,48 +1988,40 @@ def get_all_players():
             )
         )
         match_count = public_stats_matches.count()
-        
-        # Count wins
+
         wins = 0
-        matches = public_stats_matches.all()
-        for m in matches:
-            if not m.score_a or not m.score_b:
+        for match in public_stats_matches.all():
+            if not match.score_a or not match.score_b:
                 continue
             try:
-                sa = json.loads(m.score_a) if isinstance(m.score_a, str) else m.score_a
-                sb = json.loads(m.score_b) if isinstance(m.score_b, str) else m.score_b
+                sa = json.loads(match.score_a) if isinstance(match.score_a, str) else match.score_a
+                sb = json.loads(match.score_b) if isinstance(match.score_b, str) else match.score_b
                 sets_a = sum(1 for i in range(len(sa)) for _ in [1] if i < len(sb) and sa[i] > sb[i])
                 sets_b = sum(1 for i in range(len(sb)) for _ in [1] if i < len(sa) and sb[i] > sa[i])
-                if m.player_a == full_name and sets_a > sets_b:
+                if match.player_a == full_name and sets_a > sets_b:
                     wins += 1
-                elif m.player_b == full_name and sets_b > sets_a:
+                elif match.player_b == full_name and sets_b > sets_a:
                     wins += 1
             except (json.JSONDecodeError, TypeError):
                 pass
-        
-        if gid and gid in seen_global:
-            # Already seen this global player — skip (stats are same since same full_name)
-            continue
-        
-        if gid:
-            seen_global[gid] = True
-        
+
         result.append({
-            'id': p.id,
+            'id': canonical.id,
             'global_player_id': gid,
             'name': full_name,
-            'first_name': p.first_name or '',
-            'last_name': p.last_name or '',
-            'gender': p.gender or '',
-            'category': p.category or '',
-            'country': (p.country or '').upper(),
-            'tournament_id': p.tournament_id,
-            'tournament_name': p.tournament.name if p.tournament else '',
+            'first_name': canonical.first_name or '',
+            'last_name': canonical.last_name or '',
+            'gender': _resolve_gender(canonical, global_player),
+            'category': _resolve_category(canonical, global_player),
+            'country': _resolve_country(canonical, global_player),
+            'tournament_id': canonical.tournament_id,
+            'tournament_name': canonical.tournament.name if canonical.tournament else '',
             'matches_played': match_count,
             'wins': wins,
-            'losses': match_count - wins
+            'losses': match_count - wins,
         })
-    
+
+    result.sort(key=lambda row: (row.get('last_name', ''), row.get('first_name', '')))
     return jsonify(result)
 
 
@@ -2004,6 +2033,7 @@ def get_player_profile(player_id: int):
     import json
     from wyniki.db_models import Player, GlobalPlayer, Tournament, MatchHistory
     from wyniki.database import get_full_bracket
+    from wyniki.services.categories import normalize_player_classification
     from sqlalchemy import or_
 
     is_global = request.args.get('global', '0') == '1'
@@ -2016,7 +2046,7 @@ def get_player_profile(player_id: int):
         last_name = (gp.last_name or '').strip()
         first_name_val = gp.first_name or ''
         gender_val = gp.gender or ''
-        category_val = gp.category or ''
+        category_val = normalize_player_classification(gp.category or '')
         country_val = (gp.country or '').upper()
         photo_url = gp.photo_url or ''
         birth_date = gp.birth_date or ''
@@ -2043,7 +2073,11 @@ def get_player_profile(player_id: int):
         last_name = (player.last_name or '').strip()
         first_name_val = player.first_name or ''
         gender_val = player.gender or ''
-        category_val = player.category or ''
+        category_val = normalize_player_classification(player.category or '')
+        if not category_val and player.global_player_id:
+            gp_lookup = db.session.get(GlobalPlayer, player.global_player_id)
+            if gp_lookup:
+                category_val = normalize_player_classification(gp_lookup.category or '')
         country_val = (player.country or '').upper()
         photo_url = ''
         birth_date = ''
