@@ -13,6 +13,15 @@ def test_normalize_category_code_handles_b34_variants():
     assert normalize_category_code('B1') == 'B1'
 
 
+def test_normalize_player_classification_rejects_b34():
+    from wyniki.services.categories import normalize_player_classification
+
+    assert normalize_player_classification('B34') == ''
+    assert normalize_player_classification('B3/4') == ''
+    assert normalize_player_classification('B3') == 'B3'
+    assert normalize_player_classification('b4') == 'B4'
+
+
 def test_b34_is_mixed_only_when_configured_for_tournament():
     assert is_mixed_category('B34', ['B34'])
     assert is_mixed_category('B3/4', ['B34'])

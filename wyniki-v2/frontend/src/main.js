@@ -17,6 +17,7 @@ import { createScheduleView } from './modules/scheduleView.js';
 import { createTournamentView } from './modules/tournamentsView.js';
 import { applyHashRoute, updateHashFromState } from './modules/routing.js';
 import { formatTemplate as fmt } from './shared/text.js';
+import { formatPlayerClassification } from './shared/categories.js';
 import './main.css';
 
 function codeToFlag(code) {
@@ -145,6 +146,7 @@ Alpine.data('tennisApp', () => ({
 
   /* --- Flag helper --- */
   codeToFlag(code) { return codeToFlag(code); },
+  formatPlayerClassification(category) { return formatPlayerClassification(category); },
 
   /* --- Translation helpers --- */
   tr() { return getTranslation(this.lang); },

@@ -26,6 +26,12 @@ export function normalizeMixedCategories(values) {
   return normalized;
 }
 
+export function formatPlayerClassification(category) {
+  const code = normalizeCategoryCode(category);
+  if (code === 'B1' || code === 'B2' || code === 'B3' || code === 'B4') return code;
+  return '';
+}
+
 export function inferMixedPlayerBands(tournamentCategories = []) {
   const bands = [];
   for (const cat of tournamentCategories || []) {

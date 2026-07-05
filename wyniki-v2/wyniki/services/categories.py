@@ -27,6 +27,14 @@ def normalize_category_code(value: Any) -> str:
     return cleaned
 
 
+def normalize_player_classification(value: Any) -> str:
+    """Player skill band only (B1–B4). B34 is a tournament bucket, not a player category."""
+    code = normalize_category_code(value)
+    if code in {'B1', 'B2', 'B3', 'B4'}:
+        return code
+    return ''
+
+
 def normalize_mixed_categories(values: Iterable[Any] | None) -> list[str]:
     normalized: list[str] = []
     for value in values or []:
