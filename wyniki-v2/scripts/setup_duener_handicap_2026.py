@@ -25,36 +25,31 @@ TOURNAMENT_CATEGORIES: list[dict[str, Any]] = [
 ]
 
 DIVISIONS: list[dict[str, Any]] = [
+    {
         "group_name": "B1 Men",
-        "category": "B1",
-        "gender": "M",
         "players": [
-            ("Lars", "Stetten", "DE"),
-            ("Carlos", "Arbos", "FR"),
-            ("Naqi", "Rizvi", "GB"),
-            ("Lucas", "Bartlewski", "DE"),
+            {"first_name": "Lars", "last_name": "Stetten", "country": "DE", "category": "B1", "gender": "M"},
+            {"first_name": "Carlos", "last_name": "Arbos", "country": "FR", "category": "B1", "gender": "M"},
+            {"first_name": "Naqi", "last_name": "Rizvi", "country": "GB", "category": "B1", "gender": "M"},
+            {"first_name": "Lucas", "last_name": "Bartlewski", "country": "DE", "category": "B1", "gender": "M"},
         ],
     },
     {
         "group_name": "B2 Mixed",
-        "category": "B2",
-        "gender": "",
         "players": [
-            ("Dana", "Granowski", "DE"),
-            ("Simone", "Kaminski", "DE"),
-            ("Axel", "Teichmann", "DE"),
-            ("Yannik", "Neumann", "DE"),
-            ("Marian", "Wywiórski", "PL"),
+            {"first_name": "Dana", "last_name": "Granowski", "country": "DE", "category": "B2", "gender": "K"},
+            {"first_name": "Simone", "last_name": "Kaminski", "country": "DE", "category": "B2", "gender": "K"},
+            {"first_name": "Axel", "last_name": "Teichmann", "country": "DE", "category": "B2", "gender": "M"},
+            {"first_name": "Yannik", "last_name": "Neumann", "country": "DE", "category": "B2", "gender": "M"},
+            {"first_name": "Marian", "last_name": "Wywiórski", "country": "PL", "category": "B2", "gender": "M"},
         ],
     },
     {
         "group_name": "B3/4 Mixed",
-        "category": "B34",
-        "gender": "",
         "players": [
-            ("Christian", "Schäfer", "DE"),
-            ("Rick", "Bouwens", "NL"),
-            ("Daniela", "Wallace", "DE"),
+            {"first_name": "Christian", "last_name": "Schäfer", "country": "DE", "category": "B3", "gender": "M"},
+            {"first_name": "Rick", "last_name": "Bouwens", "country": "NL", "category": "B3", "gender": "M"},
+            {"first_name": "Daniela", "last_name": "Wallace", "country": "DE", "category": "B4", "gender": "K"},
         ],
     },
 ]
@@ -72,9 +67,13 @@ def _insert_players(tournament_id: int) -> dict[str, int]:
     with database.db_conn() as conn:
         cursor = conn.cursor()
         for division in DIVISIONS:
-            category = division["category"]
-            gender = division["gender"]
-            for first_name, last_name, country in division["players"]:
+            group_name = division["group_name"]
+            for player in division["players"]:
+                first_name = player["first_name"]
+                last_name = player["last_name"]
+                country = player["country"]
+                category = player["category"]
+                gender = player.get("gender") or ""
                 full_name = f"{first_name} {last_name}".strip()
                 cursor.execute(
                     """
@@ -84,7 +83,7 @@ def _insert_players(tournament_id: int) -> dict[str, int]:
                     """,
                     (tournament_id, full_name, first_name, last_name, category, country, gender),
                 )
-                player_ids[division["group_name"], full_name] = cursor.lastrowid
+                player_ids[group_name, full_name] = cursor.lastrowid
         conn.commit()
     return player_ids
 
@@ -102,8 +101,8 @@ def _save_groups(
                 "name": group_name,
                 "tournament_category_id": category_ids.get(group_name),
                 "players": [
-                    player_ids[(group_name, f"{first} {last}".strip())]
-                    for first, last, _country in division["players"]
+                    player_ids[(group_name, f"{p['first_name']} {p['last_name']}".strip())]
+                    for p in division["players"]
                 ],
             }
         )
