@@ -46,6 +46,10 @@ export function createLiveRuntimeView() {
     error: null,
     lastUpdate: null,
     tournamentName: null,
+    _eventSource: null,
+    _sseRetryTimer: null,
+    _sseFailures: 0,
+    _visibilityBound: false,
 
     async fetchInitialData() {
       try {
@@ -59,14 +63,40 @@ export function createLiveRuntimeView() {
         this.tournamentName = data.tournament_name || null;
         this.loading = false;
         this.lastUpdate = new Date();
+        this.error = null;
       } catch (err) {
         this.error = err.message;
         this.loading = false;
       }
     },
 
+    _bindVisibilityReconnect() {
+      if (this._visibilityBound) return;
+      this._visibilityBound = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        this.error = null;
+        this._sseFailures = 0;
+        this.connectSSE();
+        if (this.activeTab === 'live' && this.liveSubTab === 'scores') {
+          this.fetchInitialData();
+        }
+      });
+    },
+
     connectSSE() {
+      this._bindVisibilityReconnect();
+      if (this._sseRetryTimer) {
+        clearTimeout(this._sseRetryTimer);
+        this._sseRetryTimer = null;
+      }
+      if (this._eventSource) {
+        this._eventSource.close();
+        this._eventSource = null;
+      }
+
       const eventSource = new EventSource('/api/stream');
+      this._eventSource = eventSource;
 
       eventSource.addEventListener('court_update', (e) => {
         try {
@@ -74,6 +104,9 @@ export function createLiveRuntimeView() {
           const courtId = String(data.court_id);
           if (!this.publicCourtIds[courtId]) return;
           const prev = this.courts[courtId];
+
+          this._sseFailures = 0;
+          this.error = null;
 
           this.$nextTick(() => {
             this.animateChanges(courtId, prev, data);
@@ -89,9 +122,23 @@ export function createLiveRuntimeView() {
         } catch { /* ignore parse errors */ }
       });
 
+      eventSource.onopen = () => {
+        this._sseFailures = 0;
+        this.error = null;
+      };
+
       eventSource.onerror = () => {
-        this.error = 'Połączenie przerwane';
-        setTimeout(() => this.connectSSE(), 5000);
+        if (this._eventSource === eventSource) {
+          eventSource.close();
+          this._eventSource = null;
+        }
+        this._sseFailures += 1;
+        const hidden = document.hidden;
+        const retryMs = hidden ? 15000 : 5000;
+        if (!hidden && this._sseFailures >= 3) {
+          this.error = this.tr?.()?.connection?.lost || 'Połączenie przerwane';
+        }
+        this._sseRetryTimer = setTimeout(() => this.connectSSE(), retryMs);
       };
     },
 

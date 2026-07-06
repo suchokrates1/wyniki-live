@@ -53,7 +53,7 @@
         </div>
         
         <!-- Error State -->
-        <div x-show="error && !loading" class="error-bar" role="alert" aria-live="assertive">
+        <div x-show="error && !loading && activeTab === 'live'" class="error-bar" role="alert" aria-live="assertive">
             <span class="error" x-text="error"></span>
         </div>
 
