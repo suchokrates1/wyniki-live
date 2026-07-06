@@ -74,7 +74,8 @@ export const TRANSLATIONS = {
       bracket: 'Drabinka',
       schedule: 'Plan turnieju',
       noMatches: 'Brak meczów w tym turnieju'
-    }
+    },
+    connection: { lost: 'Połączenie przerwane' }
   },
   de: {
     htmlLang: 'de',
@@ -147,7 +148,8 @@ export const TRANSLATIONS = {
       bracket: 'Turnierbaum',
       schedule: 'Turnierplan',
       noMatches: 'Keine Spiele in diesem Turnier'
-    }
+    },
+    connection: { lost: 'Verbindung unterbrochen' }
   },
   en: {
     htmlLang: 'en',
@@ -221,7 +223,8 @@ export const TRANSLATIONS = {
       bracket: 'Bracket',
       schedule: 'Tournament schedule',
       noMatches: 'No matches in this tournament'
-    }
+    },
+    connection: { lost: 'Connection interrupted' }
   },
   it: {
     htmlLang: 'it',
@@ -294,7 +297,8 @@ export const TRANSLATIONS = {
       bracket: 'Tabellone',
       schedule: 'Programma del torneo',
       noMatches: 'Nessuna partita in questo torneo'
-    }
+    },
+    connection: { lost: 'Connessione interrotta' }
   },
   es: {
     htmlLang: 'es',
@@ -367,7 +371,8 @@ export const TRANSLATIONS = {
       bracket: 'Cuadro',
       schedule: 'Calendario del torneo',
       noMatches: 'No hay partidos en este torneo'
-    }
+    },
+    connection: { lost: 'Conexión interrumpida' }
   },
   fr: {
     htmlLang: 'fr',
@@ -440,7 +445,8 @@ export const TRANSLATIONS = {
       bracket: 'Tableau',
       schedule: 'Programme du tournoi',
       noMatches: 'Aucun match dans ce tournoi'
-    }
+    },
+    connection: { lost: 'Connexion interrompue' }
   }
 };
 
