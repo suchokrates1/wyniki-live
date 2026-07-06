@@ -872,7 +872,7 @@
                                 x-text="tr().tournamentHistory?.bracket || 'Drabinka'"></button>
                         <button class="th-subtab" role="tab" :aria-selected="historySubTab === 'schedule'" :class="{ 'th-subtab--active': historySubTab === 'schedule' }"
                             @click="openTournamentHistorySubTab('schedule')"
-                            x-text="tr().liveSub?.schedule || 'Terminarz'"></button>
+                            x-text="tr().tournamentHistory?.schedule || 'Plan turnieju'"></button>
                         <button class="th-subtab" role="tab" :aria-selected="historySubTab === 'matches'" :class="{ 'th-subtab--active': historySubTab === 'matches' }"
                             @click="openTournamentHistorySubTab('matches')"
                                 x-text="tr().tournamentHistory?.matchHistory || 'Historia meczów'"></button>
