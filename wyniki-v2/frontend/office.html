@@ -834,13 +834,14 @@
         </div>
 
         <div class="mt-4 rounded-[20px] border border-amber-200 bg-amber-50 p-3"
-             x-show="autoUnplaced().length"
+             x-show="autoUnplacedCount()"
              @dragover.prevent
              @drop.prevent="onAutoDropToUnassigned()">
           <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
             <div>
               <div class="text-sm font-semibold text-slate-900" x-text="planningUnassignedTitle()"></div>
-              <div class="text-[11px] text-slate-500" x-text="ot('planning.dropToUnassigned')"></div>
+              <p class="mt-1 text-xs text-amber-900/80" x-text="ot('planning.unassignedHint')"></p>
+              <div class="text-[11px] text-slate-500 mt-1" x-text="ot('planning.dropToUnassigned')"></div>
             </div>
             <button type="button"
                     class="btn btn-sm btn-outline border-rose-200 text-rose-700 hover:bg-rose-50"
@@ -848,22 +849,31 @@
                     @click="deleteAllUnassigned()"
                     x-text="ot('planning.deleteAllUnassigned')"></button>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <template x-for="entry in autoUnplaced()" :key="'autounp_'+(entry.schedule_id || entry.id)">
-              <div class="relative rounded-xl bg-white border border-amber-200 p-2 pr-7 cursor-move"
-                   :draggable="!autoLoading"
-                   @dragstart="onAutoDragStart(entry, $event)">
-                <button type="button"
-                        class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                        :title="ot('planning.removeEntry')"
-                        @click.stop="deletePlanningScheduleEntry(entry, { skipConfirm: true })"
-                        x-text="'×'"></button>
-                <div class="text-sm font-semibold text-slate-900">
-                  <span x-text="entry.player1_name || '—'"></span>
-                  <span class="text-slate-400" x-text="' ' + ot('versus') + ' '"></span>
-                  <span x-text="entry.player2_name || '—'"></span>
+          <div class="mt-2 space-y-4">
+            <template x-for="section in autoUnplacedSections()" :key="'autounp_section_'+section.key">
+              <div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-amber-900/90"
+                     x-text="section.label + ' (' + section.entries.length + ')'"></div>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <template x-for="entry in section.entries" :key="'autounp_'+(entry.schedule_id || entry.id)">
+                    <div class="relative rounded-xl bg-white border border-amber-200 p-2 pr-7 cursor-move min-w-[11rem]"
+                         :draggable="!autoLoading"
+                         @dragstart="onAutoDragStart(entry, $event)">
+                      <button type="button"
+                              class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                              :title="ot('planning.removeEntry')"
+                              @click.stop="deletePlanningScheduleEntry(entry, { skipConfirm: true })"
+                              x-text="'×'"></button>
+                      <div class="text-sm font-semibold text-slate-900">
+                        <span x-text="entry.player1_name || '—'"></span>
+                        <span class="text-slate-400" x-text="' ' + ot('versus') + ' '"></span>
+                        <span x-text="entry.player2_name || '—'"></span>
+                      </div>
+                      <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
+                      <div class="text-[10px] text-amber-800 mt-0.5" x-text="planningUnassignedDayLabel(entry)"></div>
+                    </div>
+                  </template>
                 </div>
-                <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
               </div>
             </template>
           </div>
