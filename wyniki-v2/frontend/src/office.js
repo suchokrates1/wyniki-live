@@ -863,14 +863,75 @@ Alpine.data('officeApp', () => ({
       .sort(sortByTime);
   },
 
-  autoUnplaced() {
-    const day = this.autoDayDate;
+  autoIsUnplacedEntry(entry) {
+    return !entry?.court_id || !entry?.scheduled_time;
+  },
+
+  autoUnplacedAll() {
     if (this.autoIsPreview()) {
-      return this.autoProposal.filter(p => !p.court_id || !p.scheduled_time);
+      return this.autoProposal.filter(entry => this.autoIsUnplacedEntry(entry));
     }
-    return (this.planningSchedule || []).filter(
-      e => (!e.court_id || !e.scheduled_time) && (!e.day_date || e.day_date === day)
-    );
+    return (this.planningSchedule || []).filter(entry => this.autoIsUnplacedEntry(entry));
+  },
+
+  autoUnplacedCount() {
+    return this.autoUnplacedAll().length;
+  },
+
+  autoUnplacedPhaseKey(entry) {
+    const source = String(entry?.source_type || '').toLowerCase();
+    const phase = String(entry?.phase || '').toLowerCase();
+    if (source === 'group' || phase.includes('grup')) return 'group';
+    if (
+      phase.includes('rewan')
+      || phase.includes('dogryw')
+      || phase.includes('replay')
+      || phase.includes('rematch')
+      || phase.includes('revanch')
+    ) {
+      return 'replay';
+    }
+    return 'knockout';
+  },
+
+  autoUnplacedPhaseOrder() {
+    return ['group', 'replay', 'knockout'];
+  },
+
+  autoUnplacedPhaseLabel(phaseKey) {
+    const labels = {
+      group: this.ot('planning.unassignedPhaseGroup'),
+      replay: this.ot('planning.unassignedPhaseReplay'),
+      knockout: this.ot('planning.unassignedPhaseKnockout'),
+    };
+    return labels[phaseKey] || labels.knockout;
+  },
+
+  autoUnplacedSections() {
+    const sections = this.autoUnplacedPhaseOrder().map(key => ({
+      key,
+      label: this.autoUnplacedPhaseLabel(key),
+      entries: [],
+    }));
+    const byKey = Object.fromEntries(sections.map(section => [section.key, section]));
+    const sortEntries = (left, right) => {
+      const categoryCompare = String(left?.category_name || '').localeCompare(String(right?.category_name || ''));
+      if (categoryCompare !== 0) return categoryCompare;
+      const phaseCompare = String(left?.phase || '').localeCompare(String(right?.phase || ''));
+      if (phaseCompare !== 0) return phaseCompare;
+      return String(left?.player1_name || '').localeCompare(String(right?.player1_name || ''));
+    };
+    for (const entry of this.autoUnplacedAll()) {
+      const key = this.autoUnplacedPhaseKey(entry);
+      (byKey[key] || byKey.knockout).entries.push(entry);
+    }
+    return sections
+      .map(section => ({ ...section, entries: section.entries.sort(sortEntries) }))
+      .filter(section => section.entries.length > 0);
+  },
+
+  autoUnplaced() {
+    return this.autoUnplacedAll();
   },
 
   autoEntryId(entry) {
@@ -1026,15 +1087,12 @@ Alpine.data('officeApp', () => ({
   },
 
   async deleteAllUnassigned() {
-    const count = this.autoUnplaced().length;
+    const count = this.autoUnplacedCount();
     if (!count) return;
     if (!confirm(this.ot('confirm.deleteAllUnassigned', { count }))) return;
     this.autoLoading = true;
     try {
-      const params = new URLSearchParams();
-      if (this.autoDayDate) params.set('day_date', this.autoDayDate);
-      const query = params.toString() ? `?${params.toString()}` : '';
-      const response = await fetch(`/api/office/${this.slot}/schedule/unassigned${query}`, {
+      const response = await fetch(`/api/office/${this.slot}/schedule/unassigned`, {
         method: 'DELETE',
         headers: this.officeHeaders(),
       });
@@ -1130,7 +1188,13 @@ Alpine.data('officeApp', () => ({
   },
 
   planningUnassignedTitle() {
-    return this.ot('planning.unassignedTitle', { count: this.autoUnplaced().length });
+    return this.ot('planning.unassignedTitle', { count: this.autoUnplacedCount() });
+  },
+
+  planningUnassignedDayLabel(entry) {
+    const day = String(entry?.day_date || '').trim();
+    if (!day) return this.ot('planning.unassignedNoDay');
+    return this.ot('planning.unassignedDay', { date: this.formatOfficeScheduleDay(entry) });
   },
 
   planningDayLabel(day, index) {
