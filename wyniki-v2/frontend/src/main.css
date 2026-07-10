@@ -190,10 +190,24 @@ body {
   font-size: 12px;
   font-weight: 700;
   border-radius: 999px;
+  /* Opaque so contrast is stable on any surface (card or dark header);
+     translucent green-on-green failed 1.4.3 (~1.8:1) on light cards. */
+  background: #d7f2e1;
+  color: #106a34;
+  border: 1px solid #9ad9b4;
+  animation: live-pulse 2s ease-in-out infinite;
+}
+[data-theme="dark"] .live-badge {
   background: rgba(53,196,106,0.15);
   color: #35c46a;
-  border: 1px solid rgba(53,196,106,0.35);
-  animation: live-pulse 2s ease-in-out infinite;
+  border-color: rgba(53,196,106,0.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .live-badge {
+    background: rgba(53,196,106,0.15);
+    color: #35c46a;
+    border-color: rgba(53,196,106,0.35);
+  }
 }
 .live-badge::before {
   content: '';
