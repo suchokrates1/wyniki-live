@@ -2148,9 +2148,9 @@ Alpine.data('officeApp', () => ({
   officeKnockoutStatusLabel(slot) {
     if (slot?.winner_name) return this.ot('status.knockoutFinished');
     if (slot?.status === 'in_progress') return this.ot('status.inProgress');
+    if (!slot?.ready) return this.ot('status.knockoutWaiting');
     if (slot?.status === 'planned') return this.ot('status.knockoutPlanned');
-    if (slot?.ready) return this.ot('status.knockoutReady');
-    return this.ot('status.knockoutWaiting');
+    return this.ot('status.knockoutReady');
   },
 
   officeKnockoutCanAddResult(slot) {

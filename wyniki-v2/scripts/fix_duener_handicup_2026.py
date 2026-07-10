@@ -24,11 +24,12 @@ COURTS = {
 }
 
 # Client plan: Platzbelegung / Zeitplan (Freitag–Sonntag)
+# IDs verified against production DB (2026-07-10).
 SCHEDULE_SLOTS: list[tuple[str, str, str, int]] = [
-    # Freitag 17.07 — B2 on Platz 2
-    ("2026-07-17", "16:00", COURTS[2], 278),
-    ("2026-07-17", "17:10", COURTS[2], 279),
-    ("2026-07-17", "18:20", COURTS[2], 280),
+    # Freitag 17.07 — B2 on Platz 2 (missing group matches)
+    ("2026-07-17", "16:00", COURTS[2], 294),
+    ("2026-07-17", "17:10", COURTS[2], 295),
+    ("2026-07-17", "18:20", COURTS[2], 296),
     # Samstag 18.07
     ("2026-07-18", "10:00", COURTS[1], 272),  # B1
     ("2026-07-18", "10:00", COURTS[2], 288),  # B3/4
@@ -50,7 +51,14 @@ SCHEDULE_SLOTS: list[tuple[str, str, str, int]] = [
     ("2026-07-19", "11:10", COURTS[1], 291),  # B1 — Finale
     ("2026-07-19", "11:10", COURTS[2], 287),  # B2
     ("2026-07-19", "11:10", COURTS[3], 293),  # B3/4 — Finale
+    ("2026-07-19", "12:20", COURTS[2], 300),  # B2 — Finale
+    ("2026-07-19", "12:20", COURTS[3], 301),  # B2 — Spiel um Platz 3
 ]
+
+DUPLICATE_SCHEDULE_IDS = (297, 298, 299)
+
+GROUP_NOTE_DE = "Orientierungszeit wird vom Turnierbüro bekannt gegeben"
+KNOCKOUT_NOTE_DE = "Pokalspiel – Uhrzeit noch zu bestätigen"
 
 SIMONE_PLAYER_ID = 493
 
@@ -87,6 +95,15 @@ def fix_simone_name() -> None:
     )
     with database.db_conn() as conn:
         c = conn.cursor()
+        c.execute(
+            """
+            UPDATE bracket_group_players
+            SET player_name = ?
+            WHERE player_id = ?
+               OR player_name LIKE '%Siomone Kaminski%'
+            """,
+            ("Simone Kaminski", SIMONE_PLAYER_ID),
+        )
         for column in ("player1_name", "player2_name"):
             c.execute(
                 f"""
@@ -98,7 +115,47 @@ def fix_simone_name() -> None:
                 (TOURNAMENT_ID,),
             )
         conn.commit()
-    print("Fixed player name: Simone Kaminski")
+    print("Fixed player name: Simone Kaminski (players, bracket groups, schedule)")
+
+
+def remove_duplicate_schedule_entries() -> None:
+    with database.db_conn() as conn:
+        c = conn.cursor()
+        placeholders = ",".join("?" for _ in DUPLICATE_SCHEDULE_IDS)
+        c.execute(
+            f"DELETE FROM tournament_schedule WHERE tournament_id = ? AND id IN ({placeholders})",
+            (TOURNAMENT_ID, *DUPLICATE_SCHEDULE_IDS),
+        )
+        deleted = c.rowcount
+        conn.commit()
+    print(f"Removed {deleted} duplicate B2 schedule rows: {DUPLICATE_SCHEDULE_IDS}")
+
+
+def fix_german_notes() -> None:
+    with database.db_conn() as conn:
+        c = conn.cursor()
+        c.execute(
+            """
+            UPDATE tournament_schedule
+            SET notes_public = ?
+            WHERE tournament_id = ?
+              AND source_type = 'group'
+            """,
+            (GROUP_NOTE_DE, TOURNAMENT_ID),
+        )
+        group_rows = c.rowcount
+        c.execute(
+            """
+            UPDATE tournament_schedule
+            SET notes_public = ?
+            WHERE tournament_id = ?
+              AND source_type = 'knockout'
+            """,
+            (KNOCKOUT_NOTE_DE, TOURNAMENT_ID),
+        )
+        knockout_rows = c.rowcount
+        conn.commit()
+    print(f"Updated notes_public to German ({group_rows} group, {knockout_rows} knockout rows)")
 
 
 def apply_schedule() -> None:
@@ -154,7 +211,11 @@ def _run(tournament_id: int) -> None:
     TOURNAMENT_ID = tournament_id
     fix_tournament_meta()
     fix_simone_name()
+    remove_duplicate_schedule_entries()
     apply_schedule()
+    fix_german_notes()
+    schedule = database.fetch_tournament_schedule(TOURNAMENT_ID)
+    print(f"Final schedule rows: {len(schedule)}")
 
 
 if __name__ == "__main__":
