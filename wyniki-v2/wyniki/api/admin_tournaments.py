@@ -59,6 +59,7 @@ from ..database import (
     update_tournament_schedule_entry,
     delete_tournament_schedule_entry,
     link_schedule_to_match,
+    get_tournament_quick_info,
     _is_knockout_placeholder_name,
 )
 from ..config import logger, settings
@@ -1074,6 +1075,7 @@ def _build_office_dashboard(tournament_id: int) -> Dict[str, Any]:
         "matches": office_matches[:300],
         "schedule": schedule,
         "courts": fetch_courts_for_tournament(tournament_id),
+        "quick_info": get_tournament_quick_info(tournament_id),
     }
 
 

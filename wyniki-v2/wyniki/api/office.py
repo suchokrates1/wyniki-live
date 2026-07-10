@@ -34,6 +34,8 @@ from ..database import (
     seed_knockout_rematch_for_groups,
     save_autoscheduler_config,
     save_bracket_groups,
+    get_tournament_quick_info,
+    save_tournament_quick_info,
     upsert_tournament_schedule_entries,
     update_tournament_schedule_entry,
     delete_tournament_schedule_entry,
@@ -478,6 +480,32 @@ def office_schedule_publish(slot: int):
         "schedule": fetch_tournament_schedule(tournament_id),
         "dashboard": _build_office_dashboard(tournament_id),
     })
+
+
+@blueprint.route('/<int:slot>/quick-info', methods=['GET'])
+def office_quick_info_get(slot: int):
+    """Return the quick info banner draft for the authenticated office."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    return _json_no_cache({"quick_info": get_tournament_quick_info(tournament_id)})
+
+
+@blueprint.route('/<int:slot>/quick-info', methods=['PUT'])
+def office_quick_info_save(slot: int):
+    """Publish or hide the quick info banner on the public live site."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    quick_info = save_tournament_quick_info(
+        tournament_id,
+        str(data.get('message') or ''),
+        active=_normalize_bool(data.get('active', True)),
+    )
+    return _json_no_cache({"quick_info": quick_info})
 
 
 @blueprint.route('/<int:slot>/autoschedule/config', methods=['GET'])

@@ -3985,6 +3985,58 @@ def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dic
     return current
 
 
+def _tournament_quick_info_key(tournament_id: int) -> str:
+    return f"tournament_quick_info:{int(tournament_id)}"
+
+
+def get_tournament_quick_info(tournament_id: int) -> Dict[str, Any]:
+    """Return the office-authored quick info banner for a tournament."""
+    default = {"message": "", "active": False, "updated_at": None}
+    stored = fetch_app_settings([_tournament_quick_info_key(tournament_id)]).get(
+        _tournament_quick_info_key(tournament_id)
+    )
+    if not stored:
+        return default
+    try:
+        data = json.loads(stored)
+        if not isinstance(data, dict):
+            return default
+        return {
+            "message": str(data.get("message") or "").strip(),
+            "active": bool(data.get("active")),
+            "updated_at": data.get("updated_at"),
+        }
+    except (ValueError, TypeError):
+        return default
+
+
+def save_tournament_quick_info(
+    tournament_id: int,
+    message: str,
+    *,
+    active: bool = True,
+) -> Dict[str, Any]:
+    """Persist quick info shown as a public banner on the live site."""
+    from .db_models import utc_now_iso
+
+    normalized = str(message or "").strip()[:2000]
+    payload = {
+        "message": normalized,
+        "active": bool(active),
+        "updated_at": utc_now_iso(),
+    }
+    upsert_app_settings({_tournament_quick_info_key(tournament_id): json.dumps(payload, ensure_ascii=False)})
+    return get_tournament_quick_info(tournament_id)
+
+
+def get_public_tournament_quick_info(tournament_id: int) -> Optional[Dict[str, Any]]:
+    """Return active quick info for the public site, or None when hidden/empty."""
+    info = get_tournament_quick_info(tournament_id)
+    if not info.get("active") or not info.get("message"):
+        return None
+    return {"message": info["message"], "updated_at": info.get("updated_at")}
+
+
 def _schedule_entry_match_dict(entry: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": entry.get("id"),

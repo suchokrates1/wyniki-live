@@ -46,6 +46,7 @@ export function createLiveRuntimeView() {
     error: null,
     lastUpdate: null,
     tournamentName: null,
+    tournamentQuickInfo: null,
     _eventSource: null,
     _sseRetryTimer: null,
     _sseFailures: 0,
@@ -64,6 +65,7 @@ export function createLiveRuntimeView() {
         this.loading = false;
         this.lastUpdate = new Date();
         this.error = null;
+        this.fetchTournamentQuickInfo();
       } catch (err) {
         this.error = err.message;
         this.loading = false;
@@ -140,6 +142,17 @@ export function createLiveRuntimeView() {
         }
         this._sseRetryTimer = setTimeout(() => this.connectSSE(), retryMs);
       };
+    },
+
+    async fetchTournamentQuickInfo(tournamentId = null) {
+      try {
+        const data = tournamentId
+          ? await publicApi.getTournamentQuickInfo(tournamentId)
+          : await publicApi.getActiveQuickInfo();
+        this.tournamentQuickInfo = data?.message ? data : null;
+      } catch {
+        this.tournamentQuickInfo = null;
+      }
     },
 
     animateChanges(courtId, prev, next) {

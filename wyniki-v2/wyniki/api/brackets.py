@@ -17,6 +17,7 @@ from wyniki.database import (
     build_public_schedule_payload,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
+    get_public_tournament_quick_info,
 )
 
 # Public API
@@ -122,6 +123,42 @@ def public_schedule():
     ensure_group_schedule_entries(tid)
     ensure_knockout_schedule_entries(tid)
     return _json_no_cache(build_public_schedule_payload(tid))
+
+
+@bracket_public_bp.route('/info')
+def public_quick_info():
+    """Quick info banner for the active tournament."""
+    requested_tid = request.args.get('tournament_id', type=int)
+    tid = requested_tid or get_active_tournament_id(public_only=True)
+    if not tid:
+        return jsonify({"error": "No active tournament"}), 404
+    if requested_tid:
+        tournament, error = _public_tournament_or_404(tid)
+        if error:
+            return error
+        tournament, error = _resolve_requested_stage(tournament)
+        if error:
+            return error
+        tid = tournament["id"]
+    info = get_public_tournament_quick_info(tid)
+    if not info:
+        return _json_no_cache({"message": None})
+    return _json_no_cache(info)
+
+
+@bracket_public_bp.route('/<int:tid>/info')
+def public_tournament_quick_info(tid: int):
+    """Quick info banner for a specific tournament."""
+    tournament, error = _public_tournament_or_404(tid)
+    if error:
+        return error
+    tournament, error = _resolve_requested_stage(tournament)
+    if error:
+        return error
+    info = get_public_tournament_quick_info(tournament["id"])
+    if not info:
+        return _json_no_cache({"message": None})
+    return _json_no_cache(info)
 
 
 @bracket_public_bp.route('/list')
