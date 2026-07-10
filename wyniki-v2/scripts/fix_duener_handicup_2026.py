@@ -158,6 +158,18 @@ def fix_german_notes() -> None:
     print(f"Updated notes_public to German ({group_rows} group, {knockout_rows} knockout rows)")
 
 
+def clear_schedule_notes() -> None:
+    with database.db_conn() as conn:
+        c = conn.cursor()
+        c.execute(
+            "UPDATE tournament_schedule SET notes_public = '' WHERE tournament_id = ?",
+            (TOURNAMENT_ID,),
+        )
+        rows = c.rowcount
+        conn.commit()
+    print(f"Cleared notes_public on {rows} schedule rows")
+
+
 def apply_schedule() -> None:
     now = database._utc_now()
     court_labels = {cid: _court_label(cid) for cid in COURTS.values()}
@@ -199,9 +211,15 @@ def apply_schedule() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tournament-id", type=int, default=TOURNAMENT_ID)
+    parser.add_argument("--clear-notes", action="store_true", help="Clear all notes_public on schedule rows")
     args = parser.parse_args()
     tid = args.tournament_id
     database.init_db()
+    if args.clear_notes:
+        global TOURNAMENT_ID
+        TOURNAMENT_ID = tid
+        clear_schedule_notes()
+        return 0
     _run(tid)
     return 0
 
