@@ -460,19 +460,22 @@
         </article>
       </div>
 
-      <div class="mt-6 office-panel rounded-[24px] p-5 relative z-10">
+      <section class="mt-6 office-panel rounded-[24px] p-5 relative z-10" aria-labelledby="office-quick-info-title">
         <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('quickInfo.subtitle')"></div>
-        <h2 class="mt-2 text-xl font-semibold" x-text="ot('quickInfo.title')"></h2>
-        <p class="mt-1 text-sm text-slate-500" x-text="ot('quickInfo.description')"></p>
+        <h2 id="office-quick-info-title" class="mt-2 text-xl font-semibold" x-text="ot('quickInfo.title')"></h2>
+        <p id="office-quick-info-desc" class="mt-1 text-sm text-slate-500" x-text="ot('quickInfo.description')"></p>
+        <label class="sr-only" for="office-quick-info-message" x-text="ot('quickInfo.messageLabel')"></label>
         <textarea
+          id="office-quick-info-message"
           class="textarea textarea-bordered w-full mt-4 min-h-[96px] bg-white/80"
           x-model="quickInfoMessage"
           :placeholder="ot('quickInfo.placeholder')"
+          :aria-describedby="'office-quick-info-desc'"
           maxlength="2000"
         ></textarea>
         <div class="mt-3 flex items-center gap-3 flex-wrap">
-          <label class="office-toggle">
-            <input type="checkbox" x-model="quickInfoActive">
+          <label class="office-toggle" for="office-quick-info-active">
+            <input type="checkbox" id="office-quick-info-active" x-model="quickInfoActive">
             <span x-text="ot('quickInfo.showPublic')"></span>
           </label>
           <button
@@ -481,6 +484,8 @@
             style="background: linear-gradient(135deg, #0f766e, #115e59);"
             @click="saveQuickInfo()"
             :class="{'btn-disabled': quickInfoSaving}"
+            :aria-busy="quickInfoSaving"
+            :aria-disabled="quickInfoSaving"
             x-text="ot('quickInfo.publish')"
           ></button>
           <button
@@ -489,11 +494,12 @@
             @click="hideQuickInfo()"
             x-show="quickInfoActive && quickInfoMessage"
             :class="{'btn-disabled': quickInfoSaving}"
+            :aria-disabled="quickInfoSaving"
             x-text="ot('quickInfo.hide')"
           ></button>
-          <span class="text-xs text-slate-500" x-show="quickInfoUpdatedAt" x-text="ot('quickInfo.updated', { time: formatQuickInfoTime(quickInfoUpdatedAt) })"></span>
+          <span class="text-xs text-slate-500" role="status" aria-live="polite" x-show="quickInfoUpdatedAt" x-text="ot('quickInfo.updated', { time: formatQuickInfoTime(quickInfoUpdatedAt) })"></span>
         </div>
-      </div>
+      </section>
     </section>
 
     <section class="mt-8 office-panel rounded-[28px] p-4 md:p-5">
