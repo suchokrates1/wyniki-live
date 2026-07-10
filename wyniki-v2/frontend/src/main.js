@@ -4,6 +4,7 @@ import {
   describeSpeechSetSequence as describeSpeechSetSequenceForScreenReader,
   spokenScore as spokenScoreForScreenReader,
 } from './a11y/scoreNarration.js';
+import { initTabsA11y } from './a11y/tabs.js';
 import { DEFAULT_LANGUAGE, isSupportedLanguage, resolveLocale, SUPPORTED_LANGUAGES } from './i18n/locale.js';
 import { applyTranslationPatches, lookupTranslation } from './i18n/runtime.js';
 import { TRANSLATIONS, TRANSLATION_PATCHES } from './i18n/translations.js';
@@ -259,3 +260,6 @@ Alpine.data('tennisApp', () => ({
 }));
 
 Alpine.start();
+
+// APG keyboard support (roving tabindex + arrow keys) for all [role=tablist].
+initTabsA11y();

@@ -52,11 +52,11 @@
 
         <!-- Tab Navigation -->
         <nav class="tab-bar" role="tablist" :aria-label="tr().tabs?.navLabel || 'Główna nawigacja'">
-                <button class="tab-btn" role="tab" :aria-selected="activeTab === 'live'" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="openMainTab('live')"
+                <button class="tab-btn" id="tab-main-live" role="tab" aria-controls="panel-main-live" :aria-selected="activeTab === 'live'" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="openMainTab('live')"
                     x-text="tr().tabs?.live || 'Na żywo'"></button>
-                <button class="tab-btn" role="tab" :aria-selected="activeTab === 'tournaments'" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="openMainTab('tournaments')"
+                <button class="tab-btn" id="tab-main-tournaments" role="tab" aria-controls="panel-main-tournaments" :aria-selected="activeTab === 'tournaments'" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="openMainTab('tournaments')"
                     x-text="tr().tabs?.tournaments || 'Historia'"></button>
-                <button class="tab-btn" role="tab" :aria-selected="activeTab === 'players'" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="openMainTab('players')"
+                <button class="tab-btn" id="tab-main-players" role="tab" aria-controls="panel-main-players" :aria-selected="activeTab === 'players'" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="openMainTab('players')"
                     x-text="tr().tabs?.players || 'Zawodnicy'"></button>
         </nav>
         
@@ -75,33 +75,33 @@
         <main id="main" tabindex="-1">
 
             <!-- ======= TAB: LIVE ======= -->
-            <div x-show="activeTab === 'live'">
+            <div x-show="activeTab === 'live'" id="panel-main-live" role="tabpanel" aria-labelledby="tab-main-live">
 
             <!-- Active tournament name -->
             <h2 class="live-tournament-name" x-show="tournamentName" x-text="tournamentName"></h2>
 
             <!-- Live sub-navigation cards -->
             <div class="live-subnav" role="tablist" :aria-label="tr().liveSub?.navLabel || 'Podzakładki Na żywo'">
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'scores'" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="openLiveSubTab('scores')">
+                <button class="live-subnav__card" id="tab-live-scores" role="tab" aria-controls="panel-live-scores" :aria-selected="liveSubTab === 'scores'" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="openLiveSubTab('scores')">
                     <span class="live-subnav__icon" aria-hidden="true">🎾</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.scores || 'Wyniki live'"></span>
                 </button>
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'bracket'" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="openLiveSubTab('bracket')">
+                <button class="live-subnav__card" id="tab-live-bracket" role="tab" aria-controls="panel-live-bracket" :aria-selected="liveSubTab === 'bracket'" :class="{ 'live-subnav__card--active': liveSubTab === 'bracket' }" @click="openLiveSubTab('bracket')">
                     <span class="live-subnav__icon" aria-hidden="true">🏆</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.bracket || 'Drabinka'"></span>
                 </button>
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'schedule'" :class="{ 'live-subnav__card--active': liveSubTab === 'schedule' }" @click="openLiveSubTab('schedule')">
+                <button class="live-subnav__card" id="tab-live-schedule" role="tab" aria-controls="panel-live-schedule" :aria-selected="liveSubTab === 'schedule'" :class="{ 'live-subnav__card--active': liveSubTab === 'schedule' }" @click="openLiveSubTab('schedule')">
                     <span class="live-subnav__icon" aria-hidden="true">📅</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.schedule || 'Terminarz'"></span>
                 </button>
-                <button class="live-subnav__card" role="tab" :aria-selected="liveSubTab === 'history'" :class="{ 'live-subnav__card--active': liveSubTab === 'history' }" @click="openLiveSubTab('history')">
+                <button class="live-subnav__card" id="tab-live-history" role="tab" aria-controls="panel-live-history" :aria-selected="liveSubTab === 'history'" :class="{ 'live-subnav__card--active': liveSubTab === 'history' }" @click="openLiveSubTab('history')">
                     <span class="live-subnav__icon" aria-hidden="true">📋</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.history || 'Historia'"></span>
                 </button>
             </div>
 
             <!-- SUB: Live Scores -->
-            <div x-show="liveSubTab === 'scores'" role="tabpanel">
+            <div x-show="liveSubTab === 'scores'" role="tabpanel" id="panel-live-scores" aria-labelledby="tab-live-scores">
 
             <!-- Quick court navigation (screen readers) -->
             <nav x-show="getCourtIds().length > 0" :aria-label="t('navLabel')" class="sr-only">
@@ -239,7 +239,7 @@
             </div><!-- end SUB: scores -->
 
             <!-- SUB: Live Bracket (active tournament) -->
-            <div x-show="liveSubTab === 'bracket'" role="tabpanel">
+            <div x-show="liveSubTab === 'bracket'" role="tabpanel" id="panel-live-bracket" aria-labelledby="tab-live-bracket">
                 <!-- Loading -->
                 <div x-show="bracketLoading" class="loading-state" role="status">
                     <span class="spinner spinner--large"></span>
@@ -439,7 +439,7 @@
             </div><!-- end SUB: bracket -->
 
             <!-- SUB: Live Schedule -->
-            <div x-show="liveSubTab === 'schedule'" role="tabpanel">
+            <div x-show="liveSubTab === 'schedule'" role="tabpanel" id="panel-live-schedule" aria-labelledby="tab-live-schedule">
                 <section class="schedule-section" aria-labelledby="live-schedule-title">
                     <div class="schedule-heading-row">
                         <div>
@@ -756,7 +756,7 @@
             </div><!-- end SUB: schedule -->
 
             <!-- SUB: Live History (active tournament) -->
-            <div x-show="liveSubTab === 'history'" role="tabpanel">
+            <div x-show="liveSubTab === 'history'" role="tabpanel" id="panel-live-history" aria-labelledby="tab-live-history">
                 <section x-show="sortedHistory().length > 0" aria-labelledby="live-history-title">
                     <h3 id="live-history-title" class="hm-heading" x-text="tr().history?.title || 'Historia meczów'"></h3>
                     <div class="hm-list" role="list">
@@ -848,7 +848,7 @@
             </div><!-- end TAB: LIVE -->
 
             <!-- ======= TAB: TOURNAMENTS (Historia) ======= -->
-            <div x-show="activeTab === 'tournaments'">
+            <div x-show="activeTab === 'tournaments'" id="panel-main-tournaments" role="tabpanel" aria-labelledby="tab-main-tournaments">
 
                 <!-- Tournament list (cards) -->
                 <div x-show="!selectedTournamentId" class="tournament-grid">
@@ -1228,7 +1228,7 @@
             </div><!-- end TAB: TOURNAMENTS -->
 
             <!-- ======= TAB: PLAYERS ======= -->
-            <div x-show="activeTab === 'players'">
+            <div x-show="activeTab === 'players'" id="panel-main-players" role="tabpanel" aria-labelledby="tab-main-players">
                 <h2 x-show="!selectedPlayerId" class="section-heading" x-text="tr().playerSection?.title || 'Baza zawodników'"></h2>
 
                 <!-- Search + filters (hidden when profile is open) -->
