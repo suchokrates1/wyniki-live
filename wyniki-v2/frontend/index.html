@@ -36,6 +36,13 @@
             </div>
         </header>
 
+        <div class="tournament-info-banner" x-show="tournamentQuickInfo?.message" x-cloak role="status" aria-live="polite">
+            <div class="tournament-info-banner__inner">
+                <span class="tournament-info-banner__icon" aria-hidden="true">ℹ️</span>
+                <p class="tournament-info-banner__text" x-text="tournamentQuickInfo?.message"></p>
+            </div>
+        </div>
+
         <!-- Tab Navigation -->
         <nav class="tab-bar" role="tablist" :aria-label="tr().tabs?.navLabel || 'Główna nawigacja'">
                 <button class="tab-btn" role="tab" :aria-selected="activeTab === 'live'" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="openMainTab('live')"
