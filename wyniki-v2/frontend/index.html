@@ -375,8 +375,10 @@
                                     <p class="bracket-legend__title" :id="'bracket-legend-title-' + cat.name.replace(/\s+/g, '-')" x-text="tr().bracket?.legendTitle || 'Legenda tabeli'"></p>
                                     <dl class="bracket-legend__list">
                                         <template x-for="item in tableLegendItems()" :key="'legend-'+cat.name+'-'+item.term">
-                                            <dt x-text="item.term"></dt>
-                                            <dd x-text="item.description"></dd>
+                                            <div class="bracket-legend__item">
+                                                <dt x-text="item.term"></dt>
+                                                <dd x-text="item.description"></dd>
+                                            </div>
                                         </template>
                                     </dl>
                                 </div>
@@ -1020,8 +1022,10 @@
                                             <p class="bracket-legend__title" :id="'tournament-bracket-legend-title-' + cat.name.replace(/\s+/g, '-')" x-text="tr().bracket?.legendTitle || 'Legenda tabeli'"></p>
                                             <dl class="bracket-legend__list">
                                                 <template x-for="item in tableLegendItems()" :key="'tlegend-'+cat.name+'-'+item.term">
-                                                    <dt x-text="item.term"></dt>
-                                                    <dd x-text="item.description"></dd>
+                                                    <div class="bracket-legend__item">
+                                                        <dt x-text="item.term"></dt>
+                                                        <dd x-text="item.description"></dd>
+                                                    </div>
                                                 </template>
                                             </dl>
                                         </div>
