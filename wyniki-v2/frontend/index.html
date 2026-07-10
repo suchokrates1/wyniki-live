@@ -36,7 +36,14 @@
             </div>
         </header>
 
-        <div class="tournament-info-banner" x-show="tournamentQuickInfo?.message" x-cloak role="status" aria-live="polite">
+        <div
+            class="tournament-info-banner"
+            x-show="tournamentQuickInfo?.message"
+            x-cloak
+            role="region"
+            :aria-label="acc().tournamentQuickInfoLabel || 'Komunikat turniejowy'"
+            aria-live="polite"
+        >
             <div class="tournament-info-banner__inner">
                 <span class="tournament-info-banner__icon" aria-hidden="true">ℹ️</span>
                 <p class="tournament-info-banner__text" x-text="tournamentQuickInfo?.message"></p>
