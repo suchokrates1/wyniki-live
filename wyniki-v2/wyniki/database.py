@@ -706,6 +706,35 @@ def _split_bracket_label(value: Optional[str]) -> tuple[str, str]:
 GROUP_PHASE = "Grupowa"
 GROUP_REMATCH_PHASE = "Grupowa — Rewanż"
 
+DEFAULT_GROUP_SCHEDULE_NOTE_PL = "Godzina orientacyjna zostanie podana przez biuro zawodow"
+DEFAULT_KNOCKOUT_SCHEDULE_NOTE_PL = "Mecz fazy pucharowej - godzina do potwierdzenia"
+DEFAULT_GROUP_SCHEDULE_NOTE_DE = "Orientierungszeit wird vom Turnierbüro bekannt gegeben"
+DEFAULT_KNOCKOUT_SCHEDULE_NOTE_DE = "Pokalspiel – Uhrzeit noch zu bestätigen"
+
+
+def _tournament_country_code(tournament_id: int) -> str:
+    try:
+        with db_conn() as conn:
+            row = conn.execute(
+                "SELECT UPPER(COALESCE(country, '')) AS country FROM tournaments WHERE id = ?",
+                (tournament_id,),
+            ).fetchone()
+            return str(row["country"] if row else "")
+    except Exception:
+        return ""
+
+
+def _default_group_schedule_note(tournament_id: int) -> str:
+    if _tournament_country_code(tournament_id) == "DE":
+        return DEFAULT_GROUP_SCHEDULE_NOTE_DE
+    return DEFAULT_GROUP_SCHEDULE_NOTE_PL
+
+
+def _default_knockout_schedule_note(tournament_id: int) -> str:
+    if _tournament_country_code(tournament_id) == "DE":
+        return DEFAULT_KNOCKOUT_SCHEDULE_NOTE_DE
+    return DEFAULT_KNOCKOUT_SCHEDULE_NOTE_PL
+
 
 def is_group_stage_phase(phase: Optional[str]) -> bool:
     """Return True for regular or rematch group-stage phases."""
@@ -860,9 +889,12 @@ def _expected_group_matches_count(
         (tournament_id, group_id, GROUP_PHASE, GROUP_REMATCH_PHASE),
     )
     scheduled = int(cursor.fetchone()["count"] or 0)
+    expected_rr = player_count * (player_count - 1) // 2
+    if scheduled > expected_rr > 0:
+        return expected_rr
     if scheduled > 0:
         return scheduled
-    return player_count * (player_count - 1) // 2
+    return expected_rr
 
 
 def _count_finished_group_matches(
@@ -2574,6 +2606,45 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
         return None
 
 
+def _sync_player_name_across_tournament(
+    tournament_id: int,
+    old_name: str,
+    new_name: str,
+    player_id: int,
+) -> None:
+    if not old_name or not new_name or old_name == new_name:
+        return
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE bracket_group_players
+                SET player_name = ?
+                WHERE group_id IN (SELECT id FROM bracket_groups WHERE tournament_id = ?)
+                  AND (player_id = ? OR player_name = ?)
+                """,
+                (new_name, tournament_id, player_id, old_name),
+            )
+            for column in ("player1_name", "player2_name"):
+                cursor.execute(
+                    f"""
+                    UPDATE tournament_schedule
+                    SET {column} = ?
+                    WHERE tournament_id = ? AND {column} = ?
+                    """,
+                    (new_name, tournament_id, old_name),
+                )
+            conn.commit()
+    except Exception as e:
+        logger.error(
+            "sync_player_name_error",
+            error=str(e),
+            tournament_id=tournament_id,
+            player_id=player_id,
+        )
+
+
 def update_player(player_id: int, name: str, category: str, country: str,
                   first_name: str = "", last_name: str = "", gender: str = "",
                   tournament_id: Optional[int] = None) -> bool:
@@ -2587,14 +2658,23 @@ def update_player(player_id: int, name: str, category: str, country: str,
             first_name, last_name = '', name.strip()
     if not name:
         name = f"{first_name} {last_name}".strip()
+    old_name = ""
+    scoped_tournament_id = tournament_id
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            scoped_tournament_id = tournament_id
             if scoped_tournament_id is None:
-                cursor.execute("SELECT tournament_id FROM players WHERE id = ?", (player_id,))
+                cursor.execute("SELECT tournament_id, name FROM players WHERE id = ?", (player_id,))
                 row = cursor.fetchone()
                 scoped_tournament_id = row["tournament_id"] if row else None
+                old_name = str(row["name"] if row else "")
+            else:
+                cursor.execute(
+                    "SELECT name FROM players WHERE id = ? AND tournament_id = ?",
+                    (player_id, scoped_tournament_id),
+                )
+                row = cursor.fetchone()
+                old_name = str(row["name"] if row else "")
             global_player_id = None
             if scoped_tournament_id is None or _tournament_links_global_players(cursor, scoped_tournament_id):
                 global_player_id = _ensure_global_player(
@@ -2606,8 +2686,11 @@ def update_player(player_id: int, name: str, category: str, country: str,
                 WHERE id = ? AND (? IS NULL OR tournament_id = ?)
             """, (name, first_name, last_name, category, country, gender, global_player_id, player_id, tournament_id, tournament_id))
             conn.commit()
+            updated = cursor.rowcount > 0
             logger.info("player_updated", id=player_id)
-            return cursor.rowcount > 0
+        if updated and scoped_tournament_id:
+            _sync_player_name_across_tournament(scoped_tournament_id, old_name, name, player_id)
+        return updated
     except Exception as e:
         logger.error("update_player_error", error=str(e), player_id=player_id)
         return False
@@ -3182,7 +3265,7 @@ def _insert_group_round_robin_schedule_entries(
                 (
                     tournament_id, default_day, category_name or group_name, group_id, group_name, phase,
                     player1_name, player2_name, source_type, group_id, next_order,
-                    "Godzina orientacyjna zostanie podana przez biuro zawodow", now, now,
+                    _default_group_schedule_note(tournament_id), now, now,
                 ),
             )
             next_order += 1
@@ -3306,7 +3389,7 @@ def ensure_knockout_schedule_entries(
                     (
                         tournament_id, default_day, category_name or phase_label, phase_label,
                         player1_name, player2_name, status, slot["id"], next_order,
-                        "Mecz fazy pucharowej - godzina do potwierdzenia", now, now,
+                        _default_knockout_schedule_note(tournament_id), now, now,
                     ),
                 )
                 next_order += 1
