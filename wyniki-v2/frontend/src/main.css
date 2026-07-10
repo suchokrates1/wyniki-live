@@ -2232,7 +2232,8 @@ body {
 }
 .tournament-card__date {
   font-size: 12px;
-  opacity: 0.8;
+  /* No opacity: it composites --text-dim toward the card bg and drops
+     contrast below 4.5:1 (WCAG 1.4.3). Size already sets the hierarchy. */
 }
 .tournament-card__footer {
   display: flex;
