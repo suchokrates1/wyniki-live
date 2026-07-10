@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate translations (all locales)
+        run: npm run test:i18n
+
       - name: Build public frontend
         run: npm run build
 
