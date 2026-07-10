@@ -1804,17 +1804,20 @@ body {
   font-weight: 800;
   color: var(--text);
 }
-.bracket-legend__item {
-  display: inline-flex;
+.bracket-legend__list {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px 12px;
+  margin: 0;
 }
-.bracket-legend__item dt {
+.bracket-legend__list dt {
   margin: 0;
   font-weight: 800;
   color: var(--text);
 }
-.bracket-legend__item dd {
+.bracket-legend__list dd {
   margin: 0;
 }
 .bt-podium--top {

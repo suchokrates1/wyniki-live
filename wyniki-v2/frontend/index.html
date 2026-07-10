@@ -371,15 +371,15 @@
                                     </template>
                                 </div>
 
-                                <dl class="bracket-legend" :aria-label="tr().bracket?.legendTitle || 'Legenda tabeli'">
-                                    <dt class="bracket-legend__title" x-text="tr().bracket?.legendTitle || 'Legenda tabeli'"></dt>
-                                    <template x-for="item in tableLegendItems()" :key="'legend-'+cat.name+'-'+item.term">
-                                        <div class="bracket-legend__item">
+                                <div class="bracket-legend" role="group" :aria-labelledby="'bracket-legend-title-' + cat.name.replace(/\s+/g, '-')">
+                                    <p class="bracket-legend__title" :id="'bracket-legend-title-' + cat.name.replace(/\s+/g, '-')" x-text="tr().bracket?.legendTitle || 'Legenda tabeli'"></p>
+                                    <dl class="bracket-legend__list">
+                                        <template x-for="item in tableLegendItems()" :key="'legend-'+cat.name+'-'+item.term">
                                             <dt x-text="item.term"></dt>
                                             <dd x-text="item.description"></dd>
-                                        </div>
-                                    </template>
-                                </dl>
+                                        </template>
+                                    </dl>
+                                </div>
 
                                 <!-- Bracket tree (only for categories with knockout) -->
                                 <template x-if="cat.knockout.length > 0">
@@ -1016,15 +1016,15 @@
                                             </template>
                                         </div>
 
-                                        <dl class="bracket-legend" :aria-label="tr().bracket?.legendTitle || 'Legenda tabeli'">
-                                            <dt class="bracket-legend__title" x-text="tr().bracket?.legendTitle || 'Legenda tabeli'"></dt>
-                                            <template x-for="item in tableLegendItems()" :key="'tlegend-'+cat.name+'-'+item.term">
-                                                <div class="bracket-legend__item">
+                                        <div class="bracket-legend" role="group" :aria-labelledby="'tournament-bracket-legend-title-' + cat.name.replace(/\s+/g, '-')">
+                                            <p class="bracket-legend__title" :id="'tournament-bracket-legend-title-' + cat.name.replace(/\s+/g, '-')" x-text="tr().bracket?.legendTitle || 'Legenda tabeli'"></p>
+                                            <dl class="bracket-legend__list">
+                                                <template x-for="item in tableLegendItems()" :key="'tlegend-'+cat.name+'-'+item.term">
                                                     <dt x-text="item.term"></dt>
                                                     <dd x-text="item.description"></dd>
-                                                </div>
-                                            </template>
-                                        </dl>
+                                                </template>
+                                            </dl>
+                                        </div>
 
                                         <!-- Knockout -->
                                         <template x-if="cat.knockout.length > 0">

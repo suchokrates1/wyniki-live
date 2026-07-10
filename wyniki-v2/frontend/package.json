@@ -12,6 +12,8 @@
     "smoke:office": "node scripts/office-smoke.mjs",
     "smoke:office:production": "node scripts/office-smoke.mjs --base-url https://score.vestmedia.pl --slot 3",
     "smoke:production": "node scripts/public-smoke.mjs --base-url https://score.vestmedia.pl",
+    "test:a11y:public": "node scripts/a11y-public.mjs",
+    "test:a11y:public:production": "node scripts/a11y-public.mjs --base-url https://score.vestmedia.pl --report reports/a11y-public-production.json",
     "verify:production": "npm run check:public && npm run smoke:production && npm run smoke:office:production"
   },
   "dependencies": {
@@ -19,6 +21,7 @@
     "daisyui": "^4.4.19"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/typography": "^0.5.10",

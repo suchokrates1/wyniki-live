@@ -55,6 +55,7 @@ logs/
 node_modules/
 frontend/node_modules/
 frontend/dist/
+frontend/reports/
 
 # Vite build output (built in Docker multi-stage)
 wyniki/static/
