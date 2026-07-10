@@ -61,10 +61,9 @@ export function createLiveCourtView() {
     },
 
     getHeadingAria(courtId) {
-      const court = this.courts[courtId] || {};
-      const courtLabel = court.tournament_name
-        ? `${court.tournament_name}: ${this.getCourtDisplayLabel(courtId)}`
-        : this.getCourtDisplayLabel(courtId);
+      // Tournament name is already announced by the H2 above the courts;
+      // don't repeat it on every court heading/region (avoids SR verbosity).
+      const courtLabel = this.getCourtDisplayLabel(courtId);
       const nameA = this.getPlayerName(courtId, 'A');
       const nameB = this.getPlayerName(courtId, 'B');
       const vs = this.acc().versus || 'kontra';

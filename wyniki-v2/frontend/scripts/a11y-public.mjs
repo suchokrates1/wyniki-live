@@ -58,6 +58,7 @@ const themes = listArg('--themes', THEMES).filter((theme) => THEMES.includes(the
 const routeNames = listArg('--routes', ROUTES.map((route) => route.name));
 const routes = ROUTES.filter((route) => routeNames.includes(route.name) || routeNames.includes(route.hash));
 const reportPath = argValue('--report', '');
+const skipContrast = process.argv.includes('--skip-contrast');
 
 const failures = [];
 const report = {
@@ -92,13 +93,18 @@ try {
             await page.evaluate(() => {
               document.documentElement.setAttribute('data-theme', 'dark');
             });
+          } else {
+            await page.evaluate(() => {
+              document.documentElement.setAttribute('data-theme', 'light');
+            });
           }
           await page.waitForTimeout(500);
 
-          const axeResult = await new AxeBuilder({ page })
-            .withTags(report.axeTags)
-            .disableRules(['color-contrast'])
-            .analyze();
+          let axeBuilder = new AxeBuilder({ page }).withTags(report.axeTags);
+          if (skipContrast) {
+            axeBuilder = axeBuilder.disableRules(['color-contrast']);
+          }
+          const axeResult = await axeBuilder.analyze();
 
           const violations = axeResult.violations.map(summarizeViolation);
           const incomplete = axeResult.incomplete.map(summarizeViolation);
