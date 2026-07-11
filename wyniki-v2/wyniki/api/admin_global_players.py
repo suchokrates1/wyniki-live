@@ -6,8 +6,18 @@ from sqlalchemy import or_, func
 from ..db_models import db, GlobalPlayer, Player, MatchHistory, Tournament
 from ..config import logger
 from ..services.player_registry import create_tournament_player, find_or_create_global_player, split_player_name
+from ..services.office_event_broker import emit_office_invalidation
 
 blueprint = Blueprint('admin_global_players', __name__, url_prefix='/admin/api/global-players')
+
+
+@blueprint.after_request
+def _emit_global_player_import_invalidation(response):
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and response.status_code < 400:
+        tournament_id = (request.view_args or {}).get("tid")
+        if tournament_id is not None:
+            emit_office_invalidation(int(tournament_id), ["players", "groups", "dashboard"])
+    return response
 
 
 def _entry_counts_for_stats(entry: Player) -> bool:

@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import queue
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request, stream_with_context
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash
 
 from ..config import settings
+from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 from ..database import (
     advance_knockout,
     apply_autoschedule_placements,
@@ -64,6 +66,12 @@ from .admin_tournaments import (
 )
 
 blueprint = Blueprint('office', __name__, url_prefix='/api/office')
+_STREAM_COOKIE_PREFIX = "office_stream_"
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+_NON_MUTATING_ENDPOINTS = {
+    "office_auth",
+    "office_autoschedule_generate",
+}
 
 
 def _token_serializer() -> URLSafeTimedSerializer:
@@ -108,6 +116,23 @@ def _issue_office_token(slot: int, tournament_id: int) -> str:
     return _token_serializer().dumps({"slot": int(slot), "tournament_id": int(tournament_id)})
 
 
+def _office_stream_cookie_name(slot: int) -> str:
+    return f"{_STREAM_COOKIE_PREFIX}{int(slot)}"
+
+
+def _set_office_stream_cookie(response, slot: int, tournament_id: int):
+    response.set_cookie(
+        _office_stream_cookie_name(slot),
+        _issue_office_token(slot, tournament_id),
+        max_age=60 * 60 * 24,
+        httponly=True,
+        secure=True,
+        samesite="Strict",
+        path=f"/api/office/{int(slot)}/",
+    )
+    return response
+
+
 def _require_office_access(slot: int):
     tournament, error = _resolve_office_tournament_slot(slot)
     if error:
@@ -117,7 +142,12 @@ def _require_office_access(slot: int):
     if auth_header.lower().startswith('bearer '):
         token = auth_header[7:].strip()
     else:
-        token = (request.headers.get('X-Office-Token') or request.args.get('token') or '').strip()
+        token = (
+            request.headers.get('X-Office-Token')
+            or request.cookies.get(_office_stream_cookie_name(slot))
+            or request.args.get('token')
+            or ''
+        ).strip()
     if not token:
         return None, (jsonify({"error": "Office authorization required"}), 401)
 
@@ -131,6 +161,24 @@ def _require_office_access(slot: int):
     if int(payload.get('slot') or 0) != int(slot) or int(payload.get('tournament_id') or 0) != int(tournament['id']):
         return None, (jsonify({"error": "Office session no longer matches active tournament"}), 401)
     return tournament, None
+
+
+@blueprint.after_request
+def _emit_office_mutation_invalidation(response):
+    """Cover every successful explicit office write with one broad invalidation."""
+    if (
+        request.method not in _MUTATING_METHODS
+        or response.status_code >= 400
+        or (request.endpoint or "").rsplit(".", 1)[-1] in _NON_MUTATING_ENDPOINTS
+    ):
+        return response
+    slot = (request.view_args or {}).get("slot")
+    if slot is None:
+        return response
+    tournament, error = _resolve_office_tournament_slot(int(slot))
+    if not error and tournament:
+        emit_office_invalidation(int(tournament["id"]), ["dashboard"])
+    return response
 
 
 @blueprint.route('/<int:slot>/meta', methods=['GET'])
@@ -162,12 +210,46 @@ def office_auth(slot: int):
     if not password or not check_password_hash(office_password_hash, password):
         return jsonify({"error": "Invalid office password"}), 403
 
-    return _json_no_cache({
+    response = _json_no_cache({
         "token": _issue_office_token(slot, int(tournament['id'])),
         "slot": slot,
         "tournament": _office_tournament_payload(tournament, slot),
         "dashboard": _build_office_dashboard(int(tournament['id'])),
     })
+    return _set_office_stream_cookie(response, slot, int(tournament["id"]))
+
+
+@blueprint.route('/<int:slot>/stream', methods=['GET'])
+def office_stream(slot: int):
+    """Authenticated, tournament-scoped invalidation stream for the office UI."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament["id"])
+
+    def generate():
+        listener = office_event_broker.listen(tournament_id)
+        try:
+            connected = json.dumps({"tournament_id": tournament_id})
+            yield f"event: connected\ndata: {connected}\n\n"
+            while True:
+                try:
+                    event = listener.get(timeout=30)
+                    yield f"event: office_invalidate\ndata: {json.dumps(event)}\n\n"
+                except queue.Empty:
+                    yield ": heartbeat\n\n"
+        finally:
+            office_event_broker.discard(tournament_id, listener)
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @blueprint.route('/<int:slot>/dashboard', methods=['GET'])
@@ -176,7 +258,11 @@ def office_dashboard(slot: int):
     tournament, error = _require_office_access(slot)
     if error:
         return error
-    return _json_no_cache(_build_office_dashboard(int(tournament['id'])))
+    return _set_office_stream_cookie(
+        _json_no_cache(_build_office_dashboard(int(tournament["id"]))),
+        slot,
+        int(tournament["id"]),
+    )
 
 
 @blueprint.route('/<int:slot>/planning', methods=['GET'])
