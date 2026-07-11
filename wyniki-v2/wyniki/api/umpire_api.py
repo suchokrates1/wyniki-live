@@ -8,6 +8,7 @@ from typing import Any
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court, utc_now_iso
 from ..services.court_manager import ensure_court_state, normalize_kort_id, STATE_LOCK, _empty_player_state
 from ..services.event_broker import emit_score_update
+from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
 from ..config import logger
@@ -839,6 +840,8 @@ def create_match():
         db.session.commit()
 
         _link_match_schedule_if_possible(match, status="in_progress")
+        if match.tournament_id:
+            emit_office_invalidation(match.tournament_id, ["results", "schedule", "dashboard"])
         
         # Initialize court state with match data
         if kort_id:
@@ -935,6 +938,8 @@ def update_match(match_id: int):
         
         db.session.commit()
         _link_match_schedule_if_possible(match, status="in_progress")
+        if match.tournament_id:
+            emit_office_invalidation(match.tournament_id, ["results", "schedule", "dashboard"])
         
         # Update court state for live display
         kort_id = match.court_id
@@ -1133,6 +1138,8 @@ def finish_match(match_id: int):
                 threading.Timer(5.0, emit_cleared).start()
         
         logger.info(f"Match {match_id} finished on court {kort_id}")
+        if match.tournament_id:
+            emit_office_invalidation(match.tournament_id, ["results", "schedule", "groups", "dashboard"])
         
         return jsonify(match.to_dict()), 200
         

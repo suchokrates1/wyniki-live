@@ -63,8 +63,19 @@ from ..database import (
     _is_knockout_placeholder_name,
 )
 from ..config import logger, settings
+from ..services.office_event_broker import emit_office_invalidation
 
 blueprint = Blueprint('admin_tournaments', __name__, url_prefix='/admin/api/tournaments')
+
+
+@blueprint.after_request
+def _emit_admin_tournament_invalidation(response):
+    """Keep active office sessions current after an admin tournament write."""
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and response.status_code < 400:
+        tournament_id = (request.view_args or {}).get("tournament_id")
+        if tournament_id is not None:
+            emit_office_invalidation(int(tournament_id), ["dashboard"])
+    return response
 
 
 def _is_knockout_phase(phase: str | None) -> bool:

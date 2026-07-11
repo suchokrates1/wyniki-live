@@ -123,6 +123,13 @@ Alpine.data('officeApp', () => ({
   quickInfoUpdatedAt: null,
   quickInfoSaving: false,
   quickInfoDirty: false,
+  officeEventSource: null,
+  officeSseReconnectTimer: null,
+  officeSseRefreshTimer: null,
+  officeFallbackPollTimer: null,
+  officeSseFailures: 0,
+  officeSseState: 'idle',
+  pendingRemoteRefresh: false,
 
   get isAuthenticated() {
     return !!this.token;
@@ -166,12 +173,15 @@ Alpine.data('officeApp', () => ({
     this.loadMeta();
     if (this.token) {
       this.loadDashboard();
+      this.connectOfficeSSE();
     }
-    window.setInterval(() => {
-      if (this.isAuthenticated) {
-        this.loadDashboard(false);
-      }
-    }, 12000);
+    window.addEventListener('visibilitychange', () => {
+      if (!this.isAuthenticated || document.hidden) return;
+      this.officeSseFailures = 0;
+      this.connectOfficeSSE();
+      this.loadDashboard(false);
+    });
+    window.addEventListener('pagehide', () => this.stopOfficeSSE());
   },
 
   resolveSlot() {
@@ -204,6 +214,7 @@ Alpine.data('officeApp', () => ({
   },
 
   logout(message = '') {
+    this.stopOfficeSSE();
     this.setToken('');
     this.dashboard = null;
     this.seenMatchKeys = [];
@@ -212,6 +223,87 @@ Alpine.data('officeApp', () => ({
     this.authError = message;
     this.authPassword = '';
     this.quickInfoDirty = false;
+  },
+
+  officeHasUnsavedWork() {
+    return this.quickInfoDirty
+      || this.quickInfoSaving
+      || this.addMatchOpen
+      || this.editMatchOpen
+      || this.planningSaving
+      || this.planningOpenCardId !== null
+      || this.categoryEditId !== null
+      || this.autoIsPreview?.();
+  },
+
+  connectOfficeSSE() {
+    if (!this.token || typeof EventSource === 'undefined') return;
+    this.stopOfficeSSE({ keepFallback: true });
+    this.officeSseState = 'connecting';
+    const source = new EventSource(`/api/office/${this.slot}/stream`);
+    this.officeEventSource = source;
+
+    source.addEventListener('connected', () => {
+      this.officeSseFailures = 0;
+      this.officeSseState = 'live';
+      this.stopOfficeFallbackPoll();
+    });
+    source.addEventListener('office_invalidate', () => this.queueOfficeSSERefresh());
+    source.onerror = () => {
+      if (this.officeEventSource !== source) return;
+      source.close();
+      this.officeEventSource = null;
+      this.officeSseFailures += 1;
+      this.officeSseState = 'reconnecting';
+      this.startOfficeFallbackPoll();
+      const delay = Math.min(30000, 1000 * (2 ** Math.min(this.officeSseFailures, 5)));
+      window.clearTimeout(this.officeSseReconnectTimer);
+      this.officeSseReconnectTimer = window.setTimeout(() => this.connectOfficeSSE(), delay);
+    };
+  },
+
+  stopOfficeSSE({ keepFallback = false } = {}) {
+    if (this.officeEventSource) this.officeEventSource.close();
+    this.officeEventSource = null;
+    window.clearTimeout(this.officeSseReconnectTimer);
+    window.clearTimeout(this.officeSseRefreshTimer);
+    this.officeSseReconnectTimer = null;
+    this.officeSseRefreshTimer = null;
+    if (!keepFallback) this.stopOfficeFallbackPoll();
+  },
+
+  startOfficeFallbackPoll() {
+    if (this.officeFallbackPollTimer || !this.isAuthenticated) return;
+    const poll = () => {
+      if (this.isAuthenticated && !document.hidden) this.refreshOfficeFromRemote();
+    };
+    poll();
+    this.officeFallbackPollTimer = window.setInterval(poll, 12000);
+  },
+
+  stopOfficeFallbackPoll() {
+    if (this.officeFallbackPollTimer) window.clearInterval(this.officeFallbackPollTimer);
+    this.officeFallbackPollTimer = null;
+  },
+
+  queueOfficeSSERefresh() {
+    window.clearTimeout(this.officeSseRefreshTimer);
+    this.officeSseRefreshTimer = window.setTimeout(() => this.refreshOfficeFromRemote(), 200);
+  },
+
+  async refreshOfficeFromRemote() {
+    if (this.officeHasUnsavedWork()) {
+      this.pendingRemoteRefresh = true;
+      return;
+    }
+    this.pendingRemoteRefresh = false;
+    await this.loadDashboard(false);
+    if (this.activeTab === 'planning') await this.loadOfficePlanningData();
+  },
+
+  async flushPendingOfficeRefresh() {
+    if (!this.pendingRemoteRefresh || this.officeHasUnsavedWork()) return;
+    await this.refreshOfficeFromRemote();
   },
 
   hydrateNotificationPreferences() {
@@ -307,6 +399,7 @@ Alpine.data('officeApp', () => ({
       if (!response.ok) throw new Error(payload.error || this.ot('errors.quickInfoFailed'));
       if (payload.quick_info) this.applyQuickInfo(payload.quick_info);
       this.quickInfoDirty = false;
+      this.flushPendingOfficeRefresh();
       this.showToast(this.ot('toast.quickInfoSaved'), 'success');
     } catch (error) {
       console.error('Failed to save quick info:', error);
@@ -506,6 +599,7 @@ Alpine.data('officeApp', () => ({
       this.applyDashboard(payload.dashboard || null, { notify: false });
       this.authPassword = '';
       this.authError = '';
+      this.connectOfficeSSE();
       this.showToast(this.ot('toast.unlocked'), 'success');
     } catch (error) {
       console.error('Office auth failed:', error);
@@ -602,6 +696,7 @@ Alpine.data('officeApp', () => ({
   closeAddMatchModal() {
     this.addMatchOpen = false;
     this.resetOfficeNewMatch(true);
+    this.flushPendingOfficeRefresh();
   },
 
   officeSetsFromForm(form) {
@@ -2257,6 +2352,7 @@ Alpine.data('officeApp', () => ({
   closeEditModal() {
     this.officeEditingMatch = null;
     this.editMatchOpen = false;
+    this.flushPendingOfficeRefresh();
   },
 
   async saveOfficeMatchEdit() {

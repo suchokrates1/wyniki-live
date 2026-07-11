@@ -1,5 +1,6 @@
 """Bracket API: group management, standings, knockout bracket."""
 from flask import Blueprint, jsonify, request
+from wyniki.services.office_event_broker import emit_office_invalidation
 
 from wyniki.database import (
     get_active_tournament_id,
@@ -25,6 +26,15 @@ bracket_public_bp = Blueprint('bracket_public', __name__, url_prefix='/api/tourn
 
 # Admin API
 bracket_admin_bp = Blueprint('bracket_admin', __name__, url_prefix='/admin/api/tournaments')
+
+
+@bracket_admin_bp.after_request
+def _emit_bracket_admin_invalidation(response):
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and response.status_code < 400:
+        tournament_id = (request.view_args or {}).get("tid")
+        if tournament_id is not None:
+            emit_office_invalidation(int(tournament_id), ["groups", "schedule", "dashboard"])
+    return response
 
 
 def _json_no_cache(payload, status: int = 200):
