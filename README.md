@@ -5,6 +5,7 @@ Live tennis scoring system with UNO API integration, admin panel, multilingual s
 ## 🎯 Quick Links
 
 - **📖 [Deployment Guide](DEPLOYMENT.md)** - SSH access, deployment, troubleshooting
+- **📱 [Cursor Agent (PMA)](CURSOR.md)** - My Machines worker, sterowanie z telefonu
 - **🌐 Live Site**: https://score.vestmedia.pl / https://blindtennis.app
 - **🏢 Tournament Office**: https://blindtennis.app/office
 - **📚 [API Documentation](API.md)** - Complete API reference

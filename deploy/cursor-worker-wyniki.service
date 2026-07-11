@@ -1,0 +1,17 @@
+[Unit]
+Description=Cursor Cloud Agent Worker — wyniki-live (My Machines)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=suchokrates1
+Environment=HOME=/home/suchokrates1
+Environment=PATH=/home/suchokrates1/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WorkingDirectory=/home/suchokrates1/count
+ExecStart=/home/suchokrates1/.local/bin/agent worker start --verbose --name minipc-wyniki --worker-dir /home/suchokrates1/count
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
