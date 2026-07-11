@@ -469,13 +469,14 @@
           id="office-quick-info-message"
           class="textarea textarea-bordered w-full mt-4 min-h-[96px] bg-white/80"
           x-model="quickInfoMessage"
+          @input="quickInfoDirty = true"
           :placeholder="ot('quickInfo.placeholder')"
           :aria-describedby="'office-quick-info-desc'"
           maxlength="2000"
         ></textarea>
         <div class="mt-3 flex items-center gap-3 flex-wrap">
           <label class="office-toggle" for="office-quick-info-active">
-            <input type="checkbox" id="office-quick-info-active" x-model="quickInfoActive">
+            <input type="checkbox" id="office-quick-info-active" x-model="quickInfoActive" @change="quickInfoDirty = true">
             <span x-text="ot('quickInfo.showPublic')"></span>
           </label>
           <button
