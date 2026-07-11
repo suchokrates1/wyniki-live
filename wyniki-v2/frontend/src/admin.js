@@ -10,6 +10,20 @@ import './main.css';
 
 window.Alpine = Alpine;
 
+const ADMIN_TOKEN_KEY = 'wyniki-admin-token';
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (input, init = {}) => {
+  const url = typeof input === 'string' ? input : input.url;
+  const isProtected = url.startsWith('/admin/api/') || (
+    url.startsWith('/api/overlay/') && ['POST', 'PUT', 'PATCH', 'DELETE'].includes((init.method || 'GET').toUpperCase())
+  );
+  if (!isProtected || url === '/admin/api/auth') return nativeFetch(input, init);
+  const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  const headers = new Headers(init.headers || {});
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return nativeFetch(input, { ...init, headers });
+};
+
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
   return 'https://flagcdn.com/w40/' + code.toLowerCase().slice(0, 2) + '.png';
@@ -17,6 +31,9 @@ function codeToFlag(code) {
 
 Alpine.data('adminApp', () => ({
   activeTab: 'courts',
+  adminPassword: '',
+  adminNeedsAuth: !sessionStorage.getItem(ADMIN_TOKEN_KEY),
+  adminAuthError: '',
   
   // Courts
   courts: [],
@@ -292,7 +309,8 @@ Alpine.data('adminApp', () => ({
     return `${this.selectedCourtTournamentIds.length} turnieje`;
   },
   
-  init() {
+  async init() {
+    if (this.adminNeedsAuth) return;
     this.loadCourts();
     this.loadTournaments();
     this.loadEmailSettings();
@@ -316,6 +334,24 @@ Alpine.data('adminApp', () => ({
         this.loadOfficeDashboard(false);
       }
     }, 12000);
+  },
+
+  async loginAdmin() {
+    this.adminAuthError = '';
+    const response = await nativeFetch('/admin/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: this.adminPassword }),
+    });
+    if (!response.ok) {
+      this.adminAuthError = 'Nieprawidłowe hasło administratora.';
+      return;
+    }
+    const payload = await response.json();
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, payload.token);
+    this.adminPassword = '';
+    this.adminNeedsAuth = false;
+    await this.init();
   },
   
   // ===== TOAST =====

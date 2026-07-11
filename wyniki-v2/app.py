@@ -9,19 +9,20 @@ from __future__ import annotations
 from gevent import monkey
 monkey.patch_all()
 
-from flask import Flask
+from flask import Flask, request
 from prometheus_client import CollectorRegistry
 from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy import event
 
 from wyniki.config import logger, settings
 from wyniki.db_models import db
-from wyniki.api import courts, admin, health, stream, web, events, office
+from wyniki.api import courts, admin, health, stream, web, events, office, admin_auth
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp, tournaments_public_bp
 from wyniki.api.admin_global_players import blueprint as global_players_blueprint
 from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
 from wyniki.api.overlay_api import blueprint as overlay_api_blueprint
 from wyniki.api.brackets import bracket_public_bp, bracket_admin_bp
+from wyniki.services.api_auth import require_admin_access
 from wyniki.init_state import initialize_state
 
 
@@ -57,11 +58,23 @@ def create_app() -> Flask:
     # Initialize Prometheus metrics
     metrics = PrometheusMetrics(app, registry=CollectorRegistry())
     metrics.info('wyniki_live_v2', 'Tennis Live Scores v2', version='2.0.0')
+
+    @app.before_request
+    def protect_administrator_mutations():
+        """Protect administrator APIs and overlay writes without affecting public reads."""
+        if request.path == "/admin/api/auth":
+            return None
+        if request.path.startswith("/admin/api/"):
+            return require_admin_access()
+        if request.path.startswith("/api/overlay/") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+            return require_admin_access()
+        return None
     
     # Register blueprints
     app.register_blueprint(web.blueprint)
     app.register_blueprint(courts.blueprint)
     app.register_blueprint(admin.blueprint)
+    app.register_blueprint(admin_auth.blueprint)
     app.register_blueprint(tournaments_blueprint)
     app.register_blueprint(players_public_bp)
     app.register_blueprint(tournaments_public_bp)
