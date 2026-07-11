@@ -122,6 +122,7 @@ Alpine.data('officeApp', () => ({
   quickInfoActive: true,
   quickInfoUpdatedAt: null,
   quickInfoSaving: false,
+  quickInfoDirty: false,
 
   get isAuthenticated() {
     return !!this.token;
@@ -210,6 +211,7 @@ Alpine.data('officeApp', () => ({
     this.editMatchOpen = false;
     this.authError = message;
     this.authPassword = '';
+    this.quickInfoDirty = false;
   },
 
   hydrateNotificationPreferences() {
@@ -254,7 +256,7 @@ Alpine.data('officeApp', () => ({
 
     this.dashboard = nextDashboard;
     this.tournamentMeta = nextDashboard?.tournament || this.tournamentMeta;
-    if (nextDashboard?.quick_info) {
+    if (nextDashboard?.quick_info && !this.quickInfoDirty && !this.quickInfoSaving) {
       this.applyQuickInfo(nextDashboard.quick_info);
     }
     this.ensureDefaultGroupSelection();
@@ -304,6 +306,7 @@ Alpine.data('officeApp', () => ({
       }
       if (!response.ok) throw new Error(payload.error || this.ot('errors.quickInfoFailed'));
       if (payload.quick_info) this.applyQuickInfo(payload.quick_info);
+      this.quickInfoDirty = false;
       this.showToast(this.ot('toast.quickInfoSaved'), 'success');
     } catch (error) {
       console.error('Failed to save quick info:', error);
