@@ -11,6 +11,7 @@ from ..services.event_broker import emit_score_update
 from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
+from ..services.api_auth import court_session_expires_at, issue_court_token, require_court_access
 from ..config import logger
 
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
@@ -604,20 +605,24 @@ def get_players():
             if not data:
                 return jsonify({"ok": False, "error": "invalid-payload"}), 400
             
-            # Verify court PIN for authorization
+            # A signed court session is required after the transition period.
             kort_id = data.get("kort_id")
             provided_pin = str(data.get("pin", "")).strip()
             
-            if not kort_id or not provided_pin:
-                return jsonify({"ok": False, "error": "kort_id and pin required"}), 400
+            if not kort_id:
+                return jsonify({"ok": False, "error": "kort_id required"}), 400
             
-            # Check court and PIN
             court = db.session.get(Court, kort_id)
             if not court:
                 return jsonify({"ok": False, "error": "court-not-found"}), 404
-            
-            if court.pin and provided_pin != court.pin:
-                return jsonify({"ok": False, "error": "invalid-pin", "authorized": False}), 403
+            access_error = require_court_access(kort_id)
+            if access_error:
+                return access_error
+            if not request.headers.get("Authorization"):
+                if not provided_pin:
+                    return jsonify({"ok": False, "error": "pin required for legacy client"}), 400
+                if court.pin and provided_pin != court.pin:
+                    return jsonify({"ok": False, "error": "invalid-pin", "authorized": False}), 403
             
             normalized_player = player_payload(data)
             if not normalized_player["last_name"] and not normalized_player["name"]:
@@ -746,6 +751,9 @@ def authorize_court(kort_id: str):
                 "ok": True,
                 "authorized": True,
                 "court_id": kort_id,
+                "kort_id": kort_id,
+                "token": issue_court_token(kort_id),
+                "expires_at": court_session_expires_at(),
                 "message": "Access granted"
             }), 200
         else:
@@ -769,8 +777,13 @@ def create_match():
     """Create new match on server."""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid payload"}), 400
         score = data.get("score", {})
         kort_id = data.get("court_id")
+        access_error = require_court_access(kort_id)
+        if access_error:
+            return access_error
         client_audit = _match_client_audit(data)
         client_match_uuid = _clean_client_text(data.get("client_match_uuid"), 80)
         schedule_id = _clean_int(data.get("schedule_id"))
@@ -912,6 +925,9 @@ def update_match(match_id: int):
         match = db.session.get(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
+        access_error = require_court_access(match.court_id)
+        if access_error:
+            return access_error
         
         # Update match data
         score = data.get("score", {})
@@ -982,6 +998,9 @@ def finish_match(match_id: int):
         match = db.session.get(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
+        access_error = require_court_access(match.court_id)
+        if access_error:
+            return access_error
         
         _apply_finish_outcome(match, data)
         _maybe_backfill_match_bracket_context(match)
@@ -1166,6 +1185,9 @@ def receive_statistics():
         match = db.session.get(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
+        access_error = require_court_access(match.court_id)
+        if access_error:
+            return access_error
         if match.finish_reason == FINISH_REASON_TEST:
             return jsonify({"message": "Statistics ignored for test match"}), 200
         
@@ -1240,6 +1262,9 @@ def log_match_event():
         data = request.get_json()
         event_type = data.get('event_type', '')
         kort_id = normalize_kort_id(data.get('court_id'))
+        access_error = require_court_access(kort_id)
+        if access_error:
+            return access_error
 
         logger.info(f"Match event: {event_type} on court {kort_id}")
 
@@ -1431,65 +1456,6 @@ def log_match_event():
         return jsonify({"error": str(e)}), 500
 
 
-@blueprint.route('/players', methods=['POST'])
-def add_player():
-    """Add new player from app."""
-    try:
-        data = request.get_json()
-        
-        surname = data.get("surname", "").strip()
-        kort_id = data.get("kort_id")
-        if not surname:
-            return jsonify({"error": "surname is required"}), 400
-        
-        tournament = _resolve_tournament_for_court(kort_id)
-        if not tournament:
-            return jsonify({"error": "No tournament for selected court"}), 400
-        
-        # Check if player exists
-        existing = Player.query.filter_by(
-            tournament_id=tournament.id,
-            name=surname
-        ).first()
-        
-        if existing:
-            country_code = (existing.country or '').strip() or None
-            return jsonify({
-                "id": existing.id,
-                "surname": existing.name,
-                "full_name": existing.name,
-                "country_code": country_code,
-                "flag_url": None
-            }), 200
-        
-        # Create new player
-        player = Player(
-            tournament_id=tournament.id,
-            name=surname,
-            country=data.get("country_code"),
-            category=data.get("category")
-        )
-        
-        db.session.add(player)
-        db.session.commit()
-        
-        logger.info(f"New player added: {surname} (ID: {player.id})")
-        country_code = (player.country or '').strip() or None
-        
-        return jsonify({
-            "id": player.id,
-            "surname": player.name,
-            "full_name": player.name,
-            "country_code": country_code,
-            "flag_url": None
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error adding player: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-
-
 @blueprint.route('/umpire-heartbeat', methods=['POST'])
 def umpire_heartbeat():
     """Receive periodic heartbeat from umpire tablet (battery, online status).
@@ -1500,6 +1466,9 @@ def umpire_heartbeat():
     try:
         data = request.get_json() or {}
         kort_id = normalize_kort_id(data.get('court_id', ''))
+        access_error = require_court_access(kort_id)
+        if access_error:
+            return access_error
         battery_level = data.get('battery_level')
         is_charging = data.get('is_charging')
         screen = data.get('screen', '')

@@ -209,6 +209,20 @@
 </head>
 <body class="min-h-screen bg-base-200">
   <div x-data="adminApp" class="container mx-auto px-4 py-8 max-w-7xl">
+    <div x-show="adminNeedsAuth" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-base-300/90 p-4">
+      <form @submit.prevent="loginAdmin" class="card w-full max-w-sm bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h1 class="card-title">Panel administratora</h1>
+          <p>Podaj hasło administratora, aby zarządzać turniejami i nakładkami.</p>
+          <label class="form-control">
+            <span class="label-text">Hasło</span>
+            <input x-model="adminPassword" type="password" autocomplete="current-password" class="input input-bordered" required autofocus>
+          </label>
+          <p x-show="adminAuthError" x-text="adminAuthError" class="text-error" role="alert"></p>
+          <button class="btn btn-primary" type="submit">Zaloguj</button>
+        </div>
+      </form>
+    </div>
 
     <header class="mb-8">
       <div class="flex justify-between items-center">

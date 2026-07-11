@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +27,11 @@ class Settings(BaseSettings):
     
     # Admin
     admin_password: Optional[str] = None
+    admin_session_ttl_hours: int = 12
+
+    # API authorization rollout
+    court_session_ttl_hours: int = 24
+    court_auth_grace_until: datetime = datetime(2026, 8, 8, tzinfo=timezone.utc)
 
     # AI-assisted player import parsing
     import_players_ai_api_key: Optional[str] = None

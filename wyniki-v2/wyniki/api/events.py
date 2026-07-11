@@ -10,6 +10,7 @@ from ..config import logger
 from ..database import db_conn
 from ..services.court_manager import ensure_court_state, is_known_kort, STATE_LOCK
 from ..services.event_broker import event_broker
+from ..services.api_auth import require_court_access
 
 blueprint = Blueprint('events', __name__, url_prefix='/api')
 
@@ -59,9 +60,6 @@ def validate_event_data(data: Dict[str, Any]) -> tuple[bool, str]:
     
     if data['event_type'] not in VALID_EVENT_TYPES:
         return False, f"Invalid event_type: {data['event_type']}"
-    
-    if 'pin' not in data:
-        return False, "Missing PIN"
     
     # Player data validation
     if 'player1' not in data or 'player2' not in data:
@@ -308,12 +306,16 @@ def receive_event():
         # Check if court exists
         if not is_known_kort(kort_id):
             return jsonify({'error': f'Court {kort_id} not found'}), 404
-        
-        # Verify PIN
-        provided_pin = str(data['pin'])
-        if not verify_court_pin(kort_id, provided_pin):
-            logger.warning(f"Invalid PIN attempt for court {kort_id}")
-            return jsonify({'error': 'Invalid PIN'}), 403
+        access_error = require_court_access(kort_id)
+        if access_error:
+            return access_error
+        if not request.headers.get("Authorization"):
+            provided_pin = str(data.get('pin') or '')
+            if not provided_pin:
+                return jsonify({'error': 'Missing PIN for legacy client'}), 400
+            if not verify_court_pin(kort_id, provided_pin):
+                logger.warning(f"Invalid PIN attempt for court {kort_id}")
+                return jsonify({'error': 'Invalid PIN'}), 403
         
         # Process event
         process_match_event(kort_id, data)

@@ -92,7 +92,8 @@ Verifies court PIN for access control.
 {
   "authorized": true,
   "court_id": "1",
-  "court_name": "Court 1"
+  "token": "signed-court-session-token",
+  "expires_at": "2026-08-08T12:00:00+00:00"
 }
 ```
 
@@ -341,10 +342,16 @@ The score object follows this structure:
 
 ## Authentication
 
-Currently, only court PIN authorization is implemented. Future versions may include:
-- JWT tokens
-- API keys
-- OAuth2
+After a successful court-PIN check, the server issues a signed, court-scoped session
+token. New clients must send it with every write:
+
+```http
+Authorization: Bearer <token>
+```
+
+For backward compatibility, PIN-only and unauthenticated legacy writes are accepted
+until `COURT_AUTH_GRACE_UNTIL` (currently 2026-08-08 UTC) and are logged as warnings.
+After that date, mutation endpoints return `401` without a valid session token.
 
 ## Error Handling
 
