@@ -2874,6 +2874,86 @@ def _schedule_pair_clause(player1_name: str, player2_name: str) -> tuple[str, tu
     )
 
 
+def _schedule_entry_is_assigned(court_id: Any, scheduled_time: Any) -> bool:
+    return bool(str(court_id or "").strip() and str(scheduled_time or "").strip())
+
+
+def _schedule_entry_is_unplaced(
+    *,
+    court_id: Any,
+    scheduled_time: Any,
+    match_id: Any = None,
+    status: Any = None,
+) -> bool:
+    """True when a schedule row still belongs in the unassigned pool."""
+    if match_id not in (None, "", 0):
+        return False
+    if str(status or "").strip().lower() == "completed":
+        return False
+    return not _schedule_entry_is_assigned(court_id, scheduled_time)
+
+
+def _schedule_entry_priority(row: sqlite3.Row | Dict[str, Any]) -> tuple[int, int, int, int]:
+    """Higher tuple values mean the row should be kept over duplicates."""
+    has_match = row["match_id"] not in (None, "", 0) if isinstance(row, dict) else row["match_id"] is not None
+    assigned = _schedule_entry_is_assigned(row["court_id"], row["scheduled_time"])
+    has_group = row["bracket_group_id"] not in (None, "", 0) if isinstance(row, dict) else row["bracket_group_id"] is not None
+    row_id = int(row["id"] or 0)
+    return (
+        1 if has_match else 0,
+        1 if assigned else 0,
+        1 if has_group else 0,
+        -row_id,
+    )
+
+
+def _prune_duplicate_schedule_entries(cursor: sqlite3.Cursor, tournament_id: int) -> int:
+    """Drop redundant unassigned rows when another row exists for the same pair and phase."""
+    cursor.execute(
+        """
+        SELECT id, phase, player1_name, player2_name, court_id, scheduled_time,
+               match_id, bracket_group_id, status
+        FROM tournament_schedule
+        WHERE tournament_id = ?
+        ORDER BY id
+        """,
+        (tournament_id,),
+    )
+    rows = [dict(row) for row in cursor.fetchall()]
+    grouped: Dict[tuple[str, tuple[str, str]], List[Dict[str, Any]]] = {}
+    for row in rows:
+        players = sorted(
+            [str(row["player1_name"] or "").strip(), str(row["player2_name"] or "").strip()],
+            key=str.casefold,
+        )
+        if not players[0] or not players[1]:
+            continue
+        key = (str(row["phase"] or "").strip().casefold(), tuple(players))
+        grouped.setdefault(key, []).append(row)
+
+    deleted = 0
+    for entries in grouped.values():
+        if len(entries) <= 1:
+            continue
+        keeper = max(entries, key=_schedule_entry_priority)
+        for entry in entries:
+            if int(entry["id"]) == int(keeper["id"]):
+                continue
+            if not _schedule_entry_is_unplaced(
+                court_id=entry["court_id"],
+                scheduled_time=entry["scheduled_time"],
+                match_id=entry["match_id"],
+                status=entry["status"],
+            ):
+                continue
+            cursor.execute(
+                "DELETE FROM tournament_schedule WHERE id = ? AND tournament_id = ?",
+                (entry["id"], tournament_id),
+            )
+            deleted += int(cursor.rowcount or 0)
+    return deleted
+
+
 def _format_score_text(sets_history_raw: Any) -> str:
     """Build a compact score string (e.g. '4:2 4:1 STB 10:7') from a sets_history JSON."""
     if not sets_history_raw:
@@ -3146,16 +3226,52 @@ def upsert_tournament_schedule_entries(tournament_id: int, entries: List[Dict[st
                     (*values, schedule_id, tournament_id),
                 )
             else:
+                pair_clause, pair_params = _schedule_pair_clause(entry["player1_name"], entry["player2_name"])
                 cursor.execute(
-                    """
-                    INSERT INTO tournament_schedule (
-                        tournament_id, day_date, scheduled_time, court_id, court_label, category_name,
-                        bracket_group_id, group_name, phase, player1_name, player2_name, status, source_type,
-                        source_ref_id, match_id, sort_order, notes_public, notes_internal, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    f"""
+                    SELECT id FROM tournament_schedule
+                    WHERE tournament_id = ? AND phase = ? AND {pair_clause}
+                    ORDER BY id
+                    LIMIT 1
                     """,
-                    (tournament_id, *values[:-1], now, now),
+                    (tournament_id, entry["phase"], *pair_params),
                 )
+                existing = cursor.fetchone()
+                if existing:
+                    schedule_id = int(existing["id"])
+                    cursor.execute(
+                        """
+                        UPDATE tournament_schedule
+                        SET day_date = ?, scheduled_time = ?, court_id = ?, court_label = ?, category_name = ?,
+                            bracket_group_id = COALESCE(?, bracket_group_id), group_name = CASE
+                                WHEN COALESCE(?, '') != '' THEN ? ELSE group_name END,
+                            phase = ?, player1_name = ?, player2_name = ?,
+                            status = ?, source_type = ?, source_ref_id = ?, match_id = COALESCE(?, match_id),
+                            sort_order = ?, notes_public = ?, notes_internal = ?, updated_at = ?
+                        WHERE id = ? AND tournament_id = ?
+                        """,
+                        (
+                            entry["day_date"], entry["scheduled_time"], entry["court_id"], entry["court_label"],
+                            entry["category_name"], entry["bracket_group_id"], entry["group_name"], entry["group_name"],
+                            entry["phase"], entry["player1_name"], entry["player2_name"], entry["status"],
+                            entry["source_type"], entry["source_ref_id"], entry["match_id"], entry["sort_order"],
+                            entry["notes_public"], entry["notes_internal"], now, schedule_id, tournament_id,
+                        ),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO tournament_schedule (
+                            tournament_id, day_date, scheduled_time, court_id, court_label, category_name,
+                            bracket_group_id, group_name, phase, player1_name, player2_name, status, source_type,
+                            source_ref_id, match_id, sort_order, notes_public, notes_internal, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (tournament_id, *values[:-1], now, now),
+                    )
+        conn.commit()
+        cursor = conn.cursor()
+        _prune_duplicate_schedule_entries(cursor, tournament_id)
         conn.commit()
     return fetch_tournament_schedule(tournament_id)
 
@@ -3248,9 +3364,9 @@ def _insert_group_round_robin_schedule_entries(
             cursor.execute(
                 f"""
                 SELECT id FROM tournament_schedule
-                WHERE tournament_id = ? AND bracket_group_id = ? AND phase = ? AND {pair_clause}
+                WHERE tournament_id = ? AND phase = ? AND {pair_clause}
                 """,
-                (tournament_id, group_id, phase, *pair_params),
+                (tournament_id, phase, *pair_params),
             )
             if cursor.fetchone():
                 continue
@@ -3295,6 +3411,7 @@ def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
                     start_order=next_order,
                     now=now,
                 )
+            _prune_duplicate_schedule_entries(cursor, tournament_id)
             conn.commit()
         return fetch_tournament_schedule(tournament_id)
     except Exception as e:
@@ -3449,7 +3566,13 @@ def link_schedule_to_match(
                 f"""
                 SELECT id FROM tournament_schedule
                 WHERE {' AND '.join(filters)}
-                ORDER BY CASE WHEN match_id IS NULL THEN 0 ELSE 1 END, id
+                ORDER BY
+                    CASE
+                        WHEN COALESCE(court_id, '') != '' AND COALESCE(scheduled_time, '') != '' THEN 0
+                        ELSE 1
+                    END,
+                    CASE WHEN match_id IS NULL THEN 0 ELSE 1 END,
+                    id
                 LIMIT 1
                 """,
                 params,
@@ -3461,6 +3584,7 @@ def link_schedule_to_match(
                 "UPDATE tournament_schedule SET match_id = ?, status = ?, updated_at = ? WHERE id = ?",
                 (match_id, status, _utc_now(), row["id"]),
             )
+            _prune_duplicate_schedule_entries(cursor, tournament_id)
             conn.commit()
             schedule_id = row["id"]
         return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)), None)
@@ -4389,6 +4513,8 @@ def delete_unassigned_schedule_entries(
             query = """
                 DELETE FROM tournament_schedule
                 WHERE tournament_id = ?
+                  AND match_id IS NULL
+                  AND LOWER(COALESCE(status, '')) != 'completed'
                   AND (COALESCE(court_id, '') = '' OR COALESCE(scheduled_time, '') = '')
             """
             if day_date:

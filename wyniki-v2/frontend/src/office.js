@@ -1022,7 +1022,10 @@ Alpine.data('officeApp', () => ({
   },
 
   autoIsUnplacedEntry(entry) {
-    return !entry?.court_id || !entry?.scheduled_time;
+    if (!entry) return false;
+    if (entry.match_id) return false;
+    if (String(entry.status || '').toLowerCase() === 'completed') return false;
+    return !entry.court_id || !entry.scheduled_time;
   },
 
   autoUnplacedAll() {
