@@ -2546,3 +2546,136 @@ def test_office_unassign_delete_unassigned_and_regenerate_schedule(full_app_with
     assert regenerated.status_code == 200
     assert len(regenerated.get_json()["schedule"]) == 3
 
+
+def test_manual_schedule_then_generate_does_not_duplicate_pairs(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Manual Overflow Cup",
+        "2026-07-18",
+        "2026-07-19",
+        active=True,
+        office_password_hash=generate_password_hash("overflow"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    players = [
+        database.insert_player(tournament_id, "A One", "B1", "PL", first_name="A", last_name="One", gender="M"),
+        database.insert_player(tournament_id, "A Two", "B1", "PL", first_name="A", last_name="Two", gender="M"),
+        database.insert_player(tournament_id, "A Three", "B1", "PL", first_name="A", last_name="Three", gender="M"),
+    ]
+    database.save_bracket_groups(tournament_id, [{"name": "B1 Mężczyźni — Grupa A", "players": players}])
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "overflow"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    courts = database.fetch_courts_for_tournament(tournament_id)
+
+    manual = client.post(
+        "/api/office/1/schedule",
+        headers=headers,
+        json={
+            "day_date": "2026-07-18",
+            "scheduled_time": "10:00",
+            "court_id": courts[0]["kort_id"],
+            "phase": "Grupowa",
+            "player1_name": "A One",
+            "player2_name": "A Two",
+            "status": "planned",
+        },
+    )
+    assert manual.status_code == 200
+    manual_schedule = manual.get_json()["schedule"]
+    assert len(manual_schedule) == 3
+    assigned = next(
+        entry for entry in manual_schedule
+        if {entry["player1_name"], entry["player2_name"]} == {"A One", "A Two"}
+    )
+    assert assigned["court_id"] == courts[0]["kort_id"]
+    assert assigned["scheduled_time"] == "10:00"
+
+    generated = client.post("/api/office/1/schedule/generate", headers=headers)
+    assert generated.status_code == 200
+    schedule = generated.get_json()["schedule"]
+    assert len(schedule) == 3
+
+    pair_counts = {}
+    for entry in schedule:
+        players_key = tuple(sorted([entry["player1_name"], entry["player2_name"]], key=str.casefold))
+        key = (entry["phase"], players_key)
+        pair_counts[key] = pair_counts.get(key, 0) + 1
+    assert all(count == 1 for count in pair_counts.values())
+
+
+def test_completed_group_match_is_not_counted_as_unassigned(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Completed Unassigned Cup",
+        "2026-07-18",
+        "2026-07-19",
+        active=True,
+        office_password_hash=generate_password_hash("done"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    players = [
+        database.insert_player(tournament_id, "A One", "B1", "PL", first_name="A", last_name="One", gender="M"),
+        database.insert_player(tournament_id, "A Two", "B1", "PL", first_name="A", last_name="Two", gender="M"),
+        database.insert_player(tournament_id, "A Three", "B1", "PL", first_name="A", last_name="Three", gender="M"),
+    ]
+    groups = [{"name": "B1 Mężczyźni — Grupa A", "players": players}]
+    database.save_bracket_groups(tournament_id, groups)
+    group_id = database.fetch_bracket_groups(tournament_id)[0]["id"]
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "done"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    generated = client.post("/api/office/1/schedule/generate", headers=headers)
+    assert generated.status_code == 200
+
+    result = client.post(
+        "/api/office/1/group-matches",
+        headers=headers,
+        json={
+            "group_id": group_id,
+            "player1_name": "A One",
+            "player2_name": "A Two",
+            "sets": [
+                {"player1_games": 4, "player2_games": 1},
+                {"player1_games": 4, "player2_games": 2},
+            ],
+        },
+    )
+    assert result.status_code == 201
+
+    schedule = database.fetch_tournament_schedule(tournament_id)
+    completed = [entry for entry in schedule if entry["player1_name"] == "A One" and entry["player2_name"] == "A Two"]
+    assert len(completed) == 1
+    assert completed[0]["match_id"] is not None
+    assert completed[0]["status"] == "completed"
+    assert not database._schedule_entry_is_unplaced(
+        court_id=completed[0]["court_id"],
+        scheduled_time=completed[0]["scheduled_time"],
+        match_id=completed[0]["match_id"],
+        status=completed[0]["status"],
+    )
+
+    unassigned = [
+        entry for entry in schedule
+        if database._schedule_entry_is_unplaced(
+            court_id=entry["court_id"],
+            scheduled_time=entry["scheduled_time"],
+            match_id=entry["match_id"],
+            status=entry["status"],
+        )
+    ]
+    assert len(unassigned) == 2
+
+    deleted = database.delete_unassigned_schedule_entries(tournament_id)
+    assert deleted == 2
+    remaining = database.fetch_tournament_schedule(tournament_id)
+    assert len(remaining) == 1
+    assert remaining[0]["match_id"] is not None
