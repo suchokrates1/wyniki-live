@@ -48,6 +48,9 @@ from ..database import (
     delete_player,
     bulk_insert_players,
     is_group_stage_phase,
+    normalize_group_stage_phase,
+    GROUP_PHASE,
+    GROUP_REMATCH_PHASE,
     expected_group_matches_count,
     count_finished_group_matches,
     maybe_generate_knockout_from_completed_groups,
@@ -1471,9 +1474,24 @@ def create_office_group_match(tournament_id: int):
         return error
 
     data = request.get_json(silent=True) or {}
+    schedule_id = _normalize_int(data.get('schedule_id'), 0) or None
     group_id = _normalize_int(data.get('group_id'), 0)
     player1_name = (data.get('player1_name') or '').strip()
     player2_name = (data.get('player2_name') or '').strip()
+
+    schedule_entry = None
+    if schedule_id:
+        schedule_entry = next(
+            (entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)),
+            None,
+        )
+        if not schedule_entry:
+            return jsonify({"error": "Schedule entry not found"}), 404
+        player1_name = player1_name or str(schedule_entry.get("player1_name") or "").strip()
+        player2_name = player2_name or str(schedule_entry.get("player2_name") or "").strip()
+        if not group_id and schedule_entry.get("bracket_group_id"):
+            group_id = int(schedule_entry["bracket_group_id"])
+
     if not group_id or not player1_name or not player2_name or player1_name == player2_name:
         return jsonify({"error": "Group and two different players are required"}), 400
 
@@ -1487,11 +1505,15 @@ def create_office_group_match(tournament_id: int):
 
     _, player_groups = _group_players_index(groups)
     pair_key = _player_pair_key(player1_name, player2_name)
+    raw_phase = (data.get('phase') or (schedule_entry or {}).get('phase') or GROUP_PHASE).strip()
+    if not is_group_stage_phase(raw_phase):
+        return jsonify({"error": "Unsupported group-stage phase"}), 400
+    phase = normalize_group_stage_phase(raw_phase)
 
     existing_match = Match.query.filter(
         Match.tournament_id == tournament_id,
         Match.bracket_group_id == group_id,
-        Match.phase == 'Grupowa',
+        Match.phase == phase,
         Match.status == 'finished',
         (
             ((Match.player1_name == player1_name) & (Match.player2_name == player2_name))
@@ -1501,7 +1523,9 @@ def create_office_group_match(tournament_id: int):
     if existing_match:
         return jsonify({"error": "This group match already has a result. Edit the existing result instead."}), 409
 
-    for history in MatchHistory.query.filter_by(tournament_id=tournament_id, phase='Grupowa').all():
+    for history in MatchHistory.query.filter_by(tournament_id=tournament_id).all():
+        if normalize_group_stage_phase(history.phase) != phase:
+            continue
         if _infer_group_id_for_players(history.player_a, history.player_b, player_groups) != group_id:
             continue
         if _player_pair_key(history.player_a, history.player_b) == pair_key:
@@ -1514,13 +1538,13 @@ def create_office_group_match(tournament_id: int):
 
     now = utc_now_iso()
     match = Match(
-        court_id=(data.get('court_id') or f"office-{tournament_id}"),
+        court_id=(data.get('court_id') or (schedule_entry or {}).get('court_id') or f"office-{tournament_id}"),
         player1_name=player1_name,
         player2_name=player2_name,
         status='finished',
         tournament_id=tournament_id,
         bracket_group_id=group_id,
-        phase='Grupowa',
+        phase=phase,
         finish_reason='walkover' if _normalize_bool(data.get('walkover', False)) else 'normal',
         winner_name=(data.get('winner_name') or '').strip() if _normalize_bool(data.get('walkover', False)) else None,
         result_note='Walkower' if _normalize_bool(data.get('walkover', False)) else None,
@@ -1537,13 +1561,18 @@ def create_office_group_match(tournament_id: int):
     link_schedule_to_match(
         tournament_id,
         match.id,
+        schedule_id=schedule_id,
         player1_name=player1_name,
         player2_name=player2_name,
-        phase='Grupowa',
+        phase=phase,
         bracket_group_id=group_id,
     )
 
-    generation = maybe_generate_knockout_from_completed_groups(tournament_id)
+    generation = (
+        maybe_generate_knockout_from_completed_groups(tournament_id)
+        if phase == GROUP_PHASE
+        else {"status": "pending"}
+    )
     return _json_no_cache({
         "message": "Group match added",
         "match": _office_match_payload(match, {group_id: group.get('name')}),
