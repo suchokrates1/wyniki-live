@@ -2679,3 +2679,91 @@ def test_completed_group_match_is_not_counted_as_unassigned(full_app_with_temp_d
     remaining = database.fetch_tournament_schedule(tournament_id)
     assert len(remaining) == 1
     assert remaining[0]["match_id"] is not None
+
+
+def test_office_group_rematch_after_first_leg(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Rematch Entry Cup",
+        "2026-07-18",
+        "2026-07-19",
+        active=True,
+        office_password_hash=generate_password_hash("rematch-entry"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    players = [
+        database.insert_player(tournament_id, "A One", "B1", "PL", first_name="A", last_name="One", gender="M"),
+        database.insert_player(tournament_id, "A Two", "B1", "PL", first_name="A", last_name="Two", gender="M"),
+        database.insert_player(tournament_id, "A Three", "B1", "PL", first_name="A", last_name="Three", gender="M"),
+    ]
+    database.save_bracket_groups(tournament_id, [{"name": "B1 Mężczyźni — Grupa A", "players": players}])
+    group_id = database.fetch_bracket_groups(tournament_id)[0]["id"]
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "rematch-entry"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    first_leg = client.post(
+        "/api/office/1/group-matches",
+        headers=headers,
+        json={
+            "group_id": group_id,
+            "player1_name": "A One",
+            "player2_name": "A Two",
+            "phase": "Grupowa",
+            "sets": [
+                {"player1_games": 4, "player2_games": 1},
+                {"player1_games": 4, "player2_games": 2},
+            ],
+        },
+    )
+    assert first_leg.status_code == 201
+
+    rematch_schedule = database.upsert_tournament_schedule_entries(tournament_id, [{
+        "day_date": "2026-07-19",
+        "scheduled_time": "10:00",
+        "court_id": database.fetch_courts_for_tournament(tournament_id)[0]["kort_id"],
+        "phase": database.GROUP_REMATCH_PHASE,
+        "bracket_group_id": group_id,
+        "group_name": "B1 Mężczyźni — Grupa A",
+        "player1_name": "A One",
+        "player2_name": "A Two",
+        "status": "planned",
+        "source_type": "manual",
+    }])
+    rematch_id = next(entry["id"] for entry in rematch_schedule if entry["player1_name"] == "A One" and entry["phase"] == database.GROUP_REMATCH_PHASE)
+
+    second_leg = client.post(
+        "/api/office/1/group-matches",
+        headers=headers,
+        json={
+            "group_id": group_id,
+            "schedule_id": rematch_id,
+            "player1_name": "A One",
+            "player2_name": "A Two",
+            "phase": "Grupowa — Rewanż",
+            "sets": [
+                {"player1_games": 1, "player2_games": 4},
+                {"player1_games": 2, "player2_games": 4},
+            ],
+        },
+    )
+    assert second_leg.status_code == 201
+
+    schedule = database.fetch_tournament_schedule(tournament_id)
+    rematch_row = next(entry for entry in schedule if int(entry["id"]) == int(rematch_id))
+    assert rematch_row["match_id"] is not None
+    assert rematch_row["status"] == "completed"
+
+    from wyniki.db_models import Match
+
+    with full_app_with_temp_db.app_context():
+        pair_matches = Match.query.filter_by(tournament_id=tournament_id, bracket_group_id=group_id).all()
+        phases = sorted({
+            match.phase
+            for match in pair_matches
+            if {match.player1_name, match.player2_name} == {"A One", "A Two"}
+        })
+        assert phases == ["Grupowa", database.GROUP_REMATCH_PHASE]

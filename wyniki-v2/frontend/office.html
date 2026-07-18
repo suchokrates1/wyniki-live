@@ -861,7 +861,13 @@
                           <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="ot('planning.publicNotes')"></span>
                           <input type="text" class="input input-bordered input-sm bg-white w-full" x-model="entry.notes_public" :placeholder="ot('planning.publicNotesPlaceholder')">
                         </label>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 flex-wrap">
+                          <button type="button"
+                                  class="btn btn-sm border-0 text-white"
+                                  style="background: linear-gradient(135deg, #c2410c, #9a3412);"
+                                  x-show="officeIsGroupScheduleEntry(entry)"
+                                  @click="openAddGroupResultFromSchedule(entry)"
+                                  x-text="ot('planning.addResult')"></button>
                           <button type="button" class="btn btn-sm border-0 text-white flex-1" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveOfficeScheduleEntry(entry)" x-text="ot('planning.save')"></button>
                           <button type="button" class="btn btn-sm btn-outline" @click="deletePlanningScheduleEntry(entry)" x-text="ot('planning.delete')"></button>
                         </div>
@@ -1149,6 +1155,14 @@
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.group_id" @change="onOfficeGroupChanged()">
             <template x-for="group in officeGroups" :key="group.id">
               <option :value="group.id" x-text="officeDisplayLabel(group.name)"></option>
+            </template>
+          </select>
+        </label>
+        <label class="form-control" x-show="officeNewMatch.mode === 'group'">
+          <span class="label-text font-semibold mb-2" x-text="ot('modals.groupPhase')"></span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.phase">
+            <template x-for="option in officeGroupPhaseOptions()" :key="option.value">
+              <option :value="option.value" x-text="option.label"></option>
             </template>
           </select>
         </label>

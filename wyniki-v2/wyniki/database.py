@@ -736,10 +736,44 @@ def _default_knockout_schedule_note(tournament_id: int) -> str:
     return DEFAULT_KNOCKOUT_SCHEDULE_NOTE_PL
 
 
+_GROUP_REMATCH_PHASE_MARKERS = (
+    "rewanż",
+    "rematch",
+    "rückspiel",
+    "revanch",
+    "ritorno",
+    "revancha",
+    "replay",
+    "dogryw",
+)
+
+
+def normalize_group_stage_phase(phase: Optional[str]) -> str:
+    """Map localized schedule/result labels to canonical group-stage phases."""
+    value = (phase or "").strip()
+    if not value:
+        return GROUP_PHASE
+    if value in {GROUP_PHASE, GROUP_REMATCH_PHASE}:
+        return value
+    lowered = value.casefold()
+    if lowered == GROUP_REMATCH_PHASE.casefold():
+        return GROUP_REMATCH_PHASE
+    if any(marker in lowered for marker in _GROUP_REMATCH_PHASE_MARKERS):
+        return GROUP_REMATCH_PHASE
+    return GROUP_PHASE
+
+
 def is_group_stage_phase(phase: Optional[str]) -> bool:
     """Return True for regular or rematch group-stage phases."""
     value = (phase or "").strip()
-    return value in {GROUP_PHASE, GROUP_REMATCH_PHASE}
+    if value in {GROUP_PHASE, GROUP_REMATCH_PHASE}:
+        return True
+    lowered = value.casefold()
+    if lowered in {GROUP_PHASE.casefold(), GROUP_REMATCH_PHASE.casefold()}:
+        return True
+    if lowered in {"gruppenphase", "group", "girone", "grupos", "poule"}:
+        return True
+    return any(marker in lowered for marker in _GROUP_REMATCH_PHASE_MARKERS)
 
 
 def expected_group_matches_count(tournament_id: int, group_id: int, player_count: int) -> int:

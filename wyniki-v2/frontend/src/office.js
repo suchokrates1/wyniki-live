@@ -21,7 +21,7 @@ function defaultOfficeForm(groupId = '') {
     knockout_slot_id: null,
     schedule_id: null,
     court_id: '',
-    phase: '',
+    phase: 'Grupowa',
     player1_name: '',
     player2_name: '',
     walkover: false,
@@ -676,7 +676,61 @@ Alpine.data('officeApp', () => ({
 
   openAddMatchModal() {
     this.ensureDefaultGroupSelection();
+    this.officeNewMatch = defaultOfficeForm(this.officeNewMatch.group_id);
     this.officeNewMatch.mode = 'group';
+    this.officeNewMatch.phase = 'Grupowa';
+    this.addMatchOpen = true;
+  },
+
+  officeGroupPhaseOptions() {
+    return [
+      { value: 'Grupowa', label: this.ot('phases.group') },
+      { value: 'Grupowa — Rewanż', label: this.ot('phases.groupRematch') },
+    ];
+  },
+
+  officeNormalizeGroupPhase(phase) {
+    const text = String(phase || '').trim();
+    if (!text) return 'Grupowa';
+    const lower = text.toLowerCase();
+    if (text === 'Grupowa — Rewanż') return text;
+    if (lower.includes('rewan') || lower.includes('rematch') || lower.includes('rück') || lower.includes('revanch') || lower.includes('ritorno') || lower.includes('revancha') || lower.includes('replay')) {
+      return 'Grupowa — Rewanż';
+    }
+    return 'Grupowa';
+  },
+
+  inferOfficeGroupIdForPlayers(player1Name, player2Name) {
+    const names = new Set([player1Name, player2Name].filter(Boolean));
+    if (names.size !== 2) return '';
+    for (const group of this.officeGroups) {
+      const groupNames = new Set((group.players || []).map(player => player.name));
+      if ([...names].every(name => groupNames.has(name))) {
+        return group.id;
+      }
+    }
+    return '';
+  },
+
+  officeIsGroupScheduleEntry(entry) {
+    if (!entry?.player1_name || !entry?.player2_name || entry?.match_id) return false;
+    if (String(entry.source_type || '').toLowerCase() === 'knockout') return false;
+    const phase = String(entry.phase || '').toLowerCase();
+    if (phase.includes('finał') || phase.includes('final') || phase.includes('półfina') || phase.includes('semif') || phase.includes('3.') || phase.includes('3rd')) {
+      return false;
+    }
+    return this.officeNormalizeGroupPhase(entry.phase) !== '' || phase.includes('grup');
+  },
+
+  openAddGroupResultFromSchedule(entry) {
+    const groupId = entry?.bracket_group_id || this.inferOfficeGroupIdForPlayers(entry?.player1_name, entry?.player2_name);
+    this.officeNewMatch = defaultOfficeForm(groupId);
+    this.officeNewMatch.mode = 'group';
+    this.officeNewMatch.schedule_id = entry?.id || null;
+    this.officeNewMatch.phase = this.officeNormalizeGroupPhase(entry?.phase);
+    this.officeNewMatch.player1_name = entry?.player1_name || '';
+    this.officeNewMatch.player2_name = entry?.player2_name || '';
+    this.officeNewMatch.court_id = entry?.court_id || '';
     this.addMatchOpen = true;
   },
 
@@ -2226,9 +2280,11 @@ Alpine.data('officeApp', () => ({
         headers: this.officeHeaders(),
         body: JSON.stringify({
           group_id: this.officeNewMatch.group_id,
+          schedule_id: this.officeNewMatch.schedule_id,
           player1_name: this.officeNewMatch.player1_name,
           player2_name: this.officeNewMatch.player2_name,
-          phase: this.officeNewMatch.phase || 'Grupowa',
+          phase: this.officeNormalizeGroupPhase(this.officeNewMatch.phase),
+          court_id: this.officeNewMatch.court_id,
           walkover: this.officeNewMatch.walkover,
           winner_name: this.officeNewMatch.winner_name,
           sets: this.officeSetsFromForm(this.officeNewMatch),

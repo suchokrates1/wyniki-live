@@ -46,6 +46,7 @@ from ..database import (
     GROUP_PHASE,
     GROUP_REMATCH_PHASE,
     is_group_stage_phase,
+    normalize_group_stage_phase,
 )
 from ..db_models import Match, MatchHistory, Tournament, db, utc_now_iso
 from .admin_tournaments import (
@@ -739,9 +740,24 @@ def office_group_match(slot: int):
     tournament_id = int(tournament['id'])
 
     data = request.get_json(silent=True) or {}
+    schedule_id = _normalize_int(data.get('schedule_id'), 0) or None
     group_id = _normalize_int(data.get('group_id'), 0)
     player1_name = (data.get('player1_name') or '').strip()
     player2_name = (data.get('player2_name') or '').strip()
+
+    schedule_entry = None
+    if schedule_id:
+        schedule_entry = next(
+            (entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)),
+            None,
+        )
+        if not schedule_entry:
+            return jsonify({"error": "Schedule entry not found"}), 404
+        player1_name = player1_name or str(schedule_entry.get("player1_name") or "").strip()
+        player2_name = player2_name or str(schedule_entry.get("player2_name") or "").strip()
+        if not group_id and schedule_entry.get("bracket_group_id"):
+            group_id = int(schedule_entry["bracket_group_id"])
+
     if not group_id or not player1_name or not player2_name or player1_name == player2_name:
         return jsonify({"error": "Group and two different players are required"}), 400
 
@@ -755,9 +771,10 @@ def office_group_match(slot: int):
 
     _, player_groups = _group_players_index(groups)
     pair_key = _player_pair_key(player1_name, player2_name)
-    phase = (data.get('phase') or GROUP_PHASE).strip()
-    if not is_group_stage_phase(phase):
-        phase = GROUP_PHASE
+    raw_phase = (data.get('phase') or (schedule_entry or {}).get('phase') or GROUP_PHASE).strip()
+    if not is_group_stage_phase(raw_phase):
+        return jsonify({"error": "Unsupported group-stage phase"}), 400
+    phase = normalize_group_stage_phase(raw_phase)
 
     existing_match = Match.query.filter(
         Match.tournament_id == tournament_id,
@@ -785,7 +802,7 @@ def office_group_match(slot: int):
 
     now = utc_now_iso()
     match = Match(
-        court_id=(data.get('court_id') or f"office-{tournament_id}"),
+        court_id=(data.get('court_id') or (schedule_entry or {}).get('court_id') or f"office-{tournament_id}"),
         player1_name=player1_name,
         player2_name=player2_name,
         status='finished',
@@ -808,13 +825,18 @@ def office_group_match(slot: int):
     link_schedule_to_match(
         tournament_id,
         match.id,
+        schedule_id=schedule_id,
         player1_name=player1_name,
         player2_name=player2_name,
-        phase='Grupowa',
+        phase=phase,
         bracket_group_id=group_id,
     )
 
-    generation = maybe_generate_knockout_from_completed_groups(tournament_id)
+    generation = (
+        maybe_generate_knockout_from_completed_groups(tournament_id)
+        if phase == GROUP_PHASE
+        else {"status": "pending"}
+    )
     return _json_no_cache({
         "message": "Group match added",
         "match": _office_match_payload(match, {group_id: group.get('name')}, player_groups),
