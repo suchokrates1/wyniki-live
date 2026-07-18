@@ -865,8 +865,8 @@
                           <button type="button"
                                   class="btn btn-sm border-0 text-white"
                                   style="background: linear-gradient(135deg, #c2410c, #9a3412);"
-                                  x-show="officeIsGroupScheduleEntry(entry)"
-                                  @click="openAddGroupResultFromSchedule(entry)"
+                                  x-show="officeCanAddResultFromSchedule(entry)"
+                                  @click="openAddResultFromSchedule(entry)"
                                   x-text="ot('planning.addResult')"></button>
                           <button type="button" class="btn btn-sm border-0 text-white flex-1" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveOfficeScheduleEntry(entry)" x-text="ot('planning.save')"></button>
                           <button type="button" class="btn btn-sm btn-outline" @click="deletePlanningScheduleEntry(entry)" x-text="ot('planning.delete')"></button>
@@ -1150,6 +1150,14 @@
       </div>
 
       <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <label class="form-control md:col-span-2" x-show="!officeNewMatch.lockedFromSlot">
+          <span class="label-text font-semibold mb-2" x-text="ot('modals.resultKind')"></span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.resultKind" @change="onOfficeResultKindChanged()">
+            <template x-for="option in officeResultKindOptions()" :key="option.value">
+              <option :value="option.value" x-text="option.label"></option>
+            </template>
+          </select>
+        </label>
         <label class="form-control" x-show="officeNewMatch.mode === 'group'">
           <span class="label-text font-semibold mb-2" x-text="ot('modals.group')"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.group_id" @change="onOfficeGroupChanged()">
@@ -1158,13 +1166,14 @@
             </template>
           </select>
         </label>
-        <label class="form-control" x-show="officeNewMatch.mode === 'group'">
-          <span class="label-text font-semibold mb-2" x-text="ot('modals.groupPhase')"></span>
-          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.phase">
-            <template x-for="option in officeGroupPhaseOptions()" :key="option.value">
-              <option :value="option.value" x-text="option.label"></option>
+        <label class="form-control" x-show="officeNewMatch.mode === 'knockout'">
+          <span class="label-text font-semibold mb-2" x-text="ot('modals.knockoutPhase')"></span>
+          <input type="text" class="input input-bordered bg-white/90" list="office-knockout-phase-options" x-model="officeNewMatch.phase" :placeholder="ot('modals.knockoutPhasePlaceholder')">
+          <datalist id="office-knockout-phase-options">
+            <template x-for="phase in officeKnockoutPhaseSuggestions()" :key="'phase_'+phase">
+              <option :value="phase"></option>
             </template>
-          </select>
+          </datalist>
         </label>
         <label class="form-control">
           <span class="label-text font-semibold mb-2" x-text="ot('modals.walkover')"></span>
@@ -1190,6 +1199,22 @@
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player2_name">
             <template x-for="player in officeGroupPlayers()" :key="player.name">
               <option :value="player.name" x-text="player.name"></option>
+            </template>
+          </select>
+        </label>
+        <label class="form-control" x-show="officeNewMatch.mode === 'knockout'">
+          <span class="label-text font-semibold mb-2" x-text="ot('modals.playerA')"></span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player1_name">
+            <template x-for="name in officeAllPlayerNames()" :key="'ko_p1_'+name">
+              <option :value="name" x-text="name"></option>
+            </template>
+          </select>
+        </label>
+        <label class="form-control" x-show="officeNewMatch.mode === 'knockout'">
+          <span class="label-text font-semibold mb-2" x-text="ot('modals.playerB')"></span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player2_name">
+            <template x-for="name in officeAllPlayerNames()" :key="'ko_p2_'+name">
+              <option :value="name" x-text="name"></option>
             </template>
           </select>
         </label>

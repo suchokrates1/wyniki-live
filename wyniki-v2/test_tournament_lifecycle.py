@@ -2767,3 +2767,54 @@ def test_office_group_rematch_after_first_leg(full_app_with_temp_db):
             if {match.player1_name, match.player2_name} == {"A One", "A Two"}
         })
         assert phases == ["Grupowa", database.GROUP_REMATCH_PHASE]
+
+
+def test_office_manual_knockout_result_from_schedule(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Manual Knockout Cup",
+        "2026-07-18",
+        "2026-07-19",
+        active=True,
+        office_password_hash=generate_password_hash("ko-manual"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    p1 = database.insert_player(tournament_id, "Final One", "B1", "DE", first_name="Final", last_name="One", gender="M")
+    p2 = database.insert_player(tournament_id, "Final Two", "B1", "DE", first_name="Final", last_name="Two", gender="M")
+
+    schedule = database.upsert_tournament_schedule_entries(tournament_id, [{
+        "day_date": "2026-07-19",
+        "scheduled_time": "11:10",
+        "court_id": database.fetch_courts_for_tournament(tournament_id)[0]["kort_id"],
+        "phase": "B1 Men — Finał",
+        "player1_name": "Final One",
+        "player2_name": "Final Two",
+        "status": "planned",
+        "source_type": "manual",
+    }])
+    schedule_id = schedule[0]["id"]
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "ko-manual"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    response = client.post(
+        "/api/office/1/knockout-matches",
+        headers=headers,
+        json={
+            "schedule_id": schedule_id,
+            "phase": "B1 Men — Finał",
+            "player1_name": "Final One",
+            "player2_name": "Final Two",
+            "sets": [
+                {"player1_games": 4, "player2_games": 2},
+                {"player1_games": 4, "player2_games": 1},
+            ],
+        },
+    )
+    assert response.status_code == 201
+    linked = next(entry for entry in database.fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id))
+    assert linked["match_id"] is not None
+    assert linked["status"] == "completed"

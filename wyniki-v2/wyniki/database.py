@@ -776,6 +776,14 @@ def is_group_stage_phase(phase: Optional[str]) -> bool:
     return any(marker in lowered for marker in _GROUP_REMATCH_PHASE_MARKERS)
 
 
+def is_knockout_stage_phase(phase: Optional[str]) -> bool:
+    """Return True for knockout-style phases (final, semifinal, bronze, etc.)."""
+    value = (phase or "").strip()
+    if not value or is_group_stage_phase(value):
+        return False
+    return True
+
+
 def expected_group_matches_count(tournament_id: int, group_id: int, player_count: int) -> int:
     with db_conn() as conn:
         return _expected_group_matches_count(conn.cursor(), tournament_id, group_id, player_count)

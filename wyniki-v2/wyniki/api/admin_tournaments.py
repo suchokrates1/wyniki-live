@@ -48,6 +48,7 @@ from ..database import (
     delete_player,
     bulk_insert_players,
     is_group_stage_phase,
+    is_knockout_stage_phase,
     normalize_group_stage_phase,
     GROUP_PHASE,
     GROUP_REMATCH_PHASE,
@@ -82,7 +83,7 @@ def _emit_admin_tournament_invalidation(response):
 
 
 def _is_knockout_phase(phase: str | None) -> bool:
-    return bool(phase and phase != 'Grupowa')
+    return is_knockout_stage_phase(phase)
 
 
 class OfficeWorkflowError(ValueError):
@@ -930,30 +931,56 @@ def _resolve_office_knockout_slot(tournament_id: int, data: Dict[str, Any]) -> t
         schedule_entry = TournamentSchedule.query.filter_by(
             id=schedule_id,
             tournament_id=tournament_id,
-            source_type='knockout',
         ).first()
         if not schedule_entry:
-            raise OfficeWorkflowError('Knockout schedule entry not found', 404)
+            raise OfficeWorkflowError('Schedule entry not found', 404)
         if schedule_entry.match_id:
-            raise OfficeWorkflowError('This knockout slot already has a linked match. Edit the existing result instead.', 409)
-        slot_id = int(schedule_entry.source_ref_id or 0)
+            raise OfficeWorkflowError('This schedule slot already has a linked match. Edit the existing result instead.', 409)
+        phase = str(schedule_entry.phase or data.get('phase') or '').strip()
+        if is_group_stage_phase(phase):
+            raise OfficeWorkflowError('Use the group result form for group-stage matches')
+        slot_id = int(schedule_entry.source_ref_id or 0) or slot_id
+        if not slot_id:
+            return {
+                'id': None,
+                'phase': phase or 'Pucharowa',
+                'player1_name': schedule_entry.player1_name,
+                'player2_name': schedule_entry.player2_name,
+                'position': 0,
+            }, schedule_entry
 
-    if not slot_id:
-        raise OfficeWorkflowError('Knockout schedule entry or slot is required')
+    if slot_id:
+        slot = next((item for item in fetch_bracket_knockout(tournament_id) if int(item.get('id') or 0) == slot_id), None)
+        if not slot:
+            raise OfficeWorkflowError('Knockout slot not found', 404)
+        if slot.get('winner_name'):
+            raise OfficeWorkflowError('This knockout slot already has a result. Edit the existing result instead.', 409)
+        if not schedule_entry:
+            schedule_entry = TournamentSchedule.query.filter_by(
+                tournament_id=tournament_id,
+                source_type='knockout',
+                source_ref_id=slot_id,
+            ).first()
+            if not schedule_entry and schedule_id:
+                schedule_entry = TournamentSchedule.query.filter_by(
+                    id=schedule_id,
+                    tournament_id=tournament_id,
+                ).first()
+        return slot, schedule_entry
 
-    slot = next((item for item in fetch_bracket_knockout(tournament_id) if int(item.get('id') or 0) == slot_id), None)
-    if not slot:
-        raise OfficeWorkflowError('Knockout slot not found', 404)
-    if slot.get('winner_name'):
-        raise OfficeWorkflowError('This knockout slot already has a result. Edit the existing result instead.', 409)
+    phase = str(data.get('phase') or '').strip()
+    player1_name = str(data.get('player1_name') or '').strip()
+    player2_name = str(data.get('player2_name') or '').strip()
+    if phase and player1_name and player2_name and is_knockout_stage_phase(phase):
+        return {
+            'id': None,
+            'phase': phase,
+            'player1_name': player1_name,
+            'player2_name': player2_name,
+            'position': 0,
+        }, schedule_entry
 
-    if not schedule_entry:
-        schedule_entry = TournamentSchedule.query.filter_by(
-            tournament_id=tournament_id,
-            source_type='knockout',
-            source_ref_id=slot_id,
-        ).first()
-    return slot, schedule_entry
+    raise OfficeWorkflowError('Knockout phase, players, schedule entry, or bracket slot is required')
 
 
 def _create_office_knockout_match(tournament_id: int, data: Dict[str, Any]) -> tuple[Dict[str, Any], int]:
@@ -970,12 +997,14 @@ def _create_office_knockout_match(tournament_id: int, data: Dict[str, Any]) -> t
 
     requested_player1 = (data.get('player1_name') or player1_name).strip()
     requested_player2 = (data.get('player2_name') or player2_name).strip()
-    if {requested_player1, requested_player2} != {player1_name, player2_name}:
+    if slot.get('id') and {requested_player1, requested_player2} != {player1_name, player2_name}:
         raise OfficeWorkflowError('Players must match the generated knockout slot')
-
+    player1_name = requested_player1 or player1_name
+    player2_name = requested_player2 or player2_name
+    match_phase = str(slot.get('phase') or data.get('phase') or 'Pucharowa').strip()
     existing_match = Match.query.filter(
         Match.tournament_id == tournament_id,
-        Match.phase == slot.get('phase'),
+        Match.phase == match_phase,
         Match.status == 'finished',
         (
             ((Match.player1_name == player1_name) & (Match.player2_name == player2_name))
@@ -1001,7 +1030,7 @@ def _create_office_knockout_match(tournament_id: int, data: Dict[str, Any]) -> t
         player2_name=player2_name,
         status='finished',
         tournament_id=tournament_id,
-        phase=slot.get('phase') or 'Pucharowa',
+        phase=match_phase,
         finish_reason='walkover' if _normalize_bool(data.get('walkover', False)) else 'normal',
         winner_name=winner_name,
         result_note='Walkower' if _normalize_bool(data.get('walkover', False)) else None,
