@@ -4584,6 +4584,11 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
     tournament_params = [tournament_id] if tournament_id is not None else []
     phase_clause = "AND phase IN (?, ?)"
     phase_params = (GROUP_PHASE, GROUP_REMATCH_PHASE)
+    # When a tournament_id is known, date filtering is wrong for late office corrections:
+    # results entered after end_date would vanish from standings. Keep the date window
+    # only for legacy rows without a tournament link.
+    date_clause = "" if tournament_id is not None else "AND created_at >= ? AND created_at <= ?"
+    date_params: list[Any] = [] if tournament_id is not None else [start_date, end_ts]
     # Try exact match first
     cursor.execute(f"""
          SELECT id, player1_name, player2_name, player1_sets, player2_sets,
@@ -4595,10 +4600,9 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
           {phase_clause}
           AND player1_name IN ({placeholders})
           AND player2_name IN ({placeholders})
-          AND created_at >= ?
-          AND created_at <= ?
+          {date_clause}
         ORDER BY created_at
-    """, (*tournament_params, *phase_params, *player_names, *player_names, start_date, end_ts))
+    """, (*tournament_params, *phase_params, *player_names, *player_names, *date_params))
     exact_results = [dict(row) for row in cursor.fetchall()]
 
     # Fallback: surname-based matching (bracket stores "Kowalski" but match has "Jan Kowalski")
@@ -4633,10 +4637,9 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
                     {phase_clause}
           AND ({p1_cond})
           AND ({p2_cond})
-          AND created_at >= ?
-          AND created_at <= ?
+          {date_clause}
         ORDER BY created_at
-        """, (*tournament_params, *phase_params, *like_params, *like_params2, start_date, end_ts))
+        """, (*tournament_params, *phase_params, *like_params, *like_params2, *date_params))
     raw_results = cursor.fetchall()
     if not exact_results and not raw_results:
         return []
