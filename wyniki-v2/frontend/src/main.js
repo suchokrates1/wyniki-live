@@ -57,6 +57,13 @@ Alpine.data('tennisApp', () => ({
 
   _navigating: false,
 
+  /** Stable x-for keys — Alpine crashes on reorder when :key is undefined. */
+  forKey(...parts) {
+    return parts.map((part, index) => (
+      part == null || part === '' ? `_${index}` : String(part)
+    )).join('|');
+  },
+
   init() {
     // Restore language from URL param or localStorage
     const urlParams = new URLSearchParams(location.search);
