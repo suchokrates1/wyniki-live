@@ -31,35 +31,35 @@ Cel: `full --skip-android` zielony w &lt; 2 min. Android wave nie blokuje merge,
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| `deploy.py status` | OK 2026-07-26 | all tracks `1.0.0-dev.24` / `100024` |
-| `/health` + snapshot | OK | prod + e2e healthy; snapshot via `/api/snapshot` |
+| `deploy.py status` | OK 2026-07-26 | all tracks `1.0.0-dev.25` / `100025` |
+| `/health` + snapshot | OK | prod + e2e healthy; `prod_smoke.py` OK |
 | Public 6 języków | OK | browser; `verify:production` may show third-party pageerror |
-| Office login + SSE | OK | rehearsal path documented; smoke via E2E modules |
+| Office login + SSE | OK | E2E `01_bootstrap` + SSE reconnect module |
 | Admin login + office tab SSE | OK | same |
-| Umpire authorize → match flow | OK | PIN path E2E + MultiCourt wave |
-| Offline outbox tablet | OK | SyncStatus.OFFLINE + outbox flush |
-| DB backup + restore path known | OK | `wyniki-data-20260726T123251Z.tar.gz` |
-| Play API 36 review sent | OK | auto-review; confirm Publishing overview if pending |
-| Golden APK on production track | OK | `100024` completed on production |
+| Umpire authorize → match flow | OK | PIN path E2E + MultiCourt; grace dry-run on e2e |
+| Offline outbox tablet | OK | SyncStatus.OFFLINE + outbox backoff |
+| DB backup + restore path known | OK | `wyniki-data-20260726T152937Z.tar.gz` |
+| Play API 36 review sent | OK | auto-review on `100025` commit |
+| Golden APK on production track | OK | `100025` completed on production |
 
-**Pre-flight signed:** 2026-07-26 (operator + AI rehearsal).
+**Pre-flight signed:** 2026-07-26 (operator + AI rehearsal, post-upload `100025`).
 
 ## Golden versions (fill at freeze)
 
-- Android versionName / versionCode: `1.0.0-dev.24` / `100024` (all tracks aligned)
-- Backend git SHA on minipc: `62bea90`
-- Frontend build: Docker image from `62bea90` (2026-07-26)
-- DB backup: `/home/suchokrates1/wyniki-backups/wyniki/wyniki-data-20260726T123251Z.tar.gz`
-- Play review: auto-review active on commit (no `changesNotSentForReview`); confirm Publishing overview if any item still pending
-- Public UI: browser OK; `npm run verify:production` may report pageerror `reading 'after'` (likely third-party analytics) — API smoke OK
+- Android versionName / versionCode: `1.0.0-dev.25` / `100025` (all tracks aligned)
+- Backend git SHA on minipc: `4b784b4`
+- Frontend build: Docker image from `4b784b4` (2026-07-26)
+- DB backup: `/home/suchokrates1/wyniki-backups/wyniki/wyniki-data-20260726T152937Z.tar.gz`
+- Play review: auto-review active on commit; confirm Publishing overview if any item still pending
+- Public UI: browser OK; API smoke OK
+- Court-auth grace dry-run (e2e): `COURT_AUTH_GRACE_UNTIL=2020-01-01` → POST `/api/players` without token = **401**; PIN authorize + Bearer = **201** (restored default grace after)
 
 ## Keystore / signing ops
 
 Checklist: `~/.config/infrastructure/keystore-rotation-checklist.md`
 
-- Local signing props present in `android-tennis-referee/local.properties` (not committed)
+- Local signing props present; Play upload of `100025` succeeded on all tracks
 - Full password rotation / Vault rewrite: **świadomie odroczone** do sesji air-gapped (Play App Signing w użyciu)
-- Upload keystore file itself was not rotated; local password copies verified present for release builds
 
 ## Related
 

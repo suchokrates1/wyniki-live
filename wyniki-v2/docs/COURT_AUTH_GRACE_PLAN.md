@@ -45,3 +45,16 @@ COURT_AUTH_GRACE_UNTIL=2026-08-08T00:00:00+00:00
 ```
 
 Pydantic Settings mapuje pole `court_auth_grace_until` z env (ISO-8601).
+
+## Dry-run log (e2e, 2026-07-26)
+
+Na minipc, kontener `wyniki-tenis-e2e` z `COURT_AUTH_GRACE_UNTIL=2020-01-01T00:00:00+00:00`:
+
+| Krok | Wynik |
+|------|--------|
+| `POST /api/players` bez Bearer | **401** `Court authorization required` |
+| `POST /api/courts/{id}/authorize` PIN `0000` | token OK |
+| `POST /api/players` z Bearer | **201** player created |
+| Restore | `docker compose -f docker-compose.e2e.yml up -d` (domyślny grace do 2026-08-08) |
+
+Produkcja **nie** była przełączana — tylko e2e.
