@@ -52,6 +52,12 @@ export default async function run() {
       ],
     }),
   });
+  // Re-generate so KO slots get schedule rows / office "Dodaj wynik" affordances.
+  try {
+    await generateSchedule(token, tournamentId);
+  } catch {
+    /* already generated — ignore */
+  }
   console.log('  Large seed: 3 groups + KO bracket');
 
   const slot = await resolveOfficeSlot(tournamentName);
@@ -88,7 +94,7 @@ export default async function run() {
     const planning = new OfficePlanningPage(page);
     await planning.openKnockoutTab();
     const addKo = page.getByRole('button', { name: /Dodaj wynik/i }).first();
-    if (await addKo.isVisible({ timeout: 4000 }).catch(() => false)) {
+    if (await addKo.isVisible({ timeout: 10000 }).catch(() => false)) {
       await addKo.click();
       await page.waitForFunction(
         () => document.body.innerText.includes('Zapisz wynik'),
@@ -111,20 +117,40 @@ export default async function run() {
         }
       }
       await koModal.getByRole('button', { name: 'Zapisz wynik' }).click();
+      let modalClosed = false;
       try {
         await page.waitForFunction(
           () => !document.body.innerText.includes('Zapisz wynik'),
           undefined,
-          { timeout: 12000 }
+          { timeout: 15000 }
         );
-        console.log('  Office: knockout result from slot saved');
+        modalClosed = true;
       } catch {
         await page.keyboard.press('Escape');
         await page.getByRole('button', { name: /Anuluj|Zamknij/i }).first().click().catch(() => {});
-        console.log('  Office: KO modal closed after save attempt');
+      }
+      await page.waitForTimeout(400);
+      const body = await page.evaluate(() => document.body.innerText);
+      const scoreHit = /6[\s:.-]*2|6[\s:.-]*3/.test(body);
+      const playerHit = names.some((n) => body.includes((n.split(' ').pop() || '').slice(0, 8)));
+      // Harder than silent skip: KO slot must show seeded players even if save modal is flaky.
+      if (!playerHit) {
+        throw new Error('KO tab missing seeded player evidence after save attempt');
+      }
+      if (modalClosed || scoreHit) {
+        console.log(
+          `  Office: knockout result from slot saved (modalClosed=${modalClosed}, scoreHit=${scoreHit})`
+        );
+      } else {
+        console.log('  Office: KO modal flaky after save — bracket players still visible (asserted)');
       }
     } else {
-      console.log('  Office: no ready KO add button (slot may need schedule link)');
+      // Still require KO tab content after seed (harder than silent skip).
+      const hasKo = await planning.hasKnockoutGenerated();
+      if (!hasKo) {
+        throw new Error('KO bracket not visible in office after seed');
+      }
+      console.log('  Office: KO tab ready but no "Dodaj wynik" yet (schedule link pending)');
     }
 
     // Prefer API delete for schedule (UI may still have open overlays).

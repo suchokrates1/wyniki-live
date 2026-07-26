@@ -29,3 +29,5 @@ Nowe funkcje tylko w modułach; fasada nie rośnie poza re-exportami.
 - [x] Mapa odpowiedzialności spisana (T0)
 - [x] Fizyczny split + fasada (T2)
 - [x] Smoke importów / testy lifecycle (T2)
+- [x] Cienkie serwisy lifecycle: `wyniki/services/tournament_lifecycle.py` + `test_tournament_lifecycle_service.py` (Faza C)
+- [x] Office auto-schedule FE wydzielony: `frontend/src/modules/office/autoScheduleView.js`

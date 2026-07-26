@@ -117,12 +117,22 @@ If live scoring breaks during tournament operations:
 
 ## Android Rehearsal
 
-With emulator running:
+With emulator running (prefer Eclipse Adoptium JDK 17):
 
 ```powershell
 Set-Location "c:\Users\sucho\Vest Tennis\android-tennis-referee"
-$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
+# Fallback: Android Studio JBR if Adoptium missing
+# $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
 .\gradlew.bat :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=pl.vestmedia.tennisreferee.e2e.UmpireTournamentE2ETest#tournamentSimulation_coversUmpireFlowsServerSyncHistoryAndCleanup
+```
+
+PIN path (court → PIN → PlayerSelection):
+
+```powershell
+.\gradlew.bat :app:connectedDebugAndroidTest `
+  "-Pandroid.testInstrumentationRunnerArguments.class=pl.vestmedia.tennisreferee.e2e.CourtPinPathE2ETest" `
+  "-Pandroid.testInstrumentationRunnerArguments.e2e.baseUrl=http://192.168.31.5:18087"
 ```
 
 ## Pre-event checklist (T−7 … T−0)
@@ -152,10 +162,13 @@ Print / tick before each tournament weekend:
 
 ## Current Freeze Baseline
 
-- Android golden: `1.0.0-dev.24` (`100024`) on beta+production; `100023` on internal+alpha
-- Backend: `2d77867` on minipc
+- Android golden: `1.0.0-dev.24` (`100024`) on **all** tracks (internal/alpha/beta/production)
+- Backend: `62bea90` on minipc
 - Scoring / umpire JSON contract: **frozen** w tygodniu T4 (tylko świadome hotfixy)
 - Checklist: `docs/ARCHITECTURE_FREEZE_PRE_EVENT.md`
+- Quality gate: `docs/QUALITY_GATE.md` — po większym PR zawsze `run.py full --skip-android`
+- Pre-event week: `docs/PRE_EVENT_FREEZE.md`
+- Court auth grace: `docs/COURT_AUTH_GRACE_PLAN.md`
 
 ## Local E2E Tournament Test
 
@@ -200,10 +213,13 @@ python scripts/e2e_tournament/run.py down
 
 ```powershell
 # e2e on minipc :18087 — emulator uses LAN IP (not 10.0.2.2 unless you ssh -L)
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
 $env:E2E_BASE_URL = 'http://192.168.31.5:18087'
 $env:E2E_ADMIN_PASSWORD = 'e2e-admin'
 Set-Location "c:\Users\sucho\Vest Tennis\android-tennis-referee"
-.\scripts\run_parallel_courts.ps1 -MaxCourts 4
+.\scripts\run_parallel_courts.ps1 -MaxCourts 4 `
+  -BaseUrl 'http://192.168.31.5:18087' `
+  -HostBaseUrl 'http://192.168.31.5:18087'
 ```
 
 Or via Python orchestrator (office + android + public assert):
@@ -216,4 +232,20 @@ python scripts/e2e_tournament/run.py full
 python scripts/e2e_tournament/run.py full --skip-android
 ```
 
-Requires ≥1 AVD. With one device, courts run sequentially; with 2–4 devices, parallel. Tests: `app/src/androidTest/.../e2e/`.
+Requires ≥1 AVD. With one device, courts run sequentially; with 2–4 devices, parallel.
+After Android wave, orchestrator asserts snapshot/artifacts contain finished `E2E-*` matches.
+Tests: `app/src/androidTest/.../e2e/` (`MultiCourtUmpireE2ETest`, `CourtPinPathE2ETest`).
+
+### Observability alerts (minipc)
+
+Daily `prod_ops_check.sh` now also fails on:
+
+- unhealthy `/health`
+- Docker volume / backup disk low free space (&lt; 2 GiB)
+- recent umpire sync errors in container logs (best-effort)
+
+Manual:
+
+```powershell
+ssh minipc "/home/suchokrates1/count/wyniki-v2/scripts/prod_ops_check.sh"
+```

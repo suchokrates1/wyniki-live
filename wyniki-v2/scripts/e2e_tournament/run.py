@@ -17,8 +17,10 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -116,7 +118,34 @@ def cmd_office(module_filter: str | None = None) -> bool:
     return result.returncode == 0
 
 
-def cmd_public_assert() -> bool:
+def _admin_token() -> str | None:
+    password = os.environ.get("E2E_ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSWORD") or "e2e-admin"
+    try:
+        req = urllib.request.Request(
+            f"{BASE_URL}/admin/api/auth",
+            data=json.dumps({"password": password}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            token = data.get("token") or data.get("access_token")
+            return str(token) if token else None
+    except Exception as exc:
+        print(f"[public] admin auth failed: {exc}", file=sys.stderr)
+        return None
+
+
+def _http_json_auth(url: str, token: str, timeout: float = 10.0) -> dict | list | None:
+    try:
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode())
+    except Exception:
+        return None
+
+
+def cmd_public_assert(*, e2e_marker: str | None = None) -> bool:
     """Assert public APIs look alive after office/android work."""
     print("[public] Asserting /health + /api/snapshot ...")
     health = _http_json(f"{BASE_URL}/health")
@@ -135,6 +164,51 @@ def cmd_public_assert() -> bool:
         print("[public] FAIL: could not fetch snapshot/courts", file=sys.stderr)
         return False
 
+    if e2e_marker:
+        token = _admin_token()
+        if not token:
+            print("[public] FAIL: could not obtain admin token for E2E artifacts assert", file=sys.stderr)
+            return False
+        encoded = urllib.parse.quote(e2e_marker)
+        artifacts = _http_json_auth(f"{BASE_URL}/admin/api/e2e/artifacts?marker={encoded}", token)
+        if not isinstance(artifacts, dict):
+            print(f"[public] FAIL: artifacts missing for marker={e2e_marker}", file=sys.stderr)
+            return False
+        matches = artifacts.get("matches") or []
+        finished = [
+            m for m in matches
+            if isinstance(m, dict) and str(m.get("status") or "").lower() == "finished"
+        ]
+        if not finished:
+            print(
+                f"[public] FAIL: no finished matches for marker={e2e_marker} "
+                f"(matches={len(matches)})",
+                file=sys.stderr,
+            )
+            return False
+        # Snapshot / active tournaments should still mention the marker while fixture lives.
+        blob = json.dumps(snapshot) + json.dumps(_http_json(f"{BASE_URL}/api/tournaments/active") or {})
+        if e2e_marker.split("-parallel")[0][:12] not in blob and e2e_marker not in blob:
+            # Soft: artifacts are authoritative; warn if public surfaces lag.
+            print(f"[public] WARN: marker not in snapshot/active text (artifacts OK: {len(finished)} finished)")
+        else:
+            print(f"[public] E2E marker visible; finished matches={len(finished)}")
+        # Cleanup shared Android fixture after assert.
+        try:
+            req = urllib.request.Request(
+                f"{BASE_URL}/admin/api/e2e/cleanup",
+                data=json.dumps({"marker": e2e_marker}).encode(),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                },
+                method="POST",
+            )
+            urllib.request.urlopen(req, timeout=30).read()
+            print(f"[public] cleaned marker={e2e_marker}")
+        except Exception as exc:
+            print(f"[public] WARN: cleanup failed: {exc}", file=sys.stderr)
+
     print("[public] OK")
     return True
 
@@ -150,7 +224,7 @@ def _adb_has_device() -> bool:
     return False
 
 
-def cmd_android(max_courts: int = 4) -> bool:
+def cmd_android(max_courts: int = 4, *, skip_cleanup: bool = False, marker_out: Path | None = None) -> bool:
     """Run Android multi-court wave via PowerShell orchestrator."""
     if not ANDROID_SCRIPT.exists():
         print(f"[android] ERROR: script not found: {ANDROID_SCRIPT}", file=sys.stderr)
@@ -179,6 +253,10 @@ def cmd_android(max_courts: int = 4) -> bool:
         "-MaxCourts",
         str(max_courts),
     ]
+    if skip_cleanup:
+        cmd.append("-SkipCleanup")
+    if marker_out is not None:
+        cmd += ["-MarkerOutFile", str(marker_out)]
     env = {**os.environ, "E2E_BASE_URL": host_base}
     result = _run(cmd, check=False, cwd=str(ANDROID_ROOT), env=env)
     return result.returncode == 0
@@ -188,6 +266,8 @@ def cmd_full(*, skip_android: bool = False, max_courts: int = 4) -> bool:
     """Full cycle: up → office → android (if devices) → public assert → timing."""
     t0 = time.time()
     results: dict[str, bool] = {}
+    e2e_marker: str | None = None
+    marker_file = Path(tempfile.gettempdir()) / "wyniki-e2e-android-marker.txt"
 
     if not cmd_up():
         print("[full] ABORT: container/health failed.")
@@ -203,9 +283,17 @@ def cmd_full(*, skip_android: bool = False, max_courts: int = 4) -> bool:
         print("[full] Android: SKIP (no adb device) — set devices and re-run `android` / `full`")
         results["android"] = False
     else:
-        results["android"] = cmd_android(max_courts=max_courts)
+        if marker_file.exists():
+            marker_file.unlink(missing_ok=True)
+        results["android"] = cmd_android(
+            max_courts=max_courts,
+            skip_cleanup=True,
+            marker_out=marker_file,
+        )
+        if marker_file.exists():
+            e2e_marker = marker_file.read_text(encoding="utf-8").strip() or None
 
-    results["public"] = cmd_public_assert()
+    results["public"] = cmd_public_assert(e2e_marker=e2e_marker if results.get("android") else None)
 
     elapsed = time.time() - t0
     print(f"\n{'='*50}")
