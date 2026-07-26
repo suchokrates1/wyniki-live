@@ -125,7 +125,33 @@ $env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
 .\gradlew.bat :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=pl.vestmedia.tennisreferee.e2e.UmpireTournamentE2ETest#tournamentSimulation_coversUmpireFlowsServerSyncHistoryAndCleanup
 ```
 
+## Pre-event checklist (T−7 … T−0)
+
+Print / tick before each tournament weekend:
+
+### Dzień −7 / −3
+- [ ] `git status` clean on laptop + `ssh minipc "cd ~/count/wyniki-v2 && git log -1 --oneline"` matches intended revision
+- [ ] Backend deploy: `python deploy.py backend` then `curl -fsS https://score.vestmedia.pl/health`
+- [ ] Public smoke (6 języków): `cd wyniki-v2/frontend && npm run verify:production`
+- [ ] Office: login slotu, SSE `live` (nie ciągły 12s poll), wpis wyniku grupowego → refresh bez F5
+- [ ] Admin: login, zakładka Biuro turnieju odświeża się po mutacji (SSE), brak spamu API gdy inna zakładka
+- [ ] Umpire: authorize kortu → create/update/finish match; po reconnect outbox flush (offline→online)
+- [ ] APK/AAB na trackach: `internal` + `alpha` po zmianach Androida; `beta`/`production` po teście tabletu
+- [ ] Play Console: API 36 / targetSdk — status „Send for review” jeśli `changesNotSentForReview`
+
+### Dzień −1
+- [ ] Backup DB: `python .\scripts\prod_backup.py` (sprawdź ścieżkę archiwum na minipc)
+- [ ] Dry-run restore udokumentowany (komenda z sekcji Rollback, **bez** `--yes` na produkcji — tylko weryfikacja pliku)
+- [ ] `python deploy.py status` — wersje APK vs oczekiwane `versionCode`
+- [ ] Zero otwartych P0: scoring / standings / auth
+
+### Dzień 0 (start)
+- [ ] Ponowny `/health` + snapshot
+- [ ] Szybki smoke office + jeden kort sędziowski
+- [ ] Zamrożenie: zero refaktoru struktury / migracji schematu; tylko hotfixy
+
 ## Current Freeze Baseline
 
-- Android: `35e1911`
-- Backend: `ca3cb3e`
+- Android: bump lokalny outbox (`1.0.0-dev.23`) — zaktualizuj po pushu
+- Backend: zaktualizuj po deployu T0–T2
+- Scoring / umpire JSON contract: **frozen** w tygodniu T4 (tylko świadome hotfixy)

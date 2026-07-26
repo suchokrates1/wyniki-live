@@ -1,8 +1,9 @@
 """Admin API routes for tournaments and players management."""
 import json
+import queue
 import re
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request, stream_with_context
 from pathlib import Path
 from typing import Dict, Any
 from uuid import uuid4
@@ -67,7 +68,7 @@ from ..database import (
     _is_knockout_placeholder_name,
 )
 from ..config import logger, settings
-from ..services.office_event_broker import emit_office_invalidation
+from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 
 blueprint = Blueprint('admin_tournaments', __name__, url_prefix='/admin/api/tournaments')
 
@@ -1493,6 +1494,38 @@ def get_tournament_office_dashboard(tournament_id: int):
     if error:
         return error
     return _json_no_cache(_build_office_dashboard(tournament_id))
+
+
+@blueprint.route('/<int:tournament_id>/office/stream', methods=['GET'])
+def admin_tournament_office_stream(tournament_id: int):
+    """SSE invalidation stream for the admin office tab (same broker as office UI)."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+
+    def generate():
+        listener = office_event_broker.listen(tournament_id)
+        try:
+            connected = json.dumps({"tournament_id": tournament_id})
+            yield f"event: connected\ndata: {connected}\n\n"
+            while True:
+                try:
+                    event = listener.get(timeout=30)
+                    yield f"event: office_invalidate\ndata: {json.dumps(event)}\n\n"
+                except queue.Empty:
+                    yield ": heartbeat\n\n"
+        finally:
+            office_event_broker.discard(tournament_id, listener)
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @blueprint.route('/<int:tournament_id>/office/group-matches', methods=['POST'])

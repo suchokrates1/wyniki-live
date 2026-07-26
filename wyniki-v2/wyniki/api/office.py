@@ -5,10 +5,13 @@ import json
 import queue
 
 from flask import Blueprint, Response, jsonify, request, stream_with_context
-from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash
 
-from ..config import settings
+from ..services.api_auth import (
+    issue_office_token,
+    office_stream_cookie_name,
+    require_office_access,
+)
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 from ..database import (
     advance_knockout,
@@ -67,16 +70,11 @@ from .admin_tournaments import (
 )
 
 blueprint = Blueprint('office', __name__, url_prefix='/api/office')
-_STREAM_COOKIE_PREFIX = "office_stream_"
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _NON_MUTATING_ENDPOINTS = {
     "office_auth",
     "office_autoschedule_generate",
 }
-
-
-def _token_serializer() -> URLSafeTimedSerializer:
-    return URLSafeTimedSerializer(settings.secret_key, salt='office-access')
 
 
 def _office_slot_tournaments() -> list[dict]:
@@ -113,18 +111,10 @@ def _resolve_office_tournament_slot(slot: int):
     return tournament, None
 
 
-def _issue_office_token(slot: int, tournament_id: int) -> str:
-    return _token_serializer().dumps({"slot": int(slot), "tournament_id": int(tournament_id)})
-
-
-def _office_stream_cookie_name(slot: int) -> str:
-    return f"{_STREAM_COOKIE_PREFIX}{int(slot)}"
-
-
 def _set_office_stream_cookie(response, slot: int, tournament_id: int):
     response.set_cookie(
-        _office_stream_cookie_name(slot),
-        _issue_office_token(slot, tournament_id),
+        office_stream_cookie_name(slot),
+        issue_office_token(slot, tournament_id),
         max_age=60 * 60 * 24,
         httponly=True,
         secure=True,
@@ -138,29 +128,9 @@ def _require_office_access(slot: int):
     tournament, error = _resolve_office_tournament_slot(slot)
     if error:
         return None, error
-
-    auth_header = (request.headers.get('Authorization') or '').strip()
-    if auth_header.lower().startswith('bearer '):
-        token = auth_header[7:].strip()
-    else:
-        token = (
-            request.headers.get('X-Office-Token')
-            or request.cookies.get(_office_stream_cookie_name(slot))
-            or request.args.get('token')
-            or ''
-        ).strip()
-    if not token:
-        return None, (jsonify({"error": "Office authorization required"}), 401)
-
-    try:
-        payload = _token_serializer().loads(token, max_age=60 * 60 * 24)
-    except SignatureExpired:
-        return None, (jsonify({"error": "Office session expired"}), 401)
-    except BadSignature:
-        return None, (jsonify({"error": "Invalid office session"}), 401)
-
-    if int(payload.get('slot') or 0) != int(slot) or int(payload.get('tournament_id') or 0) != int(tournament['id']):
-        return None, (jsonify({"error": "Office session no longer matches active tournament"}), 401)
+    auth_error = require_office_access(slot, int(tournament["id"]))
+    if auth_error:
+        return None, auth_error
     return tournament, None
 
 
@@ -212,7 +182,7 @@ def office_auth(slot: int):
         return jsonify({"error": "Invalid office password"}), 403
 
     response = _json_no_cache({
-        "token": _issue_office_token(slot, int(tournament['id'])),
+        "token": issue_office_token(slot, int(tournament['id'])),
         "slot": slot,
         "tournament": _office_tournament_payload(tournament, slot),
         "dashboard": _build_office_dashboard(int(tournament['id'])),

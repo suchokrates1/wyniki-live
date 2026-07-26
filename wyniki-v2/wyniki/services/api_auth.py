@@ -1,4 +1,14 @@
-"""Signed sessions and rollout guards for court and administrator APIs."""
+"""Signed sessions and rollout guards for court, administrator, and office APIs.
+
+Salt conventions (never mix):
+- court-session
+- admin-access
+- office-access
+
+HTTP status convention:
+- 401: missing / expired / invalid signature
+- 403: valid token but wrong binding (court/slot/tournament) or wrong password
+"""
 from __future__ import annotations
 
 from hmac import compare_digest
@@ -8,6 +18,9 @@ from flask import jsonify, request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from ..config import logger, settings
+
+OFFICE_STREAM_COOKIE_PREFIX = "office_stream_"
+_OFFICE_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
 
 
 def _serializer(salt: str) -> URLSafeTimedSerializer:
@@ -22,6 +35,16 @@ def issue_admin_token() -> str:
     return _serializer("admin-access").dumps({"role": "admin"})
 
 
+def issue_office_token(slot: int, tournament_id: int) -> str:
+    return _serializer("office-access").dumps(
+        {"slot": int(slot), "tournament_id": int(tournament_id)}
+    )
+
+
+def office_stream_cookie_name(slot: int) -> str:
+    return f"{OFFICE_STREAM_COOKIE_PREFIX}{int(slot)}"
+
+
 def court_session_expires_at() -> str:
     return (datetime.now(timezone.utc) + timedelta(hours=settings.court_session_ttl_hours)).isoformat()
 
@@ -29,6 +52,18 @@ def court_session_expires_at() -> str:
 def _bearer_token() -> str:
     header = (request.headers.get("Authorization") or "").strip()
     return header[7:].strip() if header.lower().startswith("bearer ") else ""
+
+
+def _office_token_from_request(slot: int) -> str:
+    bearer = _bearer_token()
+    if bearer:
+        return bearer
+    return (
+        request.headers.get("X-Office-Token")
+        or request.cookies.get(office_stream_cookie_name(slot))
+        or request.args.get("token")
+        or ""
+    ).strip()
 
 
 def _in_court_grace_period() -> bool:
@@ -89,4 +124,24 @@ def require_admin_access() -> tuple | None:
         return jsonify({"error": "Invalid administrator session"}), 401
     if payload.get("role") != "admin":
         return jsonify({"error": "Invalid administrator session"}), 401
+    return None
+
+
+def require_office_access(slot: int, tournament_id: int) -> tuple | None:
+    """Validate an office token bound to slot + tournament_id."""
+    token = _office_token_from_request(slot)
+    if not token:
+        return jsonify({"error": "Office authorization required"}), 401
+    try:
+        payload = _serializer("office-access").loads(
+            token, max_age=_OFFICE_SESSION_MAX_AGE_SECONDS
+        )
+    except SignatureExpired:
+        return jsonify({"error": "Office session expired"}), 401
+    except BadSignature:
+        return jsonify({"error": "Invalid office session"}), 401
+    if int(payload.get("slot") or 0) != int(slot) or int(payload.get("tournament_id") or 0) != int(
+        tournament_id
+    ):
+        return jsonify({"error": "Office session no longer matches active tournament"}), 403
     return None
