@@ -8,6 +8,7 @@
 import { readdirSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { adminLogin, cleanupAllE2E } from './fixtures.js';
 
 const MODULES_DIR = resolve(import.meta.dirname, 'modules');
 
@@ -38,6 +39,14 @@ if (toRun.length === 0) {
 console.log(`\n=== E2E Tournament Runner ===`);
 console.log(`Base URL: ${process.env.E2E_BASE_URL || 'http://localhost:18087'}`);
 console.log(`Modules: ${toRun.length}\n`);
+
+try {
+  const token = await adminLogin();
+  const purged = await cleanupAllE2E(token);
+  console.log(`Purged leftover E2E artifacts: ${JSON.stringify(purged)}\n`);
+} catch (err) {
+  console.warn(`Warning: pre-run E2E purge failed: ${err.message}\n`);
+}
 
 const results = [];
 const t0 = Date.now();
