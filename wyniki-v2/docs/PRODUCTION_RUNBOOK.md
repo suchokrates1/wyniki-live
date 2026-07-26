@@ -196,12 +196,24 @@ python scripts/e2e_tournament/run.py down
 - `E2E_ADMIN_PASSWORD` defaults to `e2e-admin` (never reuse prod `ADMIN_PASSWORD`)
 - Container: `wyniki-tenis-e2e`, volume: `wyniki_e2e_data`
 
-### Android 4-court wave (optional)
+### Android 4-court wave
 
 ```powershell
+# e2e on minipc :18087 — emulator uses LAN IP (not 10.0.2.2 unless you ssh -L)
+$env:E2E_BASE_URL = 'http://192.168.31.5:18087'
+$env:E2E_ADMIN_PASSWORD = 'e2e-admin'
 Set-Location "c:\Users\sucho\Vest Tennis\android-tennis-referee"
-$env:E2E_BASE_URL = 'http://10.0.2.2:18087'   # emulator → host/minipc port-forward
-.\scripts\run_parallel_courts.ps1
+.\scripts\run_parallel_courts.ps1 -MaxCourts 4
 ```
 
-Requires up to 4 AVDs (`emulator-5554` …). Orchestrator degrades to fewer devices when not all are connected. Tests live under `app/src/androidTest/.../e2e/` (`E2EBackendClient`, `UmpireRobot`, `MultiCourtUmpireE2ETest`).
+Or via Python orchestrator (office + android + public assert):
+
+```powershell
+$env:E2E_BASE_URL = 'http://192.168.31.5:18087'
+$env:E2E_ADMIN_PASSWORD = 'e2e-admin'
+python scripts/e2e_tournament/run.py full
+# office-only / no devices:
+python scripts/e2e_tournament/run.py full --skip-android
+```
+
+Requires ≥1 AVD. With one device, courts run sequentially; with 2–4 devices, parallel. Tests: `app/src/androidTest/.../e2e/`.
