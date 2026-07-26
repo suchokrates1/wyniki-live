@@ -14,7 +14,8 @@ services:
       - FLASK_ENV=${FLASK_ENV:-production}
       - DEBUG=false
       - DATABASE_PATH=/data/wyniki.sqlite3
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-e2e-admin}
+      # Do not interpolate host .env ADMIN_PASSWORD (prod secret).
+      - ADMIN_PASSWORD=${E2E_ADMIN_PASSWORD:-e2e-admin}
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
     restart: "no"
