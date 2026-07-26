@@ -1,0 +1,49 @@
+name: E2E office smoke (optional remote)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly 03:15 UTC — soft gate; does not block PRs
+    - cron: '15 3 * * *'
+
+concurrency:
+  group: e2e-smoke
+  cancel-in-progress: true
+
+jobs:
+  office-bootstrap:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: wyniki-v2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: wyniki-v2/frontend/package-lock.json
+
+      - name: Install frontend deps + Chromium
+        working-directory: wyniki-v2/frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Health + office bootstrap against remote e2e
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [ -z "$E2E_BASE_URL" ]; then
+            echo "E2E_BASE_URL secret not set — skipping remote smoke"
+            exit 0
+          fi
+          python scripts/e2e_tournament/run.py health
+          python scripts/e2e_tournament/run.py office --module 01_bootstrap

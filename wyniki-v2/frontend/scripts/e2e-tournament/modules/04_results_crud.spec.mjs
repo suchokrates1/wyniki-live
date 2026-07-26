@@ -5,12 +5,19 @@ import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, saveGroups,
   generateSchedule, cleanup, samplePlayers, resolveOfficeSlot,
-  OFFICE_PASSWORD, marker,
+  OFFICE_PASSWORD, marker, apiUrl, adminHeaders,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficeResultsPage } from '../pages/officeResults.js';
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:18087';
+
+async function fetchJson(url, options = {}) {
+  const resp = await fetch(url, options);
+  const body = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`${options.method || 'GET'} ${url} → ${resp.status}: ${body.error || resp.statusText}`);
+  return body;
+}
 
 export default async function run() {
   const token = await adminLogin();
@@ -71,6 +78,17 @@ export default async function run() {
     console.log('  Office: result edited');
   } finally {
     await browser.close();
+  }
+
+  // History delete via admin API (global latest) — allowed surface for cleanup rehearsal.
+  try {
+    const deleted = await fetchJson(apiUrl('/admin/api/history/latest'), {
+      method: 'DELETE',
+      headers: adminHeaders(token),
+    });
+    console.log(`  Admin: latest history delete → ${JSON.stringify(deleted).slice(0, 120)}`);
+  } catch (err) {
+    console.log(`  Admin: history delete skipped (${err.message})`);
   }
 
   await cleanup(token);

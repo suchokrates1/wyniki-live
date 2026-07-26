@@ -2,13 +2,15 @@
 
 ## Two Weeks Before
 
-- Confirm architecture freeze is in effect.
+- Confirm architecture freeze is in effect (`docs/ARCHITECTURE_FREEZE_PRE_EVENT.md`, `docs/PRE_EVENT_FREEZE.md`).
 - Confirm backend baseline commit on production matches intended release.
 - Confirm Android release build installed on all umpire devices.
 - Verify all courts, PINs, tournaments, and overlays are configured.
 - Confirm backup disk on `minipc` is mounted and writable.
 - Run backend regression suite locally.
-- Run Android emulator E2E against production.
+- Run quality gate: `python scripts/e2e_tournament/run.py full --skip-android` (see `docs/QUALITY_GATE.md`).
+- Review court-auth grace plan (`docs/COURT_AUTH_GRACE_PLAN.md`).
+- Run Android emulator E2E against e2e host (PIN path + parallel courts).
 
 ## One Week Before
 
