@@ -77,18 +77,31 @@ export async function createTournament(token, { name, startDate, endDate, courts
   };
 }
 
-export async function resolveOfficeSlot(tournamentName, maxSlots = 12) {
+export async function resolveOfficeSlot(tournamentName, maxSlots = 80) {
+  let misses = 0;
   for (let slot = 1; slot <= maxSlots; slot += 1) {
     try {
       const meta = await fetchJson(apiUrl(`/api/office/${slot}/meta`));
+      misses = 0;
       if ((meta?.tournament?.name || '') === tournamentName) {
         return slot;
       }
     } catch {
-      // empty / unavailable slot
+      misses += 1;
+      // A few empty trailing slots means we've passed the end of the office list.
+      if (misses >= 3 && slot > 3) break;
     }
   }
   throw new Error(`Office slot not found for tournament "${tournamentName}"`);
+}
+
+/** Wipe leftover E2E-* tournaments that previous failed runs left behind. */
+export async function cleanupAllE2E(token) {
+  return fetchJson(apiUrl('/admin/api/e2e/cleanup'), {
+    method: 'POST',
+    headers: adminHeaders(token),
+    body: JSON.stringify({ marker: 'E2E-' }),
+  });
 }
 
 export async function addPlayers(token, tournamentId, players) {
@@ -120,9 +133,11 @@ export async function saveGroups(token, tournamentId, groups) {
 }
 
 export async function fetchGroups(token, tournamentId) {
-  return fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/bracket/groups`), {
+  const body = await fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/bracket/groups`), {
     headers: adminHeaders(token),
   });
+  // API returns a bare array (not { groups: [...] }).
+  return Array.isArray(body) ? body : (body.groups || []);
 }
 
 export async function generateSchedule(token, tournamentId) {

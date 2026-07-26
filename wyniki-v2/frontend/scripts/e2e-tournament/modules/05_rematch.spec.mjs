@@ -25,8 +25,8 @@ export default async function run() {
   await saveGroups(token, tournamentId, [{ name: 'B1 — Grupa A', players: playerIds }]);
   await generateSchedule(token, tournamentId);
 
-  const groupsResp = await fetchGroups(token, tournamentId);
-  const groupIds = (groupsResp.groups || []).map((g) => g.id).filter(Boolean);
+  const groups = await fetchGroups(token, tournamentId);
+  const groupIds = groups.map((g) => g.id).filter(Boolean);
   console.log(`  Group IDs: ${groupIds}`);
 
   if (groupIds.length === 0) {

@@ -36,10 +36,17 @@ export default async function run() {
 
     const resultsPage = new OfficeResultsPage(page);
     await resultsPage.openAddResult();
+    await resultsPage.ensureGroupPlayersSelected();
     await resultsPage.enterScore([6, 6], [3, 2]);
     await resultsPage.submitResult();
     console.log('  Office: group result saved');
 
+    // History tab is usually already active after save; wait for card then navigate if needed.
+    await page.waitForFunction(
+      (m) => document.body.innerText.includes(m),
+      marker(),
+      { timeout: 10000 }
+    );
     await resultsPage.navigateToHistory();
     const bodyAfterAdd = await resultsPage.getHistoryPlayerSnippet();
     if (!bodyAfterAdd.includes(marker())) {
@@ -48,17 +55,20 @@ export default async function run() {
     console.log('  Office: result visible in history');
 
     await resultsPage.openEditFirst();
-    const editInputs = page.locator('.office-modal input[type="number"]');
-    if (await editInputs.count() >= 2) {
-      await editInputs.nth(0).fill('7');
-      await editInputs.nth(1).fill('5');
-      const saveBtn = page.getByRole('button', { name: /Zapisz|Zatwierdź|Popraw/i }).last();
-      if (await saveBtn.isVisible().catch(() => false)) {
-        await saveBtn.click();
-        await page.waitForTimeout(1000);
-      }
-      console.log('  Office: result edit attempted');
-    }
+    const editModal = page.locator('.office-modal').filter({ hasText: 'Zapisz korektę' });
+    await editModal.waitFor({ state: 'visible', timeout: 8000 });
+    const editInputs = editModal.locator('input[type="number"]:visible');
+    await editInputs.nth(0).fill('7');
+    await editInputs.nth(0).dispatchEvent('input');
+    await editInputs.nth(1).fill('5');
+    await editInputs.nth(1).dispatchEvent('input');
+    await editModal.getByRole('button', { name: 'Zapisz korektę' }).click();
+    await page.waitForFunction(
+      () => !document.body.innerText.includes('Zapisz korektę'),
+      undefined,
+      { timeout: 10000 }
+    );
+    console.log('  Office: result edited');
   } finally {
     await browser.close();
   }
