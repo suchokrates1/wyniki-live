@@ -1,0 +1,648 @@
+import {
+  inferMixedPlayerBands,
+  mixedCategoryDisplayLabel,
+  planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
+  planningDivisionKey as sharedPlanningDivisionKey,
+  planningResolveStoredGroupName as sharedPlanningResolveStoredGroupName,
+  planningStoredGroupNames as sharedPlanningStoredGroupNames,
+} from '../../shared/categories.js';
+
+export function createOfficePlayersView() {
+  return {
+    async loadOfficePlanningData() {
+      if (!this.token) return;
+      this.planningLoading = true;
+      try {
+        const response = await fetch(`/api/office/${this.slot}/planning`, {
+          headers: this.officeHeaders(),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(payload.error || this.ot('errors.planningFailed'));
+        }
+        this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
+        this.tournamentCategories = Array.isArray(payload.tournament_categories) ? payload.tournament_categories : [];
+        this.planningMixedCategories = inferMixedPlayerBands(this.tournamentCategories);
+        this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
+        this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
+        this.planningCourts = Array.isArray(payload.courts) ? payload.courts : [];
+        if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.syncPlanningGroupAssignments();
+        this.ensurePlanningDefaults();
+      } catch (error) {
+        console.error('Failed to load office planning data:', error);
+        this.showToast(error.message || this.ot('toast.planningError'), 'error');
+      } finally {
+        this.planningLoading = false;
+      }
+    },
+
+    ensurePlanningDefaults() {
+      const divisions = this.planningDivisions();
+      if (!divisions.find(division => String(division.key) === String(this.planningSelectedDivision))) {
+        this.planningSelectedDivision = divisions[0]?.key || '';
+        this.planningSelectedCategoryId = divisions[0]?.id ?? null;
+      }
+      if (this.planningUsesTournamentCategories() && this.planningSelectedDivision) {
+        this.planningSelectedCategoryId = Number(this.planningSelectedDivision);
+      }
+      this.categorySetupOpen = !this.tournamentCategories.length;
+      const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
+      if (selectedGroups.length) {
+        this.planningGroupCount = Math.max(1, selectedGroups.length);
+      } else {
+        this.planningGroupCount = 1;
+      }
+      this.planningNewSchedule.day_date = this.planningNewSchedule.day_date || this.tournamentMeta?.start_date || this.dashboard?.tournament?.start_date || '';
+      this.planningNewSchedule.court_id = this.planningNewSchedule.court_id || this.planningCourts[0]?.kort_id || '';
+      const days = this.planningTournamentDays();
+      if (!this.autoDayDate || !days.includes(this.autoDayDate)) {
+        this.autoDayDate = days[0] || this.autoDayDate || '';
+      }
+      this.planningStep1Collapsed = this.planningGroupsComplete();
+    },
+
+    planningGroupsComplete() {
+      const players = this.planningPlayers || [];
+      if (!players.length || !(this.planningGroups || []).length) return false;
+      return players.every(player => this.planningGroupAssignments[player.id]);
+    },
+
+    planningDivisionCountLine(division) {
+      return `${this.ot('planning.playersCount', { count: division.count })} · ${this.ot('planning.inGroups', { count: this.planningDivisionAssignedCount(division.key) })}`;
+    },
+
+    planningStep1CompleteLine() {
+      return this.ot('planning.step1Complete', { count: this.planningGroups.length });
+    },
+
+    syncPlanningGroupAssignments() {
+      const assignments = {};
+      for (const group of this.planningGroups || []) {
+        for (const player of group.players || []) {
+          if (player.player_id) assignments[player.player_id] = group.name;
+        }
+      }
+      this.planningGroupAssignments = assignments;
+    },
+
+    normalizePlanningCategory(value) {
+      return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    },
+
+    normalizePlanningGender(value) {
+      const raw = String(value || '').trim().toUpperCase();
+      if (raw === 'K' || raw === 'F' || raw === 'W') return 'K';
+      if (raw === 'M') return 'M';
+      return '';
+    },
+
+    planningUsesTournamentCategories() {
+      return (this.tournamentCategories || []).some(cat => cat.is_active !== 0);
+    },
+
+    planningCategoryPresetKeys() {
+      return ['B1M', 'B1K', 'B2M', 'B2K', 'B3M', 'B3K', 'B4M', 'B4K'];
+    },
+
+    planningCategoryPresetLabel(key) {
+      const labels = {
+        B1M: 'B1 M', B1K: 'B1 K', B2M: 'B2 M', B2K: 'B2 K',
+        B3M: 'B3 M', B3K: 'B3 K', B4M: 'B4 M', B4K: 'B4 K',
+      };
+      return labels[key] || key;
+    },
+
+    planningSelectedCategory() {
+      const id = this.planningSelectedCategoryId ?? this.planningSelectedDivision;
+      return (this.tournamentCategories || []).find(cat => String(cat.id) === String(id)) || null;
+    },
+
+    playerClassificationLabel(player) {
+      const band = String(player?.category || '').trim();
+      const gender = this.normalizePlanningGender(player?.gender);
+      const genderLabel = gender === 'K' ? this.ot('gender.women') : gender === 'M' ? this.ot('gender.men') : '';
+      return [band, genderLabel].filter(Boolean).join(' · ');
+    },
+
+    async confirmTournamentCategories() {
+      const presets = this.planningCategoryPresetKeys()
+        .filter(key => this.categoryPresetSelected[key])
+        .map(key => ({ preset_key: key }));
+      const customLabel = (this.categoryCustomLabel || '').trim();
+      const entries = [...presets];
+      if (customLabel) {
+        entries.push({
+          label: customLabel,
+          hint_bands: (this.categoryCustomHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
+        });
+      }
+      if (!entries.length) {
+        this.showToast(this.ot('toast.pickCategory'), 'warning');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/office/${this.slot}/categories/confirm`, {
+          method: 'POST',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({ categories: entries }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+        this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : [];
+        this.categorySetupOpen = false;
+        this.categoryCustomLabel = '';
+        this.categoryCustomHints = '';
+        this.showToast(this.ot('toast.categoriesSaved'), 'success');
+        this.ensurePlanningDefaults();
+      } catch (error) {
+        this.showToast(error.message || this.ot('toast.categoriesError'), 'error');
+      }
+    },
+
+    async addCustomTournamentCategory() {
+      const label = (this.categoryCustomLabel || '').trim();
+      if (!label) return;
+      try {
+        const response = await fetch(`/api/office/${this.slot}/categories`, {
+          method: 'POST',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({
+            label,
+            hint_bands: (this.categoryCustomHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+        this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : this.tournamentCategories;
+        this.categoryCustomLabel = '';
+        this.categoryCustomHints = '';
+        this.showToast(this.ot('toast.categoryAdded'), 'success');
+        this.ensurePlanningDefaults();
+      } catch (error) {
+        this.showToast(error.message || this.ot('toast.categoriesError'), 'error');
+      }
+    },
+
+    async saveTournamentCategoryEdit() {
+      if (!this.categoryEditId) return;
+      try {
+        const response = await fetch(`/api/office/${this.slot}/categories/${this.categoryEditId}`, {
+          method: 'PATCH',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({ label: (this.categoryEditLabel || '').trim() }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+        this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : this.tournamentCategories;
+        if (Array.isArray(payload.groups)) this.planningGroups = payload.groups;
+        if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+        this.categoryEditId = null;
+        this.categoryEditLabel = '';
+        this.showToast(this.ot('toast.categoryUpdated'), 'success');
+      } catch (error) {
+        this.showToast(error.message || this.ot('toast.categoriesError'), 'error');
+      }
+    },
+
+    async deleteTournamentCategory(categoryId) {
+      if (!categoryId || !confirm(this.ot('confirm.deleteCategory'))) return;
+      try {
+        const response = await fetch(`/api/office/${this.slot}/categories/${categoryId}`, {
+          method: 'DELETE',
+          headers: this.officeHeaders(),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+        this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : [];
+        this.ensurePlanningDefaults();
+        this.showToast(this.ot('toast.categoryDeleted'), 'success');
+      } catch (error) {
+        this.showToast(error.message || this.ot('toast.categoriesError'), 'error');
+      }
+    },
+
+    startCategoryEdit(category) {
+      this.categoryEditId = category.id;
+      this.categoryEditLabel = category.label;
+    },
+
+    planningDivisionKey(player) {
+      return sharedPlanningDivisionKey(
+        player?.category || '',
+        player?.gender || '',
+        this.planningMixedCategories,
+      );
+    },
+
+    planningDivisionLabel(key = this.planningSelectedDivision) {
+      const value = String(key || '').toUpperCase();
+      const mixedLabel = mixedCategoryDisplayLabel(value, this.planningMixedCategories);
+      if (mixedLabel) return mixedLabel;
+      const category = (value.match(/^B\d{1,2}/) || [''])[0];
+      const gender = value.endsWith('K')
+        ? this.ot('gender.women')
+        : value.endsWith('M')
+          ? this.ot('gender.men')
+          : '';
+      if (category && gender) return `${category} ${gender}`;
+      return category || gender || this.ot('gender.unassigned');
+    },
+
+    planningDivisionFromGroupName(groupName) {
+      return sharedPlanningDivisionFromGroupName(groupName, this.planningMixedCategories);
+    },
+
+    planningDivisions() {
+      if (this.planningUsesTournamentCategories()) {
+        return (this.tournamentCategories || [])
+          .filter(cat => cat.is_active !== 0)
+          .map(cat => ({
+            key: String(cat.id),
+            id: cat.id,
+            label: cat.label,
+            count: cat.player_count || this.planningCategoryAssignedCount(cat.id),
+            hint_bands: cat.hint_bands || [],
+          }));
+      }
+      const grouped = new Map();
+      for (const player of this.planningPlayers || []) {
+        const key = this.planningDivisionKey(player);
+        if (!grouped.has(key)) grouped.set(key, { key, label: this.planningDivisionLabel(key), count: 0 });
+        grouped.get(key).count += 1;
+      }
+      return [...grouped.values()].sort((left, right) => {
+        if (left.key === 'NIEPRZYPISANI') return 1;
+        if (right.key === 'NIEPRZYPISANI') return -1;
+        return left.key.localeCompare(right.key, 'pl', { numeric: true });
+      });
+    },
+
+    planningPlayersForDivision(key = this.planningSelectedDivision) {
+      if (this.planningUsesTournamentCategories()) return this.planningPlayers || [];
+      return (this.planningPlayers || []).filter(player => this.planningDivisionKey(player) === key);
+    },
+
+    planningGroupsForDivision(key = this.planningSelectedDivision) {
+      if (this.planningUsesTournamentCategories()) {
+        const categoryId = Number(key || this.planningSelectedCategoryId || this.planningSelectedDivision);
+        const cat = (this.tournamentCategories || []).find(item => Number(item.id) === categoryId);
+        return (this.planningGroups || []).filter(group => {
+          if (group.tournament_category_id != null) return Number(group.tournament_category_id) === categoryId;
+          if (!cat) return false;
+          return group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`);
+        });
+      }
+      return (this.planningGroups || []).filter(group => this.planningDivisionFromGroupName(group.name) === key);
+    },
+
+    planningTargetGroupNames() {
+      if (this.planningUsesTournamentCategories()) {
+        const cat = this.planningSelectedCategory();
+        if (!cat) return [];
+        const label = cat.label;
+        const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
+        if (count === 1) return [label];
+        return Array.from({ length: count }, (_, index) => (
+          `${label} — Grupa ${String.fromCharCode(65 + index)}`
+        ));
+      }
+      if (!this.planningSelectedDivision) return [];
+      return sharedPlanningStoredGroupNames(
+        this.planningSelectedDivision,
+        this.planningGroupCount,
+        this.planningMixedCategories,
+      );
+    },
+
+    planningGroupDisplayName(groupName) {
+      return this.officeDisplayLabel(groupName);
+    },
+
+    planningResolveGroupName(groupName, divisionKey = this.planningSelectedDivision) {
+      if (this.planningUsesTournamentCategories()) {
+        const valid = new Set(this.planningTargetGroupNames());
+        if (valid.has(groupName)) return groupName;
+        return '';
+      }
+      const groupCount = divisionKey === this.planningSelectedDivision
+        ? this.planningGroupCount
+        : this.planningGroupCountForDivision(divisionKey);
+      return sharedPlanningResolveStoredGroupName(
+        groupName,
+        divisionKey,
+        groupCount,
+        this.planningMixedCategories,
+      );
+    },
+
+    planningGroupCountForDivision(divisionKey) {
+      const groups = (this.planningGroups || []).filter(group => (
+        sharedPlanningDivisionFromGroupName(group.name, this.planningMixedCategories) === divisionKey
+      ));
+      return groups.length ? Math.max(1, Math.min(8, groups.length)) : 1;
+    },
+
+    planningDivisionGroupNames() {
+      const names = new Set(this.planningTargetGroupNames());
+      for (const group of this.planningGroupsForDivision()) names.add(group.name);
+      for (const player of this.planningPlayersForDivision()) {
+        const assigned = this.planningGroupAssignments[player.id];
+        if (assigned) names.add(assigned);
+      }
+      return [...names];
+    },
+
+    planningAssignedPlayers(groupName) {
+      return (this.planningPlayers || []).filter(player => (
+        this.planningResolveGroupName(this.planningGroupAssignments[player.id]) === groupName
+      ));
+    },
+
+    planningEffectiveGroup(player) {
+      return this.planningResolveGroupName(this.planningGroupAssignments[player.id]);
+    },
+
+    planningUnassignedPlayers() {
+      return (this.planningPlayers || []).filter(player => !this.planningEffectiveGroup(player));
+    },
+
+    planningOrdinal(player) {
+      const pool = this.planningUsesTournamentCategories()
+        ? this.planningUnassignedPlayers()
+        : this.planningPlayersForDivision();
+      return pool.findIndex(item => item.id === player.id) + 1;
+    },
+
+    planningCategoryAssignedCount(categoryId = this.planningSelectedCategoryId) {
+      return this.planningGroupsForDivision(String(categoryId))
+        .reduce((sum, group) => sum + (group.players?.length || 0), 0);
+    },
+
+    planningDivisionAssignedCount(key = this.planningSelectedDivision) {
+      if (this.planningUsesTournamentCategories()) {
+        return this.planningCategoryAssignedCount(Number(key || this.planningSelectedCategoryId));
+      }
+      const targets = new Set(sharedPlanningStoredGroupNames(
+        key,
+        this.planningGroupCountForDivision(key),
+        this.planningMixedCategories,
+      ));
+      return this.planningPlayersForDivision(key).filter(player => {
+        const resolved = this.planningResolveGroupName(this.planningGroupAssignments[player.id], key);
+        return resolved && targets.has(resolved);
+      }).length;
+    },
+
+    selectPlanningDivision(key) {
+      this.planningSelectedDivision = key;
+      if (this.planningUsesTournamentCategories()) {
+        this.planningSelectedCategoryId = Number(key);
+      }
+      const groups = this.planningGroupsForDivision(key);
+      this.planningGroupCount = groups.length ? Math.max(1, Math.min(8, groups.length)) : 1;
+    },
+
+    planningSetGroupCount(delta) {
+      const next = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1) + Number(delta || 0)));
+      if (next === this.planningGroupCount) return;
+      this.planningGroupCount = next;
+      const valid = new Set(this.planningTargetGroupNames());
+      const assignments = { ...this.planningGroupAssignments };
+      let changed = false;
+      for (const player of this.planningPlayersForDivision()) {
+        const assigned = assignments[player.id];
+        if (!assigned) continue;
+        const canonical = this.planningResolveGroupName(assigned);
+        if (!canonical || !valid.has(canonical)) {
+          delete assignments[player.id];
+          changed = true;
+        } else if (canonical !== assigned) {
+          assignments[player.id] = canonical;
+          changed = true;
+        }
+      }
+      if (changed) this.planningGroupAssignments = assignments;
+      this.schedulePlanningAutoSave();
+    },
+
+    onPlanningPlayerDragStart(player, event) {
+      this.planningDragPlayerId = player.id;
+      if (event?.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        try { event.dataTransfer.setData('text/plain', String(player.id)); } catch (e) { /* noop */ }
+      }
+    },
+
+    onPlanningDropToGroup(groupName) {
+      const id = this.planningDragPlayerId;
+      this.planningDragPlayerId = null;
+      if (!id || !groupName) return;
+      if (this.planningGroupAssignments[id] === groupName) return;
+      this.planningGroupAssignments = { ...this.planningGroupAssignments, [id]: groupName };
+      this.schedulePlanningAutoSave();
+    },
+
+    onPlanningDropToPool() {
+      const id = this.planningDragPlayerId;
+      this.planningDragPlayerId = null;
+      if (!id || !this.planningGroupAssignments[id]) return;
+      const assignments = { ...this.planningGroupAssignments };
+      delete assignments[id];
+      this.planningGroupAssignments = assignments;
+      this.schedulePlanningAutoSave();
+    },
+
+    autoAssignPlanningGroups() {
+      const groupNames = this.planningTargetGroupNames();
+      if (!groupNames.length) return;
+      const assignments = { ...this.planningGroupAssignments };
+      this.planningUnassignedPlayers().forEach((player, index) => {
+        assignments[player.id] = groupNames[index % groupNames.length];
+      });
+      this.planningGroupAssignments = assignments;
+      this.schedulePlanningAutoSave();
+    },
+
+    clearPlanningDivisionAssignments() {
+      const assignments = { ...this.planningGroupAssignments };
+      for (const player of this.planningPlayers || []) {
+        const groupName = assignments[player.id];
+        if (!groupName) continue;
+        if (this.planningUsesTournamentCategories()) {
+          const valid = new Set(this.planningTargetGroupNames());
+          if (valid.has(this.planningResolveGroupName(groupName))) delete assignments[player.id];
+        } else if (this.planningDivisionKey(player) === this.planningSelectedDivision) {
+          delete assignments[player.id];
+        }
+      }
+      this.planningGroupAssignments = assignments;
+      this.schedulePlanningAutoSave();
+    },
+
+    schedulePlanningAutoSave() {
+      if (this.planningSaveTimer) clearTimeout(this.planningSaveTimer);
+      this.planningSaveTimer = setTimeout(() => { this.autoSavePlanningGroups(); }, 500);
+    },
+
+    async autoSavePlanningGroups() {
+      if (!this.planningSelectedDivision && !this.planningSelectedCategoryId) return;
+      this.planningSaving = true;
+      try {
+        const selectedCategoryId = this.planningUsesTournamentCategories()
+          ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
+          : null;
+        const otherGroups = (this.planningGroups || [])
+          .filter(group => {
+            if (selectedCategoryId != null) {
+              const cat = this.planningSelectedCategory();
+              const gid = group.tournament_category_id != null ? Number(group.tournament_category_id) : null;
+              const inSelected = gid === selectedCategoryId
+                || (cat && (group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`)));
+              return !inSelected;
+            }
+            return this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision;
+          })
+          .map(group => ({
+            name: group.name,
+            tournament_category_id: group.tournament_category_id || null,
+            players: (group.players || []).map(player => player.player_id).filter(Boolean),
+          }));
+        const divisionGroups = this.planningTargetGroupNames()
+          .map(groupName => ({
+            name: groupName,
+            tournament_category_id: selectedCategoryId,
+            players: this.planningAssignedPlayers(groupName).map(player => player.id),
+          }))
+          .filter(group => group.players.length > 0);
+        const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
+          method: 'PUT',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({ groups: [...otherGroups, ...divisionGroups] }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.groupsFailed'));
+        this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
+        this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
+        if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+      } catch (error) {
+        console.error('Failed to auto-save office planning groups:', error);
+        this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
+      } finally {
+        this.planningSaving = false;
+      }
+    },
+
+    async savePlanningGroups() {
+      if (!this.planningSelectedDivision && !this.planningSelectedCategoryId) return;
+      const selectedCategoryId = this.planningUsesTournamentCategories()
+        ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
+        : null;
+      const otherGroups = (this.planningGroups || [])
+        .filter(group => {
+          if (selectedCategoryId != null) {
+            const cat = this.planningSelectedCategory();
+            const gid = group.tournament_category_id != null ? Number(group.tournament_category_id) : null;
+            const inSelected = gid === selectedCategoryId
+              || (cat && (group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`)));
+            return !inSelected;
+          }
+          return this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision;
+        })
+        .map(group => ({
+          name: group.name,
+          tournament_category_id: group.tournament_category_id || null,
+          players: (group.players || []).map(player => player.player_id).filter(Boolean),
+        }));
+      const divisionGroups = this.planningTargetGroupNames()
+        .map(groupName => ({
+          name: groupName,
+          tournament_category_id: selectedCategoryId,
+          players: this.planningAssignedPlayers(groupName).map(player => player.id),
+        }))
+        .filter(group => group.players.length > 0);
+      if (!divisionGroups.length) {
+        this.showToast(this.ot('toast.assignPlayerWarning'), 'warning');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
+          method: 'PUT',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({ groups: [...otherGroups, ...divisionGroups] }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.groupsFailed'));
+        this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
+        this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
+        if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.syncPlanningGroupAssignments();
+        this.showToast(this.ot('toast.groupsSaved'), 'success');
+      } catch (error) {
+        console.error('Failed to save office planning groups:', error);
+        this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
+      }
+    },
+
+    planningPlayerNameOptions() {
+      return (this.planningPlayers || [])
+        .map(player => player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, 'pl'));
+    },
+
+    async addOfficePlayer() {
+      const firstName = (this.planningNewPlayer.first_name || '').trim();
+      const lastName = (this.planningNewPlayer.last_name || '').trim();
+      if (!firstName && !lastName) {
+        this.showToast(this.ot('toast.playerNameRequired'), 'warning');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/office/${this.slot}/players`, {
+          method: 'POST',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({
+            first_name: firstName,
+            last_name: lastName,
+            category: (this.planningNewPlayer.category || '').trim(),
+            gender: (this.planningNewPlayer.gender || '').trim(),
+            country: (this.planningNewPlayer.country || '').trim(),
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(payload.error || this.ot('errors.playerAddFailed'));
+        }
+        this.planningPlayers = Array.isArray(payload.players) ? payload.players : this.planningPlayers;
+        if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.planningNewPlayer = {
+          first_name: '',
+          last_name: '',
+          category: this.planningNewPlayer.category || '',
+          country: '',
+        };
+        this.showToast(this.ot('toast.playerAdded'), 'success');
+      } catch (error) {
+        console.error('Failed to add office player:', error);
+        this.showToast(error.message || this.ot('toast.playerAddError'), 'error');
+      }
+    },
+  };
+}

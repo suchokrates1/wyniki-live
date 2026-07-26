@@ -1,0 +1,1499 @@
+"""Database access layer submodule."""
+import json
+import re
+import sqlite3
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, Generator, List, Optional
+from werkzeug.security import generate_password_hash
+
+from ..config import settings, logger
+
+from .connection import db_conn
+
+def _bracket_row_match_priority(row: sqlite3.Row, player_name: str) -> int:
+    """Rank player matches: full-name exact wins over surname-only fallback."""
+    normalized = _normalize_player_name(player_name)
+    if not normalized:
+        return 0
+
+    first_name = (row["player_first_name"] or "").strip()
+    last_name = (row["player_last_name"] or "").strip()
+    exact_candidates = {
+        _normalize_player_name(row["bracket_player_name"]),
+        _normalize_player_name(row["player_full_name"]),
+        _normalize_player_name(f"{first_name} {last_name}"),
+        _normalize_player_name(last_name),
+    }
+    exact_candidates.discard("")
+    if normalized in exact_candidates:
+        return 2
+
+    surname = _player_surname(player_name)
+    surname_candidates = {
+        _player_surname(row["bracket_player_name"]),
+        _player_surname(row["player_full_name"]),
+        _player_surname(last_name),
+    }
+    surname_candidates.discard("")
+    if surname and surname in surname_candidates:
+        return 1
+    return 0
+
+def _find_bracket_groups_for_player(cursor: sqlite3.Cursor, tournament_id: int, player_name: str) -> tuple[set[int], int]:
+    """Find candidate bracket groups for a player using exact names first, surname fallback second."""
+    cursor.execute(
+        """
+        SELECT DISTINCT bgp.group_id, bg.name,
+               bgp.player_name AS bracket_player_name,
+               p.name AS player_full_name,
+               p.first_name AS player_first_name,
+               p.last_name AS player_last_name
+        FROM bracket_group_players bgp
+        JOIN bracket_groups bg ON bg.id = bgp.group_id
+        LEFT JOIN players p ON p.id = bgp.player_id
+        WHERE bg.tournament_id = ?
+        """,
+        (tournament_id,),
+    )
+
+    best_priority = 0
+    matched_group_ids: set[int] = set()
+    for row in cursor.fetchall():
+        priority = _bracket_row_match_priority(row, player_name)
+        if priority <= 0:
+            continue
+        if priority > best_priority:
+            best_priority = priority
+            matched_group_ids = {int(row["group_id"])}
+        elif priority == best_priority:
+            matched_group_ids.add(int(row["group_id"]))
+
+    return matched_group_ids, best_priority
+
+def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: int) -> Dict[str, Any]:
+    """Detect bracket group/phase for a match based on player names.
+    
+    Returns dict with:
+      - group_id: int or None
+      - phase: 'Grupowa' | 'Pucharowa' | None
+      - warning: str code or None ('different_groups' | 'no_bracket')
+    """
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            p1 = (player1_name or "").strip()
+            p2 = (player2_name or "").strip()
+            p1_surname = p1.split()[-1] if p1 else ""
+            p2_surname = p2.split()[-1] if p2 else ""
+
+            def _find_explicit_phase(table_name: str) -> Optional[str]:
+                cursor.execute(
+                    f"""
+                    SELECT phase
+                    FROM {table_name}
+                    WHERE tournament_id = ?
+                      AND phase IS NOT NULL
+                      AND TRIM(phase) != ''
+                      AND phase != 'Grupowa'
+                      AND ((player1_name = ? AND player2_name = ?)
+                        OR (player1_name = ? AND player2_name = ?))
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (tournament_id, p1, p2, p2, p1),
+                )
+                row = cursor.fetchone()
+                if row:
+                    return row["phase"]
+                if not p1_surname or not p2_surname:
+                    return None
+                cursor.execute(
+                    f"""
+                    SELECT phase
+                    FROM {table_name}
+                    WHERE tournament_id = ?
+                      AND phase IS NOT NULL
+                      AND TRIM(phase) != ''
+                      AND phase != 'Grupowa'
+                      AND ((player1_name LIKE ? AND player2_name LIKE ?)
+                        OR (player1_name LIKE ? AND player2_name LIKE ?))
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (
+                        tournament_id,
+                        f"%{p1_surname}",
+                        f"%{p2_surname}",
+                        f"%{p2_surname}",
+                        f"%{p1_surname}",
+                    ),
+                )
+                row = cursor.fetchone()
+                return row["phase"] if row else None
+
+            scheduled_phase = _find_explicit_phase("tournament_schedule")
+            if scheduled_phase:
+                return {"group_id": None, "phase": scheduled_phase, "warning": None}
+
+            # Prefer explicit knockout slots over shared group membership so
+            # same-group finals are not misclassified as group matches.
+            knockout_phase = _find_explicit_phase("bracket_knockout")
+            if knockout_phase:
+                return {"group_id": None, "phase": knockout_phase, "warning": None}
+
+            p1_gids, p1_priority = _find_bracket_groups_for_player(cursor, tournament_id, player1_name)
+            p2_gids, p2_priority = _find_bracket_groups_for_player(cursor, tournament_id, player2_name)
+
+            if not p1_gids or not p2_gids:
+                return {"group_id": None, "phase": None, "warning": "no_bracket"}
+
+            common = p1_gids & p2_gids
+
+            if common:
+                gid = min(common)
+                return {"group_id": gid, "phase": "Grupowa", "warning": None}
+
+            surname_only_ambiguous = (p1_priority == 1 and len(p1_gids) > 1) or (p2_priority == 1 and len(p2_gids) > 1)
+            if surname_only_ambiguous:
+                return {"group_id": None, "phase": None, "warning": "no_bracket"}
+
+            return {"group_id": None, "phase": "Pucharowa", "warning": "different_groups"}
+
+    except Exception as e:
+        logger.error("detect_bracket_context_error", error=str(e))
+        return {"group_id": None, "phase": None, "warning": None}
+
+def _split_bracket_label(value: Optional[str]) -> tuple[str, str]:
+    """Split a bracket label into category prefix and suffix."""
+    label = (value or "").strip()
+    if not label:
+        return "", ""
+    if " — " not in label:
+        return "", label
+    prefix, suffix = label.split(" — ", 1)
+    return prefix.strip(), suffix.strip()
+
+GROUP_PHASE = "Grupowa"
+
+GROUP_REMATCH_PHASE = "Grupowa — Rewanż"
+
+_GROUP_REMATCH_PHASE_MARKERS = (
+    "rewanż",
+    "rematch",
+    "rückspiel",
+    "revanch",
+    "ritorno",
+    "revancha",
+    "replay",
+    "dogryw",
+)
+
+def normalize_group_stage_phase(phase: Optional[str]) -> str:
+    """Map localized schedule/result labels to canonical group-stage phases."""
+    value = (phase or "").strip()
+    if not value:
+        return GROUP_PHASE
+    if value in {GROUP_PHASE, GROUP_REMATCH_PHASE}:
+        return value
+    lowered = value.casefold()
+    if lowered == GROUP_REMATCH_PHASE.casefold():
+        return GROUP_REMATCH_PHASE
+    if any(marker in lowered for marker in _GROUP_REMATCH_PHASE_MARKERS):
+        return GROUP_REMATCH_PHASE
+    return GROUP_PHASE
+
+def is_group_stage_phase(phase: Optional[str]) -> bool:
+    """Return True for regular or rematch group-stage phases."""
+    value = (phase or "").strip()
+    if value in {GROUP_PHASE, GROUP_REMATCH_PHASE}:
+        return True
+    lowered = value.casefold()
+    if lowered in {GROUP_PHASE.casefold(), GROUP_REMATCH_PHASE.casefold()}:
+        return True
+    if lowered in {"gruppenphase", "group", "girone", "grupos", "poule"}:
+        return True
+    return any(marker in lowered for marker in _GROUP_REMATCH_PHASE_MARKERS)
+
+def is_knockout_stage_phase(phase: Optional[str]) -> bool:
+    """Return True for knockout-style phases (final, semifinal, bronze, etc.)."""
+    value = (phase or "").strip()
+    if not value or is_group_stage_phase(value):
+        return False
+    return True
+
+def expected_group_matches_count(tournament_id: int, group_id: int, player_count: int) -> int:
+    with db_conn() as conn:
+        return _expected_group_matches_count(conn.cursor(), tournament_id, group_id, player_count)
+
+def count_finished_group_matches(tournament_id: int, group_id: int) -> int:
+    with db_conn() as conn:
+        return _count_finished_group_matches(conn.cursor(), tournament_id, group_id)
+
+def _phase_kind(phase: Optional[str]) -> Optional[str]:
+    """Map localized phase labels to a stable semantic kind."""
+    _, suffix = _split_bracket_label(phase)
+    normalized = (suffix or phase or "").strip().lower()
+    if not normalized:
+        return None
+    if "półfina" in normalized or "semif" in normalized:
+        return "semifinal"
+    if "3." in normalized or "3 " in normalized or "third" in normalized or "3rd" in normalized:
+        return "third_place"
+    if "5." in normalized or "5 " in normalized or "fifth" in normalized or "5th" in normalized:
+        return "fifth_place"
+    if "7." in normalized or "7 " in normalized or "seventh" in normalized or "7th" in normalized:
+        return "seventh_place"
+    if normalized == "pucharowa":
+        return "knockout"
+    if "fina" in normalized or normalized == "final":
+        return "final"
+    return None
+
+def _group_sort_key(name: str) -> tuple[int, str]:
+    """Sort groups so A/B stay in a stable order inside a category."""
+    _, suffix = _split_bracket_label(name)
+    label = (suffix or name or "").strip()
+    last_token = label.split()[-1].upper() if label else ""
+    if len(last_token) == 1 and last_token.isalpha():
+        return (0, last_token)
+    return (1, label.lower())
+
+def _is_group_partition_name(name: str) -> bool:
+    """Return True when a group label is one partition of a wider A/B category."""
+    prefix, suffix = _split_bracket_label(name)
+    if not prefix or not suffix:
+        return False
+    label = suffix.strip()
+    if not label:
+        return False
+    last_token = label.split()[-1].upper()
+    return label.casefold().startswith("grupa ") or (len(last_token) == 1 and last_token.isalpha())
+
+def _knockout_bucket_key(group_name: str) -> tuple[str, str]:
+    """Group standings into either one single-group final or a shared A/B bracket."""
+    name = (group_name or "").strip()
+    prefix, _ = _split_bracket_label(name)
+    if _is_group_partition_name(name):
+        return ("multi", prefix)
+    return ("single", name)
+
+def _is_knockout_placeholder_name(name: Optional[str]) -> bool:
+    """Detect generated placeholder labels that should be replaced by real players."""
+    value = (name or "").strip()
+    if not value:
+        return True
+    lowered = value.lower()
+    if lowered.startswith("zwycięzca pf") or lowered.startswith("przegrany pf"):
+        return True
+    if lowered.startswith("winner sf") or lowered.startswith("loser sf"):
+        return True
+    if re.match(r"^\d+[A-Za-z]$", value):
+        return True
+    if re.match(r"^\d+\.\s+", value):
+        return True
+    return False
+
+def _standing_placeholder(rank: int, group_name: str, category_prefix: str) -> str:
+    """Stable standing placeholder, e.g. 1. B2 Mężczyźni or 1A for partitioned groups."""
+    if _is_group_partition_name(group_name):
+        _, suffix = _split_bracket_label(group_name)
+        label = (suffix or "").strip()
+        last_token = label.split()[-1].upper() if label else ""
+        if len(last_token) == 1 and last_token.isalpha():
+            return f"{rank}{last_token}"
+    prefix = (category_prefix or group_name or "").strip()
+    return f"{rank}. {prefix}"
+
+def _is_group_play_complete(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    group_id: int,
+    player_count: int,
+) -> bool:
+    if player_count < 2:
+        return True
+    expected = _expected_group_matches_count(cursor, tournament_id, group_id, player_count)
+    return _count_finished_group_matches(cursor, tournament_id, group_id) >= expected
+
+def _bucket_groups_play_complete(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    ordered_groups: List[Dict[str, Any]],
+    group_id_by_name: Dict[str, int],
+    player_count_by_name: Dict[str, int],
+) -> bool:
+    for group in ordered_groups:
+        name = str(group.get("name") or "").strip()
+        group_id = group_id_by_name.get(name)
+        if not group_id:
+            return False
+        player_count = player_count_by_name.get(name) or len(group.get("standings") or [])
+        if not _is_group_play_complete(cursor, tournament_id, group_id, player_count):
+            return False
+    return True
+
+def _slot_phase_matches(slot_phase: str, expected_kind: str, category_prefix: str) -> bool:
+    """Check whether a stored phase belongs to the requested category/kind."""
+    slot_prefix, _ = _split_bracket_label(slot_phase)
+    return slot_prefix == category_prefix and _phase_kind(slot_phase) == expected_kind
+
+def _expected_group_matches_count(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    group_id: int,
+    player_count: int,
+) -> int:
+    """Count scheduled group-stage matches for one bracket group."""
+    if player_count < 2:
+        return 0
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM tournament_schedule
+        WHERE tournament_id = ?
+          AND bracket_group_id = ?
+          AND phase IN (?, ?)
+        """,
+        (tournament_id, group_id, GROUP_PHASE, GROUP_REMATCH_PHASE),
+    )
+    scheduled = int(cursor.fetchone()["count"] or 0)
+    expected_rr = player_count * (player_count - 1) // 2
+    if scheduled > expected_rr > 0:
+        return expected_rr
+    if scheduled > 0:
+        return scheduled
+    return expected_rr
+
+def _count_finished_group_matches(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    group_id: int,
+) -> int:
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM matches
+        WHERE tournament_id = ?
+          AND status = 'finished'
+          AND COALESCE(finish_reason, 'normal') != 'test'
+          AND phase IN (?, ?)
+          AND bracket_group_id = ?
+        """,
+        (tournament_id, GROUP_PHASE, GROUP_REMATCH_PHASE, group_id),
+    )
+    return int(cursor.fetchone()["count"] or 0)
+
+def _assign_knockout_slot_player(cursor, slot: sqlite3.Row, side: int, player_name: str) -> None:
+    """Write a player into the requested side if the slot is empty or placeholder-only."""
+    column = "player1_name" if side == 1 else "player2_name"
+    current_value = slot[column]
+    if current_value and not _is_knockout_placeholder_name(current_value):
+        return
+    cursor.execute(f"UPDATE bracket_knockout SET {column} = ? WHERE id = ?", (player_name, slot["id"]))
+
+def _knockout_schedule_player_names(slot: sqlite3.Row) -> tuple[str, str]:
+    """Return schedule-facing player names, using stable placeholders for pending finals."""
+    player1_name = (slot["player1_name"] or "").strip()
+    player2_name = (slot["player2_name"] or "").strip()
+    phase_kind = _phase_kind(str(slot["phase"] or ""))
+
+    if phase_kind == "final":
+        return (
+            player1_name or "Zwycięzca PF 1",
+            player2_name or "Zwycięzca PF 2",
+        )
+    if phase_kind == "third_place":
+        return (
+            player1_name or "Przegrany PF 1",
+            player2_name or "Przegrany PF 2",
+        )
+    return (player1_name, player2_name)
+
+def _build_knockout_slots_for_category(category_prefix: str, ordered_groups: List[Dict]) -> List[Dict]:
+    """Generate semifinal/final/placement slots for one category."""
+    group_a = ordered_groups[0]["standings"]
+    group_b = ordered_groups[1]["standings"]
+
+    semifinal_phase = f"{category_prefix} — Półfinał" if category_prefix else "Półfinał"
+    final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
+    third_phase = f"{category_prefix} — o 3. miejsce" if category_prefix else "o 3. miejsce"
+    fifth_phase = f"{category_prefix} — o 5. miejsce" if category_prefix else "o 5. miejsce"
+    seventh_phase = f"{category_prefix} — o 7. miejsce" if category_prefix else "o 7. miejsce"
+
+    slots = [
+        {
+            "phase": semifinal_phase,
+            "position": 1,
+            "player1_name": group_a[0]["name"],
+            "player2_name": group_b[1]["name"],
+        },
+        {
+            "phase": semifinal_phase,
+            "position": 2,
+            "player1_name": group_b[0]["name"],
+            "player2_name": group_a[1]["name"],
+        },
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+        {
+            "phase": third_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+    ]
+
+    if len(group_a) >= 3 and len(group_b) >= 3:
+        slots.append(
+            {
+                "phase": fifth_phase,
+                "position": 1,
+                "player1_name": group_a[2]["name"],
+                "player2_name": group_b[2]["name"],
+            }
+        )
+    if len(group_a) >= 4 and len(group_b) >= 4:
+        slots.append(
+            {
+                "phase": seventh_phase,
+                "position": 1,
+                "player1_name": group_a[3]["name"],
+                "player2_name": group_b[3]["name"],
+            }
+        )
+    return slots
+
+def _build_single_group_final_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Generate a direct final for one completed 3-player group."""
+    if len(standings) < 2:
+        return []
+    final_phase = f"{group_name} — Finał" if group_name else "Finał"
+    return [
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": standings[0]["name"],
+            "player2_name": standings[1]["name"],
+        }
+    ]
+
+def _build_provisional_single_group_final_slots(group_name: str, category_prefix: str) -> List[Dict[str, Any]]:
+    final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
+    return [
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": _standing_placeholder(1, group_name, category_prefix),
+            "player2_name": _standing_placeholder(2, group_name, category_prefix),
+        }
+    ]
+
+def _build_provisional_four_player_group_knockout_slots(
+    group_name: str,
+    category_prefix: str,
+) -> List[Dict[str, Any]]:
+    final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
+    third_phase = f"{category_prefix} — o 3. miejsce" if category_prefix else "o 3. miejsce"
+    return [
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": _standing_placeholder(1, group_name, category_prefix),
+            "player2_name": _standing_placeholder(2, group_name, category_prefix),
+        },
+        {
+            "phase": third_phase,
+            "position": 1,
+            "player1_name": _standing_placeholder(3, group_name, category_prefix),
+            "player2_name": _standing_placeholder(4, group_name, category_prefix),
+        },
+    ]
+
+def _build_provisional_knockout_slots_for_category(
+    category_prefix: str,
+    ordered_groups: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    group_a = ordered_groups[0]
+    group_b = ordered_groups[1]
+    group_a_name = str(group_a.get("name") or category_prefix)
+    group_b_name = str(group_b.get("name") or category_prefix)
+    player_count_a = len(group_a.get("standings") or [])
+    player_count_b = len(group_b.get("standings") or [])
+
+    semifinal_phase = f"{category_prefix} — Półfinał" if category_prefix else "Półfinał"
+    final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
+    third_phase = f"{category_prefix} — o 3. miejsce" if category_prefix else "o 3. miejsce"
+    fifth_phase = f"{category_prefix} — o 5. miejsce" if category_prefix else "o 5. miejsce"
+    seventh_phase = f"{category_prefix} — o 7. miejsce" if category_prefix else "o 7. miejsce"
+
+    slots = [
+        {
+            "phase": semifinal_phase,
+            "position": 1,
+            "player1_name": _standing_placeholder(1, group_a_name, category_prefix),
+            "player2_name": _standing_placeholder(2, group_b_name, category_prefix),
+        },
+        {
+            "phase": semifinal_phase,
+            "position": 2,
+            "player1_name": _standing_placeholder(1, group_b_name, category_prefix),
+            "player2_name": _standing_placeholder(2, group_a_name, category_prefix),
+        },
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+        {
+            "phase": third_phase,
+            "position": 1,
+            "player1_name": None,
+            "player2_name": None,
+        },
+    ]
+
+    if player_count_a >= 3 and player_count_b >= 3:
+        slots.append(
+            {
+                "phase": fifth_phase,
+                "position": 1,
+                "player1_name": _standing_placeholder(3, group_a_name, category_prefix),
+                "player2_name": _standing_placeholder(3, group_b_name, category_prefix),
+            }
+        )
+    if player_count_a >= 4 and player_count_b >= 4:
+        slots.append(
+            {
+                "phase": seventh_phase,
+                "position": 1,
+                "player1_name": _standing_placeholder(4, group_a_name, category_prefix),
+                "player2_name": _standing_placeholder(4, group_b_name, category_prefix),
+            }
+        )
+    return slots
+
+def _compute_provisional_knockout_slots_from_bracket(
+    bracket_groups: List[Dict[str, Any]],
+    *,
+    tournament_id: int,
+    group_id_by_name: Dict[str, int],
+    player_count_by_name: Dict[str, int],
+) -> Dict[str, Any]:
+    """Build knockout slots with standing placeholders until group play is finished."""
+    buckets: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
+    for group in bracket_groups:
+        name = str(group.get("name") or "").strip()
+        if not name:
+            continue
+        buckets.setdefault(_knockout_bucket_key(name), []).append(group)
+
+    slots: List[Dict[str, Any]] = []
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        for (bucket_kind, bucket_name), bucket_groups in buckets.items():
+            ordered_groups = sorted(bucket_groups, key=lambda group: _group_sort_key(str(group.get("name") or "")))
+            complete = _bucket_groups_play_complete(
+                cursor,
+                tournament_id,
+                ordered_groups,
+                group_id_by_name,
+                player_count_by_name,
+            )
+            if bucket_kind == "multi":
+                if len(ordered_groups) < 2:
+                    continue
+                if len(ordered_groups) > 2:
+                    return {"error": f"Auto knockout supports exactly 2 groups per category: {bucket_name}"}
+                first_group = ordered_groups[0].get("standings") or []
+                second_group = ordered_groups[1].get("standings") or []
+                if len(first_group) < 2 or len(second_group) < 2:
+                    return {"error": f"Category needs at least 2 players per group: {bucket_name}"}
+                if complete:
+                    slots.extend(_build_knockout_slots_for_category(bucket_name, ordered_groups))
+                else:
+                    slots.extend(_build_provisional_knockout_slots_for_category(bucket_name, ordered_groups))
+                continue
+
+            standings = ordered_groups[0].get("standings") or []
+            group_name = str(ordered_groups[0].get("name") or bucket_name)
+            player_count = player_count_by_name.get(group_name) or len(standings)
+            if player_count >= 4 or len(standings) >= 4:
+                top_four = standings[:4] if len(standings) >= 4 else standings
+                if complete and len(top_four) >= 4:
+                    slots.extend(_build_four_player_group_knockout_slots(bucket_name, top_four))
+                else:
+                    slots.extend(_build_provisional_four_player_group_knockout_slots(group_name, bucket_name))
+            elif player_count == 3 or len(standings) == 3:
+                if complete:
+                    slots.extend(_build_single_group_final_slots(bucket_name, standings))
+                else:
+                    slots.extend(_build_provisional_single_group_final_slots(group_name, bucket_name))
+
+    if not slots:
+        return {"error": "Need at least one eligible category for knockout generation"}
+    return {"status": "ok", "knockout": slots}
+
+def seed_knockout_rematch_for_groups(
+    tournament_id: int,
+    bracket_group_ids: List[int],
+    *,
+    schedule_day: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Backward-compatible alias for group-stage rematch generation."""
+    return ensure_group_rematch_schedule_entries(
+        tournament_id,
+        bracket_group_ids,
+        schedule_day=schedule_day,
+    )
+
+def _build_four_player_group_knockout_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Generate a direct final and 3rd-place match for one 4-player group.
+
+    Semifinals are only used when a category has two groups (A/B); a single group of
+    four plays 1st vs 2nd for the title and 3rd vs 4th for bronze.
+    """
+    if len(standings) < 4:
+        return _build_single_group_final_slots(group_name, standings)
+    final_phase = f"{group_name} — Finał" if group_name else "Finał"
+    third_phase = f"{group_name} — o 3. miejsce" if group_name else "o 3. miejsce"
+    return [
+        {
+            "phase": final_phase,
+            "position": 1,
+            "player1_name": standings[0]["name"],
+            "player2_name": standings[1]["name"],
+        },
+        {
+            "phase": third_phase,
+            "position": 1,
+            "player1_name": standings[2]["name"],
+            "player2_name": standings[3]["name"],
+        },
+    ]
+
+def _compute_knockout_slots_from_bracket(bracket_groups: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Build the expected knockout slots for every eligible category in one tournament."""
+    buckets: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
+    for group in bracket_groups:
+        name = str(group.get("name") or "").strip()
+        if not name:
+            continue
+        buckets.setdefault(_knockout_bucket_key(name), []).append(group)
+
+    slots: List[Dict[str, Any]] = []
+    for (bucket_kind, bucket_name), bucket_groups in buckets.items():
+        ordered_groups = sorted(bucket_groups, key=lambda group: _group_sort_key(str(group.get("name") or "")))
+        if bucket_kind == "multi":
+            if len(ordered_groups) < 2:
+                continue
+            if len(ordered_groups) > 2:
+                return {"error": f"Auto knockout supports exactly 2 groups per category: {bucket_name}"}
+            first_group = ordered_groups[0].get("standings") or []
+            second_group = ordered_groups[1].get("standings") or []
+            if len(first_group) < 2 or len(second_group) < 2:
+                return {"error": f"Category needs at least 2 players per group: {bucket_name}"}
+            slots.extend(_build_knockout_slots_for_category(bucket_name, ordered_groups))
+            continue
+
+        standings = ordered_groups[0].get("standings") or []
+        if len(standings) >= 4:
+            slots.extend(_build_four_player_group_knockout_slots(bucket_name, standings[:4]))
+        elif len(standings) == 3:
+            slots.extend(_build_single_group_final_slots(bucket_name, standings))
+
+    if not slots:
+        return {"error": "Need at least one eligible category for knockout generation"}
+    return {"status": "ok", "knockout": slots}
+
+def seed_provisional_knockout_from_groups(
+    tournament_id: int,
+    *,
+    schedule_day: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build or refresh knockout slots with standing placeholders until group play ends."""
+    db_groups = fetch_bracket_groups(tournament_id)
+    if not db_groups:
+        return {"status": "skipped", "reason": "no_groups"}
+
+    group_id_by_name = {str(group.get("name") or ""): int(group["id"]) for group in db_groups if group.get("id")}
+    player_count_by_name = {
+        str(group.get("name") or ""): len(group.get("players") or [])
+        for group in db_groups
+    }
+
+    bracket = get_full_bracket(tournament_id)
+    if bracket.get("error"):
+        return {"status": "error", "error": bracket["error"]}
+
+    generated = _compute_provisional_knockout_slots_from_bracket(
+        bracket.get("groups", []),
+        tournament_id=tournament_id,
+        group_id_by_name=group_id_by_name,
+        player_count_by_name=player_count_by_name,
+    )
+    if generated.get("error"):
+        return {"status": "error", **generated}
+
+    slots = generated.get("knockout", [])
+    if not slots:
+        return {"status": "skipped", "reason": "no_eligible_categories"}
+
+    return _merge_bracket_knockout_slots(
+        tournament_id,
+        slots,
+        schedule_day=schedule_day,
+        replace_unfinished_players=True,
+    )
+
+def _merge_bracket_knockout_slots(
+    tournament_id: int,
+    slots: List[Dict[str, Any]],
+    *,
+    schedule_day: Optional[str] = None,
+    replace_unfinished_players: bool = False,
+) -> Dict[str, Any]:
+    """Insert missing knockout slots and fill placeholder players without overwriting real results."""
+    inserted = 0
+    updated = 0
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            for slot in slots:
+                phase = str(slot.get("phase") or "").strip()
+                position = int(slot.get("position") or 1)
+                if not phase:
+                    continue
+
+                cursor.execute(
+                    """
+                    SELECT id, player1_name, player2_name, winner_name, score_summary
+                    FROM bracket_knockout
+                    WHERE tournament_id = ? AND phase = ? AND position = ?
+                    LIMIT 1
+                    """,
+                    (tournament_id, phase, position),
+                )
+                existing = cursor.fetchone()
+                if not existing:
+                    cursor.execute(
+                        """
+                        INSERT INTO bracket_knockout (
+                            tournament_id, phase, position, player1_name, player2_name, winner_name, score_summary
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            tournament_id,
+                            phase,
+                            position,
+                            slot.get("player1_name"),
+                            slot.get("player2_name"),
+                            slot.get("winner_name"),
+                            slot.get("score_summary"),
+                        ),
+                    )
+                    inserted += 1
+                    continue
+
+                assignments: List[str] = []
+                values: List[Any] = []
+                for field in ("player1_name", "player2_name"):
+                    new_value = slot.get(field)
+                    current_value = existing[field]
+                    can_replace = (
+                        replace_unfinished_players
+                        and not existing["winner_name"]
+                        and new_value is not None
+                    )
+                    if new_value and (
+                        can_replace
+                        or not current_value
+                        or _is_knockout_placeholder_name(current_value)
+                    ):
+                        assignments.append(f"{field} = ?")
+                        values.append(new_value)
+                if slot.get("winner_name") and not existing["winner_name"]:
+                    assignments.append("winner_name = ?")
+                    values.append(slot.get("winner_name"))
+                if slot.get("score_summary") and not existing["score_summary"]:
+                    assignments.append("score_summary = ?")
+                    values.append(slot.get("score_summary"))
+                if assignments:
+                    cursor.execute(
+                        f"UPDATE bracket_knockout SET {', '.join(assignments)} WHERE id = ?",
+                        (*values, existing["id"]),
+                    )
+                    updated += 1
+            conn.commit()
+        ensure_knockout_schedule_entries(tournament_id, schedule_day=schedule_day)
+        return {"status": "ok", "inserted": inserted, "updated": updated, "knockout": slots}
+    except Exception as e:
+        logger.error("merge_bracket_knockout_error", error=str(e), tournament_id=tournament_id)
+        return {"error": str(e)}
+
+def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[str, Any]:
+    """Generate knockout automatically once all configured group matches are finished."""
+    groups = fetch_bracket_groups(tournament_id)
+    if not groups:
+        return {"status": "skipped", "reason": "no_groups"}
+
+    expected_matches = 0
+    finished_matches = 0
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        for group in groups:
+            player_count = len(group.get("players", []))
+            if player_count < 2:
+                continue
+            group_id = int(group["id"])
+            expected_matches += _expected_group_matches_count(cursor, tournament_id, group_id, player_count)
+            finished_matches += _count_finished_group_matches(cursor, tournament_id, group_id)
+
+    if expected_matches == 0:
+        return {"status": "skipped", "reason": "no_group_matches_expected"}
+    if finished_matches < expected_matches:
+        return {
+            "status": "pending",
+            "reason": "group_stage_incomplete",
+            "finished_matches": finished_matches,
+            "expected_matches": expected_matches,
+        }
+
+    bracket = get_full_bracket(tournament_id)
+    groups_data = bracket.get("groups", [])
+    generated = _compute_knockout_slots_from_bracket(groups_data)
+    if generated.get("error"):
+        return generated
+
+    merged = _merge_bracket_knockout_slots(tournament_id, generated.get("knockout", []))
+    if merged.get("error"):
+        return merged
+    if not merged.get("inserted") and not merged.get("updated"):
+        return {"status": "skipped", "reason": "knockout_already_configured"}
+    return merged
+
+def advance_knockout(match_id: int, tournament_id: int) -> bool:
+    """After a knockout match finishes, find the matching slot, persist the result,
+    and auto-advance winners to the next round (SF→Final/3rd place)."""
+    try:
+        from ..db_models import Match as MatchModel
+        from ..db_models import db
+        match = db.session.get(MatchModel, match_id)
+        if not match or match.status != "finished":
+            return False
+
+        p1 = match.player1_name
+        p2 = match.player2_name
+        winner = match.winner_name or (p1 if match.player1_sets > match.player2_sets else p2)
+
+        sets_history = json.loads(match.sets_history) if match.sets_history else []
+        score_parts = []
+        for s in sets_history:
+            g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+            if g1 == 0 and g2 == 0 and s.get("tiebreak_loser_points") is None:
+                continue
+            score_parts.append(f"{g1}:{g2}")
+        score_summary = " ".join(score_parts)
+
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            # Find the knockout slot matching these two players
+            cursor.execute("""
+                SELECT id, phase, position FROM bracket_knockout
+                WHERE tournament_id = ?
+                  AND ((player1_name = ? AND player2_name = ?)
+                    OR (player1_name = ? AND player2_name = ?))
+                  AND winner_name IS NULL
+            """, (tournament_id, p1, p2, p2, p1))
+            slot = cursor.fetchone()
+            if not slot:
+                return False
+
+            # Update the slot with winner and score
+            cursor.execute("""
+                UPDATE bracket_knockout
+                SET winner_name = ?, score_summary = ?, finish_reason = ?, result_note = ?
+                WHERE id = ?
+            """, (winner, score_summary, match.finish_reason or 'normal', match.result_note, slot["id"]))
+
+            loser = p2 if winner == p1 else p1
+
+            # Auto-advance: if semifinal, populate final and 3rd place
+            if _phase_kind(slot["phase"]) == "semifinal":
+                _advance_to_next_round(cursor, tournament_id, slot["phase"], slot["position"], winner, loser)
+
+            conn.commit()
+            ensure_knockout_schedule_entries(tournament_id)
+            logger.info("knockout_advanced", match_id=match_id, winner=winner, phase=slot["phase"])
+            return True
+
+    except Exception as e:
+        logger.error("advance_knockout_error", error=str(e), match_id=match_id)
+        return False
+
+def _advance_to_next_round(cursor, tournament_id: int, semifinal_phase: str, sf_position: int, winner: str, loser: str) -> None:
+    """Fill in final/3rd-place slots based on semifinal results."""
+    category_prefix, _ = _split_bracket_label(semifinal_phase)
+    cursor.execute(
+        "SELECT id, phase, position, player1_name, player2_name FROM bracket_knockout WHERE tournament_id = ?",
+        (tournament_id,),
+    )
+    slots = cursor.fetchall()
+    final_slot = next(
+        (slot for slot in slots if _slot_phase_matches(slot["phase"], "final", category_prefix)),
+        None,
+    )
+    third_slot = next(
+        (slot for slot in slots if _slot_phase_matches(slot["phase"], "third_place", category_prefix)),
+        None,
+    )
+    target_side = 1 if int(sf_position) == 1 else 2
+    if final_slot:
+        _assign_knockout_slot_player(cursor, final_slot, target_side, winner)
+    if third_slot:
+        _assign_knockout_slot_player(cursor, third_slot, target_side, loser)
+
+def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
+    """Replace all bracket groups for a tournament.
+    groups: [{"name": "A", "players": [player_id, ...]}, ...]
+    """
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            # Delete existing groups (cascade deletes players)
+            cursor.execute(
+                "DELETE FROM bracket_group_players WHERE group_id IN "
+                "(SELECT id FROM bracket_groups WHERE tournament_id = ?)",
+                (tournament_id,)
+            )
+            cursor.execute("DELETE FROM bracket_groups WHERE tournament_id = ?", (tournament_id,))
+            cursor.execute("DELETE FROM tournament_schedule WHERE tournament_id = ? AND source_type IN ('group', 'group_rematch')", (tournament_id,))
+
+            # Build player_id -> full name lookup
+            cursor.execute(
+                "SELECT id, last_name, name FROM players WHERE tournament_id = ?",
+                (tournament_id,)
+            )
+            name_map = {}
+            for row in cursor.fetchall():
+                full = (row["name"] or "").strip()
+                name_map[row["id"]] = full if full else (row["last_name"] or "").strip()
+
+            for idx, g in enumerate(groups):
+                category_id = g.get("tournament_category_id")
+                cursor.execute(
+                    "INSERT INTO bracket_groups (tournament_id, name, order_num, tournament_category_id) VALUES (?, ?, ?, ?)",
+                    (tournament_id, g["name"], idx, category_id),
+                )
+                gid = cursor.lastrowid
+                for pid in g.get("players", []):
+                    pname = name_map.get(pid, "")
+                    if pname:
+                        cursor.execute(
+                            "INSERT INTO bracket_group_players (group_id, player_id, player_name) VALUES (?, ?, ?)",
+                            (gid, pid, pname)
+                        )
+            conn.commit()
+            logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
+        ensure_group_schedule_entries(tournament_id)
+        return True
+    except Exception as e:
+        logger.error("save_bracket_groups_error", error=str(e))
+        return False
+
+def fetch_bracket_groups(tournament_id: int) -> List[Dict]:
+    """Get all bracket groups with players for a tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, name, order_num, tournament_category_id FROM bracket_groups WHERE tournament_id = ? ORDER BY order_num",
+                (tournament_id,),
+            )
+            groups = []
+            for g in cursor.fetchall():
+                cursor.execute(
+                    "SELECT player_id, player_name FROM bracket_group_players WHERE group_id = ?",
+                    (g["id"],),
+                )
+                players = [{"player_id": r["player_id"], "name": r["player_name"]} for r in cursor.fetchall()]
+                groups.append({
+                    "id": g["id"],
+                    "name": g["name"],
+                    "tournament_category_id": g["tournament_category_id"],
+                    "players": players,
+                })
+            return groups
+    except Exception as e:
+        logger.error("fetch_bracket_groups_error", error=str(e))
+        return []
+
+def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str, tournament_id: Optional[int] = None) -> List[Dict]:
+    """Find finished matches between a set of players within a date range.
+    
+    Uses exact name matching plus surname-based fallback to handle mixed storage,
+    where some rows use full names and others only surnames.
+    """
+    if len(player_names) < 2:
+        return []
+    placeholders = ",".join("?" for _ in player_names)
+    end_ts = end_date + "T23:59:59"
+    tournament_clause = "AND tournament_id = ?" if tournament_id is not None else ""
+    tournament_params = [tournament_id] if tournament_id is not None else []
+    phase_clause = "AND phase IN (?, ?)"
+    phase_params = (GROUP_PHASE, GROUP_REMATCH_PHASE)
+    # When a tournament_id is known, date filtering is wrong for late office corrections:
+    # results entered after end_date would vanish from standings. Keep the date window
+    # only for legacy rows without a tournament link.
+    date_clause = "" if tournament_id is not None else "AND created_at >= ? AND created_at <= ?"
+    date_params: list[Any] = [] if tournament_id is not None else [start_date, end_ts]
+    # Try exact match first
+    cursor.execute(f"""
+         SELECT id, player1_name, player2_name, player1_sets, player2_sets,
+             sets_history, created_at, winner_name, finish_reason, result_note
+        FROM matches
+        WHERE status = 'finished'
+           AND COALESCE(finish_reason, 'normal') != 'test'
+          {tournament_clause}
+          {phase_clause}
+          AND player1_name IN ({placeholders})
+          AND player2_name IN ({placeholders})
+          {date_clause}
+        ORDER BY created_at
+    """, (*tournament_params, *phase_params, *player_names, *player_names, *date_params))
+    exact_results = [dict(row) for row in cursor.fetchall()]
+
+    # Fallback: surname-based matching (bracket stores "Kowalski" but match has "Jan Kowalski")
+    # Build a map of surname -> bracket_name for renaming results
+    surnames = []
+    for name in player_names:
+        parts = name.strip().split()
+        surname = parts[-1] if parts else name
+        surnames.append(surname)
+
+    like_conditions = []
+    like_params = []
+    for surname in surnames:
+        like_conditions.append("player1_name LIKE ?")
+        like_params.append(f"%{surname}")
+    p1_cond = " OR ".join(like_conditions)
+
+    like_conditions2 = []
+    like_params2 = []
+    for surname in surnames:
+        like_conditions2.append("player2_name LIKE ?")
+        like_params2.append(f"%{surname}")
+    p2_cond = " OR ".join(like_conditions2)
+
+    cursor.execute(f"""
+         SELECT id, player1_name, player2_name, player1_sets, player2_sets,
+             sets_history, created_at, winner_name, finish_reason, result_note
+        FROM matches
+        WHERE status = 'finished'
+                  AND COALESCE(finish_reason, 'normal') != 'test'
+                    {tournament_clause}
+                    {phase_clause}
+          AND ({p1_cond})
+          AND ({p2_cond})
+          {date_clause}
+        ORDER BY created_at
+        """, (*tournament_params, *phase_params, *like_params, *like_params2, *date_params))
+    raw_results = cursor.fetchall()
+    if not exact_results and not raw_results:
+        return []
+
+    # Build surname -> bracket_name lookup
+    surname_to_bracket = {}
+    for name in player_names:
+        parts = name.strip().split()
+        surname = parts[-1].lower() if parts else name.lower()
+        surname_to_bracket[surname] = name
+
+    # Remap match player names to bracket names
+    seen_pairs = {
+        tuple(sorted((row["player1_name"], row["player2_name"])))
+        for row in exact_results
+        if row.get("player1_name") and row.get("player2_name")
+    }
+    remapped = []
+    for row in raw_results:
+        r = dict(row)
+        p1_surname = r["player1_name"].strip().split()[-1].lower() if r["player1_name"] else ""
+        p2_surname = r["player2_name"].strip().split()[-1].lower() if r["player2_name"] else ""
+        bracket_p1 = surname_to_bracket.get(p1_surname)
+        bracket_p2 = surname_to_bracket.get(p2_surname)
+        if bracket_p1 and bracket_p2 and bracket_p1 != bracket_p2:
+            pair_key = tuple(sorted((bracket_p1, bracket_p2)))
+            if pair_key in seen_pairs:
+                continue
+            r["player1_name"] = bracket_p1
+            r["player2_name"] = bracket_p2
+            remapped.append(r)
+            seen_pairs.add(pair_key)
+
+    merged = list(exact_results)
+    seen_ids = {int(row["id"]) for row in exact_results if row.get("id") is not None}
+    for row in remapped:
+        row_id = row.get("id")
+        if row_id is not None and int(row_id) in seen_ids:
+            continue
+        merged.append(row)
+        if row_id is not None:
+            seen_ids.add(int(row_id))
+
+    merged.sort(key=lambda row: row.get("created_at") or "")
+    return merged
+
+def _is_stb(s: dict) -> bool:
+    """Detect super tiebreak set (set 3+ with low games and TB points)."""
+    if s.get("is_super_tiebreak", False):
+        return True
+    g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+    return (s.get("set_number", 0) >= 3 and max(g1, g2) <= 1
+            and s.get("tiebreak_loser_points") is not None)
+
+def _is_empty_set(s: dict) -> bool:
+    """Skip junk 0:0 sets (app initialised set 3 but match ended in 2)."""
+    g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+    return g1 == 0 and g2 == 0 and s.get("tiebreak_loser_points") is None
+
+def _build_set_detail(s: dict, flipped: bool = False) -> dict:
+    """Build per-set scoreboard data. For STB, use actual TB points."""
+    g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+    tb = s.get("tiebreak_loser_points")
+    stb = _is_stb(s)
+    if stb and tb is not None:
+        # STB: convert games 0/1 → actual tiebreak points
+        # Winner gets max(10, tb+2), loser gets tb
+        winner_pts = max(10, tb + 2)
+        if g1 > g2:  # player1 won STB
+            g1, g2 = winner_pts, tb
+        else:
+            g1, g2 = tb, winner_pts
+        tb = None  # no separate TB display needed
+    if flipped:
+        g1, g2 = g2, g1
+    return {"g1": g1, "g2": g2, "tb": tb, "stb": stb}
+
+def _format_set_score(s: dict, flipped: bool = False) -> str:
+    """Format a single set score string."""
+    g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+    if flipped:
+        g1, g2 = g2, g1
+    tb = s.get("tiebreak_loser_points")
+    if _is_stb(s):
+        return f"STB {g1}:{g2}" if tb is None else f"STB [{g1}:{g2}({tb})]"
+    if tb is not None:
+        return f"{g1}:{g2}({tb})"
+    return f"{g1}:{g2}"
+
+def _compute_standings(player_names: List[str], matches) -> tuple:
+    """Compute standings from a list of matches. Returns (standings, match_results)."""
+    stats = {name: {"wins": 0, "losses": 0, "sets_won": 0, "sets_lost": 0,
+                     "games_won": 0, "games_lost": 0, "played": 0}
+             for name in player_names}
+
+    match_results = []
+    for m in matches:
+        p1, p2 = m["player1_name"], m["player2_name"]
+        s1, s2 = m["player1_sets"], m["player2_sets"]
+        sh = json.loads(m["sets_history"]) if m["sets_history"] else []
+        sh = [s for s in sh if not _is_empty_set(s)]
+
+        if p1 not in stats or p2 not in stats:
+            continue
+
+        stats[p1]["played"] += 1
+        stats[p2]["played"] += 1
+
+        winner = m.get("winner_name") if isinstance(m, dict) else None
+        if winner == p1:
+            stats[p1]["wins"] += 1
+            stats[p2]["losses"] += 1
+        elif winner == p2:
+            stats[p2]["wins"] += 1
+            stats[p1]["losses"] += 1
+        elif s1 > s2:
+            stats[p1]["wins"] += 1
+            stats[p2]["losses"] += 1
+            winner = p1
+        elif s2 > s1:
+            stats[p2]["wins"] += 1
+            stats[p1]["losses"] += 1
+            winner = p2
+
+        stats[p1]["sets_won"] += s1
+        stats[p1]["sets_lost"] += s2
+        stats[p2]["sets_won"] += s2
+        stats[p2]["sets_lost"] += s1
+
+        for s in sh:
+            if not _is_stb(s):
+                stats[p1]["games_won"] += s.get("player1_games", 0)
+                stats[p1]["games_lost"] += s.get("player2_games", 0)
+                stats[p2]["games_won"] += s.get("player2_games", 0)
+                stats[p2]["games_lost"] += s.get("player1_games", 0)
+
+        # Build per-set score arrays for scoreboard display
+        sets_detail = [_build_set_detail(s) for s in sh]
+
+        # Build score string
+        score_parts = []
+        for s in sh:
+            score_parts.append(_format_set_score(s))
+
+        match_results.append({
+            "match_id": m["id"],
+            "player_a": p1,
+            "player_b": p2,
+            "score": "  ".join(score_parts),
+            "sets": sets_detail,
+            "winner": winner,
+            "sets_a": s1,
+            "sets_b": s2,
+            "finish_reason": m.get("finish_reason") if isinstance(m, dict) else None,
+            "result_note": m.get("result_note") if isinstance(m, dict) else None,
+        })
+
+    # Sort: wins desc, set_diff desc, game_diff desc
+    standings = []
+    for name, s in stats.items():
+        standings.append({
+            "name": name,
+            **s,
+            "set_diff": s["sets_won"] - s["sets_lost"],
+            "game_diff": s["games_won"] - s["games_lost"],
+        })
+    standings.sort(key=lambda x: (x["wins"], x["set_diff"], x["game_diff"]), reverse=True)
+    return standings, match_results
+
+def save_bracket_knockout(tournament_id: int, slots: List[Dict]) -> bool:
+    """Save knockout bracket slots."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bracket_knockout WHERE tournament_id = ?", (tournament_id,))
+            for slot in slots:
+                cursor.execute(
+                    "INSERT INTO bracket_knockout (tournament_id, phase, position, "
+                    "player1_name, player2_name, winner_name, score_summary, finish_reason, result_note) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (tournament_id, slot["phase"], slot.get("position", 1),
+                     slot.get("player1_name"), slot.get("player2_name"),
+                     slot.get("winner_name"), slot.get("score_summary"),
+                     slot.get("finish_reason", "normal"), slot.get("result_note"))
+                )
+            conn.commit()
+            logger.info("bracket_knockout_saved", tournament_id=tournament_id, count=len(slots))
+            return True
+    except Exception as e:
+        logger.error("save_bracket_knockout_error", error=str(e))
+        return False
+
+def fetch_bracket_knockout(tournament_id: int) -> List[Dict]:
+    """Get knockout bracket slots."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id, phase, position, player1_name, player2_name, winner_name, score_summary, finish_reason, result_note "
+                "FROM bracket_knockout WHERE tournament_id = ? ORDER BY phase, position",
+                (tournament_id,)
+            )
+            return [dict(r) for r in cursor.fetchall()]
+    except Exception as e:
+        logger.error("fetch_bracket_knockout_error", error=str(e))
+        return []
+
+def _detect_knockout_result(
+    cursor,
+    p1: str,
+    p2: str,
+    start_date: str,
+    end_date: str,
+    tournament_id: Optional[int] = None,
+    phase: Optional[str] = None,
+) -> Optional[Dict]:
+    """Try to find a finished match between two specific players."""
+    if not p1 or not p2:
+        return None
+
+    end_ts = end_date + "T23:59:59"
+    tournament_clause = "AND tournament_id = ?" if tournament_id is not None else ""
+    tournament_params = [tournament_id] if tournament_id is not None else []
+    surname1 = p1.strip().split()[-1] if p1.strip() else p1
+    surname2 = p2.strip().split()[-1] if p2.strip() else p2
+
+    def _fetch_finished_match(match_phase: Optional[str]) -> Optional[sqlite3.Row]:
+        phase_clause = "AND phase = ?" if match_phase else ""
+        phase_params = [match_phase] if match_phase else []
+        cursor.execute(f"""
+                        SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history,
+                                     winner_name, finish_reason, result_note
+            FROM matches
+            WHERE status = 'finished'
+                            AND COALESCE(finish_reason, 'normal') != 'test'
+              {tournament_clause}
+              {phase_clause}
+              AND ((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))
+              AND created_at >= ? AND created_at <= ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (*tournament_params, *phase_params, p1, p2, p2, p1, start_date, end_ts))
+        row = cursor.fetchone()
+        if row:
+            return row
+        cursor.execute(f"""
+                        SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history,
+                                     winner_name, finish_reason, result_note
+            FROM matches
+            WHERE status = 'finished'
+                            AND COALESCE(finish_reason, 'normal') != 'test'
+              {tournament_clause}
+              {phase_clause}
+              AND ((player1_name LIKE ? AND player2_name LIKE ?)
+                OR (player1_name LIKE ? AND player2_name LIKE ?))
+              AND created_at >= ? AND created_at <= ?
+            ORDER BY created_at DESC LIMIT 1
+        """, (*tournament_params, *phase_params, f"%{surname1}", f"%{surname2}", f"%{surname2}", f"%{surname1}", start_date, end_ts))
+        return cursor.fetchone()
+
+    row = _fetch_finished_match(phase)
+    if not row and phase and phase != "Pucharowa":
+        row = _fetch_finished_match("Pucharowa")
+    if not row and not phase:
+        row = _fetch_finished_match(None)
+
+    if not row:
+        return None
+
+    p1_surname = p1.strip().split()[-1].lower() if p1.strip() else ""
+    match_p1_surname = row["player1_name"].strip().split()[-1].lower() if row["player1_name"] else ""
+    flipped = match_p1_surname != p1_surname
+
+    sh = json.loads(row["sets_history"]) if row["sets_history"] else []
+    sh = [s for s in sh if not _is_empty_set(s)]
+    score_parts = [_format_set_score(s, flipped) for s in sh]
+    sets_detail = [_build_set_detail(s, flipped) for s in sh]
+
+    match_winner = row["winner_name"] or (row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"])
+    winner_surname = match_winner.strip().split()[-1].lower() if match_winner else ""
+    if winner_surname == p1.strip().split()[-1].lower():
+        winner = p1
+    elif winner_surname == p2.strip().split()[-1].lower():
+        winner = p2
+    else:
+        winner = match_winner
+    return {
+        "winner": winner,
+        "score": "  ".join(score_parts),
+        "sets": sets_detail,
+        "finish_reason": row["finish_reason"],
+        "result_note": row["result_note"],
+    }
+
+def get_full_bracket(tournament_id: int) -> Dict:
+    """Get complete bracket data for a tournament."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+
+            # Tournament info
+            cursor.execute("SELECT name, start_date, end_date FROM tournaments WHERE id = ?", (tournament_id,))
+            t = cursor.fetchone()
+            if not t:
+                return {"error": "Tournament not found"}
+
+            start_date = t["start_date"]
+            end_date = t["end_date"]
+
+            # Groups + standings
+            cursor.execute(
+                "SELECT id, name FROM bracket_groups WHERE tournament_id = ? ORDER BY order_num",
+                (tournament_id,)
+            )
+            group_rows = cursor.fetchall()
+
+            groups_data = []
+            for g in group_rows:
+                cursor.execute(
+                    "SELECT player_name FROM bracket_group_players WHERE group_id = ?",
+                    (g["id"],)
+                )
+                player_names = [r["player_name"] for r in cursor.fetchall()]
+                matches = _find_group_matches(cursor, player_names, start_date, end_date, tournament_id)
+                standings, match_results = _compute_standings(player_names, matches)
+                groups_data.append({
+                    "name": g["name"],
+                    "standings": standings,
+                    "matches": match_results,
+                })
+
+            # Knockout
+            cursor.execute(
+                "SELECT phase, position, player1_name, player2_name, winner_name, score_summary, finish_reason, result_note "
+                "FROM bracket_knockout WHERE tournament_id = ? ORDER BY phase, position",
+                (tournament_id,)
+            )
+            knockout_rows = cursor.fetchall()
+
+            knockout = {}
+            for r in knockout_rows:
+                phase = r["phase"]
+                slot = {
+                    "position": r["position"],
+                    "player1": r["player1_name"],
+                    "player2": r["player2_name"],
+                    "winner": r["winner_name"],
+                    "score": r["score_summary"],
+                    "finish_reason": r["finish_reason"],
+                    "result_note": r["result_note"],
+                    "sets": None,
+                }
+                # Auto-detect result from match data (always, to populate sets)
+                if slot["player1"] and slot["player2"]:
+                    result = _detect_knockout_result(
+                        cursor, slot["player1"], slot["player2"], start_date, end_date, tournament_id, phase
+                    )
+                    if result:
+                        if not slot["winner"]:
+                            slot["winner"] = result["winner"]
+                            slot["score"] = result["score"]
+                            slot["finish_reason"] = result.get("finish_reason")
+                            slot["result_note"] = result.get("result_note")
+                        slot["sets"] = result.get("sets")
+
+                knockout.setdefault(phase, []).append(slot)
+
+            return {
+                "tournament": {
+                    "id": tournament_id,
+                    "name": t["name"],
+                },
+                "groups": groups_data,
+                "knockout": knockout,
+            }
+    except Exception as e:
+        logger.error("get_full_bracket_error", error=str(e))
+        return {"error": str(e)}
+
+def generate_knockout_from_standings(tournament_id: int) -> Dict:
+    """Auto-generate knockout bracket from completed group standings."""
+    try:
+        bracket = get_full_bracket(tournament_id)
+        generated = _compute_knockout_slots_from_bracket(bracket.get("groups", []))
+        if generated.get("error"):
+            return generated
+        slots = generated.get("knockout", [])
+
+        save_bracket_knockout(tournament_id, slots)
+        ensure_knockout_schedule_entries(tournament_id)
+        return {"status": "ok", "knockout": slots}
+    except Exception as e:
+        logger.error("generate_knockout_error", error=str(e))
+        return {"error": str(e)}
