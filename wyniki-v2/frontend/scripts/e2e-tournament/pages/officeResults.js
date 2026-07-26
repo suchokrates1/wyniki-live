@@ -1,47 +1,52 @@
 /**
- * Page object: Office results / matches tab.
+ * Page object: office match results (Dodaj wynik / Popraw wynik).
  */
 export class OfficeResultsPage {
   constructor(page) {
     this.page = page;
   }
 
-  async navigateToTab() {
-    await this.page.getByRole('button', { name: 'Mecze' }).click();
+  async navigateToHistory() {
+    await this.page.getByRole('button', { name: 'Ostatnie mecze' }).click();
     await this.page.waitForFunction(
-      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Mecze'),
+      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Ostatnie mecze'),
       undefined,
-      { timeout: 8000 }
+      { timeout: 10000 }
     );
   }
 
-  async clickStartMatch(player1Partial, player2Partial) {
-    const btn = this.page.locator(`button:has-text("Rozpocznij")`).first();
-    await btn.click();
-    await this.page.waitForTimeout(500);
+  async openAddResult() {
+    await this.page.getByRole('button', { name: 'Dodaj wynik' }).click();
+    await this.page.waitForFunction(
+      () => document.body.innerText.includes('Zapisz wynik'),
+      undefined,
+      { timeout: 10000 }
+    );
   }
 
   async enterScore(setsA, setsB) {
-    // Fill score form inputs if visible
-    const inputs = this.page.locator('input[type="number"]');
-    const count = await inputs.count();
-    if (count >= 2) {
-      await inputs.nth(0).fill(String(setsA[0] ?? 0));
-      await inputs.nth(1).fill(String(setsB[0] ?? 0));
+    const modal = this.page.locator('.office-modal').filter({ hasText: 'Zapisz wynik' });
+    const inputs = modal.locator('input[type="number"]');
+    await inputs.nth(0).fill(String(setsA[0] ?? 6));
+    await inputs.nth(1).fill(String(setsB[0] ?? 4));
+    if (setsA[1] != null && setsB[1] != null) {
+      await inputs.nth(2).fill(String(setsA[1]));
+      await inputs.nth(3).fill(String(setsB[1]));
     }
   }
 
   async submitResult() {
-    const saveBtn = this.page.getByRole('button', { name: /Zapisz|Zatwierdź/i });
-    if (await saveBtn.isVisible()) {
-      await saveBtn.click();
-      await this.page.waitForTimeout(1000);
-    }
+    await this.page.getByRole('button', { name: 'Zapisz wynik' }).click();
+    await this.page.waitForTimeout(1500);
   }
 
-  async getMatchCount() {
-    return this.page.evaluate(() =>
-      document.querySelectorAll('[data-match-id], .match-row, .office-match-card').length
-    );
+  async openEditFirst() {
+    const editBtn = this.page.getByRole('button', { name: 'Popraw wynik' }).first();
+    await editBtn.click();
+    await this.page.waitForTimeout(800);
+  }
+
+  async getHistoryPlayerSnippet() {
+    return this.page.evaluate(() => document.body.innerText);
   }
 }

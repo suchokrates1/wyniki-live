@@ -13,10 +13,12 @@ export class AdminBootstrapPage {
   }
 
   async login(password = 'e2e-admin') {
-    await this.page.getByPlaceholder(/hasło|password/i).fill(password);
-    await this.page.getByRole('button', { name: /Zaloguj|Login/i }).click();
+    const form = this.page.locator('form').filter({ hasText: 'Panel administratora' });
+    await form.locator('input[type="password"]').fill(password);
+    await form.getByRole('button', { name: /Zaloguj|Login/i }).click();
     await this.page.waitForFunction(
-      () => !document.body.innerText.includes('Zaloguj') || document.body.innerText.includes('Turnieje'),
+      () => document.body.innerText.includes('Panel Administracyjny')
+        && !document.body.innerText.includes('Podaj hasło administratora'),
       undefined,
       { timeout: 10000 }
     );

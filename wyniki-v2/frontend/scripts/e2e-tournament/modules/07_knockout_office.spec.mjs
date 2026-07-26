@@ -1,12 +1,11 @@
 /**
- * Module 07: Knockout from office — verify knockout bracket visibility after group completion.
- * Since completing all group matches via UI is complex, this module seeds completion via API
- * then verifies the knockout bracket is visible in the office Drabinka tab.
+ * Module 07: Knockout tab — seed groups/schedule, open Drabinka in office UI.
  */
 import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, saveGroups,
-  generateSchedule, cleanup, apiUrl, marker, samplePlayers, adminHeaders,
+  generateSchedule, cleanup, samplePlayers, resolveOfficeSlot,
+  OFFICE_PASSWORD, apiUrl, adminHeaders,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficePlanningPage } from '../pages/officePlanning.js';
@@ -23,18 +22,17 @@ async function fetchJson(url, options = {}) {
 export default async function run() {
   const token = await adminLogin();
   const tournament = await createTournament(token, { courts: 4 });
-  const tournamentId = tournament.tournament?.id || tournament.id;
+  const tournamentId = tournament.id;
+  const tournamentName = tournament.name;
 
   const players = samplePlayers(4);
   const bulkResult = await addPlayers(token, tournamentId, players);
-  const playerIds = bulkResult.player_ids || bulkResult.players?.map((p) => p.id) || [];
+  const playerIds = bulkResult.player_ids || [];
 
-  const groups = [{ name: 'B1 — Grupa A', players: playerIds }];
-  await saveGroups(token, tournamentId, groups);
+  await saveGroups(token, tournamentId, [{ name: 'B1 — Grupa A', players: playerIds }]);
   await generateSchedule(token, tournamentId);
   console.log('  Tournament seeded with groups + schedule');
 
-  // Attempt knockout generation (may require completed group matches)
   try {
     await fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/knockout/generate`), {
       method: 'POST',
@@ -45,21 +43,18 @@ export default async function run() {
     console.log(`  Knockout generation skipped (groups not complete): ${e.message}`);
   }
 
-  // Verify office shows bracket tab
+  const slot = await resolveOfficeSlot(tournamentName);
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);
-    await loginPage.goto(1);
-    await loginPage.login('test');
+    await loginPage.goto(slot);
+    await loginPage.login(OFFICE_PASSWORD);
 
     const planningPage = new OfficePlanningPage(page);
-    await planningPage.navigateToTab();
-    await planningPage.waitForGroups();
-    console.log('  Office: bracket/planning tab accessible');
-
+    await planningPage.openKnockoutTab();
     const hasKnockout = await planningPage.hasKnockoutGenerated();
-    console.log(`  Office: knockout generated indicator: ${hasKnockout}`);
+    console.log(`  Office: knockout tab accessible (indicator=${hasKnockout})`);
   } finally {
     await browser.close();
   }

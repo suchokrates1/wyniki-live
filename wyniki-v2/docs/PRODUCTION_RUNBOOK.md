@@ -192,5 +192,16 @@ python scripts/e2e_tournament/run.py down
 ### Configuration
 
 - `.env.e2e.example` — copy to `.env.e2e` to override defaults
-- `E2E_BASE_URL` env var overrides `http://localhost:18087`
+- `E2E_BASE_URL` env var overrides `http://localhost:18087` (on Windows host without Docker use `http://192.168.31.5:18087` against minipc)
+- `E2E_ADMIN_PASSWORD` defaults to `e2e-admin` (never reuse prod `ADMIN_PASSWORD`)
 - Container: `wyniki-tenis-e2e`, volume: `wyniki_e2e_data`
+
+### Android 4-court wave (optional)
+
+```powershell
+Set-Location "c:\Users\sucho\Vest Tennis\android-tennis-referee"
+$env:E2E_BASE_URL = 'http://10.0.2.2:18087'   # emulator → host/minipc port-forward
+.\scripts\run_parallel_courts.ps1
+```
+
+Requires up to 4 AVDs (`emulator-5554` …). Orchestrator degrades to fewer devices when not all are connected. Tests live under `app/src/androidTest/.../e2e/` (`E2EBackendClient`, `UmpireRobot`, `MultiCourtUmpireE2ETest`).

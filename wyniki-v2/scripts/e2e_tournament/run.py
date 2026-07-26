@@ -104,8 +104,8 @@ def cmd_full() -> bool:
 
     results["office"] = cmd_office()
 
-    # Android stub
-    print("[full] Android: SKIP (no connected device / stub)")
+    # Android wave is optional (needs AVDs + adb). Code path: android-tennis-referee/scripts/run_parallel_courts.ps1
+    print("[full] Android: SKIP in this orchestrator (run scripts/run_parallel_courts.ps1 separately when AVDs are up)")
     results["android"] = True
 
     elapsed = time.time() - t0

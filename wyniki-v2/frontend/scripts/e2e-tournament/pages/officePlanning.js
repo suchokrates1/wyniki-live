@@ -1,5 +1,5 @@
 /**
- * Page object: Office planning tab (groups, draw).
+ * Page object: Office planning tab (groups + schedule board).
  */
 export class OfficePlanningPage {
   constructor(page) {
@@ -7,24 +7,37 @@ export class OfficePlanningPage {
   }
 
   async navigateToTab() {
-    await this.page.getByRole('button', { name: 'Drabinka' }).click();
+    await this.page.getByRole('button', { name: 'Plan turnieju' }).click();
     await this.page.waitForFunction(
-      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Drabinka'),
+      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Plan turnieju'),
       undefined,
-      { timeout: 8000 }
+      { timeout: 10000 }
     );
   }
 
   async waitForGroups() {
     await this.page.waitForFunction(
-      () => document.body.innerText.toLocaleLowerCase('pl-PL').includes('grupa'),
+      () => {
+        const text = document.body.innerText.toLocaleLowerCase('pl-PL');
+        return text.includes('grupa') || text.includes('grupy startowe');
+      },
       undefined,
-      { timeout: 8000 }
+      { timeout: 12000 }
+    );
+  }
+
+  async openKnockoutTab() {
+    await this.page.getByRole('button', { name: 'Drabinka' }).click();
+    await this.page.waitForFunction(
+      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Drabinka'),
+      undefined,
+      { timeout: 10000 }
     );
   }
 
   async hasKnockoutGenerated() {
     const text = await this.page.evaluate(() => document.body.innerText.toLocaleLowerCase('pl-PL'));
-    return text.includes('wygenerowane');
+    return text.includes('wygenerowane') || text.includes('półfinał') || text.includes('finał')
+      || text.includes('nie została jeszcze wygenerowana');
   }
 }

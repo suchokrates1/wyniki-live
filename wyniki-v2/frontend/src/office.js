@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import { mergeAdminModules } from './admin/merge.js';
 import { createOfficeI18n } from './i18n/officeI18n.js';
 import { createOfficeCoreView } from './modules/office/coreView.js';
 import { createOfficeMatchesView } from './modules/office/matchesView.js';
@@ -11,15 +12,16 @@ import './main.css';
 
 window.Alpine = Alpine;
 
-Alpine.data('officeApp', () => ({
-  ...createOfficeI18n(),
-  ...createOfficeCoreView(),
-  ...createOfficeSseView(),
-  ...createOfficeNotificationsView(),
-  ...createOfficeQuickInfoView(),
-  ...createOfficeMatchesView(),
-  ...createOfficeScheduleView(),
-  ...createOfficePlayersView(),
-}));
+// Preserve getters (isAuthenticated, officeMatches, …) — object spread would freeze them.
+Alpine.data('officeApp', () => mergeAdminModules(
+  createOfficeI18n(),
+  createOfficeCoreView(),
+  createOfficeSseView(),
+  createOfficeNotificationsView(),
+  createOfficeQuickInfoView(),
+  createOfficeMatchesView(),
+  createOfficeScheduleView(),
+  createOfficePlayersView(),
+));
 
 Alpine.start();
