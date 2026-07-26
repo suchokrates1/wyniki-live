@@ -31,6 +31,9 @@
 
 ## Golden versions (fill at freeze)
 
-- Android versionName / versionCode:
-- Backend git SHA on minipc:
-- Frontend build date:
+- Android versionName / versionCode: `1.0.0-dev.24` / `100024` (production+beta); internal/alpha still `100023` (same feature set minus bump)
+- Backend git SHA on minipc: `2d77867`
+- Frontend build: Docker image from `2d77867` (2026-07-26)
+- DB backup: `/home/suchokrates1/wyniki-backups/wyniki/wyniki-data-20260726T123251Z.tar.gz`
+- Play review: auto-review active on commit (no `changesNotSentForReview`); confirm Publishing overview if any item still pending
+- Public UI: browser OK; `npm run verify:production` may report pageerror `reading 'after'` (likely third-party analytics) — API smoke OK

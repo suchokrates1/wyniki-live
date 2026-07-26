@@ -152,6 +152,7 @@ Print / tick before each tournament weekend:
 
 ## Current Freeze Baseline
 
-- Android: bump lokalny outbox (`1.0.0-dev.23`) — zaktualizuj po pushu
-- Backend: zaktualizuj po deployu T0–T2
+- Android golden: `1.0.0-dev.24` (`100024`) on beta+production; `100023` on internal+alpha
+- Backend: `2d77867` on minipc
 - Scoring / umpire JSON contract: **frozen** w tygodniu T4 (tylko świadome hotfixy)
+- Checklist: `docs/ARCHITECTURE_FREEZE_PRE_EVENT.md`
