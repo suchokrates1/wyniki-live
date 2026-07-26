@@ -46,14 +46,12 @@ from ..database import (
     delete_tournament_schedule_entry,
     publish_tournament_schedule,
     link_schedule_to_match,
-    GROUP_PHASE,
-    GROUP_REMATCH_PHASE,
-    is_group_stage_phase,
-    normalize_group_stage_phase,
 )
 from ..db_models import Match, MatchHistory, Tournament, db, utc_now_iso
-from .admin_tournaments import (
+from ..services.office_workflow import (
+    OfficeWorkflowError,
     _build_office_dashboard,
+    _create_office_group_match,
     _create_office_knockout_match,
     _group_players_index,
     _infer_group_id_for_players,
@@ -64,8 +62,6 @@ from .admin_tournaments import (
     _normalize_office_sets,
     _office_history_payload,
     _office_match_payload,
-    OfficeWorkflowError,
-    _player_pair_key,
     _sync_office_match_history,
 )
 
@@ -707,112 +703,11 @@ def office_group_match(slot: int):
     tournament, error = _require_office_access(slot)
     if error:
         return error
-    tournament_id = int(tournament['id'])
-
-    data = request.get_json(silent=True) or {}
-    schedule_id = _normalize_int(data.get('schedule_id'), 0) or None
-    group_id = _normalize_int(data.get('group_id'), 0)
-    player1_name = (data.get('player1_name') or '').strip()
-    player2_name = (data.get('player2_name') or '').strip()
-
-    schedule_entry = None
-    if schedule_id:
-        schedule_entry = next(
-            (entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)),
-            None,
-        )
-        if not schedule_entry:
-            return jsonify({"error": "Schedule entry not found"}), 404
-        player1_name = player1_name or str(schedule_entry.get("player1_name") or "").strip()
-        player2_name = player2_name or str(schedule_entry.get("player2_name") or "").strip()
-        if not group_id and schedule_entry.get("bracket_group_id"):
-            group_id = int(schedule_entry["bracket_group_id"])
-
-    if not group_id or not player1_name or not player2_name or player1_name == player2_name:
-        return jsonify({"error": "Group and two different players are required"}), 400
-
-    groups = fetch_bracket_groups(tournament_id)
-    group = next((item for item in groups if int(item['id']) == group_id), None)
-    if not group:
-        return jsonify({"error": "Group not found"}), 404
-    group_player_names = {player['name'] for player in group.get('players', [])}
-    if player1_name not in group_player_names or player2_name not in group_player_names:
-        return jsonify({"error": "Both players must belong to the selected group"}), 400
-
-    _, player_groups = _group_players_index(groups)
-    pair_key = _player_pair_key(player1_name, player2_name)
-    raw_phase = (data.get('phase') or (schedule_entry or {}).get('phase') or GROUP_PHASE).strip()
-    if not is_group_stage_phase(raw_phase):
-        return jsonify({"error": "Unsupported group-stage phase"}), 400
-    phase = normalize_group_stage_phase(raw_phase)
-
-    existing_match = Match.query.filter(
-        Match.tournament_id == tournament_id,
-        Match.bracket_group_id == group_id,
-        Match.phase == phase,
-        Match.status == 'finished',
-        (((Match.player1_name == player1_name) & (Match.player2_name == player2_name))
-         | ((Match.player1_name == player2_name) & (Match.player2_name == player1_name))),
-    ).first()
-    if existing_match:
-        return jsonify({"error": "This group match already has a result. Edit the existing result instead."}), 409
-
-    for history in MatchHistory.query.filter_by(tournament_id=tournament_id).all():
-        if history.phase != phase:
-            continue
-        if _infer_group_id_for_players(history.player_a, history.player_b, player_groups) != group_id:
-            continue
-        if _player_pair_key(history.player_a, history.player_b) == pair_key:
-            return jsonify({"error": "This group match already has a result. Edit the existing result instead."}), 409
-
     try:
-        sets_history, player1_sets, player2_sets = _normalize_office_sets(data, player1_name, player2_name)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-
-    now = utc_now_iso()
-    match = Match(
-        court_id=(data.get('court_id') or (schedule_entry or {}).get('court_id') or f"office-{tournament_id}"),
-        player1_name=player1_name,
-        player2_name=player2_name,
-        status='finished',
-        tournament_id=tournament_id,
-        bracket_group_id=group_id,
-        phase=phase,
-        finish_reason='walkover' if _normalize_bool(data.get('walkover', False)) else 'normal',
-        winner_name=(data.get('winner_name') or '').strip() if _normalize_bool(data.get('walkover', False)) else None,
-        result_note='Walkower' if _normalize_bool(data.get('walkover', False)) else None,
-        player1_sets=player1_sets,
-        player2_sets=player2_sets,
-        sets_history=json.dumps(sets_history),
-        created_at=data.get('ended_at') or now,
-        updated_at=now,
-    )
-    db.session.add(match)
-    db.session.flush()
-    _sync_office_match_history(match, group.get('name'))
-    db.session.commit()
-    link_schedule_to_match(
-        tournament_id,
-        match.id,
-        schedule_id=schedule_id,
-        player1_name=player1_name,
-        player2_name=player2_name,
-        phase=phase,
-        bracket_group_id=group_id,
-    )
-
-    generation = (
-        maybe_generate_knockout_from_completed_groups(tournament_id)
-        if phase == GROUP_PHASE
-        else {"status": "pending"}
-    )
-    return _json_no_cache({
-        "message": "Group match added",
-        "match": _office_match_payload(match, {group_id: group.get('name')}, player_groups),
-        "knockout_generation": generation,
-        "dashboard": _build_office_dashboard(tournament_id),
-    }, 201)
+        payload, status = _create_office_group_match(int(tournament['id']), request.get_json(silent=True) or {})
+    except OfficeWorkflowError as exc:
+        return jsonify({"error": str(exc)}), exc.status_code
+    return _json_no_cache(payload, status)
 
 
 @blueprint.route('/<int:slot>/knockout-matches', methods=['POST'])

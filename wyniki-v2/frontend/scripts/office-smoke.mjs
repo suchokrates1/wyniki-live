@@ -32,7 +32,7 @@ async function inspectPage(page) {
 }
 
 const baseUrl = argValue('--base-url', process.env.OFFICE_SMOKE_BASE_URL || 'https://score.vestmedia.pl');
-const slot = Number(argValue('--slot', process.env.OFFICE_SMOKE_SLOT || '3'));
+const slot = Number(argValue('--slot', process.env.OFFICE_SMOKE_SLOT || '1'));
 const meta = await readJson(appUrl(baseUrl, `/api/office/${slot}/meta`));
 const tournament = meta.tournament || {};
 const password = argValue('--password', process.env.OFFICE_SMOKE_PASSWORD || (tournament.is_simulation ? 'test' : ''));

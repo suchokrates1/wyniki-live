@@ -57,3 +57,21 @@
 - Create final backup.
 - Archive rehearsal notes, incidents, and fixes.
 - Decide which emergency patches should become permanent cleanup work.
+
+## Local E2E Tournament Verification
+
+Before or after rehearsals, run the full local E2E to verify the tournament flow end-to-end:
+
+```powershell
+Set-Location "c:\Users\sucho\Wyniki\wyniki-live\wyniki-v2"
+python scripts/e2e_tournament/run.py full
+```
+
+This builds a fresh Docker container (`wyniki-tenis-e2e` on port `18087`), creates a simulation tournament, runs Playwright modules covering groups/schedule/results/knockout/quick-info, then tears down. Takes ~2-3 minutes.
+
+Individual modules can be run with:
+
+```powershell
+cd frontend
+npm run e2e:tournament:module -- 01_bootstrap
+```

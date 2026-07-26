@@ -1,0 +1,29 @@
+services:
+  wyniki-e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wyniki-tenis-e2e
+    image: count-wyniki-e2e:latest
+    ports:
+      - "18087:8080"
+    volumes:
+      - wyniki_e2e_data:/data
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-e2e-secret}
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - DEBUG=false
+      - DATABASE_PATH=/data/wyniki.sqlite3
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-e2e-admin}
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 8s
+
+volumes:
+  wyniki_e2e_data:

@@ -156,3 +156,41 @@ Print / tick before each tournament weekend:
 - Backend: `2d77867` on minipc
 - Scoring / umpire JSON contract: **frozen** w tygodniu T4 (tylko świadome hotfixy)
 - Checklist: `docs/ARCHITECTURE_FREEZE_PRE_EVENT.md`
+
+## Local E2E Tournament Test
+
+Runs a full tournament lifecycle (create → groups → schedule → results → knockout) against a local Docker container with Playwright.
+
+### Quick start
+
+```powershell
+Set-Location "c:\Users\sucho\Wyniki\wyniki-live\wyniki-v2"
+c:/Users/sucho/Wyniki/wyniki-live/.venv/Scripts/python.exe scripts/e2e_tournament/run.py full
+```
+
+### Individual commands
+
+```powershell
+# Start E2E container (port 18087)
+python scripts/e2e_tournament/run.py up
+
+# Run all office modules
+python scripts/e2e_tournament/run.py office
+
+# Run a single module
+python scripts/e2e_tournament/run.py office --module 01_bootstrap
+
+# Or via npm
+cd frontend
+npm run e2e:tournament
+npm run e2e:tournament:module -- 01_bootstrap
+
+# Tear down
+python scripts/e2e_tournament/run.py down
+```
+
+### Configuration
+
+- `.env.e2e.example` — copy to `.env.e2e` to override defaults
+- `E2E_BASE_URL` env var overrides `http://localhost:18087`
+- Container: `wyniki-tenis-e2e`, volume: `wyniki_e2e_data`
