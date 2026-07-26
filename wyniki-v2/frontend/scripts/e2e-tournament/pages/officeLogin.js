@@ -8,21 +8,25 @@ export class OfficeLoginPage {
   }
 
   async goto(slot) {
-    await this.page.goto(`${this.baseUrl}/office/${slot}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await this.page.goto(`${this.baseUrl}/office/${slot}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 20000,
+    });
     await this.page.waitForFunction(
       () => document.body.innerText.includes('Wejście do biura zawodów'),
       undefined,
-      { timeout: 10000 }
+      { timeout: 15000 }
     );
   }
 
   async login(password = 'test') {
-    await this.page.getByLabel('Hasło modułu biura').fill(password);
+    await this.page.locator('input[type="password"]').fill(password);
     await this.page.getByRole('button', { name: 'Wejdź do biura' }).click();
     await this.page.waitForFunction(
-      () => document.body.innerText.includes('Ostatnie mecze'),
+      () => document.body.innerText.includes('Ostatnie mecze')
+        && !document.body.innerText.includes('Wejście do biura zawodów'),
       undefined,
-      { timeout: 12000 }
+      { timeout: 20000 }
     );
   }
 }

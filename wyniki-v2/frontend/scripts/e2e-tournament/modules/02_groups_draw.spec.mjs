@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, saveGroups,
-  generateSchedule, officeLogin, cleanup, apiUrl, marker, samplePlayers,
+  generateSchedule, cleanup, samplePlayers, resolveOfficeSlot, OFFICE_PASSWORD,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficePlanningPage } from '../pages/officePlanning.js';
@@ -14,14 +14,14 @@ const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:18087';
 export default async function run() {
   const token = await adminLogin();
   const tournament = await createTournament(token);
-  const tournamentId = tournament.tournament?.id || tournament.id;
+  const tournamentId = tournament.id;
+  const tournamentName = tournament.name;
 
   const players = samplePlayers(8);
   const bulkResult = await addPlayers(token, tournamentId, players);
-  const playerIds = bulkResult.player_ids || bulkResult.players?.map((p) => p.id) || [];
+  const playerIds = bulkResult.player_ids || [];
   console.log(`  Created ${playerIds.length} players`);
 
-  // Create 2 groups of 4
   const groups = [
     { name: 'B1 — Grupa A', players: playerIds.slice(0, 4) },
     { name: 'B1 — Grupa B', players: playerIds.slice(4, 8) },
@@ -32,19 +32,20 @@ export default async function run() {
   await generateSchedule(token, tournamentId);
   console.log('  Schedule generated');
 
-  // Verify in office UI
+  const slot = await resolveOfficeSlot(tournamentName);
+  console.log(`  Office slot=${slot}`);
+
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);
-    // Find slot for our tournament (it's the active simulation, should be slot 1)
-    await loginPage.goto(1);
-    await loginPage.login('test');
+    await loginPage.goto(slot);
+    await loginPage.login(OFFICE_PASSWORD);
 
     const planningPage = new OfficePlanningPage(page);
     await planningPage.navigateToTab();
     await planningPage.waitForGroups();
-    console.log('  Office: groups visible in Drabinka tab');
+    console.log('  Office: groups visible in Plan turnieju');
   } finally {
     await browser.close();
   }

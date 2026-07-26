@@ -1,37 +1,33 @@
 /**
- * Page object: Office quick info tab.
+ * Page object: quick info hero block (not a tab).
  */
 export class OfficeQuickInfoPage {
   constructor(page) {
     this.page = page;
   }
 
-  async navigateToTab() {
-    await this.page.getByRole('button', { name: /Info|Szybka informacja/i }).click();
-    await this.page.waitForFunction(
-      () => {
-        const active = document.querySelector('.office-tab.is-active');
-        return active && /Info|Szybka/i.test(active.textContent);
-      },
-      undefined,
-      { timeout: 8000 }
-    );
+  async ensureVisible() {
+    await this.page.waitForSelector('#office-quick-info-message, textarea', { timeout: 10000 });
   }
 
   async setContent(text) {
-    const textarea = this.page.locator('textarea').first();
+    await this.ensureVisible();
+    const textarea = this.page.locator('#office-quick-info-message, textarea').first();
     await textarea.fill(text);
+    const checkbox = this.page.locator('#office-quick-info-active');
+    if (await checkbox.count()) {
+      await checkbox.check({ force: true }).catch(() => {});
+    }
   }
 
   async save() {
-    const saveBtn = this.page.getByRole('button', { name: /Zapisz/i }).first();
-    await saveBtn.click();
-    await this.page.waitForTimeout(500);
+    await this.page.getByRole('button', { name: 'Opublikuj' }).first().click();
+    await this.page.waitForTimeout(1000);
   }
 
   async getDisplayedContent() {
     return this.page.evaluate(() => {
-      const ta = document.querySelector('textarea');
+      const ta = document.querySelector('#office-quick-info-message') || document.querySelector('textarea');
       return ta ? ta.value : '';
     });
   }

@@ -1,11 +1,11 @@
 /**
- * Module 03: Schedule publish — generate schedule via API, publish, verify in office schedule tab.
+ * Module 03: Schedule publish — generate + publish, verify planning board in office.
  */
 import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, saveGroups,
-  generateSchedule, publishSchedule, officeLogin, cleanup,
-  apiUrl, marker, samplePlayers, adminHeaders,
+  generateSchedule, publishSchedule, cleanup, samplePlayers,
+  resolveOfficeSlot, OFFICE_PASSWORD,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficeSchedulePage } from '../pages/officeSchedule.js';
@@ -15,11 +15,12 @@ const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:18087';
 export default async function run() {
   const token = await adminLogin();
   const tournament = await createTournament(token);
-  const tournamentId = tournament.tournament?.id || tournament.id;
+  const tournamentId = tournament.id;
+  const tournamentName = tournament.name;
 
   const players = samplePlayers(8);
   const bulkResult = await addPlayers(token, tournamentId, players);
-  const playerIds = bulkResult.player_ids || bulkResult.players?.map((p) => p.id) || [];
+  const playerIds = bulkResult.player_ids || [];
 
   const groups = [
     { name: 'B1 — Grupa A', players: playerIds.slice(0, 4) },
@@ -27,21 +28,22 @@ export default async function run() {
   ];
   await saveGroups(token, tournamentId, groups);
   await generateSchedule(token, tournamentId);
-  await publishSchedule(token, tournamentId);
+
+  const slot = await resolveOfficeSlot(tournamentName);
+  await publishSchedule(token, tournamentId, slot);
   console.log('  Schedule generated and published');
 
-  // Verify in office
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);
-    await loginPage.goto(1);
-    await loginPage.login('test');
+    await loginPage.goto(slot);
+    await loginPage.login(OFFICE_PASSWORD);
 
     const schedulePage = new OfficeSchedulePage(page);
     await schedulePage.navigateToTab();
     await schedulePage.waitForEntries();
-    console.log('  Office: schedule entries visible');
+    console.log('  Office: schedule board visible');
   } finally {
     await browser.close();
   }

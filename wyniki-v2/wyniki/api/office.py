@@ -108,12 +108,13 @@ def _resolve_office_tournament_slot(slot: int):
 
 
 def _set_office_stream_cookie(response, slot: int, tournament_id: int):
+    # secure only on HTTPS — local Docker E2E uses plain HTTP (port 18087).
     response.set_cookie(
         office_stream_cookie_name(slot),
         issue_office_token(slot, tournament_id),
         max_age=60 * 60 * 24,
         httponly=True,
-        secure=True,
+        secure=bool(request.is_secure),
         samesite="Strict",
         path=f"/api/office/{int(slot)}/",
     )
