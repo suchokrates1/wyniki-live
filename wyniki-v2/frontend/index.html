@@ -807,7 +807,7 @@
                                         <svg class="hm-chevron" :class="{ 'hm-chevron--open': isMatchExpanded(match.match_id) }" aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     </button>
                                 </div>
-                                <div class="hm-details-panel" x-show="isMatchExpanded(match.match_id)" x-transition.duration.200ms>
+                                <div class="hm-details-panel" x-show="isMatchExpanded(match.match_id)" x-cloak>
                                     <template x-if="getMatchStats(match.match_id)?.loading">
                                         <div class="hm-details-status"><span class="spinner"></span> <span x-text="tr().historyDetail?.loading || 'Ładowanie...'"></span></div>
                                     </template>
@@ -1191,7 +1191,7 @@
                                             <svg class="hm-chevron" :class="{ 'hm-chevron--open': isMatchExpanded(match.match_id) }" aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                         </button>
                                     </div>
-                                    <div class="hm-details-panel" x-show="isMatchExpanded(match.match_id)" x-transition.duration.200ms>
+                                    <div class="hm-details-panel" x-show="isMatchExpanded(match.match_id)" x-cloak>
                                         <template x-if="getMatchStats(match.match_id)?.loading">
                                             <div class="hm-details-status"><span class="spinner"></span> <span x-text="tr().historyDetail?.loading || 'Ładowanie...'"></span></div>
                                         </template>
