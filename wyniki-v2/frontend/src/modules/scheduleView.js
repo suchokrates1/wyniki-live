@@ -114,15 +114,14 @@ export function createScheduleView() {
       return buildScheduleGroups(day, this.scheduleModuleOptions());
     },
 
-    scheduleSelectionKey(day) {
-      return getScheduleSelectionKey(day, this.scheduleSortMode);
+    scheduleSelectionKey() {
+      return getScheduleSelectionKey(this.scheduleSortMode);
     },
 
     scheduleActiveGroup(day) {
       const groups = Array.isArray(day?.groups) ? day.groups : [];
       if (!groups.length) return null;
-      const key = this.scheduleSelectionKey(day);
-      const selectedId = this.scheduleSelectedGroups[key];
+      const selectedId = this.scheduleSelectedGroups[this.scheduleSelectionKey()];
       return groups.find((group) => group.id === selectedId) || groups[0];
     },
 
@@ -131,11 +130,13 @@ export function createScheduleView() {
     },
 
     selectScheduleGroup(day, groupId) {
-      if (!day || !groupId) return;
+      if (!groupId) return;
       this.scheduleSelectedGroups = {
         ...this.scheduleSelectedGroups,
-        [this.scheduleSelectionKey(day)]: groupId,
+        [this.scheduleSelectionKey()]: groupId,
       };
+      const title = (day?.groups || []).find((group) => group.id === groupId)?.title;
+      if (title) this.scheduleAnnouncement = title;
     },
 
     scheduleTablistLabel() {

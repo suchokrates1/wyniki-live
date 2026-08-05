@@ -67,8 +67,9 @@ export function formatScheduleArchivedDaysLabel(count, { custom = '', lang = 'pl
   return `Completed days (${count})`;
 }
 
-export function getScheduleSelectionKey(day, sortMode = 'court') {
-  return `${day?.date || 'unknown'}::${sortMode === 'category' ? 'category' : 'court'}`;
+export function getScheduleSelectionKey(sortMode = 'court') {
+  // Shared across all days so category/court tabs stay in sync (day 1 ↔ day 2).
+  return sortMode === 'category' ? 'category' : 'court';
 }
 
 export function getScheduleDomId(prefix, day, group) {
