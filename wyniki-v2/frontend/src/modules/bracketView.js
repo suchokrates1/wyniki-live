@@ -1,5 +1,6 @@
 import { publicApi } from '../api/publicApi.js';
 import { formatTemplate as fmt } from '../shared/text.js';
+import { translateStoredScheduleLabel } from '../shared/labelDisplay.js';
 import {
   buildBracketCategories,
   compareBracketCategoryNames as compareBracketCategoryNamesData,
@@ -82,7 +83,9 @@ export function createBracketView() {
     },
 
     knockoutMatchAria(slot, phase, index = 0) {
-      const phaseName = this.translateCategory(phase || (this.tr().bracket?.knockoutTitle || 'Faza pucharowa'));
+      const phaseName = this.translatePhase(
+        phase || 'Pucharowa',
+      ) || (this.tr().history?.phaseKnockout || 'Faza pucharowa');
       const intro = fmt(this.acc().stageMatch || '{phase}, mecz {number}', {
         phase: phaseName,
         number: index + 1,
@@ -133,33 +136,31 @@ export function createBracketView() {
     },
 
     translatePhase(phase) {
-      if (!phase) return '';
-      const t = this.tr();
-      const map = {
-        'Grupowa': t.history?.phaseGroup || 'Group',
-        'Pucharowa': t.history?.phaseKnockout || 'Knockout',
-        'Faza grupowa': t.playerProfile?.groupPhase || t.history?.phaseGroup || 'Group phase',
-        'Faza pucharowa': t.playerProfile?.knockoutPhase || t.history?.phaseKnockout || 'Knockout phase',
-      };
-      return this.translateCategory(map[phase] || phase);
+      return this.translateStoredLabel(phase);
     },
 
     translateCategory(name) {
+      return this.translateStoredLabel(name);
+    },
+
+    /** Shared public/office dictionary for DB phase & category labels. */
+    translateStoredLabel(name) {
       if (!name) return '';
       const t = this.tr();
-      const women = t.history?.catWomen || 'Women';
-      const men = t.history?.catMen || 'Men';
-      const semifinal = t.bracket?.semifinal || 'Semifinal';
-      const final_ = t.bracket?.finalLabel || 'Final';
-      const placeMatch = t.bracket?.placeMatch || '{forPlace} {number}. {place}';
-      const forPlace = t.bracket?.forPlace || 'for';
-      const place = t.playerProfile?.place || 'place';
-      return name
-        .replace(/Kobiety/g, women)
-        .replace(/Mężczyźni/g, men)
-        .replace(/Półfinał/g, semifinal)
-        .replace(/Finał/g, final_)
-        .replace(/o (\d+)\. miejsce/g, (_, number) => fmt(placeMatch, { number, forPlace, place }));
+      return translateStoredScheduleLabel(name, {
+        women: t.history?.catWomen || 'Women',
+        men: t.history?.catMen || 'Men',
+        mixed: t.history?.catMixed || 'Mixed',
+        semifinal: t.bracket?.semifinal || 'Semifinal',
+        final: t.bracket?.finalLabel || 'Final',
+        placeFor: t.bracket?.placeMatch || 'o {number}. miejsce',
+        group: t.history?.phaseGroup || t.playerProfile?.groupPhase || 'Group stage',
+        groupRematch: t.history?.phaseGroupRematch || 'Group stage — rematch',
+        knockout: t.history?.phaseKnockout || t.playerProfile?.knockoutPhase || 'Knockout stage',
+        groupSuffixLetter: t.playerProfile?.group
+          ? `${t.playerProfile.group} {letter}`
+          : 'Group {letter}',
+      });
     },
 
     bracketCategoryLabel(name) {
