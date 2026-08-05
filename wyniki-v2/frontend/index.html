@@ -386,7 +386,7 @@
                                 <!-- Bracket tree (only for categories with knockout) -->
                                 <template x-if="cat.knockout.length > 0">
                                     <section class="bracket-tree" :aria-label="bracketTreeAriaLabel(cat.name)">
-                                        <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'">Faza pucharowa</h3>
+                                        <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Drabinka'">Drabinka</h3>
 
                                         <div class="bt-ladder">
                                             <template x-for="(ko, ki) in cat.knockout" :key="'ko-'+cat.name+'-'+ki">
@@ -1033,7 +1033,7 @@
                                         <!-- Knockout -->
                                         <template x-if="cat.knockout.length > 0">
                                             <section class="bracket-tree" :aria-label="bracketTreeAriaLabel(cat.name)">
-                                                <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Faza pucharowa'">Faza pucharowa</h3>
+                                                <h3 class="bracket-tree__title" x-text="tr().bracket?.knockoutTitle || 'Drabinka'">Drabinka</h3>
 
                                                 <div class="bt-ladder">
                                                     <template x-for="(ko, ki) in cat.knockout" :key="'tko-'+cat.name+'-'+ki">

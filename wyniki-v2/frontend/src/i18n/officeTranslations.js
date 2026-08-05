@@ -216,9 +216,9 @@ export const OFFICE_TRANSLATION_PATCHES = {
         b34Mixed: 'B3/4 Mixed',
       },
       phases: {
-        group: 'Grupowa',
-        groupRematch: 'Grupowa — rewanż',
-        knockout: 'Pucharowa',
+        group: 'Faza grupowa',
+        groupRematch: 'Faza grupowa — rewanż',
+        knockout: 'Faza pucharowa',
         match: 'Mecz',
       },
       bracket: {
@@ -919,7 +919,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
       },
       gender: { women: 'Women', men: 'Men', unassigned: 'Unassigned' },
       categories: { b34Mixed: 'B3/4 Mixed' },
-      phases: { group: 'Group', groupRematch: 'Group — rematch', knockout: 'Knockout', match: 'Match' },
+      phases: { group: 'Group stage', groupRematch: 'Group stage — rematch', knockout: 'Knockout stage', match: 'Match' },
       bracket: {
         semifinal: 'Semifinal',
         final: 'Final',
@@ -1265,7 +1265,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
       },
       gender: { women: 'Donne', men: 'Uomini', unassigned: 'Non assegnati' },
       categories: { b34Mixed: 'B3/4 Mixed' },
-      phases: { group: 'Girone', groupRematch: 'Girone — ritorno', knockout: 'Eliminazione', match: 'Partita' },
+      phases: { group: 'Fase a gironi', groupRematch: 'Fase a gironi — ritorno', knockout: 'Fase a eliminazione', match: 'Partita' },
       bracket: {
         semifinal: 'Semifinale',
         final: 'Finale',
@@ -1611,7 +1611,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
       },
       gender: { women: 'Mujeres', men: 'Hombres', unassigned: 'Sin asignar' },
       categories: { b34Mixed: 'B3/4 Mixed' },
-      phases: { group: 'Grupos', groupRematch: 'Grupos — revancha', knockout: 'Eliminatoria', match: 'Partido' },
+      phases: { group: 'Fase de grupos', groupRematch: 'Fase de grupos — revancha', knockout: 'Fase eliminatoria', match: 'Partido' },
       bracket: {
         semifinal: 'Semifinal',
         final: 'Final',
@@ -1957,7 +1957,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
       },
       gender: { women: 'Femmes', men: 'Hommes', unassigned: 'Non assignés' },
       categories: { b34Mixed: 'B3/4 Mixed' },
-      phases: { group: 'Poule', groupRematch: 'Poule — revanche', knockout: 'Élimination', match: 'Match' },
+      phases: { group: 'Phase de groupes', groupRematch: 'Phase de groupes — match retour', knockout: 'Phase à élimination', match: 'Match' },
       bracket: {
         semifinal: 'Demi-finale',
         final: 'Finale',

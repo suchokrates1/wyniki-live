@@ -16,9 +16,10 @@ export function translateStoredScheduleLabel(name, labels = {}) {
   const knockout = labels.knockout || 'Pucharowa';
   const groupSuffix = labels.groupSuffixLetter || 'Grupa {letter}';
 
-  if (text === 'Grupowa') return group;
-  if (text === 'Grupowa — Rewanż') return groupRematch;
-  if (text === 'Pucharowa') return knockout;
+  // Canonical DB values (+ rare already-localized leftovers)
+  if (text === 'Grupowa' || text === 'Faza grupowa') return group;
+  if (text === 'Grupowa — Rewanż' || text === 'Faza grupowa — rewanż') return groupRematch;
+  if (text === 'Pucharowa' || text === 'Faza pucharowa') return knockout;
 
   let result = text
     .replace(/Półfinał/g, semifinal)
