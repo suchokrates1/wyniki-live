@@ -296,13 +296,17 @@ def _is_knockout_placeholder_name(name: Optional[str]) -> bool:
     return False
 
 def _standing_placeholder(rank: int, group_name: str, category_prefix: str) -> str:
-    """Stable standing placeholder, e.g. 1. B2 Mężczyźni or 1A for partitioned groups."""
+    """Stable standing placeholder, e.g. 1. B2 Mężczyźni or 1. B3 Men — Grupa A."""
     if _is_group_partition_name(group_name):
-        _, suffix = _split_bracket_label(group_name)
+        prefix, suffix = _split_bracket_label(group_name)
+        category = (category_prefix or prefix or "").strip()
         label = (suffix or "").strip()
         last_token = label.split()[-1].upper() if label else ""
-        if len(last_token) == 1 and last_token.isalpha():
-            return f"{rank}{last_token}"
+        if category and len(last_token) == 1 and last_token.isalpha():
+            return f"{rank}. {category} — Grupa {last_token}"
+        full_name = (group_name or "").strip()
+        if full_name:
+            return f"{rank}. {full_name}"
     prefix = (category_prefix or group_name or "").strip()
     return f"{rank}. {prefix}"
 

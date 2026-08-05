@@ -97,8 +97,8 @@ def test_provisional_two_groups_use_group_letter_placeholders():
         },
     )
     semis = [slot for slot in result["knockout"] if "Półfinał" in slot["phase"]]
-    assert semis[0]["player1_name"] == "1A"
-    assert semis[0]["player2_name"] == "2B"
+    assert semis[0]["player1_name"] == "1. B1 Mężczyźni — Grupa A"
+    assert semis[0]["player2_name"] == "2. B1 Mężczyźni — Grupa B"
 
 
 def test_two_groups_per_category_create_semifinals():
