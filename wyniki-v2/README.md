@@ -4,6 +4,16 @@ Real-time tennis match scoreboard with admin panel and PIN-based court verificat
 
 ## 📖 Documentation
 
+### Przewodniki UI (Obsidian)
+
+Pełny katalog strony publicznej, biura i admina (każdy przycisk / zakładka):
+
+➡️ **[../docs/przewodniki/00 - Biuro i strona publiczna.md](../docs/przewodniki/00%20-%20Biuro%20i%20strona%20publiczna.md)**
+
+Otwórz folder `wyniki-live/docs/przewodniki/` jako vault.
+
+### Techniczne / ops
+
 - **[INFRASTRUCTURE.md](INFRASTRUCTURE.md)** ⚠️ Server credentials & SSH access (not in git)
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Deployment procedures (not in git)
 - **[docs/traefik-optimization-proposal.md](docs/traefik-optimization-proposal.md)** - Reverse proxy setup (not in git)
@@ -26,9 +36,11 @@ python app.py
 ```
 
 ### Access Points
-- **Public URL**: https://test.vestmedia.pl
-- **Admin Panel**: https://test.vestmedia.pl/admin
-- **API Base**: https://test.vestmedia.pl/api
+- **Public**: `/` (np. https://score.vestmedia.pl)
+- **Tournament Office**: `/office` lub `/office/<slot>`
+- **Admin Panel**: `/admin`
+- **Overlay**: `/overlay/<id>`
+- **API Base**: `/api`
 
 ## 🏗️ Architecture
 
@@ -40,11 +52,11 @@ python app.py
 
 ## 🔑 Features
 
-- Real-time court status updates (SSE)
-- PIN-based court verification system
-- Admin panel for court management
-- RESTful API for match data
-- Responsive design with DaisyUI
+- Real-time scores (SSE) — public + office
+- Tournament office: planning, autoschedule, results, quick-info banner
+- Admin: courts/PIN, tournaments, global players, overlay designer
+- PIN-based court verification for umpire app
+- Multilingual public UI (PL/EN/DE/IT/ES/FR)
 
 ## 📝 Recent Changes
 
