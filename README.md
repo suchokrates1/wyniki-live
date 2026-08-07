@@ -1,179 +1,75 @@
-# Wyniki Live - Tennis Score Display System
+# Wyniki Live — Tennis Score Display System
 
-Live tennis scoring system with UNO API integration, admin panel, multilingual support, and tournament office workflow.
+System wyników tenisa na żywo: strona publiczna, biuro turnieju, panel admin oraz API dla aplikacji sędziowskiej.
 
-## 🎯 Quick Links
+## Przewodniki UI (Obsidian)
 
-- **📖 [Deployment Guide](DEPLOYMENT.md)** - SSH access, deployment, troubleshooting
-- **📱 [Cursor Agent (PMA)](CURSOR.md)** - My Machines worker, sterowanie z telefonu
-- **🌐 Live Site**: https://score.vestmedia.pl / https://blindtennis.app
-- **🏢 Tournament Office**: https://blindtennis.app/office
-- **📚 [API Documentation](API.md)** - Complete API reference
+Pełny katalog strony publicznej, biura (`/office`) i admina (`/admin`):
 
-## ✨ Features
+➡️ **[docs/przewodniki/00 - Biuro i strona publiczna.md](docs/przewodniki/00%20-%20Biuro%20i%20strona%20publiczna.md)**
 
-- 🎾 **Real-time Scores** - Live updates for 4 courts
-- 🌍 **Multilingual** - PL, EN, DE, IT, ES, FR
-- 👨‍💼 **Admin Panel** - Match history, court management, player database
-- 🚀 **UNO API Integration** - Smart polling with rate limiting
-- 🏁 **195+ Country Flags** - Complete flag database
-- 🐳 **Docker Ready** - Production-ready containerization
+Otwórz folder `docs/przewodniki/` jako vault w Obsidianie.
 
-## 🏗️ Architecture
+## Powierzchnie
 
-### Stack
-- **Backend**: Flask 3.0 + Python 3.11
-- **Database**: SQLite3
-- **Proxy**: Cloudflare + Traefik
-- **Deployment**: Docker Compose
+| Powierzchnia | URL | Dostęp |
+|--------------|-----|--------|
+| Publiczna | `/` | Bez logowania (`access_key` dla prywatnych turniejów) |
+| Biuro turnieju | `/office` lub `/office/<slot>` | Hasło biura turnieju |
+| Admin | `/admin` | Hasło administratora |
+| Overlay OBS | `/overlay/<id>` | Bez logowania (layout z Admin) |
 
-### Services
-- **wyniki-tenis-v2** - Main Flask app (port 8087)
+Produkcja: https://score.vestmedia.pl / https://blindtennis.app
 
-## 🚀 Quick Start
+## Quick links
 
-### Local Development
+- **Przewodniki UI:** [docs/przewodniki/](docs/przewodniki/)
+- **Aplikacja (kod):** [wyniki-v2/](wyniki-v2/)
+- **API:** [API.md](API.md) (uwaga: część historyczna może być nieaktualna — źródło prawdy w kodzie `wyniki-v2`)
+- **Cursor / PMA:** [CURSOR.md](CURSOR.md)
+- **Deploy techniczny:** `wyniki-v2/docs/` + lokalne runbooki
+
+## Stack
+
+- Backend: Flask + SQLAlchemy (w `wyniki-v2/`)
+- Frontend: Vite + Alpine.js + Tailwind / DaisyUI
+- Realtime: SSE (`/api/stream`, office stream)
+- Deploy: Docker
+
+## Local development
 
 ```bash
-# Clone repository
-git clone https://github.com/suchokrates1/wyniki-live.git
-cd wyniki-live
-
-# Install dependencies
+cd wyniki-v2
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your settings
-
-# Run locally
+# skonfiguruj .env (wzorzec: ../.env.example)
 python app.py
 ```
 
-Open http://localhost:5000 in your browser.
+Frontend (dev): `cd wyniki-v2/frontend && npm install && npm run dev`
 
-### Docker Deployment
-
-See **[DEPLOYMENT.md](DEPLOYMENT.md)** for complete deployment guide.
+## Testing
 
 ```bash
-# Quick deployment to server
-ssh -i ~/.ssh/wyniki_minipc suchokrates1@100.110.194.46 \
-  "cd ~/count && git pull && docker compose build wyniki && docker compose up -d wyniki"
-```
-
-## 📡 API Endpoints
-
-### Public
-- `GET /` - Main scoreboard
-- `GET /office` - Tournament office
-- `GET /admin` - Admin panel
-- `GET /api/snapshot` - Current match data
-- `GET /api/stream` - SSE live updates
-
-### Admin (requires authentication)
-- `POST /admin/login` - Admin login
-- `GET /admin` - Admin panel
-- `GET /api/admin/history` - Match history
-- `POST /api/admin/history` - Create history entry
-- `PUT /api/admin/history/<id>` - Update entry
-- `DELETE /api/admin/history/<id>` - Delete entry
-
-See **[API.md](API.md)** for complete API documentation.
-
-## ⚙️ Configuration
-
-Key environment variables in `.env`:
-
-```bash
-# UNO API Configuration
-UNO_BASE=https://app.overlays.uno/apiv2/controlapps
-KORT1_ID=your_court1_id
-KORT2_ID=your_court2_id
-KORT3_ID=your_court3_id
-KORT4_ID=your_court4_id
-UNO_AUTH_BEARER=your_bearer_token
-
-# Rate Limiting
-RPM_PER_COURT=55  # Requests per minute per court
-BURST=8           # Burst allowance
-
-# Admin Panel
-ADMIN_PASSWORD=your_secure_password
-
-# Domain
-PUBLIC_HOST=score.vestmedia.pl
-PUBLIC_HOST_ALT=blindtennis.app
-```
-
-See `.env.example` for all configuration options.
-
-## 🧪 Testing
-
-```bash
-# Run all tests
+cd wyniki-v2   # lub root z pytest według setupu repo
 pytest
-
-# With coverage report
-pytest --cov=wyniki --cov-report=html
-
-# Specific test file
-pytest tests/test_match_time.py
-
-# Watch mode
-pytest-watch
 ```
 
-## 🛠️ Development Tools
-
-```bash
-# Install dev dependencies
-pip install -r requirements-dev.txt
-
-# Type checking
-mypy wyniki/
-
-# Code formatting
-black wyniki/ tests/
-
-# Linting
-flake8 wyniki/
-
-# Security scan
-bandit -r wyniki/
-
-# Pre-commit hooks
-pre-commit install
-pre-commit run --all-files
-```
-
-## 📁 Project Structure
+## Struktura
 
 ```
 wyniki-live/
-├── wyniki-v2/             # Current application (Flask + Vite frontend)
-│   ├── app.py             # Flask application entry point
-│   ├── wyniki/            # Backend package
-│   ├── frontend/          # HTML/JS sources
-│   └── docker-compose.yml # Container orchestration
-├── tests/                 # Test suite
-└── requirements.txt       # Python dependencies
+├── docs/przewodniki/   # Instrukcje Obsidian (UI / użycie)
+├── wyniki-v2/          # Aplikacja (Flask + frontend)
+├── API.md
+└── CURSOR.md
 ```
 
-## 🔐 Security
+## Security (skrót)
 
-- Admin panel protected by password authentication
-- Session-based authentication for admin API
-- HTTPS-only in production (enforced by Cloudflare)
-- Rate limiting on UNO API requests
-- CORS configured for public API endpoints
+- Admin i biuro: Bearer token po haśle (sessionStorage)
+- PIN kortu dla aplikacji sędziowskiej
+- HTTPS w produkcji (Cloudflare)
 
-## 📄 License
+## License
 
-This project is proprietary software. All rights reserved.
-
-## 🤝 Support
-
-For deployment issues, see [DEPLOYMENT.md](DEPLOYMENT.md).
-
-For API questions, see [API.md](API.md).
+Proprietary — all rights reserved.
