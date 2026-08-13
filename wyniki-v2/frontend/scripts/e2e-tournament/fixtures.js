@@ -23,6 +23,11 @@ export function apiUrl(path) {
   return new URL(path, BASE_URL).toString();
 }
 
+/** Office/public pair labels insert ZWSP after ` / ` for wrapping. */
+export function visibleText(value) {
+  return String(value || '').replaceAll('\u200B', '');
+}
+
 export function marker() {
   return _activeMarker;
 }
@@ -62,7 +67,8 @@ export async function createTournament(token, { name, startDate, endDate, courts
       end_date: endDate || today,
       active: true,
       is_simulation: isSimulation,
-      is_public: isPublic ?? true,
+      // Simulation tournaments are forced private server-side; public E2E needs isSimulation: false.
+      is_public: isPublic ?? !isSimulation,
       court_count: courts,
       city: 'E2E',
       country: 'PL',
@@ -270,7 +276,11 @@ export async function seedDoublesTournament(token, {
   groupSpecs = null,
   courts = 4,
 } = {}) {
-  const tournament = await createTournament(token, { courts });
+  const tournament = await createTournament(token, {
+    courts,
+    isSimulation: false,
+    isPublic: true,
+  });
   const confirmed = await confirmCategories(token, tournament.id, [
     { label: 'B1 Double', is_doubles: true },
   ]);

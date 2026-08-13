@@ -15,6 +15,22 @@ export class OfficePlanningPage {
     );
   }
 
+  /** Completed groups collapse step 1 (Debel badge, play-format, pair list). */
+  async expandStep1() {
+    await this.waitForGroups();
+    const toggle = this.page.locator('.office-panel').filter({ hasText: 'Grupy startowe' }).locator('span.btn');
+    await toggle.first().waitFor({ state: 'visible', timeout: 8000 });
+    const label = ((await toggle.first().innerText()) || '').trim();
+    if (label === 'Edytuj') {
+      await toggle.first().click();
+    }
+    await this.page.waitForFunction(
+      () => document.body.innerText.includes('Zwiń'),
+      undefined,
+      { timeout: 8000 },
+    );
+  }
+
   async waitForGroups() {
     await this.page.waitForFunction(
       () => {
