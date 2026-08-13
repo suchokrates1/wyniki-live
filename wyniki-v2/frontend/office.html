@@ -540,7 +540,7 @@
             <div>
               <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('planning.step1')"></div>
               <h3 class="mt-2 text-2xl font-semibold" x-text="ot('planning.step1Title')"></h3>
-              <p class="mt-1 text-sm text-slate-500" x-show="!planningStep1Collapsed" x-text="ot('planning.step1Open')"></p>
+              <p class="mt-1 text-sm text-slate-500" x-show="!planningStep1Collapsed" x-text="planningSelectedCategoryIsDoubles() ? ot('planning.step1OpenDoubles') : ot('planning.step1Open')"></p>
               <p class="mt-1 text-sm text-emerald-700 font-semibold" x-show="planningStep1Collapsed && planningGroupsComplete()" x-text="planningStep1CompleteLine()"></p>
               <p class="mt-1 text-sm text-amber-700 font-semibold" x-show="planningStep1Collapsed && !planningGroupsComplete()" x-text="ot('planning.step1InProgress')"></p>
             </div>
@@ -559,9 +559,15 @@
           <p class="mt-1 text-sm text-slate-600" x-text="ot('planning.categoriesSetupHint')"></p>
           <div class="mt-3 flex flex-wrap gap-2">
             <template x-for="preset in planningCategoryPresetKeys()" :key="'preset_'+preset">
-              <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-sm cursor-pointer">
-                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="categoryPresetSelected[preset]">
-                <span x-text="planningCategoryPresetLabel(preset)"></span>
+              <label class="inline-flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-sm cursor-pointer">
+                <span class="inline-flex items-center gap-2">
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="categoryPresetSelected[preset]">
+                  <span x-text="planningCategoryPresetLabel(preset)"></span>
+                </span>
+                <span class="inline-flex items-center gap-1 text-[11px] text-slate-500 pl-7">
+                  <input type="checkbox" class="checkbox checkbox-xs" x-model="categoryPresetDoubles[preset]" :disabled="!categoryPresetSelected[preset]">
+                  <span x-text="ot('planning.doubles')"></span>
+                </span>
               </label>
             </template>
           </div>
@@ -569,6 +575,11 @@
             <input type="text" class="input input-bordered bg-white/90 sm:col-span-2" :placeholder="ot('planning.customCategoryPlaceholder')" x-model="categoryCustomLabel">
             <input type="text" class="input input-bordered bg-white/90" placeholder="B2 / B3,B4" x-model="categoryCustomHints">
           </div>
+          <label class="mt-2 inline-flex items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" class="checkbox checkbox-sm" x-model="categoryCustomDoubles">
+            <span x-text="ot('planning.doubles')"></span>
+          </label>
+          <p class="mt-1 text-xs text-slate-500" x-text="ot('planning.doublesHint')"></p>
           <div class="mt-3 flex gap-2 flex-wrap">
             <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="confirmTournamentCategories()" x-text="ot('planning.confirmCategories')"></button>
             <button type="button" class="btn btn-outline bg-white/80" x-show="tournamentCategories.length" @click="categorySetupOpen = false" x-text="ot('planning.cancelSetup')"></button>
@@ -584,6 +595,7 @@
             <template x-for="cat in tournamentCategories.filter(c => c.is_active !== 0)" :key="'tcat_'+cat.id">
               <div class="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm flex items-center gap-2">
                 <span class="font-semibold" x-text="cat.label"></span>
+                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800" x-show="cat.is_doubles" x-text="ot('planning.doubles')"></span>
                 <button type="button" class="text-emerald-700 text-xs" @click="startCategoryEdit(cat)" x-text="ot('planning.edit')"></button>
                 <button type="button" class="text-rose-600 text-xs" @click="deleteTournamentCategory(cat.id)" x-text="ot('planning.delete')"></button>
               </div>
@@ -598,6 +610,10 @@
             <input type="text" class="input input-bordered bg-white/90" placeholder="B2" x-model="categoryCustomHints">
             <button type="button" class="btn btn-outline" @click="addCustomTournamentCategory()" x-text="ot('planning.addCategory')"></button>
           </div>
+          <label class="mt-2 inline-flex items-center gap-2 text-sm text-slate-600" x-show="categorySetupOpen && tournamentCategories.length">
+            <input type="checkbox" class="checkbox checkbox-sm" x-model="categoryCustomDoubles">
+            <span x-text="ot('planning.doubles')"></span>
+          </label>
         </div>
 
         <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="tournamentCategories.length && !categorySetupOpen">
@@ -617,6 +633,32 @@
             <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addOfficePlayer()" x-text="ot('planning.addPlayer')"></button>
           </div>
         </div>
+        <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="planningSelectedCategoryIsDoubles() && tournamentCategories.length && !categorySetupOpen">
+          <button type="button" class="text-sm font-semibold text-emerald-700" @click="planningAddTeamOpen = !planningAddTeamOpen" x-text="planningAddTeamOpen ? '− ' + ot('planning.addTeamTitle') : '+ ' + ot('planning.addTeam')"></button>
+          <div class="mt-3 grid gap-3 sm:grid-cols-3" x-show="planningAddTeamOpen">
+            <select class="select select-bordered bg-white/90" x-model="planningNewTeam.player1_id">
+              <option value="" x-text="ot('planning.partner1')"></option>
+              <template x-for="player in planningTeamPartnerOptions(planningNewTeam.player2_id)" :key="'office_team_p1_'+player.id">
+                <option :value="player.id" x-text="player.name"></option>
+              </template>
+            </select>
+            <select class="select select-bordered bg-white/90" x-model="planningNewTeam.player2_id">
+              <option value="" x-text="ot('planning.partner2')"></option>
+              <template x-for="player in planningTeamPartnerOptions(planningNewTeam.player1_id)" :key="'office_team_p2_'+player.id">
+                <option :value="player.id" x-text="player.name"></option>
+              </template>
+            </select>
+            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addOfficeTeam()" x-text="ot('planning.addTeam')"></button>
+          </div>
+          <div class="mt-3 space-y-2" x-show="planningTeamsForCategory(planningSelectedCategoryId).length">
+            <template x-for="team in planningTeamsForCategory(planningSelectedCategoryId)" :key="'office_team_'+team.id">
+              <div class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm">
+                <span class="font-semibold text-slate-900" x-text="team.display_name"></span>
+                <button type="button" class="text-rose-600 text-xs disabled:opacity-40" @click="deleteOfficeTeam(team)" :disabled="!!planningTeamAssignments[team.id]" x-text="ot('planning.deleteTeam')"></button>
+              </div>
+            </template>
+          </div>
+        </div>
         <div class="mt-6" x-show="!tournamentCategories.length && !categorySetupOpen">
           <div class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500" x-text="ot('planning.confirmCategoriesFirst')"></div>
         </div>
@@ -633,7 +675,10 @@
                   class="rounded-2xl border px-4 py-2 text-left transition"
                   :class="planningSelectedDivision === division.key ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm' : 'border-slate-200 bg-white/70 text-slate-700 hover:border-slate-300'"
                   @click="selectPlanningDivision(division.key)">
-                  <div class="font-semibold" x-text="division.label"></div>
+                  <div class="font-semibold flex items-center gap-2">
+                    <span x-text="division.label"></span>
+                    <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800" x-show="division.is_doubles" x-text="ot('planning.doubles')"></span>
+                  </div>
                   <div class="text-[11px] opacity-70" x-text="planningDivisionCountLine(division)"></div>
                 </button>
               </template>
@@ -647,11 +692,11 @@
               <span class="px-4 min-w-10 text-center font-semibold tabular-nums" x-text="planningGroupCount"></span>
               <button type="button" class="px-3 py-1.5 text-lg font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40" @click="planningSetGroupCount(1)" :disabled="planningGroupCount >= 8">+</button>
             </div>
-            <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="autoAssignPlanningGroups()" x-text="Number(planningGroupCount || 1) === 1 ? ot('planning.assignAll') : ot('planning.autoAssign')"></button>
+            <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="autoAssignPlanningGroups()" x-text="planningSelectedCategoryIsDoubles() ? (Number(planningGroupCount || 1) === 1 ? ot('planning.assignAllTeams') : ot('planning.autoAssignTeams')) : (Number(planningGroupCount || 1) === 1 ? ot('planning.assignAll') : ot('planning.autoAssign'))"></button>
             <button type="button" class="btn btn-sm btn-ghost" @click="clearPlanningDivisionAssignments()" x-text="ot('planning.clear')"></button>
           </div>
 
-          <div class="mt-5 grid gap-4 lg:grid-cols-[0.8fr_2fr]" x-show="planningSelectedDivision">
+          <div class="mt-5 grid gap-4 lg:grid-cols-[0.8fr_2fr]" x-show="planningSelectedDivision && !planningSelectedCategoryIsDoubles()">
             <div class="rounded-[22px] border border-slate-200/80 bg-white/65 p-3"
                  @dragover.prevent @drop.prevent="onPlanningDropToPool()">
               <div class="flex items-center justify-between mb-2">
@@ -681,10 +726,20 @@
               <template x-for="groupName in planningTargetGroupNames()" :key="'office_group_col_'+groupName">
                 <div class="rounded-[22px] border border-slate-200/80 bg-white/70 p-3 transition"
                      @dragover.prevent @drop.prevent="onPlanningDropToGroup(groupName)">
-                  <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center justify-between mb-2 gap-2">
                     <div class="font-semibold text-slate-800 text-sm truncate" x-text="planningGroupDisplayName(groupName)"></div>
                     <span class="office-chip office-chip-group" x-text="planningAssignedPlayers(groupName).length"></span>
                   </div>
+                  <label class="block text-[10px] uppercase tracking-wide text-slate-400 mb-1" x-text="ot('planning.playFormat')"></label>
+                  <select class="select select-bordered select-xs w-full mb-2 bg-white/90"
+                          :value="planningGroupPlayFormat(groupName)"
+                          :disabled="planningGroupHasLockedFormat(groupName)"
+                          @click.stop
+                          @change="setPlanningGroupPlayFormat(groupName, $event.target.value)">
+                    <template x-for="option in planningPlayFormatOptions()" :key="'office_fmt_'+groupName+'_'+option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
                   <div class="space-y-2 min-h-[60px]">
                     <template x-for="player in planningAssignedPlayers(groupName)" :key="'office_group_player_'+groupName+'_'+player.id">
                       <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 cursor-move"
@@ -697,6 +752,62 @@
                       </div>
                     </template>
                     <div class="text-[11px] text-slate-300 text-center py-3" x-show="!planningAssignedPlayers(groupName).length" x-text="ot('planning.dragHere')"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-4 lg:grid-cols-[0.8fr_2fr]" x-show="planningSelectedDivision && planningSelectedCategoryIsDoubles()">
+            <div class="rounded-[22px] border border-slate-200/80 bg-white/65 p-3"
+                 @dragover.prevent @drop.prevent="onPlanningDropTeamToPool()">
+              <div class="flex items-center justify-between mb-2">
+                <div class="font-semibold text-slate-800 text-sm" x-text="ot('planning.toDraw')"></div>
+                <span class="office-chip office-chip-group" x-text="planningUnassignedTeams().length"></span>
+              </div>
+              <div class="space-y-2 min-h-[60px]">
+                <template x-for="team in planningUnassignedTeams()" :key="'office_pool_team_'+team.id">
+                  <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 cursor-move hover:border-emerald-300"
+                       draggable="true" @dragstart="onPlanningTeamDragStart(team, $event)">
+                    <span class="font-mono font-semibold text-slate-400 tabular-nums w-6 text-center" x-text="planningTeamOrdinal(team)"></span>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-semibold text-sm text-slate-900 truncate" x-text="team.display_name"></div>
+                    </div>
+                  </div>
+                </template>
+                <div class="text-[11px] text-slate-300 text-center py-3" x-show="!planningUnassignedTeams().length" x-text="ot('planning.allTeamsDrawn')"></div>
+              </div>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <template x-for="groupName in planningTargetGroupNames()" :key="'office_team_group_col_'+groupName">
+                <div class="rounded-[22px] border border-slate-200/80 bg-white/70 p-3 transition"
+                     @dragover.prevent @drop.prevent="onPlanningDropTeamToGroup(groupName)">
+                  <div class="flex items-center justify-between mb-2 gap-2">
+                    <div class="font-semibold text-slate-800 text-sm truncate" x-text="planningGroupDisplayName(groupName)"></div>
+                    <span class="office-chip office-chip-group" x-text="planningAssignedTeams(groupName).length"></span>
+                  </div>
+                  <label class="block text-[10px] uppercase tracking-wide text-slate-400 mb-1" x-text="ot('planning.playFormat')"></label>
+                  <select class="select select-bordered select-xs w-full mb-2 bg-white/90"
+                          :value="planningGroupPlayFormat(groupName)"
+                          :disabled="planningGroupHasLockedFormat(groupName)"
+                          @click.stop
+                          @change="setPlanningGroupPlayFormat(groupName, $event.target.value)">
+                    <template x-for="option in planningPlayFormatOptions()" :key="'office_team_fmt_'+groupName+'_'+option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                  <div class="space-y-2 min-h-[60px]">
+                    <template x-for="team in planningAssignedTeams(groupName)" :key="'office_group_team_'+groupName+'_'+team.id">
+                      <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 cursor-move"
+                           draggable="true" @dragstart="onPlanningTeamDragStart(team, $event)">
+                        <span class="font-mono font-semibold text-emerald-600 tabular-nums w-6 text-center" x-text="planningTeamOrdinal(team)"></span>
+                        <div class="flex-1 min-w-0">
+                          <div class="font-semibold text-sm text-slate-900 truncate" x-text="team.display_name"></div>
+                        </div>
+                      </div>
+                    </template>
+                    <div class="text-[11px] text-slate-300 text-center py-3" x-show="!planningAssignedTeams(groupName).length" x-text="ot('planning.dragTeamHere')"></div>
                   </div>
                 </div>
               </template>
@@ -947,14 +1058,14 @@
                 </template>
               </select>
               <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player1_name">
-                <option value="" x-text="ot('planning.player1')"></option>
-                <template x-for="name in planningPlayerNameOptions()" :key="'office_new_p1_'+name">
+                <option value="" x-text="planningScheduleCategoryIsDoubles() ? ot('planning.competitor1') : ot('planning.player1')"></option>
+                <template x-for="name in planningScheduleNameOptions()" :key="'office_new_p1_'+name">
                   <option :value="name" x-text="name"></option>
                 </template>
               </select>
               <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player2_name">
-                <option value="" x-text="ot('planning.player2')"></option>
-                <template x-for="name in planningPlayerNameOptions()" :key="'office_new_p2_'+name">
+                <option value="" x-text="planningScheduleCategoryIsDoubles() ? ot('planning.competitor2') : ot('planning.player2')"></option>
+                <template x-for="name in planningScheduleNameOptions()" :key="'office_new_p2_'+name">
                   <option :value="name" x-text="name"></option>
                 </template>
               </select>

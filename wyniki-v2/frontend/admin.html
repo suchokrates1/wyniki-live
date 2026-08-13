@@ -633,7 +633,7 @@
                   </div>
                   <div class="form-control justify-end">
                     <div class="join">
-                      <button @click="autoAssignPlanningGroups()" class="btn btn-outline join-item" x-text="Number(planningGroupCount || 1) === 1 ? 'Przypisz wszystkich' : 'Rozdziel automatycznie'"></button>
+                      <button @click="autoAssignPlanningGroups()" class="btn btn-outline join-item" x-text="planningSelectedCategoryIsDoubles() ? (Number(planningGroupCount || 1) === 1 ? 'Przypisz wszystkie pary' : 'Rozdziel pary automatycznie') : (Number(planningGroupCount || 1) === 1 ? 'Przypisz wszystkich' : 'Rozdziel automatycznie')"></button>
                       <button @click="clearPlanningDivisionAssignments()" class="btn btn-ghost join-item">Wyczyść</button>
                     </div>
                   </div>
@@ -641,7 +641,7 @@
 
                 <div x-show="planningDivisions().length === 0" class="alert alert-info"><span>Najpierw dodaj zawodników do turnieju.</span></div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4" x-show="planningSelectedDivision">
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4" x-show="planningSelectedDivision && !planningSelectedCategoryIsDoubles()">
                   <div class="xl:col-span-2 overflow-x-auto">
                     <table class="table table-zebra table-sm">
                       <thead><tr><th>Zawodnik</th><th>Kategoria</th><th>Kraj</th><th>Grupa</th></tr></thead>
@@ -675,6 +675,14 @@
                           <h4 class="font-bold" x-text="groupName"></h4>
                           <span class="badge badge-primary" x-text="planningAssignedPlayers(groupName).length"></span>
                         </div>
+                        <label class="block text-[10px] uppercase tracking-wide opacity-60 mt-2">Tryb rozgrywek</label>
+                        <select class="select select-bordered select-xs w-full mt-1"
+                                :value="planningGroupPlayFormat(groupName)"
+                                @change="setPlanningGroupPlayFormat(groupName, $event.target.value)">
+                          <template x-for="option in planningPlayFormatOptions()" :key="'admin_fmt_'+groupName+'_'+option.value">
+                            <option :value="option.value" x-text="option.label"></option>
+                          </template>
+                        </select>
                         <ul class="mt-2 space-y-1 text-sm">
                           <template x-for="player in planningAssignedPlayers(groupName)" :key="'planning_group_player_'+groupName+'_'+player.id">
                             <li x-text="player.name"></li>
@@ -684,6 +692,75 @@
                     </template>
                     <div x-show="planningUnassignedPlayers().length" class="alert alert-warning py-2">
                       <span x-text="planningUnassignedPlayers().length + ' zawodników bez grupy'"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-4" x-show="planningSelectedDivision && planningSelectedCategoryIsDoubles()">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <select class="select select-bordered" x-model="planningNewTeam.player1_id">
+                      <option value="">Partner 1</option>
+                      <template x-for="player in planningTeamPartnerOptions(planningNewTeam.player2_id)" :key="'admin_team_p1_'+player.id">
+                        <option :value="player.id" x-text="player.name"></option>
+                      </template>
+                    </select>
+                    <select class="select select-bordered" x-model="planningNewTeam.player2_id">
+                      <option value="">Partner 2</option>
+                      <template x-for="player in planningTeamPartnerOptions(planningNewTeam.player1_id)" :key="'admin_team_p2_'+player.id">
+                        <option :value="player.id" x-text="player.name"></option>
+                      </template>
+                    </select>
+                    <button type="button" class="btn btn-outline" @click="addPlanningTeam()">Dodaj drużynę</button>
+                  </div>
+                  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                    <div class="xl:col-span-2 overflow-x-auto">
+                      <table class="table table-zebra table-sm">
+                        <thead><tr><th>Para</th><th>Grupa</th><th></th></tr></thead>
+                        <tbody>
+                          <template x-for="team in planningTeamsForCategory(planningSelectedCategoryId)" :key="'planning_team_'+team.id">
+                            <tr>
+                              <td class="font-semibold" x-text="team.display_name"></td>
+                              <td>
+                                <select class="select select-sm select-bordered min-w-44" x-model="planningTeamAssignments[team.id]">
+                                  <option value="">Nieprzypisana</option>
+                                  <template x-for="groupName in planningDivisionGroupNames()" :key="'planning_team_group_'+team.id+'_'+groupName">
+                                    <option :value="groupName" x-text="groupName"></option>
+                                  </template>
+                                </select>
+                              </td>
+                              <td>
+                                <button type="button" class="btn btn-ghost btn-xs text-error" @click="deletePlanningTeam(team)" :disabled="!!planningTeamAssignments[team.id]">Usuń</button>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="space-y-3">
+                      <template x-for="groupName in planningDivisionGroupNames()" :key="'planning_team_group_preview_'+groupName">
+                        <div class="rounded-box border border-base-300 bg-base-200 p-3">
+                          <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold" x-text="groupName"></h4>
+                            <span class="badge badge-primary" x-text="planningAssignedTeams(groupName).length"></span>
+                          </div>
+                          <label class="block text-[10px] uppercase tracking-wide opacity-60 mt-2">Tryb rozgrywek</label>
+                        <select class="select select-bordered select-xs w-full mt-1"
+                                  :value="planningGroupPlayFormat(groupName)"
+                                  @change="setPlanningGroupPlayFormat(groupName, $event.target.value)">
+                            <template x-for="option in planningPlayFormatOptions()" :key="'admin_team_fmt_'+groupName+'_'+option.value">
+                              <option :value="option.value" x-text="option.label"></option>
+                            </template>
+                          </select>
+                          <ul class="mt-2 space-y-1 text-sm">
+                            <template x-for="team in planningAssignedTeams(groupName)" :key="'planning_group_team_'+groupName+'_'+team.id">
+                              <li x-text="team.display_name"></li>
+                            </template>
+                          </ul>
+                        </div>
+                      </template>
+                      <div x-show="planningUnassignedTeams().length" class="alert alert-warning py-2">
+                        <span x-text="planningUnassignedTeams().length + ' par bez grupy'"></span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -755,14 +832,14 @@
                       <option value="completed">Zakończony</option>
                     </select>
                     <select class="select select-bordered md:col-span-2" x-model="planningNewSchedule.player1_name">
-                      <option value="">Zawodnik 1</option>
-                      <template x-for="name in planningPlayerNameOptions()" :key="'planning_new_p1_'+name">
+                      <option value="" x-text="planningScheduleCategoryIsDoubles() ? 'Para 1' : 'Zawodnik 1'"></option>
+                      <template x-for="name in planningScheduleNameOptions()" :key="'planning_new_p1_'+name">
                         <option :value="name" x-text="name"></option>
                       </template>
                     </select>
                     <select class="select select-bordered md:col-span-2" x-model="planningNewSchedule.player2_name">
-                      <option value="">Zawodnik 2</option>
-                      <template x-for="name in planningPlayerNameOptions()" :key="'planning_new_p2_'+name">
+                      <option value="" x-text="planningScheduleCategoryIsDoubles() ? 'Para 2' : 'Zawodnik 2'"></option>
+                      <template x-for="name in planningScheduleNameOptions()" :key="'planning_new_p2_'+name">
                         <option :value="name" x-text="name"></option>
                       </template>
                     </select>
@@ -871,9 +948,15 @@
           <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 mt-2" x-show="!adminTournamentCategories.length || adminCategorySetupOpen">
             <div class="flex flex-wrap gap-2">
               <template x-for="preset in adminCategoryPresetKeys()" :key="'edit_preset_'+preset">
-                <label class="inline-flex items-center gap-2 rounded-full border border-base-300 bg-base-100 px-3 py-1.5 text-sm cursor-pointer">
-                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="adminCategoryPresetSelected[preset]">
-                  <span x-text="adminCategoryPresetLabel(preset)"></span>
+                <label class="inline-flex flex-col gap-1 rounded-2xl border border-base-300 bg-base-100 px-3 py-2 text-sm cursor-pointer">
+                  <span class="inline-flex items-center gap-2">
+                    <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="adminCategoryPresetSelected[preset]">
+                    <span x-text="adminCategoryPresetLabel(preset)"></span>
+                  </span>
+                  <span class="inline-flex items-center gap-1 text-xs opacity-70 pl-7">
+                    <input type="checkbox" class="checkbox checkbox-xs" x-model="adminCategoryPresetDoubles[preset]" :disabled="!adminCategoryPresetSelected[preset]">
+                    <span>Debel</span>
+                  </span>
                 </label>
               </template>
             </div>
@@ -881,6 +964,10 @@
               <input type="text" class="input input-bordered sm:col-span-2" placeholder="Np. B2 Mixed lub B3/4 Mixed" x-model="adminCategoryCustomLabel">
               <input type="text" class="input input-bordered" placeholder="B2 / B3,B4" x-model="adminCategoryCustomHints">
             </div>
+            <label class="mt-2 inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" class="checkbox checkbox-sm" x-model="adminCategoryCustomDoubles">
+              <span>Debel</span>
+            </label>
             <div class="mt-3 flex gap-2 flex-wrap">
               <button type="button" class="btn btn-primary btn-sm" @click="confirmAdminTournamentCategories(editTournament.id)">Zatwierdź kategorie</button>
               <button type="button" class="btn btn-ghost btn-sm" x-show="adminTournamentCategories.length" @click="adminCategorySetupOpen = false">Anuluj</button>
@@ -896,6 +983,7 @@
               <template x-for="cat in adminTournamentCategories.filter(c => c.is_active !== 0)" :key="'edit_tcat_'+cat.id">
                 <div class="badge badge-lg gap-2 py-3 px-3">
                   <span x-text="cat.label"></span>
+                  <span class="badge badge-success badge-sm" x-show="cat.is_doubles">Debel</span>
                   <button type="button" class="text-primary" @click="startAdminCategoryEdit(cat)">Edytuj</button>
                   <button type="button" class="text-error" @click="deleteAdminTournamentCategory(editTournament.id, cat.id)">Usuń</button>
                 </div>
@@ -910,6 +998,10 @@
               <input type="text" class="input input-bordered" placeholder="B2" x-model="adminCategoryCustomHints">
               <button type="button" class="btn btn-outline btn-sm" @click="addAdminTournamentCategory(editTournament.id)">Dodaj</button>
             </div>
+            <label class="mt-2 inline-flex items-center gap-2 text-sm" x-show="adminCategorySetupOpen && adminTournamentCategories.length">
+              <input type="checkbox" class="checkbox checkbox-sm" x-model="adminCategoryCustomDoubles">
+              <span>Debel</span>
+            </label>
           </div>
 
           <div class="card-actions justify-end mt-6">
@@ -945,9 +1037,15 @@
           <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 mt-2">
             <div class="flex flex-wrap gap-2">
               <template x-for="preset in adminCategoryPresetKeys()" :key="'new_preset_'+preset">
-                <label class="inline-flex items-center gap-2 rounded-full border border-base-300 bg-base-100 px-3 py-1.5 text-sm cursor-pointer">
-                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="newCategoryPresetSelected[preset]">
-                  <span x-text="adminCategoryPresetLabel(preset)"></span>
+                <label class="inline-flex flex-col gap-1 rounded-2xl border border-base-300 bg-base-100 px-3 py-2 text-sm cursor-pointer">
+                  <span class="inline-flex items-center gap-2">
+                    <input type="checkbox" class="checkbox checkbox-sm checkbox-primary" x-model="newCategoryPresetSelected[preset]">
+                    <span x-text="adminCategoryPresetLabel(preset)"></span>
+                  </span>
+                  <span class="inline-flex items-center gap-1 text-xs opacity-70 pl-7">
+                    <input type="checkbox" class="checkbox checkbox-xs" x-model="newCategoryPresetDoubles[preset]" :disabled="!newCategoryPresetSelected[preset]">
+                    <span>Debel</span>
+                  </span>
                 </label>
               </template>
             </div>
@@ -955,6 +1053,10 @@
               <input type="text" class="input input-bordered sm:col-span-2" placeholder="Np. B2 Mixed lub B3/4 Mixed" x-model="newCategoryCustomLabel">
               <input type="text" class="input input-bordered" placeholder="B2 / B3,B4" x-model="newCategoryCustomHints">
             </div>
+            <label class="mt-2 inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" class="checkbox checkbox-sm" x-model="newCategoryCustomDoubles">
+              <span>Debel</span>
+            </label>
           </div>
 
           <div class="card-actions justify-end mt-4"><button @click="createTournament()" class="btn btn-primary">Utw&#243;rz turniej</button></div>
