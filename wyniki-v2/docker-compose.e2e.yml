@@ -35,6 +35,7 @@ services:
   e2e-runner:
     image: ${E2E_PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright:v1.56.1-jammy}
     profiles: ["runner"]
+    shm_size: "1gb"
     working_dir: /app
     volumes:
       - ./frontend:/app

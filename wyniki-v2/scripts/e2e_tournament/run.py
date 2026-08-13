@@ -119,7 +119,7 @@ def _office_docker_cmd(module_filter: str | None = None) -> list[str]:
         f" && node scripts/e2e-tournament/run.mjs{module_arg}"
     )
     return [
-        "docker", "run", "--rm", "--network", "host",
+        "docker", "run", "--rm", "--network", "host", "--shm-size=1g",
         "-v", f"{FRONTEND_DIR}:/app",
         "-v", "wyniki-e2e-ms-playwright:/ms-playwright",
         "-w", "/app",
