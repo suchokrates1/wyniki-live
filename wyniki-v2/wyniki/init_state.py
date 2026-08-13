@@ -8,12 +8,15 @@ from .database import init_db, fetch_courts, fetch_tournaments, fetch_match_hist
 from .db_models import Match, Player
 from .services.court_manager import STATE_LOCK, ensure_court_state, refresh_courts_from_db
 from .services.history_manager import load_history_from_db
+from .services.teams import is_team_display_name
 
 
 def _resolve_live_player_name(match: Match, raw_name: str | None) -> str:
     candidate = (raw_name or '').strip()
     if not candidate:
         return ''
+    if is_team_display_name(candidate):
+        return candidate
     if not match.tournament_id:
         return candidate
 

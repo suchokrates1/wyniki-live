@@ -653,7 +653,7 @@
           <div class="mt-3 space-y-2" x-show="planningTeamsForCategory(planningSelectedCategoryId).length">
             <template x-for="team in planningTeamsForCategory(planningSelectedCategoryId)" :key="'office_team_'+team.id">
               <div class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm">
-                <span class="font-semibold text-slate-900" x-text="team.display_name"></span>
+                <span class="font-semibold text-slate-900 competitor-name" x-text="formatCompetitorName(team.display_name)"></span>
                 <button type="button" class="text-rose-600 text-xs disabled:opacity-40" @click="deleteOfficeTeam(team)" :disabled="!!planningTeamAssignments[team.id]" x-text="ot('planning.deleteTeam')"></button>
               </div>
             </template>
@@ -771,7 +771,7 @@
                        draggable="true" @dragstart="onPlanningTeamDragStart(team, $event)">
                     <span class="font-mono font-semibold text-slate-400 tabular-nums w-6 text-center" x-text="planningTeamOrdinal(team)"></span>
                     <div class="flex-1 min-w-0">
-                      <div class="font-semibold text-sm text-slate-900 truncate" x-text="team.display_name"></div>
+                      <div class="font-semibold text-sm text-slate-900 competitor-name leading-tight" x-text="formatCompetitorName(team.display_name)"></div>
                     </div>
                   </div>
                 </template>
@@ -803,7 +803,7 @@
                            draggable="true" @dragstart="onPlanningTeamDragStart(team, $event)">
                         <span class="font-mono font-semibold text-emerald-600 tabular-nums w-6 text-center" x-text="planningTeamOrdinal(team)"></span>
                         <div class="flex-1 min-w-0">
-                          <div class="font-semibold text-sm text-slate-900 truncate" x-text="team.display_name"></div>
+                          <div class="font-semibold text-sm text-slate-900 competitor-name leading-tight" x-text="formatCompetitorName(team.display_name)"></div>
                         </div>
                       </div>
                     </template>
@@ -936,10 +936,10 @@
                                     x-text="'×'"></button>
                           </div>
                         </div>
-                        <div class="mt-1 text-sm font-semibold leading-tight" :class="autoIsPlaceholder(entry) ? 'text-indigo-600 italic' : 'text-slate-900'">
-                          <span x-text="entry.player1_name || '—'"></span>
-                          <span class="text-slate-400" x-text="' ' + ot('versus') + ' '"></span>
-                          <span x-text="entry.player2_name || '—'"></span>
+                        <div class="mt-1 text-sm font-semibold leading-tight space-y-0.5" :class="autoIsPlaceholder(entry) ? 'text-indigo-600 italic' : 'text-slate-900'">
+                          <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                          <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400" x-text="ot('versus')"></div>
+                          <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
                         </div>
                         <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
                         <div class="text-[11px] font-semibold mt-0.5" :class="entry.status === 'draft' ? 'text-slate-400' : 'text-emerald-600'" x-text="officeScheduleStatusLabel(entry.status)"></div>
@@ -1023,10 +1023,10 @@
                               :title="ot('planning.removeEntry')"
                               @click.stop="deletePlanningScheduleEntry(entry, { skipConfirm: true })"
                               x-text="'×'"></button>
-                      <div class="text-sm font-semibold text-slate-900">
-                        <span x-text="entry.player1_name || '—'"></span>
-                        <span class="text-slate-400" x-text="' ' + ot('versus') + ' '"></span>
-                        <span x-text="entry.player2_name || '—'"></span>
+                      <div class="text-sm font-semibold text-slate-900 leading-tight space-y-0.5">
+                        <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400" x-text="ot('versus')"></div>
+                        <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
                       </div>
                       <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
                       <div class="text-[10px] text-amber-800 mt-0.5" x-text="planningUnassignedDayLabel(entry)"></div>
@@ -1099,7 +1099,7 @@
                   <div class="hm-player" :class="{ 'hm-player--winner': officeMatchWinner(match) === 'A' }">
                     <span class="hm-winner-mark" x-show="officeMatchWinner(match) === 'A'" aria-hidden="true"></span>
                     <span class="hm-winner-mark hm-winner-mark--empty" x-show="officeMatchWinner(match) !== 'A'" aria-hidden="true"></span>
-                    <span class="hm-player-name" x-text="match.player1_name || '-' "></span>
+                    <span class="hm-player-name competitor-name" x-text="formatCompetitorName(match.player1_name || '-')"></span>
                     <span class="hm-sets">
                       <template x-for="(set, i) in officeMatchSets(match)" :key="'oa-'+match.id+'-'+i">
                         <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b }">
@@ -1111,7 +1111,7 @@
                   <div class="hm-player" :class="{ 'hm-player--winner': officeMatchWinner(match) === 'B' }">
                     <span class="hm-winner-mark" x-show="officeMatchWinner(match) === 'B'" aria-hidden="true"></span>
                     <span class="hm-winner-mark hm-winner-mark--empty" x-show="officeMatchWinner(match) !== 'B'" aria-hidden="true"></span>
-                    <span class="hm-player-name" x-text="match.player2_name || '-' "></span>
+                    <span class="hm-player-name competitor-name" x-text="formatCompetitorName(match.player2_name || '-')"></span>
                     <span class="hm-sets">
                       <template x-for="(set, i) in officeMatchSets(match)" :key="'ob-'+match.id+'-'+i">
                         <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a }">
@@ -1225,13 +1225,13 @@
             </div>
 
             <div class="mt-5 rounded-2xl border border-slate-200/80 bg-white/70 p-4 space-y-3">
-              <div class="flex items-center justify-between gap-3">
-                <span class="font-semibold text-slate-800" x-text="slot.player1_name || ot('knockout.previousRoundWinner')"></span>
-                <span class="office-chip" x-show="slot.winner_name === slot.player1_name" x-text="ot('knockout.winShort')"></span>
+              <div class="flex items-start justify-between gap-3">
+                <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(slot.player1_name) || ot('knockout.previousRoundWinner')"></span>
+                <span class="office-chip shrink-0" x-show="slot.winner_name === slot.player1_name" x-text="ot('knockout.winShort')"></span>
               </div>
-              <div class="flex items-center justify-between gap-3">
-                <span class="font-semibold text-slate-800" x-text="slot.player2_name || ot('knockout.previousRoundWinner')"></span>
-                <span class="office-chip" x-show="slot.winner_name === slot.player2_name" x-text="ot('knockout.winShort')"></span>
+              <div class="flex items-start justify-between gap-3">
+                <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(slot.player2_name) || ot('knockout.previousRoundWinner')"></span>
+                <span class="office-chip shrink-0" x-show="slot.winner_name === slot.player2_name" x-text="ot('knockout.winShort')"></span>
               </div>
             </div>
 
@@ -1391,11 +1391,11 @@
           <div class="grid gap-4 md:grid-cols-2">
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
               <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="officeCompetitorALabel(officeEditingMatch)"></div>
-              <div class="mt-2 text-xl font-semibold" x-text="officeEditingMatch.player1_name"></div>
+              <div class="mt-2 text-xl font-semibold competitor-name" x-text="formatCompetitorName(officeEditingMatch.player1_name)"></div>
             </div>
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
               <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="officeCompetitorBLabel(officeEditingMatch)"></div>
-              <div class="mt-2 text-xl font-semibold" x-text="officeEditingMatch.player2_name"></div>
+              <div class="mt-2 text-xl font-semibold competitor-name" x-text="formatCompetitorName(officeEditingMatch.player2_name)"></div>
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 import { publicApi } from '../api/publicApi.js';
+import { registerCompetitorName } from '../shared/teamDisplay.js';
 import {
   dedupePlayersList,
   filterPlayersList,
@@ -37,12 +38,7 @@ export function createPlayersView() {
         }
         this.allPlayers = dedupePlayersList(Array.isArray(data) ? data : []);
         for (const player of this.allPlayers) {
-          const name = player.name || '';
-          if (name.includes(' ')) {
-            const parts = name.trim().split(/\s+/);
-            const surname = parts[parts.length - 1];
-            this.bracketNameMap[surname] = name;
-          }
+          registerCompetitorName(this.bracketNameMap, player.name || '');
         }
         this.filterPlayers();
       } catch {

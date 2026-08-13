@@ -18,6 +18,7 @@ import {
 } from '../shared/courtLabels.js';
 import { formatDuration } from '../shared/date.js';
 import { formatTemplate as fmt } from '../shared/text.js';
+import { formatTeamLabelForWrap, isTeamDisplayName } from '../shared/teamDisplay.js';
 
 export function createLiveCourtView() {
   return {
@@ -50,14 +51,47 @@ export function createLiveCourtView() {
 
     getPlayerName(courtId, side) {
       const player = this.courts[courtId]?.[side];
+      let name = '';
       if (player) {
         const full = player.full_name;
-        if (full && String(full).trim()) return String(full).trim();
-        const surname = player.surname;
-        if (surname && surname !== '-') return surname;
+        if (full && String(full).trim()) name = String(full).trim();
+        else {
+          const surname = player.surname;
+          if (surname && surname !== '-') name = surname;
+        }
       }
-      const tr = this.tr();
-      return side === 'A' ? tr.players.defaultA : tr.players.defaultB;
+      if (!name) {
+        const tr = this.tr();
+        name = side === 'A' ? tr.players.defaultA : tr.players.defaultB;
+      }
+      return formatTeamLabelForWrap(name);
+    },
+
+    isTeamDisplayName(value) {
+      return isTeamDisplayName(value);
+    },
+
+    playerHasFlag(courtId, side) {
+      const player = this.courts[courtId]?.[side];
+      return !!(player?.flag_url || player?.flag_code);
+    },
+
+    playerHasPartnerFlag(courtId, side) {
+      const player = this.courts[courtId]?.[side];
+      if (!player) return false;
+      const partnerUrl = player.flag_url_partner || '';
+      const partnerCode = String(player.flag_code_partner || '').toUpperCase();
+      if (!partnerUrl && !partnerCode) return false;
+      const primary = String(player.flag_code || '').toUpperCase();
+      return !primary || partnerCode !== primary;
+    },
+
+    playerFlagStyle(courtId, side, partner = false) {
+      const player = this.courts[courtId]?.[side] || {};
+      const url = partner
+        ? (player.flag_url_partner || this.codeToFlag(player.flag_code_partner))
+        : (player.flag_url || this.codeToFlag(player.flag_code));
+      return url ? `background-image:url(${url})` : '';
     },
 
     getHeadingAria(courtId) {

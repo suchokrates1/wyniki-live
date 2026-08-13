@@ -1,6 +1,7 @@
 import { publicApi } from '../api/publicApi.js';
 import { formatTemplate as fmt } from '../shared/text.js';
 import { translateStoredScheduleLabel } from '../shared/labelDisplay.js';
+import { formatTeamLabelForWrap, registerCompetitorName } from '../shared/teamDisplay.js';
 import {
   buildBracketCategories,
   compareBracketCategoryNames as compareBracketCategoryNamesData,
@@ -140,7 +141,7 @@ export function createBracketView() {
 
     resolveBracketName(surname) {
       if (!surname) return '';
-      return this.bracketNameMap[surname] || surname;
+      return formatTeamLabelForWrap(this.bracketNameMap[surname] || surname);
     },
 
     translatePhase(phase) {
@@ -193,11 +194,7 @@ export function createBracketView() {
       for (const group of (data.groups || [])) {
         for (const match of (group.matches || [])) {
           for (const playerName of [match.player_a, match.player_b]) {
-            if (playerName && playerName.includes(' ')) {
-              const parts = playerName.trim().split(/\s+/);
-              const surname = parts[parts.length - 1];
-              this.bracketNameMap[surname] = playerName;
-            }
+            registerCompetitorName(this.bracketNameMap, playerName);
           }
         }
       }
@@ -205,11 +202,7 @@ export function createBracketView() {
         for (const slots of Object.values(data.knockout)) {
           for (const slot of (Array.isArray(slots) ? slots : [])) {
             for (const playerName of [slot.player1, slot.player2, slot.winner]) {
-              if (playerName && playerName.includes(' ')) {
-                const parts = playerName.trim().split(/\s+/);
-                const surname = parts[parts.length - 1];
-                this.bracketNameMap[surname] = playerName;
-              }
+              registerCompetitorName(this.bracketNameMap, playerName);
             }
           }
         }

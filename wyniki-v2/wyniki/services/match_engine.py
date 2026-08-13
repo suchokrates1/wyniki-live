@@ -192,6 +192,8 @@ def reset_after_match(state: Dict[str, Any]) -> None:
         "current_games": 0,
         "flag_url": None,
         "flag_code": None,
+        "flag_url_partner": None,
+        "flag_code_partner": None,
         "flag_lookup_surname": None,
     }
     state["B"] = {
@@ -204,6 +206,8 @@ def reset_after_match(state: Dict[str, Any]) -> None:
         "current_games": 0,
         "flag_url": None,
         "flag_code": None,
+        "flag_url_partner": None,
+        "flag_code_partner": None,
         "flag_lookup_surname": None,
     }
     state["current_set"] = 1

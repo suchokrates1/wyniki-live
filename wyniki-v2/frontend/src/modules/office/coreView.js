@@ -1,4 +1,5 @@
 import { translateStoredScheduleLabel } from '../../shared/labelDisplay.js';
+import { formatTeamLabelForWrap } from '../../shared/teamDisplay.js';
 import { officeAuthHeaders } from './api.js';
 import { defaultOfficeForm, defaultOfficeScheduleForm } from './forms.js';
 
@@ -379,6 +380,10 @@ export function createOfficeCoreView() {
 
     officeHeaders() {
       return officeAuthHeaders(this.token);
+    },
+
+    formatCompetitorName(value) {
+      return formatTeamLabelForWrap(value);
     },
 
     officeDisplayLabel(value) {

@@ -158,11 +158,17 @@
                                 <!-- Player A -->
                                 <div class="score-row" data-side="A">
                                     <dt class="player-cell">
-                                        <span class="player-flag has-image" aria-hidden="true"
-                                              x-show="courts[courtId]?.A?.flag_url || courts[courtId]?.A?.flag_code"
-                                              :style="'background-image:url('+(courts[courtId]?.A?.flag_url || codeToFlag(courts[courtId]?.A?.flag_code))+')'">
+                                        <span class="player-flags" aria-hidden="true">
+                                            <span class="player-flag has-image"
+                                                  x-show="playerHasFlag(courtId, 'A')"
+                                                  :style="playerFlagStyle(courtId, 'A')"></span>
+                                            <span class="player-flag has-image"
+                                                  x-show="playerHasPartnerFlag(courtId, 'A')"
+                                                  :style="playerFlagStyle(courtId, 'A', true)"></span>
                                         </span>
-                                        <span class="player-name" :id="'k'+courtId+'-name-A'" x-text="getPlayerName(courtId, 'A')"></span>
+                                        <span class="player-name" :id="'k'+courtId+'-name-A'"
+                                              :class="{ 'player-name--team': isTeamDisplayName(getPlayerName(courtId, 'A')) }"
+                                              x-text="getPlayerName(courtId, 'A')"></span>
                                         <template x-if="courts[courtId]?.serve === 'A'">
                                             <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="" style="width:14px;height:14px;"></span>
                                         </template>
@@ -193,11 +199,17 @@
                                 <!-- Player B -->
                                 <div class="score-row" data-side="B">
                                     <dt class="player-cell">
-                                        <span class="player-flag has-image" aria-hidden="true"
-                                              x-show="courts[courtId]?.B?.flag_url || courts[courtId]?.B?.flag_code"
-                                              :style="'background-image:url('+(courts[courtId]?.B?.flag_url || codeToFlag(courts[courtId]?.B?.flag_code))+')'">
+                                        <span class="player-flags" aria-hidden="true">
+                                            <span class="player-flag has-image"
+                                                  x-show="playerHasFlag(courtId, 'B')"
+                                                  :style="playerFlagStyle(courtId, 'B')"></span>
+                                            <span class="player-flag has-image"
+                                                  x-show="playerHasPartnerFlag(courtId, 'B')"
+                                                  :style="playerFlagStyle(courtId, 'B', true)"></span>
                                         </span>
-                                        <span class="player-name" :id="'k'+courtId+'-name-B'" x-text="getPlayerName(courtId, 'B')"></span>
+                                        <span class="player-name" :id="'k'+courtId+'-name-B'"
+                                              :class="{ 'player-name--team': isTeamDisplayName(getPlayerName(courtId, 'B')) }"
+                                              x-text="getPlayerName(courtId, 'B')"></span>
                                         <template x-if="courts[courtId]?.serve === 'B'">
                                             <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="" style="width:14px;height:14px;"></span>
                                         </template>

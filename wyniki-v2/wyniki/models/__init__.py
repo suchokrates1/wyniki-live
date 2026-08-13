@@ -22,6 +22,8 @@ class PlayerData(BaseModel):
     set3: int = 0
     flag_code: Optional[str] = None
     flag_url: Optional[str] = None
+    flag_code_partner: Optional[str] = None
+    flag_url_partner: Optional[str] = None
     flag_lookup_surname: Optional[str] = None
 
 

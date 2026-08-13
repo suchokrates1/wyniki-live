@@ -1,4 +1,5 @@
 import { publicApi } from '../api/publicApi.js';
+import { registerCompetitorName } from '../shared/teamDisplay.js';
 import {
   getMatchSets as getHistoryMatchSets,
   getMatchWinner as getHistoryMatchWinner,
@@ -24,16 +25,8 @@ export function createHistoryView() {
         if (!data) return;
         this.history = Array.isArray(data) ? data : [];
         for (const match of this.history) {
-          if (match.player_a && match.player_a.includes(' ')) {
-            const parts = match.player_a.trim().split(/\s+/);
-            const surname = parts[parts.length - 1];
-            this.bracketNameMap[surname] = match.player_a;
-          }
-          if (match.player_b && match.player_b.includes(' ')) {
-            const parts = match.player_b.trim().split(/\s+/);
-            const surname = parts[parts.length - 1];
-            this.bracketNameMap[surname] = match.player_b;
-          }
+          registerCompetitorName(this.bracketNameMap, match.player_a);
+          registerCompetitorName(this.bracketNameMap, match.player_b);
         }
       } catch { /* ignore */ }
     },
