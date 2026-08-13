@@ -450,6 +450,9 @@ def test_mobile_suggested_match_uses_selected_court_and_nearest_time(umpire_app_
     assert suggestion["player2_name"] == "Nearest Two"
     assert suggestion["player1"]["full_name"] == "Nearest One"
     assert suggestion["player2"]["full_name"] == "Nearest Two"
+    assert suggestion["is_doubles"] is False
+    assert "partner" not in (suggestion["player1"] or {})
+    assert "partner" not in (suggestion["player2"] or {})
 
 
 def test_mobile_create_match_links_explicit_schedule_id(umpire_app_with_temp_db):
