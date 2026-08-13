@@ -358,17 +358,31 @@ def test_link_schedule_to_match_uses_explicit_schedule_id_before_name_heuristic(
             "status": "planned",
             "sort_order": 1,
         },
-        {
-            "day_date": "2026-05-29",
-            "scheduled_time": "11:00",
-            "court_id": f"t{tournament_id}-1",
-            "player1_name": "Explicit Player One",
-            "player2_name": "Explicit Player Two",
-            "status": "planned",
-            "sort_order": 2,
-        },
     ])
+    # upsert collapses the same pair+phase into one row; a second slot of the
+    # same names (e.g. two planned meetings) must be inserted directly.
+    with database.db_conn() as conn:
+        cursor = conn.cursor()
+        now = database._utc_now()
+        cursor.execute(
+            """
+            INSERT INTO tournament_schedule (
+                tournament_id, day_date, scheduled_time, court_id, phase,
+                player1_name, player2_name, status, sort_order, created_at, updated_at
+            ) VALUES (?, '2026-05-29', '11:00', ?, 'Grupowa', ?, ?, 'planned', 2, ?, ?)
+            """,
+            (
+                tournament_id,
+                f"t{tournament_id}-1",
+                "Explicit Player One",
+                "Explicit Player Two",
+                now,
+                now,
+            ),
+        )
+        conn.commit()
     schedule = database.fetch_tournament_schedule(tournament_id)
+    assert len(schedule) == 2
     explicit_schedule_id = schedule[1]["id"]
 
     linked = database.link_schedule_to_match(
