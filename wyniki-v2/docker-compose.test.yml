@@ -38,6 +38,7 @@ services:
       - "traefik.http.routers.wyniki-test.tls.certresolver=cloudflare"
       - "traefik.http.services.wyniki-test.loadbalancer.server.port=8080"
       - "traefik.docker.network=proxy"
+      - "com.centurylinklabs.watchtower.enable=false"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
