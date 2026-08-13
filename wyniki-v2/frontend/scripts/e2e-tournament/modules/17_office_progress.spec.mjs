@@ -23,21 +23,19 @@ export default async function run() {
     await loginPage.login(OFFICE_PASSWORD);
     const planningPage = new OfficePlanningPage(page);
     await planningPage.openProgressTab();
-    await page.waitForFunction(
-      () => {
-        const text = document.body.innerText.replaceAll('\u200B', '');
-        return text.includes('Plan') && text.includes('Gotowe') && text.includes('Zostało');
-      },
-      undefined,
-      { timeout: 12000 },
-    );
-    const body = await page.evaluate(() => document.body.innerText.replaceAll('\u200B', ''));
-    if (!body.toLowerCase().includes('pary') && !body.includes('Pary')) {
-      throw new Error('Progress tab should label doubles composition as Pary');
+    const progressCard = page.locator('article.office-panel').filter({ hasText: /gotowe/i });
+    await progressCard.first().waitFor({ state: 'visible', timeout: 12000 });
+    const cardText = String(await progressCard.first().innerText() || '').replaceAll('\u200B', '');
+    const lowered = cardText.toLowerCase();
+    if (!lowered.includes('plan') || !lowered.includes('gotowe') || !lowered.includes('zostało')) {
+      throw new Error(`Progress card missing Plan/Gotowe/Zostało\nUI: ${cardText.slice(0, 800)}`);
+    }
+    if (!lowered.includes('pary')) {
+      throw new Error(`Progress tab should label doubles composition as Pary\nUI: ${cardText.slice(0, 800)}`);
     }
     const pair = teams[0].display_name;
-    if (!body.includes(pair)) {
-      throw new Error(`Progress chips missing pair ${pair}`);
+    if (!cardText.includes(pair)) {
+      throw new Error(`Progress chips missing pair ${pair}\nUI: ${cardText.slice(0, 800)}`);
     }
     console.log('  Progress: Plan/Gotowe/Zostało + pair chips');
   } finally {

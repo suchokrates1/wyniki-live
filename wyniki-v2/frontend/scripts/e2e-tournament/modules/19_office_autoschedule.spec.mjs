@@ -29,12 +29,13 @@ export default async function run() {
     const schedulePage = new OfficeSchedulePage(page);
     await schedulePage.navigateToTab();
     await schedulePage.waitForEntries();
-
-    const body = await page.evaluate(() => document.body.innerText);
-    for (const label of ['Generuj mecze', 'Generuj rewanże', 'Opublikuj wszystkie', 'Zakres', 'Generuj propozycję']) {
-      if (!body.includes(label)) {
-        throw new Error(`Schedule step 2 missing control: ${label}`);
-      }
+    await page.getByRole('button', { name: /Generuj mecze/i }).waitFor({ state: 'visible', timeout: 10000 });
+    await page.getByRole('button', { name: /Generuj rewanże/i }).waitFor({ state: 'visible', timeout: 5000 });
+    await page.getByRole('button', { name: /Opublikuj wszystkie/i }).waitFor({ state: 'visible', timeout: 5000 });
+    await page.getByRole('button', { name: /Generuj propozycję/i }).waitFor({ state: 'visible', timeout: 5000 });
+    const body = await page.evaluate(() => document.body.innerText.toLowerCase());
+    if (!body.includes('zakres')) {
+      throw new Error('Schedule step 2 missing Zakres control');
     }
     console.log('  Step 2 generate/publish/autoschedule controls visible');
 

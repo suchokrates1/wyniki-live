@@ -24,7 +24,7 @@ export default async function run() {
     const resultsPage = new OfficeResultsPage(page);
     await resultsPage.openAddResult();
 
-    const modalText = await page.locator('.office-modal').innerText();
+    const modalText = await page.locator('.office-modal').filter({ hasText: 'Zapisz wynik' }).innerText();
     const normalized = modalText.replaceAll('\u200B', '');
     if (!normalized.includes('Para A') || !normalized.includes('Para B')) {
       throw new Error(`Doubles result modal should use Para A/B, got: ${normalized.slice(0, 400)}`);
