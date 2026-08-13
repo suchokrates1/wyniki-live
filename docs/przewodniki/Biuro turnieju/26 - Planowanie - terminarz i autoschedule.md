@@ -14,8 +14,8 @@ Generowanie meczów, publikacja, automatyczne / ręczne układanie na kortach.
 
 | Kontrolka | Co robi | API |
 |-----------|---------|-----|
-| **Generuj mecze** | Round-robin z grup | `POST …/schedule/generate` |
-| **Generuj rewanże** | Rewanże dla wybranych grup | `POST …/schedule/generate-rematch` |
+| **Generuj mecze** | RR z grup `groups_knockout` / `round_robin`; **pomija** `knockout` | `POST …/schedule/generate` |
+| **Generuj rewanże** | Rewanże dla wybranych grup (nie dla KO-only) | `POST …/schedule/generate-rematch` |
 | **Opublikuj wszystkie** | Publikacja draftów | `POST …/schedule/publish` |
 | Chipy dnia | Filtr dnia | — |
 
@@ -46,12 +46,16 @@ Statusy: **Roboczy** / **Opublikowany** / **W trakcie** / **Zakończony**.
 
 ## Ręczny wpis
 
-Formularz **+ Dodaj ręczny wpis**: data, czas, kort, kategoria, faza, status, gracze, uwagi → **Dodaj** (`POST …/schedule`).
+Formularz **+ Dodaj ręczny wpis**: data, czas, kort, kategoria, faza, status, **gracze albo pary** (dropdown zależy od `is_doubles` kategorii), uwagi → **Dodaj** (`POST …/schedule`).
 
-> [!note] Debel
-> Plan kategorii Double (drużyny w terminarzu, dropdown par): [[42 - Debel - plan implementacji]].
+Karty i kolumny kortów pokazują `formatCompetitorName` — długie `"A / B"` łamią się po separatorze.
+
+## E2E
+
+`03_schedule_publish.spec.mjs` — tablica po publikacji. `05_rematch.spec.mjs` — rewanże. `19_office_autoschedule.spec.mjs` — zakres, start, **Generuj propozycję**. `11` / `14` — etykiety par w terminarzu.
 
 ## Powiązane
 
 - [[25 - Planowanie - grupy]]
 - [[13 - Terminarz]] (publiczny odczyt)
+- [[28 - Debel w biurze]]

@@ -42,6 +42,7 @@ Trzy powierzchnie produktu web:
 - [[25 - Planowanie - grupy]]
 - [[26 - Planowanie - terminarz i autoschedule]]
 - [[27 - Wprowadzanie i edycja wyniku]]
+- [[28 - Debel w biurze]] (kategorie Double, pary, tryb grupy, wynik na drużynach)
 
 ## Admin (`/admin`)
 
@@ -59,3 +60,4 @@ Trzy powierzchnie produktu web:
 - [[40 - Role i dostęp]]
 - [[41 - Mapowanie URL]]
 - [[42 - Debel - plan implementacji]] (debel, tryb na grupie, litewski)
+- [[28 - Debel w biurze]] (UI operatora)

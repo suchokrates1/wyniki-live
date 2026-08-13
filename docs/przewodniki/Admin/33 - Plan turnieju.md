@@ -15,9 +15,10 @@ Przypisywanie do grup i zarządzanie terminarzem z poziomu Admin (równolegle do
 | Kontrolka | Co robi | API |
 |-----------|---------|-----|
 | Select turnieju + **Odśwież** | Ładuje dane | players, groups, schedule, courts |
-| Select kategorii + liczba grup | Setup dywizji | — |
-| Select grupy przy zawodniku | Przypisanie | — |
-| **Zapisz grupy** | Zapis | `PUT …/bracket/groups` |
+| Select kategorii + liczba grup | Setup dywizji; kategoria Debel składa **pary** | — |
+| Select grupy przy zawodniku **albo parze** | Przypisanie | — |
+| Dropdown trybu na grupie | `groups_knockout` / `round_robin` / `knockout` | Jak w biurze |
+| **Zapisz grupy** | Zapis | `PUT …/bracket/groups` (`players` albo `teams`) |
 | **Przypisz wszystkich** / **Rozdziel** / **Wyczyść** | Pomocnicze | — |
 
 ## Terminarz
@@ -33,4 +34,5 @@ Przypisywanie do grup i zarządzanie terminarzem z poziomu Admin (równolegle do
 
 - [[25 - Planowanie - grupy]]
 - [[26 - Planowanie - terminarz i autoschedule]]
+- [[28 - Debel w biurze]]
 - [[42 - Debel - plan implementacji]]

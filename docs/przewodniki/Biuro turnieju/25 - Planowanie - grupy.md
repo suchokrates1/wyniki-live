@@ -18,11 +18,12 @@ Zakładka **Plan turnieju** → krok **Grupy startowe**. Przycisk **Odśwież pl
 
 | Kontrolka | Co robi | API |
 |-----------|---------|-----|
-| Presety (np. B1–B4 K/M) | Zaznaczenie | — |
-| Pola kategorii niestandardowej | Nazwa + wskazówki | — |
-| **Zatwierdź kategorie** | Potwierdzenie zestawu | `POST …/categories/confirm` |
+| Presety (np. B1–B4 K/M) | Zaznaczenie + opcjonalny checkbox **Debel** | — |
+| Pola kategorii niestandardowej | Nazwa + wskazówki + **Debel** | — |
+| **Zatwierdź kategorie** | Potwierdzenie zestawu (`is_doubles` na wpisie) | `POST …/categories/confirm` |
 | **Anuluj** | Zamknięcie setupu | — |
 | **+ Dodaj kategorię** / **Edytuj** / **Usuń** / **Zapisz** | CRUD | `POST/PATCH/DELETE …/categories` |
+| Badge **Debel** na chipie kategorii | Oznaczenie Double | Odczyt |
 
 ## Zawodnicy
 
@@ -30,21 +31,34 @@ Zakładka **Plan turnieju** → krok **Grupy startowe**. Przycisk **Odśwież pl
 |-----------|---------|-----|
 | Formularz **+ Dodaj zawodnika** (Imię, Nazwisko, kategoria, płeć, kraj) | Nowy gracz turnieju | `POST …/players` |
 
+## Pary (kategoria Debel)
+
+| Kontrolka | Co robi | API |
+|-----------|---------|-----|
+| **+ Dodaj drużynę** | Partner 1 + Partner 2 | `POST …/teams` → `display_name` |
+| Lista par / **Usuń parę** | CRUD | `DELETE …/teams/{id}` (zablokowane, gdy para jest w grupie) |
+
 ## Grupy
 
 | Kontrolka | Co robi | API |
 |-----------|---------|-----|
-| Chipy dywizji / kategorii | Wybór działu | — |
+| Chipy dywizji / kategorii | Wybór działu; badge **Debel** | — |
 | Licznik grup − / + (1–8) | Liczba grup | — |
-| **Przypisz wszystkich** / **Rozdziel automatycznie** | Auto-assign | Potem auto-zapis grup |
+| **Przypisz wszystkich** / **Rozdziel automatycznie** | Auto-assign osób | Potem auto-zapis grup |
+| **Przypisz wszystkie pary** / **Rozdziel pary** | Auto-assign drużyn | Jak wyżej, przy Double |
 | **Wyczyść** | Czyści przypisania | — |
-| Drag & drop graczy do grup | Ręczny układ | Auto `PUT …/planning/groups` |
+| Drag & drop graczy **albo par** do grup | Ręczny układ | Auto `PUT …/planning/groups` |
+| Dropdown **Tryb rozgrywek** na karcie | `groups_knockout` / `round_robin` / `knockout` | Zapis z grupami; blokada gdy grupa ma mecze |
 
-> [!note] Plan
-> Checkbox **Debel** na kategorii; **dropdown trybu** (grupy+puchar / tylko RR / tylko puchar) na karcie grupy: [[42 - Debel - plan implementacji]].
+Kafelek planu przy Double pokazuje **Pary**, nie zawodników. Szczegóły trybu: [[28 - Debel w biurze]].
+
+## E2E
+
+`02_groups_draw.spec.mjs` — grupy singla. `11_doubles_category_teams.spec.mjs` / `12_group_play_format.spec.mjs` — pary i tryb. `18_office_planning_ui.spec.mjs` — confirm Debel + dodaj parę z UI.
 
 ## Powiązane
 
 - [[26 - Planowanie - terminarz i autoschedule]]
-- [[36 - Gracze turnieju i import]] (admin — masowy import)
-- [[42 - Debel - plan implementacji]] (kategorie Double, **tryb na grupie**, drużyny)
+- [[36 - Gracze turnieju i import]] (admin — masowy import **osób**; pary składa biuro)
+- [[28 - Debel w biurze]]
+- [[42 - Debel - plan implementacji]]

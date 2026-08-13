@@ -16,7 +16,7 @@ Podgląd wyników na żywo, drabinki, terminarza, historii turniejów i profili 
 |---------|---------|-------|
 | Tytuł **Wyniki tenisowe** | Brand | — |
 | Badge **LIVE** | Pokazuje się przy aktywnym korcie | Ze snapshotu |
-| Select języka | PL/DE/EN/IT/ES/FR | `?lang=` + localStorage |
+| Select języka | PL/DE/EN/IT/ES/FR/**LT** | `?lang=` + localStorage |
 | Przełącznik motywu ☀️/🌙 | Jasny / ciemny | `localStorage.theme` |
 | Baner quick-info | Komunikat z biura | Gdy biuro opublikuje |
 | Skip link | Skok do `#main` | A11y |
@@ -41,4 +41,6 @@ Podgląd wyników na żywo, drabinki, terminarza, historii turniejów i profili 
 ## Powiązane
 
 - [[00 - Biuro i strona publiczna]]
+- [[18 - Język, motyw, access_key]] (w tym Lietuvių)
+- [[28 - Debel w biurze]] (pary na terminarzu i drabince)
 - [[41 - Mapowanie URL]]

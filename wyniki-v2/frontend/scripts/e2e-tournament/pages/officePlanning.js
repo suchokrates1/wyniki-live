@@ -51,6 +51,15 @@ export class OfficePlanningPage {
     );
   }
 
+  async openProgressTab() {
+    await this.page.locator('.office-tab').filter({ hasText: 'Postęp grup' }).click();
+    await this.page.waitForFunction(
+      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Postęp grup'),
+      undefined,
+      { timeout: 10000 },
+    );
+  }
+
   async hasKnockoutGenerated() {
     const text = await this.page.evaluate(() => document.body.innerText.toLocaleLowerCase('pl-PL'));
     return text.includes('wygenerowane') || text.includes('półfinał') || text.includes('finał')

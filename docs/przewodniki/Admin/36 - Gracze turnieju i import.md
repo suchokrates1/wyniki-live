@@ -23,7 +23,10 @@ Lista graczy konkretnego turnieju, dodawanie pojedyncze oraz masowy import z tek
 > [!tip]
 > Import wspiera asystowane rozpoznawanie (m.in. flagi). Przed **Zatwierdź import** sprawdź podgląd wierszy.
 
+Import CSV zostaje na **osobach**. Pary składa biuro / plan admina w kategorii Debel — [[28 - Debel w biurze]].
+
 ## Powiązane
 
 - [[25 - Planowanie - grupy]]
 - [[35 - Zawodnicy globalni]]
+- [[28 - Debel w biurze]]

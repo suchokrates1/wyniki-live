@@ -19,7 +19,7 @@ Zakładka **Na żywo** → podzakładka **Wyniki live** (`#live` / `#live/scores
 | Element | Co robi | Efekt |
 |---------|---------|-------|
 | Podnav: **Wyniki live** / **Drabinka** / **Terminarz** / **Historia** | Zmiana widoku | Hash routing |
-| Karty kortów | Wynik: flagi, piłka serwisu, punkty, sety, TB/STB, zegar meczu | Tylko odczyt |
+| Karty kortów | Wynik: flagi (w deblu też flaga partnera, gdy narodowość inna), piłka serwisu, punkty, sety, TB/STB, zegar | Tylko odczyt; nazwy z `/` nie są obcinane do jednego nazwiska |
 | Stan pusty **Brak aktywnych kortów** | Info | — |
 | Linki SR `#kort-{id}` | Skok do kortu | A11y |
 
