@@ -116,3 +116,103 @@ def test_two_groups_per_category_create_semifinals():
     assert phases.count("B1 Mężczyźni — Półfinał") == 2
     assert "B1 Mężczyźni — Finał" in phases
     assert "B1 Mężczyźni — o 3. miejsce" in phases
+
+
+def test_round_robin_group_does_not_create_knockout():
+    result = _compute_knockout_slots_from_bracket([
+        {
+            "name": "B4 Mixed",
+            "play_format": "round_robin",
+            "standings": [{"name": f"P{i}"} for i in range(1, 5)],
+        }
+    ])
+    assert result.get("error")
+    assert "knockout" not in result
+
+
+def test_mixed_round_robin_and_groups_knockout_only_builds_ready_cup():
+    result = _compute_knockout_slots_from_bracket([
+        {
+            "name": "B4 Mixed",
+            "play_format": "round_robin",
+            "standings": [{"name": f"R{i}"} for i in range(1, 4)],
+        },
+        {
+            "name": "B1 Mężczyźni — Grupa A",
+            "play_format": "groups_knockout",
+            "standings": [{"name": "A1"}, {"name": "A2"}],
+        },
+        {
+            "name": "B1 Mężczyźni — Grupa B",
+            "play_format": "groups_knockout",
+            "standings": [{"name": "B1"}, {"name": "B2"}],
+        },
+    ])
+    phases = [slot["phase"] for slot in result["knockout"]]
+    assert all(not phase.startswith("B4 Mixed") for phase in phases)
+    assert phases.count("B1 Mężczyźni — Półfinał") == 2
+    assert {(slot["player1_name"], slot["player2_name"]) for slot in result["knockout"] if slot["phase"] == "B1 Mężczyźni — Półfinał"} == {
+        ("A1", "B2"),
+        ("B1", "A2"),
+    }
+
+
+def test_mixed_bucket_does_not_cross_when_one_group_is_not_groups_knockout():
+    result = _compute_knockout_slots_from_bracket([
+        {
+            "name": "B1 Mężczyźni — Grupa A",
+            "play_format": "groups_knockout",
+            "standings": [{"name": f"A{i}"} for i in range(1, 5)],
+        },
+        {
+            "name": "B1 Mężczyźni — Grupa B",
+            "play_format": "round_robin",
+            "standings": [{"name": f"B{i}"} for i in range(1, 5)],
+        },
+    ])
+    phases = [slot["phase"] for slot in result["knockout"]]
+    assert "B1 Mężczyźni — Półfinał" not in phases
+    assert "B1 Mężczyźni — Grupa A — Finał" in phases
+    assert "B1 Mężczyźni — Grupa A — o 3. miejsce" in phases
+    assert all("Grupa B" not in phase for phase in phases)
+
+
+def test_knockout_only_four_players_use_semifinals_not_direct_final():
+    result = _compute_knockout_slots_from_bracket([
+        {
+            "name": "B2 Kobiety",
+            "play_format": "knockout",
+            "players": [{"name": f"P{i}"} for i in range(1, 5)],
+        }
+    ])
+    phases = [slot["phase"] for slot in result["knockout"]]
+    assert phases.count("B2 Kobiety — Półfinał") == 2
+    assert "B2 Kobiety — Finał" in phases
+    assert "B2 Kobiety — o 3. miejsce" in phases
+    semis = [slot for slot in result["knockout"] if slot["phase"] == "B2 Kobiety — Półfinał"]
+    assert {(slot["position"], slot["player1_name"], slot["player2_name"]) for slot in semis} == {
+        (1, "P1", "P4"),
+        (2, "P2", "P3"),
+    }
+
+
+def test_two_knockout_only_groups_keep_separate_finals():
+    result = _compute_knockout_slots_from_bracket([
+        {
+            "name": "B1 Men — Grupa A",
+            "play_format": "knockout",
+            "players": [{"name": "A1"}, {"name": "A2"}],
+        },
+        {
+            "name": "B1 Men — Grupa B",
+            "play_format": "knockout",
+            "players": [{"name": "B1"}, {"name": "B2"}],
+        },
+    ])
+    phases = [slot["phase"] for slot in result["knockout"]]
+    assert "B1 Men — Półfinał" not in phases
+    assert "B1 Men — Grupa A — Finał" in phases
+    assert "B1 Men — Grupa B — Finał" in phases
+    finals = {slot["phase"]: (slot["player1_name"], slot["player2_name"]) for slot in result["knockout"]}
+    assert finals["B1 Men — Grupa A — Finał"] == ("A1", "A2")
+    assert finals["B1 Men — Grupa B — Finał"] == ("B1", "B2")

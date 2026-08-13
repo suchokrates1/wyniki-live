@@ -291,9 +291,9 @@
                                 </div>
 
                                 <!-- Group tables (side by side if 2 groups) -->
-                                <div class="bracket-groups" :class="{ 'bracket-groups--pair': cat.groups.length === 2 }">
+                                <div class="bracket-groups" :class="{ 'bracket-groups--pair': cat.groups.filter(g => groupShowsStandingsTable(g)).length === 2 }" x-show="categoryShowsStandingsTables(cat)">
                                     <template x-for="(group, gi) in cat.groups" :key="'g-'+cat.name+'-'+gi">
-                                        <section class="bracket-group" :aria-label="group.name">
+                                        <section class="bracket-group" :aria-label="group.name" x-show="groupShowsStandingsTable(group)">
                                             <h3 class="bracket-group__title">
                                                 <span x-text="group.name"></span>
                                             </h3>
@@ -371,7 +371,7 @@
                                     </template>
                                 </div>
 
-                                <div class="bracket-legend" role="group" :aria-labelledby="'bracket-legend-title-' + cat.name.replace(/\s+/g, '-')">
+                                <div class="bracket-legend" role="group" :aria-labelledby="'bracket-legend-title-' + cat.name.replace(/\s+/g, '-')" x-show="categoryShowsStandingsTables(cat)">
                                     <p class="bracket-legend__title" :id="'bracket-legend-title-' + cat.name.replace(/\s+/g, '-')" x-text="tr().bracket?.legendTitle || 'Legenda tabeli'"></p>
                                     <dl class="bracket-legend__list">
                                         <template x-for="item in tableLegendItems()" :key="'legend-'+cat.name+'-'+item.term">
@@ -939,9 +939,9 @@
                                         </div>
 
                                         <!-- Group tables -->
-                                        <div class="bracket-groups" :class="{ 'bracket-groups--pair': cat.groups.length === 2 }">
+                                        <div class="bracket-groups" :class="{ 'bracket-groups--pair': cat.groups.filter(g => groupShowsStandingsTable(g)).length === 2 }" x-show="categoryShowsStandingsTables(cat)">
                                             <template x-for="(group, gi) in cat.groups" :key="'tg-'+cat.name+'-'+gi">
-                                                <section class="bracket-group" :aria-label="group.name">
+                                                <section class="bracket-group" :aria-label="group.name" x-show="groupShowsStandingsTable(group)">
                                                     <h3 class="bracket-group__title">
                                                         <span x-text="group.name"></span>
                                                     </h3>
@@ -1018,7 +1018,7 @@
                                             </template>
                                         </div>
 
-                                        <div class="bracket-legend" role="group" :aria-labelledby="'tournament-bracket-legend-title-' + cat.name.replace(/\s+/g, '-')">
+                                        <div class="bracket-legend" role="group" :aria-labelledby="'tournament-bracket-legend-title-' + cat.name.replace(/\s+/g, '-')" x-show="categoryShowsStandingsTables(cat)">
                                             <p class="bracket-legend__title" :id="'tournament-bracket-legend-title-' + cat.name.replace(/\s+/g, '-')" x-text="tr().bracket?.legendTitle || 'Legenda tabeli'"></p>
                                             <dl class="bracket-legend__list">
                                                 <template x-for="item in tableLegendItems()" :key="'tlegend-'+cat.name+'-'+item.term">

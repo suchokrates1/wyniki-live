@@ -9,8 +9,9 @@ aliases: [Doubles office plan, Kategorie double, Drużyny w planie, Format grupy
 > [!info] Status (2026-08-13)
 > Plan zatwierdzony do realizacji. Branch roboczy: `cursor/doubles-office-040b` (z `feature/doubles-office`). Środowisko testowe: https://test.blindtennis.app (dell, osobny compose/volume — nie prod).  
 > **Etap 0 (fundament) zaimplementowany:** `is_doubles`, `play_format`, `tournament_teams`, `team_id` na grupie, CRUD par, `format_team_display_name` / `normalize_pair_key`, testy `test_tournament_teams.py`.  
-> **Etap 1 (UI biura) zaimplementowany:** checkbox Double, badge Debel, pary (CRUD + DnD), dropdown trybu na karcie grupy, kompletność kroku 1 osobno dla par, dropdown terminarza z drużynami, analog w adminie, i18n pl/de/en/it/es/fr. Generator KO nadal może ignorować `play_format` — to Etap 1b.  
-> Aplikacja sędziowska już punktuje debel. Brakuje: kategoria Double w biurze (UI), drużyny w planowaniu, most sugestii `scheduleId`, ręczny wynik debla w biurze, **tryb rozgrywek na grupie (dropdown, default grupy+puchar)**, **tłumaczenia nowych stringów we wszystkich językach**, **litewski + audyt kontekstowy istniejących tłumaczeń**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
+> **Etap 1 (UI biura) zaimplementowany:** checkbox Double, badge Debel, pary (CRUD + DnD), dropdown trybu na karcie grupy, kompletność kroku 1 osobno dla par, dropdown terminarza z drużynami, analog w adminie, i18n pl/de/en/it/es/fr.  
+> **Etap 1b (pipeline trybu) zaimplementowany:** `ensure_group_schedule_entries` pomija `knockout`; auto-KO liczy kompletność per grupa / para A+B (nie czeka na cały turniej); `round_robin` bez pucharu; `knockout` z puli członków bez RR (drabinka 2/4/8); krzyż 1A–2B tylko gdy obie grupy kubełka są `groups_knockout`; samotny `groups_knockout` z tabeli (top 4 → finał+3. miejsce); postęp biura; publiczna drabinka ukrywa tabelę RR dla `knockout`. Testy: `test_group_play_format.py`, `test_knockout_generation.py`, lifecycle.  
+> Aplikacja sędziowska już punktuje debel. Brakuje: ręczny wynik debla w biurze, most sugestii `scheduleId`, polerka wyświetlania par, **litewski + audyt kontekstowy istniejących tłumaczeń**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
 
 Powiązane w tym vaultcie: [[25 - Planowanie - grupy]] · [[26 - Planowanie - terminarz i autoschedule]] · [[27 - Wprowadzanie i edycja wyniku]] · [[24 - Puchar]] · [[12 - Drabinka]] · [[13 - Terminarz]] · [[18 - Język, motyw, access_key]] · [[33 - Plan turnieju]] · [[36 - Gracze turnieju i import]]
 
@@ -453,19 +454,19 @@ Pliki: `ScheduleSuggestion.kt`, `ScheduleSuggestionSelector.kt`, `PlayerSelectio
 
 ### Etap 1b — format rozgrywek (pipeline)
 
-- [ ] `ensure_group_schedule_entries` pomija grupy `knockout`
-- [ ] `maybe_generate_knockout_from_completed_groups` liczy kompletność **per grupa / para A+B**, nie per cały turniej; pomija grupy `round_robin`
-- [ ] `seed_provisional_knockout_from_groups` analogicznie
-- [ ] Krzyżowy PF tylko gdy obie grupy kubełka są `groups_knockout`
-- [ ] Generator KO dla grupy `knockout`: pula członków, bez tabeli RR; rozmiar drabinki 2/4/8
-- [ ] Grupa `groups_knockout` samotna → KO z jej tabeli (top 4 / finał 1–2)
-- [ ] Postęp biura: `round_robin` complete po RR; `knockout` complete po drabince
-- [ ] Publiczna drabinka: tabela bez drzewa dla `round_robin`; bez tabeli RR dla `knockout`
-- [ ] Autoschedule: zakres faz zgodny z trybem grupy
-- [ ] Testy: grupa RR-only + grupa groups+KO w tym samym turnieju — puchar drugiej wstaje bez czekania na pierwszą
-- [ ] Testy: grupa knockout-only nie dostaje meczów `Grupowa`
-- [ ] Testy: dwie grupy `groups_knockout` → krzyż 1A–2B jak dziś
-- [ ] Testy: nowa grupa z `+` ma `groups_knockout` bez klikania
+- [x] `ensure_group_schedule_entries` pomija grupy `knockout`
+- [x] `maybe_generate_knockout_from_completed_groups` liczy kompletność **per grupa / para A+B**, nie per cały turniej; pomija grupy `round_robin`
+- [x] `seed_provisional_knockout_from_groups` analogicznie
+- [x] Krzyżowy PF tylko gdy obie grupy kubełka są `groups_knockout`
+- [x] Generator KO dla grupy `knockout`: pula członków, bez tabeli RR; rozmiar drabinki 2/4/8
+- [x] Grupa `groups_knockout` samotna → KO z jej tabeli (top 4 / finał 1–2)
+- [x] Postęp biura: `round_robin` complete po RR; `knockout` complete po drabince
+- [x] Publiczna drabinka: tabela bez drzewa dla `round_robin`; bez tabeli RR dla `knockout`
+- [x] Autoschedule: zakres faz zgodny z trybem grupy
+- [x] Testy: grupa RR-only + grupa groups+KO w tym samym turnieju — puchar drugiej wstaje bez czekania na pierwszą
+- [x] Testy: grupa knockout-only nie dostaje meczów `Grupowa`
+- [x] Testy: dwie grupy `groups_knockout` → krzyż 1A–2B jak dziś
+- [x] Testy: nowa grupa z `+` ma `groups_knockout` bez klikania
 
 **Wejście:** Etap 0 (+ UI dropdownu z Etapu 1). **Wyjście:** trzy tryby działają niezależnie na grupach.
 
@@ -631,8 +632,8 @@ Turniej ma kategorię **B1 Mężczyźni Double** (albo custom z checkboxem).
 > [!warning] Bez Etapu 2
 > Każdy niesędziowany mecz debla zablokuje grupy i puchar. To jest ścieżka dnia turnieju, nie nice-to-have.
 
-> [!warning] Auto-KO jest dziś na cały turniej
-> Dopóki Etap 1b nie przetnie generatora **per grupa**, dropdown „tylko RR” nie zadziała: jedna niedokończona grupa w B4 zablokuje puchar B1.
+> [!warning] Auto-KO było na cały turniej
+> Etap 1b przecina generator **per grupa / para A+B**. Grupa `round_robin` nie blokuje pucharu innej grupy; krzyż 1A–2B tylko gdy obie są `groups_knockout`.
 
 > [!warning] i18n
 > Nowy string bez 7 języków = niedokończony PR. Kalka 1:1 (np. LT „dvigubas“ na debel) = bug językowy, nie „wystarczy na teraz”.

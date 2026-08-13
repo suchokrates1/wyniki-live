@@ -40,6 +40,14 @@ export function createBracketView() {
       return getGroupStandingsRows(group, siblingGroups);
     },
 
+    groupShowsStandingsTable(group) {
+      return String(group?.play_format || 'groups_knockout') !== 'knockout';
+    },
+
+    categoryShowsStandingsTables(category) {
+      return (category?.groups || []).some((group) => this.groupShowsStandingsTable(group));
+    },
+
     knockoutPodiumEntries(knockout = []) {
       return getKnockoutPodiumEntries(knockout);
     },
