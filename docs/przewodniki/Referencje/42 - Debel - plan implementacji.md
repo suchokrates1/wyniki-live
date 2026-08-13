@@ -502,10 +502,10 @@ Pliki: `ScheduleSuggestion.kt`, `ScheduleSuggestionSelector.kt`, `PlayerSelectio
 
 ### Etap 4 — wyświetlanie
 
-- [ ] Publiczny terminarz / drabinka: łamanie `"A / B"`, search po obu partnerach
-- [ ] Flagi live z członków pary
-- [ ] Overlay: regresja ochrony `/`
-- [ ] Biuro: karty terminarza i pucharu czytelne przy długich parach
+- [x] Publiczny terminarz / drabinka: łamanie `"A / B"`, search po obu partnerach
+- [x] Flagi live z członków pary
+- [x] Overlay: regresja ochrony `/`
+- [x] Biuro: karty terminarza i pucharu czytelne przy długich parach
 
 **Wejście:** Etap 1. Może iść równolegle z 2–3.
 

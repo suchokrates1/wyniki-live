@@ -98,6 +98,30 @@ def _resolve_live_player_name(existing_state: Dict[str, Any], player_data: Dict[
     return incoming_name
 
 
+def _should_keep_live_flags(existing_state: Dict[str, Any], player_data: Dict[str, Any], resolved_name: str) -> bool:
+    """Keep DB pair flags when events repeat the same team or send a single partner name."""
+    incoming_name = str(player_data.get('full_name') or player_data.get('name') or '-').strip() or '-'
+    existing_name = str(existing_state.get('full_name') or existing_state.get('surname') or '').strip()
+    if '/' not in existing_name:
+        return False
+    if '/' not in incoming_name:
+        return True
+    return incoming_name == existing_name or incoming_name == resolved_name
+
+
+def _apply_event_player_identity(side_state: Dict[str, Any], player_data: Dict[str, Any]) -> None:
+    resolved_name = _resolve_live_player_name(side_state, player_data)
+    keep_flags = _should_keep_live_flags(side_state, player_data, resolved_name)
+    side_state['surname'] = resolved_name
+    side_state['full_name'] = resolved_name
+    if keep_flags:
+        return
+    side_state['flag_code'] = player_data.get('flag_code')
+    side_state['flag_url'] = player_data.get('flag_url')
+    side_state['flag_code_partner'] = player_data.get('flag_code_partner')
+    side_state['flag_url_partner'] = player_data.get('flag_url_partner')
+
+
 def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
     """Process match event and update court state."""
     with STATE_LOCK:
@@ -107,18 +131,9 @@ def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
         # Update player data
         player1 = event_data['player1']
         player2 = event_data['player2']
-        
-        full_a = _resolve_live_player_name(state['A'], player1)
-        state['A']['surname'] = full_a
-        state['A']['full_name'] = full_a
-        state['A']['flag_code'] = player1.get('flag_code')
-        state['A']['flag_url'] = player1.get('flag_url')
-        
-        full_b = _resolve_live_player_name(state['B'], player2)
-        state['B']['surname'] = full_b
-        state['B']['full_name'] = full_b
-        state['B']['flag_code'] = player2.get('flag_code')
-        state['B']['flag_url'] = player2.get('flag_url')
+
+        _apply_event_player_identity(state['A'], player1)
+        _apply_event_player_identity(state['B'], player2)
         
         # Update serve indicator
         if player1.get('serving'):
@@ -257,6 +272,8 @@ def serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
                 'name': state['A']['surname'],
                 'flag_code': state['A']['flag_code'],
                 'flag_url': state['A']['flag_url'],
+                'flag_code_partner': state['A'].get('flag_code_partner'),
+                'flag_url_partner': state['A'].get('flag_url_partner'),
                 'points': state['A']['points'],
                 'set1': state['A']['set1'],
                 'set2': state['A']['set2'],
@@ -267,6 +284,8 @@ def serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
                 'name': state['B']['surname'],
                 'flag_code': state['B']['flag_code'],
                 'flag_url': state['B']['flag_url'],
+                'flag_code_partner': state['B'].get('flag_code_partner'),
+                'flag_url_partner': state['B'].get('flag_url_partner'),
                 'points': state['B']['points'],
                 'set1': state['B']['set1'],
                 'set2': state['B']['set2'],

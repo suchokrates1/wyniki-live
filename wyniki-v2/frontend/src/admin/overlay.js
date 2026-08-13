@@ -1,6 +1,23 @@
+import { abbreviateCompetitorName } from '../shared/teamDisplay.js';
+
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
   return 'https://flagcdn.com/w40/' + code.toLowerCase().slice(0, 2) + '.png';
+}
+
+function flagSpans(p) {
+  let html = '';
+  const flagUrl = p.flag_url || (p.flag_code ? codeToFlag(p.flag_code) : '');
+  const partnerUrl = p.flag_url_partner || (p.flag_code_partner ? codeToFlag(p.flag_code_partner) : '');
+  const primary = String(p.flag_code || '').toUpperCase();
+  const partner = String(p.flag_code_partner || '').toUpperCase();
+  if (flagUrl) {
+    html += '<span class="sb-flag has-image" style="background-image:url(' + flagUrl + ')"></span>';
+  }
+  if (partnerUrl && partner && partner !== primary) {
+    html += '<span class="sb-flag has-image" style="background-image:url(' + partnerUrl + ')"></span>';
+  }
+  return html ? '<span class="player-flags">' + html + '</span>' : '';
 }
 
 export function createOverlayAdmin() {
@@ -1009,15 +1026,12 @@ export function createOverlayAdmin() {
 
       function pRow(p, serveKey, sideClass) {
         const isServing = court.serve === serveKey;
-        let flagHtml = '';
-        const flagUrl = p.flag_url || (p.flag_code ? codeToFlag(p.flag_code) : '');
-        if (flagUrl) {
-          flagHtml = '<span class="sb-flag has-image" style="background-image:url(' + flagUrl + ')"></span>';
-        }
+        let flagHtml = flagSpans(p);
         const serveHtml = isServing ? '<span class="sb-serve"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:16px;height:16px;"></span>' : '';
         const dName = p.surname || p.full_name || '\u2014';
+        const teamClass = String(dName).includes(' / ') ? ' is-team' : '';
         const playerCell = '<div class="sb-player-cell">' + flagHtml
-          + '<span class="sb-name" data-full="' + dName.replace(/"/g, '&quot;') + '">' + dName + '</span>'
+          + '<span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + dName + '</span>'
           + serveHtml + '</div>';
 
         // Points cell
@@ -1114,11 +1128,7 @@ export function createOverlayAdmin() {
 
       // Auto-scale long player names in preview
       _abbreviateName(name) {
-     const parts = name.trim().split(/\s+/);
-     if (parts.length < 2) return name;
-     const surname = parts[parts.length - 1];
-     const initials = parts.slice(0, -1).map(p => p.charAt(0).toUpperCase() + '.').join(' ');
-     return initials + ' ' + surname;
+        return abbreviateCompetitorName(name);
       },
 
       // ===== STATS PANEL RENDER IN PREVIEW =====
@@ -1169,6 +1179,15 @@ export function createOverlayAdmin() {
            el.style.overflow = 'hidden';
            const fullName = el.getAttribute('data-full') || el.textContent;
            el.textContent = fullName;
+           if (String(fullName).includes(' / ')) {
+             el.classList.add('is-team');
+             el.style.whiteSpace = 'normal';
+             if (el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 1) {
+               const abbrTeam = this._abbreviateName(fullName);
+               if (abbrTeam !== fullName) el.textContent = abbrTeam;
+             }
+             return;
+           }
            let sw = el.scrollWidth;
            const cw = el.clientWidth;
            if (sw <= cw + 1) return;

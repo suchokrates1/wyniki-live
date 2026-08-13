@@ -129,6 +129,14 @@
             flex: 1; min-width: 0; overflow: hidden; color: #fefefe;
             white-space: nowrap;
         }
+        .player-cell .player-name.is-team {
+            white-space: normal;
+            line-height: 1.15;
+        }
+        .player-flags {
+            display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+        }
+        .player-flags .player-flag { width: 24px; height: 16px; }
 
         /* Flag */
         .player-flag {
@@ -424,15 +432,12 @@
 
         function pRow(p, serveKey, sideClass) {
             var isServing = court.serve === serveKey;
-            var flagHtml = '';
-            var flagUrl = p.flag_url || (p.flag_code ? codeToFlag(p.flag_code) : '');
-            if (flagUrl) {
-                flagHtml = '<span class="player-flag has-image" style="background-image:url('+flagUrl+')"></span>';
-            }
+            var flagHtml = flagSpans(p);
             var serveHtml = isServing ? '<span class="serve-indicator"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve"></span>' : '';
             var dName = p.full_name||p.surname||'\u2014';
+            var teamClass = String(dName).indexOf(' / ') !== -1 ? ' is-team' : '';
             var playerCell = '<div class="player-cell">'+flagHtml
-                +'<span class="player-name" data-full="'+dName.replace(/"/g,'&quot;')+'">'+dName+'</span>'
+                +'<span class="player-name'+teamClass+'" data-full="'+dName.replace(/"/g,'&quot;')+'">'+dName+'</span>'
                 +serveHtml+'</div>';
 
             // Points cell
@@ -626,12 +631,35 @@
         syncTournamentContext();
     }
 
-    function abbreviateName(name) {
-        var parts = name.trim().split(/\s+/);
+    function abbreviatePersonName(name) {
+        var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
         if (parts.length < 2) return name;
         var surname = parts[parts.length - 1];
         var initials = parts.slice(0, -1).map(function(p) { return p.charAt(0).toUpperCase() + '.'; }).join(' ');
         return initials + ' ' + surname;
+    }
+
+    function abbreviateName(name) {
+        var raw = String(name || '');
+        if (raw.indexOf(' / ') !== -1) {
+            return raw.split(' / ').map(abbreviatePersonName).join(' / ');
+        }
+        return abbreviatePersonName(raw);
+    }
+
+    function flagSpans(p) {
+        var html = '';
+        var flagUrl = p.flag_url || (p.flag_code ? codeToFlag(p.flag_code) : '');
+        var partnerUrl = p.flag_url_partner || (p.flag_code_partner ? codeToFlag(p.flag_code_partner) : '');
+        var primary = String(p.flag_code || '').toUpperCase();
+        var partner = String(p.flag_code_partner || '').toUpperCase();
+        if (flagUrl) {
+            html += '<span class="player-flag has-image" style="background-image:url('+flagUrl+')"></span>';
+        }
+        if (partnerUrl && partner && partner !== primary) {
+            html += '<span class="player-flag has-image" style="background-image:url('+partnerUrl+')"></span>';
+        }
+        return html ? '<span class="player-flags">'+html+'</span>' : '';
     }
 
     function fitPlayerNames() {
@@ -640,6 +668,16 @@
             el.style.overflow = 'hidden';
             var fullName = el.getAttribute('data-full') || el.textContent;
             el.textContent = fullName;
+            var isTeam = String(fullName).indexOf(' / ') !== -1;
+            if (isTeam) {
+                el.classList.add('is-team');
+                el.style.whiteSpace = 'normal';
+                if (el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 1) {
+                    var abbrTeam = abbreviateName(fullName);
+                    if (abbrTeam !== fullName) el.textContent = abbrTeam;
+                }
+                return;
+            }
             var sw = el.scrollWidth;
             var cw = el.clientWidth;
             if (sw <= cw + 1) return;

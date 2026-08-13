@@ -1,3 +1,4 @@
+import { competitorSearchTokens } from '../shared/teamDisplay.js';
 import { formatTemplate } from '../shared/text.js';
 
 export function getScheduleDays(data = null) {
@@ -163,10 +164,10 @@ export function scheduleMatchMatchesQuery(match, query, options = {}) {
   const player1 = match?.player1_name || '';
   const player2 = match?.player2_name || '';
   const haystack = [
-    player1,
-    player2,
-    resolveName(player1),
-    resolveName(player2),
+    ...competitorSearchTokens(player1),
+    ...competitorSearchTokens(player2),
+    ...competitorSearchTokens(resolveName(player1)),
+    ...competitorSearchTokens(resolveName(player2)),
     courtLabel(match),
     getScheduleCategoryLabel(match, options),
     match?.notes_public || '',

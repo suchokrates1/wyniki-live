@@ -544,6 +544,56 @@ def _schedule_entry_is_doubles(entry: dict, tournament_id: int) -> bool:
     return is_team_display_name(entry.get("player1_name")) or is_team_display_name(entry.get("player2_name"))
 
 
+def _normalized_country_code(value: Any) -> str | None:
+    raw = str(value or "").strip()
+    if not re.fullmatch(r"[A-Za-z]{2}", raw):
+        return None
+    return raw.upper()
+
+
+def _flag_cdn_url(country_code: str | None) -> str | None:
+    if not country_code:
+        return None
+    return f"https://flagcdn.com/w80/{country_code.lower()}.png"
+
+
+def _flag_fields_from_person_payload(payload: dict | None) -> tuple[str | None, str | None, str | None, str | None]:
+    """Primary + partner flags from a mobile person/team payload.
+
+    Same-country pairs keep a single flag. Mixed-nationality pairs expose both.
+    """
+    if not isinstance(payload, dict):
+        return None, None, None, None
+    partner = payload.get("partner") if isinstance(payload.get("partner"), dict) else {}
+    codes: list[str] = []
+    for raw in (
+        payload.get("country_code") or payload.get("flag_code"),
+        (partner or {}).get("country_code") or (partner or {}).get("flag_code") or payload.get("flag_code_partner"),
+    ):
+        code = _normalized_country_code(raw)
+        if code and code not in codes:
+            codes.append(code)
+    if not codes:
+        return None, None, None, None
+    primary = codes[0]
+    partner_code = codes[1] if len(codes) > 1 else None
+    return primary, _flag_cdn_url(primary), partner_code, _flag_cdn_url(partner_code)
+
+
+def _apply_flag_fields_to_side(
+    court_state: dict,
+    side: str,
+    payload: dict | None,
+) -> None:
+    code, url, partner_code, partner_url = _flag_fields_from_person_payload(payload)
+    if not code:
+        return
+    court_state[side]["flag_code"] = code
+    court_state[side]["flag_url"] = url
+    court_state[side]["flag_code_partner"] = partner_code
+    court_state[side]["flag_url_partner"] = partner_url
+
+
 def _apply_db_flags_to_court_state(
     court_state: dict,
     tournament_id: int | None,
@@ -555,11 +605,7 @@ def _apply_db_flags_to_court_state(
         return
     for side, name in (("A", player1_name), ("B", player2_name)):
         payload = _mobile_player_payload_for_name(tournament_id, name or "")
-        country_code = (payload or {}).get("country_code")
-        if not country_code or not re.fullmatch(r"[A-Za-z]{2}", str(country_code)):
-            continue
-        court_state[side]["flag_code"] = str(country_code).upper()
-        court_state[side]["flag_url"] = f"https://flagcdn.com/w80/{str(country_code).lower()}.png"
+        _apply_flag_fields_to_side(court_state, side, payload)
 
 
 def _mobile_schedule_suggestion_payload(entry: dict | None, tournament_id: int) -> dict | None:
