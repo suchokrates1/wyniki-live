@@ -423,27 +423,125 @@ def _format_mobile_court_name(court: dict) -> str:
     return raw_name
 
 
+def _mobile_person_payload(
+    *,
+    player_id: Any,
+    first_name: str | None,
+    last_name: str | None,
+    name: str | None,
+    country: str | None,
+    category: Any,
+    gender: Any,
+) -> dict:
+    first = (first_name or "").strip()
+    last = (last_name or "").strip()
+    full = f"{first} {last}".strip() or (name or "").strip()
+    country_code = (country or "").strip() or None
+    return {
+        "id": player_id,
+        "first_name": first,
+        "last_name": last,
+        "surname": last or name,
+        "full_name": full,
+        "name": full,
+        "country_code": country_code,
+        "category": category,
+        "gender": gender,
+        "flag_url": f"https://flagcdn.com/w80/{country_code.lower()}.png" if country_code else None,
+    }
+
+
+def _mobile_person_payload_from_mapping(player: dict) -> dict:
+    return _mobile_person_payload(
+        player_id=player.get("id"),
+        first_name=player.get("first_name") or "",
+        last_name=player.get("last_name") or "",
+        name=player.get("name") or "",
+        country=player.get("country"),
+        category=player.get("category"),
+        gender=player.get("gender"),
+    )
+
+
+def _find_team_for_label(tournament_id: int, player_name: str) -> dict | None:
+    from ..database import fetch_tournament_teams
+    from ..services.teams import is_team_display_name, normalize_pair_key
+
+    if not is_team_display_name(player_name):
+        return None
+    try:
+        wanted = normalize_pair_key(player_name)
+    except ValueError:
+        return None
+    for team in fetch_tournament_teams(tournament_id):
+        display = team.get("display_name") or ""
+        if display == player_name:
+            return team
+        try:
+            if normalize_pair_key(display) == wanted:
+                return team
+        except ValueError:
+            continue
+    return None
+
+
+def _mobile_team_side_payload(team: dict) -> dict | None:
+    from ..services.teams import person_full_name, split_team_display_name
+
+    first = team.get("player1")
+    second = team.get("player2")
+    if not first or not second:
+        return None
+    left, right = first, second
+    split = split_team_display_name(team.get("display_name"))
+    if split:
+        left_name, right_name = split
+        first_name = person_full_name(first)
+        if first_name == right_name or person_full_name(second) == left_name:
+            left, right = second, first
+    payload = _mobile_person_payload_from_mapping(left)
+    payload["partner"] = _mobile_person_payload_from_mapping(right)
+    return payload
+
+
 def _mobile_player_payload_for_name(tournament_id: int, player_name: str) -> dict | None:
     normalized_name = (player_name or '').strip()
     if not tournament_id or not normalized_name:
         return None
     players = Player.query.filter_by(tournament_id=tournament_id).all()
     player = next((item for item in players if item.full_name == normalized_name or item.name == normalized_name), None)
-    if not player:
+    if player:
+        return _mobile_person_payload(
+            player_id=player.id,
+            first_name=player.first_name or '',
+            last_name=player.last_name or '',
+            name=player.name,
+            country=player.country,
+            category=player.category,
+            gender=player.gender,
+        )
+    team = _find_team_for_label(tournament_id, normalized_name)
+    if not team:
         return None
-    country_code = (player.country or '').strip() or None
-    return {
-        "id": player.id,
-        "first_name": player.first_name or '',
-        "last_name": player.last_name or '',
-        "surname": player.last_name or player.name,
-        "full_name": player.full_name,
-        "name": player.full_name,
-        "country_code": country_code,
-        "category": player.category,
-        "gender": player.gender,
-        "flag_url": f"https://flagcdn.com/w80/{country_code.lower()}.png" if country_code else None,
-    }
+    return _mobile_team_side_payload(team)
+
+
+def _schedule_entry_is_doubles(entry: dict, tournament_id: int) -> bool:
+    from ..database import fetch_bracket_groups, fetch_tournament_category
+    from ..services.teams import is_team_display_name
+
+    group_id = entry.get("bracket_group_id")
+    if group_id:
+        for group in fetch_bracket_groups(tournament_id):
+            if int(group.get("id") or 0) != int(group_id):
+                continue
+            category_id = group.get("tournament_category_id")
+            if category_id:
+                category = fetch_tournament_category(int(category_id))
+                if category is not None:
+                    return bool(category.get("is_doubles"))
+            break
+    return is_team_display_name(entry.get("player1_name")) or is_team_display_name(entry.get("player2_name"))
 
 
 def _apply_db_flags_to_court_state(
@@ -468,8 +566,15 @@ def _mobile_schedule_suggestion_payload(entry: dict | None, tournament_id: int) 
     if not entry:
         return None
     payload = dict(entry)
+    is_doubles = _schedule_entry_is_doubles(payload, tournament_id)
+    payload["is_doubles"] = is_doubles
     payload["player1"] = _mobile_player_payload_for_name(tournament_id, payload.get("player1_name") or "")
     payload["player2"] = _mobile_player_payload_for_name(tournament_id, payload.get("player2_name") or "")
+    if not is_doubles:
+        for side in ("player1", "player2"):
+            person = payload.get(side)
+            if isinstance(person, dict):
+                person.pop("partner", None)
     return payload
 
 

@@ -15,8 +15,11 @@ from ..services.teams import (
     DEFAULT_PLAY_FORMAT,
     PLAY_FORMAT_GROUPS_KNOCKOUT,
     PLAY_FORMAT_KNOCKOUT,
+    competitor_label_variants,
     is_team_display_name,
     normalize_play_format,
+    same_competitor_label,
+    sql_two_sided_name_match,
 )
 
 def _surname_match_token(name: Optional[str]) -> str:
@@ -29,6 +32,11 @@ def _surname_match_token(name: Optional[str]) -> str:
 
 def _bracket_row_match_priority(row: sqlite3.Row, player_name: str) -> int:
     """Rank player matches: full-name exact wins over surname-only fallback."""
+    if is_team_display_name(player_name):
+        if same_competitor_label(player_name, row["bracket_player_name"]):
+            return 2
+        return 0
+
     normalized = _normalize_player_name(player_name)
     if not normalized:
         return 0
@@ -104,6 +112,7 @@ def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: 
             p2_surname = _surname_match_token(p2)
 
             def _find_explicit_phase(table_name: str) -> Optional[str]:
+                pair_clause, pair_params = sql_two_sided_name_match(p1, p2)
                 cursor.execute(
                     f"""
                     SELECT phase
@@ -112,12 +121,11 @@ def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: 
                       AND phase IS NOT NULL
                       AND TRIM(phase) != ''
                       AND phase != 'Grupowa'
-                      AND ((player1_name = ? AND player2_name = ?)
-                        OR (player1_name = ? AND player2_name = ?))
+                      AND {pair_clause}
                     ORDER BY id DESC
                     LIMIT 1
                     """,
-                    (tournament_id, p1, p2, p2, p1),
+                    (tournament_id, *pair_params),
                 )
                 row = cursor.fetchone()
                 if row:
@@ -1385,11 +1393,22 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
     """Find finished matches between a set of players within a date range.
     
     Uses exact name matching plus surname-based fallback to handle mixed storage,
-    where some rows use full names and others only surnames.
+    where some rows use full names and others only surnames. Doubles labels also
+    match when partner order inside a pair is reversed.
     """
     if len(player_names) < 2:
         return []
-    placeholders = ",".join("?" for _ in player_names)
+    lookup_names: List[str] = []
+    seen_lookup: set[str] = set()
+    for name in player_names:
+        for variant in competitor_label_variants(name) or [str(name or "").strip()]:
+            if not variant or variant in seen_lookup:
+                continue
+            seen_lookup.add(variant)
+            lookup_names.append(variant)
+    if len(lookup_names) < 2:
+        return []
+    placeholders = ",".join("?" for _ in lookup_names)
     end_ts = end_date + "T23:59:59"
     tournament_clause = "AND tournament_id = ?" if tournament_id is not None else ""
     tournament_params = [tournament_id] if tournament_id is not None else []
@@ -1413,7 +1432,7 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
           AND player2_name IN ({placeholders})
           {date_clause}
         ORDER BY created_at
-    """, (*tournament_params, *phase_params, *player_names, *player_names, *date_params))
+    """, (*tournament_params, *phase_params, *lookup_names, *lookup_names, *date_params))
     exact_results = [dict(row) for row in cursor.fetchall()]
     if any(is_team_display_name(name) for name in player_names):
         exact_results.sort(key=lambda row: row.get("created_at") or "")
@@ -1684,6 +1703,7 @@ def _detect_knockout_result(
     def _fetch_finished_match(match_phase: Optional[str]) -> Optional[sqlite3.Row]:
         phase_clause = "AND phase = ?" if match_phase else ""
         phase_params = [match_phase] if match_phase else []
+        pair_clause, pair_params = sql_two_sided_name_match(p1, p2)
         cursor.execute(f"""
                         SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history,
                                      winner_name, finish_reason, result_note
@@ -1692,10 +1712,10 @@ def _detect_knockout_result(
                             AND COALESCE(finish_reason, 'normal') != 'test'
               {tournament_clause}
               {phase_clause}
-              AND ((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))
+              AND {pair_clause}
               AND created_at >= ? AND created_at <= ?
             ORDER BY created_at DESC LIMIT 1
-        """, (*tournament_params, *phase_params, p1, p2, p2, p1, start_date, end_ts))
+        """, (*tournament_params, *phase_params, *pair_params, start_date, end_ts))
         row = cursor.fetchone()
         if row or not allow_surname_fallback:
             return row
@@ -1723,9 +1743,9 @@ def _detect_knockout_result(
     if not row:
         return None
 
-    if row["player1_name"] == p1:
+    if same_competitor_label(row["player1_name"], p1):
         flipped = False
-    elif row["player1_name"] == p2:
+    elif same_competitor_label(row["player1_name"], p2):
         flipped = True
     elif allow_surname_fallback:
         p1_surname = _surname_match_token(p1).lower()
@@ -1740,9 +1760,9 @@ def _detect_knockout_result(
     sets_detail = [_build_set_detail(s, flipped) for s in sh]
 
     match_winner = row["winner_name"] or (row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"])
-    if match_winner == p1:
+    if same_competitor_label(match_winner, p1):
         winner = p1
-    elif match_winner == p2:
+    elif same_competitor_label(match_winner, p2):
         winner = p2
     elif allow_surname_fallback:
         winner_surname = _surname_match_token(match_winner).lower()

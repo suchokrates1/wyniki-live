@@ -129,6 +129,45 @@ def test_find_group_matches_does_not_use_surname_token_from_pair_label(db):
     assert matches == []
 
 
+def test_find_group_matches_accepts_reversed_partner_order(db):
+    tournament_id, group, team_a, team_b = _seed_doubles_group(db)
+    reversed_a = " / ".join(reversed(team_a["display_name"].split(" / ", 1)))
+    reversed_b = " / ".join(reversed(team_b["display_name"].split(" / ", 1)))
+    with db.db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO matches (
+                court_id, tournament_id, status, phase, player1_name, player2_name,
+                player1_sets, player2_sets, winner_name, sets_history, finish_reason, created_at
+            ) VALUES (?, ?, 'finished', 'Grupowa', ?, ?, 2, 0, ?, ?, 'normal', ?)
+            """,
+            (
+                f"t{tournament_id}-1",
+                tournament_id,
+                reversed_a,
+                reversed_b,
+                reversed_a,
+                json.dumps([
+                    {"player1_games": 4, "player2_games": 1},
+                    {"player1_games": 4, "player2_games": 2},
+                ]),
+                "2026-08-13T12:00:00",
+            ),
+        )
+        conn.commit()
+        matches = db._find_group_matches(
+            cursor,
+            [team_a["display_name"], team_b["display_name"]],
+            "2026-08-13",
+            "2026-08-15",
+            tournament_id,
+        )
+    assert len(matches) == 1
+    assert matches[0]["player1_name"] == reversed_a
+    assert matches[0]["player2_name"] == reversed_b
+
+
 def test_normalize_office_sets_walkover_accepts_team_names():
     team_a = "Anna Kowalska / Ewa Nowak"
     team_b = "Jan Lewandowski / Piotr Wiśniewski"

@@ -105,6 +105,75 @@ def normalize_pair_key(left: Any, right: Any = None) -> str:
     return f"{lo}|{hi}"
 
 
+def competitor_label_variants(value: Optional[str]) -> list[str]:
+    """Exact stored labels that represent the same competitor, partner order ignored."""
+    raw = str(value or "").strip()
+    if not raw:
+        return []
+    split = split_team_display_name(raw)
+    if not split:
+        return [raw]
+    left, right = split
+    variants = [
+        f"{left}{TEAM_NAME_SEPARATOR}{right}",
+        f"{right}{TEAM_NAME_SEPARATOR}{left}",
+    ]
+    if raw not in variants:
+        variants.append(raw)
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in variants:
+        if item in seen:
+            continue
+        seen.add(item)
+        unique.append(item)
+    return unique
+
+
+def competitor_identity_key(value: Optional[str]) -> str:
+    """Stable key for one competitor (person or pair) used in matching/deduping."""
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    if is_team_display_name(raw):
+        try:
+            return normalize_pair_key(raw)
+        except ValueError:
+            pass
+    return " ".join(raw.lower().split())
+
+
+def same_competitor_label(left: Optional[str], right: Optional[str]) -> bool:
+    a = str(left or "").strip()
+    b = str(right or "").strip()
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    return bool(competitor_identity_key(a) and competitor_identity_key(a) == competitor_identity_key(b))
+
+
+def sql_two_sided_name_match(
+    player1_name: str,
+    player2_name: str,
+    *,
+    p1_column: str = "player1_name",
+    p2_column: str = "player2_name",
+) -> tuple[str, tuple[str, ...]]:
+    """SQL fragment matching two sides, ignoring pair-partner order and side flip."""
+    left = competitor_label_variants(player1_name)
+    right = competitor_label_variants(player2_name)
+    if not left or not right:
+        return "(0)", ()
+    left_ph = ",".join("?" for _ in left)
+    right_ph = ",".join("?" for _ in right)
+    clause = (
+        f"(({p1_column} IN ({left_ph}) AND {p2_column} IN ({right_ph}))"
+        f" OR ({p1_column} IN ({right_ph}) AND {p2_column} IN ({left_ph})))"
+    )
+    return clause, (*left, *right, *right, *left)
+
+
 def ordered_player_ids(player1_id: int, player2_id: int) -> tuple[int, int]:
     key = pair_key_from_player_ids(player1_id, player2_id)
     left, right = key.split(":")

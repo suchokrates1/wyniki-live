@@ -9,7 +9,12 @@ from typing import Any, Dict, Generator, List, Optional
 from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
-from ..services.teams import PLAY_FORMAT_KNOCKOUT, normalize_play_format
+from ..services.teams import (
+    PLAY_FORMAT_KNOCKOUT,
+    competitor_identity_key,
+    normalize_play_format,
+    sql_two_sided_name_match,
+)
 
 from .connection import _utc_now, db_conn, fetch_app_settings, upsert_app_settings
 
@@ -138,11 +143,9 @@ def _autoschedule_phases_include_knockout(phases: Optional[List[str]]) -> bool:
     wanted = {str(phase).strip().lower() for phase in phases}
     return bool({"knockout", "pucharowa", "knockouts", "all", "wszystko"} & wanted)
 
-def _schedule_pair_clause(player1_name: str, player2_name: str) -> tuple[str, tuple[str, str, str, str]]:
-    return (
-        "((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))",
-        (player1_name, player2_name, player2_name, player1_name),
-    )
+def _schedule_pair_clause(player1_name: str, player2_name: str) -> tuple[str, tuple[str, ...]]:
+    """Match a schedule pair, ignoring side flip and partner order inside each team."""
+    return sql_two_sided_name_match(player1_name, player2_name)
 
 def _schedule_entry_is_assigned(court_id: Any, scheduled_time: Any) -> bool:
     return bool(str(court_id or "").strip() and str(scheduled_time or "").strip())
@@ -190,8 +193,10 @@ def _prune_duplicate_schedule_entries(cursor: sqlite3.Cursor, tournament_id: int
     grouped: Dict[tuple[str, tuple[str, str]], List[Dict[str, Any]]] = {}
     for row in rows:
         players = sorted(
-            [str(row["player1_name"] or "").strip(), str(row["player2_name"] or "").strip()],
-            key=str.casefold,
+            [
+                competitor_identity_key(row["player1_name"]),
+                competitor_identity_key(row["player2_name"]),
+            ]
         )
         if not players[0] or not players[1]:
             continue

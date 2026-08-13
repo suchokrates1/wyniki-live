@@ -70,6 +70,24 @@ def test_normalize_pair_key_ignores_partner_order():
     assert pair_key_from_player_ids(3, 8) == "3:8"
 
 
+def test_competitor_label_variants_and_same_pair():
+    from wyniki.services.teams import (
+        competitor_label_variants,
+        same_competitor_label,
+        sql_two_sided_name_match,
+    )
+
+    canonical = "Anna Kowalska / Ewa Nowak"
+    reversed_pair = "Ewa Nowak / Anna Kowalska"
+    assert competitor_label_variants(canonical) == [canonical, reversed_pair]
+    assert same_competitor_label(canonical, reversed_pair) is True
+    assert same_competitor_label(canonical, "Anna Kowalska") is False
+    clause, params = sql_two_sided_name_match(canonical, "Jan Lewandowski / Piotr Wiśniewski")
+    assert "IN" in clause
+    assert canonical in params
+    assert reversed_pair in params
+
+
 def test_normalize_play_format_defaults():
     assert normalize_play_format(None) == DEFAULT_PLAY_FORMAT
     assert normalize_play_format("knockout") == "knockout"
