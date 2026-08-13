@@ -574,11 +574,11 @@ Nic z etapów 0–6 nie jest „done” bez tej macierzy. Nowe pliki tam, gdzie 
 
 Nowe moduły, ten sam runner co `01_bootstrap` … `10_sse_reconnect`:
 
-- [ ] `11_doubles_category_teams.spec` — confirm Double, dodaj 4 pary, grupy, generuj RR, publiczny terminarz pokazuje `"A / B"`
-- [ ] `12_group_play_format.spec` — dropdown na karcie; `+` = grupy+puchar; przełączenie RR-only → brak KO; knockout-only → brak RR; dwie groups+KO → krzyż
-- [ ] `13_office_doubles_result.spec` — ręczny wynik grupowy i pucharowy na drużynach; walkower; korekta; standings
-- [ ] `14_public_doubles_display.spec` — drabinka, terminarz, search po obu nazwiskach pary
-- [ ] `15_lang_lt.spec` — `?lang=lt` na office i publicznej; select Lietuvių; brak surowych kluczy PL na nowych ekranach (spot-check)
+- [x] `11_doubles_category_teams.spec` — confirm Double, dodaj 4 pary, grupy, generuj RR, publiczny terminarz pokazuje `"A / B"`
+- [x] `12_group_play_format.spec` — dropdown na karcie; `+` = grupy+puchar; przełączenie RR-only → brak KO; knockout-only → brak RR; dwie groups+KO → krzyż
+- [x] `13_office_doubles_result.spec` — ręczny wynik grupowy i pucharowy na drużynach; walkower; korekta; standings
+- [x] `14_public_doubles_display.spec` — drabinka, terminarz, search po obu nazwiskach pary
+- [x] `15_lang_lt.spec` — `?lang=lt` na office i publicznej; select Lietuvių; brak surowych kluczy PL na nowych ekranach (spot-check)
 
 Regresja: odpal **cały** `e2e:tournament` (moduły 01–10) na końcu — singiel i obecny puchar nie mogą paść.
 
@@ -591,7 +591,7 @@ Regresja: odpal **cały** `e2e:tournament` (moduły 01–10) na końcu — singi
 #### Gate CI
 
 - [ ] `pytest -q` (nowe + stare) zielone
-- [ ] `npm run e2e:tournament` zielone (w tym 11–15)
+- [x] `npm run e2e:tournament` zielone (w tym 11–15)
 - [ ] `gradlew test` zielone
 - [ ] E2E Androida z seedem double na emulatorze (jak obecny `UmpireTournamentE2ETest`)
 - [ ] Brakujący klucz i18n failuje, nie warnuje
