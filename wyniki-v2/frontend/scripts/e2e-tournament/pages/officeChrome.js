@@ -9,11 +9,11 @@ export class OfficeChromePage {
   async expectStats() {
     await this.page.waitForFunction(
       () => {
-        const text = document.body.innerText;
-        return text.includes('Postęp')
-          && text.includes('Zakończone')
-          && text.includes('Pozostało')
-          && text.includes('Drabinka');
+        const text = document.body.innerText.toLowerCase();
+        return text.includes('postęp')
+          && (text.includes('zakończone') || text.includes('zakonczone'))
+          && text.includes('pozostało')
+          && text.includes('drabinka');
       },
       undefined,
       { timeout: 10000 },

@@ -27,8 +27,7 @@ export default async function run() {
     const customInput = page.locator('input[placeholder*="B2 Mixed"]').first();
     await customInput.waitFor({ state: 'visible', timeout: 10000 });
     await customInput.fill('B1 Double');
-    const doublesBox = page.locator('label').filter({ hasText: 'Debel' }).locator('input[type="checkbox"]').last();
-    await doublesBox.check();
+    await page.locator('label.mt-2:visible').filter({ hasText: 'Debel' }).locator('input[type="checkbox"]').check();
     await page.getByRole('button', { name: 'Zatwierdź kategorie' }).click();
     await page.waitForFunction(
       () => document.body.innerText.toLowerCase().includes('debel')
@@ -55,30 +54,49 @@ export default async function run() {
     );
     console.log('  Added two players from UI');
 
-    await page.getByRole('button', { name: '+ Dodaj drużynę' }).click();
-    await page.waitForTimeout(400);
-    const allSelects = page.locator('select:visible');
-    const n = await allSelects.count();
-    const picked = [];
-    for (let i = 0; i < n && picked.length < 2; i += 1) {
-      const values = await allSelects.nth(i).locator('option').evaluateAll(
-        (opts) => opts.map((opt) => opt.value).filter(Boolean),
-      );
-      const next = values.find((value) => !picked.includes(value));
-      if (next && values.length >= 2) {
-        await allSelects.nth(i).selectOption(next);
-        picked.push(next);
-      }
+    const closePlayerForm = page.getByRole('button', { name: /Nowy zawodnik/ });
+    if (await closePlayerForm.isVisible().catch(() => false)) {
+      await closePlayerForm.click();
     }
-    if (picked.length < 2) throw new Error('Could not select two partners for the pair');
-    await page.getByRole('button', { name: 'Dodaj drużynę', exact: true }).click();
+
+    await page.getByRole('button', { name: '+ Dodaj drużynę' }).click();
+    const teamForm = page.locator('div.mt-3.grid').filter({
+      has: page.getByRole('button', { name: 'Dodaj drużynę', exact: true }),
+    });
+    await teamForm.waitFor({ state: 'visible', timeout: 8000 });
+    const partner1 = teamForm.locator('select').nth(0);
+    const partner2 = teamForm.locator('select').nth(1);
     await page.waitForFunction(
-      () => document.body.innerText.replaceAll('\u200B', '').includes(' / '),
+      () => [...document.querySelectorAll('select option')].some((opt) => (opt.textContent || '').includes('Kowalska')),
       undefined,
-      { timeout: 12000 },
+      { timeout: 8000 },
     );
+    const firstId = await partner1.locator('option').evaluateAll(
+      (opts) => opts.map((opt) => opt.value).filter(Boolean)[0],
+    );
+    if (!firstId) throw new Error('Partner 1 select has no players');
+    await partner1.selectOption(firstId);
+    await page.waitForTimeout(300);
+    const secondId = await partner2.locator('option').evaluateAll(
+      (opts, taken) => opts.map((opt) => opt.value).filter((value) => value && value !== taken)[0],
+      firstId,
+    );
+    if (!secondId) throw new Error('Partner 2 select has no remaining player');
+    await partner2.selectOption(secondId);
+    await page.getByRole('button', { name: 'Dodaj drużynę', exact: true }).click();
+    try {
+      await page.waitForFunction(
+        () => document.body.innerText.replaceAll('\u200B', '').includes(' / '),
+        undefined,
+        { timeout: 12000 },
+      );
+    } catch (err) {
+      const snippet = await page.evaluate(() => document.body.innerText.replaceAll('\u200B', '').slice(0, 1800));
+      throw new Error(`${err.message}\nUI snippet: ${snippet}`);
+    }
     console.log('  Added a pair from UI');
 
+    await page.getByRole('button', { name: 'Przypisz wszystkie pary' }).waitFor({ state: 'visible', timeout: 8000 });
     await page.getByRole('button', { name: 'Przypisz wszystkie pary' }).click();
     await page.waitForTimeout(800);
     console.log('  Assign-all-pairs control clicked');
