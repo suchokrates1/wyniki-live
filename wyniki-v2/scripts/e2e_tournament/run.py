@@ -121,10 +121,12 @@ def _office_docker_cmd(module_filter: str | None = None) -> list[str]:
     return [
         "docker", "run", "--rm", "--network", "host",
         "-v", f"{FRONTEND_DIR}:/app",
+        "-v", "wyniki-e2e-ms-playwright:/ms-playwright",
         "-w", "/app",
         "-e", f"E2E_BASE_URL={BASE_URL}",
         "-e", f"E2E_ADMIN_PASSWORD={os.environ.get('E2E_ADMIN_PASSWORD') or os.environ.get('ADMIN_PASSWORD') or 'e2e-admin'}",
         "-e", "npm_config_update_notifier=false",
+        "-e", "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright",
         image,
         "bash", "-lc", inner,
     ]

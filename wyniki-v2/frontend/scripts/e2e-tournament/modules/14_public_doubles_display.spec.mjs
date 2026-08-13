@@ -31,29 +31,41 @@ export default async function run() {
   const browser = await chromium.launch({ headless: true });
   try {
     const page = await browser.newPage();
-    await page.goto(`${BASE_URL}/?tid=${tournament.id}#live/schedule`, {
+    await page.goto(`${BASE_URL}/#tournaments/${tournament.id}/schedule`, {
       waitUntil: 'domcontentloaded',
       timeout: 20000,
     });
-    await page.waitForFunction(
-      (label) => document.body.innerText.includes(label),
-      teams[0].display_name,
-      { timeout: 15000 },
-    );
+    try {
+      await page.waitForFunction(
+        (label) => document.body.innerText.replaceAll('\u200B', '').includes(label),
+        teams[0].display_name,
+        { timeout: 15000 },
+      );
+    } catch (err) {
+      const snippet = await page.evaluate(() => document.body.innerText.replaceAll('\u200B', '').slice(0, 1800));
+      throw new Error(`${err.message}\nUI snippet: ${snippet}`);
+    }
 
-    const search = page.locator('input[type="search"], input[placeholder*="Szukaj"], input[placeholder*="nazwisk"]').first();
-    if (await search.count()) {
+    console.log('  Public tournament schedule tab shows pair labels');
+
+    await page.goto(`${BASE_URL}/#live/schedule`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 20000,
+    });
+    const search = page.locator('.schedule-search__input');
+    await page.waitForTimeout(800);
+    if (await search.count() && await search.first().isVisible()) {
       const surname = partners[1].split(' ').pop();
-      await search.fill(surname);
-      await search.dispatchEvent('input');
+      await search.first().fill(surname);
+      await search.first().dispatchEvent('input');
       await page.waitForTimeout(400);
-      const visible = await page.evaluate(() => document.body.innerText);
+      const visible = await page.evaluate(() => document.body.innerText.replaceAll('\u200B', ''));
       if (!visible.includes(teams[0].display_name) && !visible.includes(partners[0])) {
         throw new Error(`Search for ${surname} did not keep the pair visible`);
       }
       console.log(`  Public search by second partner (${surname}) still shows the pair`);
     } else {
-      console.log('  Public search box not found — payload check already passed');
+      console.log('  Live schedule search not visible — tournament tab already showed pairs');
     }
   } finally {
     await browser.close();

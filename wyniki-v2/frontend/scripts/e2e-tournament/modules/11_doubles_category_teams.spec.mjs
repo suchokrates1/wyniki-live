@@ -49,11 +49,20 @@ export default async function run() {
     await loginPage.login(OFFICE_PASSWORD);
     const planningPage = new OfficePlanningPage(page);
     await planningPage.navigateToTab();
-    await page.waitForFunction(
-      (label) => document.body.innerText.includes('Debel') && document.body.innerText.includes(label),
-      pairLabels[0],
-      { timeout: 12000 },
-    );
+    await planningPage.expandStep1();
+    try {
+      await page.waitForFunction(
+        (label) => {
+          const text = document.body.innerText.replaceAll('\u200B', '');
+          return text.toLowerCase().includes('debel') && text.includes(label);
+        },
+        pairLabels[0],
+        { timeout: 12000 },
+      );
+    } catch (err) {
+      const snippet = await page.evaluate(() => document.body.innerText.replaceAll('\u200B', '').slice(0, 1800));
+      throw new Error(`${err.message}\nUI snippet: ${snippet}`);
+    }
     console.log('  Office: Debel badge and pair names visible');
   } finally {
     await browser.close();

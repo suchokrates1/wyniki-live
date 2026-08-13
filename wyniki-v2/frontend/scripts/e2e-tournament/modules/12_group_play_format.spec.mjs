@@ -52,16 +52,18 @@ export default async function run() {
     await loginPage.login(OFFICE_PASSWORD);
     const planningPage = new OfficePlanningPage(page);
     await planningPage.navigateToTab();
-    await page.waitForFunction(
-      () => document.body.innerText.includes('Tryb rozgrywek'),
+    await planningPage.expandStep1();
+    const formats = await page.waitForFunction(
+      () => {
+        const match = [...document.querySelectorAll('select')].find((select) => {
+          const values = [...select.options].map((option) => option.value);
+          return values.includes('groups_knockout') && values.includes('round_robin') && values.includes('knockout');
+        });
+        return match ? [...match.options].map((option) => option.value) : null;
+      },
       undefined,
       { timeout: 12000 },
     );
-    const formats = await page.locator('select').evaluateAll((selects) => (
-      selects
-        .map((select) => [...select.options].map((option) => option.value))
-        .find((values) => values.includes('groups_knockout') && values.includes('round_robin') && values.includes('knockout'))
-    ));
     if (!formats) throw new Error('Play-format dropdown with three modes not found');
     console.log('  Office: play-format dropdown has groups_knockout / round_robin / knockout');
   } finally {

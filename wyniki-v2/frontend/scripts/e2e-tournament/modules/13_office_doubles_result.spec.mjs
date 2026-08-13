@@ -62,7 +62,7 @@ export default async function run() {
     await loginPage.login(OFFICE_PASSWORD);
     const resultsPage = new OfficeResultsPage(page);
     await resultsPage.navigateToHistory();
-    const body = await resultsPage.getHistoryPlayerSnippet();
+    const body = (await resultsPage.getHistoryPlayerSnippet()).replaceAll('\u200B', '');
     if (!body.includes(teams[0].display_name) || !body.includes(teams[1].display_name)) {
       throw new Error('History does not show both pair labels');
     }
