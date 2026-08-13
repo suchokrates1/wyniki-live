@@ -342,9 +342,13 @@
     <div class="office-lang-bar__inner">
       <label class="sr-only" for="officeLangSelect" x-text="officeUi().languageSelect"></label>
       <select id="officeLangSelect" class="lang-select" x-model="lang" @change="onLangChange()">
-        <template x-for="code in supportedLanguages" :key="code">
-          <option :value="code" x-text="languageLabels[code]"></option>
-        </template>
+        <option value="pl">Polski</option>
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+        <option value="it">Italiano</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+        <option value="lt">Lietuvių</option>
       </select>
     </div>
   </div>
