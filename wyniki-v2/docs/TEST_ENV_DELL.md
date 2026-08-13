@@ -44,6 +44,6 @@ Prod `/health` must still succeed after every test deploy.
 
 ## DNS / mesh
 
-`blindtennis.app` has no wildcard. `test` is a proxied CNAME to the same Cloudflare tunnel as apex (`0f2e0111-af7e-43d2-9436-b2fe38d70132.cfargotunnel.com`).
+DNS: proxied CNAME `*.blindtennis.app` → the same Cloudflare tunnel as apex (added 2026-08-13; previously this zone had only apex/`www`/`ftp`). Mesh Traefik: `traefik-peer-watcher` on dell picks up `dell-local` labels automatically.
 
-Dell Traefik issues the cert via Cloudflare DNS challenge. After the container is up, mesh must list `Host(\`test.blindtennis.app\`)` in `dell_services.yml` on minipc and rpi so a random tunnel connector still reaches dell.
+Tunnel ingress is remotely managed (token tunnel). API tokens on disk cannot read public hostnames (401). Empirically a hostname with DNS to the tunnel reaches Traefik (HTTP 404 without a router, not Cloudflare 1033).
