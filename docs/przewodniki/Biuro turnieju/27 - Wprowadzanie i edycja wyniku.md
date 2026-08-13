@@ -14,11 +14,11 @@ Ręczne dodanie wyniku (gdy nie idzie z aplikacji sędziowskiej) oraz korekta is
 
 | Pole | Znaczenie |
 |------|-----------|
-| **Typ meczu** | Grupowy vs pucharowy |
+| **Typ meczu** | Grupowy vs pucharowy vs rewanż |
 | **Grupa** | Przy typie grupowym |
 | **Faza pucharowa** | Search + datalist slotów KO |
-| **Walkower** + zwycięzca | WO zamiast setów |
-| **Zawodnik A / B** | Wybór graczy (singiel). W deblu — drużyny, patrz plan |
+| **Walkower** + zwycięzca | WO zamiast setów (zwycięzca = osoba albo para) |
+| **Zawodnik A / B** albo **Para A / B** | Singiel: osoby. Debel: `officeFormUsesTeams` → pary z `display_name` |
 | Set 1 / Set 2 / Super tie-break | Pary liczb |
 | **Anuluj** / **Zamknij** | Zamknięcie |
 | **Zapisz wynik** | `POST …/group-matches` lub `…/knockout-matches` |
@@ -36,12 +36,16 @@ Ręczne dodanie wyniku (gdy nie idzie z aplikacji sędziowskiej) oraz korekta is
 - **Popraw wynik** w Historii / Drabince
 - **Dodaj wynik** na karcie terminarza
 
-> [!warning] Debel jeszcze nie w UI
-> Modal dziś listuje **osoby**. Mecze debla niesędziowane z aplikacji wymagają wyboru **drużyn** — zakres i taski: [[42 - Debel - plan implementacji]] (Etap 2).
+W deblu `player1_name` / `player2_name` w payloadzie to kanoniczne etykiety par. 409, gdy slot terminarza ma już mecz.
+
+## E2E
+
+`04_results_crud.spec.mjs` — modal singla (sety + korekta). `08_walkover_ko_depth.spec.mjs` — walkower KO. `13_office_doubles_result.spec.mjs` — WO + korekta API na parach. `20_office_result_modal_teams.spec.mjs` — UI **Para A / Para B**.
 
 ## Powiązane
 
 - [[22 - Historia]]
 - [[24 - Puchar]]
 - [[26 - Planowanie - terminarz i autoschedule]]
+- [[28 - Debel w biurze]]
 - [[42 - Debel - plan implementacji]]

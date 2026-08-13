@@ -18,7 +18,7 @@ Uproszczone biuro wbudowane w Admin: wyniki grupowe i korekty, bez pełnego plan
 | **Odśwież** | Dashboard | `GET /admin/api/tournaments/{id}/office` |
 | SSE | Live | `…/office/stream` |
 | Karty KO | Podsumowanie | Odczyt |
-| Formularz wyniku grupowego (grupa, Z1/Z2, WO, sety, STB) | **Dodaj wynik** | `POST …/office/group-matches` |
+| Formularz wyniku grupowego (grupa, Z1/Z2, WO, sety, STB) | **Dodaj wynik** | `POST …/office/group-matches` — w deblu Z1/Z2 to etykiety par |
 | **Wyczyść** | Reset formularza | — |
 | Tabela meczów **Edytuj wynik** / **Zapisz korektę** / **Anuluj** | Inline edit | `PUT …/office/matches/{id}` |
 
@@ -29,3 +29,4 @@ Uproszczone biuro wbudowane w Admin: wyniki grupowe i korekty, bez pełnego plan
 
 - [[27 - Wprowadzanie i edycja wyniku]]
 - [[33 - Plan turnieju]]
+- [[28 - Debel w biurze]]
