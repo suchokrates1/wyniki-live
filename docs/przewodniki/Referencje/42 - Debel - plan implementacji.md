@@ -585,7 +585,7 @@ Nowe moduły, ten sam runner co `01_bootstrap` … `10_sse_reconnect`:
 - [x] `19_office_autoschedule.spec` — krok 2 generuj / propozycja ([[26]])
 - [x] `20_office_result_modal_teams.spec` — modal Para A/B ([[27]])
 
-Regresja: odpal **cały** `e2e:tournament` (moduły 01–10) na końcu — singiel i obecny puchar nie mogą paść.
+Regresja: odpal **cały** `e2e:tournament` (moduły 01–20) na końcu — singiel, puchar i debel nie mogą paść.
 
 #### E2E — aplikacja sędziowska
 
