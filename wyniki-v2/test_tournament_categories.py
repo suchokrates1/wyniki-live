@@ -42,6 +42,7 @@ def test_confirm_tournament_categories(db):
     assert categories[0]["label"] == "B1 Men"
     assert categories[1]["label"] == "B2 Mixed"
     assert db.fetch_tournament_categories(tournament_id)[0]["preset_key"] == "B1M"
+    assert categories[0]["is_doubles"] is False
 
 
 def test_confirm_rejects_duplicate_without_replace(db):

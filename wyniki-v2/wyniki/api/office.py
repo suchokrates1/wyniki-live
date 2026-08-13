@@ -27,6 +27,12 @@ from ..database import (
     update_tournament_category,
     delete_tournament_category,
     migrate_tournament_categories_from_legacy,
+    fetch_tournament_teams,
+    fetch_tournament_team,
+    insert_tournament_team,
+    delete_tournament_team,
+    TeamConflictError,
+    TeamValidationError,
     generate_autoschedule_proposal,
     get_autoscheduler_config,
     maybe_generate_knockout_from_completed_groups,
@@ -304,6 +310,7 @@ def office_categories_create(slot: int):
         label=label,
         preset_key=str(data.get("preset_key") or ""),
         hint_bands=data.get("hint_bands") if isinstance(data.get("hint_bands"), list) else None,
+        is_doubles=data.get("is_doubles", False),
     )
     if not category:
         return jsonify({"error": "Failed to create category"}), 500
@@ -323,6 +330,7 @@ def office_categories_update(slot: int, category_id: int):
         hint_bands=data.get("hint_bands") if isinstance(data.get("hint_bands"), list) else None,
         sort_order=data.get("sort_order") if data.get("sort_order") is not None else None,
         is_active=data.get("is_active") if "is_active" in data else None,
+        is_doubles=data.get("is_doubles") if "is_doubles" in data else None,
     )
     if not category or int(category.get("tournament_id") or 0) != tournament_id:
         return jsonify({"error": "Category not found"}), 404
@@ -347,6 +355,61 @@ def office_categories_delete(slot: int, category_id: int):
     if not delete_tournament_category(category_id):
         return jsonify({"error": "Failed to delete category"}), 500
     return _json_no_cache({"categories": fetch_tournament_categories(tournament_id)})
+
+
+@blueprint.route('/<int:slot>/teams', methods=['GET'])
+def office_teams_list(slot: int):
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    category_id = request.args.get("category_id", type=int)
+    teams = fetch_tournament_teams(tournament_id, category_id=category_id)
+    return _json_no_cache({"teams": teams})
+
+
+@blueprint.route('/<int:slot>/teams', methods=['POST'])
+def office_teams_create(slot: int):
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    try:
+        category_id = int(data.get("category_id") or 0)
+        player1_id = int(data.get("player1_id") or 0)
+        player2_id = int(data.get("player2_id") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "category_id, player1_id and player2_id required"}), 400
+    if not category_id or not player1_id or not player2_id:
+        return jsonify({"error": "category_id, player1_id and player2_id required"}), 400
+    try:
+        team = insert_tournament_team(tournament_id, category_id, player1_id, player2_id)
+    except TeamValidationError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except TeamConflictError as exc:
+        return jsonify({"error": str(exc)}), 409
+    return _json_no_cache({
+        "team": team,
+        "teams": fetch_tournament_teams(tournament_id, category_id=category_id),
+    }), 201
+
+
+@blueprint.route('/<int:slot>/teams/<int:team_id>', methods=['DELETE'])
+def office_teams_delete(slot: int, team_id: int):
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    existing = fetch_tournament_team(team_id)
+    if not existing or int(existing.get("tournament_id") or 0) != tournament_id:
+        return jsonify({"error": "Team not found"}), 404
+    try:
+        if not delete_tournament_team(team_id):
+            return jsonify({"error": "Failed to delete team"}), 500
+    except TeamConflictError as exc:
+        return jsonify({"error": str(exc)}), 409
+    return _json_no_cache({"teams": fetch_tournament_teams(tournament_id)})
 
 
 @blueprint.route('/<int:slot>/planning/groups', methods=['PUT'])

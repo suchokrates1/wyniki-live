@@ -7,8 +7,9 @@ aliases: [Doubles office plan, Kategorie double, Drużyny w planie, Format grupy
 # Debel, format rozgrywek i tłumaczenia — plan implementacji
 
 > [!info] Status (2026-08-13)
-> Plan zatwierdzony do realizacji. **Kod jeszcze nie ruszył.** Branch: `feature/doubles-office`. Środowisko testowe: https://test.blindtennis.app (dell, osobny compose/volume — nie prod).  
-> Aplikacja sędziowska już punktuje debel. Brakuje: kategoria Double w biurze, drużyny jako 1 konkurent, most sugestii `scheduleId`, ręczny wynik debla w biurze, **tryb rozgrywek na grupie (dropdown, default grupy+puchar)**, **tłumaczenia nowych stringów we wszystkich językach**, **litewski + audyt kontekstowy istniejących tłumaczeń**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
+> Plan zatwierdzony do realizacji. Branch roboczy: `cursor/doubles-office-040b` (z `feature/doubles-office`). Środowisko testowe: https://test.blindtennis.app (dell, osobny compose/volume — nie prod).  
+> **Etap 0 (fundament) zaimplementowany:** `is_doubles`, `play_format`, `tournament_teams`, `team_id` na grupie, CRUD par, `format_team_display_name` / `normalize_pair_key`, testy `test_tournament_teams.py`. UI biura (Etap 1) jeszcze nie ruszył.  
+> Aplikacja sędziowska już punktuje debel. Brakuje: kategoria Double w biurze (UI), drużyny w planowaniu, most sugestii `scheduleId`, ręczny wynik debla w biurze, **tryb rozgrywek na grupie (dropdown, default grupy+puchar)**, **tłumaczenia nowych stringów we wszystkich językach**, **litewski + audyt kontekstowy istniejących tłumaczeń**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
 
 Powiązane w tym vaultcie: [[25 - Planowanie - grupy]] · [[26 - Planowanie - terminarz i autoschedule]] · [[27 - Wprowadzanie i edycja wyniku]] · [[24 - Puchar]] · [[12 - Drabinka]] · [[13 - Terminarz]] · [[18 - Język, motyw, access_key]] · [[33 - Plan turnieju]] · [[36 - Gracze turnieju i import]]
 
@@ -424,14 +425,14 @@ Pliki: `ScheduleSuggestion.kt`, `ScheduleSuggestionSelector.kt`, `PlayerSelectio
 
 ### Etap 0 — fundament (warunek startu)
 
-- [ ] Migracja `tournament_categories.is_doubles`
-- [ ] Migracja `bracket_groups.play_format` (`groups_knockout` \| `round_robin` \| `knockout`, default `groups_knockout`)
-- [ ] `category_row_payload` + confirm/insert/update przyjmują `is_doubles`
-- [ ] Zapis/odczyt grup (`save_bracket_groups` / `fetch_bracket_groups`) przenosi `play_format`
-- [ ] Tabela `tournament_teams` + CRUD w `database/`
-- [ ] `bracket_group_players.team_id` + zapis grup z biura rozróżnia osobę vs drużynę
-- [ ] Kanoniczna funkcja `format_team_display_name` + `normalize_pair_key` (kolejność partnerów)
-- [ ] Testy jednostkowe nazwy / unique pary / walidacji kategorii
+- [x] Migracja `tournament_categories.is_doubles`
+- [x] Migracja `bracket_groups.play_format` (`groups_knockout` \| `round_robin` \| `knockout`, default `groups_knockout`)
+- [x] `category_row_payload` + confirm/insert/update przyjmują `is_doubles`
+- [x] Zapis/odczyt grup (`save_bracket_groups` / `fetch_bracket_groups`) przenosi `play_format`
+- [x] Tabela `tournament_teams` + CRUD w `database/`
+- [x] `bracket_group_players.team_id` + zapis grup z biura rozróżnia osobę vs drużynę
+- [x] Kanoniczna funkcja `format_team_display_name` + `normalize_pair_key` (kolejność partnerów)
+- [x] Testy jednostkowe nazwy / unique pary / walidacji kategorii
 
 **Wejście:** puste. **Wyjście:** API kategorii i drużyn działa, UI jeszcze może być surowy.
 

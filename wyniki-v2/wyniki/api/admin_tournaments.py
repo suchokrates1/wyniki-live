@@ -28,6 +28,12 @@ from ..database import (
     update_tournament_category,
     delete_tournament_category,
     migrate_tournament_categories_from_legacy,
+    fetch_tournament_teams,
+    fetch_tournament_team,
+    insert_tournament_team,
+    delete_tournament_team,
+    TeamConflictError,
+    TeamValidationError,
     get_planning_mixed_bands,
     insert_tournament,
     update_tournament,
@@ -738,6 +744,7 @@ def create_tournament_category_route(tournament_id: int):
         label=label,
         preset_key=str(data.get("preset_key") or ""),
         hint_bands=data.get("hint_bands") if isinstance(data.get("hint_bands"), list) else None,
+        is_doubles=data.get("is_doubles", False),
     )
     if not category:
         return jsonify({"error": "Failed to create category"}), 500
@@ -755,6 +762,7 @@ def update_tournament_category_route(tournament_id: int, category_id: int):
         hint_bands=data.get("hint_bands") if isinstance(data.get("hint_bands"), list) else None,
         sort_order=data.get("sort_order") if data.get("sort_order") is not None else None,
         is_active=data.get("is_active") if "is_active" in data else None,
+        is_doubles=data.get("is_doubles") if "is_doubles" in data else None,
     )
     if not category or int(category.get("tournament_id") or 0) != tournament_id:
         return jsonify({"error": "Category not found"}), 404
@@ -777,6 +785,54 @@ def delete_tournament_category_route(tournament_id: int, category_id: int):
     if not delete_tournament_category(category_id):
         return jsonify({"error": "Failed to delete category"}), 500
     return jsonify({"categories": fetch_tournament_categories(tournament_id)})
+
+
+@blueprint.route('/<int:tournament_id>/teams', methods=['GET'])
+def list_tournament_teams_route(tournament_id: int):
+    if not fetch_tournament(tournament_id):
+        return jsonify({"error": "Tournament not found"}), 404
+    category_id = request.args.get("category_id", type=int)
+    return jsonify({"teams": fetch_tournament_teams(tournament_id, category_id=category_id)})
+
+
+@blueprint.route('/<int:tournament_id>/teams', methods=['POST'])
+def create_tournament_team_route(tournament_id: int):
+    if not fetch_tournament(tournament_id):
+        return jsonify({"error": "Tournament not found"}), 404
+    data = _request_payload()
+    try:
+        category_id = int(data.get("category_id") or 0)
+        player1_id = int(data.get("player1_id") or 0)
+        player2_id = int(data.get("player2_id") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "category_id, player1_id and player2_id required"}), 400
+    if not category_id or not player1_id or not player2_id:
+        return jsonify({"error": "category_id, player1_id and player2_id required"}), 400
+    try:
+        team = insert_tournament_team(tournament_id, category_id, player1_id, player2_id)
+    except TeamValidationError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except TeamConflictError as exc:
+        return jsonify({"error": str(exc)}), 409
+    return jsonify({
+        "team": team,
+        "teams": fetch_tournament_teams(tournament_id, category_id=category_id),
+    }), 201
+
+
+@blueprint.route('/<int:tournament_id>/teams/<int:team_id>', methods=['DELETE'])
+def delete_tournament_team_route(tournament_id: int, team_id: int):
+    if not fetch_tournament(tournament_id):
+        return jsonify({"error": "Tournament not found"}), 404
+    existing = fetch_tournament_team(team_id)
+    if not existing or int(existing.get("tournament_id") or 0) != tournament_id:
+        return jsonify({"error": "Team not found"}), 404
+    try:
+        if not delete_tournament_team(team_id):
+            return jsonify({"error": "Failed to delete team"}), 500
+    except TeamConflictError as exc:
+        return jsonify({"error": str(exc)}), 409
+    return jsonify({"teams": fetch_tournament_teams(tournament_id)})
 
 
 @blueprint.route('', methods=['POST'])

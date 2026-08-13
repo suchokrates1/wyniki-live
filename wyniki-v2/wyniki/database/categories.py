@@ -12,10 +12,10 @@ from ..config import settings, logger
 
 from .connection import _utc_now, db_conn, fetch_app_settings, upsert_app_settings
 
-def _tournament_category_counts(cursor: sqlite3.Cursor, category_id: int) -> tuple[int, int]:
+def _tournament_category_counts(cursor: sqlite3.Cursor, category_id: int) -> tuple[int, int, int]:
     cursor.execute(
         """
-        SELECT COUNT(DISTINCT bgp.player_id)
+        SELECT COUNT(*)
         FROM bracket_group_players bgp
         JOIN bracket_groups bg ON bg.id = bgp.group_id
         WHERE bg.tournament_category_id = ?
@@ -28,7 +28,12 @@ def _tournament_category_counts(cursor: sqlite3.Cursor, category_id: int) -> tup
         (category_id,),
     )
     group_count = int(cursor.fetchone()[0] or 0)
-    return player_count, group_count
+    cursor.execute(
+        "SELECT COUNT(*) FROM tournament_teams WHERE category_id = ?",
+        (category_id,),
+    )
+    team_count = int(cursor.fetchone()[0] or 0)
+    return player_count, group_count, team_count
 
 def fetch_tournament_categories(tournament_id: int, *, active_only: bool = False) -> List[Dict[str, Any]]:
     from ..services.tournament_categories import category_row_payload
@@ -40,13 +45,16 @@ def fetch_tournament_categories(tournament_id: int, *, active_only: bool = False
             cursor.execute(
                 f"""
                 SELECT tc.*,
-                       (SELECT COUNT(DISTINCT bgp.player_id)
+                       (SELECT COUNT(*)
                         FROM bracket_group_players bgp
                         JOIN bracket_groups bg ON bg.id = bgp.group_id
                         WHERE bg.tournament_category_id = tc.id) AS player_count,
                        (SELECT COUNT(*)
                         FROM bracket_groups bg
-                        WHERE bg.tournament_category_id = tc.id) AS group_count
+                        WHERE bg.tournament_category_id = tc.id) AS group_count,
+                       (SELECT COUNT(*)
+                        FROM tournament_teams tt
+                        WHERE tt.category_id = tc.id) AS team_count
                 FROM tournament_categories tc
                 WHERE tc.tournament_id = ? {clause}
                 ORDER BY tc.sort_order, tc.id
@@ -66,7 +74,7 @@ def fetch_tournament_category(category_id: int) -> Optional[Dict[str, Any]]:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT tc.*, 0 AS player_count, 0 AS group_count
+                SELECT tc.*, 0 AS player_count, 0 AS group_count, 0 AS team_count
                 FROM tournament_categories tc
                 WHERE tc.id = ?
                 """,
@@ -76,7 +84,9 @@ def fetch_tournament_category(category_id: int) -> Optional[Dict[str, Any]]:
             if not row:
                 return None
             payload = category_row_payload(row)
-            payload["player_count"], payload["group_count"] = _tournament_category_counts(cursor, category_id)
+            payload["player_count"], payload["group_count"], payload["team_count"] = _tournament_category_counts(
+                cursor, category_id
+            )
             return payload
     except Exception as e:
         logger.error("fetch_tournament_category_error", error=str(e), category_id=category_id)
@@ -90,7 +100,9 @@ def _insert_tournament_category_row(
     preset_key: str = "",
     hint_bands: Optional[List[str]] = None,
     sort_order: Optional[int] = None,
+    is_doubles: bool = False,
 ) -> int:
+    from ..services.teams import coerce_is_doubles
     from ..services.tournament_categories import normalize_hint_bands
 
     if sort_order is None:
@@ -103,10 +115,18 @@ def _insert_tournament_category_row(
     cursor.execute(
         """
         INSERT INTO tournament_categories (
-            tournament_id, label, preset_key, sort_order, is_active, hint_bands, created_at
-        ) VALUES (?, ?, ?, ?, 1, ?, ?)
+            tournament_id, label, preset_key, sort_order, is_active, hint_bands, is_doubles, created_at
+        ) VALUES (?, ?, ?, ?, 1, ?, ?, ?)
         """,
-        (tournament_id, label.strip(), preset_key.strip(), sort_order, bands_json, _utc_now()),
+        (
+            tournament_id,
+            label.strip(),
+            preset_key.strip(),
+            sort_order,
+            bands_json,
+            1 if coerce_is_doubles(is_doubles) else 0,
+            _utc_now(),
+        ),
     )
     return int(cursor.lastrowid)
 
@@ -164,6 +184,7 @@ def confirm_tournament_categories(
                     preset_key=preset_key,
                     hint_bands=normalize_hint_bands(hint_bands or []),
                     sort_order=index,
+                    is_doubles=entry.get("is_doubles"),
                 )
             conn.commit()
         logger.info("tournament_categories_confirmed", tournament_id=tournament_id, count=len(entries))
@@ -180,6 +201,7 @@ def insert_tournament_category(
     label: str,
     preset_key: str = "",
     hint_bands: Optional[List[str]] = None,
+    is_doubles: bool = False,
 ) -> Optional[Dict[str, Any]]:
     from ..services.tournament_categories import normalize_hint_bands
 
@@ -195,6 +217,7 @@ def insert_tournament_category(
                 label=label,
                 preset_key=preset_key,
                 hint_bands=normalize_hint_bands(hint_bands or []),
+                is_doubles=is_doubles,
             )
             conn.commit()
         return fetch_tournament_category(category_id)
@@ -278,7 +301,9 @@ def update_tournament_category(
     hint_bands: Optional[List[str]] = None,
     sort_order: Optional[int] = None,
     is_active: Optional[bool] = None,
+    is_doubles: Optional[bool] = None,
 ) -> Optional[Dict[str, Any]]:
+    from ..services.teams import coerce_is_doubles
     from ..services.tournament_categories import normalize_hint_bands
 
     existing = fetch_tournament_category(category_id)
@@ -308,6 +333,9 @@ def update_tournament_category(
             if is_active is not None:
                 fields.append("is_active = ?")
                 params.append(1 if is_active else 0)
+            if is_doubles is not None:
+                fields.append("is_doubles = ?")
+                params.append(1 if coerce_is_doubles(is_doubles) else 0)
             if fields:
                 params.append(category_id)
                 cursor.execute(
@@ -326,11 +354,20 @@ def delete_tournament_category(category_id: int, *, force: bool = False) -> bool
         return False
     player_count = int(existing.get("player_count") or 0)
     group_count = int(existing.get("group_count") or 0)
-    if (player_count or group_count) and not force:
+    team_count = int(existing.get("team_count") or 0)
+    if (player_count or group_count or team_count) and not force:
         return update_tournament_category(category_id, is_active=False) is not None
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
+            cursor.execute(
+                """
+                DELETE FROM bracket_group_players
+                WHERE team_id IN (SELECT id FROM tournament_teams WHERE category_id = ?)
+                """,
+                (category_id,),
+            )
+            cursor.execute("DELETE FROM tournament_teams WHERE category_id = ?", (category_id,))
             cursor.execute(
                 "UPDATE bracket_groups SET tournament_category_id = NULL WHERE tournament_category_id = ?",
                 (category_id,),

@@ -285,6 +285,7 @@ def init_db() -> None:
                 tournament_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 order_num INTEGER DEFAULT 0,
+                play_format TEXT NOT NULL DEFAULT 'groups_knockout',
                 FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
             )
         """)
@@ -294,6 +295,7 @@ def init_db() -> None:
                 group_id INTEGER NOT NULL,
                 player_id INTEGER,
                 player_name TEXT NOT NULL,
+                team_id INTEGER,
                 FOREIGN KEY (group_id) REFERENCES bracket_groups(id) ON DELETE CASCADE
             )
         """)
@@ -306,6 +308,7 @@ def init_db() -> None:
                 sort_order INTEGER DEFAULT 0,
                 is_active INTEGER DEFAULT 1,
                 hint_bands TEXT DEFAULT '[]',
+                is_doubles INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
                 UNIQUE(tournament_id, label)
@@ -317,6 +320,43 @@ def init_db() -> None:
         if 'tournament_category_id' not in bracket_group_cols:
             cursor.execute("ALTER TABLE bracket_groups ADD COLUMN tournament_category_id INTEGER")
             logger.info("database_migration", action="added_tournament_category_id_to_bracket_groups")
+        if 'play_format' not in bracket_group_cols:
+            cursor.execute(
+                "ALTER TABLE bracket_groups ADD COLUMN play_format TEXT NOT NULL DEFAULT 'groups_knockout'"
+            )
+            logger.info("database_migration", action="added_play_format_to_bracket_groups")
+        cursor.execute("PRAGMA table_info(tournament_categories)")
+        category_cols = [row[1] for row in cursor.fetchall()]
+        if 'is_doubles' not in category_cols:
+            cursor.execute(
+                "ALTER TABLE tournament_categories ADD COLUMN is_doubles INTEGER NOT NULL DEFAULT 0"
+            )
+            logger.info("database_migration", action="added_is_doubles_to_tournament_categories")
+        cursor.execute("PRAGMA table_info(bracket_group_players)")
+        group_player_cols = [row[1] for row in cursor.fetchall()]
+        if 'team_id' not in group_player_cols:
+            cursor.execute("ALTER TABLE bracket_group_players ADD COLUMN team_id INTEGER")
+            logger.info("database_migration", action="added_team_id_to_bracket_group_players")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tournament_teams (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tournament_id INTEGER NOT NULL,
+                category_id INTEGER NOT NULL,
+                player1_id INTEGER NOT NULL,
+                player2_id INTEGER NOT NULL,
+                display_name TEXT NOT NULL,
+                pair_key TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+                FOREIGN KEY (category_id) REFERENCES tournament_categories(id) ON DELETE CASCADE,
+                FOREIGN KEY (player1_id) REFERENCES players(id) ON DELETE CASCADE,
+                FOREIGN KEY (player2_id) REFERENCES players(id) ON DELETE CASCADE,
+                UNIQUE(category_id, pair_key)
+            )
+        """)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tournament_teams_tid ON tournament_teams(tournament_id, category_id)"
+        )
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS bracket_knockout (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
