@@ -40,18 +40,26 @@ export default async function run() {
     await page.getByRole('button', { name: '+ Dodaj zawodnika' }).click();
     const firstName = page.getByPlaceholder('Imię');
     const lastName = page.getByPlaceholder('Nazwisko');
-    await firstName.fill('Anna');
-    await lastName.fill('Kowalska');
-    await page.locator('button').filter({ hasText: /^Dodaj zawodnika$/ }).click();
-    await page.waitForTimeout(600);
-    await firstName.fill('Jan');
-    await lastName.fill('Nowak');
-    await page.locator('button').filter({ hasText: /^Dodaj zawodnika$/ }).click();
-    await page.waitForFunction(
-      () => document.body.innerText.includes('Kowalska') && document.body.innerText.includes('Nowak'),
-      undefined,
-      { timeout: 10000 },
-    );
+    await firstName.waitFor({ state: 'visible', timeout: 8000 });
+
+    async function addOfficePlayerUi(first, last) {
+      await firstName.fill(first);
+      await lastName.fill(last);
+      await page.getByRole('button', { name: 'Dodaj zawodnika', exact: true }).click();
+      await page.waitForFunction(
+        () => document.body.innerText.includes('Zawodnik dodany'),
+        undefined,
+        { timeout: 10000 },
+      );
+      await page.waitForFunction(
+        () => !document.body.innerText.includes('Zawodnik dodany'),
+        undefined,
+        { timeout: 5000 },
+      ).catch(() => {});
+    }
+
+    await addOfficePlayerUi('Anna', 'Kowalska');
+    await addOfficePlayerUi('Jan', 'Nowak');
     console.log('  Added two players from UI');
 
     const closePlayerForm = page.getByRole('button', { name: /Nowy zawodnik/ });
