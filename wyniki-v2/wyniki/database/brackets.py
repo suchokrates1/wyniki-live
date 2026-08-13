@@ -11,7 +11,12 @@ from werkzeug.security import generate_password_hash
 from ..config import settings, logger
 
 from .connection import db_conn
-from ..services.teams import DEFAULT_PLAY_FORMAT, normalize_play_format
+from ..services.teams import (
+    DEFAULT_PLAY_FORMAT,
+    PLAY_FORMAT_GROUPS_KNOCKOUT,
+    PLAY_FORMAT_KNOCKOUT,
+    normalize_play_format,
+)
 
 def _bracket_row_match_priority(row: sqlite3.Row, player_name: str) -> int:
     """Rank player matches: full-name exact wins over surname-only fallback."""
@@ -167,13 +172,17 @@ def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: 
         return {"group_id": None, "phase": None, "warning": None}
 
 def _split_bracket_label(value: Optional[str]) -> tuple[str, str]:
-    """Split a bracket label into category prefix and suffix."""
+    """Split a bracket label into category prefix and suffix.
+
+    Uses the last em-dash so nested labels like
+    ``B1 Men — Grupa A — Finał`` keep the group name in the prefix.
+    """
     label = (value or "").strip()
     if not label:
         return "", ""
     if " — " not in label:
         return "", label
-    prefix, suffix = label.split(" — ", 1)
+    prefix, suffix = label.rsplit(" — ", 1)
     return prefix.strip(), suffix.strip()
 
 GROUP_PHASE = "Grupowa"
@@ -232,12 +241,37 @@ def count_finished_group_matches(tournament_id: int, group_id: int) -> int:
     with db_conn() as conn:
         return _count_finished_group_matches(conn.cursor(), tournament_id, group_id)
 
+def count_group_knockout_progress(tournament_id: int, group_name: str) -> tuple[int, int]:
+    """Return (expected, finished) knockout slots belonging to one group label."""
+    label = str(group_name or "").strip()
+    if not label:
+        return 0, 0
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT phase, winner_name FROM bracket_knockout WHERE tournament_id = ?",
+            (tournament_id,),
+        )
+        expected = 0
+        finished = 0
+        prefix = f"{label} — "
+        for row in cursor.fetchall():
+            phase = str(row["phase"] or "")
+            if phase != label and not phase.startswith(prefix):
+                continue
+            expected += 1
+            if row["winner_name"]:
+                finished += 1
+        return expected, finished
+
 def _phase_kind(phase: Optional[str]) -> Optional[str]:
     """Map localized phase labels to a stable semantic kind."""
     _, suffix = _split_bracket_label(phase)
     normalized = (suffix or phase or "").strip().lower()
     if not normalized:
         return None
+    if "ćwierć" in normalized or "cwierc" in normalized or "quarter" in normalized:
+        return "quarterfinal"
     if "półfina" in normalized or "semif" in normalized:
         return "semifinal"
     if "3." in normalized or "3 " in normalized or "third" in normalized or "3rd" in normalized:
@@ -279,6 +313,189 @@ def _knockout_bucket_key(group_name: str) -> tuple[str, str]:
     if _is_group_partition_name(name):
         return ("multi", prefix)
     return ("single", name)
+
+def _group_play_format(group: Optional[Dict[str, Any]]) -> str:
+    return normalize_play_format((group or {}).get("play_format"))
+
+
+def _group_competitor_names(group: Dict[str, Any]) -> List[str]:
+    names: List[str] = []
+    for item in group.get("players") or []:
+        if isinstance(item, dict):
+            label = str(item.get("name") or item.get("player_name") or "").strip()
+        else:
+            label = str(item or "").strip()
+        if label and label not in names:
+            names.append(label)
+    if names:
+        return names
+    for standing in group.get("standings") or []:
+        label = str((standing or {}).get("name") or "").strip()
+        if label and label not in names:
+            names.append(label)
+    return names
+
+
+def _knockout_phase_label(prefix: str, kind: str) -> str:
+    suffixes = {
+        "quarterfinal": "Ćwierćfinał",
+        "semifinal": "Półfinał",
+        "final": "Finał",
+        "third_place": "o 3. miejsce",
+    }
+    suffix = suffixes[kind]
+    prefix = (prefix or "").strip()
+    return f"{prefix} — {suffix}" if prefix else suffix
+
+
+def _knockout_slot(
+    prefix: str,
+    kind: str,
+    position: int,
+    player1_name: Optional[str],
+    player2_name: Optional[str],
+) -> Dict[str, Any]:
+    return {
+        "phase": _knockout_phase_label(prefix, kind),
+        "position": position,
+        "player1_name": player1_name,
+        "player2_name": player2_name,
+    }
+
+
+def _iter_knockout_units(bracket_groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Split groups into independent knockout generation units based on play_format."""
+    buckets: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
+    for group in bracket_groups:
+        name = str(group.get("name") or "").strip()
+        if not name:
+            continue
+        buckets.setdefault(_knockout_bucket_key(name), []).append(group)
+
+    units: List[Dict[str, Any]] = []
+    for (bucket_kind, bucket_name), bucket_groups in buckets.items():
+        ordered = sorted(bucket_groups, key=lambda group: _group_sort_key(str(group.get("name") or "")))
+        groups_knockout = [group for group in ordered if _group_play_format(group) == PLAY_FORMAT_GROUPS_KNOCKOUT]
+        knockout_only = [group for group in ordered if _group_play_format(group) == PLAY_FORMAT_KNOCKOUT]
+        if (
+            bucket_kind == "multi"
+            and len(ordered) == 2
+            and len(groups_knockout) == 2
+        ):
+            units.append({"type": "cross", "label": bucket_name, "groups": groups_knockout})
+        else:
+            for group in groups_knockout:
+                units.append({"type": "single_table", "label": str(group.get("name") or bucket_name), "groups": [group]})
+        for group in knockout_only:
+            units.append({"type": "direct_pool", "label": str(group.get("name") or bucket_name), "groups": [group]})
+    return units
+
+
+def _build_direct_knockout_slots(label: str, names: List[str]) -> List[Dict[str, Any]]:
+    """Build a 2/4/8 knockout tree from a group's member list (list order = seeding)."""
+    seeds = [str(name).strip() for name in names if str(name or "").strip()]
+    count = len(seeds)
+    if count < 2 or count > 8:
+        return []
+    if count == 2:
+        return [_knockout_slot(label, "final", 1, seeds[0], seeds[1])]
+
+    if count <= 4:
+        padded = seeds + [None] * (4 - count)
+        slots: List[Dict[str, Any]] = []
+        final_players: List[Optional[str]] = [None, None]
+        for position, (left, right) in enumerate(((padded[0], padded[3]), (padded[1], padded[2])), start=1):
+            if left and right:
+                slots.append(_knockout_slot(label, "semifinal", position, left, right))
+            else:
+                final_players[position - 1] = left or right
+        slots.append(_knockout_slot(label, "final", 1, final_players[0], final_players[1]))
+        if count == 4:
+            slots.append(_knockout_slot(label, "third_place", 1, None, None))
+        return slots
+
+    padded = seeds + [None] * (8 - count)
+    qf_pairs = (
+        (padded[0], padded[7], 1),
+        (padded[3], padded[4], 2),
+        (padded[1], padded[6], 3),
+        (padded[2], padded[5], 4),
+    )
+    slots = []
+    sf_players: List[Optional[str]] = [None, None, None, None]
+    for left, right, position in qf_pairs:
+        if left and right:
+            slots.append(_knockout_slot(label, "quarterfinal", position, left, right))
+        else:
+            sf_players[position - 1] = left or right
+    slots.append(_knockout_slot(label, "semifinal", 1, sf_players[0], sf_players[1]))
+    slots.append(_knockout_slot(label, "semifinal", 2, sf_players[2], sf_players[3]))
+    slots.append(_knockout_slot(label, "final", 1, None, None))
+    if count >= 4:
+        slots.append(_knockout_slot(label, "third_place", 1, None, None))
+    return slots
+
+
+def _slots_for_knockout_unit(
+    unit: Dict[str, Any],
+    *,
+    complete: bool,
+    player_count_by_name: Optional[Dict[str, int]] = None,
+) -> List[Dict[str, Any]]:
+    counts = player_count_by_name or {}
+    unit_type = unit.get("type")
+    label = str(unit.get("label") or "")
+    groups = unit.get("groups") or []
+    if unit_type == "cross":
+        if len(groups) < 2:
+            return []
+        first = groups[0].get("standings") or []
+        second = groups[1].get("standings") or []
+        if complete:
+            if len(first) < 2 or len(second) < 2:
+                return []
+            return _build_knockout_slots_for_category(label, groups)
+        if len(first) < 2 or len(second) < 2:
+            return []
+        return _build_provisional_knockout_slots_for_category(label, groups)
+
+    if unit_type == "direct_pool":
+        return _build_direct_knockout_slots(label, _group_competitor_names(groups[0] if groups else {}))
+
+    if unit_type != "single_table" or not groups:
+        return []
+    group = groups[0]
+    standings = group.get("standings") or []
+    group_name = str(group.get("name") or label)
+    player_count = counts.get(group_name) or len(standings) or len(_group_competitor_names(group))
+    if player_count >= 4 or len(standings) >= 4:
+        top_four = standings[:4] if len(standings) >= 4 else standings
+        if complete and len(top_four) >= 4:
+            return _build_four_player_group_knockout_slots(label, top_four)
+        return _build_provisional_four_player_group_knockout_slots(group_name, label)
+    if player_count == 3 or len(standings) == 3:
+        if complete:
+            return _build_single_group_final_slots(label, standings)
+        return _build_provisional_single_group_final_slots(group_name, label)
+    return []
+
+
+def _unit_group_play_complete(
+    cursor: sqlite3.Cursor,
+    tournament_id: int,
+    unit: Dict[str, Any],
+    group_id_by_name: Dict[str, int],
+    player_count_by_name: Dict[str, int],
+) -> bool:
+    if unit.get("type") == "direct_pool":
+        return len(_group_competitor_names((unit.get("groups") or [{}])[0])) >= 2
+    return _bucket_groups_play_complete(
+        cursor,
+        tournament_id,
+        unit.get("groups") or [],
+        group_id_by_name,
+        player_count_by_name,
+    )
 
 def _is_knockout_placeholder_name(name: Optional[str]) -> bool:
     """Detect generated placeholder labels that should be replaced by real players."""
@@ -351,6 +568,10 @@ def _expected_group_matches_count(
     player_count: int,
 ) -> int:
     """Count scheduled group-stage matches for one bracket group."""
+    cursor.execute("SELECT play_format FROM bracket_groups WHERE id = ?", (group_id,))
+    row = cursor.fetchone()
+    if row and normalize_play_format(row["play_format"] if "play_format" in row.keys() else None) == PLAY_FORMAT_KNOCKOUT:
+        return 0
     if player_count < 2:
         return 0
     cursor.execute(
@@ -592,54 +813,34 @@ def _compute_provisional_knockout_slots_from_bracket(
     player_count_by_name: Dict[str, int],
 ) -> Dict[str, Any]:
     """Build knockout slots with standing placeholders until group play is finished."""
-    buckets: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
-    for group in bracket_groups:
-        name = str(group.get("name") or "").strip()
-        if not name:
-            continue
-        buckets.setdefault(_knockout_bucket_key(name), []).append(group)
-
     slots: List[Dict[str, Any]] = []
-    with db_conn() as conn:
-        cursor = conn.cursor()
-        for (bucket_kind, bucket_name), bucket_groups in buckets.items():
-            ordered_groups = sorted(bucket_groups, key=lambda group: _group_sort_key(str(group.get("name") or "")))
-            complete = _bucket_groups_play_complete(
-                cursor,
-                tournament_id,
-                ordered_groups,
-                group_id_by_name,
-                player_count_by_name,
-            )
-            if bucket_kind == "multi":
-                if len(ordered_groups) < 2:
-                    continue
-                if len(ordered_groups) > 2:
-                    return {"error": f"Auto knockout supports exactly 2 groups per category: {bucket_name}"}
-                first_group = ordered_groups[0].get("standings") or []
-                second_group = ordered_groups[1].get("standings") or []
-                if len(first_group) < 2 or len(second_group) < 2:
-                    return {"error": f"Category needs at least 2 players per group: {bucket_name}"}
-                if complete:
-                    slots.extend(_build_knockout_slots_for_category(bucket_name, ordered_groups))
-                else:
-                    slots.extend(_build_provisional_knockout_slots_for_category(bucket_name, ordered_groups))
+    units = _iter_knockout_units(bracket_groups)
+    completeness: Dict[int, bool] = {}
+    if tournament_id:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            for index, unit in enumerate(units):
+                completeness[index] = _unit_group_play_complete(
+                    cursor,
+                    tournament_id,
+                    unit,
+                    group_id_by_name,
+                    player_count_by_name,
+                )
+    for index, unit in enumerate(units):
+        if unit.get("type") == "cross":
+            ordered_groups = unit.get("groups") or []
+            if len(ordered_groups) != 2:
                 continue
-
-            standings = ordered_groups[0].get("standings") or []
-            group_name = str(ordered_groups[0].get("name") or bucket_name)
-            player_count = player_count_by_name.get(group_name) or len(standings)
-            if player_count >= 4 or len(standings) >= 4:
-                top_four = standings[:4] if len(standings) >= 4 else standings
-                if complete and len(top_four) >= 4:
-                    slots.extend(_build_four_player_group_knockout_slots(bucket_name, top_four))
-                else:
-                    slots.extend(_build_provisional_four_player_group_knockout_slots(group_name, bucket_name))
-            elif player_count == 3 or len(standings) == 3:
-                if complete:
-                    slots.extend(_build_single_group_final_slots(bucket_name, standings))
-                else:
-                    slots.extend(_build_provisional_single_group_final_slots(group_name, bucket_name))
+            first_group = ordered_groups[0].get("standings") or []
+            second_group = ordered_groups[1].get("standings") or []
+            if len(first_group) < 2 or len(second_group) < 2:
+                continue
+        slots.extend(_slots_for_knockout_unit(
+            unit,
+            complete=completeness.get(index, False),
+            player_count_by_name=player_count_by_name,
+        ))
 
     if not slots:
         return {"error": "Need at least one eligible category for knockout generation"}
@@ -685,33 +886,25 @@ def _build_four_player_group_knockout_slots(group_name: str, standings: List[Dic
 
 def _compute_knockout_slots_from_bracket(bracket_groups: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Build the expected knockout slots for every eligible category in one tournament."""
-    buckets: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
-    for group in bracket_groups:
-        name = str(group.get("name") or "").strip()
-        if not name:
-            continue
-        buckets.setdefault(_knockout_bucket_key(name), []).append(group)
-
     slots: List[Dict[str, Any]] = []
-    for (bucket_kind, bucket_name), bucket_groups in buckets.items():
-        ordered_groups = sorted(bucket_groups, key=lambda group: _group_sort_key(str(group.get("name") or "")))
-        if bucket_kind == "multi":
-            if len(ordered_groups) < 2:
+    player_count_by_name = {
+        str(group.get("name") or ""): len(group.get("standings") or []) or len(_group_competitor_names(group))
+        for group in bracket_groups
+    }
+    for unit in _iter_knockout_units(bracket_groups):
+        if unit.get("type") == "cross":
+            ordered_groups = unit.get("groups") or []
+            if len(ordered_groups) != 2:
                 continue
-            if len(ordered_groups) > 2:
-                return {"error": f"Auto knockout supports exactly 2 groups per category: {bucket_name}"}
             first_group = ordered_groups[0].get("standings") or []
             second_group = ordered_groups[1].get("standings") or []
             if len(first_group) < 2 or len(second_group) < 2:
-                return {"error": f"Category needs at least 2 players per group: {bucket_name}"}
-            slots.extend(_build_knockout_slots_for_category(bucket_name, ordered_groups))
-            continue
-
-        standings = ordered_groups[0].get("standings") or []
-        if len(standings) >= 4:
-            slots.extend(_build_four_player_group_knockout_slots(bucket_name, standings[:4]))
-        elif len(standings) == 3:
-            slots.extend(_build_single_group_final_slots(bucket_name, standings))
+                return {"error": f"Category needs at least 2 players per group: {unit.get('label')}"}
+        slots.extend(_slots_for_knockout_unit(
+            unit,
+            complete=True,
+            player_count_by_name=player_count_by_name,
+        ))
 
     if not slots:
         return {"error": "Need at least one eligible category for knockout generation"}
@@ -738,7 +931,7 @@ def seed_provisional_knockout_from_groups(
         return {"status": "error", "error": bracket["error"]}
 
     generated = _compute_provisional_knockout_slots_from_bracket(
-        bracket.get("groups", []),
+        _annotate_groups_with_stored_format(bracket.get("groups", []), db_groups),
         tournament_id=tournament_id,
         group_id_by_name=group_id_by_name,
         player_count_by_name=player_count_by_name,
@@ -842,44 +1035,81 @@ def _merge_bracket_knockout_slots(
         logger.error("merge_bracket_knockout_error", error=str(e), tournament_id=tournament_id)
         return {"error": str(e)}
 
+def _annotate_groups_with_stored_format(
+    bracket_groups: List[Dict[str, Any]],
+    stored_groups: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    by_name = {str(group.get("name") or ""): group for group in stored_groups}
+    annotated: List[Dict[str, Any]] = []
+    for group in bracket_groups:
+        stored = by_name.get(str(group.get("name") or "")) or {}
+        merged = dict(group)
+        merged["play_format"] = stored.get("play_format") or group.get("play_format")
+        if stored.get("id") is not None:
+            merged["id"] = stored["id"]
+        if stored.get("players") and not merged.get("players"):
+            merged["players"] = stored["players"]
+        annotated.append(merged)
+    return annotated
+
+
 def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[str, Any]:
-    """Generate knockout automatically once all configured group matches are finished."""
+    """Generate knockout for every ready group/pair; do not wait for the whole tournament."""
     groups = fetch_bracket_groups(tournament_id)
     if not groups:
         return {"status": "skipped", "reason": "no_groups"}
 
-    expected_matches = 0
-    finished_matches = 0
+    bracket = get_full_bracket(tournament_id)
+    if bracket.get("error"):
+        return {"status": "error", "error": bracket["error"]}
+    groups_data = _annotate_groups_with_stored_format(bracket.get("groups") or [], groups)
+    group_id_by_name = {str(group.get("name") or ""): int(group["id"]) for group in groups if group.get("id")}
+    player_count_by_name = {
+        str(group.get("name") or ""): len(group.get("players") or [])
+        for group in groups
+    }
+
+    ready_slots: List[Dict[str, Any]] = []
+    pending_units = 0
+    eligible_units = 0
     with db_conn() as conn:
         cursor = conn.cursor()
-        for group in groups:
-            player_count = len(group.get("players", []))
-            if player_count < 2:
+        for unit in _iter_knockout_units(groups_data):
+            eligible_units += 1
+            if not _unit_group_play_complete(
+                cursor,
+                tournament_id,
+                unit,
+                group_id_by_name,
+                player_count_by_name,
+            ):
+                pending_units += 1
                 continue
-            group_id = int(group["id"])
-            expected_matches += _expected_group_matches_count(cursor, tournament_id, group_id, player_count)
-            finished_matches += _count_finished_group_matches(cursor, tournament_id, group_id)
+            ready_slots.extend(_slots_for_knockout_unit(
+                unit,
+                complete=True,
+                player_count_by_name=player_count_by_name,
+            ))
 
-    if expected_matches == 0:
-        return {"status": "skipped", "reason": "no_group_matches_expected"}
-    if finished_matches < expected_matches:
+    if not eligible_units:
+        return {"status": "skipped", "reason": "no_eligible_categories"}
+    if not ready_slots:
         return {
             "status": "pending",
             "reason": "group_stage_incomplete",
-            "finished_matches": finished_matches,
-            "expected_matches": expected_matches,
+            "pending_units": pending_units,
         }
 
-    bracket = get_full_bracket(tournament_id)
-    groups_data = bracket.get("groups", [])
-    generated = _compute_knockout_slots_from_bracket(groups_data)
-    if generated.get("error"):
-        return generated
-
-    merged = _merge_bracket_knockout_slots(tournament_id, generated.get("knockout", []))
+    merged = _merge_bracket_knockout_slots(tournament_id, ready_slots)
     if merged.get("error"):
         return merged
     if not merged.get("inserted") and not merged.get("updated"):
+        if pending_units:
+            return {
+                "status": "pending",
+                "reason": "group_stage_incomplete",
+                "pending_units": pending_units,
+            }
         return {"status": "skipped", "reason": "knockout_already_configured"}
     return merged
 
@@ -928,10 +1158,11 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
             """, (winner, score_summary, match.finish_reason or 'normal', match.result_note, slot["id"]))
 
             loser = p2 if winner == p1 else p1
-
-            # Auto-advance: if semifinal, populate final and 3rd place
-            if _phase_kind(slot["phase"]) == "semifinal":
+            kind = _phase_kind(slot["phase"])
+            if kind == "semifinal":
                 _advance_to_next_round(cursor, tournament_id, slot["phase"], slot["position"], winner, loser)
+            elif kind == "quarterfinal":
+                _advance_quarterfinal(cursor, tournament_id, slot["phase"], slot["position"], winner)
 
             conn.commit()
             ensure_knockout_schedule_entries(tournament_id)
@@ -963,6 +1194,29 @@ def _advance_to_next_round(cursor, tournament_id: int, semifinal_phase: str, sf_
         _assign_knockout_slot_player(cursor, final_slot, target_side, winner)
     if third_slot:
         _assign_knockout_slot_player(cursor, third_slot, target_side, loser)
+
+
+def _advance_quarterfinal(cursor, tournament_id: int, quarter_phase: str, qf_position: int, winner: str) -> None:
+    """Feed a quarterfinal winner into the matching semifinal side."""
+    category_prefix, _ = _split_bracket_label(quarter_phase)
+    cursor.execute(
+        "SELECT id, phase, position, player1_name, player2_name FROM bracket_knockout WHERE tournament_id = ?",
+        (tournament_id,),
+    )
+    slots = cursor.fetchall()
+    semis = [
+        slot for slot in slots
+        if _slot_phase_matches(slot["phase"], "semifinal", category_prefix)
+    ]
+    semis.sort(key=lambda slot: int(slot["position"] or 0))
+    if not semis:
+        return
+    position = int(qf_position or 1)
+    sf_index = 0 if position <= 2 else 1
+    side = 1 if position % 2 == 1 else 2
+    if sf_index >= len(semis):
+        return
+    _assign_knockout_slot_player(cursor, semis[sf_index], side, winner)
 
 def _iter_group_competitors(group: Dict) -> List[Dict[str, Optional[int]]]:
     """Normalize group payload into person vs team competitor rows."""
@@ -1071,6 +1325,7 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
             conn.commit()
             logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
         ensure_group_schedule_entries(tournament_id)
+        maybe_generate_knockout_from_completed_groups(tournament_id)
         return True
     except Exception as e:
         logger.error("save_bracket_groups_error", error=str(e))
@@ -1497,7 +1752,7 @@ def get_full_bracket(tournament_id: int) -> Dict:
 
             # Groups + standings
             cursor.execute(
-                "SELECT id, name FROM bracket_groups WHERE tournament_id = ? ORDER BY order_num",
+                "SELECT id, name, play_format FROM bracket_groups WHERE tournament_id = ? ORDER BY order_num",
                 (tournament_id,)
             )
             group_rows = cursor.fetchall()
@@ -1511,8 +1766,12 @@ def get_full_bracket(tournament_id: int) -> Dict:
                 player_names = [r["player_name"] for r in cursor.fetchall()]
                 matches = _find_group_matches(cursor, player_names, start_date, end_date, tournament_id)
                 standings, match_results = _compute_standings(player_names, matches)
+                play_format = g["play_format"] if "play_format" in g.keys() else DEFAULT_PLAY_FORMAT
                 groups_data.append({
+                    "id": g["id"],
                     "name": g["name"],
+                    "play_format": normalize_play_format(play_format),
+                    "players": [{"name": name} for name in player_names],
                     "standings": standings,
                     "matches": match_results,
                 })

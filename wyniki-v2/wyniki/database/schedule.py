@@ -9,6 +9,7 @@ from typing import Any, Dict, Generator, List, Optional
 from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
+from ..services.teams import PLAY_FORMAT_KNOCKOUT, normalize_play_format
 
 from .connection import _utc_now, db_conn, fetch_app_settings, upsert_app_settings
 
@@ -75,6 +76,9 @@ def ensure_group_rematch_schedule_entries(
                 group = group_by_id.get(group_id)
                 if not group:
                     skipped.append({"group_id": group_id, "reason": "not_found"})
+                    continue
+                if normalize_play_format(group.get("play_format")) == PLAY_FORMAT_KNOCKOUT:
+                    skipped.append({"group_id": group_id, "reason": "knockout_format"})
                     continue
 
                 cursor.execute(
@@ -650,6 +654,8 @@ def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
             cursor.execute("SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM tournament_schedule WHERE tournament_id = ?", (tournament_id,))
             next_order = int(cursor.fetchone()["max_order"] or 0) + 1
             for group in groups:
+                if normalize_play_format(group.get("play_format")) == PLAY_FORMAT_KNOCKOUT:
+                    continue
                 next_order = _insert_group_round_robin_schedule_entries(
                     cursor,
                     tournament_id,

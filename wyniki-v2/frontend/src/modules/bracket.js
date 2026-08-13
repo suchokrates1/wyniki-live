@@ -112,6 +112,14 @@ export function compareBracketCategoryNames(leftName, rightName, { getCategoryLa
   );
 }
 
+export function groupShowsStandingsTable(group) {
+  return String(group?.play_format || 'groups_knockout') !== 'knockout';
+}
+
+export function categoryShowsStandingsTables(category) {
+  return (category?.groups || []).some(groupShowsStandingsTable);
+}
+
 export function buildBracketCategories(data, { compareCategoryNames = (left, right) => String(left.name || '').localeCompare(String(right.name || '')) } = {}) {
   if (!data || !data.groups) return [];
   const cats = new Map();

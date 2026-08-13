@@ -10,6 +10,7 @@ from ..database import (
     GROUP_PHASE,
     advance_knockout,
     count_finished_group_matches,
+    count_group_knockout_progress,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
     expected_group_matches_count,
@@ -27,6 +28,7 @@ from ..database import (
     _is_knockout_placeholder_name,
 )
 from ..db_models import Match, MatchHistory, TournamentSchedule, db, utc_now_iso
+from ..services.teams import PLAY_FORMAT_KNOCKOUT, normalize_play_format
 
 
 class OfficeWorkflowError(ValueError):
@@ -680,8 +682,12 @@ def _build_office_dashboard(tournament_id: int) -> Dict[str, Any]:
     for group in groups:
         group_id = int(group['id'])
         player_count = len(group.get('players') or [])
-        expected = expected_group_matches_count(tournament_id, group_id, player_count)
-        finished = count_finished_group_matches(tournament_id, group_id)
+        play_format = normalize_play_format(group.get('play_format'))
+        if play_format == PLAY_FORMAT_KNOCKOUT:
+            expected, finished = count_group_knockout_progress(tournament_id, group.get('name') or '')
+        else:
+            expected = expected_group_matches_count(tournament_id, group_id, player_count)
+            finished = count_finished_group_matches(tournament_id, group_id)
         expected_total += expected
         finished_total += finished
         progress_groups.append({

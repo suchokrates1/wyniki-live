@@ -1625,9 +1625,17 @@ def test_group_completion_auto_generates_category_knockout_and_prefixed_semifina
         insert_finished_match("Bartek A1", "Bartek A2", "Grupowa", 2, 0, "2026-04-26T11:00:00", "B2 Mężczyźni — Grupa A")
         conn.commit()
 
-    pending = database.maybe_generate_knockout_from_completed_groups(tournament_id)
-    assert pending["status"] == "pending"
-    assert database.fetch_bracket_knockout(tournament_id) == []
+    first = database.maybe_generate_knockout_from_completed_groups(tournament_id)
+    assert first["status"] == "ok"
+    knockout_after_b1 = database.fetch_bracket_knockout(tournament_id)
+    b1_semis_early = [slot for slot in knockout_after_b1 if slot["phase"] == "B1 Kobiety — Półfinał"]
+    b2_semis_early = [slot for slot in knockout_after_b1 if slot["phase"] == "B2 Mężczyźni — Półfinał"]
+    assert len(b1_semis_early) == 2
+    assert b2_semis_early == []
+    assert {(slot["player1_name"], slot["player2_name"]) for slot in b1_semis_early} == {
+        ("Anna A1", "Anna B1"),
+        ("Anna B2", "Anna A2"),
+    }
 
     with database.db_conn() as conn:
         cursor = conn.cursor()
