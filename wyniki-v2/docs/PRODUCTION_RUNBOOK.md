@@ -4,6 +4,8 @@
 
 This runbook covers the live backend on `minipc` for `score.vestmedia.pl`.
 
+Feature work deploys to an isolated stack on `dell`: https://test.blindtennis.app — see [TEST_ENV_DELL.md](TEST_ENV_DELL.md). Do not point `docker-compose.test.yml` at minipc or reuse prod volume / overlay IDs.
+
 ## Service Identity
 
 - Host: `minipc`

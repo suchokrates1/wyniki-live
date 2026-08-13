@@ -58,3 +58,4 @@ Trzy powierzchnie produktu web:
 
 - [[40 - Role i dostęp]]
 - [[41 - Mapowanie URL]]
+- [[42 - Debel - plan implementacji]] (debel, tryb na grupie, litewski)

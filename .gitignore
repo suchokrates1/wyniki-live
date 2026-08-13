@@ -3,7 +3,9 @@
 .env.*
 !.env.example
 !.env.e2e.example
+!.env.test.example
 !wyniki-v2/.env.e2e.example
+!wyniki-v2/.env.test.example
 
 # Database
 *.sqlite3

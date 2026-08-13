@@ -10,7 +10,7 @@ aliases: [Query params public]
 
 | Parametr | Aliasy | Efekt |
 |----------|--------|-------|
-| `lang` | — | Język UI (`pl/de/en/it/es/fr`), zapis w localStorage |
+| `lang` | — | Język UI (`pl/de/en/it/es/fr`; plan: + `lt`) |
 | `tournament_id` | `tid` | Otwórz szczegóły turnieju (gdy brak hasha) |
 | `access_key` | `key` | Klucz do prywatnych turniejów (history/bracket/schedule/info) |
 | `etap` | `stage` | Etap symulacji (z turniejami typu simulation) |
@@ -29,3 +29,4 @@ Przełącznik ☀️/🌙 w nagłówku → `localStorage.theme` (jasny/ciemny). 
 
 - [[10 - Strona publiczna - przegląd]]
 - [[40 - Role i dostęp]]
+- [[42 - Debel - plan implementacji]] (litewski + audyt tłumaczeń)
