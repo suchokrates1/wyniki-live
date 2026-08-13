@@ -7,7 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:i18n": "node scripts/validate-i18n.mjs",
-    "test:unit": "node --test src/shared/teamDisplay.test.js src/modules/schedule.test.js",
+    "test:unit": "node --test src/shared/teamDisplay.test.js src/shared/labelDisplay.test.js src/modules/schedule.test.js src/i18n/validation.test.js",
     "check:public": "npm run test:i18n && npm run build",
     "smoke:public": "node scripts/public-smoke.mjs",
     "smoke:office": "node scripts/office-smoke.mjs",

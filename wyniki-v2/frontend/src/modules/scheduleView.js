@@ -249,12 +249,12 @@ export function createScheduleView() {
       return this.scheduleStatusLabel(match?.status);
     },
 
-    scheduleParticipantName(name) {
-      return this.resolveBracketName(name) || name || this.acc().unknownPlayer || 'zawodnik nieustalony';
+    scheduleParticipantName(name, otherName) {
+      return this.resolveBracketName(name) || name || this.unknownCompetitorLabel(name, otherName);
     },
 
     scheduleMatchupLabel(match) {
-      return `${this.scheduleParticipantName(match?.player1_name)} ${this.acc().versus || 'kontra'} ${this.scheduleParticipantName(match?.player2_name)}`;
+      return `${this.scheduleParticipantName(match?.player1_name, match?.player2_name)} ${this.acc().versus || 'kontra'} ${this.scheduleParticipantName(match?.player2_name, match?.player1_name)}`;
     },
 
     scheduleMatchAria(match) {

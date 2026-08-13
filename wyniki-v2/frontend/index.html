@@ -22,12 +22,9 @@
                 <div class="header-actions">
                     <label class="sr-only" for="langSelect" x-text="uiText().languageSelect || 'Wybierz jezyk'">Wybierz jezyk</label>
                     <select id="langSelect" class="lang-select" x-model="lang" @change="onLangChange()">
-                        <option value="pl">Polski</option>
-                        <option value="de">Deutsch</option>
-                        <option value="en">English</option>
-                        <option value="it">Italiano</option>
-                        <option value="es">Español</option>
-                        <option value="fr">Français</option>
+                        <template x-for="code in supportedLanguages" :key="code">
+                            <option :value="code" x-text="languageLabels[code]"></option>
+                        </template>
                     </select>
                     <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')" :title="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')">
                         <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="darkMode ? '☀️' : '🌙'"></span>
@@ -315,7 +312,7 @@
                                                 <thead>
                                                     <tr>
                                                         <th class="bt-pos" scope="col">#</th>
-                                                        <th class="bt-name" scope="col" x-text="tr().bracket?.player || 'Zawodnik'"></th>
+                                                        <th class="bt-name" scope="col" x-text="bracketCompetitorColumnLabel(group)"></th>
                                                         <th class="bt-stat" scope="col" :aria-label="tr().bracket?.legendWins || 'wygrane mecze'"><span aria-hidden="true" x-text="tr().bracket?.wins || 'W'"></span></th>
                                                         <th class="bt-stat" scope="col" :aria-label="tr().bracket?.legendLosses || 'przegrane mecze'"><span aria-hidden="true" x-text="tr().bracket?.losses || 'L'"></span></th>
                                                         <th class="bt-stat" scope="col" :aria-label="tr().bracket?.legendSets || 'sety wygrane do przegranych'"><span aria-hidden="true" x-text="tr().bracket?.setsHeader || 'S'"></span></th>
@@ -962,7 +959,7 @@
                                                         <thead>
                                                             <tr>
                                                                 <th class="bt-pos" scope="col">#</th>
-                                                                <th class="bt-name" scope="col" x-text="tr().bracket?.player || 'Zawodnik'"></th>
+                                                                <th class="bt-name" scope="col" x-text="bracketCompetitorColumnLabel(group)"></th>
                                                                 <th class="bt-stat" scope="col" :aria-label="tr().bracket?.legendWins || 'wygrane mecze'"><span aria-hidden="true" x-text="tr().bracket?.wins || 'W'"></span></th>
                                                                 <th class="bt-stat" scope="col" :aria-label="tr().bracket?.legendLosses || 'przegrane mecze'"><span aria-hidden="true" x-text="tr().bracket?.losses || 'L'"></span></th>
                                                                 <th class="bt-stat" scope="col" :aria-label="tr().bracket?.legendSets || 'sety wygrane do przegranych'"><span aria-hidden="true" x-text="tr().bracket?.setsHeader || 'S'"></span></th>
