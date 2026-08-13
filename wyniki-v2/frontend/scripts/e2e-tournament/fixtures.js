@@ -49,7 +49,7 @@ export function adminHeaders(token) {
   return headers;
 }
 
-export async function createTournament(token, { name, startDate, endDate, courts = 4, isSimulation = true } = {}) {
+export async function createTournament(token, { name, startDate, endDate, courts = 4, isSimulation = true, isPublic } = {}) {
   newMarker();
   const tournamentName = name || `${_activeMarker} Test Cup`;
   const today = new Date().toISOString().slice(0, 10);
@@ -62,6 +62,7 @@ export async function createTournament(token, { name, startDate, endDate, courts
       end_date: endDate || today,
       active: true,
       is_simulation: isSimulation,
+      is_public: isPublic ?? true,
       court_count: courts,
       city: 'E2E',
       country: 'PL',
@@ -187,14 +188,138 @@ export async function cleanup(token) {
   });
 }
 
+export async function confirmCategories(token, tournamentId, entries, { replace = true } = {}) {
+  return fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/categories/confirm`), {
+    method: 'POST',
+    headers: adminHeaders(token),
+    body: JSON.stringify({ categories: entries, replace }),
+  });
+}
+
+export async function createTeam(token, tournamentId, categoryId, player1Id, player2Id) {
+  const body = await fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/teams`), {
+    method: 'POST',
+    headers: adminHeaders(token),
+    body: JSON.stringify({
+      category_id: categoryId,
+      player1_id: player1Id,
+      player2_id: player2Id,
+    }),
+  });
+  return body.team || body;
+}
+
+export async function fetchAdminSchedule(token, tournamentId) {
+  const body = await fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/schedule`), {
+    headers: adminHeaders(token),
+  });
+  return Array.isArray(body) ? body : (body.schedule || []);
+}
+
+export async function fetchPublicSchedule(tournamentId) {
+  return fetchJson(apiUrl(`/api/tournament/${tournamentId}/schedule`));
+}
+
+export async function fetchPublicBracket(tournamentId) {
+  return fetchJson(apiUrl(`/api/tournament/${tournamentId}/bracket`));
+}
+
+export async function generateKnockout(token, tournamentId) {
+  return fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/bracket/knockout/generate`), {
+    method: 'POST',
+    headers: adminHeaders(token),
+  });
+}
+
+export async function officeGroupMatch(slot, officeToken, payload) {
+  return fetchJson(apiUrl(`/api/office/${slot}/group-matches`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${officeToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function officeKnockoutMatch(slot, officeToken, payload) {
+  return fetchJson(apiUrl(`/api/office/${slot}/knockout-matches`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${officeToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function officeUpdateMatch(slot, officeToken, matchId, payload) {
+  return fetchJson(apiUrl(`/api/office/${slot}/matches/${matchId}`), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${officeToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function seedDoublesTournament(token, {
+  pairCount = 4,
+  playFormat = 'round_robin',
+  groupSpecs = null,
+  courts = 4,
+} = {}) {
+  const tournament = await createTournament(token, { courts });
+  const confirmed = await confirmCategories(token, tournament.id, [
+    { label: 'B1 Double', is_doubles: true },
+  ]);
+  const category = (confirmed.categories || [])[0];
+  if (!category?.id) throw new Error('Doubles category confirm failed');
+
+  const players = samplePlayers(pairCount * 2);
+  const bulk = await addPlayers(token, tournament.id, players);
+  const ids = bulk.player_ids || [];
+  if (ids.length < pairCount * 2) throw new Error(`Expected ${pairCount * 2} players, got ${ids.length}`);
+
+  const teams = [];
+  for (let i = 0; i < pairCount; i += 1) {
+    teams.push(await createTeam(token, tournament.id, category.id, ids[i * 2], ids[i * 2 + 1]));
+  }
+
+  const specs = groupSpecs || [{
+    name: 'B1 Double — Grupa A',
+    play_format: playFormat,
+    teamIndexes: teams.map((_, index) => index),
+  }];
+  const groups = specs.map((spec) => ({
+    name: spec.name,
+    tournament_category_id: category.id,
+    play_format: spec.play_format || playFormat,
+    teams: spec.teamIndexes.map((index) => teams[index].id),
+  }));
+  await saveGroups(token, tournament.id, groups);
+  await generateSchedule(token, tournament.id);
+  const slot = await resolveOfficeSlot(tournament.name);
+  return {
+    tournament,
+    category,
+    teams,
+    players: bulk.players,
+    playerIds: ids,
+    slot,
+  };
+}
+
 export function samplePlayers(count = 8) {
   const names = [
     'Anna Kowalska', 'Jan Nowak', 'Maria Wisniewska', 'Piotr Wojcik',
     'Katarzyna Kaminska', 'Tomasz Lewandowski', 'Agnieszka Zielinska', 'Michal Szymanski',
     'Ewa Wozniak', 'Adam Dabrowski', 'Joanna Kozlowska', 'Krzysztof Jankowski',
+    'Natalia Pawlak', 'Marek Kaczmarek', 'Paulina Grabowska', 'Robert Michalski',
   ];
-  return names.slice(0, count).map((fullName, i) => {
-    const [first, last] = fullName.split(' ');
+  return Array.from({ length: count }, (_, i) => {
+    const [first] = (names[i] || `Player${i + 1} Extra`).split(' ');
     return {
       name: `${first} ${_activeMarker}-P${i + 1}`,
       category: 'B1',
