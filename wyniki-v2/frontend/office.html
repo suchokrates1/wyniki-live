@@ -11,331 +11,6 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://stats.dawidsuchodolski.pl/script.js" data-website-id="b49919d3-6628-40cc-9213-72ec52409e28"></script>
-  <style>
-    :root {
-      --office-ink: #1b2430;
-      --office-muted: #5f6b7a;
-      --office-accent: #0f766e;
-      --office-accent-soft: rgba(15, 118, 110, 0.14);
-      --office-highlight: #c2410c;
-      --office-panel: rgba(255, 252, 247, 0.92);
-      --office-line: rgba(27, 36, 48, 0.12);
-      --office-shadow: 0 30px 80px rgba(48, 37, 20, 0.14);
-    }
-
-    body.office-body {
-      min-height: 100vh;
-      font-family: 'Outfit', 'Segoe UI', sans-serif;
-      color: var(--office-ink);
-      background:
-        radial-gradient(circle at top left, rgba(194, 65, 12, 0.18), transparent 34%),
-        radial-gradient(circle at right 15% top 12%, rgba(15, 118, 110, 0.18), transparent 30%),
-        linear-gradient(180deg, #f6efe3 0%, #f2f4ef 48%, #eef3f5 100%);
-    }
-
-    .office-shell {
-      width: min(1360px, calc(100vw - 32px));
-      margin: 0 auto;
-      padding: 24px 0 40px;
-    }
-
-    .office-hero {
-      position: relative;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.45);
-      border-radius: 30px;
-      padding: 28px;
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(255, 248, 240, 0.72)),
-        linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(194, 65, 12, 0.1));
-      box-shadow: var(--office-shadow);
-      backdrop-filter: blur(16px);
-    }
-
-    .office-hero::after {
-      content: '';
-      position: absolute;
-      inset: auto -120px -120px auto;
-      width: 320px;
-      height: 320px;
-      border-radius: 999px;
-      background: radial-gradient(circle, rgba(15, 118, 110, 0.16) 0%, transparent 70%);
-    }
-
-    .office-hero-top {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 20px 28px;
-      align-items: start;
-    }
-
-    .office-hero-title {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      min-width: 0;
-    }
-
-    .office-hero-actions {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 12px;
-      min-width: min(100%, 520px);
-    }
-
-    .office-primary-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .office-title {
-      font-family: 'Fraunces', Georgia, serif;
-      font-size: clamp(2rem, 4vw, 3.6rem);
-      line-height: 1.02;
-      letter-spacing: -0.03em;
-      margin: 0;
-    }
-
-    .office-panel {
-      border: 1px solid var(--office-line);
-      background: var(--office-panel);
-      box-shadow: 0 18px 40px rgba(17, 24, 39, 0.06);
-      backdrop-filter: blur(14px);
-    }
-
-    .office-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border-radius: 999px;
-      padding: 7px 14px;
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-
-    .office-chip-group {
-      background: rgba(15, 118, 110, 0.12);
-      color: #0f766e;
-    }
-
-    .office-chip-knockout {
-      background: rgba(194, 65, 12, 0.12);
-      color: #c2410c;
-    }
-
-    .office-chip-neutral {
-      background: rgba(55, 65, 81, 0.1);
-      color: #374151;
-    }
-
-    .office-stat {
-      border-radius: 24px;
-      border: 1px solid var(--office-line);
-      background: rgba(255, 255, 255, 0.68);
-      padding: 18px 20px;
-      min-height: 118px;
-    }
-
-    .office-history-card {
-      border-radius: 24px;
-      padding: 20px;
-      transition: transform 0.18s ease, box-shadow 0.18s ease;
-    }
-
-    .office-history-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 24px 40px rgba(17, 24, 39, 0.08);
-    }
-
-    .office-history-scoreboard {
-      border-radius: 20px;
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      background: rgba(255, 255, 255, 0.74);
-      overflow: hidden;
-    }
-
-    .office-history-card .hm-player {
-      padding: 12px 16px;
-      min-height: 48px;
-    }
-
-    .office-history-card .hm-player-name {
-      font-size: 1rem;
-      color: #1f2937;
-    }
-
-    .office-history-card .hm-set-cell {
-      min-width: 34px;
-      font-size: 1rem;
-      color: #475569;
-    }
-
-    .office-history-card .hm-player--winner .hm-player-name,
-    .office-history-card .hm-player--winner .hm-set-cell {
-      color: #0f172a;
-    }
-
-    .office-tab {
-      border-radius: 999px;
-      padding: 10px 18px;
-      font-weight: 700;
-      color: var(--office-muted);
-      transition: all 0.2s ease;
-    }
-
-    .office-tab.is-active {
-      color: #fff;
-      background: linear-gradient(135deg, #0f766e, #115e59);
-      box-shadow: 0 10px 24px rgba(15, 118, 110, 0.24);
-    }
-
-    .office-alert-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      padding: 12px 14px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.65);
-      background: rgba(255, 255, 255, 0.62);
-      width: 100%;
-    }
-
-    .office-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #334155;
-    }
-
-    .office-toggle input {
-      width: 18px;
-      height: 18px;
-      accent-color: #0f766e;
-    }
-
-    .office-login {
-      width: min(560px, calc(100vw - 32px));
-      margin: 12vh auto 0;
-      border-radius: 32px;
-      padding: 32px;
-    }
-
-    .office-logo {
-      width: 72px;
-      height: 72px;
-      border-radius: 22px;
-      object-fit: cover;
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
-    }
-
-    .office-summary-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
-      gap: 24px;
-      margin-top: 24px;
-    }
-
-    .office-match-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .office-modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.42);
-      backdrop-filter: blur(10px);
-      z-index: 60;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-
-    .office-modal {
-      width: min(760px, calc(100vw - 32px));
-      max-height: calc(100vh - 48px);
-      overflow: auto;
-      border-radius: 28px;
-      padding: 26px;
-    }
-
-    @media (max-width: 1024px) {
-      .office-hero-top {
-        grid-template-columns: 1fr;
-      }
-
-      .office-hero-actions {
-        min-width: 0;
-        width: 100%;
-        align-items: stretch;
-      }
-
-      .office-primary-actions {
-        justify-content: flex-start;
-      }
-
-      .office-alert-controls {
-        justify-content: flex-start;
-      }
-
-      .office-summary-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 720px) {
-      .office-shell {
-        width: calc(100vw - 20px);
-        padding-top: 12px;
-      }
-
-      .office-hero,
-      .office-login,
-      .office-modal {
-        padding: 20px;
-        border-radius: 24px;
-      }
-
-      .office-match-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .office-lang-bar {
-      position: sticky;
-      top: 0;
-      z-index: 70;
-      display: flex;
-      justify-content: flex-end;
-      padding: 12px 16px 0;
-      pointer-events: none;
-    }
-
-    .office-lang-bar__inner {
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.7);
-      background: rgba(255, 255, 255, 0.82);
-      box-shadow: 0 10px 30px rgba(27, 36, 48, 0.08);
-      backdrop-filter: blur(12px);
-    }
-  </style>
 </head>
 <body class="office-body" x-data="officeApp()" x-init="init()" x-effect="applyOfficeDocumentLang()">
   <div class="office-lang-bar">
@@ -365,22 +40,17 @@
 
   <main x-show="!isAuthenticated" x-cloak>
     <section class="office-login office-panel">
-      <div>
-        <div>
-          <span class="office-chip office-chip-group" x-text="ot('login.slotChip', { slot })"></span>
-          <h1 class="office-title mt-4" x-text="ot('login.title')"></h1>
-        </div>
-      </div>
-
-      <div class="mt-8 rounded-[28px] border border-white/70 bg-white/60 p-5" x-show="tournamentMeta || metaLoading" x-cloak>
-        <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('login.tournamentAssigned')"></div>
-        <div class="mt-3" x-show="metaLoading && !tournamentMeta" x-text="ot('login.loadingTournament')"></div>
+      <span class="office-chip office-chip-group" x-text="ot('login.slotChip', { slot })"></span>
+      <h1 class="office-title mt-3" x-text="ot('login.title')"></h1>
+      <div class="mt-6 rounded-2xl border border-white/70 bg-white/70 p-4" x-show="tournamentMeta || metaLoading" x-cloak>
+        <div class="office-kicker" x-text="ot('login.tournamentAssigned')"></div>
+        <div class="mt-2 text-sm text-slate-500" x-show="metaLoading && !tournamentMeta" x-text="ot('login.loadingTournament')"></div>
         <template x-if="tournamentMeta">
           <div>
-            <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="flex items-start justify-between gap-3 flex-wrap">
               <div>
-                <div class="text-2xl font-semibold text-slate-900" x-text="tournamentMeta.name"></div>
-                <div class="mt-2 text-sm text-slate-500" x-text="(tournamentMeta.start_date || ot('login.noDate')) + (tournamentMeta.end_date ? ' - ' + tournamentMeta.end_date : '')"></div>
+                <div class="text-xl font-semibold text-slate-900" x-text="tournamentMeta.name"></div>
+                <div class="mt-1 text-sm text-slate-500" x-text="(tournamentMeta.start_date || ot('login.noDate')) + (tournamentMeta.end_date ? ' - ' + tournamentMeta.end_date : '')"></div>
               </div>
               <div class="flex gap-2 flex-wrap">
                 <span class="office-chip" :class="tournamentMeta.active ? 'office-chip-group' : 'office-chip-neutral'" x-text="tournamentMeta.active ? ot('login.activeTournament') : ot('login.inactivePreview')"></span>
@@ -390,157 +60,143 @@
           </div>
         </template>
       </div>
-
-      <form class="mt-8 space-y-5" @submit.prevent="authenticate">
+      <form class="mt-6 space-y-4" @submit.prevent="authenticate">
         <label class="form-control">
           <span class="label-text text-slate-700 font-semibold mb-2" x-text="ot('login.passwordLabel')"></span>
-          <input type="password" class="input input-bordered input-lg w-full bg-white/90" x-model="authPassword" :placeholder="ot('login.passwordPlaceholder')">
+          <input type="password" class="input input-bordered w-full bg-white/90" x-model="authPassword" :placeholder="ot('login.passwordPlaceholder')">
         </label>
         <div class="text-sm text-red-700 min-h-6" x-text="authError"></div>
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-          <button type="submit" class="btn btn-lg border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" :class="{'btn-disabled': authLoading}">
-            <span x-show="!authLoading" x-text="ot('login.enter')"></span>
-            <span x-show="authLoading" x-text="ot('login.loggingIn')"></span>
-          </button>
-        </div>
+        <button type="submit" class="btn office-btn-primary" :class="{'btn-disabled': authLoading}">
+          <span x-show="!authLoading" x-text="ot('login.enter')"></span>
+          <span x-show="authLoading" x-text="ot('login.loggingIn')"></span>
+        </button>
       </form>
     </section>
   </main>
 
   <main class="office-shell" x-show="isAuthenticated" x-cloak>
-    <section class="office-hero">
-      <div class="office-hero-top relative z-10">
-        <div class="office-hero-title">
-          <template x-if="tournamentMeta?.logo_path">
-            <img :src="tournamentMeta.logo_path" :alt="ot('hero.logoAlt')" class="office-logo">
-          </template>
-          <template x-if="!tournamentMeta?.logo_path">
-            <div class="office-logo bg-white/60 flex items-center justify-center text-3xl">🎾</div>
-          </template>
-          <div class="min-w-0">
-            <h1 class="office-title" x-text="tournamentMeta?.name || dashboard?.tournament?.name || ot('hero.defaultTitle')"></h1>
-          </div>
-        </div>
-        <div class="office-hero-actions">
-          <div class="office-alert-controls">
-            <label class="office-toggle">
-              <input type="checkbox" :checked="notificationsEnabled" @change="toggleNotifications()">
-              <span x-text="ot('hero.notifications')"></span>
-            </label>
-            <button type="button" class="btn btn-sm btn-outline bg-white/85" @click="testNotifications()" x-text="ot('hero.testNotification')"></button>
-            <span class="text-xs text-slate-500" x-show="notificationPermission === 'denied'" x-text="ot('hero.browserBlocksNotifications')"></span>
-          </div>
-          <div class="office-primary-actions">
-            <button type="button" class="btn btn-outline bg-white/80 border-white/70" @click="loadDashboard()" x-text="ot('hero.refresh')"></button>
-            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #c2410c, #9a3412);" @click="openAddMatchModal()" x-text="ot('hero.addResult')"></button>
-            <button type="button" class="btn btn-ghost text-slate-600" @click="logout()" x-text="ot('hero.logout')"></button>
-          </div>
+    <header class="office-topbar">
+      <div class="office-topbar__brand">
+        <template x-if="tournamentMeta?.logo_path">
+          <img :src="tournamentMeta.logo_path" :alt="ot('hero.logoAlt')" class="office-logo">
+        </template>
+        <template x-if="!tournamentMeta?.logo_path">
+          <div class="office-logo bg-white/70 flex items-center justify-center text-xl">🎾</div>
+        </template>
+        <div class="office-topbar__meta min-w-0">
+          <h1 class="office-title truncate" x-text="tournamentMeta?.name || dashboard?.tournament?.name || ot('hero.defaultTitle')"></h1>
+          <span class="office-chip office-chip-group w-fit" x-text="ot('login.slotChip', { slot })"></span>
         </div>
       </div>
-
-      <div class="grid gap-4 lg:grid-cols-4 mt-8 relative z-10">
-        <article class="office-stat">
-          <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('stats.progress')"></div>
-          <div class="mt-3 text-4xl font-semibold" x-text="`${officeProgressPercent()}%`"></div>
-          <progress class="progress mt-4" :value="officeProgressPercent()" max="100"></progress>
-        </article>
-        <article class="office-stat">
-          <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('stats.finishedMatches')"></div>
-          <div class="mt-3 text-4xl font-semibold" x-text="dashboard?.progress?.finished_matches || 0"></div>
-          <div class="mt-3 text-sm text-slate-500" x-text="ot('stats.ofExpected', { count: dashboard?.progress?.expected_matches || 0 })"></div>
-        </article>
-        <article class="office-stat">
-          <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('stats.remaining')"></div>
-          <div class="mt-3 text-4xl font-semibold" x-text="dashboard?.progress?.remaining_matches || 0"></div>
-          <div class="mt-3 text-sm text-slate-500" x-text="ot('stats.remainingDesc')"></div>
-        </article>
-        <article class="office-stat">
-          <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('stats.bracket')"></div>
-          <div class="mt-3 text-4xl font-semibold" x-text="`${officeKnockout.finished_matches || 0}/${officeKnockout.expected_matches || 0}`"></div>
-          <div class="mt-3 text-sm text-slate-500" x-text="ot('stats.readyToPlay', { count: officeKnockout.ready_matches || 0 })"></div>
-        </article>
-      </div>
-
-      <section class="mt-6 office-panel rounded-[24px] p-5 relative z-10" aria-labelledby="office-quick-info-title">
-        <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('quickInfo.subtitle')"></div>
-        <h2 id="office-quick-info-title" class="mt-2 text-xl font-semibold" x-text="ot('quickInfo.title')"></h2>
-        <p id="office-quick-info-desc" class="mt-1 text-sm text-slate-500" x-text="ot('quickInfo.description')"></p>
-        <label class="sr-only" for="office-quick-info-message" x-text="ot('quickInfo.messageLabel')"></label>
-        <textarea
-          id="office-quick-info-message"
-          class="textarea textarea-bordered w-full mt-4 min-h-[96px] bg-white/80"
-          x-model="quickInfoMessage"
-          @input="quickInfoDirty = true"
-          :placeholder="ot('quickInfo.placeholder')"
-          :aria-describedby="'office-quick-info-desc'"
-          maxlength="2000"
-        ></textarea>
-        <div class="mt-3 flex items-center gap-3 flex-wrap">
-          <label class="office-toggle" for="office-quick-info-active">
-            <input type="checkbox" id="office-quick-info-active" x-model="quickInfoActive" @change="quickInfoDirty = true">
-            <span x-text="ot('quickInfo.showPublic')"></span>
-          </label>
-          <button
-            type="button"
-            class="btn btn-sm border-0 text-white"
-            style="background: linear-gradient(135deg, #0f766e, #115e59);"
-            @click="saveQuickInfo()"
-            :class="{'btn-disabled': quickInfoSaving}"
-            :aria-busy="quickInfoSaving"
-            :aria-disabled="quickInfoSaving"
-            x-text="ot('quickInfo.publish')"
-          ></button>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline bg-white/80"
-            @click="hideQuickInfo()"
-            x-show="quickInfoActive && quickInfoMessage"
-            :class="{'btn-disabled': quickInfoSaving}"
-            :aria-disabled="quickInfoSaving"
-            x-text="ot('quickInfo.hide')"
-          ></button>
-          <span class="text-xs text-slate-500" role="status" aria-live="polite" x-show="quickInfoUpdatedAt" x-text="ot('quickInfo.updated', { time: formatQuickInfoTime(quickInfoUpdatedAt) })"></span>
+      <div id="office-stats" class="office-topbar__stats">
+        <div class="office-pill office-stat">
+          <div class="office-pill__label" x-text="ot('stats.progress')"></div>
+          <div class="office-pill__value" x-text="`${officeProgressPercent()}%`"></div>
         </div>
-      </section>
+        <div class="office-pill office-stat">
+          <div class="office-pill__label" x-text="ot('stats.finishedMatches')"></div>
+          <div class="office-pill__value" x-text="dashboard?.progress?.finished_matches || 0"></div>
+        </div>
+        <div class="office-pill office-stat">
+          <div class="office-pill__label" x-text="ot('stats.remaining')"></div>
+          <div class="office-pill__value" x-text="dashboard?.progress?.remaining_matches || 0"></div>
+        </div>
+        <div class="office-pill office-stat">
+          <div class="office-pill__label" x-text="ot('stats.bracket')"></div>
+          <div class="office-pill__value" x-text="`${officeKnockout.finished_matches || 0}/${officeKnockout.expected_matches || 0}`"></div>
+        </div>
+      </div>
+      <div class="office-topbar__actions">
+        <label class="office-toggle">
+          <input type="checkbox" :checked="notificationsEnabled" @change="toggleNotifications()">
+          <span x-text="ot('hero.notifications')"></span>
+        </label>
+        <button type="button" class="btn btn-sm btn-outline bg-white/85" @click="testNotifications()" x-text="ot('hero.testNotification')"></button>
+        <span class="text-xs text-slate-500" x-show="notificationPermission === 'denied'" x-text="ot('hero.browserBlocksNotifications')"></span>
+        <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="loadDashboard()" x-text="ot('hero.refresh')"></button>
+        <button type="button" class="btn btn-sm office-btn-accent" @click="openAddMatchModal()" x-text="ot('hero.addResult')"></button>
+        <button type="button" class="btn btn-sm btn-ghost text-slate-600" @click="logout()" x-text="ot('hero.logout')"></button>
+      </div>
+    </header>
+
+    <section class="office-quick office-panel" aria-labelledby="office-quick-info-title">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div class="office-kicker" x-text="ot('quickInfo.subtitle')"></div>
+          <h2 id="office-quick-info-title" class="text-base font-semibold" x-text="ot('quickInfo.title')"></h2>
+        </div>
+        <p id="office-quick-info-desc" class="text-xs text-slate-500" x-text="ot('quickInfo.description')"></p>
+      </div>
+      <label class="sr-only" for="office-quick-info-message" x-text="ot('quickInfo.messageLabel')"></label>
+      <textarea
+        id="office-quick-info-message"
+        class="textarea textarea-bordered w-full mt-2 bg-white/80"
+        x-model="quickInfoMessage"
+        @input="quickInfoDirty = true"
+        :placeholder="ot('quickInfo.placeholder')"
+        :aria-describedby="'office-quick-info-desc'"
+        maxlength="2000"
+      ></textarea>
+      <div class="mt-2 flex items-center gap-3 flex-wrap">
+        <label class="office-toggle" for="office-quick-info-active">
+          <input type="checkbox" id="office-quick-info-active" x-model="quickInfoActive" @change="quickInfoDirty = true">
+          <span x-text="ot('quickInfo.showPublic')"></span>
+        </label>
+        <button type="button" class="btn btn-sm office-btn-primary" @click="saveQuickInfo()" :class="{'btn-disabled': quickInfoSaving}" :aria-busy="quickInfoSaving" :aria-disabled="quickInfoSaving" x-text="ot('quickInfo.publish')"></button>
+        <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="hideQuickInfo()" x-show="quickInfoActive && quickInfoMessage" :class="{'btn-disabled': quickInfoSaving}" :aria-disabled="quickInfoSaving" x-text="ot('quickInfo.hide')"></button>
+        <span class="text-xs text-slate-500" role="status" aria-live="polite" x-show="quickInfoUpdatedAt" x-text="ot('quickInfo.updated', { time: formatQuickInfoTime(quickInfoUpdatedAt) })"></span>
+      </div>
     </section>
 
-    <section class="mt-8 office-panel rounded-[28px] p-4 md:p-5">
-      <div class="flex items-center justify-between gap-4 flex-wrap">
-        <div class="flex items-center gap-2 flex-wrap">
+    <section class="office-tabs">
+      <div class="flex items-center justify-between gap-4 flex-wrap w-full">
+        <div class="flex items-center gap-1 flex-wrap">
           <button type="button" class="office-tab" :class="{'is-active': activeTab === 'history'}" @click="activeTab = 'history'" x-text="ot('tabs.history')"></button>
           <button type="button" class="office-tab" :class="{'is-active': activeTab === 'progress'}" @click="activeTab = 'progress'" x-text="ot('tabs.progress')"></button>
           <button type="button" class="office-tab" :class="{'is-active': activeTab === 'knockout'}" @click="activeTab = 'knockout'" x-text="ot('tabs.knockout')"></button>
           <button type="button" class="office-tab" :class="{'is-active': activeTab === 'planning'}" @click="openPlanningTab()" x-text="ot('tabs.planning')"></button>
         </div>
-        <div class="text-sm text-slate-500" x-show="loading" x-text="ot('tabs.refreshing')"></div>
+        <div class="text-sm text-slate-500 px-2" x-show="loading" x-text="ot('tabs.refreshing')"></div>
       </div>
     </section>
 
     <section class="mt-6 space-y-6" x-show="activeTab === 'planning'" x-cloak>
-      <div class="office-panel rounded-[28px] p-5 md:p-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div class="office-panel rounded-[20px] p-4 md:p-5">
+        <div class="office-plan-head">
           <div>
-            <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('planning.subtitle')"></div>
-            <h2 class="mt-2 text-3xl font-semibold" x-text="ot('planning.title')"></h2>
+            <div class="office-kicker" x-text="ot('planning.subtitle')"></div>
+            <h2 class="mt-1 text-xl font-semibold" x-text="ot('planning.title')"></h2>
             <p class="mt-2 text-sm text-slate-500" x-text="ot('planning.description')"></p>
           </div>
           <button type="button" class="btn btn-outline bg-white/80" @click="loadOfficePlanningData()" :class="{'btn-disabled': planningLoading}" x-text="ot('planning.refreshPlan')"></button>
         </div>
-        <div class="mt-5 grid gap-4 md:grid-cols-4">
-          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="planningHeadlineCompetitorLabel()"></div><div class="mt-2 text-3xl font-semibold" x-text="planningHeadlineCompetitorCount()"></div></div>
-          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('planning.groups')"></div><div class="mt-2 text-3xl font-semibold" x-text="planningGroups.length"></div></div>
-          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('planning.entries')"></div><div class="mt-2 text-3xl font-semibold" x-text="planningSchedule.length"></div></div>
-          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('planning.courts')"></div><div class="mt-2 text-3xl font-semibold" x-text="planningCourts.length"></div></div>
+        <div class="mt-4 office-topbar__stats">
+          <div class="office-pill office-stat">
+            <div class="office-pill__label" x-text="planningHeadlineCompetitorLabel()"></div>
+            <div class="office-pill__value" x-text="planningHeadlineCompetitorCount()"></div>
+          </div>
+          <div class="office-pill office-stat">
+            <div class="office-pill__label" x-text="ot('planning.groups')"></div>
+            <div class="office-pill__value" x-text="planningGroups.length"></div>
+          </div>
+          <div class="office-pill office-stat">
+            <div class="office-pill__label" x-text="ot('planning.entries')"></div>
+            <div class="office-pill__value" x-text="planningSchedule.length"></div>
+          </div>
+          <div class="office-pill office-stat">
+            <div class="office-pill__label" x-text="ot('planning.courts')"></div>
+            <div class="office-pill__value" x-text="planningCourts.length"></div>
+          </div>
         </div>
       </div>
 
-      <div class="office-panel rounded-[28px] p-5 md:p-6">
+      <div class="office-panel rounded-[20px] p-5 md:p-6">
         <div class="flex items-start justify-between gap-4 flex-wrap cursor-pointer" @click="planningStep1Collapsed = !planningStep1Collapsed">
           <div class="flex items-start gap-3">
             <span class="mt-1 text-slate-400 transition-transform" :class="planningStep1Collapsed ? '' : 'rotate-90'">▶</span>
             <div>
-              <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('planning.step1')"></div>
-              <h3 class="mt-2 text-2xl font-semibold" x-text="ot('planning.step1Title')"></h3>
+              <div class="office-kicker" x-text="ot('planning.step1')"></div>
+              <h3 class="mt-1 text-xl font-semibold" x-text="ot('planning.step1Title')"></h3>
               <p class="mt-1 text-sm text-slate-500" x-show="!planningStep1Collapsed" x-text="planningSelectedCategoryIsDoubles() ? ot('planning.step1OpenDoubles') : ot('planning.step1Open')"></p>
               <p class="mt-1 text-sm text-emerald-700 font-semibold" x-show="planningStep1Collapsed && planningGroupsComplete()" x-text="planningStep1CompleteLine()"></p>
               <p class="mt-1 text-sm text-amber-700 font-semibold" x-show="planningStep1Collapsed && !planningGroupsComplete()" x-text="ot('planning.step1InProgress')"></p>
@@ -555,8 +211,8 @@
         </div>
 
         <div x-show="!planningStep1Collapsed">
-        <div class="mt-5 rounded-[22px] border border-emerald-200 bg-emerald-50/60 p-4" x-show="!tournamentCategories.length || categorySetupOpen">
-          <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" x-text="ot('planning.categoriesSetup')"></div>
+        <div class="mt-5 rounded-[16px] border border-emerald-200 bg-emerald-50/60 p-4" x-show="!tournamentCategories.length || categorySetupOpen">
+          <div class="office-kicker" x-text="ot('planning.categoriesSetup')"></div>
           <p class="mt-1 text-sm text-slate-600" x-text="ot('planning.categoriesSetupHint')"></p>
           <div class="mt-3 flex flex-wrap gap-2">
             <template x-for="preset in planningCategoryPresetKeys()" :key="'preset_'+preset">
@@ -582,14 +238,14 @@
           </label>
           <p class="mt-1 text-xs text-slate-500" x-text="ot('planning.doublesHint')"></p>
           <div class="mt-3 flex gap-2 flex-wrap">
-            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="confirmTournamentCategories()" x-text="ot('planning.confirmCategories')"></button>
+            <button type="button" class="btn office-btn-primary" @click="confirmTournamentCategories()" x-text="ot('planning.confirmCategories')"></button>
             <button type="button" class="btn btn-outline bg-white/80" x-show="tournamentCategories.length" @click="categorySetupOpen = false" x-text="ot('planning.cancelSetup')"></button>
           </div>
         </div>
 
-        <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="tournamentCategories.length && !categorySetupOpen">
+        <div class="mt-5 rounded-[16px] border border-slate-200/80 bg-white/65 p-4" x-show="tournamentCategories.length && !categorySetupOpen">
           <div class="flex items-center justify-between gap-2 flex-wrap">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" x-text="ot('planning.tournamentCategories')"></div>
+            <div class="office-kicker" x-text="ot('planning.tournamentCategories')"></div>
             <button type="button" class="text-sm font-semibold text-emerald-700" @click="categorySetupOpen = true" x-text="'+ ' + ot('planning.addCategory')"></button>
           </div>
           <div class="mt-2 flex flex-wrap gap-2">
@@ -604,7 +260,7 @@
           </div>
           <div class="mt-3 grid gap-2 sm:grid-cols-3" x-show="categoryEditId">
             <input type="text" class="input input-bordered bg-white/90 sm:col-span-2" x-model="categoryEditLabel">
-            <button type="button" class="btn btn-sm border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveTournamentCategoryEdit()" x-text="ot('planning.save')"></button>
+            <button type="button" class="btn btn-sm office-btn-primary" @click="saveTournamentCategoryEdit()" x-text="ot('planning.save')"></button>
           </div>
           <div class="mt-3 grid gap-2 sm:grid-cols-4" x-show="categorySetupOpen && tournamentCategories.length">
             <input type="text" class="input input-bordered bg-white/90 sm:col-span-2" :placeholder="ot('planning.customCategoryPlaceholder')" x-model="categoryCustomLabel">
@@ -617,7 +273,7 @@
           </label>
         </div>
 
-        <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="tournamentCategories.length && !categorySetupOpen">
+        <div class="mt-5 rounded-[16px] border border-slate-200/80 bg-white/65 p-4" x-show="tournamentCategories.length && !categorySetupOpen">
           <button type="button" class="text-sm font-semibold text-emerald-700" @click="planningAddPlayerOpen = !planningAddPlayerOpen" x-text="planningAddPlayerOpen ? '− ' + ot('planning.addPlayerTitle') : '+ ' + ot('planning.addPlayer')"></button>
           <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" x-show="planningAddPlayerOpen">
             <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.firstName')" x-model="planningNewPlayer.first_name">
@@ -631,10 +287,10 @@
               <option value="K" x-text="ot('gender.women')"></option>
             </select>
             <input type="text" class="input input-bordered bg-white/90" maxlength="2" :placeholder="ot('planning.countryCode')" x-model="planningNewPlayer.country">
-            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addOfficePlayer()" x-text="ot('planning.addPlayer')"></button>
+            <button type="button" class="btn office-btn-primary" @click="addOfficePlayer()" x-text="ot('planning.addPlayer')"></button>
           </div>
         </div>
-        <div class="mt-5 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="planningSelectedCategoryIsDoubles() && tournamentCategories.length && !categorySetupOpen">
+        <div class="mt-5 rounded-[16px] border border-slate-200/80 bg-white/65 p-4" x-show="planningSelectedCategoryIsDoubles() && tournamentCategories.length && !categorySetupOpen">
           <button type="button" class="text-sm font-semibold text-emerald-700" @click="planningAddTeamOpen = !planningAddTeamOpen" x-text="planningAddTeamOpen ? '− ' + ot('planning.addTeamTitle') : '+ ' + ot('planning.addTeam')"></button>
           <div class="mt-3 grid gap-3 sm:grid-cols-3" x-show="planningAddTeamOpen">
             <select class="select select-bordered bg-white/90" x-model="planningNewTeam.player1_id">
@@ -649,7 +305,7 @@
                 <option :value="player.id" x-text="player.name"></option>
               </template>
             </select>
-            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addOfficeTeam()" x-text="ot('planning.addTeam')"></button>
+            <button type="button" class="btn office-btn-primary" @click="addOfficeTeam()" x-text="ot('planning.addTeam')"></button>
           </div>
           <div class="mt-3 space-y-2" x-show="planningTeamsForCategory(planningSelectedCategoryId).length">
             <template x-for="team in planningTeamsForCategory(planningSelectedCategoryId)" :key="'office_team_'+team.id">
@@ -661,15 +317,15 @@
           </div>
         </div>
         <div class="mt-6" x-show="!tournamentCategories.length && !categorySetupOpen">
-          <div class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500" x-text="ot('planning.confirmCategoriesFirst')"></div>
+          <div class="rounded-[20px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500" x-text="ot('planning.confirmCategoriesFirst')"></div>
         </div>
         <div class="mt-6" x-show="tournamentCategories.length && !planningPlayers.length && !categorySetupOpen">
-          <div class="rounded-[24px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500" x-text="ot('planning.addPlayersFirst')"></div>
+          <div class="rounded-[20px] border border-slate-200/80 bg-white/70 p-8 text-center text-slate-500" x-text="ot('planning.addPlayersFirst')"></div>
         </div>
 
         <div x-show="planningDivisions().length && tournamentCategories.length">
           <div class="mt-4">
-            <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2" x-text="ot('planning.category')"></div>
+            <div class="office-kicker mb-2" x-text="ot('planning.category')"></div>
             <div class="flex flex-wrap gap-2">
               <template x-for="division in planningDivisions()" :key="'office_division_card_'+division.key">
                 <button type="button"
@@ -687,7 +343,7 @@
           </div>
 
           <div class="mt-5 flex items-center gap-3 flex-wrap" x-show="planningSelectedDivision">
-            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" x-text="ot('planning.groupCount')"></span>
+            <span class="office-kicker" x-text="ot('planning.groupCount')"></span>
             <div class="inline-flex items-center rounded-xl border border-slate-200 bg-white/80 overflow-hidden">
               <button type="button" class="px-3 py-1.5 text-lg font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40" @click="planningSetGroupCount(-1)" :disabled="planningGroupCount <= 1">−</button>
               <span class="px-4 min-w-10 text-center font-semibold tabular-nums" x-text="planningGroupCount"></span>
@@ -698,7 +354,7 @@
           </div>
 
           <div class="mt-5 grid gap-4 lg:grid-cols-[0.8fr_2fr]" x-show="planningSelectedDivision && !planningSelectedCategoryIsDoubles()">
-            <div class="rounded-[22px] border border-slate-200/80 bg-white/65 p-3"
+            <div class="rounded-[16px] border border-slate-200/80 bg-white/65 p-3"
                  @dragover.prevent @drop.prevent="onPlanningDropToPool()">
               <div class="flex items-center justify-between mb-2">
                 <div class="font-semibold text-slate-800 text-sm" x-text="ot('planning.toDraw')"></div>
@@ -725,13 +381,13 @@
 
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <template x-for="groupName in planningTargetGroupNames()" :key="'office_group_col_'+groupName">
-                <div class="rounded-[22px] border border-slate-200/80 bg-white/70 p-3 transition"
+                <div class="rounded-[16px] border border-slate-200/80 bg-white/70 p-3 transition"
                      @dragover.prevent @drop.prevent="onPlanningDropToGroup(groupName)">
                   <div class="flex items-center justify-between mb-2 gap-2">
                     <div class="font-semibold text-slate-800 text-sm truncate" x-text="planningGroupDisplayName(groupName)"></div>
                     <span class="office-chip office-chip-group" x-text="planningAssignedPlayers(groupName).length"></span>
                   </div>
-                  <label class="block text-[10px] uppercase tracking-wide text-slate-400 mb-1" x-text="ot('planning.playFormat')"></label>
+                  <label class="block office-kicker mb-1" x-text="ot('planning.playFormat')"></label>
                   <select class="select select-bordered select-xs w-full mb-2 bg-white/90"
                           :value="planningGroupPlayFormat(groupName)"
                           :disabled="planningGroupHasLockedFormat(groupName)"
@@ -760,7 +416,7 @@
           </div>
 
           <div class="mt-5 grid gap-4 lg:grid-cols-[0.8fr_2fr]" x-show="planningSelectedDivision && planningSelectedCategoryIsDoubles()">
-            <div class="rounded-[22px] border border-slate-200/80 bg-white/65 p-3"
+            <div class="rounded-[16px] border border-slate-200/80 bg-white/65 p-3"
                  @dragover.prevent @drop.prevent="onPlanningDropTeamToPool()">
               <div class="flex items-center justify-between mb-2">
                 <div class="font-semibold text-slate-800 text-sm" x-text="ot('planning.toDraw')"></div>
@@ -782,13 +438,13 @@
 
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <template x-for="groupName in planningTargetGroupNames()" :key="'office_team_group_col_'+groupName">
-                <div class="rounded-[22px] border border-slate-200/80 bg-white/70 p-3 transition"
+                <div class="rounded-[16px] border border-slate-200/80 bg-white/70 p-3 transition"
                      @dragover.prevent @drop.prevent="onPlanningDropTeamToGroup(groupName)">
                   <div class="flex items-center justify-between mb-2 gap-2">
                     <div class="font-semibold text-slate-800 text-sm truncate" x-text="planningGroupDisplayName(groupName)"></div>
                     <span class="office-chip office-chip-group" x-text="planningAssignedTeams(groupName).length"></span>
                   </div>
-                  <label class="block text-[10px] uppercase tracking-wide text-slate-400 mb-1" x-text="ot('planning.playFormat')"></label>
+                  <label class="block office-kicker mb-1" x-text="ot('planning.playFormat')"></label>
                   <select class="select select-bordered select-xs w-full mb-2 bg-white/90"
                           :value="planningGroupPlayFormat(groupName)"
                           :disabled="planningGroupHasLockedFormat(groupName)"
@@ -818,190 +474,211 @@
         </div>
       </div>
 
-      <div class="office-panel rounded-[28px] p-5 md:p-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div class="office-panel rounded-[20px] p-4 md:p-5">
+        <div class="office-plan-head">
           <div>
-            <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('planning.step2')"></div>
-            <h3 class="mt-2 text-2xl font-semibold" x-text="ot('planning.step2Title')"></h3>
+            <div class="office-kicker" x-text="ot('planning.step2')"></div>
+            <h3 class="mt-1 text-xl font-semibold" x-text="ot('planning.step2Title')"></h3>
             <p class="mt-1 text-sm text-slate-500" x-text="ot('planning.step2Open')"></p>
           </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" class="btn btn-outline bg-white/80" @click="generatePlanningSchedule()" x-text="ot('planning.generateMatches')"></button>
-            <button type="button" class="btn btn-outline bg-white/80" @click="generatePlanningRematch()" x-text="ot('planning.generateRematch')"></button>
-            <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" :class="{'btn-disabled': planningPublishing}" @click="publishAllSchedule()" x-text="ot('planning.publishAll')"></button>
-          </div>
         </div>
 
-        <div class="mt-4 rounded-[22px] border border-slate-200/80 bg-white/65 p-4" x-show="planningBracketGroups().length">
-          <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500" x-text="ot('planning.rematchGroups')"></div>
-          <p class="mt-1 text-sm text-slate-500" x-text="ot('planning.rematchHint')"></p>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <template x-for="group in planningBracketGroups()" :key="'rematch_group_'+group.id">
-              <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-sm text-slate-700 cursor-pointer">
-                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
-                       :checked="isPlanningRematchGroupSelected(group.id)"
-                       @change="togglePlanningRematchGroup(group.id, $event.target.checked)">
-                <span x-text="group.name"></span>
-              </label>
-            </template>
-          </div>
-        </div>
+        <div class="office-workspace mt-4">
+          <aside class="office-commands office-panel">
+            <div class="office-kicker mb-2" x-text="ot('planning.commands')"></div>
+            <div class="office-stepper">
+              <div class="office-step" :class="officePlanningHasMatches() ? 'is-done' : 'is-active'">
+                <span class="office-step__n">1</span>
+                <span x-text="ot('planning.stageMatches')"></span>
+              </div>
+              <div class="office-step" :class="autoIsPreview() || officePlanningHasMatches() ? 'is-active' : ''">
+                <span class="office-step__n">2</span>
+                <span x-text="ot('planning.stageLayout')"></span>
+              </div>
+              <div class="office-step" :class="autoIsPreview() ? '' : ''">
+                <span class="office-step__n">3</span>
+                <span x-text="ot('planning.stagePublish')"></span>
+              </div>
+            </div>
 
-        <div class="mt-5 flex flex-wrap gap-2" x-show="planningTournamentDays().length">
-          <template x-for="(day, index) in planningTournamentDays()" :key="'planning_day_tab_'+day">
-            <button type="button"
-              class="rounded-full border px-4 py-1.5 text-sm font-semibold transition"
-              :class="autoDayDate === day ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300'"
-              @click="selectPlanningDay(day)"
-              x-text="planningDayLabel(day, index)"></button>
-          </template>
-        </div>
+            <div class="flex flex-wrap gap-1 mb-3" x-show="planningTournamentDays().length">
+              <template x-for="(day, index) in planningTournamentDays()" :key="'planning_day_tab_'+day">
+                <button type="button"
+                  class="rounded-full border px-3 py-1 text-xs font-semibold transition"
+                  :class="autoDayDate === day ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-600'"
+                  @click="selectPlanningDay(day)"
+                  x-text="planningDayLabel(day, index)"></button>
+              </template>
+            </div>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label class="block">
-            <span class="text-xs font-semibold uppercase tracking-wide text-slate-500" x-text="ot('planning.scope')"></span>
-            <select class="select select-bordered bg-white/90 mt-1 w-full" x-model="autoPhaseScope">
-              <option value="group" x-text="ot('planning.scopeGroup')"></option>
-              <option value="knockout" x-text="ot('planning.scopeKnockout')"></option>
-              <option value="all" x-text="ot('planning.scopeAll')"></option>
-            </select>
-          </label>
-          <label class="block">
-            <span class="text-xs font-semibold uppercase tracking-wide text-slate-500" x-text="ot('planning.startTime')"></span>
-            <input type="time" class="input input-bordered bg-white/90 mt-1 w-full" x-model="autoStartTime">
-          </label>
-          <div class="block">
-            <span class="text-xs font-semibold uppercase tracking-wide text-slate-500" x-text="ot('planning.b1Court')"></span>
-            <div class="mt-1 rounded-xl border border-slate-200 bg-white/90 p-2 max-h-32 overflow-y-auto space-y-1">
-              <template x-for="court in autoCourts" :key="'autob1_'+court.kort_id">
-                <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
-                  <input type="checkbox"
-                         class="checkbox checkbox-sm checkbox-primary"
-                         :checked="autoB1Courts.map(String).includes(String(court.kort_id))"
-                         @change="autoToggleB1Court(court.kort_id, $event.target.checked)">
-                  <span x-text="ot('planning.courtPrefix', { name: court.name })"></span>
-                </label>
+            <label class="block mb-2">
+              <span class="office-kicker" x-text="ot('planning.scope')"></span>
+              <select class="select select-bordered select-sm bg-white mt-1 w-full" x-model="autoPhaseScope">
+                <option value="group" x-text="ot('planning.scopeGroup')"></option>
+                <option value="knockout" x-text="ot('planning.scopeKnockout')"></option>
+                <option value="all" x-text="ot('planning.scopeAll')"></option>
+              </select>
+            </label>
+            <label class="block mb-2">
+              <span class="office-kicker" x-text="ot('planning.startTime')"></span>
+              <input type="time" class="input input-bordered input-sm bg-white mt-1 w-full" x-model="autoStartTime">
+            </label>
+            <div class="block mb-3">
+              <span class="office-kicker" x-text="ot('planning.b1Court')"></span>
+              <div class="mt-1 rounded-xl border border-slate-200 bg-white p-2 max-h-28 overflow-y-auto space-y-1">
+                <template x-for="court in autoCourts" :key="'autob1_'+court.kort_id">
+                  <label class="flex items-center gap-2 rounded-lg px-1 py-1 text-xs text-slate-700 cursor-pointer">
+                    <input type="checkbox" class="checkbox checkbox-xs checkbox-primary"
+                           :checked="autoB1Courts.map(String).includes(String(court.kort_id))"
+                           @change="autoToggleB1Court(court.kort_id, $event.target.checked)">
+                    <span x-text="ot('planning.courtPrefix', { name: court.name })"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-outline bg-white" @click="generatePlanningSchedule()" x-text="ot('planning.generateMatches')"></button>
+            <button type="button" class="btn btn-sm btn-outline bg-white" @click="generatePlanningRematch()" x-text="ot('planning.generateRematch')"></button>
+            <button type="button" class="btn btn-sm office-btn-primary" :class="{'btn-disabled': autoLoading}" @click="autoGenerate()" x-text="ot('planning.generateProposal')"></button>
+            <button type="button" class="btn btn-sm office-btn-primary mt-2" :class="{'btn-disabled': planningPublishing}" @click="publishAllSchedule()" x-text="ot('planning.publishAll')"></button>
+            <button type="button" class="btn btn-sm btn-ghost text-left justify-start" @click="planningRematchOpen = !planningRematchOpen" x-text="ot('planning.rematchesToggle')"></button>
+          </aside>
+
+          <div>
+            <div class="office-preview-bar" x-show="autoIsPreview()">
+              <span class="office-chip office-chip-knockout font-semibold" x-text="ot('planning.previewMode')"></span>
+              <button type="button" class="btn btn-sm office-btn-primary" :class="{'btn-disabled': autoLoading}" @click="autoApply()" x-text="ot('planning.approveSchedule')"></button>
+              <button type="button" class="btn btn-sm btn-outline bg-white" :class="{'btn-disabled': autoLoading}" @click="autoDiscardProposal()" x-text="ot('planning.discardProposal')"></button>
+              <span class="text-xs text-slate-500" x-text="ot('planning.afterApproveHint')"></span>
+            </div>
+            <p class="text-xs text-slate-500 mb-2" x-show="!autoIsPreview()" x-text="ot('planning.dragHint')"></p>
+
+            <div class="rounded-[16px] border border-slate-200/80 bg-white/70 p-3 mb-3" x-show="planningRematchOpen && planningBracketGroups().length">
+              <div class="office-kicker" x-text="ot('planning.rematchGroups')"></div>
+              <p class="mt-1 text-xs text-slate-500" x-text="ot('planning.rematchHint')"></p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <template x-for="group in planningBracketGroups()" :key="'rematch_group_'+group.id">
+                  <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 cursor-pointer">
+                    <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                           :checked="isPlanningRematchGroupSelected(group.id)"
+                           @change="togglePlanningRematchGroup(group.id, $event.target.checked)">
+                    <span x-text="group.name"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+
+            <div class="office-timetable-wrap">
+              <div class="office-timetable office-timetable--head" :style="officeTimetableStyle()">
+                <div class="office-timetable__corner"></div>
+                <template x-for="court in autoCourts" :key="'gridh_'+court.kort_id">
+                  <div class="office-timetable__court">
+                    <div class="flex items-start justify-between gap-1">
+                      <div>
+                        <div x-text="autoCourtLabel(court.kort_id)"></div>
+                        <div class="text-[10px] font-medium text-slate-400" x-text="autoSlotMinutesLabel(court.kort_id)"></div>
+                      </div>
+                      <button type="button"
+                              class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                              :class="autoIsB1Court(court.kort_id) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-400'"
+                              :title="ot('planning.toggleB1Court')"
+                              @click.stop="autoToggleB1Court(court.kort_id, !autoIsB1Court(court.kort_id))"
+                              x-text="'B1'"></button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+              <template x-for="time in autoGridTimes()" :key="'gridt_'+time">
+                <div class="office-timetable office-timetable--row" :style="officeTimetableStyle()">
+                  <div class="office-timetable__time" x-text="time"></div>
+                  <template x-for="court in autoCourts" :key="'gridc_'+time+'_'+court.kort_id">
+                    <div class="office-timetable__cell"
+                         @dragover.prevent
+                         @drop.prevent="onAutoDropAt(court.kort_id, time)">
+                      <template x-for="entry in autoEntriesAt(court.kort_id, time)" :key="'cell_'+autoEntryId(entry)">
+                        <div class="office-block"
+                             :class="[
+                               officeScheduleStatusClass(entry.status),
+                               autoIsPlaceholder(entry) ? 'is-placeholder' : '',
+                               planningOpenCardId === autoEntryId(entry) ? 'is-selected' : ''
+                             ]"
+                             :draggable="!autoLoading"
+                             @dragstart="onAutoDragStart(entry, $event)"
+                             @click="!autoIsPreview() && togglePlanningCard(entry)">
+                          <div class="flex items-center justify-between gap-1">
+                            <span class="font-mono text-[11px] font-bold text-emerald-700" x-text="entry.scheduled_time"></span>
+                            <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="officeDisplayLabel(entry.phase)"></span>
+                          </div>
+                          <div class="mt-0.5 competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                          <div class="office-block__vs" x-text="ot('versus')"></div>
+                          <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
+                          <div class="text-[10px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
+                          <div class="text-[10px] font-semibold mt-0.5" :class="entry.status === 'draft' ? 'text-slate-400' : 'text-emerald-700'" x-text="officeScheduleStatusLabel(entry.status)"></div>
+                        </div>
+                      </template>
+                      <div class="h-full min-h-[64px] grid place-items-center text-[10px] text-slate-300" x-show="!autoEntriesAt(court.kort_id, time).length" x-text="ot('planning.emptySlot')"></div>
+                    </div>
+                  </template>
+                </div>
               </template>
             </div>
           </div>
-          <div class="flex items-end gap-2">
-            <button type="button" class="btn border-0 text-white w-full" style="background: linear-gradient(135deg, #0f766e, #115e59);" :class="{'btn-disabled': autoLoading}" @click="autoGenerate()" x-text="ot('planning.generateProposal')"></button>
-          </div>
-        </div>
 
-        <div class="mt-4 flex items-center gap-3 flex-wrap" x-show="autoIsPreview()">
-          <span class="office-chip office-chip-knockout font-semibold" x-text="ot('planning.previewMode')"></span>
-          <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" :class="{'btn-disabled': autoLoading}" @click="autoApply()" x-text="ot('planning.approveSchedule')"></button>
-          <button type="button" class="btn btn-outline bg-white/80" :class="{'btn-disabled': autoLoading}" @click="autoDiscardProposal()" x-text="ot('planning.discardProposal')"></button>
-          <span class="text-xs text-slate-500" x-text="ot('planning.afterApproveHint')"></span>
-        </div>
-        <div class="mt-4 text-xs text-slate-500" x-show="!autoIsPreview()" x-text="ot('planning.dragHint')"></div>
-
-        <div class="mt-4 overflow-x-auto">
-          <div class="flex gap-4 min-w-max">
-            <template x-for="court in autoCourts" :key="'autocol_'+court.kort_id">
-              <div class="w-64 flex-shrink-0 rounded-2xl bg-slate-50 border border-slate-200 p-3"
-                   @dragover.prevent
-                   @drop.prevent="onAutoDrop(court.kort_id, null)">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0">
-                    <div class="text-sm font-semibold text-slate-900" x-text="autoCourtLabel(court.kort_id)"></div>
-                    <div class="text-[11px] text-slate-400 mb-2" x-text="autoSlotMinutesLabel(court.kort_id)"></div>
-                  </div>
-                  <button type="button"
-                          class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition"
-                          :class="autoIsB1Court(court.kort_id) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'"
-                          :title="ot('planning.toggleB1Court')"
-                          @click.stop="autoToggleB1Court(court.kort_id, !autoIsB1Court(court.kort_id))"
-                          x-text="'B1'"></button>
+          <aside class="office-inspector office-panel">
+            <div class="office-kicker" x-text="ot('planning.inspectorTitle')"></div>
+            <p class="mt-2 text-sm text-slate-500" x-show="!planningOpenCardId" x-text="ot('planning.inspectorEmpty')"></p>
+            <template x-for="entry in planningInspectorEntries()" :key="'insp_'+autoEntryId(entry)">
+              <div class="mt-3 space-y-2" x-show="!autoIsPreview()">
+                <div class="text-sm font-semibold leading-tight space-y-0.5">
+                  <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                  <div class="office-block__vs" x-text="ot('versus')"></div>
+                  <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
                 </div>
-                <div class="space-y-2 min-h-[80px]">
-                  <template x-for="entry in autoBoardEntries(court.kort_id)" :key="'autocard_'+(entry.schedule_id || entry.id)">
-                    <div class="rounded-xl border shadow-sm p-2"
-                         :class="(autoIsPlaceholder(entry) ? 'bg-indigo-50 border-indigo-200 border-dashed' : 'bg-white border-slate-200') + (planningOpenCardId === autoEntryId(entry) ? ' ring-2 ring-emerald-400' : '')">
-                      <div class="cursor-move"
-                           :draggable="!autoLoading"
-                           @dragstart="onAutoDragStart(entry, $event)"
-                           @dragover.prevent
-                           @drop.prevent.stop="onAutoDrop(court.kort_id, entry)"
-                           @click="!autoIsPreview() && togglePlanningCard(entry)">
-                        <div class="flex items-center justify-between gap-2">
-                          <span class="font-mono font-semibold text-emerald-700 tabular-nums" x-text="entry.scheduled_time"></span>
-                          <div class="flex items-center gap-1">
-                            <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="officeDisplayLabel(entry.phase)"></span>
-                            <button type="button"
-                                    class="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                                    :title="ot('planning.removeEntry')"
-                                    x-show="!autoIsPreview()"
-                                    @click.stop="deletePlanningScheduleEntry(entry, { skipConfirm: true })"
-                                    x-text="'×'"></button>
-                          </div>
-                        </div>
-                        <div class="mt-1 text-sm font-semibold leading-tight space-y-0.5" :class="autoIsPlaceholder(entry) ? 'text-indigo-600 italic' : 'text-slate-900'">
-                          <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
-                          <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400" x-text="ot('versus')"></div>
-                          <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
-                        </div>
-                        <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
-                        <div class="text-[11px] font-semibold mt-0.5" :class="entry.status === 'draft' ? 'text-slate-400' : 'text-emerald-600'" x-text="officeScheduleStatusLabel(entry.status)"></div>
-                      </div>
-                      <div class="mt-2 pt-2 border-t border-slate-200 space-y-2" x-show="planningOpenCardId === autoEntryId(entry) && !autoIsPreview()" x-cloak @click.stop>
-                        <div class="grid grid-cols-2 gap-2">
-                          <label class="block">
-                            <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="ot('planning.time')"></span>
-                            <input type="time" class="input input-bordered input-sm bg-white w-full" x-model="entry.scheduled_time">
-                          </label>
-                          <label class="block">
-                            <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="ot('planning.court')"></span>
-                            <select class="select select-bordered select-sm bg-white w-full" x-model="entry.court_id">
-                              <option value="" x-text="ot('planning.courtTbd')"></option>
-                              <template x-for="c in autoCourts" :key="'carddetail_court_'+entry.id+'_'+c.kort_id">
-                                <option :value="c.kort_id" x-text="c.name || c.kort_id"></option>
-                              </template>
-                            </select>
-                          </label>
-                        </div>
-                        <label class="block">
-                          <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="ot('planning.publishStatus')"></span>
-                          <select class="select select-bordered select-sm bg-white w-full" x-model="entry.status">
-                            <template x-for="option in scheduleStatusOptions()" :key="'carddetail_status_'+entry.id+'_'+option.value">
-                              <option :value="option.value" x-text="option.label"></option>
-                            </template>
-                          </select>
-                        </label>
-                        <label class="block">
-                          <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="ot('planning.publicNotes')"></span>
-                          <input type="text" class="input input-bordered input-sm bg-white w-full" x-model="entry.notes_public" :placeholder="ot('planning.publicNotesPlaceholder')">
-                        </label>
-                        <div class="flex gap-2 flex-wrap">
-                          <button type="button"
-                                  class="btn btn-sm border-0 text-white"
-                                  style="background: linear-gradient(135deg, #c2410c, #9a3412);"
-                                  x-show="officeCanAddResultFromSchedule(entry)"
-                                  @click="openAddResultFromSchedule(entry)"
-                                  x-text="ot('planning.addResult')"></button>
-                          <button type="button" class="btn btn-sm border-0 text-white flex-1" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="saveOfficeScheduleEntry(entry)" x-text="ot('planning.save')"></button>
-                          <button type="button" class="btn btn-sm btn-outline" @click="deletePlanningScheduleEntry(entry)" x-text="ot('planning.delete')"></button>
-                        </div>
-                      </div>
-                    </div>
-                  </template>
-                  <div class="text-[11px] text-slate-300 text-center py-2" x-show="!autoBoardEntries(court.kort_id).length" x-text="ot('planning.dropMatchHere')"></div>
+                <div class="grid grid-cols-2 gap-2">
+                  <label class="block">
+                    <span class="office-kicker" x-text="ot('planning.time')"></span>
+                    <input type="time" class="input input-bordered input-sm bg-white w-full" x-model="entry.scheduled_time">
+                  </label>
+                  <label class="block">
+                    <span class="office-kicker" x-text="ot('planning.court')"></span>
+                    <select class="select select-bordered select-sm bg-white w-full" x-model="entry.court_id">
+                      <option value="" x-text="ot('planning.courtTbd')"></option>
+                      <template x-for="c in autoCourts" :key="'insp_court_'+entry.id+'_'+c.kort_id">
+                        <option :value="c.kort_id" x-text="c.name || c.kort_id"></option>
+                      </template>
+                    </select>
+                  </label>
+                </div>
+                <label class="block">
+                  <span class="office-kicker" x-text="ot('planning.publishStatus')"></span>
+                  <select class="select select-bordered select-sm bg-white w-full" x-model="entry.status">
+                    <template x-for="option in scheduleStatusOptions()" :key="'insp_status_'+entry.id+'_'+option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="office-kicker" x-text="ot('planning.publicNotes')"></span>
+                  <input type="text" class="input input-bordered input-sm bg-white w-full" x-model="entry.notes_public" :placeholder="ot('planning.publicNotesPlaceholder')">
+                </label>
+                <div class="flex gap-2 flex-wrap pt-1">
+                  <button type="button" class="btn btn-sm office-btn-accent" x-show="officeCanAddResultFromSchedule(entry)" @click="openAddResultFromSchedule(entry)" x-text="ot('planning.addResult')"></button>
+                  <button type="button" class="btn btn-sm office-btn-primary flex-1" @click="saveOfficeScheduleEntry(entry)" x-text="ot('planning.save')"></button>
+                  <button type="button" class="btn btn-sm btn-outline" @click="deletePlanningScheduleEntry(entry)" x-text="ot('planning.delete')"></button>
                 </div>
               </div>
             </template>
-          </div>
+          </aside>
         </div>
 
-        <div class="mt-4 rounded-[20px] border border-amber-200 bg-amber-50 p-3"
+        <div class="office-unassigned"
              x-show="autoUnplacedCount()"
              @dragover.prevent
              @drop.prevent="onAutoDropToUnassigned()">
           <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
             <div>
-              <div class="text-sm font-semibold text-slate-900" x-text="planningUnassignedTitle()"></div>
+              <div class="text-sm font-semibold text-slate-900" x-text="ot('planning.unassignedShort', { count: autoUnplacedCount() })"></div>
               <p class="mt-1 text-xs text-amber-900/80" x-text="ot('planning.unassignedHint')"></p>
-              <div class="text-[11px] text-slate-500 mt-1" x-text="ot('planning.dropToUnassigned')"></div>
             </div>
             <button type="button"
                     class="btn btn-sm btn-outline border-rose-200 text-rose-700 hover:bg-rose-50"
@@ -1009,16 +686,16 @@
                     @click="deleteAllUnassigned()"
                     x-text="ot('planning.deleteAllUnassigned')"></button>
           </div>
-          <div class="mt-2 space-y-4">
+          <div class="space-y-3">
             <template x-for="section in autoUnplacedSections()" :key="'autounp_section_'+section.key">
               <div>
-                <div class="text-xs font-semibold uppercase tracking-wide text-amber-900/90"
-                     x-text="section.label + ' (' + section.entries.length + ')'"></div>
+                <div class="office-kicker" x-text="section.label + ' (' + section.entries.length + ')'"></div>
                 <div class="mt-2 flex flex-wrap gap-2">
                   <template x-for="entry in section.entries" :key="'autounp_'+(entry.schedule_id || entry.id)">
-                    <div class="relative rounded-xl bg-white border border-amber-200 p-2 pr-7 cursor-move min-w-[11rem]"
+                    <div class="relative rounded-xl bg-white border border-amber-200 p-2 pr-7 cursor-move min-w-[10rem]"
                          :draggable="!autoLoading"
-                         @dragstart="onAutoDragStart(entry, $event)">
+                         @dragstart="onAutoDragStart(entry, $event)"
+                         @click="togglePlanningCard(entry)">
                       <button type="button"
                               class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                               :title="ot('planning.removeEntry')"
@@ -1026,11 +703,10 @@
                               x-text="'×'"></button>
                       <div class="text-sm font-semibold text-slate-900 leading-tight space-y-0.5">
                         <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400" x-text="ot('versus')"></div>
+                        <div class="office-block__vs" x-text="ot('versus')"></div>
                         <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
                       </div>
                       <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
-                      <div class="text-[10px] text-amber-800 mt-0.5" x-text="planningUnassignedDayLabel(entry)"></div>
                     </div>
                   </template>
                 </div>
@@ -1039,9 +715,9 @@
           </div>
         </div>
 
-        <div class="mt-5">
+        <div class="mt-4">
           <button type="button" class="text-sm font-semibold text-slate-500 hover:text-slate-800" @click="planningManualOpen = !planningManualOpen" x-text="planningManualOpen ? ot('planning.hideManual') : ot('planning.showManual')"></button>
-          <div class="mt-3 rounded-[24px] border border-slate-200/80 bg-white/65 p-4" x-show="planningManualOpen" x-cloak>
+          <div class="mt-3 rounded-[16px] border border-slate-200/80 bg-white/65 p-4" x-show="planningManualOpen" x-cloak>
             <div class="grid gap-3 lg:grid-cols-6">
               <input type="date" class="input input-bordered bg-white/90" x-model="planningNewSchedule.day_date">
               <input type="time" class="input input-bordered bg-white/90" x-model="planningNewSchedule.scheduled_time">
@@ -1071,17 +747,16 @@
                 </template>
               </select>
               <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.notesPlaceholder')" x-model="planningNewSchedule.notes_public">
-              <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addPlanningScheduleEntry()" x-text="ot('planning.add')"></button>
+              <button type="button" class="btn office-btn-primary" @click="addPlanningScheduleEntry()" x-text="ot('planning.add')"></button>
             </div>
           </div>
         </div>
       </div>
-    </section>
 
     <section class="office-summary-grid" x-show="activeTab === 'history'" x-cloak>
       <div class="space-y-4">
         <template x-if="!officeMatches.length">
-          <article class="office-panel rounded-[28px] p-8 text-center text-slate-500">
+          <article class="office-panel rounded-[20px] p-8 text-center text-slate-500">
             <span x-text="ot('history.empty')"></span>
           </article>
         </template>
@@ -1129,8 +804,8 @@
       </div>
 
       <aside class="space-y-4">
-        <article class="office-panel rounded-[28px] p-6">
-          <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('history.quickGroups')"></div>
+        <article class="office-panel rounded-[20px] p-6">
+          <div class="office-kicker" x-text="ot('history.quickGroups')"></div>
           <div class="mt-4 space-y-3">
             <template x-for="group in officeGroups" :key="group.id">
               <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
@@ -1151,33 +826,33 @@
     <section class="mt-6" x-show="activeTab === 'progress'" x-cloak>
       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <template x-for="group in officeGroups" :key="group.id">
-          <article class="office-panel rounded-[28px] p-6">
+          <article class="office-panel rounded-[20px] p-6">
             <div class="flex items-start justify-between gap-4">
               <div>
-                <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('progress.group')"></div>
-                <h2 class="mt-2 text-2xl font-semibold" x-text="officeDisplayLabel(group.name)"></h2>
+                <div class="office-kicker" x-text="ot('progress.group')"></div>
+                <h2 class="mt-1 text-xl font-semibold" x-text="officeDisplayLabel(group.name)"></h2>
                 <p class="mt-1 text-sm text-slate-500" x-text="officeDisplayLabel(group.category) || ot('progress.groupPhase')"></p>
               </div>
               <span class="office-chip" :class="group.complete ? 'office-chip-group' : 'office-chip-knockout'" x-text="groupCompletionLabel(group)"></span>
             </div>
-            <div class="mt-5 grid grid-cols-3 gap-3 text-center">
-              <div class="rounded-2xl bg-white/70 p-3 border border-slate-200/80">
-                <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('progress.plan')"></div>
-                <div class="mt-2 text-2xl font-semibold" x-text="group.expected_matches"></div>
+            <div class="mt-5 grid grid-cols-3 gap-2 text-center">
+              <div class="office-pill">
+                <div class="office-pill__label" x-text="ot('progress.plan')"></div>
+                <div class="office-pill__value" x-text="group.expected_matches"></div>
               </div>
-              <div class="rounded-2xl bg-white/70 p-3 border border-slate-200/80">
-                <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('progress.done')"></div>
-                <div class="mt-2 text-2xl font-semibold" x-text="group.finished_matches"></div>
+              <div class="office-pill">
+                <div class="office-pill__label" x-text="ot('progress.done')"></div>
+                <div class="office-pill__value" x-text="group.finished_matches"></div>
               </div>
-              <div class="rounded-2xl bg-white/70 p-3 border border-slate-200/80">
-                <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('progress.left')"></div>
-                <div class="mt-2 text-2xl font-semibold" x-text="group.remaining_matches"></div>
+              <div class="office-pill">
+                <div class="office-pill__label" x-text="ot('progress.left')"></div>
+                <div class="office-pill__value" x-text="group.remaining_matches"></div>
               </div>
             </div>
             <div class="mt-5 text-sm text-slate-600" x-text="officeGroupIsDoubles(group) ? ot('progress.pairs') : ot('progress.players')"></div>
             <div class="mt-3 flex flex-wrap gap-2">
               <template x-for="player in group.players || []" :key="player.id || player.name">
-                <span class="px-3 py-2 rounded-full bg-white/80 border border-slate-200/80 text-sm text-slate-700" x-text="player.name"></span>
+                <span class="px-3 py-2 rounded-full bg-white/80 border border-slate-200/80 text-sm text-slate-700 competitor-name" x-text="formatCompetitorName(player.name)"></span>
               </template>
             </div>
           </article>
@@ -1186,30 +861,30 @@
     </section>
 
     <section class="mt-6 space-y-5" x-show="activeTab === 'knockout'" x-cloak>
-      <div class="grid gap-4 md:grid-cols-3">
-        <article class="office-stat">
-          <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('knockout.generated')"></div>
-          <div class="mt-2 text-3xl font-semibold" x-text="officeKnockout.expected_matches || 0"></div>
+      <div class="office-topbar__stats">
+        <article class="office-pill office-stat">
+          <div class="office-pill__label" x-text="ot('knockout.generated')"></div>
+          <div class="office-pill__value" x-text="officeKnockout.expected_matches || 0"></div>
         </article>
-        <article class="office-stat">
-          <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('knockout.ready')"></div>
-          <div class="mt-2 text-3xl font-semibold" x-text="officeKnockout.ready_matches || 0"></div>
+        <article class="office-pill office-stat">
+          <div class="office-pill__label" x-text="ot('knockout.ready')"></div>
+          <div class="office-pill__value" x-text="officeKnockout.ready_matches || 0"></div>
         </article>
-        <article class="office-stat">
-          <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('knockout.finished')"></div>
-          <div class="mt-2 text-3xl font-semibold" x-text="officeKnockout.finished_matches || 0"></div>
+        <article class="office-pill office-stat">
+          <div class="office-pill__label" x-text="ot('knockout.finished')"></div>
+          <div class="office-pill__value" x-text="officeKnockout.finished_matches || 0"></div>
         </article>
       </div>
 
       <template x-if="!officeKnockoutMatches.length">
-        <article class="office-panel rounded-[28px] p-8 text-center text-slate-500">
+        <article class="office-panel rounded-[20px] p-8 text-center text-slate-500">
           <span x-text="ot('knockout.empty')"></span>
         </article>
       </template>
 
       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <template x-for="slot in officeKnockoutMatches" :key="'office_knockout_'+slot.slot_id">
-          <article class="office-panel rounded-[28px] p-6">
+          <article class="office-panel rounded-[20px] p-6">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -1243,7 +918,7 @@
 
             <div class="mt-5 flex justify-end gap-2">
               <button type="button" class="btn btn-outline bg-white/80" x-show="slot.match_id" @click="startOfficeEditFromKnockout(slot)" x-text="ot('knockout.editResult')"></button>
-              <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" x-show="officeKnockoutCanAddResult(slot)" @click="openAddKnockoutResult(slot)" x-text="ot('knockout.addResult')"></button>
+              <button type="button" class="btn office-btn-primary" x-show="officeKnockoutCanAddResult(slot)" @click="openAddKnockoutResult(slot)" x-text="ot('knockout.addResult')"></button>
             </div>
           </article>
         </template>
@@ -1255,8 +930,8 @@
     <section class="office-modal office-panel" @click.away="closeAddMatchModal()">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('modals.newResult')"></div>
-          <h2 class="mt-2 text-3xl font-semibold" x-text="officeNewMatch.mode === 'knockout' ? ot('modals.addKnockoutResult') : ot('modals.addGroupResult')"></h2>
+          <div class="office-kicker" x-text="ot('modals.newResult')"></div>
+          <h2 class="mt-2 text-xl font-semibold" x-text="officeNewMatch.mode === 'knockout' ? ot('modals.addKnockoutResult') : ot('modals.addGroupResult')"></h2>
         </div>
         <button type="button" class="btn btn-sm btn-ghost" @click="closeAddMatchModal()" x-text="ot('modals.close')"></button>
       </div>
@@ -1293,7 +968,7 @@
         </label>
 
         <div class="md:col-span-2 rounded-2xl border border-slate-200/80 bg-white/70 p-4" x-show="officeNewMatch.mode === 'knockout'">
-          <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('modals.bracketSlot')"></div>
+          <div class="office-kicker" x-text="ot('modals.bracketSlot')"></div>
           <div class="mt-2 text-lg font-semibold" x-text="officeDisplayLabel(officeNewMatch.phase) || ot('knockout.defaultPhase')"></div>
           <div class="mt-1 text-sm text-slate-500" x-text="`${officeNewMatch.player1_name || '-'} ${ot('versus')} ${officeNewMatch.player2_name || '-'}`"></div>
         </div>
@@ -1372,7 +1047,7 @@
 
       <div class="mt-8 flex justify-end gap-3">
         <button type="button" class="btn btn-ghost" @click="closeAddMatchModal()" x-text="ot('modals.cancel')"></button>
-        <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #0f766e, #115e59);" @click="addOfficeMatchResult()" x-text="ot('modals.saveResult')"></button>
+        <button type="button" class="btn office-btn-primary" @click="addOfficeMatchResult()" x-text="ot('modals.saveResult')"></button>
       </div>
     </section>
   </div>
@@ -1381,8 +1056,8 @@
     <section class="office-modal office-panel" @click.away="closeEditModal()">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <div class="text-xs uppercase tracking-[0.24em] text-slate-500" x-text="ot('modals.correction')"></div>
-          <h2 class="mt-2 text-3xl font-semibold" x-text="ot('modals.editMatchTitle')"></h2>
+          <div class="office-kicker" x-text="ot('modals.correction')"></div>
+          <h2 class="mt-2 text-xl font-semibold" x-text="ot('modals.editMatchTitle')"></h2>
         </div>
         <button type="button" class="btn btn-sm btn-ghost" @click="closeEditModal()" x-text="ot('modals.close')"></button>
       </div>
@@ -1391,11 +1066,11 @@
         <div class="mt-6 space-y-6">
           <div class="grid gap-4 md:grid-cols-2">
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
-              <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="officeCompetitorALabel(officeEditingMatch)"></div>
+              <div class="office-kicker" x-text="officeCompetitorALabel(officeEditingMatch)"></div>
               <div class="mt-2 text-xl font-semibold competitor-name" x-text="formatCompetitorName(officeEditingMatch.player1_name)"></div>
             </div>
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
-              <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="officeCompetitorBLabel(officeEditingMatch)"></div>
+              <div class="office-kicker" x-text="officeCompetitorBLabel(officeEditingMatch)"></div>
               <div class="mt-2 text-xl font-semibold competitor-name" x-text="formatCompetitorName(officeEditingMatch.player2_name)"></div>
             </div>
           </div>
@@ -1428,7 +1103,7 @@
 
       <div class="mt-8 flex justify-end gap-3">
         <button type="button" class="btn btn-ghost" @click="closeEditModal()" x-text="ot('modals.cancel')"></button>
-        <button type="button" class="btn border-0 text-white" style="background: linear-gradient(135deg, #c2410c, #9a3412);" @click="saveOfficeMatchEdit()" x-text="ot('modals.saveCorrection')"></button>
+        <button type="button" class="btn office-btn-accent" @click="saveOfficeMatchEdit()" x-text="ot('modals.saveCorrection')"></button>
       </div>
     </section>
   </div>

@@ -247,6 +247,81 @@ export function createOfficeAutoScheduleView() {
       return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
     },
 
+    autoNormalizeTime(value) {
+      const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})/);
+      if (!match) return '';
+      return `${String(Number(match[1])).padStart(2, '0')}:${match[2]}`;
+    },
+
+    autoGridTimes() {
+      const times = new Set();
+      const start = this.autoNormalizeTime(this.autoStartTime) || '09:30';
+      times.add(start);
+      for (const court of this.autoCourts || []) {
+        for (const entry of this.autoBoardEntries(court.kort_id)) {
+          const time = this.autoNormalizeTime(entry.scheduled_time);
+          if (time) times.add(time);
+        }
+      }
+      let sorted = Array.from(times).sort();
+      const min = sorted[0] || start;
+      const last = sorted[sorted.length - 1] || start;
+      const end = this.autoAddMinutes(last, sorted.length > 1 ? 30 : 30 * 8);
+      let cursor = min;
+      let guard = 0;
+      while (cursor <= end && guard < 36) {
+        times.add(cursor);
+        cursor = this.autoAddMinutes(cursor, 30);
+        guard += 1;
+      }
+      return Array.from(times).sort();
+    },
+
+    autoEntryAt(courtId, time) {
+      const want = this.autoNormalizeTime(time);
+      return this.autoBoardEntries(courtId).find(
+        (entry) => this.autoNormalizeTime(entry.scheduled_time) === want,
+      ) || null;
+    },
+
+    autoEntriesAt(courtId, time) {
+      const entry = this.autoEntryAt(courtId, time);
+      return entry ? [entry] : [];
+    },
+
+    officeTimetableStyle() {
+      const count = Math.max(1, (this.autoCourts || []).length);
+      return `grid-template-columns: 64px repeat(${count}, minmax(148px, 1fr));`;
+    },
+
+    planningSelectedEntry() {
+      const id = this.planningOpenCardId;
+      if (id == null || id === '') return null;
+      const pool = this.autoIsPreview() ? this.autoProposal : this.planningSchedule;
+      return (pool || []).find((entry) => String(this.autoEntryId(entry)) === String(id)) || null;
+    },
+
+    planningInspectorEntries() {
+      const entry = this.planningSelectedEntry();
+      return entry ? [entry] : [];
+    },
+
+    officeScheduleStatusClass(status) {
+      const value = String(status || '').toLowerCase();
+      if (value === 'published' || value.includes('publik')) return 'is-published';
+      if (value === 'in_progress' || value === 'live' || value.includes('trw')) return 'is-live';
+      if (value === 'completed' || value.includes('zakon') || value.includes('zakoń')) return 'is-done';
+      return 'is-draft';
+    },
+
+    officePlanningHasMatches() {
+      return (this.planningSchedule || []).length > 0;
+    },
+
+    async onAutoDropAt(courtId, time) {
+      await this.onAutoDrop(courtId, { scheduled_time: time, court_id: courtId });
+    },
+
     autoBoardEntries(courtId) {
       const day = this.autoDayDate;
       const sortByTime = (a, b) => String(a.scheduled_time || '').localeCompare(String(b.scheduled_time || ''));

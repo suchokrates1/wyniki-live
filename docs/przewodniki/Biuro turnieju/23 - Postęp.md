@@ -8,7 +8,7 @@ aliases: [Postęp grup, Office progress]
 
 ## Cel
 
-Read-only podgląd postępu w grupach (ile zaplanowano / zrobiono / zostało).
+Karty per grupa z pillami Plan / Gotowe / Zostało i chipami składu.
 
 ## Elementy UI
 

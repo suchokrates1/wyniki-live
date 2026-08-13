@@ -12,6 +12,8 @@ Podgląd zakończonych meczów i szybka korekta wyniku.
 
 ## Elementy UI
 
+Karty scoreboardu + sidebar grup. Ten sam system wizualny co chrome (panele 20px, kicker, chipy).
+
 | Kontrolka | Co robi | Efekt |
 |-----------|---------|-------|
 | Karty meczów (scoreboard) | Podgląd | Z dashboardu; debel: `formatCompetitorName` łamie `"A / B"` |

@@ -8,9 +8,11 @@ aliases: [Office chrome, Quick info]
 
 ## Cel
 
-Górny pasek operacyjny + baner komunikatu na stronie publicznej.
+Górny pasek operacyjny (zwarty, sticky) + baner komunikatu na stronie publicznej.
 
-## Przyciski hero
+## Chrome
+
+Kompaktowy pasek: logo + nazwa turnieju, **pille** statystyk, akcje po prawej. Nie ma osobnego hero.
 
 | Kontrolka | Co robi | Efekt |
 |-----------|---------|-------|
@@ -19,7 +21,7 @@ Górny pasek operacyjny + baner komunikatu na stronie publicznej.
 | **Odśwież** | Przeładuj dashboard | `GET …/dashboard` |
 | **Dodaj wynik** | Modal wyniku | [[27 - Wprowadzanie i edycja wyniku]] |
 | **Wyloguj** | Czyści token i SSE | Powrót do logowania |
-| Karty statystyk (Postęp / Zakończone / Pozostało / Drabinka) | Podgląd | Z dashboardu; w deblu te same liczby, tylko konkurent to para |
+| Pille: Postęp / Zakończone / Pozostało / Drabinka | Podgląd | Z dashboardu; w deblu te same liczby, tylko konkurent to para |
 
 SSE: `/api/office/{slot}/stream` — odświeża dane na żywo.
 
@@ -43,7 +45,7 @@ SSE: `/api/office/{slot}/stream` — odświeża dane na żywo.
 
 ## E2E
 
-`16_office_login_chrome.spec.mjs` — karty statystyk, zakładki, Odśwież, Wyloguj. `06_quick_info.spec.mjs` — baner. `10_sse_reconnect.spec.mjs` — SSE.
+`16_office_login_chrome.spec.mjs` — pille statystyk, zakładki, Odśwież, Wyloguj. `06_quick_info.spec.mjs` — baner. `10_sse_reconnect.spec.mjs` — SSE.
 
 ## Powiązane
 
