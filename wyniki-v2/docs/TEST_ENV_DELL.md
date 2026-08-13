@@ -19,6 +19,39 @@ Isolated copy of Wyniki Live for feature work (doubles office and related). Prod
 
 Secrets live only in `~/wyniki-live/wyniki-v2/.env.test` (`chmod 600`). Do not copy prod `.env`.
 
+## E2E tournament stack (port 18087)
+
+Isolated throwaway DB for `npm run e2e:tournament` / `python scripts/e2e_tournament/run.py`. Do **not** point this at minipc or at `test.blindtennis.app`.
+
+| | E2E | Feature test | Production |
+|---|---|---|---|
+| Host | `dell` | `dell` | `minipc` |
+| URL | `http://192.168.31.10:18087` (LAN) / `http://127.0.0.1:18087` | https://test.blindtennis.app | https://blindtennis.app |
+| Compose | `docker-compose.e2e.yml` | `docker-compose.test.yml` | `docker-compose.yml` |
+| Container | `wyniki-tenis-e2e` | `wyniki-tenis-test` | `wyniki-tenis-v2` |
+| Volume | `wyniki-e2e_wyniki_e2e_data` | `wyniki-test_wyniki_test_data` | `count_wyniki_data` |
+| Admin password | `e2e-admin` (`.env.e2e`) | `.env.test` | prod `.env` |
+
+Dell has no host Node. Office Playwright runs in `mcr.microsoft.com/playwright` (`run.py office` detects this).
+
+```bash
+hostname   # must print dell
+cd ~/wyniki-live/wyniki-v2
+python3 scripts/e2e_tournament/run.py up
+curl -fsS http://127.0.0.1:18087/health
+python3 scripts/e2e_tournament/run.py office
+# optional: python3 scripts/e2e_tournament/run.py down
+```
+
+From Windows against Dell:
+
+```powershell
+$env:E2E_BASE_URL = 'http://192.168.31.10:18087'
+$env:E2E_ADMIN_PASSWORD = 'e2e-admin'
+```
+
+Android espresso (Etap 7, emulator) uses the same LAN URL, not minipc `:18087`.
+
 ## Deploy / update
 
 From a machine with GitHub access (after pushing the feature branch):

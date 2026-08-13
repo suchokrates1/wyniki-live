@@ -1,10 +1,14 @@
+# Isolated E2E stack on dell (port 18087).
+# Not production (minipc) and not the manual test site (test.blindtennis.app / 18088).
+name: wyniki-e2e
+
 services:
   wyniki-e2e:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: wyniki-tenis-e2e
-    image: count-wyniki-e2e:latest
+    image: wyniki-e2e:latest
     ports:
       - "18087:8080"
     volumes:
@@ -18,13 +22,33 @@ services:
       - ADMIN_PASSWORD=${E2E_ADMIN_PASSWORD:-e2e-admin}
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
-    restart: "no"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 8s
+
+  # Optional: `docker compose --profile runner run --rm e2e-runner`
+  # Dell has no host Node; Playwright runs in this image against wyniki-e2e.
+  e2e-runner:
+    image: ${E2E_PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright:v1.56.1-jammy}
+    profiles: ["runner"]
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    environment:
+      - E2E_BASE_URL=http://wyniki-e2e:8080
+      - E2E_ADMIN_PASSWORD=${E2E_ADMIN_PASSWORD:-e2e-admin}
+      - npm_config_update_notifier=false
+    depends_on:
+      wyniki-e2e:
+        condition: service_healthy
+    command:
+      - bash
+      - -lc
+      - npm install --no-audit --no-fund && npx playwright install chromium && node scripts/e2e-tournament/run.mjs
 
 volumes:
   wyniki_e2e_data:

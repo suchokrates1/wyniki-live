@@ -23,6 +23,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+import shutil
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 COMPOSE_FILE = PROJECT_ROOT / "docker-compose.e2e.yml"
@@ -58,7 +59,13 @@ def _http_json(url: str, timeout: float = 8.0) -> dict | list | None:
 
 def cmd_up() -> bool:
     """Build and start the E2E container, wait for /health."""
-    # When BASE_URL points at a remote host (minipc), skip local docker compose.
+    if not ENV_FILE.exists():
+        example = PROJECT_ROOT / ".env.e2e.example"
+        if example.exists():
+            ENV_FILE.write_text(example.read_text(encoding="utf-8"), encoding="utf-8")
+            ENV_FILE.chmod(0o600)
+            print(f"[up] Created {ENV_FILE} from example (chmod 600).")
+    # When BASE_URL points at a remote host, skip local docker compose.
     if "localhost" not in BASE_URL and "127.0.0.1" not in BASE_URL:
         print(f"[up] Using remote E2E_BASE_URL={BASE_URL} (skip local docker compose)")
         return cmd_health()
@@ -102,19 +109,44 @@ def cmd_health() -> bool:
         return False
 
 
+def _office_docker_cmd(module_filter: str | None = None) -> list[str]:
+    """Playwright via official image — Dell has no host Node."""
+    image = os.environ.get("E2E_PLAYWRIGHT_IMAGE", "mcr.microsoft.com/playwright:v1.56.1-jammy")
+    module_arg = f" --module {module_filter}" if module_filter else ""
+    inner = (
+        "npm install --no-audit --no-fund"
+        " && npx playwright install chromium"
+        f" && node scripts/e2e-tournament/run.mjs{module_arg}"
+    )
+    return [
+        "docker", "run", "--rm", "--network", "host",
+        "-v", f"{FRONTEND_DIR}:/app",
+        "-w", "/app",
+        "-e", f"E2E_BASE_URL={BASE_URL}",
+        "-e", f"E2E_ADMIN_PASSWORD={os.environ.get('E2E_ADMIN_PASSWORD') or os.environ.get('ADMIN_PASSWORD') or 'e2e-admin'}",
+        "-e", "npm_config_update_notifier=false",
+        image,
+        "bash", "-lc", inner,
+    ]
+
+
 def cmd_office(module_filter: str | None = None) -> bool:
-    """Run Playwright office modules (Node)."""
+    """Run Playwright office modules (host Node, or Docker on Dell)."""
     run_script = E2E_SCRIPTS_DIR / "run.mjs"
     if not run_script.exists():
         print(f"[office] ERROR: {run_script} not found.", file=sys.stderr)
         return False
 
-    cmd = ["node", str(run_script)]
-    if module_filter:
-        cmd += ["--module", module_filter]
-
     env = {**os.environ, "E2E_BASE_URL": BASE_URL}
-    result = _run(cmd, check=False, cwd=str(FRONTEND_DIR), env=env)
+    if shutil.which("node"):
+        cmd = ["node", str(run_script)]
+        if module_filter:
+            cmd += ["--module", module_filter]
+        result = _run(cmd, check=False, cwd=str(FRONTEND_DIR), env=env)
+        return result.returncode == 0
+
+    print("[office] node not on PATH — running Playwright in Docker (host network).")
+    result = _run(_office_docker_cmd(module_filter), check=False, cwd=str(FRONTEND_DIR), env=env)
     return result.returncode == 0
 
 
@@ -233,10 +265,10 @@ def cmd_android(max_courts: int = 4, *, skip_cleanup: bool = False, marker_out: 
         print("[android] ERROR: no adb device in 'device' state.", file=sys.stderr)
         return False
 
-    # Emulator reaches LAN host (minipc) directly; HostBaseUrl is this machine's view of e2e.
+    # Emulator on the same LAN reaches Dell :18087; 10.0.2.2 is only for a local AVD.
     device_base = os.environ.get("E2E_ANDROID_BASE_URL", BASE_URL)
     if "localhost" in device_base or "127.0.0.1" in device_base:
-        device_base = "http://10.0.2.2:18087"
+        device_base = os.environ.get("E2E_ANDROID_LOOPBACK_URL", "http://10.0.2.2:18087")
 
     host_base = BASE_URL
     cmd = [

@@ -134,7 +134,7 @@ PIN path (court → PIN → PlayerSelection):
 ```powershell
 .\gradlew.bat :app:connectedDebugAndroidTest `
   "-Pandroid.testInstrumentationRunnerArguments.class=pl.vestmedia.tennisreferee.e2e.CourtPinPathE2ETest" `
-  "-Pandroid.testInstrumentationRunnerArguments.e2e.baseUrl=http://192.168.31.5:18087"
+  "-Pandroid.testInstrumentationRunnerArguments.e2e.baseUrl=http://192.168.31.10:18087"
 ```
 
 ## Pre-event checklist (T−7 … T−0)
@@ -208,27 +208,28 @@ python scripts/e2e_tournament/run.py down
 ### Configuration
 
 - `.env.e2e.example` — copy to `.env.e2e` to override defaults
-- `E2E_BASE_URL` env var overrides `http://localhost:18087` (on Windows host without Docker use `http://192.168.31.5:18087` against minipc)
+- `E2E_BASE_URL` env var overrides `http://localhost:18087` (from Windows without Docker use `http://192.168.31.10:18087` against **dell**)
 - `E2E_ADMIN_PASSWORD` defaults to `e2e-admin` (never reuse prod `ADMIN_PASSWORD`)
-- Container: `wyniki-tenis-e2e`, volume: `wyniki_e2e_data`
+- Container: `wyniki-tenis-e2e` on **dell**, volume: `wyniki_e2e_data`
+- Feature UI testing stays on https://test.blindtennis.app (`docker-compose.test.yml`, port 18088)
 
 ### Android 4-court wave
 
 ```powershell
-# e2e on minipc :18087 — emulator uses LAN IP (not 10.0.2.2 unless you ssh -L)
+# e2e on dell :18087 — emulator uses LAN IP (not 10.0.2.2 unless the AVD is on the same machine)
 $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
-$env:E2E_BASE_URL = 'http://192.168.31.5:18087'
+$env:E2E_BASE_URL = 'http://192.168.31.10:18087'
 $env:E2E_ADMIN_PASSWORD = 'e2e-admin'
 Set-Location "c:\Users\sucho\Vest Tennis\android-tennis-referee"
 .\scripts\run_parallel_courts.ps1 -MaxCourts 4 `
-  -BaseUrl 'http://192.168.31.5:18087' `
-  -HostBaseUrl 'http://192.168.31.5:18087'
+  -BaseUrl 'http://192.168.31.10:18087' `
+  -HostBaseUrl 'http://192.168.31.10:18087'
 ```
 
 Or via Python orchestrator (office + android + public assert):
 
 ```powershell
-$env:E2E_BASE_URL = 'http://192.168.31.5:18087'
+$env:E2E_BASE_URL = 'http://192.168.31.10:18087'
 $env:E2E_ADMIN_PASSWORD = 'e2e-admin'
 python scripts/e2e_tournament/run.py full
 # office-only / no devices:
