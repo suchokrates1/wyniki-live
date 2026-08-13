@@ -10,12 +10,14 @@ aliases: [Autoschedule, Office schedule]
 
 Generowanie meczów, publikacja, automatyczne / ręczne układanie na kortach.
 
+Układ kroku 2: **lewa szyna poleceń** (etapy Mecze → Układ → Publikacja) | **siatka czas × kort** | **prawy inspektor** wybranego meczu. Pula nieprzypisanych jest paskiem pod siatką, nie osobną kolumną. Rewanże grup są za przełącznikiem **Rewanże…**.
+
 ## Generowanie i publikacja
 
 | Kontrolka | Co robi | API |
 |-----------|---------|-----|
 | **Generuj mecze** | RR z grup `groups_knockout` / `round_robin`; **pomija** `knockout` | `POST …/schedule/generate` |
-| **Generuj rewanże** | Rewanże dla wybranych grup (nie dla KO-only) | `POST …/schedule/generate-rematch` |
+| **Generuj rewanże** | Rewanże dla wybranych grup (nie dla KO-only); grupy za **Rewanże…** | `POST …/schedule/generate-rematch` |
 | **Opublikuj wszystkie** | Publikacja draftów | `POST …/schedule/publish` |
 | Chipy dnia | Filtr dnia | — |
 
@@ -29,11 +31,13 @@ Generowanie meczów, publikacja, automatyczne / ręczne układanie na kortach.
 | **Generuj propozycję** | Podgląd układu | `POST …/autoschedule/generate` |
 | **Zatwierdź terminarz** | Zastosuj | `POST …/autoschedule/apply` |
 | **Odrzuć propozycję** | Anuluj podgląd | Client |
-| DnD między kolumnami kortów | Przesuń mecz | `POST …/autoschedule/move` |
+| DnD na komórkę siatki (kort × godzina) | Przesuń mecz | `POST …/autoschedule/move` |
 | Drop do nieprzypisanych | Odłącz od kortu | `POST …/autoschedule/unassign` |
 | **Usuń wszystkie** (unassigned) | Czyść pulę | `DELETE …/schedule/unassigned` |
 
-## Karty meczów (rozwinięcie)
+## Inspektor meczu (panel po prawej)
+
+Klik w blok na siatce otwiera inspektor (zamiast rozwijania karty w kolumnie).
 
 | Pole / przycisk | Co robi | API |
 |-----------------|---------|-----|
@@ -48,7 +52,7 @@ Statusy: **Roboczy** / **Opublikowany** / **W trakcie** / **Zakończony**.
 
 Formularz **+ Dodaj ręczny wpis**: data, czas, kort, kategoria, faza, status, **gracze albo pary** (dropdown zależy od `is_doubles` kategorii), uwagi → **Dodaj** (`POST …/schedule`).
 
-Karty i kolumny kortów pokazują `formatCompetitorName` — długie `"A / B"` łamią się po separatorze.
+Karty i siatka pokazują `formatCompetitorName` — długie `"A / B"` łamią się po separatorze.
 
 ## E2E
 

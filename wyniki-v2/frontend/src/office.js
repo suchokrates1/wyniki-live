@@ -10,6 +10,7 @@ import { createOfficeScheduleView } from './modules/office/scheduleView.js';
 import { createOfficeAutoScheduleView } from './modules/office/autoScheduleView.js';
 import { createOfficeSseView } from './modules/office/sseView.js';
 import './main.css';
+import './styles/office.css';
 
 window.Alpine = Alpine;
 

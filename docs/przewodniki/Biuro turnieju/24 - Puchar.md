@@ -14,7 +14,7 @@ Operacje na slotach pucharowych: podgląd gotowości, dodawanie i korekta wynik�
 
 | Kontrolka | Co robi | Efekt |
 |-----------|---------|-------|
-| Statystyki (wygenerowane / gotowe / zakończone) | Podsumowanie | — |
+| Statystyki (wygenerowane / gotowe / zakończone) | Pille podsumowania | — |
 | Karty slotów KO (gracze, wynik, kort, termin) | Podgląd | Debel: etykiety par, ZWSP po `/` |
 | **Dodaj wynik** | Modal wyniku KO | `POST …/knockout-matches` — strony to pary, gdy slot debla |
 | **Popraw wynik** | Modal korekty | `PUT …/matches/{id}` |

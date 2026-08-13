@@ -104,6 +104,8 @@ export function createOfficeCoreView() {
 
     planningManualOpen: false,
 
+    planningRematchOpen: false,
+
     planningPublishing: false,
 
     planningNewSchedule: defaultOfficeScheduleForm(),
