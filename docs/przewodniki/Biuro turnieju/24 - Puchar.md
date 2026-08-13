@@ -23,3 +23,4 @@ Operacje na slotach pucharowych: podgląd gotowości, dodawanie i korekta wynik�
 
 - [[27 - Wprowadzanie i edycja wyniku]]
 - [[12 - Drabinka]] (publiczny podgląd)
+- [[42 - Debel - plan implementacji]] (tryb na grupie: tylko puchar / tylko RR / grupy+puchar)

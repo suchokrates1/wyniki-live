@@ -40,7 +40,11 @@ Zakładka **Plan turnieju** → krok **Grupy startowe**. Przycisk **Odśwież pl
 | **Wyczyść** | Czyści przypisania | — |
 | Drag & drop graczy do grup | Ręczny układ | Auto `PUT …/planning/groups` |
 
+> [!note] Plan
+> Checkbox **Debel** na kategorii; **dropdown trybu** (grupy+puchar / tylko RR / tylko puchar) na karcie grupy: [[42 - Debel - plan implementacji]].
+
 ## Powiązane
 
 - [[26 - Planowanie - terminarz i autoschedule]]
 - [[36 - Gracze turnieju i import]] (admin — masowy import)
+- [[42 - Debel - plan implementacji]] (kategorie Double, **tryb na grupie**, drużyny)

@@ -1,0 +1,55 @@
+# Isolated test stack for https://test.blindtennis.app on dell.
+# Do not use this file on minipc. Production stays on docker-compose.yml.
+name: wyniki-test
+
+services:
+  wyniki:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wyniki-tenis-test
+    image: wyniki-test:latest
+    ports:
+      - "18088:8080"
+    env_file:
+      - .env.test
+    volumes:
+      - wyniki_test_data:/data
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - FLASK_ENV=production
+      - DEBUG=false
+      - DATABASE_PATH=/data/wyniki.sqlite3
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - IMPORT_PLAYERS_AI_API_KEY=${IMPORT_PLAYERS_AI_API_KEY:-}
+      - IMPORT_PLAYERS_AI_MODEL=${IMPORT_PLAYERS_AI_MODEL:-gemini-2.5-flash}
+      - IMPORT_PLAYERS_AI_TIMEOUT_SECONDS=${IMPORT_PLAYERS_AI_TIMEOUT_SECONDS:-20}
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - UNO_BASE=${UNO_BASE:-https://app.overlays.uno/apiv2/controlapps}
+      # Intentionally unset: KORT*_ID / UNO_AUTH_BEARER — test must not write prod overlays.
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.constraint-label=dell-local"
+      - "traefik.http.routers.wyniki-test.rule=Host(`test.blindtennis.app`)"
+      - "traefik.http.routers.wyniki-test.entrypoints=https"
+      - "traefik.http.routers.wyniki-test.tls=true"
+      - "traefik.http.routers.wyniki-test.tls.certresolver=cloudflare"
+      - "traefik.http.services.wyniki-test.loadbalancer.server.port=8080"
+      - "traefik.docker.network=proxy"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - proxy
+
+volumes:
+  wyniki_test_data:
+
+networks:
+  proxy:
+    external: true

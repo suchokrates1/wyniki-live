@@ -48,6 +48,9 @@ Statusy: **Roboczy** / **Opublikowany** / **W trakcie** / **Zakończony**.
 
 Formularz **+ Dodaj ręczny wpis**: data, czas, kort, kategoria, faza, status, gracze, uwagi → **Dodaj** (`POST …/schedule`).
 
+> [!note] Debel
+> Plan kategorii Double (drużyny w terminarzu, dropdown par): [[42 - Debel - plan implementacji]].
+
 ## Powiązane
 
 - [[25 - Planowanie - grupy]]

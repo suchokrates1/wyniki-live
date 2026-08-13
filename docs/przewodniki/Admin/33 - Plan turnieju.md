@@ -33,3 +33,4 @@ Przypisywanie do grup i zarządzanie terminarzem z poziomu Admin (równolegle do
 
 - [[25 - Planowanie - grupy]]
 - [[26 - Planowanie - terminarz i autoschedule]]
+- [[42 - Debel - plan implementacji]]
