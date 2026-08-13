@@ -124,8 +124,8 @@ def _apply_event_player_identity(side_state: Dict[str, Any], player_data: Dict[s
 
 def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
     """Process match event and update court state."""
+    state = ensure_court_state(kort_id)
     with STATE_LOCK:
-        state = ensure_court_state(kort_id)
         event_type = event_data['event_type']
         
         # Update player data
