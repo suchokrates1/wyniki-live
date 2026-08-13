@@ -4,6 +4,7 @@ import {
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
   planningDivisionKey as sharedPlanningDivisionKey,
 } from '../shared/categories.js';
+import { PLAY_FORMATS, normalizePlayFormat } from '../shared/playFormat.js';
 
 export function createTournamentsAdmin() {
   return {
@@ -48,14 +49,18 @@ export function createTournamentsAdmin() {
 
       adminTournamentCategories: [],
       adminCategoryPresetSelected: {},
+      adminCategoryPresetDoubles: {},
       adminCategoryCustomLabel: '',
       adminCategoryCustomHints: '',
+      adminCategoryCustomDoubles: false,
       adminCategoryEditId: null,
       adminCategoryEditLabel: '',
       adminCategorySetupOpen: true,
       newCategoryPresetSelected: {},
+      newCategoryPresetDoubles: {},
       newCategoryCustomLabel: '',
       newCategoryCustomHints: '',
+      newCategoryCustomDoubles: false,
       tournamentCategoriesCache: {},
 
      // Tournament planning dashboard
@@ -67,8 +72,13 @@ export function createTournamentsAdmin() {
      planningSchedule: [],
      planningCourts: [],
      planningSelectedDivision: '',
+     planningSelectedCategoryId: null,
      planningGroupCount: 1,
      planningGroupAssignments: {},
+     planningTeamAssignments: {},
+     planningGroupFormats: {},
+     planningTeams: [],
+     planningNewTeam: { player1_id: '', player2_id: '' },
      planningScheduleFilter: { day: '', category: '', court: '' },
      planningNewSchedule: {
        day_date: '',
@@ -179,6 +189,8 @@ export function createTournamentsAdmin() {
         this.newCategoryPresetSelected,
         this.newCategoryCustomLabel,
         this.newCategoryCustomHints,
+        this.newCategoryPresetDoubles,
+        this.newCategoryCustomDoubles,
       );
       if (createdId && categoryEntries.length) {
         await this.confirmAdminTournamentCategories(createdId, categoryEntries, { silent: true });
@@ -201,8 +213,10 @@ export function createTournamentsAdmin() {
         logo: null,
       };
       this.newCategoryPresetSelected = {};
+      this.newCategoryPresetDoubles = {};
       this.newCategoryCustomLabel = '';
       this.newCategoryCustomHints = '';
+      this.newCategoryCustomDoubles = false;
       await this.loadTournaments();
     } catch (err) {
       console.error('Failed to create tournament:', err);
@@ -240,7 +254,9 @@ export function createTournamentsAdmin() {
     this.adminCategoryEditLabel = '';
     this.adminCategoryCustomLabel = '';
     this.adminCategoryCustomHints = '';
+    this.adminCategoryCustomDoubles = false;
     this.adminCategoryPresetSelected = {};
+    this.adminCategoryPresetDoubles = {};
     await this.loadAdminTournamentCategories(tournament.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
       },
@@ -282,16 +298,17 @@ export function createTournamentsAdmin() {
     return labels[key] || key;
       },
 
-      buildAdminCategoryEntries(presetSelected, customLabel, customHints) {
+      buildAdminCategoryEntries(presetSelected, customLabel, customHints, presetDoubles = {}, customDoubles = false) {
     const presets = this.adminCategoryPresetKeys()
       .filter(key => presetSelected[key])
-      .map(key => ({ preset_key: key }));
+      .map(key => ({ preset_key: key, is_doubles: Boolean(presetDoubles[key]) }));
     const label = String(customLabel || '').trim();
     const entries = [...presets];
     if (label) {
       entries.push({
         label,
         hint_bands: String(customHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
+        is_doubles: Boolean(customDoubles),
       });
     }
     return entries;
@@ -338,6 +355,8 @@ export function createTournamentsAdmin() {
       this.adminCategoryPresetSelected,
       this.adminCategoryCustomLabel,
       this.adminCategoryCustomHints,
+      this.adminCategoryPresetDoubles,
+      this.adminCategoryCustomDoubles,
     );
     if (!payloadEntries.length) {
       if (!options.silent) this.showToast('Wybierz co najmniej jedną kategorię', 'warning');
@@ -356,7 +375,9 @@ export function createTournamentsAdmin() {
       this.adminCategorySetupOpen = false;
       this.adminCategoryCustomLabel = '';
       this.adminCategoryCustomHints = '';
+      this.adminCategoryCustomDoubles = false;
       this.adminCategoryPresetSelected = {};
+      this.adminCategoryPresetDoubles = {};
       if (!options.silent) this.showToast('Kategorie zapisane', 'success');
       return true;
     } catch (error) {
@@ -376,6 +397,7 @@ export function createTournamentsAdmin() {
         body: JSON.stringify({
           label,
           hint_bands: String(this.adminCategoryCustomHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
+          is_doubles: Boolean(this.adminCategoryCustomDoubles),
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -384,6 +406,7 @@ export function createTournamentsAdmin() {
       this.tournamentCategoriesCache[tournamentId] = this.adminTournamentCategories;
       this.adminCategoryCustomLabel = '';
       this.adminCategoryCustomHints = '';
+      this.adminCategoryCustomDoubles = false;
       this.showToast('Kategoria dodana', 'success');
     } catch (error) {
       this.showToast(error.message || 'Błąd dodawania kategorii', 'error');
@@ -566,12 +589,13 @@ export function createTournamentsAdmin() {
         if (!this.planningTournamentId) return;
         this.planningLoading = true;
         try {
-     const [playersResponse, groupsResponse, scheduleResponse, courtsResponse, tournamentResponse] = await Promise.all([
+     const [playersResponse, groupsResponse, scheduleResponse, courtsResponse, tournamentResponse, teamsResponse] = await Promise.all([
        fetch(`/admin/api/tournaments/${this.planningTournamentId}/players`),
        fetch(`/admin/api/tournaments/${this.planningTournamentId}/bracket/groups`),
        fetch(`/admin/api/tournaments/${this.planningTournamentId}/schedule`),
        fetch('/admin/api/courts'),
        fetch(`/admin/api/tournaments/${this.planningTournamentId}`),
+       fetch(`/admin/api/tournaments/${this.planningTournamentId}/teams`),
      ]);
      if (!playersResponse.ok || !groupsResponse.ok || !scheduleResponse.ok || !courtsResponse.ok || !tournamentResponse.ok) {
        throw new Error('Failed to load planning data');
@@ -582,6 +606,8 @@ export function createTournamentsAdmin() {
      this.planningMixedCategories = inferMixedPlayerBands(categories);
      this.planningPlayers = await playersResponse.json();
      this.planningGroups = await groupsResponse.json();
+     const teamsPayload = teamsResponse.ok ? await teamsResponse.json().catch(() => ({})) : {};
+     this.planningTeams = Array.isArray(teamsPayload.teams) ? teamsPayload.teams : [];
      const schedulePayload = await scheduleResponse.json();
      this.planningSchedule = Array.isArray(schedulePayload.schedule) ? schedulePayload.schedule : [];
      const allCourts = await courtsResponse.json();
@@ -605,8 +631,12 @@ export function createTournamentsAdmin() {
 
       ensurePlanningDefaults() {
         const divisions = this.planningDivisions();
-        if (!divisions.find(division => division.key === this.planningSelectedDivision)) {
+        if (!divisions.find(division => String(division.key) === String(this.planningSelectedDivision))) {
      this.planningSelectedDivision = divisions[0]?.key || '';
+     this.planningSelectedCategoryId = divisions[0]?.id ?? null;
+        }
+        if (this.planningUsesTournamentCategories() && this.planningSelectedDivision) {
+          this.planningSelectedCategoryId = Number(this.planningSelectedDivision);
         }
         const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
         if (selectedGroups.length) {
@@ -621,12 +651,18 @@ export function createTournamentsAdmin() {
 
       syncPlanningGroupAssignments() {
         const assignments = {};
+        const teamAssignments = {};
+        const formats = { ...(this.planningGroupFormats || {}) };
         for (const group of this.planningGroups || []) {
+     formats[group.name] = normalizePlayFormat(group.play_format);
      for (const player of group.players || []) {
-       if (player.player_id) assignments[player.player_id] = group.name;
+       if (player.team_id) teamAssignments[player.team_id] = group.name;
+       else if (player.player_id) assignments[player.player_id] = group.name;
      }
         }
         this.planningGroupAssignments = assignments;
+        this.planningTeamAssignments = teamAssignments;
+        this.planningGroupFormats = formats;
       },
 
       normalizePlanningGender(value) {
@@ -658,7 +694,62 @@ export function createTournamentsAdmin() {
         return sharedPlanningDivisionFromGroupName(groupName, this.planningMixedCategories);
       },
 
+      planningUsesTournamentCategories() {
+        return this.tournamentCategoriesFor(this.planningTournamentId).some(cat => cat.is_active !== 0);
+      },
+
+      planningSelectedCategory() {
+        const id = this.planningSelectedCategoryId ?? this.planningSelectedDivision;
+        return this.tournamentCategoriesFor(this.planningTournamentId).find(cat => String(cat.id) === String(id)) || null;
+      },
+
+      planningSelectedCategoryIsDoubles() {
+        return Boolean(this.planningSelectedCategory()?.is_doubles);
+      },
+
+      planningTeamsForCategory(categoryId) {
+        const id = Number(categoryId || 0);
+        if (!id) return [];
+        return (this.planningTeams || []).filter(team => Number(team.category_id) === id);
+      },
+
+      planningGroupPlayFormat(groupName) {
+        return normalizePlayFormat((this.planningGroupFormats || {})[groupName]);
+      },
+
+      planningPlayFormatOptions() {
+        return PLAY_FORMATS.map(value => ({
+          value,
+          label: ({
+            groups_knockout: 'Grupy + puchar',
+            round_robin: 'Tylko każdy z każdym',
+            knockout: 'Tylko puchar',
+          })[value] || value,
+        }));
+      },
+
+      setPlanningGroupPlayFormat(groupName, value) {
+        if (!groupName) return;
+        this.planningGroupFormats = {
+          ...(this.planningGroupFormats || {}),
+          [groupName]: normalizePlayFormat(value),
+        };
+      },
+
       planningDivisions() {
+        if (this.planningUsesTournamentCategories()) {
+          return this.tournamentCategoriesFor(this.planningTournamentId)
+            .filter(cat => cat.is_active !== 0)
+            .map(cat => ({
+              key: String(cat.id),
+              id: cat.id,
+              label: cat.label,
+              count: cat.is_doubles
+                ? this.planningTeamsForCategory(cat.id).length
+                : (cat.player_count || (this.planningPlayers || []).length),
+              is_doubles: Boolean(cat.is_doubles),
+            }));
+        }
         const grouped = new Map();
         for (const player of this.planningPlayers || []) {
      const key = this.planningDivisionKey(player);
@@ -673,14 +764,32 @@ export function createTournamentsAdmin() {
       },
 
       planningPlayersForDivision(key = this.planningSelectedDivision) {
+        if (this.planningUsesTournamentCategories()) return this.planningPlayers || [];
         return (this.planningPlayers || []).filter(player => this.planningDivisionKey(player) === key);
       },
 
       planningGroupsForDivision(key = this.planningSelectedDivision) {
+        if (this.planningUsesTournamentCategories()) {
+          const categoryId = Number(key || this.planningSelectedCategoryId || this.planningSelectedDivision);
+          const cat = this.tournamentCategoriesFor(this.planningTournamentId).find(item => Number(item.id) === categoryId);
+          return (this.planningGroups || []).filter(group => {
+            if (group.tournament_category_id != null) return Number(group.tournament_category_id) === categoryId;
+            if (!cat) return false;
+            return group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`);
+          });
+        }
         return (this.planningGroups || []).filter(group => this.planningDivisionFromGroupName(group.name) === key);
       },
 
       planningTargetGroupNames() {
+        if (this.planningUsesTournamentCategories()) {
+          const cat = this.planningSelectedCategory();
+          if (!cat) return [];
+          const label = cat.label;
+          const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
+          if (count === 1) return [label];
+          return Array.from({ length: count }, (_, index) => `${label} — Grupa ${String.fromCharCode(65 + index)}`);
+        }
         const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
         const label = this.planningDivisionLabel();
         if (!this.planningSelectedDivision) return [];
@@ -695,6 +804,10 @@ export function createTournamentsAdmin() {
      const assigned = this.planningGroupAssignments[player.id];
      if (assigned) names.add(assigned);
         }
+        for (const team of this.planningTeamsForCategory(this.planningSelectedCategoryId)) {
+          const assigned = this.planningTeamAssignments[team.id];
+          if (assigned) names.add(assigned);
+        }
         return [...names];
       },
 
@@ -706,35 +819,108 @@ export function createTournamentsAdmin() {
         return this.planningPlayersForDivision().filter(player => !this.planningGroupAssignments[player.id]);
       },
 
-      autoAssignPlanningGroups() {
-        const groupNames = this.planningTargetGroupNames();
-        if (!groupNames.length) return;
-        this.planningPlayersForDivision().forEach((player, index) => {
-     this.planningGroupAssignments[player.id] = groupNames[index % groupNames.length];
+      planningAssignedTeams(groupName) {
+        return this.planningTeamsForCategory(this.planningSelectedCategoryId).filter(team => (
+          this.planningTeamAssignments[team.id] === groupName
+        ));
+      },
+
+      planningUnassignedTeams() {
+        return this.planningTeamsForCategory(this.planningSelectedCategoryId).filter(team => !this.planningTeamAssignments[team.id]);
+      },
+
+      planningTeamPartnerOptions(excludeId = null) {
+        const taken = new Set();
+        for (const team of this.planningTeamsForCategory(this.planningSelectedCategoryId)) {
+          if (team.player1_id) taken.add(Number(team.player1_id));
+          if (team.player2_id) taken.add(Number(team.player2_id));
+        }
+        const exclude = Number(excludeId || 0);
+        return (this.planningPlayers || []).filter(player => {
+          if (taken.has(Number(player.id))) return false;
+          if (exclude && Number(player.id) === exclude) return false;
+          return true;
         });
       },
 
+      autoAssignPlanningGroups() {
+        const groupNames = this.planningTargetGroupNames();
+        if (!groupNames.length) return;
+        if (this.planningSelectedCategoryIsDoubles()) {
+          this.planningUnassignedTeams().forEach((team, index) => {
+            this.planningTeamAssignments[team.id] = groupNames[index % groupNames.length];
+          });
+          this.planningTeamAssignments = { ...this.planningTeamAssignments };
+          return;
+        }
+        this.planningPlayersForDivision().forEach((player, index) => {
+     this.planningGroupAssignments[player.id] = groupNames[index % groupNames.length];
+        });
+        this.planningGroupAssignments = { ...this.planningGroupAssignments };
+      },
+
       clearPlanningDivisionAssignments() {
+        if (this.planningSelectedCategoryIsDoubles()) {
+          const assignments = { ...this.planningTeamAssignments };
+          for (const team of this.planningTeamsForCategory(this.planningSelectedCategoryId)) {
+            delete assignments[team.id];
+          }
+          this.planningTeamAssignments = assignments;
+          return;
+        }
         for (const player of this.planningPlayersForDivision()) {
      delete this.planningGroupAssignments[player.id];
         }
+        this.planningGroupAssignments = { ...this.planningGroupAssignments };
+      },
+
+      planningSerializeStoredGroup(group) {
+        const rows = group.players || [];
+        return {
+          name: group.name,
+          tournament_category_id: group.tournament_category_id || null,
+          play_format: normalizePlayFormat(group.play_format || this.planningGroupFormats?.[group.name]),
+          players: rows.filter(row => row.player_id && !row.team_id).map(row => row.player_id),
+          teams: rows.filter(row => row.team_id).map(row => row.team_id),
+        };
       },
 
       async savePlanningGroups() {
         if (!this.planningTournamentId || !this.planningSelectedDivision) return;
+        const selectedCategoryId = this.planningUsesTournamentCategories()
+          ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
+          : null;
+        const isDoubles = this.planningSelectedCategoryIsDoubles();
         const otherGroups = (this.planningGroups || [])
-     .filter(group => this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision)
-     .map(group => ({ name: group.name, players: (group.players || []).map(player => player.player_id).filter(Boolean) }));
+     .filter(group => {
+       if (selectedCategoryId != null) {
+         const cat = this.planningSelectedCategory();
+         const gid = group.tournament_category_id != null ? Number(group.tournament_category_id) : null;
+         const inSelected = gid === selectedCategoryId
+           || (cat && (group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`)));
+         return !inSelected;
+       }
+       return this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision;
+     })
+     .map(group => this.planningSerializeStoredGroup(group));
 
         const divisionGroups = this.planningDivisionGroupNames()
-     .map(groupName => ({
-       name: groupName,
-       players: this.planningAssignedPlayers(groupName).map(player => player.id),
-     }))
-     .filter(group => group.players.length > 0);
+     .map(groupName => {
+       const payload = {
+         name: groupName,
+         tournament_category_id: selectedCategoryId,
+         play_format: this.planningGroupPlayFormat(groupName),
+         players: [],
+         teams: [],
+       };
+       if (isDoubles) payload.teams = this.planningAssignedTeams(groupName).map(team => team.id);
+       else payload.players = this.planningAssignedPlayers(groupName).map(player => player.id);
+       return payload;
+     })
+     .filter(group => (group.players.length + group.teams.length) > 0);
 
         if (!divisionGroups.length) {
-     this.showToast('Przypisz przynajmniej jednego zawodnika do grupy', 'warning');
+     this.showToast(isDoubles ? 'Przypisz przynajmniej jedną parę do grupy' : 'Przypisz przynajmniej jednego zawodnika do grupy', 'warning');
      return;
         }
 
@@ -783,6 +969,75 @@ export function createTournamentsAdmin() {
 
       planningPlayerNameOptions() {
         return (this.planningPlayers || []).map(player => player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pl'));
+      },
+
+      planningScheduleCategoryIsDoubles() {
+        const label = String(this.planningNewSchedule?.category_name || '').trim();
+        const cats = this.tournamentCategoriesFor(this.planningTournamentId).filter(cat => cat.is_doubles && cat.is_active !== 0);
+        if (label) return cats.find(cat => cat.label === label) || null;
+        return this.planningSelectedCategoryIsDoubles() ? this.planningSelectedCategory() : null;
+      },
+
+      planningScheduleNameOptions() {
+        const doublesCat = this.planningScheduleCategoryIsDoubles();
+        if (doublesCat) {
+          return this.planningTeamsForCategory(doublesCat.id)
+            .map(team => team.display_name)
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b, 'pl'));
+        }
+        return this.planningPlayerNameOptions();
+      },
+
+      async addPlanningTeam() {
+        const category = this.planningSelectedCategory();
+        if (!this.planningTournamentId || !category?.is_doubles) return;
+        const player1Id = Number(this.planningNewTeam.player1_id || 0);
+        const player2Id = Number(this.planningNewTeam.player2_id || 0);
+        if (!player1Id || !player2Id || player1Id === player2Id) {
+          this.showToast('Wybierz dwóch różnych zawodników', 'warning');
+          return;
+        }
+        try {
+          const response = await fetch(`/admin/api/tournaments/${this.planningTournamentId}/teams`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              category_id: category.id,
+              player1_id: player1Id,
+              player2_id: player2Id,
+            }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error || 'Failed to add team');
+          this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
+          this.planningNewTeam = { player1_id: '', player2_id: '' };
+          this.showToast('Para dodana', 'success');
+        } catch (err) {
+          this.showToast(err.message || 'Błąd dodawania pary', 'error');
+        }
+      },
+
+      async deletePlanningTeam(team) {
+        if (!this.planningTournamentId || !team?.id) return;
+        if (this.planningTeamAssignments[team.id]) {
+          this.showToast('Nie można usunąć pary przypisanej do grupy', 'warning');
+          return;
+        }
+        if (!confirm('Usunąć tę parę z kategorii?')) return;
+        try {
+          const response = await fetch(`/admin/api/tournaments/${this.planningTournamentId}/teams/${team.id}`, { method: 'DELETE' });
+          const payload = await response.json().catch(() => ({}));
+          if (response.status === 409) {
+            this.showToast(payload.error || 'Nie można usunąć pary przypisanej do grupy', 'warning');
+            return;
+          }
+          if (!response.ok) throw new Error(payload.error || 'Failed to delete team');
+          this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
+          this.showToast('Para usunięta', 'success');
+        } catch (err) {
+          this.showToast(err.message || 'Błąd usuwania pary', 'error');
+        }
       },
 
       planningCourtLabel(courtId) {

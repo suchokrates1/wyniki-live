@@ -8,7 +8,8 @@ aliases: [Doubles office plan, Kategorie double, Drużyny w planie, Format grupy
 
 > [!info] Status (2026-08-13)
 > Plan zatwierdzony do realizacji. Branch roboczy: `cursor/doubles-office-040b` (z `feature/doubles-office`). Środowisko testowe: https://test.blindtennis.app (dell, osobny compose/volume — nie prod).  
-> **Etap 0 (fundament) zaimplementowany:** `is_doubles`, `play_format`, `tournament_teams`, `team_id` na grupie, CRUD par, `format_team_display_name` / `normalize_pair_key`, testy `test_tournament_teams.py`. UI biura (Etap 1) jeszcze nie ruszył.  
+> **Etap 0 (fundament) zaimplementowany:** `is_doubles`, `play_format`, `tournament_teams`, `team_id` na grupie, CRUD par, `format_team_display_name` / `normalize_pair_key`, testy `test_tournament_teams.py`.  
+> **Etap 1 (UI biura) zaimplementowany:** checkbox Double, badge Debel, pary (CRUD + DnD), dropdown trybu na karcie grupy, kompletność kroku 1 osobno dla par, dropdown terminarza z drużynami, analog w adminie, i18n pl/de/en/it/es/fr. Generator KO nadal może ignorować `play_format` — to Etap 1b.  
 > Aplikacja sędziowska już punktuje debel. Brakuje: kategoria Double w biurze (UI), drużyny w planowaniu, most sugestii `scheduleId`, ręczny wynik debla w biurze, **tryb rozgrywek na grupie (dropdown, default grupy+puchar)**, **tłumaczenia nowych stringów we wszystkich językach**, **litewski + audyt kontekstowy istniejących tłumaczeń**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
 
 Powiązane w tym vaultcie: [[25 - Planowanie - grupy]] · [[26 - Planowanie - terminarz i autoschedule]] · [[27 - Wprowadzanie i edycja wyniku]] · [[24 - Puchar]] · [[12 - Drabinka]] · [[13 - Terminarz]] · [[18 - Język, motyw, access_key]] · [[33 - Plan turnieju]] · [[36 - Gracze turnieju i import]]
@@ -438,15 +439,15 @@ Pliki: `ScheduleSuggestion.kt`, `ScheduleSuggestionSelector.kt`, `PlayerSelectio
 
 ### Etap 1 — biuro: kategorie i pary
 
-- [ ] Checkbox Double przy presetach i custom w `office.html` + `playersView.js`
-- [ ] Dropdown **Tryb rozgrywek** na karcie **każdej grupy** (default pozycja 1); to samo w adminie
-- [ ] Badge Debel na chipie kategorii; badge trybu na karcie grupy
-- [ ] Formularz **Dodaj drużynę** (2 osoby) dla kategorii `is_doubles`
-- [ ] Lista / usuwanie par; blokada usunięcia gdy para jest w grupie
-- [ ] DnD grup na kartach par; auto-assign par
-- [ ] Kompletność kroku 1 liczona osobno: osoby vs pary
-- [ ] Tłumaczenia nowych kluczy we **wszystkich** językach (po LT: także `lt`) — nie EN jako zaślepka
-- [ ] Ręczny wpis terminarza: dropdown drużyn w kategorii double
+- [x] Checkbox Double przy presetach i custom w `office.html` + `playersView.js`
+- [x] Dropdown **Tryb rozgrywek** na karcie **każdej grupy** (default pozycja 1); to samo w adminie
+- [x] Badge Debel na chipie kategorii; badge trybu na karcie grupy
+- [x] Formularz **Dodaj drużynę** (2 osoby) dla kategorii `is_doubles`
+- [x] Lista / usuwanie par; blokada usunięcia gdy para jest w grupie
+- [x] DnD grup na kartach par; auto-assign par
+- [x] Kompletność kroku 1 liczona osobno: osoby vs pary
+- [x] Tłumaczenia nowych kluczy we **wszystkich** językach (po LT: także `lt`) — nie EN jako zaślepka
+- [x] Ręczny wpis terminarza: dropdown drużyn w kategorii double
 
 **Wejście:** Etap 0. **Wyjście:** da się złożyć kategorię double, pary, grupy i wygenerować plan z etykietami `"A / B"`. Dropdown trybu jest na karcie grupy, ale generator KO jeszcze może go ignorować — to Etap 1b.
 

@@ -50,9 +50,13 @@ export function createOfficeCoreView() {
 
     categoryPresetSelected: {},
 
+    categoryPresetDoubles: {},
+
     categoryCustomLabel: '',
 
     categoryCustomHints: '',
+
+    categoryCustomDoubles: false,
 
     categoryEditId: null,
 
@@ -72,7 +76,22 @@ export function createOfficeCoreView() {
 
     planningGroupAssignments: {},
 
+    planningTeamAssignments: {},
+
+    planningGroupFormats: {},
+
+    planningTeams: [],
+
     planningDragPlayerId: null,
+
+    planningDragTeamId: null,
+
+    planningNewTeam: {
+      player1_id: '',
+      player2_id: '',
+    },
+
+    planningAddTeamOpen: false,
 
     planningSaving: false,
 

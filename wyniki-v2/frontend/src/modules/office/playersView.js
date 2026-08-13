@@ -6,6 +6,7 @@ import {
   planningResolveStoredGroupName as sharedPlanningResolveStoredGroupName,
   planningStoredGroupNames as sharedPlanningStoredGroupNames,
 } from '../../shared/categories.js';
+import { DEFAULT_PLAY_FORMAT, PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
 
 export function createOfficePlayersView() {
   return {
@@ -26,6 +27,7 @@ export function createOfficePlayersView() {
         }
         this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
         this.tournamentCategories = Array.isArray(payload.tournament_categories) ? payload.tournament_categories : [];
+        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : [];
         this.planningMixedCategories = inferMixedPlayerBands(this.tournamentCategories);
         this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
@@ -67,27 +69,67 @@ export function createOfficePlayersView() {
     },
 
     planningGroupsComplete() {
-      const players = this.planningPlayers || [];
-      if (!players.length || !(this.planningGroups || []).length) return false;
-      return players.every(player => this.planningGroupAssignments[player.id]);
+      const categories = (this.tournamentCategories || []).filter(cat => cat.is_active !== 0);
+      const groups = this.planningGroups || [];
+      if (!categories.length || !groups.length) return false;
+      const teams = this.planningTeams || [];
+      for (const cat of categories.filter(item => item.is_doubles)) {
+        const catTeams = teams.filter(team => Number(team.category_id) === Number(cat.id));
+        if (!catTeams.length) continue;
+        const allAssigned = catTeams.every(team => {
+          const groupName = this.planningTeamAssignments[team.id];
+          if (!groupName) return false;
+          const group = groups.find(item => item.name === groupName);
+          return group && Number(group.tournament_category_id) === Number(cat.id);
+        });
+        if (!allAssigned) return false;
+      }
+      const coveredIds = new Set();
+      for (const team of teams) {
+        if (!this.planningTeamAssignments[team.id]) continue;
+        if (team.player1_id) coveredIds.add(Number(team.player1_id));
+        if (team.player2_id) coveredIds.add(Number(team.player2_id));
+      }
+      const singlesPlayers = (this.planningPlayers || []).filter(player => !coveredIds.has(Number(player.id)));
+      if (singlesPlayers.length) {
+        return singlesPlayers.every(player => this.planningGroupAssignments[player.id]);
+      }
+      return teams.some(team => this.planningTeamAssignments[team.id]) || (this.planningPlayers || []).length > 0;
     },
 
     planningDivisionCountLine(division) {
+      const cat = (this.tournamentCategories || []).find(item => String(item.id) === String(division.key));
+      if (cat?.is_doubles) {
+        const assigned = this.planningTeamsForCategory(cat.id).filter(team => this.planningTeamAssignments[team.id]).length;
+        return `${this.ot('planning.pairsCount', { count: division.count })} · ${this.ot('planning.inGroups', { count: assigned })}`;
+      }
       return `${this.ot('planning.playersCount', { count: division.count })} · ${this.ot('planning.inGroups', { count: this.planningDivisionAssignedCount(division.key) })}`;
     },
 
     planningStep1CompleteLine() {
+      if ((this.tournamentCategories || []).some(cat => cat.is_doubles && cat.is_active !== 0)) {
+        const allTeamsAssigned = (this.planningTeams || []).every(team => this.planningTeamAssignments[team.id]);
+        if (allTeamsAssigned && (this.planningTeams || []).length) {
+          return this.ot('planning.step1CompleteTeams', { count: this.planningGroups.length });
+        }
+      }
       return this.ot('planning.step1Complete', { count: this.planningGroups.length });
     },
 
     syncPlanningGroupAssignments() {
       const assignments = {};
+      const teamAssignments = {};
+      const formats = { ...(this.planningGroupFormats || {}) };
       for (const group of this.planningGroups || []) {
+        formats[group.name] = normalizePlayFormat(group.play_format);
         for (const player of group.players || []) {
-          if (player.player_id) assignments[player.player_id] = group.name;
+          if (player.team_id) teamAssignments[player.team_id] = group.name;
+          else if (player.player_id) assignments[player.player_id] = group.name;
         }
       }
       this.planningGroupAssignments = assignments;
+      this.planningTeamAssignments = teamAssignments;
+      this.planningGroupFormats = formats;
     },
 
     normalizePlanningCategory(value) {
@@ -122,6 +164,45 @@ export function createOfficePlayersView() {
       return (this.tournamentCategories || []).find(cat => String(cat.id) === String(id)) || null;
     },
 
+    planningSelectedCategoryIsDoubles() {
+      return Boolean(this.planningSelectedCategory()?.is_doubles);
+    },
+
+    planningTeamsForCategory(categoryId) {
+      const id = Number(categoryId || 0);
+      if (!id) return [];
+      return (this.planningTeams || []).filter(team => Number(team.category_id) === id);
+    },
+
+    planningGroupPlayFormat(groupName) {
+      return normalizePlayFormat((this.planningGroupFormats || {})[groupName]);
+    },
+
+    planningPlayFormatOptions() {
+      return PLAY_FORMATS.map(value => ({
+        value,
+        label: this.ot(playFormatLabelKey(value)),
+      }));
+    },
+
+    planningGroupHasLockedFormat(groupName) {
+      const group = (this.planningGroups || []).find(item => item.name === groupName);
+      if (!group?.id) return false;
+      return (this.planningSchedule || []).some(entry => (
+        Number(entry.bracket_group_id) === Number(group.id)
+        && (entry.match_id || (entry.status && entry.status !== 'draft'))
+      ));
+    },
+
+    setPlanningGroupPlayFormat(groupName, value) {
+      if (!groupName || this.planningGroupHasLockedFormat(groupName)) return;
+      this.planningGroupFormats = {
+        ...(this.planningGroupFormats || {}),
+        [groupName]: normalizePlayFormat(value),
+      };
+      this.schedulePlanningAutoSave();
+    },
+
     playerClassificationLabel(player) {
       const band = String(player?.category || '').trim();
       const gender = this.normalizePlanningGender(player?.gender);
@@ -132,13 +213,14 @@ export function createOfficePlayersView() {
     async confirmTournamentCategories() {
       const presets = this.planningCategoryPresetKeys()
         .filter(key => this.categoryPresetSelected[key])
-        .map(key => ({ preset_key: key }));
+        .map(key => ({ preset_key: key, is_doubles: Boolean(this.categoryPresetDoubles[key]) }));
       const customLabel = (this.categoryCustomLabel || '').trim();
       const entries = [...presets];
       if (customLabel) {
         entries.push({
           label: customLabel,
           hint_bands: (this.categoryCustomHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
+          is_doubles: Boolean(this.categoryCustomDoubles),
         });
       }
       if (!entries.length) {
@@ -157,6 +239,8 @@ export function createOfficePlayersView() {
         this.categorySetupOpen = false;
         this.categoryCustomLabel = '';
         this.categoryCustomHints = '';
+        this.categoryCustomDoubles = false;
+        this.categoryPresetDoubles = {};
         this.showToast(this.ot('toast.categoriesSaved'), 'success');
         this.ensurePlanningDefaults();
       } catch (error) {
@@ -174,6 +258,7 @@ export function createOfficePlayersView() {
           body: JSON.stringify({
             label,
             hint_bands: (this.categoryCustomHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
+            is_doubles: Boolean(this.categoryCustomDoubles),
           }),
         });
         const payload = await response.json().catch(() => ({}));
@@ -181,6 +266,7 @@ export function createOfficePlayersView() {
         this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : this.tournamentCategories;
         this.categoryCustomLabel = '';
         this.categoryCustomHints = '';
+        this.categoryCustomDoubles = false;
         this.showToast(this.ot('toast.categoryAdded'), 'success');
         this.ensurePlanningDefaults();
       } catch (error) {
@@ -265,8 +351,11 @@ export function createOfficePlayersView() {
             key: String(cat.id),
             id: cat.id,
             label: cat.label,
-            count: cat.player_count || this.planningCategoryAssignedCount(cat.id),
+            count: cat.is_doubles
+              ? this.planningTeamsForCategory(cat.id).length
+              : cat.player_count || this.planningCategoryAssignedCount(cat.id),
             hint_bands: cat.hint_bands || [],
+            is_doubles: Boolean(cat.is_doubles),
           }));
       }
       const grouped = new Map();
@@ -354,7 +443,42 @@ export function createOfficePlayersView() {
         const assigned = this.planningGroupAssignments[player.id];
         if (assigned) names.add(assigned);
       }
+      for (const team of this.planningTeamsForCategory(this.planningSelectedCategoryId)) {
+        const assigned = this.planningTeamAssignments[team.id];
+        if (assigned) names.add(assigned);
+      }
       return [...names];
+    },
+
+    planningAssignedTeams(groupName) {
+      return this.planningTeamsForCategory(this.planningSelectedCategoryId).filter(team => (
+        this.planningResolveGroupName(this.planningTeamAssignments[team.id]) === groupName
+      ));
+    },
+
+    planningUnassignedTeams() {
+      return this.planningTeamsForCategory(this.planningSelectedCategoryId).filter(team => (
+        !this.planningResolveGroupName(this.planningTeamAssignments[team.id])
+      ));
+    },
+
+    planningTeamOrdinal(team) {
+      const pool = this.planningUnassignedTeams();
+      return pool.findIndex(item => Number(item.id) === Number(team.id)) + 1;
+    },
+
+    planningTeamPartnerOptions(excludeId = null) {
+      const taken = new Set();
+      for (const team of this.planningTeamsForCategory(this.planningSelectedCategoryId)) {
+        if (team.player1_id) taken.add(Number(team.player1_id));
+        if (team.player2_id) taken.add(Number(team.player2_id));
+      }
+      const exclude = Number(excludeId || 0);
+      return (this.planningPlayers || []).filter(player => {
+        if (taken.has(Number(player.id))) return false;
+        if (exclude && Number(player.id) === exclude) return false;
+        return true;
+      });
     },
 
     planningAssignedPlayers(groupName) {
@@ -413,6 +537,7 @@ export function createOfficePlayersView() {
       this.planningGroupCount = next;
       const valid = new Set(this.planningTargetGroupNames());
       const assignments = { ...this.planningGroupAssignments };
+      const teamAssignments = { ...this.planningTeamAssignments };
       let changed = false;
       for (const player of this.planningPlayersForDivision()) {
         const assigned = assignments[player.id];
@@ -426,21 +551,95 @@ export function createOfficePlayersView() {
           changed = true;
         }
       }
-      if (changed) this.planningGroupAssignments = assignments;
+      for (const team of this.planningTeamsForCategory(this.planningSelectedCategoryId)) {
+        const assigned = teamAssignments[team.id];
+        if (!assigned) continue;
+        const canonical = this.planningResolveGroupName(assigned);
+        if (!canonical || !valid.has(canonical)) {
+          delete teamAssignments[team.id];
+          changed = true;
+        } else if (canonical !== assigned) {
+          teamAssignments[team.id] = canonical;
+          changed = true;
+        }
+      }
+      if (changed) {
+        this.planningGroupAssignments = assignments;
+        this.planningTeamAssignments = teamAssignments;
+      }
       this.schedulePlanningAutoSave();
     },
 
     onPlanningPlayerDragStart(player, event) {
       this.planningDragPlayerId = player.id;
+      this.planningDragTeamId = null;
       if (event?.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move';
         try { event.dataTransfer.setData('text/plain', String(player.id)); } catch (e) { /* noop */ }
       }
     },
 
+    onPlanningTeamDragStart(team, event) {
+      this.planningDragTeamId = team.id;
+      this.planningDragPlayerId = null;
+      if (event?.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        try { event.dataTransfer.setData('text/plain', `team:${team.id}`); } catch (e) { /* noop */ }
+      }
+    },
+
+    onPlanningDropTeamToGroup(groupName) {
+      const id = this.planningDragTeamId;
+      this.planningDragTeamId = null;
+      this.planningDragPlayerId = null;
+      if (!id || !groupName) return;
+      if (this.planningTeamAssignments[id] === groupName) return;
+      this.planningTeamAssignments = { ...this.planningTeamAssignments, [id]: groupName };
+      this.schedulePlanningAutoSave();
+    },
+
+    onPlanningDropTeamToPool() {
+      const id = this.planningDragTeamId;
+      this.planningDragTeamId = null;
+      this.planningDragPlayerId = null;
+      if (!id || !this.planningTeamAssignments[id]) return;
+      const assignments = { ...this.planningTeamAssignments };
+      delete assignments[id];
+      this.planningTeamAssignments = assignments;
+      this.schedulePlanningAutoSave();
+    },
+
+    autoAssignPlanningTeams() {
+      const groupNames = this.planningTargetGroupNames();
+      if (!groupNames.length) return;
+      const assignments = { ...this.planningTeamAssignments };
+      this.planningUnassignedTeams().forEach((team, index) => {
+        assignments[team.id] = groupNames[index % groupNames.length];
+      });
+      this.planningTeamAssignments = assignments;
+      this.schedulePlanningAutoSave();
+    },
+
+    clearPlanningTeamAssignments() {
+      const assignments = { ...this.planningTeamAssignments };
+      const valid = new Set(this.planningTargetGroupNames());
+      for (const team of this.planningTeamsForCategory(this.planningSelectedCategoryId)) {
+        const groupName = assignments[team.id];
+        if (!groupName) continue;
+        if (valid.has(this.planningResolveGroupName(groupName))) delete assignments[team.id];
+      }
+      this.planningTeamAssignments = assignments;
+      this.schedulePlanningAutoSave();
+    },
+
     onPlanningDropToGroup(groupName) {
+      if (this.planningSelectedCategoryIsDoubles()) {
+        this.onPlanningDropTeamToGroup(groupName);
+        return;
+      }
       const id = this.planningDragPlayerId;
       this.planningDragPlayerId = null;
+      this.planningDragTeamId = null;
       if (!id || !groupName) return;
       if (this.planningGroupAssignments[id] === groupName) return;
       this.planningGroupAssignments = { ...this.planningGroupAssignments, [id]: groupName };
@@ -448,8 +647,13 @@ export function createOfficePlayersView() {
     },
 
     onPlanningDropToPool() {
+      if (this.planningSelectedCategoryIsDoubles()) {
+        this.onPlanningDropTeamToPool();
+        return;
+      }
       const id = this.planningDragPlayerId;
       this.planningDragPlayerId = null;
+      this.planningDragTeamId = null;
       if (!id || !this.planningGroupAssignments[id]) return;
       const assignments = { ...this.planningGroupAssignments };
       delete assignments[id];
@@ -458,6 +662,10 @@ export function createOfficePlayersView() {
     },
 
     autoAssignPlanningGroups() {
+      if (this.planningSelectedCategoryIsDoubles()) {
+        this.autoAssignPlanningTeams();
+        return;
+      }
       const groupNames = this.planningTargetGroupNames();
       if (!groupNames.length) return;
       const assignments = { ...this.planningGroupAssignments };
@@ -469,6 +677,10 @@ export function createOfficePlayersView() {
     },
 
     clearPlanningDivisionAssignments() {
+      if (this.planningSelectedCategoryIsDoubles()) {
+        this.clearPlanningTeamAssignments();
+        return;
+      }
       const assignments = { ...this.planningGroupAssignments };
       for (const player of this.planningPlayers || []) {
         const groupName = assignments[player.id];
@@ -484,6 +696,58 @@ export function createOfficePlayersView() {
       this.schedulePlanningAutoSave();
     },
 
+    planningSerializeStoredGroup(group) {
+      const rows = group.players || [];
+      return {
+        name: group.name,
+        tournament_category_id: group.tournament_category_id || null,
+        play_format: normalizePlayFormat(group.play_format || this.planningGroupFormats?.[group.name]),
+        players: rows.filter(row => row.player_id && !row.team_id).map(row => row.player_id),
+        teams: rows.filter(row => row.team_id).map(row => row.team_id),
+      };
+    },
+
+    planningSelectedCategoryFilter(group) {
+      const selectedCategoryId = this.planningUsesTournamentCategories()
+        ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
+        : null;
+      if (selectedCategoryId != null) {
+        const cat = this.planningSelectedCategory();
+        const gid = group.tournament_category_id != null ? Number(group.tournament_category_id) : null;
+        return gid === selectedCategoryId
+          || (cat && (group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`)));
+      }
+      return this.planningDivisionFromGroupName(group.name) === this.planningSelectedDivision;
+    },
+
+    buildPlanningGroupsPayload() {
+      const selectedCategoryId = this.planningUsesTournamentCategories()
+        ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
+        : null;
+      const isDoubles = Boolean(this.planningSelectedCategory()?.is_doubles);
+      const otherGroups = (this.planningGroups || [])
+        .filter(group => !this.planningSelectedCategoryFilter(group))
+        .map(group => this.planningSerializeStoredGroup(group));
+      const divisionGroups = this.planningTargetGroupNames()
+        .map(groupName => {
+          const payload = {
+            name: groupName,
+            tournament_category_id: selectedCategoryId,
+            play_format: this.planningGroupPlayFormat(groupName),
+            players: [],
+            teams: [],
+          };
+          if (isDoubles) {
+            payload.teams = this.planningAssignedTeams(groupName).map(team => team.id);
+          } else {
+            payload.players = this.planningAssignedPlayers(groupName).map(player => player.id);
+          }
+          return payload;
+        })
+        .filter(group => (group.players.length + group.teams.length) > 0);
+      return [...otherGroups, ...divisionGroups];
+    },
+
     schedulePlanningAutoSave() {
       if (this.planningSaveTimer) clearTimeout(this.planningSaveTimer);
       this.planningSaveTimer = setTimeout(() => { this.autoSavePlanningGroups(); }, 500);
@@ -491,38 +755,14 @@ export function createOfficePlayersView() {
 
     async autoSavePlanningGroups() {
       if (!this.planningSelectedDivision && !this.planningSelectedCategoryId) return;
+      const groups = this.buildPlanningGroupsPayload();
+      if (!groups.length) return;
       this.planningSaving = true;
       try {
-        const selectedCategoryId = this.planningUsesTournamentCategories()
-          ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
-          : null;
-        const otherGroups = (this.planningGroups || [])
-          .filter(group => {
-            if (selectedCategoryId != null) {
-              const cat = this.planningSelectedCategory();
-              const gid = group.tournament_category_id != null ? Number(group.tournament_category_id) : null;
-              const inSelected = gid === selectedCategoryId
-                || (cat && (group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`)));
-              return !inSelected;
-            }
-            return this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision;
-          })
-          .map(group => ({
-            name: group.name,
-            tournament_category_id: group.tournament_category_id || null,
-            players: (group.players || []).map(player => player.player_id).filter(Boolean),
-          }));
-        const divisionGroups = this.planningTargetGroupNames()
-          .map(groupName => ({
-            name: groupName,
-            tournament_category_id: selectedCategoryId,
-            players: this.planningAssignedPlayers(groupName).map(player => player.id),
-          }))
-          .filter(group => group.players.length > 0);
         const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
           method: 'PUT',
           headers: this.officeHeaders(),
-          body: JSON.stringify({ groups: [...otherGroups, ...divisionGroups] }),
+          body: JSON.stringify({ groups }),
         });
         const payload = await response.json().catch(() => ({}));
         if (response.status === 401) {
@@ -533,6 +773,7 @@ export function createOfficePlayersView() {
         this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.syncPlanningGroupAssignments();
       } catch (error) {
         console.error('Failed to auto-save office planning groups:', error);
         this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
@@ -543,41 +784,23 @@ export function createOfficePlayersView() {
 
     async savePlanningGroups() {
       if (!this.planningSelectedDivision && !this.planningSelectedCategoryId) return;
-      const selectedCategoryId = this.planningUsesTournamentCategories()
-        ? Number(this.planningSelectedCategoryId || this.planningSelectedDivision)
-        : null;
-      const otherGroups = (this.planningGroups || [])
-        .filter(group => {
-          if (selectedCategoryId != null) {
-            const cat = this.planningSelectedCategory();
-            const gid = group.tournament_category_id != null ? Number(group.tournament_category_id) : null;
-            const inSelected = gid === selectedCategoryId
-              || (cat && (group.name === cat.label || String(group.name || '').startsWith(`${cat.label} —`)));
-            return !inSelected;
-          }
-          return this.planningDivisionFromGroupName(group.name) !== this.planningSelectedDivision;
-        })
-        .map(group => ({
-          name: group.name,
-          tournament_category_id: group.tournament_category_id || null,
-          players: (group.players || []).map(player => player.player_id).filter(Boolean),
-        }));
-      const divisionGroups = this.planningTargetGroupNames()
-        .map(groupName => ({
-          name: groupName,
-          tournament_category_id: selectedCategoryId,
-          players: this.planningAssignedPlayers(groupName).map(player => player.id),
-        }))
-        .filter(group => group.players.length > 0);
-      if (!divisionGroups.length) {
-        this.showToast(this.ot('toast.assignPlayerWarning'), 'warning');
+      const groups = this.buildPlanningGroupsPayload();
+      const selectedHasCompetitors = groups.some(group => this.planningSelectedCategoryFilter(group)
+        && ((group.players || []).length + (group.teams || []).length) > 0);
+      if (!selectedHasCompetitors) {
+        this.showToast(
+          this.planningSelectedCategoryIsDoubles()
+            ? this.ot('toast.assignTeamWarning')
+            : this.ot('toast.assignPlayerWarning'),
+          'warning',
+        );
         return;
       }
       try {
         const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
           method: 'PUT',
           headers: this.officeHeaders(),
-          body: JSON.stringify({ groups: [...otherGroups, ...divisionGroups] }),
+          body: JSON.stringify({ groups }),
         });
         const payload = await response.json().catch(() => ({}));
         if (response.status === 401) {
@@ -601,6 +824,99 @@ export function createOfficePlayersView() {
         .map(player => player.name || `${player.first_name || ''} ${player.last_name || ''}`.trim())
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b, 'pl'));
+    },
+
+    planningScheduleCategoryIsDoubles() {
+      const label = String(this.planningNewSchedule?.category_name || '').trim();
+      const cats = (this.tournamentCategories || []).filter(cat => cat.is_doubles && cat.is_active !== 0);
+      if (label) {
+        return cats.find(cat => cat.label === label) || null;
+      }
+      return this.planningSelectedCategoryIsDoubles() ? this.planningSelectedCategory() : null;
+    },
+
+    planningScheduleNameOptions() {
+      const doublesCat = this.planningScheduleCategoryIsDoubles();
+      if (doublesCat) {
+        return this.planningTeamsForCategory(doublesCat.id)
+          .map(team => team.display_name)
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b, 'pl'));
+      }
+      return this.planningPlayerNameOptions();
+    },
+
+    async addOfficeTeam() {
+      const category = this.planningSelectedCategory();
+      if (!category?.is_doubles) {
+        this.showToast(this.ot('toast.pickTwoPartners'), 'warning');
+        return;
+      }
+      const player1Id = Number(this.planningNewTeam.player1_id || 0);
+      const player2Id = Number(this.planningNewTeam.player2_id || 0);
+      if (!player1Id || !player2Id) {
+        this.showToast(this.ot('toast.partnersRequired'), 'warning');
+        return;
+      }
+      if (player1Id === player2Id) {
+        this.showToast(this.ot('toast.pickTwoPartners'), 'warning');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/office/${this.slot}/teams`, {
+          method: 'POST',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({
+            category_id: category.id,
+            player1_id: player1Id,
+            player2_id: player2Id,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.teamAddFailed'));
+        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
+        this.planningNewTeam = { player1_id: '', player2_id: '' };
+        this.showToast(this.ot('toast.teamAdded'), 'success');
+      } catch (error) {
+        console.error('Failed to add office team:', error);
+        this.showToast(error.message || this.ot('toast.teamAddError'), 'error');
+      }
+    },
+
+    async deleteOfficeTeam(team) {
+      if (!team?.id || !confirm(this.ot('confirm.deleteTeam'))) return;
+      if (this.planningTeamAssignments[team.id]) {
+        this.showToast(this.ot('toast.teamInGroup'), 'warning');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/office/${this.slot}/teams/${team.id}`, {
+          method: 'DELETE',
+          headers: this.officeHeaders(),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (response.status === 409) {
+          this.showToast(payload.error || this.ot('toast.teamInGroup'), 'warning');
+          return;
+        }
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.teamDeleteFailed'));
+        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
+        const assignments = { ...this.planningTeamAssignments };
+        delete assignments[team.id];
+        this.planningTeamAssignments = assignments;
+        this.showToast(this.ot('toast.teamDeleted'), 'success');
+      } catch (error) {
+        console.error('Failed to delete office team:', error);
+        this.showToast(error.message || this.ot('toast.teamDeleteError'), 'error');
+      }
     },
 
     async addOfficePlayer() {

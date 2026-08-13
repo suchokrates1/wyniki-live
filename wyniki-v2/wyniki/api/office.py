@@ -258,6 +258,7 @@ def office_planning(slot: int):
         "schedule": fetch_tournament_schedule(tournament_id),
         "courts": dashboard.get("courts", []),
         "tournament_categories": categories,
+        "teams": fetch_tournament_teams(tournament_id),
         "dashboard": dashboard,
     })
 
@@ -391,7 +392,7 @@ def office_teams_create(slot: int):
         return jsonify({"error": str(exc)}), 409
     return _json_no_cache({
         "team": team,
-        "teams": fetch_tournament_teams(tournament_id, category_id=category_id),
+        "teams": fetch_tournament_teams(tournament_id),
     }), 201
 
 

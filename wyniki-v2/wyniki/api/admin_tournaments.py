@@ -816,7 +816,7 @@ def create_tournament_team_route(tournament_id: int):
         return jsonify({"error": str(exc)}), 409
     return jsonify({
         "team": team,
-        "teams": fetch_tournament_teams(tournament_id, category_id=category_id),
+        "teams": fetch_tournament_teams(tournament_id),
     }), 201
 
 

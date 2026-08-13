@@ -206,3 +206,78 @@ def test_schema_has_doubles_columns(db):
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tournament_teams'")
         assert cursor.fetchone() is not None
     db.init_db()
+
+
+def test_resaving_singles_preserves_doubles_teams_and_play_format(db):
+    tournament_id = _create_tournament(db)
+    singles, doubles = db.confirm_tournament_categories(
+        tournament_id,
+        [
+            {"label": "B1 Men"},
+            {"label": "B1 Double", "is_doubles": True},
+        ],
+    )
+    s1 = _insert_person(db, tournament_id, "Jan", "Kowalski")
+    s2 = _insert_person(db, tournament_id, "Adam", "Nowak")
+    p1 = _insert_person(db, tournament_id, "Anna", "Kowalska")
+    p2 = _insert_person(db, tournament_id, "Ewa", "Nowak")
+    p3 = _insert_person(db, tournament_id, "Piotr", "Wiśniewski")
+    p4 = _insert_person(db, tournament_id, "Jan", "Lewandowski")
+    team_a = db.insert_tournament_team(tournament_id, doubles["id"], p1, p2)
+    team_b = db.insert_tournament_team(tournament_id, doubles["id"], p3, p4)
+
+    assert db.save_bracket_groups(
+        tournament_id,
+        [
+            {
+                "name": "B1 Men",
+                "tournament_category_id": singles["id"],
+                "play_format": "groups_knockout",
+                "players": [s1, s2],
+            },
+            {
+                "name": "B1 Double",
+                "tournament_category_id": doubles["id"],
+                "play_format": "round_robin",
+                "teams": [team_a["id"], team_b["id"]],
+            },
+        ],
+    )
+
+    stored = db.fetch_bracket_groups(tournament_id)
+    doubles_group = next(group for group in stored if group["name"] == "B1 Double")
+    assert db.save_bracket_groups(
+        tournament_id,
+        [
+            {
+                "name": doubles_group["name"],
+                "tournament_category_id": doubles["id"],
+                "play_format": doubles_group["play_format"],
+                "teams": [row["team_id"] for row in doubles_group["players"]],
+            },
+            {
+                "name": "B1 Men",
+                "tournament_category_id": singles["id"],
+                "play_format": "knockout",
+                "players": [s1, s2],
+            },
+        ],
+    )
+
+    groups = {group["name"]: group for group in db.fetch_bracket_groups(tournament_id)}
+    assert groups["B1 Double"]["play_format"] == "round_robin"
+    assert {row["team_id"] for row in groups["B1 Double"]["players"]} == {team_a["id"], team_b["id"]}
+    assert groups["B1 Men"]["play_format"] == "knockout"
+    assert {row["player_id"] for row in groups["B1 Men"]["players"]} == {s1, s2}
+
+
+def test_new_group_defaults_to_groups_knockout(db):
+    tournament_id = _create_tournament(db)
+    singles = db.confirm_tournament_categories(tournament_id, [{"label": "B1 Men"}])[0]
+    p1 = _insert_person(db, tournament_id, "Jan", "Kowalski")
+    assert db.save_bracket_groups(
+        tournament_id,
+        [{"name": "B1 Men", "tournament_category_id": singles["id"], "players": [p1]}],
+    )
+    groups = db.fetch_bracket_groups(tournament_id)
+    assert groups[0]["play_format"] == DEFAULT_PLAY_FORMAT
