@@ -22,9 +22,13 @@
                 <div class="header-actions">
                     <label class="sr-only" for="langSelect" x-text="uiText().languageSelect || 'Wybierz jezyk'">Wybierz jezyk</label>
                     <select id="langSelect" class="lang-select" x-model="lang" @change="onLangChange()">
-                        <template x-for="code in supportedLanguages" :key="code">
-                            <option :value="code" x-text="languageLabels[code]"></option>
-                        </template>
+                        <option value="pl">Polski</option>
+                        <option value="de">Deutsch</option>
+                        <option value="en">English</option>
+                        <option value="it">Italiano</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="lt">Lietuvių</option>
                     </select>
                     <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')" :title="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')">
                         <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="darkMode ? '☀️' : '🌙'"></span>
