@@ -1298,7 +1298,7 @@
         </div>
 
         <label class="form-control" x-show="officeNewMatch.mode === 'group'">
-          <span class="label-text font-semibold mb-2" x-text="ot('modals.playerA')"></span>
+          <span class="label-text font-semibold mb-2" x-text="officeCompetitorALabel()"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player1_name">
             <template x-for="player in officeGroupPlayers()" :key="player.name">
               <option :value="player.name" x-text="player.name"></option>
@@ -1306,7 +1306,7 @@
           </select>
         </label>
         <label class="form-control" x-show="officeNewMatch.mode === 'group'">
-          <span class="label-text font-semibold mb-2" x-text="ot('modals.playerB')"></span>
+          <span class="label-text font-semibold mb-2" x-text="officeCompetitorBLabel()"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player2_name">
             <template x-for="player in officeGroupPlayers()" :key="player.name">
               <option :value="player.name" x-text="player.name"></option>
@@ -1314,7 +1314,7 @@
           </select>
         </label>
         <label class="form-control" x-show="officeNewMatch.mode === 'knockout'">
-          <span class="label-text font-semibold mb-2" x-text="ot('modals.playerA')"></span>
+          <span class="label-text font-semibold mb-2" x-text="officeCompetitorALabel()"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player1_name">
             <template x-for="name in officeAllPlayerNames()" :key="'ko_p1_'+name">
               <option :value="name" x-text="name"></option>
@@ -1322,7 +1322,7 @@
           </select>
         </label>
         <label class="form-control" x-show="officeNewMatch.mode === 'knockout'">
-          <span class="label-text font-semibold mb-2" x-text="ot('modals.playerB')"></span>
+          <span class="label-text font-semibold mb-2" x-text="officeCompetitorBLabel()"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player2_name">
             <template x-for="name in officeAllPlayerNames()" :key="'ko_p2_'+name">
               <option :value="name" x-text="name"></option>
@@ -1390,11 +1390,11 @@
         <div class="mt-6 space-y-6">
           <div class="grid gap-4 md:grid-cols-2">
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
-              <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('modals.playerA')"></div>
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="officeCompetitorALabel(officeEditingMatch)"></div>
               <div class="mt-2 text-xl font-semibold" x-text="officeEditingMatch.player1_name"></div>
             </div>
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
-              <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('modals.playerB')"></div>
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="officeCompetitorBLabel(officeEditingMatch)"></div>
               <div class="mt-2 text-xl font-semibold" x-text="officeEditingMatch.player2_name"></div>
             </div>
           </div>

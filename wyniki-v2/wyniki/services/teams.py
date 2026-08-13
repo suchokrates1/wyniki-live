@@ -59,6 +59,11 @@ def split_team_display_name(value: Optional[str]) -> Optional[tuple[str, str]]:
     return left, right
 
 
+def is_team_display_name(value: Optional[str]) -> bool:
+    """True for canonical pair labels like 'Anna Kowalska / Ewa Nowak'."""
+    return split_team_display_name(value) is not None
+
+
 def pair_key_from_player_ids(player1_id: int, player2_id: int) -> str:
     left, right = int(player1_id), int(player2_id)
     if left == right:

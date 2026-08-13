@@ -11,7 +11,8 @@ aliases: [Doubles office plan, Kategorie double, Drużyny w planie, Format grupy
 > **Etap 0 (fundament) zaimplementowany:** `is_doubles`, `play_format`, `tournament_teams`, `team_id` na grupie, CRUD par, `format_team_display_name` / `normalize_pair_key`, testy `test_tournament_teams.py`.  
 > **Etap 1 (UI biura) zaimplementowany:** checkbox Double, badge Debel, pary (CRUD + DnD), dropdown trybu na karcie grupy, kompletność kroku 1 osobno dla par, dropdown terminarza z drużynami, analog w adminie, i18n pl/de/en/it/es/fr.  
 > **Etap 1b (pipeline trybu) zaimplementowany:** `ensure_group_schedule_entries` pomija `knockout`; auto-KO liczy kompletność per grupa / para A+B (nie czeka na cały turniej); `round_robin` bez pucharu; `knockout` z puli członków bez RR (drabinka 2/4/8); krzyż 1A–2B tylko gdy obie grupy kubełka są `groups_knockout`; samotny `groups_knockout` z tabeli (top 4 → finał+3. miejsce); postęp biura; publiczna drabinka ukrywa tabelę RR dla `knockout`. Testy: `test_group_play_format.py`, `test_knockout_generation.py`, lifecycle.  
-> Aplikacja sędziowska już punktuje debel. Brakuje: ręczny wynik debla w biurze, most sugestii `scheduleId`, polerka wyświetlania par, **litewski + audyt kontekstowy istniejących tłumaczeń**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
+> **Etap 2 (ręczny wynik debla) zaimplementowany:** modal A/B = drużyny grupy double; prefill ze schedule zostawia nazwy par + `schedule_id`; walkower na drużynach; `officeAllPlayerNames` nie dokleja osób do formularza debla; korekta zostawia nazwy par; standings/KO exact nazwa drużyny (bez surname-token z `"A / B"`); 409 gdy slot ma już mecz; analog etykiet w adminie. Testy: `test_office_doubles_result.py`.  
+> Aplikacja sędziowska już punktuje debel. Brakuje: most sugestii `scheduleId`, polerka wyświetlania par, **litewski + audyt kontekstowy istniejących tłumaczeń**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
 
 Powiązane w tym vaultcie: [[25 - Planowanie - grupy]] · [[26 - Planowanie - terminarz i autoschedule]] · [[27 - Wprowadzanie i edycja wyniku]] · [[24 - Puchar]] · [[12 - Drabinka]] · [[13 - Terminarz]] · [[18 - Język, motyw, access_key]] · [[33 - Plan turnieju]] · [[36 - Gracze turnieju i import]]
 
@@ -472,14 +473,14 @@ Pliki: `ScheduleSuggestion.kt`, `ScheduleSuggestionSelector.kt`, `PlayerSelectio
 
 ### Etap 2 — ręczny wynik w biurze
 
-- [ ] Modal **Dodaj wynik**: dla grupy double A/B = drużyny grupy
-- [ ] Prefill ze schedule (grupa i puchar) zostawia nazwy par + `schedule_id`
-- [ ] Walkower: zwycięzca z dwóch drużyn
-- [ ] `officeAllPlayerNames` nie miesza osób do formularza debla
-- [ ] Korekta wyniku debla
-- [ ] Standings i awans KO po nazwach drużyn (exact, bez surname-token z `"A / B"`)
-- [ ] 409 gdy slot już ma mecz (appka albo biuro)
-- [ ] To samo w adminie (jeśli osobny formularz wyniku)
+- [x] Modal **Dodaj wynik**: dla grupy double A/B = drużyny grupy
+- [x] Prefill ze schedule (grupa i puchar) zostawia nazwy par + `schedule_id`
+- [x] Walkower: zwycięzca z dwóch drużyn
+- [x] `officeAllPlayerNames` nie miesza osób do formularza debla
+- [x] Korekta wyniku debla
+- [x] Standings i awans KO po nazwach drużyn (exact, bez surname-token z `"A / B"`)
+- [x] 409 gdy slot już ma mecz (appka albo biuro)
+- [x] To samo w adminie (jeśli osobny formularz wyniku)
 
 **Wejście:** Etap 1 (grupy mają `display_name` par). **Wyjście:** turniej debla da się zamknąć **bez** aplikacji sędziowskiej.
 
@@ -549,8 +550,8 @@ Nic z etapów 0–6 nie jest „done” bez tej macierzy. Nowe pliki tam, gdzie 
 - [ ] Dwie grupy `groups_knockout` → krzyż 1A–2B (regresja `test_knockout_generation.py`)
 - [ ] Mieszanka: RR-only A + groups+KO B — KO B wstaje bez czekania na A; A bez slotów PF
 - [ ] Auto-KO **nie** czeka na cały turniej
-- [ ] Ręczny wynik debla (group + KO + walkower) po `display_name`; 409 przy duplikacie
-- [ ] Standings / `_find_group_matches`: exact nazwa drużyny; **brak** `split()[-1]` na `"A / B"`
+- [x] Ręczny wynik debla (group + KO + walkower) po `display_name`; 409 przy duplikacie
+- [x] Standings / `_find_group_matches`: exact nazwa drużyny; **brak** `split()[-1]` na `"A / B"`
 - [ ] `link_schedule_to_match`: priorytet `schedule_id`; fallback pary bez kolejności partnerów
 - [ ] Sugestia: `is_doubles` + 4 payloady graczy z `partner`
 - [ ] Ta sama osoba w singlu i w jednej parze debla — OK; druga para w tej samej kategorii — reject

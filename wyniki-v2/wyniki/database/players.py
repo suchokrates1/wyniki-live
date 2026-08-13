@@ -17,7 +17,14 @@ def _normalize_player_name(value: Optional[str]) -> str:
     return " ".join((value or "").strip().lower().split())
 
 def _player_surname(value: Optional[str]) -> str:
-    """Return the normalized surname/token used by mobile clients."""
+    """Return the normalized surname/token used by mobile clients.
+
+    Pair labels must not be reduced to the second partner's last name.
+    """
+    from ..services.teams import is_team_display_name
+
+    if is_team_display_name(value):
+        return ""
     normalized = _normalize_player_name(value)
     if not normalized:
         return ""

@@ -15,8 +15,17 @@ from ..services.teams import (
     DEFAULT_PLAY_FORMAT,
     PLAY_FORMAT_GROUPS_KNOCKOUT,
     PLAY_FORMAT_KNOCKOUT,
+    is_team_display_name,
     normalize_play_format,
 )
+
+def _surname_match_token(name: Optional[str]) -> str:
+    """Last-name token for legacy singles matching; empty for doubles pair labels."""
+    value = (name or "").strip()
+    if not value or is_team_display_name(value):
+        return ""
+    return value.split()[-1]
+
 
 def _bracket_row_match_priority(row: sqlite3.Row, player_name: str) -> int:
     """Rank player matches: full-name exact wins over surname-only fallback."""
@@ -91,8 +100,8 @@ def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: 
             cursor = conn.cursor()
             p1 = (player1_name or "").strip()
             p2 = (player2_name or "").strip()
-            p1_surname = p1.split()[-1] if p1 else ""
-            p2_surname = p2.split()[-1] if p2 else ""
+            p1_surname = _surname_match_token(p1)
+            p2_surname = _surname_match_token(p2)
 
             def _find_explicit_phase(table_name: str) -> Optional[str]:
                 cursor.execute(
@@ -1406,6 +1415,9 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
         ORDER BY created_at
     """, (*tournament_params, *phase_params, *player_names, *player_names, *date_params))
     exact_results = [dict(row) for row in cursor.fetchall()]
+    if any(is_team_display_name(name) for name in player_names):
+        exact_results.sort(key=lambda row: row.get("created_at") or "")
+        return exact_results
 
     # Fallback: surname-based matching (bracket stores "Kowalski" but match has "Jan Kowalski")
     # Build a map of surname -> bracket_name for renaming results
@@ -1665,8 +1677,9 @@ def _detect_knockout_result(
     end_ts = end_date + "T23:59:59"
     tournament_clause = "AND tournament_id = ?" if tournament_id is not None else ""
     tournament_params = [tournament_id] if tournament_id is not None else []
-    surname1 = p1.strip().split()[-1] if p1.strip() else p1
-    surname2 = p2.strip().split()[-1] if p2.strip() else p2
+    allow_surname_fallback = bool(_surname_match_token(p1) and _surname_match_token(p2))
+    surname1 = _surname_match_token(p1) or p1
+    surname2 = _surname_match_token(p2) or p2
 
     def _fetch_finished_match(match_phase: Optional[str]) -> Optional[sqlite3.Row]:
         phase_clause = "AND phase = ?" if match_phase else ""
@@ -1684,7 +1697,7 @@ def _detect_knockout_result(
             ORDER BY created_at DESC LIMIT 1
         """, (*tournament_params, *phase_params, p1, p2, p2, p1, start_date, end_ts))
         row = cursor.fetchone()
-        if row:
+        if row or not allow_surname_fallback:
             return row
         cursor.execute(f"""
                         SELECT player1_name, player2_name, player1_sets, player2_sets, sets_history,
@@ -1710,9 +1723,16 @@ def _detect_knockout_result(
     if not row:
         return None
 
-    p1_surname = p1.strip().split()[-1].lower() if p1.strip() else ""
-    match_p1_surname = row["player1_name"].strip().split()[-1].lower() if row["player1_name"] else ""
-    flipped = match_p1_surname != p1_surname
+    if row["player1_name"] == p1:
+        flipped = False
+    elif row["player1_name"] == p2:
+        flipped = True
+    elif allow_surname_fallback:
+        p1_surname = _surname_match_token(p1).lower()
+        match_p1_surname = _surname_match_token(row["player1_name"]).lower()
+        flipped = bool(p1_surname) and match_p1_surname != p1_surname
+    else:
+        flipped = False
 
     sh = json.loads(row["sets_history"]) if row["sets_history"] else []
     sh = [s for s in sh if not _is_empty_set(s)]
@@ -1720,11 +1740,18 @@ def _detect_knockout_result(
     sets_detail = [_build_set_detail(s, flipped) for s in sh]
 
     match_winner = row["winner_name"] or (row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"])
-    winner_surname = match_winner.strip().split()[-1].lower() if match_winner else ""
-    if winner_surname == p1.strip().split()[-1].lower():
+    if match_winner == p1:
         winner = p1
-    elif winner_surname == p2.strip().split()[-1].lower():
+    elif match_winner == p2:
         winner = p2
+    elif allow_surname_fallback:
+        winner_surname = _surname_match_token(match_winner).lower()
+        if winner_surname and winner_surname == _surname_match_token(p1).lower():
+            winner = p1
+        elif winner_surname and winner_surname == _surname_match_token(p2).lower():
+            winner = p2
+        else:
+            winner = match_winner
     else:
         winner = match_winner
     return {
