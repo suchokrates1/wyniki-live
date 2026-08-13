@@ -46,11 +46,16 @@ export default async function run() {
       await firstName.fill(first);
       await lastName.fill(last);
       await page.getByRole('button', { name: 'Dodaj zawodnika', exact: true }).click();
-      await page.waitForFunction(
-        () => document.body.innerText.includes('Zawodnik dodany'),
-        undefined,
-        { timeout: 10000 },
-      );
+      try {
+        await page.waitForFunction(
+          () => document.body.innerText.includes('Zawodnik dodany'),
+          undefined,
+          { timeout: 10000 },
+        );
+      } catch (err) {
+        const snippet = await page.evaluate(() => document.body.innerText.replaceAll('\u200B', '').slice(0, 1800));
+        throw new Error(`Player ${first} ${last} was not added: ${err.message}\nUI snippet: ${snippet}`);
+      }
       await page.waitForFunction(
         () => !document.body.innerText.includes('Zawodnik dodany'),
         undefined,
