@@ -70,6 +70,8 @@ def infer_mixed_player_bands(categories: List[Dict[str, Any]] | None) -> List[st
 def category_row_payload(row: Any) -> Dict[str, Any]:
     import json
 
+    from .teams import coerce_is_doubles
+
     hint_raw = row["hint_bands"] if "hint_bands" in row.keys() else "[]"
     try:
         hint_bands = json.loads(hint_raw) if hint_raw else []
@@ -77,6 +79,9 @@ def category_row_payload(row: Any) -> Dict[str, Any]:
             hint_bands = []
     except (ValueError, TypeError):
         hint_bands = []
+    is_doubles = False
+    if "is_doubles" in row.keys():
+        is_doubles = coerce_is_doubles(row["is_doubles"])
     return {
         "id": int(row["id"]),
         "tournament_id": int(row["tournament_id"]),
@@ -85,6 +90,8 @@ def category_row_payload(row: Any) -> Dict[str, Any]:
         "sort_order": int(row["sort_order"] or 0),
         "is_active": int(row["is_active"] or 0),
         "hint_bands": hint_bands,
+        "is_doubles": is_doubles,
         "player_count": int(row["player_count"] if "player_count" in row.keys() else 0),
         "group_count": int(row["group_count"] if "group_count" in row.keys() else 0),
+        "team_count": int(row["team_count"] if "team_count" in row.keys() else 0),
     }

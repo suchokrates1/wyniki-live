@@ -11,6 +11,7 @@ from werkzeug.security import generate_password_hash
 from ..config import settings, logger
 
 from .connection import db_conn
+from ..services.teams import DEFAULT_PLAY_FORMAT, normalize_play_format
 
 def _bracket_row_match_priority(row: sqlite3.Row, player_name: str) -> int:
     """Rank player matches: full-name exact wins over surname-only fallback."""
@@ -963,9 +964,43 @@ def _advance_to_next_round(cursor, tournament_id: int, semifinal_phase: str, sf_
     if third_slot:
         _assign_knockout_slot_player(cursor, third_slot, target_side, loser)
 
+def _iter_group_competitors(group: Dict) -> List[Dict[str, Optional[int]]]:
+    """Normalize group payload into person vs team competitor rows."""
+    entries: List[Dict[str, Optional[int]]] = []
+    seen: set[tuple] = set()
+
+    def _add(player_id: Optional[int], team_id: Optional[int]) -> None:
+        key = (player_id, team_id)
+        if key in seen:
+            return
+        seen.add(key)
+        entries.append({"player_id": player_id, "team_id": team_id})
+
+    for item in group.get("players") or []:
+        if isinstance(item, dict):
+            raw_team = item.get("team_id")
+            raw_player = item.get("player_id") if item.get("player_id") is not None else item.get("id")
+            if raw_team:
+                _add(None, int(raw_team))
+            elif raw_player:
+                _add(int(raw_player), None)
+            continue
+        if item:
+            _add(int(item), None)
+    for item in group.get("teams") or []:
+        if isinstance(item, dict):
+            raw_team = item.get("team_id") if item.get("team_id") is not None else item.get("id")
+            if raw_team:
+                _add(None, int(raw_team))
+            continue
+        if item:
+            _add(None, int(item))
+    return entries
+
+
 def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
     """Replace all bracket groups for a tournament.
-    groups: [{"name": "A", "players": [player_id, ...]}, ...]
+    groups: [{"name": "A", "players": [player_id, ...], "teams": [team_id, ...]}, ...]
     """
     try:
         with db_conn() as conn:
@@ -989,19 +1024,49 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
                 full = (row["name"] or "").strip()
                 name_map[row["id"]] = full if full else (row["last_name"] or "").strip()
 
+            cursor.execute(
+                "SELECT id, display_name FROM tournament_teams WHERE tournament_id = ?",
+                (tournament_id,),
+            )
+            team_map = {int(row["id"]): str(row["display_name"] or "") for row in cursor.fetchall()}
+
             for idx, g in enumerate(groups):
                 category_id = g.get("tournament_category_id")
+                play_format = normalize_play_format(g.get("play_format"))
                 cursor.execute(
-                    "INSERT INTO bracket_groups (tournament_id, name, order_num, tournament_category_id) VALUES (?, ?, ?, ?)",
-                    (tournament_id, g["name"], idx, category_id),
+                    """
+                    INSERT INTO bracket_groups (
+                        tournament_id, name, order_num, tournament_category_id, play_format
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (tournament_id, g["name"], idx, category_id, play_format),
                 )
                 gid = cursor.lastrowid
-                for pid in g.get("players", []):
-                    pname = name_map.get(pid, "")
+                for competitor in _iter_group_competitors(g):
+                    team_id = competitor.get("team_id")
+                    player_id = competitor.get("player_id")
+                    if team_id:
+                        pname = team_map.get(int(team_id), "")
+                        if not pname:
+                            continue
+                        cursor.execute(
+                            """
+                            INSERT INTO bracket_group_players (group_id, player_id, player_name, team_id)
+                            VALUES (?, NULL, ?, ?)
+                            """,
+                            (gid, pname, int(team_id)),
+                        )
+                        continue
+                    if not player_id:
+                        continue
+                    pname = name_map.get(player_id, "")
                     if pname:
                         cursor.execute(
-                            "INSERT INTO bracket_group_players (group_id, player_id, player_name) VALUES (?, ?, ?)",
-                            (gid, pid, pname)
+                            """
+                            INSERT INTO bracket_group_players (group_id, player_id, player_name, team_id)
+                            VALUES (?, ?, ?, NULL)
+                            """,
+                            (gid, player_id, pname),
                         )
             conn.commit()
             logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
@@ -1017,20 +1082,34 @@ def fetch_bracket_groups(tournament_id: int) -> List[Dict]:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id, name, order_num, tournament_category_id FROM bracket_groups WHERE tournament_id = ? ORDER BY order_num",
+                """
+                SELECT id, name, order_num, tournament_category_id, play_format
+                FROM bracket_groups
+                WHERE tournament_id = ?
+                ORDER BY order_num
+                """,
                 (tournament_id,),
             )
             groups = []
             for g in cursor.fetchall():
                 cursor.execute(
-                    "SELECT player_id, player_name FROM bracket_group_players WHERE group_id = ?",
+                    "SELECT player_id, player_name, team_id FROM bracket_group_players WHERE group_id = ?",
                     (g["id"],),
                 )
-                players = [{"player_id": r["player_id"], "name": r["player_name"]} for r in cursor.fetchall()]
+                players = [
+                    {
+                        "player_id": r["player_id"],
+                        "name": r["player_name"],
+                        "team_id": r["team_id"],
+                    }
+                    for r in cursor.fetchall()
+                ]
+                play_format = g["play_format"] if "play_format" in g.keys() else DEFAULT_PLAY_FORMAT
                 groups.append({
                     "id": g["id"],
                     "name": g["name"],
                     "tournament_category_id": g["tournament_category_id"],
+                    "play_format": normalize_play_format(play_format),
                     "players": players,
                 })
             return groups

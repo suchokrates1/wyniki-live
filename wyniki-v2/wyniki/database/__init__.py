@@ -1,7 +1,7 @@
 """Database access layer for v2 (package facade)."""
 from __future__ import annotations
 
-from . import brackets, categories, connection, courts, history, players, schedule, tournaments
+from . import brackets, categories, connection, courts, history, players, schedule, teams, tournaments
 
 from .connection import (
     _default_simulation_office_password_hash,
@@ -176,6 +176,15 @@ from .categories import (
     set_mixed_categories,
 )
 
+from .teams import (
+    TeamConflictError,
+    TeamValidationError,
+    fetch_tournament_teams,
+    fetch_tournament_team,
+    insert_tournament_team,
+    delete_tournament_team,
+)
+
 from .history import (
     insert_match_history,
     delete_latest_history_entry,
@@ -193,6 +202,7 @@ _MODULES = {
     'brackets': brackets,
     'categories': categories,
     'history': history,
+    'teams': teams,
 }
 _INJECTIONS = {
     'schedule': {
@@ -374,6 +384,12 @@ __all__ = [
     'get_planning_mixed_bands',
     'clear_legacy_mixed_categories',
     'set_mixed_categories',
+    'TeamConflictError',
+    'TeamValidationError',
+    'fetch_tournament_teams',
+    'fetch_tournament_team',
+    'insert_tournament_team',
+    'delete_tournament_team',
     'insert_match_history',
     'delete_latest_history_entry',
     'fetch_match_history',
