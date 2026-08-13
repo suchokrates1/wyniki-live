@@ -458,7 +458,7 @@
                       </select>
                     </div>
                     <div class="form-control">
-                      <label class="label"><span class="label-text">Zawodnik 1</span></label>
+                      <label class="label"><span class="label-text" x-text="officeCompetitorLabel(1)"></span></label>
                       <select class="select select-bordered" x-model="officeNewMatch.player1_name">
                         <template x-for="player in officeGroupPlayers()" :key="'office_p1_'+player.name">
                           <option :value="player.name" x-text="player.name"></option>
@@ -466,7 +466,7 @@
                       </select>
                     </div>
                     <div class="form-control">
-                      <label class="label"><span class="label-text">Zawodnik 2</span></label>
+                      <label class="label"><span class="label-text" x-text="officeCompetitorLabel(2)"></span></label>
                       <select class="select select-bordered" x-model="officeNewMatch.player2_name">
                         <template x-for="player in officeGroupPlayers()" :key="'office_p2_'+player.name">
                           <option :value="player.name" x-text="player.name"></option>

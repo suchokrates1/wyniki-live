@@ -165,6 +165,16 @@ export function createOfficeTabAdmin() {
        return group?.players || [];
      },
 
+     officeSelectedGroupIsDoubles() {
+       return this.officeGroupPlayers().some((player) => player?.team_id);
+     },
+
+     officeCompetitorLabel(side) {
+       const doubles = this.officeSelectedGroupIsDoubles();
+       if (side === 1) return doubles ? 'Para 1' : 'Zawodnik 1';
+       return doubles ? 'Para 2' : 'Zawodnik 2';
+     },
+
      onOfficeGroupChanged() {
        const players = this.officeGroupPlayers();
        this.officeNewMatch.player1_name = players[0]?.name || '';
@@ -207,11 +217,11 @@ export function createOfficeTabAdmin() {
 
      async addOfficeGroupMatch() {
        if (!this.officeTournamentId || !this.officeNewMatch.group_id || !this.officeNewMatch.player1_name || !this.officeNewMatch.player2_name) {
-         this.showToast('Wybierz grupę i zawodników', 'warning');
+         this.showToast(this.officeSelectedGroupIsDoubles() ? 'Wybierz grupę i pary' : 'Wybierz grupę i zawodników', 'warning');
          return;
        }
        if (this.officeNewMatch.player1_name === this.officeNewMatch.player2_name) {
-         this.showToast('Wybierz dwóch różnych zawodników', 'warning');
+         this.showToast(this.officeSelectedGroupIsDoubles() ? 'Wybierz dwie różne pary' : 'Wybierz dwóch różnych zawodników', 'warning');
          return;
        }
        if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {

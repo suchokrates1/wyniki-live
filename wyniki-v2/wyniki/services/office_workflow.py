@@ -564,6 +564,11 @@ def _create_office_group_match(tournament_id: int, data: Dict[str, Any]) -> tupl
         )
         if not schedule_entry:
             raise OfficeWorkflowError('Schedule entry not found', 404)
+        if schedule_entry.get("match_id"):
+            raise OfficeWorkflowError(
+                'This schedule slot already has a linked match. Edit the existing result instead.',
+                409,
+            )
         player1_name = player1_name or str(schedule_entry.get("player1_name") or "").strip()
         player2_name = player2_name or str(schedule_entry.get("player2_name") or "").strip()
         if not group_id and schedule_entry.get("bracket_group_id"):

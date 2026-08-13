@@ -64,8 +64,63 @@ export function createOfficeMatchesView() {
       this.officeNewMatch.phase = kind === 'rematch' ? 'Grupowa — Rewanż' : 'Grupowa';
     },
 
+    officeLooksLikeTeamName(name) {
+      return String(name || '').includes(' / ');
+    },
+
+    officeGroupIsDoubles(group) {
+      return (group?.players || []).some((player) => player?.team_id);
+    },
+
+    officeFormUsesTeams(form = this.officeNewMatch) {
+      if (this.officeLooksLikeTeamName(form?.player1_name) || this.officeLooksLikeTeamName(form?.player2_name)) {
+        return true;
+      }
+      if ((form?.mode || 'group') === 'group') {
+        return this.officeGroupIsDoubles(this.officeSelectedGroup());
+      }
+      const names = new Set([form?.player1_name, form?.player2_name].filter(Boolean));
+      for (const group of this.officeGroups || []) {
+        if (!this.officeGroupIsDoubles(group)) continue;
+        const groupNames = new Set((group.players || []).map((player) => player.name));
+        if ([...names].some((name) => groupNames.has(name))) return true;
+      }
+      const populated = (this.officeGroups || []).filter((group) => (group.players || []).length);
+      return populated.length > 0 && populated.every((group) => this.officeGroupIsDoubles(group));
+    },
+
+    officeCompetitorALabel(form = this.officeNewMatch) {
+      return this.officeFormUsesTeams(form) ? this.ot('modals.teamA') : this.ot('modals.playerA');
+    },
+
+    officeCompetitorBLabel(form = this.officeNewMatch) {
+      return this.officeFormUsesTeams(form) ? this.ot('modals.teamB') : this.ot('modals.playerB');
+    },
+
     officeAllPlayerNames() {
       const names = new Set();
+      const form = this.officeNewMatch || {};
+      if (form.lockedFromSlot) {
+        for (const name of [form.player1_name, form.player2_name]) {
+          const label = String(name || '').trim();
+          if (label) names.add(label);
+        }
+        return [...names];
+      }
+      if (this.officeFormUsesTeams(form)) {
+        for (const name of [form.player1_name, form.player2_name]) {
+          const label = String(name || '').trim();
+          if (label) names.add(label);
+        }
+        for (const group of this.officeGroups || []) {
+          if (!this.officeGroupIsDoubles(group)) continue;
+          for (const player of group.players || []) {
+            const name = String(player?.name || '').trim();
+            if (name) names.add(name);
+          }
+        }
+        return [...names].sort((left, right) => left.localeCompare(right));
+      }
       for (const player of this.planningPlayers || []) {
         const name = String(player?.name || '').trim();
         if (name) names.add(name);
@@ -220,11 +275,11 @@ export function createOfficeMatchesView() {
 
     async addOfficeGroupMatch() {
       if (!this.officeNewMatch.group_id || !this.officeNewMatch.player1_name || !this.officeNewMatch.player2_name) {
-        this.showToast(this.ot('toast.pickGroupPlayers'), 'warning');
+        this.showToast(this.officeFormUsesTeams() ? this.ot('toast.pickGroupTeams') : this.ot('toast.pickGroupPlayers'), 'warning');
         return;
       }
       if (this.officeNewMatch.player1_name === this.officeNewMatch.player2_name) {
-        this.showToast(this.ot('toast.pickTwoPlayers'), 'warning');
+        this.showToast(this.officeFormUsesTeams() ? this.ot('toast.pickTwoTeams') : this.ot('toast.pickTwoPlayers'), 'warning');
         return;
       }
       if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {
@@ -277,7 +332,7 @@ export function createOfficeMatchesView() {
         return;
       }
       if (this.officeNewMatch.player1_name === this.officeNewMatch.player2_name) {
-        this.showToast(this.ot('toast.pickTwoPlayers'), 'warning');
+        this.showToast(this.officeFormUsesTeams() ? this.ot('toast.pickTwoTeams') : this.ot('toast.pickTwoPlayers'), 'warning');
         return;
       }
       if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {
