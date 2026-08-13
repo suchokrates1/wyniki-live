@@ -579,11 +579,11 @@ Nowe moduły, ten sam runner co `01_bootstrap` … `10_sse_reconnect`:
 - [x] `13_office_doubles_result.spec` — ręczny wynik grupowy i pucharowy na drużynach; walkower; korekta; standings
 - [x] `14_public_doubles_display.spec` — drabinka, terminarz, search po obu nazwiskach pary
 - [x] `15_lang_lt.spec` — `?lang=lt` na office i publicznej; select Lietuvių; brak surowych kluczy PL na nowych ekranach (spot-check)
-- [ ] `16_office_login_chrome.spec` — logowanie, chrome, zakładki, wylogowanie ([[20]], [[21]])
-- [ ] `17_office_progress.spec` — postęp grup + chipy par ([[23]])
-- [ ] `18_office_planning_ui.spec` — confirm Debel i para z UI ([[25]])
-- [ ] `19_office_autoschedule.spec` — krok 2 generuj / propozycja ([[26]])
-- [ ] `20_office_result_modal_teams.spec` — modal Para A/B ([[27]])
+- [x] `16_office_login_chrome.spec` — logowanie, chrome, zakładki, wylogowanie ([[20]], [[21]])
+- [x] `17_office_progress.spec` — postęp grup + chipy par ([[23]])
+- [x] `18_office_planning_ui.spec` — confirm Debel i para z UI ([[25]])
+- [x] `19_office_autoschedule.spec` — krok 2 generuj / propozycja ([[26]])
+- [x] `20_office_result_modal_teams.spec` — modal Para A/B ([[27]])
 
 Regresja: odpal **cały** `e2e:tournament` (moduły 01–10) na końcu — singiel i obecny puchar nie mogą paść.
 
@@ -596,7 +596,7 @@ Regresja: odpal **cały** `e2e:tournament` (moduły 01–10) na końcu — singi
 #### Gate CI
 
 - [ ] `pytest -q` (nowe + stare) zielone
-- [x] `npm run e2e:tournament` zielone (w tym 11–15)
+- [x] `npm run e2e:tournament` / `run.py office` zielone (01–20, Dell :18087)
 - [ ] `gradlew test` zielone
 - [ ] E2E Androida z seedem double na emulatorze (jak obecny `UmpireTournamentE2ETest`)
 - [ ] Brakujący klucz i18n failuje, nie warnuje
