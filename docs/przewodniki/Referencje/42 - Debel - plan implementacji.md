@@ -12,8 +12,8 @@ aliases: [Doubles office plan, Kategorie double, Drużyny w planie, Format grupy
 > **Etap 1 (UI biura) zaimplementowany:** checkbox Double, badge Debel, pary (CRUD + DnD), dropdown trybu na karcie grupy, kompletność kroku 1 osobno dla par, dropdown terminarza z drużynami, analog w adminie, i18n pl/de/en/it/es/fr.  
 > **Etap 1b (pipeline trybu) zaimplementowany:** `ensure_group_schedule_entries` pomija `knockout`; auto-KO liczy kompletność per grupa / para A+B (nie czeka na cały turniej); `round_robin` bez pucharu; `knockout` z puli członków bez RR (drabinka 2/4/8); krzyż 1A–2B tylko gdy obie grupy kubełka są `groups_knockout`; samotny `groups_knockout` z tabeli (top 4 → finał+3. miejsce); postęp biura; publiczna drabinka ukrywa tabelę RR dla `knockout`. Testy: `test_group_play_format.py`, `test_knockout_generation.py`, lifecycle.  
 > **Etap 2 (ręczny wynik debla) zaimplementowany:** modal A/B = drużyny grupy double; prefill ze schedule zostawia nazwy par + `schedule_id`; walkower na drużynach; `officeAllPlayerNames` nie dokleja osób do formularza debla; korekta zostawia nazwy par; standings/KO exact nazwa drużyny (bez surname-token z `"A / B"`); 409 gdy slot ma już mecz; analog etykiet w adminie. Testy: `test_office_doubles_result.py`.  
-> **Etap 3 (most aplikacji) — backend w tym repo:** sugestia `is_doubles` + `partner`; `link_schedule_to_match` / standings / KO / `detect_bracket_context` ignorują kolejność partnerów w parze. Testy: `test_mobile_doubles_suggestion.py`. **Aplikacja Android jest w osobnym repo** (`android-tennis-referee`) — `ScheduleSuggestion` / `applySuggestedMatch` / `scheduleId` przy Debel z sugestii jeszcze nie w tym PR.  
-> Brakuje: strona Android Etapu 3, polerka wyświetlania par (Etap 4), **litewski + audyt kontekstowy**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
+> **Etap 3 (most aplikacji):** backend w `wyniki-live` (`is_doubles` + `partner`, matching bez kolejności partnerów). Aplikacja w `Umpire-App`: `ScheduleSuggestion.isDoubles`, selector 4 osób, `applySuggestedMatch` nie czyści `scheduleId` przy Debel z sugestii, `team1Name`/`team2Name` z planu.  
+> Brakuje: polerka wyświetlania par (Etap 4), **litewski + audyt kontekstowy**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
 
 Powiązane w tym vaultcie: [[25 - Planowanie - grupy]] · [[26 - Planowanie - terminarz i autoschedule]] · [[27 - Wprowadzanie i edycja wyniku]] · [[24 - Puchar]] · [[12 - Drabinka]] · [[13 - Terminarz]] · [[18 - Język, motyw, access_key]] · [[33 - Plan turnieju]] · [[36 - Gracze turnieju i import]]
 
@@ -488,16 +488,17 @@ Pliki: `ScheduleSuggestion.kt`, `ScheduleSuggestionSelector.kt`, `PlayerSelectio
 ### Etap 3 — most aplikacji
 
 - [x] `_mobile_schedule_suggestion_payload`: `is_doubles` z kategorii slotu + `partner`
-- [ ] `ScheduleSuggestion` + selector 4 osób (repo `android-tennis-referee`)
-- [ ] `applySuggestedMatch` nie wymusza singla (repo `android-tennis-referee`)
-- [ ] Checkbox Debel z sugestii **nie** czyści `scheduleId` (repo `android-tennis-referee`)
-- [ ] `team1Name` / `team2Name` z planu przy starcie (repo `android-tennis-referee`)
+- [x] `ScheduleSuggestion` + selector 4 osób (repo `android-tennis-referee` / `Umpire-App`)
+- [x] `applySuggestedMatch` nie wymusza singla (repo `android-tennis-referee` / `Umpire-App`)
+- [x] Checkbox Debel z sugestii **nie** czyści `scheduleId` (repo `android-tennis-referee` / `Umpire-App`)
+- [x] `team1Name` / `team2Name` z planu przy starcie (repo `android-tennis-referee` / `Umpire-App`)
 - [x] `link_schedule_to_match` fallback: para bez kolejności partnerów
 - [x] `detect_bracket_context` / `_find_group_matches`: exact nazwa drużyny, potem para bez kolejności partnerów; **brak** surname-token z `"A / B"`
 - [x] Testy backend (`test_mobile_doubles_suggestion.py`)
-- [ ] `ScheduleSuggestionSelectorTest` + UI Use suggested doubles (repo `android-tennis-referee`)
+- [x] `ScheduleSuggestionSelectorTest` (4 osoby, `isDoubles`, scheduleId zostaje przy Debel z sugestii)
+- [ ] UI Use suggested doubles (espresso na żywym korcie — Etap 7)
 
-**Wejście:** Etap 1 (slot w planie ma nazwy par). **Wyjście backend:** payload 4 osób + `scheduleId` da się podpiąć mimo odwróconych partnerów. **Wyjście pełne:** sędzia z **Użyj meczu** startuje debel — wymaga zmian w aplikacji.
+**Wejście:** Etap 1 (slot w planie ma nazwy par). **Wyjście:** sędzia z **Użyj meczu** startuje debel podpięty pod slot (`scheduleId` + kanoniczne nazwy par). Espresso na żywym korcie = Etap 7.
 
 ### Etap 4 — wyświetlanie
 
@@ -561,10 +562,10 @@ Nic z etapów 0–6 nie jest „done” bez tej macierzy. Nowe pliki tam, gdzie 
 
 #### Unit — aplikacja
 
-- [ ] `ScheduleSuggestionSelector` wybiera 4 osoby przy `isDoubles`
-- [ ] `applySuggestedMatch` ustawia debel i **nie** czyści `scheduleId`
-- [ ] Payload meczu: `player1Name`/`player2Name` = kanoniczne etykiety z planu (`team1Name`)
-- [ ] Ręczne Debel bez sugestii nadal czyści `scheduleId` (regresja)
+- [x] `ScheduleSuggestionSelector` wybiera 4 osoby przy `isDoubles`
+- [x] `applySuggestedMatch` ustawia debel i **nie** czyści `scheduleId`
+- [x] Payload meczu: `player1Name`/`player2Name` = kanoniczne etykiety z planu (`team1Name`)
+- [x] Ręczne Debel bez sugestii nadal czyści `scheduleId` (regresja)
 - [ ] `AvailableLanguages` zawiera `lt`; stringi `values-lt` kompletne vs `values-pl` (gate liczby kluczy)
 
 #### E2E — biuro / publiczna (`e2e-tournament`)
