@@ -10,7 +10,7 @@ aliases: [Query params public]
 
 | Parametr | Aliasy | Efekt |
 |----------|--------|-------|
-| `lang` | — | Język UI (`pl/de/en/it/es/fr`; plan: + `lt`) |
+| `lang` | — | Język UI (`pl/de/en/it/es/fr/lt`) |
 | `tournament_id` | `tid` | Otwórz szczegóły turnieju (gdy brak hasha) |
 | `access_key` | `key` | Klucz do prywatnych turniejów (history/bracket/schedule/info) |
 | `etap` | `stage` | Etap symulacji (z turniejami typu simulation) |

@@ -1,4 +1,6 @@
 /** Office module translations for all supported languages. */
+import { OFFICE_TRANSLATION_PATCHES_LT } from './officeTranslationsLt.js';
+
 export const OFFICE_TRANSLATION_PATCHES = {
   pl: {
     office: {
@@ -189,6 +191,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         done: 'Gotowe',
         left: 'Zostało',
         players: 'Zawodnicy',
+        pairs: 'Pary',
       },
       knockout: {
         generated: 'Wygenerowane',
@@ -266,7 +269,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutFinished: 'Zakończony',
         knockoutPlanned: 'Zaplanowany',
         knockoutReady: 'Gotowy do rozegrania',
-        knockoutWaiting: 'Czeka na zawodników',
+        knockoutWaiting: 'Czeka na strony',
         complete: 'Komplet',
         noData: 'Brak danych',
       },
@@ -334,7 +337,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutGenerated: ' Drabinka została wygenerowana.',
         addResultError: 'Błąd dodawania wyniku',
         pickKnockoutMatch: 'Wybierz mecz pucharowy z drabinki',
-        knockoutSlotIncomplete: 'Slot pucharowy nie ma jeszcze dwóch zawodników',
+        knockoutSlotIncomplete: 'Slot pucharowy nie ma jeszcze dwóch konkurentów',
         knockoutResultSaved: 'Wynik pucharowy zapisany',
         knockoutResultError: 'Błąd dodawania wyniku pucharowego',
         noHistoryEntry: 'Ten wynik nie ma jeszcze wpisu w historii',
@@ -593,6 +596,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         done: 'Fertig',
         left: 'Offen',
         players: 'Spieler',
+        pairs: 'Paare',
       },
       knockout: {
         generated: 'Generiert',
@@ -655,7 +659,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutFinished: 'Beendet',
         knockoutPlanned: 'Geplant',
         knockoutReady: 'Spielbereit',
-        knockoutWaiting: 'Wartet auf Spieler',
+        knockoutWaiting: 'Wartet auf Teilnehmer',
         complete: 'Vollständig',
         noData: 'Keine Daten',
       },
@@ -723,7 +727,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutGenerated: ' Turnierbaum wurde erstellt.',
         addResultError: 'Fehler beim Hinzufügen des Ergebnisses',
         pickKnockoutMatch: 'K.-o.-Spiel aus dem Turnierbaum wählen',
-        knockoutSlotIncomplete: 'Der K.-o.-Slot hat noch keine zwei Spieler',
+        knockoutSlotIncomplete: 'Der K.-o.-Slot hat noch keine zwei Teilnehmer',
         knockoutResultSaved: 'K.-o.-Ergebnis gespeichert',
         knockoutResultError: 'Fehler beim Hinzufügen des K.-o.-Ergebnisses',
         noHistoryEntry: 'Dieses Ergebnis hat noch keinen Historieneintrag',
@@ -979,6 +983,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         done: 'Done',
         left: 'Left',
         players: 'Players',
+        pairs: 'Pairs',
       },
       knockout: {
         generated: 'Generated',
@@ -1041,7 +1046,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutFinished: 'Finished',
         knockoutPlanned: 'Planned',
         knockoutReady: 'Ready to play',
-        knockoutWaiting: 'Waiting for players',
+        knockoutWaiting: 'Waiting for competitors',
         complete: 'Complete',
         noData: 'No data',
       },
@@ -1109,7 +1114,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutGenerated: ' Bracket was generated.',
         addResultError: 'Failed to add result',
         pickKnockoutMatch: 'Choose a knockout match from the bracket',
-        knockoutSlotIncomplete: 'Knockout slot does not have two players yet',
+        knockoutSlotIncomplete: 'Knockout slot does not have two competitors yet',
         knockoutResultSaved: 'Knockout result saved',
         knockoutResultError: 'Failed to add knockout result',
         noHistoryEntry: 'This result is not in history yet',
@@ -1365,6 +1370,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         done: 'Fatto',
         left: 'Restano',
         players: 'Giocatori',
+        pairs: 'Coppie',
       },
       knockout: {
         generated: 'Generati',
@@ -1427,7 +1433,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutFinished: 'Concluso',
         knockoutPlanned: 'Programmato',
         knockoutReady: 'Pronto a giocare',
-        knockoutWaiting: 'In attesa di giocatori',
+        knockoutWaiting: 'In attesa dei concorrenti',
         complete: 'Completo',
         noData: 'Nessun dato',
       },
@@ -1495,7 +1501,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutGenerated: ' Tabellone generato.',
         addResultError: 'Errore aggiunta risultato',
         pickKnockoutMatch: 'Scegli una partita a eliminazione dal tabellone',
-        knockoutSlotIncomplete: 'Lo slot non ha ancora due giocatori',
+        knockoutSlotIncomplete: 'Lo slot non ha ancora due concorrenti',
         knockoutResultSaved: 'Risultato eliminazione salvato',
         knockoutResultError: 'Errore aggiunta risultato eliminazione',
         noHistoryEntry: 'Questo risultato non è ancora in cronologia',
@@ -1751,6 +1757,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         done: 'Hecho',
         left: 'Quedan',
         players: 'Jugadores',
+        pairs: 'Parejas',
       },
       knockout: {
         generated: 'Generados',
@@ -1813,7 +1820,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutFinished: 'Terminado',
         knockoutPlanned: 'Planificado',
         knockoutReady: 'Listo para jugar',
-        knockoutWaiting: 'Esperando jugadores',
+        knockoutWaiting: 'Esperando a los competidores',
         complete: 'Completo',
         noData: 'Sin datos',
       },
@@ -1881,7 +1888,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutGenerated: ' Se generó el cuadro.',
         addResultError: 'Error al añadir resultado',
         pickKnockoutMatch: 'Elige un partido eliminatorio del cuadro',
-        knockoutSlotIncomplete: 'El slot aún no tiene dos jugadores',
+        knockoutSlotIncomplete: 'El slot aún no tiene dos competidores',
         knockoutResultSaved: 'Resultado eliminatorio guardado',
         knockoutResultError: 'Error al añadir resultado eliminatorio',
         noHistoryEntry: 'Este resultado aún no está en el historial',
@@ -2137,6 +2144,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         done: 'Fait',
         left: 'Reste',
         players: 'Joueurs',
+        pairs: 'Paires',
       },
       knockout: {
         generated: 'Générés',
@@ -2199,7 +2207,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutFinished: 'Terminé',
         knockoutPlanned: 'Planifié',
         knockoutReady: 'Prêt à jouer',
-        knockoutWaiting: 'En attente de joueurs',
+        knockoutWaiting: 'En attente des compétiteurs',
         complete: 'Complet',
         noData: 'Aucune donnée',
       },
@@ -2267,7 +2275,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         knockoutGenerated: ' Le tableau a été généré.',
         addResultError: 'Erreur d\'ajout du résultat',
         pickKnockoutMatch: 'Choisissez un match élimination dans le tableau',
-        knockoutSlotIncomplete: 'Le slot n\'a pas encore deux joueurs',
+        knockoutSlotIncomplete: 'Le slot n\'a pas encore deux compétiteurs',
         knockoutResultSaved: 'Résultat élimination enregistré',
         knockoutResultError: 'Erreur d\'ajout du résultat élimination',
         noHistoryEntry: 'Ce résultat n\'est pas encore dans l\'historique',
@@ -2334,4 +2342,5 @@ export const OFFICE_TRANSLATION_PATCHES = {
       dates: { noDate: 'Sans date', courtTbd: 'Court à définir' },
     },
   },
+  lt: OFFICE_TRANSLATION_PATCHES_LT,
 };

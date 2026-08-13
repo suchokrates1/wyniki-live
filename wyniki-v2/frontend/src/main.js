@@ -5,7 +5,7 @@ import {
   spokenScore as spokenScoreForScreenReader,
 } from './a11y/scoreNarration.js';
 import { initTabsA11y } from './a11y/tabs.js';
-import { DEFAULT_LANGUAGE, isSupportedLanguage, resolveLocale, SUPPORTED_LANGUAGES } from './i18n/locale.js';
+import { DEFAULT_LANGUAGE, isSupportedLanguage, LANGUAGE_LABELS, resolveLocale, SUPPORTED_LANGUAGES } from './i18n/locale.js';
 import { applyTranslationPatches, lookupTranslation } from './i18n/runtime.js';
 import { TRANSLATIONS, TRANSLATION_PATCHES } from './i18n/translations.js';
 import { warnMissingTranslationKeys } from './i18n/validation.js';
@@ -19,6 +19,7 @@ import { createTournamentView } from './modules/tournamentsView.js';
 import { applyHashRoute, updateHashFromState } from './modules/routing.js';
 import { formatTemplate as fmt } from './shared/text.js';
 import { formatPlayerClassification } from './shared/categories.js';
+import { isTeamDisplayName } from './shared/teamDisplay.js';
 import './main.css';
 
 function codeToFlag(code) {
@@ -43,6 +44,8 @@ window.Alpine = Alpine;
 
 Alpine.data('tennisApp', () => ({
   lang: 'pl',
+  supportedLanguages: SUPPORTED_LANGUAGES,
+  languageLabels: LANGUAGE_LABELS,
   darkMode: false,
   ...createHistoryView(),
   ...createPlayersView(),
@@ -164,6 +167,12 @@ Alpine.data('tennisApp', () => ({
   acc() {
     return { ...(TRANSLATIONS.pl.accessibility || {}), ...(this.tr().accessibility || {}) };
   },
+  unknownCompetitorLabel(...names) {
+    if (names.some((name) => isTeamDisplayName(name))) {
+      return this.acc().unknownPair || this.acc().unknownPlayer || 'zawodnik nieustalony';
+    }
+    return this.acc().unknownPlayer || 'zawodnik nieustalony';
+  },
   locale() {
     return resolveLocale(this.lang);
   },
@@ -242,9 +251,9 @@ Alpine.data('tennisApp', () => ({
   },
 
   buildCompletedMatchAria({ intro = [], playerA, playerB, winnerName = '', scoreText = '', details = [] }) {
-    const unknownPlayer = this.acc().unknownPlayer || 'zawodnik nieustalony';
+    const unknownCompetitor = this.unknownCompetitorLabel(playerA, playerB);
     const parts = [...intro.filter(Boolean)];
-    parts.push(`${playerA || unknownPlayer} ${this.acc().versus || 'kontra'} ${playerB || unknownPlayer}`);
+    parts.push(`${playerA || unknownCompetitor} ${this.acc().versus || 'kontra'} ${playerB || unknownCompetitor}`);
     if (winnerName) {
       parts.push(`${this.acc().winner || 'Zwyciezca'}: ${winnerName}`);
     }

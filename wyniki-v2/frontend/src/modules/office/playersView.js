@@ -168,6 +168,19 @@ export function createOfficePlayersView() {
       return Boolean(this.planningSelectedCategory()?.is_doubles);
     },
 
+    planningHeadlineCompetitorLabel() {
+      return this.planningSelectedCategoryIsDoubles()
+        ? this.ot('planning.teams')
+        : this.ot('planning.players');
+    },
+
+    planningHeadlineCompetitorCount() {
+      if (this.planningSelectedCategoryIsDoubles()) {
+        return this.planningTeamsForCategory(this.planningSelectedCategoryId).length;
+      }
+      return (this.planningPlayers || []).length;
+    },
+
     planningTeamsForCategory(categoryId) {
       const id = Number(categoryId || 0);
       if (!id) return [];

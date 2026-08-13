@@ -1,7 +1,7 @@
 import { publicApi } from '../api/publicApi.js';
 import { formatTemplate as fmt } from '../shared/text.js';
 import { translateStoredScheduleLabel } from '../shared/labelDisplay.js';
-import { formatTeamLabelForWrap, registerCompetitorName } from '../shared/teamDisplay.js';
+import { formatTeamLabelForWrap, isTeamDisplayName, registerCompetitorName } from '../shared/teamDisplay.js';
 import {
   buildBracketCategories,
   compareBracketCategoryNames as compareBracketCategoryNamesData,
@@ -69,6 +69,18 @@ export function createBracketView() {
       return fmt(this.tr().bracket?.groupTableLabel || 'Tabela grupy {group}', {
         group: groupName || '—',
       });
+    },
+
+    bracketCompetitorColumnLabel(group) {
+      const names = [
+        ...(group?.standings || []).map((row) => row?.name),
+        ...(group?.players || []).map((player) => player?.name || player),
+      ];
+      const bracket = this.tr().bracket || {};
+      if (names.some((name) => isTeamDisplayName(name))) {
+        return bracket.pair || 'Para';
+      }
+      return bracket.player || 'Zawodnik';
     },
 
     bracketTreeAriaLabel(categoryName) {

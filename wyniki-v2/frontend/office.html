@@ -342,12 +342,9 @@
     <div class="office-lang-bar__inner">
       <label class="sr-only" for="officeLangSelect" x-text="officeUi().languageSelect"></label>
       <select id="officeLangSelect" class="lang-select" x-model="lang" @change="onLangChange()">
-        <option value="pl">Polski</option>
-        <option value="de">Deutsch</option>
-        <option value="en">English</option>
-        <option value="it">Italiano</option>
-        <option value="es">Español</option>
-        <option value="fr">Français</option>
+        <template x-for="code in supportedLanguages" :key="code">
+          <option :value="code" x-text="languageLabels[code]"></option>
+        </template>
       </select>
     </div>
   </div>
@@ -526,7 +523,7 @@
           <button type="button" class="btn btn-outline bg-white/80" @click="loadOfficePlanningData()" :class="{'btn-disabled': planningLoading}" x-text="ot('planning.refreshPlan')"></button>
         </div>
         <div class="mt-5 grid gap-4 md:grid-cols-4">
-          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('planning.players')"></div><div class="mt-2 text-3xl font-semibold" x-text="planningPlayers.length"></div></div>
+          <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="planningHeadlineCompetitorLabel()"></div><div class="mt-2 text-3xl font-semibold" x-text="planningHeadlineCompetitorCount()"></div></div>
           <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('planning.groups')"></div><div class="mt-2 text-3xl font-semibold" x-text="planningGroups.length"></div></div>
           <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('planning.entries')"></div><div class="mt-2 text-3xl font-semibold" x-text="planningSchedule.length"></div></div>
           <div class="office-stat"><div class="text-xs uppercase tracking-[0.2em] text-slate-400" x-text="ot('planning.courts')"></div><div class="mt-2 text-3xl font-semibold" x-text="planningCourts.length"></div></div>
@@ -1173,7 +1170,7 @@
                 <div class="mt-2 text-2xl font-semibold" x-text="group.remaining_matches"></div>
               </div>
             </div>
-            <div class="mt-5 text-sm text-slate-600" x-text="ot('progress.players')"></div>
+            <div class="mt-5 text-sm text-slate-600" x-text="officeGroupIsDoubles(group) ? ot('progress.pairs') : ot('progress.players')"></div>
             <div class="mt-3 flex flex-wrap gap-2">
               <template x-for="player in group.players || []" :key="player.id || player.name">
                 <span class="px-3 py-2 rounded-full bg-white/80 border border-slate-200/80 text-sm text-slate-700" x-text="player.name"></span>

@@ -13,9 +13,11 @@ aliases: [Doubles office plan, Kategorie double, Drużyny w planie, Format grupy
 > **Etap 1b (pipeline trybu) zaimplementowany:** `ensure_group_schedule_entries` pomija `knockout`; auto-KO liczy kompletność per grupa / para A+B (nie czeka na cały turniej); `round_robin` bez pucharu; `knockout` z puli członków bez RR (drabinka 2/4/8); krzyż 1A–2B tylko gdy obie grupy kubełka są `groups_knockout`; samotny `groups_knockout` z tabeli (top 4 → finał+3. miejsce); postęp biura; publiczna drabinka ukrywa tabelę RR dla `knockout`. Testy: `test_group_play_format.py`, `test_knockout_generation.py`, lifecycle.  
 > **Etap 2 (ręczny wynik debla) zaimplementowany:** modal A/B = drużyny grupy double; prefill ze schedule zostawia nazwy par + `schedule_id`; walkower na drużynach; `officeAllPlayerNames` nie dokleja osób do formularza debla; korekta zostawia nazwy par; standings/KO exact nazwa drużyny (bez surname-token z `"A / B"`); 409 gdy slot ma już mecz; analog etykiet w adminie. Testy: `test_office_doubles_result.py`.  
 > **Etap 3 (most aplikacji):** backend w `wyniki-live` (`is_doubles` + `partner`, matching bez kolejności partnerów). Aplikacja w `Umpire-App`: `ScheduleSuggestion.isDoubles`, selector 4 osób, `applySuggestedMatch` nie czyści `scheduleId` przy Debel z sugestii, `team1Name`/`team2Name` z planu.  
-> Brakuje: polerka wyświetlania par (Etap 4), **litewski + audyt kontekstowy**. **Gate: testy jednostkowe + E2E na wszystko z tego planu.**
+> **Etap 4 (wyświetlanie par) zaimplementowany:** łamanie etykiet `"A / B"`, search po obu nazwiskach, flagi partnera na live, overlay zostawia `/`.  
+> **Etap 6 (i18n + LT) zaimplementowany:** `lt` + `lt-LT`, pełne katalogi publiczna/biuro, select Lietuvių, `?lang=lt`, audyt zawodnik→para, Android `values-lt`. Notatka: [[43 - Debel - audyt i18n]].  
+> **Gate: testy jednostkowe + E2E na wszystko z tego planu (Etap 7).**
 
-Powiązane w tym vaultcie: [[25 - Planowanie - grupy]] · [[26 - Planowanie - terminarz i autoschedule]] · [[27 - Wprowadzanie i edycja wyniku]] · [[24 - Puchar]] · [[12 - Drabinka]] · [[13 - Terminarz]] · [[18 - Język, motyw, access_key]] · [[33 - Plan turnieju]] · [[36 - Gracze turnieju i import]]
+Powiązane w tym vaultcie: [[25 - Planowanie - grupy]] · [[26 - Planowanie - terminarz i autoschedule]] · [[27 - Wprowadzanie i edycja wyniku]] · [[24 - Puchar]] · [[12 - Drabinka]] · [[13 - Terminarz]] · [[18 - Język, motyw, access_key]] · [[33 - Plan turnieju]] · [[36 - Gracze turnieju i import]] · [[43 - Debel - audyt i18n]]
 
 Poza tym vaultem (aplikacja): `android-tennis-referee/docs/Referencje/32 - Singiel vs debel.md`, `14 - Wybór zawodników.md`, `DOUBLES_SUPPORT.md`.
 
@@ -515,15 +517,15 @@ Unit i wąskie E2E **w tym samym PR co kod** danego etapu (0–4, 1b, 6). Pełna
 
 ### Etap 6 — tłumaczenia, litewski, audyt kontekstowy
 
-- [ ] CI: brakujący klucz vs `pl` failuje build (publiczna + office)
-- [ ] Wszystkie nowe klucze Double / drużyna / format / toasty / aria w `pl de en it es fr` (i `lt` gdy pakiet gotowy)
-- [ ] `SUPPORTED_LANGUAGES` + `lt` + `lt-LT`
-- [ ] Pełny `TRANSLATIONS.lt` i `OFFICE_TRANSLATION_PATCHES.lt`
-- [ ] Select **Lietuvių** na publicznej i w biurze; `?lang=lt`
-- [ ] `labelDisplay.js`: mapowanie faz/kategorii dla LT
-- [ ] Android: `AvailableLanguages` + `values-lt/strings.xml`; ekran wyboru języka
-- [ ] Audyt kontekstowy DE/EN/IT/ES/FR/LT na żywych ekranach (nie tabela 1:1) — notatka w vaultcie z decyzjami terminów
-- [ ] Poprawki kalii znalezionych w audycie (w tym miejsca, gdzie po deblu „zawodnik” powinno być „para”)
+- [x] CI: brakujący klucz vs `pl` failuje build (publiczna + office)
+- [x] Wszystkie nowe klucze Double / drużyna / format / toasty / aria w `pl de en it es fr` (i `lt` gdy pakiet gotowy)
+- [x] `SUPPORTED_LANGUAGES` + `lt` + `lt-LT`
+- [x] Pełny `TRANSLATIONS.lt` i `OFFICE_TRANSLATION_PATCHES.lt`
+- [x] Select **Lietuvių** na publicznej i w biurze; `?lang=lt`
+- [x] `labelDisplay.js`: mapowanie faz/kategorii dla LT
+- [x] Android: `AvailableLanguages` + `values-lt/strings.xml`; ekran wyboru języka
+- [x] Audyt kontekstowy DE/EN/IT/ES/FR/LT na żywych ekranach (nie tabela 1:1) — notatka w vaultcie z decyzjami terminów
+- [x] Poprawki kalii znalezionych w audycie (w tym miejsca, gdzie po deblu „zawodnik” powinno być „para”)
 
 **Wejście:** klucze feature’u znane (po Etapie 1/1b). Może iść równolegle z 2–4, ale merge dopiero gdy nowe stringi nie są EN-zaślepką. **Wyjście:** 7 języków, terminy tenisowe w kontekście.
 
@@ -558,7 +560,7 @@ Nic z etapów 0–6 nie jest „done” bez tej macierzy. Nowe pliki tam, gdzie 
 - [x] `link_schedule_to_match`: priorytet `schedule_id`; fallback pary bez kolejności partnerów
 - [x] Sugestia: `is_doubles` + 4 payloady graczy z `partner`
 - [ ] Ta sama osoba w singlu i w jednej parze debla — OK; druga para w tej samej kategorii — reject
-- [ ] i18n: `findMissingTranslationKeys` jako test (nie `console.warn`) dla `pl…lt`
+- [x] i18n: `findMissingTranslationKeys` jako test (nie `console.warn`) dla `pl…lt`
 
 #### Unit — aplikacja
 
@@ -566,7 +568,7 @@ Nic z etapów 0–6 nie jest „done” bez tej macierzy. Nowe pliki tam, gdzie 
 - [x] `applySuggestedMatch` ustawia debel i **nie** czyści `scheduleId`
 - [x] Payload meczu: `player1Name`/`player2Name` = kanoniczne etykiety z planu (`team1Name`)
 - [x] Ręczne Debel bez sugestii nadal czyści `scheduleId` (regresja)
-- [ ] `AvailableLanguages` zawiera `lt`; stringi `values-lt` kompletne vs `values-pl` (gate liczby kluczy)
+- [x] `AvailableLanguages` zawiera `lt`; stringi `values-lt` kompletne vs `values-pl` (gate liczby kluczy)
 
 #### E2E — biuro / publiczna (`e2e-tournament`)
 

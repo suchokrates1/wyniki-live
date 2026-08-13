@@ -1,4 +1,4 @@
-import { DEFAULT_LANGUAGE, isSupportedLanguage, resolveLocale, SUPPORTED_LANGUAGES } from './locale.js';
+import { DEFAULT_LANGUAGE, isSupportedLanguage, LANGUAGE_LABELS, resolveLocale, SUPPORTED_LANGUAGES } from './locale.js';
 import { applyTranslationPatches, lookupTranslation } from './runtime.js';
 import { TRANSLATIONS, TRANSLATION_PATCHES } from './translations.js';
 import { OFFICE_TRANSLATION_PATCHES } from './officeTranslations.js';
@@ -15,6 +15,7 @@ export function createOfficeI18n() {
   return {
     lang: DEFAULT_LANGUAGE,
     supportedLanguages: SUPPORTED_LANGUAGES,
+    languageLabels: LANGUAGE_LABELS,
 
     initOfficeLang() {
       const urlParams = new URLSearchParams(location.search);

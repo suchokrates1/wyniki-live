@@ -1,6 +1,8 @@
 /* ============================================================
    TRANSLATIONS (ported from v1 translations.js)
    ============================================================ */
+import { TRANSLATIONS_LT, TRANSLATION_PATCHES_LT } from './translationsLt.js';
+
 export const TRANSLATIONS = {
   pl: {
     htmlLang: 'pl',
@@ -60,7 +62,7 @@ export const TRANSLATIONS = {
     schedule: { title: 'Terminarz rozgrywek', emptyTitle: 'Terminarz nie jest jeszcze opublikowany', emptyText: 'Biuro zawodów uzupełni orientacyjne godziny i korty.', loading: 'Ładowanie terminarza...', refresh: 'Odśwież', time: 'Godzina', court: 'Kort', category: 'Kategoria', phase: 'Etap', match: 'Mecz', status: 'Status', notes: 'Uwagi', searchLabel: 'Szukaj po nazwisku', searchPlaceholder: 'Szukaj nazwiska...', sortLabel: 'Sortowanie', sortCourt: 'Po korcie', sortCategory: 'Po kategorii', tabsLabelCourt: 'Wybierz kort', tabsLabelCategory: 'Wybierz kategorię', noResultsTitle: 'Brak dopasowanych meczów', noResultsText: 'Zmień wyszukiwaną frazę albo przełącz sposób sortowania.', timeTbd: 'godzina do potwierdzenia', courtTbd: 'kort do potwierdzenia', categoryTbd: 'kategoria do potwierdzenia', statusDraft: 'Roboczy', statusPlanned: 'Zaplanowany', statusInProgress: 'W trakcie', statusCompleted: 'Zakończony', updated: 'Terminarz zaktualizowany' },
     bracket: {
       emptyTitle: 'Brak drabinki', emptyText: 'Drabinka turniejowa nie została jeszcze skonfigurowana',
-      group: 'Grupa', player: 'Zawodnik', wins: 'W', losses: 'L',
+      group: 'Grupa', player: 'Zawodnik', pair: 'Para', wins: 'W', losses: 'L',
       setsHeader: 'Sety', gamesHeader: 'Gemy', matchesTitle: 'Mecze grupowe',
       knockoutTitle: 'Drabinka', semifinal: 'Półfinał',
       finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce', forPlace: 'o',
@@ -134,7 +136,7 @@ export const TRANSLATIONS = {
     liveSub: { scores: 'Live-Ergebnisse', bracket: 'Turnierbaum', schedule: 'Zeitplan', history: 'Historie' },
     bracket: {
       emptyTitle: 'Kein Turnierbaum', emptyText: 'Der Turnierbaum wurde noch nicht konfiguriert',
-      group: 'Gruppe', player: 'Spieler', wins: 'S', losses: 'N',
+      group: 'Gruppe', player: 'Spieler', pair: 'Paar', wins: 'S', losses: 'N',
       setsHeader: 'Sätze', gamesHeader: 'Spiele', matchesTitle: 'Gruppenspiele',
       knockoutTitle: 'Turnierbaum', semifinal: 'Halbfinale',
       finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3', forPlace: 'um Platz',
@@ -209,7 +211,7 @@ export const TRANSLATIONS = {
     schedule: { title: 'Tournament schedule', emptyTitle: 'The schedule is not published yet', emptyText: 'The tournament office will add approximate times and courts.', loading: 'Loading schedule...', refresh: 'Refresh', time: 'Time', court: 'Court', category: 'Category', phase: 'Stage', match: 'Match', status: 'Status', notes: 'Notes', searchLabel: 'Search by surname', searchPlaceholder: 'Search surname...', sortLabel: 'Sorting', sortCourt: 'By court', sortCategory: 'By category', tabsLabelCourt: 'Choose court', tabsLabelCategory: 'Choose category', noResultsTitle: 'No matching matches', noResultsText: 'Change the search phrase or switch the sort mode.', timeTbd: 'time to be confirmed', courtTbd: 'court to be confirmed', categoryTbd: 'category to be confirmed', statusDraft: 'Draft', statusPlanned: 'Planned', statusInProgress: 'In progress', statusCompleted: 'Finished', updated: 'Schedule updated' },
     bracket: {
       emptyTitle: 'No bracket', emptyText: 'Tournament bracket has not been configured yet',
-      group: 'Group', player: 'Player', wins: 'W', losses: 'L',
+      group: 'Group', player: 'Player', pair: 'Pair', wins: 'W', losses: 'L',
       setsHeader: 'Sets', gamesHeader: 'Games', matchesTitle: 'Group matches',
       knockoutTitle: 'Bracket', semifinal: 'Semifinal',
       finalLabel: 'Final', thirdPlace: 'Third place match', forPlace: 'for',
@@ -283,7 +285,7 @@ export const TRANSLATIONS = {
     liveSub: { scores: 'Risultati live', bracket: 'Tabellone', schedule: 'Programma', history: 'Cronologia' },
     bracket: {
       emptyTitle: 'Nessun tabellone', emptyText: 'Il tabellone del torneo non è ancora stato configurato',
-      group: 'Girone', player: 'Giocatore', wins: 'V', losses: 'S',
+      group: 'Girone', player: 'Giocatore', pair: 'Coppia', wins: 'V', losses: 'S',
       setsHeader: 'Set', gamesHeader: 'Game', matchesTitle: 'Partite del girone',
       knockoutTitle: 'Tabellone', semifinal: 'Semifinale',
       finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto', forPlace: 'per il',
@@ -357,7 +359,7 @@ export const TRANSLATIONS = {
     liveSub: { scores: 'En vivo', bracket: 'Cuadro', schedule: 'Calendario', history: 'Historial' },
     bracket: {
       emptyTitle: 'Sin cuadro', emptyText: 'El cuadro del torneo aún no ha sido configurado',
-      group: 'Grupo', player: 'Jugador', wins: 'V', losses: 'D',
+      group: 'Grupo', player: 'Jugador', pair: 'Pareja', wins: 'V', losses: 'D',
       setsHeader: 'Sets', gamesHeader: 'Juegos', matchesTitle: 'Partidos del grupo',
       knockoutTitle: 'Cuadro', semifinal: 'Semifinal',
       finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar', forPlace: 'por el',
@@ -431,7 +433,7 @@ export const TRANSLATIONS = {
     liveSub: { scores: 'En direct', bracket: 'Tableau', schedule: 'Programme', history: 'Historique' },
     bracket: {
       emptyTitle: 'Pas de tableau', emptyText: 'Le tableau du tournoi n\'a pas encore été configuré',
-      group: 'Groupe', player: 'Joueur', wins: 'V', losses: 'D',
+      group: 'Groupe', player: 'Joueur', pair: 'Paire', wins: 'V', losses: 'D',
       setsHeader: 'Sets', gamesHeader: 'Jeux', matchesTitle: 'Matchs de groupe',
       knockoutTitle: 'Tableau', semifinal: 'Demi-finale',
       finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place', forPlace: 'pour la',
@@ -447,7 +449,8 @@ export const TRANSLATIONS = {
       noMatches: 'Aucun match dans ce tournoi'
     },
     connection: { lost: 'Connexion interrompue' }
-  }
+  },
+  lt: TRANSLATIONS_LT,
 };
 
 export const TRANSLATION_PATCHES = {
@@ -469,7 +472,7 @@ export const TRANSLATION_PATCHES = {
     schedule: { title: 'Plan turnieju', emptyTitle: 'Plan turnieju nie jest jeszcze opublikowany', loading: 'Ładowanie planu turnieju...', updated: 'Plan turnieju zaktualizowany' },
     bracket: { categoryTabsLabel: 'Kategorie turniejowe', podiumLabel: 'Podium', groupTableLabel: 'Tabela grupy {group}', treeLabel: 'Drabinka {category}', placeMatch: 'Mecz o {number}. miejsce' },
     tournamentHistory: { navLabel: 'Sekcje turnieju', matchHistory: 'Wyniki', schedule: 'Plan turnieju' },
-    accessibility: { scoreJoiner: 'do', winner: 'Zwycięzca', result: 'Wynik meczu', court: 'Kort', phase: 'Etap', duration: 'Czas', unknownPlayer: 'zawodnik nieustalony', unknownCourt: 'kort nieustalony', scorePending: 'wynik nie jest jeszcze dostępny', stageMatch: '{phase}, mecz {number}', groupMatch: '{group}, mecz {number}', tournamentQuickInfoLabel: 'Komunikat turniejowy' },
+    accessibility: { scoreJoiner: 'do', winner: 'Zwycięzca', result: 'Wynik meczu', court: 'Kort', phase: 'Etap', duration: 'Czas', unknownPlayer: 'zawodnik nieustalony', unknownPair: 'para nieustalona', unknownCourt: 'kort nieustalony', scorePending: 'wynik nie jest jeszcze dostępny', stageMatch: '{phase}, mecz {number}', groupMatch: '{group}, mecz {number}', tournamentQuickInfoLabel: 'Komunikat turniejowy' },
   },
   de: {
     ui: { appName: 'Tennis-Ergebnisse', pageDescription: 'Live-Tennis-Ergebnisse, Turnierbaum, Turnierplan und Spielhistorie.', skipToContent: 'Zum Inhalt springen', languageSelect: 'Sprache auswählen', poweredBy: 'Bereitgestellt von' },
@@ -482,7 +485,7 @@ export const TRANSLATION_PATCHES = {
     schedule: { title: 'Turnierplan', emptyTitle: 'Der Turnierplan ist noch nicht veröffentlicht', emptyText: 'Das Turnierbüro ergänzt ungefähre Zeiten und Plätze.', loading: 'Turnierplan wird geladen...', refresh: 'Aktualisieren', time: 'Uhrzeit', court: 'Platz', category: 'Kategorie', phase: 'Phase', match: 'Spiel', status: 'Status', notes: 'Hinweise', searchLabel: 'Nach Nachnamen suchen', searchPlaceholder: 'Nachnamen suchen...', sortLabel: 'Sortierung', sortCourt: 'Nach Platz', sortCategory: 'Nach Kategorie', tabsLabelCourt: 'Platz auswählen', tabsLabelCategory: 'Kategorie auswählen', noResultsTitle: 'Keine passenden Spiele', noResultsText: 'Ändere den Suchbegriff oder die Sortierung.', timeTbd: 'Uhrzeit wird bestätigt', courtTbd: 'Platz wird bestätigt', categoryTbd: 'Kategorie wird bestätigt', statusDraft: 'Entwurf', statusPlanned: 'Geplant', statusInProgress: 'Läuft', statusCompleted: 'Beendet', updated: 'Turnierplan aktualisiert' },
     bracket: { categoryTabsLabel: 'Turnierkategorien', podiumLabel: 'Podium', groupTableLabel: 'Tabelle der Gruppe {group}', treeLabel: 'Turnierbaum {category}', placeMatch: 'Spiel um Platz {number}' },
     tournamentHistory: { navLabel: 'Turnierbereiche', matchHistory: 'Ergebnisse', schedule: 'Turnierplan' },
-    accessibility: { scoreJoiner: 'zu', winner: 'Sieger', result: 'Spielstand', court: 'Platz', phase: 'Phase', duration: 'Dauer', unknownPlayer: 'Spieler steht noch nicht fest', unknownCourt: 'Platz steht noch nicht fest', scorePending: 'Ergebnis ist noch nicht verfügbar', stageMatch: '{phase}, Spiel {number}', groupMatch: '{group}, Spiel {number}', tournamentQuickInfoLabel: 'Turnierinfo' },
+    accessibility: { scoreJoiner: 'zu', winner: 'Sieger', result: 'Spielstand', court: 'Platz', phase: 'Phase', duration: 'Dauer', unknownPlayer: 'Spieler steht noch nicht fest', unknownPair: 'Paar steht noch nicht fest', unknownCourt: 'Platz steht noch nicht fest', scorePending: 'Ergebnis ist noch nicht verfügbar', stageMatch: '{phase}, Spiel {number}', groupMatch: '{group}, Spiel {number}', tournamentQuickInfoLabel: 'Turnierinfo' },
   },
   en: {
     ui: { appName: 'Tennis Scores', pageDescription: 'Live tennis scores, brackets, tournament schedule and match history.', skipToContent: 'Skip to main content', languageSelect: 'Select language', poweredBy: 'Powered by' },
@@ -495,7 +498,7 @@ export const TRANSLATION_PATCHES = {
     schedule: { title: 'Tournament schedule', updated: 'Tournament schedule updated' },
     bracket: { categoryTabsLabel: 'Tournament categories', podiumLabel: 'Podium', groupTableLabel: 'Standings for group {group}', treeLabel: 'Bracket {category}', placeMatch: 'Match for place {number}' },
     tournamentHistory: { navLabel: 'Tournament sections', matchHistory: 'Results', schedule: 'Tournament schedule' },
-    accessibility: { scoreJoiner: 'to', winner: 'Winner', result: 'Match score', court: 'Court', phase: 'Stage', duration: 'Duration', unknownPlayer: 'player to be confirmed', unknownCourt: 'court to be confirmed', scorePending: 'score is not available yet', stageMatch: '{phase}, match {number}', groupMatch: '{group}, match {number}', tournamentQuickInfoLabel: 'Tournament announcement' },
+    accessibility: { scoreJoiner: 'to', winner: 'Winner', result: 'Match score', court: 'Court', phase: 'Stage', duration: 'Duration', unknownPlayer: 'player to be confirmed', unknownPair: 'pair to be confirmed', unknownCourt: 'court to be confirmed', scorePending: 'score is not available yet', stageMatch: '{phase}, match {number}', groupMatch: '{group}, match {number}', tournamentQuickInfoLabel: 'Tournament announcement' },
   },
   it: {
     ui: { appName: 'Risultati tennis', pageDescription: 'Risultati tennis in diretta, tabelloni, programma del torneo e storico partite.', skipToContent: 'Vai al contenuto principale', languageSelect: 'Seleziona lingua', poweredBy: 'Offerto da' },
@@ -508,7 +511,7 @@ export const TRANSLATION_PATCHES = {
     schedule: { title: 'Programma del torneo', emptyTitle: 'Il programma del torneo non è ancora pubblicato', emptyText: 'L\'ufficio del torneo aggiungerà orari e campi indicativi.', loading: 'Caricamento del programma del torneo...', refresh: 'Aggiorna', time: 'Ora', court: 'Campo', category: 'Categoria', phase: 'Fase', match: 'Partita', status: 'Stato', notes: 'Note', searchLabel: 'Cerca per cognome', searchPlaceholder: 'Cerca cognome...', sortLabel: 'Ordinamento', sortCourt: 'Per campo', sortCategory: 'Per categoria', tabsLabelCourt: 'Scegli campo', tabsLabelCategory: 'Scegli categoria', noResultsTitle: 'Nessuna partita corrispondente', noResultsText: 'Modifica la ricerca o cambia ordinamento.', timeTbd: 'orario da confermare', courtTbd: 'campo da confermare', categoryTbd: 'categoria da confermare', statusDraft: 'Bozza', statusPlanned: 'Programmato', statusInProgress: 'In corso', statusCompleted: 'Concluso', updated: 'Programma del torneo aggiornato' },
     bracket: { categoryTabsLabel: 'Categorie del torneo', podiumLabel: 'Podio', groupTableLabel: 'Classifica del girone {group}', treeLabel: 'Tabellone {category}', placeMatch: 'Partita per il {number}° posto' },
     tournamentHistory: { navLabel: 'Sezioni del torneo', matchHistory: 'Risultati', schedule: 'Programma del torneo' },
-    accessibility: { scoreJoiner: 'a', winner: 'Vincitore', result: 'Punteggio del match', court: 'Campo', phase: 'Fase', duration: 'Durata', unknownPlayer: 'giocatore da definire', unknownCourt: 'campo da definire', scorePending: 'risultato non ancora disponibile', stageMatch: '{phase}, partita {number}', groupMatch: '{group}, partita {number}', tournamentQuickInfoLabel: 'Annuncio del torneo' },
+    accessibility: { scoreJoiner: 'a', winner: 'Vincitore', result: 'Punteggio del match', court: 'Campo', phase: 'Fase', duration: 'Durata', unknownPlayer: 'giocatore da definire', unknownPair: 'coppia da definire', unknownCourt: 'campo da definire', scorePending: 'risultato non ancora disponibile', stageMatch: '{phase}, partita {number}', groupMatch: '{group}, partita {number}', tournamentQuickInfoLabel: 'Annuncio del torneo' },
   },
   es: {
     ui: { appName: 'Resultados de tenis', pageDescription: 'Resultados de tenis en vivo, cuadros, calendario del torneo e historial de partidos.', skipToContent: 'Saltar al contenido principal', languageSelect: 'Seleccionar idioma', poweredBy: 'Desarrollado por' },
@@ -521,7 +524,7 @@ export const TRANSLATION_PATCHES = {
     schedule: { title: 'Calendario del torneo', emptyTitle: 'El calendario del torneo aún no está publicado', emptyText: 'La oficina del torneo añadirá horarios y canchas orientativos.', loading: 'Cargando calendario del torneo...', refresh: 'Actualizar', time: 'Hora', court: 'Cancha', category: 'Categoría', phase: 'Fase', match: 'Partido', status: 'Estado', notes: 'Notas', searchLabel: 'Buscar por apellido', searchPlaceholder: 'Buscar apellido...', sortLabel: 'Ordenación', sortCourt: 'Por cancha', sortCategory: 'Por categoría', tabsLabelCourt: 'Elegir cancha', tabsLabelCategory: 'Elegir categoría', noResultsTitle: 'No hay partidos coincidentes', noResultsText: 'Cambia la búsqueda o el modo de ordenación.', timeTbd: 'hora por confirmar', courtTbd: 'cancha por confirmar', categoryTbd: 'categoría por confirmar', statusDraft: 'Borrador', statusPlanned: 'Planificado', statusInProgress: 'En curso', statusCompleted: 'Finalizado', updated: 'Calendario del torneo actualizado' },
     bracket: { categoryTabsLabel: 'Categorías del torneo', podiumLabel: 'Podio', groupTableLabel: 'Tabla del grupo {group}', treeLabel: 'Cuadro {category}', placeMatch: 'Partido por el {number}.º puesto' },
     tournamentHistory: { navLabel: 'Secciones del torneo', matchHistory: 'Resultados', schedule: 'Calendario del torneo' },
-    accessibility: { scoreJoiner: 'a', winner: 'Ganador', result: 'Marcador del partido', court: 'Cancha', phase: 'Fase', duration: 'Duración', unknownPlayer: 'jugador por confirmar', unknownCourt: 'cancha por confirmar', scorePending: 'el resultado aún no está disponible', stageMatch: '{phase}, partido {number}', groupMatch: '{group}, partido {number}', tournamentQuickInfoLabel: 'Anuncio del torneo' },
+    accessibility: { scoreJoiner: 'a', winner: 'Ganador', result: 'Marcador del partido', court: 'Cancha', phase: 'Fase', duration: 'Duración', unknownPlayer: 'jugador por confirmar', unknownPair: 'pareja por confirmar', unknownCourt: 'cancha por confirmar', scorePending: 'el resultado aún no está disponible', stageMatch: '{phase}, partido {number}', groupMatch: '{group}, partido {number}', tournamentQuickInfoLabel: 'Anuncio del torneo' },
   },
   fr: {
     ui: { appName: 'Résultats tennis', pageDescription: 'Résultats tennis en direct, tableaux, programme du tournoi et historique des matchs.', skipToContent: 'Aller au contenu principal', languageSelect: 'Choisir la langue', poweredBy: 'Propulsé par' },
@@ -534,6 +537,7 @@ export const TRANSLATION_PATCHES = {
     schedule: { title: 'Programme du tournoi', emptyTitle: 'Le programme du tournoi n\'est pas encore publié', emptyText: 'Le bureau du tournoi ajoutera les horaires et courts indicatifs.', loading: 'Chargement du programme du tournoi...', refresh: 'Actualiser', time: 'Heure', court: 'Court', category: 'Catégorie', phase: 'Phase', match: 'Match', status: 'Statut', notes: 'Notes', searchLabel: 'Rechercher par nom', searchPlaceholder: 'Rechercher un nom...', sortLabel: 'Tri', sortCourt: 'Par court', sortCategory: 'Par catégorie', tabsLabelCourt: 'Choisir un court', tabsLabelCategory: 'Choisir une catégorie', noResultsTitle: 'Aucun match correspondant', noResultsText: 'Modifiez la recherche ou le mode de tri.', timeTbd: 'heure à confirmer', courtTbd: 'court à confirmer', categoryTbd: 'catégorie à confirmer', statusDraft: 'Brouillon', statusPlanned: 'Planifié', statusInProgress: 'En cours', statusCompleted: 'Terminé', updated: 'Programme du tournoi mis à jour' },
     bracket: { categoryTabsLabel: 'Catégories du tournoi', podiumLabel: 'Podium', groupTableLabel: 'Classement du groupe {group}', treeLabel: 'Tableau {category}', placeMatch: 'Match pour la {number}e place' },
     tournamentHistory: { navLabel: 'Sections du tournoi', matchHistory: 'Résultats', schedule: 'Programme du tournoi' },
-    accessibility: { scoreJoiner: 'à', winner: 'Vainqueur', result: 'Score du match', court: 'Court', phase: 'Phase', duration: 'Durée', unknownPlayer: 'joueur à confirmer', unknownCourt: 'court à confirmer', scorePending: 'le score n’est pas encore disponible', stageMatch: '{phase}, match {number}', groupMatch: '{group}, match {number}', tournamentQuickInfoLabel: 'Annonce du tournoi' },
+    accessibility: { scoreJoiner: 'à', winner: 'Vainqueur', result: 'Score du match', court: 'Court', phase: 'Phase', duration: 'Durée', unknownPlayer: 'joueur à confirmer', unknownPair: 'paire à confirmer', unknownCourt: 'court à confirmer', scorePending: 'le score n’est pas encore disponible', stageMatch: '{phase}, match {number}', groupMatch: '{group}, match {number}', tournamentQuickInfoLabel: 'Annonce du tournoi' },
   },
+  lt: TRANSLATION_PATCHES_LT,
 };
