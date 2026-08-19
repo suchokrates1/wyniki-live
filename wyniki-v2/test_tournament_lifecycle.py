@@ -475,27 +475,35 @@ def test_mobile_create_match_links_explicit_schedule_id(umpire_app_with_temp_db)
     app = umpire_app_with_temp_db
     tournament_id = database.insert_tournament("Mobile Explicit Schedule Cup", "2026-05-29", "2026-05-29", active=True)
     database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
-    database.upsert_tournament_schedule_entries(tournament_id, [
-        {
-            "day_date": "2026-05-29",
-            "scheduled_time": "09:00",
-            "court_id": f"t{tournament_id}-1",
-            "player1_name": "Mobile Player One",
-            "player2_name": "Mobile Player Two",
-            "status": "planned",
-            "sort_order": 1,
-        },
-        {
-            "day_date": "2026-05-29",
-            "scheduled_time": "10:30",
-            "court_id": f"t{tournament_id}-1",
-            "player1_name": "Mobile Player One",
-            "player2_name": "Mobile Player Two",
-            "status": "planned",
-            "sort_order": 2,
-        },
-    ])
+    # Two assigned slots for the same pair: upsert would collapse them by phase+names.
+    with database.db_conn() as conn:
+        cursor = conn.cursor()
+        court_id = f"t{tournament_id}-1"
+        for sort_order, scheduled_time in enumerate(("09:00", "10:30"), start=1):
+            cursor.execute(
+                """
+                INSERT INTO tournament_schedule (
+                    tournament_id, day_date, scheduled_time, court_id, court_label,
+                    phase, player1_name, player2_name, status, source_type, sort_order
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    tournament_id,
+                    "2026-05-29",
+                    scheduled_time,
+                    court_id,
+                    "Kort 1",
+                    "Grupowa",
+                    "Mobile Player One",
+                    "Mobile Player Two",
+                    "planned",
+                    "manual",
+                    sort_order,
+                ),
+            )
+        conn.commit()
     schedule = database.fetch_tournament_schedule(tournament_id)
+    assert len(schedule) == 2
     schedule_id = schedule[1]["id"]
 
     response = app.test_client().post("/api/matches", json={
@@ -2225,11 +2233,17 @@ def test_office_autoschedule_generate_apply_and_move(full_app_with_temp_db):
 
     courts = [court["kort_id"] for court in config_payload["courts"]]
 
-    # Generate proposal.
+    # Generate proposal for group phase only. Default play_format is groups+knockout,
+    # which would also seed a provisional KO slot on the same day.
     gen = client.post(
         "/api/office/1/autoschedule/generate",
         headers=headers,
-        json={"start_time": "09:30", "b1_court_id": courts[-1], "day_date": "2026-06-10"},
+        json={
+            "start_time": "09:30",
+            "b1_court_id": courts[-1],
+            "day_date": "2026-06-10",
+            "phases": ["group"],
+        },
     )
     assert gen.status_code == 200
     proposal = gen.get_json()
@@ -2532,7 +2546,10 @@ def test_office_unassign_delete_unassigned_and_regenerate_schedule(full_app_with
     assert auth.status_code == 200
     headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
 
-    database.save_bracket_groups(tournament_id, [{"name": "B1 Mężczyźni — Grupa A", "players": players}])
+    database.save_bracket_groups(
+        tournament_id,
+        [{"name": "B1 Mężczyźni — Grupa A", "play_format": "round_robin", "players": players}],
+    )
     generated = client.post("/api/office/1/schedule/generate", headers=headers)
     assert generated.status_code == 200
     schedule = generated.get_json()["schedule"]
@@ -2588,7 +2605,10 @@ def test_manual_schedule_then_generate_does_not_duplicate_pairs(full_app_with_te
         database.insert_player(tournament_id, "A Two", "B1", "PL", first_name="A", last_name="Two", gender="M"),
         database.insert_player(tournament_id, "A Three", "B1", "PL", first_name="A", last_name="Three", gender="M"),
     ]
-    database.save_bracket_groups(tournament_id, [{"name": "B1 Mężczyźni — Grupa A", "players": players}])
+    database.save_bracket_groups(
+        tournament_id,
+        [{"name": "B1 Mężczyźni — Grupa A", "play_format": "round_robin", "players": players}],
+    )
 
     client = full_app_with_temp_db.test_client()
     auth = client.post("/api/office/1/auth", json={"password": "overflow"})
@@ -2649,7 +2669,7 @@ def test_completed_group_match_is_not_counted_as_unassigned(full_app_with_temp_d
         database.insert_player(tournament_id, "A Two", "B1", "PL", first_name="A", last_name="Two", gender="M"),
         database.insert_player(tournament_id, "A Three", "B1", "PL", first_name="A", last_name="Three", gender="M"),
     ]
-    groups = [{"name": "B1 Mężczyźni — Grupa A", "players": players}]
+    groups = [{"name": "B1 Mężczyźni — Grupa A", "play_format": "round_robin", "players": players}]
     database.save_bracket_groups(tournament_id, groups)
     group_id = database.fetch_bracket_groups(tournament_id)[0]["id"]
 

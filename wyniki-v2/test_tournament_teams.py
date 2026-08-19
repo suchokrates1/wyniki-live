@@ -157,6 +157,87 @@ def test_unique_pair_ignores_partner_order(db):
     assert listed[0]["id"] == team["id"]
 
 
+def test_person_can_play_singles_and_one_doubles_pair(db):
+    tournament_id = _create_tournament(db)
+    singles, doubles = db.confirm_tournament_categories(
+        tournament_id,
+        [
+            {"label": "B1 Men"},
+            {"label": "B1 Double", "is_doubles": True},
+        ],
+    )
+    anna = _insert_person(db, tournament_id, "Anna", "Kowalska")
+    ewa = _insert_person(db, tournament_id, "Ewa", "Nowak")
+    jan = _insert_person(db, tournament_id, "Jan", "Lewandowski")
+    team = db.insert_tournament_team(tournament_id, doubles["id"], anna, ewa)
+    assert db.save_bracket_groups(
+        tournament_id,
+        [
+            {
+                "name": "B1 Men",
+                "tournament_category_id": singles["id"],
+                "players": [anna, jan],
+            },
+            {
+                "name": "B1 Double",
+                "tournament_category_id": doubles["id"],
+                "teams": [team["id"]],
+            },
+        ],
+    )
+    groups = {group["name"]: group for group in db.fetch_bracket_groups(tournament_id)}
+    assert {row["player_id"] for row in groups["B1 Men"]["players"]} == {anna, jan}
+    assert groups["B1 Double"]["players"][0]["team_id"] == team["id"]
+
+
+def test_person_cannot_join_second_pair_in_same_category(db):
+    tournament_id = _create_tournament(db)
+    doubles = db.confirm_tournament_categories(
+        tournament_id, [{"label": "B1 Double", "is_doubles": True}]
+    )[0]
+    anna = _insert_person(db, tournament_id, "Anna", "Kowalska")
+    ewa = _insert_person(db, tournament_id, "Ewa", "Nowak")
+    iga = _insert_person(db, tournament_id, "Iga", "Wiśniewska")
+    db.insert_tournament_team(tournament_id, doubles["id"], anna, ewa)
+    with pytest.raises(TeamConflictError, match="one pair in this category"):
+        db.insert_tournament_team(tournament_id, doubles["id"], anna, iga)
+
+
+def test_doubles_round_robin_schedule_uses_pair_labels(db):
+    tournament_id = _create_tournament(db)
+    doubles = db.confirm_tournament_categories(
+        tournament_id, [{"label": "B1 Double", "is_doubles": True}]
+    )[0]
+    team_a = db.insert_tournament_team(
+        tournament_id,
+        doubles["id"],
+        _insert_person(db, tournament_id, "Anna", "Kowalska"),
+        _insert_person(db, tournament_id, "Ewa", "Nowak"),
+    )
+    team_b = db.insert_tournament_team(
+        tournament_id,
+        doubles["id"],
+        _insert_person(db, tournament_id, "Iga", "Świątek"),
+        _insert_person(db, tournament_id, "Ola", "Lewandowska"),
+    )
+    assert db.save_bracket_groups(
+        tournament_id,
+        [
+            {
+                "name": "B1 Double",
+                "tournament_category_id": doubles["id"],
+                "play_format": "groups_knockout",
+                "teams": [team_a["id"], team_b["id"]],
+            }
+        ],
+    )
+    schedule = db.fetch_tournament_schedule(tournament_id)
+    group_rows = [row for row in schedule if row.get("phase") == "Grupowa"]
+    assert len(group_rows) == 1
+    names = {group_rows[0]["player1_name"], group_rows[0]["player2_name"]}
+    assert names == {team_a["display_name"], team_b["display_name"]}
+
+
 def test_save_group_stores_team_id_and_display_name(db):
     tournament_id = _create_tournament(db)
     doubles = db.confirm_tournament_categories(

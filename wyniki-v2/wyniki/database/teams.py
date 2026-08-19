@@ -148,6 +148,19 @@ def insert_tournament_team(
             cursor = conn.cursor()
             player_a = _load_player(cursor, stored_p1, tournament_id)
             player_b = _load_player(cursor, stored_p2, tournament_id)
+            cursor.execute(
+                """
+                SELECT pair_key FROM tournament_teams
+                WHERE category_id = ?
+                  AND (player1_id IN (?, ?) OR player2_id IN (?, ?))
+                """,
+                (category_id, stored_p1, stored_p2, stored_p1, stored_p2),
+            )
+            existing = cursor.fetchone()
+            if existing:
+                if str(existing["pair_key"] or "") == pair_key:
+                    raise TeamConflictError("This pair already exists in the category")
+                raise TeamConflictError("A person can only be in one pair in this category")
             display_name = format_team_display_name(player_a, player_b)
             cursor.execute(
                 """

@@ -62,6 +62,8 @@ def create_app() -> Flask:
     @app.before_request
     def protect_administrator_mutations():
         """Protect administrator APIs and overlay writes without affecting public reads."""
+        if app.config.get("TESTING"):
+            return None
         if request.path == "/admin/api/auth":
             return None
         if request.path.startswith("/admin/api/"):

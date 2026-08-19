@@ -250,3 +250,15 @@ def test_round_robin_schedule_exists_without_knockout_slots(db):
     generated = db.maybe_generate_knockout_from_completed_groups(tournament_id)
     assert generated.get("status") in {"skipped", "pending"}
     assert db.fetch_bracket_knockout(tournament_id) == []
+
+
+def test_knockout_group_with_one_competitor_skips_tree(db):
+    tournament_id = _create_tournament(db)
+    player = _insert_person(db, tournament_id, "Anna", "Solo")
+    assert db.save_bracket_groups(
+        tournament_id,
+        [{"name": "B1 Kobiety", "play_format": "knockout", "players": [player]}],
+    )
+    schedule = db.fetch_tournament_schedule(tournament_id)
+    assert [row for row in schedule if row.get("phase") == "Grupowa"] == []
+    assert db.fetch_bracket_knockout(tournament_id) == []
