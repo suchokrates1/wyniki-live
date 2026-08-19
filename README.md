@@ -10,6 +10,8 @@ Pełny katalog strony publicznej, biura (`/office`) i admina (`/admin`):
 
 Otwórz folder `docs/przewodniki/` jako vault w Obsidianie.
 
+Cursor My Machines: **minipc-wyniki** (prod) · **dell-wyniki** (test) — [CURSOR.md](CURSOR.md)
+
 ## Powierzchnie
 
 | Powierzchnia | URL | Dostęp |
