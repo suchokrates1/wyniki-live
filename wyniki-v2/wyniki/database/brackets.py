@@ -15,6 +15,7 @@ from ..services.teams import (
     DEFAULT_PLAY_FORMAT,
     PLAY_FORMAT_GROUPS_KNOCKOUT,
     PLAY_FORMAT_KNOCKOUT,
+    competitor_identity_key,
     competitor_label_variants,
     is_team_display_name,
     normalize_play_format,
@@ -609,24 +610,72 @@ def _expected_group_matches_count(
         return scheduled
     return expected_rr
 
+def _group_competitor_keys(cursor: sqlite3.Cursor, group_id: int) -> set[str]:
+    cursor.execute(
+        "SELECT player_name FROM bracket_group_players WHERE group_id = ?",
+        (group_id,),
+    )
+    keys: set[str] = set()
+    for row in cursor.fetchall():
+        key = competitor_identity_key(row["player_name"])
+        if key:
+            keys.add(key)
+    return keys
+
+
+def _both_competitors_in_group(player1_name: Any, player2_name: Any, group_keys: set[str]) -> bool:
+    left = competitor_identity_key(player1_name)
+    right = competitor_identity_key(player2_name)
+    return bool(left and right and left in group_keys and right in group_keys)
+
+
 def _count_finished_group_matches(
     cursor: sqlite3.Cursor,
     tournament_id: int,
     group_id: int,
 ) -> int:
+    """Count finished group-stage results for a group, including inferred and legacy history."""
+    group_keys = _group_competitor_keys(cursor, group_id)
+    counted_match_ids: set[int] = set()
     cursor.execute(
         """
-        SELECT COUNT(*) AS count
+        SELECT id, player1_name, player2_name, bracket_group_id
         FROM matches
         WHERE tournament_id = ?
           AND status = 'finished'
           AND COALESCE(finish_reason, 'normal') != 'test'
           AND phase IN (?, ?)
-          AND bracket_group_id = ?
         """,
-        (tournament_id, GROUP_PHASE, GROUP_REMATCH_PHASE, group_id),
+        (tournament_id, GROUP_PHASE, GROUP_REMATCH_PHASE),
     )
-    return int(cursor.fetchone()["count"] or 0)
+    for row in cursor.fetchall():
+        bracket_group_id = row["bracket_group_id"]
+        linked = bracket_group_id not in (None, "", 0) and int(bracket_group_id) == int(group_id)
+        inferred = bracket_group_id in (None, "", 0) and _both_competitors_in_group(
+            row["player1_name"], row["player2_name"], group_keys
+        )
+        if linked or inferred:
+            counted_match_ids.add(int(row["id"]))
+
+    cursor.execute(
+        """
+        SELECT match_id, player_a, player_b, phase
+        FROM match_history
+        WHERE tournament_id = ?
+          AND COALESCE(finish_reason, 'normal') != 'test'
+        """,
+        (tournament_id,),
+    )
+    history_extra = 0
+    for row in cursor.fetchall():
+        if not is_group_stage_phase(row["phase"]):
+            continue
+        match_id = row["match_id"]
+        if match_id not in (None, "", 0) and int(match_id) in counted_match_ids:
+            continue
+        if _both_competitors_in_group(row["player_a"], row["player_b"], group_keys):
+            history_extra += 1
+    return len(counted_match_ids) + history_extra
 
 def _assign_knockout_slot_player(cursor, slot: sqlite3.Row, side: int, player_name: str) -> None:
     """Write a player into the requested side if the slot is empty or placeholder-only."""

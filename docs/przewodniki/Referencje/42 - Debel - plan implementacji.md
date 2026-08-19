@@ -544,22 +544,22 @@ Nic z etapów 0–6 nie jest „done” bez tej macierzy. Nowe pliki tam, gdzie 
 
 #### Unit — backend
 
-- [ ] `is_doubles` na confirm/PATCH kategorii; default 0; nie da się potwierdzić pary w kategorii singlowej
-- [ ] CRUD `tournament_teams`: unique pary (kolejność partnerów nieważna), dwóch różnych ludzi, kanoniczny `display_name`
-- [ ] Zapis grupy: `team_id` + `player_name = display_name`; singiel bez `team_id`
-- [ ] `normalize_pair_key`: `"A / B"` == `"B / A"`; strony meczu nadal odwracalne
-- [ ] RR z grupy debla: `player1_name`/`player2_name` = etykiety par
-- [ ] `play_format` default `groups_knockout` na nowej grupie
-- [ ] Grupa `round_robin`: `ensure_group_schedule` tworzy RR; generator KO **pomija** grupę
-- [ ] Grupa `knockout`: zero wierszy `Grupowa`; drabinka z puli; za mało osób → błąd/skip
-- [ ] Dwie grupy `groups_knockout` → krzyż 1A–2B (regresja `test_knockout_generation.py`)
-- [ ] Mieszanka: RR-only A + groups+KO B — KO B wstaje bez czekania na A; A bez slotów PF
-- [ ] Auto-KO **nie** czeka na cały turniej
+- [x] `is_doubles` na confirm/PATCH kategorii; default 0; nie da się potwierdzić pary w kategorii singlowej
+- [x] CRUD `tournament_teams`: unique pary (kolejność partnerów nieważna), dwóch różnych ludzi, kanoniczny `display_name`
+- [x] Zapis grupy: `team_id` + `player_name = display_name`; singiel bez `team_id`
+- [x] `normalize_pair_key`: `"A / B"` == `"B / A"`; strony meczu nadal odwracalne
+- [x] RR z grupy debla: `player1_name`/`player2_name` = etykiety par
+- [x] `play_format` default `groups_knockout` na nowej grupie
+- [x] Grupa `round_robin`: `ensure_group_schedule` tworzy RR; generator KO **pomija** grupę
+- [x] Grupa `knockout`: zero wierszy `Grupowa`; drabinka z puli; za mało osób → błąd/skip
+- [x] Dwie grupy `groups_knockout` → krzyż 1A–2B (regresja `test_knockout_generation.py`)
+- [x] Mieszanka: RR-only A + groups+KO B — KO B wstaje bez czekania na A; A bez slotów PF
+- [x] Auto-KO **nie** czeka na cały turniej
 - [x] Ręczny wynik debla (group + KO + walkower) po `display_name`; 409 przy duplikacie
 - [x] Standings / `_find_group_matches`: exact nazwa drużyny; **brak** `split()[-1]` na `"A / B"`
 - [x] `link_schedule_to_match`: priorytet `schedule_id`; fallback pary bez kolejności partnerów
 - [x] Sugestia: `is_doubles` + 4 payloady graczy z `partner`
-- [ ] Ta sama osoba w singlu i w jednej parze debla — OK; druga para w tej samej kategorii — reject
+- [x] Ta sama osoba w singlu i w jednej parze debla — OK; druga para w tej samej kategorii — reject
 - [x] i18n: `findMissingTranslationKeys` jako test (nie `console.warn`) dla `pl…lt`
 
 #### Unit — aplikacja
@@ -591,15 +591,17 @@ Regresja: odpal **cały** `e2e:tournament` (moduły 01–20) na końcu — singi
 
 - [ ] Seed slotu double → karta sugestii z parami → **Użyj meczu** → Debel + 4 osoby + `scheduleId` → start → `link` po ID → publiczny slot in_progress/completed
 - [ ] Start debla **bez** sugestii (ręczny checkbox) — mecz się sędziuje; brak twardego crash na schedule
-- [ ] Fallback nazw: plan `"A / B"`, appka wysyła `"B / A"` bez `schedule_id` — slot i tak się spina (jeśli ten scenariusz zostaje w zakresie)
+- [x] Fallback nazw: plan `"A / B"`, appka wysyła `"B / A"` bez `schedule_id` — slot i tak się spina (`test_link_schedule_to_match_fallback_ignores_partner_order`)
+
+> 2026-08-19: espresso na emulatorze **nie odpalone** (brak urządzenia/`adb devices` puste). Unit `gradlew test` zielony; istniejący `UmpireTournamentE2ETest` ma scenariusze `doubles_regular` / mixed, ale nie ścieżki „Użyj meczu” ze slotu double.
 
 #### Gate CI
 
-- [ ] `pytest -q` (nowe + stare) zielone
+- [x] `pytest -q` (nowe + stare) zielone — 135 passed (2026-08-19)
 - [x] `npm run e2e:tournament` / `run.py office` zielone (01–20, Dell :18087)
-- [ ] `gradlew test` zielone
-- [ ] E2E Androida z seedem double na emulatorze (jak obecny `UmpireTournamentE2ETest`)
-- [ ] Brakujący klucz i18n failuje, nie warnuje
+- [x] `gradlew test` zielone (`android-doubles-040b` @ `b437727`, JDK 17)
+- [ ] E2E Androida z seedem double na emulatorze (jak obecny `UmpireTournamentE2ETest`) — zablokowane brakiem emulatora
+- [x] Brakujący klucz i18n failuje, nie warnuje (`npm run test:i18n` + `validation.test.js`)
 
 **Wejście:** etapy 0–6 zaimplementowane. **Wyjście:** feature można merge’ować.
 

@@ -216,3 +216,15 @@ def test_two_knockout_only_groups_keep_separate_finals():
     finals = {slot["phase"]: (slot["player1_name"], slot["player2_name"]) for slot in result["knockout"]}
     assert finals["B1 Men — Grupa A — Finał"] == ("A1", "A2")
     assert finals["B1 Men — Grupa B — Finał"] == ("B1", "B2")
+
+
+def test_knockout_only_one_player_skips_tree():
+    result = _compute_knockout_slots_from_bracket([
+        {
+            "name": "B1 Double",
+            "play_format": "knockout",
+            "players": [{"name": "Anna Kowalska / Ewa Nowak"}],
+        }
+    ])
+    assert result.get("error")
+    assert not result.get("knockout")

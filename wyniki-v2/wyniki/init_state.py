@@ -1,6 +1,7 @@
 """State initialization and loading."""
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 from .config import logger, settings
@@ -149,10 +150,10 @@ def initialize_state() -> None:
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
     
-    # Ensure at least one active tournament exists
+    # Ensure at least one active tournament exists (skip under pytest — tests insert their own).
     try:
         tournaments = fetch_tournaments()
-        if not tournaments:
+        if not tournaments and not os.environ.get("PYTEST_CURRENT_TEST"):
             from datetime import date
             from .database import insert_tournament
             insert_tournament("test tournament", date.today().isoformat(), "2099-12-31", active=True)
