@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  doublesPartnerBands,
   inferPlanningGenderFromLabel,
   planningDivisionFromGroupName,
+  playerMatchesDoublesCategory,
   playerMatchesTournamentCategory,
   tournamentCategoryDivisionKey,
 } from './categories.js';
@@ -44,4 +46,15 @@ test('B3/4 mixed matches B3 and B4 of any gender', () => {
   assert.equal(playerMatchesTournamentCategory({ category: 'B3', gender: 'M' }, cat), true);
   assert.equal(playerMatchesTournamentCategory({ category: 'B4', gender: 'K' }, cat), true);
   assert.equal(playerMatchesTournamentCategory({ category: 'B1', gender: 'M' }, cat), false);
+});
+
+test('doubles partner pool uses visual class only, not singles gender', () => {
+  const fromWomenPreset = { preset_key: 'B1K', label: 'B1 Women', hint_bands: ['B1'], is_doubles: true };
+  const openDouble = { preset_key: '', label: 'B1 Double', hint_bands: ['B1'], is_doubles: true };
+  assert.deepEqual(doublesPartnerBands(fromWomenPreset), ['B1']);
+  assert.equal(playerMatchesDoublesCategory({ category: 'B1', gender: 'M' }, fromWomenPreset), true);
+  assert.equal(playerMatchesDoublesCategory({ category: 'B1', gender: 'K' }, fromWomenPreset), true);
+  assert.equal(playerMatchesDoublesCategory({ category: 'B2', gender: 'K' }, fromWomenPreset), false);
+  assert.equal(playerMatchesDoublesCategory({ category: 'B1', gender: 'M' }, openDouble), true);
+  assert.equal(playerMatchesDoublesCategory({ category: 'B1', gender: 'K' }, openDouble), true);
 });

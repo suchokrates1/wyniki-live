@@ -13,7 +13,7 @@ Nowe funkcje kategorii **Double**: konkurentem jest **para** (`"Imię Nazwisko /
 | Miejsce | Co widać / co robić |
 |---------|---------------------|
 | Krok 1 — kategorie | Checkbox **Debel** przy presecie i kategorii niestandardowej; po zatwierdzeniu badge **Debel** |
-| Krok 1 — pary | **+ Dodaj drużynę**: Partner 1 + Partner 2 → kanoniczna etykieta; **Usuń parę** (gdy para nie jest w grupie) |
+| Krok 1 — pary | **+ Dodaj drużynę**: Partner 1 + Partner 2 (także gracze już w grupach singla; para K / M / mix). Filtr = klasa wzrokowa, nie płeć. **Usuń parę** (gdy para nie jest w grupie) |
 | Krok 1 — grupy | DnD **par** (nie osób); licznik **Pary**; **Przypisz wszystkie pary** / **Rozdziel pary** |
 | Karta grupy | Dropdown **Tryb rozgrywek**: grupy+puchar / tylko każdy z każdym / tylko puchar |
 | Krok 2 — terminarz | Dropdown stron meczu listuje pary; karty i autoschedule łamią długie `"A / B"` |

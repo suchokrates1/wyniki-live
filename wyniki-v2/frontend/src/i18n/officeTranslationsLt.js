@@ -97,6 +97,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       dragHere: 'Vilkite čia',
       doubles: 'Dvejetai',
       doublesHint: 'Dvejetų kategorijoje varžovas yra pora, o ne vienas žaidėjas.',
+      doublesPartnerHint: 'Partneriai imami iš turnyro sąrašo, taip pat jau esantys vienetų grupėse. Pora gali būti moterys, vyrai arba mišri.',
       playFormat: 'Varžybų formatas',
       playFormatGroupsKnockout: 'Grupės + atkrintamosios',
       playFormatRoundRobin: 'Tik ratų sistema',

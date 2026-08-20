@@ -714,13 +714,13 @@
                     <select class="select select-bordered" x-model="planningNewTeam.player1_id">
                       <option value="">Partner 1</option>
                       <template x-for="player in planningTeamPartnerOptions(planningNewTeam.player2_id)" :key="'admin_team_p1_'+player.id">
-                        <option :value="player.id" x-text="player.name"></option>
+                        <option :value="player.id" x-text="planningTeamPartnerLabel(player)"></option>
                       </template>
                     </select>
                     <select class="select select-bordered" x-model="planningNewTeam.player2_id">
                       <option value="">Partner 2</option>
                       <template x-for="player in planningTeamPartnerOptions(planningNewTeam.player1_id)" :key="'admin_team_p2_'+player.id">
-                        <option :value="player.id" x-text="player.name"></option>
+                        <option :value="player.id" x-text="planningTeamPartnerLabel(player)"></option>
                       </template>
                     </select>
                     <button type="button" class="btn btn-outline" @click="addPlanningTeam()">Dodaj drużynę</button>
