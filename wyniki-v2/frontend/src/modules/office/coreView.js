@@ -11,6 +11,8 @@ export function createOfficeCoreView() {
 
     authPassword: '',
 
+    showAuthPassword: false,
+
     authError: '',
 
     metaLoading: false,
@@ -86,6 +88,8 @@ export function createOfficeCoreView() {
     planningDragPlayerId: null,
 
     planningDragTeamId: null,
+
+    planningCategoryFilterEnabled: true,
 
     planningNewTeam: {
       player1_id: '',

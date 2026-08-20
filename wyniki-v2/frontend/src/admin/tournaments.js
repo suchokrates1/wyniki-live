@@ -3,6 +3,7 @@ import {
   mixedCategoryDisplayLabel,
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
   planningDivisionKey as sharedPlanningDivisionKey,
+  playerMatchesTournamentCategory,
 } from '../shared/categories.js';
 import { PLAY_FORMATS, normalizePlayFormat } from '../shared/playFormat.js';
 
@@ -74,6 +75,7 @@ export function createTournamentsAdmin() {
      planningSelectedDivision: '',
      planningSelectedCategoryId: null,
      planningGroupCount: 1,
+     planningCategoryFilterEnabled: true,
      planningGroupAssignments: {},
      planningTeamAssignments: {},
      planningGroupFormats: {},
@@ -746,7 +748,7 @@ export function createTournamentsAdmin() {
               label: cat.label,
               count: cat.is_doubles
                 ? this.planningTeamsForCategory(cat.id).length
-                : (cat.player_count || (this.planningPlayers || []).length),
+                : this.planningPlayersMatchingCategory(cat).length,
               is_doubles: Boolean(cat.is_doubles),
             }));
         }
@@ -763,8 +765,20 @@ export function createTournamentsAdmin() {
         });
       },
 
+      planningPlayersMatchingCategory(category = this.planningSelectedCategory()) {
+        return (this.planningPlayers || []).filter(player => (
+          playerMatchesTournamentCategory(player, category, this.planningMixedCategories)
+        ));
+      },
+
       planningPlayersForDivision(key = this.planningSelectedDivision) {
-        if (this.planningUsesTournamentCategories()) return this.planningPlayers || [];
+        if (this.planningUsesTournamentCategories()) {
+          if (!this.planningCategoryFilterEnabled) return this.planningPlayers || [];
+          const cat = String(key) === String(this.planningSelectedDivision)
+            ? this.planningSelectedCategory()
+            : this.tournamentCategoriesFor(this.planningTournamentId).find(item => String(item.id) === String(key));
+          return this.planningPlayersMatchingCategory(cat);
+        }
         return (this.planningPlayers || []).filter(player => this.planningDivisionKey(player) === key);
       },
 
@@ -812,7 +826,7 @@ export function createTournamentsAdmin() {
       },
 
       planningAssignedPlayers(groupName) {
-        return this.planningPlayersForDivision().filter(player => this.planningGroupAssignments[player.id] === groupName);
+        return (this.planningPlayers || []).filter(player => this.planningGroupAssignments[player.id] === groupName);
       },
 
       planningUnassignedPlayers() {
@@ -853,7 +867,7 @@ export function createTournamentsAdmin() {
           this.planningTeamAssignments = { ...this.planningTeamAssignments };
           return;
         }
-        this.planningPlayersForDivision().forEach((player, index) => {
+        this.planningUnassignedPlayers().forEach((player, index) => {
      this.planningGroupAssignments[player.id] = groupNames[index % groupNames.length];
         });
         this.planningGroupAssignments = { ...this.planningGroupAssignments };
@@ -866,6 +880,15 @@ export function createTournamentsAdmin() {
             delete assignments[team.id];
           }
           this.planningTeamAssignments = assignments;
+          return;
+        }
+        if (this.planningUsesTournamentCategories()) {
+          const valid = new Set(this.planningTargetGroupNames());
+          const assignments = { ...this.planningGroupAssignments };
+          for (const player of this.planningPlayers || []) {
+            if (valid.has(assignments[player.id])) delete assignments[player.id];
+          }
+          this.planningGroupAssignments = assignments;
           return;
         }
         for (const player of this.planningPlayersForDivision()) {

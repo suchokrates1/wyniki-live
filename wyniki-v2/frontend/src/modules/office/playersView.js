@@ -5,6 +5,7 @@ import {
   planningDivisionKey as sharedPlanningDivisionKey,
   planningResolveStoredGroupName as sharedPlanningResolveStoredGroupName,
   planningStoredGroupNames as sharedPlanningStoredGroupNames,
+  playerMatchesTournamentCategory,
 } from '../../shared/categories.js';
 import { DEFAULT_PLAY_FORMAT, PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
 
@@ -366,7 +367,7 @@ export function createOfficePlayersView() {
             label: cat.label,
             count: cat.is_doubles
               ? this.planningTeamsForCategory(cat.id).length
-              : cat.player_count || this.planningCategoryAssignedCount(cat.id),
+              : this.planningPlayersMatchingCategory(cat).length,
             hint_bands: cat.hint_bands || [],
             is_doubles: Boolean(cat.is_doubles),
           }));
@@ -384,8 +385,20 @@ export function createOfficePlayersView() {
       });
     },
 
+    planningPlayersMatchingCategory(category = this.planningSelectedCategory()) {
+      return (this.planningPlayers || []).filter(player => (
+        playerMatchesTournamentCategory(player, category, this.planningMixedCategories)
+      ));
+    },
+
     planningPlayersForDivision(key = this.planningSelectedDivision) {
-      if (this.planningUsesTournamentCategories()) return this.planningPlayers || [];
+      if (this.planningUsesTournamentCategories()) {
+        if (!this.planningCategoryFilterEnabled) return this.planningPlayers || [];
+        const cat = String(key) === String(this.planningSelectedDivision)
+          ? this.planningSelectedCategory()
+          : (this.tournamentCategories || []).find(item => String(item.id) === String(key));
+        return this.planningPlayersMatchingCategory(cat);
+      }
       return (this.planningPlayers || []).filter(player => this.planningDivisionKey(player) === key);
     },
 
@@ -505,7 +518,7 @@ export function createOfficePlayersView() {
     },
 
     planningUnassignedPlayers() {
-      return (this.planningPlayers || []).filter(player => !this.planningEffectiveGroup(player));
+      return this.planningPlayersForDivision().filter(player => !this.planningEffectiveGroup(player));
     },
 
     planningOrdinal(player) {
@@ -552,11 +565,12 @@ export function createOfficePlayersView() {
       const assignments = { ...this.planningGroupAssignments };
       const teamAssignments = { ...this.planningTeamAssignments };
       let changed = false;
-      for (const player of this.planningPlayersForDivision()) {
+      for (const player of this.planningPlayers || []) {
         const assigned = assignments[player.id];
         if (!assigned) continue;
         const canonical = this.planningResolveGroupName(assigned);
-        if (!canonical || !valid.has(canonical)) {
+        if (!canonical) continue;
+        if (!valid.has(canonical)) {
           delete assignments[player.id];
           changed = true;
         } else if (canonical !== assigned) {

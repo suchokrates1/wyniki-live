@@ -98,6 +98,89 @@ export function planningDivisionKey(category, gender, mixedCategories = []) {
   return cat || normalizedGender || 'NIEPRZYPISANI';
 }
 
+/** Infer K/M from a category or group label. Check women before men — "women" contains "men". */
+export function inferPlanningGenderFromLabel(label) {
+  const lower = String(label || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (
+    /\bwomen\b/.test(lower)
+    || /\bwoman\b/.test(lower)
+    || lower.includes('kobiet')
+    || /\bfrau/.test(lower)
+    || /\bdamen\b/.test(lower)
+    || lower.includes('moter')
+    || /\bdonne\b/.test(lower)
+    || /\bmujeres\b/.test(lower)
+    || /\bfemmes\b/.test(lower)
+  ) return 'K';
+  if (
+    /\bmen\b/.test(lower)
+    || /\bman\b/.test(lower)
+    || lower.includes('mezczy')
+    || lower.includes('manner')
+    || /\bherren\b/.test(lower)
+    || /\bvyrai\b/.test(lower)
+    || /\buomini\b/.test(lower)
+    || /\bhombres\b/.test(lower)
+    || /\bhommes\b/.test(lower)
+  ) return 'M';
+  const upper = String(label || '').toUpperCase().trim();
+  if (upper.endsWith('K')) return 'K';
+  if (upper.endsWith('M')) return 'M';
+  return '';
+}
+
+function playerBandMatches(playerCategory, bands) {
+  const code = normalizeCategoryCode(playerCategory);
+  const normalized = normalizeMixedCategories(bands);
+  if (!code || !normalized.length) return false;
+  if (normalized.includes(code)) return true;
+  if (normalized.includes('B34') && (code === 'B3' || code === 'B4' || code === 'B34')) return true;
+  if (code === 'B34' && (normalized.includes('B3') || normalized.includes('B4'))) return true;
+  return false;
+}
+
+/** Canonical B1K/B1M/… key for a tournament category row (preset first). */
+export function tournamentCategoryDivisionKey(category, mixedCategories = []) {
+  if (!category) return '';
+  const preset = String(category.preset_key || '').trim().toUpperCase();
+  if (/^B\d{1,2}[KM]$/.test(preset)) return preset;
+
+  const label = String(category.label || '');
+  const hints = normalizeMixedCategories(category.hint_bands || []);
+  const code = extractCategoryCodeFromLabel(label) || (hints.length === 1 ? hints[0] : '');
+  const mixed = isMixedCategory(code, mixedCategories)
+    || isMixedSectionLabel(label)
+    || hints.length > 1
+    || hints.includes('B34')
+    || /mixed|\bmix\b|mieszan/i.test(label);
+
+  if (mixed) {
+    if (hints.includes('B34') || (hints.includes('B3') && hints.includes('B4'))) return 'B34';
+    if (hints.length === 1) return hints[0];
+    return code || hints[0] || '';
+  }
+
+  const gender = inferPlanningGenderFromLabel(label);
+  if (code && gender) return `${code}${gender}`;
+  if (preset) return preset;
+  return code || gender || '';
+}
+
+/** True when a player's visual class + gender belongs in this tournament category. */
+export function playerMatchesTournamentCategory(player, category, mixedCategories = []) {
+  if (!player || !category) return false;
+  const expected = tournamentCategoryDivisionKey(category, mixedCategories);
+  if (!expected) return true;
+  if (/^B\d{1,2}$/.test(expected)) {
+    const hints = normalizeMixedCategories(category.hint_bands || []);
+    return playerBandMatches(player.category, hints.length ? hints : [expected]);
+  }
+  return planningDivisionKey(player.category, player.gender, mixedCategories) === expected;
+}
+
 export function planningDivisionFromGroupName(groupName, mixedCategories = []) {
   const label = String(groupName || '').split(' — ')[0].split(' - ')[0].trim();
   const category = extractCategoryCodeFromLabel(label);
@@ -105,11 +188,7 @@ export function planningDivisionFromGroupName(groupName, mixedCategories = []) {
   if (isMixedCategory(category, mixedCategories) || isMixedSectionLabel(sectionLabel)) {
     return category || '';
   }
-  const upper = label.toUpperCase();
-  const lower = label.toLowerCase();
-  let gender = '';
-  if (lower.includes('kob') || lower.includes('frau') || lower.includes('damen') || upper.endsWith('K')) gender = 'K';
-  if (lower.includes('męż') || lower.includes('mez') || lower.includes('mężczy') || lower.includes('männer') || lower.includes('manner') || lower.includes('herren') || upper.endsWith('M')) gender = 'M';
+  const gender = inferPlanningGenderFromLabel(label) || inferPlanningGenderFromLabel(sectionLabel);
   if (category && gender) return `${category}${gender}`;
   return category || gender || '';
 }
