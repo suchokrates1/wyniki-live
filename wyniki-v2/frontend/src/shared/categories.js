@@ -181,6 +181,31 @@ export function playerMatchesTournamentCategory(player, category, mixedCategorie
   return planningDivisionKey(player.category, player.gender, mixedCategories) === expected;
 }
 
+/** Visual-class bands for a doubles partner pool. Gender is ignored — pairs may be M, K, or mixed. */
+export function doublesPartnerBands(category, mixedCategories = []) {
+  if (!category) return [];
+  const hints = normalizeMixedCategories(category.hint_bands || []);
+  if (hints.includes('B34') || (hints.includes('B3') && hints.includes('B4'))) {
+    return ['B3', 'B4', 'B34'];
+  }
+  if (hints.length) return hints;
+  const key = tournamentCategoryDivisionKey(category, mixedCategories);
+  if (key === 'B34') return ['B3', 'B4', 'B34'];
+  const band = (String(key || '').match(/^B\d{1,2}/) || [''])[0];
+  return band ? [band] : [];
+}
+
+/**
+ * Doubles partners: same visual class as the category, any gender,
+ * including people already drawn into singles groups.
+ */
+export function playerMatchesDoublesCategory(player, category, mixedCategories = []) {
+  if (!player || !category) return false;
+  const bands = doublesPartnerBands(category, mixedCategories);
+  if (!bands.length) return true;
+  return playerBandMatches(player.category, bands);
+}
+
 export function planningDivisionFromGroupName(groupName, mixedCategories = []) {
   const label = String(groupName || '').split(' — ')[0].split(' - ')[0].trim();
   const category = extractCategoryCodeFromLabel(label);

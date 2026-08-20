@@ -35,7 +35,7 @@ Zakładka **Plan turnieju** → krok **Grupy startowe**. Przycisk **Odśwież pl
 
 | Kontrolka | Co robi | API |
 |-----------|---------|-----|
-| **+ Dodaj drużynę** | Partner 1 + Partner 2 | `POST …/teams` → `display_name` |
+| **+ Dodaj drużynę** | Partner 1 + Partner 2. Lista: klasa wzrokowa kategorii (Filtr) albo wszyscy; osoby już w grupach singla są dostępne; para może być K, M albo mix | `POST …/teams` → `display_name` |
 | Lista par / **Usuń parę** | CRUD | `DELETE …/teams/{id}` (zablokowane, gdy para jest w grupie) |
 
 ## Grupy

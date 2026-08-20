@@ -315,18 +315,33 @@
           </div>
         </div>
         <div class="mt-5 rounded-[16px] border border-slate-200/80 bg-white/65 p-4" x-show="planningSelectedCategoryIsDoubles() && tournamentCategories.length && !categorySetupOpen">
-          <button type="button" class="text-sm font-semibold text-emerald-700" @click="planningAddTeamOpen = !planningAddTeamOpen" x-text="planningAddTeamOpen ? '− ' + ot('planning.addTeamTitle') : '+ ' + ot('planning.addTeam')"></button>
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <button type="button" class="text-sm font-semibold text-emerald-700" @click="planningAddTeamOpen = !planningAddTeamOpen" x-text="planningAddTeamOpen ? '− ' + ot('planning.addTeamTitle') : '+ ' + ot('planning.addTeam')"></button>
+            <div class="inline-flex rounded-lg border border-slate-200 overflow-hidden text-[11px] font-semibold" role="group">
+              <button type="button"
+                class="px-2.5 py-1"
+                :class="planningCategoryFilterEnabled ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'"
+                @click="planningCategoryFilterEnabled = true"
+                x-text="ot('planning.poolFilter')"></button>
+              <button type="button"
+                class="px-2.5 py-1"
+                :class="!planningCategoryFilterEnabled ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'"
+                @click="planningCategoryFilterEnabled = false"
+                x-text="ot('planning.poolFilterAll')"></button>
+            </div>
+          </div>
+          <p class="mt-1 text-xs text-slate-500" x-text="ot('planning.doublesPartnerHint')"></p>
           <div class="mt-3 grid gap-3 sm:grid-cols-3" x-show="planningAddTeamOpen">
             <select class="select select-bordered bg-white/90" x-model="planningNewTeam.player1_id">
               <option value="" x-text="ot('planning.partner1')"></option>
               <template x-for="player in planningTeamPartnerOptions(planningNewTeam.player2_id)" :key="'office_team_p1_'+player.id">
-                <option :value="player.id" x-text="player.name"></option>
+                <option :value="player.id" x-text="planningTeamPartnerLabel(player)"></option>
               </template>
             </select>
             <select class="select select-bordered bg-white/90" x-model="planningNewTeam.player2_id">
               <option value="" x-text="ot('planning.partner2')"></option>
               <template x-for="player in planningTeamPartnerOptions(planningNewTeam.player1_id)" :key="'office_team_p2_'+player.id">
-                <option :value="player.id" x-text="player.name"></option>
+                <option :value="player.id" x-text="planningTeamPartnerLabel(player)"></option>
               </template>
             </select>
             <button type="button" class="btn office-btn-primary" @click="addOfficeTeam()" x-text="ot('planning.addTeam')"></button>

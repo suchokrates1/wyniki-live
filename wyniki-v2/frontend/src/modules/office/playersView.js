@@ -5,6 +5,7 @@ import {
   planningDivisionKey as sharedPlanningDivisionKey,
   planningResolveStoredGroupName as sharedPlanningResolveStoredGroupName,
   planningStoredGroupNames as sharedPlanningStoredGroupNames,
+  playerMatchesDoublesCategory,
   playerMatchesTournamentCategory,
 } from '../../shared/categories.js';
 import { DEFAULT_PLAY_FORMAT, PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
@@ -500,11 +501,22 @@ export function createOfficePlayersView() {
         if (team.player2_id) taken.add(Number(team.player2_id));
       }
       const exclude = Number(excludeId || 0);
+      const category = this.planningSelectedCategory();
+      const filterOn = Boolean(this.planningCategoryFilterEnabled);
       return (this.planningPlayers || []).filter(player => {
         if (taken.has(Number(player.id))) return false;
         if (exclude && Number(player.id) === exclude) return false;
+        if (filterOn && category) {
+          return playerMatchesDoublesCategory(player, category, this.planningMixedCategories);
+        }
         return true;
       });
+    },
+
+    planningTeamPartnerLabel(player) {
+      const name = player?.name || `${player?.first_name || ''} ${player?.last_name || ''}`.trim();
+      const klass = this.playerClassificationLabel(player);
+      return klass ? `${name} · ${klass}` : name;
     },
 
     planningAssignedPlayers(groupName) {
@@ -555,6 +567,7 @@ export function createOfficePlayersView() {
       }
       const groups = this.planningGroupsForDivision(key);
       this.planningGroupCount = groups.length ? Math.max(1, Math.min(8, groups.length)) : 1;
+      if (this.planningSelectedCategoryIsDoubles()) this.planningAddTeamOpen = true;
     },
 
     planningSetGroupCount(delta) {

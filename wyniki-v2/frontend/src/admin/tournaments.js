@@ -3,6 +3,7 @@ import {
   mixedCategoryDisplayLabel,
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
   planningDivisionKey as sharedPlanningDivisionKey,
+  playerMatchesDoublesCategory,
   playerMatchesTournamentCategory,
 } from '../shared/categories.js';
 import { PLAY_FORMATS, normalizePlayFormat } from '../shared/playFormat.js';
@@ -850,11 +851,25 @@ export function createTournamentsAdmin() {
           if (team.player2_id) taken.add(Number(team.player2_id));
         }
         const exclude = Number(excludeId || 0);
+        const category = this.planningSelectedCategory();
+        const filterOn = Boolean(this.planningCategoryFilterEnabled);
         return (this.planningPlayers || []).filter(player => {
           if (taken.has(Number(player.id))) return false;
           if (exclude && Number(player.id) === exclude) return false;
+          if (filterOn && category) {
+            return playerMatchesDoublesCategory(player, category, this.planningMixedCategories);
+          }
           return true;
         });
+      },
+
+      planningTeamPartnerLabel(player) {
+        const name = player?.name || `${player?.first_name || ''} ${player?.last_name || ''}`.trim();
+        const band = String(player?.category || '').trim();
+        const gender = this.normalizePlanningGender(player?.gender);
+        const genderLabel = gender === 'K' ? 'Kobiety' : gender === 'M' ? 'Mężczyźni' : '';
+        const klass = [band, genderLabel].filter(Boolean).join(' · ');
+        return klass ? `${name} · ${klass}` : name;
       },
 
       autoAssignPlanningGroups() {
