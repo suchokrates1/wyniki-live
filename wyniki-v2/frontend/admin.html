@@ -219,7 +219,13 @@
           <p>Podaj hasło administratora, aby zarządzać turniejami i nakładkami.</p>
           <label class="form-control">
             <span class="label-text">Hasło</span>
-            <input x-model="adminPassword" type="password" autocomplete="current-password" class="input input-bordered" required autofocus>
+            <div class="relative">
+              <input x-model="adminPassword" :type="passwordVisible.admin ? 'text' : 'password'" type="password" autocomplete="current-password" class="input input-bordered w-full pr-12" required autofocus>
+              <button type="button" class="absolute inset-y-0 right-0 z-10 flex w-11 items-center justify-center opacity-60 hover:opacity-100" @click="passwordVisible.admin = !passwordVisible.admin" :aria-label="passwordVisible.admin ? 'Ukryj hasło' : 'Pokaż hasło'" :aria-pressed="passwordVisible.admin">
+                <svg x-show="!passwordVisible.admin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                <svg x-show="passwordVisible.admin" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+              </button>
+            </div>
           </label>
           <p x-show="adminAuthError" x-text="adminAuthError" class="text-error" role="alert"></p>
           <button class="btn btn-primary" type="submit">Zaloguj</button>
@@ -635,6 +641,10 @@
                     <input type="number" min="1" max="8" x-model.number="planningGroupCount" class="input input-bordered">
                   </div>
                   <div class="form-control justify-end">
+                    <div class="join" x-show="planningUsesTournamentCategories()">
+                      <button type="button" class="btn btn-sm join-item" :class="planningCategoryFilterEnabled ? 'btn-primary' : 'btn-ghost'" @click="planningCategoryFilterEnabled = true">Filtr</button>
+                      <button type="button" class="btn btn-sm join-item" :class="!planningCategoryFilterEnabled ? 'btn-primary' : 'btn-ghost'" @click="planningCategoryFilterEnabled = false">Wszyscy</button>
+                    </div>
                     <div class="join">
                       <button @click="autoAssignPlanningGroups()" class="btn btn-outline join-item" x-text="planningSelectedCategoryIsDoubles() ? (Number(planningGroupCount || 1) === 1 ? 'Przypisz wszystkie pary' : 'Rozdziel pary automatycznie') : (Number(planningGroupCount || 1) === 1 ? 'Przypisz wszystkich' : 'Rozdziel automatycznie')"></button>
                       <button @click="clearPlanningDivisionAssignments()" class="btn btn-ghost join-item">Wyczyść</button>
@@ -930,7 +940,13 @@
             <div class="form-control"><label class="label"><span class="label-text">Klucz dostępu</span></label><input type="text" x-model="editTournament.access_key" class="input input-bordered" placeholder="opcjonalnie"></div>
             <div class="form-control">
               <label class="label"><span class="label-text">Hasło modułu biura</span></label>
-              <input type="password" x-model="editTournament.office_password" class="input input-bordered" placeholder="nowe hasło lub puste bez zmiany">
+              <div class="relative">
+                <input type="password" :type="passwordVisible.officeEdit ? 'text' : 'password'" x-model="editTournament.office_password" class="input input-bordered w-full pr-12" placeholder="nowe hasło lub puste bez zmiany" autocomplete="new-password">
+                <button type="button" class="absolute inset-y-0 right-0 z-10 flex w-11 items-center justify-center opacity-60 hover:opacity-100" @click="passwordVisible.officeEdit = !passwordVisible.officeEdit" :aria-label="passwordVisible.officeEdit ? 'Ukryj hasło' : 'Pokaż hasło'" :aria-pressed="passwordVisible.officeEdit">
+                  <svg x-show="!passwordVisible.officeEdit" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                  <svg x-show="passwordVisible.officeEdit" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                </button>
+              </div>
               <label class="label" x-show="editTournament.has_office_password"><span class="label-text-alt text-success">Hasło biura jest już ustawione</span></label>
             </div>
           </div>
@@ -1027,7 +1043,15 @@
             <div class="form-control"><label class="label"><span class="label-text">Email raport&#243;w</span></label><input type="email" x-model="newTournament.report_email" class="input input-bordered" placeholder="np. turniej@vestmedia.pl"></div>
             <div class="form-control"><label class="label"><span class="label-text">Logo turnieju</span></label><input type="file" accept="image/*" @change="onTournamentLogoSelected" class="file-input file-input-bordered"></div>
             <div class="form-control"><label class="label"><span class="label-text">Klucz dostępu</span></label><input type="text" x-model="newTournament.access_key" class="input input-bordered" placeholder="opcjonalnie"></div>
-            <div class="form-control"><label class="label"><span class="label-text">Hasło modułu biura</span></label><input type="password" x-model="newTournament.office_password" class="input input-bordered" placeholder="np. biuro2026"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Hasło modułu biura</span></label>
+              <div class="relative">
+                <input type="password" :type="passwordVisible.officeNew ? 'text' : 'password'" x-model="newTournament.office_password" class="input input-bordered w-full pr-12" placeholder="np. biuro2026" autocomplete="new-password">
+                <button type="button" class="absolute inset-y-0 right-0 z-10 flex w-11 items-center justify-center opacity-60 hover:opacity-100" @click="passwordVisible.officeNew = !passwordVisible.officeNew" :aria-label="passwordVisible.officeNew ? 'Ukryj hasło' : 'Pokaż hasło'" :aria-pressed="passwordVisible.officeNew">
+                  <svg x-show="!passwordVisible.officeNew" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                  <svg x-show="passwordVisible.officeNew" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                </button>
+              </div>
+            </div>
           </div>
           <div class="flex items-center gap-3 mt-4 flex-wrap">
             <label class="label cursor-pointer justify-start gap-3 py-0"><input type="checkbox" class="toggle toggle-info" x-model="newTournament.is_public" :disabled="newTournament.is_simulation"><span class="label-text">Publiczny</span></label>
@@ -1072,7 +1096,15 @@
             <div class="form-control"><label class="label"><span class="label-text">Host SMTP</span></label><input type="text" x-model="emailSettings.smtp_host" class="input input-bordered" placeholder="smtp.example.com"></div>
             <div class="form-control"><label class="label"><span class="label-text">Port</span></label><input type="number" x-model="emailSettings.smtp_port" class="input input-bordered" placeholder="587"></div>
             <div class="form-control"><label class="label"><span class="label-text">Login</span></label><input type="text" x-model="emailSettings.smtp_username" class="input input-bordered"></div>
-            <div class="form-control"><label class="label"><span class="label-text">Has&#322;o</span></label><input type="password" x-model="emailSettings.smtp_password" class="input input-bordered"></div>
+            <div class="form-control"><label class="label"><span class="label-text">Has&#322;o</span></label>
+              <div class="relative">
+                <input type="password" :type="passwordVisible.smtp ? 'text' : 'password'" x-model="emailSettings.smtp_password" class="input input-bordered w-full pr-12" autocomplete="new-password">
+                <button type="button" class="absolute inset-y-0 right-0 z-10 flex w-11 items-center justify-center opacity-60 hover:opacity-100" @click="passwordVisible.smtp = !passwordVisible.smtp" :aria-label="passwordVisible.smtp ? 'Ukryj hasło' : 'Pokaż hasło'" :aria-pressed="passwordVisible.smtp">
+                  <svg x-show="!passwordVisible.smtp" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                  <svg x-show="passwordVisible.smtp" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                </button>
+              </div>
+            </div>
             <div class="form-control"><label class="label"><span class="label-text">Email nadawcy</span></label><input type="email" x-model="emailSettings.smtp_from_email" class="input input-bordered"></div>
             <div class="form-control"><label class="label"><span class="label-text">Nazwa nadawcy</span></label><input type="text" x-model="emailSettings.smtp_from_name" class="input input-bordered"></div>
             <div class="form-control justify-end">

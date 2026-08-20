@@ -47,8 +47,11 @@ Zakładka **Plan turnieju** → krok **Grupy startowe**. Przycisk **Odśwież pl
 | **Przypisz wszystkich** / **Rozdziel automatycznie** | Auto-assign osób | Potem auto-zapis grup |
 | **Przypisz wszystkie pary** / **Rozdziel pary** | Auto-assign drużyn | Jak wyżej, przy Double |
 | **Wyczyść** | Czyści przypisania | — |
+| **Filtr** / **Wszyscy** (domyślnie Filtr) | Pula „Do wylosowania”: tylko klasa wybranej kategorii (np. B1 Women) albo wszyscy nieprzypisani | — |
 | Drag & drop graczy **albo par** do grup | Ręczny układ | Auto `PUT …/planning/groups` |
 | Dropdown **Tryb rozgrywek** na karcie | `groups_knockout` / `round_robin` / `knockout` | Zapis z grupami; blokada gdy grupa ma mecze |
+
+Kafelek kategorii pokazuje liczbę zawodników **pasujących do klasy** (np. B1 Women), nie wszystkich w turnieju. **Przypisz wszystkich** / **Rozdziel automatycznie** bierze pulę z aktualnego filtra.
 
 Kafelek planu przy Double pokazuje **Pary**, nie zawodników. Szczegóły trybu: [[28 - Debel w biurze]].
 

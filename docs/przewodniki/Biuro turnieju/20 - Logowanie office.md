@@ -21,7 +21,7 @@ Wejście do panelu operatorskiego turnieju przypisanego do slotu.
 | Select języka | i18n biura (`pl/de/en/it/es/fr/lt`) | Osobny od publicznej; `?lang=lt` ustawia **Lietuvių** |
 | Chip **Biuro slot {n}** | Info | — |
 | Meta turnieju (nazwa, daty, aktywny / symulacja) | Z API | `GET /api/office/{slot}/meta` |
-| Pole **Hasło modułu biura** | Hasło | Ustawiane przy tworzeniu turnieju w Admin |
+| Pole **Hasło modułu biura** + oczko | Hasło; przycisk pokazuje / ukrywa treść | Ustawiane przy tworzeniu turnieju w Admin |
 | **Wejdź do biura** | Auth | `POST /api/office/{slot}/auth` → token w `sessionStorage` |
 
 > [!warning] Hasło

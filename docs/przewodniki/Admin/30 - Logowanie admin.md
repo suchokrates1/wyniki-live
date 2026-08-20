@@ -19,7 +19,7 @@ Wejście do panelu systemowego (korty, turnieje, gracze globalni, overlay).
 | Kontrolka | Co robi | Efekt |
 |-----------|---------|-------|
 | Tytuł **Panel administratora** | — | — |
-| Pole **Hasło** | Hasło z konfiguracji serwera (`ADMIN_PASSWORD`) | — |
+| Pole **Hasło** + oczko | Hasło z konfiguracji serwera (`ADMIN_PASSWORD`); przycisk pokazuje / ukrywa treść | — |
 | **Zaloguj** | Auth | `POST /admin/api/auth` → token `wyniki-admin-token` w sessionStorage |
 
 ## Zakładki po zalogowaniu

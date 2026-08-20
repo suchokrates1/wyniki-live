@@ -22,6 +22,12 @@ export function createAuthAdmin() {
     adminPassword: '',
     adminNeedsAuth: !sessionStorage.getItem(ADMIN_TOKEN_KEY),
     adminAuthError: '',
+    passwordVisible: {
+      admin: false,
+      officeEdit: false,
+      officeNew: false,
+      smtp: false,
+    },
 
     toast: {
       show: false,
