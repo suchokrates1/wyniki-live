@@ -79,3 +79,11 @@ def overlay_page(overlay_id, tournament_slot=None):
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
+
+
+@blueprint.route('/vest-media-logo.png')
+def vest_media_logo():
+    """Vest Media brand mark for TV watermark (same asset as vestmedia.pl)."""
+    response = send_from_directory(APP_ROOT, 'vest-media-logo.png')
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response

@@ -20,10 +20,18 @@
         .layout.auto-hidden { opacity: 0; pointer-events: none; }
         .element-wrapper {
             position: absolute;
-            transition: left 0.4s ease, top 0.4s ease, width 0.4s ease, opacity 0.5s ease;
+            transition: left 0.4s ease, top 0.4s ease, width 0.4s ease, height 0.4s ease, opacity 0.5s ease;
+            overflow: hidden;
         }
         .element-wrapper.el-hidden {
             opacity: 0; pointer-events: none; transform: translateY(-30px);
+        }
+
+        /* TV-style corner watermark */
+        .ov-watermark {
+            position: absolute; z-index: 90; pointer-events: none;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
         }
 
         /* ---- Unified overlay container ---- */
@@ -403,12 +411,16 @@
             return playerState['set'+setIdx] || 0;
         };
         const hasThirdSetScore = readSetValue(pA, 3) > 0 || readSetValue(pB, 3) > 0;
-        const visibleSetCount = active ? (isSuperTB ? 2 : Math.min(3, Math.max(1, curSet))) : (hasThirdSetScore ? 3 : 2);
+        // Always reserve ≥2 set columns so top-bar slots don't expand mid-match
+        const visibleSetCount = active
+            ? (isSuperTB ? 2 : Math.max(2, Math.min(3, curSet)))
+            : (hasThirdSetScore ? 3 : 2);
         const sets = [];
         for (let s = 1; s <= 3; s++) {
             const a = readSetValue(pA, s), b = readSetValue(pB, s);
             if (s <= visibleSetCount || a > 0 || b > 0) sets.push({ idx: s, a: a||0, b: b||0 });
         }
+        while (sets.length < 2) sets.push({ idx: sets.length + 1, a: 0, b: 0 });
         const isTie = court.tie?.visible || false;
         const ptA = isTie ? (court.tie?.A||0) : (pA.points||'0');
         const ptB = isTie ? (court.tie?.B||0) : (pB.points||'0');
@@ -521,6 +533,32 @@
         return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;"><span class="label-text">'+el.label_text+'</span>'+timeHtml+'</div>';
     }
 
+    function estimateTopSlotHeight(el) {
+        var labelPos = el.label_position || 'above';
+        var hasLabel = labelPos !== 'none' && String(el.label_text || '').trim().length > 0;
+        var labelFs = el.label_font_size || (el.zone === 'top' ? 12 : 14);
+        var labelGap = el.label_gap != null ? el.label_gap : 4;
+        var labelH = hasLabel ? (labelFs + 16 + labelGap) : 0;
+        return Math.ceil(labelH + 76);
+    }
+
+    function renderWatermark(preset) {
+        var wm = preset.watermark;
+        if (!wm || !wm.enabled) return '';
+        // Vest Media brand (same file as vestmedia.pl footer) — not tournament logo
+        var logo = '/vest-media-logo.png';
+        var size = wm.size || 140;
+        var opacity = wm.opacity != null ? wm.opacity : 0.4;
+        var margin = 36;
+        var pos = wm.position || 'bottom-right';
+        var place = '';
+        if (pos === 'top-left') place = 'left:'+margin+'px;top:'+margin+'px;';
+        else if (pos === 'top-right') place = 'right:'+margin+'px;top:'+margin+'px;';
+        else if (pos === 'bottom-left') place = 'left:'+margin+'px;bottom:'+margin+'px;';
+        else place = 'right:'+margin+'px;bottom:'+margin+'px;';
+        return '<img class="ov-watermark" src="'+logo+'" alt="Vest Media" style="'+place+'width:'+size+'px;height:'+size+'px;opacity:'+opacity+';">';
+    }
+
     function render() {
         var preset = getPreset();
         var anyActive = getTrackedCourtIds().some(function(id){return courts[id]?.match_status?.active;});
@@ -530,7 +568,7 @@
         var scale = Math.min(sx, sy);
         var elems = preset.elements || [];
 
-        // Apply top-bar grid positioning (mirrors admin.js logic)
+        // Apply top-bar grid positioning (mirrors admin overlay.js)
         if (preset.top_bar?.enabled) {
             var topEls = elems.filter(function(e){ return e.zone === 'top'; });
             if (topEls.length > 0) {
@@ -541,13 +579,18 @@
                 var totalW = 1920 - 2 * mx;
                 var usable = topEls.length > cols ? cols : topEls.length;
                 var colW = Math.round((totalW - (usable - 1) * gap) / usable);
-                var refH = topEls[0].h || null;
+                var slotH = null;
+                if (preset.top_bar.reserve_expanded !== false) {
+                    slotH = Math.max.apply(null, topEls.map(estimateTopSlotHeight));
+                } else if (topEls[0].h) {
+                    slotH = topEls[0].h;
+                }
                 topEls.forEach(function(el, i) {
                     if (i >= cols) return;
                     el.x = Math.round(mx + i * (colW + gap));
                     el.y = mt;
                     el.w = colW;
-                    if (refH) el.h = refH;
+                    if (slotH) el.h = slotH;
                 });
             }
         }
@@ -573,6 +616,7 @@
             return '<div class="element-wrapper '+hidden+'" style="'+style+'">'
                 +'<div class="overlay-container">'+labelAbove+renderScoreboard(el)+labelBelow+'</div></div>';
         }).join('');
+        html += renderWatermark(preset);
         document.getElementById('app').innerHTML =
             '<div class="layout '+(autoHidden?'auto-hidden':'')+'" style="transform:scale('+scale+')">'+html+'</div>';
     }
