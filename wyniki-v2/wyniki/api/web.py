@@ -84,6 +84,8 @@ def overlay_page(overlay_id, tournament_slot=None):
 @blueprint.route('/vest-media-logo.png')
 def vest_media_logo():
     """Vest Media brand mark for TV watermark (same asset as vestmedia.pl)."""
-    response = send_from_directory(APP_ROOT, 'vest-media-logo.png')
+    # Docker image: Vite public → wyniki/static; also copied next to overlay.html
+    logo_dir = APP_ROOT if (APP_ROOT / 'vest-media-logo.png').is_file() else STATIC_DIR
+    response = send_from_directory(logo_dir, 'vest-media-logo.png')
     response.headers['Cache-Control'] = 'public, max-age=86400'
     return response
