@@ -20,8 +20,11 @@ function flagSpans(p) {
   return html ? '<span class="player-flags">' + html + '</span>' : '';
 }
 
+export const VEST_MEDIA_LOGO_URL = '/vest-media-logo.png';
+
 export function createOverlayAdmin() {
   return {
+      VEST_MEDIA_LOGO_URL,
       // Overlay settings (new preset-based model)
       overlaySettings: {
         tournament_logo: null,
@@ -76,6 +79,7 @@ export function createOverlayAdmin() {
              if (ov.tournament_id != null && ov.tournament_id !== '') {
                ov.tournament_id = Number(ov.tournament_id) || null;
              }
+             if (ov.top_bar?.enabled) this.applyTopBarGrid(ov);
            });
            // Auto-select first overlay if current is missing
            const ids = Object.keys(this.overlaySettings.overlays || {});
@@ -384,17 +388,54 @@ export function createOverlayAdmin() {
     // ===== GRID & ALIGNMENT SYSTEM =====
     _ensureGridDefaults(ov) {
       if (!ov.top_bar) {
-        ov.top_bar = { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 };
+        ov.top_bar = { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true };
+      } else if (ov.top_bar.reserve_expanded === undefined) {
+        ov.top_bar.reserve_expanded = true;
+      }
+      if (!ov.watermark) {
+        ov.watermark = { enabled: false, opacity: 0.4, position: 'bottom-right', size: 140 };
       }
       (ov.elements || []).forEach(el => {
         if (!el.zone) el.zone = 'free';
       });
     },
 
-    /** Recompute positions for all elements in the top-bar grid */
-    applyTopBarGrid() {
+    /** Estimated height for a court slot at 2-set expanded scoreboard (label + SB). */
+    estimateTopSlotHeight(el) {
+      const labelPos = el.label_position || 'above';
+      const hasLabel = labelPos !== 'none' && String(el.label_text || '').trim().length > 0;
+      const labelFs = el.label_font_size || (el.zone === 'top' ? 12 : 14);
+      const labelGap = el.label_gap != null ? el.label_gap : 4;
+      const labelH = hasLabel ? (labelFs + 16 + labelGap) : 0;
+      // Two scoreboard rows (~36–38px each) — stable regardless of set-column count
+      const sbH = 76;
+      return Math.ceil(labelH + sbH);
+    },
+
+    topBarGuideStyle(colIndex) {
       const ov = this.currentOverlay();
+      if (!ov?.top_bar) return '';
+      const tb = ov.top_bar;
+      const cols = tb.columns || 3;
+      const mx = tb.margin_x || 0;
+      const mt = tb.margin_top || 0;
+      const gap = tb.gap || 10;
+      const totalW = 1920 - 2 * mx;
+      const colW = (totalW - (cols - 1) * gap) / cols;
+      const x = mx + colIndex * (colW + gap);
+      const topEls = (ov.elements || []).filter(el => el.zone === 'top');
+      const reserved = tb.reserve_expanded !== false
+        ? Math.max(60, ...topEls.map(el => this.estimateTopSlotHeight(el)), topEls[0]?.h || 0)
+        : Math.max(60, topEls[0]?.h || 60);
+      return 'position:absolute;left:' + x + 'px;top:' + mt + 'px;width:' + colW + 'px;height:' + reserved
+        + 'px;border:1px dashed rgba(0,255,150,0.35);border-radius:6px;background:rgba(0,255,150,0.04);';
+    },
+
+    /** Recompute positions for all elements in the top-bar grid */
+    applyTopBarGrid(targetOv) {
+      const ov = targetOv || this.currentOverlay();
       if (!ov?.top_bar?.enabled) return;
+      this._ensureGridDefaults(ov);
       const topEls = (ov.elements || []).filter(el => el.zone === 'top');
       if (topEls.length === 0) return;
       const cols = ov.top_bar.columns || 3;
@@ -405,17 +446,20 @@ export function createOverlayAdmin() {
       const usable = topEls.length > cols ? cols : topEls.length;
       const colW = Math.round((totalW - (usable - 1) * gap) / usable);
 
-      // Use first element's H as reference for linked sizing
-      const refH = topEls[0].h || null;
+      let slotH = null;
+      if (ov.top_bar.reserve_expanded !== false) {
+        slotH = Math.max(...topEls.map(el => this.estimateTopSlotHeight(el)));
+      } else if (topEls[0].h) {
+        slotH = topEls[0].h;
+      }
 
       topEls.forEach((el, i) => {
         if (i >= cols) return; // max cols elements
-        // Center within its column slot
         const slotX = mx + i * (colW + gap);
         el.x = Math.round(slotX);
         el.y = mt;
         el.w = colW;
-        if (refH) el.h = refH;
+        if (slotH) el.h = slotH;
       });
     },
 
@@ -437,10 +481,33 @@ export function createOverlayAdmin() {
     setTopBarProp(prop, value) {
       const ov = this.currentOverlay();
       if (!ov) return;
-      if (!ov.top_bar) ov.top_bar = { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 };
+      this._ensureGridDefaults(ov);
       ov.top_bar[prop] = value;
       if (ov.top_bar.enabled) this.applyTopBarGrid();
       this.saveOverlaySettings();
+    },
+
+    setWatermarkProp(prop, value) {
+      const ov = this.currentOverlay();
+      if (!ov) return;
+      this._ensureGridDefaults(ov);
+      ov.watermark[prop] = value;
+      this.saveOverlaySettings();
+    },
+
+    watermarkStyle() {
+      const ov = this.currentOverlay();
+      const wm = ov?.watermark || {};
+      const size = wm.size || 140;
+      const opacity = wm.opacity != null ? wm.opacity : 0.4;
+      const margin = 36;
+      const pos = wm.position || 'bottom-right';
+      let place = '';
+      if (pos === 'top-left') place = `left:${margin}px;top:${margin}px;`;
+      else if (pos === 'top-right') place = `right:${margin}px;top:${margin}px;`;
+      else if (pos === 'bottom-left') place = `left:${margin}px;bottom:${margin}px;`;
+      else place = `right:${margin}px;bottom:${margin}px;`;
+      return place + `width:${size}px;height:${size}px;opacity:${opacity};`;
     },
 
     setElZone(zone) {
@@ -582,7 +649,7 @@ export function createOverlayAdmin() {
         const others = courtIds.filter(c => c !== String(focus));
         const topCols = Math.min(others.length, 4);
         return {
-          top_bar: { enabled:true, columns:topCols, margin_x:20, margin_top:10, gap:12 },
+          top_bar: { enabled:true, columns:topCols, margin_x:20, margin_top:10, gap:12, reserve_expanded:true },
           elements: [
             mkCourt(focus, 30, 890, 600, { zone:'free', logo:false, labelPos:'above' }),
             ...others.slice(0, topCols).map((c, i) =>
@@ -602,7 +669,7 @@ export function createOverlayAdmin() {
       const topN = (n) => {
         const ids = courtIds.slice(0, n);
         return {
-          top_bar: { enabled: true, columns: ids.length, margin_x: 20, margin_top: 10, gap: 12 },
+          top_bar: { enabled: true, columns: ids.length, margin_x: 20, margin_top: 10, gap: 12, reserve_expanded: true },
           elements: ids.map((c, i) =>
             mkCourt(c, 20+i*634, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 })
           ),
@@ -617,7 +684,7 @@ export function createOverlayAdmin() {
       const mainCourt = courtIds[0];
       const otherCourts = courtIds.slice(1);
       templates['main+stats'] = {
-        top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 },
+        top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true },
         elements: [
           mkCourt(mainCourt, 30, 890, 600, { logo:false, labelPos:'above' }),
           { type:'stats', court_id:mainCourt, visible:true, x:1540, y:860, w:360, zone:'free' },
@@ -626,7 +693,7 @@ export function createOverlayAdmin() {
 
       const broadcastTopCols = Math.min(otherCourts.length, 4);
       templates['broadcast'] = {
-        top_bar: { enabled: true, columns: broadcastTopCols || 3, margin_x: 20, margin_top: 10, gap: 12 },
+        top_bar: { enabled: true, columns: broadcastTopCols || 3, margin_x: 20, margin_top: 10, gap: 12, reserve_expanded: true },
         elements: [
           ...otherCourts.slice(0, broadcastTopCols).map((c, i) =>
             mkCourt(c, 20+i*634, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 })
@@ -766,7 +833,8 @@ export function createOverlayAdmin() {
         name: 'Nowy overlay ' + n,
         auto_hide: false,
         tournament_id: defaultTournamentId,
-        top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10 },
+        top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true },
+        watermark: { enabled: false, opacity: 0.4, position: 'bottom-right', size: 140 },
         elements: [
           { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460, zone: 'free',
             show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
@@ -842,6 +910,9 @@ export function createOverlayAdmin() {
       const el = this.selectedEl();
       if (!el) return;
       el[prop] = value;
+      if (el.zone === 'top' && (prop === 'show_logo' || String(prop).startsWith('label_'))) {
+        this.applyTopBarGrid();
+      }
       this.saveOverlaySettings();
     },
 

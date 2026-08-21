@@ -71,3 +71,8 @@ ENV/
 # Pre-commit
 .pre-commit-cache/
 *.pem
+
+# YouTube OAuth (never commit)
+client_secret*.json
+**/token.json
+youtube-ibta/

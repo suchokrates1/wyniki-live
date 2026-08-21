@@ -46,6 +46,7 @@
       position: absolute; cursor: grab; user-select: none; touch-action: none;
       transition: box-shadow 0.15s;
       outline: 2px solid transparent; outline-offset: 2px;
+      overflow: hidden;
     }
     .drag-el:hover { outline-color: rgba(100,180,255,0.5); }
     .drag-el.is-dragging { cursor: grabbing; outline-color: #4CAF50; z-index: 100; }
@@ -193,10 +194,17 @@
       border-radius:6px; pointer-events:none; z-index:200;
     }
 
-    /* property inputs */
-    .prop-row { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-    .prop-label { font-size:12px; opacity:0.7; min-width:60px; }
-    .prop-input { font-size:12px; }
+    /* property inputs – label above control to avoid cramped overlap */
+    .prop-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; min-width:0; }
+    .prop-label { font-size:11px; opacity:0.7; flex-shrink:0; white-space:nowrap; }
+    .prop-input { font-size:12px; min-width:0; }
+    .prop-field { display:flex; flex-direction:column; gap:3px; min-width:0; margin-bottom:8px; }
+    .prop-field > .prop-label { min-width:0; line-height:1.2; }
+    .prop-field .input,
+    .prop-field .select { width:100%; min-width:0; }
+    .prop-grid-xywh { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-bottom:4px; }
+    .prop-grid-2 { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+    .prop-grid-3 { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
 
     /* logo crop modal */
     .crop-area { width:200px; height:200px; overflow:hidden; position:relative;
@@ -208,6 +216,12 @@
     .ruler-line { stroke:rgba(255,200,0,0.7); stroke-width:1; stroke-dasharray:4 3; }
     .ruler-text { fill:#FFD54F; font-size:11px; font-family:monospace; text-anchor:middle; }
     .ruler-bg { fill:rgba(0,0,0,0.7); rx:3; }
+
+    /* TV-style watermark preview on canvas */
+    .ov-watermark {
+      position:absolute; z-index:80; pointer-events:none;
+      object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.35));
+    }
   </style>
 </head>
 <body class="min-h-screen bg-base-200">
@@ -1542,16 +1556,7 @@
                   <template x-if="currentOverlay()?.top_bar?.enabled">
                     <div style="position:absolute;inset:0;pointer-events:none;z-index:50;">
                       <template x-for="i in (currentOverlay()?.top_bar?.columns || 3)" :key="'gc_'+i">
-                        <div :style="(() => {
-                          const tb = currentOverlay().top_bar;
-                          const cols = tb.columns || 3;
-                          const mx = tb.margin_x || 0;
-                          const gap = tb.gap || 10;
-                          const totalW = 1920 - 2*mx;
-                          const colW = (totalW - (cols-1)*gap) / cols;
-                          const x = mx + (i-1)*(colW+gap);
-                          return 'position:absolute;left:'+x+'px;top:0;width:'+colW+'px;height:60px;border:1px dashed rgba(0,255,150,0.35);border-radius:6px;background:rgba(0,255,150,0.04);';
-                        })()" class="pointer-events-none"></div>
+                        <div :style="topBarGuideStyle(i-1)" class="pointer-events-none"></div>
                       </template>
                     </div>
                   </template>
@@ -1591,6 +1596,11 @@
                       <div class="resize-handle rh-se" @pointerdown.stop.prevent="startResize($event, idx, 'se')"></div>
                       <div class="resize-handle rh-sw" @pointerdown.stop.prevent="startResize($event, idx, 'sw')"></div>
                     </div>
+                  </template>
+
+                  <!-- Watermark preview (Vest Media TV corner logo) -->
+                  <template x-if="currentOverlay()?.watermark?.enabled">
+                    <img class="ov-watermark" :src="VEST_MEDIA_LOGO_URL" alt="Vest Media" :style="watermarkStyle()">
                   </template>
                 </div>
                 <!-- Coords -->
@@ -1634,15 +1644,15 @@
           <div class="card bg-base-100 shadow-xl mb-3">
             <div class="card-body p-3">
               <h3 class="font-bold text-sm mb-2">Overlay</h3>
-              <div class="prop-row">
+              <div class="prop-field">
                 <span class="prop-label">Nazwa</span>
-                <input type="text" class="input input-xs input-bordered flex-1 prop-input"
+                <input type="text" class="input input-xs input-bordered prop-input"
                        :value="currentOverlay()?.name || ''"
                        @change="updateOverlayProp('name', $event.target.value)">
               </div>
-              <div class="prop-row mb-2">
+              <div class="prop-field mb-2">
                 <span class="prop-label">Turniej</span>
-                <select class="select select-xs select-bordered flex-1"
+                <select class="select select-xs select-bordered"
                         :value="currentOverlay()?.tournament_id || ''"
                         @change="setCurrentOverlayTournament($event.target.value)">
                   <option value="">Bez przypisania</option>
@@ -1673,33 +1683,40 @@
               </div>
               <template x-if="currentOverlay()?.top_bar?.enabled">
                 <div>
-                  <div class="flex gap-2 mb-2">
-                    <span class="text-xs opacity-70 self-center">Kolumny</span>
+                  <div class="flex gap-2 mb-2 items-center">
+                    <span class="text-xs opacity-70">Kolumny</span>
                     <div class="btn-group">
                       <button class="btn btn-xs" :class="currentOverlay()?.top_bar?.columns === 3 ? 'btn-primary' : ''" @click="setTopBarProp('columns', 3)">3</button>
                       <button class="btn btn-xs" :class="currentOverlay()?.top_bar?.columns === 4 ? 'btn-primary' : ''" @click="setTopBarProp('columns', 4)">4</button>
                     </div>
                   </div>
-                  <div class="grid grid-cols-3 gap-2">
-                    <div class="prop-row">
-                      <span class="prop-label text-xs">Margines X</span>
-                      <input type="number" class="input input-xs input-bordered w-14 prop-input" min="0" max="200"
+                  <div class="prop-grid-3 mb-2">
+                    <div class="prop-field">
+                      <span class="prop-label">Margines X</span>
+                      <input type="number" class="input input-xs input-bordered prop-input" min="0" max="200"
                              :value="currentOverlay()?.top_bar?.margin_x || 0"
                              @change="setTopBarProp('margin_x', +$event.target.value)">
                     </div>
-                    <div class="prop-row">
-                      <span class="prop-label text-xs">G&oacute;ra</span>
-                      <input type="number" class="input input-xs input-bordered w-14 prop-input" min="0" max="200"
+                    <div class="prop-field">
+                      <span class="prop-label">G&oacute;ra</span>
+                      <input type="number" class="input input-xs input-bordered prop-input" min="0" max="200"
                              :value="currentOverlay()?.top_bar?.margin_top || 0"
                              @change="setTopBarProp('margin_top', +$event.target.value)">
                     </div>
-                    <div class="prop-row">
-                      <span class="prop-label text-xs">Odst&#281;p</span>
-                      <input type="number" class="input input-xs input-bordered w-14 prop-input" min="0" max="100"
+                    <div class="prop-field">
+                      <span class="prop-label">Odst&#281;p</span>
+                      <input type="number" class="input input-xs input-bordered prop-input" min="0" max="100"
                              :value="currentOverlay()?.top_bar?.gap ?? 10"
                              @change="setTopBarProp('gap', +$event.target.value)">
                     </div>
                   </div>
+                  <label class="label cursor-pointer gap-2 py-0 justify-start">
+                    <input type="checkbox" class="toggle toggle-info toggle-xs"
+                           :checked="currentOverlay()?.top_bar?.reserve_expanded !== false"
+                           @change="setTopBarProp('reserve_expanded', $event.target.checked)">
+                    <span class="label-text text-xs">Rezerwuj miejsce pod 2. set</span>
+                  </label>
+                  <div class="text-xs opacity-40 mt-1">Siatka zawsze pokazuje 2 kolumny set&oacute;w i ustawia wysoko&#347;&#263; slotu, &#380;eby scoreboardy nie nachodzi&#322;y na siebie po rozwini&#281;ciu.</div>
                 </div>
               </template>
             </div>
@@ -1781,20 +1798,28 @@
               </div>
 
               <!-- Position & size -->
-              <div class="grid grid-cols-4 gap-2 mb-1">
-                <div class="prop-row"><span class="prop-label">X</span>
-                  <input type="number" class="input input-xs input-bordered w-full prop-input" min="0" max="1920"
-                         :value="selectedEl()?.x" @change="setElProp('x', +$event.target.value)"></div>
-                <div class="prop-row"><span class="prop-label">Y</span>
-                  <input type="number" class="input input-xs input-bordered w-full prop-input" min="0" max="1080"
-                         :value="selectedEl()?.y" @change="setElProp('y', +$event.target.value)"></div>
-                <div class="prop-row"><span class="prop-label">W</span>
-                  <input type="number" class="input input-xs input-bordered w-full prop-input" min="100" max="1920"
-                         :value="selectedEl()?.w" @change="setDimension('w', +$event.target.value)"></div>
-                <div class="prop-row"><span class="prop-label">H</span>
-                  <input type="number" class="input input-xs input-bordered w-full prop-input" min="0" max="1080"
+              <div class="prop-grid-xywh">
+                <div class="prop-field">
+                  <span class="prop-label">X</span>
+                  <input type="number" class="input input-xs input-bordered prop-input" min="0" max="1920"
+                         :value="selectedEl()?.x" @change="setElProp('x', +$event.target.value)">
+                </div>
+                <div class="prop-field">
+                  <span class="prop-label">Y</span>
+                  <input type="number" class="input input-xs input-bordered prop-input" min="0" max="1080"
+                         :value="selectedEl()?.y" @change="setElProp('y', +$event.target.value)">
+                </div>
+                <div class="prop-field">
+                  <span class="prop-label">W</span>
+                  <input type="number" class="input input-xs input-bordered prop-input" min="100" max="1920"
+                         :value="selectedEl()?.w" @change="setDimension('w', +$event.target.value)">
+                </div>
+                <div class="prop-field">
+                  <span class="prop-label">H</span>
+                  <input type="number" class="input input-xs input-bordered prop-input" min="0" max="1080"
                          :value="selectedEl()?.h || ''" placeholder="auto"
-                         @change="setDimension('h', $event.target.value ? +$event.target.value : null)"></div>
+                         @change="setDimension('h', $event.target.value ? +$event.target.value : null)">
+                </div>
               </div>
               <label class="label cursor-pointer gap-1 py-0 justify-start mb-2">
                 <input type="checkbox" class="checkbox checkbox-xs checkbox-info" x-model="keepAspectRatio">
@@ -1802,15 +1827,16 @@
               </label>
 
               <!-- Zone selector -->
-              <div class="prop-row mb-2">
-                <span class="prop-label">Strefa</span>
-                <select class="select select-xs select-bordered flex-1"
+              <div class="prop-field mb-2">
+                <span class="prop-label">Strefa
+                  <span x-show="selectedEl()?.zone === 'top' && currentOverlay()?.top_bar?.enabled" class="badge badge-accent badge-xs ml-1">siatka</span>
+                </span>
+                <select class="select select-xs select-bordered"
                         :value="selectedEl()?.zone || 'free'"
                         @change="setElZone($event.target.value)">
                   <option value="free">Swobodny</option>
                   <option value="top">G&oacute;rny pasek</option>
                 </select>
-                <span x-show="selectedEl()?.zone === 'top' && currentOverlay()?.top_bar?.enabled" class="badge badge-accent badge-xs ml-1">siatka</span>
               </div>
 
               <!-- Visibility & size (court only) -->
@@ -1823,8 +1849,8 @@
                              :checked="selectedEl()?.visible !== false"
                              @change="setElProp('visible', $event.target.checked)">
                     </label>
-                    <label class="label cursor-pointer gap-2 py-0">
-                      <span class="label-text text-xs">Logo</span>
+                    <label class="label cursor-pointer gap-2 py-0" title="Logo turnieju obok tabeli wyniku (nie watermark TV)">
+                      <span class="label-text text-xs">Logo w SB</span>
                       <input type="checkbox" class="toggle toggle-success toggle-xs"
                              :checked="selectedEl()?.show_logo"
                              @change="setElProp('show_logo', $event.target.checked)">
@@ -1834,29 +1860,27 @@
                   <!-- Scoreboard options -->
                   <div class="divider my-1 text-xs opacity-50">Scoreboard</div>
 
-                  <!-- Scoreboard bg opacity -->
-                  <div class="prop-row">
-                    <span class="prop-label">T&#322;o SB</span>
-                    <input type="range" class="range range-xs range-info flex-1" min="0" max="100" step="5"
+                  <div class="prop-field">
+                    <span class="prop-label">T&#322;o SB
+                      <span class="opacity-50 ml-1" x-text="Math.round((selectedEl()?.bg_opacity != null ? selectedEl().bg_opacity : 0.95) * 100) + '%'"></span>
+                    </span>
+                    <input type="range" class="range range-xs range-info w-full" min="0" max="100" step="5"
                            :value="Math.round((selectedEl()?.bg_opacity != null ? selectedEl().bg_opacity : 0.95) * 100)"
                            @input="setElProp('bg_opacity', +$event.target.value / 100)">
-                    <span class="text-xs opacity-50 w-10 text-right" x-text="Math.round((selectedEl()?.bg_opacity != null ? selectedEl().bg_opacity : 0.95) * 100) + '%'"></span>
                   </div>
-
-                  <!-- Logo size removed – logo auto-matches scoreboard height -->
 
                   <!-- Label settings -->
                   <div class="divider my-1 text-xs opacity-50">Napis kortu</div>
-                  <div class="prop-row">
+                  <div class="prop-field">
                     <span class="prop-label">Tekst</span>
-                    <input type="text" class="input input-xs input-bordered flex-1 prop-input"
+                    <input type="text" class="input input-xs input-bordered prop-input"
                            :value="selectedEl()?.label_text || ''"
                            @change="setElProp('label_text', $event.target.value)">
                   </div>
-                  <div class="flex gap-2 mb-1">
-                    <div class="prop-row flex-1">
+                  <div class="prop-grid-2">
+                    <div class="prop-field">
                       <span class="prop-label">Pozycja</span>
-                      <select class="select select-xs select-bordered flex-1"
+                      <select class="select select-xs select-bordered"
                               :value="selectedEl()?.label_position || 'above'"
                               @change="setElProp('label_position', $event.target.value)">
                         <option value="above">Nad</option>
@@ -1864,26 +1888,25 @@
                         <option value="none">Brak</option>
                       </select>
                     </div>
-                    <div class="prop-row flex-1">
+                    <div class="prop-field">
                       <span class="prop-label">Odst&#281;p</span>
-                      <input type="number" class="input input-xs input-bordered w-16 prop-input" min="0" max="40"
+                      <input type="number" class="input input-xs input-bordered prop-input" min="0" max="40"
                              :value="selectedEl()?.label_gap || 4"
                              @change="setElProp('label_gap', +$event.target.value)">
                     </div>
-                  </div>
-                  <div class="flex gap-2">
-                    <div class="prop-row flex-1">
+                    <div class="prop-field">
                       <span class="prop-label">Rozmiar</span>
-                      <input type="number" class="input input-xs input-bordered w-16 prop-input" min="8" max="30"
+                      <input type="number" class="input input-xs input-bordered prop-input" min="8" max="30"
                              :value="selectedEl()?.label_font_size || 13"
                              @change="setElProp('label_font_size', +$event.target.value)">
                     </div>
-                    <div class="prop-row flex-1">
-                      <span class="prop-label">T&#322;o</span>
-                      <input type="range" class="range range-xs range-primary flex-1" min="0" max="100" step="5"
+                    <div class="prop-field">
+                      <span class="prop-label">T&#322;o
+                        <span class="opacity-50 ml-1" x-text="Math.round((selectedEl()?.label_bg_opacity || 0.7) * 100) + '%'"></span>
+                      </span>
+                      <input type="range" class="range range-xs range-primary w-full" min="0" max="100" step="5"
                              :value="Math.round((selectedEl()?.label_bg_opacity || 0.7) * 100)"
                              @input="setElProp('label_bg_opacity', +$event.target.value / 100)">
-                      <span class="text-xs opacity-50 w-8" x-text="Math.round((selectedEl()?.label_bg_opacity || 0.7) * 100) + '%'"></span>
                     </div>
                   </div>
                 </div>
@@ -1939,13 +1962,53 @@
                   <button x-show="overlaySettings.tournament_logo && !currentOverlayTournament()?.logo_path" @click="removeLogo()" class="btn btn-xs btn-ghost text-error mt-1">Usu&#324; fallback logo</button>
                 </div>
               </div>
-              <div class="prop-row">
+              <div class="prop-field mb-3">
                 <span class="prop-label">Nazwa</span>
-                <input type="text" class="input input-xs input-bordered flex-1 prop-input"
+                <input type="text" class="input input-xs input-bordered prop-input"
                        :value="overlayBrandingName()"
                        :disabled="!!currentOverlayTournament()"
                        @change="if (!currentOverlayTournament()) { overlaySettings.tournament_name = $event.target.value; saveOverlaySettings(); }">
               </div>
+
+              <div class="divider my-1 text-xs opacity-50">Watermark TV</div>
+              <div class="text-xs opacity-50 mb-2">Logo <strong>Vest Media</strong> (z vestmedia.pl) w rogu obrazu — jak stacja TV. Osobne od logo turnieju w scoreboardzie.</div>
+              <label class="label cursor-pointer gap-2 py-0 justify-start mb-2">
+                <input type="checkbox" class="toggle toggle-success toggle-xs"
+                       :checked="!!currentOverlay()?.watermark?.enabled"
+                       @change="setWatermarkProp('enabled', $event.target.checked)">
+                <span class="label-text text-xs">Poka&#380; watermark Vest Media</span>
+              </label>
+              <template x-if="currentOverlay()?.watermark?.enabled">
+                <div>
+                  <div class="prop-field">
+                    <span class="prop-label">Pozycja</span>
+                    <select class="select select-xs select-bordered"
+                            :value="currentOverlay()?.watermark?.position || 'bottom-right'"
+                            @change="setWatermarkProp('position', $event.target.value)">
+                      <option value="bottom-right">Prawy dolny</option>
+                      <option value="bottom-left">Lewy dolny</option>
+                      <option value="top-right">Prawy g&oacute;rny</option>
+                      <option value="top-left">Lewy g&oacute;rny</option>
+                    </select>
+                  </div>
+                  <div class="prop-grid-2">
+                    <div class="prop-field">
+                      <span class="prop-label">Rozmiar (px)</span>
+                      <input type="number" class="input input-xs input-bordered prop-input" min="40" max="400"
+                             :value="currentOverlay()?.watermark?.size || 140"
+                             @change="setWatermarkProp('size', +$event.target.value)">
+                    </div>
+                    <div class="prop-field">
+                      <span class="prop-label">Przezroczysto&#347;&#263;
+                        <span class="opacity-50 ml-1" x-text="Math.round((currentOverlay()?.watermark?.opacity != null ? currentOverlay().watermark.opacity : 0.4) * 100) + '%'"></span>
+                      </span>
+                      <input type="range" class="range range-xs range-accent w-full" min="10" max="100" step="5"
+                             :value="Math.round((currentOverlay()?.watermark?.opacity != null ? currentOverlay().watermark.opacity : 0.4) * 100)"
+                             @input="setWatermarkProp('opacity', +$event.target.value / 100)">
+                    </div>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
 
