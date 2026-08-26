@@ -79,11 +79,10 @@ export function createLiveCourtView() {
     playerHasPartnerFlag(courtId, side) {
       const player = this.courts[courtId]?.[side];
       if (!player) return false;
-      const partnerUrl = player.flag_url_partner || '';
       const partnerCode = String(player.flag_code_partner || '').toUpperCase();
-      if (!partnerUrl && !partnerCode) return false;
+      if (!/^[A-Z]{2}$/.test(partnerCode)) return false;
       const primary = String(player.flag_code || '').toUpperCase();
-      return !primary || partnerCode !== primary;
+      return partnerCode !== primary;
     },
 
     playerFlagStyle(courtId, side, partner = false) {
@@ -91,7 +90,7 @@ export function createLiveCourtView() {
       const url = partner
         ? (player.flag_url_partner || this.codeToFlag(player.flag_code_partner))
         : (player.flag_url || this.codeToFlag(player.flag_code));
-      return url ? `background-image:url(${url})` : '';
+      return url ? { backgroundImage: `url(${url})` } : {};
     },
 
     getHeadingAria(courtId) {

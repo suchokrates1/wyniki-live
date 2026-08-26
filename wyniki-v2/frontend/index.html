@@ -160,12 +160,14 @@
                                 <div class="score-row" data-side="A">
                                     <dt class="player-cell">
                                         <span class="player-flags" aria-hidden="true">
-                                            <span class="player-flag has-image"
-                                                  x-show="playerHasFlag(courtId, 'A')"
-                                                  :style="playerFlagStyle(courtId, 'A')"></span>
-                                            <span class="player-flag has-image"
-                                                  x-show="playerHasPartnerFlag(courtId, 'A')"
-                                                  :style="playerFlagStyle(courtId, 'A', true)"></span>
+                                            <template x-if="playerHasFlag(courtId, 'A')">
+                                                <span class="player-flag has-image"
+                                                      :style="playerFlagStyle(courtId, 'A')"></span>
+                                            </template>
+                                            <template x-if="playerHasPartnerFlag(courtId, 'A')">
+                                                <span class="player-flag has-image"
+                                                      :style="playerFlagStyle(courtId, 'A', true)"></span>
+                                            </template>
                                         </span>
                                         <span class="player-name" :id="'k'+courtId+'-name-A'"
                                               :class="{ 'player-name--team': isTeamDisplayName(getPlayerName(courtId, 'A')) }"
@@ -201,12 +203,14 @@
                                 <div class="score-row" data-side="B">
                                     <dt class="player-cell">
                                         <span class="player-flags" aria-hidden="true">
-                                            <span class="player-flag has-image"
-                                                  x-show="playerHasFlag(courtId, 'B')"
-                                                  :style="playerFlagStyle(courtId, 'B')"></span>
-                                            <span class="player-flag has-image"
-                                                  x-show="playerHasPartnerFlag(courtId, 'B')"
-                                                  :style="playerFlagStyle(courtId, 'B', true)"></span>
+                                            <template x-if="playerHasFlag(courtId, 'B')">
+                                                <span class="player-flag has-image"
+                                                      :style="playerFlagStyle(courtId, 'B')"></span>
+                                            </template>
+                                            <template x-if="playerHasPartnerFlag(courtId, 'B')">
+                                                <span class="player-flag has-image"
+                                                      :style="playerFlagStyle(courtId, 'B', true)"></span>
+                                            </template>
                                         </span>
                                         <span class="player-name" :id="'k'+courtId+'-name-B'"
                                               :class="{ 'player-name--team': isTeamDisplayName(getPlayerName(courtId, 'B')) }"
