@@ -333,7 +333,19 @@ def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict
 
     court_state["sets_detail"] = sets_detail
     non_stb_count = sum(1 for set_score in sets_history if not set_score.get("is_super_tiebreak", False))
-    court_state["current_set"] = max(1, non_stb_count + 1)
+    current_set = max(1, non_stb_count + 1)
+    court_state["current_set"] = current_set
+    completed_set_nums = {
+        int(set_score.get("set_number", idx + 1) or (idx + 1))
+        for idx, set_score in enumerate(sets_history)
+        if not set_score.get("is_super_tiebreak", False)
+    }
+    # Overlay reads set1/set2, not current_games. After a game the tablet PUTs
+    # (this is also when the side-change announcement is on screen) and must
+    # keep the in-progress set visible.
+    if match.status != "finished" and current_set not in completed_set_nums and current_set <= 3:
+        court_state["A"][f"set{current_set}"] = int(match.player1_games or 0)
+        court_state["B"][f"set{current_set}"] = int(match.player2_games or 0)
     _set_live_super_tiebreak_flag(
         court_state,
         bool(score.get("is_super_tiebreak", False)) and match.status == "in_progress",

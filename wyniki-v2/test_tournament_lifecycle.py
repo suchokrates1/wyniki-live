@@ -130,6 +130,43 @@ def test_create_match_stores_mobile_client_audit(umpire_app_with_temp_db):
     assert client_info["app"]["device"] == "Samsung SM-X200"
 
 
+def test_sync_live_score_keeps_in_progress_set_games():
+    from types import SimpleNamespace
+
+    from wyniki.api.umpire_api import _sync_live_score_to_court_state
+    from wyniki.services.court_manager import _empty_court_state
+
+    court = _empty_court_state()
+    court["A"]["set1"] = 1
+    court["A"]["points"] = "30"
+    match = SimpleNamespace(
+        player1_games=1,
+        player2_games=0,
+        player1_points=0,
+        player2_points=0,
+        sets_history="[]",
+        status="in_progress",
+    )
+
+    _sync_live_score_to_court_state(court, match, {"player1_games": 1, "player2_games": 0})
+
+    assert court["A"]["set1"] == 1
+    assert court["B"]["set1"] == 0
+    assert court["A"]["current_games"] == 1
+    assert court["current_set"] == 1
+
+    match.sets_history = json.dumps([{"set_number": 1, "player1_games": 4, "player2_games": 2}])
+    match.player1_games = 2
+    match.player2_games = 1
+    _sync_live_score_to_court_state(court, match)
+
+    assert court["A"]["set1"] == 4
+    assert court["B"]["set1"] == 2
+    assert court["A"]["set2"] == 2
+    assert court["B"]["set2"] == 1
+    assert court["current_set"] == 2
+
+
 def test_create_match_sets_flags_from_tournament_players(umpire_app_with_temp_db):
     from wyniki import database
     from wyniki.services.court_manager import get_court_state
