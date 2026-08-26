@@ -12,6 +12,23 @@ from ..config import settings, logger
 
 from .connection import _default_simulation_office_password_hash, db_conn, fetch_app_settings, upsert_app_settings
 
+# Prefer the tournament whose dates include today, then the newest start_date.
+# Without this, SQLite LIMIT 1 returns the lowest id (e.g. App Review 26 over IBTA 31).
+_ACTIVE_TOURNAMENT_ORDER = """
+ORDER BY
+  CASE
+    WHEN start_date IS NOT NULL
+     AND date('now') >= date(start_date)
+     AND (end_date IS NULL OR date('now') <= date(end_date))
+    THEN 0
+    ELSE 1
+  END,
+  COALESCE(start_date, '') DESC,
+  id DESC
+LIMIT 1
+"""
+
+
 def get_active_tournament_id(public_only: bool = False) -> Optional[int]:
     """Get the ID of the currently active tournament."""
     try:
@@ -20,7 +37,7 @@ def get_active_tournament_id(public_only: bool = False) -> Optional[int]:
             query = "SELECT id FROM tournaments WHERE active = 1"
             if public_only:
                 query += " AND COALESCE(is_public, 1) = 1"
-            query += " LIMIT 1"
+            query += _ACTIVE_TOURNAMENT_ORDER
             cursor.execute(query)
             row = cursor.fetchone()
             return row["id"] if row else None
@@ -36,7 +53,7 @@ def get_active_tournament_name(public_only: bool = False) -> Optional[str]:
             query = "SELECT name FROM tournaments WHERE active = 1"
             if public_only:
                 query += " AND COALESCE(is_public, 1) = 1"
-            query += " LIMIT 1"
+            query += _ACTIVE_TOURNAMENT_ORDER
             cursor.execute(query)
             row = cursor.fetchone()
             return row["name"] if row else None
