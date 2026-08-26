@@ -598,8 +598,6 @@ def _apply_flag_fields_to_side(
     payload: dict | None,
 ) -> None:
     code, url, partner_code, partner_url = _flag_fields_from_person_payload(payload)
-    if not code:
-        return
     court_state[side]["flag_code"] = code
     court_state[side]["flag_url"] = url
     court_state[side]["flag_code_partner"] = partner_code
@@ -1484,6 +1482,14 @@ def log_match_event():
                     court_state["B"]["full_name"] = player2["name"]
             if player2.get('full_name'):
                 court_state["B"]["full_name"] = player2["full_name"]
+
+            flag_tid = (active_match.tournament_id if active_match else None) or court_state.get("tournament_id")
+            _apply_db_flags_to_court_state(
+                court_state,
+                flag_tid,
+                court_state["A"].get("full_name") or court_state["A"].get("surname"),
+                court_state["B"].get("full_name") or court_state["B"].get("surname"),
+            )
 
             if restore_match_score:
                 _sync_live_score_to_court_state(court_state, active_match, score)

@@ -972,6 +972,13 @@ main { padding: 16px 0; }
 }
 .player-flag.has-image {
   color: transparent;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-size: cover;
+  overflow: hidden;
+}
+.player-flag:not([style*="url("]) {
+  display: none !important;
 }
 
 /* === Tiebreak superscript (loser's points) === */
