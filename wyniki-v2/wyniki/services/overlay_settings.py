@@ -130,7 +130,7 @@ def _overlay_focus(focus: str, name: str) -> Dict[str, Any]:
         )
     return {
         "name": name,
-        "auto_hide": False,
+        "auto_hide": True,
         "top_bar": {
             "enabled": True,
             "columns": 3,
@@ -150,7 +150,7 @@ def _overlay_all() -> Dict[str, Any]:
                   show_logo=False, label_position="above")
         for i, (x, y) in enumerate(positions)
     ]
-    return {"name": "Wszystkie korty", "auto_hide": False, "elements": elements}
+    return {"name": "Wszystkie korty", "auto_hide": True, "elements": elements}
 
 
 # ---------- canonical defaults ----------

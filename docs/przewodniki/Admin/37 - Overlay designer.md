@@ -35,7 +35,7 @@ Zmiany właściwości → autosave `PUT /api/overlay/settings` (z Bearer admin).
 
 | Sekcja | Pola / akcje |
 |--------|----------------|
-| Overlay | Nazwa, przypisanie turnieju, **Autoukrywanie** |
+| Overlay | Nazwa, przypisanie turnieju, **Autoukrywanie** (na dowolnym overlayu chowa puste korty; wracają przy nazwiskach) |
 | Siatka górna | Włącz, kolumny 3/4, marginesy, odstęp, **Rezerwuj miejsce pod 2. set** |
 | Szablony | `{kort} focus`, 3/4 korty góra, Wszystkie góra, Główny+Stats, Broadcast |
 | Kopiuj układ do… | Inny preset |

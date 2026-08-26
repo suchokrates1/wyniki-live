@@ -12,15 +12,24 @@ from ..config import logger
 blueprint = Blueprint('overlay_api', __name__, url_prefix='/api/overlay')
 
 
+def _json_no_cache(payload, status: int = 200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
 @blueprint.route('/settings', methods=['GET'])
 def get_settings():
     """Get current overlay settings."""
     try:
         settings = get_overlay_settings()
-        return jsonify(settings)
+        return _json_no_cache(settings)
     except Exception as e:
         logger.error(f"Failed to get overlay settings: {e}")
-        return jsonify({"error": str(e)}), 500
+        return _json_no_cache({"error": str(e)}, 500)
 
 
 @blueprint.route('/settings', methods=['PUT'])

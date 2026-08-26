@@ -274,6 +274,26 @@
         return settings.overlays?.[overlayId] || { name: '', auto_hide: false, elements: [] };
     }
 
+    function isPlaceholderName(value) {
+        var raw = String(value || '').trim();
+        return !raw || raw === '-' || raw === '\u2014' || raw === '\u2013';
+    }
+
+    function courtHasPlayers(court) {
+        if (!court) return false;
+        var a = court.A || {};
+        var b = court.B || {};
+        return !isPlaceholderName(a.full_name || a.surname) || !isPlaceholderName(b.full_name || b.surname);
+    }
+
+    function isElementCourtOccupied(el) {
+        return courtHasPlayers(resolveCourtState(el && el.court_id));
+    }
+
+    function overlayHasOccupiedCourt(preset) {
+        return (preset.elements || []).some(isElementCourtOccupied);
+    }
+
     function sortCourtIds(ids) {
         return ids.slice().sort(function(a, b) {
             return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
@@ -561,8 +581,8 @@
 
     function render() {
         var preset = getPreset();
-        var anyActive = getTrackedCourtIds().some(function(id){return courts[id]?.match_status?.active;});
-        var autoHidden = preset.auto_hide && !anyActive;
+        var anyOccupied = overlayHasOccupiedCourt(preset);
+        var autoHidden = preset.auto_hide && !anyOccupied;
         var sx = window.innerWidth / 1920;
         var sy = window.innerHeight / 1080;
         var scale = Math.min(sx, sy);
@@ -597,6 +617,7 @@
 
         var html = elems.map(function(el) {
             var hidden = el.visible === false ? 'el-hidden' : '';
+            if (!hidden && preset.auto_hide && !isElementCourtOccupied(el)) hidden = 'el-hidden';
             var style = 'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;';
             if (el.h) style += 'height:'+el.h+'px;';
             var hClass = el.h ? ' has-h' : '';

@@ -24,7 +24,7 @@ URL kopiujesz z [[37 - Overlay designer]].
 | Aspekt | Opis |
 |--------|------|
 | Dane | Snapshot + SSE + ustawienia overlay (poll) |
-| Autoukrywanie | Gdy włączone i brak aktywnych meczów — layout znika |
+| Autoukrywanie | Na dowolnym overlayu chowa każdy pusty kort (góra, dół, róg, siatka). Wraca, gdy pojawią się nazwiska. Cały layout znika, gdy żaden kort tego presetu nie ma zawodników |
 | Skala | Dopasowanie do viewportu |
 
 > [!note] Embed
