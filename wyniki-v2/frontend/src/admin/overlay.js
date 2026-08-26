@@ -831,7 +831,7 @@ export function createOverlayAdmin() {
       if (!this.overlaySettings.overlays) this.overlaySettings.overlays = {};
       this.overlaySettings.overlays[newId] = {
         name: 'Nowy overlay ' + n,
-        auto_hide: false,
+        auto_hide: true,
         tournament_id: defaultTournamentId,
         top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true },
         watermark: { enabled: false, opacity: 0.4, position: 'bottom-right', size: 140 },
