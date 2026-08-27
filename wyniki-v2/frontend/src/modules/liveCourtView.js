@@ -18,7 +18,7 @@ import {
 } from '../shared/courtLabels.js';
 import { formatDuration } from '../shared/date.js';
 import { formatTemplate as fmt } from '../shared/text.js';
-import { formatTeamLabelForWrap, isTeamDisplayName } from '../shared/teamDisplay.js';
+import { formatTeamLabelForWrap, isTeamDisplayName, TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
 
 export function createLiveCourtView() {
   return {
@@ -67,6 +67,10 @@ export function createLiveCourtView() {
       return formatTeamLabelForWrap(name);
     },
 
+    getSpokenPlayerName(courtId, side) {
+      return String(this.getPlayerName(courtId, side) || '').replaceAll(TEAM_WRAP_BREAK, '');
+    },
+
     isTeamDisplayName(value) {
       return isTeamDisplayName(value);
     },
@@ -94,17 +98,16 @@ export function createLiveCourtView() {
     },
 
     getHeadingAria(courtId) {
-      // Tournament name is already announced by the H2 above the courts;
-      // don't repeat it on every court heading/region (avoids SR verbosity).
+      // Tournament name is already announced by the H2 above the courts.
+      // VoiceOver heading/region swipe lands here, so include the same
+      // spoken score line that getScoreSummary() builds for .score-summary.
       const courtLabel = this.getCourtDisplayLabel(courtId);
-      const nameA = this.getPlayerName(courtId, 'A');
-      const nameB = this.getPlayerName(courtId, 'B');
+      const nameA = this.getSpokenPlayerName(courtId, 'A');
+      const nameB = this.getSpokenPlayerName(courtId, 'B');
       const vs = this.acc().versus || 'kontra';
-      const serve = this.courts[courtId]?.serve;
-      const servingText = this.acc().serving || 'serwuje';
-      const labelA = serve === 'A' ? `${nameA} (${servingText})` : nameA;
-      const labelB = serve === 'B' ? `${nameB} (${servingText})` : nameB;
-      return `${courtLabel}: ${labelA} ${vs} ${labelB}`;
+      const names = `${courtLabel}: ${nameA} ${vs} ${nameB}`;
+      const score = this.getScoreSummary(courtId);
+      return score ? `${names}. ${score}` : names;
     },
 
     isTiebreak(courtId) {
@@ -179,9 +182,9 @@ export function createLiveCourtView() {
       const serve = court.serve;
       const servingText = a.serving || 'serwuje';
       const servingPart = serve === 'A'
-        ? `${this.getPlayerName(courtId, 'A')} ${servingText}`
+        ? `${this.getSpokenPlayerName(courtId, 'A')} ${servingText}`
         : serve === 'B'
-          ? `${this.getPlayerName(courtId, 'B')} ${servingText}`
+          ? `${this.getSpokenPlayerName(courtId, 'B')} ${servingText}`
           : null;
 
       const pointsLabel = isTie
