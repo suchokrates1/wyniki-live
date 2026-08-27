@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, request
 
 from ..config import logger
 from ..database import db_conn
-from ..services.court_manager import ensure_court_state, is_known_kort, STATE_LOCK
+from ..services.court_manager import ensure_court_state, is_known_kort, reset_live_set_columns, STATE_LOCK
 from ..services.event_broker import event_broker
 from ..services.api_auth import require_court_access
 
@@ -129,6 +129,9 @@ def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
             state['serve'] = 'A'
         elif player2.get('serving'):
             state['serve'] = 'B'
+
+        if event_type == 'match_start':
+            reset_live_set_columns(state)
         
         # Update score
         score = event_data['score']

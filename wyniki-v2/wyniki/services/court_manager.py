@@ -75,7 +75,18 @@ def _empty_court_state() -> Dict[str, Any]:
         "battery_level": None,
         "is_charging": None,
         "updated": None,
+        "sets_detail": [],
     }
+
+
+def reset_live_set_columns(court_state: Dict[str, Any]) -> None:
+    """Zero overlay set columns so a new live frame cannot show the previous match."""
+    for side in ("A", "B"):
+        player = court_state.setdefault(side, _empty_player_state())
+        player["set1"] = 0
+        player["set2"] = 0
+        player["set3"] = 0
+    court_state["sets_detail"] = []
 
 
 def _kort_sort_key(value: str) -> Tuple[int, str]:

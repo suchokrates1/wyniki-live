@@ -6,7 +6,13 @@ import re
 from typing import Any
 
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court, utc_now_iso
-from ..services.court_manager import ensure_court_state, normalize_kort_id, STATE_LOCK, _empty_player_state
+from ..services.court_manager import (
+    ensure_court_state,
+    normalize_kort_id,
+    reset_live_set_columns,
+    STATE_LOCK,
+    _empty_player_state,
+)
 from ..services.event_broker import emit_score_update
 from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
@@ -290,6 +296,49 @@ def _set_live_super_tiebreak_flag(court_state: dict, is_active: bool) -> None:
     court_state["super_tiebreak_active"] = bool(is_active)
 
 
+def _apply_umpire_put_sets(court_state: dict, score: dict, *, is_super_tiebreak: bool) -> None:
+    """Write live set columns from an umpire PUT. Always drop leftover columns first."""
+    games_a = int(score.get("player1_games", 0))
+    games_b = int(score.get("player2_games", 0))
+    court_state["A"]["current_games"] = games_a
+    court_state["B"]["current_games"] = games_b
+
+    sets_a = int(score.get("player1_sets", 0))
+    sets_b = int(score.get("player2_sets", 0))
+    match_finished = bool(score.get("match_finished", False))
+    current_set = (sets_a + sets_b) if match_finished else (sets_a + sets_b + 1)
+    court_state["current_set"] = current_set
+    _set_live_super_tiebreak_flag(court_state, is_super_tiebreak and not match_finished)
+
+    # A new match PUT with empty sets_history used to keep the previous
+    # match's set2 (overlay: 1:0 4:0).
+    reset_live_set_columns(court_state)
+
+    sets_history = score.get("sets_history") or []
+    if sets_history:
+        for sh in sets_history:
+            sn = int(sh.get("set_number", 0))
+            is_stb = bool(sh.get("is_super_tiebreak", False))
+            if 1 <= sn <= 3 and not is_stb:
+                court_state["A"][f"set{sn}"] = int(sh.get("player1_games", 0))
+                court_state["B"][f"set{sn}"] = int(sh.get("player2_games", 0))
+
+        sets_detail = []
+        for sh in sets_history:
+            sets_detail.append({
+                "p1": int(sh.get("player1_games", 0)),
+                "p2": int(sh.get("player2_games", 0)),
+                "tb": sh.get("tiebreak_loser_points"),
+                "stb": bool(sh.get("is_super_tiebreak", False)),
+            })
+        court_state["sets_detail"] = sets_detail
+
+    completed_set_nums = {int(sh.get("set_number", 0)) for sh in sets_history} if sets_history else set()
+    if current_set not in completed_set_nums:
+        court_state["A"][f"set{current_set}"] = games_a
+        court_state["B"][f"set{current_set}"] = games_b
+
+
 def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict | None = None) -> None:
     """Mirror match score payload into in-memory court state for overlays/live views."""
     score = score or {}
@@ -299,9 +348,7 @@ def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict
     court_state["A"]["points"] = str(match.player1_points or 0)
     court_state["B"]["points"] = str(match.player2_points or 0)
 
-    for set_num in range(1, 4):
-        court_state["A"][f"set{set_num}"] = 0
-        court_state["B"][f"set{set_num}"] = 0
+    reset_live_set_columns(court_state)
 
     court_state["tie"]["A"] = 0
     court_state["tie"]["B"] = 0
@@ -1307,6 +1354,7 @@ def finish_match(match_id: int):
                 court_state["stats"] = {}
                 court_state["stats_mode"] = None
                 court_state["history_meta"] = {}
+                reset_live_set_columns(court_state)
             
             # Emit cleared state after a short delay so frontend sees final score first
             import threading
@@ -1516,48 +1564,8 @@ def log_match_event():
                     court_state["tie"]["B"] = 0
                     court_state["tie"]["visible"] = None
 
-                # --- Games ---
-                games_a = int(score.get('player1_games', 0))
-                games_b = int(score.get('player2_games', 0))
-                court_state["A"]["current_games"] = games_a
-                court_state["B"]["current_games"] = games_b
-
-                # --- Sets ---
-                sets_a = int(score.get('player1_sets', 0))
-                sets_b = int(score.get('player2_sets', 0))
-                match_finished = bool(score.get('match_finished', False))
-                current_set = (sets_a + sets_b) if match_finished else (sets_a + sets_b + 1)
-                court_state["current_set"] = current_set
-                _set_live_super_tiebreak_flag(court_state, is_super_tiebreak and not match_finished)
-
-                # --- Sets history (from Android >= vC4) ---
-                # Populate completed set scores from sets_history if available
-                sets_history = score.get('sets_history', [])
-                if sets_history:
-                    for sh in sets_history:
-                        sn = int(sh.get('set_number', 0))
-                        is_stb = bool(sh.get('is_super_tiebreak', False))
-                        if 1 <= sn <= 3 and not is_stb:
-                            court_state["A"][f"set{sn}"] = int(sh.get('player1_games', 0))
-                            court_state["B"][f"set{sn}"] = int(sh.get('player2_games', 0))
-
-                # Build sets_detail for frontend (TB info)
-                if sets_history:
-                    sets_detail = []
-                    for sh in sets_history:
-                        sh_p1g = int(sh.get('player1_games', 0))
-                        sh_p2g = int(sh.get('player2_games', 0))
-                        sh_tb = sh.get('tiebreak_loser_points')
-                        sh_stb = bool(sh.get('is_super_tiebreak', False))
-                        sets_detail.append({"p1": sh_p1g, "p2": sh_p2g, "tb": sh_tb, "stb": sh_stb})
-                    court_state["sets_detail"] = sets_detail
-
-                # Write current games to set{N} for the active set
-                # Only write if this set is not already finalized in sets_history
-                completed_set_nums = {int(sh.get('set_number', 0)) for sh in sets_history} if sets_history else set()
-                if current_set not in completed_set_nums:
-                    court_state["A"][f"set{current_set}"] = games_a
-                    court_state["B"][f"set{current_set}"] = games_b
+                _apply_umpire_put_sets(court_state, score, is_super_tiebreak=is_super_tiebreak)
+                match_finished = bool(score.get("match_finished", False))
 
                 # Store stats_mode for later use
                 stats_mode = score.get('stats_mode')

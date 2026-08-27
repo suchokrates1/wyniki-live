@@ -167,6 +167,40 @@ def test_sync_live_score_keeps_in_progress_set_games():
     assert court["current_set"] == 2
 
 
+def test_put_score_drops_previous_match_set_columns():
+    from wyniki.api.umpire_api import _apply_umpire_put_sets
+    from wyniki.services.court_manager import _empty_court_state
+
+    court = _empty_court_state()
+    court["A"]["set1"] = 4
+    court["B"]["set1"] = 2
+    court["A"]["set2"] = 4
+    court["B"]["set2"] = 0
+    court["sets_detail"] = [{"p1": 4, "p2": 2}, {"p1": 4, "p2": 0}]
+    court["current_set"] = 2
+
+    _apply_umpire_put_sets(
+        court,
+        {
+            "player1_games": 1,
+            "player2_games": 0,
+            "player1_sets": 0,
+            "player2_sets": 0,
+            "sets_history": [],
+        },
+        is_super_tiebreak=False,
+    )
+
+    assert court["A"]["set1"] == 1
+    assert court["B"]["set1"] == 0
+    assert court["A"]["set2"] == 0
+    assert court["B"]["set2"] == 0
+    assert court["A"]["set3"] == 0
+    assert court["B"]["set3"] == 0
+    assert court["sets_detail"] == []
+    assert court["current_set"] == 1
+
+
 def test_create_match_sets_flags_from_tournament_players(umpire_app_with_temp_db):
     from wyniki import database
     from wyniki.services.court_manager import get_court_state
@@ -810,7 +844,7 @@ def test_player_import_preview_supports_sectioned_start_list(app_with_temp_db):
 
     tournament_id = database.insert_tournament("Import Sections Cup", "2026-05-22", "2026-05-24", active=True)
 
-    text = """Ðzien dobry
+    text = """Ýzien dobry
 Podaję listę startową Mistrzostw Polski w Blind Tenisie 22-24.05.2026
 22.05 po klasyfikacji ok. 19:00 odbędzie się losowanie w kategoriach, gdzie jest zapisanych więcej niż 5 zawodników.
 Ostateczny termin odwołań mija 15.05.2026 bez konsekwencji zwrotu kosztów.
@@ -821,7 +855,7 @@ Magdalena Kokot-Rybińska
 Monika\tDubiel
 
 B1 Mężczyzn
-Łukasz  Chmielewski
+ŝukasz  Chmielewski
 Rafał Sudoł
 Sławomir\tTolak – Ciszewski
 
@@ -835,7 +869,7 @@ Mateusz\tCiborowski
 Marian\tWywiórski
 Michał\tOrchowski
 Mariusz\tKowalski
-Łukasz\tKonklewski
+ŝukasz\tKonklewski
 Emil\tStopierzynski
 Tomasz\tGawrych
 Jarosław\tStopierzyński

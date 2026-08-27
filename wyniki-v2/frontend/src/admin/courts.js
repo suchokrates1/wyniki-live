@@ -274,9 +274,8 @@ export function createCourtsAdmin() {
      const b = cd.B || {};
      const active = cd.match_status?.active || false;
      const curSet = cd.current_set || 1;
-     const hasSetDetail = Array.isArray(cd.sets_detail) && cd.sets_detail.length > 0;
      const readSetValue = (playerState, setIdx) => {
-       if (active && !hasSetDetail && setIdx > curSet) return 0;
+       if (active && setIdx > curSet) return 0;
        return playerState[`set${setIdx}`] || 0;
      };
      const nameA = a.surname || '-';
