@@ -20,8 +20,7 @@ export function getStoredSetScore(court, side, setIdx) {
   if (!court) return 0;
   const active = court.match_status?.active;
   const currentSet = parseInt(court.current_set, 10) || 1;
-  const hasSetDetail = Array.isArray(court.sets_detail) && court.sets_detail.length > 0;
-  if (active && !hasSetDetail && setIdx > currentSet) return 0;
+  if (active && setIdx > currentSet) return 0;
   return Number(court[side]?.[`set${setIdx}`] ?? 0) || 0;
 }
 

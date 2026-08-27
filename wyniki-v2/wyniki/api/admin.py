@@ -104,7 +104,14 @@ def reset_court(kort_id):
             return jsonify({"error": "Court not found"}), 404
 
         with court_manager.STATE_LOCK:
+            identity = {
+                "court_name": state.get("court_name"),
+                "display_order": state.get("display_order"),
+                "tournament_id": state.get("tournament_id"),
+                "tournament_name": state.get("tournament_name"),
+            }
             fresh = court_manager._empty_court_state()
+            fresh.update(identity)
             state.clear()
             state.update(fresh)
 

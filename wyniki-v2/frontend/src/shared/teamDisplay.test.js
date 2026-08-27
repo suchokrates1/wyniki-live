@@ -46,6 +46,7 @@ test('competitorSearchTokens include both partners and reversed order', () => {
 
 test('abbreviateCompetitorName shortens each partner, not the slash token', () => {
   assert.equal(abbreviateCompetitorName(PAIR), 'A. Kowalska / E. Nowak');
+  assert.equal(abbreviateCompetitorName('Dawid Suchodolski / Jan Kowalski'), 'D. Suchodolski / J. Kowalski');
   assert.equal(abbreviateCompetitorName('Jan Kowalski'), 'J. Kowalski');
   assert.equal(isTeamDisplayName(PAIR), true);
   assert.equal(isTeamDisplayName('Jan Kowalski'), false);

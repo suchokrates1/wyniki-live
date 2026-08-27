@@ -1070,7 +1070,7 @@ export function createOverlayAdmin() {
       })();
       const isSuperTB = !!court.super_tiebreak_active || (Number(curSet) === 3 && regularSetWins.A === 1 && regularSetWins.B === 1);
       const readSetValue = (playerState, setIdx) => {
-        if (active && !hasSetDetail && setIdx > curSet) return 0;
+        if (active && setIdx > curSet) return 0;
         return playerState['set' + setIdx] || 0;
       };
       const hasThirdSetScore = readSetValue(pA, 3) > 0 || readSetValue(pB, 3) > 0;
@@ -1100,9 +1100,11 @@ export function createOverlayAdmin() {
         let flagHtml = flagSpans(p);
         const serveHtml = isServing ? '<span class="sb-serve"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:16px;height:16px;"></span>' : '';
         const dName = p.surname || p.full_name || '\u2014';
-        const teamClass = String(dName).includes(' / ') ? ' is-team' : '';
+        const isTeam = String(dName).includes(' / ');
+        const shown = isTeam ? this._abbreviateName(dName) : dName;
+        const teamClass = isTeam ? ' is-team' : '';
         const playerCell = '<div class="sb-player-cell">' + flagHtml
-          + '<span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + dName + '</span>'
+          + '<span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
           + serveHtml + '</div>';
 
         // Points cell
@@ -1253,10 +1255,7 @@ export function createOverlayAdmin() {
            if (String(fullName).includes(' / ')) {
              el.classList.add('is-team');
              el.style.whiteSpace = 'normal';
-             if (el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 1) {
-               const abbrTeam = this._abbreviateName(fullName);
-               if (abbrTeam !== fullName) el.textContent = abbrTeam;
-             }
+             el.textContent = this._abbreviateName(fullName);
              return;
            }
            let sw = el.scrollWidth;

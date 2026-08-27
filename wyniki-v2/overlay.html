@@ -427,7 +427,7 @@
         })();
         const isSuperTB = Number(curSet) === 3 && regularSetWins.A === 1 && regularSetWins.B === 1;
         const readSetValue = (playerState, setIdx) => {
-            if (active && !hasSetDetail && setIdx > curSet) return 0;
+            if (active && setIdx > curSet) return 0;
             return playerState['set'+setIdx] || 0;
         };
         const hasThirdSetScore = readSetValue(pA, 3) > 0 || readSetValue(pB, 3) > 0;
@@ -467,9 +467,11 @@
             var flagHtml = flagSpans(p);
             var serveHtml = isServing ? '<span class="serve-indicator"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve"></span>' : '';
             var dName = p.full_name||p.surname||'\u2014';
-            var teamClass = String(dName).indexOf(' / ') !== -1 ? ' is-team' : '';
+            var isTeam = String(dName).indexOf(' / ') !== -1;
+            var shown = isTeam ? abbreviateName(dName) : dName;
+            var teamClass = isTeam ? ' is-team' : '';
             var playerCell = '<div class="player-cell">'+flagHtml
-                +'<span class="player-name'+teamClass+'" data-full="'+dName.replace(/"/g,'&quot;')+'">'+dName+'</span>'
+                +'<span class="player-name'+teamClass+'" data-full="'+dName.replace(/"/g,'&quot;')+'">'+shown+'</span>'
                 +serveHtml+'</div>';
 
             // Points cell
@@ -512,6 +514,8 @@
         var pA = court.A || {}, pB = court.B || {};
         var nA = pA.full_name||pA.surname||'A';
         var nB = pB.full_name||pB.surname||'B';
+        if (String(nA).indexOf(' / ') !== -1) nA = abbreviateName(nA);
+        if (String(nB).indexOf(' / ') !== -1) nB = abbreviateName(nB);
         var sA = st.player_a||{}, sB = st.player_b||{};
         var mode = el.stats_mode || 'simple';
         var rows = [
@@ -737,10 +741,7 @@
             if (isTeam) {
                 el.classList.add('is-team');
                 el.style.whiteSpace = 'normal';
-                if (el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 1) {
-                    var abbrTeam = abbreviateName(fullName);
-                    if (abbrTeam !== fullName) el.textContent = abbrTeam;
-                }
+                el.textContent = abbreviateName(fullName);
                 return;
             }
             var sw = el.scrollWidth;

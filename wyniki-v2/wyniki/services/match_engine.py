@@ -226,6 +226,7 @@ def reset_after_match(state: Dict[str, Any]) -> None:
         "active": False,
         "last_completed": None,
     }
+    state["sets_detail"] = []
     logger.info("Court reset after match")
 
 
