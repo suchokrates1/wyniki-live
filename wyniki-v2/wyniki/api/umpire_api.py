@@ -17,7 +17,8 @@ from ..services.event_broker import emit_score_update
 from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
-from ..services.api_auth import court_session_expires_at, issue_court_token, require_court_access
+from ..services.api_auth import court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
+from ..services.director_commands import director_command_broker, dump_match_config, normalize_match_config, tablet_presence
 from ..config import logger
 
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
@@ -1051,6 +1052,7 @@ def create_match():
             player1_points=score.get("player1_points", 0),
             player2_points=score.get("player2_points", 0),
             sets_history=json.dumps(score.get("sets_history", [])),
+            match_config=dump_match_config(data.get("match_config")),
             client_info=client_audit["client_info"],
             client_ip=client_audit["client_ip"],
             client_country=client_audit["client_country"],
@@ -1146,6 +1148,8 @@ def update_match(match_id: int):
         match.player1_points = score.get("player1_points", 0)
         match.player2_points = score.get("player2_points", 0)
         match.sets_history = json.dumps(score.get("sets_history", []))
+        if data.get("match_config") is not None:
+            match.match_config = dump_match_config(data.get("match_config"))
         match.status = data.get("status", "in_progress")
         if data.get("client_match_uuid") and not match.client_match_uuid:
             match.client_match_uuid = _clean_client_text(data.get("client_match_uuid"), 80)
@@ -1508,6 +1512,27 @@ def log_match_event():
         restore_match_score = bool(
             active_match and _match_has_recorded_progress(active_match) and _score_payload_is_zeroed(score)
         )
+        tablet_presence.record(
+            session_court_id=kort_id,
+            match_id=active_match.id if active_match else event_match_id,
+            client_match_uuid=event_client_uuid or (active_match.client_match_uuid if active_match else None),
+            player1_name=(player1.get("full_name") or player1.get("name")),
+            player2_name=(player2.get("full_name") or player2.get("name")),
+        )
+
+        expected_court = str(active_match.court_id or "").strip() if active_match else ""
+        if active_match and expected_court and expected_court != kort_id:
+            logger.info(
+                "stale_court_match_event_ignored",
+                match_id=active_match.id,
+                event_court=kort_id,
+                match_court=expected_court,
+            )
+            return jsonify({
+                "success": True,
+                "stale_court": True,
+                "expected_court_id": expected_court,
+            }), 200
 
         court_state = ensure_court_state(kort_id)
         with STATE_LOCK:
@@ -1650,6 +1675,8 @@ def umpire_heartbeat():
         is_charging = data.get('is_charging')
         screen = data.get('screen', '')
         app_version = data.get('app_version', '')
+        match_id = _clean_int(data.get('match_id'))
+        client_match_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
 
         logger.info(
             f"Heartbeat: court={kort_id} battery={battery_level}% "
@@ -1668,8 +1695,62 @@ def umpire_heartbeat():
                 court_state["app_version"] = app_version
                 court_state["umpire_screen"] = screen
 
-        return jsonify({"status": "ok"}), 200
+            tablet_presence.record(
+                session_court_id=kort_id,
+                match_id=match_id,
+                client_match_uuid=client_match_uuid,
+                screen=screen,
+                battery_level=battery_level,
+                app_version=app_version,
+            )
+
+        commands = director_command_broker.pending_for(kort_id, match_id, client_match_uuid)
+        return jsonify({"status": "ok", "commands": commands}), 200
 
     except Exception as e:
         logger.error(f"Error processing heartbeat: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/umpire/commands', methods=['GET'])
+def poll_director_commands():
+    """Long-poll pending director commands for the authorized tablet session."""
+    try:
+        session_court_id = court_id_from_bearer() or normalize_kort_id(request.args.get("court_id"))
+        access_error = require_court_access(session_court_id)
+        if access_error:
+            return access_error
+        if not session_court_id:
+            return jsonify({"error": "court_id required"}), 400
+
+        match_id = _clean_int(request.args.get("match_id"))
+        client_match_uuid = _clean_client_text(request.args.get("client_match_uuid"), 80)
+        wait_ms = request.args.get("wait_ms", type=int) or 0
+        wait_s = max(0.0, min(float(wait_ms) / 1000.0, 25.0))
+        commands = director_command_broker.wait_for(
+            session_court_id,
+            match_id,
+            client_match_uuid,
+            wait_s,
+        )
+        return jsonify({"commands": commands}), 200
+    except Exception as e:
+        logger.error(f"Error polling director commands: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/umpire/commands/<command_id>/ack', methods=['POST'])
+def ack_director_command(command_id: str):
+    """Drop a director command after the tablet applied it."""
+    try:
+        session_court_id = court_id_from_bearer() or normalize_kort_id(
+            (request.get_json(silent=True) or {}).get("court_id") or request.args.get("court_id")
+        )
+        access_error = require_court_access(session_court_id)
+        if access_error:
+            return access_error
+        acked = director_command_broker.ack(command_id)
+        return jsonify({"ok": True, "acked": acked}), 200
+    except Exception as e:
+        logger.error(f"Error acking director command: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500

@@ -66,6 +66,21 @@ def _office_token_from_request(slot: int) -> str:
     ).strip()
 
 
+def court_id_from_bearer() -> str | None:
+    """Return the court bound to the request Bearer token, if any."""
+    token = _bearer_token()
+    if not token:
+        return None
+    try:
+        payload = _serializer("court-session").loads(
+            token, max_age=settings.court_session_ttl_hours * 60 * 60
+        )
+    except (SignatureExpired, BadSignature):
+        return None
+    court_id = str(payload.get("kort_id") or "").strip()
+    return court_id or None
+
+
 def _in_court_grace_period() -> bool:
     return datetime.now(timezone.utc) < settings.court_auth_grace_until
 

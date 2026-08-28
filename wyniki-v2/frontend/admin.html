@@ -328,6 +328,7 @@
                             <template x-if="editingCourt !== court.kort_id"><button @click="startEdit(court.kort_id)" class="btn btn-sm btn-ghost" title="Edytuj">&#9999;&#65039;</button></template>
                             <template x-if="editingCourt === court.kort_id"><div class="flex gap-1"><button @click="saveCourt(court.kort_id)" class="btn btn-sm btn-success">&#10003;</button><button @click="cancelEdit()" class="btn btn-sm btn-ghost">&#10007;</button></div></template>
                             <template x-if="courtData[court.kort_id]?.match_status?.active"><button @click="resetCourt(court.kort_id)" class="btn btn-sm btn-ghost text-warning" title="Resetuj mecz">&#128260;</button></template>
+                            <button @click="openDirectorPanel(court.kort_id)" class="btn btn-sm btn-ghost" title="Steruj tabletem">Reżyserka</button>
                             <button @click="deleteCourt(court.kort_id)" class="btn btn-sm btn-ghost text-error" title="Usu&#324;">&#128465;&#65039;</button>
                           </td>
                         </tr>
@@ -344,6 +345,88 @@
             <input type="text" x-model="newCourtId" placeholder="ID nowego kortu (np. 6)" class="input input-bordered input-sm">
             <input type="text" x-model="newCourtPin" placeholder="PIN (4 cyfry)" class="input input-bordered input-sm w-32" maxlength="4" pattern="[0-9]{4}">
             <button @click="addCourt()" class="btn btn-primary btn-sm">+ Dodaj kort</button>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="directorPanelOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div class="card bg-base-100 w-full max-w-2xl shadow-xl">
+          <div class="card-body gap-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="card-title">Sterowanie tabletem</h3>
+                <p class="text-sm opacity-70">Zmiana idzie od razu na apkę sędziego (kort, nazwiska, wynik, zasady).</p>
+              </div>
+              <button class="btn btn-sm btn-ghost" @click="directorPanelOpen = false">Zamknij</button>
+            </div>
+            <div x-show="directorLoading" class="text-sm opacity-70">Ładowanie tabletów…</div>
+            <p class="text-sm" x-show="directorForm.sessionCourtId">
+              Tablet jest na korcie <span class="font-semibold" x-text="directorForm.sessionCourtId"></span>
+              — komenda idzie na tę sesję, nawet gdy mecz w bazie jest już na innym korcie.
+            </p>
+            <label class="form-control" x-show="directorTablets.length">
+              <span class="label-text">Tablet / mecz</span>
+              <select class="select select-bordered select-sm" @change="selectDirectorTablet(directorTablets[$event.target.value])">
+                <template x-for="(tablet, index) in directorTablets" :key="tablet.match_id || index">
+                  <option :value="index" x-text="(tablet.player1_name || '?') + ' vs ' + (tablet.player2_name || '?') + ' · #' + (tablet.match_id || '—') + ' · ' + (tablet.session_court_id || '')"></option>
+                </template>
+              </select>
+            </label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label class="form-control">
+                <span class="label-text">Kort (ID)</span>
+                <select class="select select-bordered select-sm" x-model="directorForm.courtId">
+                  <template x-for="court in courts" :key="court.kort_id">
+                    <option :value="court.kort_id" x-text="(court.name || court.kort_id) + ' (' + court.kort_id + ')'"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="form-control">
+                <span class="label-text">Format (gemy / sety do wygranej)</span>
+                <div class="flex gap-2">
+                  <input type="number" min="1" class="input input-bordered input-sm w-20" x-model="directorForm.gamesPerSet">
+                  <input type="number" min="1" class="input input-bordered input-sm w-20" x-model="directorForm.setsToWin">
+                </div>
+              </label>
+              <label class="form-control md:col-span-2">
+                <span class="label-text">Zawodnik 1</span>
+                <input type="text" class="input input-bordered input-sm" x-model="directorForm.player1Name">
+              </label>
+              <label class="form-control md:col-span-2">
+                <span class="label-text">Zawodnik 2</span>
+                <input type="text" class="input input-bordered input-sm" x-model="directorForm.player2Name">
+              </label>
+              <label class="form-control">
+                <span class="label-text">Sety</span>
+                <div class="flex gap-2">
+                  <input type="number" min="0" class="input input-bordered input-sm w-20" x-model="directorForm.player1Sets">
+                  <input type="number" min="0" class="input input-bordered input-sm w-20" x-model="directorForm.player2Sets">
+                </div>
+              </label>
+              <label class="form-control">
+                <span class="label-text">Gemy</span>
+                <div class="flex gap-2">
+                  <input type="number" min="0" class="input input-bordered input-sm w-20" x-model="directorForm.player1Games">
+                  <input type="number" min="0" class="input input-bordered input-sm w-20" x-model="directorForm.player2Games">
+                </div>
+              </label>
+              <label class="form-control">
+                <span class="label-text">Punkty (surowe)</span>
+                <div class="flex gap-2">
+                  <input type="number" min="0" class="input input-bordered input-sm w-20" x-model="directorForm.player1Points">
+                  <input type="number" min="0" class="input input-bordered input-sm w-20" x-model="directorForm.player2Points">
+                </div>
+              </label>
+              <label class="form-control">
+                <span class="label-text">Zasady</span>
+                <label class="label cursor-pointer justify-start gap-2"><input type="checkbox" class="checkbox checkbox-sm" x-model="directorForm.noAdvantage"><span class="label-text">No-Ad</span></label>
+                <label class="label cursor-pointer justify-start gap-2"><input type="checkbox" class="checkbox checkbox-sm" x-model="directorForm.tiebreakOnly"><span class="label-text">Tylko tiebreak</span></label>
+              </label>
+            </div>
+            <div class="card-actions justify-end">
+              <button class="btn btn-ghost btn-sm" @click="directorPanelOpen = false">Anuluj</button>
+              <button class="btn btn-primary btn-sm" :disabled="directorSaving" @click="applyDirectorControl()" x-text="directorSaving ? 'Wysyłanie…' : 'Wyślij na tablet'"></button>
+            </div>
           </div>
         </div>
       </div>
