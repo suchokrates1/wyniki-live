@@ -7,7 +7,14 @@ from datetime import datetime, timezone
 from .config import logger, settings
 from .database import init_db, fetch_courts, fetch_tournaments, fetch_match_history, get_active_tournament_id
 from .db_models import Match, Player
-from .services.court_manager import STATE_LOCK, ensure_court_state, refresh_courts_from_db
+from .services.court_manager import (
+    COURTS,
+    STATE_LOCK,
+    ensure_court_state,
+    get_court_state,
+    refresh_courts_from_db,
+    restore_overlay_snapshot_file,
+)
 from .services.history_manager import load_history_from_db
 from .services.teams import is_team_display_name
 
@@ -176,6 +183,20 @@ def initialize_state() -> None:
         
         refresh_courts_from_db(db_courts_list, seed_if_empty=False)
         rehydrate_live_courts()
+        restored_from_file = restore_overlay_snapshot_file()
+        if restored_from_file:
+            from .services.event_broker import emit_score_update
+
+            with STATE_LOCK:
+                live_ids = [
+                    kid
+                    for kid, state in COURTS.items()
+                    if (state.get("match_status") or {}).get("active")
+                ]
+            for kid in live_ids:
+                state = get_court_state(kid)
+                if state:
+                    emit_score_update(kid, state)
         logger.info(f"Loaded {len(db_courts)} courts from database")
     except Exception as e:
         logger.error(f"Failed to load courts: {e}")

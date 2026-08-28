@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     match_history_size: int = 100
     log_entries_per_court: int = 50
     live_rehydrate_max_age_hours: int = 12
+    overlay_snapshot_path: str = "/data/overlay_snapshot.json"
+    overlay_snapshot_max_age_seconds: int = 1800
     
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent

@@ -1,8 +1,12 @@
 """Court configuration and state management."""
 from __future__ import annotations
 
+import json
 import threading
+import time
 from collections import OrderedDict, deque
+from copy import deepcopy
+from pathlib import Path
 from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 
 from ..config import settings, logger
@@ -199,6 +203,62 @@ def serialize_all_states() -> Dict[str, Any]:
     """Get all court states."""
     with STATE_LOCK:
         return {kort_id: serialize_court_state(state) for kort_id, state in COURTS.items()}
+
+
+_SNAPSHOT_IDENTITY_KEYS = ("court_name", "display_order", "tournament_id", "tournament_name")
+
+
+def restore_courts_from_snapshot(courts: Dict[str, Any]) -> int:
+    """Overwrite in-memory court live state from a previously dumped snapshot.
+
+    Identity fields from the current COURTS dict win when the snapshot is missing them.
+    Courts that exist only in the snapshot are ignored.
+    """
+    restored = 0
+    with STATE_LOCK:
+        for kort_id, incoming in (courts or {}).items():
+            key = str(kort_id)
+            if key not in COURTS or not isinstance(incoming, dict):
+                continue
+            merged = deepcopy(incoming)
+            current = COURTS[key]
+            for field in _SNAPSHOT_IDENTITY_KEYS:
+                if merged.get(field) in (None, "") and current.get(field) not in (None, ""):
+                    merged[field] = current[field]
+            current.clear()
+            current.update(merged)
+            restored += 1
+    logger.info("overlay_snapshot_restored", courts=restored)
+    return restored
+
+
+def restore_overlay_snapshot_file(path: str | Path | None = None, max_age_seconds: int | None = None) -> int:
+    """Load `/data/overlay_snapshot.json` if it is fresh, then consume the file."""
+    snapshot_path = Path(path or settings.overlay_snapshot_path)
+    max_age = int(max_age_seconds if max_age_seconds is not None else settings.overlay_snapshot_max_age_seconds)
+    if not snapshot_path.is_file():
+        return 0
+    age = time.time() - snapshot_path.stat().st_mtime
+    if age > max_age:
+        logger.warning("overlay_snapshot_stale", path=str(snapshot_path), age_seconds=int(age), max_age_seconds=max_age)
+        return 0
+    try:
+        payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.error("overlay_snapshot_read_error", error=str(exc), path=str(snapshot_path))
+        return 0
+    courts = payload.get("courts") if isinstance(payload, dict) else None
+    if not isinstance(courts, dict):
+        logger.warning("overlay_snapshot_invalid", path=str(snapshot_path))
+        return 0
+    restored = restore_courts_from_snapshot(courts)
+    applied = snapshot_path.with_name(snapshot_path.name + ".applied")
+    try:
+        applied.unlink(missing_ok=True)
+        snapshot_path.replace(applied)
+    except OSError as exc:
+        logger.warning("overlay_snapshot_consume_error", error=str(exc), path=str(snapshot_path))
+    return restored
 
 
 def serialize_public_snapshot() -> Dict[str, Any]:
