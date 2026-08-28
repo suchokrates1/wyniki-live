@@ -167,6 +167,51 @@ def test_sync_live_score_keeps_in_progress_set_games():
     assert court["current_set"] == 2
 
 
+def test_sync_live_score_converts_raw_points_to_tennis_display():
+    from types import SimpleNamespace
+
+    from wyniki.api.umpire_api import _sync_live_score_to_court_state
+    from wyniki.services.court_manager import _empty_court_state
+
+    court = _empty_court_state()
+    match = SimpleNamespace(
+        player1_games=1,
+        player2_games=0,
+        player1_points=2,
+        player2_points=0,
+        sets_history="[]",
+        status="in_progress",
+    )
+    _sync_live_score_to_court_state(court, match)
+
+    assert court["A"]["points"] == "30"
+    assert court["B"]["points"] == "0"
+    assert court["tie"]["visible"] is False
+
+
+def test_sync_live_score_keeps_numeric_points_in_set_tiebreak():
+    from types import SimpleNamespace
+
+    from wyniki.api.umpire_api import _sync_live_score_to_court_state
+    from wyniki.services.court_manager import _empty_court_state
+
+    court = _empty_court_state()
+    match = SimpleNamespace(
+        player1_games=4,
+        player2_games=4,
+        player1_points=2,
+        player2_points=0,
+        sets_history="[]",
+        status="in_progress",
+    )
+    _sync_live_score_to_court_state(court, match, {"is_tiebreak": True})
+
+    assert court["tie"]["visible"] is True
+    assert court["tie"]["A"] == 2
+    assert court["tie"]["B"] == 0
+    assert court["A"]["points"] == "0"
+
+
 def test_put_score_drops_previous_match_set_columns():
     from wyniki.api.umpire_api import _apply_umpire_put_sets
     from wyniki.services.court_manager import _empty_court_state
