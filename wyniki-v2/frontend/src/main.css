@@ -1294,6 +1294,16 @@ body {
   line-height: 1.5;
   white-space: pre-wrap;
 }
+.tournament-info-banner__mail {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.tournament-info-banner__mail:hover,
+.tournament-info-banner__mail:focus-visible {
+  color: var(--accent, #0f766e);
+}
 
 /* === Empty State === */
 .empty-state {
