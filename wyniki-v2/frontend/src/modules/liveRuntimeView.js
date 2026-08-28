@@ -1,4 +1,5 @@
 import { publicApi } from '../api/publicApi.js';
+import { formatQuickInfoHtml as renderQuickInfoHtml } from './quickInfoFormat.js';
 
 function flash(el) {
   if (!el) return;
@@ -142,6 +143,10 @@ export function createLiveRuntimeView() {
         }
         this._sseRetryTimer = setTimeout(() => this.connectSSE(), retryMs);
       };
+    },
+
+    formatQuickInfoHtml(message) {
+      return renderQuickInfoHtml(message);
     },
 
     async fetchTournamentQuickInfo(tournamentId = null) {
