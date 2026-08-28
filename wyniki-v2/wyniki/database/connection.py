@@ -426,6 +426,7 @@ def init_db() -> None:
             'winner_name': 'TEXT',
             'injured_player_name': 'TEXT',
             'result_note': 'TEXT',
+            'match_config': 'TEXT',
         }
         for column_name, ddl in match_client_columns.items():
             if column_name not in m_cols:

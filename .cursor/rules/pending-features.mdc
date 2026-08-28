@@ -1,0 +1,15 @@
+---
+description: Pending product work for wyniki-live and the umpire Android app. Apply when planning features, admin, overlay, or referee tablet sync.
+alwaysApply: true
+---
+
+# Pending features
+
+Canonical backlog: `docs/TODO.md`.
+
+Do not treat these as done until implemented and verified.
+
+1. **Director remote tablet control** — from admin/reżyserka, live-push court, names, score, and match rules onto the umpire app (Vilnius 2026: could not move González–Schmidt off court 2 because the tablet kept `court_id`). Overlay/SQL-only moves are not enough.
+2. **Server-side match finish** — persist `MatchConfig` on create; auto-finish when the score satisfies the format; drop stale outbox 403 finishes.
+
+When implementing either item, read `docs/TODO.md` first.

@@ -418,3 +418,58 @@ def demo_status():
     })
 
 
+@blueprint.route('/api/director/tablets', methods=['GET'])
+def director_tablets():
+    """Live umpire tablets (heartbeat/events) plus in-progress matches on a court."""
+    try:
+        from ..db_models import Match
+        from ..services.director_commands import tablet_presence
+
+        court_id = str(request.args.get("court_id") or "").strip() or None
+        tablets = tablet_presence.list_for_court(court_id)
+        seen_match_ids = {row.get("match_id") for row in tablets if row.get("match_id")}
+        query = Match.query.filter_by(status="in_progress")
+        if court_id:
+            query = query.filter_by(court_id=court_id)
+        for match in query.order_by(Match.updated_at.desc()).all():
+            if match.id in seen_match_ids:
+                continue
+            tablets.append({
+                "session_court_id": match.court_id,
+                "match_id": match.id,
+                "client_match_uuid": match.client_match_uuid,
+                "player1_name": match.player1_name,
+                "player2_name": match.player2_name,
+                "screen": None,
+                "battery_level": None,
+                "app_version": None,
+                "last_seen": match.updated_at,
+                "from_db": True,
+            })
+        return jsonify({"tablets": tablets})
+    except Exception as e:
+        logger.error(f"Failed to list director tablets: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@blueprint.route('/api/matches/<int:match_id>/control', methods=['POST'])
+def director_control_match(match_id: int):
+    """Push court, names, score, and match rules onto the umpire tablet."""
+    try:
+        from ..db_models import Match, db
+        from ..services.director_commands import apply_director_control
+
+        match = db.session.get(Match, match_id)
+        if not match:
+            return jsonify({"error": "Match not found"}), 404
+        payload = request.get_json(silent=True) or {}
+        command = apply_director_control(match, payload)
+        return jsonify({"status": "ok", "command": command, "match": match.to_dict()}), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Failed director control: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+

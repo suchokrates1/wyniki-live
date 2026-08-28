@@ -255,6 +255,7 @@ class Match(db.Model):
     player2_points = db.Column(db.Integer, default=0)
     
     sets_history = db.Column(db.Text)  # JSON string
+    match_config = db.Column(db.Text, nullable=True)
 
     client_info = db.Column(db.Text, nullable=True)
     client_ip = db.Column(db.String(100), nullable=True)
@@ -289,6 +290,7 @@ class Match(db.Model):
             'phase': self.phase,
             'client_match_uuid': self.client_match_uuid,
             'schedule_id': self.schedule_id,
+            'match_config': json.loads(self.match_config) if self.match_config else None,
             'finish_reason': self.finish_reason or 'normal',
             'winner_name': self.winner_name,
             'injured_player_name': self.injured_player_name,

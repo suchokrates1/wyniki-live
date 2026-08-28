@@ -125,3 +125,9 @@ ssh dell 'sudo systemctl restart cursor-worker-dell-wyniki'
 ```
 
 Więcej o workerach: `~/cursor-worker/README.md` · `infrastructure/servers.md`
+
+---
+
+## Backlog produktowy
+
+`docs/TODO.md` — m.in. zdalne sterowanie tabletem sędziego z reżyserki oraz domykanie meczu po stronie serwera.

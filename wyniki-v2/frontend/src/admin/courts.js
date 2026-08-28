@@ -306,5 +306,131 @@ export function createCourtsAdmin() {
        this.showToast('Błąd resetowania kortu: ' + err.message, 'error');
      }
       },
+
+      directorPanelOpen: false,
+      directorLoading: false,
+      directorSaving: false,
+      directorTablets: [],
+      directorForm: {
+        sessionCourtId: '',
+        matchId: null,
+        courtId: '',
+        player1Name: '',
+        player2Name: '',
+        player1Sets: 0,
+        player2Sets: 0,
+        player1Games: 0,
+        player2Games: 0,
+        player1Points: 0,
+        player2Points: 0,
+        gamesPerSet: 4,
+        setsToWin: 2,
+        noAdvantage: false,
+        tiebreakOnly: false,
+        statsMode: 'ADVANCED',
+      },
+
+      async openDirectorPanel(kortId) {
+        this.directorPanelOpen = true;
+        this.directorLoading = true;
+        this.directorForm.sessionCourtId = kortId;
+        this.directorForm.courtId = kortId;
+        try {
+          const [tabletsRes, matchHint] = await Promise.all([
+            fetch('/admin/api/director/tablets?court_id=' + encodeURIComponent(kortId)),
+            Promise.resolve(this.courtData[kortId] || {}),
+          ]);
+          if (!tabletsRes.ok) throw new Error('Nie udało się wczytać tabletów');
+          const payload = await tabletsRes.json();
+          this.directorTablets = payload.tablets || [];
+          const first = this.directorTablets[0];
+          if (first?.match_id) {
+            await this.selectDirectorTablet(first);
+          } else {
+            const a = matchHint.A || {};
+            const b = matchHint.B || {};
+            this.directorForm.player1Name = a.full_name || a.surname || '';
+            this.directorForm.player2Name = b.full_name || b.surname || '';
+            this.directorForm.player1Games = a.current_games || 0;
+            this.directorForm.player2Games = b.current_games || 0;
+          }
+        } catch (err) {
+          console.error(err);
+          this.showToast(err.message || 'Błąd reżyserki', 'error');
+        } finally {
+          this.directorLoading = false;
+        }
+      },
+
+      async selectDirectorTablet(tablet) {
+        this.directorForm.matchId = tablet.match_id || null;
+        this.directorForm.player1Name = tablet.player1_name || '';
+        this.directorForm.player2Name = tablet.player2_name || '';
+        this.directorForm.sessionCourtId = tablet.session_court_id || this.directorForm.sessionCourtId;
+        if (!tablet.match_id) return;
+        const response = await fetch('/api/matches/' + tablet.match_id);
+        if (!response.ok) return;
+        const match = await response.json();
+        const score = match.score || {};
+        this.directorForm.courtId = match.court_id || this.directorForm.courtId;
+        this.directorForm.player1Name = match.player1_name || this.directorForm.player1Name;
+        this.directorForm.player2Name = match.player2_name || this.directorForm.player2Name;
+        this.directorForm.player1Sets = score.player1_sets || 0;
+        this.directorForm.player2Sets = score.player2_sets || 0;
+        this.directorForm.player1Games = score.player1_games || 0;
+        this.directorForm.player2Games = score.player2_games || 0;
+        this.directorForm.player1Points = score.player1_points || 0;
+        this.directorForm.player2Points = score.player2_points || 0;
+        const config = match.match_config || {};
+        this.directorForm.gamesPerSet = config.games_per_set || 4;
+        this.directorForm.setsToWin = config.sets_to_win || 2;
+        this.directorForm.noAdvantage = !!config.no_advantage;
+        this.directorForm.tiebreakOnly = !!config.tiebreak_only;
+        this.directorForm.statsMode = config.stats_mode || 'ADVANCED';
+      },
+
+      async applyDirectorControl() {
+        if (!this.directorForm.matchId) {
+          this.showToast('Wybierz mecz / tablet', 'warning');
+          return;
+        }
+        this.directorSaving = true;
+        try {
+          const response = await fetch('/admin/api/matches/' + this.directorForm.matchId + '/control', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_court_id: this.directorForm.sessionCourtId,
+              court_id: this.directorForm.courtId,
+              player1_name: this.directorForm.player1Name,
+              player2_name: this.directorForm.player2Name,
+              score: {
+                player1_sets: Number(this.directorForm.player1Sets) || 0,
+                player2_sets: Number(this.directorForm.player2Sets) || 0,
+                player1_games: Number(this.directorForm.player1Games) || 0,
+                player2_games: Number(this.directorForm.player2Games) || 0,
+                player1_points: Number(this.directorForm.player1Points) || 0,
+                player2_points: Number(this.directorForm.player2Points) || 0,
+              },
+              match_config: {
+                games_per_set: Number(this.directorForm.gamesPerSet) || 4,
+                sets_to_win: Number(this.directorForm.setsToWin) || 2,
+                no_advantage: !!this.directorForm.noAdvantage,
+                tiebreak_only: !!this.directorForm.tiebreakOnly,
+                stats_mode: this.directorForm.statsMode || 'ADVANCED',
+              },
+            }),
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(body.error || 'Nie udało się wysłać na tablet');
+          this.showToast('Wysłano na tablet', 'success');
+          this.directorPanelOpen = false;
+        } catch (err) {
+          console.error(err);
+          this.showToast(err.message || 'Błąd sterowania tabletem', 'error');
+        } finally {
+          this.directorSaving = false;
+        }
+      },
   };
 }
