@@ -346,8 +346,6 @@ def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict
 
     court_state["A"]["current_games"] = int(match.player1_games or 0)
     court_state["B"]["current_games"] = int(match.player2_games or 0)
-    court_state["A"]["points"] = str(match.player1_points or 0)
-    court_state["B"]["points"] = str(match.player2_points or 0)
 
     reset_live_set_columns(court_state)
 
@@ -394,10 +392,20 @@ def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict
     if match.status != "finished" and current_set not in completed_set_nums and current_set <= 3:
         court_state["A"][f"set{current_set}"] = int(match.player1_games or 0)
         court_state["B"][f"set{current_set}"] = int(match.player2_games or 0)
-    _set_live_super_tiebreak_flag(
-        court_state,
-        bool(score.get("is_super_tiebreak", False)) and match.status == "in_progress",
+    live_stb = match.status == "in_progress" and (
+        bool(score.get("is_super_tiebreak", False)) or non_stb_count >= 2
     )
+    _set_live_super_tiebreak_flag(court_state, live_stb)
+    if match.status == "in_progress":
+        _paint_live_points(
+            court_state,
+            int(match.player1_points or 0),
+            int(match.player2_points or 0),
+            is_tiebreak=bool(score.get("is_tiebreak", False)),
+            is_super_tiebreak=live_stb,
+            player1_games=int(match.player1_games or 0),
+            player2_games=int(match.player2_games or 0),
+        )
 
 
 def _match_has_recorded_progress(match: Match | None) -> bool:
@@ -1450,6 +1458,42 @@ def receive_statistics():
         db.session.rollback()
         logger.error(f"Error receiving statistics: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+def _paint_live_points(
+    court_state: dict,
+    raw_a: int,
+    raw_b: int,
+    *,
+    is_tiebreak: bool,
+    is_super_tiebreak: bool,
+    player1_games: int = 0,
+    player2_games: int = 0,
+) -> None:
+    """Write overlay point columns from tablet raw integers.
+
+    Match-events already convert 2→30. PUT/rehydrate used to dump the raw
+    count, so the overlay flashed 2:0 instead of 30:0 until the next event.
+    Set TB at 4-4 (or flagged) stays numeric in the tie column.
+    """
+    in_set_tiebreak = is_tiebreak or (
+        not is_super_tiebreak
+        and player1_games == player2_games
+        and player1_games >= 4
+    )
+    if in_set_tiebreak or is_super_tiebreak:
+        court_state["A"]["points"] = "0"
+        court_state["B"]["points"] = "0"
+        court_state["tie"]["A"] = int(raw_a)
+        court_state["tie"]["B"] = int(raw_b)
+        court_state["tie"]["visible"] = True
+        return
+    disp_a, disp_b = _raw_points_to_tennis(int(raw_a), int(raw_b))
+    court_state["A"]["points"] = disp_a
+    court_state["B"]["points"] = disp_b
+    court_state["tie"]["A"] = 0
+    court_state["tie"]["B"] = 0
+    court_state["tie"]["visible"] = False
 
 
 def _raw_points_to_tennis(raw_a: int, raw_b: int) -> tuple[str, str]:
