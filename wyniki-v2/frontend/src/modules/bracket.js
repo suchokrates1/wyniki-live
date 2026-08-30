@@ -5,23 +5,43 @@ export function getGroupStandingsRows(group, siblingGroups = []) {
   return rows;
 }
 
+function phaseSuffix(phase) {
+  const text = String(phase || '').trim();
+  if (!text) return '';
+  if (!text.includes(' — ')) return text;
+  return text.split(' — ').pop().trim();
+}
+
+export function getKnockoutRoundKind(phase) {
+  const suffix = phaseSuffix(phase).toLowerCase();
+  if (suffix.includes('ćwierć') || suffix.includes('cwierc') || suffix.includes('quarter')) return 'quarterfinal';
+  if (suffix.includes('półfina') || suffix.includes('polfina') || suffix.includes('semif')) return 'semifinal';
+  if (/(?:^|\s)fina[lł]/.test(suffix) || suffix.includes('final')) return 'final';
+  if (/\d+\.\s*miejsce|3rd|3-4|5th|7th|11th/.test(suffix) || /o\s+\d+/.test(suffix)) return 'placement';
+  return 'other';
+}
+
 export function isFinalPhase(phase) {
-  const text = String(phase || '');
-  return text.includes('Finał') && !text.includes('Półfinał');
+  return getKnockoutRoundKind(phase) === 'final';
 }
 
 export function isSemifinalPhase(phase) {
-  return String(phase || '').includes('Półfinał');
+  return getKnockoutRoundKind(phase) === 'semifinal';
+}
+
+export function isQuarterfinalPhase(phase) {
+  return getKnockoutRoundKind(phase) === 'quarterfinal';
 }
 
 export function isPlacementPhase(phase) {
-  return /o\s+\d+\.\s*miejsce/i.test(String(phase || ''));
+  return getKnockoutRoundKind(phase) === 'placement';
 }
 
 export function getKnockoutPhaseClass(phase) {
   return {
     'bt-round--final': isFinalPhase(phase),
     'bt-round--semifinal': isSemifinalPhase(phase),
+    'bt-round--quarterfinal': isQuarterfinalPhase(phase),
     'bt-round--placement': isPlacementPhase(phase),
   };
 }
@@ -40,7 +60,10 @@ export function getKnockoutSlotLoser(slot) {
 
 export function getKnockoutPodiumEntries(knockout = []) {
   const entries = [];
-  const finalPhase = knockout.find((entry) => isFinalPhase(entry.phase) && entry.slots?.[0]?.winner);
+  const finalPhase = knockout.find((entry) => {
+    const phase = String(entry.phase || '');
+    return isFinalPhase(phase) && !/consolation/i.test(phase) && entry.slots?.[0]?.winner;
+  });
   const thirdPlacePhase = knockout.find((entry) => getKnockoutPlaceNumber(entry.phase) === 3 && entry.slots?.[0]?.winner);
   const finalSlot = finalPhase?.slots?.[0];
   if (!finalSlot?.winner) return [];
@@ -120,10 +143,18 @@ export function categoryShowsStandingsTables(category) {
   return (category?.groups || []).some(groupShowsStandingsTable);
 }
 
+function knockoutSortKey(phase) {
+  const text = String(phase || '');
+  const consolation = /consolation/i.test(text) ? 1 : 0;
+  const kindOrder = { quarterfinal: 1, semifinal: 2, final: 3, placement: 4, other: 5 };
+  const kind = getKnockoutRoundKind(text);
+  return [consolation, kindOrder[kind] ?? 5, text];
+}
+
 export function buildBracketCategories(data, { compareCategoryNames = (left, right) => String(left.name || '').localeCompare(String(right.name || '')) } = {}) {
-  if (!data || !data.groups) return [];
+  if (!data) return [];
   const cats = new Map();
-  for (const group of data.groups) {
+  for (const group of data.groups || []) {
     const sep = group.name.indexOf(' — ');
     const cat = sep > -1 ? group.name.substring(0, sep) : group.name;
     if (!cats.has(cat)) cats.set(cat, { name: cat, groups: [], knockout: [] });
@@ -134,16 +165,35 @@ export function buildBracketCategories(data, { compareCategoryNames = (left, rig
     for (const [phase, slots] of Object.entries(data.knockout)) {
       const sep = phase.indexOf(' — ');
       const prefix = sep > -1 ? phase.substring(0, sep) : phase.split(' ')[0];
+      let attached = false;
       for (const [, cat] of cats) {
         if (cat.name === prefix || (sep === -1 && cat.name.startsWith(prefix))) {
           cat.knockout.push({ phase, slots });
+          attached = true;
           break;
         }
+      }
+      if (!attached && prefix) {
+        if (!cats.has(prefix)) cats.set(prefix, { name: prefix, groups: [], knockout: [] });
+        cats.get(prefix).knockout.push({ phase, slots });
       }
     }
   }
 
-  return [...cats.values()].sort(compareCategoryNames);
+  return [...cats.values()]
+    .map((category) => ({
+      ...category,
+      knockout: [...category.knockout].sort((left, right) => {
+        const leftKey = knockoutSortKey(left.phase);
+        const rightKey = knockoutSortKey(right.phase);
+        for (let index = 0; index < leftKey.length; index += 1) {
+          if (leftKey[index] < rightKey[index]) return -1;
+          if (leftKey[index] > rightKey[index]) return 1;
+        }
+        return 0;
+      }),
+    }))
+    .sort(compareCategoryNames);
 }
 
 export function resolveActiveBracketCategory(categories = [], selectedName = '') {
