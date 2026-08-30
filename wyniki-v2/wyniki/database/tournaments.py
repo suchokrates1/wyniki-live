@@ -10,7 +10,13 @@ from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
 
-from .connection import _default_simulation_office_password_hash, db_conn, fetch_app_settings, upsert_app_settings
+from .connection import (
+    _default_simulation_office_password_hash,
+    db_conn,
+    fetch_app_settings,
+    upsert_app_settings,
+    website_visible_sql,
+)
 
 # Prefer the tournament whose dates include today, then the newest start_date.
 # Without this, SQLite LIMIT 1 returns the lowest id (e.g. App Review 26 over IBTA 31).
@@ -36,7 +42,7 @@ def get_active_tournament_id(public_only: bool = False) -> Optional[int]:
             cursor = conn.cursor()
             query = "SELECT id FROM tournaments WHERE active = 1"
             if public_only:
-                query += " AND COALESCE(is_public, 1) = 1"
+                query += f" AND {website_visible_sql()}"
             query += _ACTIVE_TOURNAMENT_ORDER
             cursor.execute(query)
             row = cursor.fetchone()
@@ -52,7 +58,7 @@ def get_active_tournament_name(public_only: bool = False) -> Optional[str]:
             cursor = conn.cursor()
             query = "SELECT name FROM tournaments WHERE active = 1"
             if public_only:
-                query += " AND COALESCE(is_public, 1) = 1"
+                query += f" AND {website_visible_sql()}"
             query += _ACTIVE_TOURNAMENT_ORDER
             cursor.execute(query)
             row = cursor.fetchone()
@@ -69,12 +75,26 @@ def fetch_active_tournaments(public_only: bool = False) -> List[Dict]:
         logger.error("fetch_active_tournaments_error", error=str(e))
         return []
 
+
+def fetch_umpire_active_tournaments() -> List[Dict]:
+    """Active events for the Android app: public cups plus Play-review simulations."""
+    try:
+        return [
+            tournament
+            for tournament in fetch_tournaments(public_only=False)
+            if tournament.get("active") == 1
+            and (tournament.get("is_public") == 1 or tournament.get("is_simulation") == 1)
+        ]
+    except Exception as e:
+        logger.error("fetch_umpire_active_tournaments_error", error=str(e))
+        return []
+
 def fetch_tournaments(public_only: bool = False) -> List[Dict]:
     """Fetch all tournaments."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            where_clause = "WHERE COALESCE(t.is_public, 1) = 1" if public_only else ""
+            where_clause = f"WHERE {website_visible_sql('t')}" if public_only else ""
             cursor.execute("""
                 SELECT
                     t.id,

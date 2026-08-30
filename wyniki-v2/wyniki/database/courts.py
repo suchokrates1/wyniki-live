@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
 
-from .connection import db_conn
+from .connection import db_conn, website_visible_sql
 
 def fetch_courts(active_only: bool = False, public_only: bool = False) -> List[Dict[str, Optional[str]]]:
     """Fetch courts from database, optionally limited to active tournaments."""
@@ -33,7 +33,7 @@ def fetch_courts(active_only: bool = False, public_only: bool = False) -> List[D
             if active_only:
                 conditions.append("COALESCE(t.active, 0) = 1")
             if public_only:
-                conditions.append("COALESCE(t.is_public, 1) = 1")
+                conditions.append(website_visible_sql("t"))
             if conditions:
                 query += " WHERE " + " AND ".join(conditions)
             query += " ORDER BY COALESCE(c.tournament_id, 0), c.display_order, c.kort_id"

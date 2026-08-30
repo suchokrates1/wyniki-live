@@ -12,6 +12,8 @@ import requests
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
+from sqlalchemy import func
+
 from ..db_models import Match, MatchHistory, Tournament, db, utc_now_iso
 from ..services.categories import (
     is_mixed_category,
@@ -21,6 +23,7 @@ from ..services.categories import (
 from ..database import (
     fetch_tournaments,
     fetch_active_tournaments,
+    fetch_umpire_active_tournaments,
     fetch_tournament,
     fetch_tournament_categories,
     confirm_tournament_categories,
@@ -111,6 +114,14 @@ def _normalize_tournament_flags(data: Dict[str, Any]) -> tuple[bool, bool, bool,
         stats_enabled = False
     access_key = (data.get('access_key') or '').strip()
     return is_public, stats_enabled, is_simulation, access_key
+
+
+def _website_tournament_filter():
+    return (Tournament.is_public == 1) & (func.coalesce(Tournament.is_simulation, 0) == 0)
+
+
+def _website_stats_filter():
+    return _website_tournament_filter() & (Tournament.stats_enabled == 1)
 
 
 def _normalize_office_password_hash(raw_password: Any, *, existing_hash: str = '', is_simulation: bool = False, is_create: bool = False) -> str:
@@ -1418,14 +1429,17 @@ tournaments_public_bp = Blueprint('tournaments_public', __name__, url_prefix='/a
 
 @tournaments_public_bp.route('/active', methods=['GET'])
 def get_active_tournaments_public():
-    """Get active tournaments for the Android app selection screen."""
-    return _json_no_cache(fetch_active_tournaments(public_only=True))
+    """Active tournaments for the Android app, including Play-review simulations."""
+    payload = fetch_umpire_active_tournaments()
+    for tournament in payload:
+        tournament.pop("access_key", None)
+    return _json_no_cache(payload)
 
 
 @players_public_bp.route('/active', methods=['GET'])
 def get_active_players():
     """Get players from all active tournaments (for Umpire App)."""
-    players = fetch_players_for_active_tournaments(public_only=True)
+    players = fetch_players_for_active_tournaments(public_only=True, include_simulations=True)
     
     # Format for Umpire mobile app
     result = [
@@ -1456,10 +1470,7 @@ def get_all_players():
 
     players = (
         Player.query.join(Tournament)
-        .filter(
-            Tournament.is_public == 1,
-            Tournament.stats_enabled == 1,
-        )
+        .filter(_website_stats_filter())
         .order_by(Tournament.start_date.desc(), Tournament.id.desc(), Player.id.desc())
         .all()
     )
@@ -1514,7 +1525,7 @@ def get_all_players():
             MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
             .filter(
                 match_filter,
-                (MatchHistory.tournament_id.is_(None)) | ((Tournament.is_public == 1) & (Tournament.stats_enabled == 1)),
+                (MatchHistory.tournament_id.is_(None)) | _website_stats_filter(),
             )
         )
         match_count = public_stats_matches.count()
@@ -1583,21 +1594,23 @@ def get_player_profile(player_id: int):
         age_val = gp.age
         siblings = Player.query.join(Tournament).filter(
             Player.global_player_id == gp.id,
-            Tournament.is_public == 1,
-            Tournament.stats_enabled == 1,
+            _website_stats_filter(),
         ).all()
         if not siblings and last_name:
             siblings = Player.query.join(Tournament).filter(
                 Player.last_name == last_name,
                 Player.first_name == gp.first_name,
-                Tournament.is_public == 1,
-                Tournament.stats_enabled == 1,
+                _website_stats_filter(),
             ).all()
     else:
         player = db.session.get(Player, player_id)
         if not player:
             return jsonify({'error': 'Player not found'}), 404
-        if player.tournament and (int(player.tournament.is_public or 0) != 1 or int(player.tournament.stats_enabled or 0) != 1):
+        if player.tournament and (
+            int(player.tournament.is_public or 0) != 1
+            or int(player.tournament.stats_enabled or 0) != 1
+            or int(player.tournament.is_simulation or 0) == 1
+        ):
             return jsonify({'error': 'Player not found'}), 404
         full_name = player.full_name
         last_name = (player.last_name or '').strip()
@@ -1622,15 +1635,13 @@ def get_player_profile(player_id: int):
                 age_val = gp.age
             siblings = Player.query.join(Tournament).filter(
                 Player.global_player_id == player.global_player_id,
-                Tournament.is_public == 1,
-                Tournament.stats_enabled == 1,
+                _website_stats_filter(),
             ).all()
         elif last_name:
             siblings = Player.query.join(Tournament).filter(
                 Player.last_name == last_name,
                 Player.first_name == player.first_name,
-                Tournament.is_public == 1,
-                Tournament.stats_enabled == 1,
+                _website_stats_filter(),
             ).all()
         else:
             siblings = [player]
@@ -1641,7 +1652,7 @@ def get_player_profile(player_id: int):
     tournament_ids = list({s.tournament_id for s in siblings if s.tournament_id})
 
     # Fetch all matches for this player across all tournaments
-    public_stats_filter = (MatchHistory.tournament_id.is_(None)) | ((Tournament.is_public == 1) & (Tournament.stats_enabled == 1))
+    public_stats_filter = (MatchHistory.tournament_id.is_(None)) | _website_stats_filter()
     all_matches = (
         MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
         .filter(

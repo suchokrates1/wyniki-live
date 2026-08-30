@@ -77,7 +77,11 @@ def match_stats(match_id: int):
         match_record = db.session.get(Match, match_id)
         if match_record and match_record.tournament_id:
             tournament = db.session.get(Tournament, match_record.tournament_id)
-            if tournament and (int(tournament.is_public or 0) != 1 or int(tournament.stats_enabled or 0) != 1):
+            if tournament and (
+                int(tournament.is_public or 0) != 1
+                or int(tournament.stats_enabled or 0) != 1
+                or int(tournament.is_simulation or 0) == 1
+            ):
                 return jsonify({"error": "Statistics not found"}), 404
 
         stats = MatchStatistics.query.filter_by(match_id=match_id).first()
