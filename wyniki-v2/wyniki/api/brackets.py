@@ -50,7 +50,7 @@ def _public_tournament_or_404(tid: int):
     tournament = fetch_tournament(tid)
     if not tournament:
         return None, (jsonify({"error": "Tournament not found"}), 404)
-    if int(tournament.get("is_public") or 0) == 1:
+    if int(tournament.get("is_public") or 0) == 1 and int(tournament.get("is_simulation") or 0) != 1:
         return tournament, None
     expected_key = str(tournament.get("access_key") or "").strip()
     provided_key = str(request.args.get("access_key") or request.args.get("key") or "").strip()

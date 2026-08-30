@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
 
-from .connection import db_conn
+from .connection import db_conn, website_visible_sql
 
 def _normalize_player_name(value: Optional[str]) -> str:
     """Normalize player names for tolerant exact matching."""
@@ -73,12 +73,17 @@ def fetch_active_tournament_players() -> List[Dict]:
         logger.error("fetch_active_tournament_players_error", error=str(e))
         return []
 
-def fetch_players_for_active_tournaments(public_only: bool = False) -> List[Dict]:
+def fetch_players_for_active_tournaments(public_only: bool = False, include_simulations: bool = False) -> List[Dict]:
     """Fetch players belonging to any active tournament."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            public_clause = "AND COALESCE(t.is_public, 1) = 1" if public_only else ""
+            if public_only and include_simulations:
+                public_clause = "AND (COALESCE(t.is_public, 1) = 1 OR COALESCE(t.is_simulation, 0) = 1)"
+            elif public_only:
+                public_clause = f"AND {website_visible_sql('t')}"
+            else:
+                public_clause = ""
             cursor.execute(f"""
                 SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
                        p.category, p.country, p.gender, p.global_player_id, p.created_at

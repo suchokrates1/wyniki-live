@@ -15,6 +15,12 @@ def _default_simulation_office_password_hash(is_simulation: bool, office_passwor
         return generate_password_hash('test')
     return (office_password_hash or '').strip()
 
+
+def website_visible_sql(alias: str = "") -> str:
+    """Public website: published events only. Simulations stay in the umpire app."""
+    prefix = f"{alias}." if alias else ""
+    return f"COALESCE({prefix}is_public, 1) = 1 AND COALESCE({prefix}is_simulation, 0) = 0"
+
 @contextmanager
 def db_conn() -> Generator[sqlite3.Connection, None, None]:
     """Context manager for database connections."""

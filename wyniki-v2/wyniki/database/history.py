@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
 
-from .connection import db_conn
+from .connection import db_conn, website_visible_sql
 
 def insert_match_history(entry: Dict[str, Any]) -> None:
     """Insert a match history entry."""
@@ -113,7 +113,7 @@ def fetch_match_history(
                 conditions.append("mh.tournament_id = ?")
                 params.append(tournament_id)
             if public_only:
-                conditions.append("(mh.tournament_id IS NULL OR COALESCE(t.is_public, 1) = 1)")
+                conditions.append(f"(mh.tournament_id IS NULL OR ({website_visible_sql('t')}))")
             if stats_enabled_only:
                 conditions.append("(mh.tournament_id IS NULL OR COALESCE(t.stats_enabled, 1) = 1)")
 

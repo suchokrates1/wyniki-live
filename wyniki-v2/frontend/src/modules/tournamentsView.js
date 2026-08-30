@@ -46,7 +46,9 @@ export function createTournamentView() {
       try {
         const data = await publicApi.getTournaments();
         if (!data) return;
-        this.tournaments = Array.isArray(data) ? data : [];
+        this.tournaments = (Array.isArray(data) ? data : []).filter(
+          (tournament) => !tournament.is_simulation
+        );
       } catch {
         /* ignore */
       }

@@ -1489,8 +1489,8 @@ def test_private_simulation_is_hidden_from_public_tournament_endpoints(full_app_
     assert "Public Cup" in public_names
     assert "Private Simulation" not in public_names
     assert "Public Cup" in active_names
-    assert "Private Simulation" not in active_names
-    assert {p["name"] for p in active_players_response.get_json()} == {"Public Player"}
+    assert "Private Simulation" in active_names
+    assert {p["name"] for p in active_players_response.get_json()} == {"Public Player", "Private Player"}
     assert hidden_bracket_response.status_code == 404
     assert keyed_bracket_response.status_code == 200
     assert keyed_bracket_response.get_json()["tournament"]["name"] == "Private Simulation"
@@ -1500,6 +1500,49 @@ def test_private_simulation_is_hidden_from_public_tournament_endpoints(full_app_
     assert hidden_history_response.status_code == 404
     assert keyed_history_response.status_code == 200
     assert keyed_history_response.get_json()[0]["player_a"] == "Private Player"
+
+
+def test_website_active_ignores_review_simulation_after_event_ends(full_app_with_temp_db):
+    from datetime import date, timedelta
+    from wyniki import database
+
+    with database.db_conn() as conn:
+        conn.execute("UPDATE tournaments SET active = 0")
+        conn.commit()
+
+    today = date.today()
+    public_id = database.insert_tournament(
+        "Finished Public Cup",
+        (today - timedelta(days=6)).isoformat(),
+        (today - timedelta(days=2)).isoformat(),
+        active=True,
+    )
+    review_id = database.insert_tournament(
+        "App Review Access",
+        (today - timedelta(days=100)).isoformat(),
+        (today + timedelta(days=365)).isoformat(),
+        active=True,
+        is_simulation=True,
+    )
+    client = full_app_with_temp_db.test_client()
+
+    assert database.get_active_tournament_id(public_only=True) == public_id
+    public_names = {tournament["name"] for tournament in client.get("/api/tournament/list").get_json()}
+    assert "Finished Public Cup" in public_names
+    assert "App Review Access" not in public_names
+    umpire_names = {tournament["name"] for tournament in client.get("/api/tournaments/active").get_json()}
+    assert "Finished Public Cup" in umpire_names
+    assert "App Review Access" in umpire_names
+    assert client.get("/api/tournament/bracket").get_json()["tournament"]["id"] == public_id
+    assert client.get(f"/api/tournament/{review_id}/bracket").status_code == 404
+
+    with database.db_conn() as conn:
+        conn.execute("UPDATE tournaments SET is_public = 1 WHERE id = ?", (review_id,))
+        conn.commit()
+    assert database.get_active_tournament_id(public_only=True) == public_id
+    assert "App Review Access" not in {
+        tournament["name"] for tournament in client.get("/api/tournament/list").get_json()
+    }
 
 
 def test_public_history_defaults_to_active_public_tournament(full_app_with_temp_db):
