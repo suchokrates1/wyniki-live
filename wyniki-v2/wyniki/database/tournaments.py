@@ -18,6 +18,8 @@ from .connection import (
     website_visible_sql,
 )
 
+PUBLIC_RESULT_GRACE_DAYS = 7
+
 # Prefer the tournament whose dates include today, then the newest start_date.
 # Without this, SQLite LIMIT 1 returns the lowest id (e.g. App Review 26 over IBTA 31).
 _ACTIVE_TOURNAMENT_ORDER = """
@@ -34,6 +36,30 @@ ORDER BY
 LIMIT 1
 """
 
+# Public homepage: keep showing results for a week after the final, unless
+# another real tournament is currently in progress.
+_PUBLIC_ACTIVE_TOURNAMENT_ORDER = f"""
+ORDER BY
+  CASE
+    WHEN start_date IS NOT NULL
+     AND date('now') >= date(start_date)
+     AND (end_date IS NULL OR date('now') <= date(end_date))
+    THEN 0
+    WHEN end_date IS NOT NULL
+     AND date('now') > date(end_date)
+     AND date('now') <= date(end_date, '+{PUBLIC_RESULT_GRACE_DAYS} days')
+    THEN 1
+    ELSE 2
+  END,
+  COALESCE(end_date, start_date, '') DESC,
+  id DESC
+LIMIT 1
+"""
+
+
+def _active_tournament_order(public_only: bool) -> str:
+    return _PUBLIC_ACTIVE_TOURNAMENT_ORDER if public_only else _ACTIVE_TOURNAMENT_ORDER
+
 
 def get_active_tournament_id(public_only: bool = False) -> Optional[int]:
     """Get the ID of the currently active tournament."""
@@ -43,7 +69,7 @@ def get_active_tournament_id(public_only: bool = False) -> Optional[int]:
             query = "SELECT id FROM tournaments WHERE active = 1"
             if public_only:
                 query += f" AND {website_visible_sql()}"
-            query += _ACTIVE_TOURNAMENT_ORDER
+            query += _active_tournament_order(public_only)
             cursor.execute(query)
             row = cursor.fetchone()
             return row["id"] if row else None
@@ -59,7 +85,7 @@ def get_active_tournament_name(public_only: bool = False) -> Optional[str]:
             query = "SELECT name FROM tournaments WHERE active = 1"
             if public_only:
                 query += f" AND {website_visible_sql()}"
-            query += _ACTIVE_TOURNAMENT_ORDER
+            query += _active_tournament_order(public_only)
             cursor.execute(query)
             row = cursor.fetchone()
             return row["name"] if row else None

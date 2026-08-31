@@ -1545,6 +1545,39 @@ def test_website_active_ignores_review_simulation_after_event_ends(full_app_with
     }
 
 
+def test_public_homepage_keeps_finished_event_for_a_week_unless_another_is_live(full_app_with_temp_db):
+    from datetime import date, timedelta
+    from wyniki import database
+
+    with database.db_conn() as conn:
+        conn.execute("UPDATE tournaments SET active = 0")
+        conn.commit()
+
+    today = date.today()
+    finished_id = database.insert_tournament(
+        "Just Finished Cup",
+        (today - timedelta(days=5)).isoformat(),
+        (today - timedelta(days=2)).isoformat(),
+        active=True,
+    )
+    older_id = database.insert_tournament(
+        "Older Finished Cup",
+        (today - timedelta(days=20)).isoformat(),
+        (today - timedelta(days=10)).isoformat(),
+        active=True,
+    )
+    assert database.get_active_tournament_id(public_only=True) == finished_id
+
+    live_id = database.insert_tournament(
+        "Live Cup",
+        today.isoformat(),
+        (today + timedelta(days=2)).isoformat(),
+        active=True,
+    )
+    assert database.get_active_tournament_id(public_only=True) == live_id
+    assert database.get_active_tournament_id(public_only=True) != older_id
+
+
 def test_public_history_defaults_to_active_public_tournament(full_app_with_temp_db):
     from wyniki import database
 
