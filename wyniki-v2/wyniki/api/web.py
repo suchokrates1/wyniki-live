@@ -59,7 +59,8 @@ def umpire_manifest():
 def umpire_service_worker():
     response = send_from_directory(STATIC_DIR, 'umpire-sw.js')
     response.headers['Content-Type'] = 'application/javascript'
-    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    response.headers['CDN-Cache-Control'] = 'no-store'
     response.headers['Service-Worker-Allowed'] = '/'
     return response
 
@@ -67,7 +68,7 @@ def umpire_service_worker():
 @blueprint.route('/umpire-icons/<path:filename>')
 def umpire_icons(filename):
     response = send_from_directory(STATIC_DIR / 'umpire-icons', filename)
-    response.headers['Cache-Control'] = 'public, max-age=86400'
+    response.headers['Cache-Control'] = 'public, max-age=300, must-revalidate'
     return response
 
 
