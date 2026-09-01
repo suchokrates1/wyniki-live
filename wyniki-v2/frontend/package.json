@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "icons:umpire": "node scripts/generate-umpire-icons.mjs",
+    "build": "npm run icons:umpire && vite build",
     "preview": "vite preview",
     "test:i18n": "node scripts/validate-i18n.mjs",
     "test:match-engine": "node scripts/run-match-engine-tests.mjs",

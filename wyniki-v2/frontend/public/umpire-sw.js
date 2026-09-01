@@ -1,4 +1,4 @@
-const CACHE = 'umpire-pwa-v1';
+const CACHE = 'umpire-pwa-v2';
 const SHELL = [
   '/umpire',
   '/umpire.html',
@@ -7,12 +7,22 @@ const SHELL = [
   '/umpire-icons/icon-512.png',
 ];
 
+function precacheShell(cache, urls) {
+  return Promise.all(urls.map((url) => cache.add(url).catch(() => undefined)));
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => precacheShell(cache, SHELL)).then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
+  );
 });
 
 self.addEventListener('fetch', (event) => {
