@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1220">
+  <title>Blind Tennis Referee</title>
+  <link rel="manifest" href="/umpire.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎾</text></svg>">
+</head>
+<body>
+  <div class="ump" x-data="umpireApp()" x-init="init()">
+    <header class="ump-top">
+      <div>
+        <p class="ump-sub" x-text="t('appName')"></p>
+        <h1 class="ump-title" x-text="t(screen === 'language' ? 'languageTitle' : screen === 'tournament' ? 'tournamentTitle' : screen === 'court' ? 'courtTitle' : screen === 'players' ? 'playersTitle' : screen === 'config' ? 'configTitle' : screen === 'serve' ? 'serveTitle' : 'settings')"></h1>
+      </div>
+      <div>
+        <button class="ump-btn ump-btn--ghost" type="button" x-show="screen !== 'language'" @click="back()" x-text="t('back')"></button>
+        <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'court'" @click="openSettings()" x-text="t('settings')">⚙</button>
+      </div>
+    </header>
+
+    <p class="ump-error" x-show="error" x-text="error"></p>
+    <p x-show="loading" x-text="t('loading')"></p>
+
+    <section x-show="screen === 'language'">
+      <div class="ump-list">
+        <template x-for="item in languages" :key="item.code">
+          <button type="button" class="ump-btn ump-lang ump-card" @click="selectLanguage(item.code)">
+            <span x-text="item.flag + '  ' + item.name"></span>
+          </button>
+        </template>
+      </div>
+    </section>
+
+    <section x-show="screen === 'tournament'">
+      <button class="ump-btn" type="button" @click="loadTournaments()" x-text="t('refresh')"></button>
+      <p x-show="!loading && !tournaments.length" x-text="t('emptyTournaments')"></p>
+      <div class="ump-list" style="margin-top:12px">
+        <template x-for="tournament in tournaments" :key="tournament.id">
+          <button type="button" class="ump-btn ump-lang ump-card" @click="selectTournament(tournament)">
+            <span x-text="tournament.name"></span>
+          </button>
+        </template>
+      </div>
+    </section>
+
+    <section x-show="screen === 'court'">
+      <button class="ump-btn" type="button" @click="loadCourts()" x-text="t('refresh')"></button>
+      <p x-show="!loading && !courts.length" x-text="t('emptyCourts')"></p>
+      <div class="ump-courts" style="margin-top:12px">
+        <template x-for="court in courts" :key="court.kort_id">
+          <button type="button" class="ump-btn ump-court ump-card" @click="openPin(court)">
+            <span x-text="court.name"></span>
+            <span class="ump-badge" x-show="court.is_available === false" x-text="t('occupied')"></span>
+          </button>
+        </template>
+      </div>
+    </section>
+
+    <section x-show="screen === 'players'">
+      <div class="ump-card ump-suggest" x-show="suggestion">
+        <strong x-text="t('suggestion')"></strong>
+        <p x-text="(suggestion && suggestion.player1_name || '') + ' vs ' + (suggestion && suggestion.player2_name || '')"></p>
+        <button class="ump-btn ump-btn--accent" type="button" @click="applySuggestion()" x-text="t('applySuggestion')"></button>
+      </div>
+      <div class="ump-toggle">
+        <button class="ump-btn" type="button" :aria-pressed="!isDoubles" @click="isDoubles = false; selectedIds = selectedIds.slice(0, 2)" x-text="t('singles')"></button>
+        <button class="ump-btn" type="button" :aria-pressed="isDoubles" @click="isDoubles = true" x-text="t('doubles')"></button>
+      </div>
+      <input class="ump-search" type="search" :placeholder="t('searchPlayers')" x-model="search">
+      <div class="ump-list" style="margin-top:12px">
+        <template x-for="player in filteredPlayers()" :key="player.id">
+          <button type="button" class="ump-btn ump-player ump-card" :class="{ 'is-on': isSelected(player) }" @click="togglePlayer(player)">
+            <span x-text="(isSelected(player) ? (selectionIndex(player) + 1) + '. ' : '') + (player.name || player.full_name)"></span>
+          </button>
+        </template>
+      </div>
+      <p x-show="!canContinuePlayers()" x-text="t('needPlayers', { count: isDoubles ? 4 : 2 })"></p>
+      <div class="ump-toggle">
+        <button class="ump-btn" type="button" @click="showAddPlayer = !showAddPlayer" x-text="t('addPlayer')"></button>
+        <button class="ump-btn ump-btn--accent" type="button" :disabled="!canContinuePlayers()" @click="openConfig()" x-text="t('next')"></button>
+      </div>
+      <div class="ump-card" style="padding:14px;margin-top:12px" x-show="showAddPlayer">
+        <input class="ump-input" :placeholder="t('firstName')" x-model="addForm.firstName">
+        <input class="ump-input" style="margin-top:8px" :placeholder="t('lastName')" x-model="addForm.lastName">
+        <input class="ump-input" style="margin-top:8px" :placeholder="t('country')" x-model="addForm.country">
+        <button class="ump-btn ump-btn--accent" style="margin-top:8px" type="button" @click="saveNewPlayer()" x-text="t('savePlayer')"></button>
+      </div>
+    </section>
+
+    <section x-show="screen === 'config'">
+      <label class="ump-sub" x-text="t('umpireName')"></label>
+      <input class="ump-input" x-model="configForm.umpireName">
+      <label class="ump-sub" x-text="t('manualTime')"></label>
+      <input class="ump-input" type="datetime-local" x-model="configForm.manualStartTime">
+      <label class="ump-toggle"><input type="checkbox" x-model="configForm.noAdvantage"> <span x-text="t('noAdvantage')"></span></label>
+      <label class="ump-toggle"><input type="checkbox" x-model="configForm.tiebreakOnly"> <span x-text="t('tiebreakOnly')"></span></label>
+      <div x-show="!configForm.tiebreakOnly">
+        <p class="ump-sub" x-text="t('gamesPerSet')"></p>
+        <div class="ump-chips">
+          <template x-for="value in [3,4,5,6]" :key="'g'+value">
+            <button type="button" class="ump-btn" :aria-pressed="configForm.gamesPerSet === value" @click="configForm.gamesPerSet = value" x-text="value"></button>
+          </template>
+        </div>
+        <p class="ump-sub" x-text="t('setsToWin')"></p>
+        <div class="ump-chips">
+          <template x-for="value in [1,2,3]" :key="'s'+value">
+            <button type="button" class="ump-btn" :aria-pressed="configForm.setsToWin === value" @click="configForm.setsToWin = value" x-text="value"></button>
+          </template>
+        </div>
+        <p class="ump-sub" x-text="t('tiebreak')"></p>
+        <div class="ump-chips">
+          <button type="button" class="ump-btn" :aria-pressed="configForm.tiebreakPoints === 7" @click="configForm.tiebreakPoints = 7">7</button>
+          <button type="button" class="ump-btn" :aria-pressed="configForm.tiebreakPoints === 10" @click="configForm.tiebreakPoints = 10">10</button>
+        </div>
+        <p class="ump-sub" x-text="t('superTiebreak')"></p>
+        <div class="ump-chips">
+          <button type="button" class="ump-btn" :aria-pressed="configForm.superTiebreakPoints === 7" @click="configForm.superTiebreakPoints = 7">7</button>
+          <button type="button" class="ump-btn" :aria-pressed="configForm.superTiebreakPoints === 10" @click="configForm.superTiebreakPoints = 10">10</button>
+        </div>
+      </div>
+      <div x-show="configForm.tiebreakOnly">
+        <p class="ump-sub" x-text="t('tiebreak')"></p>
+        <div class="ump-chips">
+          <button type="button" class="ump-btn" :aria-pressed="configForm.tbOnlyPoints === 7" @click="configForm.tbOnlyPoints = 7">7</button>
+          <button type="button" class="ump-btn" :aria-pressed="configForm.tbOnlyPoints === 10" @click="configForm.tbOnlyPoints = 10">10</button>
+        </div>
+      </div>
+      <div class="ump-modes">
+        <button type="button" class="ump-card ump-mode" @click="startWithMode('BASIC')">
+          <h2 x-text="t('basic')"></h2>
+          <p class="ump-sub" x-text="t('basicHint')"></p>
+        </button>
+        <button type="button" class="ump-card ump-mode" @click="startWithMode('ADVANCED')">
+          <h2 x-text="t('advanced')"></h2>
+          <p class="ump-sub" x-text="t('advancedHint')"></p>
+        </button>
+      </div>
+    </section>
+
+    <section x-show="screen === 'serve'">
+      <p x-text="t('serveStub')"></p>
+      <p x-show="draft" x-text="draft && draft.players && draft.players.map(p => p.lastName || p.name).join(' vs ')"></p>
+    </section>
+
+    <section x-show="screen === 'settings'">
+      <p x-text="t('settingsStub')"></p>
+      <button class="ump-btn ump-btn--accent" type="button" @click="go('language')" x-text="t('settingsLanguage')"></button>
+    </section>
+
+    <div class="ump-pin" x-show="pinOpen" x-cloak>
+      <div class="ump-card ump-pin__card">
+        <h2 x-text="t('pinTitle')"></h2>
+        <p x-text="t('pinMessage', { court: pinCourt && pinCourt.name || '' })"></p>
+        <div class="ump-pin__boxes">
+          <template x-for="(box, index) in pinBoxes" :key="index">
+            <div class="ump-pin__box" x-text="box ? '•' : ''"></div>
+          </template>
+        </div>
+        <p class="ump-error" x-show="pinError" x-text="pinError"></p>
+        <div class="ump-pad">
+          <template x-for="digit in [1,2,3,4,5,6,7,8,9]" :key="digit">
+            <button class="ump-btn ump-card" type="button" @click="enterPinDigit(digit)" x-text="digit"></button>
+          </template>
+          <button class="ump-btn" type="button" @click="closePin()" x-text="t('cancel')"></button>
+          <button class="ump-btn ump-card" type="button" @click="enterPinDigit(0)">0</button>
+          <button class="ump-btn" type="button" @click="pinBackspace()" x-text="t('pinBack')"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/umpire/app.js"></script>
+</body>
+</html>

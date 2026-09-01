@@ -1,0 +1,9 @@
+{
+  "name": "Blind Tennis Referee",
+  "short_name": "Sędzia",
+  "start_url": "/umpire",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "lang": "pl"
+}

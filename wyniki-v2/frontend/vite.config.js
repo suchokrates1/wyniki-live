@@ -25,7 +25,8 @@ export default defineConfig({
         main: path.resolve(__dirname, 'index.html'),
         admin: path.resolve(__dirname, 'admin.html'),
         embed: path.resolve(__dirname, 'embed.html'),
-        office: path.resolve(__dirname, 'office.html')
+        office: path.resolve(__dirname, 'office.html'),
+        umpire: path.resolve(__dirname, 'umpire.html')
       }
     }
   },
