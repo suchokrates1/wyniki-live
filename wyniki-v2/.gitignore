@@ -58,6 +58,9 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/reports/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
 
 # Vite build output (built in Docker multi-stage)
 wyniki/static/
