@@ -18,7 +18,15 @@
 <body>
   <div class="ump" x-data="umpireApp()" x-init="init()">
     <header class="ump-top">
-      <div>
+      <button
+        class="ump-icon-btn"
+        type="button"
+        x-show="screen !== 'language'"
+        :aria-label="t('back')"
+        @click="back()"
+      >‹</button>
+      <span class="ump-icon-btn ump-icon-btn--spacer" x-show="screen === 'language'" aria-hidden="true"></span>
+      <div class="ump-top__title">
         <p class="ump-sub" x-text="t('appName')"></p>
         <h1 class="ump-title" x-text="screenTitle()"></h1>
         <p class="ump-sub" x-show="screen === 'match' && chrome().showTimer" x-text="timerText"></p>
@@ -27,8 +35,13 @@
       <div class="ump-top__actions">
         <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'match' && chrome().showUndo" :disabled="!chrome().undoEnabled" @click="askUndo()" x-text="t('undo')"></button>
         <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'match' && chrome().showFinish" @click="askFinish()" x-text="t('finish')"></button>
-        <button class="ump-btn ump-btn--ghost" type="button" x-show="screen !== 'language'" @click="back()" x-text="t('back')"></button>
-        <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'court'" @click="openSettings()" x-text="t('settings')">⚙</button>
+        <button
+          class="ump-icon-btn"
+          type="button"
+          x-show="screen === 'court'"
+          :aria-label="t('settings')"
+          @click="openSettings()"
+        >⚙</button>
       </div>
     </header>
 
@@ -160,21 +173,30 @@
           <span x-text="scoreboard() && t(scoreboard().matchType === 'mixed' ? 'matchTypeMixed' : scoreboard().matchType === 'doubles' ? 'matchTypeDoubles' : 'matchTypeSingles')"></span>
           <span x-show="scoreboard() && scoreboard().umpireName" x-text="scoreboard() && t('umpireMeta', { name: scoreboard().umpireName })"></span>
         </p>
-        <div class="ump-board__row">
-          <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p1Flag"></span>
-          <span class="ump-board__name" x-text="scoreboard() && scoreboard().p1Name"></span>
-          <span class="ump-board__serve" x-show="scoreboard() && scoreboard().p1Serving">🎾</span>
+        <div class="ump-board__grid">
+          <span class="ump-board__h ump-board__h-player" x-text="t('scoreboardPlayer')"></span>
+          <span class="ump-board__h" aria-hidden="true"></span>
+          <span class="ump-board__h" x-text="t('scoreboardPoints')"></span>
+          <span class="ump-board__h" x-text="t('scoreboardSet1')"></span>
+          <span class="ump-board__h" x-text="t('scoreboardSet2')"></span>
+
+          <span class="ump-board__player">
+            <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p1Flag"></span>
+            <span class="ump-board__name" x-text="scoreboard() && scoreboard().p1Name"></span>
+          </span>
+          <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p1Serving }">🎾</span>
+          <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p1Points"></span>
           <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active }" x-text="scoreboard() && scoreboard().set1.p1"></span>
           <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active }" x-text="scoreboard() && scoreboard().set2.p1"></span>
-          <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p1Points"></span>
-        </div>
-        <div class="ump-board__row">
-          <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p2Flag"></span>
-          <span class="ump-board__name" x-text="scoreboard() && scoreboard().p2Name"></span>
-          <span class="ump-board__serve" x-show="scoreboard() && scoreboard().p2Serving">🎾</span>
+
+          <span class="ump-board__player">
+            <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p2Flag"></span>
+            <span class="ump-board__name" x-text="scoreboard() && scoreboard().p2Name"></span>
+          </span>
+          <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p2Serving }">🎾</span>
+          <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p2Points"></span>
           <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active }" x-text="scoreboard() && scoreboard().set1.p2"></span>
           <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active }" x-text="scoreboard() && scoreboard().set2.p2"></span>
-          <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p2Points"></span>
         </div>
         <p class="ump-board__mode" x-show="scoreboard() && scoreboard().gameMode" x-text="gameModeLabel()"></p>
       </div>
@@ -235,17 +257,25 @@
       <div class="ump-basic" x-show="matchView() === 'BASIC_SCORING' && basicView()">
         <p class="ump-basic__info" :class="{ 'is-second': basicView() && basicView().faultKind === 'double' }" x-text="basicView() && t(basicView().serveInfoKey)"></p>
         <div class="ump-basic__court">
-          <div class="ump-basic__side">
+          <div class="ump-basic__col">
             <p class="ump-basic__name" x-text="basicView() && basicView().leftName"></p>
-            <button class="ump-btn ump-win" type="button" x-show="basicView() && basicView().showServerLeft" @click="basicWin(basicView().leftIsPlayer1)" x-text="t('win')"></button>
-            <button class="ump-btn ump-fault" type="button" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" x-show="basicView() && basicView().showServerLeft" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
-            <button class="ump-btn ump-win" type="button" x-show="basicView() && basicView().showReceiverLeft" @click="basicWin(basicView().leftIsPlayer1)" x-text="t('win')"></button>
+            <div class="ump-basic__side ump-basic__side--server" x-show="basicView() && basicView().showServerLeft">
+              <button class="ump-btn ump-win" type="button" @click="basicWin(basicView().leftIsPlayer1)" x-text="t('win')"></button>
+              <button class="ump-btn ump-fault" type="button" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
+            </div>
+            <div class="ump-basic__side ump-basic__side--receiver" x-show="basicView() && basicView().showReceiverLeft">
+              <button class="ump-btn ump-win" type="button" @click="basicWin(basicView().leftIsPlayer1)" x-text="t('win')"></button>
+            </div>
           </div>
-          <div class="ump-basic__side">
+          <div class="ump-basic__col">
             <p class="ump-basic__name" x-text="basicView() && basicView().rightName"></p>
-            <button class="ump-btn ump-win" type="button" x-show="basicView() && basicView().showServerRight" @click="basicWin(basicView().rightIsPlayer1)" x-text="t('win')"></button>
-            <button class="ump-btn ump-fault" type="button" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" x-show="basicView() && basicView().showServerRight" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
-            <button class="ump-btn ump-win" type="button" x-show="basicView() && basicView().showReceiverRight" @click="basicWin(basicView().rightIsPlayer1)" x-text="t('win')"></button>
+            <div class="ump-basic__side ump-basic__side--server" x-show="basicView() && basicView().showServerRight">
+              <button class="ump-btn ump-win" type="button" @click="basicWin(basicView().rightIsPlayer1)" x-text="t('win')"></button>
+              <button class="ump-btn ump-fault" type="button" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
+            </div>
+            <div class="ump-basic__side ump-basic__side--receiver" x-show="basicView() && basicView().showReceiverRight">
+              <button class="ump-btn ump-win" type="button" @click="basicWin(basicView().rightIsPlayer1)" x-text="t('win')"></button>
+            </div>
           </div>
         </div>
       </div>

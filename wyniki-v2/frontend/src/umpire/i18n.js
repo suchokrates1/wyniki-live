@@ -417,12 +417,30 @@ const STRINGS = {
 const SHARED_EXTRA = {
   installApp: 'Install app',
   installed: 'App installed',
+  scoreboardPlayer: 'Player',
+  scoreboardPoints: 'Points',
+  scoreboardSet1: 'Set 1',
+  scoreboardSet2: 'Set 2',
 };
 
 const LANG_EXTRA = {
   en: SHARED_EXTRA,
-  pl: { installApp: 'Zainstaluj aplikację', installed: 'Aplikacja zainstalowana' },
-  lt: { installApp: 'Įdiegti programėlę', installed: 'Programėlė įdiegta' },
+  pl: {
+    installApp: 'Zainstaluj aplikację',
+    installed: 'Aplikacja zainstalowana',
+    scoreboardPlayer: 'Zawodnik',
+    scoreboardPoints: 'Punkty',
+    scoreboardSet1: 'Set 1',
+    scoreboardSet2: 'Set 2',
+  },
+  lt: {
+    installApp: 'Įdiegti programėlę',
+    installed: 'Programėlė įdiegta',
+    scoreboardPlayer: 'Žaidėjas',
+    scoreboardPoints: 'Taškai',
+    scoreboardSet1: '1 setas',
+    scoreboardSet2: '2 setas',
+  },
   de: {
     singles: 'Einzel',
     historyEmpty: 'Keine Spiele.',
@@ -454,6 +472,10 @@ const LANG_EXTRA = {
     matchTitle: 'Spiel',
     installApp: 'App installieren',
     installed: 'App installiert',
+    scoreboardPlayer: 'Spieler',
+    scoreboardPoints: 'Punkte',
+    scoreboardSet1: 'Satz 1',
+    scoreboardSet2: 'Satz 2',
   },
   es: {
     singles: 'Individuales',
@@ -486,6 +508,10 @@ const LANG_EXTRA = {
     matchTitle: 'Partido',
     installApp: 'Instalar aplicación',
     installed: 'Aplicación instalada',
+    scoreboardPlayer: 'Jugador',
+    scoreboardPoints: 'Puntos',
+    scoreboardSet1: 'Set 1',
+    scoreboardSet2: 'Set 2',
   },
   fr: {
     singles: 'Simple',
@@ -518,6 +544,10 @@ const LANG_EXTRA = {
     matchTitle: 'Match',
     installApp: 'Installer l’application',
     installed: 'Application installée',
+    scoreboardPlayer: 'Joueur',
+    scoreboardPoints: 'Points',
+    scoreboardSet1: 'Set 1',
+    scoreboardSet2: 'Set 2',
   },
   it: {
     singles: 'Singolare',
@@ -550,6 +580,10 @@ const LANG_EXTRA = {
     matchTitle: 'Partita',
     installApp: 'Installa app',
     installed: 'App installata',
+    scoreboardPlayer: 'Giocatore',
+    scoreboardPoints: 'Punti',
+    scoreboardSet1: 'Set 1',
+    scoreboardSet2: 'Set 2',
   },
 };
 
