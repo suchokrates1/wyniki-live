@@ -90,7 +90,7 @@ def match_stats(match_id: int):
         data = stats.to_dict()
         # Enrich with match timestamps
         if match_record:
-            data["started_at"] = match_record.created_at
+            data["started_at"] = match_record.started_at or match_record.created_at
             data["ended_at"] = match_record.updated_at
         # Resolve winner surname to full name via Player DB
         if data.get("winner"):

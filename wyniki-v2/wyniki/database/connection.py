@@ -141,6 +141,7 @@ def init_db() -> None:
                 client_user_agent TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                started_at TEXT,
                 FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
             )
         """)
@@ -433,6 +434,7 @@ def init_db() -> None:
             'injured_player_name': 'TEXT',
             'result_note': 'TEXT',
             'match_config': 'TEXT',
+            'started_at': 'TEXT',
         }
         for column_name, ddl in match_client_columns.items():
             if column_name not in m_cols:

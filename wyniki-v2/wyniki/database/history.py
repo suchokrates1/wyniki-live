@@ -137,14 +137,14 @@ def fetch_match_history(
             if match_ids:
                 placeholders = ",".join("?" for _ in match_ids)
                 cursor.execute(
-                    f"SELECT id, player1_name, player2_name, created_at FROM matches WHERE id IN ({placeholders})",
+                    f"SELECT id, player1_name, player2_name, created_at, started_at FROM matches WHERE id IN ({placeholders})",
                     match_ids,
                 )
                 for mr in cursor.fetchall():
                     match_lookup[mr["id"]] = {
                         "p1": mr["player1_name"],
                         "p2": mr["player2_name"],
-                        "started_at": mr["created_at"],
+                        "started_at": mr["started_at"] or mr["created_at"],
                     }
                 # Fetch duration from match_statistics for entries with duration=0
                 cursor.execute(

@@ -15,9 +15,19 @@ async function startBasicMatch(page) {
 
 test('16–17–19 Basic chrome, server, and WIN to 15', async ({ page }) => {
   await startBasicMatch(page);
-  await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Finish' })).toBeVisible();
+  const undo = page.getByRole('button', { name: 'Undo' });
+  const finish = page.getByRole('button', { name: 'Finish Match' });
+  await expect(undo).toBeVisible();
+  await expect(finish).toBeVisible();
+  await expect(page.locator('.ump-top__actions').getByRole('button', { name: 'Undo' })).toHaveCount(0);
+  await expect(page.locator('.ump-board__timer')).toBeVisible();
+  await expect(page.locator('.ump-board__serve.is-on .ump-ball')).toBeVisible();
   await expect(page.locator('.ump-board__name').first()).toContainText('Kowalski');
+  const undoBox = await undo.boundingBox();
+  const finishBox = await finish.boundingBox();
+  const winBox = await page.locator('.ump-win').first().boundingBox();
+  expect(undoBox.y).toBeGreaterThan(winBox.y);
+  expect(finishBox.y).toBeGreaterThan(undoBox.y);
   await page.locator('.ump-win').first().click();
   await expect(page.locator('.ump-board__pts').first()).toHaveText('15');
 });

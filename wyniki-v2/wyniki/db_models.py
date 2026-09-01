@@ -264,6 +264,7 @@ class Match(db.Model):
     
     created_at = db.Column(db.String(50), default=utc_now_iso)
     updated_at = db.Column(db.String(50), default=utc_now_iso, onupdate=utc_now_iso)
+    started_at = db.Column(db.String(50), nullable=True)
     
     # Relationships
     statistics = db.relationship('MatchStatistics', back_populates='match', uselist=False, cascade='all, delete-orphan')
@@ -296,7 +297,8 @@ class Match(db.Model):
             'injured_player_name': self.injured_player_name,
             'result_note': self.result_note,
             'created_at': self.created_at,
-            'updated_at': self.updated_at
+            'updated_at': self.updated_at,
+            'started_at': self.started_at,
         }
         if bracket_warning:
             result['bracket_warning'] = bracket_warning

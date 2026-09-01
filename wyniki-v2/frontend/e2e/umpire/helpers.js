@@ -40,6 +40,8 @@ export async function mockUmpireApi(page, options = {}) {
           players: [
             { id: 1, name: 'Kowalski', first_name: 'Jan', last_name: 'Kowalski' },
             { id: 2, name: 'Nowak', first_name: 'Adam', last_name: 'Nowak' },
+            { id: 3, name: 'Lis', first_name: 'Ewa', last_name: 'Lis' },
+            { id: 4, name: 'Wojcik', first_name: 'Anna', last_name: 'Wojcik' },
           ],
         },
       });
