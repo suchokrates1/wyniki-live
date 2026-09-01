@@ -280,6 +280,29 @@ test('director court move updates live state and the next API payload', () => {
   assert.equal(ctl.state.player1.getFullName(), 'Jessica González');
 });
 
+test('WIN and match start emit Android match-event types', () => {
+  const seen = [];
+  const state = matchState({
+    matchConfig: new MatchConfig({ gamesPerSet: 4, statsMode: StatsMode.BASIC }),
+    statsMode: StatsMode.BASIC,
+  });
+  const ctl = createMatchController({
+    now: () => 1_000,
+    onSync: (reason, _state, extra) => {
+      seen.push({ reason, eventType: extra?.eventType || null });
+      return { matchId: 99 };
+    },
+  });
+  ctl.initialize(state);
+  ctl.setFirstServer(1);
+  ctl.handleBasicWin(true);
+  assert.deepEqual(seen.map((item) => item.reason === 'event' ? item.eventType : item.reason), [
+    'create',
+    'match_start',
+    'point',
+  ]);
+});
+
 test('dictionary 30 is never shown as 0', () => {
   const state = matchState();
   state.player1Points = 2;

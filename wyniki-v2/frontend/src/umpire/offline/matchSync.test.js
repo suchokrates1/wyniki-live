@@ -12,6 +12,7 @@ function apiStub(handlers) {
     updateMatch: handlers.updateMatch || (async () => ({ ok: true, status: 200, data: {} })),
     finishMatch: handlers.finishMatch || (async () => ({ ok: true, status: 200, data: {} })),
     sendStatistics: handlers.sendStatistics || (async () => ({ ok: true, status: 200, data: {} })),
+    logMatchEvent: handlers.logMatchEvent || (async () => ({ ok: true, status: 200, data: {} })),
   };
 }
 
@@ -55,4 +56,23 @@ test('offline create is queued without calling the API', async () => {
   });
   assert.equal(called, false);
   assert.equal((await outbox.pending())[0].type, MutationType.CREATE);
+});
+
+test('offline point event is queued as EVENT', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  const state = matchState({ matchId: 9, clientMatchUuid: 'uuid-3' });
+  state.matchId = 9;
+  state.clientMatchUuid = 'uuid-3';
+  let called = false;
+  await syncMatchLive({
+    api: apiStub({ logMatchEvent: async () => { called = true; return { ok: true, status: 200, data: {} }; } }),
+    outbox,
+    reason: 'event',
+    state,
+    extra: { eventType: 'point' },
+    online: () => false,
+  });
+  assert.equal(called, false);
+  assert.equal((await outbox.pending())[0].type, MutationType.EVENT);
+  assert.equal((await outbox.pending())[0].payload.event_type, 'point');
 });

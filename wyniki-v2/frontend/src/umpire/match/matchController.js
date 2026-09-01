@@ -1,7 +1,8 @@
 import { DirectorCommandApplier } from '../match-engine/directorCommandApplier.js';
 import { MatchActionReducer, MatchCommand } from '../match-engine/matchActionReducer.js';
 import { MatchFinishOutcomeApplier } from '../match-engine/matchFinishOutcomeApplier.js';
-import { MatchProgressReducer, MatchProgressScreen } from '../match-engine/matchProgressReducer.js';
+import { MatchProgressEvent, MatchProgressReducer, MatchProgressScreen } from '../match-engine/matchProgressReducer.js';
+import { MatchPointEvent } from '../match-engine/matchPointReducer.js';
 import { MatchUndoManager, MatchUndoResult } from '../match-engine/matchUndoManager.js';
 import { ActionType, StatsMode } from '../match-engine/models.js';
 import { parseDirectorCommand } from '../offline/directorCommandParse.js';
@@ -47,6 +48,11 @@ export function createMatchController({
   }
 
   function handlePointResult(result) {
+    for (const event of result.pointEvents || []) {
+      if (event === MatchPointEvent.Point) requestSync('event', { eventType: 'point' });
+      if (event === MatchPointEvent.ServeChange) requestSync('event', { eventType: 'serve_change' });
+      if (event === MatchPointEvent.SideChange) requestSync('event', { eventType: 'side_change' });
+    }
     if (result.announcementType) pendingAnnouncementType = result.announcementType;
     if (result.showAnnouncementImmediately) {
       view = MatchView.ANNOUNCEMENT;
@@ -77,6 +83,10 @@ export function createMatchController({
       pendingAnnouncementType,
       now(),
     );
+    for (const event of result.events || []) {
+      if (event === MatchProgressEvent.Game) requestSync('event', { eventType: 'game' });
+      if (event === MatchProgressEvent.Set) requestSync('event', { eventType: 'set' });
+    }
     pendingAnnouncementType = result.announcementType;
     if (result.finalizeMatch) requestSync('finalize');
     view = result.nextScreen === MatchProgressScreen.Announcement
@@ -150,6 +160,7 @@ export function createMatchController({
       applyMatchCommand(MatchCommand.StartMatch(serverNumber, now()));
       view = scoringView();
       requestSync('create');
+      requestSync('event', { eventType: 'match_start' });
       notify();
     },
 
