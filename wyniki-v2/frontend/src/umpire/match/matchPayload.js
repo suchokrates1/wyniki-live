@@ -106,6 +106,80 @@ function playerStatsPayload(stats) {
   };
 }
 
+const POINT_EVENT_API = {
+  Point: 'point',
+  ServeChange: 'serve_change',
+  SideChange: 'side_change',
+  Game: 'game',
+  Set: 'set',
+};
+
+export function toApiEventType(event) {
+  return POINT_EVENT_API[event] || event;
+}
+
+export function toMatchEventPayload(state, eventType, nowMs = Date.now()) {
+  return {
+    court_id: state.courtId,
+    match_id: state.matchId,
+    client_match_uuid: state.clientMatchUuid,
+    event_type: toApiEventType(eventType),
+    player1: eventPlayer(state, true),
+    player2: eventPlayer(state, false),
+    score: {
+      player1_sets: state.player1Sets,
+      player2_sets: state.player2Sets,
+      player1_games: state.player1Games,
+      player2_games: state.player2Games,
+      player1_points: state.player1Points,
+      player2_points: state.player2Points,
+      is_tiebreak: state.isTiebreak,
+      is_super_tiebreak: state.isSuperTiebreak,
+      match_finished: Boolean(state.isMatchFinished),
+      sets_history: (state.setsHistory || []).map((set) => ({
+        set_number: set.setNumber,
+        player1_games: set.player1Games,
+        player2_games: set.player2Games,
+        tiebreak_loser_points: set.tiebreakLoserPoints,
+        is_super_tiebreak: set.isSuperTiebreak,
+      })),
+      stats_mode: state.statsMode,
+    },
+    stats: {
+      player1_aces: state.player1Stats.aces,
+      player1_double_faults: state.player1Stats.doubleFaults,
+      player1_winners: state.player1Stats.winners,
+      player1_unforced_errors: state.player1Stats.unforcedErrors,
+      player1_first_serve_pct: state.player1Stats.getFirstServePercentage(),
+      player2_aces: state.player2Stats.aces,
+      player2_double_faults: state.player2Stats.doubleFaults,
+      player2_winners: state.player2Stats.winners,
+      player2_unforced_errors: state.player2Stats.unforcedErrors,
+      player2_first_serve_pct: state.player2Stats.getFirstServePercentage(),
+    },
+    timestamp: nowMs,
+  };
+}
+
+function eventPlayer(state, isPlayer1) {
+  const player = isPlayer1 ? state.player1 : state.player2;
+  const serving = isPlayer1 ? state.isPlayer1Serving : !state.isPlayer1Serving;
+  if (!state.isDoubles) {
+    return {
+      name: player.getDisplayName(),
+      full_name: player.getFullName(),
+      flag: player.flag || null,
+      is_serving: serving,
+    };
+  }
+  return {
+    name: isPlayer1 ? state.getTeam1DisplayName() : state.getTeam2DisplayName(),
+    full_name: isPlayer1 ? state.getTeam1FullName() : state.getTeam2FullName(),
+    flag: player.flag || null,
+    is_serving: serving,
+  };
+}
+
 export function finishWinnerName(state) {
   if (state.finishWinnerName) return state.finishWinnerName;
   if (state.player1Sets > state.player2Sets) return state.getTeam1DisplayName();

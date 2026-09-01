@@ -28,8 +28,18 @@ test('16–17–19 Basic chrome, server, and WIN to 15', async ({ page }) => {
   const winBox = await page.locator('.ump-win').first().boundingBox();
   expect(undoBox.y).toBeGreaterThan(winBox.y);
   expect(finishBox.y).toBeGreaterThan(undoBox.y);
+  const pts = page.locator('.ump-board__pts').first();
+  await pts.evaluate((el) => {
+    window.__umpSawPulse = el.classList.contains('is-pulse');
+    const obs = new MutationObserver(() => {
+      if (el.classList.contains('is-pulse')) window.__umpSawPulse = true;
+    });
+    obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+    window.__umpPulseObs = obs;
+  });
   await page.locator('.ump-win').first().click();
-  await expect(page.locator('.ump-board__pts').first()).toHaveText('15');
+  await expect.poll(() => page.evaluate(() => window.__umpSawPulse)).toBe(true);
+  await expect(pts).toHaveText('15');
 });
 
 test('18 Advanced ACE scores 15', async ({ page }) => {

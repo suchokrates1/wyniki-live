@@ -19,6 +19,7 @@ from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
 from ..services.api_auth import court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
 from ..services.director_commands import director_command_broker, dump_match_config, normalize_match_config, tablet_presence
+from ..services.match_format import match_score_satisfies_format
 from ..services.match_timer import apply_match_start_from_payload, sync_court_match_timer_from_match
 from ..config import logger
 
@@ -251,6 +252,156 @@ def _apply_finish_outcome(match: Match, data: dict) -> None:
     match.winner_name = winner_name
     match.injured_player_name = injured_player_name
     match.result_note = result_note
+
+
+def _finalize_match_record(match: Match, data: dict) -> None:
+    """Apply finish fields on the row. Caller commits."""
+    _apply_finish_outcome(match, data)
+    _maybe_backfill_match_bracket_context(match)
+    match.status = "finished"
+    match.updated_at = utc_now_iso()
+
+
+def _publish_match_finished(match: Match) -> None:
+    """Schedule, overlay, history, emails, knockout — same path as POST /finish."""
+    match_id = match.id
+    if match.finish_reason == FINISH_REASON_TEST:
+        from ..database import unlink_schedule_from_match
+        unlink_schedule_from_match(match_id)
+    else:
+        _link_match_schedule_if_possible(match, status="completed")
+
+    kort_id = match.court_id
+    if kort_id:
+        court_state = ensure_court_state(kort_id)
+
+        sets_history = json.loads(match.sets_history) if match.sets_history else []
+        with STATE_LOCK:
+            court_state["match_status"]["active"] = False
+            court_state["match_status"]["last_completed"] = utc_now_iso()
+            _set_live_super_tiebreak_flag(court_state, False)
+
+            if sets_history:
+                sets_detail = []
+                for idx, set_score in enumerate(sets_history):
+                    set_num = idx + 1
+                    p1g = set_score.get("player1_games", 0)
+                    p2g = set_score.get("player2_games", 0)
+                    tb_loser = set_score.get("tiebreak_loser_points")
+                    is_stb = set_score.get("is_super_tiebreak", False)
+
+                    sets_detail.append({
+                        "p1": p1g, "p2": p2g,
+                        "tb": tb_loser, "stb": is_stb
+                    })
+
+                    if is_stb:
+                        court_state["tie"]["A"] = p1g
+                        court_state["tie"]["B"] = p2g
+                        court_state["tie"]["visible"] = True
+                    else:
+                        court_state["A"][f"set{set_num}"] = p1g
+                        court_state["B"][f"set{set_num}"] = p2g
+
+                court_state["sets_detail"] = sets_detail
+                non_stb_count = sum(1 for s in sets_history if not s.get("is_super_tiebreak", False))
+                court_state["current_set"] = non_stb_count + 1
+                for i in range(non_stb_count + 1, 4):
+                    court_state["A"][f"set{i}"] = 0
+                    court_state["B"][f"set{i}"] = 0
+
+            court_state["history_meta"] = court_state.get("history_meta", {})
+            court_state["history_meta"]["match_id"] = match_id
+            court_state["history_meta"]["stats_mode"] = court_state.get("stats_mode")
+            court_state["history_meta"]["finish_reason"] = match.finish_reason or FINISH_REASON_NORMAL
+            court_state["history_meta"]["winner_name"] = match.winner_name
+            court_state["history_meta"]["injured_player_name"] = match.injured_player_name
+            court_state["history_meta"]["result_note"] = match.result_note
+
+            try:
+                if match.tournament_id:
+                    p1 = Player.query.filter_by(
+                        tournament_id=match.tournament_id,
+                        name=match.player1_name
+                    ).first()
+                    p2 = Player.query.filter_by(
+                        tournament_id=match.tournament_id,
+                        name=match.player2_name
+                    ).first()
+                    if p1 and p2 and p1.category and p2.category:
+                        if p1.category == p2.category:
+                            court_state["history_meta"]["category"] = p1.category
+            except Exception as e:
+                logger.warning(f"Could not detect category: {e}")
+
+            court_state["match_time"] = court_state.get("match_time", {})
+            if match.statistics and getattr(match.statistics, 'match_duration_ms', None):
+                duration_ms = match.statistics.match_duration_ms
+                court_state["match_time"]["seconds"] = duration_ms // 1000
+            else:
+                started_ts = court_state["match_time"].get("started_ts")
+                if started_ts:
+                    from ..utils import parse_iso_datetime
+                    started = parse_iso_datetime(started_ts)
+                    court_state["match_time"]["seconds"] = int(
+                        (datetime.now(timezone.utc) - started).total_seconds()
+                    )
+
+        if match.phase:
+            court_state["history_meta"]["phase"] = match.phase
+        if match.finish_reason != FINISH_REASON_TEST:
+            add_match_to_history(kort_id, court_state)
+
+        if match.finish_reason != FINISH_REASON_TEST and match.tournament_id:
+            try:
+                from ..database import fetch_tournament
+                from ..services.email_reports import maybe_send_tournament_summary, send_match_report
+
+                tournament = fetch_tournament(match.tournament_id)
+                send_match_report(match, court_state, tournament)
+                maybe_send_tournament_summary(match.tournament_id)
+            except Exception as e:
+                logger.warning(f"Could not send email report: {e}")
+
+        if match.finish_reason != FINISH_REASON_TEST and match.phase == "Grupowa" and match.tournament_id:
+            try:
+                from ..database import maybe_generate_knockout_from_completed_groups
+                maybe_generate_knockout_from_completed_groups(match.tournament_id)
+            except Exception as e:
+                logger.warning(f"Could not generate knockout: {e}")
+
+        if match.finish_reason != FINISH_REASON_TEST and _is_knockout_phase(match.phase) and match.tournament_id:
+            try:
+                from ..database import advance_knockout
+                advance_knockout(match_id, match.tournament_id)
+            except Exception as e:
+                logger.warning(f"Could not advance knockout: {e}")
+
+        emit_score_update(kort_id, court_state)
+
+        with STATE_LOCK:
+            court_state["A"] = _empty_player_state()
+            court_state["B"] = _empty_player_state()
+            court_state["current_set"] = 1
+            _set_live_super_tiebreak_flag(court_state, False)
+            court_state["serve"] = None
+            court_state["tie"] = {"A": 0, "B": 0, "visible": None, "locked": False}
+            court_state["stats"] = {}
+            court_state["stats_mode"] = None
+            court_state["history_meta"] = {}
+            reset_live_set_columns(court_state)
+
+        import threading
+        def emit_cleared():
+            emit_score_update(kort_id, court_state)
+        if current_app.config.get("TESTING"):
+            emit_cleared()
+        else:
+            threading.Timer(5.0, emit_cleared).start()
+
+    logger.info(f"Match {match_id} finished on court {kort_id}")
+    if match.tournament_id:
+        emit_office_invalidation(match.tournament_id, ["results", "schedule", "groups", "dashboard"])
 
 
 def _sync_court_match_timer_from_match(court_state: dict, match: Match) -> None:
@@ -1125,7 +1276,6 @@ def update_match(match_id: int):
         match.sets_history = json.dumps(score.get("sets_history", []))
         if data.get("match_config") is not None:
             match.match_config = dump_match_config(data.get("match_config"))
-        match.status = data.get("status", "in_progress")
         apply_match_start_from_payload(match, data)
         if data.get("client_match_uuid") and not match.client_match_uuid:
             match.client_match_uuid = _clean_client_text(data.get("client_match_uuid"), 80)
@@ -1138,9 +1288,26 @@ def update_match(match_id: int):
             if not match.phase and schedule_entry.get("phase"):
                 match.phase = schedule_entry.get("phase")
         _maybe_backfill_match_bracket_context(match)
+
+        became_finished = False
+        already_finished = match.status == "finished"
+        if not already_finished and match_score_satisfies_format(match):
+            _finalize_match_record(match, {
+                "finish_reason": FINISH_REASON_NORMAL,
+                "winner_name": data.get("winner_name"),
+            })
+            became_finished = True
+        elif not already_finished:
+            requested = str(data.get("status") or "in_progress")
+            match.status = "in_progress" if requested == "finished" else requested
         match.updated_at = utc_now_iso()
         
         db.session.commit()
+        if became_finished:
+            _publish_match_finished(match)
+            return jsonify(match.to_dict()), 200
+        if already_finished:
+            return jsonify(match.to_dict()), 200
         _link_match_schedule_if_possible(match, status="in_progress")
         if match.tournament_id:
             emit_office_invalidation(match.tournament_id, ["results", "schedule", "dashboard"])
@@ -1190,165 +1357,12 @@ def finish_match(match_id: int):
         if access_error:
             return access_error
         
-        _apply_finish_outcome(match, data)
-        _maybe_backfill_match_bracket_context(match)
-        match.status = "finished"
-        match.updated_at = utc_now_iso()
+        if match.status == "finished":
+            return jsonify(match.to_dict()), 200
+
+        _finalize_match_record(match, data)
         db.session.commit()
-        if match.finish_reason == FINISH_REASON_TEST:
-            from ..database import unlink_schedule_from_match
-            unlink_schedule_from_match(match.id)
-        else:
-            _link_match_schedule_if_possible(match, status="completed")
-        
-        # Update court state
-        kort_id = match.court_id
-        if kort_id:
-            court_state = ensure_court_state(kort_id)
-
-            # Ensure set scores are correct from Match DB record (belt-and-suspenders)
-            sets_history = json.loads(match.sets_history) if match.sets_history else []
-            with STATE_LOCK:
-                court_state["match_status"]["active"] = False
-                court_state["match_status"]["last_completed"] = utc_now_iso()
-                _set_live_super_tiebreak_flag(court_state, False)
-                
-                # Overwrite set scores from authoritative sets_history
-                if sets_history:
-                    sets_detail = []
-                    for idx, set_score in enumerate(sets_history):
-                        set_num = idx + 1
-                        p1g = set_score.get("player1_games", 0)
-                        p2g = set_score.get("player2_games", 0)
-                        tb_loser = set_score.get("tiebreak_loser_points")
-                        is_stb = set_score.get("is_super_tiebreak", False)
-                        
-                        sets_detail.append({
-                            "p1": p1g, "p2": p2g,
-                            "tb": tb_loser, "stb": is_stb
-                        })
-                        
-                        if is_stb:
-                            # Super tiebreak: show in Points column (tie)
-                            court_state["tie"]["A"] = p1g
-                            court_state["tie"]["B"] = p2g
-                            court_state["tie"]["visible"] = True
-                        else:
-                            court_state["A"][f"set{set_num}"] = p1g
-                            court_state["B"][f"set{set_num}"] = p2g
-                    
-                    court_state["sets_detail"] = sets_detail
-                    non_stb_count = sum(1 for s in sets_history if not s.get("is_super_tiebreak", False))
-                    court_state["current_set"] = non_stb_count + 1
-                    # Clear phantom set data beyond regular sets
-                    for i in range(non_stb_count + 1, 4):
-                        court_state["A"][f"set{i}"] = 0
-                        court_state["B"][f"set{i}"] = 0
-                
-                # Store match_id for history linkage
-                court_state["history_meta"] = court_state.get("history_meta", {})
-                court_state["history_meta"]["match_id"] = match_id
-                court_state["history_meta"]["stats_mode"] = court_state.get("stats_mode")
-                court_state["history_meta"]["finish_reason"] = match.finish_reason or FINISH_REASON_NORMAL
-                court_state["history_meta"]["winner_name"] = match.winner_name
-                court_state["history_meta"]["injured_player_name"] = match.injured_player_name
-                court_state["history_meta"]["result_note"] = match.result_note
-
-                # Auto-detect category from player DB records
-                # If both players share the same category, include it
-                try:
-                    if match.tournament_id:
-                        p1 = Player.query.filter_by(
-                            tournament_id=match.tournament_id,
-                            name=match.player1_name
-                        ).first()
-                        p2 = Player.query.filter_by(
-                            tournament_id=match.tournament_id,
-                            name=match.player2_name
-                        ).first()
-                        if p1 and p2 and p1.category and p2.category:
-                            if p1.category == p2.category:
-                                court_state["history_meta"]["category"] = p1.category
-                except Exception as e:
-                    logger.warning(f"Could not detect category: {e}")
-
-                # Store match duration from Match record or timestamps
-                court_state["match_time"] = court_state.get("match_time", {})
-                if match.statistics and getattr(match.statistics, 'match_duration_ms', None):
-                    duration_ms = match.statistics.match_duration_ms
-                    court_state["match_time"]["seconds"] = duration_ms // 1000
-                else:
-                    # Fallback: compute from started_ts → now
-                    started_ts = court_state["match_time"].get("started_ts")
-                    if started_ts:
-                        from ..utils import parse_iso_datetime
-                        started = parse_iso_datetime(started_ts)
-                        court_state["match_time"]["seconds"] = int(
-                            (datetime.now(timezone.utc) - started).total_seconds()
-                        )
-            
-            # Add match to history for frontend display
-            # Set phase from match record if available
-            if match.phase:
-                court_state["history_meta"]["phase"] = match.phase
-            if match.finish_reason != FINISH_REASON_TEST:
-                add_match_to_history(kort_id, court_state)
-
-            if match.finish_reason != FINISH_REASON_TEST and match.tournament_id:
-                try:
-                    from ..database import fetch_tournament
-                    from ..services.email_reports import maybe_send_tournament_summary, send_match_report
-
-                    tournament = fetch_tournament(match.tournament_id)
-                    send_match_report(match, court_state, tournament)
-                    maybe_send_tournament_summary(match.tournament_id)
-                except Exception as e:
-                    logger.warning(f"Could not send email report: {e}")
-            
-            # Auto-generate knockout once the configured group stage is complete.
-            if match.finish_reason != FINISH_REASON_TEST and match.phase == "Grupowa" and match.tournament_id:
-                try:
-                    from ..database import maybe_generate_knockout_from_completed_groups
-                    maybe_generate_knockout_from_completed_groups(match.tournament_id)
-                except Exception as e:
-                    logger.warning(f"Could not generate knockout: {e}")
-
-            # Auto-advance knockout bracket
-            if match.finish_reason != FINISH_REASON_TEST and _is_knockout_phase(match.phase) and match.tournament_id:
-                try:
-                    from ..database import advance_knockout
-                    advance_knockout(match_id, match.tournament_id)
-                except Exception as e:
-                    logger.warning(f"Could not advance knockout: {e}")
-            
-            emit_score_update(kort_id, court_state)
-            
-            # Clear court state for next match (keep structure, reset data)
-            with STATE_LOCK:
-                court_state["A"] = _empty_player_state()
-                court_state["B"] = _empty_player_state()
-                court_state["current_set"] = 1
-                _set_live_super_tiebreak_flag(court_state, False)
-                court_state["serve"] = None
-                court_state["tie"] = {"A": 0, "B": 0, "visible": None, "locked": False}
-                court_state["stats"] = {}
-                court_state["stats_mode"] = None
-                court_state["history_meta"] = {}
-                reset_live_set_columns(court_state)
-            
-            # Emit cleared state after a short delay so frontend sees final score first
-            import threading
-            def emit_cleared():
-                emit_score_update(kort_id, court_state)
-            if current_app.config.get("TESTING"):
-                emit_cleared()
-            else:
-                threading.Timer(5.0, emit_cleared).start()
-        
-        logger.info(f"Match {match_id} finished on court {kort_id}")
-        if match.tournament_id:
-            emit_office_invalidation(match.tournament_id, ["results", "schedule", "groups", "dashboard"])
-        
+        _publish_match_finished(match)
         return jsonify(match.to_dict()), 200
         
     except ValueError as e:

@@ -189,40 +189,40 @@
           <div class="ump-board__player">
             <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p1Flag"></span>
             <span class="ump-board__name" x-text="scoreboard() && scoreboard().p1Name"></span>
-            <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p1Serving, 'is-gone': scoreboard() && scoreboard().matchType !== 'singles' }" :aria-hidden="!(scoreboard() && scoreboard().p1Serving)">
+            <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p1Serving, 'is-gone': scoreboard() && scoreboard().matchType !== 'singles', 'is-leave': motion.serveLeaveP1, 'is-enter': motion.serveEnterP1 }" :aria-hidden="!(scoreboard() && scoreboard().p1Serving)">
               <svg class="ump-ball" viewBox="0 0 24 24" aria-hidden="true"><path fill="#C6D930" d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M9.5,2.2C6.5,6.5 6.5,11 9,14.5c1.5,2.2 1.8,5.2 0.5,7.3"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M14.5,2.2c3,4.3 3,8.8 0.5,12.3c-1.5,2.2-1.8,5.2-0.5,7.3"/></svg>
             </span>
           </div>
-          <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p1Points"></span>
-          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active }" x-text="scoreboard() && scoreboard().set1.p1"></span>
-          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active }" x-text="scoreboard() && scoreboard().set2.p1"></span>
+          <span class="ump-board__pts" :class="{ 'is-pulse': motion.pulseP1 }" x-text="scoreboard() && scoreboard().p1Points"></span>
+          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active, 'is-pulse': motion.pulseSet1P1 }" x-text="scoreboard() && scoreboard().set1.p1"></span>
+          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active, 'is-pulse': motion.pulseSet2P1 }" x-text="scoreboard() && scoreboard().set2.p1"></span>
 
           <div class="ump-board__player">
             <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p2Flag"></span>
             <span class="ump-board__name" x-text="scoreboard() && scoreboard().p2Name"></span>
-            <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p2Serving, 'is-gone': scoreboard() && scoreboard().matchType !== 'singles' }" :aria-hidden="!(scoreboard() && scoreboard().p2Serving)">
+            <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p2Serving, 'is-gone': scoreboard() && scoreboard().matchType !== 'singles', 'is-leave': motion.serveLeaveP2, 'is-enter': motion.serveEnterP2 }" :aria-hidden="!(scoreboard() && scoreboard().p2Serving)">
               <svg class="ump-ball" viewBox="0 0 24 24" aria-hidden="true"><path fill="#C6D930" d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M9.5,2.2C6.5,6.5 6.5,11 9,14.5c1.5,2.2 1.8,5.2 0.5,7.3"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M14.5,2.2c3,4.3 3,8.8 0.5,12.3c-1.5,2.2-1.8,5.2-0.5,7.3"/></svg>
             </span>
           </div>
-          <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p2Points"></span>
-          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active }" x-text="scoreboard() && scoreboard().set1.p2"></span>
-          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active }" x-text="scoreboard() && scoreboard().set2.p2"></span>
+          <span class="ump-board__pts" :class="{ 'is-pulse': motion.pulseP2 }" x-text="scoreboard() && scoreboard().p2Points"></span>
+          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active, 'is-pulse': motion.pulseSet1P2 }" x-text="scoreboard() && scoreboard().set1.p2"></span>
+          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active, 'is-pulse': motion.pulseSet2P2 }" x-text="scoreboard() && scoreboard().set2.p2"></span>
         </div>
       </div>
 
       <div class="ump-match__body">
-      <div x-show="matchView() === 'SERVER_SELECTION'">
+      <div class="ump-panel" :class="panelClass('SERVER_SELECTION')">
         <button class="ump-btn" type="button" @click="swapSides()" x-text="t('swapSides')"></button>
         <div class="ump-serve-grid" style="margin-top:12px">
           <template x-for="button in serverButtons()" :key="button.buttonIndex">
-            <button type="button" class="ump-btn ump-card ump-serve-btn" :class="{ 'is-on': button.selected, 'is-team1': button.colorRole === 'Team1', 'is-team2': button.colorRole === 'Team2' }" @click="chooseServer(button.buttonIndex)" x-text="button.label"></button>
+            <button type="button" class="ump-btn ump-card ump-serve-btn" :class="{ 'is-on': button.selected, 'is-team1': button.colorRole === 'Team1', 'is-team2': button.colorRole === 'Team2', 'is-swap-out': motion.sideSwapPhase === 'out', 'is-swap-in': motion.sideSwapPhase === 'in' }" @click="chooseServer(button.buttonIndex)" x-text="button.label"></button>
           </template>
         </div>
       </div>
 
-      <div class="ump-adv" x-show="matchView() === 'SERVE' && advancedServe()">
-        <p class="ump-basic__info" :class="{ 'is-second': advancedServe() && !advancedServe().isFirstServe }" x-text="advancedServe() && t(advancedServe().serveInfoKey)"></p>
-        <div class="ump-basic__court">
+      <div class="ump-panel ump-adv" :class="panelClass('SERVE')">
+        <p class="ump-basic__info" :class="{ 'is-second': advancedServe() && !advancedServe().isFirstServe, 'is-second-fade': motion.secondServeAdvanced }" x-text="advancedServe() && t(advancedServe().serveInfoKey)"></p>
+        <div class="ump-basic__court" :class="{ 'is-card-swap': motion.cardSwap }">
           <div class="ump-basic__side">
             <p class="ump-basic__name" x-text="advancedServe() && advancedServe().leftName"></p>
             <template x-if="advancedServe() && advancedServe().showServeLeft">
@@ -247,8 +247,8 @@
         <button class="ump-btn ump-btn--accent ump-adv__bip" type="button" @click="ballInPlay()" x-text="t('ballInPlay')"></button>
       </div>
 
-      <div class="ump-adv" x-show="matchView() === 'RALLY' && advancedRally()">
-        <div class="ump-basic__court">
+      <div class="ump-panel ump-adv" :class="panelClass('RALLY')">
+        <div class="ump-basic__court" :class="{ 'is-card-swap': motion.cardSwap }">
           <div class="ump-basic__side">
             <p class="ump-basic__name" x-text="advancedRally() && advancedRally().leftName"></p>
             <button class="ump-btn ump-adv__ace" type="button" @click="winner(advancedRally().leftIsPlayer1)" x-text="t('winner')"></button>
@@ -264,9 +264,9 @@
         </div>
       </div>
 
-      <div class="ump-basic" x-show="matchView() === 'BASIC_SCORING' && basicView()">
-        <p class="ump-basic__info" :class="{ 'is-second': basicView() && basicView().faultKind === 'double' }" x-text="basicView() && t(basicView().serveInfoKey)"></p>
-        <div class="ump-basic__court">
+      <div class="ump-panel ump-basic" :class="panelClass('BASIC_SCORING')">
+        <p class="ump-basic__info" :class="{ 'is-second': basicView() && basicView().faultKind === 'double', 'is-second-enter': motion.secondServe }" x-text="basicView() && t(basicView().serveInfoKey)"></p>
+        <div class="ump-basic__court" :class="{ 'is-card-swap': motion.cardSwap }">
           <div class="ump-basic__col">
             <p class="ump-basic__name" x-text="basicView() && basicView().leftName"></p>
             <div class="ump-basic__side ump-basic__side--server" x-show="basicView() && basicView().showServerLeft">
@@ -290,7 +290,7 @@
         </div>
       </div>
 
-      <div class="ump-card ump-announce" x-show="matchView() === 'ANNOUNCEMENT' && announcement()">
+      <div class="ump-panel ump-card ump-announce" :class="panelClass('ANNOUNCEMENT')">
         <p class="ump-announce__icon" x-text="announcement() && announcement().icon"></p>
         <h2 x-text="announcement() && announcement().title"></h2>
         <p x-text="announcement() && announcement().message"></p>
@@ -298,7 +298,7 @@
         <button class="ump-btn" type="button" x-show="announcement() && announcement().showSkipSides" @click="skipSideChange()" x-text="t('skipSides')"></button>
       </div>
 
-      <div class="ump-card ump-finish" x-show="matchView() === 'MATCH_FINISHED' && matchState()">
+      <div class="ump-panel ump-card ump-finish" :class="panelClass('MATCH_FINISHED')">
         <h2 x-text="t('matchFinished')"></h2>
         <p class="ump-finish__winner" x-text="t('winnerLabel', { name: winnerName() })"></p>
         <dl class="ump-stats">

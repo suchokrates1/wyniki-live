@@ -20,6 +20,13 @@ import { hydrateMatchState, serializeMatchState } from './match/matchStateIo.js'
 import { matchTimerText } from './match/matchTimer.js';
 import { MatchView, SyncStatus } from './match/matchViews.js';
 import { suggestionScheduleId } from './match/suggestion.js';
+import {
+  MOTION_MS,
+  emptyMotionUi,
+  motionPatches,
+  panelVisible,
+  snapshotMatchMotion,
+} from './match/matchMotion.js';
 import { buildScoreboard } from './match/scoreboardView.js';
 import { buildServerButtons, resolveServerNumber } from './match/serverSelection.js';
 import { createWakeLock } from './match/wakeLock.js';
@@ -109,6 +116,10 @@ function createUmpireApp() {
     settingsFrom: 'court',
     match: null,
     matchRev: 0,
+    motion: emptyMotionUi(),
+    _motionPrev: null,
+    _motionTimers: {},
+    _lastAnnouncement: null,
     timerText: '00:00',
     _timerId: null,
     dialog: null,
@@ -271,6 +282,7 @@ function createUmpireApp() {
 
     onMatchChange() {
       this.matchRev += 1;
+      this.applyMotion();
       if (this.match?.state) {
         this.timerText = matchTimerText(this.match.state, Date.now());
         session.saveActiveMatch({
@@ -857,8 +869,11 @@ function createUmpireApp() {
 
     announcement() {
       this.matchRev;
-      if (!this.match?.state) return null;
-      return announcementContent(this.match.pendingAnnouncementType, this.match.state, (key, vars) => this.t(key, vars));
+      if (!this.match?.state) return this.motion.leavingView === MatchView.ANNOUNCEMENT ? this._lastAnnouncement : null;
+      const content = announcementContent(this.match.pendingAnnouncementType, this.match.state, (key, vars) => this.t(key, vars));
+      if (content) this._lastAnnouncement = content;
+      if (!content && this.motion.leavingView === MatchView.ANNOUNCEMENT) return this._lastAnnouncement;
+      return content;
     },
 
     syncLabel() {
@@ -881,7 +896,81 @@ function createUmpireApp() {
     },
 
     swapSides() {
-      this.match?.swapSides();
+      if (this.motion.sideSwapPhase) return;
+      this.motion.sideSwapPhase = 'out';
+      this.clearMotionTimer('sideOut');
+      this._motionTimers.sideOut = setTimeout(() => {
+        this.match?.swapSides();
+        this.motion.sideSwapPhase = 'in';
+        this.clearMotionTimer('sideIn');
+        this._motionTimers.sideIn = setTimeout(() => {
+          this.motion.sideSwapPhase = '';
+        }, MOTION_MS.sideSwap);
+      }, MOTION_MS.sideSwap);
+    },
+
+    clearMotionTimer(name) {
+      if (this._motionTimers[name]) {
+        clearTimeout(this._motionTimers[name]);
+        this._motionTimers[name] = null;
+      }
+    },
+
+    flagMotion(name, duration) {
+      this.motion[name] = false;
+      const apply = () => {
+        this.motion[name] = true;
+        this.clearMotionTimer(name);
+        this._motionTimers[name] = setTimeout(() => {
+          this.motion[name] = false;
+        }, duration);
+      };
+      if (this.$nextTick) this.$nextTick(apply);
+      else queueMicrotask(apply);
+    },
+
+    applyMotion() {
+      const next = snapshotMatchMotion(this.match?.state, this.matchView());
+      const patch = motionPatches(this._motionPrev, next);
+      this._motionPrev = next;
+
+      if (Object.prototype.hasOwnProperty.call(patch, 'leavingView')
+        || Object.prototype.hasOwnProperty.call(patch, 'enteringView')) {
+        this.motion.leavingView = patch.leavingView || null;
+        this.motion.enteringView = patch.enteringView || null;
+        this.clearMotionTimer('leave');
+        this.clearMotionTimer('enter');
+        this._motionTimers.leave = setTimeout(() => {
+          this.motion.leavingView = null;
+        }, MOTION_MS.panelExit);
+        this._motionTimers.enter = setTimeout(() => {
+          this.motion.enteringView = null;
+        }, MOTION_MS.panelEnter);
+      }
+
+      const pulses = ['pulseP1', 'pulseP2', 'pulseSet1P1', 'pulseSet1P2', 'pulseSet2P1', 'pulseSet2P2'];
+      for (const key of pulses) {
+        if (patch[key]) this.flagMotion(key, MOTION_MS.pulse);
+      }
+      const serveFlags = ['serveLeaveP1', 'serveLeaveP2', 'serveEnterP1', 'serveEnterP2'];
+      for (const key of serveFlags) {
+        if (patch[key]) this.flagMotion(key, MOTION_MS.serveIcon);
+      }
+      if (patch.cardSwap) this.flagMotion('cardSwap', MOTION_MS.cardSwap);
+      if (patch.secondServe) this.flagMotion('secondServe', MOTION_MS.secondServe);
+      if (patch.secondServeAdvanced) this.flagMotion('secondServeAdvanced', MOTION_MS.secondServeFade);
+    },
+
+    panelVisible(name) {
+      return panelVisible(this.matchView(), this.motion.leavingView, name);
+    },
+
+    panelClass(name) {
+      return {
+        'is-shown': this.panelVisible(name),
+        'is-enter': this.motion.enteringView === name,
+        'is-exit': this.motion.leavingView === name,
+      };
     },
 
     basicWin(isPlayer1) {
@@ -1017,6 +1106,9 @@ function createUmpireApp() {
     nextMatch(sameSetup) {
       wakeLock.release();
       session.clearActiveMatch();
+      this.motion = emptyMotionUi();
+      this._motionPrev = null;
+      this._lastAnnouncement = null;
       this.selectedIds = [];
       this.team1Name = null;
       this.team2Name = null;

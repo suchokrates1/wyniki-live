@@ -1,5 +1,5 @@
 import { FinishMatchRequest } from '../match-engine/models.js';
-import { toFinishPayload, toMatchPayload, toStatisticsPayload } from '../match/matchPayload.js';
+import { toFinishPayload, toMatchEventPayload, toMatchPayload, toStatisticsPayload } from '../match/matchPayload.js';
 import { MutationType, classifyHttp } from './syncRules.js';
 
 export async function syncMatchLive({
@@ -12,6 +12,15 @@ export async function syncMatchLive({
 }) {
   const payload = toMatchPayload(state);
   if (!online()) {
+    if (reason === 'event') {
+      await outbox.enqueue({
+        clientMatchUuid: state.clientMatchUuid,
+        type: MutationType.EVENT,
+        payload: toMatchEventPayload(state, extra?.eventType || 'point'),
+        serverMatchId: state.matchId,
+      });
+      return { failed: true, offline: true };
+    }
     if (reason === 'finalize') {
       await outbox.enqueue({
         clientMatchUuid: state.clientMatchUuid,
@@ -47,6 +56,27 @@ export async function syncMatchLive({
     return { failed: true, offline: true };
   }
   try {
+    if (reason === 'event') {
+      const payload = extra?.eventType
+        ? toMatchEventPayload(state, extra.eventType)
+        : toMatchEventPayload(state, 'point');
+      const result = await api.logMatchEvent(payload);
+      if (!result.ok) {
+        return handleFailure({
+          api,
+          outbox,
+          reason,
+          state,
+          extra: payload,
+          result,
+          online,
+          type: MutationType.EVENT,
+          payload,
+        });
+      }
+      return { matchId: state.matchId };
+    }
+
     if (reason === 'create' || state.matchId == null) {
       const result = await api.createMatch(payload);
       if (result.ok) return { matchId: result.data?.id };
@@ -105,7 +135,17 @@ export async function syncMatchLive({
     }
     return { matchId: state.matchId };
   } catch {
-    await enqueueForRetry({ outbox, reason, state, extra, type: reason === 'finalize' ? MutationType.FINISH : (state.matchId == null ? MutationType.CREATE : MutationType.UPDATE) });
+    await enqueueForRetry({
+      outbox,
+      reason,
+      state,
+      extra,
+      type: reason === 'event'
+        ? MutationType.EVENT
+        : reason === 'finalize'
+          ? MutationType.FINISH
+          : (state.matchId == null ? MutationType.CREATE : MutationType.UPDATE),
+    });
     return { failed: true, offline: !online() };
   }
 }
@@ -147,7 +187,9 @@ async function enqueueForRetry({ outbox, reason, state, extra, type }) {
       injuredPlayerName: state.injuredPlayerName,
       resultNote: state.resultNote,
     })))
-    : toMatchPayload(state);
+    : type === MutationType.EVENT
+      ? (extra?.eventType ? toMatchEventPayload(state, extra.eventType) : toMatchEventPayload(state, extra?.event_type || 'point'))
+      : toMatchPayload(state);
   await outbox.enqueue({
     clientMatchUuid: state.clientMatchUuid,
     type,

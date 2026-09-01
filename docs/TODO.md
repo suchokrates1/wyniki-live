@@ -36,9 +36,7 @@ González–Schmidt przeniesiony na kort 8 w bazie i overlayu; tablet nadal auto
 
 ## [P1] Domykanie meczu po stronie serwera
 
-**Status:** do zrobienia  
+**Status:** zaimplementowane — zweryfikowane lokalnie (API + unit); do potwierdzenia na teście live  
 **Źródło:** ten sam dzień, kort 16 (Malicki–Dutra 4:2 4:2)
 
-Apka ma `MatchConfig`, ale nie wysyła formatu przy create. Overlay gasi mecz (`MATCH_FINISHED`), baza czeka na `POST /matches/{id}/finish`. Finish potrafi iść na stare ID z outboxa (403 w kółko).
-
-Przy create zapisać format. Przy PUT/secie, gdy wynik spełnia format — ten sam tor co `/finish` (idempotentnie). `/finish` zostaje na krecz / W/O / test. Outbox: 403/404 drop; tylko bieżące `clientMatchUuid`.
+Przy create zapisujemy `MatchConfig`. Przy PUT, gdy `player1_sets`/`player2_sets` spełniają `sets_to_win` — ten sam tor co `POST /finish` (historia, overlay, e-mail, drabinka). Ponowny `/finish` jest idempotentny. `/finish` zostaje na krecz / W/O / test. Outbox PWA: 403/404 drop.

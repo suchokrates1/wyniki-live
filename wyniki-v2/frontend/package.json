@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "icons:umpire": "node scripts/generate-umpire-icons.mjs",
-    "build": "npm run icons:umpire && vite build",
+    "build": "npm run icons:umpire && vite build && node scripts/inject-umpire-sw-precache.mjs",
     "preview": "vite preview",
     "test:i18n": "node scripts/validate-i18n.mjs",
     "test:match-engine": "node scripts/run-match-engine-tests.mjs",
