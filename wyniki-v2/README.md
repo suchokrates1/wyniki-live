@@ -39,6 +39,7 @@ python app.py
 - **Public**: `/` (np. https://score.vestmedia.pl)
 - **Tournament Office**: `/office` lub `/office/<slot>`
 - **Admin Panel**: `/admin`
+- **Umpire PWA**: `/umpire` (tablet Chrome; install notes in [docs/UMPIRE_PWA.md](docs/UMPIRE_PWA.md))
 - **Overlay**: `/overlay/<id>`
 - **API Base**: `/api`
 
