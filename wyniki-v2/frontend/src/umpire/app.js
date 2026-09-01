@@ -116,6 +116,9 @@ function createUmpireApp() {
     historyEntries: [],
     historyDetail: null,
     diagnosticsCopyOk: false,
+    directorToast: false,
+    _directorToastTimer: null,
+    _pollActive: false,
     _outbox: null,
     _history: null,
     _diagnostics: createDiagnostics(),
@@ -160,10 +163,15 @@ function createUmpireApp() {
       this._outbox = stores.outbox;
       this._history = stores.history;
       this._heartbeat = createHeartbeat({
-        send: (body) => api.sendHeartbeat(body),
+        send: async (body) => {
+          const result = await api.sendHeartbeat(body);
+          this.applyDirectorCommands(result?.data?.commands);
+          return result;
+        },
         getBody: () => this.heartbeatPayload(),
       });
       this._heartbeat.start();
+      this.startDirectorPoll();
       if (navigator.onLine) this.flushOutbox();
     },
 
@@ -184,6 +192,61 @@ function createUmpireApp() {
         clientMatchUuid: state?.clientMatchUuid || null,
         appVersion: APP_VERSION,
       });
+    },
+
+    applyDirectorCommands(commands) {
+      if (!commands?.length || !this.match) return;
+      const applied = this.match.applyDirectorCommands(commands);
+      if (!applied.length) return;
+      for (const command of applied) {
+        if (command.courtToken && command.courtId) {
+          const current = session.getCourtSession() || {};
+          session.saveCourtSession({
+            ...current,
+            courtId: command.courtId,
+            courtName: command.courtName || command.courtId,
+            token: command.courtToken,
+            expiresAtMillis: parseExpiresAt(command.courtTokenExpiresAt) ?? current.expiresAtMillis,
+          });
+        }
+        if (command.id) api.ackDirectorCommand(command.id, command.courtId || session.getCourtSession()?.courtId);
+      }
+      this.showDirectorToast();
+    },
+
+    showDirectorToast() {
+      this.directorToast = true;
+      clearTimeout(this._directorToastTimer);
+      this._directorToastTimer = setTimeout(() => {
+        this.directorToast = false;
+      }, 2800);
+    },
+
+    startDirectorPoll() {
+      if (this._pollActive) return;
+      this._pollActive = true;
+      const poll = async () => {
+        while (this._pollActive) {
+          const court = session.getCourtSession();
+          if (!court?.courtId || !navigator.onLine) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            continue;
+          }
+          try {
+            const state = this.match?.state;
+            const result = await api.getDirectorCommands({
+              courtId: court.courtId,
+              matchId: state?.matchId,
+              clientMatchUuid: state?.clientMatchUuid,
+              waitMs: 20_000,
+            });
+            this.applyDirectorCommands(result?.data?.commands);
+          } catch {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+        }
+      };
+      poll();
     },
 
     onMatchChange() {

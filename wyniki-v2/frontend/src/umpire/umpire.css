@@ -426,6 +426,19 @@ body {
   border-bottom: 1px solid var(--ump-line);
 }
 
+.ump-toast {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--ump-accent);
+  color: #04221f;
+  font-weight: 700;
+  text-align: center;
+}
+
 .ump-section-title {
   margin: 24px 0 8px;
   font-size: 1.1rem;

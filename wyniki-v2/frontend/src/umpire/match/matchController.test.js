@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MatchConfig, MatchFinishReason, FinishMatchRequest, StatsMode } from '../match-engine/models.js';
 import { matchState } from '../match-engine/testSupport.js';
+import { toMatchPayload } from './matchPayload.js';
 import { createMatchController } from './matchController.js';
 import { MatchView } from './matchViews.js';
 
@@ -254,6 +255,29 @@ test('G6 PWA doubles four-slot serve rotation and A / B API names', () => {
   for (let i = 0; i < 4; i += 1) ctl.handleAce();
   assert.equal(state.currentServer, 1);
   assert.equal(state.isPlayer1Serving, true);
+});
+
+test('director court move updates live state and the next API payload', () => {
+  const state = matchState({
+    matchId: 671,
+    clientMatchUuid: 'uuid-gonzalez',
+    courtId: 't31-2',
+    courtName: 'Kort 2',
+  });
+  const { ctl } = controller(state);
+  ctl.setFirstServer(1);
+  const applied = ctl.applyDirectorCommands([{
+    match_id: 671,
+    client_match_uuid: 'uuid-gonzalez',
+    court_id: 't31-8',
+    court_name: 'Kort 8',
+    player1_name: 'Jessica González',
+    player2_name: 'Daniela Schmidt',
+  }]);
+  assert.equal(applied.length, 1);
+  assert.equal(ctl.state.courtId, 't31-8');
+  assert.equal(toMatchPayload(ctl.state).court_id, 't31-8');
+  assert.equal(ctl.state.player1.getFullName(), 'Jessica González');
 });
 
 test('dictionary 30 is never shown as 0', () => {
