@@ -23,6 +23,7 @@ export function heartbeatBody({
 export function createHeartbeat({
   send,
   getBody,
+  canSend = () => true,
   intervalMs = HEARTBEAT_INTERVAL_MS,
   setIntervalFn = setInterval,
   clearIntervalFn = clearInterval,
@@ -30,6 +31,7 @@ export function createHeartbeat({
   let timer = null;
 
   async function sendNow() {
+    if (!canSend()) return null;
     try {
       return await send(getBody());
     } catch {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { heartbeatBody } from './heartbeat.js';
+import { createHeartbeat, heartbeatBody } from './heartbeat.js';
 
 test('heartbeat omits battery and sends court + version', () => {
   const body = heartbeatBody({
@@ -18,4 +18,21 @@ test('heartbeat omits battery and sends court + version', () => {
   assert.equal(body.timestamp, '1700');
   assert.equal('battery_level' in body, false);
   assert.equal('is_charging' in body, false);
+});
+
+test('heartbeat does not POST before a court token exists', async () => {
+  const sent = [];
+  const beat = createHeartbeat({
+    send: async (body) => {
+      sent.push(body);
+      return { ok: true };
+    },
+    getBody: () => ({ court_id: '' }),
+    canSend: () => false,
+    setIntervalFn: () => 1,
+    clearIntervalFn: () => {},
+  });
+  beat.start();
+  await beat.sendNow();
+  assert.deepEqual(sent, []);
 });

@@ -173,6 +173,7 @@ function createUmpireApp() {
           return result;
         },
         getBody: () => this.heartbeatPayload(),
+        canSend: () => Boolean(session.getCourtSession()?.token),
       });
       this._heartbeat.start();
       this.startDirectorPoll();
@@ -457,6 +458,7 @@ function createUmpireApp() {
         expiresAtMillis: parseExpiresAt(data.expires_at),
       });
       this.closePin();
+      this._heartbeat?.sendNow();
       this.go('players');
     },
 

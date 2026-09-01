@@ -64,6 +64,13 @@ def umpire_service_worker():
     return response
 
 
+@blueprint.route('/umpire-icons/<path:filename>')
+def umpire_icons(filename):
+    response = send_from_directory(STATIC_DIR / 'umpire-icons', filename)
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response
+
+
 @blueprint.route('/office')
 @blueprint.route('/office/')
 @blueprint.route('/office/<int:slot>')
