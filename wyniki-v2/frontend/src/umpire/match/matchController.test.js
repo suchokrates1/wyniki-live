@@ -147,8 +147,11 @@ test('G8 PWA finish Normal Test Retirement Walkover', () => {
   assert.equal(walkover.setsHistory.length, 2);
 });
 
-test('skip side change toggles sidesSwapped and returns to Basic', () => {
-  const state = matchState();
+test('skip side change toggles sidesSwapped and returns to scoring', () => {
+  const state = matchState({
+    matchConfig: new MatchConfig({ statsMode: StatsMode.BASIC }),
+    statsMode: StatsMode.BASIC,
+  });
   const { ctl } = controller(state);
   ctl.setFirstServer(1);
   winGame(ctl, true);
@@ -178,4 +181,86 @@ test('leave confirm only after the timer has started', () => {
   ctl.setFirstServer(1);
   assert.equal(ctl.chrome().confirmLeave, true);
   assert.equal(ctl.chrome().showTimer, true);
+});
+
+test('G3 PWA Advanced: tiebreak to 7 win-by-2 and serve change', () => {
+  const state = matchState({
+    matchConfig: new MatchConfig({ gamesPerSet: 6, setsToWin: 2, statsMode: StatsMode.ADVANCED }),
+  });
+  state.player1Games = 5;
+  state.player2Games = 6;
+  state.player1Points = 3;
+  const { ctl } = controller(state);
+  ctl.setFirstServer(1);
+  assert.equal(ctl.view, MatchView.SERVE);
+  ctl.handleAce();
+  assert.equal(state.isTiebreak, true);
+  assert.equal(ctl.pendingAnnouncementType, 'tiebreak');
+  ctl.continueFromAnnouncement();
+  const serverBefore = state.isPlayer1Serving;
+  ctl.handleAce();
+  assert.equal(state.isPlayer1Serving, !serverBefore);
+  state.player1Points = 8;
+  state.player2Points = 6;
+  ctl.handleAce();
+  assert.equal(state.isTiebreak, false);
+  assert.equal(state.player1Sets, 1);
+});
+
+test('G5 PWA Advanced ace fault DF BIP winner FE UE', () => {
+  const state = matchState({
+    matchConfig: new MatchConfig({ statsMode: StatsMode.ADVANCED }),
+  });
+  const { ctl } = controller(state);
+  ctl.setFirstServer(1);
+  ctl.handleAce();
+  assert.equal(state.player1Stats.aces, 1);
+  assert.equal(state.player1Points, 1);
+  assert.equal(ctl.view, MatchView.SERVE);
+
+  ctl.handleFault();
+  assert.equal(state.isFirstServe, false);
+  ctl.handleFault();
+  assert.equal(state.player1Stats.doubleFaults, 1);
+  assert.equal(state.player2Points, 1);
+
+  state.isFirstServe = false;
+  ctl.handleBallInPlay();
+  assert.equal(ctl.view, MatchView.RALLY);
+  assert.equal(state.player1Stats.secondServesIn, 1);
+
+  ctl.handleWinner(true);
+  assert.equal(state.player1Stats.winners, 1);
+  ctl.handleForcedError(false);
+  assert.equal(state.player2Stats.forcedErrors, 1);
+  ctl.handleUnforcedError(true);
+  assert.equal(state.player1Stats.unforcedErrors, 1);
+});
+
+test('G6 PWA doubles four-slot serve rotation and A / B API names', () => {
+  const state = matchState({
+    isDoubles: true,
+    team1Name: 'Kowalski / Lis',
+    team2Name: 'Nowak / Wojcik',
+    matchConfig: new MatchConfig({ gamesPerSet: 6, statsMode: StatsMode.ADVANCED }),
+  });
+  const { ctl } = controller(state);
+  ctl.setFirstServer(1);
+  assert.equal(state.currentServer, 1);
+  for (let game = 0; game < 3; game += 1) {
+    for (let i = 0; i < 4; i += 1) ctl.handleAce();
+  }
+  assert.equal(state.currentServer, 4);
+  for (let i = 0; i < 4; i += 1) ctl.handleAce();
+  assert.equal(state.currentServer, 1);
+  assert.equal(state.isPlayer1Serving, true);
+});
+
+test('dictionary 30 is never shown as 0', () => {
+  const state = matchState();
+  state.player1Points = 2;
+  state.player2Points = 0;
+  assert.equal(state.getPlayer1PointsDisplay(), '30');
+  assert.equal(state.getPlayer2PointsDisplay(), '0');
+  assert.notEqual(state.getPlayer1PointsDisplay(), '0');
 });

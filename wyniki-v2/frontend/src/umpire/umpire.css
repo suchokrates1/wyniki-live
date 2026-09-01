@@ -326,6 +326,49 @@ body {
   font-weight: 700;
 }
 
+.ump-adv {
+  display: grid;
+  gap: 12px;
+}
+
+.ump-adv__stack {
+  display: grid;
+  gap: 10px;
+}
+
+.ump-adv__ace,
+.ump-adv__fault,
+.ump-adv__foot,
+.ump-adv__forced,
+.ump-adv__bip {
+  min-height: 64px;
+  font-weight: 700;
+  border-color: transparent;
+}
+
+.ump-adv__ace {
+  background: #166534;
+  min-height: 80px;
+  font-size: 1.4rem;
+}
+
+.ump-adv__fault {
+  background: #dc2626;
+}
+
+.ump-adv__foot {
+  background: #ea580c;
+}
+
+.ump-adv__forced {
+  background: #7c3aed;
+}
+
+.ump-adv__bip {
+  min-height: 72px;
+  font-size: 1.2rem;
+}
+
 .ump-announce,
 .ump-finish {
   padding: 20px;
