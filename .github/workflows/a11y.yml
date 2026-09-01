@@ -30,6 +30,9 @@ jobs:
       - name: Validate translations (all locales)
         run: npm run test:i18n
 
+      - name: Match engine unit tests (Android domain oracle)
+        run: npm run test:match-engine
+
       - name: Build public frontend
         run: npm run build
 
