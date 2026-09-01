@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Podgląd redesignu — wyniki</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --bg-elev: #101825;
+      --card: #141c28;
+      --text: #e6edf3;
+      --muted: #9fb1c2;
+      --line: #1e2a3a;
+      --accent: #c6e953;
+      --accent-ink: #141a08;
+      --link: #9ad1ff;
+      --ok: #35c46a;
+      --header: #0b0f14;
+      --nav: #0d131c;
+      --danger: #ff6b6b;
+      --radius: 14px;
+      --focus: #ffe08a;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    [data-theme="light"] {
+      --bg: #f4f6f8;
+      --bg-elev: #fff;
+      --card: #fff;
+      --text: #0f1419;
+      --muted: #5f6b7a;
+      --line: #d1d5db;
+      --accent: #6b8f12;
+      --accent-ink: #fff;
+      --link: #0a5fd0;
+      --ok: #106a34;
+      --header: #1b2430;
+      --nav: #fff;
+      --focus: #0a5fd0;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); }
+    button, select { font: inherit; color: inherit; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+    .app {
+      min-height: 100vh;
+      padding-bottom: 84px;
+    }
+
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--header);
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .top-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--accent); color: #141a08;
+      display: grid; place-items: center; font-size: 16px;
+    }
+    .tourney {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tourney select {
+      width: min(420px, 100%);
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      padding: 0 12px;
+    }
+    .tourney select option { color: #0f1419; }
+    .live-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px;
+      background: #d7f2e1; color: #106a34; font-size: 12px; font-weight: 800;
+    }
+    .live-pill i {
+      width: 8px; height: 8px; border-radius: 50%; background: #35c46a;
+      box-shadow: 0 0 8px #35c46a;
+    }
+    .tools { display: flex; gap: 8px; }
+    .icon-btn {
+      min-width: 44px; min-height: 44px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.1); cursor: pointer;
+    }
+
+    .desk-nav {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 8px 16px 0;
+      display: flex;
+      gap: 4px;
+    }
+    .desk-nav button {
+      min-height: 44px;
+      padding: 0 14px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 650;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+    }
+    .desk-nav button[aria-current="page"] {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+    [data-theme="light"] .desk-nav button[aria-current="page"] { color: #0f1419; }
+
+    .banner {
+      max-width: 1120px;
+      margin: 12px auto 0;
+      padding: 0 16px;
+    }
+    .banner-inner {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 12px 14px; border-radius: var(--radius);
+      background: rgba(198,233,83,.1);
+      border: 1px solid rgba(198,233,83,.28);
+      font-size: 14px;
+    }
+
+    main { max-width: 1120px; margin: 0 auto; padding: 16px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .court {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .court-h {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; border-bottom: 1px solid var(--line);
+      font-size: 13px; color: var(--muted); font-weight: 650;
+    }
+    .court-h strong { color: var(--text); font-size: 15px; }
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) 64px repeat(3, 48px);
+      align-items: stretch;
+    }
+    .row + .row { border-top: 1px solid var(--line); }
+    .player {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; font-weight: 700;
+    }
+    .flag { width: 22px; height: 15px; border-radius: 2px; background: #445; flex: none; }
+    .serve {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 0 2px rgba(198,233,83,.25);
+    }
+    .pts, .set {
+      display: grid; place-items: center;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+    .pts { background: rgba(198,233,83,.12); font-size: 22px; color: var(--accent); }
+    .set { font-size: 18px; color: var(--muted); }
+    .set.on { color: var(--text); }
+    .meta {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      padding: 8px 12px 12px; color: var(--muted); font-size: 12px;
+    }
+    .chip {
+      padding: 2px 8px; border-radius: 999px;
+      background: rgba(154,209,255,.12); color: var(--link); font-weight: 650;
+    }
+
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 16px; overflow: hidden; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
+    th { color: var(--muted); font-size: 12px; letter-spacing: .4px; text-transform: uppercase; }
+    .st { font-weight: 700; color: var(--ok); }
+    .st.wait { color: var(--muted); }
+
+    .group {
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 14px;
+    }
+    .group h3 { margin: 0 0 10px; font-size: 15px; }
+    .bar { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+    .bar button {
+      min-height: 40px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+      border: 1px solid var(--line); background: var(--bg-elev);
+    }
+    .bar button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+
+    .player-card {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 14px; border-bottom: 1px solid var(--line);
+    }
+    .list { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+
+    .phone-nav {
+      display: none;
+      position: fixed; left: 0; right: 0; bottom: 0;
+      background: var(--nav);
+      border-top: 1px solid var(--line);
+      padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+      grid-template-columns: repeat(5, 1fr);
+      z-index: 30;
+    }
+    .phone-nav button {
+      border: 0; background: transparent; min-height: 52px; cursor: pointer;
+      color: var(--muted); font-size: 11px; font-weight: 700;
+      display: grid; place-items: center; gap: 2px;
+    }
+    .phone-nav button[aria-current="page"] { color: var(--text); }
+    .phone-nav span { font-size: 16px; }
+
+    .note {
+      margin-top: 18px; color: var(--muted); font-size: 13px; line-height: 1.5;
+    }
+    .now { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+
+    @media (max-width: 800px) {
+      .grid { grid-template-columns: 1fr; }
+      .desk-nav { display: none; }
+      .phone-nav { display: grid; }
+      .brand-name { display: none; }
+      .tourney select { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="top-inner">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">🎾</span>
+          <span class="brand-name">Wyniki</span>
+        </div>
+        <div class="tourney">
+          <label class="sr" for="t" style="position:absolute;left:-999px">Turniej</label>
+          <select id="t">
+            <option selected>Warszawa Open 2026 (aktywny)</option>
+            <option>Poznań Cup 2025</option>
+            <option>Gdańsk Indoor 2025</option>
+          </select>
+          <span class="live-pill"><i></i>LIVE</span>
+        </div>
+        <div class="tools">
+          <select class="icon-btn" aria-label="Język" style="width:auto;padding:0 8px">
+            <option>PL</option><option>EN</option><option>DE</option>
+          </select>
+          <button class="icon-btn" type="button" id="theme" aria-label="Przełącz motyw">☾</button>
+        </div>
+      </div>
+      <nav class="desk-nav" aria-label="Główna nawigacja">
+        <button type="button" data-view="courts" aria-current="page">Korty</button>
+        <button type="button" data-view="schedule">Terminarz</button>
+        <button type="button" data-view="bracket">Drabinka</button>
+        <button type="button" data-view="results">Wyniki</button>
+        <button type="button" data-view="players">Zawodnicy</button>
+      </nav>
+    </header>
+
+    <div class="banner">
+      <div class="banner-inner">Kort 2 opóźniony ok. 20 min. Finał B1 nie wcześniej niż 16:30.</div>
+    </div>
+
+    <main>
+      <section data-panel="courts">
+        <p class="now">Teraz na kortach · Warszawa Open 2026</p>
+        <div class="grid">
+          <article class="court">
+            <div class="court-h"><strong>Kort 1</strong><span class="live-pill"><i></i>LIVE</span></div>
+            <div class="row">
+              <div class="player"><span class="flag" style="background:#dc143c"></span>Kowalski / Nowak <span class="serve" title="serwis"></span></div>
+              <div class="pts">30</div>
+              <div class="set">6</div><div class="set on">4</div><div class="set"></div>
+            </div>
+            <div class="row">
+              <div class="player"><span class="flag" style="background:#0057b7"></span>Schmidt / Müller</div>
+              <div class="pts">15</div>
+              <div class="set">3</div><div class="set on">5</div><div class="set"></div>
+            </div>
+            <div class="meta"><span class="chip">B1 debel</span><span>set 2 · 1:12</span></div>
+          </article>
+          <article class="court">
+            <div class="court-h"><strong>Kort 2</strong><span>nagrzewanie</span></div>
+            <div class="row">
+              <div class="player"><span class="flag" style="background:#fff"></span>Wiśniewska</div>
+              <div class="pts">0</div>
+              <div class="set">0</div><div class="set"></div><div class="set"></div>
+            </div>
+            <div class="row">
+              <div class="player"><span class="flag" style="background:#009246"></span>Rossi</div>
+              <div class="pts">0</div>
+              <div class="set">0</div><div class="set"></div><div class="set"></div>
+            </div>
+            <div class="meta"><span class="chip">B2 singiel</span><span>start ~14:40</span></div>
+          </article>
+        </div>
+      </section>
+
+      <section data-panel="schedule" hidden>
+        <p class="now">Terminarz · dzisiaj · sortowanie po korcie</p>
+        <table>
+          <thead><tr><th>Godz.</th><th>Kort</th><th>Mecz</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>13:00</td><td>1</td><td>Kowalski/Nowak — Schmidt/Müller</td><td class="st">w trakcie</td></tr>
+            <tr><td>14:40</td><td>2</td><td>Wiśniewska — Rossi</td><td class="st wait">plan</td></tr>
+            <tr><td>16:30</td><td>1</td><td>Finał B1</td><td class="st wait">po Korcie 1</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section data-panel="bracket" hidden>
+        <div class="bar" role="toolbar" aria-label="Kategoria">
+          <button type="button" aria-pressed="true">B1 debel</button>
+          <button type="button">B2 singiel</button>
+          <button type="button">B3</button>
+        </div>
+        <div class="group">
+          <h3>Grupa A</h3>
+          <table>
+            <thead><tr><th>Zawodnik</th><th>W</th><th>P</th><th>Sety</th></tr></thead>
+            <tbody>
+              <tr><td>Kowalski / Nowak</td><td>2</td><td>0</td><td>4–1</td></tr>
+              <tr><td>Schmidt / Müller</td><td>1</td><td>1</td><td>3–2</td></tr>
+              <tr><td>Rossi / Bianchi</td><td>0</td><td>2</td><td>0–4</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section data-panel="results" hidden>
+        <p class="now">Zakończone dzisiaj</p>
+        <div class="list">
+          <article class="court" style="border:0;border-radius:0">
+            <div class="row">
+              <div class="player"><span class="flag" style="background:#dc143c"></span>Lewandowska</div>
+              <div class="pts" style="background:transparent;color:var(--text)">2</div>
+              <div class="set on">6</div><div class="set on">6</div><div class="set"></div>
+            </div>
+            <div class="row">
+              <div class="player"><span class="flag" style="background:#000"></span>Dupont</div>
+              <div class="pts" style="background:transparent;color:var(--muted)">0</div>
+              <div class="set">2</div><div class="set">3</div><div class="set"></div>
+            </div>
+            <div class="meta"><span class="chip">B2</span><span>Kort 3 · 48 min</span></div>
+          </article>
+        </div>
+      </section>
+
+      <section data-panel="players" hidden>
+        <p class="now">Baza zawodników · ten sam turniej albo cała kariera</p>
+        <div class="list">
+          <div class="player-card"><span>Anna Lewandowska · PL · B2</span><span>12–4</span></div>
+          <div class="player-card"><span>Piotr Kowalski · PL · B1</span><span>8–3</span></div>
+          <div class="player-card"><span>Giulia Rossi · IT · B2</span><span>6–6</span></div>
+        </div>
+      </section>
+
+      <p class="note">
+        To jest statyczny podgląd pomysłu, nie działająca aplikacja.
+        Te same dane co dziś (snapshot, SSE, drabinka, plan) — inna mapa: turniej w headerze, pięć widoków, na telefonie pasek na dole.
+        Opis: <code>PUBLIC_UI_REDESIGN.md</code>
+      </p>
+    </main>
+  </div>
+
+  <nav class="phone-nav" aria-label="Główna nawigacja">
+    <button type="button" data-view="courts" aria-current="page"><span>🎾</span>Korty</button>
+    <button type="button" data-view="schedule"><span>📅</span>Plan</button>
+    <button type="button" data-view="bracket"><span>🏆</span>Drabinka</button>
+    <button type="button" data-view="results"><span>📋</span>Wyniki</button>
+    <button type="button" data-view="players"><span>👤</span>Gracze</button>
+  </nav>
+
+  <script>
+    const buttons = document.querySelectorAll('[data-view]');
+    const panels = document.querySelectorAll('[data-panel]');
+    function show(view) {
+      buttons.forEach((btn) => {
+        if (btn.dataset.view === view) btn.setAttribute('aria-current', 'page');
+        else btn.removeAttribute('aria-current');
+      });
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.panel !== view;
+      });
+    }
+    buttons.forEach((btn) => btn.addEventListener('click', () => show(btn.dataset.view)));
+    document.getElementById('theme').addEventListener('click', () => {
+      const root = document.documentElement;
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+    });
+    document.querySelectorAll('.bar button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        btn.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+        btn.setAttribute('aria-pressed', 'true');
+      });
+    });
+  </script>
+</body>
+</html>
