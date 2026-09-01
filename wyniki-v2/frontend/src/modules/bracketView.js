@@ -4,12 +4,15 @@ import { translateStoredScheduleLabel } from '../shared/labelDisplay.js';
 import { formatTeamLabelForWrap, isTeamDisplayName, registerCompetitorName } from '../shared/teamDisplay.js';
 import {
   buildBracketCategories,
+  buildKnockoutTrees,
   compareBracketCategoryNames as compareBracketCategoryNamesData,
   getBracketCategoryLabel,
   getGroupStandingsRows,
   getKnockoutPhaseClass,
   getKnockoutPodiumEntries,
+  groupMatchWinner,
   isFinalPhase as isFinalBracketPhase,
+  knockoutSlotWinner,
   resolveActiveBracketCategory,
 } from './bracket.js';
 
@@ -51,6 +54,18 @@ export function createBracketView() {
 
     knockoutPodiumEntries(knockout = []) {
       return getKnockoutPodiumEntries(knockout);
+    },
+
+    knockoutTrees(knockout = []) {
+      return buildKnockoutTrees(knockout);
+    },
+
+    knockoutSlotWinner(slot) {
+      return knockoutSlotWinner(slot);
+    },
+
+    groupMatchWinner(match) {
+      return groupMatchWinner(match);
     },
 
     isFinalPhase(phase) {
@@ -98,7 +113,7 @@ export function createBracketView() {
         intro: [intro],
         playerA: this.resolveBracketName(match?.player_a),
         playerB: this.resolveBracketName(match?.player_b),
-        winnerName: this.resolveBracketName(match?.winner),
+        winnerName: this.resolveBracketName(this.groupMatchWinner(match)),
         scoreText: this.describeBracketSetsForSpeech(match?.sets || []),
       });
     },
@@ -115,7 +130,7 @@ export function createBracketView() {
         intro: [intro],
         playerA: this.resolveBracketName(slot?.player1),
         playerB: this.resolveBracketName(slot?.player2),
-        winnerName: this.resolveBracketName(slot?.winner),
+        winnerName: this.resolveBracketName(this.knockoutSlotWinner(slot)),
         scoreText: this.formatKnockoutScore(slot),
       });
     },
@@ -172,6 +187,7 @@ export function createBracketView() {
         women: t.history?.catWomen || 'Women',
         men: t.history?.catMen || 'Men',
         mixed: t.history?.catMixed || 'Mixed',
+        doubles: t.bracket?.doubles || t.history?.catDoubles || 'Doubles',
         semifinal: t.bracket?.semifinal || 'Semifinal',
         final: t.bracket?.finalLabel || 'Final',
         placeFor: t.bracket?.placeMatch || 'o {number}. miejsce',
@@ -191,6 +207,7 @@ export function createBracketView() {
         womenLabel: t.history?.catWomen || 'Women',
         menLabel: t.history?.catMen || 'Men',
         mixedLabel: t.history?.catMixed || 'Mixed',
+        doublesLabel: t.bracket?.doubles || t.history?.catDoubles || 'Doubles',
       });
     },
 

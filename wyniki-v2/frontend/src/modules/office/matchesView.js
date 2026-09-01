@@ -1,4 +1,5 @@
 import { defaultOfficeForm } from './forms.js';
+import { getMatchSets } from '../history.js';
 
 export function createOfficeMatchesView() {
   return {
@@ -514,26 +515,7 @@ export function createOfficeMatchesView() {
     },
 
     officeMatchSets(match) {
-      if (!Array.isArray(match?.sets_history)) return [];
-      const sets = [];
-      for (const setInfo of match.sets_history) {
-        let a = Number(setInfo?.player1_games ?? 0);
-        let b = Number(setInfo?.player2_games ?? 0);
-        const tb = setInfo?.tiebreak_loser_points ?? null;
-        const isSuperTB = !!setInfo?.is_super_tiebreak;
-        if (isSuperTB && tb !== null && tb !== undefined) {
-          const winnerPts = Math.max(10, Number(tb) + 2);
-          if (a > b) {
-            a = winnerPts;
-            b = Number(tb);
-          } else {
-            a = Number(tb);
-            b = winnerPts;
-          }
-        }
-        sets.push({ a, b, tb: isSuperTB ? null : tb, isSuperTB });
-      }
-      return sets;
+      return getMatchSets({ sets_history: match?.sets_history });
     },
 
     officeMatchScore(match) {

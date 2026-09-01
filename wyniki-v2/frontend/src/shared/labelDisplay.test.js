@@ -22,6 +22,7 @@ test('maps canonical Polish DB phase labels into Lithuanian UI terms', () => {
   assert.equal(translateStoredScheduleLabel('Pucharowa', LT_LABELS), 'Atkrintamosios');
   assert.equal(translateStoredScheduleLabel('Półfinał', LT_LABELS), 'Pusfinalis');
   assert.equal(translateStoredScheduleLabel('B1 Mężczyźni — Finał', LT_LABELS), 'B1 Vyrai — Finalas');
+  assert.equal(translateStoredScheduleLabel('B1 Men Doubles', { ...LT_LABELS, doubles: 'Dvejetai' }), 'B1 Men Dvejetai');
   assert.equal(translateStoredScheduleLabel('o 3. miejsce', LT_LABELS), 'dėl 3 vietos');
   assert.equal(translateStoredScheduleLabel('Grupa A', LT_LABELS), 'Grupė A');
 });

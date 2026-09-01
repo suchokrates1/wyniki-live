@@ -32,7 +32,7 @@ export const TRANSLATIONS = {
       active: 'aktywny',
       serving: 'serwuje'
     },
-    history: { title: 'Historia meczów', court: 'Kort', vs: 'vs', score: 'wynik', time: 'czas', category: 'Kategoria', phaseGroup: 'Faza grupowa', phaseKnockout: 'Faza pucharowa', phaseGroupRematch: 'Faza grupowa — rewanż', catWomen: 'Kobiety', catMen: 'Mężczyźni', catMixed: 'Mieszane' },
+    history: { title: 'Historia meczów', court: 'Kort', vs: 'vs', score: 'wynik', time: 'czas', category: 'Kategoria', phaseGroup: 'Faza grupowa', phaseKnockout: 'Faza pucharowa', phaseGroupRematch: 'Faza grupowa — rewanż', catWomen: 'Kobiety', catMen: 'Mężczyźni', catMixed: 'Mieszane', catDoubles: 'Debel', searchLabel: 'Szukaj po nazwisku', searchPlaceholder: 'Szukaj nazwiska...', allCategories: 'Wszystkie kategorie', allCourts: 'Wszystkie korty', allDates: 'Wszystkie dni', clearFilters: 'Wyczyść filtry', noFilterResults: 'Brak meczów dla wybranych filtrów' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Asy', doubleFaults: 'Podwójne błędy', winners: 'Winnery',
@@ -66,6 +66,7 @@ export const TRANSLATIONS = {
       setsHeader: 'Sety', gamesHeader: 'Gemy', matchesTitle: 'Mecze grupowe',
       knockoutTitle: 'Drabinka', semifinal: 'Półfinał',
       finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce', forPlace: 'o',
+      doubles: 'Debel',
       legendTitle: 'Legenda tabeli', legendWins: 'wygrane mecze', legendLosses: 'przegrane mecze',
       legendSets: 'sety wygrane do przegranych', legendGames: 'gemy wygrane do przegranych'
     },
@@ -107,7 +108,7 @@ export const TRANSLATIONS = {
       active: 'aktiv',
       serving: 'Aufschlag'
     },
-    history: { title: 'Match-Historie', court: 'Platz', vs: 'gegen', score: 'Ergebnis', time: 'Zeit', category: 'Kategorie', phaseGroup: 'Gruppenphase', phaseKnockout: 'K.-o.-Phase', phaseGroupRematch: 'Gruppenphase — Rückspiel', catWomen: 'Frauen', catMen: 'Männer', catMixed: 'Mixed' },
+    history: { title: 'Match-Historie', court: 'Platz', vs: 'gegen', score: 'Ergebnis', time: 'Zeit', category: 'Kategorie', phaseGroup: 'Gruppenphase', phaseKnockout: 'K.-o.-Phase', phaseGroupRematch: 'Gruppenphase — Rückspiel', catWomen: 'Frauen', catMen: 'Männer', catMixed: 'Mixed', catDoubles: 'Doppel', searchLabel: 'Nach Nachnamen suchen', searchPlaceholder: 'Nachnamen suchen...', allCategories: 'Alle Kategorien', allCourts: 'Alle Plätze', allDates: 'Alle Tage', clearFilters: 'Filter zurücksetzen', noFilterResults: 'Keine Spiele für die gewählten Filter' },
     footer: { set: 'Satz' },
     stats: {
       aces: 'Asse', doubleFaults: 'Doppelfehler', winners: 'Winner',
@@ -140,6 +141,7 @@ export const TRANSLATIONS = {
       setsHeader: 'Sätze', gamesHeader: 'Spiele', matchesTitle: 'Gruppenspiele',
       knockoutTitle: 'Turnierbaum', semifinal: 'Halbfinale',
       finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3', forPlace: 'um Platz',
+      doubles: 'Doppel',
       legendTitle: 'Tabellenlegende', legendWins: 'gewonnene Spiele', legendLosses: 'verlorene Spiele',
       legendSets: 'gewonnene zu verlorenen Sätzen', legendGames: 'gewonnene zu verlorenen Spielen'
     },
@@ -181,7 +183,7 @@ export const TRANSLATIONS = {
       active: 'active',
       serving: 'serving'
     },
-    history: { title: 'Match history', court: 'Court', vs: 'vs', score: 'score', time: 'time', category: 'Category', phaseGroup: 'Group stage', phaseKnockout: 'Knockout stage', phaseGroupRematch: 'Group stage — rematch', catWomen: 'Women', catMen: 'Men', catMixed: 'Mixed' },
+    history: { title: 'Match history', court: 'Court', vs: 'vs', score: 'score', time: 'time', category: 'Category', phaseGroup: 'Group stage', phaseKnockout: 'Knockout stage', phaseGroupRematch: 'Group stage — rematch', catWomen: 'Women', catMen: 'Men', catMixed: 'Mixed', catDoubles: 'Doubles', searchLabel: 'Search by surname', searchPlaceholder: 'Search surname...', allCategories: 'All categories', allCourts: 'All courts', allDates: 'All days', clearFilters: 'Clear filters', noFilterResults: 'No matches for the selected filters' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Double faults', winners: 'Winners',
@@ -215,6 +217,7 @@ export const TRANSLATIONS = {
       setsHeader: 'Sets', gamesHeader: 'Games', matchesTitle: 'Group matches',
       knockoutTitle: 'Bracket', semifinal: 'Semifinal',
       finalLabel: 'Final', thirdPlace: 'Third place match', forPlace: 'for',
+      doubles: 'Doubles',
       legendTitle: 'Table legend', legendWins: 'matches won', legendLosses: 'matches lost',
       legendSets: 'sets won to sets lost', legendGames: 'games won to games lost'
     },
@@ -256,7 +259,7 @@ export const TRANSLATIONS = {
       active: 'attivo',
       serving: 'al servizio'
     },
-    history: { title: 'Storico incontri', court: 'Campo', vs: 'contro', score: 'risultato', time: 'tempo', category: 'Categoria', phaseGroup: 'Fase a gironi', phaseKnockout: 'Fase a eliminazione', phaseGroupRematch: 'Fase a gironi — ritorno', catWomen: 'Donne', catMen: 'Uomini', catMixed: 'Misto' },
+    history: { title: 'Storico incontri', court: 'Campo', vs: 'contro', score: 'risultato', time: 'tempo', category: 'Categoria', phaseGroup: 'Fase a gironi', phaseKnockout: 'Fase a eliminazione', phaseGroupRematch: 'Fase a gironi — ritorno', catWomen: 'Donne', catMen: 'Uomini', catMixed: 'Misto', catDoubles: 'Doppio', searchLabel: 'Cerca per cognome', searchPlaceholder: 'Cerca cognome...', allCategories: 'Tutte le categorie', allCourts: 'Tutti i campi', allDates: 'Tutti i giorni', clearFilters: 'Cancella filtri', noFilterResults: 'Nessuna partita per i filtri selezionati' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Ace', doubleFaults: 'Doppi falli', winners: 'Vincenti',
@@ -289,6 +292,7 @@ export const TRANSLATIONS = {
       setsHeader: 'Set', gamesHeader: 'Game', matchesTitle: 'Partite del girone',
       knockoutTitle: 'Tabellone', semifinal: 'Semifinale',
       finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto', forPlace: 'per il',
+      doubles: 'Doppio',
       legendTitle: 'Legenda tabella', legendWins: 'partite vinte', legendLosses: 'partite perse',
       legendSets: 'set vinti rispetto ai set persi', legendGames: 'game vinti rispetto ai game persi'
     },
@@ -330,7 +334,7 @@ export const TRANSLATIONS = {
       active: 'activo',
       serving: 'al servicio'
     },
-    history: { title: 'Historial de partidos', court: 'Cancha', vs: 'contra', score: 'resultado', time: 'tiempo', category: 'Categoría', phaseGroup: 'Fase de grupos', phaseKnockout: 'Fase eliminatoria', phaseGroupRematch: 'Fase de grupos — revancha', catWomen: 'Mujeres', catMen: 'Hombres', catMixed: 'Mixto' },
+    history: { title: 'Historial de partidos', court: 'Cancha', vs: 'contra', score: 'resultado', time: 'tiempo', category: 'Categoría', phaseGroup: 'Fase de grupos', phaseKnockout: 'Fase eliminatoria', phaseGroupRematch: 'Fase de grupos — revancha', catWomen: 'Mujeres', catMen: 'Hombres', catMixed: 'Mixto', catDoubles: 'Dobles', searchLabel: 'Buscar por apellido', searchPlaceholder: 'Buscar apellido...', allCategories: 'Todas las categorías', allCourts: 'Todas las canchas', allDates: 'Todos los días', clearFilters: 'Borrar filtros', noFilterResults: 'No hay partidos para los filtros seleccionados' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Dobles faltas', winners: 'Ganadores',
@@ -363,6 +367,7 @@ export const TRANSLATIONS = {
       setsHeader: 'Sets', gamesHeader: 'Juegos', matchesTitle: 'Partidos del grupo',
       knockoutTitle: 'Cuadro', semifinal: 'Semifinal',
       finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar', forPlace: 'por el',
+      doubles: 'Dobles',
       legendTitle: 'Leyenda de la tabla', legendWins: 'partidos ganados', legendLosses: 'partidos perdidos',
       legendSets: 'sets ganados frente a perdidos', legendGames: 'juegos ganados frente a perdidos'
     },
@@ -404,7 +409,7 @@ export const TRANSLATIONS = {
       active: 'actif',
       serving: 'au service'
     },
-    history: { title: 'Historique des matchs', court: 'Court', vs: 'contre', score: 'score', time: 'temps', category: 'Catégorie', phaseGroup: 'Phase de groupes', phaseKnockout: 'Phase à élimination', phaseGroupRematch: 'Phase de groupes — match retour', catWomen: 'Femmes', catMen: 'Hommes', catMixed: 'Mixte' },
+    history: { title: 'Historique des matchs', court: 'Court', vs: 'contre', score: 'score', time: 'temps', category: 'Catégorie', phaseGroup: 'Phase de groupes', phaseKnockout: 'Phase à élimination', phaseGroupRematch: 'Phase de groupes — match retour', catWomen: 'Femmes', catMen: 'Hommes', catMixed: 'Mixte', catDoubles: 'Double', searchLabel: 'Rechercher par nom', searchPlaceholder: 'Rechercher un nom...', allCategories: 'Toutes les catégories', allCourts: 'Tous les courts', allDates: 'Tous les jours', clearFilters: 'Effacer les filtres', noFilterResults: 'Aucun match pour les filtres sélectionnés' },
     footer: { set: 'Set' },
     stats: {
       aces: 'Aces', doubleFaults: 'Doubles fautes', winners: 'Coups gagnants',
@@ -437,6 +442,7 @@ export const TRANSLATIONS = {
       setsHeader: 'Sets', gamesHeader: 'Jeux', matchesTitle: 'Matchs de groupe',
       knockoutTitle: 'Tableau', semifinal: 'Demi-finale',
       finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place', forPlace: 'pour la',
+      doubles: 'Double',
       legendTitle: 'Légende du tableau', legendWins: 'matchs gagnés', legendLosses: 'matchs perdus',
       legendSets: 'sets gagnés contre sets perdus', legendGames: 'jeux gagnés contre jeux perdus'
     },

@@ -11,16 +11,34 @@ from .court_manager import GLOBAL_HISTORY, STATE_LOCK
 
 
 def _score_arrays_from_sets_history(sets_history: Optional[List[Dict[str, Any]]]) -> tuple[List[int], List[int]]:
-    """Build persisted score arrays from authoritative sets_history data."""
+    """Build persisted score arrays from authoritative sets_history data.
+
+    Super tie-break points stay in the arrays so public history can show [10:3]
+    as a third tennis-style column instead of dropping the match STB.
+    """
     if not sets_history:
         return [], []
 
-    regular_sets = [set_info for set_info in sets_history if not set_info.get("is_super_tiebreak")]
-    if not regular_sets:
-        return [], []
-
-    score_a = [int(set_info.get("player1_games", 0)) for set_info in regular_sets]
-    score_b = [int(set_info.get("player2_games", 0)) for set_info in regular_sets]
+    score_a: List[int] = []
+    score_b: List[int] = []
+    for set_info in sets_history:
+        if not isinstance(set_info, dict):
+            continue
+        games_a = int(set_info.get("player1_games", 0) or 0)
+        games_b = int(set_info.get("player2_games", 0) or 0)
+        is_stb = bool(set_info.get("is_super_tiebreak"))
+        tb_raw = set_info.get("tiebreak_loser_points")
+        if games_a == 0 and games_b == 0 and tb_raw is None and not is_stb:
+            continue
+        if is_stb and tb_raw is not None and max(games_a, games_b) <= 1:
+            loser_points = int(tb_raw)
+            winner_points = max(10, loser_points + 2)
+            if games_a > games_b:
+                games_a, games_b = winner_points, loser_points
+            else:
+                games_a, games_b = loser_points, winner_points
+        score_a.append(games_a)
+        score_b.append(games_b)
     return score_a, score_b
 
 

@@ -52,9 +52,10 @@ export function getKnockoutPlaceNumber(phase) {
 }
 
 export function getKnockoutSlotLoser(slot) {
-  if (!slot || !slot.winner) return '';
-  if (slot.winner === slot.player1) return slot.player2 || '';
-  if (slot.winner === slot.player2) return slot.player1 || '';
+  const winner = knockoutSlotWinner(slot);
+  if (!slot || !winner) return '';
+  if (winner === slot.player1) return slot.player2 || '';
+  if (winner === slot.player2) return slot.player1 || '';
   return '';
 }
 
@@ -62,15 +63,19 @@ export function getKnockoutPodiumEntries(knockout = []) {
   const entries = [];
   const finalPhase = knockout.find((entry) => {
     const phase = String(entry.phase || '');
-    return isFinalPhase(phase) && !/consolation/i.test(phase) && entry.slots?.[0]?.winner;
+    return isFinalPhase(phase) && !/consolation/i.test(phase) && knockoutSlotWinner(entry.slots?.[0]);
   });
-  const thirdPlacePhase = knockout.find((entry) => getKnockoutPlaceNumber(entry.phase) === 3 && entry.slots?.[0]?.winner);
+  const thirdPlacePhase = knockout.find((entry) => (
+    getKnockoutPlaceNumber(entry.phase) === 3 && knockoutSlotWinner(entry.slots?.[0])
+  ));
   const finalSlot = finalPhase?.slots?.[0];
-  if (!finalSlot?.winner) return [];
+  const finalWinner = knockoutSlotWinner(finalSlot);
+  if (!finalWinner) return [];
   const secondPlace = getKnockoutSlotLoser(finalSlot);
-  const thirdPlace = thirdPlacePhase?.slots?.[0]?.winner || '';
+  const thirdSlot = thirdPlacePhase?.slots?.[0];
+  const thirdPlace = knockoutSlotWinner(thirdSlot);
   if (!secondPlace || !thirdPlace) return [];
-  entries.push({ medal: '🥇', cls: 'bt-podium-item--gold', player: finalSlot.winner, place: '1.' });
+  entries.push({ medal: '🥇', cls: 'bt-podium-item--gold', player: finalWinner, place: '1.' });
   entries.push({ medal: '🥈', cls: 'bt-podium-item--silver', player: secondPlace, place: '2.' });
   entries.push({ medal: '🥉', cls: 'bt-podium-item--bronze', player: thirdPlace, place: '3.' });
   return entries;
@@ -79,6 +84,7 @@ export function getKnockoutPodiumEntries(knockout = []) {
 import {
   extractCategoryCodeFromLabel,
   formatCategoryDisplay,
+  inferPlanningGenderFromLabel,
   isMixedSectionLabel,
 } from '../shared/categories.js';
 
@@ -90,13 +96,18 @@ export function parseBracketCategory(name) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
-  const sectionLabel = baseName.replace(/^B(?:\d(?:\/\d)?|\d{2})\s*/i, '').trim();
+  const doubles = /\b(doubles?|debl\w*|doppel|doppio|dobles|dvejet\w*)\b/.test(normalized);
+  const sectionLabel = baseName
+    .replace(/^B(?:\d(?:\/\d)?|\d{2})\s*/i, '')
+    .replace(/\b(doubles?|debl\w*|doppel|doppio|dobles|dvejet\w*)\b/gi, '')
+    .trim();
   let gender = '';
+  const genderCode = inferPlanningGenderFromLabel(baseName) || inferPlanningGenderFromLabel(sectionLabel);
   if (isMixedSectionLabel(sectionLabel) || normalized.includes('mixed') || normalized.includes(' mix')) {
     gender = 'mixed';
-  } else if (normalized.includes('kobiet')) gender = 'women';
-  else if (normalized.includes('mezczyzn') || normalized.includes(' men') || normalized.endsWith(' men')) gender = 'men';
-  return { rawName, baseName, division, gender };
+  } else if (genderCode === 'K') gender = 'women';
+  else if (genderCode === 'M') gender = 'men';
+  return { rawName, baseName, division, gender, doubles };
 }
 
 export function getBracketCategoryLabel(name, {
@@ -104,19 +115,32 @@ export function getBracketCategoryLabel(name, {
   womenLabel = 'Women',
   menLabel = 'Men',
   mixedLabel = 'Mixed',
+  doublesLabel = 'Doubles',
 } = {}) {
   const parsed = parseBracketCategory(name);
+  let label = '';
   if (parsed.gender === 'mixed' && parsed.division) {
-    return `${formatCategoryDisplay(parsed.division)} ${mixedLabel}`.trim();
+    label = `${formatCategoryDisplay(parsed.division)} ${mixedLabel}`.trim();
+  } else if (!parsed.division || !parsed.gender) {
+    label = translateCategory(name);
+  } else {
+    const genderLabel = parsed.gender === 'women' ? womenLabel : menLabel;
+    label = `${formatCategoryDisplay(parsed.division)} ${genderLabel}`.trim();
   }
-  if (!parsed.division || !parsed.gender) return translateCategory(name);
-  const genderLabel = parsed.gender === 'women' ? womenLabel : menLabel;
-  return `${formatCategoryDisplay(parsed.division)} ${genderLabel}`.trim();
+  if (parsed.doubles && doublesLabel) {
+    const already = label.toLowerCase().includes(String(doublesLabel).toLowerCase())
+      || parseBracketCategory(label).doubles;
+    if (!already) label = `${label} ${doublesLabel}`.trim();
+  }
+  return label;
 }
 
 export function compareBracketCategoryNames(leftName, rightName, { getCategoryLabel = (name) => String(name || ''), lang = 'pl' } = {}) {
   const left = parseBracketCategory(leftName);
   const right = parseBracketCategory(rightName);
+  const leftDoubles = left.doubles ? 0 : 1;
+  const rightDoubles = right.doubles ? 0 : 1;
+  if (leftDoubles !== rightDoubles) return leftDoubles - rightDoubles;
   const leftNum = Number.parseInt(left.division.replace(/\D/g, ''), 10);
   const rightNum = Number.parseInt(right.division.replace(/\D/g, ''), 10);
   const safeLeftNum = Number.isFinite(leftNum) ? leftNum : Number.MAX_SAFE_INTEGER;
@@ -143,12 +167,77 @@ export function categoryShowsStandingsTables(category) {
   return (category?.groups || []).some(groupShowsStandingsTable);
 }
 
+function normalizePhaseText(phase) {
+  return String(phase || '').toLowerCase().replace(/–/g, '-');
+}
+
+export function getKnockoutFamily(phase) {
+  const text = normalizePhaseText(phase);
+  const consolation = text.includes('consolation');
+  if (/13\s*-\s*16/.test(text)) return consolation ? 6 : 5;
+  if (/9\s*-\s*16/.test(text)) return consolation ? 6 : 4;
+  if (consolation && (/5\s*-\s*8/.test(text) || /7\.\s*miejsce/.test(text))) return 3;
+  if (consolation) return 2;
+  if (/5\s*-\s*8/.test(text) || /7\.\s*miejsce/.test(text)) return 1;
+  return 0;
+}
+
+function knockoutRoundNumber(phase) {
+  const suffix = phaseSuffix(phase);
+  const namedRound = suffix.match(/runda\s+(\d+)/i);
+  if (namedRound) return Number(namedRound[1]);
+  const leading = suffix.match(/^(\d+)/);
+  return leading ? Number(leading[1]) : 0;
+}
+
 function knockoutSortKey(phase) {
   const text = String(phase || '');
-  const consolation = /consolation/i.test(text) ? 1 : 0;
-  const kindOrder = { quarterfinal: 1, semifinal: 2, final: 3, placement: 4, other: 5 };
   const kind = getKnockoutRoundKind(text);
-  return [consolation, kindOrder[kind] ?? 5, text];
+  // Tournated / tennis.lt draw: early rounds on the left, final on the right.
+  const kindOrder = { other: 1, quarterfinal: 2, semifinal: 3, final: 4, placement: 5 };
+  return [getKnockoutFamily(text), kindOrder[kind] ?? 6, knockoutRoundNumber(text), text];
+}
+
+export function winnerFromSets(sets, player1, player2, fallback = '') {
+  if (!Array.isArray(sets) || !sets.length) return fallback || '';
+  let wins1 = 0;
+  let wins2 = 0;
+  for (const set of sets) {
+    const left = Number(set?.g1 ?? set?.a ?? 0);
+    const right = Number(set?.g2 ?? set?.b ?? 0);
+    if (left > right) wins1 += 1;
+    else if (right > left) wins2 += 1;
+  }
+  if (wins1 > wins2) return player1 || '';
+  if (wins2 > wins1) return player2 || '';
+  return fallback || '';
+}
+
+export function knockoutSlotWinner(slot) {
+  if (!slot) return '';
+  return winnerFromSets(slot.sets, slot.player1, slot.player2, slot.winner || '');
+}
+
+export function groupMatchWinner(match) {
+  if (!match) return '';
+  return winnerFromSets(match.sets, match.player_a, match.player_b, match.winner || '');
+}
+
+export function buildKnockoutTrees(knockout = []) {
+  const trees = [];
+  const byFamily = new Map();
+  for (const round of knockout) {
+    const family = getKnockoutFamily(round.phase);
+    if (!byFamily.has(family)) {
+      const tree = { family, rounds: [], placement: [] };
+      byFamily.set(family, tree);
+      trees.push(tree);
+    }
+    const tree = byFamily.get(family);
+    if (getKnockoutRoundKind(round.phase) === 'placement') tree.placement.push(round);
+    else tree.rounds.push(round);
+  }
+  return trees.filter((tree) => tree.rounds.length || tree.placement.length);
 }
 
 export function buildBracketCategories(data, { compareCategoryNames = (left, right) => String(left.name || '').localeCompare(String(right.name || '')) } = {}) {

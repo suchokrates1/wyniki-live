@@ -19,11 +19,7 @@ export function createTournamentView() {
     historySubTab: 'bracket',
 
     sortedTournamentHistory() {
-      return [...this.tournamentHistory].sort((a, b) => {
-        const ta = a.ended_ts || a.timestamp || '';
-        const tb = b.ended_ts || b.timestamp || '';
-        return tb.localeCompare(ta);
-      });
+      return this.filteredHistoryList(this.tournamentHistory);
     },
 
     async openTournamentHistorySubTab(subTab) {

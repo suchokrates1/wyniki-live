@@ -30,7 +30,10 @@ export const TRANSLATIONS_LT = {
   history: {
     title: 'Mačų istorija', court: 'Kortas', vs: 'prieš', score: 'rezultatas', time: 'laikas',
     category: 'Kategorija', phaseGroup: 'Grupių etapas', phaseKnockout: 'Atkrintamosios',
-    phaseGroupRematch: 'Grupių etapas — revanšas', catWomen: 'Moterys', catMen: 'Vyrai', catMixed: 'Mišrios'
+    phaseGroupRematch: 'Grupių etapas — revanšas', catWomen: 'Moterys', catMen: 'Vyrai', catMixed: 'Mišrios',
+    catDoubles: 'Dvejetai', searchLabel: 'Ieškoti pagal pavardę', searchPlaceholder: 'Ieškoti pavardės...',
+    allCategories: 'Visos kategorijos', allCourts: 'Visi kortai', allDates: 'Visos dienos',
+    clearFilters: 'Išvalyti filtrus', noFilterResults: 'Pagal pasirinktus filtrus mačų nėra'
   },
   footer: { set: 'Setas' },
   stats: {
@@ -88,6 +91,7 @@ export const TRANSLATIONS_LT = {
     setsHeader: 'Setai', gamesHeader: 'Geimai', matchesTitle: 'Grupių mačai',
     knockoutTitle: 'Turnyrinė lentelė', semifinal: 'Pusfinalis',
     finalLabel: 'Finalas', thirdPlace: 'Mačas dėl 3 vietos', forPlace: 'dėl',
+    doubles: 'Dvejetai',
     legendTitle: 'Lentelės legenda', legendWins: 'laimėti mačai', legendLosses: 'pralaimėti mačai',
     legendSets: 'laimėti setai prieš pralaimėtus', legendGames: 'laimėti geimai prieš pralaimėtus'
   },
