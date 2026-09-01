@@ -19,6 +19,7 @@ Cursor My Machines: **minipc-wyniki** (prod) · **dell-wyniki** (test) — [CURS
 | Publiczna | `/` | Bez logowania (`access_key` dla prywatnych turniejów) |
 | Biuro turnieju | `/office` lub `/office/<slot>` | Hasło biura turnieju |
 | Admin | `/admin` | Hasło administratora |
+| Sędzia (PWA) | `/umpire` | PIN kortu; tablet Chrome — [UMPIRE_PWA.md](wyniki-v2/docs/UMPIRE_PWA.md) |
 | Overlay OBS | `/overlay/<id>` | Bez logowania (layout z Admin) |
 
 Produkcja: https://score.vestmedia.pl / https://blindtennis.app

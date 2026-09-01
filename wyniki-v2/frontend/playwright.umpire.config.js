@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import { UMPIRE_E2E_VIEWPORTS } from './src/umpire/e2e/viewports.js';
 
-const mobileProjects = [UMPIRE_E2E_VIEWPORTS.phone, UMPIRE_E2E_VIEWPORTS.tablet];
+const mobileProjects = [UMPIRE_E2E_VIEWPORTS.tablet, UMPIRE_E2E_VIEWPORTS.tabletLandscape];
 
 if (mobileProjects.some((project) => !project.isMobile || !project.hasTouch)) {
   throw new Error('Umpire E2E must run as phone/tablet with touch — no desktop');

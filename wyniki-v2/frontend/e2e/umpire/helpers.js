@@ -5,7 +5,8 @@ export function todayKey(now = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-export async function mockUmpireApi(page) {
+export async function mockUmpireApi(page, options = {}) {
+  const authorizeOk = options.authorize !== false;
   await page.route('**/api/**', async (route) => {
     const url = route.request().url();
     const method = route.request().method();
@@ -13,6 +14,9 @@ export async function mockUmpireApi(page) {
       return route.fulfill({ json: [{ id: 31, name: 'Vilnius E2E' }] });
     }
     if (url.includes('/authorize')) {
+      if (!authorizeOk) {
+        return route.fulfill({ json: { authorized: false } });
+      }
       return route.fulfill({
         json: {
           authorized: true,
@@ -81,4 +85,28 @@ export async function enterPin(page, pin = '1234') {
   for (const digit of pin) {
     await page.locator('.ump-pad button', { hasText: new RegExp(`^${digit}$`) }).click();
   }
+}
+
+export async function openPinPad(page) {
+  await seedLanguage(page, 'en');
+  await page.addInitScript((day) => {
+    localStorage.setItem('umpire.selected_tournament', JSON.stringify({
+      id: 31,
+      name: 'Vilnius E2E',
+      day,
+    }));
+  }, todayKey());
+  await openUmpire(page, '#/court');
+  await page.getByRole('button', { name: 'Court 1' }).click();
+}
+
+export async function startBasicMatch(page) {
+  await seedThroughCourt(page);
+  await mockUmpireApi(page);
+  await openUmpire(page, '#/players');
+  await page.getByRole('button', { name: 'Kowalski' }).click();
+  await page.getByRole('button', { name: 'Nowak' }).click();
+  await page.locator('h1.ump-title').filter({ hasText: 'Match setup' }).waitFor({ timeout: 5_000 });
+  await page.locator('.ump-mode').filter({ hasText: 'Basic' }).click();
+  await page.getByRole('button', { name: /Kowalski/ }).first().click();
 }
