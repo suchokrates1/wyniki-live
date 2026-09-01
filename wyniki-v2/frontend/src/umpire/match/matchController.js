@@ -2,7 +2,7 @@ import { MatchActionReducer, MatchCommand } from '../match-engine/matchActionRed
 import { MatchFinishOutcomeApplier } from '../match-engine/matchFinishOutcomeApplier.js';
 import { MatchProgressReducer, MatchProgressScreen } from '../match-engine/matchProgressReducer.js';
 import { MatchUndoManager, MatchUndoResult } from '../match-engine/matchUndoManager.js';
-import { ActionType } from '../match-engine/models.js';
+import { ActionType, StatsMode } from '../match-engine/models.js';
 import { MatchView, SyncStatus, matchChrome } from './matchViews.js';
 
 export function createMatchController({
@@ -22,7 +22,9 @@ export function createMatchController({
   }
 
   function scoringView() {
-    return MatchView.BASIC_SCORING;
+    return state?.statsMode === StatsMode.ADVANCED
+      ? MatchView.SERVE
+      : MatchView.BASIC_SCORING;
   }
 
   function serverName() {
@@ -59,6 +61,9 @@ export function createMatchController({
       handlePointResult(pointResult);
     }
     handlePointResult(result);
+    if (result.transitionToRally) {
+      view = MatchView.RALLY;
+    }
     if (result.pointWinner != null || result.pointScored) {
       checkGameAndSetStatus();
     }
@@ -162,6 +167,62 @@ export function createMatchController({
         saveBefore(ActionType.DOUBLE_FAULT, `Double fault - ${serverName()}`);
       }
       applyMatchCommand(MatchCommand.BasicFault);
+      notify();
+    },
+
+    handleAce() {
+      if (!state || state.isMatchFinished) return;
+      saveBefore(ActionType.ACE, `Ace - ${serverName()}`);
+      applyMatchCommand(MatchCommand.Ace);
+      notify();
+    },
+
+    handleFault() {
+      if (!state || state.isMatchFinished) return;
+      if (state.isFirstServe) {
+        saveBefore(ActionType.FAULT, '1st serve fault');
+      } else {
+        saveBefore(ActionType.DOUBLE_FAULT, `Double fault - ${serverName()}`);
+      }
+      applyMatchCommand(MatchCommand.Fault);
+      notify();
+    },
+
+    handleFootFault() {
+      if (!state || state.isMatchFinished) return;
+      if (state.isFirstServe) {
+        saveBefore(ActionType.FOOT_FAULT, '1st serve foot fault');
+      } else {
+        saveBefore(ActionType.FOOT_FAULT, `Foot fault DF - ${serverName()}`);
+      }
+      applyMatchCommand(MatchCommand.FootFault);
+      notify();
+    },
+
+    handleBallInPlay() {
+      if (!state || state.isMatchFinished) return;
+      applyMatchCommand(MatchCommand.BallInPlay);
+      notify();
+    },
+
+    handleWinner(isPlayer1) {
+      if (!state || state.isMatchFinished) return;
+      saveBefore(ActionType.WINNER, `Winner - ${playerName(isPlayer1)}`);
+      applyMatchCommand(MatchCommand.Winner(isPlayer1));
+      notify();
+    },
+
+    handleForcedError(isPlayer1) {
+      if (!state || state.isMatchFinished) return;
+      saveBefore(ActionType.FORCED_ERROR, `Forced error - ${playerName(isPlayer1)}`);
+      applyMatchCommand(MatchCommand.ForcedError(isPlayer1));
+      notify();
+    },
+
+    handleUnforcedError(isPlayer1) {
+      if (!state || state.isMatchFinished) return;
+      saveBefore(ActionType.UNFORCED_ERROR, `Unforced error - ${playerName(isPlayer1)}`);
+      applyMatchCommand(MatchCommand.UnforcedError(isPlayer1));
       notify();
     },
 

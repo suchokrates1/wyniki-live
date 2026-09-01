@@ -11,6 +11,7 @@ import {
 } from './session.js';
 import { FinishMatchRequest, MatchFinishReason } from './match-engine/models.js';
 import { announcementContent } from './match/announcementView.js';
+import { buildAdvancedRally, buildAdvancedServe } from './match/advancedScoringView.js';
 import { buildBasicScoring } from './match/basicScoringView.js';
 import { createMatchFromDraft } from './match/createMatchFromDraft.js';
 import { createMatchController } from './match/matchController.js';
@@ -18,6 +19,7 @@ import { finishWinnerName, toFinishPayload, toMatchPayload, toStatisticsPayload 
 import { hydrateMatchState, serializeMatchState } from './match/matchStateIo.js';
 import { matchTimerText } from './match/matchTimer.js';
 import { MatchView } from './match/matchViews.js';
+import { suggestionScheduleId } from './match/suggestion.js';
 import { buildScoreboard } from './match/scoreboardView.js';
 import { buildServerButtons, resolveServerNumber } from './match/serverSelection.js';
 import { createWakeLock } from './match/wakeLock.js';
@@ -367,7 +369,7 @@ function createUmpireApp() {
       pushPerson(suggestion.player1);
       pushPerson(suggestion.player2);
       this.selectedIds = ids.slice(0, neededCount(this.isDoubles));
-      this.selectedScheduleId = suggestion.id ?? suggestion.schedule_id ?? null;
+      this.selectedScheduleId = suggestionScheduleId(suggestion);
       this.team1Name = suggestion.player1_name || null;
       this.team2Name = suggestion.player2_name || null;
       this.scheduleAdvanceToConfig();
@@ -569,6 +571,44 @@ function createUmpireApp() {
 
     basicFault() {
       this.match?.handleBasicFault();
+    },
+
+    advancedServe() {
+      this.matchRev;
+      return this.match?.state ? buildAdvancedServe(this.match.state) : null;
+    },
+
+    advancedRally() {
+      this.matchRev;
+      return this.match?.state ? buildAdvancedRally(this.match.state) : null;
+    },
+
+    ace() {
+      this.match?.handleAce();
+    },
+
+    fault() {
+      this.match?.handleFault();
+    },
+
+    footFault() {
+      this.match?.handleFootFault();
+    },
+
+    ballInPlay() {
+      this.match?.handleBallInPlay();
+    },
+
+    winner(isPlayer1) {
+      this.match?.handleWinner(isPlayer1);
+    },
+
+    forcedError(isPlayer1) {
+      this.match?.handleForcedError(isPlayer1);
+    },
+
+    unforcedError(isPlayer1) {
+      this.match?.handleUnforcedError(isPlayer1);
     },
 
     continueAnnouncement() {

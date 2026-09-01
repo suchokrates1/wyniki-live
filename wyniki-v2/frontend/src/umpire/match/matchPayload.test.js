@@ -18,3 +18,15 @@ test('match payload uses Android snake_case and lowercase finish reasons', () =>
   assert.equal(toFinishPayload(new FinishMatchRequest({ finishReason: MatchFinishReason.TEST })).finish_reason, 'test');
   assert.equal(toStatisticsPayload(state), null);
 });
+
+test('doubles API names use A / B team strings', () => {
+  const state = matchState({
+    isDoubles: true,
+    team1Name: 'Kowalski / Lis',
+    team2Name: 'Nowak / Wojcik',
+  });
+  const payload = toMatchPayload(state);
+  assert.equal(payload.player1_name, 'Kowalski / Lis');
+  assert.equal(payload.player2_name, 'Nowak / Wojcik');
+  assert.match(payload.player1_name, / \/ /);
+});

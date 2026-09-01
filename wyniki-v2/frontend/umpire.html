@@ -183,6 +183,50 @@
         </div>
       </div>
 
+      <div class="ump-adv" x-show="matchView() === 'SERVE' && advancedServe()">
+        <p class="ump-basic__info" :class="{ 'is-second': advancedServe() && !advancedServe().isFirstServe }" x-text="advancedServe() && t(advancedServe().serveInfoKey)"></p>
+        <div class="ump-basic__court">
+          <div class="ump-basic__side">
+            <p class="ump-basic__name" x-text="advancedServe() && advancedServe().leftName"></p>
+            <template x-if="advancedServe() && advancedServe().showServeLeft">
+              <div class="ump-adv__stack">
+                <button class="ump-btn ump-adv__ace" type="button" @click="ace()" x-text="t('ace')"></button>
+                <button class="ump-btn ump-adv__fault" type="button" @click="fault()" x-text="t('fault')"></button>
+                <button class="ump-btn ump-adv__foot" type="button" @click="footFault()" x-text="t('footFault')"></button>
+              </div>
+            </template>
+          </div>
+          <div class="ump-basic__side">
+            <p class="ump-basic__name" x-text="advancedServe() && advancedServe().rightName"></p>
+            <template x-if="advancedServe() && advancedServe().showServeRight">
+              <div class="ump-adv__stack">
+                <button class="ump-btn ump-adv__ace" type="button" @click="ace()" x-text="t('ace')"></button>
+                <button class="ump-btn ump-adv__fault" type="button" @click="fault()" x-text="t('fault')"></button>
+                <button class="ump-btn ump-adv__foot" type="button" @click="footFault()" x-text="t('footFault')"></button>
+              </div>
+            </template>
+          </div>
+        </div>
+        <button class="ump-btn ump-btn--accent ump-adv__bip" type="button" @click="ballInPlay()" x-text="t('ballInPlay')"></button>
+      </div>
+
+      <div class="ump-adv" x-show="matchView() === 'RALLY' && advancedRally()">
+        <div class="ump-basic__court">
+          <div class="ump-basic__side">
+            <p class="ump-basic__name" x-text="advancedRally() && advancedRally().leftName"></p>
+            <button class="ump-btn ump-adv__ace" type="button" @click="winner(advancedRally().leftIsPlayer1)" x-text="t('winner')"></button>
+            <button class="ump-btn ump-adv__forced" type="button" @click="forcedError(advancedRally().leftIsPlayer1)" x-text="t('forcedError')"></button>
+            <button class="ump-btn ump-adv__fault" type="button" @click="unforcedError(advancedRally().leftIsPlayer1)" x-text="t('unforcedError')"></button>
+          </div>
+          <div class="ump-basic__side">
+            <p class="ump-basic__name" x-text="advancedRally() && advancedRally().rightName"></p>
+            <button class="ump-btn ump-adv__ace" type="button" @click="winner(advancedRally().rightIsPlayer1)" x-text="t('winner')"></button>
+            <button class="ump-btn ump-adv__forced" type="button" @click="forcedError(advancedRally().rightIsPlayer1)" x-text="t('forcedError')"></button>
+            <button class="ump-btn ump-adv__fault" type="button" @click="unforcedError(advancedRally().rightIsPlayer1)" x-text="t('unforcedError')"></button>
+          </div>
+        </div>
+      </div>
+
       <div class="ump-basic" x-show="matchView() === 'BASIC_SCORING' && basicView()">
         <p class="ump-basic__info" :class="{ 'is-second': basicView() && basicView().faultKind === 'double' }" x-text="basicView() && t(basicView().serveInfoKey)"></p>
         <div class="ump-basic__court">
