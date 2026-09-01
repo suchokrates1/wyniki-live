@@ -81,6 +81,13 @@ export function createUmpireApi({ fetchImpl = fetch, getToken = () => null } = {
       });
     },
 
+    sendHeartbeat(payload) {
+      return request('/api/umpire-heartbeat', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
     getSuggestedMatch(courtId, tournamentId) {
       const params = new URLSearchParams();
       if (tournamentId != null) params.set('tournament_id', String(tournamentId));

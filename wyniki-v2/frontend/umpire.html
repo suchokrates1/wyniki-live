@@ -269,9 +269,89 @@
     </section>
     </template>
 
-    <section x-show="screen === 'settings'">
-      <p x-text="t('settingsStub')"></p>
-      <button class="ump-btn ump-btn--accent" type="button" @click="go('language')" x-text="t('settingsLanguage')"></button>
+    <section x-show="screen === 'settings'" class="ump-settings">
+      <h2 class="ump-section-title" x-text="t('settingsLanguage')"></h2>
+      <div class="ump-list">
+        <template x-for="item in languages" :key="'set-lang-' + item.code">
+          <button
+            type="button"
+            class="ump-btn ump-lang ump-card"
+            :class="{ 'ump-btn--accent': lang === item.code }"
+            @click="selectLanguage(item.code)"
+          >
+            <span x-text="item.flag + '  ' + item.name"></span>
+          </button>
+        </template>
+      </div>
+
+      <h2 class="ump-section-title" x-text="t('appearance')"></h2>
+      <p class="ump-sub" x-text="t('theme')"></p>
+      <div class="ump-toggle">
+        <template x-for="item in themes" :key="item">
+          <button
+            type="button"
+            class="ump-btn"
+            :class="{ 'ump-btn--accent': theme === item }"
+            @click="setTheme(item)"
+            x-text="themeLabel(item)"
+          ></button>
+        </template>
+      </div>
+
+      <h2 class="ump-section-title" x-text="t('matchHistory')"></h2>
+      <button class="ump-btn ump-btn--accent" type="button" @click="openHistory()" x-text="t('matchHistory')"></button>
+
+      <h2 class="ump-section-title" x-text="t('diagnostics')"></h2>
+      <dl class="ump-stats">
+        <template x-for="row in diagnosticsRows()" :key="row.label">
+          <div>
+            <dt x-text="row.label"></dt>
+            <dd x-text="row.value"></dd>
+          </div>
+        </template>
+      </dl>
+      <button class="ump-btn" type="button" @click="copyDiagnostics()" x-text="t('diagnosticsCopy')"></button>
+      <p class="ump-sub" x-show="diagnosticsCopyOk" x-text="t('diagnosticsCopied')"></p>
+    </section>
+
+    <section x-show="screen === 'history'">
+      <p x-show="!historyEntries.length" x-text="t('historyEmpty')"></p>
+      <button
+        class="ump-btn"
+        type="button"
+        x-show="historyEntries.length"
+        @click="askDeleteAllHistory()"
+        x-text="t('deleteAll')"
+      ></button>
+      <div class="ump-list" style="margin-top:12px">
+        <template x-for="entry in historyEntries" :key="entry.clientMatchUuid">
+          <article class="ump-card ump-history">
+            <button type="button" class="ump-history__main" @click="openHistoryDetail(entry)">
+              <strong x-text="entry.player1Name + ' vs ' + entry.player2Name"></strong>
+              <span x-text="historyScore(entry)"></span>
+              <span class="ump-sub" x-text="historyWhen(entry)"></span>
+              <span class="ump-sub" x-text="(entry.courtName || '') + ' · ' + historyDuration(entry)"></span>
+              <span class="ump-sub" x-show="entry.winnerName" x-text="t('winnerLabel', { name: entry.winnerName })"></span>
+            </button>
+            <button type="button" class="ump-btn ump-btn--ghost ump-history__delete" @click="askDeleteHistory(entry)">✕</button>
+          </article>
+        </template>
+      </div>
+    </section>
+
+    <section x-show="screen === 'historyDetail' && historyDetail" class="ump-settings">
+      <h2 x-text="historyDetail && (historyDetail.player1Name + ' vs ' + historyDetail.player2Name)"></h2>
+      <p class="ump-finish__winner" x-text="historyDetail && historyScore(historyDetail)"></p>
+      <dl class="ump-stats">
+        <div><dt x-text="t('courtLabel')"></dt><dd x-text="historyDetail && historyDetail.courtName"></dd></div>
+        <div><dt x-text="t('duration')"></dt><dd x-text="historyDetail && historyDuration(historyDetail)"></dd></div>
+        <div><dt x-text="t('umpireName')"></dt><dd x-text="historyDetail && historyDetail.umpireName"></dd></div>
+        <div x-show="historyDetail && historyDetail.winnerName">
+          <dt x-text="t('finish')"></dt>
+          <dd x-text="historyDetail && t('winnerLabel', { name: historyDetail.winnerName })"></dd>
+        </div>
+      </dl>
+      <button class="ump-btn" type="button" @click="askDeleteHistory(historyDetail)" x-text="t('confirmDeleteMatch')"></button>
     </section>
 
     <div class="ump-pin" x-show="dialog === 'undo'" x-cloak>
