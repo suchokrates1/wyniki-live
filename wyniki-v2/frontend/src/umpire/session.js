@@ -2,6 +2,8 @@ const LANG_KEY = 'umpire.selected_language';
 const TOURNAMENT_KEY = 'umpire.selected_tournament';
 const COURT_SESSION_KEY = 'umpire.court_session';
 const DRAFT_KEY = 'umpire.match_draft';
+const LAST_CONFIG_KEY = 'umpire.last_match_config';
+const ACTIVE_MATCH_KEY = 'umpire.active_match';
 
 export const AVAILABLE_LANGUAGES = Object.freeze([
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
@@ -102,7 +104,42 @@ export function createUmpireSession({
         return null;
       }
     },
+
+    saveLastMatchConfig(config) {
+      sessionStore.setItem(LAST_CONFIG_KEY, JSON.stringify(config));
+    },
+
+    getLastMatchConfig() {
+      return readJson(sessionStore, LAST_CONFIG_KEY);
+    },
+
+    clearLastMatchConfig() {
+      sessionStore.removeItem(LAST_CONFIG_KEY);
+    },
+
+    saveActiveMatch(snapshot) {
+      sessionStore.setItem(ACTIVE_MATCH_KEY, JSON.stringify(snapshot));
+    },
+
+    getActiveMatch() {
+      return readJson(sessionStore, ACTIVE_MATCH_KEY);
+    },
+
+    clearActiveMatch() {
+      sessionStore.removeItem(ACTIVE_MATCH_KEY);
+    },
   };
+}
+
+function readJson(store, key) {
+  const raw = store.getItem(key);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    store.removeItem(key);
+    return null;
+  }
 }
 
 export function parseExpiresAt(value) {

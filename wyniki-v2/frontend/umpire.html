@@ -16,9 +16,13 @@
     <header class="ump-top">
       <div>
         <p class="ump-sub" x-text="t('appName')"></p>
-        <h1 class="ump-title" x-text="t(screen === 'language' ? 'languageTitle' : screen === 'tournament' ? 'tournamentTitle' : screen === 'court' ? 'courtTitle' : screen === 'players' ? 'playersTitle' : screen === 'config' ? 'configTitle' : screen === 'serve' ? 'serveTitle' : 'settings')"></h1>
+        <h1 class="ump-title" x-text="screenTitle()"></h1>
+        <p class="ump-sub" x-show="screen === 'match' && chrome().showTimer" x-text="timerText"></p>
+        <p class="ump-sub" x-show="screen === 'match' && syncLabel()" x-text="syncLabel()"></p>
       </div>
-      <div>
+      <div class="ump-top__actions">
+        <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'match' && chrome().showUndo" :disabled="!chrome().undoEnabled" @click="askUndo()" x-text="t('undo')"></button>
+        <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'match' && chrome().showFinish" @click="askFinish()" x-text="t('finish')"></button>
         <button class="ump-btn ump-btn--ghost" type="button" x-show="screen !== 'language'" @click="back()" x-text="t('back')"></button>
         <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'court'" @click="openSettings()" x-text="t('settings')">⚙</button>
       </div>
@@ -144,15 +148,149 @@
       </div>
     </section>
 
-    <section x-show="screen === 'serve'">
-      <p x-text="t('serveStub')"></p>
-      <p x-show="draft" x-text="draft && draft.players && draft.players.map(p => p.lastName || p.name).join(' vs ')"></p>
+    <template x-if="screen === 'match' && matchRev >= 0">
+    <section class="ump-match">
+      <div class="ump-board" x-show="chrome().showScoreboard && scoreboard()">
+        <p class="ump-board__meta">
+          <span x-text="scoreboard() && t(scoreboard().matchType === 'mixed' ? 'matchTypeMixed' : scoreboard().matchType === 'doubles' ? 'matchTypeDoubles' : 'matchTypeSingles')"></span>
+          <span x-show="scoreboard() && scoreboard().umpireName" x-text="scoreboard() && t('umpireMeta', { name: scoreboard().umpireName })"></span>
+        </p>
+        <div class="ump-board__row">
+          <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p1Flag"></span>
+          <span class="ump-board__name" x-text="scoreboard() && scoreboard().p1Name"></span>
+          <span class="ump-board__serve" x-show="scoreboard() && scoreboard().p1Serving">🎾</span>
+          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active }" x-text="scoreboard() && scoreboard().set1.p1"></span>
+          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active }" x-text="scoreboard() && scoreboard().set2.p1"></span>
+          <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p1Points"></span>
+        </div>
+        <div class="ump-board__row">
+          <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p2Flag"></span>
+          <span class="ump-board__name" x-text="scoreboard() && scoreboard().p2Name"></span>
+          <span class="ump-board__serve" x-show="scoreboard() && scoreboard().p2Serving">🎾</span>
+          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active }" x-text="scoreboard() && scoreboard().set1.p2"></span>
+          <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active }" x-text="scoreboard() && scoreboard().set2.p2"></span>
+          <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p2Points"></span>
+        </div>
+        <p class="ump-board__mode" x-show="scoreboard() && scoreboard().gameMode" x-text="gameModeLabel()"></p>
+      </div>
+
+      <div x-show="matchView() === 'SERVER_SELECTION'">
+        <button class="ump-btn" type="button" @click="swapSides()" x-text="t('swapSides')"></button>
+        <div class="ump-serve-grid" style="margin-top:12px">
+          <template x-for="button in serverButtons()" :key="button.buttonIndex">
+            <button type="button" class="ump-btn ump-card ump-serve-btn" :class="{ 'is-on': button.selected, 'is-team1': button.colorRole === 'Team1', 'is-team2': button.colorRole === 'Team2' }" @click="chooseServer(button.buttonIndex)" x-text="button.label"></button>
+          </template>
+        </div>
+      </div>
+
+      <div class="ump-basic" x-show="matchView() === 'BASIC_SCORING' && basicView()">
+        <p class="ump-basic__info" :class="{ 'is-second': basicView() && basicView().faultKind === 'double' }" x-text="basicView() && t(basicView().serveInfoKey)"></p>
+        <div class="ump-basic__court">
+          <div class="ump-basic__side">
+            <p class="ump-basic__name" x-text="basicView() && basicView().leftName"></p>
+            <button class="ump-btn ump-win" type="button" x-show="basicView() && basicView().showServerLeft" @click="basicWin(basicView().leftIsPlayer1)" x-text="t('win')"></button>
+            <button class="ump-btn ump-fault" type="button" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" x-show="basicView() && basicView().showServerLeft" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
+            <button class="ump-btn ump-win" type="button" x-show="basicView() && basicView().showReceiverLeft" @click="basicWin(basicView().leftIsPlayer1)" x-text="t('win')"></button>
+          </div>
+          <div class="ump-basic__side">
+            <p class="ump-basic__name" x-text="basicView() && basicView().rightName"></p>
+            <button class="ump-btn ump-win" type="button" x-show="basicView() && basicView().showServerRight" @click="basicWin(basicView().rightIsPlayer1)" x-text="t('win')"></button>
+            <button class="ump-btn ump-fault" type="button" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" x-show="basicView() && basicView().showServerRight" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
+            <button class="ump-btn ump-win" type="button" x-show="basicView() && basicView().showReceiverRight" @click="basicWin(basicView().rightIsPlayer1)" x-text="t('win')"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ump-card ump-announce" x-show="matchView() === 'ANNOUNCEMENT' && announcement()">
+        <p class="ump-announce__icon" x-text="announcement() && announcement().icon"></p>
+        <h2 x-text="announcement() && announcement().title"></h2>
+        <p x-text="announcement() && announcement().message"></p>
+        <button class="ump-btn ump-btn--accent" type="button" @click="continueAnnouncement()" x-text="t('continue')"></button>
+        <button class="ump-btn" type="button" x-show="announcement() && announcement().showSkipSides" @click="skipSideChange()" x-text="t('skipSides')"></button>
+      </div>
+
+      <div class="ump-card ump-finish" x-show="matchView() === 'MATCH_FINISHED' && matchState()">
+        <h2 x-text="t('matchFinished')"></h2>
+        <p class="ump-finish__winner" x-text="t('winnerLabel', { name: winnerName() })"></p>
+        <dl class="ump-stats">
+          <div><dt x-text="t('aces')"></dt><dd x-text="statsLine('aces')"></dd></div>
+          <div><dt x-text="t('doubleFaults')"></dt><dd x-text="statsLine('doubleFaults')"></dd></div>
+          <div><dt x-text="t('winnersStat')"></dt><dd x-text="statsLine('winners')"></dd></div>
+          <div><dt x-text="t('unforcedErrors')"></dt><dd x-text="statsLine('unforcedErrors')"></dd></div>
+          <div><dt x-text="t('firstServePct')"></dt><dd x-text="servePctLine()"></dd></div>
+        </dl>
+        <button class="ump-btn ump-btn--accent" type="button" @click="nextMatch(true)" x-text="t('nextSame')"></button>
+        <button class="ump-btn" type="button" @click="nextMatch(false)" x-text="t('nextNew')"></button>
+      </div>
     </section>
+    </template>
 
     <section x-show="screen === 'settings'">
       <p x-text="t('settingsStub')"></p>
       <button class="ump-btn ump-btn--accent" type="button" @click="go('language')" x-text="t('settingsLanguage')"></button>
     </section>
+
+    <div class="ump-pin" x-show="dialog === 'undo'" x-cloak>
+      <div class="ump-card ump-pin__card">
+        <h2 x-text="t('undo')"></h2>
+        <p x-text="t('confirmUndo')"></p>
+        <div class="ump-toggle">
+          <button class="ump-btn ump-btn--accent" type="button" @click="confirmUndo()" x-text="t('yes')"></button>
+          <button class="ump-btn" type="button" @click="dialog = null" x-text="t('no')"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ump-pin" x-show="dialog === 'leave'" x-cloak>
+      <div class="ump-card ump-pin__card">
+        <h2 x-text="t('leaveTitle')"></h2>
+        <p x-text="t('leaveMessage')"></p>
+        <div class="ump-toggle">
+          <button class="ump-btn ump-btn--accent" type="button" @click="confirmLeave()" x-text="t('yes')"></button>
+          <button class="ump-btn" type="button" @click="dialog = null" x-text="t('no')"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ump-pin" x-show="dialog === 'finish'" x-cloak>
+      <div class="ump-card ump-pin__card">
+        <template x-if="finishStep === 'reason'">
+          <div>
+            <h2 x-text="t('finish')"></h2>
+            <p x-text="t('finishPrompt')"></p>
+            <div class="ump-list" style="margin-top:12px">
+              <button class="ump-btn" type="button" @click="pickFinishReason('NORMAL')" x-text="t('finishNormal')"></button>
+              <button class="ump-btn" type="button" @click="pickFinishReason('TEST')" x-text="t('finishTest')"></button>
+              <button class="ump-btn" type="button" @click="pickFinishReason('RETIREMENT')" x-text="t('finishRetirement')"></button>
+              <button class="ump-btn" type="button" @click="pickFinishReason('WALKOVER')" x-text="t('finishWalkover')"></button>
+              <button class="ump-btn ump-btn--ghost" type="button" @click="dialog = null" x-text="t('no')"></button>
+            </div>
+          </div>
+        </template>
+        <template x-if="finishStep === 'retirement'">
+          <div>
+            <h2 x-text="t('finishRetirement')"></h2>
+            <p x-text="t('finishRetirementPrompt')"></p>
+            <div class="ump-list" style="margin-top:12px">
+              <button class="ump-btn" type="button" @click="pickRetirement(true)" x-text="matchState() && matchState().getTeam1FullName()"></button>
+              <button class="ump-btn" type="button" @click="pickRetirement(false)" x-text="matchState() && matchState().getTeam2FullName()"></button>
+              <button class="ump-btn ump-btn--ghost" type="button" @click="dialog = null" x-text="t('cancel')"></button>
+            </div>
+          </div>
+        </template>
+        <template x-if="finishStep === 'walkover'">
+          <div>
+            <h2 x-text="t('finishWalkover')"></h2>
+            <p x-text="t('finishWalkoverPrompt')"></p>
+            <div class="ump-list" style="margin-top:12px">
+              <button class="ump-btn" type="button" @click="pickWalkover(true)" x-text="matchState() && matchState().getTeam1FullName()"></button>
+              <button class="ump-btn" type="button" @click="pickWalkover(false)" x-text="matchState() && matchState().getTeam2FullName()"></button>
+              <button class="ump-btn ump-btn--ghost" type="button" @click="dialog = null" x-text="t('cancel')"></button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
 
     <div class="ump-pin" x-show="pinOpen" x-cloak>
       <div class="ump-card ump-pin__card">

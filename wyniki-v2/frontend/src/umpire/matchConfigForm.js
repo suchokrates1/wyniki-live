@@ -57,6 +57,7 @@ export function startDraft({
     firstName: player.firstName || player.first_name || '',
     lastName: player.lastName || player.last_name || player.surname || '',
     flag: player.flag || player.country_code || null,
+    gender: player.gender || null,
   }));
 
   return {
