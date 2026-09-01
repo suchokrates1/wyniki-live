@@ -5,7 +5,8 @@ export function createUmpireApi({ fetchImpl = fetch, getToken = () => null } = {
       headers['Content-Type'] = 'application/json';
     }
     const token = getToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
+    const skipAuth = String(path).includes('/authorize');
+    if (token && !skipAuth) headers.Authorization = `Bearer ${token}`;
     const response = await fetchImpl(path, { ...options, headers });
     let data = null;
     try {
