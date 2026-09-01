@@ -21,6 +21,7 @@
     "test:a11y:ci": "node scripts/a11y-ci.mjs",
     "ci:a11y": "npm run test:i18n && npm run build && npm run test:a11y:ci",
     "verify:production": "npm run check:public && npm run smoke:production && npm run smoke:office:production",
+    "e2e:umpire": "playwright test -c playwright.umpire.config.js",
     "e2e:tournament": "node scripts/e2e-tournament/run.mjs",
     "e2e:tournament:module": "node scripts/e2e-tournament/run.mjs --module"
   },
