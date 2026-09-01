@@ -34,6 +34,27 @@ def admin():
     return response
 
 
+@blueprint.route('/umpire')
+@blueprint.route('/umpire/')
+@blueprint.route('/umpire.html')
+def umpire():
+    """Serve the umpire PWA (pre-match + scoring)."""
+    response = send_from_directory(STATIC_DIR, 'umpire.html')
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
+@blueprint.route('/umpire.webmanifest')
+def umpire_manifest():
+    response = send_from_directory(STATIC_DIR, 'umpire.webmanifest')
+    response.headers['Content-Type'] = 'application/manifest+json'
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
+
+
 @blueprint.route('/office')
 @blueprint.route('/office/')
 @blueprint.route('/office/<int:slot>')

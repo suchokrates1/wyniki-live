@@ -2,7 +2,10 @@
  * Port of android `domain/match/model/*`.
  * Kotlin data-class defaults and scoring helpers are the oracle.
  */
-import { randomUUID } from 'node:crypto';
+function randomUUID() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  throw new Error('crypto.randomUUID is required');
+}
 
 export const StatsMode = Object.freeze({
   BASIC: 'BASIC',

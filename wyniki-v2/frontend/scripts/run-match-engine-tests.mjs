@@ -3,11 +3,18 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const dir = fileURLToPath(new URL('../src/umpire/match-engine/', import.meta.url));
-const files = readdirSync(dir)
-  .filter((name) => name.endsWith('.test.js'))
-  .map((name) => path.join(dir, name))
-  .sort();
+function walk(dir) {
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const next = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...walk(next));
+    else if (entry.name.endsWith('.test.js')) files.push(next);
+  }
+  return files;
+}
+
+const dir = fileURLToPath(new URL('../src/umpire/', import.meta.url));
+const files = walk(dir).sort();
 
 if (files.length === 0) {
   console.error('No match-engine tests found');
