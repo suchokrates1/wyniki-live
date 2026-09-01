@@ -46,6 +46,41 @@ export function createUmpireApi({ fetchImpl = fetch, getToken = () => null } = {
       });
     },
 
+    createMatch(payload) {
+      return request('/api/matches', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    updateMatch(matchId, payload) {
+      return request(`/api/matches/${encodeURIComponent(matchId)}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    finishMatch(matchId, payload) {
+      return request(`/api/matches/${encodeURIComponent(matchId)}/finish`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    sendStatistics(payload) {
+      return request('/api/match-statistics', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    logMatchEvent(payload) {
+      return request('/api/match-events', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
     getSuggestedMatch(courtId, tournamentId) {
       const params = new URLSearchParams();
       if (tournamentId != null) params.set('tournament_id', String(tournamentId));

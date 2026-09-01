@@ -71,3 +71,13 @@ test('parseExpiresAt accepts unix seconds and ISO', () => {
 test('todayKey is yyyy-mm-dd', () => {
   assert.equal(todayKey(new Date('2026-09-01T23:00:00')), '2026-09-01');
 });
+
+test('last config and active match live in sessionStorage', () => {
+  const session = createUmpireSession({ localStore: memoryStore(), sessionStore: memoryStore() });
+  session.saveLastMatchConfig({ gamesPerSet: 6, statsMode: 'BASIC' });
+  assert.equal(session.getLastMatchConfig().gamesPerSet, 6);
+  session.saveActiveMatch({ view: 'BASIC_SCORING' });
+  assert.equal(session.getActiveMatch().view, 'BASIC_SCORING');
+  session.clearActiveMatch();
+  assert.equal(session.getActiveMatch(), null);
+});

@@ -201,8 +201,170 @@ body {
   display: none;
 }
 
+.ump-top__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ump-match {
+  display: grid;
+  gap: 16px;
+}
+
+.ump-board {
+  background: var(--ump-card);
+  border: 1px solid var(--ump-line);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.ump-board__meta,
+.ump-board__mode {
+  color: var(--ump-muted);
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+
+.ump-board__row {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) 1.4rem 2.4rem 2.4rem 3.2rem;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+}
+
+.ump-board__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ump-board__set,
+.ump-board__pts {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ump-board__set.is-on,
+.ump-board__pts {
+  font-weight: 700;
+}
+
+.ump-board__set.is-on {
+  background: rgba(61, 214, 198, 0.22);
+  border-radius: 8px;
+}
+
+.ump-serve-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ump-serve-btn {
+  min-height: 88px;
+  font-size: 1.15rem;
+}
+
+.ump-serve-btn.is-team1 {
+  outline: 2px solid #60a5fa;
+}
+
+.ump-serve-btn.is-team2 {
+  outline: 2px solid #f472b6;
+}
+
+.ump-basic__info {
+  text-align: center;
+  font-size: 1.15rem;
+  margin: 0 0 12px;
+}
+
+.ump-basic__info.is-second {
+  color: var(--ump-danger);
+  font-weight: 700;
+}
+
+.ump-basic__court {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ump-basic__side {
+  display: grid;
+  gap: 10px;
+}
+
+.ump-basic__name {
+  margin: 0;
+  text-align: center;
+  color: var(--ump-muted);
+}
+
+.ump-win {
+  min-height: 88px;
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: #166534;
+  border-color: transparent;
+}
+
+.ump-fault--second {
+  background: #f59e0b;
+  color: #111827;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.ump-fault--df {
+  background: #dc2626;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.ump-announce,
+.ump-finish {
+  padding: 20px;
+  text-align: center;
+  display: grid;
+  gap: 12px;
+}
+
+.ump-announce__icon {
+  font-size: 2.4rem;
+  margin: 0;
+}
+
+.ump-finish__winner {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.ump-stats {
+  margin: 0;
+  text-align: left;
+}
+
+.ump-stats div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--ump-line);
+}
+
+[x-cloak] {
+  display: none !important;
+}
+
 @media (max-width: 560px) {
-  .ump-courts {
+  .ump-courts,
+  .ump-basic__court,
+  .ump-serve-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -9,10 +9,22 @@ import {
   firstScreen,
   parseExpiresAt,
 } from './session.js';
-import { StatsMode } from './match-engine/models.js';
+import { FinishMatchRequest, MatchFinishReason } from './match-engine/models.js';
+import { announcementContent } from './match/announcementView.js';
+import { buildBasicScoring } from './match/basicScoringView.js';
+import { createMatchFromDraft } from './match/createMatchFromDraft.js';
+import { createMatchController } from './match/matchController.js';
+import { finishWinnerName, toFinishPayload, toMatchPayload, toStatisticsPayload } from './match/matchPayload.js';
+import { hydrateMatchState, serializeMatchState } from './match/matchStateIo.js';
+import { matchTimerText } from './match/matchTimer.js';
+import { MatchView } from './match/matchViews.js';
+import { buildScoreboard } from './match/scoreboardView.js';
+import { buildServerButtons, resolveServerNumber } from './match/serverSelection.js';
+import { createWakeLock } from './match/wakeLock.js';
 import './umpire.css';
 
 const session = createUmpireSession();
+const wakeLock = createWakeLock();
 
 function playerId(player) {
   return player?.id;
@@ -26,6 +38,21 @@ function playerLabel(player) {
 
 function neededCount(isDoubles) {
   return isDoubles ? 4 : 2;
+}
+
+function formFromLastConfig(last) {
+  if (!last) return { ...DEFAULT_MATCH_CONFIG_FORM };
+  return {
+    ...DEFAULT_MATCH_CONFIG_FORM,
+    gamesPerSet: last.gamesPerSet ?? DEFAULT_MATCH_CONFIG_FORM.gamesPerSet,
+    setsToWin: last.setsToWin ?? DEFAULT_MATCH_CONFIG_FORM.setsToWin,
+    tiebreakPoints: last.tiebreakPoints ?? DEFAULT_MATCH_CONFIG_FORM.tiebreakPoints,
+    superTiebreakPoints: last.superTiebreakPoints ?? DEFAULT_MATCH_CONFIG_FORM.superTiebreakPoints,
+    tbOnlyPoints: last.tbOnlyPoints ?? DEFAULT_MATCH_CONFIG_FORM.tbOnlyPoints,
+    noAdvantage: Boolean(last.noAdvantage),
+    tiebreakOnly: Boolean(last.tiebreakOnly),
+    umpireName: last.umpireName || '',
+  };
 }
 
 function createUmpireApp() {
@@ -64,19 +91,87 @@ function createUmpireApp() {
     configForm: { ...DEFAULT_MATCH_CONFIG_FORM },
     draft: null,
     settingsFrom: 'court',
+    match: null,
+    matchRev: 0,
+    timerText: '00:00',
+    _timerId: null,
+    dialog: null,
+    finishStep: null,
 
     t(key, vars) {
       return umpireText(this.lang, key, vars);
     },
 
     init() {
+      this.match = createMatchController({
+        onChange: () => this.onMatchChange(),
+        onSync: (reason, state, extra) => this.syncMatch(reason, state, extra),
+      });
+      const hashScreen = (location.hash.replace(/^#\/?/, '') || '').split('/')[0];
+      if (hashScreen) this.screen = hashScreen;
+      this.restoreActiveMatch();
+      this.ensureMatchFromDraft();
       this.go(this.screen, { replace: true });
       window.addEventListener('hashchange', () => this.syncFromHash());
+      window.addEventListener('beforeunload', (event) => {
+        if (this.match?.chrome()?.confirmLeave) {
+          event.preventDefault();
+          event.returnValue = '';
+        }
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && this.screen === 'match' && this.match?.state?.matchStartTime) {
+          wakeLock.request();
+        }
+      });
+      this._timerId = setInterval(() => {
+        if (this.match?.state) this.timerText = matchTimerText(this.match.state, Date.now());
+      }, 1000);
+    },
+
+    onMatchChange() {
+      this.matchRev += 1;
+      if (this.match?.state) {
+        this.timerText = matchTimerText(this.match.state, Date.now());
+        session.saveActiveMatch({
+          view: this.match.view,
+          pendingAnnouncementType: this.match.pendingAnnouncementType,
+          canUndo: this.match.canUndo,
+          state: serializeMatchState(this.match.state),
+        });
+      }
+    },
+
+    ensureMatchFromDraft() {
+      this.draft = session.getDraft();
+      if (!this.match?.state && this.draft) {
+        this.match.initialize(createMatchFromDraft(this.draft));
+      }
+    },
+
+    restoreActiveMatch() {
+      const snapshot = session.getActiveMatch();
+      if (!snapshot?.state) return;
+      const state = hydrateMatchState(snapshot.state);
+      if (!state) return;
+      this.match.restoreSnapshot({
+        state,
+        view: snapshot.view,
+        pendingAnnouncementType: snapshot.pendingAnnouncementType,
+        canUndo: snapshot.canUndo,
+      });
+      this.screen = 'match';
     },
 
     syncFromHash() {
       const name = (location.hash.replace(/^#\/?/, '') || this.screen).split('/')[0];
+      if (name === 'match' && this.match?.chrome()?.confirmLeave && this.screen === 'match') return;
       if (name && name !== this.screen) {
+        if (this.screen === 'match' && this.match?.chrome()?.confirmLeave) {
+          this.dialog = 'leave';
+          history.forward();
+          return;
+        }
         this.screen = name;
         this.onScreen(name);
       }
@@ -95,7 +190,8 @@ function createUmpireApp() {
       if (name === 'tournament') this.loadTournaments();
       if (name === 'court') this.loadCourts();
       if (name === 'players') this.loadPlayers();
-      if (name === 'serve') this.draft = session.getDraft();
+      if (name === 'serve') this.go('match', { replace: true });
+      if (name === 'match') this.ensureMatchFromDraft();
     },
 
     selectLanguage(code) {
@@ -306,7 +402,8 @@ function createUmpireApp() {
 
     openConfig() {
       if (!this.canContinuePlayers()) return;
-      this.configForm = { ...DEFAULT_MATCH_CONFIG_FORM };
+      const last = session.getLastMatchConfig();
+      this.configForm = last ? formFromLastConfig(last) : { ...DEFAULT_MATCH_CONFIG_FORM };
       this.go('config');
     },
 
@@ -330,8 +427,10 @@ function createUmpireApp() {
           : null,
       });
       session.saveDraft(draft);
+      session.saveLastMatchConfig({ ...this.configForm, statsMode });
       this.draft = draft;
-      this.go('serve');
+      this.match.initialize(createMatchFromDraft(draft));
+      this.go('match');
     },
 
     isMixedSelection(players) {
@@ -341,7 +440,30 @@ function createUmpireApp() {
       return hasWomen && hasMen;
     },
 
+    screenTitle() {
+      this.matchRev;
+      const titles = {
+        language: 'languageTitle',
+        tournament: 'tournamentTitle',
+        court: 'courtTitle',
+        players: 'playersTitle',
+        config: 'configTitle',
+        serve: 'serveTitle',
+        match: this.matchView() === MatchView.SERVER_SELECTION ? 'serveTitle' : 'matchTitle',
+        settings: 'settings',
+      };
+      return this.t(titles[this.screen] || 'appName');
+    },
+
     back() {
+      if (this.screen === 'match') {
+        if (this.match?.chrome()?.confirmLeave) {
+          this.dialog = 'leave';
+          return;
+        }
+        this.leaveMatch();
+        return;
+      }
       const from = {
         tournament: 'language',
         court: 'tournament',
@@ -358,9 +480,221 @@ function createUmpireApp() {
       this.go(from[this.screen] || 'language');
     },
 
+    leaveMatch() {
+      wakeLock.release();
+      session.clearActiveMatch();
+      this.dialog = null;
+      const finished = this.match?.state?.isMatchFinished;
+      this.go(finished ? 'players' : 'config');
+    },
+
+    confirmLeave() {
+      this.leaveMatch();
+    },
+
     openSettings() {
       this.settingsFrom = this.screen;
       this.go('settings');
+    },
+
+    matchView() {
+      this.matchRev;
+      return this.match?.view || MatchView.SERVER_SELECTION;
+    },
+
+    matchState() {
+      this.matchRev;
+      return this.match?.state || null;
+    },
+
+    chrome() {
+      this.matchRev;
+      return this.match?.chrome() || {
+        showScoreboard: false,
+        showUndo: false,
+        showFinish: false,
+        undoEnabled: false,
+        confirmLeave: false,
+        showTimer: false,
+      };
+    },
+
+    scoreboard() {
+      this.matchRev;
+      return this.match?.state ? buildScoreboard(this.match.state) : null;
+    },
+
+    serverButtons() {
+      this.matchRev;
+      return this.match?.state ? buildServerButtons(this.match.state).filter((button) => button.visible) : [];
+    },
+
+    basicView() {
+      this.matchRev;
+      return this.match?.state ? buildBasicScoring(this.match.state) : null;
+    },
+
+    announcement() {
+      this.matchRev;
+      if (!this.match?.state) return null;
+      return announcementContent(this.match.pendingAnnouncementType, this.match.state, (key, vars) => this.t(key, vars));
+    },
+
+    syncLabel() {
+      this.matchRev;
+      const status = this.match?.syncStatus || 'IDLE';
+      return this.t({
+        IDLE: 'syncIdle',
+        SYNCING: 'syncSyncing',
+        SYNCED: 'syncSynced',
+        FAILED: 'syncFailed',
+        OFFLINE: 'syncOffline',
+      }[status] || 'syncIdle');
+    },
+
+    chooseServer(buttonIndex) {
+      const state = this.match?.state;
+      if (!state) return;
+      this.match.setFirstServer(resolveServerNumber(buttonIndex, state));
+      wakeLock.request();
+    },
+
+    swapSides() {
+      this.match?.swapSides();
+    },
+
+    basicWin(isPlayer1) {
+      this.match?.handleBasicWin(isPlayer1);
+    },
+
+    basicFault() {
+      this.match?.handleBasicFault();
+    },
+
+    continueAnnouncement() {
+      this.match?.continueFromAnnouncement();
+    },
+
+    skipSideChange() {
+      this.match?.skipSideChange();
+    },
+
+    askUndo() {
+      if (!this.chrome().undoEnabled) return;
+      this.dialog = 'undo';
+    },
+
+    confirmUndo() {
+      this.dialog = null;
+      this.match?.undoLastAction();
+    },
+
+    askFinish() {
+      if (!this.chrome().showFinish) return;
+      this.finishStep = 'reason';
+      this.dialog = 'finish';
+    },
+
+    pickFinishReason(reason) {
+      if (reason === MatchFinishReason.RETIREMENT) {
+        this.finishStep = 'retirement';
+        return;
+      }
+      if (reason === MatchFinishReason.WALKOVER) {
+        this.finishStep = 'walkover';
+        return;
+      }
+      this.confirmFinish(new FinishMatchRequest({ finishReason: reason }));
+    },
+
+    pickRetirement(injuredIsTeam1) {
+      const state = this.match.state;
+      this.confirmFinish(new FinishMatchRequest({
+        finishReason: MatchFinishReason.RETIREMENT,
+        injuredPlayerName: injuredIsTeam1 ? state.getTeam1FullName() : state.getTeam2FullName(),
+        winnerName: injuredIsTeam1 ? state.getTeam2FullName() : state.getTeam1FullName(),
+      }));
+    },
+
+    pickWalkover(winnerIsTeam1) {
+      const state = this.match.state;
+      this.confirmFinish(new FinishMatchRequest({
+        finishReason: MatchFinishReason.WALKOVER,
+        winnerName: winnerIsTeam1 ? state.getTeam1FullName() : state.getTeam2FullName(),
+      }));
+    },
+
+    confirmFinish(request) {
+      this.dialog = null;
+      this.finishStep = null;
+      this.match.finishMatchWithOutcome(request);
+      wakeLock.release();
+    },
+
+    winnerName() {
+      return this.match?.state ? finishWinnerName(this.match.state) : '';
+    },
+
+    gameModeLabel() {
+      const board = this.scoreboard();
+      if (!board?.gameMode) return '';
+      return board.gameMode === 'super_tiebreak'
+        ? this.t('superTiebreakMode', { points: board.gameModePoints })
+        : this.t('tiebreakMode', { points: board.gameModePoints });
+    },
+
+    statsLine(field) {
+      const state = this.match?.state;
+      if (!state) return '';
+      return `${state.player1Stats[field]} / ${state.player2Stats[field]}`;
+    },
+
+    servePctLine() {
+      const state = this.match?.state;
+      if (!state) return '';
+      return `${state.player1Stats.getFirstServePercentage()}% / ${state.player2Stats.getFirstServePercentage()}%`;
+    },
+
+    nextMatch(sameSetup) {
+      wakeLock.release();
+      session.clearActiveMatch();
+      this.selectedIds = [];
+      this.team1Name = null;
+      this.team2Name = null;
+      this.selectedScheduleId = null;
+      this.suggestion = null;
+      this.configForm = sameSetup
+        ? formFromLastConfig(session.getLastMatchConfig())
+        : { ...DEFAULT_MATCH_CONFIG_FORM };
+      if (!sameSetup) session.clearLastMatchConfig();
+      this.go('players');
+    },
+
+    async syncMatch(reason, state, extra) {
+      try {
+        if (reason === 'create' || state.matchId == null) {
+          const { ok, data } = await api.createMatch(toMatchPayload(state));
+          if (!ok) return { failed: true, offline: !navigator.onLine };
+          return { matchId: data?.id };
+        }
+        const update = await api.updateMatch(state.matchId, toMatchPayload(state));
+        if (!update.ok) return { failed: true, offline: !navigator.onLine };
+        if (reason === 'finalize') {
+          const request = extra || new FinishMatchRequest({
+            finishReason: state.finishReason,
+            winnerName: state.finishWinnerName,
+            injuredPlayerName: state.injuredPlayerName,
+            resultNote: state.resultNote,
+          });
+          const finish = await api.finishMatch(state.matchId, toFinishPayload(request));
+          if (!finish.ok && finish.status !== 403) return { failed: true };
+          const stats = toStatisticsPayload(state);
+          if (stats) await api.sendStatistics(stats);
+        }
+        return { matchId: state.matchId };
+      } catch {
+        return { failed: true, offline: !navigator.onLine };
+      }
     },
   };
 }
