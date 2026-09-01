@@ -5,6 +5,8 @@ import {
   buildKnockoutTrees,
   compareBracketCategoryNames,
   getBracketCategoryLabel,
+  getCategoryPodiumEntries,
+  getGroupPodiumEntries,
   getKnockoutPodiumEntries,
   getKnockoutRoundKind,
   groupMatchWinner,
@@ -35,6 +37,25 @@ test('podium uses championship final, not quarterfinal or consolation', () => {
   assert.equal(podium[0].player, 'E');
   assert.equal(podium[1].player, 'F');
   assert.equal(podium[2].player, 'G');
+});
+
+test('round-robin category podium uses the top three in the group table', () => {
+  const podium = getCategoryPodiumEntries({
+    knockout: [],
+    groups: [{
+      play_format: 'round_robin',
+      standings: [
+        { name: 'Ivan' },
+        { name: 'Arato' },
+        { name: 'Ewan' },
+        { name: 'Mateusz' },
+      ],
+    }],
+  });
+  assert.equal(podium[0].player, 'Ivan');
+  assert.equal(podium[1].player, 'Arato');
+  assert.equal(podium[2].player, 'Ewan');
+  assert.equal(getGroupPodiumEntries([{ play_format: 'knockout', standings: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] }]).length, 0);
 });
 
 test('doubles categories get a distinct label and sort above singles', () => {

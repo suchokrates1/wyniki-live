@@ -9,6 +9,7 @@ import {
   getBracketCategoryLabel,
   getGroupStandingsRows,
   getKnockoutPhaseClass,
+  getCategoryPodiumEntries,
   getKnockoutPodiumEntries,
   groupMatchWinner,
   isFinalPhase as isFinalBracketPhase,
@@ -54,6 +55,17 @@ export function createBracketView() {
 
     knockoutPodiumEntries(knockout = []) {
       return getKnockoutPodiumEntries(knockout);
+    },
+
+    categoryPodiumEntries(category = {}) {
+      return getCategoryPodiumEntries(category);
+    },
+
+    standingsRowQualifies(row, rowIndex, group, category) {
+      if (row?._placeholder) return false;
+      if (rowIndex >= 2) return false;
+      if ((group?.standings || []).length <= 2) return false;
+      return (category?.knockout || []).length > 0;
     },
 
     knockoutTrees(knockout = []) {
