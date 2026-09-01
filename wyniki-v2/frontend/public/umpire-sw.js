@@ -1,5 +1,11 @@
 const CACHE = 'umpire-pwa-v1';
-const SHELL = ['/umpire', '/umpire.html', '/umpire.webmanifest', '/umpire-icons/icon-192.png'];
+const SHELL = [
+  '/umpire',
+  '/umpire.html',
+  '/umpire.webmanifest',
+  '/umpire-icons/icon-192.png',
+  '/umpire-icons/icon-512.png',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
