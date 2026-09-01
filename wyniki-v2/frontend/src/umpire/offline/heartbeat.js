@@ -31,9 +31,9 @@ export function createHeartbeat({
 
   async function sendNow() {
     try {
-      await send(getBody());
+      return await send(getBody());
     } catch {
-      // heartbeat is best-effort
+      return null;
     }
   }
 

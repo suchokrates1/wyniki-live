@@ -88,6 +88,23 @@ export function createUmpireApi({ fetchImpl = fetch, getToken = () => null } = {
       });
     },
 
+    getDirectorCommands({ courtId, matchId, clientMatchUuid, waitMs = 0 } = {}) {
+      const params = new URLSearchParams();
+      if (courtId) params.set('court_id', String(courtId));
+      if (matchId != null) params.set('match_id', String(matchId));
+      if (clientMatchUuid) params.set('client_match_uuid', clientMatchUuid);
+      if (waitMs) params.set('wait_ms', String(waitMs));
+      const query = params.toString() ? `?${params}` : '';
+      return request(`/api/umpire/commands${query}`);
+    },
+
+    ackDirectorCommand(commandId, courtId) {
+      return request(`/api/umpire/commands/${encodeURIComponent(commandId)}/ack`, {
+        method: 'POST',
+        body: JSON.stringify(courtId ? { court_id: courtId } : {}),
+      });
+    },
+
     getSuggestedMatch(courtId, tournamentId) {
       const params = new URLSearchParams();
       if (tournamentId != null) params.set('tournament_id', String(tournamentId));

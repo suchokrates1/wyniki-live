@@ -1,8 +1,10 @@
+import { DirectorCommandApplier } from '../match-engine/directorCommandApplier.js';
 import { MatchActionReducer, MatchCommand } from '../match-engine/matchActionReducer.js';
 import { MatchFinishOutcomeApplier } from '../match-engine/matchFinishOutcomeApplier.js';
 import { MatchProgressReducer, MatchProgressScreen } from '../match-engine/matchProgressReducer.js';
 import { MatchUndoManager, MatchUndoResult } from '../match-engine/matchUndoManager.js';
 import { ActionType, StatsMode } from '../match-engine/models.js';
+import { parseDirectorCommand } from '../offline/directorCommandParse.js';
 import { MatchView, SyncStatus, matchChrome } from './matchViews.js';
 
 export function createMatchController({
@@ -271,6 +273,19 @@ export function createMatchController({
       view = MatchView.MATCH_FINISHED;
       requestSync('finalize', request);
       notify();
+    },
+
+    applyDirectorCommands(commands = []) {
+      const applied = [];
+      if (!state) return applied;
+      for (const raw of commands) {
+        const command = parseDirectorCommand(raw);
+        if (!DirectorCommandApplier.appliesTo(state, command)) continue;
+        state = DirectorCommandApplier.apply(state, command);
+        applied.push(command);
+      }
+      if (applied.length) notify();
+      return applied;
     },
 
     restoreSnapshot({ state: nextState, view: nextView, pendingAnnouncementType: pending, canUndo: nextCanUndo }) {
