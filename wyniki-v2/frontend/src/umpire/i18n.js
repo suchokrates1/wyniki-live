@@ -1,3 +1,5 @@
+import androidStrings from './i18nAndroid.json' with { type: 'json' };
+
 const STRINGS = {
   en: {
     appName: 'Blind Tennis Referee',
@@ -411,6 +413,166 @@ const STRINGS = {
     unforcedError: 'NEPRIVERSTINĖ',
   },
 };
+
+const SHARED_EXTRA = {
+  installApp: 'Install app',
+  installed: 'App installed',
+};
+
+const LANG_EXTRA = {
+  en: SHARED_EXTRA,
+  pl: { installApp: 'Zainstaluj aplikację', installed: 'Aplikacja zainstalowana' },
+  lt: { installApp: 'Įdiegti programėlę', installed: 'Programėlė įdiegta' },
+  de: {
+    singles: 'Einzel',
+    historyEmpty: 'Keine Spiele.',
+    deleteAll: 'Alle löschen',
+    duration: 'Dauer',
+    courtLabel: 'Platz',
+    directorUpdated: 'Von der Regie aktualisiert',
+    settingsLanguage: 'Sprache ändern',
+    needPlayers: 'Wählen Sie {count} Spieler.',
+    umpireName: 'Schiedsrichter',
+    manualTime: 'Manuelle Startzeit',
+    clearTime: 'Löschen',
+    gamesPerSet: 'Spiele pro Satz',
+    setsToWin: 'Sätze zum Sieg',
+    tiebreak: 'Tie-break',
+    superTiebreak: 'Super TB',
+    noAdvantage: 'No-Ad',
+    tiebreakOnly: 'Nur Tiebreak',
+    basicHint: 'WIN / Fehler',
+    advancedHint: 'Asse, Fehler, Statistik',
+    mixed: 'Mixed',
+    loading: 'Laden…',
+    error: 'Etwas ist schiefgelaufen',
+    leaveTitle: 'Spiel verlassen?',
+    leaveMessage: 'Das Spiel läuft noch. Wirklich verlassen?',
+    skipSides: 'Seiten nicht wechseln',
+    umpireMeta: 'Schiedsrichter: {name}',
+    firstServePct: '1. Aufschlag %',
+    matchTitle: 'Spiel',
+    installApp: 'App installieren',
+    installed: 'App installiert',
+  },
+  es: {
+    singles: 'Individuales',
+    historyEmpty: 'Aún no hay partidos.',
+    deleteAll: 'Borrar todo',
+    duration: 'Duración',
+    courtLabel: 'Pista',
+    directorUpdated: 'Actualizado desde dirección',
+    settingsLanguage: 'Cambiar idioma',
+    needPlayers: 'Seleccione {count} jugadores.',
+    umpireName: 'Árbitro',
+    manualTime: 'Hora de inicio manual',
+    clearTime: 'Borrar',
+    gamesPerSet: 'Juegos por set',
+    setsToWin: 'Sets para ganar',
+    tiebreak: 'Tie-break',
+    superTiebreak: 'Super TB',
+    noAdvantage: 'No-Ad',
+    tiebreakOnly: 'Solo tie-break',
+    basicHint: 'WIN / falta',
+    advancedHint: 'Aces, errores, estadísticas',
+    mixed: 'Mixto',
+    loading: 'Cargando…',
+    error: 'Algo salió mal',
+    leaveTitle: '¿Salir del partido?',
+    leaveMessage: 'El partido sigue en curso. ¿Salir?',
+    skipSides: 'No cambiar de lado',
+    umpireMeta: 'Árbitro: {name}',
+    firstServePct: '1.º saque %',
+    matchTitle: 'Partido',
+    installApp: 'Instalar aplicación',
+    installed: 'Aplicación instalada',
+  },
+  fr: {
+    singles: 'Simple',
+    historyEmpty: 'Aucun match.',
+    deleteAll: 'Tout supprimer',
+    duration: 'Durée',
+    courtLabel: 'Court',
+    directorUpdated: 'Mis à jour par la régie',
+    settingsLanguage: 'Changer de langue',
+    needPlayers: 'Sélectionnez {count} joueurs.',
+    umpireName: 'Arbitre',
+    manualTime: 'Heure de début manuelle',
+    clearTime: 'Effacer',
+    gamesPerSet: 'Jeux par set',
+    setsToWin: 'Sets pour gagner',
+    tiebreak: 'Tie-break',
+    superTiebreak: 'Super TB',
+    noAdvantage: 'No-Ad',
+    tiebreakOnly: 'Tie-break uniquement',
+    basicHint: 'WIN / faute',
+    advancedHint: 'Aces, fautes, statistiques',
+    mixed: 'Mixte',
+    loading: 'Chargement…',
+    error: 'Une erreur est survenue',
+    leaveTitle: 'Quitter le match ?',
+    leaveMessage: 'Le match est en cours. Quitter ?',
+    skipSides: 'Ne pas changer de côté',
+    umpireMeta: 'Arbitre : {name}',
+    firstServePct: '1er service %',
+    matchTitle: 'Match',
+    installApp: 'Installer l’application',
+    installed: 'Application installée',
+  },
+  it: {
+    singles: 'Singolare',
+    historyEmpty: 'Nessuna partita.',
+    deleteAll: 'Elimina tutto',
+    duration: 'Durata',
+    courtLabel: 'Campo',
+    directorUpdated: 'Aggiornato dalla regia',
+    settingsLanguage: 'Cambia lingua',
+    needPlayers: 'Seleziona {count} giocatori.',
+    umpireName: 'Arbitro',
+    manualTime: 'Orario di inizio manuale',
+    clearTime: 'Cancella',
+    gamesPerSet: 'Game per set',
+    setsToWin: 'Set per vincere',
+    tiebreak: 'Tie-break',
+    superTiebreak: 'Super TB',
+    noAdvantage: 'No-Ad',
+    tiebreakOnly: 'Solo tie-break',
+    basicHint: 'WIN / errore',
+    advancedHint: 'Assi, errori, statistiche',
+    mixed: 'Misto',
+    loading: 'Caricamento…',
+    error: 'Qualcosa è andato storto',
+    leaveTitle: 'Lasciare la partita?',
+    leaveMessage: 'La partita è in corso. Uscire?',
+    skipSides: 'Non cambiare campo',
+    umpireMeta: 'Arbitro: {name}',
+    firstServePct: '1º servizio %',
+    matchTitle: 'Partita',
+    installApp: 'Installa app',
+    installed: 'App installata',
+  },
+};
+
+Object.assign(STRINGS.en, LANG_EXTRA.en);
+Object.assign(STRINGS.pl, LANG_EXTRA.pl);
+Object.assign(STRINGS.lt, LANG_EXTRA.lt);
+for (const code of ['de', 'es', 'fr', 'it']) {
+  STRINGS[code] = {
+    ...STRINGS.en,
+    ...androidStrings[code],
+    singles: androidStrings[code].matchTypeSingles || STRINGS.en.singles,
+    ...LANG_EXTRA[code],
+  };
+}
+
+export const SCORING_I18N_KEYS = Object.freeze([
+  'win', 'ace', 'fault', 'footFault', 'ballInPlay', 'winner',
+  'forcedError', 'unforcedError', 'secondServeButton', 'doubleFaultButton',
+]);
+
+export function umpireLocaleKeys(lang = 'en') {
+  return Object.keys(STRINGS[lang] || STRINGS.en).sort();
+}
 
 export function umpireText(lang, key, vars = {}) {
   const table = STRINGS[lang] || STRINGS.en;

@@ -4,8 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b1220">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Sędzia">
   <title>Blind Tennis Referee</title>
   <link rel="manifest" href="/umpire.webmanifest">
+  <link rel="apple-touch-icon" href="/umpire-icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
@@ -298,6 +302,15 @@
           ></button>
         </template>
       </div>
+
+      <button
+        class="ump-btn ump-btn--accent"
+        type="button"
+        x-show="canInstall && !installed"
+        @click="installApp()"
+        x-text="t('installApp')"
+      ></button>
+      <p class="ump-sub" x-show="installed" x-text="t('installed')"></p>
 
       <h2 class="ump-section-title" x-text="t('matchHistory')"></h2>
       <button class="ump-btn ump-btn--accent" type="button" @click="openHistory()" x-text="t('matchHistory')"></button>

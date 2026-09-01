@@ -65,16 +65,27 @@ export function createUmpireSession({
     },
 
     saveCourtSession(session) {
-      sessionStore.setItem(COURT_SESSION_KEY, JSON.stringify(session));
+      const raw = JSON.stringify(session);
+      localStore.setItem(COURT_SESSION_KEY, raw);
+      sessionStore.removeItem(COURT_SESSION_KEY);
     },
 
     getCourtSession() {
-      const raw = sessionStore.getItem(COURT_SESSION_KEY);
+      const raw = localStore.getItem(COURT_SESSION_KEY) || sessionStore.getItem(COURT_SESSION_KEY);
       if (!raw) return null;
       try {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (parsed.expiresAtMillis != null && parsed.expiresAtMillis <= Date.now()) {
+          this.clearCourtSession();
+          return null;
+        }
+        if (!localStore.getItem(COURT_SESSION_KEY) && parsed) {
+          localStore.setItem(COURT_SESSION_KEY, raw);
+          sessionStore.removeItem(COURT_SESSION_KEY);
+        }
+        return parsed;
       } catch {
-        sessionStore.removeItem(COURT_SESSION_KEY);
+        this.clearCourtSession();
         return null;
       }
     },
@@ -87,6 +98,7 @@ export function createUmpireSession({
     },
 
     clearCourtSession() {
+      localStore.removeItem(COURT_SESSION_KEY);
       sessionStore.removeItem(COURT_SESSION_KEY);
     },
 

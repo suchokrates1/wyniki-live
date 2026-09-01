@@ -55,6 +55,15 @@ def umpire_manifest():
     return response
 
 
+@blueprint.route('/umpire-sw.js')
+def umpire_service_worker():
+    response = send_from_directory(STATIC_DIR, 'umpire-sw.js')
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
+
+
 @blueprint.route('/office')
 @blueprint.route('/office/')
 @blueprint.route('/office/<int:slot>')
