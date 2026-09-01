@@ -19,6 +19,7 @@ from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
 from ..services.api_auth import court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
 from ..services.director_commands import director_command_broker, dump_match_config, normalize_match_config, tablet_presence
+from ..services.match_timer import apply_match_start_from_payload, sync_court_match_timer_from_match
 from ..config import logger
 
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
@@ -254,42 +255,7 @@ def _apply_finish_outcome(match: Match, data: dict) -> None:
 
 def _sync_court_match_timer_from_match(court_state: dict, match: Match) -> None:
     """Keep in-memory court timer consistent for live overlay rendering."""
-    match_time = court_state.setdefault("match_time", {})
-    match_time.setdefault("seconds", 0)
-    match_time.setdefault("running", False)
-    match_time.setdefault("offset_seconds", 0)
-    match_time.setdefault("started_ts", None)
-    match_time.setdefault("finished_ts", None)
-    match_time.setdefault("resume_ts", None)
-    match_time.setdefault("auto_resume", True)
-
-    if match.status == "in_progress":
-        started_ts = match_time.get("started_ts") or match.created_at or utc_now_iso()
-        match_time["started_ts"] = started_ts
-        match_time["finished_ts"] = None
-        match_time["running"] = True
-        if not match_time.get("resume_ts"):
-            match_time["resume_ts"] = started_ts
-        return
-
-    resume_ts = match_time.get("resume_ts")
-    if match_time.get("running") and resume_ts:
-        try:
-            from ..utils import parse_iso_datetime
-
-            resumed = parse_iso_datetime(resume_ts)
-            now = datetime.now(timezone.utc)
-            elapsed = max(0, int((now - resumed).total_seconds()))
-            total = match_time.get("offset_seconds", 0) + elapsed
-            match_time["offset_seconds"] = total
-            match_time["seconds"] = total
-        except Exception as exc:
-            logger.warning(f"Could not finalize live match timer for court state: {exc}")
-
-    match_time["running"] = False
-    match_time["resume_ts"] = None
-    if not match_time.get("finished_ts") and match.status == "finished":
-        match_time["finished_ts"] = match.updated_at or utc_now_iso()
+    sync_court_match_timer_from_match(court_state, match)
 
 
 def _set_live_super_tiebreak_flag(court_state: dict, is_active: bool) -> None:
@@ -1066,6 +1032,7 @@ def create_match():
             client_country=client_audit["client_country"],
             client_user_agent=client_audit["client_user_agent"],
         )
+        apply_match_start_from_payload(match, data)
         
         db.session.add(match)
         db.session.commit()
@@ -1159,6 +1126,7 @@ def update_match(match_id: int):
         if data.get("match_config") is not None:
             match.match_config = dump_match_config(data.get("match_config"))
         match.status = data.get("status", "in_progress")
+        apply_match_start_from_payload(match, data)
         if data.get("client_match_uuid") and not match.client_match_uuid:
             match.client_match_uuid = _clean_client_text(data.get("client_match_uuid"), 80)
         if data.get("schedule_id") and not match.schedule_id:

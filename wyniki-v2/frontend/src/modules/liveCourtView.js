@@ -17,6 +17,7 @@ import {
   localizeCourtLabel as localizeCourtLabelValue,
 } from '../shared/courtLabels.js';
 import { formatDuration } from '../shared/date.js';
+import { calcMatchTime } from '../shared/matchTime.js';
 import { formatTemplate as fmt } from '../shared/text.js';
 import { formatTeamLabelForWrap, isTeamDisplayName, TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
 
@@ -233,6 +234,10 @@ export function createLiveCourtView() {
 
     formatTime(seconds) {
       return formatDuration(seconds);
+    },
+
+    courtMatchClock(courtId) {
+      return calcMatchTime(this.courts[courtId]);
     },
   };
 }

@@ -381,13 +381,17 @@
     function calcMatchTime(court) {
         if (!court || !court.match_status?.active || !court.match_time) return null;
         var mt = court.match_time;
-        var secs = toFiniteSeconds(mt.seconds);
-        if (secs == null) {
+        var secs = null;
+        var startedTs = parseTimestampSeconds(mt.started_ts);
+        if (mt.running && startedTs != null) {
+            secs = Math.max(0, (Date.now() / 1000) - startedTs);
+        } else if (mt.running) {
             secs = toFiniteSeconds(mt.offset_seconds) || 0;
-            if (mt.running) {
-                var resumeTs = parseTimestampSeconds(mt.resume_ts);
-                if (resumeTs != null) secs += Math.max(0, (Date.now() / 1000) - resumeTs);
-            }
+            var resumeTs = parseTimestampSeconds(mt.resume_ts);
+            if (resumeTs != null) secs += Math.max(0, (Date.now() / 1000) - resumeTs);
+        } else {
+            secs = toFiniteSeconds(mt.seconds);
+            if (secs == null || secs <= 0) return null;
         }
         secs = Math.max(0, Math.floor(secs));
         var hh = String(Math.floor(secs/3600)).padStart(2,'0');
@@ -780,7 +784,6 @@
             render();
             requestAnimationFrame(fitPlayerNames);
         }, SETTINGS_POLL_MS);
-        // Tick match timers every minute
         setInterval(function() {
             document.querySelectorAll('.label-time').forEach(function(el) {
                 var cid = el.getAttribute('data-court');
@@ -788,7 +791,7 @@
                 var timeStr = calcMatchTime(court);
                 if (timeStr) el.innerHTML = '&#9201; '+timeStr;
             });
-        }, 60000);
+        }, 1000);
         window.addEventListener('resize', function() { render(); requestAnimationFrame(fitPlayerNames); });
     }
     init();

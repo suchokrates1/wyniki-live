@@ -48,3 +48,24 @@ test('heading aria includes the spoken score summary', () => {
   assert.match(spoken, /Set 1, 0 to 4/);
   assert.match(spoken, /Set 2, active, 0 to 0/);
 });
+
+test('courtMatchClock uses started_ts instead of frozen seconds', () => {
+  const started = '2026-09-01T10:00:00.000Z';
+  const view = makeView({
+    match_status: { active: true },
+    match_time: {
+      seconds: 0,
+      running: true,
+      offset_seconds: 0,
+      started_ts: started,
+      resume_ts: started,
+    },
+  });
+  const originalNow = Date.now;
+  Date.now = () => Date.parse('2026-09-01T11:03:00.000Z');
+  try {
+    assert.equal(view.courtMatchClock('c3'), '01:03');
+  } finally {
+    Date.now = originalNow;
+  }
+});

@@ -245,8 +245,8 @@
 
                         <!-- Match info footer -->
                         <div class="card-footer" x-show="isMatchActive(courtId)">
-                            <span class="match-time" x-show="courts[courtId]?.match_time?.seconds">
-                                <span aria-hidden="true">🕒</span> <span x-text="formatTime(courts[courtId]?.match_time?.seconds)"></span>
+                            <span class="match-time" x-show="courtMatchClock(courtId)">
+                                <span aria-hidden="true">🕒</span> <span x-text="courtMatchClock(courtId)"></span>
                             </span>
                             <span class="match-set" x-text="getCurrentSetLabel(courtId)"></span>
                         </div>

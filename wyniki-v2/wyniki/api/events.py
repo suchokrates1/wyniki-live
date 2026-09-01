@@ -179,9 +179,13 @@ def process_match_event(kort_id: str, event_data: Dict[str, Any]) -> None:
         
         if event_type == 'match_start':
             state['match_status']['active'] = True
-            state['match_time']['started_ts'] = datetime.now(timezone.utc).isoformat()
+            if not state['match_time'].get('started_ts'):
+                from ..services.match_timer import iso_from_epoch_ms
+                started = iso_from_epoch_ms(event_data.get('timestamp')) or datetime.now(timezone.utc).isoformat()
+                state['match_time']['started_ts'] = started
+                state['match_time']['resume_ts'] = started
+                state['match_time']['offset_seconds'] = 0
             state['match_time']['running'] = True
-            state['match_time']['resume_ts'] = datetime.now(timezone.utc).isoformat()
             logger.info(f"Match started on court {kort_id}: {player1['name']} vs {player2['name']}")
         
         elif event_type == 'match_end' or match_finished:

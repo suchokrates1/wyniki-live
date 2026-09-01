@@ -29,12 +29,9 @@
       <div class="ump-top__title">
         <p class="ump-sub" x-text="t('appName')"></p>
         <h1 class="ump-title" x-text="screenTitle()"></h1>
-        <p class="ump-sub" x-show="screen === 'match' && chrome().showTimer" x-text="timerText"></p>
         <p class="ump-sub" x-show="screen === 'match' && syncLabel()" x-text="syncLabel()"></p>
       </div>
       <div class="ump-top__actions">
-        <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'match' && chrome().showUndo" :disabled="!chrome().undoEnabled" @click="askUndo()" x-text="t('undo')"></button>
-        <button class="ump-btn ump-btn--ghost" type="button" x-show="screen === 'match' && chrome().showFinish" @click="askFinish()" x-text="t('finish')"></button>
         <button
           class="ump-icon-btn"
           type="button"
@@ -42,6 +39,13 @@
           :aria-label="t('settings')"
           @click="openSettings()"
         >⚙</button>
+        <button
+          class="ump-icon-btn"
+          type="button"
+          :aria-label="isFullscreen ? t('exitFullscreen') : t('fullscreen')"
+          :aria-pressed="isFullscreen"
+          @click="toggleFullscreen()"
+        >⛶</button>
       </div>
     </header>
 
@@ -49,8 +53,8 @@
     <p class="ump-error" x-show="error" x-text="error"></p>
     <p x-show="loading" x-text="t('loading')"></p>
 
-    <section x-show="screen === 'language'">
-      <div class="ump-list">
+    <section class="ump-screen" x-show="screen === 'language'">
+      <div class="ump-scroll ump-list">
         <template x-for="item in languages" :key="item.code">
           <button type="button" class="ump-btn ump-lang ump-card" @click="selectLanguage(item.code)">
             <span x-text="item.flag + '  ' + item.name"></span>
@@ -59,10 +63,10 @@
       </div>
     </section>
 
-    <section x-show="screen === 'tournament'">
+    <section class="ump-screen" x-show="screen === 'tournament'">
       <button class="ump-btn" type="button" @click="loadTournaments()" x-text="t('refresh')"></button>
       <p x-show="!loading && !tournaments.length" x-text="t('emptyTournaments')"></p>
-      <div class="ump-list" style="margin-top:12px">
+      <div class="ump-scroll ump-list" style="margin-top:12px">
         <template x-for="tournament in tournaments" :key="tournament.id">
           <button type="button" class="ump-btn ump-lang ump-card" @click="selectTournament(tournament)">
             <span x-text="tournament.name"></span>
@@ -71,10 +75,10 @@
       </div>
     </section>
 
-    <section x-show="screen === 'court'">
+    <section class="ump-screen" x-show="screen === 'court'">
       <button class="ump-btn" type="button" @click="loadCourts()" x-text="t('refresh')"></button>
       <p x-show="!loading && !courts.length" x-text="t('emptyCourts')"></p>
-      <div class="ump-courts" style="margin-top:12px">
+      <div class="ump-scroll ump-courts" style="margin-top:12px">
         <template x-for="court in courts" :key="court.kort_id">
           <button type="button" class="ump-btn ump-court ump-card" @click="openPin(court)">
             <span x-text="court.name"></span>
@@ -84,28 +88,20 @@
       </div>
     </section>
 
-    <section x-show="screen === 'players'">
+    <section class="ump-screen" x-show="screen === 'players'">
+      <div class="ump-toggle ump-toggle--mode">
+        <button class="ump-btn" type="button" :aria-pressed="!isDoubles" @click="setSingles()" x-text="t('singles')"></button>
+        <button class="ump-btn" type="button" :aria-pressed="isDoubles" @click="setDoubles()" x-text="t('doubles')"></button>
+      </div>
+      <p class="ump-sub ump-need" x-text="t('needPlayers', { count: isDoubles ? 4 : 2 })"></p>
       <div class="ump-card ump-suggest" x-show="suggestion">
         <strong x-text="t('suggestion')"></strong>
         <p x-text="(suggestion && suggestion.player1_name || '') + ' vs ' + (suggestion && suggestion.player2_name || '')"></p>
         <button class="ump-btn ump-btn--accent" type="button" @click="applySuggestion()" x-text="t('applySuggestion')"></button>
       </div>
-      <div class="ump-toggle">
-        <button class="ump-btn" type="button" :aria-pressed="!isDoubles" @click="isDoubles = false; selectedIds = selectedIds.slice(0, 2)" x-text="t('singles')"></button>
-        <button class="ump-btn" type="button" :aria-pressed="isDoubles" @click="isDoubles = true" x-text="t('doubles')"></button>
-      </div>
-      <input class="ump-search" type="search" :placeholder="t('searchPlayers')" x-model="search">
-      <div class="ump-list" style="margin-top:12px">
-        <template x-for="player in filteredPlayers()" :key="player.id">
-          <button type="button" class="ump-btn ump-player ump-card" :class="{ 'is-on': isSelected(player) }" @click="togglePlayer(player)">
-            <span x-text="(isSelected(player) ? (selectionIndex(player) + 1) + '. ' : '') + (player.name || player.full_name)"></span>
-          </button>
-        </template>
-      </div>
-      <p x-show="!canContinuePlayers()" x-text="t('needPlayers', { count: isDoubles ? 4 : 2 })"></p>
-      <div class="ump-toggle">
-        <button class="ump-btn" type="button" @click="showAddPlayer = !showAddPlayer" x-text="t('addPlayer')"></button>
-        <button class="ump-btn ump-btn--accent" type="button" :disabled="!canContinuePlayers()" @click="openConfig()" x-text="t('next')"></button>
+      <div class="ump-search-row">
+        <input class="ump-search" type="search" :placeholder="t('searchPlayers')" x-model="search">
+        <button class="ump-btn ump-search-row__add" type="button" @click="showAddPlayer = !showAddPlayer" x-text="t('addPlayer')"></button>
       </div>
       <div class="ump-card" style="padding:14px;margin-top:12px" x-show="showAddPlayer">
         <input class="ump-input" :placeholder="t('firstName')" x-model="addForm.firstName">
@@ -114,9 +110,17 @@
         <input class="ump-input" style="margin-top:8px" placeholder="B1" x-model="addForm.category">
         <button class="ump-btn ump-btn--accent" style="margin-top:8px" type="button" @click="saveNewPlayer()" x-text="t('savePlayer')"></button>
       </div>
+      <div class="ump-scroll ump-list" style="margin-top:12px">
+        <template x-for="player in filteredPlayers()" :key="player.id">
+          <button type="button" class="ump-btn ump-player ump-card" :class="playerRowClass(player)" @click="togglePlayer(player)">
+            <span x-text="(isSelected(player) ? (selectionIndex(player) + 1) + '. ' : '') + (player.name || player.full_name)"></span>
+          </button>
+        </template>
+      </div>
     </section>
 
-    <section x-show="screen === 'config'">
+    <section class="ump-screen" x-show="screen === 'config'">
+      <div class="ump-scroll">
       <label class="ump-sub" x-text="t('umpireName')"></label>
       <input class="ump-input" x-model="configForm.umpireName">
       <label class="ump-sub" x-text="t('manualTime')"></label>
@@ -164,43 +168,49 @@
           <p class="ump-sub" x-text="t('advancedHint')"></p>
         </button>
       </div>
+      </div>
     </section>
 
     <template x-if="screen === 'match' && matchRev >= 0">
-    <section class="ump-match">
+    <section class="ump-screen ump-match">
       <div class="ump-board" x-show="chrome().showScoreboard && scoreboard()">
+        <p class="ump-board__timer" x-show="chrome().showTimer" x-text="timerText"></p>
         <p class="ump-board__meta">
           <span x-text="scoreboard() && t(scoreboard().matchType === 'mixed' ? 'matchTypeMixed' : scoreboard().matchType === 'doubles' ? 'matchTypeDoubles' : 'matchTypeSingles')"></span>
-          <span x-show="scoreboard() && scoreboard().umpireName" x-text="scoreboard() && t('umpireMeta', { name: scoreboard().umpireName })"></span>
+          <span x-show="scoreboard() && scoreboard().umpireName" x-text="scoreboard() && ' • ' + t('umpireMeta', { name: scoreboard().umpireName })"></span>
         </p>
-        <div class="ump-board__grid">
-          <span class="ump-board__h ump-board__h-player" x-text="t('scoreboardPlayer')"></span>
-          <span class="ump-board__h" aria-hidden="true"></span>
+        <p class="ump-board__mode" x-show="scoreboard() && scoreboard().gameMode" x-text="gameModeLabel()"></p>
+        <div class="ump-board__table">
+          <span class="ump-board__h ump-board__h--player" x-text="t('scoreboardPlayer')"></span>
           <span class="ump-board__h" x-text="t('scoreboardPoints')"></span>
           <span class="ump-board__h" x-text="t('scoreboardSet1')"></span>
           <span class="ump-board__h" x-text="t('scoreboardSet2')"></span>
 
-          <span class="ump-board__player">
+          <div class="ump-board__player">
             <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p1Flag"></span>
             <span class="ump-board__name" x-text="scoreboard() && scoreboard().p1Name"></span>
-          </span>
-          <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p1Serving }">🎾</span>
+            <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p1Serving, 'is-gone': scoreboard() && scoreboard().matchType !== 'singles' }" :aria-hidden="!(scoreboard() && scoreboard().p1Serving)">
+              <svg class="ump-ball" viewBox="0 0 24 24" aria-hidden="true"><path fill="#C6D930" d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M9.5,2.2C6.5,6.5 6.5,11 9,14.5c1.5,2.2 1.8,5.2 0.5,7.3"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M14.5,2.2c3,4.3 3,8.8 0.5,12.3c-1.5,2.2-1.8,5.2-0.5,7.3"/></svg>
+            </span>
+          </div>
           <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p1Points"></span>
           <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active }" x-text="scoreboard() && scoreboard().set1.p1"></span>
           <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active }" x-text="scoreboard() && scoreboard().set2.p1"></span>
 
-          <span class="ump-board__player">
+          <div class="ump-board__player">
             <span class="ump-board__flag" x-text="scoreboard() && scoreboard().p2Flag"></span>
             <span class="ump-board__name" x-text="scoreboard() && scoreboard().p2Name"></span>
-          </span>
-          <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p2Serving }">🎾</span>
+            <span class="ump-board__serve" :class="{ 'is-on': scoreboard() && scoreboard().p2Serving, 'is-gone': scoreboard() && scoreboard().matchType !== 'singles' }" :aria-hidden="!(scoreboard() && scoreboard().p2Serving)">
+              <svg class="ump-ball" viewBox="0 0 24 24" aria-hidden="true"><path fill="#C6D930" d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M9.5,2.2C6.5,6.5 6.5,11 9,14.5c1.5,2.2 1.8,5.2 0.5,7.3"/><path fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" d="M14.5,2.2c3,4.3 3,8.8 0.5,12.3c-1.5,2.2-1.8,5.2-0.5,7.3"/></svg>
+            </span>
+          </div>
           <span class="ump-board__pts" x-text="scoreboard() && scoreboard().p2Points"></span>
           <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set1.active }" x-text="scoreboard() && scoreboard().set1.p2"></span>
           <span class="ump-board__set" :class="{ 'is-on': scoreboard() && scoreboard().set2.active }" x-text="scoreboard() && scoreboard().set2.p2"></span>
         </div>
-        <p class="ump-board__mode" x-show="scoreboard() && scoreboard().gameMode" x-text="gameModeLabel()"></p>
       </div>
 
+      <div class="ump-match__body">
       <div x-show="matchView() === 'SERVER_SELECTION'">
         <button class="ump-btn" type="button" @click="swapSides()" x-text="t('swapSides')"></button>
         <div class="ump-serve-grid" style="margin-top:12px">
@@ -301,10 +311,17 @@
         <button class="ump-btn ump-btn--accent" type="button" @click="nextMatch(true)" x-text="t('nextSame')"></button>
         <button class="ump-btn" type="button" @click="nextMatch(false)" x-text="t('nextNew')"></button>
       </div>
+      </div>
+
+      <div class="ump-match__chrome" x-show="chrome().showUndo || chrome().showFinish">
+        <button class="ump-btn ump-btn--undo" type="button" x-show="chrome().showUndo" :disabled="!chrome().undoEnabled" @click="askUndo()">↶ <span x-text="t('undo')"></span></button>
+        <button class="ump-btn ump-btn--finish" type="button" x-show="chrome().showFinish" @click="askFinish()" x-text="t('finishMatch')"></button>
+      </div>
     </section>
     </template>
 
-    <section x-show="screen === 'settings'" class="ump-settings">
+    <section class="ump-screen ump-settings" x-show="screen === 'settings'">
+      <div class="ump-scroll">
       <h2 class="ump-section-title" x-text="t('settingsLanguage')"></h2>
       <div class="ump-list">
         <template x-for="item in languages" :key="'set-lang-' + item.code">
@@ -356,9 +373,10 @@
       </dl>
       <button class="ump-btn" type="button" @click="copyDiagnostics()" x-text="t('diagnosticsCopy')"></button>
       <p class="ump-sub" x-show="diagnosticsCopyOk" x-text="t('diagnosticsCopied')"></p>
+      </div>
     </section>
 
-    <section x-show="screen === 'history'">
+    <section class="ump-screen" x-show="screen === 'history'">
       <p x-show="!historyEntries.length" x-text="t('historyEmpty')"></p>
       <button
         class="ump-btn"
@@ -367,7 +385,7 @@
         @click="askDeleteAllHistory()"
         x-text="t('deleteAll')"
       ></button>
-      <div class="ump-list" style="margin-top:12px">
+      <div class="ump-scroll ump-list" style="margin-top:12px">
         <template x-for="entry in historyEntries" :key="entry.clientMatchUuid">
           <article class="ump-card ump-history">
             <button type="button" class="ump-history__main" @click="openHistoryDetail(entry)">
@@ -383,7 +401,8 @@
       </div>
     </section>
 
-    <section x-show="screen === 'historyDetail' && historyDetail" class="ump-settings">
+    <section class="ump-screen ump-settings" x-show="screen === 'historyDetail' && historyDetail">
+      <div class="ump-scroll">
       <h2 x-text="historyDetail && (historyDetail.player1Name + ' vs ' + historyDetail.player2Name)"></h2>
       <p class="ump-finish__winner" x-text="historyDetail && historyScore(historyDetail)"></p>
       <dl class="ump-stats">
@@ -396,6 +415,7 @@
         </div>
       </dl>
       <button class="ump-btn" type="button" @click="askDeleteHistory(historyDetail)" x-text="t('confirmDeleteMatch')"></button>
+      </div>
     </section>
 
     <div class="ump-pin" x-show="dialog === 'undo'" x-cloak>

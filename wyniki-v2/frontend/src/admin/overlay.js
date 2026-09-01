@@ -1,4 +1,5 @@
 import { abbreviateCompetitorName } from '../shared/teamDisplay.js';
+import { calcMatchTime } from '../shared/matchTime.js';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
@@ -1135,15 +1136,9 @@ export function createOverlayAdmin() {
 
       // Match time bar
       let timeHtml = '';
-      if (active && court.match_time) {
-        const mt = court.match_time;
-        let secs = mt.seconds || 0;
-        if (mt.running && mt.resume_ts) secs += (Date.now() / 1000 - mt.resume_ts);
-        secs += (mt.offset_seconds || 0);
-        secs = Math.max(0, Math.floor(secs));
-        const hh = String(Math.floor(secs / 3600)).padStart(2, '0');
-        const mm = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
-        timeHtml = '<div class="sb-time-bar"><span class="time-icon">&#9201;</span> ' + hh + ':' + mm + '</div>';
+      const liveClock = active ? calcMatchTime(court) : null;
+      if (liveClock) {
+        timeHtml = '<div class="sb-time-bar"><span class="time-icon">&#9201;</span> ' + liveClock + '</div>';
       }
 
       const hFill = el.h ? ' h-fill' : '';
@@ -1157,17 +1152,8 @@ export function createOverlayAdmin() {
         + '</div>' + timeHtml + '</div></div>';
     },
 
-    // Calculate match time string (mirrors overlay.html calcMatchTime)
     _calcMatchTime(court) {
-      if (!court || !court.match_status?.active || !court.match_time) return null;
-      const mt = court.match_time;
-      let secs = mt.seconds || 0;
-      if (mt.running && mt.resume_ts) secs += (Date.now() / 1000 - mt.resume_ts);
-      secs += (mt.offset_seconds || 0);
-      secs = Math.max(0, Math.floor(secs));
-      const hh = String(Math.floor(secs / 3600)).padStart(2, '0');
-      const mm = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
-      return hh + ':' + mm;
+      return calcMatchTime(court);
     },
 
       // Render full court element with label, wrapped in overlay-container (matches OBS overlay)

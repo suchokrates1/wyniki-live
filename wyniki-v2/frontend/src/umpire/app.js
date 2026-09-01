@@ -35,6 +35,8 @@ import { syncMatchLive } from './offline/matchSync.js';
 import { createOutboxDispatcher } from './offline/outbox.js';
 import { openUmpireStores } from './offline/store.js';
 import { applyTheme, readTheme, saveTheme, THEMES } from './offline/theme.js';
+import { bindFullscreenChange, isFullscreen, toggleFullscreen } from './fullscreen.js';
+import { playerRowClass as selectionRowClass } from './playerRowClass.js';
 import './umpire.css';
 
 const session = createUmpireSession();
@@ -118,6 +120,7 @@ function createUmpireApp() {
     diagnosticsCopyOk: false,
     canInstall: false,
     installed: false,
+    isFullscreen: false,
     directorToast: false,
     _directorToastTimer: null,
     _pollActive: false,
@@ -160,6 +163,18 @@ function createUmpireApp() {
       this._timerId = setInterval(() => {
         if (this.match?.state) this.timerText = matchTimerText(this.match.state, Date.now());
       }, 1000);
+      this.isFullscreen = isFullscreen();
+      this._unbindFullscreen = bindFullscreenChange((value) => {
+        this.isFullscreen = value;
+      });
+    },
+
+    async toggleFullscreen() {
+      try {
+        await toggleFullscreen();
+      } catch {
+        this.isFullscreen = isFullscreen();
+      }
     },
 
     async initOffline() {
@@ -492,6 +507,20 @@ function createUmpireApp() {
 
     isSelected(player) {
       return this.selectedIds.includes(playerId(player));
+    },
+
+    playerRowClass(player) {
+      return selectionRowClass(this.isDoubles, this.isSelected(player) ? this.selectionIndex(player) : -1);
+    },
+
+    setSingles() {
+      this.isDoubles = false;
+      this.selectedIds = this.selectedIds.slice(0, 2);
+      this.scheduleAdvanceToConfig();
+    },
+
+    setDoubles() {
+      this.isDoubles = true;
     },
 
     selectionIndex(player) {

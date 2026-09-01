@@ -29,6 +29,7 @@ export function toMatchPayload(state) {
     court_id: state.courtId,
     player1_name: state.isDoubles ? state.getTeam1FullName() : state.player1.getFullName(),
     player2_name: state.isDoubles ? state.getTeam2FullName() : state.player2.getFullName(),
+    match_start_time_ms: state.matchStartTime > 0 ? state.matchStartTime : null,
     score: {
       player1_sets: state.player1Sets,
       player2_sets: state.player2Sets,
