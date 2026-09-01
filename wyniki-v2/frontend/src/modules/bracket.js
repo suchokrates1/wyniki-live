@@ -81,6 +81,26 @@ export function getKnockoutPodiumEntries(knockout = []) {
   return entries;
 }
 
+export function getGroupPodiumEntries(groups = []) {
+  const tables = (groups || []).filter((group) => (
+    groupShowsStandingsTable(group) && Array.isArray(group?.standings) && group.standings.length >= 3
+  ));
+  if (tables.length !== 1) return [];
+  const top = tables[0].standings.slice(0, 3).filter((row) => row?.name && !row._placeholder);
+  if (top.length < 3) return [];
+  return [
+    { medal: '🥇', cls: 'bt-podium-item--gold', player: top[0].name, place: '1.' },
+    { medal: '🥈', cls: 'bt-podium-item--silver', player: top[1].name, place: '2.' },
+    { medal: '🥉', cls: 'bt-podium-item--bronze', player: top[2].name, place: '3.' },
+  ];
+}
+
+export function getCategoryPodiumEntries(category = {}) {
+  const fromKnockout = getKnockoutPodiumEntries(category?.knockout || []);
+  if (fromKnockout.length === 3) return fromKnockout;
+  return getGroupPodiumEntries(category?.groups || []);
+}
+
 import {
   extractCategoryCodeFromLabel,
   formatCategoryDisplay,

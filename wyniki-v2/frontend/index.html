@@ -295,8 +295,8 @@
                                  :id="'cat-panel-'+cat.name.replace(/\s+/g,'-')"
                                  :aria-labelledby="'cat-tab-'+cat.name.replace(/\s+/g,'-')">
 
-                                <div class="bt-podium bt-podium--top" role="list" :aria-label="tr().bracket?.podiumLabel || 'Podium'" x-show="knockoutPodiumEntries(cat.knockout).length === 3">
-                                    <template x-for="(entry, pi) in knockoutPodiumEntries(cat.knockout)" :key="'pod-top-'+cat.name+'-'+pi">
+                                <div class="bt-podium bt-podium--top" role="list" :aria-label="tr().bracket?.podiumLabel || 'Podium'" x-show="categoryPodiumEntries(cat).length === 3">
+                                    <template x-for="(entry, pi) in categoryPodiumEntries(cat)" :key="'pod-top-'+cat.name+'-'+pi">
                                         <div class="bt-podium-item" :class="entry.cls" role="listitem">
                                             <span class="bt-podium-medal" x-text="entry.medal"></span>
                                             <span class="bt-podium-result">
@@ -329,7 +329,7 @@
                                                 </thead>
                                                 <tbody>
                                                     <template x-for="(row, ri) in groupStandingsRows(group, cat.groups)" :key="row._key || ('gs-'+cat.name+'-'+gi+'-'+ri)">
-                                                        <tr :class="{ 'bt-qualify': !row._placeholder && ri < 2 && group.standings.length > 2, 'bt-row--placeholder': row._placeholder }" :aria-hidden="row._placeholder ? 'true' : 'false'">
+                                                        <tr :class="{ 'bt-qualify': standingsRowQualifies(row, ri, group, cat), 'bt-row--placeholder': row._placeholder }" :aria-hidden="row._placeholder ? 'true' : 'false'">
                                                             <td class="bt-pos" x-text="row._placeholder ? '' : (ri + 1)"></td>
                                                             <td class="bt-name" x-text="row._placeholder ? '' : resolveBracketName(row.name)"></td>
                                                             <td class="bt-stat bt-stat--wins" x-text="row._placeholder ? '' : row.wins"></td>
@@ -1027,8 +1027,8 @@
                                          :id="'tcat-panel-'+cat.name.replace(/\s+/g,'-')"
                                          :aria-labelledby="'tcat-tab-'+cat.name.replace(/\s+/g,'-')">
 
-                                        <div class="bt-podium bt-podium--top" role="list" :aria-label="tr().bracket?.podiumLabel || 'Podium'" x-show="knockoutPodiumEntries(cat.knockout).length === 3">
-                                            <template x-for="(entry, pi) in knockoutPodiumEntries(cat.knockout)" :key="'tpod-top-'+cat.name+'-'+pi">
+                                        <div class="bt-podium bt-podium--top" role="list" :aria-label="tr().bracket?.podiumLabel || 'Podium'" x-show="categoryPodiumEntries(cat).length === 3">
+                                            <template x-for="(entry, pi) in categoryPodiumEntries(cat)" :key="'tpod-top-'+cat.name+'-'+pi">
                                                 <div class="bt-podium-item" :class="entry.cls" role="listitem">
                                                     <span class="bt-podium-medal" x-text="entry.medal"></span>
                                                     <span class="bt-podium-result">
@@ -1060,7 +1060,7 @@
                                                         </thead>
                                                         <tbody>
                                                             <template x-for="(row, ri) in groupStandingsRows(group, cat.groups)" :key="row._key || ('tgs-'+cat.name+'-'+gi+'-'+ri)">
-                                                                <tr :class="{ 'bt-qualify': !row._placeholder && ri < 2 && group.standings.length > 2, 'bt-row--placeholder': row._placeholder }" :aria-hidden="row._placeholder ? 'true' : 'false'">
+                                                                <tr :class="{ 'bt-qualify': standingsRowQualifies(row, ri, group, cat), 'bt-row--placeholder': row._placeholder }" :aria-hidden="row._placeholder ? 'true' : 'false'">
                                                                     <td class="bt-pos" x-text="row._placeholder ? '' : (ri + 1)"></td>
                                                                     <td class="bt-name" x-text="row._placeholder ? '' : resolveBracketName(row.name)"></td>
                                                                     <td class="bt-stat bt-stat--wins" x-text="row._placeholder ? '' : row.wins"></td>
