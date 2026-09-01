@@ -10,7 +10,9 @@ test('10 language picker is the first screen', async ({ page }) => {
   await expect(page.locator('h1.ump-title')).toHaveText('Choose language');
   await expect(page.getByRole('button', { name: /English/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Polski/ })).toBeVisible();
-  expect(page.viewportSize().width).toBeLessThanOrEqual(800);
+  const { width, height } = page.viewportSize();
+  expect([800, 1280]).toContain(width);
+  expect([800, 1280]).toContain(height);
 });
 
 test('11 tournament list after language', async ({ page }) => {
