@@ -116,6 +116,8 @@ function createUmpireApp() {
     historyEntries: [],
     historyDetail: null,
     diagnosticsCopyOk: false,
+    canInstall: false,
+    installed: false,
     directorToast: false,
     _directorToastTimer: null,
     _pollActive: false,
@@ -130,6 +132,8 @@ function createUmpireApp() {
 
     async init() {
       applyTheme(this.theme);
+      this.applyChromeLanguage(this.lang);
+      this.watchInstallPrompt();
       this.match = createMatchController({
         onChange: () => this.onMatchChange(),
         onSync: (reason, state, extra) => this.syncMatch(reason, state, extra),
@@ -316,14 +320,46 @@ function createUmpireApp() {
       this._heartbeat?.sendNow();
     },
 
+    applyChromeLanguage(code) {
+      document.documentElement.lang = code;
+      document.title = umpireText(code, 'appName');
+    },
+
     selectLanguage(code) {
       session.setLanguage(code);
       this.lang = code;
+      this.applyChromeLanguage(code);
+      this.matchRev += 1;
       if (this.settingsFrom === 'settings' || this.screen === 'settings') {
         this.go('settings');
         return;
       }
       this.go('tournament');
+    },
+
+    watchInstallPrompt() {
+      this.installed = window.matchMedia('(display-mode: standalone)').matches;
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        this._installEvent = event;
+        this.canInstall = true;
+      });
+      window.addEventListener('appinstalled', () => {
+        this.installed = true;
+        this.canInstall = false;
+        this._installEvent = null;
+      });
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/umpire-sw.js').catch(() => {});
+      }
+    },
+
+    async installApp() {
+      if (!this._installEvent) return;
+      this._installEvent.prompt();
+      await this._installEvent.userChoice;
+      this._installEvent = null;
+      this.canInstall = false;
     },
 
     setTheme(theme) {

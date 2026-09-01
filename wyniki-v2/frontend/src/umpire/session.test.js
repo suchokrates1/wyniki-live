@@ -58,9 +58,19 @@ test('tournament selection expires the next calendar day', () => {
 
 test('court token is valid only before expiry', () => {
   const session = createUmpireSession({ localStore: memoryStore(), sessionStore: memoryStore() });
+  session.saveCourtSession({ courtId: 't31-1', token: 'abc', expiresAtMillis: Date.now() + 60_000 });
+  assert.equal(session.hasValidCourtToken(Date.now()), true);
   session.saveCourtSession({ courtId: 't31-1', token: 'abc', expiresAtMillis: 2_000 });
-  assert.equal(session.hasValidCourtToken(1_000), true);
   assert.equal(session.hasValidCourtToken(2_000), false);
+});
+
+test('court PIN session survives a Chrome restart via localStorage', () => {
+  const localStore = memoryStore();
+  const first = createUmpireSession({ localStore, sessionStore: memoryStore() });
+  first.saveCourtSession({ courtId: 't31-1', token: 'abc', expiresAtMillis: Date.now() + 60_000 });
+  const restarted = createUmpireSession({ localStore, sessionStore: memoryStore() });
+  assert.equal(restarted.getCourtSession()?.token, 'abc');
+  assert.equal(restarted.hasValidCourtToken(), true);
 });
 
 test('parseExpiresAt accepts unix seconds and ISO', () => {
