@@ -26,6 +26,12 @@ test('language skip only after an explicit choice is stored', () => {
   assert.equal(session.getLanguage(), 'pl');
   assert.equal(firstScreen({ hasLanguage: true }), 'tournament');
   assert.equal(firstScreen({ hasLanguage: true, forceLanguage: true }), 'language');
+  assert.equal(firstScreen({ hasLanguage: true, hasTournamentToday: true }), 'court');
+  assert.equal(firstScreen({
+    hasLanguage: true,
+    hasTournamentToday: true,
+    forceTournament: true,
+  }), 'tournament');
 });
 
 test('Android language list is complete', () => {

@@ -45,3 +45,23 @@ test('startDraft stores players and TB-only flag for serve screen', () => {
   assert.equal(draft.startInSuperTiebreak, true);
   assert.equal(draft.matchConfig.tiebreakOnly, true);
 });
+
+test('startDraft maps doubles selection like Android NextMatchController', () => {
+  const config = buildMatchConfig(DEFAULT_MATCH_CONFIG_FORM, StatsMode.ADVANCED);
+  const draft = startDraft({
+    selectedPlayers: [
+      { id: 1, name: 'A' },
+      { id: 2, name: 'A-partner' },
+      { id: 3, name: 'B' },
+      { id: 4, name: 'B-partner' },
+    ],
+    isDoubles: true,
+    courtId: 't31-1',
+    courtName: 'Kort 1',
+    config,
+    team1Name: 'A / A-partner',
+    team2Name: 'B / B-partner',
+  });
+  assert.deepEqual(draft.players.map((player) => player.id), [1, 3, 2, 4]);
+  assert.equal(draft.team1Name, 'A / A-partner');
+});

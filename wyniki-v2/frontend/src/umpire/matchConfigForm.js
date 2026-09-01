@@ -48,7 +48,10 @@ export function startDraft({
   umpireName,
   manualStartTime,
 }) {
-  const players = selectedPlayers.map((player) => ({
+  const mapped = (isDoubles && selectedPlayers.length === 4)
+    ? [selectedPlayers[0], selectedPlayers[2], selectedPlayers[1], selectedPlayers[3]]
+    : selectedPlayers;
+  const players = mapped.map((player) => ({
     id: player.id,
     name: player.name || player.full_name || player.fullName,
     firstName: player.firstName || player.first_name || '',

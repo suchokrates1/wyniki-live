@@ -36,7 +36,10 @@ function createUmpireApp() {
 
   return {
     languages: AVAILABLE_LANGUAGES,
-    screen: firstScreen({ hasLanguage: session.hasLanguageSelected() }),
+    screen: firstScreen({
+      hasLanguage: session.hasLanguageSelected(),
+      hasTournamentToday: Boolean(session.getTournamentForToday()),
+    }),
     lang: session.hasLanguageSelected() ? session.getLanguage() : 'en',
     loading: false,
     error: '',
@@ -48,7 +51,11 @@ function createUmpireApp() {
     isDoubles: false,
     search: '',
     showAddPlayer: false,
-    addForm: { firstName: '', lastName: '', country: '' },
+    addForm: { firstName: '', lastName: '', country: '', category: '' },
+    team1Name: null,
+    team2Name: null,
+    selectedScheduleId: null,
+    _advanceTimer: null,
     pinOpen: false,
     pinCourt: null,
     pinBusy: false,
@@ -219,6 +226,9 @@ function createUmpireApp() {
     },
 
     togglePlayer(player) {
+      this.selectedScheduleId = null;
+      this.team1Name = null;
+      this.team2Name = null;
       const id = playerId(player);
       const index = this.selectedIds.indexOf(id);
       if (index >= 0) {
@@ -227,6 +237,15 @@ function createUmpireApp() {
       }
       if (this.selectedIds.length >= neededCount(this.isDoubles)) return;
       this.selectedIds = [...this.selectedIds, id];
+      this.scheduleAdvanceToConfig();
+    },
+
+    scheduleAdvanceToConfig() {
+      clearTimeout(this._advanceTimer);
+      if (!this.canContinuePlayers()) return;
+      this._advanceTimer = setTimeout(() => {
+        if (this.screen === 'players' && this.canContinuePlayers()) this.openConfig();
+      }, 300);
     },
 
     selectedPlayers() {
@@ -252,6 +271,10 @@ function createUmpireApp() {
       pushPerson(suggestion.player1);
       pushPerson(suggestion.player2);
       this.selectedIds = ids.slice(0, neededCount(this.isDoubles));
+      this.selectedScheduleId = suggestion.id ?? suggestion.schedule_id ?? null;
+      this.team1Name = suggestion.player1_name || null;
+      this.team2Name = suggestion.player2_name || null;
+      this.scheduleAdvanceToConfig();
     },
 
     async saveNewPlayer() {
@@ -259,11 +282,15 @@ function createUmpireApp() {
       const lastName = this.addForm.lastName.trim();
       if (!court?.courtId || !lastName) return;
       this.loading = true;
+      const firstName = this.addForm.firstName.trim();
+      const country = this.addForm.country.trim().toUpperCase();
       const { ok, data } = await api.addPlayer({
         kort_id: court.courtId,
-        first_name: this.addForm.firstName.trim(),
+        first_name: firstName,
         last_name: lastName,
-        country: this.addForm.country.trim().toUpperCase() || undefined,
+        name: `${firstName} ${lastName}`.trim(),
+        country_code: country || undefined,
+        category: this.addForm.category.trim() || undefined,
       });
       this.loading = false;
       if (!ok) {
@@ -271,7 +298,7 @@ function createUmpireApp() {
         return;
       }
       this.showAddPlayer = false;
-      this.addForm = { firstName: '', lastName: '', country: '' };
+      this.addForm = { firstName: '', lastName: '', country: '', category: '' };
       await this.loadPlayers();
       const created = data?.player || data;
       if (created?.id) this.togglePlayer(created);
@@ -291,9 +318,11 @@ function createUmpireApp() {
         selectedPlayers: selected,
         isDoubles: this.isDoubles,
         isMixedDoubles: this.isDoubles && this.isMixedSelection(selected),
+        team1Name: this.team1Name,
+        team2Name: this.team2Name,
         courtId: court.courtId,
         courtName: court.courtName,
-        scheduleId: this.suggestion?.id ?? this.suggestion?.schedule_id ?? null,
+        scheduleId: this.selectedScheduleId,
         config,
         umpireName: this.configForm.umpireName,
         manualStartTime: this.configForm.manualStartTime

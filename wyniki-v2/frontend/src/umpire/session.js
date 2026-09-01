@@ -118,7 +118,13 @@ export function parseExpiresAt(value) {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-export function firstScreen({ hasLanguage, forceLanguage = false }) {
+export function firstScreen({
+  hasLanguage,
+  hasTournamentToday = false,
+  forceLanguage = false,
+  forceTournament = false,
+} = {}) {
   if (forceLanguage || !hasLanguage) return 'language';
+  if (!forceTournament && hasTournamentToday) return 'court';
   return 'tournament';
 }
