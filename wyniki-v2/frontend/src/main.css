@@ -1383,6 +1383,12 @@ body {
   margin-top: 24px;
   padding-bottom: 48px;
 }
+.hm-filters {
+  margin-bottom: 12px;
+}
+.hm-filters .player-dropdown {
+  min-width: 160px;
+}
 .hm-heading {
   margin: 0 0 14px;
   font-size: 17px;
@@ -1488,6 +1494,9 @@ body {
 }
 .hm-set-cell--won {
   font-weight: 700;
+}
+.hm-set-cell--stb {
+  min-width: 36px;
 }
 
 /* Tiebreak superscript */
@@ -1798,14 +1807,14 @@ body {
    BRACKET: Groups & Standings
    ============================================================ */
 .bracket-content {
-  max-width: 900px;
+  max-width: 1180px;
   margin: 16px auto;
   padding: 0 12px;
 }
 .bracket-groups {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
   margin-bottom: 24px;
 }
 .bracket-group {
@@ -1915,12 +1924,35 @@ body {
 
 /* Group matches */
 .bracket-matches {
-  padding: 12px 16px;
+  padding: 8px 16px 12px;
 }
 .bracket-matches__title {
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  user-select: none;
+}
+.bracket-matches__title::-webkit-details-marker {
+  display: none;
+}
+.bracket-matches__title::marker {
+  content: '';
+}
+.bracket-matches__title::before {
+  content: '▸';
+  font-size: 11px;
+  color: var(--muted);
+}
+.bracket-matches[open] > .bracket-matches__title::before {
+  content: '▾';
+}
+.bracket-matches[open] > .bracket-matches__title {
   margin-bottom: 8px;
 }
 /* Scoreboard table (shared: group + knockout) */
@@ -1999,21 +2031,26 @@ body {
   margin-bottom: 16px;
   text-align: center;
 }
+.bt-tree {
+  margin-bottom: 28px;
+}
 .bt-ladder {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 22px;
-  overflow-x: visible;
-  padding: 4px 0 12px;
-  max-width: 820px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  padding: 4px 8px 16px;
+  max-width: none;
+  margin: 0;
 }
 .bt-round {
-  min-width: 0;
+  min-width: 220px;
+  flex: 1 1 220px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   position: relative;
+  padding-right: 20px;
 }
 .bt-round-label {
   font-size: 12px;
@@ -2023,74 +2060,51 @@ body {
   color: var(--muted);
   text-align: center;
   padding-bottom: 6px;
+  margin-bottom: 8px;
   border-bottom: 2px solid var(--line);
+  flex: 0 0 auto;
 }
-.bt-round--final {
-  width: min(100%, 360px);
-  justify-self: center;
-  z-index: 2;
+.bt-round-matches {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 12px;
 }
 .bt-round--final .bt-round-label,
 .bt-round--semifinal .bt-round-label {
   color: var(--accent);
   border-bottom-color: var(--accent);
 }
-.bt-round--quarterfinal {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px clamp(12px, 4vw, 36px);
-}
-.bt-round--quarterfinal .bt-round-label {
-  grid-column: 1 / -1;
-}
-.bt-round--semifinal {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px clamp(18px, 8vw, 72px);
-  padding-top: 42px;
-}
-.bt-round--semifinal::before,
-.bt-round--semifinal::after {
+.bt-ladder--ltr .bt-round:not(:last-child) .bt-matchup-wrap::after {
   content: '';
   position: absolute;
-  pointer-events: none;
-  background: var(--accent);
+  top: 50%;
+  right: -20px;
+  width: 20px;
+  height: 2px;
+  background: var(--line);
 }
-.bt-round--semifinal::before {
-  top: 0;
-  left: 50%;
-  width: 3px;
-  height: 24px;
-  transform: translateX(-50%);
-}
-.bt-round--semifinal::after {
-  top: 24px;
-  left: 25%;
-  right: 25%;
-  height: 3px;
-}
-.bt-round--semifinal .bt-round-label {
-  grid-column: 1 / -1;
+.bt-placement-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+  justify-content: flex-start;
 }
 .bt-round--placement {
-  width: min(100%, 620px);
-  justify-self: center;
+  min-width: 240px;
+  flex: 0 1 320px;
+  padding-right: 0;
 }
 
 /* Individual matchup card (knockout uses bm-scoreboard table) */
 .bt-matchup-wrap {
   position: relative;
   min-width: 0;
-}
-.bt-round--semifinal .bt-matchup-wrap::before {
-  content: '';
-  position: absolute;
-  top: -17px;
-  left: 50%;
-  width: 3px;
-  height: 17px;
-  transform: translateX(-50%);
-  background: var(--accent);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .bt-matchup {
   background: var(--card);
@@ -2176,20 +2190,29 @@ body {
   font-size: 11px;
 }
 
-@media (max-width: 520px) {
-  .bt-ladder { gap: 14px; }
-  .bt-round--semifinal {
+@media (max-width: 1100px) {
+  .bracket-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .bracket-groups {
     grid-template-columns: 1fr;
-    padding-top: 24px;
   }
-  .bt-round--semifinal::before,
-  .bt-round--semifinal::after,
-  .bt-round--semifinal .bt-matchup-wrap::before {
-    display: none;
+  .bracket-table { font-size: 12px; }
+  .bracket-table th, .bracket-table td { padding: 6px 6px; }
+  .bracket-match-item, .bm-scoreboard { font-size: 12px; }
+  .tab-btn { font-size: 13px; padding: 8px 8px; }
+}
+@media (max-width: 520px) {
+  .bt-ladder { gap: 0; }
+  .bt-round {
+    min-width: 200px;
+    padding-right: 16px;
   }
-  .bt-round--placement,
-  .bt-round--final {
+  .bt-round--placement {
     width: 100%;
+    flex-basis: 100%;
   }
   .bracket-legend {
     justify-content: flex-start;
@@ -2199,16 +2222,6 @@ body {
   .bm-scoreboard .bm-name { max-width: none; }
   .bm-scoreboard .bm-set { padding: 5px 5px; min-width: 22px; }
   .cat-tab { padding: 6px 10px; font-size: 12px; }
-}
-
-@media (max-width: 520px) {
-  .bracket-groups {
-    grid-template-columns: 1fr;
-  }
-  .bracket-table { font-size: 12px; }
-  .bracket-table th, .bracket-table td { padding: 6px 6px; }
-  .bracket-match-item, .bm-scoreboard { font-size: 12px; }
-  .tab-btn { font-size: 13px; padding: 8px 8px; }
 }
 
 /* ============================================================

@@ -1,22 +1,76 @@
 import { publicApi } from '../api/publicApi.js';
 import { registerCompetitorName } from '../shared/teamDisplay.js';
 import {
+  filterMatchHistory,
   getMatchSets as getHistoryMatchSets,
   getMatchWinner as getHistoryMatchWinner,
   getStatsRowsPaired as getHistoryStatsRowsPaired,
+  historyFilterOptions,
 } from './history.js';
 
 export function createHistoryView() {
   return {
     history: [],
     expandedMatchStats: {},
+    historySearch: '',
+    historyCategory: '',
+    historyCourt: '',
+    historyDate: '',
 
-    sortedHistory() {
-      return [...this.history].sort((a, b) => {
+    historyFilters() {
+      return {
+        search: this.historySearch,
+        category: this.historyCategory,
+        court: this.historyCourt,
+        date: this.historyDate,
+      };
+    },
+
+    historyHasActiveFilters() {
+      const filters = this.historyFilters();
+      return Boolean(filters.search || filters.category || filters.court || filters.date);
+    },
+
+    clearHistoryFilters() {
+      this.historySearch = '';
+      this.historyCategory = '';
+      this.historyCourt = '';
+      this.historyDate = '';
+    },
+
+    filteredHistoryList(matches = []) {
+      const sorted = [...matches].sort((a, b) => {
         const ta = a.ended_ts || a.timestamp || '';
         const tb = b.ended_ts || b.timestamp || '';
         return tb.localeCompare(ta);
       });
+      return filterMatchHistory(sorted, this.historyFilters());
+    },
+
+    sortedHistory() {
+      return this.filteredHistoryList(this.history);
+    },
+
+    historyFilterChoices(matches = this.history) {
+      const options = historyFilterOptions(matches);
+      return {
+        categories: [...options.categories].sort((left, right) => this.compareBracketCategoryNames(left, right)),
+        courts: options.courts,
+        dates: options.dates,
+      };
+    },
+
+    historyDateLabel(dateKey) {
+      if (!dateKey) return '';
+      const date = new Date(`${dateKey}T12:00:00`);
+      if (Number.isNaN(date.getTime())) return dateKey;
+      return date.toLocaleDateString(this.locale(), { weekday: 'short', day: 'numeric', month: 'short' });
+    },
+
+    historyCourtLabel(court) {
+      if (!court) return '';
+      const prefix = this.tr().history?.court || 'Kort';
+      return `${prefix} ${court.label || court.value}`;
     },
 
     async fetchHistory() {

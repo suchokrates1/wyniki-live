@@ -834,8 +834,8 @@
                     <span class="hm-player-name competitor-name" x-text="formatCompetitorName(match.player1_name || '-')"></span>
                     <span class="hm-sets">
                       <template x-for="(set, i) in officeMatchSets(match)" :key="'oa-'+match.id+'-'+i">
-                        <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b }">
-                          <span x-text="set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a < set.b" x-text="set.tb"></sup>
+                        <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b, 'hm-set-cell--stb': set.isSuperTB }">
+                          <span x-text="set.isSuperTB ? '['+set.a+']' : set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a < set.b" x-text="set.tb"></sup>
                         </span>
                       </template>
                     </span>
@@ -846,8 +846,8 @@
                     <span class="hm-player-name competitor-name" x-text="formatCompetitorName(match.player2_name || '-')"></span>
                     <span class="hm-sets">
                       <template x-for="(set, i) in officeMatchSets(match)" :key="'ob-'+match.id+'-'+i">
-                        <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a }">
-                          <span x-text="set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b < set.a" x-text="set.tb"></sup>
+                        <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a, 'hm-set-cell--stb': set.isSuperTB }">
+                          <span x-text="set.isSuperTB ? '['+set.b+']' : set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b < set.a" x-text="set.tb"></sup>
                         </span>
                       </template>
                     </span>

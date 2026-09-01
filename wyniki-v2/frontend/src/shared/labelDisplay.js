@@ -36,6 +36,11 @@ export function translateStoredScheduleLabel(name, labels = {}) {
   result = result.replace(/Kobiety/g, women);
   result = result.replace(/Mężczyźni/g, men);
   if (mixed) result = result.replace(/B3\/4 Mixed/g, mixed);
+  if (labels.doubles) {
+    result = result.replace(/\bDoubles\b/gi, labels.doubles);
+    result = result.replace(/\bDebel\b/gi, labels.doubles);
+    result = result.replace(/\bDeble\b/gi, labels.doubles);
+  }
 
   if (labels.winnerSf) {
     result = result.replace(/Zwycięzca PF (\d+)/g, (_, number) => (

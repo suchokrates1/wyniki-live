@@ -1599,6 +1599,19 @@ def _build_set_detail(s: dict, flipped: bool = False) -> dict:
         g1, g2 = g2, g1
     return {"g1": g1, "g2": g2, "tb": tb, "stb": stb}
 
+
+def _winner_from_set_details(sets_detail, p1: str, p2: str, fallback=None):
+    """Winner from displayed set games so highlight matches the scoreboard."""
+    if not sets_detail:
+        return fallback
+    wins1 = sum(1 for s in sets_detail if (s.get("g1") or 0) > (s.get("g2") or 0))
+    wins2 = sum(1 for s in sets_detail if (s.get("g2") or 0) > (s.get("g1") or 0))
+    if wins1 > wins2:
+        return p1
+    if wins2 > wins1:
+        return p2
+    return fallback
+
 def _format_set_score(s: dict, flipped: bool = False) -> str:
     """Format a single set score string."""
     g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
@@ -1627,24 +1640,25 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
         if p1 not in stats or p2 not in stats:
             continue
 
+        # Build per-set score arrays first so W/L follow the displayed games.
+        sets_detail = [_build_set_detail(s) for s in sh]
+        winner = m.get("winner_name") if isinstance(m, dict) else None
+        winner = _winner_from_set_details(sets_detail, p1, p2, winner)
+        if winner not in (p1, p2):
+            if s1 > s2:
+                winner = p1
+            elif s2 > s1:
+                winner = p2
+
         stats[p1]["played"] += 1
         stats[p2]["played"] += 1
 
-        winner = m.get("winner_name") if isinstance(m, dict) else None
         if winner == p1:
             stats[p1]["wins"] += 1
             stats[p2]["losses"] += 1
         elif winner == p2:
             stats[p2]["wins"] += 1
             stats[p1]["losses"] += 1
-        elif s1 > s2:
-            stats[p1]["wins"] += 1
-            stats[p2]["losses"] += 1
-            winner = p1
-        elif s2 > s1:
-            stats[p2]["wins"] += 1
-            stats[p1]["losses"] += 1
-            winner = p2
 
         stats[p1]["sets_won"] += s1
         stats[p1]["sets_lost"] += s2
@@ -1657,9 +1671,6 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
                 stats[p1]["games_lost"] += s.get("player2_games", 0)
                 stats[p2]["games_won"] += s.get("player2_games", 0)
                 stats[p2]["games_lost"] += s.get("player1_games", 0)
-
-        # Build per-set score arrays for scoreboard display
-        sets_detail = [_build_set_detail(s) for s in sh]
 
         # Build score string
         score_parts = []
@@ -1810,19 +1821,20 @@ def _detect_knockout_result(
 
     match_winner = row["winner_name"] or (row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"])
     if same_competitor_label(match_winner, p1):
-        winner = p1
+        mapped_winner = p1
     elif same_competitor_label(match_winner, p2):
-        winner = p2
+        mapped_winner = p2
     elif allow_surname_fallback:
         winner_surname = _surname_match_token(match_winner).lower()
         if winner_surname and winner_surname == _surname_match_token(p1).lower():
-            winner = p1
+            mapped_winner = p1
         elif winner_surname and winner_surname == _surname_match_token(p2).lower():
-            winner = p2
+            mapped_winner = p2
         else:
-            winner = match_winner
+            mapped_winner = match_winner
     else:
-        winner = match_winner
+        mapped_winner = match_winner
+    winner = _winner_from_set_details(sets_detail, p1, p2, mapped_winner)
     return {
         "winner": winner,
         "score": "  ".join(score_parts),
@@ -1899,11 +1911,10 @@ def get_full_bracket(tournament_id: int) -> Dict:
                         cursor, slot["player1"], slot["player2"], start_date, end_date, tournament_id, phase
                     )
                     if result:
-                        if not slot["winner"]:
-                            slot["winner"] = result["winner"]
-                            slot["score"] = result["score"]
-                            slot["finish_reason"] = result.get("finish_reason")
-                            slot["result_note"] = result.get("result_note")
+                        slot["winner"] = result["winner"]
+                        slot["score"] = result["score"]
+                        slot["finish_reason"] = result.get("finish_reason")
+                        slot["result_note"] = result.get("result_note")
                         slot["sets"] = result.get("sets")
 
                 knockout.setdefault(phase, []).append(slot)

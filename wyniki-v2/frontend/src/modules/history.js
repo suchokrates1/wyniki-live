@@ -1,78 +1,115 @@
-export function formatHistoryScore(scoreA, scoreB, setsHistory) {
-  if (!scoreA || !scoreB) return '–';
-  const parts = [];
-  const numSets = Math.max(scoreA.length, scoreB.length);
-  for (let index = 0; index < numSets; index += 1) {
-    let left = scoreA[index] ?? 0;
-    let right = scoreB[index] ?? 0;
-    if (left === 0 && right === 0 && index > 0) continue;
+import { competitorSearchTokens, lastNameToken } from '../shared/teamDisplay.js';
 
-    const setInfo = setsHistory?.find((set) => set.set_number === index + 1);
-    const tieBreakLoser = setInfo?.tiebreak_loser_points;
-    const isSuperTieBreak = setInfo?.is_super_tiebreak || (index === 2 && parts.length === 2 && Math.abs(left - right) <= 1);
-
-    if (isSuperTieBreak && tieBreakLoser != null) {
-      const winnerPoints = Math.max(10, tieBreakLoser + 2);
-      if (left > right) {
-        left = winnerPoints;
-        right = tieBreakLoser;
-      } else {
-        left = tieBreakLoser;
-        right = winnerPoints;
-      }
-      parts.push(`[${left}:${right}]`);
-    } else if (tieBreakLoser != null && tieBreakLoser >= 0) {
-      const winnerTieBreak = Math.max(7, tieBreakLoser + 2);
-      const tieBreakLeft = left > right ? winnerTieBreak : tieBreakLoser;
-      const tieBreakRight = left > right ? tieBreakLoser : winnerTieBreak;
-      parts.push(`${left}:${right}(${tieBreakLeft}:${tieBreakRight})`);
-    } else {
-      parts.push(`${left}:${right}`);
-    }
-  }
-  return parts.join(', ') || '–';
+function asInt(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
 }
 
-export function getMatchWinner(match) {
-  if (!match?.score_a || !match?.score_b) return null;
-  let setsA = 0;
-  let setsB = 0;
-  for (let index = 0; index < Math.max(match.score_a.length, match.score_b.length); index += 1) {
-    const left = match.score_a[index] ?? 0;
-    const right = match.score_b[index] ?? 0;
-    if (left === 0 && right === 0 && index > 0) continue;
-    if (left > right) setsA += 1;
-    else if (right > left) setsB += 1;
+function isPlaceholderSuperTieBreak(left, right) {
+  return Math.max(left, right) <= 1;
+}
+
+function looksLikeSuperTieBreak(completedSets, left, right, setInfo) {
+  if (setInfo?.is_super_tiebreak) return true;
+  if (completedSets.length !== 2) return false;
+  const first = completedSets[0];
+  const second = completedSets[1];
+  const split = (first.a > first.b) !== (second.a > second.b);
+  if (!split) return false;
+  // Match STB is first to 10; a 7-6 third set is a regular set with TB.
+  return Math.max(left, right) >= 10;
+}
+
+function resolveSuperTieBreakPoints(left, right, tieBreak) {
+  if (tieBreak === null || tieBreak === undefined) return { left, right };
+  if (!isPlaceholderSuperTieBreak(left, right)) return { left, right };
+  const loserPoints = asInt(tieBreak);
+  const winnerPoints = Math.max(10, loserPoints + 2);
+  if (left > right) return { left: winnerPoints, right: loserPoints };
+  return { left: loserPoints, right: winnerPoints };
+}
+
+function buildSet(left, right, tieBreak, isSuperTieBreak) {
+  let resolvedLeft = left;
+  let resolvedRight = right;
+  if (isSuperTieBreak) {
+    ({ left: resolvedLeft, right: resolvedRight } = resolveSuperTieBreakPoints(left, right, tieBreak));
   }
-  if (setsA > setsB) return 'A';
-  if (setsB > setsA) return 'B';
-  return null;
+  return {
+    a: resolvedLeft,
+    b: resolvedRight,
+    tb: isSuperTieBreak ? null : (tieBreak ?? null),
+    isSuperTB: !!isSuperTieBreak,
+  };
+}
+
+function setsFromHistory(setsHistory) {
+  if (!Array.isArray(setsHistory) || !setsHistory.length) return [];
+  const sets = [];
+  for (const setInfo of setsHistory) {
+    if (!setInfo || typeof setInfo !== 'object') continue;
+    const left = asInt(setInfo.player1_games);
+    const right = asInt(setInfo.player2_games);
+    const tieBreak = setInfo.tiebreak_loser_points ?? null;
+    const isSuperTieBreak = looksLikeSuperTieBreak(sets, left, right, setInfo);
+    if (left === 0 && right === 0 && tieBreak == null && !isSuperTieBreak) continue;
+    sets.push(buildSet(left, right, tieBreak, isSuperTieBreak));
+  }
+  return sets;
+}
+
+function setsFromScoreArrays(scoreA, scoreB, setsHistory) {
+  if (!scoreA || !scoreB) return [];
+  const sets = [];
+  const numSets = Math.max(scoreA.length, scoreB.length);
+  for (let index = 0; index < numSets; index += 1) {
+    const left = asInt(scoreA[index]);
+    const right = asInt(scoreB[index]);
+    if (left === 0 && right === 0 && index > 0) continue;
+    const setInfo = setsHistory?.find((set) => asInt(set?.set_number, -1) === index + 1);
+    const tieBreak = setInfo?.tiebreak_loser_points ?? null;
+    const isSuperTieBreak = looksLikeSuperTieBreak(sets, left, right, setInfo);
+    sets.push(buildSet(left, right, tieBreak, isSuperTieBreak));
+  }
+  return sets;
 }
 
 export function getMatchSets(match) {
-  if (!match?.score_a || !match?.score_b) return [];
-  const sets = [];
-  const numSets = Math.max(match.score_a.length, match.score_b.length);
-  for (let index = 0; index < numSets; index += 1) {
-    let left = match.score_a[index] ?? 0;
-    let right = match.score_b[index] ?? 0;
-    if (left === 0 && right === 0 && index > 0) continue;
-    const setInfo = match.sets_history?.find((set) => set.set_number === index + 1);
-    const tieBreak = setInfo?.tiebreak_loser_points ?? null;
-    const isSuperTieBreak = setInfo?.is_super_tiebreak || (index === 2 && sets.length === 2 && Math.abs(left - right) <= 1);
-    if (isSuperTieBreak && tieBreak !== null && tieBreak !== undefined) {
-      const winnerPoints = Math.max(10, tieBreak + 2);
-      if (left > right) {
-        left = winnerPoints;
-        right = tieBreak;
-      } else {
-        left = tieBreak;
-        right = winnerPoints;
-      }
+  const fromHistory = setsFromHistory(match?.sets_history);
+  if (fromHistory.length) return fromHistory;
+  return setsFromScoreArrays(match?.score_a, match?.score_b, match?.sets_history);
+}
+
+export function formatHistoryScore(scoreA, scoreB, setsHistory) {
+  const sets = getMatchSets({ score_a: scoreA, score_b: scoreB, sets_history: setsHistory });
+  if (!sets.length) return '–';
+  return sets.map((set) => {
+    if (set.isSuperTB) return `[${set.a}:${set.b}]`;
+    if (set.tb != null && set.tb >= 0) {
+      const winnerTieBreak = Math.max(7, asInt(set.tb) + 2);
+      const tieBreakLeft = set.a > set.b ? winnerTieBreak : set.tb;
+      const tieBreakRight = set.a > set.b ? set.tb : winnerTieBreak;
+      return `${set.a}:${set.b}(${tieBreakLeft}:${tieBreakRight})`;
     }
-    sets.push({ a: left, b: right, tb: isSuperTieBreak ? null : tieBreak, isSuperTB: isSuperTieBreak });
+    return `${set.a}:${set.b}`;
+  }).join(', ') || '–';
+}
+
+export function getMatchWinner(match) {
+  const sets = getMatchSets(match);
+  let setsA = 0;
+  let setsB = 0;
+  for (const set of sets) {
+    if (set.a > set.b) setsA += 1;
+    else if (set.b > set.a) setsB += 1;
   }
-  return sets;
+  if (setsA > setsB) return 'A';
+  if (setsB > setsA) return 'B';
+  if (match?.winner_name) {
+    if (match.winner_name === match.player_a) return 'A';
+    if (match.winner_name === match.player_b) return 'B';
+  }
+  return null;
 }
 
 function numericValue(value) {
@@ -153,4 +190,69 @@ export function getStatsRows(stats, playerKey, otherPlayerKey, labels = {}) {
   }
 
   return rows;
+}
+
+export function matchEndedDateKey(match) {
+  const raw = match?.ended_ts || match?.timestamp || match?.started_at || '';
+  const matchDate = String(raw).match(/^(\d{4}-\d{2}-\d{2})/);
+  return matchDate ? matchDate[1] : '';
+}
+
+export function matchCourtKey(match) {
+  return String(match?.kort_id || match?.court_name || '').trim();
+}
+
+function historySearchHaystack(match) {
+  const names = [match?.player_a, match?.player_b]
+    .flatMap((name) => competitorSearchTokens(name))
+    .concat([lastNameToken(match?.player_a), lastNameToken(match?.player_b)]);
+  return [
+    ...names,
+    match?.category,
+    match?.phase,
+    match?.kort_id,
+    match?.court_name,
+    match?.winner_name,
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+export function filterMatchHistory(matches = [], { search = '', category = '', court = '', date = '' } = {}) {
+  const needle = String(search || '').trim().toLowerCase();
+  return (matches || []).filter((match) => {
+    if (category && String(match?.category || '') !== String(category)) return false;
+    if (court && matchCourtKey(match) !== String(court)) return false;
+    if (date && matchEndedDateKey(match) !== String(date)) return false;
+    if (needle && !historySearchHaystack(match).includes(needle)) return false;
+    return true;
+  });
+}
+
+export function historyFilterOptions(matches = []) {
+  const categories = [];
+  const courts = [];
+  const dates = [];
+  const seen = { category: new Set(), court: new Set(), date: new Set() };
+  for (const match of matches || []) {
+    const category = String(match?.category || '').trim();
+    if (category && !seen.category.has(category)) {
+      seen.category.add(category);
+      categories.push(category);
+    }
+    const court = matchCourtKey(match);
+    if (court && !seen.court.has(court)) {
+      seen.court.add(court);
+      courts.push({
+        value: court,
+        label: String(match?.court_name || court).trim() || court,
+      });
+    }
+    const date = matchEndedDateKey(match);
+    if (date && !seen.date.has(date)) {
+      seen.date.add(date);
+      dates.push(date);
+    }
+  }
+  courts.sort((left, right) => left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' }));
+  dates.sort((left, right) => right.localeCompare(left));
+  return { categories, courts, dates };
 }

@@ -32,6 +32,12 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
-    host: true
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'https://score.vestmedia.pl',
+        changeOrigin: true,
+      },
+    },
   }
 });

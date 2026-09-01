@@ -397,6 +397,7 @@ export function createOfficeCoreView() {
         women: this.ot('gender.women'),
         men: this.ot('gender.men'),
         mixed: this.ot('categories.b34Mixed'),
+        doubles: this.ot('planning.doubles'),
         semifinal: this.ot('bracket.semifinal'),
         final: this.ot('bracket.final'),
         placeFor: this.ot('bracket.placeFor'),
