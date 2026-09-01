@@ -45,24 +45,55 @@ body {
 }
 
 .ump {
-  max-width: 720px;
+  max-width: 56rem;
   margin: 0 auto;
-  min-height: 100vh;
-  padding: 16px 16px 32px;
+  min-height: 100dvh;
+  padding: 12px 16px 20px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .ump-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.ump-icon-btn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 2rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.ump-icon-btn:hover,
+.ump-icon-btn:focus-visible {
+  background: var(--ump-card);
+}
+
+.ump-icon-btn--spacer {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.ump-top__title {
+  min-width: 0;
 }
 
 .ump-title {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 1.5rem;
 }
 
 .ump-sub {
@@ -179,7 +210,7 @@ body {
   min-height: 48px;
   border-radius: 12px;
   border: 1px solid var(--ump-line);
-  background: #0f1726;
+  background: var(--ump-card);
   color: inherit;
   padding: 0 14px;
   box-sizing: border-box;
@@ -232,11 +263,15 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+  justify-self: end;
 }
 
 .ump-match {
-  display: grid;
-  gap: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
 }
 
 .ump-board {
@@ -251,14 +286,37 @@ body {
   color: var(--ump-muted);
   margin: 0 0 8px;
   font-size: 0.9rem;
+  text-align: center;
 }
 
-.ump-board__row {
+.ump-board__grid {
   display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr) 1.4rem 2.4rem 2.4rem 3.2rem;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 28px 52px 44px 44px;
+  column-gap: 6px;
+  row-gap: 4px;
   align-items: center;
-  min-height: 44px;
+}
+
+.ump-board__h {
+  color: var(--ump-muted);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.ump-board__h-player {
+  text-align: left;
+}
+
+.ump-board__player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+}
+
+.ump-board__flag {
+  flex: 0 0 auto;
 }
 
 .ump-board__name {
@@ -268,18 +326,30 @@ body {
   white-space: nowrap;
 }
 
+.ump-board__serve {
+  visibility: hidden;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.ump-board__serve.is-on {
+  visibility: visible;
+}
+
 .ump-board__set,
 .ump-board__pts {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
-.ump-board__set.is-on,
 .ump-board__pts {
   font-weight: 700;
+  color: var(--ump-accent);
+  font-size: 1.15rem;
 }
 
 .ump-board__set.is-on {
+  font-weight: 700;
   background: rgba(61, 214, 198, 0.22);
   border-radius: 8px;
 }
@@ -303,40 +373,71 @@ body {
   outline: 2px solid #f472b6;
 }
 
+.ump-basic,
+.ump-adv {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .ump-basic__info {
   text-align: center;
   font-size: 1.15rem;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
+  font-weight: 700;
 }
 
 .ump-basic__info.is-second {
   color: var(--ump-danger);
-  font-weight: 700;
 }
 
 .ump-basic__court {
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
+  min-height: 240px;
+}
+
+.ump-basic__col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .ump-basic__side {
-  display: grid;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+  min-height: 0;
 }
 
 .ump-basic__name {
-  margin: 0;
+  margin: 0 0 8px;
   text-align: center;
   color: var(--ump-muted);
+  font-weight: 700;
 }
 
 .ump-win {
-  min-height: 88px;
+  flex: 3 1 0;
+  min-height: 120px;
   font-size: 1.8rem;
   font-weight: 700;
   background: #166534;
   border-color: transparent;
+}
+
+.ump-basic__side--receiver .ump-win {
+  flex: 1 1 0;
+}
+
+.ump-fault {
+  flex: 2 1 0;
+  min-height: 72px;
+  font-size: 1.15rem;
 }
 
 .ump-fault--second {
@@ -353,7 +454,6 @@ body {
 }
 
 .ump-adv {
-  display: grid;
   gap: 12px;
 }
 
@@ -479,7 +579,6 @@ body {
 
 @media (max-width: 560px) {
   .ump-courts,
-  .ump-basic__court,
   .ump-serve-grid {
     grid-template-columns: 1fr;
   }
