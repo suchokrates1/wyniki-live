@@ -15,14 +15,26 @@ import { buildAdvancedRally, buildAdvancedServe } from './match/advancedScoringV
 import { buildBasicScoring } from './match/basicScoringView.js';
 import { createMatchFromDraft } from './match/createMatchFromDraft.js';
 import { createMatchController } from './match/matchController.js';
-import { finishWinnerName, toFinishPayload, toMatchPayload, toStatisticsPayload } from './match/matchPayload.js';
+import { finishWinnerName } from './match/matchPayload.js';
 import { hydrateMatchState, serializeMatchState } from './match/matchStateIo.js';
 import { matchTimerText } from './match/matchTimer.js';
-import { MatchView } from './match/matchViews.js';
+import { MatchView, SyncStatus } from './match/matchViews.js';
 import { suggestionScheduleId } from './match/suggestion.js';
 import { buildScoreboard } from './match/scoreboardView.js';
 import { buildServerButtons, resolveServerNumber } from './match/serverSelection.js';
 import { createWakeLock } from './match/wakeLock.js';
+import { createDiagnostics, diagnosticsClipboardText, deviceLabel, SYNC_STATUS_KEYS } from './offline/diagnostics.js';
+import { APP_VERSION, createHeartbeat, heartbeatBody } from './offline/heartbeat.js';
+import {
+  formatHistoryDuration,
+  formatHistoryScore,
+  formatHistoryWhen,
+  historyEntryFromState,
+} from './offline/history.js';
+import { syncMatchLive } from './offline/matchSync.js';
+import { createOutboxDispatcher } from './offline/outbox.js';
+import { openUmpireStores } from './offline/store.js';
+import { applyTheme, readTheme, saveTheme, THEMES } from './offline/theme.js';
 import './umpire.css';
 
 const session = createUmpireSession();
@@ -99,22 +111,34 @@ function createUmpireApp() {
     _timerId: null,
     dialog: null,
     finishStep: null,
+    theme: readTheme(),
+    themes: THEMES,
+    historyEntries: [],
+    historyDetail: null,
+    diagnosticsCopyOk: false,
+    _outbox: null,
+    _history: null,
+    _diagnostics: createDiagnostics(),
+    _heartbeat: null,
 
     t(key, vars) {
       return umpireText(this.lang, key, vars);
     },
 
-    init() {
+    async init() {
+      applyTheme(this.theme);
       this.match = createMatchController({
         onChange: () => this.onMatchChange(),
         onSync: (reason, state, extra) => this.syncMatch(reason, state, extra),
       });
+      await this.initOffline();
       const hashScreen = (location.hash.replace(/^#\/?/, '') || '').split('/')[0];
       if (hashScreen) this.screen = hashScreen;
       this.restoreActiveMatch();
       this.ensureMatchFromDraft();
       this.go(this.screen, { replace: true });
       window.addEventListener('hashchange', () => this.syncFromHash());
+      window.addEventListener('online', () => this.flushOutbox());
       window.addEventListener('beforeunload', (event) => {
         if (this.match?.chrome()?.confirmLeave) {
           event.preventDefault();
@@ -129,6 +153,37 @@ function createUmpireApp() {
       this._timerId = setInterval(() => {
         if (this.match?.state) this.timerText = matchTimerText(this.match.state, Date.now());
       }, 1000);
+    },
+
+    async initOffline() {
+      const stores = await openUmpireStores();
+      this._outbox = stores.outbox;
+      this._history = stores.history;
+      this._heartbeat = createHeartbeat({
+        send: (body) => api.sendHeartbeat(body),
+        getBody: () => this.heartbeatPayload(),
+      });
+      this._heartbeat.start();
+      if (navigator.onLine) this.flushOutbox();
+    },
+
+    heartbeatPayload() {
+      const court = session.getCourtSession();
+      const state = this.match?.state;
+      const screen = this.screen === 'match'
+        ? `Match:${this.matchView()}`
+        : this.screen === 'historyDetail'
+          ? 'MatchDetail'
+          : this.screen === 'history'
+            ? 'MatchHistory'
+            : this.screen;
+      return heartbeatBody({
+        courtId: court?.courtId || '',
+        screen,
+        matchId: state?.matchId ?? null,
+        clientMatchUuid: state?.clientMatchUuid || null,
+        appVersion: APP_VERSION,
+      });
     },
 
     onMatchChange() {
@@ -194,12 +249,31 @@ function createUmpireApp() {
       if (name === 'players') this.loadPlayers();
       if (name === 'serve') this.go('match', { replace: true });
       if (name === 'match') this.ensureMatchFromDraft();
+      if (name === 'history') this.loadHistory();
+      this._heartbeat?.sendNow();
     },
 
     selectLanguage(code) {
       session.setLanguage(code);
       this.lang = code;
+      if (this.settingsFrom === 'settings' || this.screen === 'settings') {
+        this.go('settings');
+        return;
+      }
       this.go('tournament');
+    },
+
+    setTheme(theme) {
+      this.theme = saveTheme(theme);
+      applyTheme(this.theme);
+    },
+
+    themeLabel(theme) {
+      return this.t({
+        light: 'themeLight',
+        dark: 'themeDark',
+        system: 'themeSystem',
+      }[theme] || 'themeSystem');
     },
 
     async loadTournaments() {
@@ -453,6 +527,8 @@ function createUmpireApp() {
         serve: 'serveTitle',
         match: this.matchView() === MatchView.SERVER_SELECTION ? 'serveTitle' : 'matchTitle',
         settings: 'settings',
+        history: 'matchHistory',
+        historyDetail: 'matchHistory',
       };
       return this.t(titles[this.screen] || 'appName');
     },
@@ -473,6 +549,8 @@ function createUmpireApp() {
         config: 'players',
         serve: 'config',
         settings: this.settingsFrom || 'court',
+        history: 'settings',
+        historyDetail: 'history',
       };
       if (this.screen === 'language') return;
       if (this.screen === 'court' && this.pinOpen) {
@@ -496,7 +574,118 @@ function createUmpireApp() {
 
     openSettings() {
       this.settingsFrom = this.screen;
+      this.diagnosticsCopyOk = false;
       this.go('settings');
+    },
+
+    openLanguageFromSettings() {
+      this.settingsFrom = 'settings';
+      this.go('language');
+    },
+
+    async loadHistory() {
+      this.historyEntries = this._history ? await this._history.list() : [];
+    },
+
+    async openHistory() {
+      await this.loadHistory();
+      this.go('history');
+    },
+
+    openHistoryDetail(entry) {
+      this.historyDetail = entry;
+      this.go('historyDetail');
+    },
+
+    historyWhen(entry) {
+      return formatHistoryWhen(entry);
+    },
+
+    historyScore(entry) {
+      return formatHistoryScore(entry);
+    },
+
+    historyDuration(entry) {
+      return formatHistoryDuration(entry);
+    },
+
+    async askDeleteHistory(entry) {
+      if (!window.confirm(this.t('confirmDeleteMatch'))) return;
+      await this._history?.remove(entry.clientMatchUuid);
+      if (this.historyDetail?.clientMatchUuid === entry.clientMatchUuid) {
+        this.historyDetail = null;
+        this.go('history');
+      }
+      await this.loadHistory();
+    },
+
+    async askDeleteAllHistory() {
+      if (!window.confirm(this.t('confirmDeleteAllMatches'))) return;
+      await this._history?.clear();
+      this.historyDetail = null;
+      await this.loadHistory();
+    },
+
+    diagnosticsRows() {
+      const snap = this._diagnostics.get();
+      const statusKey = SYNC_STATUS_KEYS[snap.status] || 'syncIdle';
+      return [
+        { label: this.t('diagnosticsAppVersion'), value: APP_VERSION },
+        { label: this.t('diagnosticsBackend'), value: location.origin },
+        { label: this.t('diagnosticsDevice'), value: deviceLabel() },
+        { label: this.t('diagnosticsLocale'), value: this.lang },
+        { label: this.t('diagnosticsTimezone'), value: Intl.DateTimeFormat().resolvedOptions().timeZone || '' },
+        { label: this.t('diagnosticsSyncStatus'), value: this.t(statusKey) || snap.status },
+        {
+          label: this.t('diagnosticsLastUpdate'),
+          value: snap.updatedAt ? formatHistoryWhen({ startTime: snap.updatedAt }) : this.t('diagnosticsNever'),
+        },
+        { label: this.t('diagnosticsLastError'), value: snap.lastError || this.t('diagnosticsNoError') },
+      ];
+    },
+
+    async copyDiagnostics() {
+      const snap = this._diagnostics.get();
+      const statusKey = SYNC_STATUS_KEYS[snap.status] || 'syncIdle';
+      const text = diagnosticsClipboardText({
+        appVersion: APP_VERSION,
+        backend: location.origin,
+        device: deviceLabel(),
+        locale: this.lang,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+        statusLabel: this.t(statusKey) || snap.status,
+        updatedLabel: snap.updatedAt ? formatHistoryWhen({ startTime: snap.updatedAt }) : this.t('diagnosticsNever'),
+        errorLabel: snap.lastError || this.t('diagnosticsNoError'),
+      });
+      try {
+        await navigator.clipboard.writeText(text);
+        this.diagnosticsCopyOk = true;
+      } catch {
+        this.diagnosticsCopyOk = false;
+      }
+    },
+
+    recordSyncDiagnostics(result) {
+      if (result?.offline) this._diagnostics.record('OFFLINE', result.status ? `HTTP ${result.status}` : '');
+      else if (result?.failed) this._diagnostics.record('FAILED', result.status ? `HTTP ${result.status}` : '');
+      else this._diagnostics.record('SYNCED');
+    },
+
+    async persistHistory(state) {
+      const entry = historyEntryFromState(state);
+      if (entry && this._history) await this._history.save(entry);
+    },
+
+    async flushOutbox() {
+      if (!this._outbox) return;
+      const result = await this._outbox.flush(createOutboxDispatcher(api));
+      if (result.dropped || result.failed) {
+        this._diagnostics.record(result.dropped ? 'FAILED' : 'OFFLINE', result.dropped ? 'HTTP 403' : '');
+        this.match?.setSyncStatus(result.dropped ? SyncStatus.FAILED : SyncStatus.OFFLINE);
+      } else if (result.flushed) {
+        this._diagnostics.record('SYNCED');
+        this.match?.setSyncStatus(SyncStatus.SYNCED);
+      }
     },
 
     matchView() {
@@ -711,30 +900,20 @@ function createUmpireApp() {
     },
 
     async syncMatch(reason, state, extra) {
-      try {
-        if (reason === 'create' || state.matchId == null) {
-          const { ok, data } = await api.createMatch(toMatchPayload(state));
-          if (!ok) return { failed: true, offline: !navigator.onLine };
-          return { matchId: data?.id };
-        }
-        const update = await api.updateMatch(state.matchId, toMatchPayload(state));
-        if (!update.ok) return { failed: true, offline: !navigator.onLine };
-        if (reason === 'finalize') {
-          const request = extra || new FinishMatchRequest({
-            finishReason: state.finishReason,
-            winnerName: state.finishWinnerName,
-            injuredPlayerName: state.injuredPlayerName,
-            resultNote: state.resultNote,
-          });
-          const finish = await api.finishMatch(state.matchId, toFinishPayload(request));
-          if (!finish.ok && finish.status !== 403) return { failed: true };
-          const stats = toStatisticsPayload(state);
-          if (stats) await api.sendStatistics(stats);
-        }
-        return { matchId: state.matchId };
-      } catch {
+      if (reason === 'finalize') await this.persistHistory(state);
+      if (!this._outbox) {
         return { failed: true, offline: !navigator.onLine };
       }
+      const result = await syncMatchLive({
+        api,
+        outbox: this._outbox,
+        reason,
+        state,
+        extra,
+        online: () => navigator.onLine,
+      });
+      this.recordSyncDiagnostics(result);
+      return result;
     },
   };
 }

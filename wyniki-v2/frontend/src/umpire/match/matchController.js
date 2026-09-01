@@ -91,8 +91,9 @@ export function createMatchController({
     Promise.resolve(onSync(reason, state, extra))
       .then((result) => {
         if (result?.matchId != null) state.matchId = result.matchId;
-        syncStatus = result?.offline ? SyncStatus.OFFLINE : SyncStatus.SYNCED;
-        if (result?.failed) syncStatus = SyncStatus.FAILED;
+        if (result?.offline) syncStatus = SyncStatus.OFFLINE;
+        else if (result?.failed) syncStatus = SyncStatus.FAILED;
+        else syncStatus = SyncStatus.SYNCED;
         notify();
       })
       .catch(() => {
@@ -123,6 +124,10 @@ export function createMatchController({
     },
     get syncStatus() {
       return syncStatus;
+    },
+    setSyncStatus(next) {
+      syncStatus = next;
+      notify();
     },
     chrome() {
       return matchChrome(state, view, canUndo);

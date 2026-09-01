@@ -1,4 +1,6 @@
-:root {
+:root,
+[data-theme="dark"],
+[data-theme="system"] {
   --ump-bg: #0b1220;
   --ump-card: #152033;
   --ump-line: #24324a;
@@ -7,6 +9,30 @@
   --ump-accent: #3dd6c6;
   --ump-warn: #f59e0b;
   --ump-danger: #f87171;
+}
+
+[data-theme="light"] {
+  --ump-bg: #f3f6fb;
+  --ump-card: #ffffff;
+  --ump-line: #d5deeb;
+  --ump-text: #122033;
+  --ump-muted: #5b6b82;
+  --ump-accent: #0f9d8e;
+  --ump-warn: #c2410c;
+  --ump-danger: #b91c1c;
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    --ump-bg: #f3f6fb;
+    --ump-card: #ffffff;
+    --ump-line: #d5deeb;
+    --ump-text: #122033;
+    --ump-muted: #5b6b82;
+    --ump-accent: #0f9d8e;
+    --ump-warn: #c2410c;
+    --ump-danger: #b91c1c;
+  }
 }
 
 html,
@@ -398,6 +424,40 @@ body {
   gap: 12px;
   padding: 6px 0;
   border-bottom: 1px solid var(--ump-line);
+}
+
+.ump-section-title {
+  margin: 24px 0 8px;
+  font-size: 1.1rem;
+}
+
+.ump-settings .ump-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ump-history {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 4px;
+}
+
+.ump-history__main {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.ump-history__delete {
+  min-width: 48px;
 }
 
 [x-cloak] {
