@@ -24,3 +24,7 @@ export const UMPIRE_E2E_PWA_GATES = Object.freeze([
 export const UMPIRE_E2E_TUTORIAL_GATES = Object.freeze([
   'Tutorial',
 ]);
+
+export const UMPIRE_E2E_DIRECTOR_GATES = Object.freeze([
+  'Director',
+]);

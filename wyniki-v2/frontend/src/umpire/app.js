@@ -339,6 +339,10 @@ function createUmpireApp() {
       if (!commands?.length || !this.match) return;
       const applied = this.match.applyDirectorCommands(commands);
       if (!applied.length) return;
+      const uuid = this.match.state?.clientMatchUuid;
+      if (uuid && this._outbox?.dropPendingForMatch) {
+        this._outbox.dropPendingForMatch(uuid);
+      }
       for (const command of applied) {
         if (command.courtToken && command.courtId) {
           const current = session.getCourtSession() || {};
