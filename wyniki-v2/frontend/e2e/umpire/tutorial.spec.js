@@ -64,6 +64,20 @@ test('Tutorial settings starts sandbox and never POSTs matches', async ({ page }
   await expect(guide.getByRole('heading', { name: 'New server' })).toBeVisible();
   await guide.getByRole('button', { name: 'Next' }).click();
   await expect(guide.getByRole('heading', { name: 'Change of ends' })).toBeVisible();
+  await guide.getByRole('button', { name: 'Next' }).click();
+  await expect(guide.getByRole('heading', { name: 'Set break' })).toBeVisible();
+  await guide.getByRole('button', { name: 'Next' }).click();
+  await expect(guide.getByRole('heading', { name: 'Tiebreak' })).toBeVisible();
+  await guide.getByRole('button', { name: 'Next' }).click();
+  await expect(guide.getByRole('heading', { name: 'Finish the match' })).toBeVisible();
+  await tapNamedTutorialButton(page, 'Finish Match', 'finish');
+  await expect(guide.getByRole('heading', { name: 'Retirement after injury' })).toBeVisible();
+  await page.locator('[data-tutorial="retirement"]').click();
+  await page.getByRole('button', { name: /Costa/ }).click();
+  await expect(guide.getByRole('heading', { name: 'That’s the flow' })).toBeVisible();
+  await expect(page.locator('[data-tutorial="done"]')).toBeVisible();
+  await guide.getByRole('button', { name: 'Exit tutorial' }).click();
+  await expect(page.getByTestId('tutorial-start')).toBeVisible();
   expect(matchPosts).toEqual([]);
 });
 
