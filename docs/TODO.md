@@ -2,7 +2,7 @@
 
 ## [P0] Zdalne sterowanie tabletem sędziego z reżyserki
 
-**Status:** w toku (kanał komend + panel Korty + apka stosuje court/nazwiska/wynik/zasady)  
+**Status:** w toku (kanał + panel + apka; komenda idzie na sesję tabletu nawet gdy panel otwarto z nowego kortu po SQL-move — do potwierdzenia live / Bramka 6)  
 **Źródło:** IBTA Vilnius 2026, kort 2, 28.08.2026  
 **Repo:** `wyniki-live` (admin + API) + `android-tennis-referee`
 

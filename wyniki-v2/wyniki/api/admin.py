@@ -426,12 +426,14 @@ def director_tablets():
         from ..services.director_commands import tablet_presence
 
         court_id = str(request.args.get("court_id") or "").strip() or None
-        tablets = tablet_presence.list_for_court(court_id)
-        seen_match_ids = {row.get("match_id") for row in tablets if row.get("match_id")}
         query = Match.query.filter_by(status="in_progress")
         if court_id:
             query = query.filter_by(court_id=court_id)
-        for match in query.order_by(Match.updated_at.desc()).all():
+        matches_on_court = query.order_by(Match.updated_at.desc()).all()
+        match_ids_on_court = {match.id for match in matches_on_court}
+        tablets = tablet_presence.list_visible_on_court(court_id, match_ids_on_court)
+        seen_match_ids = {row.get("match_id") for row in tablets if row.get("match_id")}
+        for match in matches_on_court:
             if match.id in seen_match_ids:
                 continue
             tablets.append({

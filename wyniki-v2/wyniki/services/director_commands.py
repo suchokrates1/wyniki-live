@@ -206,6 +206,24 @@ class TabletPresenceStore:
             rows = [row for row in rows if row.get("session_court_id") == wanted]
         return rows
 
+    def list_visible_on_court(
+        self,
+        court_id: str | None,
+        match_ids_on_court: set[int] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Tablets sitting on this court, plus tablets whose match is now here."""
+        rows = self.list_for_court()
+        if not court_id:
+            return rows
+        wanted = str(court_id).strip()
+        match_ids = {int(match_id) for match_id in (match_ids_on_court or set()) if match_id}
+        return [
+            row
+            for row in rows
+            if row.get("session_court_id") == wanted
+            or (row.get("match_id") is not None and int(row["match_id"]) in match_ids)
+        ]
+
     def session_court_for_match(self, match_id: int | None, client_match_uuid: str | None) -> str | None:
         rows = self.list_for_court()
         if match_id:
@@ -234,9 +252,11 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
 
     old_court_id = str(match.court_id or "").strip()
     requested_session = str(patch.get("session_court_id") or "").strip()
+    # Presence wins: after a SQL/overlay-only move the panel is often opened from
+    # the new court, but the tablet is still authorized on the old PIN/session.
     session_court_id = (
-        requested_session
-        or tablet_presence.session_court_for_match(match.id, match.client_match_uuid)
+        tablet_presence.session_court_for_match(match.id, match.client_match_uuid)
+        or requested_session
         or old_court_id
     )
 
@@ -454,8 +474,6 @@ def _command_targets(
     match_id: int | None,
     client_match_uuid: str | None,
 ) -> bool:
-    if str(command.get("session_court_id") or "") != str(session_court_id or ""):
-        return False
     target_match_id = command.get("target_match_id")
     target_uuid = str(command.get("target_client_match_uuid") or "")
     if match_id and target_match_id and int(target_match_id) == int(match_id):
@@ -463,6 +481,8 @@ def _command_targets(
     uuid_text = str(client_match_uuid or "").strip()
     if uuid_text and target_uuid and uuid_text == target_uuid:
         return True
+    if str(command.get("session_court_id") or "") != str(session_court_id or ""):
+        return False
     return False
 
 

@@ -333,6 +333,78 @@ def test_director_pushes_token_when_sql_already_moved(director_app):
     assert (overlay_a.get("A") or {}).get("surname") == "Justyna Stopierzyńska"
 
 
+def test_director_reaches_tablet_when_panel_opened_from_new_court(director_app):
+    """Vilnius: SQL already moved the row; reżyserka opens the new court panel."""
+    director_command_broker.clear()
+    tablet_presence.clear()
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Vilnius Panel", "2026-08-28", "2026-08-29", active=True)
+    court_a, court_b = database.create_tournament_courts(tournament_id, 2)
+    client = director_app.test_client()
+
+    justyna = _create_match(
+        client,
+        court_a,
+        "Justyna Stopierzyńska",
+        "Courtney Webeck",
+        "uuid-justyna-panel",
+        _score(player2_sets=1, player2_games=4),
+    )
+    gonzalez = _create_match(
+        client,
+        court_b,
+        "Jessica González",
+        "Daniela Schmidt",
+        "uuid-gonzalez-panel",
+        _score(player2_games=3),
+    )
+    tablet_presence.record(
+        session_court_id=court_a,
+        match_id=gonzalez["id"],
+        client_match_uuid="uuid-gonzalez-panel",
+        player1_name="Jessica González",
+        player2_name="Daniela Schmidt",
+    )
+    tablet_presence.record(
+        session_court_id=court_a,
+        match_id=justyna["id"],
+        client_match_uuid="uuid-justyna-panel",
+        player1_name="Justyna Stopierzyńska",
+        player2_name="Courtney Webeck",
+    )
+
+    listed = client.get(f"/admin/api/director/tablets?court_id={court_b}").get_json()["tablets"]
+    stray = next(row for row in listed if row.get("match_id") == gonzalez["id"])
+    assert stray["session_court_id"] == court_a
+
+    control = client.post(
+        f"/admin/api/matches/{gonzalez['id']}/control",
+        json={
+            "session_court_id": court_b,
+            "court_id": court_b,
+            "player1_name": "Jessica González",
+            "player2_name": "Daniela Schmidt",
+            "score": _score(player2_games=3),
+        },
+    )
+    assert control.status_code == 200, control.get_data(as_text=True)
+    command = control.get_json()["command"]
+    assert command["session_court_id"] == court_a
+    assert command["court_id"] == court_b
+    assert command["court_token"]
+
+    gonzalez_poll = client.get(
+        f"/api/umpire/commands?court_id={court_a}&match_id={gonzalez['id']}&client_match_uuid=uuid-gonzalez-panel&wait_ms=0"
+    )
+    assert len(gonzalez_poll.get_json()["commands"]) == 1
+
+    justyna_poll = client.get(
+        f"/api/umpire/commands?court_id={court_a}&match_id={justyna['id']}&client_match_uuid=uuid-justyna-panel&wait_ms=0"
+    )
+    assert justyna_poll.get_json()["commands"] == []
+
+
 def test_stale_court_events_do_not_overwrite_overlay(director_app):
     director_command_broker.clear()
     tablet_presence.clear()
