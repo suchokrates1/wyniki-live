@@ -13,3 +13,9 @@ export const UMPIRE_E2E_SCREEN_GATES = Object.freeze([
   '22',
   '23',
 ]);
+
+/** PWA-only flows that must have a Playwright title starting with this prefix. */
+export const UMPIRE_E2E_PWA_GATES = Object.freeze([
+  'PWA install',
+  'PWA on',
+]);
