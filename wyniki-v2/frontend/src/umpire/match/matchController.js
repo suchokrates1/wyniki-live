@@ -19,6 +19,7 @@ export function createMatchController({
   let undoMessage = null;
   let pendingAnnouncementType = null;
   let syncStatus = SyncStatus.IDLE;
+  let bracketWarning = null;
 
   function notify() {
     onChange();
@@ -103,6 +104,7 @@ export function createMatchController({
     Promise.resolve(onSync(reason, state, extra))
       .then((result) => {
         if (result?.matchId != null) state.matchId = result.matchId;
+        if (result?.bracketWarning) bracketWarning = result.bracketWarning;
         if (result?.offline) syncStatus = SyncStatus.OFFLINE;
         else if (result?.failed) syncStatus = SyncStatus.FAILED;
         else syncStatus = SyncStatus.SYNCED;
@@ -137,6 +139,13 @@ export function createMatchController({
     get syncStatus() {
       return syncStatus;
     },
+    get bracketWarning() {
+      return bracketWarning;
+    },
+    clearBracketWarning() {
+      bracketWarning = null;
+      notify();
+    },
     setSyncStatus(next) {
       syncStatus = next;
       notify();
@@ -152,6 +161,7 @@ export function createMatchController({
       pendingAnnouncementType = options.pendingAnnouncementType ?? null;
       undoMessage = null;
       syncStatus = SyncStatus.IDLE;
+      bracketWarning = null;
       notify();
     },
 

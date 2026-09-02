@@ -76,3 +76,24 @@ test('offline point event is queued as EVENT', async () => {
   assert.equal((await outbox.pending())[0].type, MutationType.EVENT);
   assert.equal((await outbox.pending())[0].payload.event_type, 'point');
 });
+
+test('create success returns bracketWarning from the API', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  const state = matchState({ clientMatchUuid: 'uuid-br' });
+  state.clientMatchUuid = 'uuid-br';
+  const result = await syncMatchLive({
+    api: apiStub({
+      createMatch: async () => ({
+        ok: true,
+        status: 201,
+        data: { id: 44, bracket_warning: 'different_groups' },
+      }),
+    }),
+    outbox,
+    reason: 'create',
+    state,
+    online: () => true,
+  });
+  assert.equal(result.matchId, 44);
+  assert.equal(result.bracketWarning, 'different_groups');
+});

@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import { createUmpireApi } from './api.js';
 import { umpireText } from './i18n.js';
+import { courtDisplayName } from './courtDisplay.js';
 import { buildMatchConfig, DEFAULT_MATCH_CONFIG_FORM, startDraft } from './matchConfigForm.js';
 import { createPinPad } from './pinPad.js';
 import {
@@ -142,6 +143,47 @@ function createUmpireApp() {
 
     t(key, vars) {
       return umpireText(this.lang, key, vars);
+    },
+
+    courtName(court) {
+      if (!court) return '';
+      return courtDisplayName(court.name, court.kort_id || court.id, (ordinal) => (
+        this.t('courtName', { name: ordinal })
+      ));
+    },
+
+    tournamentMeta(tournament) {
+      if (!tournament) return '';
+      const place = [tournament.location, tournament.city, tournament.country]
+        .filter(Boolean)
+        .join(', ');
+      const dates = [tournament.start_date, tournament.end_date].filter(Boolean).join(' - ');
+      return [place, dates].filter(Boolean).join('\n');
+    },
+
+    bracketNotice() {
+      const type = this.match?.bracketWarning;
+      if (type === 'different_groups') {
+        return {
+          title: this.t('bracketWarningTitle'),
+          message: this.t('bracketWarningDifferentGroups'),
+        };
+      }
+      if (type === 'no_bracket') {
+        return {
+          title: this.t('bracketWarningTitle'),
+          message: this.t('bracketWarningFriendly'),
+        };
+      }
+      return null;
+    },
+
+    dismissBracketNotice() {
+      this.match?.clearBracketWarning?.();
+    },
+
+    dismissSuggestion() {
+      this.suggestion = null;
     },
 
     async init() {
@@ -475,12 +517,12 @@ function createUmpireApp() {
       if (!ok || !data?.authorized) {
         pinPad.clear();
         this.pinBoxes = pinPad.boxes();
-        this.pinError = this.t('pinInvalid');
+        this.pinError = this.t('pinInvalid', { name: data?.error || data?.detail || '' }).replace(/:\s*$/, '');
         return;
       }
       session.saveCourtSession({
         courtId: data.court_id || data.kort_id || this.pinCourt.kort_id,
-        courtName: this.pinCourt.name,
+        courtName: this.courtName(this.pinCourt),
         token: data.token,
         expiresAtMillis: parseExpiresAt(data.expires_at),
       });

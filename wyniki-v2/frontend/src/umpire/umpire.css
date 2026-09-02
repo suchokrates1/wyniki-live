@@ -193,7 +193,27 @@ body {
 
 .ump-badge {
   font-size: 0.75rem;
+  font-weight: 700;
   color: var(--ump-warn);
+}
+
+.ump-badge--free {
+  color: var(--ump-ok, #1b7a4a);
+}
+
+.ump-badge--busy {
+  color: var(--ump-warn);
+}
+
+.ump-card__meta,
+.ump-hint {
+  white-space: pre-line;
+}
+
+.ump-lang {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .ump-pin {

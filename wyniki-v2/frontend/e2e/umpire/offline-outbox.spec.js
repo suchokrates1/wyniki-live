@@ -70,7 +70,7 @@ test('airplane scoring queues updates and flushes when back online', async ({ pa
   await openUmpire(page, '#/players');
   await page.getByRole('button', { name: 'Kowalski' }).click();
   await page.getByRole('button', { name: 'Nowak' }).click();
-  await expect(page.locator('h1.ump-title')).toHaveText('Match setup', { timeout: 5_000 });
+  await expect(page.locator('h1.ump-title')).toHaveText('Match Setup', { timeout: 5_000 });
   await page.locator('.ump-mode').filter({ hasText: 'Basic' }).click();
   await page.getByRole('button', { name: /Kowalski/ }).first().click();
   await expect(page.locator('.ump-win').first()).toBeVisible();
