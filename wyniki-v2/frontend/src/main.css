@@ -1812,12 +1812,15 @@ body {
   padding: 0 12px;
 }
 .bracket-groups {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 24px;
 }
 .bracket-group {
+  box-sizing: border-box;
+  flex: 1 1 calc((100% - 32px) / 3);
+  min-width: min(100%, calc((100% - 32px) / 3));
   background: var(--card);
   border-radius: 10px;
   overflow: hidden;
@@ -2190,14 +2193,10 @@ body {
   font-size: 11px;
 }
 
-@media (max-width: 1100px) {
-  .bracket-groups {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 @media (max-width: 700px) {
-  .bracket-groups {
-    grid-template-columns: 1fr;
+  .bracket-groups .bracket-group {
+    flex-basis: 100%;
+    min-width: 100%;
   }
   .bracket-table { font-size: 12px; }
   .bracket-table th, .bracket-table td { padding: 6px 6px; }

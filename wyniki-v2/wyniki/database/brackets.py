@@ -1640,10 +1640,13 @@ def _compute_standings(player_names: List[str], matches) -> tuple:
         if p1 not in stats or p2 not in stats:
             continue
 
-        # Build per-set score arrays first so W/L follow the displayed games.
+        # Official winner_name is source of truth (tennis.lt). Set games are only a fallback.
         sets_detail = [_build_set_detail(s) for s in sh]
-        winner = m.get("winner_name") if isinstance(m, dict) else None
-        winner = _winner_from_set_details(sets_detail, p1, p2, winner)
+        try:
+            stored_winner = m["winner_name"]
+        except Exception:
+            stored_winner = None
+        winner = stored_winner if stored_winner in (p1, p2) else _winner_from_set_details(sets_detail, p1, p2, stored_winner)
         if winner not in (p1, p2):
             if s1 > s2:
                 winner = p1
@@ -1834,7 +1837,10 @@ def _detect_knockout_result(
             mapped_winner = match_winner
     else:
         mapped_winner = match_winner
-    winner = _winner_from_set_details(sets_detail, p1, p2, mapped_winner)
+    if mapped_winner in (p1, p2):
+        winner = mapped_winner
+    else:
+        winner = _winner_from_set_details(sets_detail, p1, p2, mapped_winner)
     return {
         "winner": winner,
         "score": "  ".join(score_parts),
