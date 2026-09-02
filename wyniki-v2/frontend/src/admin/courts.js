@@ -362,6 +362,20 @@ export function createCourtsAdmin() {
         }
       },
 
+      directorTabletLabel(tablet) {
+        const bits = [];
+        if (tablet.label) bits.push(tablet.label);
+        if (tablet.platform === 'pwa') bits.push('PWA');
+        else if (tablet.platform === 'android') bits.push('Android');
+        if (tablet.battery_level != null && tablet.battery_level !== '') {
+          bits.push(tablet.battery_level + '%' + (tablet.is_charging ? ' ⚡' : ''));
+        }
+        bits.push((tablet.player1_name || '?') + ' vs ' + (tablet.player2_name || '?'));
+        if (tablet.match_id) bits.push('#' + tablet.match_id);
+        if (tablet.session_court_id) bits.push(tablet.session_court_id);
+        return bits.join(' · ');
+      },
+
       async selectDirectorTablet(tablet) {
         this.directorForm.matchId = tablet.match_id || null;
         this.directorForm.player1Name = tablet.player1_name || '';
