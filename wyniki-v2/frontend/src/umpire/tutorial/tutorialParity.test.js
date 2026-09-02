@@ -23,6 +23,20 @@ test('tutorial script has unique step ids and required fields', () => {
   }
   const award = steps.find((step) => step.id === 'basic-scoring');
   assert.equal(award?.requireAction, 'awardPoint');
+  const secondServe = steps.find((step) => step.id === 'second-serve');
+  assert.equal(secondServe?.requireAction, 'secondServe');
+  assert.equal(secondServe?.snapshot, null);
+  const doubleFault = steps.find((step) => step.id === 'double-fault');
+  assert.equal(doubleFault?.requireAction, 'doubleFault');
+  assert.equal(doubleFault?.snapshot, null);
+  const undo = steps.find((step) => step.id === 'undo');
+  assert.equal(undo?.requireAction, 'undo');
+  assert.equal(undo?.snapshot, null);
+  assert.ok(ids.indexOf('undo') === ids.indexOf('double-fault') + 1);
+  const serverChange = steps.find((step) => step.id === 'server-change');
+  assert.equal(serverChange?.snapshot, 'server-change');
+  const sideChange = steps.find((step) => step.id === 'side-change');
+  assert.equal(sideChange?.snapshot, 'side-change');
 });
 
 test('Android assets script keeps the same step ids', () => {

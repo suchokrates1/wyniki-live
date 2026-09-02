@@ -1329,19 +1329,14 @@ function createUmpireApp() {
     },
 
     basicWin(isPlayer1) {
-      if (this.tutorialMode) {
-        this.tutorialNote('awardPoint');
-        return;
-      }
       this.match?.handleBasicWin(isPlayer1);
+      this.tutorialNote('awardPoint');
     },
 
     basicFault() {
-      if (this.tutorialMode) {
-        this.tutorialNote('awardPoint');
-        return;
-      }
+      const kind = this.basicView()?.faultKind;
       this.match?.handleBasicFault();
+      this.tutorialNote(kind === 'double' ? 'doubleFault' : 'secondServe');
     },
 
     advancedServe() {
@@ -1392,6 +1387,11 @@ function createUmpireApp() {
 
     askUndo() {
       if (!this.chrome().undoEnabled) return;
+      if (this.tutorialMode) {
+        this.match?.undoLastAction();
+        this.tutorialNote('undo');
+        return;
+      }
       this.dialog = 'undo';
     },
 

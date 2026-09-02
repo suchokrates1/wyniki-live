@@ -1314,6 +1314,29 @@ body {
   pointer-events: none;
 }
 
+@media (orientation: landscape) and (max-height: 900px) {
+  .ump-guide__card {
+    padding: 10px 12px;
+  }
+
+  .ump-basic__court {
+    min-height: 0;
+  }
+
+  .ump-win {
+    min-height: 64px;
+    font-size: 1.4rem;
+  }
+
+  .ump-fault {
+    min-height: 48px;
+  }
+
+  .ump-match__chrome {
+    flex-direction: row;
+  }
+}
+
 .ump-guide__card {
   pointer-events: none;
   padding: 14px 16px;
@@ -1336,6 +1359,7 @@ body {
 .ump.is-tutorial[data-guide-target="swapSides"] [data-tutorial="swapSides"],
 .ump.is-tutorial[data-guide-target="chooseServer"] [data-tutorial="chooseServer"],
 .ump.is-tutorial[data-guide-target="winButton"] [data-tutorial="winButton"],
+.ump.is-tutorial[data-guide-target="secondServe"] [data-tutorial="secondServe"],
 .ump.is-tutorial[data-guide-target="doubleFault"] [data-tutorial="doubleFault"],
 .ump.is-tutorial[data-guide-target="announcementContinue"] [data-tutorial="announcementContinue"],
 .ump.is-tutorial[data-guide-target="undo"] [data-tutorial="undo"],

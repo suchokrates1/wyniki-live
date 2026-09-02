@@ -66,13 +66,40 @@
       "snapshot": "basic"
     },
     {
+      "id": "second-serve",
+      "scene": "match",
+      "target": "secondServe",
+      "titleKey": "tutorialSecondServeTitle",
+      "bodyKey": "tutorialSecondServeBody",
+      "requireAction": "secondServe",
+      "snapshot": null
+    },
+    {
       "id": "double-fault",
       "scene": "match",
       "target": "doubleFault",
       "titleKey": "tutorialDoubleFaultTitle",
       "bodyKey": "tutorialDoubleFaultBody",
+      "requireAction": "doubleFault",
+      "snapshot": null
+    },
+    {
+      "id": "undo",
+      "scene": "match",
+      "target": "undo",
+      "titleKey": "tutorialUndoTitle",
+      "bodyKey": "tutorialUndoBody",
+      "requireAction": "undo",
+      "snapshot": null
+    },
+    {
+      "id": "server-change",
+      "scene": "match",
+      "target": "winButton",
+      "titleKey": "tutorialServerChangeTitle",
+      "bodyKey": "tutorialServerChangeBody",
       "requireAction": null,
-      "snapshot": "double-fault"
+      "snapshot": "server-change"
     },
     {
       "id": "side-change",
@@ -100,15 +127,6 @@
       "bodyKey": "tutorialTiebreakBody",
       "requireAction": null,
       "snapshot": "tiebreak"
-    },
-    {
-      "id": "undo",
-      "scene": "match",
-      "target": "undo",
-      "titleKey": "tutorialUndoTitle",
-      "bodyKey": "tutorialUndoBody",
-      "requireAction": "undo",
-      "snapshot": "undo"
     },
     {
       "id": "finish",
