@@ -1287,3 +1287,48 @@ body {
   display: none !important;
 }
 
+.ump.is-tutorial .ump-config__foot,
+.ump.is-tutorial .ump-match__chrome,
+.ump.is-tutorial .ump-serve {
+  padding-bottom: 12.5rem;
+}
+
+.ump-guide {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.ump-guide__card {
+  pointer-events: auto;
+  padding: 14px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.ump-guide__card h2 {
+  margin: 4px 0 8px;
+  font-size: 1.15rem;
+}
+
+.ump.is-tutorial[data-guide-target="court1"] [data-tutorial="court1"],
+.ump.is-tutorial[data-guide-target="pinPad"] [data-tutorial="pinPad"],
+.ump.is-tutorial[data-guide-target="players"] [data-tutorial="players"],
+.ump.is-tutorial[data-guide-target="configNext"] [data-tutorial="configNext"],
+.ump.is-tutorial[data-guide-target="swapSides"] [data-tutorial="swapSides"],
+.ump.is-tutorial[data-guide-target="chooseServer"] [data-tutorial="chooseServer"],
+.ump.is-tutorial[data-guide-target="winButton"] [data-tutorial="winButton"],
+.ump.is-tutorial[data-guide-target="doubleFault"] [data-tutorial="doubleFault"],
+.ump.is-tutorial[data-guide-target="announcementContinue"] [data-tutorial="announcementContinue"],
+.ump.is-tutorial[data-guide-target="undo"] [data-tutorial="undo"],
+.ump.is-tutorial[data-guide-target="finish"] [data-tutorial="finish"],
+.ump.is-tutorial[data-guide-target="retirement"] [data-tutorial="retirement"],
+.ump.is-tutorial[data-guide-target="done"] [data-tutorial="done"] {
+  outline: 3px solid var(--ump-accent);
+  outline-offset: 3px;
+  position: relative;
+  z-index: 45;
+}
+

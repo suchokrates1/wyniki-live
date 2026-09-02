@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { UMPIRE_E2E_PWA_GATES, UMPIRE_E2E_SCREEN_GATES } from './coverage.js';
+import { UMPIRE_E2E_PWA_GATES, UMPIRE_E2E_SCREEN_GATES, UMPIRE_E2E_TUTORIAL_GATES } from './coverage.js';
 
 const specDir = fileURLToPath(new URL('../../../e2e/umpire/', import.meta.url));
 
@@ -29,6 +29,14 @@ test('PWA install and on have Playwright specs', () => {
   const titles = specTitles();
   for (const gate of UMPIRE_E2E_PWA_GATES) {
     const found = titles.some((title) => title === gate || title.startsWith(`${gate}:`));
+    assert.ok(found, `missing Playwright spec for ${gate}`);
+  }
+});
+
+test('tutorial gates have Playwright specs', () => {
+  const titles = specTitles();
+  for (const gate of UMPIRE_E2E_TUTORIAL_GATES) {
+    const found = titles.some((title) => title === gate || title.startsWith(`${gate} `));
     assert.ok(found, `missing Playwright spec for ${gate}`);
   }
 });

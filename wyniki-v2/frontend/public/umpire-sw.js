@@ -1,4 +1,4 @@
-const CACHE = 'umpire-pwa-v3';
+const CACHE = 'umpire-pwa-v4';
 const SHELL = [
   '/umpire',
   '/umpire.html',

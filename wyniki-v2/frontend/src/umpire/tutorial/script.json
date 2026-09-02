@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "pin": "1234",
+  "steps": [
+    {
+      "id": "court-pick",
+      "scene": "court",
+      "target": "court1",
+      "titleKey": "tutorialCourtTitle",
+      "bodyKey": "tutorialCourtBody",
+      "requireAction": "selectCourt",
+      "snapshot": null
+    },
+    {
+      "id": "pin",
+      "scene": "pin",
+      "target": "pinPad",
+      "titleKey": "tutorialPinTitle",
+      "bodyKey": "tutorialPinBody",
+      "requireAction": "enterPin",
+      "snapshot": null
+    },
+    {
+      "id": "players",
+      "scene": "players",
+      "target": "players",
+      "titleKey": "tutorialPlayersTitle",
+      "bodyKey": "tutorialPlayersBody",
+      "requireAction": "selectPlayers",
+      "snapshot": null
+    },
+    {
+      "id": "config",
+      "scene": "config",
+      "target": "configNext",
+      "titleKey": "tutorialConfigTitle",
+      "bodyKey": "tutorialConfigBody",
+      "requireAction": "startMatch",
+      "snapshot": null
+    },
+    {
+      "id": "serve-swap",
+      "scene": "serve",
+      "target": "swapSides",
+      "titleKey": "tutorialServeSwapTitle",
+      "bodyKey": "tutorialServeSwapBody",
+      "requireAction": "swapSides",
+      "snapshot": "serve"
+    },
+    {
+      "id": "serve-pick",
+      "scene": "serve",
+      "target": "chooseServer",
+      "titleKey": "tutorialServePickTitle",
+      "bodyKey": "tutorialServePickBody",
+      "requireAction": "chooseServer",
+      "snapshot": "serve"
+    },
+    {
+      "id": "basic-scoring",
+      "scene": "match",
+      "target": "winButton",
+      "titleKey": "tutorialBasicTitle",
+      "bodyKey": "tutorialBasicBody",
+      "requireAction": null,
+      "snapshot": "basic"
+    },
+    {
+      "id": "double-fault",
+      "scene": "match",
+      "target": "doubleFault",
+      "titleKey": "tutorialDoubleFaultTitle",
+      "bodyKey": "tutorialDoubleFaultBody",
+      "requireAction": null,
+      "snapshot": "double-fault"
+    },
+    {
+      "id": "side-change",
+      "scene": "match",
+      "target": "announcementContinue",
+      "titleKey": "tutorialSideChangeTitle",
+      "bodyKey": "tutorialSideChangeBody",
+      "requireAction": null,
+      "snapshot": "side-change"
+    },
+    {
+      "id": "set-break",
+      "scene": "match",
+      "target": "announcementContinue",
+      "titleKey": "tutorialSetBreakTitle",
+      "bodyKey": "tutorialSetBreakBody",
+      "requireAction": null,
+      "snapshot": "set-break"
+    },
+    {
+      "id": "tiebreak",
+      "scene": "match",
+      "target": "announcementContinue",
+      "titleKey": "tutorialTiebreakTitle",
+      "bodyKey": "tutorialTiebreakBody",
+      "requireAction": null,
+      "snapshot": "tiebreak"
+    },
+    {
+      "id": "undo",
+      "scene": "match",
+      "target": "undo",
+      "titleKey": "tutorialUndoTitle",
+      "bodyKey": "tutorialUndoBody",
+      "requireAction": "undo",
+      "snapshot": "undo"
+    },
+    {
+      "id": "finish",
+      "scene": "match",
+      "target": "finish",
+      "titleKey": "tutorialFinishTitle",
+      "bodyKey": "tutorialFinishBody",
+      "requireAction": "openFinish",
+      "snapshot": "basic"
+    },
+    {
+      "id": "retirement",
+      "scene": "match",
+      "target": "retirement",
+      "titleKey": "tutorialRetirementTitle",
+      "bodyKey": "tutorialRetirementBody",
+      "requireAction": "pickRetirement",
+      "snapshot": null
+    },
+    {
+      "id": "complete",
+      "scene": "finish",
+      "target": "done",
+      "titleKey": "tutorialCompleteTitle",
+      "bodyKey": "tutorialCompleteBody",
+      "requireAction": null,
+      "snapshot": "finished"
+    }
+  ]
+}

@@ -60,11 +60,15 @@ test('PWA install gate strings exist in every locale', () => {
   }
   assert.equal(umpireText('pl', 'openApp'), 'Włącz');
   assert.equal(umpireText('en', 'installGateTitle'), 'Install Blind Tennis Referee?');
+  assert.equal(umpireText('en', 'tutorialStart'), 'Start tutorial');
+  for (const { code } of AVAILABLE_LANGUAGES) {
+    assert.equal(umpireText(code, 'appName'), 'Blind Tennis Referee', code);
+  }
 });
 
 test('every locale keeps Android labels 1:1 for shared keys', () => {
   const keys = [
-    'languageTitle', 'tournamentTitle', 'courtTitle', 'pinTitle', 'playersTitle',
+    'appName', 'languageTitle', 'tournamentTitle', 'courtTitle', 'pinTitle', 'playersTitle',
     'configTitle', 'serveTitle', 'courtName', 'occupied', 'available', 'singles',
     'doubles', 'historyEmpty', 'finishMatch', 'bracketWarningTitle',
     'bracketWarningDifferentGroups', 'bracketWarningFriendly', 'selectedCount',

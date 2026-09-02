@@ -58,6 +58,16 @@ import {
   shouldShowFullscreenButton,
   wasPwaGateDismissed,
 } from './pwaInstallGate.js';
+import { TUTORIAL_COURT_1, TUTORIAL_PIN, tutorialCatalog } from './tutorial/catalog.js';
+import { loadTutorialSnapshot } from './tutorial/presets.js';
+import {
+  tutorialCanAdvance,
+  tutorialIsLast,
+  tutorialMatchesAction,
+  tutorialNextIndex,
+  tutorialPrevIndex,
+  tutorialStepAt,
+} from './tutorial/tutorialController.js';
 import './umpire.css';
 
 const session = createUmpireSession();
@@ -163,6 +173,12 @@ function createUmpireApp() {
     _diagnostics: createDiagnostics(),
     _heartbeat: null,
     _battery: battery,
+    tutorialMode: false,
+    tutorialStepIndex: 0,
+    tutorialActionOk: false,
+    tutorialReturnScreen: 'settings',
+    tutorialCourtSession: null,
+    tutorialBanner: false,
 
     t(key, vars) {
       return umpireText(this.lang, key, vars);
@@ -243,11 +259,14 @@ function createUmpireApp() {
       await this.initOffline();
       const hashScreen = (location.hash.replace(/^#\/?/, '') || '').split('/')[0];
       if (hashScreen) this.screen = hashScreen;
-      this.restoreActiveMatch();
+      if (!session.isTutorialMode()) this.restoreActiveMatch();
       this.ensureMatchFromDraft();
       this.go(this.screen, { replace: true });
+      this.maybeShowTutorialBanner();
       window.addEventListener('hashchange', () => this.syncFromHash());
-      window.addEventListener('online', () => this.flushOutbox());
+      window.addEventListener('online', () => {
+        if (!this.tutorialMode) this.flushOutbox();
+      });
       window.addEventListener('beforeunload', (event) => {
         if (this.match?.chrome()?.confirmLeave) {
           event.preventDefault();
@@ -287,11 +306,11 @@ function createUmpireApp() {
           return result;
         },
         getBody: () => this.heartbeatPayload(),
-        canSend: () => Boolean(session.getCourtSession()?.token),
+        canSend: () => !this.tutorialMode && Boolean(session.getCourtSession()?.token),
       });
       this._heartbeat.start();
-      this.startDirectorPoll();
-      if (navigator.onLine) this.flushOutbox();
+      if (!this.tutorialMode) this.startDirectorPoll();
+      if (navigator.onLine && !this.tutorialMode) this.flushOutbox();
     },
 
     heartbeatPayload() {
@@ -345,10 +364,14 @@ function createUmpireApp() {
     },
 
     startDirectorPoll() {
-      if (this._pollActive) return;
+      if (this.tutorialMode || this._pollActive) return;
       this._pollActive = true;
       const poll = async () => {
         while (this._pollActive) {
+          if (this.tutorialMode) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            continue;
+          }
           const court = session.getCourtSession();
           if (!court?.courtId || !navigator.onLine) {
             await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -376,12 +399,14 @@ function createUmpireApp() {
       this.applyMotion();
       if (this.match?.state) {
         this.timerText = matchTimerText(this.match.state, Date.now());
-        session.saveActiveMatch({
-          view: this.match.view,
-          pendingAnnouncementType: this.match.pendingAnnouncementType,
-          canUndo: this.match.canUndo,
-          state: serializeMatchState(this.match.state),
-        });
+        if (!this.tutorialMode) {
+          session.saveActiveMatch({
+            view: this.match.view,
+            pendingAnnouncementType: this.match.pendingAnnouncementType,
+            canUndo: this.match.canUndo,
+            state: serializeMatchState(this.match.state),
+          });
+        }
       }
     },
 
@@ -436,7 +461,8 @@ function createUmpireApp() {
       if (name === 'serve') this.go('match', { replace: true });
       if (name === 'match') this.ensureMatchFromDraft();
       if (name === 'history') this.loadHistory();
-      this._heartbeat?.sendNow();
+      this.maybeShowTutorialBanner();
+      if (!this.tutorialMode) this._heartbeat?.sendNow();
     },
 
     applyChromeLanguage(code) {
@@ -540,6 +566,10 @@ function createUmpireApp() {
     },
 
     async loadTournaments() {
+      if (this.tutorialMode) {
+        this.tournaments = [tutorialCatalog((key) => this.t(key)).tournament];
+        return;
+      }
       this.loading = true;
       const { ok, data } = await api.getActiveTournaments();
       this.loading = false;
@@ -557,6 +587,10 @@ function createUmpireApp() {
     },
 
     async loadCourts() {
+      if (this.tutorialMode) {
+        this.courts = tutorialCatalog((key) => this.t(key)).courts;
+        return;
+      }
       const tournament = session.getTournamentForToday();
       if (!tournament) {
         this.go('tournament');
@@ -580,6 +614,9 @@ function createUmpireApp() {
       pinPad.clear();
       this.pinBoxes = pinPad.boxes();
       this.pinOpen = true;
+      if (this.tutorialMode && (court.kort_id || court.id) === TUTORIAL_COURT_1) {
+        this.tutorialNote('selectCourt');
+      }
     },
 
     closePin() {
@@ -606,6 +643,24 @@ function createUmpireApp() {
       if (!this.pinCourt || !pinPad.complete || this.pinBusy) return;
       this.pinBusy = true;
       this.pinError = '';
+      if (this.tutorialMode) {
+        this.pinBusy = false;
+        if (pinPad.value !== TUTORIAL_PIN) {
+          pinPad.clear();
+          this.pinBoxes = pinPad.boxes();
+          this.pinError = this.t('pinInvalid', { name: '' }).replace(/:\s*$/, '');
+          return;
+        }
+        this.tutorialCourtSession = {
+          courtId: this.pinCourt.kort_id || this.pinCourt.id,
+          courtName: this.courtName(this.pinCourt),
+          token: 'tutorial',
+        };
+        this.closePin();
+        this.tutorialNote('enterPin');
+        this.go('players');
+        return;
+      }
       const { ok, data } = await api.authorizeCourt(this.pinCourt.kort_id || this.pinCourt.id, pinPad.value);
       this.pinBusy = false;
       if (!ok || !data?.authorized) {
@@ -626,6 +681,11 @@ function createUmpireApp() {
     },
 
     async loadPlayers() {
+      if (this.tutorialMode) {
+        this.players = tutorialCatalog((key) => this.t(key)).players;
+        this.suggestion = null;
+        return;
+      }
       const court = session.getCourtSession();
       if (!court?.courtId) {
         this.go('court');
@@ -693,6 +753,10 @@ function createUmpireApp() {
     scheduleAdvanceToConfig() {
       clearTimeout(this._advanceTimer);
       if (!this.canContinuePlayers()) return;
+      if (this.tutorialMode) {
+        this.tutorialNote('selectPlayers');
+        return;
+      }
       this._advanceTimer = setTimeout(() => {
         if (this.screen === 'players' && this.canContinuePlayers()) this.openConfig();
       }, 300);
@@ -756,6 +820,11 @@ function createUmpireApp() {
 
     openConfig() {
       if (!this.canContinuePlayers()) return;
+      if (this.tutorialMode) {
+        this.configForm = { ...DEFAULT_MATCH_CONFIG_FORM };
+        this.go('config');
+        return;
+      }
       const last = session.getLastMatchConfig();
       this.configForm = last ? formFromLastConfig(last) : { ...DEFAULT_MATCH_CONFIG_FORM };
       this.go('config');
@@ -766,7 +835,7 @@ function createUmpireApp() {
     },
 
     startWithMode(statsMode) {
-      const court = session.getCourtSession();
+      const court = this.tutorialMode ? this.tutorialCourtSession : session.getCourtSession();
       const config = buildMatchConfig(this.configForm, statsMode);
       const selected = this.selectedPlayers();
       const draft = startDraft({
@@ -784,6 +853,14 @@ function createUmpireApp() {
           ? Date.parse(this.configForm.manualStartTime)
           : null,
       });
+      if (this.tutorialMode) {
+        draft.clientMatchUuid = 'tutorial-demo-match';
+        this.draft = draft;
+        this.match.initialize(createMatchFromDraft(draft));
+        this.tutorialNote('startMatch');
+        this.go('match');
+        return;
+      }
       session.saveDraft(draft);
       session.saveLastMatchConfig({ ...this.configForm, statsMode });
       this.draft = draft;
@@ -816,6 +893,10 @@ function createUmpireApp() {
     },
 
     back() {
+      if (this.tutorialMode) {
+        this.tutorialBack();
+        return;
+      }
       if (this.screen === 'match') {
         if (this.match?.chrome()?.confirmLeave) {
           this.dialog = 'leave';
@@ -953,12 +1034,143 @@ function createUmpireApp() {
       else this._diagnostics.record('SYNCED');
     },
 
+    tutorialStep() {
+      return this.tutorialMode ? tutorialStepAt(this.tutorialStepIndex) : null;
+    },
+
+    tutorialBubble() {
+      const step = this.tutorialStep();
+      if (!step) return null;
+      return {
+        title: this.t(step.titleKey),
+        body: this.t(step.bodyKey),
+        canBack: this.tutorialStepIndex > 0,
+        canNext: tutorialCanAdvance(step, this.tutorialActionOk),
+        isLast: tutorialIsLast(this.tutorialStepIndex),
+        target: step.target,
+      };
+    },
+
+    maybeShowTutorialBanner() {
+      this.tutorialBanner = !this.tutorialMode
+        && !session.tutorialDone()
+        && !session.tutorialPrompted()
+        && (this.screen === 'language' || this.screen === 'court' || this.screen === 'tournament');
+    },
+
+    acceptTutorialBanner() {
+      session.markTutorialPrompted();
+      this.tutorialBanner = false;
+      this.startTutorial();
+    },
+
+    dismissTutorialBanner() {
+      session.markTutorialPrompted();
+      this.tutorialBanner = false;
+    },
+
+    startTutorial() {
+      session.setTutorialMode(true);
+      session.markTutorialPrompted();
+      this.tutorialMode = true;
+      this.tutorialStepIndex = 0;
+      this.tutorialActionOk = false;
+      this.tutorialReturnScreen = this.screen === 'settings' ? 'settings' : 'court';
+      this.tutorialCourtSession = null;
+      this.tutorialBanner = false;
+      this.selectedIds = [];
+      this.isDoubles = false;
+      this.dialog = null;
+      this.finishStep = null;
+      this.closePin();
+      this.applyTutorialStep();
+    },
+
+    exitTutorial() {
+      session.setTutorialMode(false);
+      session.markTutorialDone();
+      this.tutorialMode = false;
+      this.tutorialActionOk = false;
+      this.tutorialCourtSession = null;
+      this.tutorialBanner = false;
+      this.dialog = null;
+      this.finishStep = null;
+      this.closePin();
+      this.go(this.tutorialReturnScreen || 'settings');
+    },
+
+    tutorialNote(action) {
+      const step = this.tutorialStep();
+      if (!tutorialMatchesAction(step, action)) return;
+      this.tutorialActionOk = true;
+      queueMicrotask(() => {
+        if (this.tutorialMode && this.tutorialActionOk) this.tutorialNext();
+      });
+    },
+
+    tutorialNext() {
+      const step = this.tutorialStep();
+      if (!tutorialCanAdvance(step, this.tutorialActionOk)) return;
+      if (tutorialIsLast(this.tutorialStepIndex)) {
+        this.exitTutorial();
+        return;
+      }
+      this.tutorialStepIndex = tutorialNextIndex(this.tutorialStepIndex);
+      this.tutorialActionOk = !tutorialStepAt(this.tutorialStepIndex)?.requireAction;
+      this.applyTutorialStep();
+    },
+
+    tutorialBack() {
+      if (this.tutorialStepIndex <= 0) {
+        this.exitTutorial();
+        return;
+      }
+      this.tutorialStepIndex = tutorialPrevIndex(this.tutorialStepIndex);
+      this.tutorialActionOk = !tutorialStepAt(this.tutorialStepIndex)?.requireAction;
+      this.applyTutorialStep();
+    },
+
+    applyTutorialStep() {
+      const step = this.tutorialStep();
+      if (!step) return;
+      this.dialog = null;
+      if (step.snapshot) {
+        const preset = loadTutorialSnapshot(step.snapshot, (key) => this.t(key));
+        if (preset) {
+          this.match.restoreSnapshot(preset);
+          this.go('match');
+        }
+      } else if (step.scene === 'court' || step.scene === 'pin') {
+        this.go('court');
+        if (step.scene === 'pin') {
+          const court = this.courts.find((item) => (item.kort_id || item.id) === TUTORIAL_COURT_1) || this.courts[0];
+          if (court) this.openPin(court);
+        } else {
+          this.closePin();
+        }
+      } else if (step.scene === 'players') {
+        this.closePin();
+        this.go('players');
+      } else if (step.scene === 'config') {
+        this.openConfig();
+      } else if (step.scene === 'finish') {
+        this.go('match');
+      }
+      if (step.id === 'finish') this.dialog = null;
+      if (step.id === 'retirement') {
+        this.finishStep = 'reason';
+        this.dialog = 'finish';
+      }
+    },
+
     async persistHistory(state) {
+      if (this.tutorialMode) return;
       const entry = historyEntryFromState(state);
       if (entry && this._history) await this._history.save(entry);
     },
 
     async flushOutbox() {
+      if (this.tutorialMode) return;
       if (!this._outbox) return;
       const result = await this._outbox.flush(createOutboxDispatcher(api));
       if (result.dropped || result.failed) {
@@ -1033,9 +1245,11 @@ function createUmpireApp() {
       if (!state) return;
       this.match.setFirstServer(resolveServerNumber(buttonIndex, state));
       wakeLock.request();
+      this.tutorialNote('chooseServer');
     },
 
     swapSides() {
+      this.tutorialNote('swapSides');
       if (this.motion.sideSwapPhase) return;
       this.motion.sideSwapPhase = 'out';
       this.clearMotionTimer('sideOut');
@@ -1175,15 +1389,22 @@ function createUmpireApp() {
     confirmUndo() {
       this.dialog = null;
       this.match?.undoLastAction();
+      this.tutorialNote('undo');
     },
 
     askFinish() {
       if (!this.chrome().showFinish) return;
       this.finishStep = 'reason';
       this.dialog = 'finish';
+      this.tutorialNote('openFinish');
     },
 
     pickFinishReason(reason) {
+      if (this.tutorialMode && reason === MatchFinishReason.RETIREMENT) {
+        this.finishStep = 'retirement';
+        this.tutorialNote('openFinish');
+        return;
+      }
       if (reason === MatchFinishReason.RETIREMENT) {
         this.finishStep = 'retirement';
         return;
@@ -1196,6 +1417,7 @@ function createUmpireApp() {
     },
 
     pickRetirement(injuredIsTeam1) {
+      this.tutorialNote('pickRetirement');
       const state = this.match.state;
       this.confirmFinish(new FinishMatchRequest({
         finishReason: MatchFinishReason.RETIREMENT,
@@ -1257,6 +1479,10 @@ function createUmpireApp() {
     },
 
     nextMatch(sameSetup) {
+      if (this.tutorialMode) {
+        this.exitTutorial();
+        return;
+      }
       wakeLock.release();
       session.clearActiveMatch();
       this.motion = emptyMotionUi();
@@ -1275,6 +1501,7 @@ function createUmpireApp() {
     },
 
     async syncMatch(reason, state, extra) {
+      if (this.tutorialMode) return { failed: false };
       if (reason === 'finalize') await this.persistHistory(state);
       if (!this._outbox) {
         return { failed: true, offline: !navigator.onLine };

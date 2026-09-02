@@ -4,6 +4,9 @@ const COURT_SESSION_KEY = 'umpire.court_session';
 const DRAFT_KEY = 'umpire.match_draft';
 const LAST_CONFIG_KEY = 'umpire.last_match_config';
 const ACTIVE_MATCH_KEY = 'umpire.active_match';
+const TUTORIAL_MODE_KEY = 'umpire.tutorial_mode';
+const TUTORIAL_DONE_KEY = 'umpire.tutorial_done';
+const TUTORIAL_PROMPTED_KEY = 'umpire.tutorial_prompted';
 
 export const AVAILABLE_LANGUAGES = Object.freeze([
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
@@ -139,6 +142,31 @@ export function createUmpireSession({
 
     clearActiveMatch() {
       sessionStore.removeItem(ACTIVE_MATCH_KEY);
+    },
+
+    isTutorialMode() {
+      return sessionStore.getItem(TUTORIAL_MODE_KEY) === '1';
+    },
+
+    setTutorialMode(on) {
+      if (on) sessionStore.setItem(TUTORIAL_MODE_KEY, '1');
+      else sessionStore.removeItem(TUTORIAL_MODE_KEY);
+    },
+
+    tutorialDone() {
+      return localStore.getItem(TUTORIAL_DONE_KEY) === '1';
+    },
+
+    markTutorialDone() {
+      localStore.setItem(TUTORIAL_DONE_KEY, '1');
+    },
+
+    tutorialPrompted() {
+      return localStore.getItem(TUTORIAL_PROMPTED_KEY) === '1';
+    },
+
+    markTutorialPrompted() {
+      localStore.setItem(TUTORIAL_PROMPTED_KEY, '1');
     },
   };
 }

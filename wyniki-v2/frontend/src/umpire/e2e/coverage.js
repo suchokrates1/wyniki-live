@@ -20,3 +20,7 @@ export const UMPIRE_E2E_PWA_GATES = Object.freeze([
   'PWA on',
   'iOS WebKit',
 ]);
+
+export const UMPIRE_E2E_TUTORIAL_GATES = Object.freeze([
+  'Tutorial',
+]);
