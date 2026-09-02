@@ -79,7 +79,15 @@ export async function seedThroughCourt(page) {
 }
 
 export async function openUmpire(page, hash = '') {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('umpire.pwa_gate_dismissed', '1');
+  });
   await page.goto(`/umpire.html${hash}`);
+  await page.locator('.ump-title').waitFor();
+}
+
+export async function openUmpireWithPwaGate(page) {
+  await page.goto('/umpire.html');
   await page.locator('.ump-title').waitFor();
 }
 

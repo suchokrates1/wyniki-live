@@ -426,6 +426,22 @@
       </div>
     </section>
 
+    <div class="ump-pin" x-show="pwaGate()" x-cloak>
+      <div class="ump-card ump-pin__card">
+        <h2 x-text="gt(pwaGate() === 'open' ? 'openGateTitle' : 'installGateTitle')"></h2>
+        <p x-text="gt(pwaGate() === 'open' ? 'openGateMessage' : 'installGateMessage')"></p>
+        <div class="ump-toggle" style="margin-top:16px">
+          <button
+            class="ump-btn ump-btn--accent"
+            type="button"
+            @click="acceptPwaGate()"
+            x-text="gt(pwaGate() === 'open' ? 'openApp' : 'installApp')"
+          ></button>
+          <button class="ump-btn" type="button" @click="skipPwaGate()" x-text="gt('notNow')"></button>
+        </div>
+      </div>
+    </div>
+
     <div class="ump-pin" x-show="dialog === 'undo'" x-cloak>
       <div class="ump-card ump-pin__card">
         <h2 x-text="t('undo')"></h2>

@@ -45,6 +45,15 @@ import { openUmpireStores } from './offline/store.js';
 import { applyTheme, readTheme, saveTheme, THEMES } from './offline/theme.js';
 import { bindFullscreenChange, isFullscreen, toggleFullscreen } from './fullscreen.js';
 import { playerRowClass as selectionRowClass } from './playerRowClass.js';
+import {
+  detectOsInstalledPwa,
+  dismissPwaGate,
+  enableInstalledPwa,
+  isStandaloneDisplay,
+  markPwaInstalled,
+  pwaGateMode,
+  wasPwaGateDismissed,
+} from './pwaInstallGate.js';
 import './umpire.css';
 
 const session = createUmpireSession();
@@ -132,6 +141,8 @@ function createUmpireApp() {
     diagnosticsCopyOk: false,
     canInstall: false,
     installed: false,
+    osInstalled: false,
+    pwaGateDismissed: wasPwaGateDismissed(globalThis.sessionStorage),
     isFullscreen: false,
     directorToast: false,
     _directorToastTimer: null,
@@ -143,6 +154,25 @@ function createUmpireApp() {
 
     t(key, vars) {
       return umpireText(this.lang, key, vars);
+    },
+
+    gateLang() {
+      const raw = String(globalThis.navigator?.language || this.lang || 'en').slice(0, 2).toLowerCase();
+      return AVAILABLE_LANGUAGES.some((item) => item.code === raw) ? raw : 'en';
+    },
+
+    gt(key, vars) {
+      return umpireText(this.gateLang(), key, vars);
+    },
+
+    pwaGate() {
+      if (this.screen !== 'language') return null;
+      return pwaGateMode({
+        standalone: isStandaloneDisplay(),
+        canInstall: this.canInstall,
+        osInstalled: this.osInstalled,
+        dismissed: this.pwaGateDismissed,
+      });
     },
 
     courtName(court) {
@@ -408,28 +438,73 @@ function createUmpireApp() {
     },
 
     watchInstallPrompt() {
-      this.installed = window.matchMedia('(display-mode: standalone)').matches;
+      this.installed = isStandaloneDisplay();
       window.addEventListener('beforeinstallprompt', (event) => {
         event.preventDefault();
         this._installEvent = event;
         this.canInstall = true;
       });
       window.addEventListener('appinstalled', () => {
+        markPwaInstalled(globalThis.localStorage);
         this.installed = true;
+        this.osInstalled = true;
         this.canInstall = false;
         this._installEvent = null;
       });
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/umpire-sw.js').catch(() => {});
       }
+      detectOsInstalledPwa({
+        storage: globalThis.localStorage,
+        getRelatedApps: navigator.getInstalledRelatedApps?.bind(navigator),
+      }).then((osInstalled) => {
+        if (osInstalled) this.osInstalled = true;
+      }).catch(() => {});
+    },
+
+    skipPwaGate() {
+      dismissPwaGate(globalThis.sessionStorage);
+      this.pwaGateDismissed = true;
+    },
+
+    async acceptPwaGate() {
+      const mode = this.pwaGate();
+      if (mode === 'install') {
+        await this.installApp();
+        return;
+      }
+      if (mode === 'open') {
+        await this.openInstalledPwa();
+        this.skipPwaGate();
+      }
+    },
+
+    async openInstalledPwa() {
+      await enableInstalledPwa({
+        requestFullscreen: async () => {
+          if (!isFullscreen()) await toggleFullscreen();
+        },
+        userAgent: globalThis.navigator?.userAgent || '',
+        origin: globalThis.location?.origin || '',
+        assignLocation: (url) => {
+          globalThis.location.href = url;
+        },
+      });
     },
 
     async installApp() {
       if (!this._installEvent) return;
       this._installEvent.prompt();
-      await this._installEvent.userChoice;
+      const choice = await this._installEvent.userChoice.catch(() => null);
       this._installEvent = null;
       this.canInstall = false;
+      if (choice?.outcome === 'accepted') {
+        markPwaInstalled(globalThis.localStorage);
+        this.osInstalled = true;
+        this.installed = true;
+        return;
+      }
+      this.skipPwaGate();
     },
 
     setTheme(theme) {

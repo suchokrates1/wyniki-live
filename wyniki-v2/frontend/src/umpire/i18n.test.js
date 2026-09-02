@@ -49,6 +49,16 @@ test('all umpire locales keep Android language titles', () => {
   assert.equal(umpireText('pl', 'courtName', { name: '1' }), 'Kort 1');
 });
 
+test('PWA install gate strings exist in every locale', () => {
+  for (const { code } of AVAILABLE_LANGUAGES) {
+    for (const key of ['installGateTitle', 'installGateMessage', 'openGateTitle', 'openGateMessage', 'openApp', 'notNow']) {
+      assert.ok(umpireText(code, key), `${code}.${key}`);
+    }
+  }
+  assert.equal(umpireText('pl', 'openApp'), 'Włącz');
+  assert.equal(umpireText('en', 'installGateTitle'), 'Install Blind Tennis Referee?');
+});
+
 test('every locale keeps Android labels 1:1 for shared keys', () => {
   const keys = [
     'languageTitle', 'tournamentTitle', 'courtTitle', 'pinTitle', 'playersTitle',
