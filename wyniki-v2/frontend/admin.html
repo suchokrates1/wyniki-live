@@ -370,7 +370,7 @@
               <span class="label-text">Tablet / mecz</span>
               <select class="select select-bordered select-sm" @change="selectDirectorTablet(directorTablets[$event.target.value])">
                 <template x-for="(tablet, index) in directorTablets" :key="tablet.match_id || index">
-                  <option :value="index" x-text="(tablet.player1_name || '?') + ' vs ' + (tablet.player2_name || '?') + ' · #' + (tablet.match_id || '—') + ' · ' + (tablet.session_court_id || '')"></option>
+                  <option :value="index" x-text="directorTabletLabel(tablet)"></option>
                 </template>
               </select>
             </label>

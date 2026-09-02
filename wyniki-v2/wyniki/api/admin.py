@@ -422,8 +422,9 @@ def demo_status():
 def director_tablets():
     """Live umpire tablets (heartbeat/events) plus in-progress matches on a court."""
     try:
-        from ..db_models import Match
+        from ..db_models import Court, Match
         from ..services.director_commands import tablet_presence
+        from ..services.tablet_aliases import annotate_tablet
 
         court_id = str(request.args.get("court_id") or "").strip() or None
         query = Match.query.filter_by(status="in_progress")
@@ -448,6 +449,13 @@ def director_tablets():
                 "last_seen": match.updated_at,
                 "from_db": True,
             })
+        court_ids = {row.get("session_court_id") for row in tablets if row.get("session_court_id")}
+        names = {}
+        if court_ids:
+            for court in Court.query.filter(Court.kort_id.in_(court_ids)).all():
+                names[court.kort_id] = str(court.name or "").strip()
+        for row in tablets:
+            annotate_tablet(row, names.get(row.get("session_court_id")))
         return jsonify({"tablets": tablets})
     except Exception as e:
         logger.error(f"Failed to list director tablets: {e}")

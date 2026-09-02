@@ -1603,12 +1603,18 @@ def log_match_event():
         restore_match_score = bool(
             active_match and _match_has_recorded_progress(active_match) and _score_payload_is_zeroed(score)
         )
+        event_meta = _request_client_meta(data)
         tablet_presence.record(
             session_court_id=kort_id,
             match_id=active_match.id if active_match else event_match_id,
             client_match_uuid=event_client_uuid or (active_match.client_match_uuid if active_match else None),
             player1_name=(player1.get("full_name") or player1.get("name")),
             player2_name=(player2.get("full_name") or player2.get("name")),
+            app_version=event_meta.get("app_version"),
+            platform=event_meta.get("platform"),
+            device=event_meta.get("device"),
+            device_model=event_meta.get("device_model"),
+            device_manufacturer=event_meta.get("device_manufacturer"),
         )
 
         expected_court = str(active_match.court_id or "").strip() if active_match else ""
@@ -1794,13 +1800,19 @@ def umpire_heartbeat():
                 court_state["app_version"] = app_version
                 court_state["umpire_screen"] = screen
 
+            heartbeat_meta = _request_client_meta(data)
             tablet_presence.record(
                 session_court_id=kort_id,
                 match_id=match_id,
                 client_match_uuid=client_match_uuid,
                 screen=screen,
                 battery_level=battery_level,
-                app_version=app_version,
+                app_version=heartbeat_meta.get("app_version") or app_version,
+                platform=heartbeat_meta.get("platform"),
+                device=heartbeat_meta.get("device"),
+                device_model=heartbeat_meta.get("device_model"),
+                device_manufacturer=heartbeat_meta.get("device_manufacturer"),
+                is_charging=is_charging,
             )
 
         commands = director_command_broker.pending_for(kort_id, match_id, client_match_uuid)

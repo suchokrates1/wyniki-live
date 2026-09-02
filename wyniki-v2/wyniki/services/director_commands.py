@@ -170,6 +170,11 @@ class TabletPresenceStore:
         screen: str | None = None,
         battery_level: Any = None,
         app_version: str | None = None,
+        platform: str | None = None,
+        device: str | None = None,
+        device_model: str | None = None,
+        device_manufacturer: str | None = None,
+        is_charging: Any = None,
     ) -> None:
         session_court_id = str(session_court_id or "").strip()
         if not session_court_id:
@@ -177,6 +182,9 @@ class TabletPresenceStore:
         key = _presence_key(session_court_id, match_id, client_match_uuid)
         with self._lock:
             existing = self._tablets.get(key) or {}
+            charging = existing.get("is_charging")
+            if is_charging is not None:
+                charging = is_charging in (True, "true", "True", 1, "1")
             self._tablets[key] = {
                 "session_court_id": session_court_id,
                 "match_id": int(match_id) if match_id else existing.get("match_id"),
@@ -185,7 +193,12 @@ class TabletPresenceStore:
                 "player2_name": player2_name or existing.get("player2_name"),
                 "screen": screen or existing.get("screen"),
                 "battery_level": _optional_int(battery_level, existing.get("battery_level")),
+                "is_charging": charging,
                 "app_version": app_version or existing.get("app_version"),
+                "platform": platform or existing.get("platform"),
+                "device": device or existing.get("device"),
+                "device_model": device_model or existing.get("device_model"),
+                "device_manufacturer": device_manufacturer or existing.get("device_manufacturer"),
                 "last_seen": datetime.now(timezone.utc).isoformat(),
                 "last_seen_epoch": time.time(),
             }
