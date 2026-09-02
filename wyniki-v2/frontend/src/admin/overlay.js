@@ -1,5 +1,10 @@
 import { abbreviateCompetitorName } from '../shared/teamDisplay.js';
 import { calcMatchTime } from '../shared/matchTime.js';
+import {
+  overlayCategoryLabel,
+  overlayCourtLabel,
+  overlayPhaseLabel,
+} from '../shared/overlayLabel.js';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
@@ -640,7 +645,7 @@ export function createOverlayAdmin() {
         type:'court', court_id:String(cid), visible:true, x, y, w,
         zone:opts.zone||'free', show_logo:opts.logo||false,
         font_size:opts.fs||17, bg_opacity:0.95, logo_size:60,
-        label_text:opts.label||(opts.noLabel?'':'KORT '+cid),
+        label_text:opts.label||(opts.noLabel?'':'COURT '+cid),
         label_position:opts.labelPos||'above',
         label_gap:4, label_bg_opacity:0.85, label_font_size:opts.lfs||14,
       });
@@ -839,7 +844,7 @@ export function createOverlayAdmin() {
         elements: [
           { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460, zone: 'free',
             show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
-            label_text: 'KORT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
+            label_text: 'COURT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
         ],
       };
       this.currentOverlayId = newId;
@@ -886,7 +891,7 @@ export function createOverlayAdmin() {
           bg_opacity: 0.95,
           logo_size: 60,
           zone: 'free',
-          label_text: 'KORT ' + defaultCourtId,
+          label_text: 'COURT ' + defaultCourtId,
           label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14,
         });
       } else {
@@ -1171,9 +1176,25 @@ export function createOverlayAdmin() {
        const belowCls = pos === 'below' ? ' label-below' : '';
        const court = this.resolveOverlayCourtData(el.court_id);
        const timeStr = this._calcMatchTime(court);
-       const timeHtml = timeStr ? '<span class="label-sep">|</span><span class="label-time">⏱ ' + timeStr + '</span>' : '';
+       const meta = court && court.history_meta ? court.history_meta : {};
+       const parts = [];
+       const courtName = overlayCourtLabel(el.label_text, el.court_id);
+       if (courtName) parts.push(courtName);
+       const cat = overlayCategoryLabel(meta.category);
+       const phase = overlayPhaseLabel(meta.phase);
+       if (cat) parts.push(cat);
+       if (phase) parts.push(phase);
+       let inner = '';
+       parts.forEach((part, index) => {
+         if (index) inner += '<span class="label-sep">·</span>';
+         inner += '<span class="' + (index === 0 ? 'label-text' : 'label-meta') + '">' + part + '</span>';
+       });
+       if (timeStr) {
+         if (parts.length) inner += '<span class="label-sep">|</span>';
+         inner += '<span class="label-time">⏱ ' + timeStr + '</span>';
+       }
        label = '<div class="sb-label-bar' + belowCls + '" style="background:' + bg + ';font-size:' + fs + 'px;">'
-         + '<span class="label-text">' + el.label_text + '</span>' + timeHtml + '</div>';
+         + inner + '</div>';
      }
 
      // Wrap in overlay-container (unified dark bg, matching OBS)

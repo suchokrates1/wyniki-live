@@ -45,7 +45,7 @@
 
         /* ---- Court label bar ---- */
         .court-label-bar {
-            display: flex; align-items: center;
+            display: flex; align-items: center; justify-content: center;
             font-weight: 700; text-transform: uppercase;
             letter-spacing: 0.1em; padding: 6px 16px;
             white-space: nowrap; color: white;
@@ -59,7 +59,8 @@
             border-bottom: 1px solid rgba(255,255,255,0.08);
             border-radius: 0; margin: 0;
         }
-        .overlay-container .court-label-bar .label-text {
+        .overlay-container .court-label-bar .label-text,
+        .overlay-container .court-label-bar .label-meta {
             flex: 0 0 auto;
         }
         .overlay-container .court-label-bar .label-sep {
@@ -67,6 +68,7 @@
         }
         .overlay-container .court-label-bar .label-time {
             flex: 0 0 auto;
+            font-family: 'Courier New', monospace;
         }
 
         /* ---- Dark grid scoreboard (matches main page) ---- */
@@ -399,6 +401,70 @@
         return hh+':'+mm;
     }
 
+    function overlayCourtLabel(labelText, courtId) {
+        var raw = String(labelText || '').trim();
+        if (/^main$/i.test(raw)) return 'MAIN';
+        var fromId = String(courtId || '').match(/(?:^|-)(\d+)$/);
+        var ordinalFromId = fromId ? fromId[1] : '';
+        if (!raw) return ordinalFromId ? 'COURT ' + ordinalFromId : '';
+        var afterDot = raw.split('•').pop().trim();
+        var stripped = afterDot.replace(/^(court|kort|platz|campo|cancha|kortas)\s+/i, '').trim();
+        if (/^\d+$/.test(stripped)) return 'COURT ' + stripped;
+        return afterDot.replace(/^(court|kort|platz|campo|cancha|kortas)\s+/i, 'COURT ');
+    }
+
+    function overlayCategoryLabel(category) {
+        var text = String(category || '').trim();
+        if (!text) return '';
+        if (text.indexOf(' — ') >= 0) text = text.split(' — ')[0].trim();
+        return text
+            .replace(/Kobiety/gi, 'Women')
+            .replace(/Mężczyźni/gi, 'Men')
+            .replace(/Mezczyzni/gi, 'Men')
+            .replace(/\bWoman\b/gi, 'Women')
+            .replace(/\bMan\b/gi, 'Men')
+            .replace(/\bDebel\b/gi, 'Doubles')
+            .replace(/\bDeble\b/gi, 'Doubles')
+            .replace(/\bMieszane\b/gi, 'Mixed');
+    }
+
+    function overlayPhaseLabel(phase) {
+        var text = String(phase || '').trim();
+        if (!text) return '';
+        var suffix = text.indexOf(' — ') >= 0 ? text.split(' — ').pop().trim() : text;
+        var lower = suffix.toLowerCase();
+        if (/rewan|rematch/.test(lower)) return 'GROUP REMATCH';
+        if (lower === 'grupowa' || /group stage|^group$|faza grupowa/.test(lower)) return 'GROUP';
+        if (/1\s*\/\s*8|r16|round of 16|ósem/.test(lower)) return '1/8';
+        if (/1\s*\/\s*4|ćwierć|cwierc|quarter/.test(lower)) return '1/4';
+        if (/1\s*\/\s*2|półfina|polfina|semif/.test(lower)) return '1/2';
+        if (/3\.\s*miejsce|3rd|third place|bronze/.test(lower)) return '3RD PLACE';
+        if (/pucharowa|knockout/.test(lower)) return 'KNOCKOUT';
+        if (/(?:^|\s)fina[lł]|final/.test(lower) && !/semi|pół|1\s*\/\s*2/.test(lower)) return 'FINAL';
+        return suffix;
+    }
+
+    function overlayLabelInnerHtml(el, court, timeStr) {
+        var parts = [];
+        var courtName = overlayCourtLabel(el.label_text, el.court_id);
+        if (courtName) parts.push(courtName);
+        var meta = court && court.history_meta ? court.history_meta : {};
+        var cat = overlayCategoryLabel(meta.category);
+        var phase = overlayPhaseLabel(meta.phase);
+        if (cat) parts.push(cat);
+        if (phase) parts.push(phase);
+        var html = '';
+        parts.forEach(function(part, index) {
+            if (index) html += '<span class="label-sep">·</span>';
+            html += '<span class="' + (index === 0 ? 'label-text' : 'label-meta') + '">' + part + '</span>';
+        });
+        if (timeStr) {
+            if (parts.length) html += '<span class="label-sep">|</span>';
+            html += '<span class="label-time" data-court="' + el.court_id + '">&#9201; ' + timeStr + '</span>';
+        }
+        return html;
+    }
+
     function renderScoreboard(el) {
         const cid = el.court_id;
         const court = resolveCourtState(cid);
@@ -557,8 +623,9 @@
         var radius = pos==='above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
         var court = resolveCourtState(el.court_id);
         var timeStr = calcMatchTime(court);
-        var timeHtml = timeStr ? '<span class="label-sep">|</span><span class="label-time" data-court="'+el.court_id+'">&#9201; '+timeStr+'</span>' : '';
-        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;"><span class="label-text">'+el.label_text+'</span>'+timeHtml+'</div>';
+        var inner = overlayLabelInnerHtml(el, court, timeStr);
+        if (!inner) return '';
+        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;">'+inner+'</div>';
     }
 
     function estimateTopSlotHeight(el) {
