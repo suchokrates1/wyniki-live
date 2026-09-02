@@ -219,6 +219,7 @@ body {
 .ump-pin {
   position: fixed;
   inset: 0;
+  z-index: 40;
   background: rgba(4, 8, 16, 0.72);
   display: flex;
   align-items: center;
