@@ -79,7 +79,12 @@ export async function syncMatchLive({
 
     if (reason === 'create' || state.matchId == null) {
       const result = await api.createMatch(payload);
-      if (result.ok) return { matchId: result.data?.id };
+      if (result.ok) {
+        return {
+          matchId: result.data?.id,
+          bracketWarning: result.data?.bracket_warning || result.data?.bracketWarning || null,
+        };
+      }
       return handleFailure({ api, outbox, reason, state, extra, result, online, type: MutationType.CREATE, payload });
     }
 

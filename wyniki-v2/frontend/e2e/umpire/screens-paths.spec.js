@@ -4,10 +4,10 @@ import { enterPin, mockUmpireApi, openPinPad, startBasicMatch } from './helpers.
 test('13 wrong PIN stays on the pad and clears digits', async ({ page }) => {
   await mockUmpireApi(page, { authorize: false });
   await openPinPad(page);
-  await expect(page.getByRole('heading', { name: 'Court PIN' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Court Authorization' })).toBeVisible();
   await enterPin(page, '0000');
-  await expect(page.getByText('Wrong PIN')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Court PIN' })).toBeVisible();
+  await expect(page.getByText(/Invalid PIN/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Court Authorization' })).toBeVisible();
   await expect(page.locator('.ump-pin__box', { hasText: '•' })).toHaveCount(0);
 });
 
@@ -15,7 +15,7 @@ test('13 cancel PIN returns to the court list', async ({ page }) => {
   await mockUmpireApi(page);
   await openPinPad(page);
   await page.getByRole('button', { name: 'Cancel' }).click();
-  await expect(page.locator('h1.ump-title')).toHaveText('Choose court');
+  await expect(page.locator('h1.ump-title')).toHaveText('Select Court');
   await expect(page.getByRole('button', { name: 'Court 1' })).toBeVisible();
 });
 

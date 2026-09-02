@@ -184,5 +184,7 @@ export function finishWinnerName(state) {
   if (state.finishWinnerName) return state.finishWinnerName;
   if (state.player1Sets > state.player2Sets) return state.getTeam1DisplayName();
   if (state.player2Sets > state.player1Sets) return state.getTeam2DisplayName();
+  if (state.player1Games > state.player2Games) return state.getTeam1DisplayName();
+  if (state.player2Games > state.player1Games) return state.getTeam2DisplayName();
   return '';
 }

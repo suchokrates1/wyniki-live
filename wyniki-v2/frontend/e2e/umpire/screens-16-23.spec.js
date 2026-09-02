@@ -7,7 +7,7 @@ async function startBasicMatch(page) {
   await openUmpire(page, '#/players');
   await page.getByRole('button', { name: 'Kowalski' }).click();
   await page.getByRole('button', { name: 'Nowak' }).click();
-  await expect(page.locator('h1.ump-title')).toHaveText('Match setup', { timeout: 5_000 });
+  await expect(page.locator('h1.ump-title')).toHaveText('Match Setup', { timeout: 5_000 });
   await page.locator('.ump-mode').filter({ hasText: 'Basic' }).click();
   await expect(page.getByRole('button', { name: /Kowalski/ })).toBeVisible();
   await page.getByRole('button', { name: /Kowalski/ }).first().click();
@@ -48,7 +48,7 @@ test('18 Advanced ACE scores 15', async ({ page }) => {
   await openUmpire(page, '#/players');
   await page.getByRole('button', { name: 'Kowalski' }).click();
   await page.getByRole('button', { name: 'Nowak' }).click();
-  await expect(page.locator('h1.ump-title')).toHaveText('Match setup', { timeout: 5_000 });
+  await expect(page.locator('h1.ump-title')).toHaveText('Match Setup', { timeout: 5_000 });
   await page.locator('.ump-mode').filter({ hasText: 'Advanced' }).click();
   await page.getByRole('button', { name: /Kowalski/ }).first().click();
   await page.getByRole('button', { name: 'ACE' }).first().click();
@@ -74,7 +74,7 @@ test('20–21 announcement continue and Test finish hides Undo', async ({ page }
   await page.getByRole('button', { name: 'Test entry' }).click();
   await expect(page.getByRole('heading', { name: 'Match Finished!' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Next match — same setup' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '▶ Next Match (same setup)' })).toBeVisible();
 });
 
 test('22 settings language and theme', async ({ page }) => {
@@ -92,5 +92,5 @@ test('23 history starts empty', async ({ page }) => {
   await seedThroughCourt(page);
   await mockUmpireApi(page);
   await openUmpire(page, '#/history');
-  await expect(page.getByText('No matches yet.')).toBeVisible();
+  await expect(page.getByText('No matches saved yet')).toBeVisible();
 });

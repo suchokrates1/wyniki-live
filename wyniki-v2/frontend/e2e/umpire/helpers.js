@@ -108,7 +108,7 @@ export async function startBasicMatch(page) {
   await openUmpire(page, '#/players');
   await page.getByRole('button', { name: 'Kowalski' }).click();
   await page.getByRole('button', { name: 'Nowak' }).click();
-  await page.locator('h1.ump-title').filter({ hasText: 'Match setup' }).waitFor({ timeout: 5_000 });
+  await page.locator('h1.ump-title').filter({ hasText: 'Match Setup' }).waitFor({ timeout: 5_000 });
   await page.locator('.ump-mode').filter({ hasText: 'Basic' }).click();
   await page.getByRole('button', { name: /Kowalski/ }).first().click();
 }

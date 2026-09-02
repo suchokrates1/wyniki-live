@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 test('10 language picker is the first screen', async ({ page }) => {
   await openUmpire(page);
-  await expect(page.locator('h1.ump-title')).toHaveText('Choose language');
+  await expect(page.locator('h1.ump-title')).toHaveText('Select Language');
   await expect(page.getByRole('button', { name: /English/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Polski/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Full screen' })).toBeVisible();
@@ -20,7 +20,7 @@ test('10 language picker is the first screen', async ({ page }) => {
 test('11 tournament list after language', async ({ page }) => {
   await openUmpire(page);
   await page.getByRole('button', { name: /English/ }).click();
-  await expect(page.locator('h1.ump-title')).toHaveText('Choose tournament');
+  await expect(page.locator('h1.ump-title')).toHaveText('Select Tournament');
   await expect(page.getByRole('button', { name: 'Vilnius E2E' })).toBeVisible();
 });
 
@@ -34,7 +34,7 @@ test('12 court list and settings gear', async ({ page }) => {
     }));
   }, todayKey());
   await openUmpire(page, '#/court');
-  await expect(page.locator('h1.ump-title')).toHaveText('Choose court');
+  await expect(page.locator('h1.ump-title')).toHaveText('Select Court');
   await expect(page.getByRole('button', { name: 'Court 1' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
 });
@@ -50,9 +50,9 @@ test('13 PIN pad accepts four digits', async ({ page }) => {
   }, todayKey());
   await openUmpire(page, '#/court');
   await page.getByRole('button', { name: 'Court 1' }).click();
-  await expect(page.getByRole('heading', { name: 'Court PIN' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Court Authorization' })).toBeVisible();
   await enterPin(page, '1234');
-  await expect(page.locator('h1.ump-title')).toHaveText('Choose players');
+  await expect(page.locator('h1.ump-title')).toHaveText('Select Players');
 });
 
 test('14–15 pick two players and open match setup', async ({ page }) => {
@@ -72,10 +72,11 @@ test('14–15 pick two players and open match setup', async ({ page }) => {
   await openUmpire(page, '#/players');
   await expect(page.getByRole('button', { name: 'Singles' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Doubles' })).toBeVisible();
-  await expect(page.getByText('Select 2 players to continue.')).toBeVisible();
+  await expect(page.getByText('Singles (2 players)')).toBeVisible();
+  await expect(page.getByText('Selected: 0/2')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0);
   const searchBox = page.locator('.ump-search-row .ump-search');
-  const addBtn = page.getByRole('button', { name: 'Add player' });
+  const addBtn = page.getByRole('button', { name: '+ Add new player' });
   await expect(searchBox).toBeVisible();
   await expect(addBtn).toBeVisible();
   await expect(page.getByRole('button', { name: 'Full screen' })).toBeVisible();
@@ -84,14 +85,14 @@ test('14–15 pick two players and open match setup', async ({ page }) => {
   const addBtnY = (await addBtn.boundingBox()).y;
   expect(Math.abs(searchBoxY - addBtnY)).toBeLessThan(12);
   await page.getByRole('button', { name: 'Doubles' }).click();
-  await expect(page.getByText('Select 4 players to continue.')).toBeVisible();
+  await expect(page.getByText('Selected: 0/4')).toBeVisible();
   await page.getByRole('button', { name: 'Kowalski' }).click();
   await page.getByRole('button', { name: 'Nowak' }).click();
   await expect(page.locator('.ump-player.is-team1')).toHaveCount(2);
   await page.getByRole('button', { name: 'Lis' }).click();
   await expect(page.locator('.ump-player.is-team2')).toHaveCount(1);
   await page.getByRole('button', { name: 'Singles' }).click();
-  await expect(page.locator('h1.ump-title')).toHaveText('Match setup', { timeout: 5_000 });
+  await expect(page.locator('h1.ump-title')).toHaveText('Match Setup', { timeout: 5_000 });
   await expect(page.getByRole('heading', { name: 'Basic' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Advanced' })).toBeVisible();
 });
