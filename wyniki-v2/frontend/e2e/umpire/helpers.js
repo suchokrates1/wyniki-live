@@ -91,6 +91,50 @@ export async function openUmpireWithPwaGate(page) {
   await page.locator('.ump-title').waitFor();
 }
 
+export async function firePwaInstallPrompt(page, outcome = 'accepted') {
+  await page.evaluate((choice) => {
+    window.__umpireInstallPrompted = false;
+    const event = new Event('beforeinstallprompt');
+    event.preventDefault = () => {};
+    event.prompt = async () => {
+      window.__umpireInstallPrompted = true;
+    };
+    event.userChoice = Promise.resolve({ outcome: choice });
+    window.dispatchEvent(event);
+  }, outcome);
+}
+
+export async function stubPwaFullscreen(page) {
+  await page.evaluate(() => {
+    window.__umpireFullscreen = false;
+    const root = document.documentElement;
+    root.requestFullscreen = async () => {
+      window.__umpireFullscreen = true;
+    };
+    root.webkitRequestFullscreen = root.requestFullscreen;
+  });
+}
+
+export async function emulateStandalonePwa(page) {
+  await page.addInitScript(() => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      if (String(query).includes('display-mode: standalone')) {
+        return {
+          matches: true,
+          media: query,
+          addListener() {},
+          removeListener() {},
+          addEventListener() {},
+          removeEventListener() {},
+          dispatchEvent() { return false; },
+        };
+      }
+      return original(query);
+    };
+  });
+}
+
 export async function enterPin(page, pin = '1234') {
   for (const digit of pin) {
     await page.locator('.ump-pad button', { hasText: new RegExp(`^${digit}$`) }).click();
