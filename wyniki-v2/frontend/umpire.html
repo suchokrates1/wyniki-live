@@ -42,6 +42,7 @@
         <button
           class="ump-icon-btn"
           type="button"
+          x-show="showFullscreenButton()"
           :aria-label="isFullscreen ? t('exitFullscreen') : t('fullscreen')"
           :aria-pressed="isFullscreen"
           @click="toggleFullscreen()"
