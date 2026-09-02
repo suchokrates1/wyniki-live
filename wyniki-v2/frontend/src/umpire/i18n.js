@@ -145,7 +145,7 @@ const STRINGS = {
     unforcedError: 'UNFORCED ERROR',
   },
   pl: {
-    appName: 'Sędzia tenisa niewidomych',
+    appName: 'Blind Tennis Referee',
     languageTitle: 'Wybierz język',
     tournamentTitle: 'Wybierz turniej',
     courtTitle: 'Wybierz kort',
@@ -288,7 +288,7 @@ const STRINGS = {
     unforcedError: 'NIEWYMUSZONY',
   },
   lt: {
-    appName: 'Neregų teniso teisėjas',
+    appName: 'Blind Tennis Referee',
     languageTitle: 'Pasirinkite kalbą',
     tournamentTitle: 'Pasirinkite turnyrą',
     courtTitle: 'Pasirinkite kortą',

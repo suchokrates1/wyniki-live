@@ -1,7 +1,7 @@
 {
   "id": "/umpire",
   "name": "Blind Tennis Referee",
-  "short_name": "Sędzia",
+  "short_name": "Blind Tennis Referee",
   "start_url": "/umpire",
   "scope": "/",
   "display": "standalone",

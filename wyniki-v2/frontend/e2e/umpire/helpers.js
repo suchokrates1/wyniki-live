@@ -63,12 +63,14 @@ export async function mockUmpireApi(page, options = {}) {
 export async function seedLanguage(page, lang = 'en') {
   await page.addInitScript((code) => {
     localStorage.setItem('umpire.selected_language', code);
+    localStorage.setItem('umpire.tutorial_prompted', '1');
   }, lang);
 }
 
 export async function seedThroughCourt(page) {
   await page.addInitScript((payload) => {
     localStorage.setItem('umpire.selected_language', 'en');
+    localStorage.setItem('umpire.tutorial_prompted', '1');
     localStorage.setItem('umpire.selected_tournament', JSON.stringify(payload.tournament));
     localStorage.setItem('umpire.court_session', JSON.stringify(payload.court));
   }, {
@@ -82,10 +84,13 @@ export async function seedThroughCourt(page) {
   });
 }
 
-export async function openUmpire(page, hash = '') {
-  await page.addInitScript(() => {
+export async function openUmpire(page, hash = '', options = {}) {
+  await page.addInitScript((keepBanner) => {
     sessionStorage.setItem('umpire.pwa_gate_dismissed', '1');
-  });
+    if (!keepBanner && !localStorage.getItem('umpire.tutorial_prompted')) {
+      localStorage.setItem('umpire.tutorial_prompted', '1');
+    }
+  }, Boolean(options.keepTutorialBanner));
   await page.goto(`/umpire.html${hash}`);
   await page.locator('.ump-title').waitFor();
 }
