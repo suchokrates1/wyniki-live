@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openUmpire, seedThroughCourt } from './helpers.js';
+import { confirmMatchSetup, openUmpire, seedThroughCourt } from './helpers.js';
 
 test('airplane scoring queues updates and flushes when back online', async ({ page }) => {
   const writes = [];
@@ -70,8 +70,7 @@ test('airplane scoring queues updates and flushes when back online', async ({ pa
   await openUmpire(page, '#/players');
   await page.getByRole('button', { name: 'Kowalski' }).click();
   await page.getByRole('button', { name: 'Nowak' }).click();
-  await expect(page.locator('h1.ump-title')).toHaveText('Match Setup', { timeout: 5_000 });
-  await page.locator('.ump-mode').filter({ hasText: 'Basic' }).click();
+  await confirmMatchSetup(page);
   await page.getByRole('button', { name: /Kowalski/ }).first().click();
   await expect(page.locator('.ump-win').first()).toBeVisible();
 

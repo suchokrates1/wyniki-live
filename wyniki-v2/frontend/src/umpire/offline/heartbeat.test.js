@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHeartbeat, heartbeatBody } from './heartbeat.js';
 
-test('heartbeat omits battery and sends court + version', () => {
-  const body = heartbeatBody({
+test('heartbeat sends court, version, and battery when the PWA can read it', () => {
+  const bare = heartbeatBody({
     courtId: 't31-1',
     screen: 'Match:BASIC_SCORING',
     matchId: 12,
@@ -11,13 +11,23 @@ test('heartbeat omits battery and sends court + version', () => {
     nowMs: 1_700,
     appVersion: '2.0.0',
   });
-  assert.equal(body.court_id, 't31-1');
-  assert.equal(body.app_version, '2.0.0');
-  assert.equal(body.screen, 'Match:BASIC_SCORING');
-  assert.equal(body.match_id, '12');
-  assert.equal(body.timestamp, '1700');
-  assert.equal('battery_level' in body, false);
-  assert.equal('is_charging' in body, false);
+  assert.equal(bare.court_id, 't31-1');
+  assert.equal(bare.app_version, '2.0.0');
+  assert.equal(bare.screen, 'Match:BASIC_SCORING');
+  assert.equal(bare.match_id, '12');
+  assert.equal(bare.timestamp, '1700');
+  assert.equal('battery_level' in bare, false);
+  assert.equal('is_charging' in bare, false);
+
+  const withBattery = heartbeatBody({
+    courtId: 't31-1',
+    batteryLevel: 64,
+    isCharging: true,
+    nowMs: 1,
+    appVersion: '2.0.0',
+  });
+  assert.equal(withBattery.battery_level, 64);
+  assert.equal(withBattery.is_charging, true);
 });
 
 test('heartbeat does not POST before a court token exists', async () => {

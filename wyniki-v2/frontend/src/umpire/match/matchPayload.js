@@ -186,5 +186,13 @@ export function finishWinnerName(state) {
   if (state.player2Sets > state.player1Sets) return state.getTeam2DisplayName();
   if (state.player1Games > state.player2Games) return state.getTeam1DisplayName();
   if (state.player2Games > state.player1Games) return state.getTeam2DisplayName();
+  let history1 = 0;
+  let history2 = 0;
+  for (const set of state.setsHistory || []) {
+    if (set.player1Games > set.player2Games) history1 += 1;
+    else if (set.player2Games > set.player1Games) history2 += 1;
+  }
+  if (history1 > history2) return state.getTeam1DisplayName();
+  if (history2 > history1) return state.getTeam2DisplayName();
   return '';
 }

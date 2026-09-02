@@ -1,6 +1,18 @@
-export function createUmpireApi({ fetchImpl = fetch, getToken = () => null } = {}) {
+import { attachBattery } from './offline/battery.js';
+import { umpireClientHeaders } from './offline/clientHeaders.js';
+
+export function createUmpireApi({
+  fetchImpl = fetch,
+  getToken = () => null,
+  getClientHeaders = () => umpireClientHeaders(),
+  getBattery = () => ({ level: null, charging: null }),
+} = {}) {
   async function request(path, options = {}) {
-    const headers = { Accept: 'application/json', ...(options.headers || {}) };
+    const headers = {
+      Accept: 'application/json',
+      ...getClientHeaders(),
+      ...(options.headers || {}),
+    };
     if (options.body && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
@@ -77,14 +89,14 @@ export function createUmpireApi({ fetchImpl = fetch, getToken = () => null } = {
     logMatchEvent(payload) {
       return request('/api/match-events', {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(attachBattery(payload, getBattery())),
       });
     },
 
     sendHeartbeat(payload) {
       return request('/api/umpire-heartbeat', {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(attachBattery(payload, getBattery())),
       });
     },
 

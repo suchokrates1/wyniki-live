@@ -31,7 +31,11 @@ export async function mockUmpireApi(page, options = {}) {
     }
     if (url.includes('/courts')) {
       return route.fulfill({
-        json: { courts: [{ kort_id: 't31-1', name: 'Court 1', is_available: true }] },
+        json: {
+          courts: options.courts || [
+            { kort_id: 't31-1', name: 'Court 1', is_available: true },
+          ],
+        },
       });
     }
     if (url.includes('/players') && method === 'GET') {
@@ -154,13 +158,20 @@ export async function openPinPad(page) {
   await page.getByRole('button', { name: 'Court 1' }).click();
 }
 
+export async function confirmMatchSetup(page, { advanced = false } = {}) {
+  await page.locator('h1.ump-title').filter({ hasText: 'Match Setup' }).waitFor({ timeout: 5_000 });
+  if (advanced) {
+    await page.getByRole('switch', { name: 'Advanced' }).click();
+  }
+  await page.getByRole('button', { name: 'Next' }).click();
+}
+
 export async function startBasicMatch(page) {
   await seedThroughCourt(page);
   await mockUmpireApi(page);
   await openUmpire(page, '#/players');
   await page.getByRole('button', { name: 'Kowalski' }).click();
   await page.getByRole('button', { name: 'Nowak' }).click();
-  await page.locator('h1.ump-title').filter({ hasText: 'Match Setup' }).waitFor({ timeout: 5_000 });
-  await page.locator('.ump-mode').filter({ hasText: 'Basic' }).click();
+  await confirmMatchSetup(page);
   await page.getByRole('button', { name: /Kowalski/ }).first().click();
 }

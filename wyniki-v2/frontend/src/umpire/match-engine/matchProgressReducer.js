@@ -17,6 +17,7 @@ export const MatchProgressReducer = {
   ANNOUNCEMENT_TIEBREAK: 'tiebreak',
   ANNOUNCEMENT_SUPER_TIEBREAK: 'super_tiebreak',
   ANNOUNCEMENT_DECIDING_POINT: 'deciding_point',
+  ANNOUNCEMENT_SET: 'set',
 
   reduceAfterPoint(state, currentAnnouncementType, nowMs) {
     let pendingAnnouncementType = currentAnnouncementType;
@@ -111,6 +112,8 @@ export const MatchProgressReducer = {
         state.isSuperTiebreak = true;
         TiebreakServeRule.captureOpeningServer(state);
         pendingAnnouncementType = this.ANNOUNCEMENT_SUPER_TIEBREAK;
+      } else {
+        pendingAnnouncementType = this.ANNOUNCEMENT_SET;
       }
     } else {
       if (player1Won) state.player1Games += 1;
@@ -161,6 +164,8 @@ export const MatchProgressReducer = {
         state.isSuperTiebreak = true;
         TiebreakServeRule.captureOpeningServer(state);
         pendingAnnouncementType = this.ANNOUNCEMENT_SUPER_TIEBREAK;
+      } else {
+        pendingAnnouncementType = this.ANNOUNCEMENT_SET;
       }
 
       state.player1Games = 0;

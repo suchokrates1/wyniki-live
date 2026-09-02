@@ -20,6 +20,21 @@ test('side change is the only announcement with skip', () => {
   assert.match(tb.message, /"games":4/);
 });
 
+test('set announcement mentions the 120 second break and skip only when ends change', () => {
+  const state = matchState();
+  state.setsHistory.push({ setNumber: 1, player1Games: 6, player2Games: 4 });
+  const stay = announcementContent(MatchProgressReducer.ANNOUNCEMENT_SET, state, t);
+  assert.equal(stay.showSkipSides, false);
+  assert.match(stay.title, /"set":1/);
+  assert.match(stay.message, /announceSetMsgStay/);
+  assert.match(stay.message, /Kowalski/);
+
+  state.setsHistory[0] = { setNumber: 1, player1Games: 6, player2Games: 3 };
+  const change = announcementContent(MatchProgressReducer.ANNOUNCEMENT_SET, state, t);
+  assert.equal(change.showSkipSides, true);
+  assert.match(change.message, /announceSetMsgChange/);
+});
+
 test('super TB and deciding point copy match Android types', () => {
   const state = matchState({ matchConfig: new MatchConfig({ setsToWin: 2, superTiebreakPoints: 10 }) });
   const stb = announcementContent(MatchProgressReducer.ANNOUNCEMENT_SUPER_TIEBREAK, state, t);

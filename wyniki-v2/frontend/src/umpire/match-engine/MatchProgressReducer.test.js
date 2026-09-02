@@ -63,8 +63,26 @@ test('setWinAddsSetHistoryAndStartsNextSet', () => {
   assert.equal(state.setsHistory[0].player1Games, 6);
   assert.equal(state.setsHistory[0].player2Games, 4);
   assert.deepEqual(result.events, [MatchProgressEvent.Game, MatchProgressEvent.Set]);
+  assert.equal(result.announcementType, MatchProgressReducer.ANNOUNCEMENT_SET);
+  assert.equal(result.nextScreen, MatchProgressScreen.Announcement);
   assert.equal(result.syncMatch, true);
   assert.equal(result.finalizeMatch, false);
+});
+
+test('setWinWithEvenGamesStillShowsSetBreakAnnouncement', () => {
+  const state = matchState({ matchConfig: new MatchConfig({ gamesPerSet: 6, setsToWin: 2 }) });
+  state.player1Games = 5;
+  state.player2Games = 4;
+  state.player1Points = 4;
+  state.player2Points = 0;
+  state.totalGamesPlayed = 9;
+
+  const result = MatchProgressReducer.reduceAfterPoint(state, null, 9_000);
+
+  assert.equal(state.setsHistory[0].player1Games, 6);
+  assert.equal(state.setsHistory[0].player2Games, 4);
+  assert.equal(result.announcementType, MatchProgressReducer.ANNOUNCEMENT_SET);
+  assert.equal(result.nextScreen, MatchProgressScreen.Announcement);
 });
 
 test('gameAtTiebreakBoundaryStartsTiebreakAnnouncement', () => {
