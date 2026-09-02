@@ -307,10 +307,10 @@
                                     </template>
                                 </div>
 
-                                <!-- Group tables (side by side if 2 groups) -->
-                                <div class="bracket-groups" :class="{ 'bracket-groups--pair': cat.groups.filter(g => groupShowsStandingsTable(g)).length === 2 }" x-show="categoryShowsStandingsTables(cat)">
-                                    <template x-for="(group, gi) in cat.groups" :key="'g-'+cat.name+'-'+gi">
-                                        <section class="bracket-group" :aria-label="group.name" x-show="groupShowsStandingsTable(group)">
+                                <!-- Group tables: 1 full width, 2 side by side, 3 in a row, wrap after 3 -->
+                                <div class="bracket-groups" x-show="categoryShowsStandingsTables(cat)">
+                                    <template x-for="(group, gi) in standingsGroups(cat)" :key="'g-'+cat.name+'-'+gi">
+                                        <section class="bracket-group" :aria-label="group.name">
                                             <h3 class="bracket-group__title">
                                                 <span x-text="group.name"></span>
                                             </h3>
@@ -1039,10 +1039,10 @@
                                             </template>
                                         </div>
 
-                                        <!-- Group tables -->
-                                        <div class="bracket-groups" :class="{ 'bracket-groups--pair': cat.groups.filter(g => groupShowsStandingsTable(g)).length === 2 }" x-show="categoryShowsStandingsTables(cat)">
-                                            <template x-for="(group, gi) in cat.groups" :key="'tg-'+cat.name+'-'+gi">
-                                                <section class="bracket-group" :aria-label="group.name" x-show="groupShowsStandingsTable(group)">
+                                        <!-- Group tables: 1 full width, 2 side by side, 3 in a row, wrap after 3 -->
+                                        <div class="bracket-groups" x-show="categoryShowsStandingsTables(cat)">
+                                            <template x-for="(group, gi) in standingsGroups(cat)" :key="'tg-'+cat.name+'-'+gi">
+                                                <section class="bracket-group" :aria-label="group.name">
                                                     <h3 class="bracket-group__title">
                                                         <span x-text="group.name"></span>
                                                     </h3>

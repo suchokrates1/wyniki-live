@@ -49,6 +49,10 @@ export function createBracketView() {
       return String(group?.play_format || 'groups_knockout') !== 'knockout';
     },
 
+    standingsGroups(category) {
+      return (category?.groups || []).filter((group) => this.groupShowsStandingsTable(group));
+    },
+
     categoryShowsStandingsTables(category) {
       return (category?.groups || []).some((group) => this.groupShowsStandingsTable(group));
     },
