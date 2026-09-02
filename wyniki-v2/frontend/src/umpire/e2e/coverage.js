@@ -18,4 +18,5 @@ export const UMPIRE_E2E_SCREEN_GATES = Object.freeze([
 export const UMPIRE_E2E_PWA_GATES = Object.freeze([
   'PWA install',
   'PWA on',
+  'iOS WebKit',
 ]);
