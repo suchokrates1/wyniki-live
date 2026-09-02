@@ -329,7 +329,7 @@
             <p class="ump-basic__name" x-text="basicView() && basicView().leftName"></p>
             <div class="ump-basic__side ump-basic__side--server" x-show="basicView() && basicView().showServerLeft">
               <button class="ump-btn ump-win" type="button" data-tutorial="winButton" @click="basicWin(basicView().leftIsPlayer1)" x-text="t('win')"></button>
-              <button class="ump-btn ump-fault" type="button" data-tutorial="doubleFault" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
+              <button class="ump-btn ump-fault" type="button" :data-tutorial="basicView() && basicView().faultKind === 'double' ? 'doubleFault' : 'secondServe'" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
             </div>
             <div class="ump-basic__side ump-basic__side--receiver" x-show="basicView() && basicView().showReceiverLeft">
               <button class="ump-btn ump-win" type="button" data-tutorial="winButton" @click="basicWin(basicView().leftIsPlayer1)" x-text="t('win')"></button>
@@ -339,7 +339,7 @@
             <p class="ump-basic__name" x-text="basicView() && basicView().rightName"></p>
             <div class="ump-basic__side ump-basic__side--server" x-show="basicView() && basicView().showServerRight">
               <button class="ump-btn ump-win" type="button" data-tutorial="winButton" @click="basicWin(basicView().rightIsPlayer1)" x-text="t('win')"></button>
-              <button class="ump-btn ump-fault" type="button" data-tutorial="doubleFault" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
+              <button class="ump-btn ump-fault" type="button" :data-tutorial="basicView() && basicView().faultKind === 'double' ? 'doubleFault' : 'secondServe'" :class="basicView() && basicView().faultKind === 'double' ? 'ump-fault--df' : 'ump-fault--second'" @click="basicFault()" x-text="basicView() && t(basicView().faultKind === 'double' ? 'doubleFaultButton' : 'secondServeButton')"></button>
             </div>
             <div class="ump-basic__side ump-basic__side--receiver" x-show="basicView() && basicView().showReceiverRight">
               <button class="ump-btn ump-win" type="button" data-tutorial="winButton" @click="basicWin(basicView().rightIsPlayer1)" x-text="t('win')"></button>

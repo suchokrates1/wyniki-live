@@ -1,6 +1,23 @@
 import { expect, test } from '@playwright/test';
 import { mockUmpireApi, openUmpire, seedLanguage } from './helpers.js';
 
+async function tapNamedTutorialButton(page, name, tutorialId) {
+  const loc = page.getByRole('button', { name, exact: typeof name === 'string' }).locator('visible=true').first();
+  await expect(loc).toBeVisible();
+  await expect.poll(async () => (await loc.boundingBox())?.width || 0, {
+    message: `${name} must be on screen`,
+  }).toBeGreaterThan(8);
+  const box = await loc.boundingBox();
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  const hit = await page.evaluate(({ px, py, expected }) => {
+    const el = document.elementFromPoint(px, py);
+    return el?.closest(`[data-tutorial="${expected}"]`) ? expected : (el?.className || el?.tagName || 'none');
+  }, { px: x, py: y, expected: tutorialId });
+  expect(hit, `${name} must be the real tap target`).toBe(tutorialId);
+  await page.mouse.click(x, y);
+}
+
 test('Tutorial settings starts sandbox and never POSTs matches', async ({ page }) => {
   const matchPosts = [];
   await seedLanguage(page, 'en');
@@ -36,8 +53,15 @@ test('Tutorial settings starts sandbox and never POSTs matches', async ({ page }
   await expect(guide.getByRole('heading', { name: 'Who serves first?' })).toBeVisible();
   await page.locator('[data-tutorial="chooseServer"]').first().click();
   await expect(guide.getByRole('heading', { name: 'Award the point' })).toBeVisible();
-  await page.locator('[data-tutorial="winButton"]').locator('visible=true').first().click();
+  await expect(page.locator('.ump-panel.ump-basic.is-shown')).toBeVisible();
+  await tapNamedTutorialButton(page, 'WIN', 'winButton');
+  await expect(guide.getByRole('heading', { name: 'Second serve' })).toBeVisible();
+  await tapNamedTutorialButton(page, '2nd SERVE', 'secondServe');
   await expect(guide.getByRole('heading', { name: 'Double fault' })).toBeVisible();
+  await tapNamedTutorialButton(page, 'DOUBLE FAULT', 'doubleFault');
+  await expect(guide.getByRole('heading', { name: 'Undo' })).toBeVisible();
+  await tapNamedTutorialButton(page, /Undo/, 'undo');
+  await expect(guide.getByRole('heading', { name: 'New server' })).toBeVisible();
   await guide.getByRole('button', { name: 'Next' }).click();
   await expect(guide.getByRole('heading', { name: 'Change of ends' })).toBeVisible();
   expect(matchPosts).toEqual([]);

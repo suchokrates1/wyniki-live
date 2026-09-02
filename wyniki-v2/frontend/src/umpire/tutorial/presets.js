@@ -2,6 +2,7 @@ import basic from './snapshots/basic.json' with { type: 'json' };
 import doubleFault from './snapshots/double-fault.json' with { type: 'json' };
 import finished from './snapshots/finished.json' with { type: 'json' };
 import serve from './snapshots/serve.json' with { type: 'json' };
+import serverChange from './snapshots/server-change.json' with { type: 'json' };
 import setBreak from './snapshots/set-break.json' with { type: 'json' };
 import sideChange from './snapshots/side-change.json' with { type: 'json' };
 import tiebreak from './snapshots/tiebreak.json' with { type: 'json' };
@@ -13,6 +14,7 @@ const SNAPSHOTS = Object.freeze({
   serve,
   basic,
   'double-fault': doubleFault,
+  'server-change': serverChange,
   'side-change': sideChange,
   'set-break': setBreak,
   tiebreak,
