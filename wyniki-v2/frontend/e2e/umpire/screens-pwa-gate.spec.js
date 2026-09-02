@@ -26,3 +26,26 @@ test('language screen asks to open the PWA when it is already installed', async 
   await page.getByRole('button', { name: 'Open' }).click();
   await expect(page.getByRole('heading', { name: 'Select Language' })).toBeVisible();
 });
+
+test('installed PWA hides the fullscreen button', async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      if (String(query).includes('display-mode: standalone')) {
+        return {
+          matches: true,
+          media: query,
+          addListener() {},
+          removeListener() {},
+          addEventListener() {},
+          removeEventListener() {},
+          dispatchEvent() { return false; },
+        };
+      }
+      return original(query);
+    };
+  });
+  await openUmpireWithPwaGate(page);
+  await expect(page.getByRole('button', { name: 'Full screen' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /English/ })).toBeVisible();
+});

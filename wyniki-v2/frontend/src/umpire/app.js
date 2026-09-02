@@ -52,6 +52,7 @@ import {
   isStandaloneDisplay,
   markPwaInstalled,
   pwaGateMode,
+  shouldShowFullscreenButton,
   wasPwaGateDismissed,
 } from './pwaInstallGate.js';
 import './umpire.css';
@@ -163,6 +164,10 @@ function createUmpireApp() {
 
     gt(key, vars) {
       return umpireText(this.gateLang(), key, vars);
+    },
+
+    showFullscreenButton() {
+      return shouldShowFullscreenButton();
     },
 
     pwaGate() {

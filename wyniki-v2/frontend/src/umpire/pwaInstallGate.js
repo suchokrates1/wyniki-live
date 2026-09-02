@@ -8,6 +8,10 @@ export function isStandaloneDisplay(win = window) {
   );
 }
 
+export function shouldShowFullscreenButton(win = window) {
+  return !isStandaloneDisplay(win);
+}
+
 export function pwaGateMode({ standalone, canInstall, osInstalled, dismissed }) {
   if (standalone || dismissed) return null;
   if (osInstalled) return 'open';

@@ -6,6 +6,7 @@ import {
   isStandaloneDisplay,
   PWA_INSTALLED_KEY,
   pwaGateMode,
+  shouldShowFullscreenButton,
 } from './pwaInstallGate.js';
 
 test('gate stays hidden in standalone or after dismiss', () => {
@@ -33,6 +34,17 @@ test('install is offered when Chrome can prompt and it is not installed yet', ()
   assert.equal(pwaGateMode({
     standalone: false, canInstall: false, osInstalled: false, dismissed: false,
   }), null);
+});
+
+test('fullscreen button is hidden in an installed PWA', () => {
+  assert.equal(shouldShowFullscreenButton({
+    matchMedia: () => ({ matches: true }),
+    navigator: {},
+  }), false);
+  assert.equal(shouldShowFullscreenButton({
+    matchMedia: () => ({ matches: false }),
+    navigator: {},
+  }), true);
 });
 
 test('standalone display reads display-mode or iOS navigator.standalone', () => {
