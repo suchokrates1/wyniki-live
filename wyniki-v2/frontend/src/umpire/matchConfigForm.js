@@ -10,6 +10,7 @@ export const DEFAULT_MATCH_CONFIG_FORM = Object.freeze({
   tiebreakOnly: false,
   umpireName: '',
   manualStartTime: null,
+  advancedStats: false,
 });
 
 export function buildMatchConfig(form, statsMode) {

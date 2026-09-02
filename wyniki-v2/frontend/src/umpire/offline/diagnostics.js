@@ -51,5 +51,17 @@ export function diagnosticsClipboardText({
 }
 
 export function deviceLabel(navigatorRef = globalThis.navigator) {
-  return navigatorRef?.userAgent || 'web';
+  const uaData = navigatorRef?.userAgentData;
+  const model = String(uaData?.model || '').trim();
+  const platform = String(uaData?.platform || '').trim();
+  if (model) return `${platform} ${model}`.trim();
+
+  const ua = String(navigatorRef?.userAgent || '');
+  const android = ua.match(/Android[^;]*;\s*([^);]+)/i);
+  if (android?.[1]) {
+    const name = android[1].replace(/^Linux\s+/i, '').trim();
+    if (name && name.toLowerCase() !== 'wv') return name;
+  }
+  if (platform) return platform;
+  return ua || 'web';
 }

@@ -8,6 +8,8 @@ export function heartbeatBody({
   clientMatchUuid = null,
   nowMs = Date.now(),
   appVersion = APP_VERSION,
+  batteryLevel = null,
+  isCharging = null,
 } = {}) {
   const body = {
     court_id: courtId || '',
@@ -17,6 +19,8 @@ export function heartbeatBody({
   };
   if (matchId != null) body.match_id = String(matchId);
   if (clientMatchUuid) body.client_match_uuid = clientMatchUuid;
+  if (batteryLevel != null) body.battery_level = batteryLevel;
+  if (isCharging != null) body.is_charging = Boolean(isCharging);
   return body;
 }
 

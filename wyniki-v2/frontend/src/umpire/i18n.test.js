@@ -51,7 +51,10 @@ test('all umpire locales keep Android language titles', () => {
 
 test('PWA install gate strings exist in every locale', () => {
   for (const { code } of AVAILABLE_LANGUAGES) {
-    for (const key of ['installGateTitle', 'installGateMessage', 'openGateTitle', 'openGateMessage', 'openApp', 'notNow']) {
+    for (const key of [
+      'installGateTitle', 'installGateMessage', 'openGateTitle', 'openGateMessage', 'openApp', 'notNow',
+      'announceSet', 'announceSetMsgChange', 'announceSetMsgStay',
+    ]) {
       assert.ok(umpireText(code, key), `${code}.${key}`);
     }
   }
@@ -66,6 +69,8 @@ test('every locale keeps Android labels 1:1 for shared keys', () => {
     'doubles', 'historyEmpty', 'finishMatch', 'bracketWarningTitle',
     'bracketWarningDifferentGroups', 'bracketWarningFriendly', 'selectedCount',
     'gameTypeSingles', 'chooseManually', 'applySuggestion',
+    'configFormatHeader', 'configOptionsHeader', 'configStatsHeader', 'tbOnlyPointsLabel',
+    'noAdvantage', 'tiebreakOnly',
   ];
   for (const { code } of AVAILABLE_LANGUAGES) {
     const android = androidStrings[code];

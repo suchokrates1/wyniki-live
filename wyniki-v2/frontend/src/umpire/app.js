@@ -16,6 +16,7 @@ import { buildAdvancedRally, buildAdvancedServe } from './match/advancedScoringV
 import { buildBasicScoring } from './match/basicScoringView.js';
 import { createMatchFromDraft } from './match/createMatchFromDraft.js';
 import { createMatchController } from './match/matchController.js';
+import { finishStatRows, finishStatValue } from './match/finishView.js';
 import { finishWinnerName } from './match/matchPayload.js';
 import { hydrateMatchState, serializeMatchState } from './match/matchStateIo.js';
 import { matchTimerText } from './match/matchTimer.js';
@@ -32,6 +33,8 @@ import { buildScoreboard } from './match/scoreboardView.js';
 import { buildServerButtons, resolveServerNumber } from './match/serverSelection.js';
 import { createWakeLock } from './match/wakeLock.js';
 import { createDiagnostics, diagnosticsClipboardText, deviceLabel, SYNC_STATUS_KEYS } from './offline/diagnostics.js';
+import { createBatteryMonitor } from './offline/battery.js';
+import { umpireClientHeaders } from './offline/clientHeaders.js';
 import { APP_VERSION, createHeartbeat, heartbeatBody } from './offline/heartbeat.js';
 import {
   formatHistoryDuration,
@@ -86,13 +89,20 @@ function formFromLastConfig(last) {
     noAdvantage: Boolean(last.noAdvantage),
     tiebreakOnly: Boolean(last.tiebreakOnly),
     umpireName: last.umpireName || '',
+    advancedStats: last.advancedStats === true || last.statsMode === 'ADVANCED',
   };
 }
 
 function createUmpireApp() {
   const pinPad = createPinPad();
+  const battery = createBatteryMonitor();
   const api = createUmpireApi({
     getToken: () => session.getCourtSession()?.token || null,
+    getClientHeaders: () => umpireClientHeaders({
+      appVersion: APP_VERSION,
+      locale: session.getLanguage() || globalThis.navigator?.language || '',
+    }),
+    getBattery: () => battery.get(),
   });
 
   return {
@@ -152,6 +162,7 @@ function createUmpireApp() {
     _history: null,
     _diagnostics: createDiagnostics(),
     _heartbeat: null,
+    _battery: battery,
 
     t(key, vars) {
       return umpireText(this.lang, key, vars);
@@ -293,12 +304,15 @@ function createUmpireApp() {
           : this.screen === 'history'
             ? 'MatchHistory'
             : this.screen;
+      const bat = this._battery.get();
       return heartbeatBody({
         courtId: court?.courtId || '',
         screen,
         matchId: state?.matchId ?? null,
         clientMatchUuid: state?.clientMatchUuid || null,
         appVersion: APP_VERSION,
+        batteryLevel: bat.level,
+        isCharging: bat.charging,
       });
     },
 
@@ -745,6 +759,10 @@ function createUmpireApp() {
       const last = session.getLastMatchConfig();
       this.configForm = last ? formFromLastConfig(last) : { ...DEFAULT_MATCH_CONFIG_FORM };
       this.go('config');
+    },
+
+    startMatch() {
+      this.startWithMode(this.configForm.advancedStats ? 'ADVANCED' : 'BASIC');
     },
 
     startWithMode(statsMode) {
@@ -1202,7 +1220,18 @@ function createUmpireApp() {
     },
 
     winnerName() {
+      this.matchRev;
       return this.match?.state ? finishWinnerName(this.match.state) : '';
+    },
+
+    finishStats() {
+      this.matchRev;
+      return this.match?.state ? finishStatRows(this.match.state) : [];
+    },
+
+    finishStatText(row) {
+      this.matchRev;
+      return this.match?.state ? finishStatValue(this.match.state, row) : '';
     },
 
     gameModeLabel() {
@@ -1214,12 +1243,14 @@ function createUmpireApp() {
     },
 
     statsLine(field) {
+      this.matchRev;
       const state = this.match?.state;
       if (!state) return '';
       return `${state.player1Stats[field]} / ${state.player2Stats[field]}`;
     },
 
     servePctLine() {
+      this.matchRev;
       const state = this.match?.state;
       if (!state) return '';
       return `${state.player1Stats.getFirstServePercentage()}% / ${state.player2Stats.getFirstServePercentage()}%`;

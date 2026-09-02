@@ -80,10 +80,10 @@
     <section class="ump-screen" x-show="screen === 'court'">
       <button class="ump-btn" type="button" @click="loadCourts()" x-text="t('refresh')"></button>
       <p x-show="!loading && !courts.length" x-text="t('emptyCourts')"></p>
-      <div class="ump-scroll ump-courts" style="margin-top:12px">
+      <div class="ump-scroll ump-courts">
         <template x-for="court in courts" :key="court.kort_id">
           <button type="button" class="ump-btn ump-court ump-card" @click="openPin(court)">
-            <span x-text="courtName(court)"></span>
+            <span class="ump-court__name" x-text="courtName(court)"></span>
             <span class="ump-badge" :class="court.is_available === false ? 'ump-badge--busy' : 'ump-badge--free'" x-text="t(court.is_available === false ? 'occupied' : 'available')"></span>
           </button>
         </template>
@@ -125,58 +125,107 @@
       </div>
     </section>
 
-    <section class="ump-screen" x-show="screen === 'config'">
-      <div class="ump-scroll">
-      <label class="ump-sub" x-text="t('umpireName')"></label>
-      <input class="ump-input" x-model="configForm.umpireName" :placeholder="t('umpireName')">
-      <label class="ump-sub" x-text="t('manualTime')"></label>
-      <input class="ump-input" type="datetime-local" x-model="configForm.manualStartTime">
-      <p class="ump-sub" x-show="!configForm.manualStartTime" x-text="t('manualTimeEmpty')"></p>
-      <label class="ump-toggle"><input type="checkbox" x-model="configForm.noAdvantage"> <span x-text="t('noAdvantage')"></span></label>
-      <p class="ump-sub" x-text="t('noAdvantageDesc')"></p>
-      <label class="ump-toggle"><input type="checkbox" x-model="configForm.tiebreakOnly"> <span x-text="t('tiebreakOnly')"></span></label>
-      <p class="ump-sub" x-text="t('tiebreakOnlyDesc')"></p>
-      <div x-show="!configForm.tiebreakOnly">
-        <p class="ump-sub" x-text="t('gamesPerSet')"></p>
-        <div class="ump-chips">
-          <template x-for="value in [3,4,5,6]" :key="'g'+value">
-            <button type="button" class="ump-btn" :aria-pressed="configForm.gamesPerSet === value" @click="configForm.gamesPerSet = value" x-text="value"></button>
-          </template>
+    <section class="ump-screen ump-screen--config" x-show="screen === 'config'">
+      <div class="ump-config">
+        <div class="ump-config__body">
+          <div class="ump-config__fields">
+            <label class="ump-config-field">
+              <span class="ump-config-field__label" x-text="t('umpireName')"></span>
+              <input class="ump-input" x-model="configForm.umpireName" :placeholder="t('umpireName')">
+            </label>
+            <label class="ump-config-field">
+              <span class="ump-config-field__label" x-text="t('manualTime')"></span>
+              <input class="ump-input" type="datetime-local" x-model="configForm.manualStartTime">
+              <span class="ump-sub" x-show="!configForm.manualStartTime" x-text="t('manualTimeEmpty')"></span>
+            </label>
+          </div>
+
+          <div class="ump-card ump-switch-card" :class="{ 'ump-switch--on': configForm.tiebreakOnly }">
+            <label class="ump-switch">
+              <span class="ump-switch__copy">
+                <strong x-text="t('tiebreakOnly')"></strong>
+                <small x-text="t('tiebreakOnlyDesc')"></small>
+              </span>
+              <input class="ump-switch__input" type="checkbox" role="switch" x-model="configForm.tiebreakOnly" :aria-label="t('tiebreakOnly')">
+              <span class="ump-switch__ui" aria-hidden="true"></span>
+            </label>
+            <div class="ump-reveal" :class="{ 'is-open': configForm.tiebreakOnly }" :aria-hidden="!configForm.tiebreakOnly">
+              <div class="ump-reveal__inner">
+                <div class="ump-config-row">
+                  <p class="ump-config-row__label" x-text="t('tbOnlyPointsLabel')"></p>
+                  <div class="ump-seg" role="group" :aria-label="t('tbOnlyPointsLabel')">
+                    <button type="button" class="ump-seg__btn" :aria-pressed="configForm.tbOnlyPoints === 7" @click="configForm.tbOnlyPoints = 7">7</button>
+                    <button type="button" class="ump-seg__btn" :aria-pressed="configForm.tbOnlyPoints === 10" @click="configForm.tbOnlyPoints = 10">10</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ump-reveal" :class="{ 'is-open': !configForm.tiebreakOnly }" :aria-hidden="configForm.tiebreakOnly">
+            <div class="ump-reveal__inner">
+              <section class="ump-card ump-format-card">
+                <h2 class="ump-config-kicker" x-text="t('configFormatHeader')"></h2>
+                <div class="ump-config-row">
+                  <p class="ump-config-row__label" x-text="t('gamesPerSet')"></p>
+                  <div class="ump-seg" role="group" :aria-label="t('gamesPerSet')">
+                    <template x-for="value in [3,4,5,6]" :key="'g'+value">
+                      <button type="button" class="ump-seg__btn" :aria-pressed="configForm.gamesPerSet === value" @click="configForm.gamesPerSet = value" x-text="value"></button>
+                    </template>
+                  </div>
+                </div>
+                <div class="ump-config-row">
+                  <p class="ump-config-row__label" x-text="t('setsToWin')"></p>
+                  <div class="ump-seg" role="group" :aria-label="t('setsToWin')">
+                    <template x-for="value in [1,2,3]" :key="'s'+value">
+                      <button type="button" class="ump-seg__btn" :aria-pressed="configForm.setsToWin === value" @click="configForm.setsToWin = value" x-text="value"></button>
+                    </template>
+                  </div>
+                </div>
+                <div class="ump-config-row">
+                  <p class="ump-config-row__label" x-text="t('tiebreak')"></p>
+                  <div class="ump-seg" role="group" :aria-label="t('tiebreak')">
+                    <button type="button" class="ump-seg__btn" :aria-pressed="configForm.tiebreakPoints === 7" @click="configForm.tiebreakPoints = 7">7</button>
+                    <button type="button" class="ump-seg__btn" :aria-pressed="configForm.tiebreakPoints === 10" @click="configForm.tiebreakPoints = 10">10</button>
+                  </div>
+                </div>
+                <div class="ump-reveal" :class="{ 'is-open': configForm.setsToWin > 1 }" :aria-hidden="configForm.setsToWin <= 1">
+                  <div class="ump-reveal__inner">
+                    <div class="ump-config-row">
+                      <p class="ump-config-row__label" x-text="t('superTiebreak')"></p>
+                      <div class="ump-seg" role="group" :aria-label="t('superTiebreak')">
+                        <button type="button" class="ump-seg__btn" :aria-pressed="configForm.superTiebreakPoints === 7" @click="configForm.superTiebreakPoints = 7">7</button>
+                        <button type="button" class="ump-seg__btn" :aria-pressed="configForm.superTiebreakPoints === 10" @click="configForm.superTiebreakPoints = 10">10</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <h2 class="ump-config-kicker" x-text="t('configOptionsHeader')"></h2>
+          <label class="ump-switch ump-card">
+            <span class="ump-switch__copy">
+              <strong x-text="t('noAdvantage')"></strong>
+              <small x-text="t('noAdvantageDesc')"></small>
+            </span>
+            <input class="ump-switch__input" type="checkbox" role="switch" x-model="configForm.noAdvantage" :aria-label="t('noAdvantage')">
+            <span class="ump-switch__ui" aria-hidden="true"></span>
+          </label>
         </div>
-        <p class="ump-sub" x-text="t('setsToWin')"></p>
-        <div class="ump-chips">
-          <template x-for="value in [1,2,3]" :key="'s'+value">
-            <button type="button" class="ump-btn" :aria-pressed="configForm.setsToWin === value" @click="configForm.setsToWin = value" x-text="value"></button>
-          </template>
+
+        <div class="ump-config__foot">
+          <label class="ump-switch ump-card">
+            <span class="ump-switch__copy">
+              <strong x-text="t('advanced')"></strong>
+              <small x-text="t('advancedHint')"></small>
+            </span>
+            <input class="ump-switch__input" type="checkbox" role="switch" x-model="configForm.advancedStats" :aria-label="t('advanced')">
+            <span class="ump-switch__ui" aria-hidden="true"></span>
+          </label>
+          <button class="ump-btn ump-btn--accent ump-config__next" type="button" @click="startMatch()" x-text="t('next')"></button>
         </div>
-        <p class="ump-sub" x-text="t('tiebreak')"></p>
-        <div class="ump-chips">
-          <button type="button" class="ump-btn" :aria-pressed="configForm.tiebreakPoints === 7" @click="configForm.tiebreakPoints = 7">7</button>
-          <button type="button" class="ump-btn" :aria-pressed="configForm.tiebreakPoints === 10" @click="configForm.tiebreakPoints = 10">10</button>
-        </div>
-        <p class="ump-sub" x-text="t('superTiebreak')"></p>
-        <div class="ump-chips">
-          <button type="button" class="ump-btn" :aria-pressed="configForm.superTiebreakPoints === 7" @click="configForm.superTiebreakPoints = 7">7</button>
-          <button type="button" class="ump-btn" :aria-pressed="configForm.superTiebreakPoints === 10" @click="configForm.superTiebreakPoints = 10">10</button>
-        </div>
-      </div>
-      <div x-show="configForm.tiebreakOnly">
-        <p class="ump-sub" x-text="t('tiebreak')"></p>
-        <div class="ump-chips">
-          <button type="button" class="ump-btn" :aria-pressed="configForm.tbOnlyPoints === 7" @click="configForm.tbOnlyPoints = 7">7</button>
-          <button type="button" class="ump-btn" :aria-pressed="configForm.tbOnlyPoints === 10" @click="configForm.tbOnlyPoints = 10">10</button>
-        </div>
-      </div>
-      <div class="ump-modes">
-        <button type="button" class="ump-card ump-mode" @click="startWithMode('BASIC')">
-          <h2 x-text="t('basic')"></h2>
-          <p class="ump-sub ump-hint" x-text="t('basicHint')"></p>
-        </button>
-        <button type="button" class="ump-card ump-mode" @click="startWithMode('ADVANCED')">
-          <h2 x-text="t('advanced')"></h2>
-          <p class="ump-sub ump-hint" x-text="t('advancedHint')"></p>
-        </button>
-      </div>
       </div>
     </section>
 
@@ -220,9 +269,9 @@
       </div>
 
       <div class="ump-match__body">
-      <div class="ump-panel" :class="panelClass('SERVER_SELECTION')">
-        <button class="ump-btn" type="button" @click="swapSides()" x-text="t('swapSides')"></button>
-        <div class="ump-serve-grid" style="margin-top:12px">
+      <div class="ump-panel ump-serve" :class="panelClass('SERVER_SELECTION')">
+        <button class="ump-btn ump-serve-swap" type="button" @click="swapSides()" x-text="t('swapSides')"></button>
+        <div class="ump-serve-grid">
           <template x-for="button in serverButtons()" :key="button.buttonIndex">
             <button type="button" class="ump-btn ump-card ump-serve-btn" :class="{ 'is-on': button.selected, 'is-team1': button.colorRole === 'Team1', 'is-team2': button.colorRole === 'Team2', 'is-swap-out': motion.sideSwapPhase === 'out', 'is-swap-in': motion.sideSwapPhase === 'in' }" @click="chooseServer(button.buttonIndex)" x-text="button.label"></button>
           </template>
@@ -311,11 +360,12 @@
         <h2 x-text="t('matchFinished')"></h2>
         <p class="ump-finish__winner" x-text="t('winnerLabel', { name: winnerName() })"></p>
         <dl class="ump-stats">
-          <div><dt x-text="t('aces')"></dt><dd x-text="statsLine('aces')"></dd></div>
-          <div><dt x-text="t('doubleFaults')"></dt><dd x-text="statsLine('doubleFaults')"></dd></div>
-          <div><dt x-text="t('winnersStat')"></dt><dd x-text="statsLine('winners')"></dd></div>
-          <div><dt x-text="t('unforcedErrors')"></dt><dd x-text="statsLine('unforcedErrors')"></dd></div>
-          <div><dt x-text="t('firstServePct')"></dt><dd x-text="servePctLine()"></dd></div>
+          <template x-for="row in finishStats()" :key="row.key">
+            <div>
+              <dt x-text="t(row.key)"></dt>
+              <dd x-text="finishStatText(row)"></dd>
+            </div>
+          </template>
         </dl>
         <button class="ump-btn ump-btn--accent" type="button" @click="nextMatch(true)" x-text="t('nextSame')"></button>
         <button class="ump-btn" type="button" @click="nextMatch(false)" x-text="t('nextNew')"></button>
