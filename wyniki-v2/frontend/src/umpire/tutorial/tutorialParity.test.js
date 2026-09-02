@@ -21,6 +21,8 @@ test('tutorial script has unique step ids and required fields', () => {
     assert.ok(step.titleKey, step.id);
     assert.ok(step.bodyKey, step.id);
   }
+  const award = steps.find((step) => step.id === 'basic-scoring');
+  assert.equal(award?.requireAction, 'awardPoint');
 });
 
 test('Android assets script keeps the same step ids', () => {

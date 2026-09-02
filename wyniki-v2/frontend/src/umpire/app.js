@@ -1103,9 +1103,7 @@ function createUmpireApp() {
       const step = this.tutorialStep();
       if (!tutorialMatchesAction(step, action)) return;
       this.tutorialActionOk = true;
-      queueMicrotask(() => {
-        if (this.tutorialMode && this.tutorialActionOk) this.tutorialNext();
-      });
+      this.tutorialNext();
     },
 
     tutorialNext() {
@@ -1241,11 +1239,14 @@ function createUmpireApp() {
     },
 
     chooseServer(buttonIndex) {
+      if (this.tutorialMode) {
+        this.tutorialNote('chooseServer');
+        return;
+      }
       const state = this.match?.state;
       if (!state) return;
       this.match.setFirstServer(resolveServerNumber(buttonIndex, state));
       wakeLock.request();
-      this.tutorialNote('chooseServer');
     },
 
     swapSides() {
@@ -1328,10 +1329,18 @@ function createUmpireApp() {
     },
 
     basicWin(isPlayer1) {
+      if (this.tutorialMode) {
+        this.tutorialNote('awardPoint');
+        return;
+      }
       this.match?.handleBasicWin(isPlayer1);
     },
 
     basicFault() {
+      if (this.tutorialMode) {
+        this.tutorialNote('awardPoint');
+        return;
+      }
       this.match?.handleBasicFault();
     },
 

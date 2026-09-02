@@ -62,7 +62,7 @@
       "target": "winButton",
       "titleKey": "tutorialBasicTitle",
       "bodyKey": "tutorialBasicBody",
-      "requireAction": null,
+      "requireAction": "awardPoint",
       "snapshot": "basic"
     },
     {
