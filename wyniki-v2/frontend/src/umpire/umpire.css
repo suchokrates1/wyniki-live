@@ -248,6 +248,13 @@ body {
   padding: 16px;
 }
 
+.ump.is-tutorial .ump-pin {
+  z-index: 45;
+  padding-bottom: 13rem;
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
 .ump-pin__card {
   width: min(420px, 100%);
   padding: 20px;
@@ -1256,6 +1263,11 @@ body {
   min-width: 48px;
 }
 
+.ump.is-tutorial .ump-panel.is-enter,
+.ump.is-tutorial .ump-panel.is-exit {
+  animation: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ump-panel.is-enter,
   .ump-panel.is-exit,
@@ -1288,8 +1300,8 @@ body {
 }
 
 .ump.is-tutorial .ump-config__foot,
-.ump.is-tutorial .ump-match__chrome,
-.ump.is-tutorial .ump-serve {
+.ump.is-tutorial .ump-match,
+.ump.is-tutorial .ump-screen .ump-scroll {
   padding-bottom: 12.5rem;
 }
 
@@ -1298,14 +1310,18 @@ body {
   left: 12px;
   right: 12px;
   bottom: 12px;
-  z-index: 40;
+  z-index: 60;
   pointer-events: none;
 }
 
 .ump-guide__card {
-  pointer-events: auto;
+  pointer-events: none;
   padding: 14px 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.ump-guide__card .ump-toggle {
+  pointer-events: auto;
 }
 
 .ump-guide__card h2 {

@@ -16,6 +16,13 @@ test('Tutorial settings starts sandbox and never POSTs matches', async ({ page }
   await expect(guide.getByRole('heading', { name: 'Pick your court' })).toBeVisible();
   await page.locator('[data-tutorial="court1"]').click();
   await expect(guide.getByRole('heading', { name: 'Court PIN' })).toBeVisible();
+  const guideAbovePinDim = await page.evaluate(() => {
+    const bubble = document.querySelector('.ump-guide');
+    const pin = document.querySelector('.ump-pin:not(.ump-guide-banner)');
+    if (!bubble || !pin) return false;
+    return Number(getComputedStyle(bubble).zIndex) > Number(getComputedStyle(pin).zIndex);
+  });
+  expect(guideAbovePinDim).toBe(true);
   for (const digit of ['1', '2', '3', '4']) {
     await page.locator('.ump-pad').getByRole('button', { name: digit, exact: true }).click();
   }
@@ -29,7 +36,7 @@ test('Tutorial settings starts sandbox and never POSTs matches', async ({ page }
   await expect(guide.getByRole('heading', { name: 'Who serves first?' })).toBeVisible();
   await page.locator('[data-tutorial="chooseServer"]').first().click();
   await expect(guide.getByRole('heading', { name: 'Award the point' })).toBeVisible();
-  await guide.getByRole('button', { name: 'Next' }).click();
+  await page.locator('[data-tutorial="winButton"]').locator('visible=true').first().click();
   await expect(guide.getByRole('heading', { name: 'Double fault' })).toBeVisible();
   await guide.getByRole('button', { name: 'Next' }).click();
   await expect(guide.getByRole('heading', { name: 'Change of ends' })).toBeVisible();
