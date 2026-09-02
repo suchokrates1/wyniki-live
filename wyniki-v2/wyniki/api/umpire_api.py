@@ -146,6 +146,64 @@ def _is_knockout_phase(phase: str | None) -> bool:
     return bool(phase and phase != 'Grupowa')
 
 
+def _apply_live_overlay_meta(court_state: dict, *, phase: str | None = None, category: str | None = None) -> None:
+    meta = court_state.setdefault("history_meta", {})
+    if phase:
+        meta["phase"] = phase
+    if category:
+        meta["category"] = category
+
+
+def _resolve_live_overlay_category(
+    tournament_id: int | None,
+    schedule_entry: dict | None,
+    bracket_ctx: dict | None,
+    player1_name: str | None,
+    player2_name: str | None,
+) -> str | None:
+    from ..database import fetch_bracket_groups, fetch_tournament_category
+    from ..database.brackets import _split_bracket_label
+
+    if schedule_entry:
+        name = str(schedule_entry.get("category_name") or "").strip()
+        if name:
+            return name
+        prefix, _ = _split_bracket_label(schedule_entry.get("group_name") or "")
+        if prefix:
+            return prefix
+
+    group_id = (bracket_ctx or {}).get("group_id")
+    if tournament_id and group_id:
+        for group in fetch_bracket_groups(tournament_id) or []:
+            if int(group.get("id") or 0) != int(group_id):
+                continue
+            prefix, _ = _split_bracket_label(group.get("name") or "")
+            if prefix:
+                return prefix
+            cat_id = group.get("tournament_category_id")
+            if cat_id:
+                category = fetch_tournament_category(int(cat_id))
+                if category:
+                    label = str(category.get("label") or category.get("name") or "").strip()
+                    if label:
+                        return label
+            break
+
+    if tournament_id and player1_name and player2_name:
+        p1 = Player.query.filter_by(tournament_id=tournament_id, name=player1_name).first()
+        p2 = Player.query.filter_by(tournament_id=tournament_id, name=player2_name).first()
+        if p1 and p2 and p1.category and p1.category == p2.category:
+            band = str(p1.category).strip().upper()
+            g1 = str(p1.gender or "").upper()
+            g2 = str(p2.gender or "").upper()
+            if g1 in {"F", "K"} and g2 in {"F", "K"}:
+                return f"{band} Women"
+            if g1 == "M" and g2 == "M":
+                return f"{band} Men"
+            return band
+    return None
+
+
 FINISH_REASON_NORMAL = "normal"
 FINISH_REASON_TEST = "test"
 FINISH_REASON_RETIREMENT = "retirement"
@@ -1216,10 +1274,17 @@ def create_match():
                 _sync_live_score_to_court_state(court_state, match, score)
                 _sync_court_match_timer_from_match(court_state, match)
                 court_state["updated"] = utc_now_iso()
-                # Store phase for history
-                if bracket_ctx.get("phase"):
-                    court_state["history_meta"] = court_state.get("history_meta", {})
-                    court_state["history_meta"]["phase"] = bracket_ctx["phase"]
+                _apply_live_overlay_meta(
+                    court_state,
+                    phase=bracket_ctx.get("phase") or match.phase,
+                    category=_resolve_live_overlay_category(
+                        tournament_id,
+                        schedule_entry,
+                        bracket_ctx,
+                        match.player1_name,
+                        match.player2_name,
+                    ),
+                )
             
             emit_score_update(kort_id, court_state)
         
@@ -1594,9 +1659,17 @@ def log_match_event():
                 _sync_live_score_to_court_state(court_state, active_match, score)
                 court_state["match_status"]["active"] = True
                 _sync_court_match_timer_from_match(court_state, active_match)
-                if active_match.phase:
-                    court_state["history_meta"] = court_state.get("history_meta", {})
-                    court_state["history_meta"]["phase"] = active_match.phase
+                _apply_live_overlay_meta(
+                    court_state,
+                    phase=active_match.phase,
+                    category=_resolve_live_overlay_category(
+                        active_match.tournament_id,
+                        _schedule_context_for_match(active_match.tournament_id, active_match.schedule_id),
+                        {"group_id": active_match.bracket_group_id, "phase": active_match.phase},
+                        active_match.player1_name,
+                        active_match.player2_name,
+                    ) or court_state.get("history_meta", {}).get("category"),
+                )
             else:
                 # --- Points ---
                 if is_tiebreak or is_super_tiebreak:
