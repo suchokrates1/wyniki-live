@@ -1356,11 +1356,21 @@ def update_match(match_id: int):
 
         became_finished = False
         already_finished = match.status == "finished"
+        explicit_reason = str(data.get("finish_reason") or "").strip().lower()
         if not already_finished and match_score_satisfies_format(match):
             _finalize_match_record(match, {
                 "finish_reason": FINISH_REASON_NORMAL,
                 "winner_name": data.get("winner_name"),
             })
+            became_finished = True
+        elif not already_finished and explicit_reason in {
+            FINISH_REASON_RETIREMENT,
+            FINISH_REASON_WALKOVER,
+            FINISH_REASON_TEST,
+        }:
+            # PWA/Android finalize PUTs the outcome before POST /finish.
+            # Ignoring it left Vilnius-style 403 finishes stuck in_progress.
+            _finalize_match_record(match, data)
             became_finished = True
         elif not already_finished:
             requested = str(data.get("status") or "in_progress")
@@ -1403,7 +1413,10 @@ def update_match(match_id: int):
             logger.info(f"Match {match_id} updated on court {kort_id}")
         
         return jsonify(match.to_dict()), 200
-        
+
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error updating match: {e}", exc_info=True)

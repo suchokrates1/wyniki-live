@@ -146,6 +146,42 @@ def test_put_does_not_finish_when_sets_to_win_not_reached(umpire_app_with_temp_d
     assert done.get_json()["status"] == "in_progress"
 
 
+def test_put_retirement_finishes_like_post_finish(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Krecz Cup", "2026-09-04", "2026-09-04", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+    client = umpire_app_with_temp_db.test_client()
+    court_id = f"t{tournament_id}-1"
+    match = _create_match(client, court_id, {"games_per_set": 4, "sets_to_win": 1})
+
+    done = client.put(
+        f"/api/matches/{match['id']}",
+        json={
+            "status": "finished",
+            "finish_reason": "retirement",
+            "injured_player_name": "Dutra",
+            "winner_name": "Malicki",
+            "score": _score(player1_sets=0, player2_sets=0, player1_games=1, player2_games=0),
+            "match_config": {"games_per_set": 4, "sets_to_win": 1},
+        },
+    )
+    assert done.status_code == 200, done.get_data(as_text=True)
+    body = done.get_json()
+    assert body["status"] == "finished"
+    assert body["finish_reason"] == "retirement"
+    assert body["winner_name"] == "Malicki"
+    assert body["injured_player_name"] == "Dutra"
+    assert get_court_state(court_id)["match_status"]["active"] is False
+
+    again = client.post(
+        f"/api/matches/{match['id']}/finish",
+        json={"finish_reason": "retirement", "injured_player_name": "Dutra"},
+    )
+    assert again.status_code == 200
+    assert again.get_json()["status"] == "finished"
+
+
 def test_create_without_explicit_config_still_stores_defaults(umpire_app_with_temp_db):
     from wyniki import database
 
