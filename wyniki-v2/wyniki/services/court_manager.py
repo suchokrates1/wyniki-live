@@ -36,6 +36,7 @@ def _empty_player_state() -> Dict[str, Any]:
         "flag_url_partner": None,
         "flag_code_partner": None,
         "flag_lookup_surname": None,
+        "category": None,
     }
 
 

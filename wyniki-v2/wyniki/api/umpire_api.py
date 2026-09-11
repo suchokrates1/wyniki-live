@@ -833,6 +833,8 @@ def _apply_flag_fields_to_side(
     court_state[side]["flag_url"] = url
     court_state[side]["flag_code_partner"] = partner_code
     court_state[side]["flag_url_partner"] = partner_url
+    if isinstance(payload, dict) and payload.get("category"):
+        court_state[side]["category"] = payload.get("category")
 
 
 def _apply_db_flags_to_court_state(

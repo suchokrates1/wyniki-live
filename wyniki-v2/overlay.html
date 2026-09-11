@@ -37,7 +37,14 @@
             filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
         }
 
+        .element-wrapper { transition: opacity .4s ease, transform .4s ease; }
+        .element-wrapper.el-hidden { transform: translateY(-16px); }
+        .element-wrapper.no-enter { transition: none; transform: none; }
         .element-wrapper.has-h { display: flex; flex-direction: column; }
+        .sb-tv-pts.is-ptflash-a, .sb-tv-pts.is-ptflash-b { animation-duration: calc(.5s / var(--sb-speed, 1)); }
+        .sb-tv-set.is-live.is-gameflash-a, .sb-tv-set.is-live.is-gameflash-b { animation-duration: calc(.7s / var(--sb-speed, 1)); }
+        .sb-tv-set.is-colin-a, .sb-tv-set.is-colin-b { animation-duration: calc(.55s / var(--sb-speed, 1)); }
+        .sb-tv-wipe.is-setwipe-a, .sb-tv-wipe.is-setwipe-b { animation-duration: calc(1.1s / var(--sb-speed, 1)); }
 
         .sb-tv { width: 100%; height: auto; container-type: inline-size; }
         .element-wrapper.has-h .sb-tv { height: 100%; }
@@ -139,6 +146,11 @@
         }
         .sb-tv-pts { font-size: 34px; color: #fff; background: #0F3A47; }
         .sb-tv-pts.is-tiebreak { background: #FFD400; color: #06222B; }
+        .sb-tv-class {
+            display: inline-block; margin-left: 8px; position: relative; top: -4px;
+            font-size: 11px; font-weight: 700; color: #FFD400; letter-spacing: .04em;
+            border: 1px solid rgba(255,212,0,.6); border-radius: 2px; padding: 2px 5px;
+        }
         .sb-tv-pts.is-ptflash-a { animation: ptflash-a .5s ease; }
         .sb-tv-pts.is-ptflash-b { animation: ptflash-b .5s ease; }
         .sb-tv-wipe {
@@ -230,6 +242,33 @@
 
     function getPreset() {
         return settings.overlays?.[overlayId] || { name: '', auto_hide: false, elements: [] };
+    }
+
+    function overlayLook(preset) {
+        var look = (preset && preset.look) || {};
+        var speed = Number(look.anim_speed);
+        var scale = Number(look.scale);
+        return {
+            flags: look.flags !== false,
+            class: look.class !== false,
+            phase: look.phase !== false,
+            clock: look.clock !== false,
+            logo: look.logo !== false,
+            anim_enter: look.anim_enter !== false,
+            anim_point: look.anim_point !== false,
+            anim_game: look.anim_game !== false,
+            anim_set: look.anim_set !== false,
+            anim_speed: speed > 0 ? speed : 1,
+            scale: scale > 0 ? scale : 1,
+        };
+    }
+
+    function playerClassBadge(p, meta, show) {
+        if (!show) return '';
+        var raw = String((p && (p.category || p.classification)) || (meta && meta.category) || '');
+        var m = raw.match(/\bB[1-4]\b/i);
+        if (!m) return '';
+        return '<span class="sb-tv-class">' + m[0].toUpperCase() + '</span>';
     }
 
     function isPlaceholderName(value) {
@@ -503,38 +542,41 @@
         const ptA = active ? ((isTie || isSuperTB) ? (court.tie?.A || 0) : (pA.points || '0')) : '\u2014';
         const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';
         const tbOn = active && (isTie || isSuperTB);
+        const look = overlayLook(getPreset());
         const logo = getTournamentBranding().logo;
-        const showLogo = el.show_logo !== false;
+        const showLogo = look.logo && el.show_logo !== false;
         const meta = court.history_meta || {};
-        const cat = overlayCategoryLabel(meta.category);
-        const phase = overlayPhaseLabel(meta.phase);
+        const cat = look.phase ? overlayCategoryLabel(meta.category) : '';
+        const phase = look.phase ? overlayPhaseLabel(meta.phase) : '';
         const metaParts = [cat, phase].filter(Boolean).join(' · ');
         const showHeaderCourt = (el.label_position || 'above') !== 'none';
         const courtName = showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '';
-        const timeStr = calcMatchTime(court) || '';
+        const timeStr = look.clock ? (calcMatchTime(court) || '') : '';
         const colCount = completed.length + (liveGames ? 1 : 0);
-        const gridCols = '52px 1fr repeat(' + Math.max(colCount, 0) + ', minmax(36px, 64px)) minmax(56px, 96px)';
+        const showFlags = look.flags;
+        const gridCols = (showFlags ? '52px ' : '') + '1fr repeat(' + Math.max(colCount, 0) + ', minmax(36px, 64px)) minmax(56px, 96px)';
         const anim = takeScoreAnim(cid, {
             ptsA: String(ptA), ptsB: String(ptB),
             gamesA: liveGames ? String(liveGames.a) : '',
             gamesB: liveGames ? String(liveGames.b) : '',
             sets: completed.map(function(c) { return c.a + '-' + c.b; }).join('|'),
         });
-        const gameFlashA = flashCls('gameflash', anim.tickGameA, !!anim.just.gamesA);
-        const gameFlashB = flashCls('gameflash', anim.tickGameB, !!anim.just.gamesB);
-        const setIn = flashCls('colin', anim.tickSet, !!anim.just.sets);
-        const ptsFlashA = flashCls('ptflash', anim.tickPtsA, !!anim.just.ptsA);
-        const ptsFlashB = flashCls('ptflash', anim.tickPtsB, !!anim.just.ptsB);
-        const wipeCls = flashCls('setwipe', anim.tickSet, !!anim.just.sets);
+        const gameFlashA = look.anim_game ? flashCls('gameflash', anim.tickGameA, !!anim.just.gamesA) : '';
+        const gameFlashB = look.anim_game ? flashCls('gameflash', anim.tickGameB, !!anim.just.gamesB) : '';
+        const setIn = look.anim_set ? flashCls('colin', anim.tickSet, !!anim.just.sets) : '';
+        const ptsFlashA = look.anim_point ? flashCls('ptflash', anim.tickPtsA, !!anim.just.ptsA) : '';
+        const ptsFlashB = look.anim_point ? flashCls('ptflash', anim.tickPtsB, !!anim.just.ptsB) : '';
+        const wipeCls = look.anim_set ? flashCls('setwipe', anim.tickSet, !!anim.just.sets) : '';
 
         function pRow(p, serveKey, sideClass) {
             var isServing = court.serve === serveKey;
-            var flagHtml = flagSpans(p) || '<span class="player-flag"></span>';
+            var flagHtml = showFlags ? (flagSpans(p) || '<span class="player-flag"></span>') : '';
             var dName = p.full_name || p.surname || '\u2014';
             var isTeam = String(dName).indexOf(' / ') !== -1;
             var shown = isTeam ? abbreviateName(dName) : dName;
             var teamClass = isTeam ? ' is-team' : '';
             var serveCls = isServing ? ' is-on' : '';
+            var classHtml = playerClassBadge(p, meta, look.class);
             var setHtml = completed.map(function(c, i) {
                 var val = serveKey === 'A' ? c.a : c.b;
                 var sup = serveKey === 'A' ? c.supA : c.supB;
@@ -549,8 +591,8 @@
             var ptsVal = serveKey === 'A' ? ptA : ptB;
             var ptsFlash = serveKey === 'A' ? ptsFlashA : ptsFlashB;
             return '<div class="sb-tv-row ' + sideClass + '">'
-                + '<div class="sb-tv-flag">' + flagHtml + '</div>'
-                + '<div class="sb-tv-player"><span class="player-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
+                + (showFlags ? '<div class="sb-tv-flag">' + flagHtml + '</div>' : '')
+                + '<div class="sb-tv-player"><span class="player-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + classHtml + '</span>'
                 + '<span class="sb-tv-serve' + serveCls + '">' + SERVE_SVG + '</span></div>'
                 + setHtml
                 + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + (ptsFlash ? ' ' + ptsFlash : '') + '">' + ptsVal + '</div>'
@@ -567,8 +609,10 @@
             ? '<span class="sb-tv-clock" data-court="' + cid + '">' + timeStr + '</span>'
             : '';
         var opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
+        var speedStyle = '--sb-speed:' + look.anim_speed + ';';
+        var scaleStyle = 'transform:scale(' + look.scale + ');transform-origin:top left;';
 
-        return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';">'
+        return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + speedStyle + scaleStyle + '--sb-cols:' + gridCols + ';">'
             + '<div class="sb-tv-card">'
             + '<div class="sb-tv-header">' + logoHtml
             + '<span class="sb-tv-meta">' + metaParts + '</span>'
@@ -688,6 +732,7 @@
         var html = elems.map(function(el) {
             var hidden = el.visible === false ? 'el-hidden' : '';
             if (!hidden && preset.auto_hide && !isElementCourtOccupied(el)) hidden = 'el-hidden';
+            if (!overlayLook(preset).anim_enter) hidden += ' no-enter';
             var style = 'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;';
             if (el.h) style += 'height:'+el.h+'px;';
             var hClass = el.h ? ' has-h' : '';

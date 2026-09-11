@@ -30,6 +30,14 @@ export const VEST_MEDIA_LOGO_URL = '/vest-media-logo.png';
 
 const SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
 
+function classBadge(p, meta, show) {
+  if (!show) return '';
+  const raw = String((p && (p.category || p.classification)) || (meta && meta.category) || '');
+  const m = raw.match(/\bB[1-4]\b/i);
+  if (!m) return '';
+  return '<span class="sb-tv-class">' + m[0].toUpperCase() + '</span>';
+}
+
 function tbSuperscripts(setInfo) {
   if (!setInfo || setInfo.tb == null || setInfo.stb) return { a: '', b: '' };
   const a = Number(setInfo.p1 || 0);
@@ -54,6 +62,7 @@ export function createOverlayAdmin() {
         overlays: {},
       },
       currentOverlayId: '1',
+      overlayEditorMode: 'layout',
       selectedElIdx: -1,
       selectedElIdxSet: [],   // multi-select: array of indices
 
@@ -98,6 +107,7 @@ export function createOverlayAdmin() {
            // Migrate: ensure grid defaults exist on each overlay
            Object.values(this.overlaySettings.overlays || {}).forEach(ov => {
              this._ensureGridDefaults(ov);
+             this._ensureLookDefaults(ov);
              if (ov.tournament_id != null && ov.tournament_id !== '') {
                ov.tournament_id = Number(ov.tournament_id) || null;
              }
@@ -408,6 +418,64 @@ export function createOverlayAdmin() {
     },
 
     // ===== GRID & ALIGNMENT SYSTEM =====
+    _defaultLook() {
+      return {
+        flags: true,
+        class: true,
+        phase: true,
+        clock: true,
+        logo: true,
+        anim_enter: true,
+        anim_point: true,
+        anim_game: true,
+        anim_set: true,
+        anim_speed: 1,
+        scale: 1,
+      };
+    },
+
+    _ensureLookDefaults(ov) {
+      if (!ov) return;
+      ov.look = { ...this._defaultLook(), ...(ov.look || {}) };
+    },
+
+    overlayLook() {
+      const ov = this.currentOverlay();
+      if (!ov) return this._defaultLook();
+      this._ensureLookDefaults(ov);
+      return ov.look;
+    },
+
+    setLookProp(key, value) {
+      const ov = this.currentOverlay();
+      if (!ov) return;
+      this._ensureLookDefaults(ov);
+      ov.look[key] = value;
+      this.saveOverlaySettings();
+    },
+
+    elementTitle(el) {
+      if (!el) return '';
+      if (el.type === 'stats') return 'Statystyki';
+      return el.label_text || ('Kort ' + (el.court_id || ''));
+    },
+
+    elementPlacementLabel(el) {
+      if (!el) return '';
+      if (el.visible === false) return 'ukryty';
+      const ov = this.currentOverlay();
+      if (el.zone === 'top' && ov?.top_bar?.enabled) {
+        const topEls = (ov.elements || []).filter((e) => e.zone === 'top');
+        const slot = topEls.indexOf(el) + 1;
+        return 'siatka · slot ' + slot;
+      }
+      return 'swobodny';
+    },
+
+    overlayHasLiveMatch() {
+      return Object.values(this.courtData || {}).some((c) => c?.match_status?.active);
+    },
+
     _ensureGridDefaults(ov) {
       if (!ov.top_bar) {
         ov.top_bar = { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true };
@@ -417,6 +485,7 @@ export function createOverlayAdmin() {
       if (!ov.watermark) {
         ov.watermark = { enabled: false, opacity: 0.4, position: 'bottom-right', size: 140 };
       }
+      this._ensureLookDefaults(ov);
       (ov.elements || []).forEach(el => {
         if (!el.zone) el.zone = 'free';
       });
@@ -863,6 +932,24 @@ export function createOverlayAdmin() {
       this.showToast('Overlay dodany', 'success');
     },
 
+    saveCurrentAsNewOverlay() {
+      const src = this.currentOverlay();
+      if (!src) return;
+      this.addOverlay();
+      const tgt = this.currentOverlay();
+      if (!tgt) return;
+      tgt.name = (src.name || 'Overlay') + ' kopia';
+      tgt.auto_hide = !!src.auto_hide;
+      tgt.tournament_id = src.tournament_id || tgt.tournament_id;
+      tgt.elements = JSON.parse(JSON.stringify(src.elements || []));
+      tgt.top_bar = JSON.parse(JSON.stringify(src.top_bar || {}));
+      tgt.watermark = JSON.parse(JSON.stringify(src.watermark || {}));
+      tgt.look = JSON.parse(JSON.stringify(src.look || this._defaultLook()));
+      this._ensureGridDefaults(tgt);
+      this.saveOverlaySettings();
+      this.showToast('Zapisano obecny układ jako nowy overlay', 'success');
+    },
+
     async removeOverlay() {
       if (!this.currentOverlayId) return;
       if (!confirm('Usunąć overlay "' + (this.currentOverlay()?.name || this.currentOverlayId) + '"?')) return;
@@ -1110,26 +1197,30 @@ export function createOverlayAdmin() {
       const ptA = active ? ((isTie || isSuperTB) ? (court.tie?.A || 0) : (pA.points || '0')) : '\u2014';
       const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';
       const tbOn = active && (isTie || isSuperTB);
+      const look = this.overlayLook();
       const logo = this.overlayBrandingLogo();
-      const showLogo = el.show_logo !== false;
+      const showLogo = look.logo !== false && el.show_logo !== false;
       const inactiveClass = active ? '' : ' match-inactive';
       const meta = court.history_meta || {};
-      const cat = overlayCategoryLabel(meta.category);
-      const phase = overlayPhaseLabel(meta.phase);
+      const cat = look.phase === false ? '' : overlayCategoryLabel(meta.category);
+      const phase = look.phase === false ? '' : overlayPhaseLabel(meta.phase);
       const metaParts = [cat, phase].filter(Boolean).join(' · ');
       const showHeaderCourt = (el.label_position || 'above') !== 'none';
       const courtName = showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '';
-      const timeStr = active ? (calcMatchTime(court) || '') : '';
+      const timeStr = (look.clock !== false && active) ? (calcMatchTime(court) || '') : '';
       const colCount = completed.length + (liveGames ? 1 : 0);
-      const gridCols = '52px 1fr repeat(' + Math.max(colCount, 0) + ', minmax(36px, 64px)) minmax(56px, 96px)';
+      const showFlags = look.flags !== false;
+      const gridCols = (showFlags ? '52px ' : '') + '1fr repeat(' + Math.max(colCount, 0) + ', minmax(36px, 64px)) minmax(56px, 96px)';
+      const scale = Number(look.scale) > 0 ? Number(look.scale) : 1;
 
       const pRow = (p, serveKey, sideClass) => {
         const isServing = court.serve === serveKey;
-        const flagHtml = flagSpans(p) || '<span class="sb-flag"></span>';
+        const flagHtml = showFlags ? (flagSpans(p) || '<span class="sb-flag"></span>') : '';
         const dName = p.surname || p.full_name || '\u2014';
         const isTeam = String(dName).includes(' / ');
         const shown = isTeam ? this._abbreviateName(dName) : dName;
         const teamClass = isTeam ? ' is-team' : '';
+        const classHtml = classBadge(p, meta, look.class !== false);
         let setHtml = completed.map((c) => {
           const val = serveKey === 'A' ? c.a : c.b;
           const sup = serveKey === 'A' ? c.supA : c.supB;
@@ -1140,8 +1231,8 @@ export function createOverlayAdmin() {
         }
         const ptsVal = serveKey === 'A' ? ptA : ptB;
         return '<div class="sb-tv-row ' + sideClass + '">'
-          + '<div class="sb-tv-flag">' + flagHtml + '</div>'
-          + '<div class="sb-tv-player"><span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
+          + (showFlags ? '<div class="sb-tv-flag">' + flagHtml + '</div>' : '')
+          + '<div class="sb-tv-player"><span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + classHtml + '</span>'
           + '<span class="sb-tv-serve' + (isServing ? ' is-on' : '') + '">' + SERVE_SVG + '</span></div>'
           + setHtml
           + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + '">' + ptsVal + '</div>'
@@ -1158,7 +1249,7 @@ export function createOverlayAdmin() {
       const clockHtml = timeStr ? '<span class="sb-tv-clock">' + timeStr + '</span>' : '';
       const opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
 
-      return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';">'
+      return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';transform:scale(' + scale + ');transform-origin:top left;">'
         + '<div class="sb-tv-card">'
         + '<div class="sb-tv-header">' + logoHtml
         + '<span class="sb-tv-meta">' + metaParts + '</span>'
