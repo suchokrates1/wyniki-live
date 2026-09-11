@@ -143,11 +143,6 @@
     .sb-tv-set.is-done { color:rgba(255,255,255,.5); background:rgba(255,255,255,.04); }
     .sb-tv-set.is-live { color:#fff; background:linear-gradient(180deg,#ff7a1c 0%,#d64900 100%); }
     .sb-tv-sup { font-size:15px; line-height:1; position:relative; top:-11px; opacity:.85; margin-left:2px; }
-    .sb-tv-class {
-      display:inline-block; margin-left:8px; position:relative; top:-4px;
-      font-size:11px; font-weight:700; color:#FFD400; letter-spacing:.04em;
-      border:1px solid rgba(255,212,0,.6); border-radius:2px; padding:2px 5px;
-    }
     .sb-tv-pts { font-size:34px; color:#fff; background:#0F3A47; }
     .sb-tv-pts.is-tiebreak { background:#FFD400; color:#06222B; }
     @keyframes servepulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.72; transform:scale(.88); } }
@@ -1856,7 +1851,6 @@
           <div class="ov-dock">
             <div class="ov-dock-title">Zawartość scoreboardu</div>
             <label class="ov-look-row"><span>Flagi</span><input type="checkbox" class="toggle toggle-success" :checked="overlayLook().flags !== false" @change="setLookProp('flags', $event.target.checked)"></label>
-            <label class="ov-look-row"><span>Klasyfikacja B1-B3</span><input type="checkbox" class="toggle toggle-success" :checked="overlayLook().class !== false" @change="setLookProp('class', $event.target.checked)"></label>
             <label class="ov-look-row"><span>Faza / kategoria</span><input type="checkbox" class="toggle toggle-success" :checked="overlayLook().phase !== false" @change="setLookProp('phase', $event.target.checked)"></label>
             <label class="ov-look-row"><span>Czas meczu</span><input type="checkbox" class="toggle toggle-success" :checked="overlayLook().clock !== false" @change="setLookProp('clock', $event.target.checked)"></label>
             <label class="ov-look-row"><span>Logo turnieju</span><input type="checkbox" class="toggle toggle-success" :checked="overlayLook().logo !== false" @change="setLookProp('logo', $event.target.checked)"></label>

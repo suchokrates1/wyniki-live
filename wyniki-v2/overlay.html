@@ -146,11 +146,6 @@
         }
         .sb-tv-pts { font-size: 34px; color: #fff; background: #0F3A47; }
         .sb-tv-pts.is-tiebreak { background: #FFD400; color: #06222B; }
-        .sb-tv-class {
-            display: inline-block; margin-left: 8px; position: relative; top: -4px;
-            font-size: 11px; font-weight: 700; color: #FFD400; letter-spacing: .04em;
-            border: 1px solid rgba(255,212,0,.6); border-radius: 2px; padding: 2px 5px;
-        }
         .sb-tv-pts.is-ptflash-a { animation: ptflash-a .5s ease; }
         .sb-tv-pts.is-ptflash-b { animation: ptflash-b .5s ease; }
         .sb-tv-wipe {
@@ -250,7 +245,7 @@
         var scale = Number(look.scale);
         return {
             flags: look.flags !== false,
-            class: look.class !== false,
+            class: look.class === true,
             phase: look.phase !== false,
             clock: look.clock !== false,
             logo: look.logo !== false,
@@ -261,14 +256,6 @@
             anim_speed: speed > 0 ? speed : 1,
             scale: scale > 0 ? scale : 1,
         };
-    }
-
-    function playerClassBadge(p, meta, show) {
-        if (!show) return '';
-        var raw = String((p && (p.category || p.classification)) || (meta && meta.category) || '');
-        var m = raw.match(/\bB[1-4]\b/i);
-        if (!m) return '';
-        return '<span class="sb-tv-class">' + m[0].toUpperCase() + '</span>';
     }
 
     function isPlaceholderName(value) {
@@ -579,7 +566,6 @@
             var shown = isTeam ? abbreviateName(dName) : dName;
             var teamClass = isTeam ? ' is-team' : '';
             var serveCls = isServing ? ' is-on' : '';
-            var classHtml = playerClassBadge(p, meta, look.class);
             var setHtml = completed.map(function(c, i) {
                 var val = serveKey === 'A' ? c.a : c.b;
                 var sup = serveKey === 'A' ? c.supA : c.supB;
@@ -595,7 +581,7 @@
             var ptsFlash = serveKey === 'A' ? ptsFlashA : ptsFlashB;
             return '<div class="sb-tv-row ' + sideClass + '">'
                 + (showFlags ? '<div class="sb-tv-flag">' + flagHtml + '</div>' : '')
-                + '<div class="sb-tv-player"><span class="player-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + classHtml + '</span>'
+                + '<div class="sb-tv-player"><span class="player-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
                 + '<span class="sb-tv-serve' + serveCls + '">' + SERVE_SVG + '</span></div>'
                 + setHtml
                 + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + (ptsFlash ? ' ' + ptsFlash : '') + '">' + ptsVal + '</div>'

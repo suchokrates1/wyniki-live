@@ -31,14 +31,6 @@ export const VEST_MEDIA_LOGO_URL = '/vest-media-logo.png';
 
 const SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
 
-function classBadge(p, meta, show) {
-  if (!show) return '';
-  const raw = String((p && (p.category || p.classification)) || (meta && meta.category) || '');
-  const m = raw.match(/\bB[1-4]\b/i);
-  if (!m) return '';
-  return '<span class="sb-tv-class">' + m[0].toUpperCase() + '</span>';
-}
-
 function tbSuperscripts(setInfo) {
   if (!setInfo || setInfo.tb == null || setInfo.stb) return { a: '', b: '' };
   const a = Number(setInfo.p1 || 0);
@@ -433,7 +425,7 @@ export function createOverlayAdmin() {
     _defaultLook() {
       return {
         flags: true,
-        class: true,
+        class: false,
         phase: true,
         clock: true,
         logo: true,
@@ -1242,7 +1234,6 @@ export function createOverlayAdmin() {
         const isTeam = String(dName).includes(' / ');
         const shown = isTeam ? this._abbreviateName(dName) : dName;
         const teamClass = isTeam ? ' is-team' : '';
-        const classHtml = classBadge(p, meta, look.class !== false);
         let setHtml = completed.map((c) => {
           const val = serveKey === 'A' ? c.a : c.b;
           const sup = serveKey === 'A' ? c.supA : c.supB;
@@ -1254,7 +1245,7 @@ export function createOverlayAdmin() {
         const ptsVal = serveKey === 'A' ? ptA : ptB;
         return '<div class="sb-tv-row ' + sideClass + '">'
           + (showFlags ? '<div class="sb-tv-flag">' + flagHtml + '</div>' : '')
-          + '<div class="sb-tv-player"><span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + classHtml + '</span>'
+          + '<div class="sb-tv-player"><span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
           + '<span class="sb-tv-serve' + (isServing ? ' is-on' : '') + '">' + SERVE_SVG + '</span></div>'
           + setHtml
           + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + '">' + ptsVal + '</div>'
