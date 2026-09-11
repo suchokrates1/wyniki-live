@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="96" viewBox="0 0 360 96" role="img" aria-label="blindtennis.app - live scores">
+  <title>blindtennis.app</title>
+  <g transform="translate(52,48)">
+    <path d="M-30,-14 A 32,32 0 0 0 -30,14" fill="none" stroke="#16263D" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M30,-14 A 32,32 0 0 1 30,14" fill="none" stroke="#16263D" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M-40,-20 A 44,44 0 0 0 -40,20" fill="none" stroke="#16263D" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+    <path d="M40,-20 A 44,44 0 0 1 40,20" fill="none" stroke="#16263D" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+    <circle cx="0" cy="0" r="22" fill="#C8DC3C"/>
+    <path d="M-15,-16 Q-4,0 -15,16" fill="none" stroke="#16263D" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M15,-16 Q4,0 15,16" fill="none" stroke="#16263D" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+  <text x="112" y="52" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="30" font-weight="500" fill="#16263D">blindtennis<tspan font-weight="400" opacity="0.6">.app</tspan></text>
+  <text x="114" y="72" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="12" letter-spacing="1.6" fill="#16263D" opacity="0.6">live scores</text>
+</svg>

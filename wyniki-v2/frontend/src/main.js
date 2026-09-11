@@ -194,7 +194,7 @@ Alpine.data('tennisApp', () => ({
 
   onLangChange() {
     document.documentElement.lang = this.tr().htmlLang || this.lang;
-    document.title = this.tr().pageTitle || 'Wyniki tenisowe – na żywo';
+    document.title = this.tr().pageTitle || 'blindtennis.app - live scores';
     const description = this.uiText().pageDescription;
     if (description) {
       document.querySelector('meta[name="description"]')?.setAttribute('content', description);

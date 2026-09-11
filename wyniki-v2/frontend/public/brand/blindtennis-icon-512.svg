@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="blindtennis.app icon">
+  <title>blindtennis.app icon</title>
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="#16263D"/>
+  <g transform="translate(256,256) scale(3.2)">
+    <path d="M-30,-14 A 32,32 0 0 0 -30,14" fill="none" stroke="#C8DC3C" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+    <path d="M30,-14 A 32,32 0 0 1 30,14" fill="none" stroke="#C8DC3C" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+    <path d="M-40,-20 A 44,44 0 0 0 -40,20" fill="none" stroke="#C8DC3C" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
+    <path d="M40,-20 A 44,44 0 0 1 40,20" fill="none" stroke="#C8DC3C" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
+    <circle cx="0" cy="0" r="22" fill="#C8DC3C"/>
+    <path d="M-15,-16 Q-4,0 -15,16" fill="none" stroke="#16263D" stroke-width="3" stroke-linecap="round"/>
+    <path d="M15,-16 Q4,0 15,16" fill="none" stroke="#16263D" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

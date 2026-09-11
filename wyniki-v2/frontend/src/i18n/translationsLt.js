@@ -1,7 +1,7 @@
 /** Full Lithuanian public catalog — tennis terms, not a calque of EN/PL. */
 export const TRANSLATIONS_LT = {
   htmlLang: 'lt',
-  pageTitle: 'Teniso rezultatai \u2013 tiesiogiai',
+  pageTitle: 'blindtennis.app - live scores',
   navLabel: 'Spartusis kortų naršymas',
   courtLabel: 'Kortas {court}',
   liveBadge: 'LIVE',

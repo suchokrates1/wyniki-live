@@ -6,7 +6,7 @@ import { TRANSLATIONS_LT, TRANSLATION_PATCHES_LT } from './translationsLt.js';
 export const TRANSLATIONS = {
   pl: {
     htmlLang: 'pl',
-    pageTitle: 'Wyniki tenisowe \u2013 na \u017cywo',
+    pageTitle: 'blindtennis.app - live scores',
     navLabel: 'Szybka nawigacja po kortach',
     courtLabel: 'Kort {court}',
     liveBadge: 'LIVE',
@@ -82,7 +82,7 @@ export const TRANSLATIONS = {
   },
   de: {
     htmlLang: 'de',
-    pageTitle: 'Tennis-Ergebnisse – live',
+    pageTitle: 'blindtennis.app - live scores',
     navLabel: 'Schnellnavigation zu den Plätzen',
     courtLabel: 'Platz {court}',
     liveBadge: 'LIVE',
@@ -157,7 +157,7 @@ export const TRANSLATIONS = {
   },
   en: {
     htmlLang: 'en',
-    pageTitle: 'Tennis Scores \u2013 Live',
+    pageTitle: 'blindtennis.app - live scores',
     navLabel: 'Quick court navigation',
     courtLabel: 'Court {court}',
     liveBadge: 'LIVE',
@@ -233,7 +233,7 @@ export const TRANSLATIONS = {
   },
   it: {
     htmlLang: 'it',
-    pageTitle: 'Risultati tennis \u2013 in diretta',
+    pageTitle: 'blindtennis.app - live scores',
     navLabel: 'Navigazione rapida dei campi',
     courtLabel: 'Campo {court}',
     liveBadge: 'LIVE',
@@ -308,7 +308,7 @@ export const TRANSLATIONS = {
   },
   es: {
     htmlLang: 'es',
-    pageTitle: 'Resultados de tenis – en vivo',
+    pageTitle: 'blindtennis.app - live scores',
     navLabel: 'Navegación rápida por canchas',
     courtLabel: 'Cancha {court}',
     liveBadge: 'EN VIVO',
@@ -383,7 +383,7 @@ export const TRANSLATIONS = {
   },
   fr: {
     htmlLang: 'fr',
-    pageTitle: 'R\u00e9sultats tennis \u2013 en direct',
+    pageTitle: 'blindtennis.app - live scores',
     navLabel: 'Navigation rapide des courts',
     courtLabel: 'Court {court}',
     liveBadge: 'EN DIRECT',

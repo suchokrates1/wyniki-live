@@ -119,6 +119,21 @@ def overlay_page(overlay_id, tournament_slot=None):
     return response
 
 
+@blueprint.route('/favicon.svg')
+def favicon():
+    response = send_from_directory(STATIC_DIR / 'brand', 'favicon.svg')
+    response.headers['Content-Type'] = 'image/svg+xml'
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response
+
+
+@blueprint.route('/brand/<path:filename>')
+def brand_assets(filename):
+    response = send_from_directory(STATIC_DIR / 'brand', filename)
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response
+
+
 @blueprint.route('/vest-media-logo.png')
 def vest_media_logo():
     """Vest Media brand mark for TV watermark (same asset as vestmedia.pl)."""

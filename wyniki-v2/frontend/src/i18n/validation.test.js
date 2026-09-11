@@ -27,6 +27,12 @@ test('findMissingTranslationKeys fails when a language omits a PL key', () => {
   assert.deepEqual(missing, [{ lang: 'en', key: 'office.doubles' }]);
 });
 
+test('public tab title is the brand name in every language', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    assert.equal(TRANSLATIONS[lang].pageTitle, 'blindtennis.app - live scores');
+  }
+});
+
 test('every supported language has the full PL public and office catalog', () => {
   assert.deepEqual(
     findMissingTranslationKeys(TRANSLATIONS, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE),
