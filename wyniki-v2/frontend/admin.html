@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Administracyjny - Wyniki Live</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Chivo+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://stats.dawidsuchodolski.pl/script.js" data-website-id="b49919d3-6628-40cc-9213-72ec52409e28"></script>
@@ -59,116 +62,107 @@
       background:rgba(0,200,120,0.8); color:#fff; border-radius:3px; pointer-events:none;
       text-transform:uppercase; letter-spacing:0.5px; font-weight:700; z-index:20; }
 
-    /* scoreboard – dark grid matching main page */
-    .sb-wrap { display:flex; width:100%; align-items:stretch; gap:8px; }
-    .sb-wrap.match-inactive .sb-table { opacity:0.4; }
-    .sb-logo { flex-shrink:0; display:flex; align-items:center; justify-content:center;
-      overflow:hidden; border-radius:8px; align-self:stretch; aspect-ratio:1; }
-    .sb-logo img { width:100%; height:100%; object-fit:cover; }
-    .sb-logo-ph { display:flex; align-items:center; justify-content:center;
-      width:100%; height:100%; background:rgba(255,255,255,0.1); border-radius:6px; font-size:28px; }
-    .sb-table {
-      flex:1; min-width:0; display:grid; gap:0;
-      border-radius:14px; overflow:hidden;
-      background:linear-gradient(180deg,#1d1d1d 0%,#090909 100%);
-      box-shadow:0 12px 24px rgba(0,0,0,0.35);
-      border:1px solid rgba(0,0,0,0.8);
-    }
-    .sb-row { display:grid; align-items:stretch; color:#fdfdfd; }
-    .sb-row + .sb-row { border-top:1px solid rgba(255,255,255,0.08); }
-    .sb-player-cell {
-      display:flex; align-items:center; gap:8px; padding:4px 10px;
-      background:linear-gradient(90deg,rgba(255,255,255,0.06) 0%,rgba(0,0,0,0) 100%);
-      font-weight:700; letter-spacing:0.6px; text-transform:uppercase;
-      border-right:1px solid rgba(0,0,0,0.65);
-      text-shadow:0 1px 0 rgba(0,0,0,0.6); white-space:nowrap; overflow:hidden;
-      font-size:18px; color:white;
-    }
-    .sb-row.side-b .sb-player-cell {
-      background:linear-gradient(90deg,rgba(255,255,255,0.03) 0%,rgba(0,0,0,0) 100%);
-    }
-    .sb-player-cell .sb-name { flex:1; min-width:0; overflow:hidden; color:#fefefe; white-space:nowrap; }
-    .sb-player-cell .sb-name.is-team { white-space:normal; line-height:1.15; }
-    .player-flags { display:inline-flex; align-items:center; gap:3px; flex-shrink:0; }
-    .player-flags .sb-flag { width:24px; height:16px; }
-    .sb-flag {
-      width:32px; height:20px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
-      font-size:10px; font-weight:700; border-radius:3px;
-      background:#2f2f2f; color:#111; text-transform:uppercase;
-      background-size:cover; background-position:center;
-      box-shadow:0 0 0 1px rgba(255,255,255,0.45);
-    }
-    .sb-flag.has-image { color:transparent; }
-    .sb-time-bar {
-      display:flex; align-items:center; justify-content:center;
-      background:linear-gradient(180deg,#1a1a1a 0%,#0a0a0a 100%);
-      color:rgba(255,255,255,0.7); font-size:10px; font-weight:600;
-      letter-spacing:1px; padding:1px 0;
-      border-radius:0 0 10px 10px; margin-top:-1px;
-      font-family:'Courier New',monospace;
-    }
-    .sb-time-bar .time-icon { opacity:0.5; margin-right:3px; }
-
-    /* ---- Unified overlay container (matches OBS overlay.html) ---- */
-    .overlay-container {
+    /* TV scoreboard — matches OBS overlay.html */
+    .sb-tv { width:100%; height:auto; container-type:inline-size; font-family:'Chivo',system-ui,sans-serif; }
+    .drag-el.has-h .sb-tv { height:100%; }
+    .sb-tv.match-inactive { opacity:0.45; }
+    .sb-tv-card {
+      position:relative; overflow:hidden; height:100%;
       display:flex; flex-direction:column;
-      background:linear-gradient(180deg,#1d1d1d 0%,#090909 100%);
-      border-radius:14px; overflow:hidden;
-      box-shadow:0 12px 24px rgba(0,0,0,0.35);
-      border:1px solid rgba(0,0,0,0.8);
+      border-radius:6px; box-shadow:0 26px 60px rgba(0,0,0,.55);
     }
-    .overlay-container .sb-table {
-      border-radius:0; box-shadow:none; border:none; background:transparent;
+    .sb-tv-header {
+      display:flex; align-items:center; gap:14px;
+      height:52px; flex-shrink:0; padding:0 16px;
+      background:linear-gradient(90deg,#041519 0%,#06222B 100%);
+      border-bottom:1px solid rgba(255,212,0,.35);
     }
-    .overlay-container .sb-wrap { gap:0; }
-    .overlay-container .sb-logo { border-radius:0; margin:0; }
-    .overlay-container .sb-label-bar {
+    .sb-tv-logo {
+      width:34px; height:34px; border-radius:4px; flex-shrink:0;
+      background:rgba(255,255,255,.1);
       display:flex; align-items:center; justify-content:center;
-      background:rgba(255,255,255,0.06);
-      border-bottom:1px solid rgba(255,255,255,0.08);
-      border-radius:0; margin:0;
+      overflow:hidden; font-size:19px;
     }
-    .overlay-container .sb-label-bar.label-below {
-      border-bottom:none;
-      border-top:1px solid rgba(255,255,255,0.08);
+    .sb-tv-logo img { width:100%; height:100%; object-fit:cover; }
+    .sb-tv-meta {
+      flex:1 1 auto; min-width:0; font-size:15px; font-weight:700; letter-spacing:.08em;
+      color:rgba(255,255,255,.68); text-transform:uppercase;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
-    .overlay-container .sb-label-bar .label-sep {
-      margin:0 10px; opacity:0.3; font-weight:400;
+    .sb-tv-tb {
+      flex-shrink:0; font-size:13px; font-weight:900; letter-spacing:.16em;
+      color:#06222B; background:#FFD400; padding:4px 10px; border-radius:3px;
+      text-transform:uppercase; white-space:nowrap;
     }
-    .overlay-container .sb-label-bar .label-time {
-      flex:0 0 auto; font-family:'Courier New',monospace;
+    .sb-tv-court {
+      flex:0 1 auto; min-width:0; font-size:15px; font-weight:700; letter-spacing:.1em;
+      color:#fff; text-transform:uppercase;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     }
-    .overlay-container .sb-time-bar { display:none; }
-    .sb-serve {
-      display:inline-flex; align-items:center; justify-content:center;
-      font-size:14px; line-height:1; flex-shrink:0; margin-left:auto;
-      filter:drop-shadow(0 0 3px rgba(53,196,106,.6));
-      animation:sb-pulse 2s ease-in-out infinite;
+    .sb-tv-clock {
+      flex-shrink:0; font-family:'Chivo Mono',monospace;
+      font-size:15px; font-weight:700; color:#FFD400; letter-spacing:.04em;
     }
-    @keyframes sb-pulse {
-      0%,100% { opacity:1; transform:scale(1); }
-      50% { opacity:.7; transform:scale(.88); }
+    .sb-tv-rows { flex:1; min-height:0; display:flex; flex-direction:column; }
+    .sb-tv-row {
+      display:grid; align-items:stretch;
+      grid-template-columns:var(--sb-cols);
+      flex:1; min-height:66px; color:#fff;
     }
-    .sb-metric {
+    .sb-tv-row.side-a { background:linear-gradient(90deg,#0B2C36 0%,#072530 100%); }
+    .sb-tv-row.side-b {
+      background:linear-gradient(90deg,#082530 0%,#05202a 100%);
+      border-top:1px solid rgba(255,255,255,.07);
+    }
+    .sb-tv-flag { display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.25); }
+    .player-flags { display:inline-flex; align-items:center; gap:3px; }
+    .sb-flag, .player-flag {
+      width:40px; height:26px; flex-shrink:0; border-radius:2px;
+      background:#16303a; background-size:cover; background-position:center;
+      box-shadow:0 0 0 1px rgba(255,255,255,.3);
+    }
+    .player-flags .sb-flag, .player-flags .player-flag { width:24px; height:16px; }
+    .sb-tv-player { display:flex; align-items:center; gap:12px; padding:0 20px; min-width:0; }
+    .sb-name, .player-name {
+      font-size:30px; font-weight:900; letter-spacing:.01em; color:#fff;
+      text-transform:uppercase; white-space:nowrap; overflow:hidden; min-width:0; flex:1;
+    }
+    .sb-name.is-team, .player-name.is-team { white-space:normal; line-height:1.15; }
+    .sb-tv-serve {
+      display:block; width:26px; height:26px; flex:0 0 26px; margin-left:auto;
+      filter:drop-shadow(0 0 6px rgba(198,233,83,.5)); opacity:0;
+    }
+    .sb-tv-serve.is-on { opacity:1; animation:servepulse 2.4s ease-in-out infinite; }
+    .sb-tv-serve svg { width:100%; height:100%; display:block; }
+    .sb-tv-set, .sb-tv-pts {
       display:flex; align-items:center; justify-content:center;
-      padding:4px 0; font-size:28px; font-weight:700;
-      letter-spacing:0.5px; text-shadow:0 1px 0 rgba(0,0,0,0.45);
-      color:white; min-width:1.5em;
+      border-left:1px solid rgba(0,0,0,.35);
+      font-family:'Chivo Mono',monospace; font-weight:700; line-height:1;
     }
-    .sb-metric + .sb-metric { border-left:1px solid rgba(0,0,0,0.6); }
-    .sb-metric.pts { background:linear-gradient(180deg,#141414 0%,#050505 100%); color:#fafafa; min-width:2.2em; }
-    .sb-metric.pts.is-tiebreak { background:linear-gradient(180deg,#ffe6a7 0%,#f3c34a 100%); color:#261200; text-shadow:none; }
-    .sb-metric.set { background:linear-gradient(180deg,#ff7a1c 0%,#d64900 100%); color:#fff9f2; }
-    .sb-metric.set.is-active { box-shadow:inset 0 0 0 2px rgba(255,255,255,0.35); }
-    .sb-label-bar { display:flex; align-items:center; justify-content:center;
-      text-align:center; font-weight:700; text-transform:uppercase;
-      letter-spacing:0.1em; padding:4px 12px; white-space:nowrap; color:white; }
+    .sb-tv-set { font-size:29px; }
+    .sb-tv-set.is-done { color:rgba(255,255,255,.5); background:rgba(255,255,255,.04); }
+    .sb-tv-set.is-live { color:#fff; background:linear-gradient(180deg,#ff7a1c 0%,#d64900 100%); }
+    .sb-tv-sup { font-size:15px; line-height:1; position:relative; top:-11px; opacity:.85; margin-left:2px; }
+    .sb-tv-pts { font-size:34px; color:#fff; background:#0F3A47; }
+    .sb-tv-pts.is-tiebreak { background:#FFD400; color:#06222B; }
+    @keyframes servepulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.72; transform:scale(.88); } }
+    @container (max-width: 520px) {
+      .sb-tv-header { height:36px; gap:8px; padding:0 10px; }
+      .sb-tv-logo { width:24px; height:24px; font-size:14px; }
+      .sb-tv-meta, .sb-tv-court { font-size:11px; }
+      .sb-tv-clock { font-size:12px; }
+      .sb-tv-tb { font-size:10px; padding:2px 6px; }
+      .sb-tv-player { padding:0 10px; gap:8px; }
+      .sb-name, .player-name { font-size:18px; }
+      .sb-tv-serve { width:18px; height:18px; flex-basis:18px; }
+      .sb-tv-set { font-size:20px; }
+      .sb-tv-pts { font-size:22px; }
+      .sb-tv-sup { font-size:11px; top:-7px; }
+      .sb-flag, .player-flag { width:28px; height:18px; }
+    }
 
-    /* Height fill (when H is set) */
     .drag-el.has-h { display:flex; flex-direction:column; }
     .drag-el.has-h > div { flex:1; min-height:0; display:flex; flex-direction:column; }
-    .sb-wrap.h-fill { flex:1; min-height:0; }
-    .sb-wrap.h-fill .sb-table { flex:1; grid-template-rows:1fr 1fr; }
 
     /* Resize handles */
     .resize-handle { position:absolute; z-index:10; opacity:0; transition:opacity 0.15s; pointer-events:none; }
@@ -1800,9 +1794,9 @@
                     <input type="checkbox" class="toggle toggle-info toggle-xs"
                            :checked="currentOverlay()?.top_bar?.reserve_expanded !== false"
                            @change="setTopBarProp('reserve_expanded', $event.target.checked)">
-                    <span class="label-text text-xs">Rezerwuj miejsce pod 2. set</span>
+                    <span class="label-text text-xs">Rezerwuj wysokość TV scoreboardu</span>
                   </label>
-                  <div class="text-xs opacity-40 mt-1">Siatka zawsze pokazuje 2 kolumny set&oacute;w i ustawia wysoko&#347;&#263; slotu, &#380;eby scoreboardy nie nachodzi&#322;y na siebie po rozwini&#281;ciu.</div>
+                  <div class="text-xs opacity-40 mt-1">Slot ma stałą wysokość nagłówka + dwóch wierszy, żeby scoreboardy nie nachodziły na siebie.</div>
                 </div>
               </template>
             </div>
