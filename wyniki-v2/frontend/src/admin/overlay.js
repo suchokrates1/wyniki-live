@@ -1,126 +1,10 @@
-import { abbreviateCompetitorName, lastNameToken, splitTeamDisplayName } from '../shared/teamDisplay.js';
+import { abbreviateCompetitorName } from '../shared/teamDisplay.js';
 import { calcMatchTime } from '../shared/matchTime.js';
-import {
-  overlayCategoryLabel,
-  overlayCourtLabel,
-  overlayPhaseLabel,
-} from '../shared/overlayLabel.js';
+import { overlayCourtLabel } from '../shared/overlayLabel.js';
 import { courtLooksEmpty, previewMockCourt } from './overlayPreviewMock.js';
-
-function codeToFlag(code) {
-  if (!code || code.length < 2) return '';
-  return 'https://flagcdn.com/w80/' + code.toLowerCase().slice(0, 2) + '.png';
-}
-
-function flagSpans(p) {
-  const flagUrl = p.flag_url || (p.flag_code ? codeToFlag(p.flag_code) : '');
-  const partnerUrl = p.flag_url_partner || (p.flag_code_partner ? codeToFlag(p.flag_code_partner) : '');
-  const primary = String(p.flag_code || '').toUpperCase();
-  const partner = String(p.flag_code_partner || '').toUpperCase();
-  if (flagUrl && partnerUrl && partner && partner !== primary) {
-    return '<span class="flag-split">'
-      + '<span class="sb-flag is-a" style="background-image:url(' + flagUrl + ')"></span>'
-      + '<span class="sb-flag is-b" style="background-image:url(' + partnerUrl + ')"></span>'
-      + '</span>';
-  }
-  if (flagUrl) return '<span class="sb-flag" style="background-image:url(' + flagUrl + ')"></span>';
-  return '';
-}
+import { renderTvScoreboard } from '../shared/tvScoreboard.js';
 
 export const VEST_MEDIA_LOGO_URL = '/vest-media-logo.png';
-
-const SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
-
-function tbSuperscripts(setInfo) {
-  if (!setInfo || setInfo.tb == null || setInfo.stb) return { a: '', b: '' };
-  const a = Number(setInfo.p1 || 0);
-  const b = Number(setInfo.p2 || 0);
-  if (a === b) return { a: '', b: '' };
-  const tb = String(setInfo.tb);
-  return a < b ? { a: tb, b: '' } : { a: '', b: tb };
-}
-
-function lastNameOnly(name) {
-  const split = splitTeamDisplayName(name);
-  if (split) return lastNameToken(split[0]) + ' / ' + lastNameToken(split[1]);
-  return lastNameToken(name) || String(name || '');
-}
-
-function nameVariantsHtml(full, className) {
-  const esc = String(full).replace(/"/g, '&quot;');
-  return '<span class="' + className + '" data-full="' + esc + '">'
-    + '<span class="sb-name-full">' + full + '</span>'
-    + '<span class="sb-name-init">' + abbreviateCompetitorName(full) + '</span>'
-    + '<span class="sb-name-last">' + lastNameOnly(full) + '</span>'
-    + '</span>';
-}
-
-function setCellHtml(val, sup, kind, flashCls) {
-  const supHtml = sup ? '<span class="sb-tv-sup">' + sup + '</span>' : '';
-  const cls = 'sb-tv-set ' + kind + (flashCls ? ' ' + flashCls : '');
-  return '<div class="' + cls + '"><span>' + val + '</span>' + supHtml + '</div>';
-}
-
-const previewScoreAnim = {};
-const previewScoreAnimHold = {};
-
-function takePreviewScoreAnim(cid, sig) {
-  const prev = previewScoreAnim[cid];
-  if (!prev) {
-    previewScoreAnim[cid] = {
-      ptsA: sig.ptsA, ptsB: sig.ptsB, gamesA: sig.gamesA, gamesB: sig.gamesB, sets: sig.sets, serve: sig.serve, tbLabel: sig.tbLabel || '',
-    };
-    return { just: {}, prevServe: sig.serve };
-  }
-  const just = {
-    sets: sig.sets !== prev.sets,
-    serve: sig.serve !== prev.serve,
-    tb: !!(sig.tbLabel && sig.tbLabel !== prev.tbLabel),
-    tbHide: !!(!sig.tbLabel && prev.tbLabel),
-  };
-  previewScoreAnim[cid] = {
-    ptsA: sig.ptsA, ptsB: sig.ptsB, gamesA: sig.gamesA, gamesB: sig.gamesB, sets: sig.sets, serve: sig.serve, tbLabel: sig.tbLabel || '',
-  };
-  return { just, prevServe: prev.serve, prevTbLabel: prev.tbLabel || '' };
-}
-
-function beginPreviewScoreAnimHold(cid, flags, look, onHoldEnd) {
-  const existed = !!previewScoreAnimHold[cid];
-  previewScoreAnimHold[cid] = { ...previewScoreAnimHold[cid], ...flags };
-  if (existed) return;
-  const holdMs = Math.round(700 / (Number(look.anim_speed) > 0 ? look.anim_speed : 1));
-  setTimeout(() => {
-    delete previewScoreAnimHold[cid];
-    onHoldEnd();
-  }, holdMs);
-}
-
-function resolvePreviewScoreMotion(cid, anim, look, actualServe, onHoldEnd) {
-  let shownServe = actualServe || '';
-  if (look.anim_set !== false) {
-    if (anim.just.sets && anim.just.serve) {
-      beginPreviewScoreAnimHold(cid, { enter: true, peel: true }, look, onHoldEnd);
-    } else if (anim.just.sets) {
-      beginPreviewScoreAnimHold(cid, { peel: true }, look, onHoldEnd);
-    } else if (anim.just.serve) {
-      beginPreviewScoreAnimHold(cid, { enter: true }, look, onHoldEnd);
-    }
-  }
-  if (anim.just.tb) beginPreviewScoreAnimHold(cid, { tbRise: true }, look, onHoldEnd);
-  if (anim.just.tbHide) {
-    beginPreviewScoreAnimHold(cid, { tbFall: true, tbFallLabel: anim.prevTbLabel || '' }, look, onHoldEnd);
-  }
-  const hold = previewScoreAnimHold[cid];
-  return {
-    shownServe: (hold && hold.visualServe) ? hold.visualServe : shownServe,
-    setPeel: !!(hold && hold.peel),
-    rideServe: !!(hold && hold.ride),
-    enterServe: !!(hold && hold.enter),
-    tbRise: !!(hold && hold.tbRise),
-    tbFall: !!(hold && hold.tbFall),
-    tbFallLabel: (hold && hold.tbFallLabel) || '',
-  };
-}
 
 export function createOverlayAdmin() {
   return {
@@ -1230,140 +1114,17 @@ export function createOverlayAdmin() {
 
     // ===== LIVE SCOREBOARD RENDER IN PREVIEW =====
     renderLiveScoreboard(el) {
-      const courtId = el.court_id;
-      const court = this.resolveOverlayCourtData(courtId);
-      const pA = court.A || {}, pB = court.B || {};
-      const active = court.match_status?.active || false;
-      const curSet = court.current_set || 1;
-      const bgOpacity = el.bg_opacity != null ? el.bg_opacity : 0.95;
-      const hasSetDetail = Array.isArray(court.sets_detail) && court.sets_detail.length > 0;
-      const regularSetWins = (() => {
-        const wins = { A: 0, B: 0 };
-        if (hasSetDetail) {
-          for (const setInfo of court.sets_detail) {
-            if (setInfo?.stb) continue;
-            const a = Number(setInfo?.p1 ?? 0);
-            const b = Number(setInfo?.p2 ?? 0);
-            if (a > b) wins.A += 1;
-            else if (b > a) wins.B += 1;
-          }
-          return wins;
-        }
-        for (let setIdx = 1; setIdx <= 2; setIdx += 1) {
-          const a = Number(pA['set' + setIdx] || 0);
-          const b = Number(pB['set' + setIdx] || 0);
-          if (a > b) wins.A += 1;
-          else if (b > a) wins.B += 1;
-        }
-        return wins;
-      })();
-      const isSuperTB = !!court.super_tiebreak_active || (Number(curSet) === 3 && regularSetWins.A === 1 && regularSetWins.B === 1);
-      const readSetValue = (playerState, setIdx) => {
-        if (active && setIdx > curSet) return 0;
-        return playerState['set' + setIdx] || 0;
-      };
-      const completed = [];
-      if (hasSetDetail) {
-        court.sets_detail.forEach((d) => {
-          if (d?.stb) return;
-          const sup = tbSuperscripts(d);
-          completed.push({ a: Number(d.p1 || 0), b: Number(d.p2 || 0), supA: sup.a, supB: sup.b });
-        });
-      } else {
-        const lastCompleted = active ? (curSet - 1) : 3;
-        for (let s = 1; s <= lastCompleted && s <= 3; s++) {
-          const a = Number(readSetValue(pA, s) || 0);
-          const b = Number(readSetValue(pB, s) || 0);
-          if (!active && a === 0 && b === 0) continue;
-          completed.push({ a, b, supA: '', supB: '' });
-        }
-      }
-      let liveGames = (active && !isSuperTB)
-        ? { a: Number(readSetValue(pA, curSet) || 0), b: Number(readSetValue(pB, curSet) || 0) }
-        : null;
-      if (!liveGames && !isSuperTB && completed.length === 0) {
-        liveGames = { a: 0, b: 0 };
-      }
-      const isTie = court.tie?.visible || false;
-      const ptA = active ? ((isTie || isSuperTB) ? (court.tie?.A || 0) : (pA.points || '0')) : '\u2014';
-      const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';
-      const tbOn = active && (isTie || isSuperTB);
+      const court = this.resolveOverlayCourtData(el.court_id);
       const look = this.overlayLook();
-      const inactiveClass = active ? '' : ' match-inactive';
-      const meta = court.history_meta || {};
-      const cat = look.phase === false ? '' : overlayCategoryLabel(meta.category);
-      const phase = look.phase === false ? '' : overlayPhaseLabel(meta.phase);
-      const metaParts = [cat, phase].filter(Boolean).join(' · ');
       const showHeaderCourt = (el.label_position || 'above') !== 'none';
-      const courtName = showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '';
-      const timeStr = (look.clock !== false && active) ? (calcMatchTime(court) || '') : '';
-      const showFlags = look.flags !== false;
-      const gridCols = 'minmax(0,1fr) auto' + (liveGames ? ' var(--set-w)' : '') + ' var(--pts-w)';
-      const scale = Number(look.scale) > 0 ? Number(look.scale) : 1;
-      const speed = Number(look.anim_speed) > 0 ? Number(look.anim_speed) : 1;
-      const serveAnimTick = this.serveAnimTick;
-      const anim = takePreviewScoreAnim(el.court_id, {
-        ptsA: String(ptA), ptsB: String(ptB),
-        gamesA: liveGames ? String(liveGames.a) : '',
-        gamesB: liveGames ? String(liveGames.b) : '',
-        sets: completed.map((c) => c.a + '-' + c.b).join('|'),
-        serve: court.serve || '',
-        tbLabel: tbOn ? (isSuperTB ? 'stb' : 'tb') : '',
+      return renderTvScoreboard({
+        courtId: el.court_id,
+        court,
+        courtName: showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '',
+        look,
+        bgOpacity: el.bg_opacity != null ? el.bg_opacity : 0.95,
+        onAnimTick: () => { this.serveAnimTick += 1; },
       });
-      const motion = resolvePreviewScoreMotion(
-        el.court_id, anim, look, court.serve || '',
-        () => { this.serveAnimTick += 1; },
-      );
-
-      const pRow = (p, serveKey, sideClass) => {
-        const isServing = motion.shownServe === serveKey;
-        const flagHtml = showFlags ? (flagSpans(p) || '<span class="sb-flag"></span>') : '';
-        const dName = p.full_name || p.surname || '\u2014';
-        const isTeam = String(dName).includes(' / ');
-        const teamClass = isTeam ? ' is-team' : '';
-        let serveCls = isServing ? ' is-on' : '';
-        if (look.anim_set !== false && isServing && (motion.rideServe || motion.enterServe)) serveCls += ' is-peel';
-        const doneHtml = completed.map((c, i) => {
-          const val = serveKey === 'A' ? c.a : c.b;
-          const sup = serveKey === 'A' ? c.supA : c.supB;
-          const flash = (motion.setPeel && i === completed.length - 1) ? 'is-peel' : '';
-          return setCellHtml(val, sup, 'is-done', flash);
-        }).join('');
-        const liveHtml = liveGames
-          ? setCellHtml(serveKey === 'A' ? liveGames.a : liveGames.b, '', 'is-live')
-          : '';
-        const ptsVal = serveKey === 'A' ? ptA : ptB;
-        return '<div class="sb-tv-row ' + sideClass + '">'
-          + '<div class="sb-tv-player">'
-          + (showFlags ? '<div class="sb-tv-flag">' + flagHtml + '</div>' : '')
-          + nameVariantsHtml(dName, 'sb-name' + teamClass)
-          + '<span class="sb-tv-serve' + serveCls + '">' + SERVE_SVG + '</span></div>'
-          + '<div class="sb-tv-dones">' + doneHtml + '</div>'
-          + liveHtml
-          + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + '">' + ptsVal + '</div>'
-          + '</div>';
-      };
-
-      const tbText = motion.tbFall
-        ? (motion.tbFallLabel === 'stb' ? 'Super tie-break' : 'Tie-break')
-        : (tbOn ? (isSuperTB ? 'Super tie-break' : 'Tie-break') : '');
-      const tbHtml = tbText
-        ? '<span class="sb-tv-tb' + (motion.tbFall ? ' is-fall' : (motion.tbRise ? ' is-rise' : '')) + '">' + tbText + '</span>'
-        : '';
-      const clockHtml = timeStr ? '<span class="sb-tv-clock">' + timeStr + '</span>' : '';
-      const opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
-
-      return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';--sb-speed:' + speed + ';transform:scale(' + scale + ');transform-origin:top left;">'
-        + '<div class="sb-tv-card">'
-        + '<div class="sb-tv-header">'
-        + (courtName ? '<span class="sb-tv-court">' + courtName + '</span>' : '')
-        + '<span class="sb-tv-meta">' + metaParts + '</span>'
-        + tbHtml
-        + clockHtml + '</div>'
-        + '<div class="sb-tv-rows">'
-        + pRow(pA, 'A', 'side-a')
-        + pRow(pB, 'B', 'side-b')
-        + '</div></div></div>';
     },
 
     _calcMatchTime(court) {

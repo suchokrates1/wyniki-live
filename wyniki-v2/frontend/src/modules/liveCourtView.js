@@ -20,9 +20,11 @@ import { formatDuration } from '../shared/date.js';
 import { calcMatchTime } from '../shared/matchTime.js';
 import { formatTemplate as fmt } from '../shared/text.js';
 import { formatTeamLabelForWrap, isTeamDisplayName, TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
+import { renderTvScoreboard } from '../shared/tvScoreboard.js';
 
 export function createLiveCourtView() {
   return {
+    serveAnimTick: 0,
     resolveDisplayPoints(court, side) {
       return resolveDisplayPointsForCourt(court, side);
     },
@@ -238,6 +240,22 @@ export function createLiveCourtView() {
 
     courtMatchClock(courtId) {
       return calcMatchTime(this.courts[courtId]);
+    },
+
+    renderLiveTvScoreboard(courtId) {
+      // Decorative only — homepage keeps the spoken heading + .score-summary live region.
+      const court = this.courts[courtId] || {};
+      return renderTvScoreboard({
+        courtId,
+        court: {
+          ...court,
+          A: { ...(court.A || {}), full_name: this.getSpokenPlayerName(courtId, 'A') },
+          B: { ...(court.B || {}), full_name: this.getSpokenPlayerName(courtId, 'B') },
+        },
+        courtName: this.getCourtDisplayLabel(courtId),
+        look: { flags: true, clock: true, phase: true, scale: 1, anim_speed: 1, anim_set: true },
+        onAnimTick: () => { this.serveAnimTick += 1; },
+      });
     },
   };
 }

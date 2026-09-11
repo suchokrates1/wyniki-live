@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { spokenScore } from '../a11y/scoreNarration.js';
+import { TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
 import { createLiveCourtView } from './liveCourtView.js';
 
 function makeView(court) {
@@ -47,6 +48,28 @@ test('heading aria includes the spoken score summary', () => {
   assert.match(spoken, /points 15 to 0/);
   assert.match(spoken, /Set 1, 0 to 4/);
   assert.match(spoken, /Set 2, active, 0 to 0/);
+});
+
+test('visual TV board stays decorative and spoken names drop wrap marks', () => {
+  const view = makeView({
+    court_name: '3',
+    serve: 'A',
+    current_set: 1,
+    match_status: { active: true },
+    A: { full_name: `Kamil Szulc / ${TEAM_WRAP_BREAK}Sascha zur Borg`, set1: 1, points: '40' },
+    B: { full_name: 'Michael Leigh / Reuben Alexander Fairbank', set1: 0, points: '30' },
+  });
+
+  const html = view.renderLiveTvScoreboard('c3');
+  assert.match(html, /class="sb-tv/);
+  assert.equal(html.includes('aria-live'), false);
+  assert.equal(html.includes(TEAM_WRAP_BREAK), false);
+  assert.match(html, /Kamil Szulc \/ Sascha zur Borg/);
+
+  const summary = view.getScoreSummary('c3');
+  assert.equal(summary.includes(TEAM_WRAP_BREAK), false);
+  assert.match(summary, /Kamil Szulc \/ Sascha zur Borg serving/);
+  assert.match(summary, /points 40 to 30/);
 });
 
 test('courtMatchClock uses started_ts instead of frozen seconds', () => {

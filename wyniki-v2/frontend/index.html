@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wyniki tenisowe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Chivo+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎾</text></svg>">
     <meta name="description" content="Wyniki tenisowe na zywo">
     <script defer src="https://stats.dawidsuchodolski.pl/script.js" data-website-id="b49919d3-6628-40cc-9213-72ec52409e28"></script>
@@ -120,136 +123,14 @@
                 <p class="empty-state__text" x-text="t('emptyText')">Skonfiguruj korty w panelu administratora</p>
             </div>
             
-            <!-- Courts Grid -->
+            <!-- Courts Grid. Visual TV HTML is aria-hidden; SR uses the heading + live summary. -->
             <div x-show="!loading" class="grid">
                 <template x-for="courtId in getCourtIds()" :key="forKey('court', courtId)">
-                    <section class="card" :id="'kort-'+courtId" :aria-labelledby="'heading-'+courtId">
-                        
-                        <!-- Card Header -->
-                        <div class="card-head">
-                            <h2 :id="'heading-'+courtId"
-                                :aria-label="getHeadingAria(courtId)">
-                                <span class="court-label" x-text="getCourtDisplayLabel(courtId)"></span>:
-                                <span class="match-title">
-                                    <span class="match-player" x-text="getPlayerName(courtId, 'A')"></span>
-                                    <span class="match-versus">
-                                        <span aria-hidden="true" x-text="tr().versus || 'vs'"></span>
-                                        <span class="sr-only" x-text="acc().versus"></span>
-                                    </span>
-                                    <span class="match-player" x-text="getPlayerName(courtId, 'B')"></span>
-                                </span>
-                                <span x-show="isMatchActive(courtId)" class="live-badge" x-text="tr().liveBadge || 'LIVE'"></span>
-                            </h2>
-                        </div>
-
-                        <!-- Scoreboard -->
-                        <div class="score-wrapper">
-                            <!-- Tiebreak labels (above scoreboard) -->
-                            <div class="score-labels">
-                                <div class="score-label score-label-tb"
-                                     :class="{ 'is-visible': isTiebreak(courtId) && !isSuperTiebreak(courtId) }"
-                                     aria-hidden="true" x-text="tr().tieBreakLabel || 'TB'"></div>
-                                <div class="score-label score-label-stb"
-                                     :class="{ 'is-visible': isSuperTiebreak(courtId) }"
-                                     aria-hidden="true" x-text="tr().superTieBreakLabel || 'STB'"></div>
-                            </div>
-
-                            <!-- Score table (visual, hidden from screen readers) -->
-                            <dl class="score-list" aria-hidden="true">
-                                <!-- Player A -->
-                                <div class="score-row" data-side="A">
-                                    <dt class="player-cell">
-                                        <span class="player-flags" aria-hidden="true">
-                                            <template x-if="playerHasFlag(courtId, 'A')">
-                                                <span class="player-flag has-image"
-                                                      :style="playerFlagStyle(courtId, 'A')"></span>
-                                            </template>
-                                            <template x-if="playerHasPartnerFlag(courtId, 'A')">
-                                                <span class="player-flag has-image"
-                                                      :style="playerFlagStyle(courtId, 'A', true)"></span>
-                                            </template>
-                                        </span>
-                                        <span class="player-name" :id="'k'+courtId+'-name-A'"
-                                              :class="{ 'player-name--team': isTeamDisplayName(getPlayerName(courtId, 'A')) }"
-                                              x-text="getPlayerName(courtId, 'A')"></span>
-                                        <template x-if="courts[courtId]?.serve === 'A'">
-                                            <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="" style="width:14px;height:14px;"></span>
-                                        </template>
-                                    </dt>
-                                    <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-A'">
-                                        <span class="metric-label" :id="'k'+courtId+'-label-points'"
-                                              x-text="getPointsLabel(courtId)"></span>
-                                        <span class="metric-value points"
-                                              :id="'k'+courtId+'-pts-A'"
-                                              :class="{ 'is-tiebreak': isTiebreak(courtId) }"
-                                              x-text="getDisplayPoints(courtId, 'A')"></span>
-                                    </dd>
-                                    <template x-for="setIdx in getSetIndices(courtId)" :key="'sA'+setIdx">
-                                        <dd class="metric" :class="'set-'+setIdx"
-                                            :aria-labelledby="'k'+courtId+'-label-set'+setIdx+' k'+courtId+'-name-A'">
-                                            <span class="metric-label" :id="'k'+courtId+'-label-set'+setIdx"
-                                                  x-text="t('setLabel', {number: setIdx})"
-                                                  x-show="$el.closest('.score-row[data-side=A]')"></span>
-                                            <span class="metric-value set"
-                                                  :id="'k'+courtId+'-s'+setIdx+'-A'"
-                                                  :class="{ 'is-active': courts[courtId]?.current_set == setIdx }">
-                                                <span x-text="getSetScore(courtId, 'A', setIdx)"></span><sup class="tb-sup" x-show="getTiebreakInfo(courtId, setIdx) !== null && parseInt(getSetScore(courtId, 'A', setIdx)) < parseInt(getSetScore(courtId, 'B', setIdx))" x-text="getTiebreakInfo(courtId, setIdx)"></sup>
-                                            </span>
-                                        </dd>
-                                    </template>
-                                </div>
-
-                                <!-- Player B -->
-                                <div class="score-row" data-side="B">
-                                    <dt class="player-cell">
-                                        <span class="player-flags" aria-hidden="true">
-                                            <template x-if="playerHasFlag(courtId, 'B')">
-                                                <span class="player-flag has-image"
-                                                      :style="playerFlagStyle(courtId, 'B')"></span>
-                                            </template>
-                                            <template x-if="playerHasPartnerFlag(courtId, 'B')">
-                                                <span class="player-flag has-image"
-                                                      :style="playerFlagStyle(courtId, 'B', true)"></span>
-                                            </template>
-                                        </span>
-                                        <span class="player-name" :id="'k'+courtId+'-name-B'"
-                                              :class="{ 'player-name--team': isTeamDisplayName(getPlayerName(courtId, 'B')) }"
-                                              x-text="getPlayerName(courtId, 'B')"></span>
-                                        <template x-if="courts[courtId]?.serve === 'B'">
-                                            <span class="serve-indicator" aria-hidden="true"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="" style="width:14px;height:14px;"></span>
-                                        </template>
-                                    </dt>
-                                    <dd class="metric points" :aria-labelledby="'k'+courtId+'-label-points k'+courtId+'-name-B'">
-                                        <span class="metric-value points"
-                                              :id="'k'+courtId+'-pts-B'"
-                                              :class="{ 'is-tiebreak': isTiebreak(courtId) }"
-                                              x-text="getDisplayPoints(courtId, 'B')"></span>
-                                    </dd>
-                                    <template x-for="setIdx in getSetIndices(courtId)" :key="'sB'+setIdx">
-                                        <dd class="metric" :class="'set-'+setIdx"
-                                            :aria-labelledby="'k'+courtId+'-label-set'+setIdx+' k'+courtId+'-name-B'">
-                                            <span class="metric-value set"
-                                                  :id="'k'+courtId+'-s'+setIdx+'-B'"
-                                                  :class="{ 'is-active': courts[courtId]?.current_set == setIdx }">
-                                                <span x-text="getSetScore(courtId, 'B', setIdx)"></span><sup class="tb-sup" x-show="getTiebreakInfo(courtId, setIdx) !== null && parseInt(getSetScore(courtId, 'B', setIdx)) < parseInt(getSetScore(courtId, 'A', setIdx))" x-text="getTiebreakInfo(courtId, setIdx)"></sup>
-                                            </span>
-                                        </dd>
-                                    </template>
-                                </div>
-                            </dl>
-                        </div>
-
-                        <!-- Screen reader summary (hidden visually, read by screen readers) -->
+                    <section class="court-tv" :id="'kort-'+courtId" :aria-labelledby="'heading-'+courtId">
+                        <h2 class="sr-only" :id="'heading-'+courtId" x-text="getHeadingAria(courtId)"></h2>
+                        <div aria-hidden="true" x-html="renderLiveTvScoreboard(courtId, serveAnimTick)"></div>
                         <p class="sr-only score-summary" :id="'k'+courtId+'-summary'" aria-live="polite"
                            x-text="getScoreSummary(courtId)"></p>
-
-                        <!-- Match info footer -->
-                        <div class="card-footer" x-show="isMatchActive(courtId)">
-                            <span class="match-time" x-show="courtMatchClock(courtId)">
-                                <span aria-hidden="true">🕒</span> <span x-text="courtMatchClock(courtId)"></span>
-                            </span>
-                            <span class="match-set" x-text="getCurrentSetLabel(courtId)"></span>
-                        </div>
                     </section>
                 </template>
             </div>
