@@ -1651,8 +1651,9 @@
           <span x-text="demoOverlayActive ? '● DEMO W OVERLAY' : '▶ Pokaż w overlay'"></span>
         </button>
         <button x-show="demoPreview" @click="clearDemo()" class="btn btn-sm btn-ghost">× Wyczyść</button>
-        <span class="font-mono text-xs" :class="overlayHasLiveMatch() ? 'text-[#4ade80]' : 'opacity-50'"
-              x-text="overlayHasLiveMatch() ? '● na żywo' : '○ brak meczu'"></span>
+        <span class="font-mono text-xs"
+              :class="overlayPreviewStatus() === 'live' ? 'text-[#4ade80]' : overlayPreviewStatus() === 'mock' ? 'text-[#FFD400]' : 'opacity-50'"
+              x-text="overlayPreviewStatus() === 'live' ? '● na żywo' : overlayPreviewStatus() === 'mock' ? '● mock TV' : '○ brak meczu'"></span>
       </div>
 
       <div x-show="currentOverlayId">

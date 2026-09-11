@@ -535,9 +535,12 @@
                 completed.push({ a: a, b: b, supA: '', supB: '' });
             }
         }
-        const liveGames = (active && !isSuperTB)
+        let liveGames = (active && !isSuperTB)
             ? { a: Number(readSetValue(pA, curSet) || 0), b: Number(readSetValue(pB, curSet) || 0) }
             : null;
+        if (!liveGames && !isSuperTB && completed.length === 0) {
+            liveGames = { a: 0, b: 0 };
+        }
         const isTie = court.tie?.visible || false;
         const ptA = active ? ((isTie || isSuperTB) ? (court.tie?.A || 0) : (pA.points || '0')) : '\u2014';
         const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';

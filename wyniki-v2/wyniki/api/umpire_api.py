@@ -154,6 +154,46 @@ def _apply_live_overlay_meta(court_state: dict, *, phase: str | None = None, cat
         meta["category"] = category
 
 
+def _apply_serve_from_payload(court_state: dict, data: dict | None) -> None:
+    """Keep the overlay serve ball across PUT-only syncs, not just match-events."""
+    data = data if isinstance(data, dict) else {}
+    raw = data.get("serve")
+    if raw in ("A", "B"):
+        court_state["serve"] = raw
+        return
+    if raw in (1, "1", "player1"):
+        court_state["serve"] = "A"
+        return
+    if raw in (2, "2", "player2"):
+        court_state["serve"] = "B"
+        return
+    player1 = data.get("player1") if isinstance(data.get("player1"), dict) else {}
+    player2 = data.get("player2") if isinstance(data.get("player2"), dict) else {}
+    if player1.get("is_serving") is True:
+        court_state["serve"] = "A"
+        return
+    if player2.get("is_serving") is True:
+        court_state["serve"] = "B"
+
+
+def _refresh_live_overlay_meta_from_match(court_state: dict, match) -> None:
+    if not match:
+        return
+    schedule_entry = _schedule_context_for_match(match.tournament_id, match.schedule_id)
+    bracket_ctx = {"group_id": match.bracket_group_id, "phase": match.phase}
+    _apply_live_overlay_meta(
+        court_state,
+        phase=match.phase or (schedule_entry or {}).get("phase"),
+        category=_resolve_live_overlay_category(
+            match.tournament_id,
+            schedule_entry,
+            bracket_ctx,
+            match.player1_name,
+            match.player2_name,
+        ) or court_state.get("history_meta", {}).get("category"),
+    )
+
+
 def _resolve_live_overlay_category(
     tournament_id: int | None,
     schedule_entry: dict | None,
@@ -1287,6 +1327,7 @@ def create_match():
                         match.player2_name,
                     ),
                 )
+                _apply_serve_from_payload(court_state, data)
             
             emit_score_update(kort_id, court_state)
         
@@ -1407,6 +1448,8 @@ def update_match(match_id: int):
                 _sync_live_score_to_court_state(court_state, match, score)
                 court_state["match_status"]["active"] = (match.status == "in_progress")
                 _sync_court_match_timer_from_match(court_state, match)
+                _refresh_live_overlay_meta_from_match(court_state, match)
+                _apply_serve_from_payload(court_state, data)
                 court_state["updated"] = utc_now_iso()
             
             # Emit SSE update
@@ -1649,10 +1692,7 @@ def log_match_event():
         court_state = ensure_court_state(kort_id)
         with STATE_LOCK:
             # --- Serve ---
-            if player1.get('is_serving'):
-                court_state["serve"] = "A"
-            elif player2.get('is_serving'):
-                court_state["serve"] = "B"
+            _apply_serve_from_payload(court_state, data)
 
             # --- Player names (keep up-to-date) ---
             if player1.get('name'):
@@ -1680,17 +1720,6 @@ def log_match_event():
                 _sync_live_score_to_court_state(court_state, active_match, score)
                 court_state["match_status"]["active"] = True
                 _sync_court_match_timer_from_match(court_state, active_match)
-                _apply_live_overlay_meta(
-                    court_state,
-                    phase=active_match.phase,
-                    category=_resolve_live_overlay_category(
-                        active_match.tournament_id,
-                        _schedule_context_for_match(active_match.tournament_id, active_match.schedule_id),
-                        {"group_id": active_match.bracket_group_id, "phase": active_match.phase},
-                        active_match.player1_name,
-                        active_match.player2_name,
-                    ) or court_state.get("history_meta", {}).get("category"),
-                )
             else:
                 # --- Points ---
                 if is_tiebreak or is_super_tiebreak:
@@ -1721,6 +1750,8 @@ def log_match_event():
                 court_state["match_status"]["active"] = not match_finished
                 if match_finished:
                     court_state["match_status"]["last_completed"] = utc_now_iso()
+
+            _refresh_live_overlay_meta_from_match(court_state, active_match)
 
             # --- Live stats (for overlay) ---
             live_stats = data.get('stats')

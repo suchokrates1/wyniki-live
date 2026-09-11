@@ -5,6 +5,7 @@ import {
   overlayCourtLabel,
   overlayPhaseLabel,
 } from '../shared/overlayLabel.js';
+import { courtLooksEmpty, previewMockCourt } from './overlayPreviewMock.js';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
@@ -83,6 +84,7 @@ export function createOverlayAdmin() {
       // Demo mode
       demoPreview: false,       // admin is showing demo data in preview
       demoOverlayActive: false,  // demo pushed to production overlays
+      overlayPreviewMock: true, // local TV mock when courts are empty
 
       // Add element defaults
       addElCourtId: '1',
@@ -217,10 +219,21 @@ export function createOverlayAdmin() {
     },
 
     resolveOverlayCourtData(courtToken, overlay = null) {
+      const live = this._liveOverlayCourtData(courtToken, overlay);
+      if (this.overlayPreviewMock && courtLooksEmpty(live)) {
+        return previewMockCourt(courtToken);
+      }
+      return live;
+    },
+
+    _liveOverlayCourtData(courtToken, overlay = null) {
       const targetOverlay = overlay || this.currentOverlay();
       const court = this.resolveOverlayCourt(targetOverlay, courtToken);
-      if (!court?.kort_id) return {};
-      return this.courtData[String(court.kort_id)] || {};
+      if (court?.kort_id) {
+        return this.courtData[String(court.kort_id)] || {};
+      }
+      const token = String(courtToken || '');
+      return this.courtData[token] || {};
     },
 
     setCurrentOverlayTournament(tournamentId) {
@@ -250,24 +263,22 @@ export function createOverlayAdmin() {
     },
 
     async loadDemoData() {
+      this.overlayPreviewMock = true;
+      this.demoPreview = true;
+      this._fitPreviewNames();
       try {
         const r = await fetch('/admin/api/demo', { method: 'POST' });
         const data = await r.json();
-        if (!r.ok) {
-          this.showToast(data.error || 'Błąd ładowania demo', 'error');
+        if (r.ok && data.demo_courts) {
+          Object.keys(data.demo_courts).forEach(id => { this.courtData[id] = data.demo_courts[id]; });
+          this.demoOverlayActive = data.demo_overlay_active || false;
+          this.showToast(data.message || 'Demo załadowane (tylko podgląd)', 'success');
           return;
         }
-        // Store demo courts in preview (does NOT affect production overlays)
-        if (data.demo_courts) {
-          Object.keys(data.demo_courts).forEach(id => { this.courtData[id] = data.demo_courts[id]; });
-        }
-        this.demoPreview = true;
-        this.demoOverlayActive = data.demo_overlay_active || false;
-        this._fitPreviewNames();
-        this.showToast(data.message || 'Demo załadowane (tylko podgląd)', 'success');
+        this.showToast('Mock TV w podglądzie admina', 'success');
       } catch (err) {
         console.error('Demo load error:', err);
-        this.showToast('Błąd ładowania demo', 'error');
+        this.showToast('Mock TV w podglądzie admina', 'success');
       }
     },
 
@@ -302,6 +313,7 @@ export function createOverlayAdmin() {
         }
         this.demoPreview = false;
         this.demoOverlayActive = false;
+        this.overlayPreviewMock = false;
         // Restore real court data
         try {
           const snap = await fetch('/api/snapshot').then(r2 => r2.json());
@@ -476,6 +488,12 @@ export function createOverlayAdmin() {
       return Object.values(this.courtData || {}).some((c) => c?.match_status?.active);
     },
 
+    overlayPreviewStatus() {
+      if (this.overlayHasLiveMatch()) return 'live';
+      if (this.overlayPreviewMock) return 'mock';
+      return 'empty';
+    },
+
     _ensureGridDefaults(ov) {
       if (!ov.top_bar) {
         ov.top_bar = { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true };
@@ -488,6 +506,7 @@ export function createOverlayAdmin() {
       this._ensureLookDefaults(ov);
       (ov.elements || []).forEach(el => {
         if (!el.zone) el.zone = 'free';
+        if (el.type === 'court' && (!el.h || el.h < 160)) el.h = 184;
       });
     },
 
@@ -720,7 +739,7 @@ export function createOverlayAdmin() {
 
       // Helper: build a court element
       const mkCourt = (cid, x, y, w, opts = {}) => ({
-        type:'court', court_id:String(cid), visible:true, x, y, w,
+        type:'court', court_id:String(cid), visible:true, x, y, w, h: opts.h || 184,
         zone:opts.zone||'free', show_logo:opts.logo||false,
         font_size:opts.fs||17, bg_opacity:0.95, logo_size:60,
         label_text:opts.label||(opts.noLabel?'':'COURT '+cid),
@@ -920,7 +939,7 @@ export function createOverlayAdmin() {
         top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true },
         watermark: { enabled: false, opacity: 0.4, position: 'bottom-right', size: 140 },
         elements: [
-          { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460, zone: 'free',
+          { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 600, h: 184, zone: 'free',
             show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
             label_text: 'COURT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
         ],
@@ -1190,9 +1209,12 @@ export function createOverlayAdmin() {
           completed.push({ a, b, supA: '', supB: '' });
         }
       }
-      const liveGames = (active && !isSuperTB)
+      let liveGames = (active && !isSuperTB)
         ? { a: Number(readSetValue(pA, curSet) || 0), b: Number(readSetValue(pB, curSet) || 0) }
         : null;
+      if (!liveGames && !isSuperTB && completed.length === 0) {
+        liveGames = { a: 0, b: 0 };
+      }
       const isTie = court.tie?.visible || false;
       const ptA = active ? ((isTie || isSuperTB) ? (court.tie?.A || 0) : (pA.points || '0')) : '\u2014';
       const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';

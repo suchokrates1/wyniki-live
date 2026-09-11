@@ -15,6 +15,9 @@ test('match payload uses Android snake_case and lowercase finish reasons', () =>
   assert.equal(payload.schedule_id, 44);
   assert.equal(payload.match_config.games_per_set, 4);
   assert.equal(payload.match_start_time_ms, 1_000);
+  assert.equal(payload.serve, 'A');
+  assert.equal(payload.player1.is_serving, true);
+  assert.equal(payload.player2.is_serving, false);
   assert.equal(toApiFinishReason(MatchFinishReason.WALKOVER), 'walkover');
   assert.equal(toFinishPayload(new FinishMatchRequest({ finishReason: MatchFinishReason.TEST })).finish_reason, 'test');
   assert.equal(toStatisticsPayload(state), null);

@@ -431,62 +431,76 @@ def _generate_demo_stats() -> Dict[str, Any]:
     }
 
 
+_FALLBACK_DEMO_PLAYERS = [
+    {"name": "Suchodolski", "country": "PL", "category": "B2"},
+    {"name": "Thompson", "country": "GB", "category": "B2"},
+    {"name": "Nowak / Lis", "country": "PL", "category": "B1"},
+    {"name": "Kovács / Horváth", "country": "HU", "category": "B1"},
+    {"name": "García", "country": "ES", "category": "B3"},
+    {"name": "Schmidt", "country": "DE", "category": "B3"},
+    {"name": "González", "country": "AR", "category": "B2"},
+    {"name": "Rossi", "country": "IT", "category": "B2"},
+]
+
+
 def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
     """Generate IBTA blind tennis demo data and store in DEMO_COURTS.
 
-    Uses real players from the active tournament database.
-    Generates IBTA-legal scores (short sets to 4, max 2 sets).
-    Fills match statistics for overlay display.
+    Uses real players from the active tournament database when available,
+    otherwise a built-in fallback so empty test DBs still preview the TV board.
     Does NOT touch real COURTS — demo data is stored separately.
 
     Returns:
         (success, message, demo_courts_dict) tuple.
     """
     import random
-    import time
+    from datetime import datetime, timedelta, timezone
     from ..database import fetch_players_for_active_tournaments
 
-    # Fetch real players from active tournament
     db_players = fetch_players_for_active_tournaments()
-
-    # Need at least 2 players for 1 court
+    source = "database"
     if len(db_players) < 2:
-        msg = f"Za mało zawodników w aktywnym turnieju ({len(db_players)}/2). Dodaj zawodników lub ustaw aktywny turniej."
-        logger.warning("demo_data_not_enough_players",
-                        available=len(db_players), required=2)
-        return (False, msg, {})
+        db_players = list(_FALLBACK_DEMO_PLAYERS)
+        source = "fallback"
+        logger.info("demo_data_using_fallback_players")
 
-    # Shuffle and pick players for available courts (2 per court)
     random.shuffle(db_players)
     max_pairs = len(db_players) // 2
     num_courts = min(max_pairs, 4)
     selected = db_players[:num_courts * 2]
 
-    # Match scenarios for variety
     scenarios = ["set1_in_progress", "set2_in_progress", "set2_deuce", "set1_in_progress"]
-    phases = ["Grupowa", "Półfinał", "Grupowa", "Grupowa"]
+    phases = ["Grupowa", "Półfinał", "Ćwierćfinał", "Finał"]
 
     court_ids = _sorted_court_ids(COURTS.keys()) if COURTS else ["1", "2", "3", "4"]
-    court_ids = court_ids[:num_courts]  # fill as many courts as we have players for
+    if len(court_ids) < num_courts:
+        extras = [str(i) for i in range(1, num_courts + 1) if str(i) not in court_ids]
+        court_ids = court_ids + extras
+    court_ids = court_ids[:num_courts]
 
     demo_matches: Dict[str, Dict[str, Any]] = {}
 
     for i, kort_id in enumerate(court_ids):
         p_a = selected[i * 2]
         p_b = selected[i * 2 + 1]
-
-        # Player names
         name_a = p_a.get("name", "Player A")
         name_b = p_b.get("name", "Player B")
-
-        # Flag image URLs from CDN (2-letter ISO code)
         cc_a = (p_a.get("country") or "")[:2].lower()
         cc_b = (p_b.get("country") or "")[:2].lower()
-        flag_url_a = f"https://flagcdn.com/w40/{cc_a}.png" if len(cc_a) == 2 else None
-        flag_url_b = f"https://flagcdn.com/w40/{cc_b}.png" if len(cc_b) == 2 else None
-
-        # Generate IBTA-legal score
+        flag_url_a = f"https://flagcdn.com/w80/{cc_a}.png" if len(cc_a) == 2 else None
+        flag_url_b = f"https://flagcdn.com/w80/{cc_b}.png" if len(cc_b) == 2 else None
         score = _generate_ibta_score(scenarios[i % len(scenarios)])
+        cat = p_a.get("category") or p_b.get("category") or "B2"
+        started = datetime.now(timezone.utc) - timedelta(seconds=int(score["time_seconds"]))
+        started_iso = started.isoformat()
+        sets_detail = []
+        if score["current_set"] >= 2:
+            sets_detail.append({
+                "p1": score["set1_a"],
+                "p2": score["set1_b"],
+                "tb": None,
+                "stb": False,
+            })
 
         demo_matches[kort_id] = {
             "A": {
@@ -500,6 +514,7 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
                 "flag_url": flag_url_a,
                 "flag_code": cc_a.upper() or None,
                 "flag_lookup_surname": None,
+                "category": cat,
             },
             "B": {
                 "surname": name_b,
@@ -512,6 +527,7 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
                 "flag_url": flag_url_b,
                 "flag_code": cc_b.upper() or None,
                 "flag_lookup_surname": None,
+                "category": cat,
             },
             "current_set": score["current_set"],
             "serve": random.choice(["A", "B"]),
@@ -521,18 +537,19 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
                 "seconds": score["time_seconds"],
                 "running": True,
                 "offset_seconds": 0,
-                "started_ts": None,
+                "started_ts": started_iso,
                 "finished_ts": None,
-                "resume_ts": time.time(),
+                "resume_ts": started_iso,
                 "auto_resume": True,
             },
             "match_status": {"active": True, "last_completed": None},
             "history_meta": {
                 "phase": phases[i % len(phases)],
-                "category": p_a.get("category") or p_b.get("category") or None,
+                "category": f"Men {cat}" if cat else None,
             },
-            "overlay_visible": None,
+            "overlay_visible": True,
             "updated": None,
+            "sets_detail": sets_detail,
             "stats": {
                 "player_a": _generate_demo_stats(),
                 "player_b": _generate_demo_stats(),
@@ -543,11 +560,8 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
         DEMO_COURTS.clear()
         for kort_id, state in demo_matches.items():
             DEMO_COURTS[kort_id] = state
-    logger.info("demo_data_seeded", courts=list(demo_matches.keys()),
-                source="database")
+    logger.info("demo_data_seeded", courts=list(demo_matches.keys()), source=source)
 
-    # Return serialized demo data so admin can preview immediately
-    from copy import deepcopy
     serialized = {k: deepcopy(v) for k, v in demo_matches.items()}
     return (True, f"Demo: korty {', '.join(demo_matches.keys())}", serialized)
 

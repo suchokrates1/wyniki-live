@@ -131,3 +131,64 @@ def test_create_match_drives_overlay_timer_from_tablet_start(umpire_app_with_tem
         assert court["match_time"]["started_ts"] == body["started_at"]
         assert court["match_time"]["running"] is True
         assert court["match_time"]["seconds"] >= 60 * 60
+
+
+def test_put_keeps_overlay_serve_and_meta(umpire_app_with_temp_db):
+    from wyniki import database
+
+    with umpire_app_with_temp_db.app_context():
+        tournament_id = database.insert_tournament("Serve Cup", "2026-09-11", "2026-09-12", active=True)
+        database.create_tournament_courts(tournament_id, 1)
+        court_id = f"t{tournament_id}-1"
+        client = umpire_app_with_temp_db.test_client()
+
+        created = client.post(
+            "/api/matches",
+            json={
+                "court_id": court_id,
+                "player1_name": "González",
+                "player2_name": "Schmidt",
+                "status": "in_progress",
+                "phase": "Półfinał",
+                "score": {
+                    "player1_sets": 0,
+                    "player2_sets": 0,
+                    "player1_games": 0,
+                    "player2_games": 0,
+                    "player1_points": 0,
+                    "player2_points": 0,
+                    "sets_history": [],
+                },
+            },
+        )
+        assert created.status_code == 201
+        match_id = created.get_json()["id"]
+        from wyniki.db_models import Match, db
+        match = db.session.get(Match, match_id)
+        match.phase = "Półfinał"
+        db.session.commit()
+
+        updated = client.put(
+            f"/api/matches/{match_id}",
+            json={
+                "serve": "B",
+                "player1": {"is_serving": False},
+                "player2": {"is_serving": True},
+                "status": "in_progress",
+                "score": {
+                    "player1_sets": 1,
+                    "player2_sets": 0,
+                    "player1_games": 2,
+                    "player2_games": 1,
+                    "player1_points": 3,
+                    "player2_points": 2,
+                    "sets_history": [
+                        {"set_number": 1, "player1_games": 4, "player2_games": 2},
+                    ],
+                },
+            },
+        )
+        assert updated.status_code == 200
+        court = ensure_court_state(court_id)
+        assert court["serve"] == "B"
+        assert court["history_meta"].get("phase") == "Półfinał"
