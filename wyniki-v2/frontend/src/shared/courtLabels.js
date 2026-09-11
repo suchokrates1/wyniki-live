@@ -15,7 +15,7 @@ export function getSortedCourtIds(courts = {}) {
 export function localizeCourtLabel(label, { forcePrefix = false, formatCourtLabel = (court) => String(court || '') } = {}) {
   const text = String(label || '').trim();
   if (!text) return '';
-  const prefixed = text.match(/^(Kort|Court|Platz|Campo|Cancha)\s+(.+)$/i);
+  const prefixed = text.match(/^(Kortas|Kort|Court|Platz|Campo|Cancha|Pista)\s+(.+)$/i);
   if (prefixed) return formatCourtLabel(prefixed[2]);
   if (/^\d+$/.test(text)) return formatCourtLabel(text);
   if (forcePrefix) return formatCourtLabel(text);

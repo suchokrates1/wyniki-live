@@ -128,7 +128,7 @@
                 <template x-for="courtId in getCourtIds()" :key="forKey('court', courtId)">
                     <section class="court-tv" :id="'kort-'+courtId" :aria-labelledby="'heading-'+courtId">
                         <h2 class="sr-only" :id="'heading-'+courtId" x-text="getHeadingAria(courtId)"></h2>
-                        <div aria-hidden="true" x-html="renderLiveTvScoreboard(courtId, serveAnimTick)"></div>
+                        <div aria-hidden="true" x-html="renderLiveTvScoreboard(courtId, serveAnimTick, lang)"></div>
                         <p class="sr-only score-summary" :id="'k'+courtId+'-summary'" aria-live="polite"
                            x-text="getScoreSummary(courtId)"></p>
                     </section>

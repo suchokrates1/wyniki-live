@@ -244,6 +244,7 @@ export function createLiveCourtView() {
 
     renderLiveTvScoreboard(courtId) {
       // Decorative only — homepage keeps the spoken heading + .score-summary live region.
+      // `lang` is passed from the template so Alpine rebuilds the header word (Kort/Court/Platz/Kortas).
       const court = this.courts[courtId] || {};
       return renderTvScoreboard({
         courtId,

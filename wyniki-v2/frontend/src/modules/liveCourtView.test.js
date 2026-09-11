@@ -62,9 +62,15 @@ test('visual TV board stays decorative and spoken names drop wrap marks', () => 
 
   const html = view.renderLiveTvScoreboard('c3');
   assert.match(html, /class="sb-tv/);
+  assert.match(html, /Court 3/);
   assert.equal(html.includes('aria-live'), false);
   assert.equal(html.includes(TEAM_WRAP_BREAK), false);
   assert.match(html, /Kamil Szulc \/ Sascha zur Borg/);
+
+  view.t = (_key, values) => `Platz ${values.court}`;
+  assert.match(view.renderLiveTvScoreboard('c3'), /Platz 3/);
+  view.t = (_key, values) => `Kortas ${values.court}`;
+  assert.match(view.renderLiveTvScoreboard('c3'), /Kortas 3/);
 
   const summary = view.getScoreSummary('c3');
   assert.equal(summary.includes(TEAM_WRAP_BREAK), false);
