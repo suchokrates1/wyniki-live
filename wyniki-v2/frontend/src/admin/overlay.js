@@ -1,8 +1,14 @@
 import { abbreviateCompetitorName } from '../shared/teamDisplay.js';
+import { calcMatchTime } from '../shared/matchTime.js';
+import {
+  overlayCategoryLabel,
+  overlayCourtLabel,
+  overlayPhaseLabel,
+} from '../shared/overlayLabel.js';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
-  return 'https://flagcdn.com/w40/' + code.toLowerCase().slice(0, 2) + '.png';
+  return 'https://flagcdn.com/w80/' + code.toLowerCase().slice(0, 2) + '.png';
 }
 
 function flagSpans(p) {
@@ -12,15 +18,31 @@ function flagSpans(p) {
   const primary = String(p.flag_code || '').toUpperCase();
   const partner = String(p.flag_code_partner || '').toUpperCase();
   if (flagUrl) {
-    html += '<span class="sb-flag has-image" style="background-image:url(' + flagUrl + ')"></span>';
+    html += '<span class="sb-flag" style="background-image:url(' + flagUrl + ')"></span>';
   }
   if (partnerUrl && partner && partner !== primary) {
-    html += '<span class="sb-flag has-image" style="background-image:url(' + partnerUrl + ')"></span>';
+    html += '<span class="sb-flag" style="background-image:url(' + partnerUrl + ')"></span>';
   }
   return html ? '<span class="player-flags">' + html + '</span>' : '';
 }
 
 export const VEST_MEDIA_LOGO_URL = '/vest-media-logo.png';
+
+const SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
+
+function tbSuperscripts(setInfo) {
+  if (!setInfo || setInfo.tb == null || setInfo.stb) return { a: '', b: '' };
+  const a = Number(setInfo.p1 || 0);
+  const b = Number(setInfo.p2 || 0);
+  if (a === b) return { a: '', b: '' };
+  const tb = String(setInfo.tb);
+  return a < b ? { a: tb, b: '' } : { a: '', b: tb };
+}
+
+function setCellHtml(val, sup, kind) {
+  const supHtml = sup ? '<span class="sb-tv-sup">' + sup + '</span>' : '';
+  return '<div class="sb-tv-set ' + kind + '"><span>' + val + '</span>' + supHtml + '</div>';
+}
 
 export function createOverlayAdmin() {
   return {
@@ -400,16 +422,9 @@ export function createOverlayAdmin() {
       });
     },
 
-    /** Estimated height for a court slot at 2-set expanded scoreboard (label + SB). */
-    estimateTopSlotHeight(el) {
-      const labelPos = el.label_position || 'above';
-      const hasLabel = labelPos !== 'none' && String(el.label_text || '').trim().length > 0;
-      const labelFs = el.label_font_size || (el.zone === 'top' ? 12 : 14);
-      const labelGap = el.label_gap != null ? el.label_gap : 4;
-      const labelH = hasLabel ? (labelFs + 16 + labelGap) : 0;
-      // Two scoreboard rows (~36–38px each) — stable regardless of set-column count
-      const sbH = 76;
-      return Math.ceil(labelH + sbH);
+    /** Estimated height for the TV scoreboard (header + two player rows). */
+    estimateTopSlotHeight() {
+      return 184;
     },
 
     topBarGuideStyle(colIndex) {
@@ -639,7 +654,7 @@ export function createOverlayAdmin() {
         type:'court', court_id:String(cid), visible:true, x, y, w,
         zone:opts.zone||'free', show_logo:opts.logo||false,
         font_size:opts.fs||17, bg_opacity:0.95, logo_size:60,
-        label_text:opts.label||(opts.noLabel?'':'KORT '+cid),
+        label_text:opts.label||(opts.noLabel?'':'COURT '+cid),
         label_position:opts.labelPos||'above',
         label_gap:4, label_bg_opacity:0.85, label_font_size:opts.lfs||14,
       });
@@ -838,7 +853,7 @@ export function createOverlayAdmin() {
         elements: [
           { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 460, zone: 'free',
             show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
-            label_text: 'KORT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
+            label_text: 'COURT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
         ],
       };
       this.currentOverlayId = newId;
@@ -885,7 +900,7 @@ export function createOverlayAdmin() {
           bg_opacity: 0.95,
           logo_size: 60,
           zone: 'free',
-          label_text: 'KORT ' + defaultCourtId,
+          label_text: 'COURT ' + defaultCourtId,
           label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14,
         });
       } else {
@@ -1045,7 +1060,6 @@ export function createOverlayAdmin() {
       const pA = court.A || {}, pB = court.B || {};
       const active = court.match_status?.active || false;
       const curSet = court.current_set || 1;
-      const logoSize = el.logo_size || 60;
       const bgOpacity = el.bg_opacity != null ? el.bg_opacity : 0.95;
       const hasSetDetail = Array.isArray(court.sets_detail) && court.sets_detail.length > 0;
       const regularSetWins = (() => {
@@ -1073,130 +1087,96 @@ export function createOverlayAdmin() {
         if (active && setIdx > curSet) return 0;
         return playerState['set' + setIdx] || 0;
       };
-      const hasThirdSetScore = readSetValue(pA, 3) > 0 || readSetValue(pB, 3) > 0;
-      const visibleSetCount = active
-        ? (isSuperTB ? 2 : Math.max(2, Math.min(3, curSet)))
-        : (hasThirdSetScore ? 3 : 2);
-      const sets = [];
-      for (let s = 1; s <= 3; s++) {
-        const a = readSetValue(pA, s), b = readSetValue(pB, s);
-        if (s <= visibleSetCount || a > 0 || b > 0) sets.push({ idx: s, a: a || 0, b: b || 0 });
+      const completed = [];
+      if (hasSetDetail) {
+        court.sets_detail.forEach((d) => {
+          if (d?.stb) return;
+          const sup = tbSuperscripts(d);
+          completed.push({ a: Number(d.p1 || 0), b: Number(d.p2 || 0), supA: sup.a, supB: sup.b });
+        });
+      } else {
+        const lastCompleted = active ? (curSet - 1) : 3;
+        for (let s = 1; s <= lastCompleted && s <= 3; s++) {
+          const a = Number(readSetValue(pA, s) || 0);
+          const b = Number(readSetValue(pB, s) || 0);
+          if (!active && a === 0 && b === 0) continue;
+          completed.push({ a, b, supA: '', supB: '' });
+        }
       }
-      // Always show at least 2 set columns
-      while (sets.length < 2) sets.push({ idx: sets.length + 1, a: 0, b: 0 });
+      const liveGames = (active && !isSuperTB)
+        ? { a: Number(readSetValue(pA, curSet) || 0), b: Number(readSetValue(pB, curSet) || 0) }
+        : null;
       const isTie = court.tie?.visible || false;
-      const ptA = isTie ? (court.tie?.A || 0) : (pA.points || '0');
-      const ptB = isTie ? (court.tie?.B || 0) : (pB.points || '0');
-      const tbCls = (isTie || isSuperTB) ? ' is-tiebreak' : '';
+      const ptA = active ? ((isTie || isSuperTB) ? (court.tie?.A || 0) : (pA.points || '0')) : '\u2014';
+      const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';
+      const tbOn = active && (isTie || isSuperTB);
       const logo = this.overlayBrandingLogo();
-      const showLogo = el.show_logo;
-      const inactiveClass = active ? '' : 'match-inactive';
+      const showLogo = el.show_logo !== false;
+      const inactiveClass = active ? '' : ' match-inactive';
+      const meta = court.history_meta || {};
+      const cat = overlayCategoryLabel(meta.category);
+      const phase = overlayPhaseLabel(meta.phase);
+      const metaParts = [cat, phase].filter(Boolean).join(' · ');
+      const showHeaderCourt = (el.label_position || 'above') !== 'none';
+      const courtName = showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '';
+      const timeStr = active ? (calcMatchTime(court) || '') : '';
+      const colCount = completed.length + (liveGames ? 1 : 0);
+      const gridCols = '52px 1fr repeat(' + Math.max(colCount, 0) + ', minmax(36px, 64px)) minmax(56px, 96px)';
 
-      // Grid template: player + points + N sets
-      const gridCols = 'grid-template-columns:1fr auto repeat(' + sets.length + ', auto);';
-
-      function pRow(p, serveKey, sideClass) {
+      const pRow = (p, serveKey, sideClass) => {
         const isServing = court.serve === serveKey;
-        let flagHtml = flagSpans(p);
-        const serveHtml = isServing ? '<span class="sb-serve"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve" style="width:16px;height:16px;"></span>' : '';
+        const flagHtml = flagSpans(p) || '<span class="sb-flag"></span>';
         const dName = p.surname || p.full_name || '\u2014';
         const isTeam = String(dName).includes(' / ');
         const shown = isTeam ? this._abbreviateName(dName) : dName;
         const teamClass = isTeam ? ' is-team' : '';
-        const playerCell = '<div class="sb-player-cell">' + flagHtml
-          + '<span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
-          + serveHtml + '</div>';
-
-        // Points cell
-        const ptsVal = serveKey === 'A' ? ptA : ptB;
-        const ptsCell = active
-          ? '<div class="sb-metric pts' + tbCls + '">' + ptsVal + '</div>'
-          : '<div class="sb-metric pts">\u2014</div>';
-
-        // Set cells
-        const setCells = sets.map(s => {
-          const val = serveKey === 'A' ? s.a : s.b;
-          const activeCls = s.idx === curSet ? ' is-active' : '';
-          return '<div class="sb-metric set' + activeCls + '">' + val + '</div>';
+        let setHtml = completed.map((c) => {
+          const val = serveKey === 'A' ? c.a : c.b;
+          const sup = serveKey === 'A' ? c.supA : c.supB;
+          return setCellHtml(val, sup, 'is-done');
         }).join('');
-
-        return '<div class="sb-row ' + sideClass + '" style="' + gridCols + '">'
-          + playerCell + ptsCell + setCells + '</div>';
-      }
-
-      let logoHtml = '';
-      if (showLogo) {
-        if (logo) {
-          logoHtml = '<div class="sb-logo"><img src="' + logo + '" alt=""></div>';
-        } else {
-          logoHtml = '<div class="sb-logo"><div class="sb-logo-ph">\uD83C\uDFBE</div></div>';
+        if (liveGames) {
+          setHtml += setCellHtml(serveKey === 'A' ? liveGames.a : liveGames.b, '', 'is-live');
         }
-      }
+        const ptsVal = serveKey === 'A' ? ptA : ptB;
+        return '<div class="sb-tv-row ' + sideClass + '">'
+          + '<div class="sb-tv-flag">' + flagHtml + '</div>'
+          + '<div class="sb-tv-player"><span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
+          + '<span class="sb-tv-serve' + (isServing ? ' is-on' : '') + '">' + SERVE_SVG + '</span></div>'
+          + setHtml
+          + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + '">' + ptsVal + '</div>'
+          + '</div>';
+      };
 
-      // Match time bar
-      let timeHtml = '';
-      if (active && court.match_time) {
-        const mt = court.match_time;
-        let secs = mt.seconds || 0;
-        if (mt.running && mt.resume_ts) secs += (Date.now() / 1000 - mt.resume_ts);
-        secs += (mt.offset_seconds || 0);
-        secs = Math.max(0, Math.floor(secs));
-        const hh = String(Math.floor(secs / 3600)).padStart(2, '0');
-        const mm = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
-        timeHtml = '<div class="sb-time-bar"><span class="time-icon">&#9201;</span> ' + hh + ':' + mm + '</div>';
-      }
+      const logoHtml = (showLogo && logo)
+        ? '<div class="sb-tv-logo"><img src="' + logo + '" alt=""></div>'
+        : '<div class="sb-tv-logo">&#127934;</div>';
 
-      const hFill = el.h ? ' h-fill' : '';
+      const tbHtml = tbOn
+        ? '<span class="sb-tv-tb">' + (isSuperTB ? 'Super tie-break' : 'Tie-break') + '</span>'
+        : '';
+      const clockHtml = timeStr ? '<span class="sb-tv-clock">' + timeStr + '</span>' : '';
       const opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
-      return '<div class="sb-wrap ' + inactiveClass + hFill + '">'
-        + logoHtml
-        + '<div style="flex:1;min-width:0;">'
-        + '<div class="sb-table" style="' + opacityStyle + '">'
+
+      return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';">'
+        + '<div class="sb-tv-card">'
+        + '<div class="sb-tv-header">' + logoHtml
+        + '<span class="sb-tv-meta">' + metaParts + '</span>'
+        + tbHtml
+        + (courtName ? '<span class="sb-tv-court">' + courtName + '</span>' : '')
+        + clockHtml + '</div>'
+        + '<div class="sb-tv-rows">'
         + pRow(pA, 'A', 'side-a')
         + pRow(pB, 'B', 'side-b')
-        + '</div>' + timeHtml + '</div></div>';
+        + '</div></div></div>';
     },
 
-    // Calculate match time string (mirrors overlay.html calcMatchTime)
     _calcMatchTime(court) {
-      if (!court || !court.match_status?.active || !court.match_time) return null;
-      const mt = court.match_time;
-      let secs = mt.seconds || 0;
-      if (mt.running && mt.resume_ts) secs += (Date.now() / 1000 - mt.resume_ts);
-      secs += (mt.offset_seconds || 0);
-      secs = Math.max(0, Math.floor(secs));
-      const hh = String(Math.floor(secs / 3600)).padStart(2, '0');
-      const mm = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
-      return hh + ':' + mm;
+      return calcMatchTime(court);
     },
 
-      // Render full court element with label, wrapped in overlay-container (matches OBS overlay)
       renderCourtElement(el) {
-     const sb = this.renderLiveScoreboard(el);
-     const hasH = !!el.h;
-     const pos = el.label_position || 'above';
-     const showLabel = el.label_text && pos !== 'none';
-
-     // Build label with inline time (matching OBS overlay)
-     let label = '';
-     if (showLabel) {
-       const bg = 'rgba(0,0,0,' + (el.label_bg_opacity != null ? el.label_bg_opacity : 0.7) + ')';
-       const fs = el.label_font_size || 14;
-       const belowCls = pos === 'below' ? ' label-below' : '';
-       const court = this.resolveOverlayCourtData(el.court_id);
-       const timeStr = this._calcMatchTime(court);
-       const timeHtml = timeStr ? '<span class="label-sep">|</span><span class="label-time">⏱ ' + timeStr + '</span>' : '';
-       label = '<div class="sb-label-bar' + belowCls + '" style="background:' + bg + ';font-size:' + fs + 'px;">'
-         + '<span class="label-text">' + el.label_text + '</span>' + timeHtml + '</div>';
-     }
-
-     // Wrap in overlay-container (unified dark bg, matching OBS)
-     if (hasH) {
-       const sbW = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">' + sb + '</div>';
-       return '<div class="overlay-container" style="height:100%;display:flex;flex-direction:column;">'
-         + (pos === 'above' ? label + sbW : sbW + label) + '</div>';
-     }
-     return '<div class="overlay-container">' + (pos === 'above' ? label + sb : sb + label) + '</div>';
+        return this.renderLiveScoreboard(el);
       },
 
       // Auto-scale long player names in preview

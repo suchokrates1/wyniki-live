@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tennis Score Overlay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Chivo+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', 'Arial', sans-serif;
+            font-family: 'Chivo', system-ui, sans-serif;
             background: transparent;
             overflow: hidden;
             color: white;
@@ -34,189 +37,142 @@
             filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
         }
 
-        /* ---- Unified overlay container ---- */
-        .overlay-container {
-            display: flex; flex-direction: column;
-            background: linear-gradient(180deg, #1d1d1d 0%, #090909 100%);
-            border-radius: 14px; overflow: hidden;
-            box-shadow: 0 12px 24px rgba(0,0,0,0.35);
-            border: 1px solid rgba(0,0,0,0.8);
-        }
-
-        /* ---- Court label bar ---- */
-        .court-label-bar {
-            display: flex; align-items: center;
-            font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.1em; padding: 6px 16px;
-            white-space: nowrap; color: white;
-        }
-        .court-label-bar .label-half {
-            flex: 1; text-align: center;
-        }
-        /* Inside unified container: label has subtle bg, no separate rounding */
-        .overlay-container .court-label-bar {
-            background: rgba(255,255,255,0.06);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            border-radius: 0; margin: 0;
-        }
-        .overlay-container .court-label-bar .label-text {
-            flex: 0 0 auto;
-        }
-        .overlay-container .court-label-bar .label-sep {
-            margin: 0 10px; opacity: 0.3; font-weight: 400;
-        }
-        .overlay-container .court-label-bar .label-time {
-            flex: 0 0 auto;
-        }
-
-        /* ---- Dark grid scoreboard (matches main page) ---- */
-        .sb-wrap {
-            display: flex; align-items: stretch; gap: 10px;
-            transition: opacity 0.5s ease;
-        }
-        .sb-wrap.match-inactive .score-table { opacity: 0.4; }
-
-        /* Height fill (when H is set) */
         .element-wrapper.has-h { display: flex; flex-direction: column; }
-        .sb-wrap.h-fill { flex: 1; min-height: 0; }
-        .sb-wrap.h-fill .score-table { flex: 1; grid-template-rows: 1fr 1fr; }
 
-        /* Logo area (optional, left of table) – auto-matches scoreboard height, keeps square */
-        .logo-area {
-            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-            overflow: hidden; border-radius: 8px;
-            align-self: stretch; aspect-ratio: 1;
+        .sb-tv { width: 100%; height: auto; container-type: inline-size; }
+        .element-wrapper.has-h .sb-tv { height: 100%; }
+        .sb-tv.match-inactive { opacity: 0.45; }
+        .sb-tv-card {
+            position: relative; overflow: hidden; height: 100%;
+            display: flex; flex-direction: column;
+            border-radius: 6px;
+            box-shadow: 0 26px 60px rgba(0,0,0,.55);
         }
-        .logo-area img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
-        .logo-ph {
+        .sb-tv-header {
+            display: flex; align-items: center; gap: 14px;
+            height: 52px; flex-shrink: 0; padding: 0 16px;
+            background: linear-gradient(90deg, #041519 0%, #06222B 100%);
+            border-bottom: 1px solid rgba(255,212,0,.35);
+        }
+        .sb-tv-logo {
+            width: 34px; height: 34px; border-radius: 4px; flex-shrink: 0;
+            background: rgba(255,255,255,.1);
             display: flex; align-items: center; justify-content: center;
-            width: 100%; height: 100%; background: rgba(255,255,255,0.1);
-            border-radius: 8px; font-size: 28px;
+            overflow: hidden; font-size: 19px;
         }
-
-        /* Score grid table */
-        .score-table {
-            flex: 1; min-width: 0;
-            display: grid; gap: 0;
-            border-radius: 14px; overflow: hidden;
-            background: linear-gradient(180deg, #1d1d1d 0%, #090909 100%);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.35);
-            border: 1px solid rgba(0,0,0,0.8);
+        .sb-tv-logo img { width: 100%; height: 100%; object-fit: cover; }
+        .sb-tv-meta {
+            flex: 1 1 auto; min-width: 0;
+            font-size: 15px; font-weight: 700; letter-spacing: .08em;
+            color: rgba(255,255,255,.68); text-transform: uppercase;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        /* Inside unified container: score-table shares container bg */
-        .overlay-container .score-table {
-            border-radius: 0; box-shadow: none; border: none;
-            background: transparent;
+        .sb-tv-tb {
+            flex-shrink: 0; font-size: 13px; font-weight: 900; letter-spacing: .16em;
+            color: #06222B; background: #FFD400; padding: 4px 10px; border-radius: 3px;
+            text-transform: uppercase; white-space: nowrap;
         }
-        /* Logo inside unified container */
-        .overlay-container .sb-wrap { gap: 0; }
-        .overlay-container .logo-area {
-            border-radius: 0; margin: 0;
+        .sb-tv-court {
+            flex: 0 1 auto; min-width: 0;
+            font-size: 15px; font-weight: 700; letter-spacing: .1em;
+            color: #fff; text-transform: uppercase;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .score-row {
-            display: grid; align-items: stretch; color: #fdfdfd;
+        .sb-tv-clock {
+            flex-shrink: 0; font-family: 'Chivo Mono', monospace;
+            font-size: 15px; font-weight: 700; color: #FFD400; letter-spacing: .04em;
         }
-        .score-row + .score-row {
-            border-top: 1px solid rgba(255,255,255,0.08);
+        .sb-tv-rows { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        .sb-tv-row {
+            display: grid; align-items: stretch;
+            grid-template-columns: var(--sb-cols);
+            flex: 1; min-height: 66px;
+            color: #fff;
         }
-
-        /* Player cell (left side) */
-        .player-cell {
-            display: flex; align-items: center; gap: 8px;
-            padding: 4px 10px;
-            background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0) 100%);
-            font-size: 18px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
-            border-right: 1px solid rgba(0,0,0,0.65);
-            text-shadow: 0 1px 0 rgba(0,0,0,0.6);
-            white-space: nowrap; overflow: hidden;
+        .sb-tv-row.side-a { background: linear-gradient(90deg, #0B2C36 0%, #072530 100%); }
+        .sb-tv-row.side-b {
+            background: linear-gradient(90deg, #082530 0%, #05202a 100%);
+            border-top: 1px solid rgba(255,255,255,.07);
         }
-        .score-row.side-b .player-cell {
-            background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 100%);
+        .sb-tv-flag {
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,.25);
         }
-        .player-cell .player-name {
-            flex: 1; min-width: 0; overflow: hidden; color: #fefefe;
-            white-space: nowrap;
-        }
-        .player-cell .player-name.is-team {
-            white-space: normal;
-            line-height: 1.15;
-        }
-        .player-flags {
-            display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+        .player-flags { display: inline-flex; align-items: center; gap: 3px; }
+        .player-flag {
+            width: 40px; height: 26px; flex-shrink: 0; border-radius: 2px;
+            background: #16303a; background-size: cover; background-position: center;
+            box-shadow: 0 0 0 1px rgba(255,255,255,.3);
         }
         .player-flags .player-flag { width: 24px; height: 16px; }
-
-        /* Flag */
-        .player-flag {
-            width: 32px; height: 20px; flex-shrink: 0;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: 10px; font-weight: 700; border-radius: 3px;
-            background: #2f2f2f; color: #111; text-transform: uppercase;
-            background-size: cover; background-position: center;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.45);
+        .sb-tv-player {
+            display: flex; align-items: center; gap: 12px;
+            padding: 0 20px; min-width: 0;
         }
-        .player-flag.has-image { color: transparent; }
-
-        /* Serve indicator */
-        .serve-indicator {
-            display: inline-flex; align-items: center; justify-content: center;
-            flex-shrink: 0; margin-left: auto;
-            filter: drop-shadow(0 0 4px rgba(53,196,106,.6));
-            animation: serve-pulse 2s ease-in-out infinite;
+        .player-name {
+            font-size: 30px; font-weight: 900; letter-spacing: .01em;
+            color: #fff; text-transform: uppercase;
+            white-space: nowrap; overflow: hidden; min-width: 0; flex: 1;
         }
-        .serve-indicator img {
-            width: 18px; height: 18px;
+        .player-name.is-team { white-space: normal; line-height: 1.15; }
+        .sb-tv-serve {
+            display: block; width: 26px; height: 26px; flex: 0 0 26px; margin-left: auto;
+            filter: drop-shadow(0 0 6px rgba(198,233,83,.5));
+            opacity: 0; transition: opacity .3s ease;
         }
-        @keyframes serve-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50%      { opacity: .7; transform: scale(.88); }
-        }
-
-        /* Metric cells (score columns) */
-        .metric-cell {
+        .sb-tv-serve.is-on { opacity: 1; animation: servepulse 2.4s ease-in-out infinite; }
+        .sb-tv-serve svg { width: 100%; height: 100%; display: block; }
+        .sb-tv-set, .sb-tv-pts {
             display: flex; align-items: center; justify-content: center;
-            padding: 4px 0; font-size: 28px; font-weight: 700;
-            letter-spacing: 0.5px;
-            text-shadow: 0 1px 0 rgba(0,0,0,0.45);
-            transition: background-color 0.3s ease, color 0.3s ease;
-            min-width: 1.5em;
+            border-left: 1px solid rgba(0,0,0,.35);
+            font-family: 'Chivo Mono', monospace; font-weight: 700; line-height: 1;
         }
-        .metric-cell + .metric-cell {
-            border-left: 1px solid rgba(0,0,0,0.6);
+        .sb-tv-set { font-size: 29px; }
+        .sb-tv-set.is-done { color: rgba(255,255,255,.5); background: rgba(255,255,255,.04); }
+        .sb-tv-set.is-live { color: #fff; background: linear-gradient(180deg, #ff7a1c 0%, #d64900 100%); }
+        .sb-tv-set.is-live.is-gameflash-a { animation: gameflash-a .7s ease; }
+        .sb-tv-set.is-live.is-gameflash-b { animation: gameflash-b .7s ease; }
+        .sb-tv-set.is-colin-a { animation: colin-a .55s ease; }
+        .sb-tv-set.is-colin-b { animation: colin-b .55s ease; }
+        .sb-tv-sup {
+            font-size: 15px; line-height: 1; position: relative; top: -11px; opacity: .85; margin-left: 2px;
         }
+        .sb-tv-pts { font-size: 34px; color: #fff; background: #0F3A47; }
+        .sb-tv-pts.is-tiebreak { background: #FFD400; color: #06222B; }
+        .sb-tv-pts.is-ptflash-a { animation: ptflash-a .5s ease; }
+        .sb-tv-pts.is-ptflash-b { animation: ptflash-b .5s ease; }
+        .sb-tv-wipe {
+            position: absolute; inset: 0; pointer-events: none;
+            background: linear-gradient(100deg, rgba(255,212,0,0) 0%, rgba(255,212,0,.5) 45%, rgba(255,255,255,.75) 55%, rgba(255,212,0,0) 100%);
+            opacity: 0;
+        }
+        .sb-tv-wipe.is-setwipe-a { animation: setwipe-a 1.1s ease; }
+        .sb-tv-wipe.is-setwipe-b { animation: setwipe-b 1.1s ease; }
 
-        /* Points column - dark */
-        .metric-cell.pts {
-            background: linear-gradient(180deg, #141414 0%, #050505 100%);
-            color: #fafafa;
-            min-width: 2.2em;
-        }
-        /* Points in tiebreak - golden */
-        .metric-cell.pts.is-tiebreak {
-            background: linear-gradient(180deg, #ffe6a7 0%, #f3c34a 100%);
-            color: #261200; text-shadow: none;
-        }
-        /* Set scores - orange */
-        .metric-cell.set {
-            background: linear-gradient(180deg, #ff7a1c 0%, #d64900 100%);
-            color: #fff9f2;
-        }
-        /* Active set - glowing border */
-        .metric-cell.set.is-active {
-            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35);
-        }
+        @keyframes ptflash-a { 0% { background-color: #FFD400; color: #06222B; } 100% { background-color: #0F3A47; color: #fff; } }
+        @keyframes ptflash-b { 0% { background-color: #FFD400; color: #06222B; } 100% { background-color: #0F3A47; color: #fff; } }
+        @keyframes gameflash-a { 0% { transform: scale(1); box-shadow: inset 0 0 0 3px #FFD400; } 40% { transform: scale(1.12); } 100% { transform: scale(1); box-shadow: inset 0 0 0 0 rgba(255,212,0,0); } }
+        @keyframes gameflash-b { 0% { transform: scale(1); box-shadow: inset 0 0 0 3px #FFD400; } 40% { transform: scale(1.12); } 100% { transform: scale(1); box-shadow: inset 0 0 0 0 rgba(255,212,0,0); } }
+        @keyframes setwipe-a { 0% { transform: translateX(-100%); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateX(105%); opacity: 0; } }
+        @keyframes setwipe-b { 0% { transform: translateX(-100%); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateX(105%); opacity: 0; } }
+        @keyframes servepulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .72; transform: scale(.88); } }
+        @keyframes colin-a { 0% { opacity: 0; transform: translateX(-26px); } 60% { opacity: 1; } 100% { opacity: 1; transform: translateX(0); } }
+        @keyframes colin-b { 0% { opacity: 0; transform: translateX(-26px); } 60% { opacity: 1; } 100% { opacity: 1; transform: translateX(0); } }
 
-        /* ---- Match time bar ---- */
-        .match-time-bar {
-            display: flex; align-items: center; justify-content: center;
-            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-            color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 600;
-            letter-spacing: 1px; padding: 2px 0;
-            border-radius: 0 0 10px 10px; margin-top: -1px;
-            font-family: 'Courier New', monospace;
+        @container (max-width: 520px) {
+            .sb-tv-header { height: 36px; gap: 8px; padding: 0 10px; }
+            .sb-tv-logo { width: 24px; height: 24px; font-size: 14px; }
+            .sb-tv-meta, .sb-tv-court { font-size: 11px; }
+            .sb-tv-clock { font-size: 12px; }
+            .sb-tv-tb { font-size: 10px; padding: 2px 6px; }
+            .sb-tv-player { padding: 0 10px; gap: 8px; }
+            .player-name { font-size: 18px; }
+            .sb-tv-serve { width: 18px; height: 18px; flex-basis: 18px; }
+            .sb-tv-set { font-size: 20px; }
+            .sb-tv-pts { font-size: 22px; }
+            .sb-tv-sup { font-size: 11px; top: -7px; }
+            .player-flag { width: 28px; height: 18px; }
         }
-        .match-time-bar .time-icon { opacity: 0.5; margin-right: 4px; }
-        .label-time { font-family: 'Courier New', monospace; }
 
         /* ---- Stats panel ---- */
         .stats-panel {
@@ -262,13 +218,15 @@
 
     function codeToFlag(code) {
         if (!code || code.length < 2) return '';
-        return 'https://flagcdn.com/w40/' + code.toLowerCase().slice(0, 2) + '.png';
+        return 'https://flagcdn.com/w80/' + code.toLowerCase().slice(0, 2) + '.png';
     }
     let courts = {};
     let settings = { tournament_logo: null, tournament_name: '', overlays: {} };
     let activeTournaments = [];
     let activeTournament = null;
     let eventSource = null;
+    let scoreAnim = {};
+    const SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
 
     function getPreset() {
         return settings.overlays?.[overlayId] || { name: '', auto_hide: false, elements: [] };
@@ -381,13 +339,17 @@
     function calcMatchTime(court) {
         if (!court || !court.match_status?.active || !court.match_time) return null;
         var mt = court.match_time;
-        var secs = toFiniteSeconds(mt.seconds);
-        if (secs == null) {
+        var secs = null;
+        var startedTs = parseTimestampSeconds(mt.started_ts);
+        if (mt.running && startedTs != null) {
+            secs = Math.max(0, (Date.now() / 1000) - startedTs);
+        } else if (mt.running) {
             secs = toFiniteSeconds(mt.offset_seconds) || 0;
-            if (mt.running) {
-                var resumeTs = parseTimestampSeconds(mt.resume_ts);
-                if (resumeTs != null) secs += Math.max(0, (Date.now() / 1000) - resumeTs);
-            }
+            var resumeTs = parseTimestampSeconds(mt.resume_ts);
+            if (resumeTs != null) secs += Math.max(0, (Date.now() / 1000) - resumeTs);
+        } else {
+            secs = toFiniteSeconds(mt.seconds);
+            if (secs == null || secs <= 0) return null;
         }
         secs = Math.max(0, Math.floor(secs));
         var hh = String(Math.floor(secs/3600)).padStart(2,'0');
@@ -395,15 +357,104 @@
         return hh+':'+mm;
     }
 
+    function overlayCourtLabel(labelText, courtId) {
+        var raw = String(labelText || '').trim();
+        if (/^main$/i.test(raw)) return 'MAIN';
+        var fromId = String(courtId || '').match(/(?:^|-)(\d+)$/);
+        var ordinalFromId = fromId ? fromId[1] : '';
+        if (!raw) return ordinalFromId ? 'COURT ' + ordinalFromId : '';
+        var afterDot = raw.split('•').pop().trim();
+        var stripped = afterDot.replace(/^(court|kort|platz|campo|cancha|kortas)\s+/i, '').trim();
+        if (/^\d+$/.test(stripped)) return 'COURT ' + stripped;
+        return afterDot.replace(/^(court|kort|platz|campo|cancha|kortas)\s+/i, 'COURT ');
+    }
+
+    function overlayCategoryLabel(category) {
+        var text = String(category || '').trim();
+        if (!text) return '';
+        if (text.indexOf(' — ') >= 0) text = text.split(' — ')[0].trim();
+        return text
+            .replace(/Kobiety/gi, 'Women')
+            .replace(/Mężczyźni/gi, 'Men')
+            .replace(/Mezczyzni/gi, 'Men')
+            .replace(/\bWoman\b/gi, 'Women')
+            .replace(/\bMan\b/gi, 'Men')
+            .replace(/\bDebel\b/gi, 'Doubles')
+            .replace(/\bDeble\b/gi, 'Doubles')
+            .replace(/\bMieszane\b/gi, 'Mixed');
+    }
+
+    function overlayPhaseLabel(phase) {
+        var text = String(phase || '').trim();
+        if (!text) return '';
+        var suffix = text.indexOf(' — ') >= 0 ? text.split(' — ').pop().trim() : text;
+        var lower = suffix.toLowerCase();
+        if (/rewan|rematch/.test(lower)) return 'GROUP REMATCH';
+        if (lower === 'grupowa' || /group stage|^group$|faza grupowa/.test(lower)) return 'GROUP';
+        if (/1\s*\/\s*8|r16|round of 16|ósem/.test(lower)) return '1/8';
+        if (/1\s*\/\s*4|ćwierć|cwierc|quarter/.test(lower)) return '1/4';
+        if (/1\s*\/\s*2|półfina|polfina|semif/.test(lower)) return '1/2';
+        if (/3\.\s*miejsce|3rd|third place|bronze/.test(lower)) return '3RD PLACE';
+        if (/pucharowa|knockout/.test(lower)) return 'KNOCKOUT';
+        if (/(?:^|\s)fina[lł]|final/.test(lower) && !/semi|pół|1\s*\/\s*2/.test(lower)) return 'FINAL';
+        return suffix;
+    }
+
+    function tbSuperscripts(setInfo) {
+        if (!setInfo || setInfo.tb == null || setInfo.stb) return { a: '', b: '' };
+        var a = Number(setInfo.p1 || 0), b = Number(setInfo.p2 || 0);
+        if (a === b) return { a: '', b: '' };
+        var tb = String(setInfo.tb);
+        return a < b ? { a: tb, b: '' } : { a: '', b: tb };
+    }
+
+    function setCellHtml(val, sup, kind, flashCls) {
+        var supHtml = sup ? '<span class="sb-tv-sup">' + sup + '</span>' : '';
+        var cls = 'sb-tv-set ' + kind + (flashCls ? ' ' + flashCls : '');
+        return '<div class="' + cls + '"><span>' + val + '</span>' + supHtml + '</div>';
+    }
+
+    function takeScoreAnim(cid, sig) {
+        var prev = scoreAnim[cid];
+        if (!prev) {
+            scoreAnim[cid] = {
+                ptsA: sig.ptsA, ptsB: sig.ptsB, gamesA: sig.gamesA, gamesB: sig.gamesB, sets: sig.sets,
+                tickPtsA: 0, tickPtsB: 0, tickGameA: 0, tickGameB: 0, tickSet: 0,
+            };
+            return { tickPtsA: 0, tickPtsB: 0, tickGameA: 0, tickGameB: 0, tickSet: 0, just: {} };
+        }
+        var just = {
+            ptsA: sig.ptsA !== prev.ptsA,
+            ptsB: sig.ptsB !== prev.ptsB,
+            gamesA: sig.gamesA !== prev.gamesA,
+            gamesB: sig.gamesB !== prev.gamesB,
+            sets: sig.sets !== prev.sets,
+        };
+        var next = {
+            ptsA: sig.ptsA, ptsB: sig.ptsB, gamesA: sig.gamesA, gamesB: sig.gamesB, sets: sig.sets,
+            tickPtsA: prev.tickPtsA + (just.ptsA ? 1 : 0),
+            tickPtsB: prev.tickPtsB + (just.ptsB ? 1 : 0),
+            tickGameA: prev.tickGameA + (just.gamesA ? 1 : 0),
+            tickGameB: prev.tickGameB + (just.gamesB ? 1 : 0),
+            tickSet: prev.tickSet + (just.sets ? 1 : 0),
+        };
+        scoreAnim[cid] = next;
+        return { tickPtsA: next.tickPtsA, tickPtsB: next.tickPtsB, tickGameA: next.tickGameA, tickGameB: next.tickGameB, tickSet: next.tickSet, just: just };
+    }
+
+    function flashCls(prefix, tick, changed) {
+        if (!changed || !tick) return '';
+        return 'is-' + prefix + '-' + (tick % 2 === 0 ? 'a' : 'b');
+    }
+
     function renderScoreboard(el) {
         const cid = el.court_id;
         const court = resolveCourtState(cid);
         const pA = court.A || {}, pB = court.B || {};
         const active = court.match_status?.active || false;
-        const inactiveClass = active ? '' : 'match-inactive';
+        const inactiveClass = active ? '' : ' match-inactive';
         const curSet = court.current_set || 1;
         const bgOpacity = el.bg_opacity != null ? el.bg_opacity : 0.95;
-        const logoSize = el.logo_size || 60;
         const hasSetDetail = Array.isArray(court.sets_detail) && court.sets_detail.length > 0;
         const regularSetWins = (function() {
             const wins = { A: 0, B: 0 };
@@ -425,77 +476,111 @@
             }
             return wins;
         })();
-        const isSuperTB = Number(curSet) === 3 && regularSetWins.A === 1 && regularSetWins.B === 1;
+        const isSuperTB = !!court.super_tiebreak_active || (Number(curSet) === 3 && regularSetWins.A === 1 && regularSetWins.B === 1);
         const readSetValue = (playerState, setIdx) => {
             if (active && setIdx > curSet) return 0;
             return playerState['set'+setIdx] || 0;
         };
-        const hasThirdSetScore = readSetValue(pA, 3) > 0 || readSetValue(pB, 3) > 0;
-        // Always reserve ≥2 set columns so top-bar slots don't expand mid-match
-        const visibleSetCount = active
-            ? (isSuperTB ? 2 : Math.max(2, Math.min(3, curSet)))
-            : (hasThirdSetScore ? 3 : 2);
-        const sets = [];
-        for (let s = 1; s <= 3; s++) {
-            const a = readSetValue(pA, s), b = readSetValue(pB, s);
-            if (s <= visibleSetCount || a > 0 || b > 0) sets.push({ idx: s, a: a||0, b: b||0 });
-        }
-        while (sets.length < 2) sets.push({ idx: sets.length + 1, a: 0, b: 0 });
-        const isTie = court.tie?.visible || false;
-        const ptA = isTie ? (court.tie?.A||0) : (pA.points||'0');
-        const ptB = isTie ? (court.tie?.B||0) : (pB.points||'0');
-        const tbCls = (isTie || isSuperTB) ? ' is-tiebreak' : '';
-        const logo = getTournamentBranding().logo;
-        const showLogo = el.show_logo;
-
-        // Logo HTML (auto-sized to scoreboard height, square)
-        var logoHtml = '';
-        if (showLogo) {
-            if (logo) {
-                logoHtml = '<div class="logo-area"><img src="'+logo+'" alt=""></div>';
-            } else {
-                logoHtml = '<div class="logo-area"><div class="logo-ph">\uD83C\uDFBE</div></div>';
+        const completed = [];
+        if (hasSetDetail) {
+            court.sets_detail.forEach(function(d) {
+                if (d?.stb) return;
+                var sup = tbSuperscripts(d);
+                completed.push({ a: Number(d.p1 || 0), b: Number(d.p2 || 0), supA: sup.a, supB: sup.b });
+            });
+        } else {
+            var lastCompleted = active ? (curSet - 1) : 3;
+            for (var s = 1; s <= lastCompleted && s <= 3; s++) {
+                var a = Number(readSetValue(pA, s) || 0), b = Number(readSetValue(pB, s) || 0);
+                if (!active && a === 0 && b === 0) continue;
+                completed.push({ a: a, b: b, supA: '', supB: '' });
             }
         }
-
-        // Grid template: player-cell | points | set1 | set2 | [set3]
-        var nCols = 1 + 1 + sets.length; // player + points + sets
-        var gridCols = 'grid-template-columns: 1fr auto repeat('+sets.length+', auto);';
+        const liveGames = (active && !isSuperTB)
+            ? { a: Number(readSetValue(pA, curSet) || 0), b: Number(readSetValue(pB, curSet) || 0) }
+            : null;
+        const isTie = court.tie?.visible || false;
+        const ptA = active ? ((isTie || isSuperTB) ? (court.tie?.A || 0) : (pA.points || '0')) : '\u2014';
+        const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';
+        const tbOn = active && (isTie || isSuperTB);
+        const logo = getTournamentBranding().logo;
+        const showLogo = el.show_logo !== false;
+        const meta = court.history_meta || {};
+        const cat = overlayCategoryLabel(meta.category);
+        const phase = overlayPhaseLabel(meta.phase);
+        const metaParts = [cat, phase].filter(Boolean).join(' · ');
+        const showHeaderCourt = (el.label_position || 'above') !== 'none';
+        const courtName = showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '';
+        const timeStr = calcMatchTime(court) || '';
+        const colCount = completed.length + (liveGames ? 1 : 0);
+        const gridCols = '52px 1fr repeat(' + Math.max(colCount, 0) + ', minmax(36px, 64px)) minmax(56px, 96px)';
+        const anim = takeScoreAnim(cid, {
+            ptsA: String(ptA), ptsB: String(ptB),
+            gamesA: liveGames ? String(liveGames.a) : '',
+            gamesB: liveGames ? String(liveGames.b) : '',
+            sets: completed.map(function(c) { return c.a + '-' + c.b; }).join('|'),
+        });
+        const gameFlashA = flashCls('gameflash', anim.tickGameA, !!anim.just.gamesA);
+        const gameFlashB = flashCls('gameflash', anim.tickGameB, !!anim.just.gamesB);
+        const setIn = flashCls('colin', anim.tickSet, !!anim.just.sets);
+        const ptsFlashA = flashCls('ptflash', anim.tickPtsA, !!anim.just.ptsA);
+        const ptsFlashB = flashCls('ptflash', anim.tickPtsB, !!anim.just.ptsB);
+        const wipeCls = flashCls('setwipe', anim.tickSet, !!anim.just.sets);
 
         function pRow(p, serveKey, sideClass) {
             var isServing = court.serve === serveKey;
-            var flagHtml = flagSpans(p);
-            var serveHtml = isServing ? '<span class="serve-indicator"><img src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 36 36%27%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27%23C6E953%27/%3E%3Ccircle cx=%2718%27 cy=%2718%27 r=%2717%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 11c4 8 14 14 26 6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3Cpath d=%27M5 25c6-8 16-14 26-6%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E" alt="serve"></span>' : '';
-            var dName = p.full_name||p.surname||'\u2014';
+            var flagHtml = flagSpans(p) || '<span class="player-flag"></span>';
+            var dName = p.full_name || p.surname || '\u2014';
             var isTeam = String(dName).indexOf(' / ') !== -1;
             var shown = isTeam ? abbreviateName(dName) : dName;
             var teamClass = isTeam ? ' is-team' : '';
-            var playerCell = '<div class="player-cell">'+flagHtml
-                +'<span class="player-name'+teamClass+'" data-full="'+dName.replace(/"/g,'&quot;')+'">'+shown+'</span>'
-                +serveHtml+'</div>';
-
-            // Points cell
-            var ptsVal = serveKey === 'A' ? ptA : ptB;
-            var ptsCell = active ? '<div class="metric-cell pts'+tbCls+'">'+ptsVal+'</div>' : '<div class="metric-cell pts">\u2014</div>';
-
-            // Set cells
-            var setCells = sets.map(function(s) {
-                var val = serveKey === 'A' ? s.a : s.b;
-                var activeCls = s.idx === curSet ? ' is-active' : '';
-                return '<div class="metric-cell set'+activeCls+'">'+val+'</div>';
+            var serveCls = isServing ? ' is-on' : '';
+            var setHtml = completed.map(function(c, i) {
+                var val = serveKey === 'A' ? c.a : c.b;
+                var sup = serveKey === 'A' ? c.supA : c.supB;
+                var flash = (i === completed.length - 1) ? setIn : '';
+                return setCellHtml(val, sup, 'is-done', flash);
             }).join('');
-
-            return '<div class="score-row '+sideClass+'" style="'+gridCols+'">'+playerCell+ptsCell+setCells+'</div>';
+            if (liveGames) {
+                var liveVal = serveKey === 'A' ? liveGames.a : liveGames.b;
+                var liveFlash = serveKey === 'A' ? gameFlashA : gameFlashB;
+                setHtml += setCellHtml(liveVal, '', 'is-live', liveFlash);
+            }
+            var ptsVal = serveKey === 'A' ? ptA : ptB;
+            var ptsFlash = serveKey === 'A' ? ptsFlashA : ptsFlashB;
+            return '<div class="sb-tv-row ' + sideClass + '">'
+                + '<div class="sb-tv-flag">' + flagHtml + '</div>'
+                + '<div class="sb-tv-player"><span class="player-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
+                + '<span class="sb-tv-serve' + serveCls + '">' + SERVE_SVG + '</span></div>'
+                + setHtml
+                + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + (ptsFlash ? ' ' + ptsFlash : '') + '">' + ptsVal + '</div>'
+                + '</div>';
         }
 
-        var opacityStyle = bgOpacity < 1 ? 'opacity:'+bgOpacity+';' : '';
-        var hFill = el.h ? ' h-fill' : '';
-        return '<div class="sb-wrap '+inactiveClass+hFill+'">'
-            +logoHtml
-            +'<div class="score-table" style="'+opacityStyle+'">'
-            +pRow(pA, 'A', 'side-a')
-            +pRow(pB, 'B', 'side-b')
-            +'</div></div>';
+        var logoHtml = (showLogo && logo)
+            ? '<div class="sb-tv-logo"><img src="' + logo + '" alt=""></div>'
+            : '<div class="sb-tv-logo">&#127934;</div>';
+
+        var tbHtml = '';
+        if (tbOn) tbHtml = '<span class="sb-tv-tb">' + (isSuperTB ? 'Super tie-break' : 'Tie-break') + '</span>';
+        var clockHtml = timeStr
+            ? '<span class="sb-tv-clock" data-court="' + cid + '">' + timeStr + '</span>'
+            : '';
+        var opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
+
+        return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';">'
+            + '<div class="sb-tv-card">'
+            + '<div class="sb-tv-header">' + logoHtml
+            + '<span class="sb-tv-meta">' + metaParts + '</span>'
+            + tbHtml
+            + (courtName ? '<span class="sb-tv-court">' + courtName + '</span>' : '')
+            + clockHtml + '</div>'
+            + '<div class="sb-tv-rows">'
+            + pRow(pA, 'A', 'side-a')
+            + pRow(pB, 'B', 'side-b')
+            + '</div>'
+            + '<div class="sb-tv-wipe' + (wipeCls ? ' ' + wipeCls : '') + '"></div>'
+            + '</div></div>';
     }
 
     function _v(val, suffix) { return val != null ? val + (suffix||'') : '\u2014'; }
@@ -543,27 +628,8 @@
             +'</div>';
     }
 
-    function renderLabel(el) {
-        if (!el.label_text || el.label_position === 'none') return '';
-        var bg = 'rgba(0,0,0,'+(el.label_bg_opacity != null ? el.label_bg_opacity : 0.7)+')';
-        var fs = el.label_font_size || 14;
-        var gap = el.label_gap != null ? el.label_gap : 4;
-        var pos = el.label_position || 'above';
-        var marginProp = pos==='above' ? 'margin-bottom' : 'margin-top';
-        var radius = pos==='above' ? 'border-radius:6px 6px 0 0;' : 'border-radius:0 0 6px 6px;';
-        var court = resolveCourtState(el.court_id);
-        var timeStr = calcMatchTime(court);
-        var timeHtml = timeStr ? '<span class="label-sep">|</span><span class="label-time" data-court="'+el.court_id+'">&#9201; '+timeStr+'</span>' : '';
-        return '<div class="court-label-bar" style="background:'+bg+';font-size:'+fs+'px;'+marginProp+':'+gap+'px;'+radius+'color:white;"><span class="label-text">'+el.label_text+'</span>'+timeHtml+'</div>';
-    }
-
     function estimateTopSlotHeight(el) {
-        var labelPos = el.label_position || 'above';
-        var hasLabel = labelPos !== 'none' && String(el.label_text || '').trim().length > 0;
-        var labelFs = el.label_font_size || (el.zone === 'top' ? 12 : 14);
-        var labelGap = el.label_gap != null ? el.label_gap : 4;
-        var labelH = hasLabel ? (labelFs + 16 + labelGap) : 0;
-        return Math.ceil(labelH + 76);
+        return 184;
     }
 
     function renderWatermark(preset) {
@@ -628,18 +694,7 @@
             if (el.type === 'stats') {
                 return '<div class="element-wrapper '+hidden+hClass+'" style="'+style+'">'+renderStats(el)+'</div>';
             }
-            var pos = el.label_position || 'above';
-            var labelAbove = pos === 'above' ? renderLabel(el) : '';
-            var labelBelow = pos === 'below' ? renderLabel(el) : '';
-            // Wrap label + scoreboard in unified overlay-container
-            if (el.h) {
-                var sbWrap = '<div style="flex:1;min-height:0;display:flex;flex-direction:column;">'+renderScoreboard(el)+'</div>';
-                return '<div class="element-wrapper '+hidden+' has-h" style="'+style+'">'
-                    +'<div class="overlay-container" style="display:flex;flex-direction:column;height:100%;">'
-                    +labelAbove+sbWrap+labelBelow+'</div></div>';
-            }
-            return '<div class="element-wrapper '+hidden+'" style="'+style+'">'
-                +'<div class="overlay-container">'+labelAbove+renderScoreboard(el)+labelBelow+'</div></div>';
+            return '<div class="element-wrapper '+hidden+hClass+'" style="'+style+'">'+renderScoreboard(el)+'</div>';
         }).join('');
         html += renderWatermark(preset);
         document.getElementById('app').innerHTML =
@@ -780,15 +835,14 @@
             render();
             requestAnimationFrame(fitPlayerNames);
         }, SETTINGS_POLL_MS);
-        // Tick match timers every minute
         setInterval(function() {
-            document.querySelectorAll('.label-time').forEach(function(el) {
+            document.querySelectorAll('.sb-tv-clock').forEach(function(el) {
                 var cid = el.getAttribute('data-court');
                 var court = cid ? resolveCourtState(cid) : null;
                 var timeStr = calcMatchTime(court);
-                if (timeStr) el.innerHTML = '&#9201; '+timeStr;
+                if (timeStr) el.textContent = timeStr;
             });
-        }, 60000);
+        }, 1000);
         window.addEventListener('resize', function() { render(); requestAnimationFrame(fitPlayerNames); });
     }
     init();
