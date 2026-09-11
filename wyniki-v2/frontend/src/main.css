@@ -136,11 +136,11 @@ body {
 }
 .header-logo {
   display: block;
-  height: 42px;
+  height: 52px;
   width: auto;
 }
 @media (max-width: 640px) {
-  .header-logo { height: 32px; }
+  .header-logo { height: 38px; }
 }
 .header-actions {
   display: flex;
