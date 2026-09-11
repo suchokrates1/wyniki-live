@@ -59,8 +59,8 @@ export const OVERLAY_PREVIEW_MOCKS = [
     currentSet: 2,
     serve: 'A',
     clockSec: 47 * 60 + 12,
-    A: player('Suchodolski', { flag_code: 'PL', category: 'B2', points: '40', set1: 4, set2: 3, current_games: 3 }),
-    B: player('Thompson', { flag_code: 'GB', category: 'B2', points: '30', set1: 2, set2: 2, current_games: 2 }),
+    A: player('Dawid Suchodolski', { flag_code: 'PL', category: 'B2', points: '40', set1: 4, set2: 3, current_games: 3 }),
+    B: player('James Thompson', { flag_code: 'GB', category: 'B2', points: '30', set1: 2, set2: 2, current_games: 2 }),
     setsDetail: [{ p1: 4, p2: 2, tb: null, stb: false }],
   }),
   court({

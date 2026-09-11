@@ -6,7 +6,7 @@ test('preview mock fills four distinct TV boards', () => {
   const one = previewMockCourt('1');
   const three = previewMockCourt('3');
   assert.equal(one.match_status.active, true);
-  assert.equal(one.A.surname, 'Suchodolski');
+  assert.equal(one.A.surname, 'Dawid Suchodolski');
   assert.equal(one.serve, 'A');
   assert.equal(one.history_meta.phase, 'Ćwierćfinał');
   assert.equal(three.tie.visible, true);

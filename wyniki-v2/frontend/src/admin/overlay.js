@@ -1,4 +1,4 @@
-import { abbreviateCompetitorName } from '../shared/teamDisplay.js';
+import { abbreviateCompetitorName, lastNameToken, splitTeamDisplayName } from '../shared/teamDisplay.js';
 import { calcMatchTime } from '../shared/matchTime.js';
 import {
   overlayCategoryLabel,
@@ -13,18 +13,18 @@ function codeToFlag(code) {
 }
 
 function flagSpans(p) {
-  let html = '';
   const flagUrl = p.flag_url || (p.flag_code ? codeToFlag(p.flag_code) : '');
   const partnerUrl = p.flag_url_partner || (p.flag_code_partner ? codeToFlag(p.flag_code_partner) : '');
   const primary = String(p.flag_code || '').toUpperCase();
   const partner = String(p.flag_code_partner || '').toUpperCase();
-  if (flagUrl) {
-    html += '<span class="sb-flag" style="background-image:url(' + flagUrl + ')"></span>';
+  if (flagUrl && partnerUrl && partner && partner !== primary) {
+    return '<span class="flag-split">'
+      + '<span class="sb-flag is-a" style="background-image:url(' + flagUrl + ')"></span>'
+      + '<span class="sb-flag is-b" style="background-image:url(' + partnerUrl + ')"></span>'
+      + '</span>';
   }
-  if (partnerUrl && partner && partner !== primary) {
-    html += '<span class="sb-flag" style="background-image:url(' + partnerUrl + ')"></span>';
-  }
-  return html ? '<span class="player-flags">' + html + '</span>' : '';
+  if (flagUrl) return '<span class="sb-flag" style="background-image:url(' + flagUrl + ')"></span>';
+  return '';
 }
 
 export const VEST_MEDIA_LOGO_URL = '/vest-media-logo.png';
@@ -40,9 +40,86 @@ function tbSuperscripts(setInfo) {
   return a < b ? { a: tb, b: '' } : { a: '', b: tb };
 }
 
-function setCellHtml(val, sup, kind) {
+function lastNameOnly(name) {
+  const split = splitTeamDisplayName(name);
+  if (split) return lastNameToken(split[0]) + ' / ' + lastNameToken(split[1]);
+  return lastNameToken(name) || String(name || '');
+}
+
+function nameVariantsHtml(full, className) {
+  const esc = String(full).replace(/"/g, '&quot;');
+  return '<span class="' + className + '" data-full="' + esc + '">'
+    + '<span class="sb-name-full">' + full + '</span>'
+    + '<span class="sb-name-init">' + abbreviateCompetitorName(full) + '</span>'
+    + '<span class="sb-name-last">' + lastNameOnly(full) + '</span>'
+    + '</span>';
+}
+
+function setCellHtml(val, sup, kind, flashCls) {
   const supHtml = sup ? '<span class="sb-tv-sup">' + sup + '</span>' : '';
-  return '<div class="sb-tv-set ' + kind + '"><span>' + val + '</span>' + supHtml + '</div>';
+  const cls = 'sb-tv-set ' + kind + (flashCls ? ' ' + flashCls : '');
+  return '<div class="' + cls + '"><span>' + val + '</span>' + supHtml + '</div>';
+}
+
+const previewScoreAnim = {};
+const previewScoreAnimHold = {};
+
+function takePreviewScoreAnim(cid, sig) {
+  const prev = previewScoreAnim[cid];
+  if (!prev) {
+    previewScoreAnim[cid] = {
+      ptsA: sig.ptsA, ptsB: sig.ptsB, gamesA: sig.gamesA, gamesB: sig.gamesB, sets: sig.sets, serve: sig.serve, tbLabel: sig.tbLabel || '',
+    };
+    return { just: {}, prevServe: sig.serve };
+  }
+  const just = {
+    sets: sig.sets !== prev.sets,
+    serve: sig.serve !== prev.serve,
+    tb: !!(sig.tbLabel && sig.tbLabel !== prev.tbLabel),
+    tbHide: !!(!sig.tbLabel && prev.tbLabel),
+  };
+  previewScoreAnim[cid] = {
+    ptsA: sig.ptsA, ptsB: sig.ptsB, gamesA: sig.gamesA, gamesB: sig.gamesB, sets: sig.sets, serve: sig.serve, tbLabel: sig.tbLabel || '',
+  };
+  return { just, prevServe: prev.serve, prevTbLabel: prev.tbLabel || '' };
+}
+
+function beginPreviewScoreAnimHold(cid, flags, look, onHoldEnd) {
+  const existed = !!previewScoreAnimHold[cid];
+  previewScoreAnimHold[cid] = { ...previewScoreAnimHold[cid], ...flags };
+  if (existed) return;
+  const holdMs = Math.round(700 / (Number(look.anim_speed) > 0 ? look.anim_speed : 1));
+  setTimeout(() => {
+    delete previewScoreAnimHold[cid];
+    onHoldEnd();
+  }, holdMs);
+}
+
+function resolvePreviewScoreMotion(cid, anim, look, actualServe, onHoldEnd) {
+  let shownServe = actualServe || '';
+  if (look.anim_set !== false) {
+    if (anim.just.sets && anim.just.serve) {
+      beginPreviewScoreAnimHold(cid, { enter: true, peel: true }, look, onHoldEnd);
+    } else if (anim.just.sets) {
+      beginPreviewScoreAnimHold(cid, { peel: true }, look, onHoldEnd);
+    } else if (anim.just.serve) {
+      beginPreviewScoreAnimHold(cid, { enter: true }, look, onHoldEnd);
+    }
+  }
+  if (anim.just.tb) beginPreviewScoreAnimHold(cid, { tbRise: true }, look, onHoldEnd);
+  if (anim.just.tbHide) {
+    beginPreviewScoreAnimHold(cid, { tbFall: true, tbFallLabel: anim.prevTbLabel || '' }, look, onHoldEnd);
+  }
+  const hold = previewScoreAnimHold[cid];
+  return {
+    shownServe: (hold && hold.visualServe) ? hold.visualServe : shownServe,
+    setPeel: !!(hold && hold.peel),
+    rideServe: !!(hold && hold.ride),
+    enterServe: !!(hold && hold.enter),
+    tbRise: !!(hold && hold.tbRise),
+    tbFall: !!(hold && hold.tbFall),
+    tbFallLabel: (hold && hold.tbFallLabel) || '',
+  };
 }
 
 export function createOverlayAdmin() {
@@ -77,6 +154,7 @@ export function createOverlayAdmin() {
       demoPreview: false,       // admin is showing demo data in preview
       demoOverlayActive: false,  // demo pushed to production overlays
       overlayPreviewMock: true, // local TV mock when courts are empty
+      serveAnimTick: 0,
 
       // Add element defaults
       addElCourtId: '1',
@@ -498,13 +576,13 @@ export function createOverlayAdmin() {
       this._ensureLookDefaults(ov);
       (ov.elements || []).forEach(el => {
         if (!el.zone) el.zone = 'free';
-        if (el.type === 'court' && (!el.h || el.h < 160)) el.h = 184;
+        if (el.type === 'court' && (!el.h || el.h === 184 || el.h < 136)) el.h = 136;
       });
     },
 
     /** Estimated height for the TV scoreboard (header + two player rows). */
     estimateTopSlotHeight() {
-      return 184;
+      return 136;
     },
 
     topBarGuideStyle(colIndex) {
@@ -731,7 +809,7 @@ export function createOverlayAdmin() {
 
       // Helper: build a court element
       const mkCourt = (cid, x, y, w, opts = {}) => ({
-        type:'court', court_id:String(cid), visible:true, x, y, w, h: opts.h || 184,
+        type:'court', court_id:String(cid), visible:true, x, y, w, h: opts.h || 136,
         zone:opts.zone||'free', show_logo:opts.logo||false,
         font_size:opts.fs||17, bg_opacity:0.95, logo_size:60,
         label_text:opts.label||(opts.noLabel?'':'COURT '+cid),
@@ -746,7 +824,7 @@ export function createOverlayAdmin() {
         return {
           top_bar: { enabled:true, columns:topCols, margin_x:20, margin_top:10, gap:12, reserve_expanded:true },
           elements: [
-            mkCourt(focus, 30, 890, 600, { zone:'free', logo:false, labelPos:'above' }),
+            mkCourt(focus, 30, 938, 600, { zone:'free', logo:false, labelPos:'above' }),
             ...others.slice(0, topCols).map((c, i) =>
               mkCourt(c, 20+i*634, 10, 620, { zone:'top', logo:false, labelPos:'below', fs:14, lfs:12 })
             ),
@@ -777,24 +855,23 @@ export function createOverlayAdmin() {
       templates['all-top'] = topN(courtIds.length);
 
       const mainCourt = courtIds[0];
-      const otherCourts = courtIds.slice(1);
       templates['main+stats'] = {
         top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true },
         elements: [
-          mkCourt(mainCourt, 30, 890, 600, { logo:false, labelPos:'above' }),
+          mkCourt(mainCourt, 30, 938, 600, { logo:false, labelPos:'above' }),
           { type:'stats', court_id:mainCourt, visible:true, x:1540, y:860, w:360, zone:'free' },
         ],
       };
 
-      const broadcastTopCols = Math.min(otherCourts.length, 4);
+      const canvasMain = courtIds.includes('1') ? '1' : mainCourt;
+      const canvasTop = courtIds.filter((c) => c !== canvasMain).slice(0, 3);
       templates['broadcast'] = {
-        top_bar: { enabled: true, columns: broadcastTopCols || 3, margin_x: 20, margin_top: 10, gap: 12, reserve_expanded: true },
+        top_bar: { enabled: true, columns: canvasTop.length || 3, margin_x: 20, margin_top: 10, gap: 12, reserve_expanded: true },
         elements: [
-          ...otherCourts.slice(0, broadcastTopCols).map((c, i) =>
+          ...canvasTop.map((c, i) =>
             mkCourt(c, 20+i*634, 10, 620, { zone:'top', logo:false, labelPos:'below', lfs:12 })
           ),
-          mkCourt(mainCourt, 30, 890, 600, { logo:false, labelPos:'above' }),
-          { type:'stats', court_id:mainCourt, visible:true, x:1540, y:860, w:360, zone:'free' },
+          mkCourt(canvasMain, 30, 938, 600, { logo:false, labelPos:'above' }),
         ],
       };
 
@@ -931,7 +1008,7 @@ export function createOverlayAdmin() {
         top_bar: { enabled: false, columns: 3, margin_x: 0, margin_top: 0, gap: 10, reserve_expanded: true },
         watermark: { enabled: false, opacity: 0.4, position: 'bottom-right', size: 140 },
         elements: [
-          { type: 'court', court_id: '1', visible: true, x: 24, y: 860, w: 600, h: 184, zone: 'free',
+          { type: 'court', court_id: '1', visible: true, x: 24, y: 900, w: 600, h: 136, zone: 'free',
             show_logo: true, font_size: 17, bg_opacity: 0.95, logo_size: 60,
             label_text: 'COURT 1', label_position: 'above', label_gap: 4, label_bg_opacity: 0.85, label_font_size: 14 },
         ],
@@ -1212,8 +1289,6 @@ export function createOverlayAdmin() {
       const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';
       const tbOn = active && (isTie || isSuperTB);
       const look = this.overlayLook();
-      const logo = this.overlayBrandingLogo();
-      const showLogo = look.logo !== false && el.show_logo !== false;
       const inactiveClass = active ? '' : ' match-inactive';
       const meta = court.history_meta || {};
       const cat = look.phase === false ? '' : overlayCategoryLabel(meta.category);
@@ -1222,52 +1297,68 @@ export function createOverlayAdmin() {
       const showHeaderCourt = (el.label_position || 'above') !== 'none';
       const courtName = showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '';
       const timeStr = (look.clock !== false && active) ? (calcMatchTime(court) || '') : '';
-      const colCount = completed.length + (liveGames ? 1 : 0);
       const showFlags = look.flags !== false;
-      const gridCols = (showFlags ? '52px ' : '') + '1fr repeat(' + Math.max(colCount, 0) + ', minmax(36px, 64px)) minmax(56px, 96px)';
+      const gridCols = 'minmax(0,1fr) auto' + (liveGames ? ' var(--set-w)' : '') + ' var(--pts-w)';
       const scale = Number(look.scale) > 0 ? Number(look.scale) : 1;
+      const speed = Number(look.anim_speed) > 0 ? Number(look.anim_speed) : 1;
+      const serveAnimTick = this.serveAnimTick;
+      const anim = takePreviewScoreAnim(el.court_id, {
+        ptsA: String(ptA), ptsB: String(ptB),
+        gamesA: liveGames ? String(liveGames.a) : '',
+        gamesB: liveGames ? String(liveGames.b) : '',
+        sets: completed.map((c) => c.a + '-' + c.b).join('|'),
+        serve: court.serve || '',
+        tbLabel: tbOn ? (isSuperTB ? 'stb' : 'tb') : '',
+      });
+      const motion = resolvePreviewScoreMotion(
+        el.court_id, anim, look, court.serve || '',
+        () => { this.serveAnimTick += 1; },
+      );
 
       const pRow = (p, serveKey, sideClass) => {
-        const isServing = court.serve === serveKey;
+        const isServing = motion.shownServe === serveKey;
         const flagHtml = showFlags ? (flagSpans(p) || '<span class="sb-flag"></span>') : '';
-        const dName = p.surname || p.full_name || '\u2014';
+        const dName = p.full_name || p.surname || '\u2014';
         const isTeam = String(dName).includes(' / ');
-        const shown = isTeam ? this._abbreviateName(dName) : dName;
         const teamClass = isTeam ? ' is-team' : '';
-        let setHtml = completed.map((c) => {
+        let serveCls = isServing ? ' is-on' : '';
+        if (look.anim_set !== false && isServing && (motion.rideServe || motion.enterServe)) serveCls += ' is-peel';
+        const doneHtml = completed.map((c, i) => {
           const val = serveKey === 'A' ? c.a : c.b;
           const sup = serveKey === 'A' ? c.supA : c.supB;
-          return setCellHtml(val, sup, 'is-done');
+          const flash = (motion.setPeel && i === completed.length - 1) ? 'is-peel' : '';
+          return setCellHtml(val, sup, 'is-done', flash);
         }).join('');
-        if (liveGames) {
-          setHtml += setCellHtml(serveKey === 'A' ? liveGames.a : liveGames.b, '', 'is-live');
-        }
+        const liveHtml = liveGames
+          ? setCellHtml(serveKey === 'A' ? liveGames.a : liveGames.b, '', 'is-live')
+          : '';
         const ptsVal = serveKey === 'A' ? ptA : ptB;
         return '<div class="sb-tv-row ' + sideClass + '">'
+          + '<div class="sb-tv-player">'
           + (showFlags ? '<div class="sb-tv-flag">' + flagHtml + '</div>' : '')
-          + '<div class="sb-tv-player"><span class="sb-name' + teamClass + '" data-full="' + dName.replace(/"/g, '&quot;') + '">' + shown + '</span>'
-          + '<span class="sb-tv-serve' + (isServing ? ' is-on' : '') + '">' + SERVE_SVG + '</span></div>'
-          + setHtml
+          + nameVariantsHtml(dName, 'sb-name' + teamClass)
+          + '<span class="sb-tv-serve' + serveCls + '">' + SERVE_SVG + '</span></div>'
+          + '<div class="sb-tv-dones">' + doneHtml + '</div>'
+          + liveHtml
           + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + '">' + ptsVal + '</div>'
           + '</div>';
       };
 
-      const logoHtml = (showLogo && logo)
-        ? '<div class="sb-tv-logo"><img src="' + logo + '" alt=""></div>'
-        : '<div class="sb-tv-logo">&#127934;</div>';
-
-      const tbHtml = tbOn
-        ? '<span class="sb-tv-tb">' + (isSuperTB ? 'Super tie-break' : 'Tie-break') + '</span>'
+      const tbText = motion.tbFall
+        ? (motion.tbFallLabel === 'stb' ? 'Super tie-break' : 'Tie-break')
+        : (tbOn ? (isSuperTB ? 'Super tie-break' : 'Tie-break') : '');
+      const tbHtml = tbText
+        ? '<span class="sb-tv-tb' + (motion.tbFall ? ' is-fall' : (motion.tbRise ? ' is-rise' : '')) + '">' + tbText + '</span>'
         : '';
       const clockHtml = timeStr ? '<span class="sb-tv-clock">' + timeStr + '</span>' : '';
       const opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
 
-      return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';transform:scale(' + scale + ');transform-origin:top left;">'
+      return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';--sb-speed:' + speed + ';transform:scale(' + scale + ');transform-origin:top left;">'
         + '<div class="sb-tv-card">'
-        + '<div class="sb-tv-header">' + logoHtml
+        + '<div class="sb-tv-header">'
+        + (courtName ? '<span class="sb-tv-court">' + courtName + '</span>' : '')
         + '<span class="sb-tv-meta">' + metaParts + '</span>'
         + tbHtml
-        + (courtName ? '<span class="sb-tv-court">' + courtName + '</span>' : '')
         + clockHtml + '</div>'
         + '<div class="sb-tv-rows">'
         + pRow(pA, 'A', 'side-a')
@@ -1334,35 +1425,10 @@ export function createOverlayAdmin() {
          document.querySelectorAll('.sb-name').forEach(el => {
            el.style.transform = '';
            el.style.overflow = 'hidden';
-           const fullName = el.getAttribute('data-full') || el.textContent;
-           el.textContent = fullName;
-           if (String(fullName).includes(' / ')) {
-             el.classList.add('is-team');
-             el.style.whiteSpace = 'normal';
-             el.textContent = this._abbreviateName(fullName);
-             return;
-           }
-           let sw = el.scrollWidth;
-           const cw = el.clientWidth;
-           if (sw <= cw + 1) return;
-           let scale = cw / sw;
-           if (scale >= 0.75) {
-             el.style.overflow = 'visible';
-             el.style.transform = 'scaleX(' + scale + ')';
-             el.style.transformOrigin = 'left center';
-             return;
-           }
-           const abbr = this._abbreviateName(fullName);
-           if (abbr !== fullName) {
-             el.textContent = abbr;
-             sw = el.scrollWidth;
-           }
-           if (sw > cw + 1) {
-             scale = cw / sw;
-             el.style.overflow = 'visible';
-             el.style.transform = 'scaleX(' + Math.max(scale, 0.55) + ')';
-             el.style.transformOrigin = 'left center';
-           }
+           if (el.scrollWidth <= el.clientWidth + 1) return;
+           el.style.overflow = 'visible';
+           el.style.transform = 'scaleX(' + Math.max(el.clientWidth / el.scrollWidth, 0.7) + ')';
+           el.style.transformOrigin = 'left center';
          });
        });
      });

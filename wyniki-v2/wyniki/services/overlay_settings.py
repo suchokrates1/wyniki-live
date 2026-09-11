@@ -107,26 +107,26 @@ def _ensure_stats_elements(overlay_id: str, overlay: Dict[str, Any]) -> list[Dic
 
 # ---------- default overlays ----------
 
-def _overlay_focus(focus: str, name: str) -> Dict[str, Any]:
-    """Court-specific overlay: main court big bottom-left, 3 others top bar.
+_CANVAS_LAYOUT_VERSION = "canvas-1-4"
+_MAIN_COURT_Y = 938
+_COURT_H = 136
 
-    - Main court: bottom-left, big (w=600), no logo, label ABOVE scoreboard.
-    - Top 3 courts: zone='top', no logo, label BELOW scoreboard.
-    All symmetrical, no logos.
+
+def _overlay_canvas(name: str) -> Dict[str, Any]:
+    """TV broadcast used by overlays 1-4: court 1 large at the bottom, 2-4 on top.
+
+    Same placement as the canvas demo. Scoreboard look (peel, TB, flags) lives
+    in overlay.html — this only stores element positions.
     """
-    others = [c for c in ("1", "2", "3", "4") if c != focus]
-    elements = []
-    # Main court — big, bottom-left, label above
-    elements.append(
-        _court_el(focus, 30, 890, 600, zone="free", show_logo=False,
-                  label_position="above")
-    )
-    # Top 3 courts in grid, label below
-    for i, cid in enumerate(others):
+    elements = [
+        _court_el("1", 30, _MAIN_COURT_Y, 600, zone="free", show_logo=False,
+                  label_position="above", h=_COURT_H),
+    ]
+    for i, cid in enumerate(("2", "3", "4")):
         elements.append(
             _court_el(cid, 20 + i * 634, 10, 620,
                       zone="top", show_logo=False,
-                      label_position="below", font_size=14)
+                      label_position="below", font_size=14, h=_COURT_H)
         )
     return {
         "name": name,
@@ -137,9 +137,38 @@ def _overlay_focus(focus: str, name: str) -> Dict[str, Any]:
             "margin_x": 20,
             "margin_top": 10,
             "gap": 12,
+            "reserve_expanded": True,
         },
         "elements": elements,
     }
+
+
+def _apply_canvas_layout(overlay: Dict[str, Any]) -> None:
+    canvas = _overlay_canvas(overlay.get("name") or "Korty 1–4")
+    overlay["elements"] = copy.deepcopy(canvas["elements"])
+    overlay["top_bar"] = copy.deepcopy(canvas["top_bar"])
+    overlay["auto_hide"] = True
+
+
+def _migrate_canvas_overlays() -> bool:
+    """One-shot: put the canvas 1+2-4 layout onto saved overlays 1-4."""
+    if _overlay_settings.get("canvas_layout_migrated") == _CANVAS_LAYOUT_VERSION:
+        return False
+    overlays = _overlay_settings.setdefault("overlays", {})
+    names = {
+        "1": "Kort 1 \u2013 g\u0142\u00f3wny",
+        "2": "Kort 2 \u2013 g\u0142\u00f3wny",
+        "3": "Kort 3 \u2013 g\u0142\u00f3wny",
+        "4": "Kort 4 \u2013 g\u0142\u00f3wny",
+    }
+    for oid, default_name in names.items():
+        ov = overlays.get(oid)
+        if not isinstance(ov, dict):
+            overlays[oid] = _overlay_canvas(default_name)
+        else:
+            _apply_canvas_layout(ov)
+    _overlay_settings["canvas_layout_migrated"] = _CANVAS_LAYOUT_VERSION
+    return True
 
 
 def _overlay_all() -> Dict[str, Any]:
@@ -158,11 +187,12 @@ def _overlay_all() -> Dict[str, Any]:
 _DEFAULT_SETTINGS: Dict[str, Any] = {
     "tournament_logo": None,
     "tournament_name": "",
+    "canvas_layout_migrated": _CANVAS_LAYOUT_VERSION,
     "overlays": {
-        "1": _overlay_focus("1", "Kort 1 \u2013 g\u0142\u00f3wny"),
-        "2": _overlay_focus("2", "Kort 2 \u2013 g\u0142\u00f3wny"),
-        "3": _overlay_focus("3", "Kort 3 \u2013 g\u0142\u00f3wny"),
-        "4": _overlay_focus("4", "Kort 4 \u2013 g\u0142\u00f3wny"),
+        "1": _overlay_canvas("Kort 1 \u2013 g\u0142\u00f3wny"),
+        "2": _overlay_canvas("Kort 2 \u2013 g\u0142\u00f3wny"),
+        "3": _overlay_canvas("Kort 3 \u2013 g\u0142\u00f3wny"),
+        "4": _overlay_canvas("Kort 4 \u2013 g\u0142\u00f3wny"),
         "all": _overlay_all(),
     },
 }
@@ -195,6 +225,9 @@ def _load_from_db() -> None:
             _overlay_settings = copy.deepcopy(_DEFAULT_SETTINGS)
             _save_to_db()
             logger.info("overlay_settings_initialized_defaults")
+        if _migrate_canvas_overlays():
+            _save_to_db()
+            logger.info("overlay_settings_migrated_canvas_layout")
     except Exception as e:
         logger.error("overlay_settings_load_error", error=str(e))
         _overlay_settings = copy.deepcopy(_DEFAULT_SETTINGS)
