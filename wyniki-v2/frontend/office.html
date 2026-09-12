@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="pl" data-theme="light">
+<html lang="pl" data-theme="kort">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tournament Office</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700&family=Chivo:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://stats.dawidsuchodolski.pl/script.js" data-website-id="b49919d3-6628-40cc-9213-72ec52409e28"></script>
 </head>
 <body class="office-body" x-data="officeApp()" x-init="init()" x-effect="applyOfficeDocumentLang()">
-  <div class="office-lang-bar">
+  <div class="office-lang-bar" x-show="!isAuthenticated">
     <div class="office-lang-bar__inner">
       <label class="sr-only" for="officeLangSelect" x-text="officeUi().languageSelect"></label>
       <select id="officeLangSelect" class="lang-select" x-model="lang" @change="onLangChange()">
@@ -27,7 +27,7 @@
       </select>
     </div>
   </div>
-  <div class="toast toast-top toast-end z-[80]" x-show="toast.show" x-transition.opacity x-cloak>
+  <div class="toast toast-bottom toast-end z-[80]" x-show="toast.show" x-transition.opacity x-cloak>
     <div class="alert" :class="{
       'alert-success': toast.type === 'success',
       'alert-warning': toast.type === 'warning',
@@ -98,143 +98,393 @@
     </section>
   </main>
 
-  <main class="office-shell" x-show="isAuthenticated" x-cloak>
-    <header class="office-topbar">
-      <div class="office-topbar__brand">
+  <div class="office-app" x-show="isAuthenticated" x-cloak>
+    <nav class="office-rail" :aria-label="ot('hero.defaultTitle')">
+      <div class="office-rail__brand">
         <template x-if="tournamentMeta?.logo_path">
           <img :src="tournamentMeta.logo_path" :alt="ot('hero.logoAlt')" class="office-logo">
         </template>
         <template x-if="!tournamentMeta?.logo_path">
-          <div class="office-logo bg-white/70 flex items-center justify-center text-xl">🎾</div>
+          <span class="office-logo office-logo--mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M4.5 6.5c3 2.2 4.7 5.4 4.7 9M19.5 6.5c-3 2.2-4.7 5.4-4.7 9"></path></svg>
+          </span>
         </template>
-        <div class="office-topbar__meta min-w-0">
-          <h1 class="office-title truncate" x-text="tournamentMeta?.name || dashboard?.tournament?.name || ot('hero.defaultTitle')"></h1>
-          <span class="office-chip office-chip-group w-fit" x-text="ot('login.slotChip', { slot })"></span>
-        </div>
+        <span class="office-rail__label office-rail__brandtext">
+          <span class="office-kicker" x-text="ot('login.slotChip', { slot })"></span>
+          <span class="office-rail__name" x-text="tournamentMeta?.name || dashboard?.tournament?.name || ot('hero.defaultTitle')"></span>
+        </span>
       </div>
-      <div id="office-stats" class="office-topbar__stats">
-        <div class="office-pill office-stat">
-          <div class="office-pill__label" x-text="ot('stats.progress')"></div>
-          <div class="office-pill__value" x-text="`${officeProgressPercent()}%`"></div>
-        </div>
-        <div class="office-pill office-stat">
-          <div class="office-pill__label" x-text="ot('stats.finishedMatches')"></div>
-          <div class="office-pill__value" x-text="dashboard?.progress?.finished_matches || 0"></div>
-        </div>
-        <div class="office-pill office-stat">
-          <div class="office-pill__label" x-text="ot('stats.remaining')"></div>
-          <div class="office-pill__value" x-text="dashboard?.progress?.remaining_matches || 0"></div>
-        </div>
-        <div class="office-pill office-stat">
-          <div class="office-pill__label" x-text="ot('stats.bracket')"></div>
-          <div class="office-pill__value" x-text="`${officeKnockout.finished_matches || 0}/${officeKnockout.expected_matches || 0}`"></div>
-        </div>
+
+      <div class="office-rail__items">
+        <template x-for="item in officeViewItems()" :key="'office_view_'+item.id">
+          <button type="button"
+                  class="office-tab office-rail__item"
+                  :class="{'is-active': activeTab === item.id}"
+                  :aria-current="activeTab === item.id ? 'page' : null"
+                  @click="openOfficeView(item.id)">
+            <span class="office-rail__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path :d="item.icon"></path></svg>
+            </span>
+            <span class="office-rail__label" x-text="item.label"></span>
+          </button>
+        </template>
       </div>
-      <div class="office-topbar__actions">
-        <label class="office-toggle">
-          <input type="checkbox" :checked="notificationsEnabled" @change="toggleNotifications()">
-          <span x-text="ot('hero.notifications')"></span>
+
+      <div class="office-rail__foot">
+        <div class="office-rail__row">
+          <span class="office-rail__icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"></path></svg>
+          </span>
+          <label class="sr-only" for="officeLangSelectApp" x-text="officeUi().languageSelect"></label>
+          <select id="officeLangSelectApp" class="office-rail__select office-rail__label" x-model="lang" @change="onLangChange()">
+            <option value="pl">Polski</option>
+            <option value="de">Deutsch</option>
+            <option value="en">English</option>
+            <option value="it">Italiano</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="lt">Lietuvių</option>
+          </select>
+        </div>
+        <label class="office-rail__item office-rail__toggle">
+          <span class="office-rail__icon">
+            <input type="checkbox" :checked="notificationsEnabled" @change="toggleNotifications()">
+          </span>
+          <span class="office-rail__label" x-text="ot('hero.notifications')"></span>
         </label>
-        <button type="button" class="btn btn-sm btn-outline bg-white/85" @click="testNotifications()" x-text="ot('hero.testNotification')"></button>
-        <span class="text-xs text-slate-500" x-show="notificationPermission === 'denied'" x-text="ot('hero.browserBlocksNotifications')"></span>
-        <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="loadDashboard()" x-text="ot('hero.refresh')"></button>
-        <button type="button" class="btn btn-sm office-btn-accent" @click="openAddMatchModal()" x-text="ot('hero.addResult')"></button>
-        <button type="button" class="btn btn-sm btn-ghost text-slate-600" @click="logout()" x-text="ot('hero.logout')"></button>
+        <button type="button" class="office-rail__item" @click="testNotifications()">
+          <span class="office-rail__icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2zM10 20a2 2 0 0 0 4 0"></path></svg>
+          </span>
+          <span class="office-rail__label" x-text="ot('hero.testNotification')"></span>
+        </button>
+        <span class="office-rail__note office-rail__label" x-show="notificationPermission === 'denied'" x-text="ot('hero.browserBlocksNotifications')"></span>
+        <button type="button" class="office-rail__item" @click="logout()">
+          <span class="office-rail__icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"></path></svg>
+          </span>
+          <span class="office-rail__label" x-text="ot('hero.logout')"></span>
+        </button>
       </div>
-    </header>
+    </nav>
 
-    <section class="office-quick office-panel" aria-labelledby="office-quick-info-title">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <div class="office-kicker" x-text="ot('quickInfo.subtitle')"></div>
-          <h2 id="office-quick-info-title" class="text-base font-semibold" x-text="ot('quickInfo.title')"></h2>
+    <main class="office-shell">
+      <header class="office-topbar">
+        <div class="office-topbar__brand">
+          <div class="office-kicker office-topbar__kicker">
+            <span x-text="ot('login.slotChip', { slot })"></span>
+            <span aria-hidden="true">&middot;</span>
+            <span x-text="tournamentMeta?.name || dashboard?.tournament?.name || ot('hero.defaultTitle')"></span>
+          </div>
+          <h1 class="office-title" x-text="officeViewTitle()"></h1>
         </div>
-        <p id="office-quick-info-desc" class="text-xs text-slate-500" x-text="ot('quickInfo.description')"></p>
-      </div>
-      <label class="sr-only" for="office-quick-info-message" x-text="ot('quickInfo.messageLabel')"></label>
-      <textarea
-        id="office-quick-info-message"
-        class="textarea textarea-bordered w-full mt-2 bg-white/80"
-        x-model="quickInfoMessage"
-        @input="quickInfoDirty = true"
-        :placeholder="ot('quickInfo.placeholder')"
-        :aria-describedby="'office-quick-info-desc'"
-        maxlength="2000"
-      ></textarea>
-      <div class="mt-2 flex items-center gap-3 flex-wrap">
-        <label class="office-toggle" for="office-quick-info-active">
-          <input type="checkbox" id="office-quick-info-active" x-model="quickInfoActive" @change="quickInfoDirty = true">
-          <span x-text="ot('quickInfo.showPublic')"></span>
-        </label>
-        <button type="button" class="btn btn-sm office-btn-primary" @click="saveQuickInfo()" :class="{'btn-disabled': quickInfoSaving}" :aria-busy="quickInfoSaving" :aria-disabled="quickInfoSaving" x-text="ot('quickInfo.publish')"></button>
-        <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="hideQuickInfo()" x-show="quickInfoActive && quickInfoMessage" :class="{'btn-disabled': quickInfoSaving}" :aria-disabled="quickInfoSaving" x-text="ot('quickInfo.hide')"></button>
-        <span class="text-xs text-slate-500" role="status" aria-live="polite" x-show="quickInfoUpdatedAt" x-text="ot('quickInfo.updated', { time: formatQuickInfoTime(quickInfoUpdatedAt) })"></span>
-      </div>
-    </section>
 
-    <section class="office-tabs">
-      <div class="flex items-center justify-between gap-4 flex-wrap w-full">
-        <div class="flex items-center gap-1 flex-wrap">
-          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'history'}" @click="activeTab = 'history'" x-text="ot('tabs.history')"></button>
-          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'progress'}" @click="activeTab = 'progress'" x-text="ot('tabs.progress')"></button>
-          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'knockout'}" @click="activeTab = 'knockout'" x-text="ot('tabs.knockout')"></button>
-          <button type="button" class="office-tab" :class="{'is-active': activeTab === 'planning'}" @click="openPlanningTab()" x-text="ot('tabs.planning')"></button>
-        </div>
-        <div class="text-sm text-slate-500 px-2" x-show="loading" x-text="ot('tabs.refreshing')"></div>
-      </div>
-    </section>
-
-    <section class="mt-6 space-y-6" x-show="activeTab === 'planning'" x-cloak>
-      <div class="office-panel rounded-[20px] p-4 md:p-5">
-        <div class="office-plan-head">
-          <div>
-            <div class="office-kicker" x-text="ot('planning.subtitle')"></div>
-            <h2 class="mt-1 text-xl font-semibold" x-text="ot('planning.title')"></h2>
-            <p class="mt-2 text-sm text-slate-500" x-text="ot('planning.description')"></p>
+        <div id="office-stats" class="office-topbar__stats">
+          <div class="office-progress">
+            <div class="office-progress__row">
+              <span x-text="ot('stats.progress')"></span>
+              <span class="office-mono" x-text="`${officeProgressPercent()}%`"></span>
+            </div>
+            <div class="office-progress__bar" aria-hidden="true"><div :style="`width: ${officeProgressPercent()}%`"></div></div>
           </div>
-          <button type="button" class="btn btn-outline bg-white/80" @click="loadOfficePlanningData()" :class="{'btn-disabled': planningLoading}" x-text="ot('planning.refreshPlan')"></button>
-        </div>
-        <div class="mt-4 office-topbar__stats">
-          <div class="office-pill office-stat">
-            <div class="office-pill__label" x-text="planningHeadlineCompetitorLabel()"></div>
-            <div class="office-pill__value" x-text="planningHeadlineCompetitorCount()"></div>
+          <div class="office-stat">
+            <div class="office-stat__label" x-text="ot('stats.finishedMatches')"></div>
+            <div class="office-stat__value" x-text="dashboard?.progress?.finished_matches || 0"></div>
           </div>
-          <div class="office-pill office-stat">
-            <div class="office-pill__label" x-text="ot('planning.groups')"></div>
-            <div class="office-pill__value" x-text="planningGroups.length"></div>
+          <div class="office-stat">
+            <div class="office-stat__label" x-text="ot('stats.remaining')"></div>
+            <div class="office-stat__value" x-text="dashboard?.progress?.remaining_matches || 0"></div>
           </div>
-          <div class="office-pill office-stat">
-            <div class="office-pill__label" x-text="ot('planning.entries')"></div>
-            <div class="office-pill__value" x-text="planningSchedule.length"></div>
-          </div>
-          <div class="office-pill office-stat">
-            <div class="office-pill__label" x-text="ot('planning.courts')"></div>
-            <div class="office-pill__value" x-text="planningCourts.length"></div>
+          <div class="office-stat">
+            <div class="office-stat__label" x-text="ot('stats.bracket')"></div>
+            <div class="office-stat__value" x-text="`${officeKnockout.finished_matches || 0}/${officeKnockout.expected_matches || 0}`"></div>
           </div>
         </div>
-      </div>
 
-      <div class="office-panel rounded-[20px] p-5 md:p-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap cursor-pointer" @click="planningStep1Collapsed = !planningStep1Collapsed">
-          <div class="flex items-start gap-3">
-            <span class="mt-1 text-slate-400 transition-transform" :class="planningStep1Collapsed ? '' : 'rotate-90'">▶</span>
+        <span class="office-live" x-show="officeLiveScheduleCount()" x-cloak>
+          <span class="office-live__dot" aria-hidden="true"></span>
+          <span x-text="`${officeLiveScheduleCount()} · ${ot('status.inProgress')}`"></span>
+        </span>
+        <span class="office-refreshing" role="status" aria-live="polite" x-show="loading" x-text="ot('tabs.refreshing')"></span>
+
+        <div class="office-topbar__actions">
+          <button type="button" class="office-btn office-btn--ghost" @click="loadDashboard(); if (officeViewUsesPlanningData()) loadOfficePlanningData()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"></path></svg>
+            <span x-text="ot('hero.refresh')"></span>
+          </button>
+          <button type="button" class="office-btn office-btn--primary" @click="openAddMatchModal()" x-text="ot('hero.addResult')"></button>
+        </div>
+      </header>
+
+      <div class="office-views">
+
+      <section class="office-view office-view--schedule" x-show="activeTab === 'planning'" x-cloak>
+        <div class="office-toolbar">
+          <div class="office-toolbar__group" x-show="planningTournamentDays().length">
+            <template x-for="(day, index) in planningTournamentDays()" :key="'planning_day_tab_'+day">
+              <button type="button"
+                class="office-daytab"
+                :class="{'is-active': autoDayDate === day}"
+                @click="selectPlanningDay(day)"
+                x-text="planningDayLabel(day, index)"></button>
+            </template>
+          </div>
+
+          <label class="office-field">
+            <span class="office-kicker" x-text="ot('planning.scope')"></span>
+            <select class="select select-bordered select-sm" x-model="autoPhaseScope">
+              <option value="group" x-text="ot('planning.scopeGroup')"></option>
+              <option value="knockout" x-text="ot('planning.scopeKnockout')"></option>
+              <option value="all" x-text="ot('planning.scopeAll')"></option>
+            </select>
+          </label>
+          <label class="office-field">
+            <span class="office-kicker" x-text="ot('planning.startTime')"></span>
+            <input type="time" class="input input-bordered input-sm" x-model="autoStartTime">
+          </label>
+
+          <div class="office-toolbar__spacer"></div>
+
+          <div class="office-toolbar__group">
+            <button type="button" class="office-btn office-btn--ghost" @click="generatePlanningSchedule()" x-text="ot('planning.generateMatches')"></button>
+            <button type="button" class="office-btn office-btn--ghost" @click="generatePlanningRematch()" x-text="ot('planning.generateRematch')"></button>
+            <button type="button" class="office-btn office-btn--ghost" :class="{'is-armed': planningRematchOpen}" :aria-expanded="planningRematchOpen" @click="planningRematchOpen = !planningRematchOpen" x-text="ot('planning.rematchesToggle')"></button>
+            <button type="button" class="office-btn office-btn--ghost" :class="{'is-armed': planningManualOpen}" :aria-expanded="planningManualOpen" @click="planningManualOpen = !planningManualOpen" x-text="planningManualOpen ? ot('planning.hideManual') : ot('planning.showManual')"></button>
+            <button type="button" class="office-btn office-btn--primary" :class="{'is-busy': autoLoading}" :aria-disabled="autoLoading" @click="autoGenerate()" x-text="ot('planning.generateProposal')"></button>
+            <button type="button" class="office-btn office-btn--live" :class="{'is-busy': planningPublishing}" :aria-disabled="planningPublishing" @click="publishAllSchedule()" x-text="ot('planning.publishAll')"></button>
+          </div>
+        </div>
+
+            <div class="office-preview-bar" x-show="autoIsPreview()">
+              <span class="office-chip office-chip-knockout font-semibold" x-text="ot('planning.previewMode')"></span>
+              <button type="button" class="btn btn-sm office-btn-primary" :class="{'btn-disabled': autoLoading}" @click="autoApply()" x-text="ot('planning.approveSchedule')"></button>
+              <button type="button" class="btn btn-sm btn-outline bg-white" :class="{'btn-disabled': autoLoading}" @click="autoDiscardProposal()" x-text="ot('planning.discardProposal')"></button>
+              <span class="text-xs text-slate-500" x-text="ot('planning.afterApproveHint')"></span>
+            </div>
+            <div class="rounded-[16px] border border-slate-200/80 bg-white/70 p-3 mb-3" x-show="planningRematchOpen && planningBracketGroups().length">
+              <div class="office-kicker" x-text="ot('planning.rematchGroups')"></div>
+              <p class="mt-1 text-xs text-slate-500" x-text="ot('planning.rematchHint')"></p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <template x-for="group in planningBracketGroups()" :key="'rematch_group_'+group.id">
+                  <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 cursor-pointer">
+                    <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                           :checked="isPlanningRematchGroupSelected(group.id)"
+                           @change="togglePlanningRematchGroup(group.id, $event.target.checked)">
+                    <span x-text="group.name"></span>
+                  </label>
+                </template>
+              </div>
+            </div>
+
+        <div class="office-workspace">
+          <div class="office-stage">
+            <p class="office-hint" x-show="!autoIsPreview()" x-text="ot('planning.dragHint')"></p>
+            <div class="office-timetable-wrap">
+              <div class="office-timetable office-timetable--head" :style="officeTimetableStyle()">
+                <div class="office-timetable__corner"></div>
+                <template x-for="court in autoCourts" :key="'gridh_'+court.kort_id">
+                  <div class="office-timetable__court">
+                    <div class="flex items-start justify-between gap-1">
+                      <div>
+                        <div x-text="autoCourtLabel(court.kort_id)"></div>
+                        <div class="text-[10px] font-medium text-slate-400" x-text="autoSlotMinutesLabel(court.kort_id)"></div>
+                      </div>
+                      <button type="button"
+                              class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                              :class="autoIsB1Court(court.kort_id) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-400'"
+                              :title="ot('planning.toggleB1Court')"
+                              @click.stop="autoToggleB1Court(court.kort_id, !autoIsB1Court(court.kort_id))"
+                              x-text="'B1'"></button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+              <template x-for="time in autoGridTimes()" :key="'gridt_'+time">
+                <div class="office-timetable office-timetable--row" :style="officeTimetableStyle()">
+                  <div class="office-timetable__time" x-text="time"></div>
+                  <template x-for="court in autoCourts" :key="'gridc_'+time+'_'+court.kort_id">
+                    <div class="office-timetable__cell"
+                         @dragover.prevent
+                         @drop.prevent="onAutoDropAt(court.kort_id, time)">
+                      <template x-for="entry in autoEntriesAt(court.kort_id, time)" :key="'cell_'+autoEntryId(entry)">
+                        <div class="office-block"
+                             data-schedule-entry
+                             :class="[
+                               officeScheduleStatusClass(entry.status),
+                               autoIsPlaceholder(entry) ? 'is-placeholder' : '',
+                               planningOpenCardId === autoEntryId(entry) ? 'is-selected' : ''
+                             ]"
+                             :draggable="!autoLoading"
+                             @dragstart="onAutoDragStart(entry, $event)"
+                             @click="!autoIsPreview() && togglePlanningCard(entry)">
+                          <span class="sr-only" x-text="entry.scheduled_time"></span>
+                          <div class="office-block__tag">
+                            <span x-text="officeDisplayLabel(entry.category_name)"></span>
+                            <span x-show="entry.category_name && entry.phase" aria-hidden="true">&middot;</span>
+                            <span x-text="officeDisplayLabel(entry.phase)"></span>
+                          </div>
+                          <div class="competitor-name office-block__name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                          <span class="sr-only" x-text="ot('versus')"></span>
+                          <div class="competitor-name office-block__name office-block__name--b" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
+                          <div class="office-block__note" x-text="officeScheduleHasResult(entry) ? officeScheduleResultLabel(entry) : officeScheduleStatusLabel(entry.status)"></div>
+                        </div>
+                      </template>
+                      <div class="h-full min-h-[64px] grid place-items-center text-[10px] text-slate-300" x-show="!autoEntriesAt(court.kort_id, time).length" x-text="ot('planning.emptySlot')"></div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+
+        <div class="office-unassigned"
+             x-show="autoUnplacedCount()"
+             @dragover.prevent
+             @drop.prevent="onAutoDropToUnassigned()">
+          <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
             <div>
-              <div class="office-kicker" x-text="ot('planning.step1')"></div>
-              <h3 class="mt-1 text-xl font-semibold" x-text="ot('planning.step1Title')"></h3>
-              <p class="mt-1 text-sm text-slate-500" x-show="!planningStep1Collapsed" x-text="planningSelectedCategoryIsDoubles() ? ot('planning.step1OpenDoubles') : ot('planning.step1Open')"></p>
-              <p class="mt-1 text-sm text-emerald-700 font-semibold" x-show="planningStep1Collapsed && planningGroupsComplete()" x-text="planningStep1CompleteLine()"></p>
-              <p class="mt-1 text-sm text-amber-700 font-semibold" x-show="planningStep1Collapsed && !planningGroupsComplete()" x-text="ot('planning.step1InProgress')"></p>
+              <div class="text-sm font-semibold text-slate-900" x-text="ot('planning.unassignedShort', { count: autoUnplacedCount() })"></div>
+              <p class="mt-1 text-xs text-amber-900/80" x-text="ot('planning.unassignedHint')"></p>
             </div>
+            <button type="button"
+                    class="btn btn-sm btn-outline border-rose-200 text-rose-700 hover:bg-rose-50"
+                    :class="{'btn-disabled': autoLoading}"
+                    @click="deleteAllUnassigned()"
+                    x-text="ot('planning.deleteAllUnassigned')"></button>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2 text-sm font-semibold text-emerald-600" x-show="planningSaving">
-              <span class="loading loading-spinner loading-sm"></span> <span x-text="ot('planning.saving')"></span>
-            </div>
-            <span class="btn btn-sm btn-ghost" x-text="planningStep1Collapsed ? ot('planning.edit') : ot('planning.collapse')"></span>
+          <div class="space-y-3">
+            <template x-for="section in autoUnplacedSections()" :key="'autounp_section_'+section.key">
+              <div>
+                <div class="office-kicker" x-text="section.label + ' (' + section.entries.length + ')'"></div>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <template x-for="entry in section.entries" :key="'autounp_'+(entry.schedule_id || entry.id)">
+                    <div class="relative rounded-xl bg-white border border-amber-200 p-2 pr-7 cursor-move min-w-[10rem]"
+                         :draggable="!autoLoading"
+                         @dragstart="onAutoDragStart(entry, $event)"
+                         @click="togglePlanningCard(entry)">
+                      <button type="button"
+                              class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                              :title="ot('planning.removeEntry')"
+                              @click.stop="deletePlanningScheduleEntry(entry, { skipConfirm: true })"
+                              x-text="'×'"></button>
+                      <div class="text-sm font-semibold text-slate-900 leading-tight space-y-0.5">
+                        <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                        <div class="office-block__vs" x-text="ot('versus')"></div>
+                        <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
+                      </div>
+                      <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
-        <div x-show="!planningStep1Collapsed">
+        <div class="mt-4">
+
+          <div class="office-panel office-manual" x-show="planningManualOpen" x-cloak>
+            <div class="grid gap-3 lg:grid-cols-6">
+              <input type="date" class="input input-bordered bg-white/90" x-model="planningNewSchedule.day_date">
+              <input type="time" class="input input-bordered bg-white/90" x-model="planningNewSchedule.scheduled_time">
+              <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.court_id">
+                <option value="" x-text="ot('planning.courtQuestion')"></option>
+                <template x-for="court in planningCourts" :key="'office_new_schedule_court_'+court.kort_id">
+                  <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
+                </template>
+              </select>
+              <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.categoryPlaceholder')" x-model="planningNewSchedule.category_name">
+              <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.phasePlaceholder')" x-model="planningNewSchedule.phase">
+              <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.status">
+                <template x-for="option in scheduleStatusOptions()" :key="'office_new_status_'+option.value">
+                  <option :value="option.value" x-text="option.label"></option>
+                </template>
+              </select>
+              <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player1_name">
+                <option value="" x-text="planningScheduleCategoryIsDoubles() ? ot('planning.competitor1') : ot('planning.player1')"></option>
+                <template x-for="name in planningScheduleNameOptions()" :key="'office_new_p1_'+name">
+                  <option :value="name" x-text="name"></option>
+                </template>
+              </select>
+              <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player2_name">
+                <option value="" x-text="planningScheduleCategoryIsDoubles() ? ot('planning.competitor2') : ot('planning.player2')"></option>
+                <template x-for="name in planningScheduleNameOptions()" :key="'office_new_p2_'+name">
+                  <option :value="name" x-text="name"></option>
+                </template>
+              </select>
+              <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.notesPlaceholder')" x-model="planningNewSchedule.notes_public">
+              <button type="button" class="btn office-btn-primary" @click="addPlanningScheduleEntry()" x-text="ot('planning.add')"></button>
+            </div>
+          </div>
+        </div>
+          </div>
+
+          <aside class="office-inspector office-panel">
+            <div class="office-kicker" x-text="ot('planning.inspectorTitle')"></div>
+            <p class="mt-2 text-sm text-slate-500" x-show="!planningOpenCardId" x-text="ot('planning.inspectorEmpty')"></p>
+            <template x-for="entry in planningInspectorEntries()" :key="'insp_'+autoEntryId(entry)">
+              <div class="mt-3 space-y-2" x-show="!autoIsPreview()">
+                <div class="text-sm font-semibold leading-tight space-y-0.5">
+                  <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                  <div class="office-block__vs" x-text="ot('versus')"></div>
+                  <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <label class="block">
+                    <span class="office-kicker" x-text="ot('planning.time')"></span>
+                    <input type="time" class="input input-bordered input-sm bg-white w-full" x-model="entry.scheduled_time">
+                  </label>
+                  <label class="block">
+                    <span class="office-kicker" x-text="ot('planning.court')"></span>
+                    <select class="select select-bordered select-sm bg-white w-full" x-model="entry.court_id">
+                      <option value="" x-text="ot('planning.courtTbd')"></option>
+                      <template x-for="c in autoCourts" :key="'insp_court_'+entry.id+'_'+c.kort_id">
+                        <option :value="c.kort_id" x-text="c.name || c.kort_id"></option>
+                      </template>
+                    </select>
+                  </label>
+                </div>
+                <label class="block">
+                  <span class="office-kicker" x-text="ot('planning.publishStatus')"></span>
+                  <select class="select select-bordered select-sm bg-white w-full" x-model="entry.status">
+                    <template x-for="option in scheduleStatusOptions()" :key="'insp_status_'+entry.id+'_'+option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="office-kicker" x-text="ot('planning.publicNotes')"></span>
+                  <input type="text" class="input input-bordered input-sm bg-white w-full" x-model="entry.notes_public" :placeholder="ot('planning.publicNotesPlaceholder')">
+                </label>
+                <div class="flex gap-2 flex-wrap pt-1">
+                  <button type="button" class="btn btn-sm office-btn-accent" x-show="officeCanAddResultFromSchedule(entry)" @click="openAddResultFromSchedule(entry)" x-text="ot('planning.addResult')"></button>
+                  <button type="button" class="btn btn-sm office-btn-primary flex-1" @click="saveOfficeScheduleEntry(entry)" x-text="ot('planning.save')"></button>
+                  <button type="button" class="btn btn-sm btn-outline" @click="deletePlanningScheduleEntry(entry)" x-text="ot('planning.delete')"></button>
+                </div>
+              </div>
+            </template>
+          </aside>
+        </div>
+      </section>
+
+
+      <section class="office-view office-view--groups" x-show="activeTab === 'groups'" x-cloak>
+        <div class="office-view__head">
+          <div class="office-view__lead">
+            <div class="office-kicker" x-text="ot('planning.subtitle')"></div>
+            <p x-text="planningSelectedCategoryIsDoubles() ? ot('planning.step1OpenDoubles') : ot('planning.step1Open')"></p>
+          </div>
+          <div class="office-statline">
+            <span><b class="office-mono" x-text="planningHeadlineCompetitorCount()"></b> <span x-text="planningHeadlineCompetitorLabel()"></span></span>
+            <span><b class="office-mono" x-text="planningGroups.length"></b> <span x-text="ot('planning.groups')"></span></span>
+            <span><b class="office-mono" x-text="planningSchedule.length"></b> <span x-text="ot('planning.entries')"></span></span>
+            <span><b class="office-mono" x-text="planningCourts.length"></b> <span x-text="ot('planning.courts')"></span></span>
+          </div>
+          <div class="office-saving" x-show="planningSaving">
+            <span class="loading loading-spinner loading-sm"></span> <span x-text="ot('planning.saving')"></span>
+          </div>
+        </div>
+
+        <div class="office-panel office-groups">
         <div class="mt-5 rounded-[16px] border border-emerald-200 bg-emerald-50/60 p-4" x-show="!tournamentCategories.length || categorySetupOpen">
           <div class="office-kicker" x-text="ot('planning.categoriesSetup')"></div>
           <p class="mt-1 text-sm text-slate-600" x-text="ot('planning.categoriesSetupHint')"></p>
@@ -527,460 +777,212 @@
           </div>
         </div>
         </div>
-      </div>
+      </section>
 
-      <div class="office-panel rounded-[20px] p-4 md:p-5">
-        <div class="office-plan-head">
-          <div>
-            <div class="office-kicker" x-text="ot('planning.step2')"></div>
-            <h3 class="mt-1 text-xl font-semibold" x-text="ot('planning.step2Title')"></h3>
-            <p class="mt-1 text-sm text-slate-500" x-text="ot('planning.step2Open')"></p>
+
+      <section class="office-view office-view--narrow" x-show="activeTab === 'quickinfo'" x-cloak aria-labelledby="office-quick-info-title">
+        <div class="office-panel office-quick">
+          <h2 id="office-quick-info-title" class="office-kicker office-kicker--accent" x-text="ot('quickInfo.title')"></h2>
+          <p id="office-quick-info-desc" class="office-hint" x-text="ot('quickInfo.description')"></p>
+          <label class="sr-only" for="office-quick-info-message" x-text="ot('quickInfo.messageLabel')"></label>
+          <textarea
+            id="office-quick-info-message"
+            class="textarea textarea-bordered w-full"
+            rows="5"
+            x-model="quickInfoMessage"
+            @input="quickInfoDirty = true"
+            :placeholder="ot('quickInfo.placeholder')"
+            :aria-describedby="'office-quick-info-desc'"
+            maxlength="2000"
+          ></textarea>
+          <div class="office-quick__controls">
+            <label class="office-toggle" for="office-quick-info-active">
+              <input type="checkbox" id="office-quick-info-active" x-model="quickInfoActive" @change="quickInfoDirty = true">
+              <span x-text="ot('quickInfo.showPublic')"></span>
+            </label>
+            <button type="button" class="office-btn office-btn--primary" @click="saveQuickInfo()" :class="{'is-busy': quickInfoSaving}" :aria-busy="quickInfoSaving" :aria-disabled="quickInfoSaving" x-text="ot('quickInfo.publish')"></button>
+            <button type="button" class="office-btn office-btn--ghost" @click="hideQuickInfo()" x-show="quickInfoActive && quickInfoMessage" :class="{'is-busy': quickInfoSaving}" :aria-disabled="quickInfoSaving" x-text="ot('quickInfo.hide')"></button>
+            <span class="office-hint" role="status" aria-live="polite" x-show="quickInfoUpdatedAt" x-text="ot('quickInfo.updated', { time: formatQuickInfoTime(quickInfoUpdatedAt) })"></span>
           </div>
         </div>
+      </section>
 
-        <div class="office-workspace mt-4">
-          <aside class="office-commands office-panel">
-            <div class="office-kicker mb-2" x-text="ot('planning.commands')"></div>
-            <div class="office-stepper">
-              <div class="office-step" :class="officePlanningHasMatches() ? 'is-done' : 'is-active'">
-                <span class="office-step__n">1</span>
-                <span x-text="ot('planning.stageMatches')"></span>
-              </div>
-              <div class="office-step" :class="autoIsPreview() || officePlanningHasMatches() ? 'is-active' : ''">
-                <span class="office-step__n">2</span>
-                <span x-text="ot('planning.stageLayout')"></span>
-              </div>
-              <div class="office-step" :class="autoIsPreview() ? '' : ''">
-                <span class="office-step__n">3</span>
-                <span x-text="ot('planning.stagePublish')"></span>
-              </div>
-            </div>
 
-            <div class="flex flex-wrap gap-1 mb-3" x-show="planningTournamentDays().length">
-              <template x-for="(day, index) in planningTournamentDays()" :key="'planning_day_tab_'+day">
-                <button type="button"
-                  class="rounded-full border px-3 py-1 text-xs font-semibold transition"
-                  :class="autoDayDate === day ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-600'"
-                  @click="selectPlanningDay(day)"
-                  x-text="planningDayLabel(day, index)"></button>
-              </template>
-            </div>
-
-            <label class="block mb-2">
-              <span class="office-kicker" x-text="ot('planning.scope')"></span>
-              <select class="select select-bordered select-sm bg-white mt-1 w-full" x-model="autoPhaseScope">
-                <option value="group" x-text="ot('planning.scopeGroup')"></option>
-                <option value="knockout" x-text="ot('planning.scopeKnockout')"></option>
-                <option value="all" x-text="ot('planning.scopeAll')"></option>
-              </select>
-            </label>
-            <label class="block mb-2">
-              <span class="office-kicker" x-text="ot('planning.startTime')"></span>
-              <input type="time" class="input input-bordered input-sm bg-white mt-1 w-full" x-model="autoStartTime">
-            </label>
-            <div class="block mb-3">
-              <span class="office-kicker" x-text="ot('planning.b1Court')"></span>
-              <div class="mt-1 rounded-xl border border-slate-200 bg-white p-2 max-h-28 overflow-y-auto space-y-1">
-                <template x-for="court in autoCourts" :key="'autob1_'+court.kort_id">
-                  <label class="flex items-center gap-2 rounded-lg px-1 py-1 text-xs text-slate-700 cursor-pointer">
-                    <input type="checkbox" class="checkbox checkbox-xs checkbox-primary"
-                           :checked="autoB1Courts.map(String).includes(String(court.kort_id))"
-                           @change="autoToggleB1Court(court.kort_id, $event.target.checked)">
-                    <span x-text="ot('planning.courtPrefix', { name: court.name })"></span>
-                  </label>
-                </template>
-              </div>
-            </div>
-
-            <button type="button" class="btn btn-sm btn-outline bg-white" @click="generatePlanningSchedule()" x-text="ot('planning.generateMatches')"></button>
-            <button type="button" class="btn btn-sm btn-outline bg-white" @click="generatePlanningRematch()" x-text="ot('planning.generateRematch')"></button>
-            <button type="button" class="btn btn-sm office-btn-primary" :class="{'btn-disabled': autoLoading}" @click="autoGenerate()" x-text="ot('planning.generateProposal')"></button>
-            <button type="button" class="btn btn-sm office-btn-primary mt-2" :class="{'btn-disabled': planningPublishing}" @click="publishAllSchedule()" x-text="ot('planning.publishAll')"></button>
-            <button type="button" class="btn btn-sm btn-ghost text-left justify-start" @click="planningRematchOpen = !planningRematchOpen" x-text="ot('planning.rematchesToggle')"></button>
-          </aside>
-
-          <div>
-            <div class="office-preview-bar" x-show="autoIsPreview()">
-              <span class="office-chip office-chip-knockout font-semibold" x-text="ot('planning.previewMode')"></span>
-              <button type="button" class="btn btn-sm office-btn-primary" :class="{'btn-disabled': autoLoading}" @click="autoApply()" x-text="ot('planning.approveSchedule')"></button>
-              <button type="button" class="btn btn-sm btn-outline bg-white" :class="{'btn-disabled': autoLoading}" @click="autoDiscardProposal()" x-text="ot('planning.discardProposal')"></button>
-              <span class="text-xs text-slate-500" x-text="ot('planning.afterApproveHint')"></span>
-            </div>
-            <p class="text-xs text-slate-500 mb-2" x-show="!autoIsPreview()" x-text="ot('planning.dragHint')"></p>
-
-            <div class="rounded-[16px] border border-slate-200/80 bg-white/70 p-3 mb-3" x-show="planningRematchOpen && planningBracketGroups().length">
-              <div class="office-kicker" x-text="ot('planning.rematchGroups')"></div>
-              <p class="mt-1 text-xs text-slate-500" x-text="ot('planning.rematchHint')"></p>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <template x-for="group in planningBracketGroups()" :key="'rematch_group_'+group.id">
-                  <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 cursor-pointer">
-                    <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
-                           :checked="isPlanningRematchGroupSelected(group.id)"
-                           @change="togglePlanningRematchGroup(group.id, $event.target.checked)">
-                    <span x-text="group.name"></span>
-                  </label>
-                </template>
-              </div>
-            </div>
-
-            <div class="office-timetable-wrap">
-              <div class="office-timetable office-timetable--head" :style="officeTimetableStyle()">
-                <div class="office-timetable__corner"></div>
-                <template x-for="court in autoCourts" :key="'gridh_'+court.kort_id">
-                  <div class="office-timetable__court">
-                    <div class="flex items-start justify-between gap-1">
-                      <div>
-                        <div x-text="autoCourtLabel(court.kort_id)"></div>
-                        <div class="text-[10px] font-medium text-slate-400" x-text="autoSlotMinutesLabel(court.kort_id)"></div>
-                      </div>
-                      <button type="button"
-                              class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                              :class="autoIsB1Court(court.kort_id) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-400'"
-                              :title="ot('planning.toggleB1Court')"
-                              @click.stop="autoToggleB1Court(court.kort_id, !autoIsB1Court(court.kort_id))"
-                              x-text="'B1'"></button>
+      <section class="office-view office-summary-grid" x-show="activeTab === 'history'" x-cloak>
+        <div class="space-y-4">
+          <template x-if="!officeMatches.length">
+            <article class="office-panel rounded-[20px] p-8 text-center text-slate-500">
+              <span x-text="ot('history.empty')"></span>
+            </article>
+          </template>
+          <template x-for="match in officeMatches" :key="`${match.source || 'match'}-${match.id}`">
+            <article class="office-panel office-history-card">
+              <div class="space-y-4">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="office-chip" :class="officePhaseTone(match)" x-text="officeMatchPhase(match)"></span>
+                    <span class="text-sm text-slate-500" x-text="formatOfficeMatchTime(match)"></span>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="startOfficeEdit(match)" x-text="ot('history.editResult')"></button>
+                </div>
+                <div class="office-history-scoreboard">
+                  <div class="hm-scoreboard" aria-hidden="true">
+                    <div class="hm-player" :class="{ 'hm-player--winner': officeMatchWinner(match) === 'A' }">
+                      <span class="hm-winner-mark" x-show="officeMatchWinner(match) === 'A'" aria-hidden="true"></span>
+                      <span class="hm-winner-mark hm-winner-mark--empty" x-show="officeMatchWinner(match) !== 'A'" aria-hidden="true"></span>
+                      <span class="hm-player-name competitor-name" x-text="formatCompetitorName(match.player1_name || '-')"></span>
+                      <span class="hm-sets">
+                        <template x-for="(set, i) in officeMatchSets(match)" :key="'oa-'+match.id+'-'+i">
+                          <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b, 'hm-set-cell--stb': set.isSuperTB }">
+                            <span x-text="set.isSuperTB ? '['+set.a+']' : set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a < set.b" x-text="set.tb"></sup>
+                          </span>
+                        </template>
+                      </span>
+                    </div>
+                    <div class="hm-player" :class="{ 'hm-player--winner': officeMatchWinner(match) === 'B' }">
+                      <span class="hm-winner-mark" x-show="officeMatchWinner(match) === 'B'" aria-hidden="true"></span>
+                      <span class="hm-winner-mark hm-winner-mark--empty" x-show="officeMatchWinner(match) !== 'B'" aria-hidden="true"></span>
+                      <span class="hm-player-name competitor-name" x-text="formatCompetitorName(match.player2_name || '-')"></span>
+                      <span class="hm-sets">
+                        <template x-for="(set, i) in officeMatchSets(match)" :key="'ob-'+match.id+'-'+i">
+                          <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a, 'hm-set-cell--stb': set.isSuperTB }">
+                            <span x-text="set.isSuperTB ? '['+set.b+']' : set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b < set.a" x-text="set.tb"></sup>
+                          </span>
+                        </template>
+                      </span>
                     </div>
                   </div>
-                </template>
+                </div>
               </div>
-              <template x-for="time in autoGridTimes()" :key="'gridt_'+time">
-                <div class="office-timetable office-timetable--row" :style="officeTimetableStyle()">
-                  <div class="office-timetable__time" x-text="time"></div>
-                  <template x-for="court in autoCourts" :key="'gridc_'+time+'_'+court.kort_id">
-                    <div class="office-timetable__cell"
-                         @dragover.prevent
-                         @drop.prevent="onAutoDropAt(court.kort_id, time)">
-                      <template x-for="entry in autoEntriesAt(court.kort_id, time)" :key="'cell_'+autoEntryId(entry)">
-                        <div class="office-block"
-                             :class="[
-                               officeScheduleStatusClass(entry.status),
-                               autoIsPlaceholder(entry) ? 'is-placeholder' : '',
-                               planningOpenCardId === autoEntryId(entry) ? 'is-selected' : ''
-                             ]"
-                             :draggable="!autoLoading"
-                             @dragstart="onAutoDragStart(entry, $event)"
-                             @click="!autoIsPreview() && togglePlanningCard(entry)">
-                          <div class="flex items-center justify-between gap-1">
-                            <span class="font-mono text-[11px] font-bold text-emerald-700" x-text="entry.scheduled_time"></span>
-                            <span class="text-[10px] uppercase tracking-wide text-slate-400" x-text="officeDisplayLabel(entry.phase)"></span>
-                          </div>
-                          <div class="mt-0.5 competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
-                          <div class="office-block__vs" x-text="ot('versus')"></div>
-                          <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
-                          <div class="text-[10px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
-                          <div class="text-[10px] font-semibold mt-0.5" :class="entry.status === 'draft' ? 'text-slate-400' : 'text-emerald-700'" x-text="officeScheduleStatusLabel(entry.status)"></div>
-                        </div>
-                      </template>
-                      <div class="h-full min-h-[64px] grid place-items-center text-[10px] text-slate-300" x-show="!autoEntriesAt(court.kort_id, time).length" x-text="ot('planning.emptySlot')"></div>
+            </article>
+          </template>
+        </div>
+
+        <aside class="space-y-4">
+          <article class="office-panel rounded-[20px] p-6">
+            <div class="office-kicker" x-text="ot('history.quickGroups')"></div>
+            <div class="mt-4 space-y-3">
+              <template x-for="group in officeGroups" :key="group.id">
+                <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <div class="font-semibold text-slate-800" x-text="officeDisplayLabel(group.name)"></div>
+                      <div class="text-sm text-slate-500" x-text="officeDisplayLabel(group.category) || ot('history.defaultGroup')"></div>
                     </div>
-                  </template>
+                    <span class="office-chip" :class="group.complete ? 'office-chip-group' : 'office-chip-neutral'" x-text="groupCompletionLabel(group)"></span>
+                  </div>
                 </div>
               </template>
             </div>
-          </div>
+          </article>
+        </aside>
+      </section>
 
-          <aside class="office-inspector office-panel">
-            <div class="office-kicker" x-text="ot('planning.inspectorTitle')"></div>
-            <p class="mt-2 text-sm text-slate-500" x-show="!planningOpenCardId" x-text="ot('planning.inspectorEmpty')"></p>
-            <template x-for="entry in planningInspectorEntries()" :key="'insp_'+autoEntryId(entry)">
-              <div class="mt-3 space-y-2" x-show="!autoIsPreview()">
-                <div class="text-sm font-semibold leading-tight space-y-0.5">
-                  <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
-                  <div class="office-block__vs" x-text="ot('versus')"></div>
-                  <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
+      <section class="office-view" x-show="activeTab === 'progress'" x-cloak>
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <template x-for="group in officeGroups" :key="group.id">
+            <article class="office-panel rounded-[20px] p-6">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="office-kicker" x-text="ot('progress.group')"></div>
+                  <h2 class="mt-1 text-xl font-semibold" x-text="officeDisplayLabel(group.name)"></h2>
+                  <p class="mt-1 text-sm text-slate-500" x-text="officeDisplayLabel(group.category) || ot('progress.groupPhase')"></p>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                  <label class="block">
-                    <span class="office-kicker" x-text="ot('planning.time')"></span>
-                    <input type="time" class="input input-bordered input-sm bg-white w-full" x-model="entry.scheduled_time">
-                  </label>
-                  <label class="block">
-                    <span class="office-kicker" x-text="ot('planning.court')"></span>
-                    <select class="select select-bordered select-sm bg-white w-full" x-model="entry.court_id">
-                      <option value="" x-text="ot('planning.courtTbd')"></option>
-                      <template x-for="c in autoCourts" :key="'insp_court_'+entry.id+'_'+c.kort_id">
-                        <option :value="c.kort_id" x-text="c.name || c.kort_id"></option>
-                      </template>
-                    </select>
-                  </label>
+                <span class="office-chip" :class="group.complete ? 'office-chip-group' : 'office-chip-knockout'" x-text="groupCompletionLabel(group)"></span>
+              </div>
+              <div class="mt-5 grid grid-cols-3 gap-2 text-center">
+                <div class="office-pill">
+                  <div class="office-pill__label" x-text="ot('progress.plan')"></div>
+                  <div class="office-pill__value" x-text="group.expected_matches"></div>
                 </div>
-                <label class="block">
-                  <span class="office-kicker" x-text="ot('planning.publishStatus')"></span>
-                  <select class="select select-bordered select-sm bg-white w-full" x-model="entry.status">
-                    <template x-for="option in scheduleStatusOptions()" :key="'insp_status_'+entry.id+'_'+option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
-                </label>
-                <label class="block">
-                  <span class="office-kicker" x-text="ot('planning.publicNotes')"></span>
-                  <input type="text" class="input input-bordered input-sm bg-white w-full" x-model="entry.notes_public" :placeholder="ot('planning.publicNotesPlaceholder')">
-                </label>
-                <div class="flex gap-2 flex-wrap pt-1">
-                  <button type="button" class="btn btn-sm office-btn-accent" x-show="officeCanAddResultFromSchedule(entry)" @click="openAddResultFromSchedule(entry)" x-text="ot('planning.addResult')"></button>
-                  <button type="button" class="btn btn-sm office-btn-primary flex-1" @click="saveOfficeScheduleEntry(entry)" x-text="ot('planning.save')"></button>
-                  <button type="button" class="btn btn-sm btn-outline" @click="deletePlanningScheduleEntry(entry)" x-text="ot('planning.delete')"></button>
+                <div class="office-pill">
+                  <div class="office-pill__label" x-text="ot('progress.done')"></div>
+                  <div class="office-pill__value" x-text="group.finished_matches"></div>
+                </div>
+                <div class="office-pill">
+                  <div class="office-pill__label" x-text="ot('progress.left')"></div>
+                  <div class="office-pill__value" x-text="group.remaining_matches"></div>
                 </div>
               </div>
-            </template>
-          </aside>
-        </div>
-
-        <div class="office-unassigned"
-             x-show="autoUnplacedCount()"
-             @dragover.prevent
-             @drop.prevent="onAutoDropToUnassigned()">
-          <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
-            <div>
-              <div class="text-sm font-semibold text-slate-900" x-text="ot('planning.unassignedShort', { count: autoUnplacedCount() })"></div>
-              <p class="mt-1 text-xs text-amber-900/80" x-text="ot('planning.unassignedHint')"></p>
-            </div>
-            <button type="button"
-                    class="btn btn-sm btn-outline border-rose-200 text-rose-700 hover:bg-rose-50"
-                    :class="{'btn-disabled': autoLoading}"
-                    @click="deleteAllUnassigned()"
-                    x-text="ot('planning.deleteAllUnassigned')"></button>
-          </div>
-          <div class="space-y-3">
-            <template x-for="section in autoUnplacedSections()" :key="'autounp_section_'+section.key">
-              <div>
-                <div class="office-kicker" x-text="section.label + ' (' + section.entries.length + ')'"></div>
-                <div class="mt-2 flex flex-wrap gap-2">
-                  <template x-for="entry in section.entries" :key="'autounp_'+(entry.schedule_id || entry.id)">
-                    <div class="relative rounded-xl bg-white border border-amber-200 p-2 pr-7 cursor-move min-w-[10rem]"
-                         :draggable="!autoLoading"
-                         @dragstart="onAutoDragStart(entry, $event)"
-                         @click="togglePlanningCard(entry)">
-                      <button type="button"
-                              class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                              :title="ot('planning.removeEntry')"
-                              @click.stop="deletePlanningScheduleEntry(entry, { skipConfirm: true })"
-                              x-text="'×'"></button>
-                      <div class="text-sm font-semibold text-slate-900 leading-tight space-y-0.5">
-                        <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
-                        <div class="office-block__vs" x-text="ot('versus')"></div>
-                        <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
-                      </div>
-                      <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
-                    </div>
-                  </template>
-                </div>
+              <div class="mt-5 text-sm text-slate-600" x-text="officeGroupIsDoubles(group) ? ot('progress.pairs') : ot('progress.players')"></div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <template x-for="player in group.players || []" :key="player.id || player.name">
+                  <span class="px-3 py-2 rounded-full bg-white/80 border border-slate-200/80 text-sm text-slate-700 competitor-name" x-text="formatCompetitorName(player.name)"></span>
+                </template>
               </div>
-            </template>
-          </div>
+            </article>
+          </template>
+        </div>
+      </section>
+
+      <section class="office-view space-y-5" x-show="activeTab === 'knockout'" x-cloak>
+        <div class="office-topbar__stats">
+          <article class="office-pill office-stat">
+            <div class="office-pill__label" x-text="ot('knockout.generated')"></div>
+            <div class="office-pill__value" x-text="officeKnockout.expected_matches || 0"></div>
+          </article>
+          <article class="office-pill office-stat">
+            <div class="office-pill__label" x-text="ot('knockout.ready')"></div>
+            <div class="office-pill__value" x-text="officeKnockout.ready_matches || 0"></div>
+          </article>
+          <article class="office-pill office-stat">
+            <div class="office-pill__label" x-text="ot('knockout.finished')"></div>
+            <div class="office-pill__value" x-text="officeKnockout.finished_matches || 0"></div>
+          </article>
         </div>
 
-        <div class="mt-4">
-          <button type="button" class="text-sm font-semibold text-slate-500 hover:text-slate-800" @click="planningManualOpen = !planningManualOpen" x-text="planningManualOpen ? ot('planning.hideManual') : ot('planning.showManual')"></button>
-          <div class="mt-3 rounded-[16px] border border-slate-200/80 bg-white/65 p-4" x-show="planningManualOpen" x-cloak>
-            <div class="grid gap-3 lg:grid-cols-6">
-              <input type="date" class="input input-bordered bg-white/90" x-model="planningNewSchedule.day_date">
-              <input type="time" class="input input-bordered bg-white/90" x-model="planningNewSchedule.scheduled_time">
-              <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.court_id">
-                <option value="" x-text="ot('planning.courtQuestion')"></option>
-                <template x-for="court in planningCourts" :key="'office_new_schedule_court_'+court.kort_id">
-                  <option :value="court.kort_id" x-text="court.name || court.kort_id"></option>
-                </template>
-              </select>
-              <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.categoryPlaceholder')" x-model="planningNewSchedule.category_name">
-              <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.phasePlaceholder')" x-model="planningNewSchedule.phase">
-              <select class="select select-bordered bg-white/90" x-model="planningNewSchedule.status">
-                <template x-for="option in scheduleStatusOptions()" :key="'office_new_status_'+option.value">
-                  <option :value="option.value" x-text="option.label"></option>
-                </template>
-              </select>
-              <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player1_name">
-                <option value="" x-text="planningScheduleCategoryIsDoubles() ? ot('planning.competitor1') : ot('planning.player1')"></option>
-                <template x-for="name in planningScheduleNameOptions()" :key="'office_new_p1_'+name">
-                  <option :value="name" x-text="name"></option>
-                </template>
-              </select>
-              <select class="select select-bordered bg-white/90 lg:col-span-2" x-model="planningNewSchedule.player2_name">
-                <option value="" x-text="planningScheduleCategoryIsDoubles() ? ot('planning.competitor2') : ot('planning.player2')"></option>
-                <template x-for="name in planningScheduleNameOptions()" :key="'office_new_p2_'+name">
-                  <option :value="name" x-text="name"></option>
-                </template>
-              </select>
-              <input type="text" class="input input-bordered bg-white/90" :placeholder="ot('planning.notesPlaceholder')" x-model="planningNewSchedule.notes_public">
-              <button type="button" class="btn office-btn-primary" @click="addPlanningScheduleEntry()" x-text="ot('planning.add')"></button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="office-summary-grid" x-show="activeTab === 'history'" x-cloak>
-      <div class="space-y-4">
-        <template x-if="!officeMatches.length">
+        <template x-if="!officeKnockoutMatches.length">
           <article class="office-panel rounded-[20px] p-8 text-center text-slate-500">
-            <span x-text="ot('history.empty')"></span>
+            <span x-text="ot('knockout.empty')"></span>
           </article>
         </template>
-        <template x-for="match in officeMatches" :key="`${match.source || 'match'}-${match.id}`">
-          <article class="office-panel office-history-card">
-            <div class="space-y-4">
-              <div class="flex items-center justify-between gap-3 flex-wrap">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="office-chip" :class="officePhaseTone(match)" x-text="officeMatchPhase(match)"></span>
-                  <span class="text-sm text-slate-500" x-text="formatOfficeMatchTime(match)"></span>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="startOfficeEdit(match)" x-text="ot('history.editResult')"></button>
-              </div>
-              <div class="office-history-scoreboard">
-                <div class="hm-scoreboard" aria-hidden="true">
-                  <div class="hm-player" :class="{ 'hm-player--winner': officeMatchWinner(match) === 'A' }">
-                    <span class="hm-winner-mark" x-show="officeMatchWinner(match) === 'A'" aria-hidden="true"></span>
-                    <span class="hm-winner-mark hm-winner-mark--empty" x-show="officeMatchWinner(match) !== 'A'" aria-hidden="true"></span>
-                    <span class="hm-player-name competitor-name" x-text="formatCompetitorName(match.player1_name || '-')"></span>
-                    <span class="hm-sets">
-                      <template x-for="(set, i) in officeMatchSets(match)" :key="'oa-'+match.id+'-'+i">
-                        <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.a > set.b, 'hm-set-cell--stb': set.isSuperTB }">
-                          <span x-text="set.isSuperTB ? '['+set.a+']' : set.a"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.a < set.b" x-text="set.tb"></sup>
-                        </span>
-                      </template>
-                    </span>
-                  </div>
-                  <div class="hm-player" :class="{ 'hm-player--winner': officeMatchWinner(match) === 'B' }">
-                    <span class="hm-winner-mark" x-show="officeMatchWinner(match) === 'B'" aria-hidden="true"></span>
-                    <span class="hm-winner-mark hm-winner-mark--empty" x-show="officeMatchWinner(match) !== 'B'" aria-hidden="true"></span>
-                    <span class="hm-player-name competitor-name" x-text="formatCompetitorName(match.player2_name || '-')"></span>
-                    <span class="hm-sets">
-                      <template x-for="(set, i) in officeMatchSets(match)" :key="'ob-'+match.id+'-'+i">
-                        <span class="hm-set-cell" :class="{ 'hm-set-cell--won': set.b > set.a, 'hm-set-cell--stb': set.isSuperTB }">
-                          <span x-text="set.isSuperTB ? '['+set.b+']' : set.b"></span><sup class="hm-tb" x-show="set.tb !== null && !set.isSuperTB && set.b < set.a" x-text="set.tb"></sup>
-                        </span>
-                      </template>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
-        </template>
-      </div>
 
-      <aside class="space-y-4">
-        <article class="office-panel rounded-[20px] p-6">
-          <div class="office-kicker" x-text="ot('history.quickGroups')"></div>
-          <div class="mt-4 space-y-3">
-            <template x-for="group in officeGroups" :key="group.id">
-              <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <div class="font-semibold text-slate-800" x-text="officeDisplayLabel(group.name)"></div>
-                    <div class="text-sm text-slate-500" x-text="officeDisplayLabel(group.category) || ot('history.defaultGroup')"></div>
-                  </div>
-                  <span class="office-chip" :class="group.complete ? 'office-chip-group' : 'office-chip-neutral'" x-text="groupCompletionLabel(group)"></span>
-                </div>
-              </div>
-            </template>
-          </div>
-        </article>
-      </aside>
-    </section>
-
-    <section class="mt-6" x-show="activeTab === 'progress'" x-cloak>
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <template x-for="group in officeGroups" :key="group.id">
-          <article class="office-panel rounded-[20px] p-6">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <div class="office-kicker" x-text="ot('progress.group')"></div>
-                <h2 class="mt-1 text-xl font-semibold" x-text="officeDisplayLabel(group.name)"></h2>
-                <p class="mt-1 text-sm text-slate-500" x-text="officeDisplayLabel(group.category) || ot('progress.groupPhase')"></p>
-              </div>
-              <span class="office-chip" :class="group.complete ? 'office-chip-group' : 'office-chip-knockout'" x-text="groupCompletionLabel(group)"></span>
-            </div>
-            <div class="mt-5 grid grid-cols-3 gap-2 text-center">
-              <div class="office-pill">
-                <div class="office-pill__label" x-text="ot('progress.plan')"></div>
-                <div class="office-pill__value" x-text="group.expected_matches"></div>
-              </div>
-              <div class="office-pill">
-                <div class="office-pill__label" x-text="ot('progress.done')"></div>
-                <div class="office-pill__value" x-text="group.finished_matches"></div>
-              </div>
-              <div class="office-pill">
-                <div class="office-pill__label" x-text="ot('progress.left')"></div>
-                <div class="office-pill__value" x-text="group.remaining_matches"></div>
-              </div>
-            </div>
-            <div class="mt-5 text-sm text-slate-600" x-text="officeGroupIsDoubles(group) ? ot('progress.pairs') : ot('progress.players')"></div>
-            <div class="mt-3 flex flex-wrap gap-2">
-              <template x-for="player in group.players || []" :key="player.id || player.name">
-                <span class="px-3 py-2 rounded-full bg-white/80 border border-slate-200/80 text-sm text-slate-700 competitor-name" x-text="formatCompetitorName(player.name)"></span>
-              </template>
-            </div>
-          </article>
-        </template>
-      </div>
-    </section>
-
-    <section class="mt-6 space-y-5" x-show="activeTab === 'knockout'" x-cloak>
-      <div class="office-topbar__stats">
-        <article class="office-pill office-stat">
-          <div class="office-pill__label" x-text="ot('knockout.generated')"></div>
-          <div class="office-pill__value" x-text="officeKnockout.expected_matches || 0"></div>
-        </article>
-        <article class="office-pill office-stat">
-          <div class="office-pill__label" x-text="ot('knockout.ready')"></div>
-          <div class="office-pill__value" x-text="officeKnockout.ready_matches || 0"></div>
-        </article>
-        <article class="office-pill office-stat">
-          <div class="office-pill__label" x-text="ot('knockout.finished')"></div>
-          <div class="office-pill__value" x-text="officeKnockout.finished_matches || 0"></div>
-        </article>
-      </div>
-
-      <template x-if="!officeKnockoutMatches.length">
-        <article class="office-panel rounded-[20px] p-8 text-center text-slate-500">
-          <span x-text="ot('knockout.empty')"></span>
-        </article>
-      </template>
-
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <template x-for="slot in officeKnockoutMatches" :key="'office_knockout_'+slot.slot_id">
-          <article class="office-panel rounded-[20px] p-6">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="office-chip office-chip-knockout" x-text="officeDisplayLabel(slot.phase) || ot('knockout.defaultPhase')"></span>
-                  <span class="office-chip" :class="slot.winner_name ? 'office-chip-group' : (slot.ready ? 'office-chip-knockout' : 'office-chip-neutral')" x-text="officeKnockoutStatusLabel(slot)"></span>
-                </div>
-                <div class="mt-3 text-sm text-slate-500">
-                  <span x-text="formatOfficeScheduleDay(slot)"></span>
-                  <span x-show="slot.scheduled_time"> · <span x-text="slot.scheduled_time"></span></span>
-                  <span> · </span><span x-text="officeScheduleCourtLabel(slot)"></span>
-                </div>
-              </div>
-              <span class="text-sm text-slate-400" x-text="'#' + (slot.position || 1)"></span>
-            </div>
-
-            <div class="mt-5 rounded-2xl border border-slate-200/80 bg-white/70 p-4 space-y-3">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <template x-for="slot in officeKnockoutMatches" :key="'office_knockout_'+slot.slot_id">
+            <article class="office-panel rounded-[20px] p-6">
               <div class="flex items-start justify-between gap-3">
-                <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(slot.player1_name) || ot('knockout.previousRoundWinner')"></span>
-                <span class="office-chip shrink-0" x-show="slot.winner_name === slot.player1_name" x-text="ot('knockout.winShort')"></span>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="office-chip office-chip-knockout" x-text="officeDisplayLabel(slot.phase) || ot('knockout.defaultPhase')"></span>
+                    <span class="office-chip" :class="slot.winner_name ? 'office-chip-group' : (slot.ready ? 'office-chip-knockout' : 'office-chip-neutral')" x-text="officeKnockoutStatusLabel(slot)"></span>
+                  </div>
+                  <div class="mt-3 text-sm text-slate-500">
+                    <span x-text="formatOfficeScheduleDay(slot)"></span>
+                    <span x-show="slot.scheduled_time"> · <span x-text="slot.scheduled_time"></span></span>
+                    <span> · </span><span x-text="officeScheduleCourtLabel(slot)"></span>
+                  </div>
+                </div>
+                <span class="text-sm text-slate-400" x-text="'#' + (slot.position || 1)"></span>
               </div>
-              <div class="flex items-start justify-between gap-3">
-                <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(slot.player2_name) || ot('knockout.previousRoundWinner')"></span>
-                <span class="office-chip shrink-0" x-show="slot.winner_name === slot.player2_name" x-text="ot('knockout.winShort')"></span>
+
+              <div class="mt-5 rounded-2xl border border-slate-200/80 bg-white/70 p-4 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                  <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(slot.player1_name) || ot('knockout.previousRoundWinner')"></span>
+                  <span class="office-chip shrink-0" x-show="slot.winner_name === slot.player1_name" x-text="ot('knockout.winShort')"></span>
+                </div>
+                <div class="flex items-start justify-between gap-3">
+                  <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(slot.player2_name) || ot('knockout.previousRoundWinner')"></span>
+                  <span class="office-chip shrink-0" x-show="slot.winner_name === slot.player2_name" x-text="ot('knockout.winShort')"></span>
+                </div>
               </div>
-            </div>
 
-            <div class="mt-4 text-sm text-slate-600" x-show="slot.score_text">
-              <span x-text="ot('knockout.score')"></span> <span class="font-semibold" x-text="slot.score_text"></span>
-            </div>
-            <div class="mt-4 text-sm text-slate-500" x-show="!slot.ready && !slot.winner_name" x-text="ot('knockout.waitingPreviousRound')"></div>
+              <div class="mt-4 text-sm text-slate-600" x-show="slot.score_text">
+                <span x-text="ot('knockout.score')"></span> <span class="font-semibold" x-text="slot.score_text"></span>
+              </div>
+              <div class="mt-4 text-sm text-slate-500" x-show="!slot.ready && !slot.winner_name" x-text="ot('knockout.waitingPreviousRound')"></div>
 
-            <div class="mt-5 flex justify-end gap-2">
-              <button type="button" class="btn btn-outline bg-white/80" x-show="slot.match_id" @click="startOfficeEditFromKnockout(slot)" x-text="ot('knockout.editResult')"></button>
-              <button type="button" class="btn office-btn-primary" x-show="officeKnockoutCanAddResult(slot)" @click="openAddKnockoutResult(slot)" x-text="ot('knockout.addResult')"></button>
-            </div>
-          </article>
-        </template>
+              <div class="mt-5 flex justify-end gap-2">
+                <button type="button" class="btn btn-outline bg-white/80" x-show="slot.match_id" @click="startOfficeEditFromKnockout(slot)" x-text="ot('knockout.editResult')"></button>
+                <button type="button" class="btn office-btn-primary" x-show="officeKnockoutCanAddResult(slot)" @click="openAddKnockoutResult(slot)" x-text="ot('knockout.addResult')"></button>
+              </div>
+            </article>
+          </template>
+        </div>
+      </section>
+
       </div>
-    </section>
-  </main>
+    </main>
+  </div>
 
   <div class="office-modal-backdrop" x-show="addMatchOpen" x-transition.opacity x-cloak>
     <section class="office-modal office-panel" @click.away="closeAddMatchModal()">

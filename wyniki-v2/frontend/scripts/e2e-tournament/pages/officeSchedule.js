@@ -1,5 +1,5 @@
 /**
- * Page object: schedule board inside Plan turnieju.
+ * Page object: schedule board — "Terminarz" view.
  */
 export class OfficeSchedulePage {
   constructor(page) {
@@ -7,9 +7,9 @@ export class OfficeSchedulePage {
   }
 
   async navigateToTab() {
-    await this.page.getByRole('button', { name: 'Plan turnieju' }).click();
+    await this.page.locator('.office-tab').filter({ hasText: 'Terminarz' }).click();
     await this.page.waitForFunction(
-      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Plan turnieju'),
+      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Terminarz'),
       undefined,
       { timeout: 10000 }
     );

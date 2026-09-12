@@ -45,7 +45,7 @@ export default async function run() {
     const planningPage = new OfficePlanningPage(page);
     await planningPage.navigateToTab();
     await planningPage.waitForGroups();
-    console.log('  Office: groups visible in Plan turnieju');
+    console.log('  Office: groups visible in Grupy startowe');
   } finally {
     await browser.close();
   }

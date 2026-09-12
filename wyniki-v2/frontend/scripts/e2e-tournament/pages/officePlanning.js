@@ -1,5 +1,6 @@
 /**
- * Page object: Office planning tab (groups + schedule board).
+ * Page object: Office planning — "Grupy startowe" view (categories, players, teams, draw).
+ * The schedule board lives in the "Terminarz" view (see officeSchedule.js).
  */
 export class OfficePlanningPage {
   constructor(page) {
@@ -7,28 +8,17 @@ export class OfficePlanningPage {
   }
 
   async navigateToTab() {
-    await this.page.getByRole('button', { name: 'Plan turnieju' }).click();
+    await this.page.locator('.office-tab').filter({ hasText: 'Grupy startowe' }).click();
     await this.page.waitForFunction(
-      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Plan turnieju'),
+      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Grupy startowe'),
       undefined,
       { timeout: 10000 }
     );
   }
 
-  /** Completed groups collapse step 1 (Debel badge, play-format, pair list). */
+  /** Step 1 has its own view now and never collapses; kept so specs read the same. */
   async expandStep1() {
     await this.waitForGroups();
-    const toggle = this.page.locator('.office-panel').filter({ hasText: 'Grupy startowe' }).locator('span.btn');
-    await toggle.first().waitFor({ state: 'visible', timeout: 8000 });
-    const label = ((await toggle.first().innerText()) || '').trim();
-    if (label === 'Edytuj') {
-      await toggle.first().click();
-    }
-    await this.page.waitForFunction(
-      () => document.body.innerText.includes('Zwiń'),
-      undefined,
-      { timeout: 8000 },
-    );
   }
 
   async waitForGroups() {

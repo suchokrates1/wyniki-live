@@ -1,5 +1,5 @@
 /**
- * Page object: office hero chrome (stats, tabs, logout, refresh).
+ * Page object: office chrome — Kort rail (views), top bar stats, refresh, logout.
  */
 export class OfficeChromePage {
   constructor(page) {
@@ -21,7 +21,7 @@ export class OfficeChromePage {
   }
 
   async expectTabs() {
-    for (const name of ['Ostatnie mecze', 'Postęp grup', 'Drabinka', 'Plan turnieju']) {
+    for (const name of ['Terminarz', 'Grupy startowe', 'Postęp grup', 'Drabinka', 'Ostatnie mecze', 'Komunikat dla widzów']) {
       const tab = this.page.locator('.office-tab').filter({ hasText: name });
       if (!(await tab.count())) {
         throw new Error(`Missing office tab: ${name}`);

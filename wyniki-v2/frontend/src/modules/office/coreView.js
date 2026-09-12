@@ -25,7 +25,7 @@ export function createOfficeCoreView() {
 
     authLoading: false,
 
-    activeTab: 'history',
+    activeTab: 'planning',
 
     addMatchOpen: false,
 
@@ -219,6 +219,7 @@ export function createOfficeCoreView() {
       if (this.token) {
         this.loadDashboard();
         this.connectOfficeSSE();
+        this.openOfficeView(this.activeTab);
       }
       window.addEventListener('visibilitychange', () => {
         if (!this.isAuthenticated || document.hidden) return;
@@ -349,6 +350,7 @@ export function createOfficeCoreView() {
         this.authPassword = '';
         this.authError = '';
         this.connectOfficeSSE();
+        this.openOfficeView(this.activeTab);
         this.showToast(this.ot('toast.unlocked'), 'success');
       } catch (error) {
         console.error('Office auth failed:', error);

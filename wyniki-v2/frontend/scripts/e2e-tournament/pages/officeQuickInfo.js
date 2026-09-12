@@ -1,5 +1,5 @@
 /**
- * Page object: quick info hero block (not a tab).
+ * Page object: quick info — "Komunikat dla widzów" view.
  */
 export class OfficeQuickInfoPage {
   constructor(page) {
@@ -7,12 +7,16 @@ export class OfficeQuickInfoPage {
   }
 
   async ensureVisible() {
-    await this.page.waitForSelector('#office-quick-info-message, textarea', { timeout: 10000 });
+    const textarea = this.page.locator('#office-quick-info-message');
+    if (!(await textarea.isVisible().catch(() => false))) {
+      await this.page.locator('.office-tab').filter({ hasText: 'Komunikat dla widzów' }).click();
+    }
+    await textarea.waitFor({ state: 'visible', timeout: 10000 });
   }
 
   async setContent(text) {
     await this.ensureVisible();
-    const textarea = this.page.locator('#office-quick-info-message, textarea').first();
+    const textarea = this.page.locator('#office-quick-info-message');
     await textarea.fill(text);
     const checkbox = this.page.locator('#office-quick-info-active');
     if (await checkbox.count()) {

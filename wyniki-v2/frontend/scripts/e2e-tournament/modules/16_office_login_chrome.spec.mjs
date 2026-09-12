@@ -37,7 +37,7 @@ export default async function run() {
     const chrome = new OfficeChromePage(page);
     await chrome.expectStats();
     await chrome.expectTabs();
-    console.log('  Chrome: stats cards and four tabs');
+    console.log('  Chrome: stats and six rail views');
 
     await page.getByRole('button', { name: 'Test powiadomienia' }).waitFor({ state: 'visible', timeout: 5000 });
     await chrome.refresh();
@@ -46,7 +46,9 @@ export default async function run() {
 
     await chrome.openTab('Postęp grup');
     await chrome.openTab('Drabinka');
-    await chrome.openTab('Plan turnieju');
+    await chrome.openTab('Terminarz');
+    await chrome.openTab('Grupy startowe');
+    await chrome.openTab('Komunikat dla widzów');
     await chrome.openTab('Ostatnie mecze');
     console.log('  Tabs switch');
 

@@ -62,7 +62,7 @@ export function createOfficeSseView() {
       }
       this.pendingRemoteRefresh = false;
       await this.loadDashboard(false);
-      if (this.activeTab === 'planning') await this.loadOfficePlanningData();
+      if (this.officeViewUsesPlanningData()) await this.loadOfficePlanningData();
     },
 
     async flushPendingOfficeRefresh() {

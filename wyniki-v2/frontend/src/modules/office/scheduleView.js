@@ -3,13 +3,42 @@ import { defaultOfficeScheduleForm } from './forms.js';
 export function createOfficeScheduleView() {
   return {
     async openPlanningTab() {
-      this.activeTab = 'planning';
+      await this.openOfficeView('planning');
+    },
+
+    officeViewUsesPlanningData(view = this.activeTab) {
+      return view === 'planning' || view === 'groups';
+    },
+
+    async openOfficeView(view) {
+      this.activeTab = view;
+      if (!this.officeViewUsesPlanningData(view)) return;
       if (!this.planningPlayers.length) {
         await this.loadOfficePlanningData();
       }
       if (!this.autoConfig) {
         await this.loadAutoConfig();
       }
+    },
+
+    officeViewItems() {
+      return [
+        { id: 'planning', label: this.ot('planning.step2Title'), icon: 'M3 5h18v15H3zM3 10h18M9 5v15M15 5v15' },
+        { id: 'groups', label: this.ot('planning.step1Title'), icon: 'M4 4h6v16H4zM14 4h6v16h-6z' },
+        { id: 'progress', label: this.ot('tabs.progress'), icon: 'M4 19V9M10 19V5M16 19v-7M21 19H3' },
+        { id: 'knockout', label: this.ot('tabs.knockout'), icon: 'M4 6h6v12H4zM14 6h6v5h-6zM14 13h6v5h-6z' },
+        { id: 'history', label: this.ot('tabs.history'), icon: 'M4 7h16M4 12h16M4 17h10' },
+        { id: 'quickinfo', label: this.ot('quickInfo.subtitle'), icon: 'M4 10v4l11 5V5L4 10zM15 8.5c1.8.5 3 1.8 3 3.5s-1.2 3-3 3.5' },
+      ];
+    },
+
+    officeViewTitle() {
+      const item = this.officeViewItems().find(entry => entry.id === this.activeTab);
+      return item?.label || this.ot('hero.defaultTitle');
+    },
+
+    officeLiveScheduleCount() {
+      return (this.officeSchedule || []).filter(entry => this.officeScheduleStatusClass(entry?.status) === 'is-live').length;
     },
 
 

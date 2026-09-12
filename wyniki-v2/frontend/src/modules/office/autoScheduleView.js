@@ -308,7 +308,7 @@ export function createOfficeAutoScheduleView() {
 
     officeScheduleStatusClass(status) {
       const value = String(status || '').toLowerCase();
-      if (value === 'published' || value.includes('publik')) return 'is-published';
+      if (value === 'published' || value === 'planned' || value.includes('publik')) return 'is-published';
       if (value === 'in_progress' || value === 'live' || value.includes('trw')) return 'is-live';
       if (value === 'completed' || value.includes('zakon') || value.includes('zakoń')) return 'is-done';
       return 'is-draft';
