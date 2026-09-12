@@ -757,7 +757,7 @@ body.office-body {
 
 .office-timetable__cell.is-drop { background: rgba(198, 233, 83, 0.06); }
 
-.office-timetable__cell > .grid { color: var(--kort-line); font-family: var(--kort-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.office-timetable__cell > .grid { color: #2d5a64; font-family: var(--kort-mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
 
 .office-block {
   position: relative;
@@ -999,6 +999,15 @@ body.office-body {
   font-weight: 700;
   text-align: center;
   min-height: 52px;
+}
+
+/* main.css styles a public `.grid` (two 360 px columns, 24 px gap, 22 px margin); it leaks
+   into every Tailwind `grid` here. :where keeps this at one class so Tailwind utilities,
+   injected later by the CDN, still win. */
+:where(.office-app, .office-modal-backdrop, .office-login) .grid {
+  grid-template-columns: none;
+  gap: 0;
+  margin: 0;
 }
 
 /* ——— Tailwind light utilities inside moved blocks → Kort palette ——— */

@@ -438,7 +438,7 @@
                     <select class="select select-bordered select-sm bg-white w-full" x-model="entry.court_id">
                       <option value="" x-text="ot('planning.courtTbd')"></option>
                       <template x-for="c in autoCourts" :key="'insp_court_'+entry.id+'_'+c.kort_id">
-                        <option :value="c.kort_id" x-text="c.name || c.kort_id"></option>
+                        <option :value="c.kort_id" :selected="String(c.kort_id) === String(entry.court_id ?? '')" x-text="c.name || c.kort_id"></option>
                       </template>
                     </select>
                   </label>
@@ -447,7 +447,7 @@
                   <span class="office-kicker" x-text="ot('planning.publishStatus')"></span>
                   <select class="select select-bordered select-sm bg-white w-full" x-model="entry.status">
                     <template x-for="option in scheduleStatusOptions()" :key="'insp_status_'+entry.id+'_'+option.value">
-                      <option :value="option.value" x-text="option.label"></option>
+                      <option :value="option.value" :selected="option.value === entry.status" x-text="option.label"></option>
                     </template>
                   </select>
                 </label>
@@ -1035,7 +1035,7 @@
           <span class="label-text font-semibold mb-2" x-text="officeCompetitorALabel()"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player1_name">
             <template x-for="player in officeGroupPlayers()" :key="player.name">
-              <option :value="player.name" x-text="player.name"></option>
+              <option :value="player.name" :selected="player.name === officeNewMatch.player1_name" x-text="player.name"></option>
             </template>
           </select>
         </label>
@@ -1043,7 +1043,7 @@
           <span class="label-text font-semibold mb-2" x-text="officeCompetitorBLabel()"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player2_name">
             <template x-for="player in officeGroupPlayers()" :key="player.name">
-              <option :value="player.name" x-text="player.name"></option>
+              <option :value="player.name" :selected="player.name === officeNewMatch.player2_name" x-text="player.name"></option>
             </template>
           </select>
         </label>
@@ -1051,7 +1051,7 @@
           <span class="label-text font-semibold mb-2" x-text="officeCompetitorALabel()"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player1_name">
             <template x-for="name in officeAllPlayerNames()" :key="'ko_p1_'+name">
-              <option :value="name" x-text="name"></option>
+              <option :value="name" :selected="name === officeNewMatch.player1_name" x-text="name"></option>
             </template>
           </select>
         </label>
@@ -1059,7 +1059,7 @@
           <span class="label-text font-semibold mb-2" x-text="officeCompetitorBLabel()"></span>
           <select class="select select-bordered bg-white/90" x-model="officeNewMatch.player2_name">
             <template x-for="name in officeAllPlayerNames()" :key="'ko_p2_'+name">
-              <option :value="name" x-text="name"></option>
+              <option :value="name" :selected="name === officeNewMatch.player2_name" x-text="name"></option>
             </template>
           </select>
         </label>
