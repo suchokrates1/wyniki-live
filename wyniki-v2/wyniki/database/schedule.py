@@ -966,6 +966,8 @@ def get_autoscheduler_config(tournament_id: int) -> Dict[str, Any]:
             pass
     if not config.get("b1_court_ids") and config.get("b1_court_id"):
         config["b1_court_ids"] = [str(config["b1_court_id"])]
+    # Always the tournament's current courts, never a list saved with an older config.
+    config["court_ids"] = auto_scheduler.build_default_config(courts)["court_ids"]
     return config
 
 def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dict[str, Any]:

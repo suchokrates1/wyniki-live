@@ -236,3 +236,14 @@ def test_place_matches_across_days_fills_each_day_then_leaves_the_rest():
     assert len(placed_day2) == 3
     assert len(unplaced) == 1
     assert len({p["match"]["id"] for p in placements}) == 7
+
+
+def test_place_matches_uses_every_non_b1_court():
+    courts = [{"kort_id": f"k{i}", "display_order": i} for i in range(1, 12)]
+    config = sched.build_default_config(courts)
+    config["start_time"] = "09:00"
+    config["end_time"] = "10:00"
+    placements = sched.place_matches(_b2_round(20), config, "2026-08-25")
+    used = {p["court_id"] for p in placements if p["court_id"]}
+    assert len(used) == 10  # eleven courts, one of them B1
+    assert config["b1_court_ids"][0] not in used

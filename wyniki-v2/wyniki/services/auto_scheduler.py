@@ -81,6 +81,7 @@ def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
             category_courts[band] = court_ids[index]
     b1_court_id = category_courts.get("B1") or (court_ids[-1] if court_ids else "")
     return {
+        "court_ids": court_ids,
         "start_time": DEFAULT_START_TIME,
         "b1_court_id": b1_court_id,
         "b1_court_ids": [b1_court_id] if b1_court_id else [],
@@ -172,9 +173,14 @@ def order_with_rest(matches: List[Dict[str, Any]], rest_slots: int = 1) -> List[
 
 
 def _ordered_flex_court_ids(config: Dict[str, Any]) -> List[str]:
-    """Non-B1 courts available for load-balanced scheduling."""
+    """Non-B1 courts available for load-balanced scheduling: every tournament court that is
+    not B1-special (older configs without ``court_ids`` fall back to the band mapping)."""
     b1_set = set(normalize_b1_court_ids(config))
     seen: List[str] = []
+    for court_id in config.get("court_ids") or []:
+        value = str(court_id or "").strip()
+        if value and value not in b1_set and value not in seen:
+            seen.append(value)
     for court_id in (config.get("category_courts") or {}).values():
         value = str(court_id or "").strip()
         if value and value not in b1_set and value not in seen:
