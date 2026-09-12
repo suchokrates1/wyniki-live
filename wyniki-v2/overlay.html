@@ -304,6 +304,11 @@
     let eventSource = null;
     let scoreAnim = {};
     let scoreAnimHold = {};
+    let boardHold = {};
+    let holdRefreshTimer = null;
+    let exitLocks = {};
+    const SCOREBOARD_HOLD_MS = 5 * 60 * 1000;
+    const SCOREBOARD_SLIDE_MS = 450;
     const SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
 
     function getPreset() {
@@ -341,12 +346,63 @@
         return !isPlaceholderName(a.full_name || a.surname) || !isPlaceholderName(b.full_name || b.surname);
     }
 
+    function courtSideName(court, side) {
+        var player = (court && court[side]) || {};
+        var full = String(player.full_name || '').trim();
+        if (full && !isPlaceholderName(full)) return full;
+        var surname = String(player.surname || '').trim();
+        if (surname && !isPlaceholderName(surname)) return surname;
+        return '';
+    }
+
+    function courtIdentityKey(court) {
+        function norm(name) { return String(name || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+        return norm(courtSideName(court, 'A')) + '|' + norm(courtSideName(court, 'B'));
+    }
+
+    function parseFinishedAtMs(court) {
+        var iso = court && court.match_status && court.match_status.last_completed;
+        if (!iso && court && court.match_time) iso = court.match_time.finished_ts;
+        if (iso == null || iso === '') return null;
+        var ms = Date.parse(iso);
+        return Number.isFinite(ms) ? ms : null;
+    }
+
+    function cloneCourt(court) {
+        if (!court || typeof court !== 'object') return null;
+        return JSON.parse(JSON.stringify(court));
+    }
+
+    function isScoreboardHeld(court, now) {
+        if (!courtHasPlayers(court)) return false;
+        if (court.match_status && court.match_status.active) return true;
+        var finishedAt = parseFinishedAtMs(court);
+        if (finishedAt == null) return true;
+        return ((now != null ? now : Date.now()) - finishedAt) < SCOREBOARD_HOLD_MS;
+    }
+
+    function holdRemainingMs(court, now) {
+        var t = now != null ? now : Date.now();
+        if (!isScoreboardHeld(court, t)) return 0;
+        if (court.match_status && court.match_status.active) return null;
+        var finishedAt = parseFinishedAtMs(court);
+        if (finishedAt == null) return 0;
+        return Math.max(0, SCOREBOARD_HOLD_MS - (t - finishedAt));
+    }
+
     function isElementCourtOccupied(el) {
-        return courtHasPlayers(resolveCourtState(el && el.court_id));
+        return isScoreboardHeld(resolveCourtState(el && el.court_id));
     }
 
     function overlayHasOccupiedCourt(preset) {
         return (preset.elements || []).some(isElementCourtOccupied);
+    }
+
+    function overlayHasMovingBoard() {
+        return Object.keys(boardHold).some(function(key) {
+            var phase = boardHold[key] && boardHold[key].phase;
+            return phase === 'visible' || phase === 'entering' || phase === 'exiting' || phase === 'swapping';
+        });
     }
 
     function sortCourtIds(ids) {
@@ -581,9 +637,9 @@
         return 'is-' + prefix + '-' + (tick % 2 === 0 ? 'a' : 'b');
     }
 
-    function renderScoreboard(el) {
+    function renderScoreboard(el, courtOverride) {
         const cid = el.court_id;
-        const court = resolveCourtState(cid);
+        const court = courtOverride || resolveCourtState(cid);
         const pA = court.A || {}, pB = court.B || {};
         const active = court.match_status?.active || false;
         const inactiveClass = active ? '' : ' match-inactive';
@@ -737,8 +793,8 @@
         return a + b;
     }
 
-    function renderStats(el) {
-        var court = resolveCourtState(el.court_id);
+    function renderStats(el, courtOverride) {
+        var court = courtOverride || resolveCourtState(el.court_id);
         var active = court.match_status?.active || false;
         if (!active) return '';
         var st = court.stats || {};
@@ -803,9 +859,171 @@
         return '<img class="ov-watermark" src="'+logo+'" alt="Vest Media" style="'+place+'width:'+size+'px;height:'+size+'px;opacity:'+opacity+';">';
     }
 
+    function elementKey(el, index) {
+        return String(el.type || 'score') + ':' + String(el.court_id != null ? el.court_id : index);
+    }
+
+    function fillWrapper(wrap, el, court) {
+        wrap.innerHTML = el.type === 'stats' ? renderStats(el, court) : renderScoreboard(el, court);
+    }
+
+    function applyWrapperChrome(wrap, el, look) {
+        var slide = slideDirClass(el);
+        wrap.classList.toggle('has-h', !!el.h);
+        wrap.classList.remove('slide-up', 'slide-down');
+        wrap.classList.add(slide);
+        wrap.classList.toggle('no-enter', !look.anim_enter);
+        wrap.style.left = (el.x || 0) + 'px';
+        wrap.style.top = (el.y || 0) + 'px';
+        wrap.style.width = (el.w || 0) + 'px';
+        wrap.style.height = el.h ? (el.h + 'px') : '';
+    }
+
+    function scheduleHoldRefresh() {
+        if (holdRefreshTimer) {
+            clearTimeout(holdRefreshTimer);
+            holdRefreshTimer = null;
+        }
+        var preset = getPreset();
+        var soonest = null;
+        (preset.elements || []).forEach(function(el) {
+            var remaining = holdRemainingMs(resolveCourtState(el.court_id));
+            if (remaining == null || remaining <= 0) return;
+            if (soonest == null || remaining < soonest) soonest = remaining;
+        });
+        if (soonest == null) return;
+        holdRefreshTimer = setTimeout(function() {
+            holdRefreshTimer = null;
+            render();
+            requestAnimationFrame(fitPlayerNames);
+        }, soonest + 40);
+    }
+
+    function finishWrapperExit(key, wrap, el, look) {
+        var slot = boardHold[key];
+        if (!slot || (slot.phase !== 'exiting' && slot.phase !== 'swapping')) return;
+        if (slot.phase === 'swapping' && slot.pendingCourt) {
+            fillWrapper(wrap, el, slot.pendingCourt);
+            slot.identity = slot.pendingIdentity || courtIdentityKey(slot.pendingCourt);
+            slot.lastCourt = cloneCourt(slot.pendingCourt);
+            slot.frozen = null;
+            slot.pendingCourt = null;
+            slot.pendingIdentity = '';
+            slot.phase = 'visible';
+            boardHold[key] = slot;
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    wrap.classList.remove('el-hidden');
+                    requestAnimationFrame(fitPlayerNames);
+                });
+            });
+            return;
+        }
+        slot.identity = '';
+        slot.frozen = null;
+        slot.pendingCourt = null;
+        slot.phase = 'hidden';
+        boardHold[key] = slot;
+        wrap.innerHTML = '';
+        render();
+    }
+
+    function startWrapperExit(key, wrap, el, look) {
+        if (exitLocks[key]) return;
+        exitLocks[key] = true;
+        wrap.classList.add('el-hidden');
+        var done = false;
+        function complete(ev) {
+            if (ev && ev.target !== wrap) return;
+            if (done) return;
+            done = true;
+            wrap.removeEventListener('transitionend', complete);
+            clearTimeout(fallback);
+            delete exitLocks[key];
+            finishWrapperExit(key, wrap, el, look);
+        }
+        var fallback = setTimeout(complete, SCOREBOARD_SLIDE_MS + 80);
+        wrap.addEventListener('transitionend', complete);
+        if (!look.anim_enter) complete();
+    }
+
+    function syncWrapperBoard(wrap, key, el, look, autoHide) {
+        var live = resolveCourtState(el.court_id);
+        var slot = boardHold[key] || { phase: 'hidden', identity: '', frozen: null, lastCourt: null };
+
+        if (el.visible === false) {
+            wrap.classList.add('el-hidden');
+            boardHold[key] = { phase: 'hidden', identity: '', frozen: null, lastCourt: null };
+            return;
+        }
+
+        if (!autoHide) {
+            fillWrapper(wrap, el, live);
+            wrap.classList.remove('el-hidden');
+            boardHold[key] = {
+                phase: 'visible',
+                identity: courtIdentityKey(live),
+                frozen: null,
+                lastCourt: cloneCourt(live),
+            };
+            return;
+        }
+
+        if (slot.phase === 'exiting' || slot.phase === 'swapping') return;
+
+        var show = isScoreboardHeld(live);
+        var identity = show ? courtIdentityKey(live) : '';
+
+        if (slot.phase === 'visible' && identity && slot.identity && identity !== slot.identity) {
+            slot.frozen = cloneCourt(slot.lastCourt);
+            slot.pendingCourt = cloneCourt(live);
+            slot.pendingIdentity = identity;
+            slot.phase = 'swapping';
+            boardHold[key] = slot;
+            startWrapperExit(key, wrap, el, look);
+            return;
+        }
+
+        if (slot.phase === 'visible' && !show) {
+            slot.frozen = cloneCourt(slot.lastCourt || live);
+            slot.phase = 'exiting';
+            boardHold[key] = slot;
+            startWrapperExit(key, wrap, el, look);
+            return;
+        }
+
+        if (slot.phase !== 'visible' && show) {
+            fillWrapper(wrap, el, live);
+            slot.identity = identity;
+            slot.lastCourt = cloneCourt(live);
+            slot.frozen = null;
+            slot.phase = 'visible';
+            boardHold[key] = slot;
+            if (look.anim_enter) {
+                wrap.classList.add('el-hidden');
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        wrap.classList.remove('el-hidden');
+                    });
+                });
+            } else {
+                wrap.classList.remove('el-hidden');
+            }
+            return;
+        }
+
+        if (slot.phase === 'visible' && show) {
+            fillWrapper(wrap, el, live);
+            slot.identity = identity;
+            slot.lastCourt = cloneCourt(live);
+            boardHold[key] = slot;
+        }
+    }
+
     function render() {
         var preset = getPreset();
-        var anyOccupied = overlayHasOccupiedCourt(preset);
+        var look = overlayLook(preset);
+        var anyOccupied = overlayHasOccupiedCourt(preset) || overlayHasMovingBoard();
         var autoHidden = preset.auto_hide && !anyOccupied;
         var sx = window.innerWidth / 1920;
         var sy = window.innerHeight / 1080;
@@ -839,22 +1057,44 @@
             }
         }
 
-        var html = elems.map(function(el) {
-            var hidden = el.visible === false ? 'el-hidden' : '';
-            if (!hidden && preset.auto_hide && !isElementCourtOccupied(el)) hidden = 'el-hidden';
-            if (!overlayLook(preset).anim_enter) hidden += ' no-enter';
-            var style = 'left:'+el.x+'px;top:'+el.y+'px;width:'+el.w+'px;';
-            if (el.h) style += 'height:'+el.h+'px;';
-            var hClass = el.h ? ' has-h' : '';
-            var slide = slideDirClass(el);
-            if (el.type === 'stats') {
-                return '<div class="element-wrapper '+hidden+' '+slide+hClass+'" style="'+style+'">'+renderStats(el)+'</div>';
+        var app = document.getElementById('app');
+        var layout = app.querySelector(':scope > .layout');
+        if (!layout) {
+            app.innerHTML = '<div class="layout"></div>';
+            layout = app.querySelector(':scope > .layout');
+        }
+        layout.style.transform = 'scale(' + scale + ')';
+        layout.classList.toggle('auto-hidden', autoHidden);
+
+        var seen = {};
+        elems.forEach(function(el, index) {
+            var key = elementKey(el, index);
+            seen[key] = true;
+            var wrap = layout.querySelector('.element-wrapper[data-el-key="' + key + '"]');
+            if (!wrap) {
+                wrap = document.createElement('div');
+                wrap.className = 'element-wrapper el-hidden ' + slideDirClass(el);
+                wrap.setAttribute('data-el-key', key);
+                layout.appendChild(wrap);
             }
-            return '<div class="element-wrapper '+hidden+' '+slide+hClass+'" style="'+style+'">'+renderScoreboard(el)+'</div>';
-        }).join('');
-        html += renderWatermark(preset);
-        document.getElementById('app').innerHTML =
-            '<div class="layout '+(autoHidden?'auto-hidden':'')+'" style="transform:scale('+scale+')">'+html+'</div>';
+            applyWrapperChrome(wrap, el, look);
+            syncWrapperBoard(wrap, key, el, look, !!preset.auto_hide);
+        });
+
+        layout.querySelectorAll('.element-wrapper').forEach(function(node) {
+            var key = node.getAttribute('data-el-key');
+            if (seen[key]) return;
+            node.remove();
+            delete boardHold[key];
+            delete exitLocks[key];
+        });
+
+        var oldWm = layout.querySelector('.ov-watermark');
+        if (oldWm) oldWm.remove();
+        var wmHtml = renderWatermark(preset);
+        if (wmHtml) layout.insertAdjacentHTML('beforeend', wmHtml);
+
+        scheduleHoldRefresh();
     }
 
     function connectSSE() {

@@ -193,44 +193,6 @@ body {
   transform: rotate(180deg);
 }
 
-/* === Live Badge === */
-.live-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 10px;
-  padding: 2px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: 999px;
-  /* Opaque so contrast is stable on any surface (card or dark header);
-     translucent green-on-green failed 1.4.3 (~1.8:1) on light cards. */
-  background: #d7f2e1;
-  color: #106a34;
-  border: 1px solid #9ad9b4;
-  animation: live-pulse 2s ease-in-out infinite;
-}
-[data-theme="dark"] .live-badge {
-  background: rgba(53,196,106,0.15);
-  color: #35c46a;
-  border-color: rgba(53,196,106,0.35);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .live-badge {
-    background: rgba(53,196,106,0.15);
-    color: #35c46a;
-    border-color: rgba(53,196,106,0.35);
-  }
-}
-.live-badge::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #35c46a;
-  box-shadow: 0 0 8px rgba(53,196,106,.8);
-}
-
 /* === Navigation === */
 nav {
   padding: 8px 0;
@@ -1135,13 +1097,6 @@ body {
   50%  { text-shadow: 0 0 12px rgba(154,209,255,.6); }
   100% { text-shadow: 0 0 0 rgba(154,209,255,0); }
 }
-@keyframes live-pulse {
-  /* Pulse via an expanding glow, not opacity: fading the badge to 0.4 made
-     its text composite with the background and drop below 4.5:1 (WCAG 1.4.3). */
-  0%   { box-shadow: 0 0 0 0 rgba(53, 196, 106, 0.45); }
-  70%  { box-shadow: 0 0 0 6px rgba(53, 196, 106, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(53, 196, 106, 0); }
-}
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -1159,7 +1114,6 @@ body {
   .points.flip-strong { animation: none; }
   .points.rolling .digit .d-old,
   .points.rolling .digit .d-new { animation: none; }
-  .live-badge { animation: none; }
 }
 
 /* === Focus === */

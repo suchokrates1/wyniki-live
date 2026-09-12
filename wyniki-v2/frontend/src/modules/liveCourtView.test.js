@@ -98,3 +98,59 @@ test('courtMatchClock uses started_ts instead of frozen seconds', () => {
     Date.now = originalNow;
   }
 });
+
+test('homepage keeps a finished score during the hold window', () => {
+  const now = Date.parse('2026-09-12T12:00:00.000Z');
+  const view = makeView({
+    court_name: '3',
+    match_status: { active: false, last_completed: '2026-09-12T11:57:00.000Z' },
+    A: { full_name: 'Ada Nowak', points: '0', set1: 4, set2: 4 },
+    B: { full_name: 'Ewa Lis', points: '0', set1: 1, set2: 2 },
+  });
+  view.syncScoreboardSlots(now);
+  assert.deepEqual(view.getCourtIds(), ['c3']);
+  assert.equal(view.isBoardOff('c3'), false);
+  assert.match(view.getHeadingAria('c3'), /Ada Nowak/);
+});
+
+test('homepage hides empty courts and expired leftovers', () => {
+  const now = Date.parse('2026-09-12T12:00:00.000Z');
+  const view = makeView({
+    court_name: '3',
+    match_status: { active: false, last_completed: '2026-09-12T11:50:00.000Z' },
+    A: { full_name: 'Ada Nowak' },
+    B: { full_name: 'Ewa Lis' },
+  });
+  view.courts.empty = {
+    court_name: '4',
+    match_status: { active: false, last_completed: null },
+    A: { surname: '-' },
+    B: { surname: '-' },
+  };
+  view.syncScoreboardSlots(now);
+  assert.deepEqual(view.getCourtIds(), []);
+});
+
+test('new names during the hold slide the old board off first', () => {
+  const now = Date.parse('2026-09-12T12:00:00.000Z');
+  const view = makeView({
+    court_name: '3',
+    match_status: { active: false, last_completed: '2026-09-12T11:57:00.000Z' },
+    A: { full_name: 'Ada Nowak', set1: 4, set2: 4 },
+    B: { full_name: 'Ewa Lis', set1: 1, set2: 2 },
+  });
+  view.syncScoreboardSlots(now);
+  view.courts.c3 = {
+    court_name: '3',
+    match_status: { active: true, last_completed: null },
+    A: { full_name: 'Piotr Kot', set1: 0, points: '0' },
+    B: { full_name: 'Jan Bąk', set1: 0, points: '0' },
+  };
+  view.syncScoreboardSlots(now);
+  assert.equal(view.isBoardOff('c3'), true);
+  assert.match(view.getSpokenPlayerName('c3', 'A'), /Ada Nowak/);
+  view.completeBoardExit('c3');
+  assert.equal(view.isBoardOff('c3'), false);
+  assert.match(view.getSpokenPlayerName('c3', 'A'), /Piotr Kot/);
+  assert.deepEqual(view.getCourtIds(), ['c3']);
+});

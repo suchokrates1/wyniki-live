@@ -21,7 +21,6 @@
             <div class="header-bar">
                 <h1 class="header-title">
                     <img class="header-logo" src="/brand/blindtennis-logo-horizontal-on-dark.svg" width="360" height="96" alt="blindtennis.app - live scores">
-                    <span x-show="hasActiveCourts()" class="live-badge" x-text="tr().liveBadge || 'LIVE'">LIVE</span>
                 </h1>
                 <div class="header-actions">
                     <label class="sr-only" for="langSelect" x-text="uiText().languageSelect || 'Wybierz jezyk'">Wybierz jezyk</label>
@@ -127,10 +126,11 @@
             <!-- Courts Grid. Visual TV HTML is aria-hidden; SR uses the heading + live summary. -->
             <div x-show="!loading" class="grid">
                 <template x-for="courtId in getCourtIds()" :key="forKey('court', courtId)">
-                    <section class="court-tv" :id="'kort-'+courtId" :aria-labelledby="'heading-'+courtId">
+                    <section class="court-tv" :class="{ 'is-off': isBoardOff(courtId) }" :id="'kort-'+courtId" :aria-labelledby="isBoardOff(courtId) ? null : ('heading-'+courtId)" :aria-hidden="isBoardOff(courtId)">
                         <h2 class="sr-only" :id="'heading-'+courtId" x-text="getHeadingAria(courtId)"></h2>
                         <div aria-hidden="true" x-html="renderLiveTvScoreboard(courtId, serveAnimTick, lang)"></div>
                         <p class="sr-only score-summary" :id="'k'+courtId+'-summary'" aria-live="polite"
+                           x-show="!isBoardOff(courtId)"
                            x-text="getScoreSummary(courtId)"></p>
                     </section>
                 </template>
