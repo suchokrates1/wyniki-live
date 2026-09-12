@@ -5,7 +5,7 @@ import { chromium } from '@playwright/test';
 import {
   adminLogin, cleanup, seedDoublesTournament, generateKnockout,
   fetchAdminSchedule, fetchPublicBracket, fetchGroups, officeLogin, officeGroupMatch,
-  OFFICE_PASSWORD,
+  OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficePlanningPage } from '../pages/officePlanning.js';
@@ -44,7 +44,7 @@ export default async function run() {
   }
   console.log(`  Formats: C RR rows=${cRows.length}, D knockout rows=${dRows.length} (no Grupowa)`);
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);

@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, cleanup, seedDoublesTournament, publishSchedule,
-  fetchPublicSchedule, fetchAdminSchedule, OFFICE_PASSWORD,
+  fetchPublicSchedule, fetchAdminSchedule, OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficePlanningPage } from '../pages/officePlanning.js';
@@ -41,7 +41,7 @@ export default async function run() {
   }
   console.log('  Public schedule shows A / B labels');
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);

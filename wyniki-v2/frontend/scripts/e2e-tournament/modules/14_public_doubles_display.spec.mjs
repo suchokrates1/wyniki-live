@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, cleanup, seedDoublesTournament, publishSchedule,
-  fetchPublicSchedule, fetchPublicBracket,
+  fetchPublicSchedule, fetchPublicBracket, launchBrowser,
 } from '../fixtures.js';
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:18087';
@@ -28,7 +28,7 @@ export default async function run() {
   const partners = String(teams[0].display_name).split(' / ').map((part) => part.trim());
   if (partners.length !== 2) throw new Error(`Cannot split pair ${teams[0].display_name}`);
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     await page.goto(`${BASE_URL}/#tournaments/${tournament.id}/schedule`, {

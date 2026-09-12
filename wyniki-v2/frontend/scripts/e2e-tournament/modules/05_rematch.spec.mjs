@@ -5,7 +5,7 @@ import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, saveGroups, fetchGroups,
   generateSchedule, generateRematch, cleanup, samplePlayers,
-  resolveOfficeSlot, OFFICE_PASSWORD,
+  resolveOfficeSlot, OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficePlanningPage } from '../pages/officePlanning.js';
@@ -37,7 +37,7 @@ export default async function run() {
   console.log(`  Rematch generated: ${JSON.stringify(rematchResult.result || rematchResult || {})}`);
 
   const slot = await resolveOfficeSlot(tournamentName);
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);

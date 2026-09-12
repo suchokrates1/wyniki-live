@@ -5,7 +5,7 @@ import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, saveGroups,
   generateSchedule, publishSchedule, cleanup, samplePlayers,
-  resolveOfficeSlot, OFFICE_PASSWORD,
+  resolveOfficeSlot, OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficeSchedulePage } from '../pages/officeSchedule.js';
@@ -33,7 +33,7 @@ export default async function run() {
   await publishSchedule(token, tournamentId, slot);
   console.log('  Schedule generated and published');
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);

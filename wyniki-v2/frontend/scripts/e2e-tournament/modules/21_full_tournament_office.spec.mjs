@@ -14,7 +14,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, cleanup, resolveOfficeSlot, officeLogin, OFFICE_PASSWORD,
-  fetchPublicSchedule,
+  fetchPublicSchedule, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 
@@ -87,7 +87,7 @@ export default async function run() {
   const dashboard = () => api('/dashboard');
   const isPlaced = (entry) => Boolean(entry.court_id && entry.scheduled_time);
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pl-PL' });
   const page = await context.newPage();
   const pageErrors = [];

@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, cleanup,
-  adminHeaders, apiUrl, marker, samplePlayers,
+  adminHeaders, apiUrl, marker, samplePlayers, launchBrowser,
 } from '../fixtures.js';
 import { AdminBootstrapPage } from '../pages/adminBootstrap.js';
 
@@ -32,7 +32,7 @@ export default async function run() {
   console.log(`  Added ${players.length} players`);
 
   // 5. Verify admin panel via browser
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     const adminPage = new AdminBootstrapPage(page, BASE_URL);

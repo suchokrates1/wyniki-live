@@ -342,3 +342,18 @@ export function samplePlayers(count = 8) {
 }
 
 export { OFFICE_PASSWORD };
+
+/**
+ * chrome-headless-shell on the Dell runner occasionally dies at launch with SIGSEGV
+ * ("Target page, context or browser has been closed"), independent of the app under test.
+ * Retry that one failure mode once and say so in the log.
+ */
+export async function launchBrowser(chromium, options = { headless: true }) {
+  try {
+    return await chromium.launch(options);
+  } catch (error) {
+    if (!/has been closed|signal 11|SIGSEGV/i.test(String(error?.message || ''))) throw error;
+    console.log('  [browser] launch crashed (runner Chromium SIGSEGV) — retrying once');
+    return chromium.launch(options);
+  }
+}

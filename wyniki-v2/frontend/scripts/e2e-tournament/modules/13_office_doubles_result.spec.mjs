@@ -5,7 +5,7 @@ import { chromium } from '@playwright/test';
 import {
   adminLogin, cleanup, seedDoublesTournament, fetchPublicBracket,
   fetchAdminSchedule, officeLogin, officeGroupMatch, officeUpdateMatch,
-  OFFICE_PASSWORD,
+  OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficeResultsPage } from '../pages/officeResults.js';
@@ -54,7 +54,7 @@ export default async function run() {
   }
   console.log('  Standings use pair labels; corrected winner is on top');
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);

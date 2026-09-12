@@ -3,7 +3,7 @@
  */
 import { chromium } from '@playwright/test';
 import {
-  adminLogin, cleanup, seedDoublesTournament, OFFICE_PASSWORD,
+  adminLogin, cleanup, seedDoublesTournament, OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficeResultsPage } from '../pages/officeResults.js';
@@ -15,7 +15,7 @@ export default async function run() {
   const seeded = await seedDoublesTournament(token, { pairCount: 2, playFormat: 'round_robin' });
   const { teams, slot } = seeded;
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);

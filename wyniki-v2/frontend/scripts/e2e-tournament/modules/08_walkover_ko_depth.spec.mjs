@@ -5,7 +5,7 @@ import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, saveGroups,
   generateSchedule, cleanup, samplePlayers, resolveOfficeSlot,
-  OFFICE_PASSWORD, marker, apiUrl, adminHeaders, officeLogin,
+  OFFICE_PASSWORD, marker, apiUrl, adminHeaders, officeLogin, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficeResultsPage } from '../pages/officeResults.js';
@@ -61,7 +61,7 @@ export default async function run() {
   console.log('  Large seed: 3 groups + KO bracket');
 
   const slot = await resolveOfficeSlot(tournamentName);
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
     const loginPage = new OfficeLoginPage(page, BASE_URL);

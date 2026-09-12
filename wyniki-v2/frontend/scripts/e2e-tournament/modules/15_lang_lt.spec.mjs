@@ -3,7 +3,7 @@
  */
 import { chromium } from '@playwright/test';
 import {
-  adminLogin, cleanup, seedDoublesTournament, OFFICE_PASSWORD,
+  adminLogin, cleanup, seedDoublesTournament, OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:18087';
@@ -15,7 +15,7 @@ export default async function run() {
   const seeded = await seedDoublesTournament(token, { pairCount: 2, playFormat: 'round_robin' });
   const { slot } = seeded;
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser(chromium);
   try {
     const page = await browser.newPage();
 
