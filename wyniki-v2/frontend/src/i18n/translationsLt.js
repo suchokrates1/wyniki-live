@@ -19,10 +19,10 @@ export const TRANSLATIONS_LT = {
   players: { defaultA: 'Žaidėjas A', defaultB: 'Žaidėjas B' },
   scoreboard: {
     phaseGroup: 'Grupės',
-    phaseGroupRematch: 'Revanšas',
-    phaseKnockout: 'Atkrintamosios',
+    phaseR16: '1/8',
+    phaseQF: 'Ketvirtfinalis',
+    phaseSF: 'Pusfinalis',
     phaseFinal: 'Finalas',
-    phaseThird: 'dėl 3 vietos',
   },
   meta: { lastRefresh: 'Paskutinis atnaujinimas: {time}.' },
   accessibility: {

@@ -43,6 +43,8 @@ test('homepage labels translate leftover English overlay tokens', () => {
   };
   assert.equal(localizeScoreboardPhase('GROUP', pl), 'Grupowa');
   assert.equal(localizeScoreboardPhase('Grupowa', pl), 'Grupowa');
+  assert.equal(localizeScoreboardPhase('1/4', { qf: 'Ćwierćfinał' }), 'Ćwierćfinał');
+  assert.equal(localizeScoreboardPhase('Półfinał', { sf: 'Półfinał' }), 'Półfinał');
   assert.equal(localizeScoreboardCategory('B1 Women', pl), 'B1 Kobiety');
   assert.equal(localizeScoreboardCategory('B1 Kobiety', pl), 'B1 Kobiety');
 });

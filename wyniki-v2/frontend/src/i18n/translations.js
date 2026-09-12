@@ -24,10 +24,10 @@ export const TRANSLATIONS = {
     players: { defaultA: 'Gracz A', defaultB: 'Gracz B' },
     scoreboard: {
       phaseGroup: 'Grupowa',
-      phaseGroupRematch: 'Rewanż',
-      phaseKnockout: 'Pucharowa',
+      phaseR16: '1/8',
+      phaseQF: 'Ćwierćfinał',
+      phaseSF: 'Półfinał',
       phaseFinal: 'Finał',
-      phaseThird: 'o 3. miejsce',
     },
     meta: { lastRefresh: 'Ostatnie odświeżenie: {time}.' },
     accessibility: {
@@ -107,10 +107,10 @@ export const TRANSLATIONS = {
     players: { defaultA: 'Spieler A', defaultB: 'Spieler B' },
     scoreboard: {
       phaseGroup: 'Gruppe',
-      phaseGroupRematch: 'Rückspiel',
-      phaseKnockout: 'K.-o.',
+      phaseR16: '1/8',
+      phaseQF: 'Viertelfinale',
+      phaseSF: 'Halbfinale',
       phaseFinal: 'Finale',
-      phaseThird: 'um Platz 3',
     },
     meta: { lastRefresh: 'Letzte Aktualisierung: {time}.' },
     accessibility: {
@@ -189,10 +189,10 @@ export const TRANSLATIONS = {
     players: { defaultA: 'Player A', defaultB: 'Player B' },
     scoreboard: {
       phaseGroup: 'Group',
-      phaseGroupRematch: 'Rematch',
-      phaseKnockout: 'Knockout',
+      phaseR16: '1/8',
+      phaseQF: 'Quarterfinal',
+      phaseSF: 'Semifinal',
       phaseFinal: 'Final',
-      phaseThird: '3rd place',
     },
     meta: { lastRefresh: 'Last refresh: {time}.' },
     accessibility: {
@@ -272,10 +272,10 @@ export const TRANSLATIONS = {
     players: { defaultA: 'Giocatore A', defaultB: 'Giocatore B' },
     scoreboard: {
       phaseGroup: 'Girone',
-      phaseGroupRematch: 'Ritorno',
-      phaseKnockout: 'Eliminazione',
+      phaseR16: '1/8',
+      phaseQF: 'Quarti',
+      phaseSF: 'Semifinale',
       phaseFinal: 'Finale',
-      phaseThird: '3° posto',
     },
     meta: { lastRefresh: 'Ultimo aggiornamento: {time}.' },
     accessibility: {
@@ -354,10 +354,10 @@ export const TRANSLATIONS = {
     players: { defaultA: 'Jugador A', defaultB: 'Jugador B' },
     scoreboard: {
       phaseGroup: 'Grupos',
-      phaseGroupRematch: 'Revancha',
-      phaseKnockout: 'Eliminatoria',
+      phaseR16: '1/8',
+      phaseQF: 'Cuartos',
+      phaseSF: 'Semifinal',
       phaseFinal: 'Final',
-      phaseThird: '3.er puesto',
     },
     meta: { lastRefresh: 'Última actualización: {time}.' },
     accessibility: {
@@ -436,10 +436,10 @@ export const TRANSLATIONS = {
     players: { defaultA: 'Joueur A', defaultB: 'Joueur B' },
     scoreboard: {
       phaseGroup: 'Groupes',
-      phaseGroupRematch: 'Retour',
-      phaseKnockout: 'Élimination',
+      phaseR16: '1/8',
+      phaseQF: 'Quart de finale',
+      phaseSF: 'Demi-finale',
       phaseFinal: 'Finale',
-      phaseThird: '3e place',
     },
     meta: { lastRefresh: 'Dernière mise à jour: {time}.' },
     accessibility: {
