@@ -247,17 +247,9 @@
 .court-tv {
   position: relative;
   min-width: 0;
-  overflow: hidden;
   opacity: 0;
   transform: translateY(10px) scale(.98);
   animation: card-in .5s ease forwards;
-  transition: opacity .45s ease, transform .45s cubic-bezier(.22, 1, .36, 1);
-}
-.court-tv.is-off {
-  animation: none;
-  opacity: 0;
-  transform: translateY(28px);
-  pointer-events: none;
 }
 .grid .court-tv:nth-child(1) { animation-delay: .00s; }
 .grid .court-tv:nth-child(2) { animation-delay: .05s; }

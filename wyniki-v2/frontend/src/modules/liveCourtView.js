@@ -21,125 +21,16 @@ import { calcMatchTime } from '../shared/matchTime.js';
 import { formatTemplate as fmt } from '../shared/text.js';
 import { formatTeamLabelForWrap, isTeamDisplayName, TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
 import { renderTvScoreboard } from '../shared/tvScoreboard.js';
-import {
-  SCOREBOARD_SLIDE_MS,
-  holdRemainingMs,
-  reduceHoldSlot,
-} from '../shared/scoreboardHold.js';
 
 export function createLiveCourtView() {
   return {
     serveAnimTick: 0,
-    boardSlots: {},
-    _exitTimers: {},
-    _holdTimer: null,
-    _slotsReady: false,
-
-    viewCourt(courtId) {
-      const frozen = this.boardSlots?.[courtId]?.frozen;
-      if (frozen) return frozen;
-      return this.courts[courtId];
-    },
-
-    isBoardOff(courtId) {
-      const phase = this.boardSlots?.[courtId]?.phase;
-      return phase === 'exiting' || phase === 'swapping';
-    },
-
-    syncScoreboardSlots(now = Date.now()) {
-      const courts = this.courts || {};
-      const next = { ...(this.boardSlots || {}) };
-      const ids = new Set([...Object.keys(courts), ...Object.keys(next)]);
-      for (const courtId of ids) {
-        const reduced = reduceHoldSlot(next[courtId], courts[courtId] || null, now);
-        if (reduced.effect === 'idle-hidden') {
-          delete next[courtId];
-          this._clearBoardExit(courtId);
-          continue;
-        }
-        next[courtId] = reduced.slot;
-        if (reduced.effect === 'exit' || reduced.effect === 'swap') {
-          this._armBoardExit(courtId);
-        }
-      }
-      this.boardSlots = next;
-      this._slotsReady = true;
-      this._scheduleHoldRefresh(now);
-    },
-
-    _clearBoardExit(courtId) {
-      const timer = this._exitTimers?.[courtId];
-      if (timer) {
-        clearTimeout(timer);
-        delete this._exitTimers[courtId];
-      }
-    },
-
-    _armBoardExit(courtId) {
-      if (this._exitTimers?.[courtId]) return;
-      this._exitTimers = this._exitTimers || {};
-      const timer = setTimeout(() => {
-        this.completeBoardExit(courtId);
-      }, SCOREBOARD_SLIDE_MS);
-      timer.unref?.();
-      this._exitTimers[courtId] = timer;
-    },
-
-    completeBoardExit(courtId) {
-      this._clearBoardExit(courtId);
-      const slot = this.boardSlots?.[courtId];
-      if (!slot) return;
-      if (slot.phase === 'swapping') {
-        this.boardSlots = {
-          ...this.boardSlots,
-          [courtId]: {
-            phase: 'visible',
-            identity: '',
-            frozen: null,
-            lastCourt: null,
-          },
-        };
-        this.syncScoreboardSlots();
-        return;
-      }
-      const rest = { ...this.boardSlots };
-      delete rest[courtId];
-      this.boardSlots = rest;
-      this.syncScoreboardSlots();
-    },
-
-    _scheduleHoldRefresh(now = Date.now()) {
-      if (this._holdTimer) {
-        clearTimeout(this._holdTimer);
-        this._holdTimer = null;
-      }
-      let soonest = null;
-      for (const court of Object.values(this.courts || {})) {
-        const remaining = holdRemainingMs(court, now);
-        if (remaining == null || remaining <= 0) continue;
-        if (soonest == null || remaining < soonest) soonest = remaining;
-      }
-      if (soonest == null) return;
-      this._holdTimer = setTimeout(() => {
-        this._holdTimer = null;
-        this.syncScoreboardSlots();
-      }, soonest + 40);
-      this._holdTimer.unref?.();
-    },
     resolveDisplayPoints(court, side) {
       return resolveDisplayPointsForCourt(court, side);
     },
 
     getCourtIds() {
-      if (!this._slotsReady && this.courts && Object.keys(this.courts).length) {
-        this.syncScoreboardSlots();
-      }
-      const sorted = getSortedCourtIds(this.courts);
-      const extras = Object.keys(this.boardSlots || {}).filter((id) => !sorted.includes(id));
-      return [...sorted, ...extras].filter((id) => {
-        const slot = this.boardSlots?.[id];
-        return slot && slot.phase !== 'hidden';
-      });
+      return getSortedCourtIds(this.courts);
     },
 
     getCourtDisplayLabel(courtId) {
@@ -158,7 +49,7 @@ export function createLiveCourtView() {
     },
 
     getPlayerName(courtId, side) {
-      const player = this.viewCourt(courtId)?.[side];
+      const player = this.courts[courtId]?.[side];
       let name = '';
       if (player) {
         const full = player.full_name;
@@ -184,12 +75,12 @@ export function createLiveCourtView() {
     },
 
     playerHasFlag(courtId, side) {
-      const player = this.viewCourt(courtId)?.[side];
+      const player = this.courts[courtId]?.[side];
       return !!(player?.flag_url || player?.flag_code);
     },
 
     playerHasPartnerFlag(courtId, side) {
-      const player = this.viewCourt(courtId)?.[side];
+      const player = this.courts[courtId]?.[side];
       if (!player) return false;
       const partnerCode = String(player.flag_code_partner || '').toUpperCase();
       if (!/^[A-Z]{2}$/.test(partnerCode)) return false;
@@ -198,7 +89,7 @@ export function createLiveCourtView() {
     },
 
     playerFlagStyle(courtId, side, partner = false) {
-      const player = this.viewCourt(courtId)?.[side] || {};
+      const player = this.courts[courtId]?.[side] || {};
       const url = partner
         ? (player.flag_url_partner || this.codeToFlag(player.flag_code_partner))
         : (player.flag_url || this.codeToFlag(player.flag_code));
@@ -219,23 +110,23 @@ export function createLiveCourtView() {
     },
 
     isTiebreak(courtId) {
-      return isTiebreakForCourt(this.viewCourt(courtId));
+      return isTiebreakForCourt(this.courts[courtId]);
     },
 
     getRegularSetWins(courtId) {
-      return getRegularSetWinsForCourt(this.viewCourt(courtId));
+      return getRegularSetWinsForCourt(this.courts[courtId]);
     },
 
     isDecidingSuperTiebreak(courtId) {
-      return isDecidingSuperTiebreakForCourt(this.viewCourt(courtId));
+      return isDecidingSuperTiebreakForCourt(this.courts[courtId]);
     },
 
     isSuperTiebreak(courtId) {
-      return isSuperTiebreakForCourt(this.viewCourt(courtId));
+      return isSuperTiebreakForCourt(this.courts[courtId]);
     },
 
     getDisplayPoints(courtId, side) {
-      return this.resolveDisplayPoints(this.viewCourt(courtId), side);
+      return this.resolveDisplayPoints(this.courts[courtId], side);
     },
 
     getPointsLabel(courtId) {
@@ -247,19 +138,19 @@ export function createLiveCourtView() {
     },
 
     getSetIndices(courtId) {
-      return getSetIndicesForCourt(this.viewCourt(courtId));
+      return getSetIndicesForCourt(this.courts[courtId]);
     },
 
     hasSuperTiebreak(courtId) {
-      return hasSuperTiebreakForCourt(this.viewCourt(courtId));
+      return hasSuperTiebreakForCourt(this.courts[courtId]);
     },
 
     getSuperTiebreakScore(courtId) {
-      return getSuperTiebreakScoreForCourt(this.viewCourt(courtId));
+      return getSuperTiebreakScoreForCourt(this.courts[courtId]);
     },
 
     getTiebreakInfo(courtId, setIdx) {
-      return getTiebreakInfoForCourt(this.viewCourt(courtId), setIdx);
+      return getTiebreakInfoForCourt(this.courts[courtId], setIdx);
     },
 
     getStoredSetScore(court, side, setIdx) {
@@ -267,12 +158,12 @@ export function createLiveCourtView() {
     },
 
     getSetScore(courtId, side, setIdx) {
-      return getSetScoreForCourt(this.viewCourt(courtId), side, setIdx);
+      return getSetScoreForCourt(this.courts[courtId], side, setIdx);
     },
 
     getCurrentSetLabel(courtId) {
       const tr = this.tr();
-      const currentSet = this.viewCourt(courtId)?.current_set || 1;
+      const currentSet = this.courts[courtId]?.current_set || 1;
       if (this.isSuperTiebreak(courtId)) {
         return tr.table?.columns?.superTieBreak || tr.superTieBreakLabel || 'Super TB';
       }
@@ -280,7 +171,7 @@ export function createLiveCourtView() {
     },
 
     getScoreSummary(courtId) {
-      const court = this.viewCourt(courtId);
+      const court = this.courts[courtId];
       if (!court) return '';
       const a = this.acc();
       const isTie = this.isTiebreak(courtId);
@@ -329,7 +220,7 @@ export function createLiveCourtView() {
     },
 
     getScore(courtId, player) {
-      const court = this.viewCourt(courtId);
+      const court = this.courts[courtId];
       if (!court) return { sets: [], points: '-' };
       const playerData = court[player];
       if (!playerData) return { sets: [], points: '-' };
@@ -344,13 +235,13 @@ export function createLiveCourtView() {
     },
 
     courtMatchClock(courtId) {
-      return calcMatchTime(this.viewCourt(courtId));
+      return calcMatchTime(this.courts[courtId]);
     },
 
     renderLiveTvScoreboard(courtId) {
       // Decorative only — homepage keeps the spoken heading + .score-summary live region.
       // `lang` is passed from the template so Alpine rebuilds the header word (Kort/Court/Platz/Kortas).
-      const court = this.viewCourt(courtId) || {};
+      const court = this.courts[courtId] || {};
       return renderTvScoreboard({
         courtId,
         court: {

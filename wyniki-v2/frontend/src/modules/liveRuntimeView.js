@@ -62,7 +62,6 @@ export function createLiveRuntimeView() {
           acc[String(courtId)] = true;
           return acc;
         }, {});
-        this.syncScoreboardSlots?.();
         this.tournamentName = data.tournament_name || null;
         this.loading = false;
         this.lastUpdate = new Date();
@@ -118,7 +117,6 @@ export function createLiveRuntimeView() {
 
           this.prevCourts[courtId] = prev ? { ...prev } : {};
           this.courts[courtId] = data;
-          this.syncScoreboardSlots?.();
           this.lastUpdate = new Date();
           if (prev?.match_status?.active && !data?.match_status?.active) {
             this.fetchHistory();

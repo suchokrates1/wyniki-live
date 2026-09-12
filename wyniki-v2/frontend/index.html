@@ -126,11 +126,10 @@
             <!-- Courts Grid. Visual TV HTML is aria-hidden; SR uses the heading + live summary. -->
             <div x-show="!loading" class="grid">
                 <template x-for="courtId in getCourtIds()" :key="forKey('court', courtId)">
-                    <section class="court-tv" :class="{ 'is-off': isBoardOff(courtId) }" :id="'kort-'+courtId" :aria-labelledby="isBoardOff(courtId) ? null : ('heading-'+courtId)" :aria-hidden="isBoardOff(courtId)">
+                    <section class="court-tv" :id="'kort-'+courtId" :aria-labelledby="'heading-'+courtId">
                         <h2 class="sr-only" :id="'heading-'+courtId" x-text="getHeadingAria(courtId)"></h2>
                         <div aria-hidden="true" x-html="renderLiveTvScoreboard(courtId, serveAnimTick, lang)"></div>
                         <p class="sr-only score-summary" :id="'k'+courtId+'-summary'" aria-live="polite"
-                           x-show="!isBoardOff(courtId)"
                            x-text="getScoreSummary(courtId)"></p>
                     </section>
                 </template>
