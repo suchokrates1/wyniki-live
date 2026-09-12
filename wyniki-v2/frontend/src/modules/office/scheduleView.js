@@ -347,6 +347,7 @@ export function createOfficeScheduleView() {
         if (payload.schedule) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.showToast(this.ot('toast.scheduleSaved'), 'success');
+        this.flushPendingOfficeRefresh();
       } catch (error) {
         console.error('Failed to save schedule entry:', error);
         this.showToast(error.message || this.ot('toast.scheduleSaveError'), 'error');
