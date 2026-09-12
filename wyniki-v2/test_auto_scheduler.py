@@ -288,6 +288,6 @@ def test_flex_courts_push_a_match_later_instead_of_double_booking():
     config = sched.build_default_config(_courts())
     config["start_time"] = "09:00"
     config["end_time"] = "18:00"
-    placements = sched.place_matches(_round_robin("B3 Men", 1, 6), config, "2026-08-25")
+    placements = sched.place_matches(_round_robin("B3 Men", 3, 4), config, "2026-08-25")
     _assert_no_player_overlap(placements, config)
     assert all(p["court_id"] for p in placements)
