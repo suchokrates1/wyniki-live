@@ -14,6 +14,7 @@ export function createOfficePlayersView() {
   return {
     async loadOfficePlanningData() {
       if (!this.token) return;
+      const revision = this.planningEditRevision;
       this.planningLoading = true;
       try {
         const response = await fetch(`/api/office/${this.slot}/planning`, {
@@ -26,6 +27,12 @@ export function createOfficePlayersView() {
         }
         if (!response.ok) {
           throw new Error(payload.error || this.ot('errors.planningFailed'));
+        }
+        if (revision !== this.planningEditRevision) {
+          // The draw changed while this response was on its way; applying it would undo
+          // those edits. Reload once they are saved.
+          this.pendingRemoteRefresh = true;
+          return;
         }
         this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
         this.tournamentCategories = Array.isArray(payload.tournament_categories) ? payload.tournament_categories : [];
@@ -46,6 +53,7 @@ export function createOfficePlayersView() {
     },
 
     ensurePlanningDefaults() {
+      const previousDivision = this.planningSelectedDivision;
       const divisions = this.planningDivisions();
       if (!divisions.find(division => String(division.key) === String(this.planningSelectedDivision))) {
         this.planningSelectedDivision = divisions[0]?.key || '';
@@ -58,7 +66,8 @@ export function createOfficePlayersView() {
       const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
       if (selectedGroups.length) {
         this.planningGroupCount = Math.max(1, selectedGroups.length);
-      } else {
+      } else if (String(previousDivision) !== String(this.planningSelectedDivision)) {
+        // Keep a group count the user picked for a category that has no saved groups yet.
         this.planningGroupCount = 1;
       }
       this.planningNewSchedule.day_date = this.planningNewSchedule.day_date || this.tournamentMeta?.start_date || this.dashboard?.tournament?.start_date || '';
@@ -795,14 +804,21 @@ export function createOfficePlayersView() {
     },
 
     schedulePlanningAutoSave() {
+      this.planningEditRevision += 1;
       if (this.planningSaveTimer) clearTimeout(this.planningSaveTimer);
-      this.planningSaveTimer = setTimeout(() => { this.autoSavePlanningGroups(); }, 500);
+      this.planningSaveTimer = setTimeout(() => {
+        this.planningSaveTimer = null;
+        this.autoSavePlanningGroups();
+      }, 500);
     },
 
     async autoSavePlanningGroups() {
       if (!this.planningSelectedDivision && !this.planningSelectedCategoryId) return;
       const groups = this.buildPlanningGroupsPayload();
-      if (!groups.length) return;
+      if (!groups.length) {
+        this.flushPendingOfficeRefresh();
+        return;
+      }
       this.planningSaving = true;
       try {
         const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
@@ -825,6 +841,7 @@ export function createOfficePlayersView() {
         this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
       } finally {
         this.planningSaving = false;
+        this.flushPendingOfficeRefresh();
       }
     },
 

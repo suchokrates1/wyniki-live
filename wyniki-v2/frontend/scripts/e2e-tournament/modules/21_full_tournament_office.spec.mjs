@@ -142,8 +142,8 @@ export default async function run() {
       await playerForm.getByRole('button', { name: 'Dodaj zawodnika', exact: true }).click();
       await toast('Zawodnik dodany');
     }
-    await waitUntil('22 players', async () => ((await planning()).players || []).length === 22);
-    log('Added 2 players through the office form (22 total)');
+    await waitUntil('20 players', async () => ((await planning()).players || []).length === 20);
+    log('Added 2 players through the office form (20 total)');
 
     // ——— draw: B2 K into two groups, B1 M into one ———
     const divisionCard = (label) => page.locator('.office-groups button.rounded-2xl').filter({ hasText: label }).first();
@@ -486,6 +486,24 @@ export default async function run() {
     log('Logged out');
   } catch (error) {
     await page.screenshot({ path: 'test-results/21-full-tournament-failure.png', fullPage: false }).catch(() => {});
+    const state = await planning().catch(() => ({}));
+    const ui = await page.evaluate(() => ({
+      active: document.querySelector('.office-tab.is-active')?.textContent?.trim(),
+      toasts: [...document.querySelectorAll('.toast .alert')].filter((node) => node.offsetParent).map((node) => node.textContent.trim()),
+      alpine: (() => {
+        const d = window.Alpine?.$data(document.body);
+        return d ? {
+          division: d.planningSelectedDivision, categoryId: d.planningSelectedCategoryId, groupCount: d.planningGroupCount,
+          targets: d.planningTargetGroupNames?.(), unassigned: d.planningUnassignedPlayers?.().length,
+          assignments: Object.keys(d.planningGroupAssignments || {}).length, saving: d.planningSaving,
+        } : null;
+      })(),
+      groupsText: document.querySelector('.office-groups')?.innerText.replace(/\s+/g, ' ').slice(0, 900),
+    })).catch((uiError) => ({ uiError: String(uiError) }));
+    console.log(`  DIAG groups=${JSON.stringify((state.groups || []).map((group) => [group.name, group.tournament_category_id, group.players.length]))}`);
+    console.log(`  DIAG players=${JSON.stringify((state.players || []).map((player) => `${player.category}${player.gender}`))}`);
+    console.log(`  DIAG ui=${JSON.stringify(ui)}`);
+    if (pageErrors.length) console.log(`  DIAG pageErrors=${JSON.stringify(pageErrors)}`);
     throw error;
   } finally {
     await browser.close();

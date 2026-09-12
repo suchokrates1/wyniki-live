@@ -104,6 +104,8 @@ export function createOfficeCoreView() {
 
     planningSaveTimer: null,
 
+    planningEditRevision: 0,
+
     planningStep1Collapsed: false,
 
     planningOpenCardId: null,
@@ -285,6 +287,7 @@ export function createOfficeCoreView() {
         || this.addMatchOpen
         || this.editMatchOpen
         || this.planningSaving
+        || !!this.planningSaveTimer
         || this.planningOpenCardId !== null
         || this.categoryEditId !== null
         || this.autoIsPreview?.();
