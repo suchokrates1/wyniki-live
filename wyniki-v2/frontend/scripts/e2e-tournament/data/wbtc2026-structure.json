@@ -1,0 +1,210 @@
+{
+  "source": "Structure of the IBTA World Blind Tennis Championships 2026 (Vilnius): categories, group sizes, courts and days. No names or results. The B2 Women consolation pool (players already in other groups) is left out.",
+  "days": 5,
+  "courts": 11,
+  "categories": [
+    {
+      "label": "B1 Men",
+      "preset_key": "B1M",
+      "hint_bands": [
+        "B1"
+      ]
+    },
+    {
+      "label": "B1 Women",
+      "preset_key": "B1K",
+      "hint_bands": [
+        "B1"
+      ]
+    },
+    {
+      "label": "B2 Men",
+      "preset_key": "B2M",
+      "hint_bands": [
+        "B2"
+      ]
+    },
+    {
+      "label": "B2 Women",
+      "preset_key": "B2K",
+      "hint_bands": [
+        "B2"
+      ]
+    },
+    {
+      "label": "B3 Men",
+      "preset_key": "B3M",
+      "hint_bands": [
+        "B3"
+      ]
+    },
+    {
+      "label": "B3 Women",
+      "preset_key": "B3K",
+      "hint_bands": [
+        "B3"
+      ]
+    },
+    {
+      "label": "B4 Men",
+      "preset_key": "B4M",
+      "hint_bands": [
+        "B4"
+      ]
+    },
+    {
+      "label": "B4 Women",
+      "preset_key": "B4K",
+      "hint_bands": [
+        "B4"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "name": "B1 Men — Grupa A",
+      "category": "B1 Men",
+      "size": 3
+    },
+    {
+      "name": "B1 Men — Grupa B",
+      "category": "B1 Men",
+      "size": 3
+    },
+    {
+      "name": "B1 Men — Grupa C",
+      "category": "B1 Men",
+      "size": 3
+    },
+    {
+      "name": "B1 Men — Grupa D",
+      "category": "B1 Men",
+      "size": 3
+    },
+    {
+      "name": "B1 Men — Grupa E",
+      "category": "B1 Men",
+      "size": 3
+    },
+    {
+      "name": "B1 Men — Grupa F",
+      "category": "B1 Men",
+      "size": 3
+    },
+    {
+      "name": "B1 Men — Grupa G",
+      "category": "B1 Men",
+      "size": 4
+    },
+    {
+      "name": "B1 Women — Grupa A",
+      "category": "B1 Women",
+      "size": 3
+    },
+    {
+      "name": "B1 Women — Grupa B",
+      "category": "B1 Women",
+      "size": 4
+    },
+    {
+      "name": "B1 Women — Grupa C",
+      "category": "B1 Women",
+      "size": 4
+    },
+    {
+      "name": "B1 Women — Grupa D",
+      "category": "B1 Women",
+      "size": 4
+    },
+    {
+      "name": "B2 Men — Grupa A",
+      "category": "B2 Men",
+      "size": 4
+    },
+    {
+      "name": "B2 Men — Grupa B",
+      "category": "B2 Men",
+      "size": 4
+    },
+    {
+      "name": "B2 Men — Grupa C",
+      "category": "B2 Men",
+      "size": 4
+    },
+    {
+      "name": "B2 Men — Grupa D",
+      "category": "B2 Men",
+      "size": 4
+    },
+    {
+      "name": "B2 Women — Grupa A",
+      "category": "B2 Women",
+      "size": 3
+    },
+    {
+      "name": "B2 Women — Grupa B",
+      "category": "B2 Women",
+      "size": 3
+    },
+    {
+      "name": "B2 Women — Grupa C",
+      "category": "B2 Women",
+      "size": 3
+    },
+    {
+      "name": "B2 Women — Grupa D",
+      "category": "B2 Women",
+      "size": 3
+    },
+    {
+      "name": "B3 Men — Grupa A",
+      "category": "B3 Men",
+      "size": 4
+    },
+    {
+      "name": "B3 Men — Grupa B",
+      "category": "B3 Men",
+      "size": 4
+    },
+    {
+      "name": "B3 Men — Grupa C",
+      "category": "B3 Men",
+      "size": 4
+    },
+    {
+      "name": "B3 Men — Grupa D",
+      "category": "B3 Men",
+      "size": 5
+    },
+    {
+      "name": "B3 Women — Grupa A",
+      "category": "B3 Women",
+      "size": 3
+    },
+    {
+      "name": "B3 Women — Grupa B",
+      "category": "B3 Women",
+      "size": 3
+    },
+    {
+      "name": "B3 Women — Grupa C",
+      "category": "B3 Women",
+      "size": 4
+    },
+    {
+      "name": "B3 Women — Grupa D",
+      "category": "B3 Women",
+      "size": 4
+    },
+    {
+      "name": "B4 Men — Grupa A",
+      "category": "B4 Men",
+      "size": 6
+    },
+    {
+      "name": "B4 Women — Grupa A",
+      "category": "B4 Women",
+      "size": 5
+    }
+  ]
+}
