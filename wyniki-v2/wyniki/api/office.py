@@ -69,6 +69,7 @@ from ..services.office_workflow import (
     _normalize_bool,
     _normalize_int,
     _normalize_office_sets,
+    office_result_outcome,
     _office_history_payload,
     _office_match_payload,
     _sync_office_match_history,
@@ -831,16 +832,17 @@ def office_update_match(slot: int, match_id: int):
             return jsonify({"error": "Match not found"}), 404
         try:
             sets_history, player1_sets, player2_sets = _normalize_office_sets(data, history.player_a, history.player_b)
+            outcome = office_result_outcome(data, history.player_a, history.player_b)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
 
         history.score_a = json.dumps([set_score.get('player1_games', 0) for set_score in sets_history])
         history.score_b = json.dumps([set_score.get('player2_games', 0) for set_score in sets_history])
         history.sets_history = json.dumps(sets_history)
-        history.finish_reason = 'walkover' if _normalize_bool(data.get('walkover', False)) else 'normal'
-        history.winner_name = (data.get('winner_name') or '').strip() if history.finish_reason == 'walkover' else None
-        history.injured_player_name = None
-        history.result_note = 'Walkower' if history.finish_reason == 'walkover' else None
+        history.finish_reason = outcome["finish_reason"]
+        history.winner_name = outcome["winner_name"]
+        history.injured_player_name = outcome["injured_player_name"]
+        history.result_note = outcome["result_note"]
         if history.match_id:
             match = Match.query.filter_by(id=history.match_id, tournament_id=tournament_id).first()
             if match:
@@ -878,14 +880,15 @@ def office_update_match(slot: int, match_id: int):
 
     try:
         sets_history, player1_sets, player2_sets = _normalize_office_sets(data, match.player1_name, match.player2_name)
+        outcome = office_result_outcome(data, match.player1_name, match.player2_name)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
     match.status = 'finished'
-    match.finish_reason = 'walkover' if _normalize_bool(data.get('walkover', False)) else 'normal'
-    match.winner_name = (data.get('winner_name') or '').strip() if match.finish_reason == 'walkover' else None
-    match.injured_player_name = None
-    match.result_note = 'Walkower' if match.finish_reason == 'walkover' else None
+    match.finish_reason = outcome["finish_reason"]
+    match.winner_name = outcome["winner_name"]
+    match.injured_player_name = outcome["injured_player_name"]
+    match.result_note = outcome["result_note"]
     match.player1_sets = player1_sets
     match.player2_sets = player2_sets
     match.sets_history = json.dumps(sets_history)

@@ -3113,6 +3113,61 @@ def test_office_delete_all_unassigned_stays_deleted_until_generate(full_app_with
     assert len(client.get("/api/office/1/planning", headers=headers).get_json()["schedule"]) == 5
 
 
+def test_office_results_support_retirement_and_set_tiebreaks(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = _planner_cup(database, "Retirement Cup", "krecz", players=3)
+    client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "krecz")
+    group_id = database.fetch_bracket_groups(tournament_id)[0]["id"]
+
+    retired = client.post("/api/office/1/group-matches", headers=headers, json={
+        "group_id": group_id, "player1_name": "P1", "player2_name": "P2",
+        "retirement": True, "retired_player_name": "P1",
+        "sets": [{"player1_games": 4, "player2_games": 2}, {"player1_games": 1, "player2_games": 1}],
+    })
+    assert retired.status_code == 201, retired.get_json()
+    match = retired.get_json()["match"]
+    assert match["winner_name"] == "P2"
+    assert match["finish_reason"] == "retirement"
+    assert match["injured_player_name"] == "P1"
+    assert (match["player1_sets"], match["player2_sets"]) == (1, 0)
+
+    tiebreak = client.post("/api/office/1/group-matches", headers=headers, json={
+        "group_id": group_id, "player1_name": "P1", "player2_name": "P3",
+        "sets": [
+            {"player1_games": 4, "player2_games": 3, "tiebreak_loser_points": 5},
+            {"player1_games": 2, "player2_games": 4},
+            {"player1_games": 10, "player2_games": 8, "is_super_tiebreak": True},
+        ],
+    })
+    assert tiebreak.status_code == 201, tiebreak.get_json()
+    sets = tiebreak.get_json()["match"]["sets_history"]
+    assert sets[0]["tiebreak_loser_points"] == 5
+    assert sets[2]["is_super_tiebreak"] is True
+
+    standings = {row["name"]: row for row in database.get_full_bracket(tournament_id)["groups"][0]["standings"]}
+    assert standings["P2"]["wins"] == 1 and standings["P1"]["losses"] == 1
+    assert standings["P1"]["wins"] == 1 and standings["P3"]["losses"] == 1
+
+    # a normal result corrected to a retirement changes the winner
+    match_id = tiebreak.get_json()["match"]["id"]
+    corrected = client.put(f"/api/office/1/matches/{match_id}", headers=headers, json={
+        "source": "match", "retirement": True, "retired_player_name": "P1",
+        "sets": [{"player1_games": 4, "player2_games": 3, "tiebreak_loser_points": 5}, {"player1_games": 0, "player2_games": 2}],
+    })
+    assert corrected.status_code == 200, corrected.get_json()
+    standings = {row["name"]: row for row in database.get_full_bracket(tournament_id)["groups"][0]["standings"]}
+    assert standings["P3"]["wins"] == 1 and standings["P1"]["wins"] == 0
+
+    bad = client.post("/api/office/1/group-matches", headers=headers, json={
+        "group_id": group_id, "player1_name": "P2", "player2_name": "P3",
+        "retirement": True, "retired_player_name": "Nobody",
+        "sets": [{"player1_games": 1, "player2_games": 0}],
+    })
+    assert bad.status_code == 400
+
+
 def test_office_group_rematch_after_first_leg(full_app_with_temp_db):
     from wyniki import database
 

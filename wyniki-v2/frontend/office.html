@@ -1064,10 +1064,16 @@
             </template>
           </datalist>
         </label>
-        <label class="form-control">
-          <span class="label-text font-semibold mb-2" x-text="ot('modals.walkover')"></span>
-          <input type="checkbox" class="toggle toggle-success mt-3" x-model="officeNewMatch.walkover">
-        </label>
+        <div class="flex gap-6">
+          <label class="form-control">
+            <span class="label-text font-semibold mb-2" x-text="ot('modals.walkover')"></span>
+            <input type="checkbox" class="toggle toggle-success mt-3" x-model="officeNewMatch.walkover" @change="if (officeNewMatch.walkover) officeNewMatch.retirement = false">
+          </label>
+          <label class="form-control">
+            <span class="label-text font-semibold mb-2" x-text="ot('modals.retirement')"></span>
+            <input type="checkbox" class="toggle toggle-warning mt-3" x-model="officeNewMatch.retirement" @change="if (officeNewMatch.retirement) officeNewMatch.walkover = false">
+          </label>
+        </div>
 
         <div class="md:col-span-2 rounded-2xl border border-slate-200/80 bg-white/70 p-4" x-show="officeNewMatch.mode === 'knockout'">
           <div class="office-kicker" x-text="ot('modals.bracketSlot')"></div>
@@ -1109,6 +1115,18 @@
         </label>
       </div>
 
+      <div class="mt-5" x-show="officeNewMatch.retirement">
+        <label class="form-control">
+          <span class="label-text font-semibold mb-2" x-text="ot('modals.retiredPlayer')"></span>
+          <select class="select select-bordered bg-white/90" x-model="officeNewMatch.retired_player_name">
+            <option value="" x-text="ot('modals.choose')"></option>
+            <option :value="officeNewMatch.player1_name" :selected="officeNewMatch.retired_player_name === officeNewMatch.player1_name" x-text="officeNewMatch.player1_name"></option>
+            <option :value="officeNewMatch.player2_name" :selected="officeNewMatch.retired_player_name === officeNewMatch.player2_name" x-text="officeNewMatch.player2_name"></option>
+          </select>
+        </label>
+        <p class="office-hint mt-2" x-text="ot('modals.retirementHint')"></p>
+      </div>
+
       <div class="mt-5" x-show="officeNewMatch.walkover">
         <label class="form-control">
           <span class="label-text font-semibold mb-2" x-text="ot('modals.walkoverWinner')"></span>
@@ -1129,6 +1147,10 @@
               <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.set1_p1" placeholder="A">
               <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.set1_p2" placeholder="B">
             </div>
+            <label class="office-tb">
+              <span x-text="ot('modals.tiebreakLoser')"></span>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="input input-bordered input-sm" x-model="officeNewMatch.set1_tb" placeholder="—">
+            </label>
           </div>
           <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
             <div class="text-sm font-semibold mb-3" x-text="ot('modals.set2')"></div>
@@ -1136,6 +1158,10 @@
               <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.set2_p1" placeholder="A">
               <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeNewMatch.set2_p2" placeholder="B">
             </div>
+            <label class="office-tb">
+              <span x-text="ot('modals.tiebreakLoser')"></span>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="input input-bordered input-sm" x-model="officeNewMatch.set2_tb" placeholder="—">
+            </label>
           </div>
           <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4 md:col-span-2">
             <div class="text-sm font-semibold mb-3" x-text="ot('modals.superTiebreak')"></div>
@@ -1177,6 +1203,25 @@
             </div>
           </div>
 
+          <div class="grid gap-4 md:grid-cols-2">
+            <label class="form-control">
+              <span class="label-text font-semibold mb-2" x-text="ot('modals.outcome')"></span>
+              <select class="select select-bordered bg-white/90" x-model="officeEditingMatch.outcome">
+                <option value="normal" :selected="officeEditingMatch.outcome === 'normal'" x-text="ot('modals.outcomeNormal')"></option>
+                <option value="walkover" :selected="officeEditingMatch.outcome === 'walkover'" x-text="ot('modals.walkover')"></option>
+                <option value="retirement" :selected="officeEditingMatch.outcome === 'retirement'" x-text="ot('modals.retirement')"></option>
+              </select>
+            </label>
+            <label class="form-control" x-show="officeEditingMatch.outcome !== 'normal'">
+              <span class="label-text font-semibold mb-2" x-text="officeEditingMatch.outcome === 'retirement' ? ot('modals.retiredPlayer') : ot('modals.walkoverWinner')"></span>
+              <select class="select select-bordered bg-white/90" x-model="officeEditingMatch.outcome_player">
+                <option value="" x-text="ot('modals.choose')"></option>
+                <option :value="officeEditingMatch.player1_name" :selected="officeEditingMatch.outcome_player === officeEditingMatch.player1_name" x-text="officeEditingMatch.player1_name"></option>
+                <option :value="officeEditingMatch.player2_name" :selected="officeEditingMatch.outcome_player === officeEditingMatch.player2_name" x-text="officeEditingMatch.player2_name"></option>
+              </select>
+            </label>
+          </div>
+
           <div class="office-match-grid">
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
               <div class="text-sm font-semibold mb-3" x-text="ot('modals.set1')"></div>
@@ -1184,6 +1229,10 @@
                 <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.set1_p1">
                 <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.set1_p2">
               </div>
+              <label class="office-tb">
+              <span x-text="ot('modals.tiebreakLoser')"></span>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="input input-bordered input-sm" x-model="officeEditingMatch.set1_tb" placeholder="—">
+            </label>
             </div>
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4">
               <div class="text-sm font-semibold mb-3" x-text="ot('modals.set2')"></div>
@@ -1191,6 +1240,10 @@
                 <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.set2_p1">
                 <input type="number" min="0" class="input input-bordered bg-white/90" x-model="officeEditingMatch.set2_p2">
               </div>
+              <label class="office-tb">
+              <span x-text="ot('modals.tiebreakLoser')"></span>
+              <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="input input-bordered input-sm" x-model="officeEditingMatch.set2_tb" placeholder="—">
+            </label>
             </div>
             <div class="rounded-2xl border border-slate-200/80 bg-white/70 p-4 md:col-span-2">
               <div class="text-sm font-semibold mb-3" x-text="ot('modals.superTiebreak')"></div>

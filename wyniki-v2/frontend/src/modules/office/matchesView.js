@@ -261,15 +261,18 @@ export function createOfficeMatchesView() {
 
     officeSetsFromForm(form) {
       const sets = [];
-      const addSet = (player1Value, player2Value, isSuperTiebreak = false) => {
+      const addSet = (player1Value, player2Value, isSuperTiebreak = false, tiebreakLoser = '') => {
         if (player1Value === '' || player2Value === '' || player1Value === null || player2Value === null) return;
         const player1Games = Number(player1Value);
         const player2Games = Number(player2Value);
         if (!Number.isFinite(player1Games) || !Number.isFinite(player2Games)) return;
-        sets.push({ player1_games: player1Games, player2_games: player2Games, is_super_tiebreak: isSuperTiebreak });
+        const set = { player1_games: player1Games, player2_games: player2Games, is_super_tiebreak: isSuperTiebreak };
+        const tb = String(tiebreakLoser ?? '').trim();
+        if (tb !== '' && Number.isFinite(Number(tb))) set.tiebreak_loser_points = Number(tb);
+        sets.push(set);
       };
-      addSet(form.set1_p1, form.set1_p2);
-      addSet(form.set2_p1, form.set2_p2);
+      addSet(form.set1_p1, form.set1_p2, false, form.set1_tb);
+      addSet(form.set2_p1, form.set2_p2, false, form.set2_tb);
       addSet(form.stb_p1, form.stb_p2, true);
       return sets;
     },
@@ -287,6 +290,10 @@ export function createOfficeMatchesView() {
         this.showToast(this.ot('toast.walkoverWinnerRequired'), 'warning');
         return;
       }
+      if (this.officeNewMatch.retirement && !this.officeNewMatch.retired_player_name) {
+        this.showToast(this.ot('toast.retiredPlayerRequired'), 'warning');
+        return;
+      }
 
       try {
         const response = await fetch(`/api/office/${this.slot}/group-matches`, {
@@ -301,6 +308,8 @@ export function createOfficeMatchesView() {
             court_id: this.officeNewMatch.court_id,
             walkover: this.officeNewMatch.walkover,
             winner_name: this.officeNewMatch.winner_name,
+            retirement: this.officeNewMatch.retirement,
+            retired_player_name: this.officeNewMatch.retired_player_name,
             sets: this.officeSetsFromForm(this.officeNewMatch),
           }),
         });
@@ -340,6 +349,10 @@ export function createOfficeMatchesView() {
         this.showToast(this.ot('toast.walkoverWinnerRequired'), 'warning');
         return;
       }
+      if (this.officeNewMatch.retirement && !this.officeNewMatch.retired_player_name) {
+        this.showToast(this.ot('toast.retiredPlayerRequired'), 'warning');
+        return;
+      }
 
       try {
         const response = await fetch(`/api/office/${this.slot}/knockout-matches`, {
@@ -354,6 +367,8 @@ export function createOfficeMatchesView() {
             player2_name: this.officeNewMatch.player2_name,
             walkover: this.officeNewMatch.walkover,
             winner_name: this.officeNewMatch.winner_name,
+            retirement: this.officeNewMatch.retirement,
+            retired_player_name: this.officeNewMatch.retired_player_name,
             sets: this.officeSetsFromForm(this.officeNewMatch),
           }),
         });
@@ -411,19 +426,25 @@ export function createOfficeMatchesView() {
 
     startOfficeEdit(match) {
       const sets = match.sets_history || [];
+      const outcome = ['walkover', 'retirement'].includes(match.finish_reason) ? match.finish_reason : 'normal';
+      const superTiebreak = sets.find(set => set?.is_super_tiebreak);
+      const regular = sets.filter(set => !set?.is_super_tiebreak);
       this.officeEditingMatch = {
         id: match.id,
         source: match.source || 'match',
         player1_name: match.player1_name,
         player2_name: match.player2_name,
-        walkover: false,
+        outcome,
+        outcome_player: outcome === 'retirement' ? (match.injured_player_name || '') : (outcome === 'walkover' ? (match.winner_name || '') : ''),
         winner_name: match.winner_name || '',
-        set1_p1: sets[0]?.player1_games ?? '',
-        set1_p2: sets[0]?.player2_games ?? '',
-        set2_p1: sets[1]?.player1_games ?? '',
-        set2_p2: sets[1]?.player2_games ?? '',
-        stb_p1: sets[2]?.player1_games ?? '',
-        stb_p2: sets[2]?.player2_games ?? '',
+        set1_p1: regular[0]?.player1_games ?? '',
+        set1_p2: regular[0]?.player2_games ?? '',
+        set1_tb: regular[0]?.tiebreak_loser_points ?? '',
+        set2_p1: regular[1]?.player1_games ?? '',
+        set2_p2: regular[1]?.player2_games ?? '',
+        set2_tb: regular[1]?.tiebreak_loser_points ?? '',
+        stb_p1: superTiebreak?.player1_games ?? '',
+        stb_p2: superTiebreak?.player2_games ?? '',
       };
       this.editMatchOpen = true;
     },
@@ -436,8 +457,14 @@ export function createOfficeMatchesView() {
 
     async saveOfficeMatchEdit() {
       if (!this.officeEditingMatch?.id) return;
-      if (this.officeEditingMatch.walkover && !this.officeEditingMatch.winner_name) {
+      const outcome = this.officeEditingMatch.outcome || 'normal';
+      const outcomePlayer = this.officeEditingMatch.outcome_player || '';
+      if (outcome === 'walkover' && !outcomePlayer) {
         this.showToast(this.ot('toast.walkoverWinnerRequired'), 'warning');
+        return;
+      }
+      if (outcome === 'retirement' && !outcomePlayer) {
+        this.showToast(this.ot('toast.retiredPlayerRequired'), 'warning');
         return;
       }
 
@@ -447,8 +474,10 @@ export function createOfficeMatchesView() {
           headers: this.officeHeaders(),
           body: JSON.stringify({
             source: this.officeEditingMatch.source || 'match',
-            walkover: this.officeEditingMatch.walkover,
-            winner_name: this.officeEditingMatch.winner_name,
+            walkover: outcome === 'walkover',
+            winner_name: outcome === 'walkover' ? outcomePlayer : '',
+            retirement: outcome === 'retirement',
+            retired_player_name: outcome === 'retirement' ? outcomePlayer : '',
             sets: this.officeSetsFromForm(this.officeEditingMatch),
           }),
         });

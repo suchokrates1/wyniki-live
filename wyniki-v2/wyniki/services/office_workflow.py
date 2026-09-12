@@ -164,8 +164,8 @@ def _office_history_payload(
         else None
     )
     group_name = group_lookup.get(group_id)
-    winner_name = None
-    if player1_sets != player2_sets:
+    winner_name = history.winner_name if history.winner_name in {history.player_a, history.player_b} else None
+    if not winner_name and player1_sets != player2_sets:
         winner_name = history.player_a if player1_sets > player2_sets else history.player_b
     return {
         "id": history.id,
@@ -192,11 +192,34 @@ def _office_history_payload(
     }
 
 
+def office_result_outcome(
+    data: Dict[str, Any],
+    player1_name: str,
+    player2_name: str,
+) -> Dict[str, Any]:
+    """finish_reason / winner / retired player / note for an office result.
+
+    Walkover and retirement ("krecz") name the winner explicitly; a normal result
+    leaves the winner to the sets.
+    """
+    if _normalize_bool(data.get('walkover', False)):
+        winner = (data.get('winner_name') or '').strip()
+        return {"finish_reason": "walkover", "winner_name": winner, "injured_player_name": None, "result_note": "Walkower"}
+    if _normalize_bool(data.get('retirement', False)):
+        retired = (data.get('retired_player_name') or '').strip()
+        if retired not in {player1_name, player2_name}:
+            raise ValueError('Retired player must be one of the match players')
+        winner = player2_name if retired == player1_name else player1_name
+        return {"finish_reason": "retirement", "winner_name": winner, "injured_player_name": retired, "result_note": f"Krecz: {retired}"}
+    return {"finish_reason": "normal", "winner_name": None, "injured_player_name": None, "result_note": None}
+
+
 def _normalize_office_sets(
     data: Dict[str, Any],
     player1_name: str,
     player2_name: str,
 ) -> tuple[list[Dict[str, Any]], int, int]:
+    retirement = _normalize_bool(data.get('retirement', False))
     if _normalize_bool(data.get('walkover', False)):
         winner_name = (data.get('winner_name') or '').strip()
         if winner_name not in {player1_name, player2_name}:
@@ -211,17 +234,22 @@ def _normalize_office_sets(
     sets_history = []
     player1_sets = 0
     player2_sets = 0
-    for index, raw_set in enumerate(raw_sets, start=1):
+    parsed_sets = []
+    for raw_set in raw_sets:
         try:
-            p1_games = int(raw_set.get('player1_games'))
-            p2_games = int(raw_set.get('player2_games'))
+            parsed_sets.append((raw_set, int(raw_set.get('player1_games')), int(raw_set.get('player2_games'))))
         except (TypeError, ValueError):
             continue
+    for index, (raw_set, p1_games, p2_games) in enumerate(parsed_sets, start=1):
         if p1_games < 0 or p2_games < 0:
             raise ValueError('Set scores cannot be negative')
-        if p1_games == p2_games:
+        interrupted = retirement and index == len(parsed_sets)
+        if p1_games == p2_games and not interrupted:
             raise ValueError('Set cannot end in a draw')
-        if p1_games > p2_games:
+        # After a retirement the last set is where play stopped: it is kept but not won.
+        if interrupted:
+            pass
+        elif p1_games > p2_games:
             player1_sets += 1
         else:
             player2_sets += 1
@@ -236,6 +264,8 @@ def _normalize_office_sets(
             set_payload['is_super_tiebreak'] = True
         sets_history.append(set_payload)
 
+    if retirement:
+        return sets_history, player1_sets, player2_sets
     if not sets_history:
         raise ValueError('At least one finished set is required')
     if player1_sets == player2_sets:
@@ -274,7 +304,9 @@ def _office_match_payload(
     player_groups: Dict[str, set[int]] | None = None,
 ) -> Dict[str, Any]:
     sets_history = _json_loads(match.sets_history, [])
-    winner = match.player1_name if int(match.player1_sets or 0) > int(match.player2_sets or 0) else match.player2_name
+    winner = match.winner_name if match.winner_name in {match.player1_name, match.player2_name} else (
+        match.player1_name if int(match.player1_sets or 0) > int(match.player2_sets or 0) else match.player2_name
+    )
     group_id = int(match.bracket_group_id) if match.bracket_group_id else None
     if not group_id and player_groups and match.phase == 'Grupowa':
         group_id = _infer_group_id_for_players(match.player1_name, match.player2_name, player_groups)
@@ -503,7 +535,11 @@ def _create_office_knockout_match(tournament_id: int, data: Dict[str, Any]) -> t
     except ValueError as exc:
         raise OfficeWorkflowError(str(exc)) from exc
 
-    winner_name = (data.get('winner_name') or '').strip() if _normalize_bool(data.get('walkover', False)) else ''
+    try:
+        outcome = office_result_outcome(data, player1_name, player2_name)
+    except ValueError as exc:
+        raise OfficeWorkflowError(str(exc)) from exc
+    winner_name = outcome["winner_name"] or ''
     if not winner_name:
         winner_name = player1_name if player1_sets > player2_sets else player2_name
 
@@ -515,9 +551,10 @@ def _create_office_knockout_match(tournament_id: int, data: Dict[str, Any]) -> t
         status='finished',
         tournament_id=tournament_id,
         phase=match_phase,
-        finish_reason='walkover' if _normalize_bool(data.get('walkover', False)) else 'normal',
+        finish_reason=outcome["finish_reason"],
         winner_name=winner_name,
-        result_note='Walkower' if _normalize_bool(data.get('walkover', False)) else None,
+        injured_player_name=outcome["injured_player_name"],
+        result_note=outcome["result_note"],
         player1_sets=player1_sets,
         player2_sets=player2_sets,
         sets_history=json.dumps(sets_history),
@@ -621,6 +658,7 @@ def _create_office_group_match(tournament_id: int, data: Dict[str, Any]) -> tupl
 
     try:
         sets_history, player1_sets, player2_sets = _normalize_office_sets(data, player1_name, player2_name)
+        outcome = office_result_outcome(data, player1_name, player2_name)
     except ValueError as exc:
         raise OfficeWorkflowError(str(exc)) from exc
 
@@ -633,9 +671,10 @@ def _create_office_group_match(tournament_id: int, data: Dict[str, Any]) -> tupl
         tournament_id=tournament_id,
         bracket_group_id=group_id,
         phase=phase,
-        finish_reason='walkover' if _normalize_bool(data.get('walkover', False)) else 'normal',
-        winner_name=(data.get('winner_name') or '').strip() if _normalize_bool(data.get('walkover', False)) else None,
-        result_note='Walkower' if _normalize_bool(data.get('walkover', False)) else None,
+        finish_reason=outcome["finish_reason"],
+        winner_name=outcome["winner_name"],
+        injured_player_name=outcome["injured_player_name"],
+        result_note=outcome["result_note"],
         player1_sets=player1_sets,
         player2_sets=player2_sets,
         sets_history=json.dumps(sets_history),
