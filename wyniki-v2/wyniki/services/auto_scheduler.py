@@ -122,7 +122,10 @@ def apply_b1_courts(config: Dict[str, Any], b1_court_ids: Optional[List[str]]) -
 
 def _phase_rank(phase: Optional[str]) -> int:
     text = str(phase or "").lower()
-    if not text or "grup" in text:
+    if not text:
+        return 0
+    # "B4 Men — Grupa A — Finał" is a final: knockout words win over the group name
+    if "grup" in text and not re.search(r"ćwierć|cwierc|quarter|półfinał|polfinal|semi|miejsc|finał|final", text):
         return 0
     if "ćwierć" in text or "cwierc" in text or "quarter" in text:
         return 1

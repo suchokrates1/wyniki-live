@@ -369,6 +369,7 @@ export function createOfficeAutoScheduleView() {
     autoUnplacedPhaseKey(entry) {
       const source = String(entry?.source_type || '').toLowerCase();
       const phase = String(entry?.phase || '').toLowerCase();
+      if (source === 'knockout') return 'knockout';
       if (source === 'group' || phase.includes('grup')) return 'group';
       if (
         phase.includes('rewan')

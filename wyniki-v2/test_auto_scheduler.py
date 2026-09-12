@@ -291,3 +291,10 @@ def test_flex_courts_push_a_match_later_instead_of_double_booking():
     placements = sched.place_matches(_round_robin("B3 Men", 3, 4), config, "2026-08-25")
     _assert_no_player_overlap(placements, config)
     assert all(p["court_id"] for p in placements)
+
+
+def test_phase_rank_knockout_of_single_group_is_not_group_phase():
+    assert sched._phase_rank("B4 Men — Grupa A — Finał") == 5
+    assert sched._phase_rank("B4 Men — Grupa A — o 3. miejsce") == 4
+    assert sched._phase_rank("Grupowa") == 0
+    assert sched._phase_rank("Grupowa — Rewanż") == 0

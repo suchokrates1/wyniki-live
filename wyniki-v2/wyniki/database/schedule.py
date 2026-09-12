@@ -1071,6 +1071,9 @@ def generate_autoschedule_proposal(
     def _is_group_entry(entry) -> bool:
         source = str(entry.get("source_type") or "").lower()
         phase = str(entry.get("phase") or "").lower()
+        if source == "knockout":
+            # knockout phases of a one-group category carry the group name ("… — Grupa A — Finał")
+            return False
         return source in {"group", "group_rematch"} or "grup" in phase
 
     def _phase_match(entry) -> bool:
