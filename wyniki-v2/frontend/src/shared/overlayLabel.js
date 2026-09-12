@@ -33,20 +33,68 @@ export function overlayCategoryLabel(category) {
     .replace(/\bMieszane\b/gi, 'Mixed');
 }
 
-export function overlayPhaseLabel(phase) {
+const OVERLAY_PHASE_EN = {
+  groupRematch: 'GROUP REMATCH',
+  group: 'GROUP',
+  r16: '1/8',
+  qf: '1/4',
+  sf: '1/2',
+  third: '3RD PLACE',
+  knockout: 'KNOCKOUT',
+  final: 'FINAL',
+};
+
+export function overlayPhaseToken(phase) {
   const text = String(phase || '').trim();
   if (!text) return '';
   const suffix = text.includes(' — ') ? text.split(' — ').pop().trim() : text;
   const lower = suffix.toLowerCase();
-  if (/rewan|rematch/.test(lower)) return 'GROUP REMATCH';
-  if (lower === 'grupowa' || /group stage|^group$|faza grupowa/.test(lower)) return 'GROUP';
-  if (/1\s*\/\s*8|r16|round of 16|ósem/.test(lower)) return '1/8';
-  if (/1\s*\/\s*4|ćwierć|cwierc|quarter/.test(lower)) return '1/4';
-  if (/1\s*\/\s*2|półfina|polfina|semif/.test(lower)) return '1/2';
-  if (/3\.\s*miejsce|3rd|third place|bronze/.test(lower)) return '3RD PLACE';
-  if (/pucharowa|knockout/.test(lower)) return 'KNOCKOUT';
-  if (/(?:^|\s)fina[lł]|final/.test(lower) && !/semi|pół|1\s*\/\s*2/.test(lower)) return 'FINAL';
-  return suffix;
+  if (/rewan|rematch/.test(lower)) return 'groupRematch';
+  if (lower === 'grupowa' || /group stage|^group$|faza grupowa|gruppenphase|fase a gironi|fase de grupos|phase de groupes|grupių/.test(lower)) {
+    return 'group';
+  }
+  if (/1\s*\/\s*8|r16|round of 16|ósem/.test(lower)) return 'r16';
+  if (/1\s*\/\s*4|ćwierć|cwierc|quarter/.test(lower)) return 'qf';
+  if (/1\s*\/\s*2|półfina|polfina|semif/.test(lower)) return 'sf';
+  if (/3\.\s*miejsce|3rd|third place|bronze/.test(lower)) return 'third';
+  if (/pucharowa|knockout|k\.\-o|eliminazione|eliminatoria|élimination|atkrintam/.test(lower)) return 'knockout';
+  if (/(?:^|\s)fina[lł]|final/.test(lower) && !/semi|pół|1\s*\/\s*2/.test(lower)) return 'final';
+  return '';
+}
+
+export function overlayPhaseLabel(phase) {
+  const text = String(phase || '').trim();
+  if (!text) return '';
+  const token = overlayPhaseToken(phase);
+  if (token) return OVERLAY_PHASE_EN[token];
+  return text.includes(' — ') ? text.split(' — ').pop().trim() : text;
+}
+
+export function localizeScoreboardPhase(phase, labels = {}) {
+  const text = String(phase || '').trim();
+  if (!text) return '';
+  const token = overlayPhaseToken(phase);
+  if (token) return labels[token] || OVERLAY_PHASE_EN[token];
+  return text.includes(' — ') ? text.split(' — ').pop().trim() : text;
+}
+
+export function localizeScoreboardCategory(category, labels = {}) {
+  let text = String(category || '').trim();
+  if (!text) return '';
+  if (text.includes(' — ')) text = text.split(' — ')[0].trim();
+  const women = labels.women || 'Women';
+  const men = labels.men || 'Men';
+  const doubles = labels.doubles || 'Doubles';
+  const mixed = labels.mixed || 'Mixed';
+  return text
+    .replace(/\bWoman\b/gi, women)
+    .replace(/Kobiety|Women|Frauen|Donne|Mujeres|Femmes|Moterys/gi, women)
+    .replace(/Mężczyźni|Mezczyzni|Männer|Uomini|Hombres|Hommes|Vyrai/gi, men)
+    .replace(/\bMen\b/gi, men)
+    .replace(/\bMan\b/gi, men)
+    .replace(/\bDebel\b|\bDeble\b|Doubles|Doppel|Doppio|Dobles|Dvejetai/gi, doubles)
+    .replace(/\bDouble\b/gi, doubles)
+    .replace(/Mieszane|Mixed|Misto|Mixto|Mixte|Mišrios/gi, mixed);
 }
 
 export function overlayMetaParts({ category, phase } = {}) {

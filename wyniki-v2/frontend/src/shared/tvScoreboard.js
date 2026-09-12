@@ -1,6 +1,12 @@
-import { abbreviateCompetitorName, lastNameToken, splitTeamDisplayName } from './teamDisplay.js';
+import { abbreviateCompetitorName, isDefaultPlayerLabel, lastNameToken, splitTeamDisplayName } from './teamDisplay.js';
 import { calcMatchTime } from './matchTime.js';
-import { overlayCategoryLabel, overlayPhaseLabel } from './overlayLabel.js';
+import {
+  localizeScoreboardCategory,
+  localizeScoreboardPhase,
+  overlayCategoryLabel,
+  overlayPhaseLabel,
+} from './overlayLabel.js';
+import { isPlaceholderName } from './scoreboardHold.js';
 
 export const TV_SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
 
@@ -51,12 +57,13 @@ function lastNameOnly(name) {
   return lastNameToken(name) || String(name || '');
 }
 
-export function tvNameVariantsHtml(full, className) {
+export function tvNameVariantsHtml(full, className, { literal = false } = {}) {
   const safe = escapeTvHtml(full);
+  const keepFull = literal || isDefaultPlayerLabel(full);
   return '<span class="' + className + '" data-full="' + safe + '">'
     + '<span class="sb-name-full">' + safe + '</span>'
-    + '<span class="sb-name-init">' + escapeTvHtml(abbreviateCompetitorName(full)) + '</span>'
-    + '<span class="sb-name-last">' + escapeTvHtml(lastNameOnly(full)) + '</span>'
+    + '<span class="sb-name-init">' + (keepFull ? safe : escapeTvHtml(abbreviateCompetitorName(full))) + '</span>'
+    + '<span class="sb-name-last">' + (keepFull ? safe : escapeTvHtml(lastNameOnly(full))) + '</span>'
     + '</span>';
 }
 
@@ -195,8 +202,18 @@ export function renderTvScoreboard({
 } = {}) {
   const model = buildTvScoreModel(court);
   const meta = court.history_meta || {};
-  const cat = look.phase === false ? '' : overlayCategoryLabel(meta.category);
-  const phase = look.phase === false ? '' : overlayPhaseLabel(meta.phase);
+  const labels = look.labels || null;
+  const nameOf = (side) => String(court?.[side]?.full_name || court?.[side]?.surname || '').trim();
+  const hasRealNames = [nameOf('A'), nameOf('B')].some(
+    (name) => name && !isPlaceholderName(name) && !isDefaultPlayerLabel(name),
+  );
+  const showMeta = look.phase !== false && hasRealNames;
+  const cat = showMeta
+    ? (labels ? localizeScoreboardCategory(meta.category, labels) : overlayCategoryLabel(meta.category))
+    : '';
+  const phase = showMeta
+    ? (labels ? localizeScoreboardPhase(meta.phase, labels) : overlayPhaseLabel(meta.phase))
+    : '';
   const metaParts = [cat, phase].filter(Boolean).join(' · ');
   const timeStr = (look.clock !== false && model.active) ? (calcMatchTime(court) || '') : '';
   const showFlags = look.flags !== false;

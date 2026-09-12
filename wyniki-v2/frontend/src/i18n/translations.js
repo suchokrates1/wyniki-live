@@ -22,6 +22,13 @@ export const TRANSLATIONS = {
       }
     },
     players: { defaultA: 'Gracz A', defaultB: 'Gracz B' },
+    scoreboard: {
+      phaseGroup: 'Grupowa',
+      phaseGroupRematch: 'Rewanż',
+      phaseKnockout: 'Pucharowa',
+      phaseFinal: 'Finał',
+      phaseThird: 'o 3. miejsce',
+    },
     meta: { lastRefresh: 'Ostatnie odświeżenie: {time}.' },
     accessibility: {
       versus: 'kontra',
@@ -98,6 +105,13 @@ export const TRANSLATIONS = {
       }
     },
     players: { defaultA: 'Spieler A', defaultB: 'Spieler B' },
+    scoreboard: {
+      phaseGroup: 'Gruppe',
+      phaseGroupRematch: 'Rückspiel',
+      phaseKnockout: 'K.-o.',
+      phaseFinal: 'Finale',
+      phaseThird: 'um Platz 3',
+    },
     meta: { lastRefresh: 'Letzte Aktualisierung: {time}.' },
     accessibility: {
       versus: 'gegen',
@@ -173,6 +187,13 @@ export const TRANSLATIONS = {
       }
     },
     players: { defaultA: 'Player A', defaultB: 'Player B' },
+    scoreboard: {
+      phaseGroup: 'Group',
+      phaseGroupRematch: 'Rematch',
+      phaseKnockout: 'Knockout',
+      phaseFinal: 'Final',
+      phaseThird: '3rd place',
+    },
     meta: { lastRefresh: 'Last refresh: {time}.' },
     accessibility: {
       versus: 'versus',
@@ -249,6 +270,13 @@ export const TRANSLATIONS = {
       }
     },
     players: { defaultA: 'Giocatore A', defaultB: 'Giocatore B' },
+    scoreboard: {
+      phaseGroup: 'Girone',
+      phaseGroupRematch: 'Ritorno',
+      phaseKnockout: 'Eliminazione',
+      phaseFinal: 'Finale',
+      phaseThird: '3° posto',
+    },
     meta: { lastRefresh: 'Ultimo aggiornamento: {time}.' },
     accessibility: {
       versus: 'contro',
@@ -324,6 +352,13 @@ export const TRANSLATIONS = {
       }
     },
     players: { defaultA: 'Jugador A', defaultB: 'Jugador B' },
+    scoreboard: {
+      phaseGroup: 'Grupos',
+      phaseGroupRematch: 'Revancha',
+      phaseKnockout: 'Eliminatoria',
+      phaseFinal: 'Final',
+      phaseThird: '3.er puesto',
+    },
     meta: { lastRefresh: 'Última actualización: {time}.' },
     accessibility: {
       versus: 'contra',
@@ -399,6 +434,13 @@ export const TRANSLATIONS = {
       }
     },
     players: { defaultA: 'Joueur A', defaultB: 'Joueur B' },
+    scoreboard: {
+      phaseGroup: 'Groupes',
+      phaseGroupRematch: 'Retour',
+      phaseKnockout: 'Élimination',
+      phaseFinal: 'Finale',
+      phaseThird: '3e place',
+    },
     meta: { lastRefresh: 'Dernière mise à jour: {time}.' },
     accessibility: {
       versus: 'contre',

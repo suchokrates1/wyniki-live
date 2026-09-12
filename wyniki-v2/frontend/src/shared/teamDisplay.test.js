@@ -4,6 +4,7 @@ import {
   abbreviateCompetitorName,
   competitorSearchTokens,
   formatTeamLabelForWrap,
+  isDefaultPlayerLabel,
   isTeamDisplayName,
   registerCompetitorName,
   splitTeamDisplayName,
@@ -50,4 +51,7 @@ test('abbreviateCompetitorName shortens each partner, not the slash token', () =
   assert.equal(abbreviateCompetitorName('Jan Kowalski'), 'J. Kowalski');
   assert.equal(isTeamDisplayName(PAIR), true);
   assert.equal(isTeamDisplayName('Jan Kowalski'), false);
+  assert.equal(isDefaultPlayerLabel('Gracz A'), true);
+  assert.equal(isDefaultPlayerLabel('Player B'), true);
+  assert.equal(isDefaultPlayerLabel('Ada Nowak'), false);
 });

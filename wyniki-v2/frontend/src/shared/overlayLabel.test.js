@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  localizeScoreboardCategory,
+  localizeScoreboardPhase,
   overlayCategoryLabel,
   overlayCourtLabel,
   overlayMetaParts,
@@ -31,6 +33,18 @@ test('phases become compact English overlay tokens', () => {
   assert.equal(overlayPhaseLabel('B1 Women — Finał'), 'FINAL');
   assert.equal(overlayPhaseLabel('1/8'), '1/8');
   assert.equal(overlayPhaseLabel('o 3. miejsce'), '3RD PLACE');
+});
+
+test('homepage labels translate leftover English overlay tokens', () => {
+  const pl = {
+    group: 'Grupowa',
+    women: 'Kobiety',
+    men: 'Mężczyźni',
+  };
+  assert.equal(localizeScoreboardPhase('GROUP', pl), 'Grupowa');
+  assert.equal(localizeScoreboardPhase('Grupowa', pl), 'Grupowa');
+  assert.equal(localizeScoreboardCategory('B1 Women', pl), 'B1 Kobiety');
+  assert.equal(localizeScoreboardCategory('B1 Kobiety', pl), 'B1 Kobiety');
 });
 
 test('meta parts skip empty values', () => {

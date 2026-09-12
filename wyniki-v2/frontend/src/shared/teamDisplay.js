@@ -52,6 +52,12 @@ export function registerCompetitorName(map, name) {
   return map;
 }
 
+const DEFAULT_PLAYER_LABEL = /^(gracz|player|spieler|giocatore|jugador|joueur|žaidėjas)\s+[ab]$/i;
+
+export function isDefaultPlayerLabel(value) {
+  return DEFAULT_PLAYER_LABEL.test(String(value || '').trim());
+}
+
 export function abbreviatePersonName(name) {
   const parts = stripWrapMarks(name).trim().split(/\s+/).filter(Boolean);
   if (parts.length < 2) return parts.join(' ') || String(name || '');

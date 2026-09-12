@@ -48,6 +48,45 @@ test('player names and flag URLs are escaped in visual HTML', () => {
   assert.match(html, /https:\/\/flags\.test\/a\.png&quot;\)/);
 });
 
+test('empty court keeps full placeholder names and drops leftover GROUP', () => {
+  const html = renderTvScoreboard({
+    courtId: 'tv-empty',
+    courtName: 'Kort 3',
+    look: { labels: { group: 'Grupowa', women: 'Kobiety' } },
+    court: {
+      match_status: { active: false, last_completed: null },
+      history_meta: { phase: 'Grupowa', category: 'B1 Women' },
+      A: { surname: '-', full_name: 'Gracz A' },
+      B: { surname: '-', full_name: 'Gracz B' },
+    },
+  });
+  assert.match(html, /sb-name-init">Gracz A</);
+  assert.match(html, /sb-name-last">Gracz B</);
+  assert.equal(html.includes('G. A'), false);
+  assert.equal(html.includes('GROUP'), false);
+  assert.equal(html.includes('Grupowa'), false);
+  assert.equal(html.includes('Women'), false);
+});
+
+test('live court uses localized homepage phase instead of GROUP', () => {
+  const html = renderTvScoreboard({
+    courtId: 'tv-live-pl',
+    courtName: 'Kort 1',
+    look: { labels: { group: 'Grupowa', women: 'Kobiety' } },
+    court: {
+      match_status: { active: true },
+      history_meta: { phase: 'Grupowa', category: 'B1 Women' },
+      serve: 'A',
+      current_set: 1,
+      A: { full_name: 'Ada Nowak', points: '0' },
+      B: { full_name: 'Ewa Lis', points: '0' },
+    },
+  });
+  assert.match(html, /Grupowa/);
+  assert.match(html, /B1 Kobiety/);
+  assert.equal(html.includes('GROUP'), false);
+});
+
 test('tvFlagSpans splits only when partner country differs', () => {
   const split = tvFlagSpans({
     flag_url: 'https://flagcdn.com/w80/pl.png',

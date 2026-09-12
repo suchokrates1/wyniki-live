@@ -238,6 +238,26 @@ export function createLiveCourtView() {
       return calcMatchTime(this.courts[courtId]);
     },
 
+    scoreboardLabels() {
+      const history = this.tr()?.history || {};
+      const scoreboard = this.tr()?.scoreboard || {};
+      const bracket = this.tr()?.bracket || {};
+      return {
+        women: history.catWomen,
+        men: history.catMen,
+        mixed: history.catMixed,
+        doubles: history.catDoubles,
+        group: scoreboard.phaseGroup || history.phaseGroup,
+        groupRematch: scoreboard.phaseGroupRematch || history.phaseGroupRematch,
+        knockout: scoreboard.phaseKnockout || history.phaseKnockout,
+        r16: '1/8',
+        qf: '1/4',
+        sf: '1/2',
+        final: scoreboard.phaseFinal || bracket.finalLabel,
+        third: scoreboard.phaseThird || bracket.thirdPlace,
+      };
+    },
+
     renderLiveTvScoreboard(courtId) {
       // Decorative only — homepage keeps the spoken heading + .score-summary live region.
       // `lang` is passed from the template so Alpine rebuilds the header word (Kort/Court/Platz/Kortas).
@@ -250,7 +270,15 @@ export function createLiveCourtView() {
           B: { ...(court.B || {}), full_name: this.getSpokenPlayerName(courtId, 'B') },
         },
         courtName: this.getCourtDisplayLabel(courtId),
-        look: { flags: true, clock: true, phase: true, scale: 1, anim_speed: 1, anim_set: true },
+        look: {
+          flags: true,
+          clock: true,
+          phase: true,
+          scale: 1,
+          anim_speed: 1,
+          anim_set: true,
+          labels: this.scoreboardLabels(),
+        },
         onAnimTick: () => { this.serveAnimTick += 1; },
       });
     },
