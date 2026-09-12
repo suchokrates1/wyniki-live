@@ -311,6 +311,7 @@
                   <div class="office-timetable__time" x-text="time"></div>
                   <template x-for="court in autoCourts" :key="'gridc_'+time+'_'+court.kort_id">
                     <div class="office-timetable__cell"
+                         :data-cell="court.kort_id + '|' + time"
                          :class="{'is-drop': planningDropCell === court.kort_id + '|' + time}"
                          @dragover.prevent
                          @dragenter.prevent="if (autoDragId) planningDropCell = court.kort_id + '|' + time"
@@ -318,6 +319,7 @@
                       <template x-for="entry in autoEntriesAt(court.kort_id, time)" :key="'cell_'+autoEntryId(entry)">
                         <div class="office-block"
                              data-schedule-entry
+                             :data-schedule-id="autoEntryId(entry)"
                              :class="[
                                officeScheduleStatusClass(entry.status),
                                autoIsPlaceholder(entry) ? 'is-placeholder' : '',
@@ -426,6 +428,7 @@
                   <template x-for="entry in autoUnplacedForDrawer()" :key="'autounp_'+(entry.schedule_id || entry.id)">
                     <div class="office-drawer__card"
                          data-unassigned-entry
+                         :data-schedule-id="autoEntryId(entry)"
                          :class="{'is-selected': planningOpenCardId === autoEntryId(entry)}"
                          :draggable="!autoLoading"
                          @dragstart="onAutoDragStart(entry, $event)"
