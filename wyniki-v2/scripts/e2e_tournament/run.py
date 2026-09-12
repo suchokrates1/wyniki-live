@@ -109,9 +109,26 @@ def cmd_health() -> bool:
         return False
 
 
+def _playwright_image() -> str:
+    """Runtime image matching the installed @playwright/test.
+
+    The browsers are installed by that package version; running them in an older image
+    made chrome-headless-shell segfault at launch now and then (signal 11, core dumps).
+    """
+    override = os.environ.get("E2E_PLAYWRIGHT_IMAGE")
+    if override:
+        return override
+    package = FRONTEND_DIR / "node_modules" / "@playwright" / "test" / "package.json"
+    try:
+        version = json.loads(package.read_text(encoding="utf-8"))["version"]
+    except (OSError, ValueError, KeyError):
+        version = "1.60.0"
+    return f"mcr.microsoft.com/playwright:v{version}-jammy"
+
+
 def _office_docker_cmd(module_filter: str | None = None) -> list[str]:
     """Playwright via official image — Dell has no host Node."""
-    image = os.environ.get("E2E_PLAYWRIGHT_IMAGE", "mcr.microsoft.com/playwright:v1.56.1-jammy")
+    image = _playwright_image()
     module_arg = f" --module {module_filter}" if module_filter else ""
     inner = (
         "npm install --no-audit --no-fund"
@@ -124,7 +141,9 @@ def _office_docker_cmd(module_filter: str | None = None) -> list[str]:
         "-v", "wyniki-e2e-ms-playwright:/ms-playwright",
         "-w", "/app",
         "-e", f"E2E_BASE_URL={BASE_URL}",
-        "-e", f"E2E_ADMIN_PASSWORD={os.environ.get('E2E_ADMIN_PASSWORD') or os.environ.get('ADMIN_PASSWORD') or 'e2e-admin'}",
+        # Value comes from the environment so the password never lands in the printed command.
+        "-e", "E2E_ADMIN_PASSWORD",
+        "-e", "E2E_KEEP",
         "-e", "npm_config_update_notifier=false",
         "-e", "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright",
         image,
@@ -148,6 +167,7 @@ def cmd_office(module_filter: str | None = None) -> bool:
         return result.returncode == 0
 
     print("[office] node not on PATH — running Playwright in Docker (host network).")
+    env["E2E_ADMIN_PASSWORD"] = os.environ.get("E2E_ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSWORD") or "e2e-admin"
     result = _run(_office_docker_cmd(module_filter), check=False, cwd=str(FRONTEND_DIR), env=env)
     return result.returncode == 0
 
