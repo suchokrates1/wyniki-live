@@ -3330,6 +3330,7 @@ def test_four_groups_build_vilnius_draw_and_move_winners_and_losers(full_app_wit
     planning = client.get("/api/office/1/planning", headers=headers).get_json()
     group_ids = {group["name"]: group["id"] for group in planning["groups"]}
 
+    database.seed_provisional_knockout_from_groups(tournament_id)
     provisional = {(slot["phase"], slot["position"]): slot for slot in database.fetch_bracket_knockout(tournament_id)}
     assert ("B2 Kobiety — Ćwierćfinał", 1) in provisional
     assert provisional[("B2 Kobiety — Ćwierćfinał", 1)]["player1_name"] == "1. B2 Kobiety — Grupa A"
