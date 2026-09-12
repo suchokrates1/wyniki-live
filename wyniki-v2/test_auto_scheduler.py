@@ -298,3 +298,20 @@ def test_phase_rank_knockout_of_single_group_is_not_group_phase():
     assert sched._phase_rank("B4 Men — Grupa A — o 3. miejsce") == 4
     assert sched._phase_rank("Grupowa") == 0
     assert sched._phase_rank("Grupowa — Rewanż") == 0
+
+
+def test_knockout_waits_for_the_end_of_its_group_phase():
+    config = sched.build_default_config(_courts())
+    config["start_time"] = "09:00"
+    config["end_time"] = "18:00"
+    group_on_day2 = {"match": {"id": 1, "category_name": "B4 Men", "phase": "Grupowa", "player1_name": "X", "player2_name": "Y"},
+                     "court_id": "c1", "scheduled_time": "14:00"}
+    final = {"id": 9, "category_name": "B4 Men — Grupa A", "phase": "B4 Men — Grupa A — Finał", "player1_name": "P", "player2_name": "Q"}
+    other = {"id": 8, "category_name": "B3 Men — Grupa A", "phase": "B3 Men — Grupa A — Finał", "player1_name": "R", "player2_name": "S"}
+    placements = sched.place_matches_across_days(
+        [final, other], config, ["2026-08-24", "2026-08-25"], {"2026-08-25": [group_on_day2]},
+    )
+    by_id = {p["match"]["id"]: p for p in placements}
+    assert by_id[9]["day_date"] == "2026-08-25"
+    assert by_id[9]["scheduled_time"] >= "15:00"
+    assert by_id[8]["day_date"] == "2026-08-24"

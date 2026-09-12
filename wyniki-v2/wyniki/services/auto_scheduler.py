@@ -286,6 +286,29 @@ def _category_key(match: Dict[str, Any]) -> str:
     return str(match.get("category_name") or match.get("group_name") or "").strip().casefold()
 
 
+def _category_root(match: Dict[str, Any]) -> str:
+    """Category without the group/phase suffix: "B4 Men — Grupa A — Finał" -> "b4 men"."""
+    text = str(match.get("category_name") or match.get("group_name") or match.get("phase") or "")
+    return text.split(" — ")[0].strip().casefold()
+
+
+def _phase_floor(match: Dict[str, Any], scheduled: List[Dict[str, Any]], config: Dict[str, Any]) -> int:
+    """Earliest minute a match may start: after every earlier-phase match of its category."""
+    rank = _phase_rank(match.get("phase"))
+    if rank == 0:
+        return 0
+    root = _category_root(match)
+    floor = 0
+    for placement in scheduled:
+        other = placement.get("match") or {}
+        if _category_root(other) != root or _phase_rank(other.get("phase")) >= rank:
+            continue
+        if not str(placement.get("scheduled_time") or "").strip():
+            continue
+        floor = max(floor, _placement_window(placement, config)[1])
+    return floor
+
+
 def _unplaced(match: Dict[str, Any], day_date: Optional[str]) -> Dict[str, Any]:
     return {
         "match": match,
@@ -337,15 +360,20 @@ def _place_in_pool(
 
     for match in ordered:
         band = normalize_band(match.get("category_name") or match.get("group_name"))
-        category = _category_key(match)
+        # the whole category waits (later rounds and phases) once one of its matches does not fit
+        category = _category_root(match)
         if category in blocked_categories:
             placements.append(_unplaced(match, day_date))
             continue
+        floor = _phase_floor(match, scheduled, config)
+
         def earliest(rest: int) -> Optional[Tuple[int, int, str]]:
             found: Optional[Tuple[int, int, str]] = None
             for order, court_id in enumerate(courts):
                 duration = _slot_minutes_for_court(court_id, config, band)
                 start = time_to_minutes(court_next_time[court_id])
+                while start < floor:
+                    start += duration
                 while start + duration <= search_end:
                     candidate = f"{start // 60:02d}:{start % 60:02d}"
                     if _slot_available_for_player(match, court_id, candidate, config, scheduled, rest):
@@ -439,10 +467,27 @@ def place_matches_across_days(
     """Fill day after day from start to end time; what does not fit on the last day stays unplaced."""
     remaining = list(matches)
     placements: List[Dict[str, Any]] = []
-    for day in days:
+    occupied_by_day = occupied_by_day or {}
+    # A later phase waits for the last day on which its category still plays an earlier phase.
+    last_day_by_phase: Dict[Tuple[str, int], int] = {}
+    for index, day in enumerate(days):
+        for placement in occupied_by_day.get(day) or []:
+            other = placement.get("match") or {}
+            key = (_category_root(other), _phase_rank(other.get("phase")))
+            last_day_by_phase[key] = max(last_day_by_phase.get(key, -1), index)
+
+    def waits(match: Dict[str, Any], index: int) -> bool:
+        root = _category_root(match)
+        rank = _phase_rank(match.get("phase"))
+        return any(r < rank and last > index for (c, r), last in last_day_by_phase.items() if c == root)
+
+    for index, day in enumerate(days):
         if not remaining:
             break
-        day_placements = place_matches(remaining, config, day, (occupied_by_day or {}).get(day))
+        ready = [match for match in remaining if not waits(match, index)]
+        if not ready:
+            continue
+        day_placements = place_matches(ready, config, day, occupied_by_day.get(day))
         placed_ids = set()
         for placement in day_placements:
             if placement.get("court_id") and placement.get("scheduled_time"):

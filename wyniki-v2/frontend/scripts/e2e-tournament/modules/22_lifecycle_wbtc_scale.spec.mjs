@@ -400,7 +400,15 @@ KO rows: ${JSON.stringify(rows.map((row) => [row.id, row.phase, row.day_date, ro
 UI: ${JSON.stringify(state)}
 Toasts: ${toasts.join(' | ')}`);
     });
-    log(`"Rozstaw fazę pucharową": ${koRows.length} knockout matches on ${[...new Set(koRows.map((row) => ddmm(row.day_date)))].join(', ')}`);
+    for (const row of koRows) {
+      const root = String(row.phase).split(' — ')[0];
+      const lastGroup = groupRows.filter((entry) => String(entry.category_name).startsWith(root))
+        .map((entry) => `${entry.day_date} ${String(toMinutes(entry.scheduled_time) + slotMinutes(entry)).padStart(4, '0')}`)
+        .sort().pop();
+      const koStart = `${row.day_date} ${String(toMinutes(row.scheduled_time)).padStart(4, '0')}`;
+      if (lastGroup && koStart < lastGroup) throw new Error(`${row.phase} starts ${row.day_date} ${row.scheduled_time}, before the ${root} group phase ends`);
+    }
+    log(`"Rozstaw fazę pucharową": ${koRows.map((row) => `${row.phase} ${ddmm(row.day_date)} ${row.scheduled_time}`).join('; ')} — each after its group phase ends`);
 
     await openView('Drabinka');
     for (const row of slots) {
