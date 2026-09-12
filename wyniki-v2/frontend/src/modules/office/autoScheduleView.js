@@ -19,6 +19,7 @@ export function createOfficeAutoScheduleView() {
         this.autoCourts = Array.isArray(payload.courts) ? payload.courts : [];
         this.autoBands = Array.isArray(payload.bands) ? payload.bands : [];
         this.autoStartTime = this.autoConfig?.start_time || '09:30';
+        this.autoEndTime = this.autoConfig?.end_time || this.autoEndTime || '18:00';
         const savedB1Courts = Array.isArray(this.autoConfig?.b1_court_ids)
           ? this.autoConfig.b1_court_ids.map(String).filter(Boolean)
           : [];
@@ -55,14 +56,26 @@ export function createOfficeAutoScheduleView() {
       return this.ot('scope.group');
     },
 
-    async autoGenerate() {
+    autoPlanAllLabel() {
+      if (this.autoPhaseScope === 'group') return this.ot('planning.planGroupPhase');
+      if (this.autoPhaseScope === 'knockout') return this.ot('planning.planKnockoutPhase');
+      return this.ot('planning.planTournament');
+    },
+
+    async autoGenerate(mode = 'day') {
       if (!this.token) return;
       const selectedDay = this.autoDayDate;
+      if (this.autoEndTime && this.autoStartTime && this.autoEndTime <= this.autoStartTime) {
+        this.showToast(this.ot('toast.endBeforeStart'), 'warning');
+        return;
+      }
       this.autoLoading = true;
       try {
         const b1Courts = (this.autoB1Courts || []).map(String).filter(Boolean);
         const body = {
+          mode,
           start_time: this.autoStartTime,
+          end_time: this.autoEndTime,
           b1_court_ids: b1Courts,
           b1_court_id: b1Courts[0] || '',
           day_date: selectedDay,
@@ -88,15 +101,15 @@ export function createOfficeAutoScheduleView() {
             : this.ot('toast.hintGroups');
           this.showToast(this.ot('toast.noMatchesScope', { scope: this.autoScopeLabel(), hint }), 'warning');
         } else {
-          const placeholders = this.autoProposal.filter(p => p.scheduled_time && this.autoIsPlaceholder(p)).length;
-          const extra = placeholders
-            ? this.ot('toast.withPlaceholders', { count: placeholders })
-            : '';
-          this.showToast(this.ot('toast.proposalReady', {
-            scope: this.autoScopeLabel(),
-            placed,
-            extra,
-          }), 'success');
+          const summary = payload.summary || {};
+          const unplaced = Number(summary.unplaced || 0);
+          const days = Array.isArray(summary.days) && summary.days.length ? summary.days.length : 1;
+          this.showToast(
+            mode === 'all'
+              ? this.ot('toast.proposalSummaryAll', { placed, days, unplaced })
+              : this.ot('toast.proposalSummaryDay', { placed, unplaced }),
+            unplaced ? 'warning' : 'success',
+          );
         }
       } catch (error) {
         console.error('Auto-generate failed:', error);

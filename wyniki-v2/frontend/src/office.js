@@ -14,6 +14,22 @@ import './styles/office.css';
 
 window.Alpine = Alpine;
 
+const nativeFetch = window.fetch.bind(window);
+window.fetch = async (input, init) => {
+  const response = await nativeFetch(input, init);
+  const url = typeof input === 'string' ? input : input?.url || '';
+  if (!/\/api\/office\/\d+\//.test(url) || /\/(auth|meta)(\?|$)/.test(url)) return response;
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent('office-session-expired'));
+  } else if (response.status === 403) {
+    const body = await response.clone().json().catch(() => ({}));
+    if (/session|sesj/i.test(String(body.error || ''))) {
+      window.dispatchEvent(new CustomEvent('office-session-expired'));
+    }
+  }
+  return response;
+};
+
 // Preserve getters (isAuthenticated, officeMatches, …) — object spread would freeze them.
 Alpine.data('officeApp', () => mergeAdminModules(
   createOfficeI18n(),

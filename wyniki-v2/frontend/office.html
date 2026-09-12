@@ -249,6 +249,10 @@
             <span class="office-kicker" x-text="ot('planning.startTime')"></span>
             <input type="time" class="input input-bordered input-sm" x-model="autoStartTime">
           </label>
+          <label class="office-field">
+            <span class="office-kicker" x-text="ot('planning.endTime')"></span>
+            <input type="time" class="input input-bordered input-sm" x-model="autoEndTime">
+          </label>
 
           <div class="office-toolbar__spacer"></div>
 
@@ -257,7 +261,8 @@
             <button type="button" class="office-btn office-btn--ghost" @click="generatePlanningRematch()" x-text="ot('planning.generateRematch')"></button>
             <button type="button" class="office-btn office-btn--ghost" :class="{'is-armed': planningRematchOpen}" :aria-expanded="planningRematchOpen" @click="planningRematchOpen = !planningRematchOpen" x-text="ot('planning.rematchesToggle')"></button>
             <button type="button" class="office-btn office-btn--ghost" :class="{'is-armed': planningManualOpen}" :aria-expanded="planningManualOpen" @click="planningManualOpen = !planningManualOpen" x-text="planningManualOpen ? ot('planning.hideManual') : ot('planning.showManual')"></button>
-            <button type="button" class="office-btn office-btn--primary" :class="{'is-busy': autoLoading}" :aria-disabled="autoLoading" @click="autoGenerate()" x-text="ot('planning.generateProposal')"></button>
+            <button type="button" class="office-btn office-btn--primary" :class="{'is-busy': autoLoading}" :aria-disabled="autoLoading" @click="autoGenerate('day')" x-text="ot('planning.planDay')"></button>
+            <button type="button" class="office-btn office-btn--primary" :class="{'is-busy': autoLoading}" :aria-disabled="autoLoading" @click="autoGenerate('all')" x-text="autoPlanAllLabel()"></button>
             <button type="button" class="office-btn office-btn--live" :class="{'is-busy': planningPublishing}" :aria-disabled="planningPublishing" @click="publishAllSchedule()" x-text="ot('planning.publishAll')"></button>
           </div>
         </div>

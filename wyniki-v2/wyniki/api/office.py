@@ -9,6 +9,7 @@ from werkzeug.security import check_password_hash
 
 from ..services.api_auth import (
     issue_office_token,
+    office_session_max_age_seconds,
     office_stream_cookie_name,
     require_office_access,
 )
@@ -40,6 +41,7 @@ from ..database import (
     unassign_schedule_entry,
     delete_unassigned_schedule_entries,
     clear_schedule_day,
+    clear_removed_fixtures,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
     seed_provisional_knockout_from_groups,
@@ -119,7 +121,7 @@ def _set_office_stream_cookie(response, slot: int, tournament_id: int):
     response.set_cookie(
         office_stream_cookie_name(slot),
         issue_office_token(slot, tournament_id),
-        max_age=60 * 60 * 24,
+        max_age=office_session_max_age_seconds(),
         httponly=True,
         secure=bool(request.is_secure),
         samesite="Strict",
@@ -476,6 +478,7 @@ def office_schedule_generate(slot: int):
         return error
     tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
+    clear_removed_fixtures(tournament_id)
     ensure_group_schedule_entries(tournament_id)
     seed_provisional_knockout_from_groups(
         tournament_id,
@@ -679,6 +682,8 @@ def office_autoschedule_generate(slot: int):
         b1_court_ids=b1_court_ids,
         day_date=(data.get('day_date') or None),
         phases=data.get('phases') if isinstance(data.get('phases'), list) else None,
+        end_time=(data.get('end_time') or None),
+        mode=(data.get('mode') or 'day'),
     )
     return _json_no_cache(proposal)
 

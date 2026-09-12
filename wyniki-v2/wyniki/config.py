@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     
     # Admin
     admin_password: Optional[str] = None
-    admin_session_ttl_hours: int = 12
+    admin_session_ttl_hours: int = 72
+    office_session_ttl_hours: int = 168
 
     # API authorization rollout
     court_session_ttl_hours: int = 24

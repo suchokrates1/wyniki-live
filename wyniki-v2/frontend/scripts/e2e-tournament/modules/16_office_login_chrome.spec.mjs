@@ -55,6 +55,28 @@ export default async function run() {
     await chrome.logout();
     await loginPage.expectLoginScreen();
     console.log('  Logout returns to login');
+
+    // A session the server no longer accepts sends the office back to the login screen.
+    await loginPage.login(OFFICE_PASSWORD);
+    await page.evaluate(() => { Alpine.$data(document.body).token = 'expired-token'; });
+    await chrome.refresh();
+    await page.waitForFunction(
+      () => document.body.innerText.includes('Wejście do biura zawodów') && document.body.innerText.includes('Sesja biura wygasła'),
+      undefined,
+      { timeout: 12000 },
+    );
+    console.log('  Expired office session returns to login with a message');
+
+    // Same for the admin panel.
+    const adminPage = await browser.newPage();
+    await adminPage.addInitScript(() => { window.sessionStorage.setItem('wyniki-admin-token', 'expired-token'); });
+    await adminPage.goto(`${BASE_URL}/admin`, { waitUntil: 'domcontentloaded' });
+    await adminPage.waitForFunction(
+      () => document.body.innerText.includes('Podaj hasło administratora') && document.body.innerText.includes('Sesja administratora wygasła'),
+      undefined,
+      { timeout: 15000 },
+    );
+    console.log('  Expired admin session returns to login with a message');
   } finally {
     await browser.close();
   }

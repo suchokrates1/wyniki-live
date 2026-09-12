@@ -103,6 +103,8 @@ from .schedule import (
     unassign_schedule_entry,
     delete_unassigned_schedule_entries,
     clear_schedule_day,
+    clear_removed_fixtures,
+    load_removed_fixtures,
 )
 
 from .brackets import (
@@ -224,6 +226,7 @@ _INJECTIONS = {
         'ensure_group_rematch_schedule_entries': 'schedule',
         'ensure_group_schedule_entries': 'schedule',
         'ensure_knockout_schedule_entries': 'schedule',
+        'clear_removed_fixtures': 'schedule',
     },
     'categories': {
         'fetch_bracket_groups': 'brackets',
@@ -322,6 +325,8 @@ __all__ = [
     'unassign_schedule_entry',
     'delete_unassigned_schedule_entries',
     'clear_schedule_day',
+    'clear_removed_fixtures',
+    'load_removed_fixtures',
     '_bracket_row_match_priority',
     '_find_bracket_groups_for_player',
     'detect_bracket_context',

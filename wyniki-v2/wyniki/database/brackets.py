@@ -1390,6 +1390,8 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
                         )
             conn.commit()
             logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
+        # A new draw means new fixtures: forget matches deleted from the previous one.
+        clear_removed_fixtures(tournament_id)
         ensure_group_schedule_entries(tournament_id)
         maybe_generate_knockout_from_completed_groups(tournament_id)
         return True

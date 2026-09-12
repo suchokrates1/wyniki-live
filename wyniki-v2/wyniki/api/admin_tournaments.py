@@ -59,6 +59,7 @@ from ..database import (
     maybe_generate_knockout_from_completed_groups,
     advance_knockout,
     ensure_group_schedule_entries,
+    clear_removed_fixtures,
     ensure_knockout_schedule_entries,
     seed_knockout_rematch_for_groups,
     upsert_tournament_schedule_entries,
@@ -644,6 +645,7 @@ def generate_tournament_schedule(tournament_id: int):
     _, error = _require_tournament(tournament_id)
     if error:
         return error
+    clear_removed_fixtures(tournament_id)
     ensure_group_schedule_entries(tournament_id)
     ensure_knockout_schedule_entries(tournament_id)
     return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})

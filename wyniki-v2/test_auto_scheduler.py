@@ -170,3 +170,69 @@ def test_recompute_court_times_with_explicit_start():
     ]
     result = sched.recompute_court_times(entries, config, start_time="09:00")
     assert [e["scheduled_time"] for e in result] == ["09:00", "10:00"]  # +60
+
+
+def _b2_round(count, start_id=1, phase="Grupowa", category="B2 Mężczyźni"):
+    return [
+        {
+            "id": start_id + i,
+            "category_name": category,
+            "phase": phase,
+            "player1_name": f"{category}-P{i * 2}",
+            "player2_name": f"{category}-P{i * 2 + 1}",
+            "sort_order": i,
+        }
+        for i in range(count)
+    ]
+
+
+def test_place_matches_leaves_what_does_not_fit_before_day_end_unplaced():
+    config = sched.build_default_config(_courts())
+    config["start_time"] = "09:00"
+    config["end_time"] = "11:00"
+    # three flex courts, 60-minute slots, two hours: six matches fit
+    placements = sched.place_matches(_b2_round(9), config, "2026-05-23")
+    placed = [p for p in placements if p["court_id"]]
+    unplaced = [p for p in placements if not p["court_id"]]
+    assert len(placed) == 6
+    assert len(unplaced) == 3
+    assert all(p["scheduled_time"] in {"09:00", "10:00"} for p in placed)
+    assert all(p["scheduled_time"] == "" for p in unplaced)
+
+
+def test_place_matches_keeps_later_phase_back_when_its_category_overflows():
+    config = sched.build_default_config(_courts())
+    config["start_time"] = "09:00"
+    config["end_time"] = "10:00"
+    matches = _b2_round(4) + [
+        {"id": 99, "category_name": "B2 Mężczyźni", "phase": "Finał", "player1_name": "W1", "player2_name": "W2", "sort_order": 1},
+    ]
+    placements = sched.place_matches(matches, config, "2026-05-23")
+    final = next(p for p in placements if p["match"]["id"] == 99)
+    assert final["court_id"] is None
+
+
+def test_place_matches_starts_courts_after_fixed_placements():
+    config = sched.build_default_config(_courts())
+    config["start_time"] = "09:00"
+    occupied = [
+        {"match": {"category_name": "B2 Mężczyźni", "player1_name": "X", "player2_name": "Y"}, "court_id": court, "scheduled_time": "09:00"}
+        for court in ("c1", "c2", "c3")
+    ]
+    placements = sched.place_matches(_b2_round(1), config, "2026-05-23", occupied)
+    assert placements[0]["scheduled_time"] == "10:00"
+
+
+def test_place_matches_across_days_fills_each_day_then_leaves_the_rest():
+    config = sched.build_default_config(_courts())
+    config["start_time"] = "09:00"
+    config["end_time"] = "10:00"
+    # three flex courts, one slot a day: 3 + 3 matches over two days, 1 left over
+    placements = sched.place_matches_across_days(_b2_round(7), config, ["2026-05-23", "2026-05-24"])
+    placed_day1 = [p for p in placements if p["court_id"] and p["day_date"] == "2026-05-23"]
+    placed_day2 = [p for p in placements if p["court_id"] and p["day_date"] == "2026-05-24"]
+    unplaced = [p for p in placements if not p["court_id"]]
+    assert len(placed_day1) == 3
+    assert len(placed_day2) == 3
+    assert len(unplaced) == 1
+    assert len({p["match"]["id"] for p in placements}) == 7

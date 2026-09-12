@@ -568,13 +568,21 @@ def update_tournament_schedule_entry(tournament_id: int, schedule_id: int, data:
         return None
 
 def delete_tournament_schedule_entry(tournament_id: int, schedule_id: int) -> bool:
-    """Delete one schedule entry."""
+    """Delete one schedule entry (a deleted group/knockout fixture stays gone until regenerated)."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
+            cursor.execute(
+                "SELECT source_type, source_ref_id, phase, player1_name, player2_name FROM tournament_schedule WHERE id = ? AND tournament_id = ?",
+                (schedule_id, tournament_id),
+            )
+            rows = [dict(row) for row in cursor.fetchall()]
             cursor.execute("DELETE FROM tournament_schedule WHERE id = ? AND tournament_id = ?", (schedule_id, tournament_id))
             conn.commit()
-            return cursor.rowcount > 0
+            deleted = cursor.rowcount > 0
+        if deleted:
+            _remember_removed_fixtures(tournament_id, rows)
+        return deleted
     except Exception as e:
         logger.error("delete_tournament_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
         return False
@@ -596,6 +604,49 @@ def publish_tournament_schedule(tournament_id: int, day_date: Optional[str] = No
         logger.error("publish_tournament_schedule_error", error=str(e), tournament_id=tournament_id)
         return 0
 
+
+def _removed_fixtures_key(tournament_id: int) -> str:
+    return f"schedule_removed_fixtures_{int(tournament_id)}"
+
+
+def _group_fixture_key(phase: Any, player1_name: Any, player2_name: Any) -> str:
+    pair = sorted([competitor_identity_key(player1_name), competitor_identity_key(player2_name)])
+    return f"{str(phase or '').strip().casefold()}|{pair[0]}|{pair[1]}"
+
+
+def _knockout_fixture_key(source_ref_id: Any) -> str:
+    return f"ko|{source_ref_id}"
+
+
+def load_removed_fixtures(tournament_id: int) -> set:
+    """Group/knockout fixtures the office deleted; ensure_* must not rebuild them."""
+    key = _removed_fixtures_key(tournament_id)
+    raw = fetch_app_settings([key]).get(key)
+    try:
+        values = json.loads(raw) if raw else []
+    except (ValueError, TypeError):
+        values = []
+    return {str(value) for value in values if value}
+
+
+def _remember_removed_fixtures(tournament_id: int, rows: List[Dict[str, Any]]) -> None:
+    keys = set()
+    for row in rows:
+        source = str(row.get("source_type") or "").lower()
+        if source == "group":
+            keys.add(_group_fixture_key(row.get("phase"), row.get("player1_name"), row.get("player2_name")))
+        elif source == "knockout" and row.get("source_ref_id"):
+            keys.add(_knockout_fixture_key(row.get("source_ref_id")))
+    if not keys:
+        return
+    merged = load_removed_fixtures(tournament_id) | keys
+    upsert_app_settings({_removed_fixtures_key(tournament_id): json.dumps(sorted(merged))})
+
+
+def clear_removed_fixtures(tournament_id: int) -> None:
+    """Forget deleted fixtures so "Generuj mecze" (or a new draw) rebuilds everything."""
+    upsert_app_settings({_removed_fixtures_key(tournament_id): json.dumps([])})
+
 def _insert_group_round_robin_schedule_entries(
     cursor: sqlite3.Cursor,
     tournament_id: int,
@@ -606,6 +657,7 @@ def _insert_group_round_robin_schedule_entries(
     default_day: str,
     start_order: int,
     now: str,
+    removed: Optional[set] = None,
 ) -> int:
     """Insert missing round-robin schedule rows for one group and return next sort order."""
     group_id = int(group["id"])
@@ -618,6 +670,8 @@ def _insert_group_round_robin_schedule_entries(
             player1_name = player1.get("name") or ""
             player2_name = player2.get("name") or ""
             if not player1_name or not player2_name:
+                continue
+            if removed and _group_fixture_key(phase, player1_name, player2_name) in removed:
                 continue
             pair_clause, pair_params = _schedule_pair_clause(player1_name, player2_name)
             cursor.execute(
@@ -651,6 +705,7 @@ def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
     groups = fetch_bracket_groups(tournament_id)
     if not groups:
         return fetch_tournament_schedule(tournament_id)
+    removed = load_removed_fixtures(tournament_id)
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -670,6 +725,7 @@ def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
                     default_day=default_day,
                     start_order=next_order,
                     now=now,
+                    removed=removed,
                 )
             _prune_duplicate_schedule_entries(cursor, tournament_id)
             conn.commit()
@@ -684,6 +740,7 @@ def ensure_knockout_schedule_entries(
     schedule_day: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Ensure every relevant knockout slot has a schedule entry for office assignment."""
+    removed = load_removed_fixtures(tournament_id)
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -754,6 +811,8 @@ def ensure_knockout_schedule_entries(
                             existing["id"],
                         ),
                     )
+                    continue
+                if _knockout_fixture_key(slot["id"]) in removed:
                     continue
                 cursor.execute(
                     """
@@ -914,7 +973,7 @@ def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dic
     from ..services import auto_scheduler
 
     current = get_autoscheduler_config(tournament_id)
-    allowed = {"start_time", "b1_court_id", "b1_court_ids", "category_courts", "slot_minutes", "rest_slots"}
+    allowed = {"start_time", "end_time", "b1_court_id", "b1_court_ids", "category_courts", "slot_minutes", "rest_slots"}
     for key in allowed:
         if key in config and config[key] not in (None, ""):
             current[key] = config[key]
@@ -950,19 +1009,34 @@ def generate_autoschedule_proposal(
     b1_court_ids: Optional[List[str]] = None,
     day_date: Optional[str] = None,
     phases: Optional[List[str]] = None,
+    end_time: Optional[str] = None,
+    mode: str = "day",
 ) -> Dict[str, Any]:
     """Build a (non-persisted) auto-placement proposal for the tournament schedule.
 
-    Returns {config, placements, courts} where each placement carries the schedule entry
-    plus the proposed court_id/day_date/scheduled_time.
+    mode "day": the selected day's open matches plus everything unassigned, placed between
+    start and end time; what does not fit stays unassigned.
+    mode "all": every open match of the chosen phases, filled from start to end time day
+    after day across the tournament dates; what does not fit on the last day stays unassigned.
+    Played and live matches (and, in "day", other phases) keep their slots and block them.
+
+    Returns {config, placements, courts, summary}; each placement carries the schedule entry
+    plus the proposed court_id/day_date/scheduled_time (court_id None when it did not fit).
     """
     from ..services import auto_scheduler
 
     ensure_group_schedule_entries(tournament_id)
 
     config = get_autoscheduler_config(tournament_id)
+    window: Dict[str, Any] = {}
     if start_time:
         config["start_time"] = str(start_time)
+        window["start_time"] = str(start_time)
+    if end_time:
+        config["end_time"] = str(end_time)
+        window["end_time"] = str(end_time)
+    if window:
+        save_autoscheduler_config(tournament_id, window)
     selected_b1_courts = [
         str(court_id).strip()
         for court_id in (b1_court_ids or [])
@@ -989,47 +1063,91 @@ def generate_autoschedule_proposal(
     else:
         ensure_knockout_schedule_entries(tournament_id)
 
-    entries = fetch_tournament_schedule(tournament_id)
-    if day_date:
-        target_day_str = str(day_date).strip()
+    all_entries = fetch_tournament_schedule(tournament_id)
+    wanted = {str(p).strip().lower() for p in (phases or [])}
+
+    def _is_group_entry(entry) -> bool:
+        source = str(entry.get("source_type") or "").lower()
+        phase = str(entry.get("phase") or "").lower()
+        return source in {"group", "group_rematch"} or "grup" in phase
+
+    def _phase_match(entry) -> bool:
+        if not wanted:
+            return True
+        is_group = _is_group_entry(entry)
+        if {"group", "grupowa", "groups"} & wanted and is_group:
+            return True
+        if {"knockout", "pucharowa", "knockouts"} & wanted and not is_group:
+            return True
+        return False
+
+    def _is_locked(entry) -> bool:
+        status = str(entry.get("status") or "").lower()
+        return bool(entry.get("match_id")) or status in {"completed", "in_progress", "live"}
+
+    def _is_placed(entry) -> bool:
+        return bool(str(entry.get("court_id") or "").strip() and str(entry.get("scheduled_time") or "").strip())
+
+    def _fixed(entry) -> Dict[str, Any]:
+        return {
+            "match": _schedule_entry_match_dict(entry),
+            "court_id": str(entry.get("court_id") or ""),
+            "scheduled_time": str(entry.get("scheduled_time") or ""),
+        }
+
+    plan_all = str(mode or "day").strip().lower() in {"all", "tournament", "phase"}
+    if plan_all:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT start_date, end_date FROM tournaments WHERE id = ?", (tournament_id,))
+            row = cursor.fetchone()
+        start_day = str((row["start_date"] if row else "") or target_day)
+        end_day = str((row["end_date"] if row else "") or start_day)
+        days: List[str] = []
+        cursor_day = datetime.fromisoformat(start_day).date()
+        last_day = datetime.fromisoformat(max(end_day, start_day)).date()
+        while cursor_day <= last_day and len(days) < 31:
+            days.append(cursor_day.isoformat())
+            cursor_day = cursor_day.fromordinal(cursor_day.toordinal() + 1)
+        entries = [entry for entry in all_entries if _phase_match(entry) and not _is_locked(entry)]
+        candidate_ids = {int(entry["id"]) for entry in entries}
+        occupied_by_day: Dict[str, List[Dict[str, Any]]] = {}
+        for entry in all_entries:
+            if int(entry["id"]) in candidate_ids or not _is_placed(entry):
+                continue
+            occupied_by_day.setdefault(str(entry.get("day_date") or ""), []).append(_fixed(entry))
+        matches = [_schedule_entry_match_dict(entry) for entry in entries]
+        placements = auto_scheduler.place_matches_across_days(matches, config, days, occupied_by_day)
+    else:
+        target_day_str = str(target_day).strip()
         entries = [
-            entry
-            for entry in entries
-            if str(entry.get("day_date") or "").strip() == target_day_str
+            entry for entry in all_entries
+            if _phase_match(entry) and not _is_locked(entry) and (
+                (str(entry.get("day_date") or "").strip() == target_day_str and _is_placed(entry))
+                or not _is_placed(entry)
+            )
         ]
-    if phases:
-        wanted = {str(p).strip().lower() for p in phases}
-
-        def _is_group_entry(entry) -> bool:
-            source = str(entry.get("source_type") or "").lower()
-            phase = str(entry.get("phase") or "").lower()
-            return source == "group" or "grup" in phase
-
-        def _phase_match(entry) -> bool:
-            is_group = _is_group_entry(entry)
-            if {"group", "grupowa", "groups"} & wanted:
-                if is_group:
-                    return True
-            if {"knockout", "pucharowa", "knockouts"} & wanted:
-                if not is_group:
-                    return True
-            return False
-
-        entries = [entry for entry in entries if _phase_match(entry)]
-
-    matches = [_schedule_entry_match_dict(entry) for entry in entries]
-    placements = auto_scheduler.place_matches(matches, config, target_day)
+        candidate_ids = {int(entry["id"]) for entry in entries}
+        occupied = [
+            _fixed(entry) for entry in all_entries
+            if int(entry["id"]) not in candidate_ids
+            and _is_placed(entry)
+            and str(entry.get("day_date") or "").strip() == target_day_str
+        ]
+        matches = [_schedule_entry_match_dict(entry) for entry in entries]
+        placements = auto_scheduler.place_matches(matches, config, target_day_str, occupied)
 
     entry_by_id = {int(entry["id"]): entry for entry in entries if entry.get("id")}
     result_placements = []
     for placement in placements:
         match = placement["match"]
         entry = entry_by_id.get(int(match["id"])) if match.get("id") else None
+        placed = bool(placement.get("court_id") and placement.get("scheduled_time"))
         result_placements.append(
             {
                 "schedule_id": match.get("id"),
                 "court_id": placement["court_id"],
-                "day_date": placement["day_date"],
+                "day_date": placement["day_date"] if placed else (entry.get("day_date") if entry else placement["day_date"]),
                 "scheduled_time": placement["scheduled_time"],
                 "band": placement["band"],
                 "category_name": entry.get("category_name") if entry else match.get("category_name"),
@@ -1038,10 +1156,17 @@ def generate_autoschedule_proposal(
                 "player2_name": entry.get("player2_name") if entry else match.get("player2_name"),
             }
         )
+    placed_rows = [row for row in result_placements if row["court_id"] and row["scheduled_time"]]
     return {
         "config": config,
         "courts": fetch_courts_for_tournament(tournament_id),
         "placements": result_placements,
+        "summary": {
+            "mode": "all" if plan_all else "day",
+            "placed": len(placed_rows),
+            "unplaced": len(result_placements) - len(placed_rows),
+            "days": sorted({row["day_date"] for row in placed_rows if row.get("day_date")}),
+        },
     }
 
 def apply_autoschedule_placements(
@@ -1310,24 +1435,34 @@ def delete_unassigned_schedule_entries(
     *,
     day_date: Optional[str] = None,
 ) -> int:
-    """Delete schedule entries with no court or time assigned (optionally for one day)."""
+    """Delete schedule entries with no court or time assigned (optionally for one day).
+
+    Manual entries, rematches and generated group/knockout fixtures all go. Generated
+    fixtures are remembered so reads do not rebuild them; "Generuj mecze" brings them back.
+    """
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             params: List[Any] = [tournament_id]
-            query = """
-                DELETE FROM tournament_schedule
+            where = """
                 WHERE tournament_id = ?
                   AND match_id IS NULL
                   AND LOWER(COALESCE(status, '')) != 'completed'
                   AND (COALESCE(court_id, '') = '' OR COALESCE(scheduled_time, '') = '')
             """
             if day_date:
-                query += " AND day_date = ?"
+                where += " AND day_date = ?"
                 params.append(str(day_date).strip())
-            cursor.execute(query, params)
+            cursor.execute(
+                f"SELECT source_type, source_ref_id, phase, player1_name, player2_name FROM tournament_schedule {where}",
+                params,
+            )
+            rows = [dict(row) for row in cursor.fetchall()]
+            cursor.execute(f"DELETE FROM tournament_schedule {where}", params)
             conn.commit()
-            return int(cursor.rowcount or 0)
+            deleted = int(cursor.rowcount or 0)
+        _remember_removed_fixtures(tournament_id, rows)
+        return deleted
     except Exception as e:
         logger.error("delete_unassigned_schedule_error", error=str(e), tournament_id=tournament_id)
         return 0

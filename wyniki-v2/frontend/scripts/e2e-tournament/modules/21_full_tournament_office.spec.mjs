@@ -1,8 +1,9 @@
 /**
  * Module 21: a whole tournament run through the office UI, every save verified through the API.
  *
- * Categories, players, pairs and the draw; generating matches; a two-day plan with the
- * auto-scheduler, the drawer and drag and drop; publishing; editing a match (time, court,
+ * Categories, players, pairs and the draw; generating matches; the auto-scheduler for one day
+ * (with an end time) and for the whole group phase over two days; the drawer and drag and drop;
+ * publishing; editing a match (time, court,
  * public note); results on both days (sets, walkover, doubles, correction); closing a group
  * and a knockout result; the viewer banner (publish, edit, hide); rematches; "Wyczyść dzień";
  * deleting unassigned matches.
@@ -253,18 +254,30 @@ export default async function run() {
 
     markStep('day 1 plan with the auto-scheduler');
     // ——— day 1 plan with the auto-scheduler ———
+    const endsAfter = (end) => (entry) => {
+      const [h, m] = String(entry.scheduled_time).split(':').map(Number);
+      const minutes = String(entry.category_name || '').startsWith('B1') ? 75 : 60;
+      const [eh, em] = end.split(':').map(Number);
+      return h * 60 + m + minutes > eh * 60 + em;
+    };
     await selectDay(day1);
     await page.locator('.office-toolbar select').selectOption('group');
-    await page.locator('.office-toolbar input[type="time"]').fill('09:00');
-    await page.getByRole('button', { name: 'Generuj propozycję' }).click();
+    await page.locator('.office-toolbar input[type="time"]').nth(0).fill('09:00');
+    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('13:00');
+    await page.getByRole('button', { name: 'Rozstaw ten dzień' }).click();
     await page.getByRole('button', { name: 'Zatwierdź terminarz' }).click();
     const day1Placed = await waitUntil('day 1 placements', async () => {
       const rows = ((await planning()).schedule || []).filter((entry) => entry.day_date === day1 && isPlaced(entry));
       return rows.length ? rows : null;
     });
-    log(`Day 1: auto-scheduler placed ${day1Placed.length} matches`);
+    const lateOnDay1 = day1Placed.filter(endsAfter('13:00'));
+    if (lateOnDay1.length) throw new Error(`Day plan ignored the 13:00 end: ${lateOnDay1.map((entry) => `${entry.category_name} ${entry.scheduled_time}`).join(', ')}`);
+    const overflow = ((await planning()).schedule || []).filter((entry) => entry.source_type === 'group' && !isPlaced(entry));
+    if (!overflow.length) throw new Error('Expected matches that do not fit 09:00–13:00 to stay unassigned');
+    if (overflow.length + day1Placed.length !== 24) throw new Error(`Placed ${day1Placed.length} + unassigned ${overflow.length} != 24`);
+    log(`"Rozstaw ten dzień" 09:00–13:00: ${day1Placed.length} on the board, ${overflow.length} left in the drawer`);
 
-    // take six matches off day 1 into the drawer (drag onto the drawer)
+    // take matches off day 1 into the drawer (drag onto the drawer)
     await page.waitForSelector('[data-schedule-entry]');
     await page.evaluate(() => {
       window.__dnd = [];
@@ -278,7 +291,7 @@ export default async function run() {
         }, true);
       }
     });
-    const toMove = day1Placed.slice(-6);
+    const toMove = day1Placed.slice(-3);
     for (const entry of toMove) {
       await block(entry.id).scrollIntoViewIfNeeded();
       await drag(block(entry.id), page.locator('.office-drawer'));
@@ -288,12 +301,10 @@ export default async function run() {
       });
     }
     await drawerCard(toMove[0].id).waitFor({ state: 'visible' });
-    log('Dragged 6 matches from the day 1 board into the drawer');
+    log(`Dragged ${toMove.length} matches from the day 1 board into the drawer`);
 
     markStep('day 2 plan: drag the six drawer cards onto the day 2 board');
-    // ——— day 2 plan: drag the six drawer cards onto the day 2 board ———
-    // The auto-scheduler only proposes matches already dated for the selected day, and group
-    // matches start on day 1, so a second day is built from the drawer.
+    // ——— day 2 by hand: drag drawer cards onto the day 2 board ———
     await selectDay(day2);
     const courtIds = (await api('/autoschedule/config')).courts.map((court) => String(court.kort_id));
     for (const [index, entry] of toMove.entries()) {
@@ -330,7 +341,23 @@ export default async function run() {
     });
     log(`Board drag: match ${mover.id} moved from court ${mover.court_id} to court ${otherCourt}`);
 
+    // ——— whole group phase over both days ———
+    await page.getByRole('button', { name: 'Rozstaw fazę grupową' }).click();
+    await page.getByRole('button', { name: 'Zatwierdź terminarz' }).click();
+    const spread = await waitUntil('group phase spread over both days', async () => {
+      const rows = ((await planning()).schedule || []).filter((entry) => entry.source_type === 'group');
+      const placed = rows.filter(isPlaced);
+      const days = new Set(placed.map((entry) => entry.day_date));
+      return placed.length === 24 && days.has(day1) && days.has(day2) ? placed : null;
+    });
+    const afterEnd = spread.filter(endsAfter('13:00'));
+    if (afterEnd.length) throw new Error(`Phase plan ignored the 13:00 end: ${afterEnd.length} matches`);
+    log(`"Rozstaw fazę grupową": all 24 placed, ${spread.filter((entry) => entry.day_date === day1).length} on day 1 and ${spread.filter((entry) => entry.day_date === day2).length} on day 2, all finished by 13:00`);
+
     markStep('publish');
+    const day2PlacedNow = ((await planning()).schedule || []).filter((entry) => entry.day_date === day2 && isPlaced(entry));
+    if (!day2PlacedNow.length) throw new Error('No matches on day 2 after planning the phase');
+
     // ——— publish ———
     await page.getByRole('button', { name: 'Opublikuj wszystkie' }).click();
     await waitUntil('placed matches published', async () => {
@@ -556,19 +583,28 @@ export default async function run() {
     log(`Drawer tab "${catB2.label}" shows its ${cardCount} matches`);
 
     markStep('delete everything unassigned');
-    // ——— delete everything unassigned ———
-    // Rematches and manual entries are removed for good. Group and knockout fixtures are
-    // rebuilt by the next planning load (ensure_*_schedule_entries), so they come back.
-    const unplacedBefore = (await schedule()).filter((entry) => !isPlaced(entry) && !entry.match_id && entry.status !== 'completed');
+    // ——— delete everything unassigned, then bring the fixtures back with "Generuj mecze" ———
+    const openUnplaced = (rows) => rows.filter((entry) => !isPlaced(entry) && !entry.match_id && entry.status !== 'completed');
+    const unplacedBefore = openUnplaced(await schedule());
     await page.getByRole('button', { name: 'Usuń wszystkie' }).click();
     await toast('Usunięto');
-    const afterDelete = await waitUntil('unassigned rematches deleted', async () => {
-      const after = await schedule();
-      const rematchesLeft = after.filter((entry) => entry.source_type === 'group_rematch' && !isPlaced(entry));
-      return rematchesLeft.length === 0 ? after : null;
+    await waitUntil('drawer empty', async () => openUnplaced(await schedule()).length === 0);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.office-rail', { state: 'visible' });
+    await openView('Terminarz');
+    await page.waitForTimeout(1500);
+    const afterReload = openUnplaced(await schedule());
+    if (afterReload.length) throw new Error(`${afterReload.length} deleted matches came back after a reload`);
+    if (await page.locator('[data-unassigned-entry]').count()) throw new Error('Drawer is not empty after deleting everything');
+    log(`"Usuń wszystkie": ${unplacedBefore.length} deleted (manual, rematches and generated) and still gone after a reload`);
+
+    await page.getByRole('button', { name: 'Generuj mecze' }).click();
+    const regenerated = await waitUntil('fixtures regenerated', async () => {
+      const rows = openUnplaced(await schedule()).filter((entry) => entry.source_type !== 'group_rematch');
+      return rows.length ? rows : null;
     });
-    const fixturesBack = afterDelete.filter((entry) => !isPlaced(entry) && !entry.match_id && entry.status !== 'completed');
-    log(`"Usuń wszystkie": ${unplacedBefore.length} unassigned before; rematches gone, ${fixturesBack.length} group/knockout fixtures rebuilt on reload`);
+    await page.locator('[data-unassigned-entry]').first().waitFor({ state: 'visible', timeout: 10000 });
+    log(`"Generuj mecze" brought back ${regenerated.length} generated fixtures into the drawer`);
 
     log(`Drag and drop: ${dragPaths.native} native pointer drags, ${dragPaths.synthetic} dispatched DnD events${dragPaths.synthetic ? ` (${dragPaths.syntheticSteps.join(', ')})` : ''}`);
     if (consoleErrors.length) log(`Console errors: ${consoleErrors.join(' | ')}`);

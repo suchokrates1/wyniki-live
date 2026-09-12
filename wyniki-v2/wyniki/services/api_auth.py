@@ -20,7 +20,10 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from ..config import logger, settings
 
 OFFICE_STREAM_COOKIE_PREFIX = "office_stream_"
-_OFFICE_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
+
+
+def office_session_max_age_seconds() -> int:
+    return int(settings.office_session_ttl_hours) * 60 * 60
 
 
 def _serializer(salt: str) -> URLSafeTimedSerializer:
@@ -149,7 +152,7 @@ def require_office_access(slot: int, tournament_id: int) -> tuple | None:
         return jsonify({"error": "Office authorization required"}), 401
     try:
         payload = _serializer("office-access").loads(
-            token, max_age=_OFFICE_SESSION_MAX_AGE_SECONDS
+            token, max_age=office_session_max_age_seconds()
         )
     except SignatureExpired:
         return jsonify({"error": "Office session expired"}), 401

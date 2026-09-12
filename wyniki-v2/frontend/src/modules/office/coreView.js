@@ -144,6 +144,8 @@ export function createOfficeCoreView() {
 
     autoStartTime: '09:30',
 
+    autoEndTime: '18:00',
+
     autoB1Courts: [],
 
     autoDayDate: '',
@@ -238,6 +240,9 @@ export function createOfficeCoreView() {
         this.loadDashboard(false);
       });
       window.addEventListener('pagehide', () => this.stopOfficeSSE());
+      window.addEventListener('office-session-expired', () => {
+        if (this.token) this.logout(this.ot('errors.sessionExpired'));
+      });
     },
 
     resolveSlot() {

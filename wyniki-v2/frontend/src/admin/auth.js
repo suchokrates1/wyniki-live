@@ -11,7 +11,13 @@ export function installAdminFetchAuth() {
     const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
     const headers = new Headers(init.headers || {});
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    return nativeFetch(input, { ...init, headers });
+    return nativeFetch(input, { ...init, headers }).then((response) => {
+      if (response.status === 401) {
+        sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+        window.dispatchEvent(new CustomEvent('admin-session-expired'));
+      }
+      return response;
+    });
   };
 }
 
@@ -33,6 +39,20 @@ export function createAuthAdmin() {
       show: false,
       message: '',
       type: 'info', // info, success, warning, error
+    },
+
+    handleAdminSessionExpired() {
+      if (this.adminNeedsAuth) return;
+      this.adminNeedsAuth = true;
+      this.adminPassword = '';
+      this.adminAuthError = 'Sesja administratora wygasła. Zaloguj się ponownie.';
+    },
+
+    logoutAdmin() {
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      this.adminNeedsAuth = true;
+      this.adminPassword = '';
+      this.adminAuthError = '';
     },
 
     async loginAdmin() {

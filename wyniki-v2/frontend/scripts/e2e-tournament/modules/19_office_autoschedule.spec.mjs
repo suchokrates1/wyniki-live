@@ -32,18 +32,19 @@ export default async function run() {
     await page.getByRole('button', { name: /Generuj mecze/i }).waitFor({ state: 'visible', timeout: 10000 });
     await page.getByRole('button', { name: /Generuj rewanże/i }).waitFor({ state: 'visible', timeout: 5000 });
     await page.getByRole('button', { name: /Opublikuj wszystkie/i }).waitFor({ state: 'visible', timeout: 5000 });
-    await page.getByRole('button', { name: /Generuj propozycję/i }).waitFor({ state: 'visible', timeout: 5000 });
+    await page.getByRole('button', { name: 'Rozstaw ten dzień' }).waitFor({ state: 'visible', timeout: 5000 });
+    await page.getByRole('button', { name: /Rozstaw (cały turniej|fazę)/ }).waitFor({ state: 'visible', timeout: 5000 });
     const body = await page.evaluate(() => document.body.innerText.toLowerCase());
-    if (!body.includes('zakres')) {
+    if (!body.includes('zakres') || !body.includes('koniec')) {
       throw new Error('Schedule step 2 missing Zakres control');
     }
     console.log('  Step 2 generate/publish/autoschedule controls visible');
 
-    await page.getByRole('button', { name: 'Generuj propozycję' }).click();
+    await page.getByRole('button', { name: 'Rozstaw ten dzień' }).click();
     await page.waitForTimeout(1500);
     const after = await page.evaluate(() => document.body.innerText);
-    if (after.includes('Zatwierdź terminarz') || after.includes('Odrzuć propozycję') || after.includes('Generuj propozycję')) {
-      console.log('  Generate proposal clicked (preview or board still present)');
+    if (after.includes('Zatwierdź terminarz') || after.includes('Odrzuć propozycję') || after.includes('Rozstaw ten dzień')) {
+      console.log('  Plan-this-day clicked (preview or board still present)');
     }
 
     await page.getByRole('button', { name: 'Opublikuj wszystkie' }).click();

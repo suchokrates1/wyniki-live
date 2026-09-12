@@ -3001,6 +3001,118 @@ def test_office_clear_day_moves_open_matches_back_to_pool(full_app_with_temp_db)
     assert by_id[int(entries[4]["id"])]["day_date"] == "2026-07-19"
 
 
+def _planner_cup(database, name, password, *, players=6, courts=2, start="2026-07-18", end="2026-07-19"):
+    tournament_id = database.insert_tournament(
+        name, start, end, active=True, office_password_hash=generate_password_hash(password),
+    )
+    database.create_tournament_courts(tournament_id, courts)
+    ids = [
+        database.insert_player(tournament_id, f"P{i}", "B2", "PL", first_name="P", last_name=str(i), gender="M")
+        for i in range(1, players + 1)
+    ]
+    database.save_bracket_groups(
+        tournament_id,
+        [{"name": "B2 Mężczyźni — Grupa A", "play_format": "round_robin", "players": ids}],
+    )
+    return tournament_id
+
+
+def _office_headers(client, password):
+    auth = client.post("/api/office/1/auth", json={"password": password})
+    assert auth.status_code == 200
+    return {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+
+def test_office_autoschedule_day_mode_leaves_overflow_unassigned(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = _planner_cup(database, "Day Window Cup", "window")
+    client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "window")
+    courts = [court["kort_id"] for court in client.get("/api/office/1/autoschedule/config", headers=headers).get_json()["courts"]]
+
+    proposal = client.post(
+        "/api/office/1/autoschedule/generate",
+        headers=headers,
+        json={"mode": "day", "day_date": "2026-07-18", "start_time": "09:00", "end_time": "11:00",
+              "phases": ["group"], "b1_court_ids": [courts[-1]]},
+    )
+    assert proposal.status_code == 200
+    body = proposal.get_json()
+    placements = body["placements"]
+    assert len(placements) == 15  # round robin of six
+    placed = [p for p in placements if p["court_id"]]
+    assert placed and all(p["day_date"] == "2026-07-18" for p in placed)
+    assert all(p["scheduled_time"] < "11:00" for p in placed)
+    assert body["summary"]["unplaced"] == len(placements) - len(placed) > 0
+    assert client.get("/api/office/1/autoschedule/config", headers=headers).get_json()["config"]["end_time"] == "11:00"
+
+    applied = client.post("/api/office/1/autoschedule/apply", headers=headers, json={"placements": placements})
+    assert applied.status_code == 200
+    schedule = applied.get_json()["schedule"]
+    assert sum(1 for entry in schedule if entry["court_id"] and entry["scheduled_time"]) == len(placed)
+
+
+def test_office_autoschedule_all_mode_spreads_over_tournament_days(full_app_with_temp_db):
+    from wyniki import database
+
+    _planner_cup(database, "Spread Cup", "spread")
+    client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "spread")
+    courts = [court["kort_id"] for court in client.get("/api/office/1/autoschedule/config", headers=headers).get_json()["courts"]]
+
+    proposal = client.post(
+        "/api/office/1/autoschedule/generate",
+        headers=headers,
+        json={"mode": "all", "start_time": "09:00", "end_time": "12:00", "phases": ["group"], "b1_court_ids": [courts[-1]]},
+    )
+    assert proposal.status_code == 200
+    body = proposal.get_json()
+    days = {p["day_date"] for p in body["placements"] if p["court_id"]}
+    assert days == {"2026-07-18", "2026-07-19"}
+    assert body["summary"]["days"] == ["2026-07-18", "2026-07-19"]
+
+    # a played match keeps its slot and is never proposed again
+    database_entries = database.fetch_tournament_schedule(database.get_active_tournament_id())
+    locked = database_entries[0]
+    client.put(f"/api/office/1/schedule/{locked['id']}", headers=headers,
+               json={"day_date": "2026-07-18", "scheduled_time": "09:00", "court_id": courts[0], "status": "in_progress"})
+    again = client.post(
+        "/api/office/1/autoschedule/generate",
+        headers=headers,
+        json={"mode": "all", "start_time": "09:00", "end_time": "12:00", "phases": ["group"], "b1_court_ids": [courts[-1]]},
+    ).get_json()
+    assert all(p["schedule_id"] != locked["id"] for p in again["placements"])
+    assert not any(p["court_id"] == courts[0] and p["day_date"] == "2026-07-18" and p["scheduled_time"] == "09:00" for p in again["placements"])
+
+
+def test_office_delete_all_unassigned_stays_deleted_until_generate(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = _planner_cup(database, "Delete All Cup", "wipe", players=4)
+    client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "wipe")
+    assert len(client.get("/api/office/1/planning", headers=headers).get_json()["schedule"]) == 6
+
+    deleted = client.delete("/api/office/1/schedule/unassigned", headers=headers)
+    assert deleted.status_code == 200
+    assert deleted.get_json()["deleted"] == 6
+
+    # reads that used to rebuild fixtures leave them deleted
+    assert client.get("/api/office/1/planning", headers=headers).get_json()["schedule"] == []
+    assert client.get("/api/office/1/schedule", headers=headers).get_json()["schedule"] == []
+    assert database.ensure_group_schedule_entries(tournament_id) == []
+
+    regenerated = client.post("/api/office/1/schedule/generate", headers=headers, json={})
+    assert regenerated.status_code == 200
+    assert len(regenerated.get_json()["schedule"]) == 6
+
+    # deleting one fixture also sticks
+    one = regenerated.get_json()["schedule"][0]
+    assert client.delete(f"/api/office/1/schedule/{one['id']}", headers=headers).status_code == 200
+    assert len(client.get("/api/office/1/planning", headers=headers).get_json()["schedule"]) == 5
+
+
 def test_office_group_rematch_after_first_leg(full_app_with_temp_db):
     from wyniki import database
 
