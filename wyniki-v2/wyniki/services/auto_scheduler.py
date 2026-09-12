@@ -315,8 +315,8 @@ def _place_in_pool(
 ) -> List[Dict[str, Any]]:
     """Place matches on a pool of courts, each at the earliest start its players can take.
 
-    A player never has two overlapping matches and keeps the rest gap; when no court has a
-    free slot for the players before the day ends, the match stays unplaced and the rest of
+    A player never has two overlapping matches; the rest gap is kept when a court can start
+    the match just as early with it. When no court has a free slot before the day ends, the match stays unplaced and the rest of
     its category waits too, so rounds keep their order.
     """
     if not courts:
@@ -338,17 +338,26 @@ def _place_in_pool(
         if category in blocked_categories:
             placements.append(_unplaced(match, day_date))
             continue
-        best: Optional[Tuple[int, int, str]] = None
-        for order, court_id in enumerate(courts):
-            duration = _slot_minutes_for_court(court_id, config, band)
-            start = time_to_minutes(court_next_time[court_id])
-            while start + duration <= search_end:
-                candidate = f"{start // 60:02d}:{start % 60:02d}"
-                if _slot_available_for_player(match, court_id, candidate, config, scheduled, rest_slots):
-                    if best is None or (start, order) < best[:2]:
-                        best = (start, order, court_id)
-                    break
-                start += duration
+        def earliest(rest: int) -> Optional[Tuple[int, int, str]]:
+            found: Optional[Tuple[int, int, str]] = None
+            for order, court_id in enumerate(courts):
+                duration = _slot_minutes_for_court(court_id, config, band)
+                start = time_to_minutes(court_next_time[court_id])
+                while start + duration <= search_end:
+                    candidate = f"{start // 60:02d}:{start % 60:02d}"
+                    if _slot_available_for_player(match, court_id, candidate, config, scheduled, rest):
+                        if found is None or (start, order) < found[:2]:
+                            found = (start, order, court_id)
+                        break
+                    start += duration
+            return found
+
+        # Overlap is never allowed; the rest gap is kept unless it would leave a court idle.
+        best = earliest(0)
+        if best is not None and rest_slots > 0:
+            rested = earliest(rest_slots)
+            if rested is not None and rested[0] <= best[0]:
+                best = rested
         if best is None:
             blocked_categories.add(category)
             placements.append(_unplaced(match, day_date))
