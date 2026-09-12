@@ -3305,3 +3305,86 @@ def test_office_manual_knockout_result_from_schedule(full_app_with_temp_db):
     linked = next(entry for entry in database.fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id))
     assert linked["match_id"] is not None
     assert linked["status"] == "completed"
+
+
+def test_four_groups_build_vilnius_draw_and_move_winners_and_losers(full_app_with_temp_db):
+    """Four groups of three: top two play a seeded main draw with places 5-8, thirds play consolation."""
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Vilnius Draw Cup", "2026-07-20", "2026-07-22", active=True,
+        office_password_hash=generate_password_hash("draw"),
+    )
+    database.create_tournament_courts(tournament_id, 4)
+    groups = []
+    for letter in "ABCD":
+        ids = [
+            database.insert_player(tournament_id, f"W{letter}{rank}", "B2", "PL", first_name="W", last_name=f"{letter}{rank}", gender="K")
+            for rank in (1, 2, 3)
+        ]
+        groups.append({"name": f"B2 Kobiety — Grupa {letter}", "play_format": "groups_knockout", "players": ids})
+    database.save_bracket_groups(tournament_id, groups)
+
+    client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "draw")
+    planning = client.get("/api/office/1/planning", headers=headers).get_json()
+    group_ids = {group["name"]: group["id"] for group in planning["groups"]}
+
+    provisional = {(slot["phase"], slot["position"]): slot for slot in database.fetch_bracket_knockout(tournament_id)}
+    assert ("B2 Kobiety — Ćwierćfinał", 1) in provisional
+    assert provisional[("B2 Kobiety — Ćwierćfinał", 1)]["player1_name"] == "1. B2 Kobiety — Grupa A"
+
+    # the lower number wins every group match: W?1 first, W?2 second, W?3 third
+    for entry in planning["schedule"]:
+        if entry.get("source_type") != "group":
+            continue
+        a, b = entry["player1_name"], entry["player2_name"]
+        winner_is_a = a[-1] < b[-1]
+        response = client.post("/api/office/1/group-matches", headers=headers, json={
+            "group_id": entry["bracket_group_id"], "schedule_id": entry["id"],
+            "player1_name": a, "player2_name": b, "phase": "Grupowa",
+            "sets": [
+                {"player1_games": 4 if winner_is_a else 1, "player2_games": 1 if winner_is_a else 4},
+                {"player1_games": 4 if winner_is_a else 2, "player2_games": 2 if winner_is_a else 4},
+            ],
+        })
+        assert response.status_code == 201, response.get_json()
+
+    slots = {(slot["phase"], slot["position"]): slot for slot in database.fetch_bracket_knockout(tournament_id)}
+    semis = [slots[("B2 Kobiety — Półfinał", position)] for position in (1, 2)]
+    all_quarters = [slot for key, slot in slots.items() if key[0] == "B2 Kobiety — Ćwierćfinał"]
+    assert [(slot["player1_name"], slot["player2_name"]) for slot in sorted(all_quarters, key=lambda s: s["position"])] == [
+        ("WA1", "WB2"), ("WD1", "WC2"), ("WB1", "WA2"), ("WC1", "WD2"),
+    ]
+    assert semis[0]["player1_name"] == "Zwycięzca: Ćwierćfinał 1"
+    assert ("B2 Kobiety — o miejsca 5–8", 1) in slots
+    consolation = [slot for key, slot in slots.items() if "Pocieszenie" in key[0]]
+    assert {slot["phase"] for slot in consolation} == {
+        "B2 Kobiety — Pocieszenie Półfinał", "B2 Kobiety — Pocieszenie Finał", "B2 Kobiety — Pocieszenie o 3. miejsce",
+    }
+    assert {name for slot in consolation for name in (slot["player1_name"], slot["player2_name"]) if name.startswith("W")} == {"WA3", "WB3", "WC3", "WD3"}
+    assert group_ids
+
+    dashboard = client.get("/api/office/1/dashboard", headers=headers).get_json()
+    ko = {(row["phase"], row["position"]): row for row in dashboard["progress"]["knockout"]["matches"]}
+
+    def play(phase, position, winner_first=True):
+        row = ko[(phase, position)]
+        response = client.post("/api/office/1/knockout-matches", headers=headers, json={
+            "schedule_id": row["schedule_id"],
+            "sets": [
+                {"player1_games": 4 if winner_first else 2, "player2_games": 2 if winner_first else 4},
+                {"player1_games": 4 if winner_first else 1, "player2_games": 1 if winner_first else 4},
+            ],
+        })
+        assert response.status_code == 201, response.get_json()
+        return client.get("/api/office/1/dashboard", headers=headers).get_json()
+
+    for position in (1, 2):
+        dashboard = play("B2 Kobiety — Ćwierćfinał", position, winner_first=(position == 1))
+        ko = {(row["phase"], row["position"]): row for row in dashboard["progress"]["knockout"]["matches"]}
+    semi = ko[("B2 Kobiety — Półfinał", 1)]
+    place = ko[("B2 Kobiety — o miejsca 5–8", 1)]
+    assert (semi["player1_name"], semi["player2_name"]) == ("WA1", "WC2")
+    assert (place["player1_name"], place["player2_name"]) == ("WB2", "WD1")
+    assert semi["ready"] and semi["schedule_id"]

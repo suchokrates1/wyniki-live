@@ -11,6 +11,7 @@ from werkzeug.security import generate_password_hash
 from ..config import settings, logger
 
 from .connection import db_conn
+from ..services.draw_builder import build_group_draws
 from ..services.teams import (
     DEFAULT_PLAY_FORMAT,
     PLAY_FORMAT_GROUPS_KNOCKOUT,
@@ -401,6 +402,12 @@ def _iter_knockout_units(bracket_groups: List[Dict[str, Any]]) -> List[Dict[str,
             and len(groups_knockout) == 2
         ):
             units.append({"type": "cross", "label": bucket_name, "groups": groups_knockout})
+        elif (
+            bucket_kind == "multi"
+            and len(ordered) >= 3
+            and len(groups_knockout) == len(ordered)
+        ):
+            units.append({"type": "group_draw", "label": bucket_name, "groups": groups_knockout})
         else:
             for group in groups_knockout:
                 units.append({"type": "single_table", "label": str(group.get("name") or bucket_name), "groups": [group]})
@@ -480,6 +487,20 @@ def _slots_for_knockout_unit(
     if unit_type == "direct_pool":
         return _build_direct_knockout_slots(label, _group_competitor_names(groups[0] if groups else {}))
 
+    if unit_type == "group_draw":
+        # Vilnius 2026 format: top two of each group in the main draw, the rest in consolation.
+        draw_groups = []
+        for group in groups:
+            group_name = str(group.get("name") or "")
+            standings = group.get("standings") or []
+            size = counts.get(group_name) or len(standings) or len(_group_competitor_names(group))
+            if complete and len(standings) >= size:
+                ranking = [str(row.get("name") or "") for row in standings]
+            else:
+                ranking = [_standing_placeholder(rank, group_name, label) for rank in range(1, size + 1)]
+            draw_groups.append({"name": group_name, "ranking": ranking})
+        return [_encode_feeds(slot) for slot in build_group_draws(label, draw_groups)]
+
     if unit_type != "single_table" or not groups:
         return []
     group = groups[0]
@@ -496,6 +517,27 @@ def _slots_for_knockout_unit(
             return _build_single_group_final_slots(label, standings)
         return _build_provisional_single_group_final_slots(group_name, label)
     return []
+
+
+def _encode_feed(target: Optional[tuple]) -> Optional[str]:
+    if not target:
+        return None
+    phase, position, side = target
+    return f"{phase}|{int(position)}|{int(side)}"
+
+
+def _decode_feed(value: Optional[str]) -> Optional[tuple]:
+    if not value or "|" not in str(value):
+        return None
+    phase, position, side = str(value).rsplit("|", 2)
+    return phase, int(position), int(side)
+
+
+def _encode_feeds(slot: Dict[str, Any]) -> Dict[str, Any]:
+    encoded = dict(slot)
+    encoded["winner_to"] = _encode_feed(slot.get("winner_to"))
+    encoded["loser_to"] = _encode_feed(slot.get("loser_to"))
+    return encoded
 
 
 def _unit_group_play_complete(
@@ -522,6 +564,8 @@ def _is_knockout_placeholder_name(name: Optional[str]) -> bool:
         return True
     lowered = value.lower()
     if lowered.startswith("zwycięzca pf") or lowered.startswith("przegrany pf"):
+        return True
+    if lowered.startswith("zwycięzca:") or lowered.startswith("przegrany:"):
         return True
     if lowered.startswith("winner sf") or lowered.startswith("loser sf"):
         return True
@@ -1037,7 +1081,7 @@ def _merge_bracket_knockout_slots(
 
                 cursor.execute(
                     """
-                    SELECT id, player1_name, player2_name, winner_name, score_summary
+                    SELECT id, player1_name, player2_name, winner_name, score_summary, winner_to, loser_to
                     FROM bracket_knockout
                     WHERE tournament_id = ? AND phase = ? AND position = ?
                     LIMIT 1
@@ -1049,8 +1093,9 @@ def _merge_bracket_knockout_slots(
                     cursor.execute(
                         """
                         INSERT INTO bracket_knockout (
-                            tournament_id, phase, position, player1_name, player2_name, winner_name, score_summary
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                            tournament_id, phase, position, player1_name, player2_name, winner_name, score_summary,
+                            winner_to, loser_to
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             tournament_id,
@@ -1060,6 +1105,8 @@ def _merge_bracket_knockout_slots(
                             slot.get("player2_name"),
                             slot.get("winner_name"),
                             slot.get("score_summary"),
+                            slot.get("winner_to"),
+                            slot.get("loser_to"),
                         ),
                     )
                     inserted += 1
@@ -1082,6 +1129,10 @@ def _merge_bracket_knockout_slots(
                     ):
                         assignments.append(f"{field} = ?")
                         values.append(new_value)
+                for field in ("winner_to", "loser_to"):
+                    if slot.get(field) and slot.get(field) != existing[field]:
+                        assignments.append(f"{field} = ?")
+                        values.append(slot.get(field))
                 if slot.get("winner_name") and not existing["winner_name"]:
                     assignments.append("winner_name = ?")
                     values.append(slot.get("winner_name"))
@@ -1206,12 +1257,13 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
             cursor = conn.cursor()
             # Find the knockout slot matching these two players
             cursor.execute("""
-                SELECT id, phase, position FROM bracket_knockout
+                SELECT id, phase, position, winner_to, loser_to FROM bracket_knockout
                 WHERE tournament_id = ?
                   AND ((player1_name = ? AND player2_name = ?)
                     OR (player1_name = ? AND player2_name = ?))
                   AND winner_name IS NULL
-            """, (tournament_id, p1, p2, p2, p1))
+                ORDER BY CASE WHEN phase = ? THEN 0 ELSE 1 END, id
+            """, (tournament_id, p1, p2, p2, p1, match.phase or ""))
             slot = cursor.fetchone()
             if not slot:
                 return False
@@ -1225,7 +1277,10 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
 
             loser = p2 if winner == p1 else p1
             kind = _phase_kind(slot["phase"])
-            if kind == "semifinal":
+            if slot["winner_to"] or slot["loser_to"]:
+                _advance_by_feeds(cursor, tournament_id, slot["winner_to"], winner)
+                _advance_by_feeds(cursor, tournament_id, slot["loser_to"], loser)
+            elif kind == "semifinal":
                 _advance_to_next_round(cursor, tournament_id, slot["phase"], slot["position"], winner, loser)
             elif kind == "quarterfinal":
                 _advance_quarterfinal(cursor, tournament_id, slot["phase"], slot["position"], winner)
@@ -1238,6 +1293,21 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
     except Exception as e:
         logger.error("advance_knockout_error", error=str(e), match_id=match_id)
         return False
+
+def _advance_by_feeds(cursor, tournament_id: int, feed: Optional[str], player_name: str) -> None:
+    """Write a player into the slot side named by a winner_to / loser_to feed."""
+    target = _decode_feed(feed)
+    if not target or not player_name:
+        return
+    phase, position, side = target
+    cursor.execute(
+        "SELECT id, player1_name, player2_name FROM bracket_knockout WHERE tournament_id = ? AND phase = ? AND position = ?",
+        (tournament_id, phase, position),
+    )
+    row = cursor.fetchone()
+    if row:
+        _assign_knockout_slot_player(cursor, row, side, player_name)
+
 
 def _advance_to_next_round(cursor, tournament_id: int, semifinal_phase: str, sf_position: int, winner: str, loser: str) -> None:
     """Fill in final/3rd-place slots based on semifinal results."""
@@ -1716,12 +1786,13 @@ def save_bracket_knockout(tournament_id: int, slots: List[Dict]) -> bool:
             for slot in slots:
                 cursor.execute(
                     "INSERT INTO bracket_knockout (tournament_id, phase, position, "
-                    "player1_name, player2_name, winner_name, score_summary, finish_reason, result_note) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "player1_name, player2_name, winner_name, score_summary, finish_reason, result_note, winner_to, loser_to) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (tournament_id, slot["phase"], slot.get("position", 1),
                      slot.get("player1_name"), slot.get("player2_name"),
                      slot.get("winner_name"), slot.get("score_summary"),
-                     slot.get("finish_reason", "normal"), slot.get("result_note"))
+                     slot.get("finish_reason", "normal"), slot.get("result_note"),
+                     slot.get("winner_to"), slot.get("loser_to"))
                 )
             conn.commit()
             logger.info("bracket_knockout_saved", tournament_id=tournament_id, count=len(slots))
@@ -1736,7 +1807,8 @@ def fetch_bracket_knockout(tournament_id: int) -> List[Dict]:
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id, phase, position, player1_name, player2_name, winner_name, score_summary, finish_reason, result_note "
+                "SELECT id, phase, position, player1_name, player2_name, winner_name, score_summary, finish_reason, result_note, "
+                "winner_to, loser_to "
                 "FROM bracket_knockout WHERE tournament_id = ? ORDER BY phase, position",
                 (tournament_id,)
             )

@@ -448,6 +448,9 @@ def init_db() -> None:
         knockout_result_columns = {
             'finish_reason': "TEXT DEFAULT 'normal'",
             'result_note': 'TEXT',
+            # "phase|position|side" of the slot the winner / loser moves to (multi-group draws)
+            'winner_to': 'TEXT',
+            'loser_to': 'TEXT',
         }
         for column_name, ddl in knockout_result_columns.items():
             if column_name not in knockout_cols:

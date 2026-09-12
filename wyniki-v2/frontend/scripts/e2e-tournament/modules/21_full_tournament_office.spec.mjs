@@ -431,11 +431,14 @@ export default async function run() {
     log(`Result with sets on day 1: ${withSets.player1_name} vs ${withSets.player2_name}`);
 
     rows = await schedule();
-    const day2Match = open(rows, (entry) => entry.day_date === day2 && !String(entry.player1_name).includes(' / '))[0];
+    // a singles match on day 2 when the phase plan put one there, otherwise any other open singles match
+    const singlesOpen = (entry) => !String(entry.player1_name).includes(' / ');
+    const day2Match = open(rows, (entry) => entry.day_date === day2 && singlesOpen(entry))[0]
+      || open(rows, (entry) => singlesOpen(entry) && entry.id !== singlesDay1.id)[0];
     const walkover = await addResultFromBoard(day2Match, { walkover: true });
     const walkoverMatch = ((await dashboard()).matches || []).find((match) => Number(match.id) === Number(walkover.match_id));
     if (!walkoverMatch?.winner_name) throw new Error(`Walkover saved without a winner: ${JSON.stringify(walkoverMatch)}`);
-    log(`Walkover on day 2: winner ${walkoverMatch.winner_name}`);
+    log(`Walkover on ${ddmm(day2Match.day_date)}: winner ${walkoverMatch.winner_name}`);
 
     rows = await schedule();
     const doublesMatch = open(rows, (entry) => String(entry.player1_name).includes(' / '))[0];
