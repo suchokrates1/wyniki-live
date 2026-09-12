@@ -304,75 +304,33 @@ def _occupied_until(court_id: str, occupied: List[Dict[str, Any]], config: Dict[
     return f"{latest // 60:02d}:{latest % 60:02d}"
 
 
-def _place_on_court(
-    court_matches: List[Dict[str, Any]],
-    court_id: str,
-    config: Dict[str, Any],
-    day_date: str,
-    start_time: str,
-    rest_slots: int,
-    occupied: Optional[List[Dict[str, Any]]] = None,
-) -> List[Dict[str, Any]]:
-    ordered = _order_matches_for_scheduling(court_matches, rest_slots)
-    placements: List[Dict[str, Any]] = []
-    cursor = _occupied_until(court_id, occupied or [], config, start_time)
-    day_end = _day_end_minutes(config)
-    full = False
-    for match in ordered:
-        band = normalize_band(match.get("category_name") or match.get("group_name"))
-        duration = _slot_minutes_for_court(court_id, config, band)
-        # Once a match does not fit, later ones wait too so phases keep their order.
-        if full or (day_end is not None and time_to_minutes(cursor) + duration > day_end):
-            full = True
-            placements.append(_unplaced(match, day_date))
-            continue
-        placements.append(
-            {
-                "match": match,
-                "court_id": court_id,
-                "day_date": day_date,
-                "scheduled_time": cursor,
-                "band": band,
-            }
-        )
-        cursor = add_minutes(cursor, duration)
-    return placements
-
-
-def _place_load_balanced(
+def _place_in_pool(
     matches: List[Dict[str, Any]],
-    flex_courts: List[str],
+    courts: List[str],
     config: Dict[str, Any],
     day_date: str,
     start_time: str,
     rest_slots: int,
     occupied: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
-    if not flex_courts:
-        return [
-            {
-                "match": match,
-                "court_id": None,
-                "day_date": day_date,
-                "scheduled_time": "",
-                "band": normalize_band(match.get("category_name") or match.get("group_name")),
-            }
-            for match in matches
-        ]
+    """Place matches on a pool of courts, each at the earliest start its players can take.
+
+    A player never has two overlapping matches and keeps the rest gap; when no court has a
+    free slot for the players before the day ends, the match stays unplaced and the rest of
+    its category waits too, so rounds keep their order.
+    """
+    if not courts:
+        return [_unplaced(match, day_date) for match in matches]
 
     ordered = _order_matches_for_scheduling(matches, rest_slots)
     fixed = list(occupied or [])
-    court_next_time = {court_id: _occupied_until(court_id, fixed, config, start_time) for court_id in flex_courts}
+    court_next_time = {court_id: _occupied_until(court_id, fixed, config, start_time) for court_id in courts}
     scheduled: List[Dict[str, Any]] = list(fixed)
     placements: List[Dict[str, Any]] = []
     day_end = _day_end_minutes(config)
+    # Without an end time a player conflict can still push a match later, but not forever.
+    search_end = day_end if day_end is not None else 24 * 60
     blocked_categories: Set[str] = set()
-
-    def fits(court_id: str, band: str) -> bool:
-        if day_end is None:
-            return True
-        duration = _slot_minutes_for_court(court_id, config, band)
-        return time_to_minutes(court_next_time[court_id]) + duration <= day_end
 
     for match in ordered:
         band = normalize_band(match.get("category_name") or match.get("group_name"))
@@ -380,42 +338,35 @@ def _place_load_balanced(
         if category in blocked_categories:
             placements.append(_unplaced(match, day_date))
             continue
-        candidates = [
-            court_id
-            for court_id in sorted(flex_courts, key=lambda court_id: time_to_minutes(court_next_time[court_id]))
-            if fits(court_id, band)
-        ]
-        if not candidates:
-            # A category that ran out of day keeps its remaining (later-phase) matches back.
+        best: Optional[Tuple[int, int, str]] = None
+        for order, court_id in enumerate(courts):
+            duration = _slot_minutes_for_court(court_id, config, band)
+            start = time_to_minutes(court_next_time[court_id])
+            while start + duration <= search_end:
+                candidate = f"{start // 60:02d}:{start % 60:02d}"
+                if _slot_available_for_player(match, court_id, candidate, config, scheduled, rest_slots):
+                    if best is None or (start, order) < best[:2]:
+                        best = (start, order, court_id)
+                    break
+                start += duration
+        if best is None:
             blocked_categories.add(category)
             placements.append(_unplaced(match, day_date))
             continue
-        chosen_court = None
-        chosen_start = None
-        for court_id in candidates:
-            proposed_start = court_next_time[court_id]
-            if _slot_available_for_player(match, court_id, proposed_start, config, scheduled, rest_slots):
-                chosen_court = court_id
-                chosen_start = proposed_start
-                break
-        if not chosen_court:
-            chosen_court = candidates[0]
-            chosen_start = court_next_time[chosen_court]
-
+        start, _, court_id = best
         placement = {
             "match": match,
-            "court_id": chosen_court,
+            "court_id": court_id,
             "day_date": day_date,
-            "scheduled_time": chosen_start,
+            "scheduled_time": f"{start // 60:02d}:{start % 60:02d}",
             "band": band,
         }
         placements.append(placement)
         scheduled.append(placement)
-        court_next_time[chosen_court] = add_minutes(
-            chosen_start,
-            _slot_minutes_for_court(chosen_court, config, band),
+        court_next_time[court_id] = add_minutes(
+            placement["scheduled_time"],
+            _slot_minutes_for_court(court_id, config, band),
         )
-
     return placements
 
 
@@ -455,18 +406,12 @@ def place_matches(
     placements: List[Dict[str, Any]] = []
 
     if b1_matches:
-        by_b1_court: Dict[str, List[Dict[str, Any]]] = {}
-        b1_counter = [0]
-        for match in b1_matches:
-            court_id = _b1_court_for_match(match, config, b1_counter=b1_counter)
-            if not court_id:
-                unplaced.append(match)
-                continue
-            by_b1_court.setdefault(court_id, []).append(match)
-        for court_id, court_matches in by_b1_court.items():
-            placements.extend(_place_on_court(court_matches, court_id, config, day_date, start_time, rest_slots, occupied))
+        placements.extend(_place_in_pool(b1_matches, b1_courts, config, day_date, start_time, rest_slots, occupied))
 
-    placements.extend(_place_load_balanced(flex_matches, flex_courts, config, day_date, start_time, rest_slots, occupied))
+    if flex_courts:
+        placements.extend(_place_in_pool(flex_matches, flex_courts, config, day_date, start_time, rest_slots, occupied))
+    else:
+        unplaced.extend(flex_matches)
 
     for match in unplaced:
         placements.append(_unplaced(match, day_date))

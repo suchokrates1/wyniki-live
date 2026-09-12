@@ -247,3 +247,47 @@ def test_place_matches_uses_every_non_b1_court():
     used = {p["court_id"] for p in placements if p["court_id"]}
     assert len(used) == 10  # eleven courts, one of them B1
     assert config["b1_court_ids"][0] not in used
+
+
+def _round_robin(category, groups, size):
+    matches = []
+    for g in range(groups):
+        names = [f"{category}-{g}-{i}" for i in range(size)]
+        for a in range(size):
+            for b in range(a + 1, size):
+                matches.append({
+                    "id": len(matches) + 1, "category_name": category, "phase": "Grupowa",
+                    "player1_name": names[a], "player2_name": names[b], "sort_order": len(matches) + 1,
+                })
+    return matches
+
+
+def _assert_no_player_overlap(placements, config):
+    windows = {}
+    for placement in placements:
+        if not placement["court_id"]:
+            continue
+        start, end = sched._placement_window(placement, config)
+        for name in (placement["match"]["player1_name"], placement["match"]["player2_name"]):
+            for other_start, other_end in windows.get(name, []):
+                assert not (start < other_end and end > other_start), f"{name} double-booked at {placement['scheduled_time']}"
+            windows.setdefault(name, []).append((start, end))
+
+
+def test_b1_courts_never_double_book_a_player():
+    courts = [{"kort_id": f"k{i}", "display_order": i} for i in range(1, 12)]
+    config = sched.apply_b1_courts(sched.build_default_config(courts), ["k9", "k10", "k11"])
+    config["start_time"] = "09:00"
+    config["end_time"] = "18:00"
+    placements = sched.place_matches(_round_robin("B1 Men", 6, 3), config, "2026-08-25")
+    _assert_no_player_overlap(placements, config)
+    assert all(p["court_id"] in {"k9", "k10", "k11"} for p in placements if p["court_id"])
+
+
+def test_flex_courts_push_a_match_later_instead_of_double_booking():
+    config = sched.build_default_config(_courts())
+    config["start_time"] = "09:00"
+    config["end_time"] = "18:00"
+    placements = sched.place_matches(_round_robin("B3 Men", 1, 6), config, "2026-08-25")
+    _assert_no_player_overlap(placements, config)
+    assert all(p["court_id"] for p in placements)
