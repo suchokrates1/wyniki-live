@@ -380,6 +380,11 @@ body.office-body {
   transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
+.office-rail.is-resting:not(:has(:focus-visible)) {
+  width: var(--kort-rail);
+  box-shadow: none;
+}
+
 .office-rail:hover .office-rail__label,
 .office-rail:has(:focus-visible) .office-rail__label {
   opacity: 1;
@@ -419,6 +424,11 @@ body.office-body {
   height: 18px;
   accent-color: var(--kort-lime);
   cursor: pointer;
+}
+
+.office-rail.is-resting:not(:has(:focus-visible)) .office-rail__label {
+  opacity: 0;
+  transform: translateX(-6px);
 }
 
 .office-rail__foot .office-rail__label { font-size: 0.8rem; }
@@ -1103,7 +1113,8 @@ body.office-body {
 @media (max-width: 760px) {
   .office-rail,
   .office-rail:hover,
-  .office-rail:has(:focus-visible) {
+  .office-rail:has(:focus-visible),
+  .office-rail.is-resting:not(:has(:focus-visible)) {
     inset: auto 0 0 0;
     width: 100%;
     height: auto;
@@ -1136,7 +1147,8 @@ body.office-body {
 
   .office-rail__icon { height: 32px; }
 
-  .office-rail__label {
+  .office-rail__label,
+  .office-rail.is-resting:not(:has(:focus-visible)) .office-rail__label {
     opacity: 1;
     transform: none;
     font-size: 0.62rem;

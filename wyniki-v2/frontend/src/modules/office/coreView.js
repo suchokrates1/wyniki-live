@@ -27,6 +27,8 @@ export function createOfficeCoreView() {
 
     activeTab: 'planning',
 
+    officeRailResting: false,
+
     addMatchOpen: false,
 
     editMatchOpen: false,

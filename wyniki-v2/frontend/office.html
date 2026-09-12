@@ -99,7 +99,7 @@
   </main>
 
   <div class="office-app" x-show="isAuthenticated" x-cloak>
-    <nav class="office-rail" :aria-label="ot('hero.defaultTitle')">
+    <nav class="office-rail" :class="{'is-resting': officeRailResting}" :aria-label="ot('hero.defaultTitle')" @mouseleave="officeRailResting = false">
       <div class="office-rail__brand">
         <template x-if="tournamentMeta?.logo_path">
           <img :src="tournamentMeta.logo_path" :alt="ot('hero.logoAlt')" class="office-logo">
@@ -121,7 +121,7 @@
                   class="office-tab office-rail__item"
                   :class="{'is-active': activeTab === item.id}"
                   :aria-current="activeTab === item.id ? 'page' : null"
-                  @click="openOfficeView(item.id)">
+                  @click="openOfficeView(item.id); if ($event.detail > 0) officeRailResting = true">
             <span class="office-rail__icon" aria-hidden="true">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path :d="item.icon"></path></svg>
             </span>
