@@ -306,7 +306,7 @@ body.office-body {
 }
 
 .office-rail:hover,
-.office-rail:focus-within {
+.office-rail:has(:focus-visible) {
   width: var(--kort-rail-open);
   box-shadow: 24px 0 48px rgba(0, 0, 0, 0.5);
 }
@@ -381,7 +381,7 @@ body.office-body {
 }
 
 .office-rail:hover .office-rail__label,
-.office-rail:focus-within .office-rail__label {
+.office-rail:has(:focus-visible) .office-rail__label {
   opacity: 1;
   transform: none;
 }
@@ -1086,7 +1086,7 @@ body.office-body {
 @media (max-width: 760px) {
   .office-rail,
   .office-rail:hover,
-  .office-rail:focus-within {
+  .office-rail:has(:focus-visible) {
     inset: auto 0 0 0;
     width: 100%;
     height: auto;
