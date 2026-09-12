@@ -388,6 +388,17 @@ export default async function run() {
     const koRows = await waitUntil('knockout placed', async () => {
       const rows = (await schedule()).filter((entry) => entry.source_type === 'knockout');
       return rows.length >= slots.length && rows.every(isPlaced) ? rows : null;
+    }).catch(async (error) => {
+      const rows = (await schedule()).filter((entry) => entry.source_type === 'knockout');
+      const toasts = await page.locator('.toast .alert').allInnerTexts().catch(() => []);
+      const state = await page.evaluate(() => {
+        const data = Alpine.$data(document.body);
+        return { day: data.autoDayDate, scope: data.autoPhaseScope, start: data.autoStartTime, end: data.autoEndTime };
+      }).catch((e) => String(e));
+      throw new Error(`${error.message}
+KO rows: ${JSON.stringify(rows.map((row) => [row.id, row.phase, row.day_date, row.court_id, row.scheduled_time, row.status]))}
+UI: ${JSON.stringify(state)}
+Toasts: ${toasts.join(' | ')}`);
     });
     log(`"Rozstaw fazę pucharową": ${koRows.length} knockout matches on ${[...new Set(koRows.map((row) => ddmm(row.day_date)))].join(', ')}`);
 
