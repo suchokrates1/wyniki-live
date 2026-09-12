@@ -422,7 +422,13 @@ export function createOfficePlayersView() {
         if (!cat) return [];
         const label = cat.label;
         const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
-        if (count === 1) return [label];
+        if (count === 1) {
+          // A lone group may be stored as "B1 Mężczyźni — Grupa A" (admin, imports);
+          // keep that name, otherwise its players look undrawn and a save drops the group.
+          const stored = this.planningGroupsForDivision();
+          if (stored.length === 1 && stored[0]?.name) return [stored[0].name];
+          return [label];
+        }
         return Array.from({ length: count }, (_, index) => (
           `${label} — Grupa ${String.fromCharCode(65 + index)}`
         ));
