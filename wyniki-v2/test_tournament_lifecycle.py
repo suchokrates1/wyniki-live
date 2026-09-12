@@ -2918,6 +2918,89 @@ def test_completed_group_match_is_not_counted_as_unassigned(full_app_with_temp_d
     assert remaining[0]["match_id"] is not None
 
 
+def test_office_clear_day_moves_open_matches_back_to_pool(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Clear Day Cup",
+        "2026-07-18",
+        "2026-07-19",
+        active=True,
+        office_password_hash=generate_password_hash("clear"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    players = [
+        database.insert_player(tournament_id, f"P{i}", "B2", "PL", first_name="P", last_name=str(i), gender="M")
+        for i in range(1, 5)
+    ]
+    database.save_bracket_groups(
+        tournament_id,
+        [{"name": "B2 Mężczyźni — Grupa A", "play_format": "round_robin", "players": players}],
+    )
+    group_id = database.fetch_bracket_groups(tournament_id)[0]["id"]
+
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "clear"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    entries = sorted(database.fetch_tournament_schedule(tournament_id), key=lambda e: int(e["id"]))
+    assert len(entries) == 6
+    placements = {
+        entries[0]["id"]: ("2026-07-18", "09:00", "planned"),
+        entries[1]["id"]: ("2026-07-18", "10:00", "planned"),
+        entries[2]["id"]: ("2026-07-18", "11:00", "in_progress"),
+        entries[3]["id"]: ("2026-07-18", "12:00", "planned"),
+        entries[4]["id"]: ("2026-07-19", "09:00", "planned"),
+    }
+    for schedule_id, (day, time, status) in placements.items():
+        response = client.put(
+            f"/api/office/1/schedule/{schedule_id}",
+            headers=headers,
+            json={"day_date": day, "scheduled_time": time, "court_id": "1", "status": status},
+        )
+        assert response.status_code == 200
+
+    played = entries[3]
+    result = client.post(
+        "/api/office/1/group-matches",
+        headers=headers,
+        json={
+            "group_id": group_id,
+            "player1_name": played["player1_name"],
+            "player2_name": played["player2_name"],
+            "sets": [
+                {"player1_games": 4, "player2_games": 1},
+                {"player1_games": 4, "player2_games": 2},
+            ],
+        },
+    )
+    assert result.status_code == 201
+
+    assert client.post("/api/office/1/schedule/clear-day", headers=headers, json={}).status_code == 400
+
+    cleared = client.post("/api/office/1/schedule/clear-day", headers=headers, json={"day_date": "2026-07-18"})
+    assert cleared.status_code == 200
+    payload = cleared.get_json()
+    assert payload["cleared"] == 2
+    assert payload["kept"] == 2
+
+    by_id = {int(entry["id"]): entry for entry in payload["schedule"]}
+    for schedule_id in (entries[0]["id"], entries[1]["id"]):
+        entry = by_id[int(schedule_id)]
+        assert entry["court_id"] == ""
+        assert entry["scheduled_time"] == ""
+        assert entry["day_date"] == "2026-07-18"
+    assert by_id[int(entries[2]["id"])]["scheduled_time"] == "11:00"
+    played_after = [
+        entry for entry in payload["schedule"]
+        if entry["player1_name"] == played["player1_name"] and entry["player2_name"] == played["player2_name"]
+    ]
+    assert played_after and played_after[0]["scheduled_time"] == "12:00"
+    assert by_id[int(entries[4]["id"])]["scheduled_time"] == "09:00"
+    assert by_id[int(entries[4]["id"])]["day_date"] == "2026-07-19"
+
+
 def test_office_group_rematch_after_first_leg(full_app_with_temp_db):
     from wyniki import database
 

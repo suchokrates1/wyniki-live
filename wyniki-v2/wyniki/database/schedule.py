@@ -1262,6 +1262,49 @@ def unassign_schedule_entry(
             logger.error("unassign_schedule_cascade_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
     return fetch_tournament_schedule(tournament_id)
 
+def clear_schedule_day(tournament_id: int, day_date: str) -> Dict[str, int]:
+    """Take every match of one day off the board (court and time cleared).
+
+    Matches that already have a result or are being played keep their place, so
+    the board still shows what happened. Cleared entries land in the unassigned
+    pool; nothing is deleted.
+    """
+    day = str(day_date or "").strip()
+    if not day:
+        return {"cleared": 0, "kept": 0}
+    placed = """
+        tournament_id = ?
+        AND day_date = ?
+        AND (COALESCE(court_id, '') != '' OR COALESCE(scheduled_time, '') != '')
+    """
+    locked = """
+        (match_id IS NOT NULL
+         OR LOWER(COALESCE(status, '')) IN ('completed', 'in_progress', 'live'))
+    """
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                f"SELECT COUNT(*) AS kept FROM tournament_schedule WHERE {placed} AND {locked}",
+                (tournament_id, day),
+            )
+            kept = int(cursor.fetchone()["kept"] or 0)
+            cursor.execute(
+                f"""
+                UPDATE tournament_schedule
+                SET court_id = '', court_label = '', scheduled_time = '', updated_at = ?
+                WHERE {placed} AND NOT {locked}
+                """,
+                (_utc_now(), tournament_id, day),
+            )
+            cleared = int(cursor.rowcount or 0)
+            conn.commit()
+            return {"cleared": cleared, "kept": kept}
+    except Exception as e:
+        logger.error("clear_schedule_day_error", error=str(e), tournament_id=tournament_id, day_date=day)
+        return {"cleared": 0, "kept": 0}
+
+
 def delete_unassigned_schedule_entries(
     tournament_id: int,
     *,

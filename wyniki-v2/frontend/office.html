@@ -229,6 +229,13 @@
                 x-text="planningDayLabel(day, index)"></button>
             </template>
           </div>
+          <button type="button"
+                  class="office-btn office-btn--danger"
+                  x-show="planningTournamentDays().length && !autoIsPreview()"
+                  :class="{'is-busy': autoLoading}"
+                  :aria-disabled="autoLoading"
+                  @click="clearPlanningDay()"
+                  x-text="ot('planning.clearDay')"></button>
 
           <label class="office-field">
             <span class="office-kicker" x-text="ot('planning.scope')"></span>
@@ -304,8 +311,10 @@
                   <div class="office-timetable__time" x-text="time"></div>
                   <template x-for="court in autoCourts" :key="'gridc_'+time+'_'+court.kort_id">
                     <div class="office-timetable__cell"
+                         :class="{'is-drop': planningDropCell === court.kort_id + '|' + time}"
                          @dragover.prevent
-                         @drop.prevent="onAutoDropAt(court.kort_id, time)">
+                         @dragenter.prevent="if (autoDragId) planningDropCell = court.kort_id + '|' + time"
+                         @drop.prevent="planningDropCell = null; onAutoDropAt(court.kort_id, time)">
                       <template x-for="entry in autoEntriesAt(court.kort_id, time)" :key="'cell_'+autoEntryId(entry)">
                         <div class="office-block"
                              data-schedule-entry
@@ -316,6 +325,7 @@
                              ]"
                              :draggable="!autoLoading"
                              @dragstart="onAutoDragStart(entry, $event)"
+                             @dragend="autoDragId = null; planningDropCell = null"
                              @click="!autoIsPreview() && togglePlanningCard(entry)">
                           <span class="sr-only" x-text="entry.scheduled_time"></span>
                           <div class="office-block__tag">
@@ -335,50 +345,6 @@
                 </div>
               </template>
             </div>
-
-        <div class="office-unassigned"
-             x-show="autoUnplacedCount()"
-             @dragover.prevent
-             @drop.prevent="onAutoDropToUnassigned()">
-          <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
-            <div>
-              <div class="text-sm font-semibold text-slate-900" x-text="ot('planning.unassignedShort', { count: autoUnplacedCount() })"></div>
-              <p class="mt-1 text-xs text-amber-900/80" x-text="ot('planning.unassignedHint')"></p>
-            </div>
-            <button type="button"
-                    class="btn btn-sm btn-outline border-rose-200 text-rose-700 hover:bg-rose-50"
-                    :class="{'btn-disabled': autoLoading}"
-                    @click="deleteAllUnassigned()"
-                    x-text="ot('planning.deleteAllUnassigned')"></button>
-          </div>
-          <div class="space-y-3">
-            <template x-for="section in autoUnplacedSections()" :key="'autounp_section_'+section.key">
-              <div>
-                <div class="office-kicker" x-text="section.label + ' (' + section.entries.length + ')'"></div>
-                <div class="mt-2 flex flex-wrap gap-2">
-                  <template x-for="entry in section.entries" :key="'autounp_'+(entry.schedule_id || entry.id)">
-                    <div class="relative rounded-xl bg-white border border-amber-200 p-2 pr-7 cursor-move min-w-[10rem]"
-                         :draggable="!autoLoading"
-                         @dragstart="onAutoDragStart(entry, $event)"
-                         @click="togglePlanningCard(entry)">
-                      <button type="button"
-                              class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                              :title="ot('planning.removeEntry')"
-                              @click.stop="deletePlanningScheduleEntry(entry, { skipConfirm: true })"
-                              x-text="'×'"></button>
-                      <div class="text-sm font-semibold text-slate-900 leading-tight space-y-0.5">
-                        <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
-                        <div class="office-block__vs" x-text="ot('versus')"></div>
-                        <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
-                      </div>
-                      <div class="text-[11px] text-slate-500" x-text="officeDisplayLabel(entry.category_name)"></div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </template>
-          </div>
-        </div>
 
         <div class="mt-4">
 
@@ -416,6 +382,76 @@
             </div>
           </div>
         </div>
+
+            <section class="office-drawer"
+                     :class="{'is-collapsed': planningDrawerCollapsed, 'is-dropzone': autoDragId && !autoIsUnplacedEntry(planningDraggedEntry())}"
+                     aria-labelledby="office-drawer-title"
+                     @dragover.prevent
+                     @drop.prevent="onDrawerDrop()">
+              <div class="office-drawer__head">
+                <button type="button"
+                        class="office-drawer__toggle"
+                        :aria-expanded="!planningDrawerCollapsed"
+                        :aria-label="planningDrawerCollapsed ? ot('planning.drawerExpand') : ot('planning.collapse')"
+                        @click="planningDrawerCollapsed = !planningDrawerCollapsed">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>
+                </button>
+                <h2 id="office-drawer-title" class="office-drawer__title" x-text="ot('planning.unassignedShort', { count: autoUnplacedCount() })"></h2>
+                <div class="office-drawer__tabs" role="tablist" :aria-label="ot('planning.category')" x-show="!planningDrawerCollapsed && autoUnplacedCount()">
+                  <template x-for="tab in autoUnplacedCategoryTabs()" :key="'drawer_tab_'+tab.key">
+                    <button type="button"
+                            role="tab"
+                            class="office-drawer__tab"
+                            :class="{'is-active': planningDrawerCategoryKey() === tab.key}"
+                            :aria-selected="planningDrawerCategoryKey() === tab.key"
+                            @click="planningDrawerCategory = tab.key">
+                      <span x-text="tab.label"></span>
+                      <span class="office-drawer__count" x-text="tab.count"></span>
+                    </button>
+                  </template>
+                </div>
+                <span class="office-drawer__spacer"></span>
+                <span class="office-drawer__hint" x-show="autoDragId && !autoIsUnplacedEntry(planningDraggedEntry())" x-text="ot('planning.drawerDrop')"></span>
+                <button type="button"
+                        class="office-btn office-btn--danger"
+                        x-show="autoUnplacedCount() && !planningDrawerCollapsed"
+                        :class="{'is-busy': autoLoading}"
+                        :aria-disabled="autoLoading"
+                        @click="deleteAllUnassigned()"
+                        x-text="ot('planning.deleteAllUnassigned')"></button>
+              </div>
+              <div class="office-drawer__body" x-show="!planningDrawerCollapsed">
+                <p class="office-hint office-drawer__empty" x-show="!autoUnplacedCount()" x-text="ot('planning.drawerEmpty')"></p>
+                <div class="office-drawer__cards" role="tabpanel" x-show="autoUnplacedCount()">
+                  <template x-for="entry in autoUnplacedForDrawer()" :key="'autounp_'+(entry.schedule_id || entry.id)">
+                    <div class="office-drawer__card"
+                         data-unassigned-entry
+                         :class="{'is-selected': planningOpenCardId === autoEntryId(entry)}"
+                         :draggable="!autoLoading"
+                         @dragstart="onAutoDragStart(entry, $event)"
+                         @dragend="autoDragId = null; planningDropCell = null"
+                         @click="togglePlanningCard(entry)">
+                      <button type="button"
+                              class="office-drawer__remove"
+                              :title="ot('planning.removeEntry')"
+                              :aria-label="ot('planning.removeEntry')"
+                              @click.stop="deletePlanningScheduleEntry(entry, { skipConfirm: true })">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                      </button>
+                      <div class="office-block__tag">
+                        <span x-text="autoUnplacedPhaseLabel(autoUnplacedPhaseKey(entry))"></span>
+                        <span aria-hidden="true">&middot;</span>
+                        <span x-text="planningUnassignedDayLabel(entry)"></span>
+                      </div>
+                      <div class="competitor-name office-block__name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                      <span class="sr-only" x-text="ot('versus')"></span>
+                      <div class="competitor-name office-block__name office-block__name--b" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
+                      <div class="office-block__note" x-show="planningDrawerCategoryKey() === ''" x-text="officeDisplayLabel(entry.category_name)"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </section>
           </div>
 
           <aside class="office-inspector office-panel">

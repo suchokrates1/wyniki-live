@@ -102,6 +102,7 @@ from .schedule import (
     move_schedule_entry_with_cascade,
     unassign_schedule_entry,
     delete_unassigned_schedule_entries,
+    clear_schedule_day,
 )
 
 from .brackets import (
@@ -320,6 +321,7 @@ __all__ = [
     'move_schedule_entry_with_cascade',
     'unassign_schedule_entry',
     'delete_unassigned_schedule_entries',
+    'clear_schedule_day',
     '_bracket_row_match_priority',
     '_find_bracket_groups_for_player',
     'detect_bracket_context',

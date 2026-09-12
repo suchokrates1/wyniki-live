@@ -110,6 +110,12 @@ export function createOfficeCoreView() {
 
     planningManualOpen: false,
 
+    planningDrawerCollapsed: false,
+
+    planningDrawerCategory: '',
+
+    planningDropCell: null,
+
     planningRematchOpen: false,
 
     planningPublishing: false,

@@ -409,6 +409,97 @@ export function createOfficeAutoScheduleView() {
       return this.autoUnplacedAll();
     },
 
+    autoUnplacedCategoryTabs() {
+      const entries = this.autoUnplacedAll();
+      const counts = new Map();
+      for (const entry of entries) {
+        const key = String(entry?.category_name || '');
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      const categories = [...counts.entries()]
+        .sort(([left], [right]) => left.localeCompare(right, 'pl', { numeric: true }))
+        .map(([key, count]) => ({ key, label: this.officeDisplayLabel(key) || '—', count }));
+      return [{ key: '', label: this.ot('planning.drawerAll'), count: entries.length }, ...categories];
+    },
+
+    planningDrawerCategoryKey() {
+      const selected = String(this.planningDrawerCategory || '');
+      if (!selected) return '';
+      return this.autoUnplacedCategoryTabs().some(tab => tab.key === selected) ? selected : '';
+    },
+
+    autoUnplacedForDrawer() {
+      const key = this.planningDrawerCategoryKey();
+      return this.autoUnplacedSections()
+        .flatMap(section => section.entries)
+        .filter(entry => !key || String(entry?.category_name || '') === key);
+    },
+
+    planningDraggedEntry() {
+      if (!this.autoDragId) return null;
+      const pool = this.autoIsPreview() ? this.autoProposal : this.planningSchedule;
+      return (pool || []).find(entry => String(this.autoEntryId(entry)) === String(this.autoDragId)) || null;
+    },
+
+    async onDrawerDrop() {
+      this.planningDropCell = null;
+      if (this.autoIsUnplacedEntry(this.planningDraggedEntry())) {
+        this.autoDragId = null;
+        return;
+      }
+      await this.onAutoDropToUnassigned();
+    },
+
+    officeDayClearableEntries(day = this.autoDayDate) {
+      return (this.planningSchedule || []).filter(entry => {
+        if (String(entry?.day_date || '') !== String(day || '')) return false;
+        if (!entry.court_id && !entry.scheduled_time) return false;
+        if (entry.match_id) return false;
+        const status = String(entry.status || '').toLowerCase();
+        return !['completed', 'in_progress', 'live'].includes(status);
+      });
+    },
+
+    async clearPlanningDay() {
+      const day = this.autoDayDate;
+      if (!day || this.autoIsPreview()) return;
+      const count = this.officeDayClearableEntries(day).length;
+      if (!count) {
+        this.showToast(this.ot('toast.nothingToClear'), 'info');
+        return;
+      }
+      const date = this.formatOfficeScheduleDay({ day_date: day });
+      if (!confirm(this.ot('confirm.clearDay', { count, date }))) return;
+      this.autoLoading = true;
+      try {
+        const response = await fetch(`/api/office/${this.slot}/schedule/clear-day`, {
+          method: 'POST',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({ day_date: day }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.clearDayFailed'));
+        if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+        if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.planningDrawerCollapsed = false;
+        const cleared = Number(payload.cleared || 0);
+        const kept = Number(payload.kept || 0);
+        this.showToast(
+          kept ? this.ot('toast.dayClearedKept', { count: cleared, kept }) : this.ot('toast.dayCleared', { count: cleared }),
+          'success',
+        );
+      } catch (error) {
+        console.error('Failed to clear schedule day:', error);
+        this.showToast(error.message || this.ot('toast.clearDayError'), 'error');
+      } finally {
+        this.autoLoading = false;
+      }
+    },
+
     autoEntryId(entry) {
       return entry?.schedule_id || entry?.id || null;
     },
@@ -493,6 +584,7 @@ export function createOfficeAutoScheduleView() {
     async onAutoDrop(courtId, targetEntry) {
       const scheduleId = this.autoDragId;
       this.autoDragId = null;
+      this.planningDropCell = null;
       if (!scheduleId) return;
       const dropTime = targetEntry && targetEntry.scheduled_time
         ? targetEntry.scheduled_time

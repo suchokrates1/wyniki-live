@@ -39,6 +39,7 @@ from ..database import (
     move_schedule_entry_with_cascade,
     unassign_schedule_entry,
     delete_unassigned_schedule_entries,
+    clear_schedule_day,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
     seed_provisional_knockout_from_groups,
@@ -757,6 +758,25 @@ def office_schedule_delete_unassigned(slot: int):
     deleted = delete_unassigned_schedule_entries(tournament_id, day_date=day_date)
     return _json_no_cache({
         "deleted": deleted,
+        "schedule": fetch_tournament_schedule(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
+
+
+@blueprint.route('/<int:slot>/schedule/clear-day', methods=['POST'])
+def office_schedule_clear_day(slot: int):
+    """Move one day's matches back to the unassigned pool; played and live ones stay."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    day_date = str(data.get('day_date') or '').strip()
+    if not day_date:
+        return jsonify({"error": "day_date is required"}), 400
+    result = clear_schedule_day(tournament_id, day_date)
+    return _json_no_cache({
+        **result,
         "schedule": fetch_tournament_schedule(tournament_id),
         "dashboard": _build_office_dashboard(tournament_id),
     })
