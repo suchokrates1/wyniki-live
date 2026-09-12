@@ -62,11 +62,22 @@ export default async function run() {
 
   const slot = await resolveOfficeSlot(tournament.name);
   const officeToken = (await officeLogin(slot)).token;
+  const transportErrors = [];
   const api = async (path, init = {}) => {
-    const response = await fetch(new URL(`/api/office/${slot}${path}`, BASE_URL), {
+    const request = () => fetch(new URL(`/api/office/${slot}${path}`, BASE_URL), {
       ...init,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${officeToken}`, ...(init.headers || {}) },
     });
+    let response;
+    try {
+      response = await request();
+    } catch (error) {
+      // Transport failure only (socket closed, reset); HTTP errors are never retried.
+      const cause = error?.cause ? `${error.cause.code || ''} ${error.cause.message || ''}`.trim() : String(error);
+      transportErrors.push(`${init.method || 'GET'} ${path}: ${cause}`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      response = await request();
+    }
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(`${init.method || 'GET'} ${path} → ${response.status}: ${JSON.stringify(body).slice(0, 300)}`);
     return body;
@@ -79,7 +90,11 @@ export default async function run() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pl-PL' });
   const page = await context.newPage();
   const pageErrors = [];
-  page.on('pageerror', (error) => pageErrors.push(String(error)));
+  let currentStep = 'start';
+  const consoleErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(`[${currentStep}] ${error?.message || ''} ${error?.stack || ''} ${JSON.stringify(error)}`.slice(0, 900)));
+  page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(`[${currentStep}] ${message.text()}`.slice(0, 400)); });
+  const markStep = (name) => { currentStep = name; };
   page.on('dialog', (dialog) => dialog.accept());
 
   const openView = async (label) => {
@@ -102,16 +117,53 @@ export default async function run() {
     await page.locator('.office-daytab').filter({ hasText: ddmm(iso) }).click();
     await page.waitForFunction((label) => document.querySelector('.office-daytab.is-active')?.textContent?.includes(label), ddmm(iso));
   };
+  const dragPaths = { native: 0, synthetic: 0, syntheticSteps: [] };
+  // Native pointer drag first; headless Chromium in some containers never starts an HTML5
+  // drag from synthetic mouse input, so fall back to dispatching the DnD events the app
+  // listens to on the same elements.
+  const drag = async (source, target) => {
+    await source.scrollIntoViewIfNeeded();
+    await target.scrollIntoViewIfNeeded();
+    const from = await source.boundingBox();
+    const to = await target.boundingBox();
+    const started = await page.evaluate(() => { window.__dragSeen = false; document.addEventListener('dragstart', () => { window.__dragSeen = true; }, { once: true, capture: true }); return true; });
+    if (from && to && started) {
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(from.x + from.width / 2 + 12, from.y + from.height / 2 + 12, { steps: 4 });
+      await page.mouse.move(to.x + to.width / 2, to.y + Math.min(to.height / 2, 40), { steps: 12 });
+      await page.mouse.up();
+    }
+    if (await page.evaluate(() => window.__dragSeen)) {
+      dragPaths.native += 1;
+      return;
+    }
+    dragPaths.synthetic += 1;
+    dragPaths.syntheticSteps.push(currentStep);
+    const sourceHandle = await source.elementHandle();
+    const targetHandle = await target.elementHandle();
+    await page.evaluate(([src, dst]) => {
+      const dataTransfer = new DataTransfer();
+      const fire = (node, type) => node.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
+      fire(src, 'dragstart');
+      fire(dst, 'dragenter');
+      fire(dst, 'dragover');
+      fire(dst, 'drop');
+      fire(src, 'dragend');
+    }, [sourceHandle, targetHandle]);
+  };
   const block = (id) => page.locator(`[data-schedule-entry][data-schedule-id="${id}"]`);
   const drawerCard = (id) => page.locator(`[data-unassigned-entry][data-schedule-id="${id}"]`);
 
   try {
+    markStep('login');
     // ——— login ———
     const login = new OfficeLoginPage(page, BASE_URL);
     await login.goto(slot);
     await login.login(OFFICE_PASSWORD);
     log('Office login through the UI');
 
+    markStep('categories');
     // ——— categories ———
     await openView('Grupy startowe');
     const presetBox = (label) => page.locator('label').filter({ has: page.locator('span', { hasText: new RegExp(`^${label}$`) }) }).locator('input.checkbox-primary');
@@ -131,6 +183,7 @@ export default async function run() {
     if (!catB1 || !catB2 || !catDbl) throw new Error(`Unexpected categories: ${JSON.stringify(categories)}`);
     log(`Categories: ${categories.map((cat) => cat.label).join(', ')}`);
 
+    markStep('two more players through the office form');
     // ——— two more players through the office form ———
     await page.getByRole('button', { name: '+ Dodaj zawodnika' }).click();
     const playerForm = page.locator('div.grid').filter({ has: page.getByRole('button', { name: 'Dodaj zawodnika', exact: true }) }).last();
@@ -145,6 +198,7 @@ export default async function run() {
     await waitUntil('20 players', async () => ((await planning()).players || []).length === 20);
     log('Added 2 players through the office form (20 total)');
 
+    markStep('draw: B2 K into two groups, B1 M into one');
     // ——— draw: B2 K into two groups, B1 M into one ———
     const divisionCard = (label) => page.locator('.office-groups button.rounded-2xl').filter({ hasText: label }).first();
     await divisionCard(catB2.label).click();
@@ -164,6 +218,7 @@ export default async function run() {
     });
     log(`${catB1.label}: one group of four`);
 
+    markStep('doubles: four pairs through the form, then the draw');
     // ——— doubles: four pairs through the form, then the draw ———
     await divisionCard(catDbl.label).click();
     const addTeamToggle = page.getByRole('button', { name: '+ Dodaj drużynę' });
@@ -186,6 +241,7 @@ export default async function run() {
     });
     log(`${catDbl.label}: four pairs added through the form and drawn into one group`);
 
+    markStep('matches');
     // ——— matches ———
     await openView('Terminarz');
     await page.getByRole('button', { name: 'Generuj mecze' }).click();
@@ -195,6 +251,7 @@ export default async function run() {
     });
     log(`Generated ${groupEntries.length} group matches`);
 
+    markStep('day 1 plan with the auto-scheduler');
     // ——— day 1 plan with the auto-scheduler ———
     await selectDay(day1);
     await page.locator('.office-toolbar select').selectOption('group');
@@ -209,10 +266,22 @@ export default async function run() {
 
     // take six matches off day 1 into the drawer (drag onto the drawer)
     await page.waitForSelector('[data-schedule-entry]');
+    await page.evaluate(() => {
+      window.__dnd = [];
+      for (const type of ['dragstart', 'dragenter', 'dragover', 'drop', 'dragend']) {
+        document.addEventListener(type, (event) => {
+          const node = event.target instanceof Element ? event.target : event.target?.parentElement;
+          const where = node?.closest('[data-schedule-id],[data-cell],.office-drawer')?.className?.toString().split(' ')[0] || node?.tagName;
+          const last = window.__dnd[window.__dnd.length - 1];
+          if (last && last[0] === type && last[1] === where) return;
+          window.__dnd.push([type, where, Alpine.$data(document.body).autoDragId]);
+        }, true);
+      }
+    });
     const toMove = day1Placed.slice(-6);
     for (const entry of toMove) {
       await block(entry.id).scrollIntoViewIfNeeded();
-      await block(entry.id).dragTo(page.locator('.office-drawer'));
+      await drag(block(entry.id), page.locator('.office-drawer'));
       await waitUntil(`entry ${entry.id} in the drawer`, async () => {
         const row = ((await planning()).schedule || []).find((item) => item.id === entry.id);
         return row && !isPlaced(row);
@@ -221,6 +290,7 @@ export default async function run() {
     await drawerCard(toMove[0].id).waitFor({ state: 'visible' });
     log('Dragged 6 matches from the day 1 board into the drawer');
 
+    markStep('day 2 plan: drag the six drawer cards onto the day 2 board');
     // ——— day 2 plan: drag the six drawer cards onto the day 2 board ———
     // The auto-scheduler only proposes matches already dated for the selected day, and group
     // matches start on day 1, so a second day is built from the drawer.
@@ -236,7 +306,7 @@ export default async function run() {
       if (!cellId) throw new Error(`No cell for court ${court} on day 2`);
       const cell = page.locator(`[data-cell="${cellId}"]`);
       await cell.scrollIntoViewIfNeeded();
-      await drawerCard(entry.id).dragTo(cell);
+      await drag(drawerCard(entry.id), cell);
       await waitUntil(`entry ${entry.id} on day 2, court ${court}`, async () => {
         const row = ((await planning()).schedule || []).find((item) => item.id === entry.id);
         return row && row.day_date === day2 && String(row.court_id) === court && Boolean(row.scheduled_time);
@@ -253,13 +323,14 @@ export default async function run() {
       || [...document.querySelectorAll('[data-cell]')].find((node) => node.getAttribute('data-cell').startsWith(`${wanted}|`))
     )?.getAttribute('data-cell'), otherCourt);
     await block(mover.id).scrollIntoViewIfNeeded();
-    await block(mover.id).dragTo(page.locator(`[data-cell="${moverCell}"]`));
+    await drag(block(mover.id), page.locator(`[data-cell="${moverCell}"]`));
     await waitUntil(`match ${mover.id} on court ${otherCourt}`, async () => {
       const row = ((await planning()).schedule || []).find((item) => item.id === mover.id);
       return row && String(row.court_id) === otherCourt && row.day_date === day2;
     });
     log(`Board drag: match ${mover.id} moved from court ${mover.court_id} to court ${otherCourt}`);
 
+    markStep('publish');
     // ——— publish ———
     await page.getByRole('button', { name: 'Opublikuj wszystkie' }).click();
     await waitUntil('placed matches published', async () => {
@@ -267,10 +338,17 @@ export default async function run() {
       return rows.length && rows.every((entry) => entry.status === 'planned');
     });
     const publicSchedule = await fetchPublicSchedule(tournamentId);
-    const publicRows = Array.isArray(publicSchedule) ? publicSchedule : (publicSchedule.schedule || publicSchedule.entries || []);
-    if (!publicRows.length) throw new Error('Public schedule is empty after publishing');
-    log(`Published; public schedule lists ${publicRows.length} entries`);
+    const publicDays = (publicSchedule.days || []).map((day) => ({
+      date: day.date,
+      matches: (day.categories || []).flatMap((category) => category.matches || []),
+    }));
+    const publicCount = publicDays.reduce((sum, day) => sum + day.matches.length, 0);
+    if (!publicDays.some((day) => day.date === day1 && day.matches.length) || !publicDays.some((day) => day.date === day2 && day.matches.length)) {
+      throw new Error(`Public schedule should list both days: ${JSON.stringify(publicDays.map((day) => [day.date, day.matches.length]))}`);
+    }
+    log(`Published; public schedule lists ${publicCount} matches on ${publicDays.map((day) => day.date).join(', ')}`);
 
+    markStep('inspector: time, court and public note');
     // ——— inspector: time, court and public note ———
     await selectDay(day1);
     const edited = ((await planning()).schedule || []).find((entry) => entry.day_date === day1 && isPlaced(entry) && entry.source_type === 'group');
@@ -290,6 +368,7 @@ export default async function run() {
     });
     log(`Inspector: match ${edited.id} moved to court ${newCourt} at 18:30 with a public note`);
 
+    markStep('results');
     // ——— results ———
     const addResultFromBoard = async (entry, { sets = [[4, 1], [4, 2]], walkover = false } = {}) => {
       await selectDay(entry.day_date);
@@ -300,7 +379,7 @@ export default async function run() {
       await dialog.waitFor({ state: 'visible' });
       if (walkover) {
         await dialog.locator('input.toggle').check();
-        const winnerSelect = dialog.locator('label.form-control').filter({ hasText: 'Zwycięzca walkowerem' }).locator('select');
+        const winnerSelect = dialog.locator('label.form-control:visible').filter({ hasText: 'Zwycięzca walkowerem' }).locator('select');
         await winnerSelect.selectOption({ index: 1 });
       } else {
         const inputs = dialog.locator('input[type="number"]');
@@ -342,9 +421,9 @@ export default async function run() {
     await page.locator('.office-topbar').getByRole('button', { name: 'Dodaj wynik' }).click();
     const headerDialog = modal();
     await headerDialog.waitFor({ state: 'visible' });
-    await headerDialog.locator('label.form-control').filter({ has: page.locator('span.label-text', { hasText: /^Grupa$/ }) }).locator('select').selectOption(String(manual.bracket_group_id));
-    await headerDialog.locator('label.form-control').filter({ hasText: 'Zawodnik A' }).locator('select').selectOption(manual.player1_name);
-    await headerDialog.locator('label.form-control').filter({ hasText: 'Zawodnik B' }).locator('select').selectOption(manual.player2_name);
+    await headerDialog.locator('label.form-control:visible').filter({ has: page.locator('span.label-text', { hasText: /^Grupa$/ }) }).locator('select').selectOption(String(manual.bracket_group_id));
+    await headerDialog.locator('label.form-control:visible').filter({ hasText: 'Zawodnik A' }).locator('select').selectOption(manual.player1_name);
+    await headerDialog.locator('label.form-control:visible').filter({ hasText: 'Zawodnik B' }).locator('select').selectOption(manual.player2_name);
     const headerInputs = headerDialog.locator('input[type="number"]');
     await fillNumber(headerInputs.nth(0), 1);
     await fillNumber(headerInputs.nth(1), 4);
@@ -379,6 +458,7 @@ export default async function run() {
     });
     log(`Corrected result of match ${beforeCorrection.id} from history`);
 
+    markStep('close the B1 M group, then a knockout result');
     // ——— close the B1 M group, then a knockout result ———
     await openView('Terminarz');
     const b1GroupId = ((await planning()).groups || []).find((group) => Number(group.tournament_category_id) === Number(catB1.id)).id;
@@ -416,6 +496,7 @@ export default async function run() {
     ));
     log(`Knockout "${koDone.phase}": winner ${koDone.winner_name}`);
 
+    markStep('viewer banner: publish, edit, hide');
     // ——— viewer banner: publish, edit, hide ———
     await openView('Komunikat dla widzów');
     const bannerText = `Mecze ${tag} startują o 9:00`;
@@ -432,6 +513,7 @@ export default async function run() {
     await waitUntil('banner hidden', async () => !(await publicInfo()).message);
     log('Viewer banner published, edited and hidden (checked on the public API)');
 
+    markStep('rematches for one B2 K group');
     // ——— rematches for one B2 K group ———
     await openView('Terminarz');
     const b2Group = ((await planning()).groups || []).find((group) => Number(group.tournament_category_id) === Number(catB2.id));
@@ -444,6 +526,7 @@ export default async function run() {
     });
     log(`Generated ${rematches.length} rematches for ${b2Group.name}`);
 
+    markStep('"Wyczyść dzień" on day 2');
     // ——— "Wyczyść dzień" on day 2 ———
     await selectDay(day2);
     const before = await schedule();
@@ -472,13 +555,24 @@ export default async function run() {
     if (tabCount !== cardCount) throw new Error(`Tab says ${tabCount}, drawer shows ${cardCount}`);
     log(`Drawer tab "${catB2.label}" shows its ${cardCount} matches`);
 
+    markStep('delete everything unassigned');
     // ——— delete everything unassigned ———
+    // Rematches and manual entries are removed for good. Group and knockout fixtures are
+    // rebuilt by the next planning load (ensure_*_schedule_entries), so they come back.
+    const unplacedBefore = (await schedule()).filter((entry) => !isPlaced(entry) && !entry.match_id && entry.status !== 'completed');
     await page.getByRole('button', { name: 'Usuń wszystkie' }).click();
-    await waitUntil('no unassigned matches left', async () => (
-      (await schedule()).every((entry) => isPlaced(entry) || entry.match_id || entry.status === 'completed')
-    ));
-    log('Deleted all unassigned matches');
+    await toast('Usunięto');
+    const afterDelete = await waitUntil('unassigned rematches deleted', async () => {
+      const after = await schedule();
+      const rematchesLeft = after.filter((entry) => entry.source_type === 'group_rematch' && !isPlaced(entry));
+      return rematchesLeft.length === 0 ? after : null;
+    });
+    const fixturesBack = afterDelete.filter((entry) => !isPlaced(entry) && !entry.match_id && entry.status !== 'completed');
+    log(`"Usuń wszystkie": ${unplacedBefore.length} unassigned before; rematches gone, ${fixturesBack.length} group/knockout fixtures rebuilt on reload`);
 
+    log(`Drag and drop: ${dragPaths.native} native pointer drags, ${dragPaths.synthetic} dispatched DnD events${dragPaths.synthetic ? ` (${dragPaths.syntheticSteps.join(', ')})` : ''}`);
+    if (consoleErrors.length) log(`Console errors: ${consoleErrors.join(' | ')}`);
+    if (transportErrors.length) log(`Retried after transport errors: ${transportErrors.join(' | ')}`);
     if (pageErrors.length) throw new Error(`Page errors: ${pageErrors.join(' | ')}`);
 
     await page.locator('.office-rail').getByRole('button', { name: 'Wyloguj' }).click();
@@ -504,6 +598,10 @@ export default async function run() {
     console.log(`  DIAG players=${JSON.stringify((state.players || []).map((player) => `${player.category}${player.gender}`))}`);
     console.log(`  DIAG ui=${JSON.stringify(ui)}`);
     if (pageErrors.length) console.log(`  DIAG pageErrors=${JSON.stringify(pageErrors)}`);
+    if (transportErrors.length) console.log(`  DIAG transport=${JSON.stringify(transportErrors)}`);
+    console.log(`  DIAG error=${error?.message} cause=${error?.cause ? `${error.cause.code || ''} ${error.cause.message || ''}` : ''}`);
+    const dnd = await page.evaluate(() => window.__dnd || []).catch(() => []);
+    if (dnd.length) console.log(`  DIAG dnd=${JSON.stringify(dnd.slice(-30))}`);
     throw error;
   } finally {
     await browser.close();
