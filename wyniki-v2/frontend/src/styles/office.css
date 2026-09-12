@@ -97,13 +97,14 @@ body.office-body {
 
 .office-kicker--accent { color: var(--kort-lime); }
 
+/* Titles stay in sentence case: text-transform would change innerText and how
+   some screen readers spell the words. */
 .office-title {
   font-family: var(--kort-sans);
   font-weight: 900;
-  font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+  font-size: clamp(1.25rem, 1.9vw, 1.55rem);
   line-height: 1.1;
-  letter-spacing: -0.03em;
-  text-transform: uppercase;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
@@ -988,9 +989,8 @@ body.office-body {
 .office-modal h2 {
   font-family: var(--kort-sans);
   font-weight: 900;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   letter-spacing: -0.02em;
-  text-transform: uppercase;
 }
 
 .office-modal input[type="number"] {
