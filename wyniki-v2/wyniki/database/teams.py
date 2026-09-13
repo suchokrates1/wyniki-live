@@ -10,7 +10,12 @@ from ..services.teams import (
     ordered_player_ids,
     pair_key_from_player_ids,
 )
-from .connection import _utc_now, db_conn, next_start_number
+from .connection import _utc_now, db_conn
+from .start_numbers import _assign as _assign_start_numbers, forget_start_numbers
+
+
+def assign_team_start_number(cursor, tournament_id: int, category_id: int, team_id: int) -> None:
+    _assign_start_numbers(cursor, int(tournament_id), int(category_id), "team", [team_id])
 
 
 class TeamValidationError(ValueError):
@@ -48,7 +53,6 @@ def _team_payload(
         "display_name": str(row["display_name"] or ""),
         "pair_key": str(row["pair_key"] or ""),
         "created_at": str(row["created_at"] or ""),
-        "start_number": row["start_number"] if "start_number" in row.keys() else None,
     }
     if player1 is not None:
         payload["player1"] = player1
@@ -167,8 +171,8 @@ def insert_tournament_team(
                 """
                 INSERT INTO tournament_teams (
                     tournament_id, category_id, player1_id, player2_id,
-                    display_name, pair_key, created_at, start_number
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    display_name, pair_key, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     tournament_id,
@@ -178,10 +182,10 @@ def insert_tournament_team(
                     display_name,
                     pair_key,
                     _utc_now(),
-                    next_start_number(cursor, tournament_id, "tournament_teams"),
                 ),
             )
             team_id = int(cursor.lastrowid)
+            assign_team_start_number(cursor, tournament_id, category_id, team_id)
             conn.commit()
         logger.info(
             "tournament_team_inserted",
@@ -216,8 +220,11 @@ def delete_tournament_team(team_id: int) -> bool:
             if int(cursor.fetchone()[0] or 0):
                 raise TeamConflictError("Cannot delete a pair that is assigned to a group")
             cursor.execute("DELETE FROM tournament_teams WHERE id = ?", (team_id,))
+            deleted = cursor.rowcount > 0
+            if deleted:
+                forget_start_numbers(cursor, "team", [team_id])
             conn.commit()
-            return cursor.rowcount > 0
+            return deleted
     except TeamConflictError:
         raise
     except Exception as e:

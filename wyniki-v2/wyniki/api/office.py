@@ -15,6 +15,8 @@ from ..services.api_auth import (
 )
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 from ..database import (
+    assign_start_numbers,
+    fetch_start_numbers,
     advance_knockout,
     correct_knockout_result,
     knockout_correction_blocker,
@@ -86,6 +88,7 @@ _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _NON_MUTATING_ENDPOINTS = {
     "office_auth",
     "office_knockout_format_preview",
+    "office_planning_start_numbers",
     "office_session_cookie",
     "office_autoschedule_generate",
 }
@@ -292,8 +295,28 @@ def office_planning(slot: int):
         "courts": dashboard.get("courts", []),
         "tournament_categories": categories,
         "teams": fetch_tournament_teams(tournament_id),
+        "start_numbers": fetch_start_numbers(tournament_id),
         "dashboard": dashboard,
     })
+
+
+@blueprint.route('/<int:slot>/planning/start-numbers', methods=['POST'])
+def office_planning_start_numbers(slot: int):
+    """Give start numbers to the players listed in a category that have none yet."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    try:
+        category_id = int(data.get('category_id') or 0)
+        player_ids = [int(value) for value in data.get('player_ids') or []]
+    except (TypeError, ValueError):
+        return jsonify({"error": "category_id and player_ids required"}), 400
+    try:
+        numbers = assign_start_numbers(int(tournament['id']), category_id, 'player', player_ids)
+    except LookupError:
+        return jsonify({"error": "category_not_found"}), 404
+    return _json_no_cache({"start_numbers": numbers})
 
 
 @blueprint.route('/<int:slot>/categories', methods=['GET'])
@@ -426,6 +449,7 @@ def office_teams_create(slot: int):
     return _json_no_cache({
         "team": team,
         "teams": fetch_tournament_teams(tournament_id),
+        "start_numbers": fetch_start_numbers(tournament_id),
     }), 201
 
 

@@ -567,28 +567,15 @@ def init_db() -> None:
             cursor.execute("ALTER TABLE players ADD COLUMN global_player_id INTEGER REFERENCES global_players(id) ON DELETE SET NULL")
             logger.info("database_migration", action="added_global_player_id_to_players")
 
-        # Migration: a start number per tournament that never changes (players and pairs)
-        for table in ("players", "tournament_teams"):
-            cursor.execute(f"PRAGMA table_info({table})")
-            if 'start_number' not in [row[1] for row in cursor.fetchall()]:
-                cursor.execute(f"ALTER TABLE {table} ADD COLUMN start_number INTEGER")
-                cursor.execute(f"""
-                    UPDATE {table} SET start_number = (
-                        SELECT COUNT(*) FROM {table} AS earlier
-                        WHERE earlier.tournament_id = {table}.tournament_id AND earlier.id <= {table}.id
-                    )
-                """)
-                logger.info("database_migration", action=f"added_start_number_to_{table}")
-        cursor.execute("PRAGMA table_info(tournaments)")
-        tournament_columns = [row[1] for row in cursor.fetchall()]
-        for table, counter in _START_NUMBER_COUNTERS.items():
-            if counter not in tournament_columns:
-                cursor.execute(f"ALTER TABLE tournaments ADD COLUMN {counter} INTEGER NOT NULL DEFAULT 0")
-                cursor.execute(f"""
-                    UPDATE tournaments SET {counter} = (
-                        SELECT COALESCE(MAX(start_number), 0) FROM {table} WHERE {table}.tournament_id = tournaments.id
-                    )
-                """)
+        # Start numbers per category (players and pairs)
+        from .start_numbers import ensure_start_number_tables, number_existing_teams
+
+        cursor.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'category_start_numbers'")
+        numbers_existed = cursor.fetchone() is not None
+        ensure_start_number_tables(cursor)
+        if not numbers_existed:
+            number_existing_teams(cursor)
+            logger.info("database_migration", action="added_category_start_numbers")
 
         conn.commit()
     
@@ -641,19 +628,3 @@ def upsert_app_settings(settings_dict: Dict[str, str]) -> None:
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-_START_NUMBER_COUNTERS = {"players": "last_player_start_number", "tournament_teams": "last_team_start_number"}
-
-
-def next_start_number(cursor: sqlite3.Cursor, tournament_id: int, table: str) -> int:
-    """Next start number in a tournament; numbers of removed players or pairs are never given again."""
-    counter = _START_NUMBER_COUNTERS[table]
-    cursor.execute(
-        f"UPDATE tournaments SET {counter} = MAX(COALESCE({counter}, 0), "
-        f"(SELECT COALESCE(MAX(start_number), 0) FROM {table} WHERE tournament_id = ?)) + 1 WHERE id = ?",
-        (tournament_id, tournament_id),
-    )
-    cursor.execute(f"SELECT {counter} FROM tournaments WHERE id = ?", (tournament_id,))
-    row = cursor.fetchone()
-    return int(row[0]) if row else 1

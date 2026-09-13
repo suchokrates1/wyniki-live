@@ -10,11 +10,6 @@ import {
 } from '../../shared/categories.js';
 import { DEFAULT_PLAY_FORMAT, PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
 
-/** Players and pairs keep the order of their start numbers (then creation order). */
-function byStartNumber(rows) {
-  return [...rows].sort((a, b) => (Number(a.start_number) || Infinity) - (Number(b.start_number) || Infinity) || Number(a.id) - Number(b.id));
-}
-
 export function createOfficePlayersView() {
   return {
     async loadOfficePlanningData() {
@@ -45,14 +40,16 @@ export function createOfficePlayersView() {
           return;
         }
         this.planningLoadedOnce = true;
-        this.planningPlayers = byStartNumber(Array.isArray(payload.players) ? payload.players : []);
+        this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
         this.tournamentCategories = Array.isArray(payload.tournament_categories) ? payload.tournament_categories : [];
-        this.planningTeams = byStartNumber(Array.isArray(payload.teams) ? payload.teams : []);
+        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : [];
+        this.planningStartNumbers = payload.start_numbers || {};
         this.planningMixedCategories = inferMixedPlayerBands(this.tournamentCategories);
         this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
         this.planningSchedule = this.keepInspectorEdits(Array.isArray(payload.schedule) ? payload.schedule : []);
         this.planningCourts = Array.isArray(payload.courts) ? payload.courts : [];
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.ensurePlanningStartNumbers();
         this.loadDrawFormats?.();
         this.syncPlanningGroupAssignments();
         this.ensurePlanningDefaults();
@@ -217,7 +214,7 @@ export function createOfficePlayersView() {
     planningTeamsForCategory(categoryId) {
       const id = Number(categoryId || 0);
       if (!id) return [];
-      return (this.planningTeams || []).filter(team => Number(team.category_id) === id);
+      return this.planningSortByStartNumber((this.planningTeams || []).filter(team => Number(team.category_id) === id), 'team', id);
     },
 
     planningGroupPlayFormat(groupName) {
@@ -425,11 +422,11 @@ export function createOfficePlayersView() {
 
     planningPlayersForDivision(key = this.planningSelectedDivision) {
       if (this.planningUsesTournamentCategories()) {
-        if (!this.planningCategoryFilterEnabled) return this.planningPlayers || [];
         const cat = String(key) === String(this.planningSelectedDivision)
           ? this.planningSelectedCategory()
           : (this.tournamentCategories || []).find(item => String(item.id) === String(key));
-        return this.planningPlayersMatchingCategory(cat);
+        const players = this.planningCategoryFilterEnabled ? this.planningPlayersMatchingCategory(cat) : (this.planningPlayers || []);
+        return this.planningSortByStartNumber(players, 'player', cat?.id);
       }
       return (this.planningPlayers || []).filter(player => this.planningDivisionKey(player) === key);
     },
@@ -526,9 +523,9 @@ export function createOfficePlayersView() {
       ));
     },
 
-    /** The pair's start number: given once when the pair is created, never renumbered. */
+    /** The pair's start number in its doubles category: given when the pair is created, never renumbered. */
     planningTeamOrdinal(team) {
-      return team?.start_number || '';
+      return this.planningStartNumber('team', team?.id, team?.category_id);
     },
 
     planningTeamPartnerOptions(excludeId = null) {
@@ -557,9 +554,12 @@ export function createOfficePlayersView() {
     },
 
     planningAssignedPlayers(groupName) {
-      return (this.planningPlayers || []).filter(player => (
+      const players = (this.planningPlayers || []).filter(player => (
         this.planningResolveGroupName(this.planningGroupAssignments[player.id]) === groupName
       ));
+      return this.planningUsesTournamentCategories()
+        ? this.planningSortByStartNumber(players, 'player', this.planningSelectedCategoryId)
+        : players;
     },
 
     planningEffectiveGroup(player) {
@@ -570,9 +570,52 @@ export function createOfficePlayersView() {
       return this.planningPlayersForDivision().filter(player => !this.planningEffectiveGroup(player));
     },
 
-    /** The player's start number: given once when the player is added, never renumbered. */
+    /** The player's start number in the selected category: given once, never renumbered. */
     planningOrdinal(player) {
-      return player?.start_number || '';
+      if (!this.planningUsesTournamentCategories()) return '';
+      return this.planningStartNumber('player', player?.id, this.planningSelectedCategoryId);
+    },
+
+    planningStartNumber(kind, id, categoryId) {
+      return this.planningStartNumbers?.[String(categoryId)]?.[kind]?.[String(id)] || '';
+    },
+
+    /** Lists inside a category follow start numbers; competitors without one yet go last. */
+    planningSortByStartNumber(rows, kind, categoryId) {
+      const number = (row) => Number(this.planningStartNumber(kind, row.id, categoryId)) || Infinity;
+      return [...rows].sort((a, b) => number(a) - number(b) || Number(a.id) - Number(b.id));
+    },
+
+    /** Players listed in a category (or already in its groups) without a number get the next ones. */
+    async ensurePlanningStartNumbers() {
+      if (!this.token || !this.planningUsesTournamentCategories() || this.planningStartNumbersPending) return;
+      const requests = [];
+      for (const category of (this.tournamentCategories || []).filter((cat) => cat.is_active !== 0 && !cat.is_doubles)) {
+        const inGroups = new Set(this.planningGroupsForDivision(String(category.id))
+          .flatMap((group) => (group.players || []).map((row) => Number(row.player_id)).filter(Boolean)));
+        const ids = (this.planningPlayers || [])
+          .filter((player) => playerMatchesTournamentCategory(player, category, this.planningMixedCategories) || inGroups.has(Number(player.id)))
+          .map((player) => Number(player.id))
+          .filter((id) => !this.planningStartNumber('player', id, category.id));
+        if (ids.length) requests.push({ category_id: category.id, player_ids: ids });
+      }
+      if (!requests.length) return;
+      this.planningStartNumbersPending = true;
+      try {
+        for (const body of requests) {
+          const response = await fetch(`/api/office/${this.slot}/planning/start-numbers`, {
+            method: 'POST',
+            headers: this.officeHeaders(),
+            body: JSON.stringify(body),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (response.ok && payload.start_numbers) this.planningStartNumbers = payload.start_numbers;
+        }
+      } catch (error) {
+        console.error('Failed to assign start numbers:', error);
+      } finally {
+        this.planningStartNumbersPending = false;
+      }
     },
 
     planningCategoryAssignedCount(categoryId = this.planningSelectedCategoryId) {
@@ -968,7 +1011,8 @@ export function createOfficePlayersView() {
           return;
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.teamAddFailed'));
-        this.planningTeams = Array.isArray(payload.teams) ? byStartNumber(payload.teams) : this.planningTeams;
+        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
+        if (payload.start_numbers) this.planningStartNumbers = payload.start_numbers;
         this.planningNewTeam = { player1_id: '', player2_id: '' };
         this.showToast(this.ot('toast.teamAdded'), 'success');
       } catch (error) {
@@ -998,7 +1042,8 @@ export function createOfficePlayersView() {
           return;
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.teamDeleteFailed'));
-        this.planningTeams = Array.isArray(payload.teams) ? byStartNumber(payload.teams) : this.planningTeams;
+        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
+        if (payload.start_numbers) this.planningStartNumbers = payload.start_numbers;
         const assignments = { ...this.planningTeamAssignments };
         delete assignments[team.id];
         this.planningTeamAssignments = assignments;
@@ -1036,7 +1081,8 @@ export function createOfficePlayersView() {
         if (!response.ok) {
           throw new Error(payload.error || this.ot('errors.playerAddFailed'));
         }
-        this.planningPlayers = Array.isArray(payload.players) ? byStartNumber(payload.players) : this.planningPlayers;
+        this.planningPlayers = Array.isArray(payload.players) ? payload.players : this.planningPlayers;
+        this.ensurePlanningStartNumbers();
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.planningNewPlayer = {
           first_name: '',

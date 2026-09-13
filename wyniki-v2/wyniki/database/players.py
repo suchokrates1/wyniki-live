@@ -10,7 +10,8 @@ from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
 
-from .connection import db_conn, next_start_number, website_visible_sql
+from .connection import db_conn, website_visible_sql
+from .start_numbers import forget_start_numbers
 
 def _normalize_player_name(value: Optional[str]) -> str:
     """Normalize player names for tolerant exact matching."""
@@ -37,14 +38,14 @@ def fetch_players(tournament_id: Optional[int] = None) -> List[Dict]:
             cursor = conn.cursor()
             if tournament_id:
                 cursor.execute("""
-                    SELECT id, tournament_id, name, first_name, last_name, category, country, gender, global_player_id, start_number, created_at
+                    SELECT id, tournament_id, name, first_name, last_name, category, country, gender, global_player_id, created_at
                     FROM players
                     WHERE tournament_id = ?
                     ORDER BY last_name, first_name
                 """, (tournament_id,))
             else:
                 cursor.execute("""
-                    SELECT id, tournament_id, name, first_name, last_name, category, country, gender, global_player_id, start_number, created_at
+                    SELECT id, tournament_id, name, first_name, last_name, category, country, gender, global_player_id, created_at
                     FROM players
                     ORDER BY tournament_id DESC, last_name, first_name
                 """)
@@ -61,7 +62,7 @@ def fetch_active_tournament_players() -> List[Dict]:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
-                       p.category, p.country, p.gender, p.global_player_id, p.start_number, p.created_at
+                       p.category, p.country, p.gender, p.global_player_id, p.created_at
                 FROM players p
                 INNER JOIN tournaments t ON p.tournament_id = t.id
                 WHERE t.active = 1
@@ -86,7 +87,7 @@ def fetch_players_for_active_tournaments(public_only: bool = False, include_simu
                 public_clause = ""
             cursor.execute(f"""
                 SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
-                       p.category, p.country, p.gender, p.global_player_id, p.start_number, p.created_at
+                       p.category, p.country, p.gender, p.global_player_id, p.created_at
                 FROM players p
                 INNER JOIN tournaments t ON p.tournament_id = t.id
                 WHERE t.active = 1
@@ -172,9 +173,9 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
                     cursor, first_name, last_name, category, country, gender
                 )
             cursor.execute("""
-                INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender, global_player_id, start_number)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (tournament_id, name, first_name, last_name, category, country, gender, global_player_id, next_start_number(cursor, tournament_id, "players")))
+                INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender, global_player_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (tournament_id, name, first_name, last_name, category, country, gender, global_player_id))
             conn.commit()
             logger.info("player_inserted", id=cursor.lastrowid, name=name, tournament_id=tournament_id)
             return cursor.lastrowid
@@ -279,6 +280,8 @@ def delete_player(player_id: int, tournament_id: Optional[int] = None) -> bool:
                 "DELETE FROM players WHERE id = ? AND (? IS NULL OR tournament_id = ?)",
                 (player_id, tournament_id, tournament_id),
             )
+            if cursor.rowcount:
+                forget_start_numbers(cursor, "player", [player_id])
             conn.commit()
             logger.info("player_deleted", id=player_id)
             return cursor.rowcount > 0
@@ -312,8 +315,8 @@ def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
                 if _tournament_links_global_players(cursor, tournament_id):
                     global_player_id = _ensure_global_player(cursor, fn, ln, category, country, gender)
                 cursor.execute("""
-                    INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender, global_player_id, start_number)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO players (tournament_id, name, first_name, last_name, category, country, gender, global_player_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     tournament_id,
                     p_name,
@@ -323,7 +326,6 @@ def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
                     country,
                     gender,
                     global_player_id,
-                    next_start_number(cursor, tournament_id, "players"),
                 ))
                 count += 1
             conn.commit()

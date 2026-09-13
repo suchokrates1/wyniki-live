@@ -88,6 +88,8 @@ export function createOfficeCoreView() {
     planningGroupFormats: {},
 
     planningTeams: [],
+    planningStartNumbers: {},
+    planningStartNumbersPending: false,
 
     planningDragPlayerId: null,
 

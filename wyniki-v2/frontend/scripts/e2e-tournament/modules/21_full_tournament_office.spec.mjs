@@ -254,8 +254,17 @@ export default async function run() {
     const shownNumbers = () => page.locator('.office-groups [data-start-number]:visible').evaluateAll((nodes) => Object.fromEntries(
       nodes.map((node) => [node.parentElement.querySelector('.truncate')?.textContent.trim(), node.textContent.trim()]),
     ));
-    const numbersBeforeDraw = await shownNumbers();
-    const storedNumbers = Object.fromEntries(((await planning()).players || []).map((player) => [player.name, String(player.start_number)]));
+    const numbersBeforeDraw = await waitUntil('start numbers in B2 K', async () => {
+      const shown = await shownNumbers();
+      return Object.keys(shown).length && Object.values(shown).every(Boolean) ? shown : null;
+    });
+    const planned = await planning();
+    const categoryNumbers = planned.start_numbers?.[String(catB2.id)]?.player || {};
+    const storedNumbers = Object.fromEntries((planned.players || []).map((player) => [player.name, String(categoryNumbers[String(player.id)] || '')]));
+    const sortedShown = Object.values(numbersBeforeDraw).map(Number).sort((a, b) => a - b).join(',');
+    if (sortedShown !== Array.from({ length: Object.keys(numbersBeforeDraw).length }, (_, index) => index + 1).join(',')) {
+      throw new Error(`B2 K should be numbered 1…n inside the category, shown ${sortedShown}`);
+    }
     const numberMismatch = Object.entries(numbersBeforeDraw).filter(([name, number]) => storedNumbers[name] !== number);
     if (!Object.keys(numbersBeforeDraw).length || numberMismatch.length) throw new Error(`Start numbers before the draw: ${JSON.stringify(numberMismatch)}`);
     await page.getByRole('button', { name: 'Rozdziel automatycznie' }).click();
@@ -269,7 +278,7 @@ export default async function run() {
     });
     const renumbered = Object.entries(numbersBeforeDraw).filter(([name, number]) => numbersAfterDraw[name] !== number);
     if (renumbered.length) throw new Error(`The draw renumbered players: ${JSON.stringify(renumbered.map(([name, number]) => [name, number, numbersAfterDraw[name]]))}`);
-    log(`Start numbers ${Object.values(numbersBeforeDraw).join(', ')} kept after the draw into groups`);
+    log(`${catB2.label} start numbers ${Object.values(numbersBeforeDraw).join(', ')} (numbered inside the category) kept after the draw into groups`);
     log(`${catB2.label}: two groups of four`);
 
     await divisionCard(catB1.label).click();
