@@ -130,3 +130,27 @@ def test_chosen_format_swaps_and_lock(full_app_with_temp_db):
 
     confirmed = client.post("/api/office/1/knockout-formats/confirm-all", headers=headers).get_json()["categories"]
     assert all(item["config"]["confirmed"] for item in confirmed)
+
+
+def test_preview_survives_a_group_still_being_drawn(full_app_with_temp_db):
+    from wyniki import database
+
+    with database.db_conn() as conn:
+        conn.execute("UPDATE tournaments SET active = 0, is_simulation = 0")
+        conn.commit()
+    tournament_id = database.insert_tournament(
+        "Half Drawn Cup", "2026-08-01", "2026-08-03", active=True,
+        office_password_hash=generate_password_hash("formats"),
+    )
+    category = database.confirm_tournament_categories(tournament_id, [{"preset_key": "B3M"}])[0]
+    ids = [database.insert_player(tournament_id, f"H{n}", "B3", "PL", gender="M") for n in range(4)]
+    database.save_bracket_groups(tournament_id, [
+        {"name": f"{category['label']} — Grupa A", "tournament_category_id": category["id"], "play_format": "groups_knockout", "players": ids[:3]},
+        {"name": f"{category['label']} — Grupa B", "tournament_category_id": category["id"], "play_format": "groups_knockout", "players": ids[3:]},
+    ])
+    client = full_app_with_temp_db.test_client()
+    response = client.get("/api/office/1/knockout-formats", headers=_headers(client))
+    assert response.status_code == 200
+    item = response.get_json()["categories"][0]
+    assert item["allowed_formats"] == ["cross", "none"]
+    assert item["preview"]["matches"] == 0

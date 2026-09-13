@@ -125,7 +125,9 @@ def _preview(category: Dict[str, Any], units: List[Dict[str, Any]], groups: List
             if lines.get(key):
                 result["draws"].append({"key": key, "lines": [entry(item, seed_rank) for item in swap_lines(lines[key], swaps.get(key))]})
     elif fmt == "cross":
-        lines = cross_draw_lines(draw_groups) if len(draw_groups) >= 2 else []
+        # a group still being drawn may hold fewer than two players: no semifinal line for it yet
+        complete = len(draw_groups) >= 2 and all(len(group["ranking"]) >= 2 for group in draw_groups[:2])
+        lines = cross_draw_lines(draw_groups) if complete else []
         result["draws"].append({"key": "main", "lines": [entry(item) for item in swap_lines(lines, swaps.get("main"))]})
     elif fmt == "direct":
         names = brackets._group_competitor_names(unit["groups"][0])
@@ -161,6 +163,15 @@ def _preview(category: Dict[str, Any], units: List[Dict[str, Any]], groups: List
     return result
 
 
+def _safe_preview(tournament_id: int, category, units, groups, config) -> Dict[str, Any]:
+    """One category's odd data must not take the whole step down: it shows an empty preview."""
+    try:
+        return _preview(category, units, groups, config)
+    except Exception as exc:  # noqa: BLE001 - logged, the office keeps working
+        logger.error("knockout_format_preview_failed", tournament_id=tournament_id, category_id=category.get("id"), error=str(exc))
+        return {"draws": [], "table": [], "placements": [], "matches": 0, "main_matches": 0, "consolation_matches": 0, "error": True}
+
+
 def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
     """Every active category with its allowed formats, chosen config and a draw preview."""
     brackets = _brackets()
@@ -192,7 +203,7 @@ def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict
             "saved": key in stored,
             "config": config,
             "locked": locked,
-            "preview": _preview(category, category_units, category_groups, config),
+            "preview": _safe_preview(tournament_id, category, category_units, category_groups, config),
         })
     return overview
 

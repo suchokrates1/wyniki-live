@@ -56,6 +56,8 @@ export function createOfficeDrawsView() {
         this.applyDrawFormats(payload.categories);
       } catch (error) {
         console.error('Failed to load knockout formats:', error);
+        // the office path must not wait forever for draws that failed to load
+        if (seq === this.drawLoadSeq) this.drawFormatsLoaded = true;
         if (this.activeTab === 'draws') this.showToast(error.message || this.ot('draws.loadFailed'), 'error');
       }
     },
