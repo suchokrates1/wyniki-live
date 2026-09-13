@@ -451,7 +451,8 @@ def office_planning_groups(slot: int):
     tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
     groups = data.get("groups", [])
-    if not groups:
+    # An empty draw is only saved when asked for explicitly ("Wyczyść" on the last category).
+    if not groups and not data.get("allow_empty"):
         return jsonify({"error": "No groups provided"}), 400
     if not save_bracket_groups(tournament_id, groups):
         return jsonify({"error": "Failed to save groups"}), 500

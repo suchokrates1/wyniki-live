@@ -3547,3 +3547,17 @@ def test_office_lists_tournaments_and_a_session_survives_a_slot_shift(full_app_w
     session = client.post(f"/api/office/{new_slot}/session", headers=headers)
     assert session.status_code == 200
     assert f"office_stream_{new_slot}" in session.headers.get("Set-Cookie", "")
+
+
+def test_office_clearing_the_last_groups_is_saved_only_when_asked(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = _planner_cup(database, "Clear Groups Cup", "clear")
+    client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "clear")
+    assert client.put("/api/office/1/planning/groups", headers=headers, json={"groups": []}).status_code == 400
+    assert len(database.fetch_bracket_groups(tournament_id)) == 1
+    cleared = client.put("/api/office/1/planning/groups", headers=headers, json={"groups": [], "allow_empty": True})
+    assert cleared.status_code == 200, cleared.get_json()
+    assert database.fetch_bracket_groups(tournament_id) == []
+    assert [row for row in cleared.get_json()["schedule"] if row.get("source_type") == "group"] == []

@@ -14,6 +14,11 @@ export function createOfficePlayersView() {
   return {
     async loadOfficePlanningData() {
       if (!this.token) return;
+      if (this.planningSaveTimer || this.planningSaving) {
+        // Groups edited here are about to be saved; loading now would bring back the old draw.
+        this.pendingRemoteRefresh = true;
+        return;
+      }
       const revision = this.planningEditRevision;
       this.planningLoading = true;
       try {
@@ -827,16 +832,18 @@ export function createOfficePlayersView() {
     async autoSavePlanningGroups() {
       if (!this.planningSelectedDivision && !this.planningSelectedCategoryId) return;
       const groups = this.buildPlanningGroupsPayload();
-      if (!groups.length) {
+      // No groups left: save that too when the server still has some ("Wyczyść"), else nothing to do.
+      if (!groups.length && !(this.planningGroups || []).length) {
         this.flushPendingOfficeRefresh();
         return;
       }
+      const revision = this.planningEditRevision;
       this.planningSaving = true;
       try {
         const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
           method: 'PUT',
           headers: this.officeHeaders(),
-          body: JSON.stringify({ groups }),
+          body: JSON.stringify({ groups, allow_empty: !groups.length }),
         });
         const payload = await response.json().catch(() => ({}));
         if (response.status === 401) {
@@ -847,7 +854,8 @@ export function createOfficePlayersView() {
         this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
-        this.syncPlanningGroupAssignments();
+        // edits made while this save was on its way are newer; the next save sends them
+        if (revision === this.planningEditRevision) this.syncPlanningGroupAssignments();
       } catch (error) {
         console.error('Failed to auto-save office planning groups:', error);
         this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
