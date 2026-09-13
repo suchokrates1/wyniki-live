@@ -74,6 +74,10 @@ export function createOfficeScheduleView() {
       (this.planningSchedule || []).forEach(entry => {
         if (entry?.day_date) days.add(String(entry.day_date));
       });
+      // a proposal for the whole tournament may use days nothing is planned on yet
+      (Array.isArray(this.autoProposal) ? this.autoProposal : []).forEach(entry => {
+        if (entry?.day_date && entry?.scheduled_time) days.add(String(entry.day_date));
+      });
       if (days.size) return Array.from(days).sort();
       const available = this.autoAvailableDays();
       return available.length ? available : [];
@@ -104,10 +108,15 @@ export function createOfficeScheduleView() {
       return this.ot('planning.dayLabel', { number: index + 1, date: short });
     },
 
+    planningDayProposalCount(day) {
+      return (Array.isArray(this.autoProposal) ? this.autoProposal : [])
+        .filter((entry) => entry?.day_date === day && entry?.court_id && entry?.scheduled_time).length;
+    },
+
+    /** Switching the day only changes what the board shows; a proposal stays until approved or dropped. */
     selectPlanningDay(day) {
       this.autoDayDate = day;
       this.planningOpenCardId = null;
-      if (this.autoIsPreview()) this.autoDiscardProposal();
     },
 
     togglePlanningCard(entry) {

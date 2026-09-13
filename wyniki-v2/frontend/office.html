@@ -269,8 +269,10 @@
               <button type="button"
                 class="office-daytab"
                 :class="{'is-active': autoDayDate === day}"
-                @click="selectPlanningDay(day)"
-                x-text="planningDayLabel(day, index)"></button>
+                @click="selectPlanningDay(day)">
+                <span x-text="planningDayLabel(day, index)"></span>
+                <span class="office-daytab__count" x-show="autoIsPreview()" x-text="planningDayProposalCount(day)"></span>
+              </button>
             </template>
           </div>
           <button type="button"

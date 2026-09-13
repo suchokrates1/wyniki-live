@@ -487,6 +487,17 @@ export default async function run() {
 
     // ——— whole group phase over both days ———
     await page.getByRole('button', { name: 'Rozstaw fazę grupową' }).click();
+    // the proposal spans both days: each day can be looked at before approving, nothing is dropped
+    await waitUntil('proposal day tabs with counts', async () => (await page.locator('.office-daytab__count:visible').count()) === 2);
+    await selectDay(day2);
+    await page.locator('.office-preview-bar').waitFor({ state: 'visible', timeout: 5000 });
+    const day2Proposal = await waitUntil('day 2 of the proposal on the board', async () => {
+      const count = await page.locator('[data-schedule-entry][data-minutes]').count();
+      return count > 0 ? count : null;
+    });
+    await selectDay(day1);
+    if (!(await page.locator('.office-preview-bar').isVisible())) throw new Error('Switching days dropped the proposal');
+    log(`Whole-phase proposal: switched to day 2 (${day2Proposal} matches) and back without losing it`);
     await page.getByRole('button', { name: 'Zatwierdź terminarz' }).click();
     const spread = await waitUntil('group phase spread over both days', async () => {
       const rows = ((await planning()).schedule || []).filter((entry) => entry.source_type === 'group');
