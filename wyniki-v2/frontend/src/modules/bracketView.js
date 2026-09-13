@@ -2,6 +2,7 @@ import { publicApi } from '../api/publicApi.js';
 import { formatTemplate as fmt } from '../shared/text.js';
 import { translateStoredScheduleLabel } from '../shared/labelDisplay.js';
 import { formatTeamLabelForWrap, isTeamDisplayName, registerCompetitorName } from '../shared/teamDisplay.js';
+import { isPendingCompetitorName } from '../shared/labelDisplay.js';
 import {
   buildBracketCategories,
   buildKnockoutTrees,
@@ -184,6 +185,7 @@ export function createBracketView() {
 
     resolveBracketName(surname) {
       if (!surname) return '';
+      if (isPendingCompetitorName(surname)) return this.translateStoredLabel(surname);
       return formatTeamLabelForWrap(this.bracketNameMap[surname] || surname);
     },
 

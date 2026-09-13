@@ -494,6 +494,8 @@ export function createOfficeCoreView() {
     },
 
     formatCompetitorName(value) {
+      // players not known yet ("Zwycięzca: Półfinał 1") are phase labels: show them translated
+      if (this.officeIsPendingCompetitorName?.(value)) return this.officeDisplayLabel(value);
       return formatTeamLabelForWrap(value);
     },
 

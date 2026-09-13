@@ -576,7 +576,7 @@
           <div class="mt-2 flex flex-wrap gap-2">
             <template x-for="cat in tournamentCategories.filter(c => c.is_active !== 0)" :key="'tcat_'+cat.id">
               <div class="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm flex items-center gap-2">
-                <span class="font-semibold" x-text="cat.label"></span>
+                <span class="font-semibold" x-text="officeDisplayLabel(cat.label)"></span>
                 <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800" x-show="cat.is_doubles" x-text="ot('planning.doubles')"></span>
                 <button type="button" class="text-emerald-700 text-xs" @click="startCategoryEdit(cat)" x-text="ot('planning.edit')"></button>
                 <button type="button" class="text-rose-600 text-xs" @click="deleteTournamentCategory(cat.id)" x-text="ot('planning.delete')"></button>
@@ -673,7 +673,7 @@
                   :class="planningSelectedDivision === division.key ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-sm' : 'border-slate-200 bg-white/70 text-slate-700 hover:border-slate-300'"
                   @click="selectPlanningDivision(division.key)">
                   <div class="font-semibold flex items-center gap-2">
-                    <span x-text="division.label"></span>
+                    <span x-text="officeDisplayLabel(division.label)"></span>
                     <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800" x-show="division.is_doubles" x-text="ot('planning.doubles')"></span>
                   </div>
                   <div class="text-[11px] opacity-70" x-text="planningDivisionCountLine(division)"></div>

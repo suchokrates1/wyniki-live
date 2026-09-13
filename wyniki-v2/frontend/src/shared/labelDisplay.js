@@ -1,5 +1,11 @@
 import { formatTemplate } from './text.js';
 
+/** A name standing in for a player not known yet: "Zwycięzca: Półfinał 1", "1. B2 Kobiety — Grupa A". */
+export function isPendingCompetitorName(name) {
+  const text = String(name || '').trim();
+  return /^(Zwycięzca|Przegrany)( PF)?[: ]/.test(text) || /^\d+\.\s/.test(text);
+}
+
 /** Translate Polish/canonical DB labels for UI display (category, phase, group names). */
 export function translateStoredScheduleLabel(name, labels = {}) {
   const text = String(name || '').trim();

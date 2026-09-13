@@ -22,6 +22,7 @@ const LANGS = ['pl', 'de', 'en', 'it', 'es', 'fr', 'lt'];
 const log = (message) => console.log(`  ${message}`);
 
 const POLISH_LETTERS = /[ąćęłńśźżĄĆĘŁŃŚŹŻ]/;
+const POLISH_ONLY_LETTERS = /[ćłńśźżĆŁŃŚŹŻ]/; // Lithuanian also has ą and ę
 const POLISH_WORDS = [
   'Wszystkie', 'Wszyscy', 'Grupa', 'Grupy', 'Kobiety', 'Mężczyźni', 'Zwycięzca', 'Przegrany', 'miejsce', 'miejsca',
   'Pocieszenie', 'Ćwierćfinał', 'Półfinał', 'Finał', 'Terminarz', 'Drabinka', 'Wynik', 'Wyniki', 'Debel', 'Zawodnik',
@@ -137,7 +138,7 @@ export default async function run() {
       for (const value of dataStrings) text = text.split(value).join(' ');
       if (KEY_PATTERN.test(text) && !/https?:|@/.test(text)) record(lang, where, raw, 'raw key');
       if (lang === 'pl') continue;
-      if (POLISH_LETTERS.test(text) || WORD_PATTERN.test(text)) record(lang, where, raw, 'Polish');
+      if ((lang === 'lt' ? POLISH_ONLY_LETTERS : POLISH_LETTERS).test(text) || WORD_PATTERN.test(text)) record(lang, where, raw, 'Polish');
     }
   };
 
