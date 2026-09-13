@@ -397,6 +397,18 @@ export default async function run() {
     await page.locator('.office-toolbar input[type="time"]').nth(0).fill('09:00');
     await page.locator('.office-toolbar input[type="time"]').nth(1).fill('13:00');
     await page.getByRole('button', { name: 'Rozstaw ten dzień' }).click();
+    // a block of the proposal opens the inspector; moving it there moves it on the board
+    const proposed = page.locator('[data-schedule-entry][data-minutes]').first();
+    await proposed.waitFor({ state: 'visible', timeout: 15000 });
+    const proposedId = await proposed.getAttribute('data-schedule-id');
+    await proposed.click();
+    const previewInspector = page.locator('.office-inspector');
+    await previewInspector.locator('.office-inspector__preview').waitFor({ state: 'visible', timeout: 5000 });
+    const proposedTime = await previewInspector.locator('input[type="time"]').inputValue();
+    if (!/^[0-9]{2}:[0-9]{2}$/.test(proposedTime)) throw new Error(`Proposal inspector shows no time: "${proposedTime}"`);
+    if (await previewInspector.getByRole('button', { name: 'Zapisz', exact: true }).isVisible()) throw new Error('Saving a single match must wait for the approved proposal');
+    await proposed.click();
+    log(`Proposal block ${proposedId} at ${proposedTime} opens the inspector (hint shown, saving hidden until approval)`);
     await page.getByRole('button', { name: 'Zatwierdź terminarz' }).click();
     const day1Placed = await waitUntil('day 1 placements', async () => {
       const rows = ((await planning()).schedule || []).filter((entry) => entry.day_date === day1 && isPlaced(entry));
@@ -552,6 +564,11 @@ export default async function run() {
       return row && row.scheduled_time === '18:30' && String(row.court_id) === String(newCourt) && row.notes_public === note;
     });
     log(`Inspector: match ${edited.id} moved to court ${newCourt} at 18:30 with a public note`);
+    await selectDay(day1);
+    const remark = page.locator(`[data-schedule-entry][data-schedule-id="${edited.id}"] .office-block__remark`);
+    await remark.waitFor({ state: 'visible', timeout: 10000 });
+    if (!(await remark.innerText()).includes(note)) throw new Error(`Match card should show its notes: ${await remark.innerText()}`);
+    log('Match card shows "Uwagi: …" once notes are typed');
 
     markStep('results');
     // ——— results ———

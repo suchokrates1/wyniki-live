@@ -282,6 +282,8 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       b1Court: 'B1 kortai (specialūs)',
       courtPrefix: 'Kortas {name}',
       generateProposal: 'Generuoti pasiūlymą',
+      inspectorPreviewHint: 'Planuoklio pasiūlymas: pakeiskite laiką arba kortą, ir mačas pasislinks tinklelyje. Būsena, pastabos ir išsaugojimas bus prieinami patvirtinus pasiūlymą.',
+      notesOnCard: 'Pastabos: {text}',
       previewMode: 'Pasiūlymo peržiūros veiksena',
       approveSchedule: 'Patvirtinti tvarkaraštį',
       discardProposal: 'Atmesti pasiūlymą',

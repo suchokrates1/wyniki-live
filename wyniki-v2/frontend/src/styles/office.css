@@ -1678,3 +1678,15 @@ body.office-body {
 .office-draws__cat { grid-template-columns: minmax(0, 1fr); }
 .office-draws__cat .office-draws__badge { justify-self: start; }
 .office-draws__cat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* notes typed for a match, on its card */
+.office-block > * { flex: none; }
+.office-block__remark {
+  font-size: 0.7rem;
+  line-height: 1.25;
+  color: var(--kort-warn);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.office-inspector__preview { padding: 8px 10px; border-radius: 8px; background: var(--kort-lime-soft); color: var(--kort-ice); }

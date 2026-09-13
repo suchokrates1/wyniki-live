@@ -384,7 +384,7 @@
                              :draggable="!autoLoading"
                              @dragstart="onAutoDragStart(block.entry, $event)"
                              @dragend="autoDragId = null; planningDropCell = null"
-                             @click="!autoIsPreview() && togglePlanningCard(block.entry)">
+                             @click="togglePlanningCard(block.entry)">
                           <span class="sr-only" x-text="block.entry.scheduled_time"></span>
                           <div class="office-block__tag">
                             <span x-text="officeDisplayLabel(block.entry.category_name)"></span>
@@ -394,6 +394,7 @@
                           <div class="competitor-name office-block__name" x-text="formatCompetitorName(block.entry.player1_name || '—')"></div>
                           <span class="sr-only" x-text="ot('versus')"></span>
                           <div class="competitor-name office-block__name office-block__name--b" x-text="formatCompetitorName(block.entry.player2_name || '—')"></div>
+                          <div class="office-block__remark" x-show="String(block.entry.notes_public || '').trim()" :title="block.entry.notes_public" x-text="ot('planning.notesOnCard', { text: String(block.entry.notes_public || '').trim() })"></div>
                           <div class="office-block__note" x-text="officeScheduleHasResult(block.entry) ? officeScheduleResultLabel(block.entry) : officeScheduleStatusLabel(block.entry.status)"></div>
                         </div>
                 </template>
@@ -513,12 +514,13 @@
             <div class="office-kicker" x-text="ot('planning.inspectorTitle')"></div>
             <p class="mt-2 text-sm text-slate-500 office-anim-fade" x-show="!planningOpenCardId && !planningInspectorLeavingId" x-text="ot('planning.inspectorEmpty')"></p>
             <template x-for="entry in planningInspectorEntries()" :key="'insp_'+autoEntryId(entry)">
-              <div class="mt-3 space-y-2 office-inspector__entry" :class="{'is-leaving': !planningOpenCardId}" x-show="!autoIsPreview()" @input="planningEditRevision++; planningInspectorDirtyId = autoEntryId(entry)" @change="planningEditRevision++; planningInspectorDirtyId = autoEntryId(entry)">
+              <div class="mt-3 space-y-2 office-inspector__entry" :class="{'is-leaving': !planningOpenCardId}" @input="planningEditRevision++; planningInspectorDirtyId = autoEntryId(entry)" @change="planningEditRevision++; planningInspectorDirtyId = autoEntryId(entry)">
                 <div class="text-sm font-semibold leading-tight space-y-0.5">
                   <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
                   <div class="office-block__vs" x-text="ot('versus')"></div>
                   <div class="competitor-name" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
                 </div>
+                <p class="office-hint office-inspector__preview" x-show="autoIsPreview()" x-text="ot('planning.inspectorPreviewHint')"></p>
                 <div class="grid grid-cols-2 gap-2">
                   <label class="block">
                     <span class="office-kicker" x-text="ot('planning.time')"></span>
@@ -534,7 +536,7 @@
                     </select>
                   </label>
                 </div>
-                <label class="block">
+                <label class="block" x-show="!autoIsPreview()">
                   <span class="office-kicker" x-text="ot('planning.publishStatus')"></span>
                   <select class="select select-bordered select-sm bg-white w-full" x-model="entry.status">
                     <template x-for="option in scheduleStatusOptions()" :key="'insp_status_'+entry.id+'_'+option.value">
@@ -542,11 +544,11 @@
                     </template>
                   </select>
                 </label>
-                <label class="block">
+                <label class="block" x-show="!autoIsPreview()">
                   <span class="office-kicker" x-text="ot('planning.publicNotes')"></span>
                   <input type="text" class="input input-bordered input-sm bg-white w-full" x-model="entry.notes_public" :placeholder="ot('planning.publicNotesPlaceholder')">
                 </label>
-                <div class="flex gap-2 flex-wrap pt-1">
+                <div class="flex gap-2 flex-wrap pt-1" x-show="!autoIsPreview()">
                   <button type="button" class="btn btn-sm office-btn-accent" x-show="officeCanAddResultFromSchedule(entry)" @click="openAddResultFromSchedule(entry)" x-text="ot('planning.addResult')"></button>
                   <button type="button" class="btn btn-sm office-btn-primary flex-1" @click="saveOfficeScheduleEntry(entry)" x-text="ot('planning.save')"></button>
                   <button type="button" class="btn btn-sm btn-outline" @click="deletePlanningScheduleEntry(entry)" x-text="ot('planning.delete')"></button>
