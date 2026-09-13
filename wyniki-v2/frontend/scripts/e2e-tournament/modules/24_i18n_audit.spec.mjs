@@ -133,7 +133,17 @@ export default async function run() {
   };
   const audit = async (page, lang, where) => {
     await page.waitForTimeout(700);
-    for (const raw of await pageStrings(page)) {
+    let strings;
+    try {
+      strings = await pageStrings(page);
+    } catch (error) {
+      if (!String(error?.message || '').includes('Execution context was destroyed')) throw error;
+      // a navigation was still settling: read the page once it has loaded
+      await page.waitForLoadState('load');
+      await page.waitForTimeout(700);
+      strings = await pageStrings(page);
+    }
+    for (const raw of strings) {
       let text = raw;
       for (const value of dataStrings) text = text.split(value).join(' ');
       if (KEY_PATTERN.test(text) && !/https?:|@/.test(text)) record(lang, where, raw, 'raw key');
