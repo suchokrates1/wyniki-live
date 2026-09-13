@@ -27,6 +27,10 @@ Szyna → **Grupy startowe**. Zmiany zapisują się automatycznie (`PUT …/plan
 
 **+ Dodaj zawodnika** (imię, nazwisko, klasa B1–B4, płeć, kraj) → `POST …/players`.
 
+## Numery startowe
+
+Numer przy zawodniku (w liście do rozlosowania i w grupach) to jego **numer startowy w kategorii**: 1, 2, 3… osobno w każdej kategorii, nadawany w kolejności dodania, gdy zawodnik pierwszy raz pojawia się w kategorii (`POST …/planning/start-numbers`). Pary dostają numer w swojej kategorii deblowej przy utworzeniu. Numer nigdy się nie zmienia — losowanie, przeniesienie do grupy ani usunięcie innych go nie przenumerowuje — a numer usuniętego zawodnika nie jest nadawany ponownie. Listy są ułożone według numerów.
+
 ## Pary (kategoria Debel)
 
 | Kontrolka | Co robi | API |
