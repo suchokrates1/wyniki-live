@@ -188,11 +188,22 @@ export default async function run() {
   const expectedGroupMatches = STRUCTURE.groups.reduce((sum, group) => sum + (group.size * (group.size - 1)) / 2, 0);
   const slot = await resolveOfficeSlot(tournament.name);
   const officeToken = (await officeLogin(slot)).token;
+  const transportErrors = [];
   const api = async (path, init = {}) => {
-    const response = await fetch(new URL(`/api/office/${slot}${path}`, BASE_URL), {
+    const request = () => fetch(new URL(`/api/office/${slot}${path}`, BASE_URL), {
       ...init,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${officeToken}`, ...(init.headers || {}) },
     });
+    let response;
+    try {
+      response = await request();
+    } catch (error) {
+      // Transport failure only (gunicorn closes idle keep-alive sockets after 2 s); HTTP errors are never retried.
+      const cause = error?.cause ? `${error.cause.code || ''} ${error.cause.message || ''}`.trim() : String(error);
+      transportErrors.push(`${init.method || 'GET'} ${path}: ${cause}`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      response = await request();
+    }
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(`${init.method || 'GET'} ${path} → ${response.status}: ${JSON.stringify(body).slice(0, 300)}`);
     return body;
@@ -543,6 +554,7 @@ export default async function run() {
     const kindsPlayed = playedKo.reduce((acc, { kind }) => ({ ...acc, [kind]: (acc[kind] || 0) + 1 }), {});
     log(`Knockout complete: ${finalKo.length} matches (${Object.entries(kindsPlayed).map(([kind, count]) => `${kind} ${count}`).join(', ')}); public bracket shows every winner; champions ${champions.join(', ')}`);
 
+    if (transportErrors.length) log(`Transport retries: ${transportErrors.length} (${[...new Set(transportErrors.map((entry) => entry.split(': ').pop()))].join('; ')})`);
     if (pageErrors.length) throw new Error(`Page errors: ${pageErrors.join(' | ')}`);
   } finally {
     await browser.close();
