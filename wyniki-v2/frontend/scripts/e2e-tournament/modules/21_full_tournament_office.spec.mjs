@@ -91,6 +91,26 @@ export default async function run() {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pl-PL' });
   const page = await context.newPage();
   const pageErrors = [];
+  // A thrown non-Error reaches Playwright as a bare "Object"; record what it really was.
+  await context.addInitScript(() => {
+    window.__thrown = [];
+    const describe = (value) => {
+      try {
+        return {
+          type: Object.prototype.toString.call(value),
+          ctor: value?.constructor?.name,
+          text: String(value?.message || value?.type || value).slice(0, 200),
+          keys: value && typeof value === 'object' ? Object.keys(value).slice(0, 10) : [],
+          target: value?.target?.tagName || value?.target?.constructor?.name || '',
+          stack: String(value?.stack || new Error().stack).slice(0, 600),
+        };
+      } catch (error) {
+        return { failed: String(error) };
+      }
+    };
+    window.addEventListener('error', (event) => window.__thrown.push({ kind: 'error', ...describe(event.error ?? event) }), true);
+    window.addEventListener('unhandledrejection', (event) => window.__thrown.push({ kind: 'rejection', ...describe(event.reason) }));
+  });
   let currentStep = 'start';
   const consoleErrors = [];
   page.on('pageerror', (error) => pageErrors.push(`[${currentStep}] ${error?.message || ''} ${error?.stack || ''} ${JSON.stringify(error)}`.slice(0, 900)));
@@ -648,7 +668,10 @@ export default async function run() {
     console.log(`  DIAG groups=${JSON.stringify((state.groups || []).map((group) => [group.name, group.tournament_category_id, group.players.length]))}`);
     console.log(`  DIAG players=${JSON.stringify((state.players || []).map((player) => `${player.category}${player.gender}`))}`);
     console.log(`  DIAG ui=${JSON.stringify(ui)}`);
-    if (pageErrors.length) console.log(`  DIAG pageErrors=${JSON.stringify(pageErrors)}`);
+    if (pageErrors.length) {
+      console.log(`  DIAG pageErrors=${JSON.stringify(pageErrors)}`);
+      console.log(`  DIAG thrown=${JSON.stringify(await page.evaluate(() => window.__thrown || []).catch((error) => String(error)))}`);
+    }
     if (transportErrors.length) console.log(`  DIAG transport=${JSON.stringify(transportErrors)}`);
     console.log(`  DIAG error=${error?.message} cause=${error?.cause ? `${error.cause.code || ''} ${error.cause.message || ''}` : ''}`);
     const dnd = await page.evaluate(() => window.__dnd || []).catch(() => []);

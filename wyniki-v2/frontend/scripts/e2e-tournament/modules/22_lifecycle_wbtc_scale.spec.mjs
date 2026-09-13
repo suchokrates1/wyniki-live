@@ -460,6 +460,7 @@ export default async function run() {
       return { phase, position: Number(position), side: Number(side) };
     };
     const playedKo = [];
+    const dialogRetries = [];
     let koIndex = 0;
     for (const day of koDays) {
       const dayRows = koRows.filter((row) => row.day_date === day)
@@ -494,11 +495,23 @@ export default async function run() {
             await uiKnows();
           }
           const block = page.locator(`[data-schedule-entry][data-schedule-id="${entry.id}"]`);
-          await block.scrollIntoViewIfNeeded();
-          await block.click();
-          await page.locator('.office-inspector').getByRole('button', { name: 'Dodaj wynik' }).click();
           const dialog = modal();
-          await dialog.waitFor({ state: 'visible' });
+          for (let attempt = 1; ; attempt += 1) {
+            await block.scrollIntoViewIfNeeded();
+            const openId = await page.evaluate(() => Alpine.$data(document.body).planningOpenCardId);
+            if (String(openId) !== String(entry.id)) await block.click();
+            await page.locator('.office-inspector').getByRole('button', { name: 'Dodaj wynik' }).click();
+            await dialog.waitFor({ state: 'visible' });
+            const form = await page.evaluate(() => {
+              const m = Alpine.$data(document.body).officeNewMatch;
+              return { id: m.schedule_id, a: m.player1_name, b: m.player2_name };
+            });
+            if (String(form.id) === String(entry.id) && form.a === current.player1_name && form.b === current.player2_name) break;
+            dialogRetries.push(`${entry.phase}: dialog had ${form.id} ${form.a} v ${form.b}`);
+            if (attempt >= 3) throw new Error(`Result dialog for ${entry.phase} keeps showing ${JSON.stringify(form)}, expected ${entry.id} ${current.player1_name} v ${current.player2_name}`);
+            await page.evaluate(() => Alpine.$data(document.body).closeAddMatchModal());
+            await uiKnows();
+          }
           const numbers = dialog.locator('input[type="number"]');
           if (kind === 'walkover') {
             await dialog.locator('input.toggle-success').check();
@@ -569,6 +582,7 @@ export default async function run() {
     const kindsPlayed = playedKo.reduce((acc, { kind }) => ({ ...acc, [kind]: (acc[kind] || 0) + 1 }), {});
     log(`Knockout complete: ${finalKo.length} matches (${Object.entries(kindsPlayed).map(([kind, count]) => `${kind} ${count}`).join(', ')}); public bracket shows every winner; champions ${champions.join(', ')}`);
 
+    if (dialogRetries.length) log(`Result dialog reopened ${dialogRetries.length}×: ${dialogRetries.join('; ')}`);
     if (transportErrors.length) log(`Transport retries: ${transportErrors.length} (${[...new Set(transportErrors.map((entry) => entry.split(': ').pop()))].join('; ')})`);
     if (pageErrors.length) throw new Error(`Page errors: ${pageErrors.join(' | ')}`);
   } finally {

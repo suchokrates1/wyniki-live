@@ -299,6 +299,8 @@ export function createOfficeCoreView() {
     },
 
     applyDashboard(nextDashboard, { notify = false } = {}) {
+      // Any dashboard applied now (e.g. returned by a save) is newer than requests still in flight.
+      this.dashboardSeq = (this.dashboardSeq || 0) + 1;
       const nextMatches = nextDashboard?.matches || [];
       const previousKeys = new Set(this.seenMatchKeys);
       const newMatches = notify ? nextMatches.filter(match => !previousKeys.has(this.matchKey(match))) : [];
@@ -379,6 +381,9 @@ export function createOfficeCoreView() {
     async loadDashboard(showLoading = true) {
       if (!this.token) return;
       if (showLoading) this.loading = true;
+      // A slow, older response must not overwrite a newer dashboard (results just saved).
+      this.dashboardSeq = (this.dashboardSeq || 0) + 1;
+      const seq = this.dashboardSeq;
       try {
         const response = await fetch(`/api/office/${this.slot}/dashboard`, {
           headers: {
@@ -393,6 +398,7 @@ export function createOfficeCoreView() {
         if (!response.ok) {
           throw new Error(payload.error || this.ot('errors.refreshFailed'));
         }
+        if (seq !== this.dashboardSeq) return;
         this.applyDashboard(payload, { notify: !showLoading });
       } catch (error) {
         console.error('Failed to load office dashboard:', error);
