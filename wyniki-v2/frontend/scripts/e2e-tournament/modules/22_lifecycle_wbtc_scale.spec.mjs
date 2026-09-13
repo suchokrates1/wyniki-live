@@ -478,6 +478,21 @@ export default async function run() {
         const loser = shaped.winnerIsA ? current.player2_name : current.player1_name;
         if (!typedToday.has(kind) && ['tiebreak', 'walkover', 'retirement'].includes(kind)) {
           typedToday.add(kind);
+          // the office view learns about results entered elsewhere a moment later; reload if it lags
+          const uiKnows = () => page.waitForFunction(([id, a, b]) => {
+            const rows = Alpine.$data(document.body).dashboard?.progress?.knockout?.matches || [];
+            const row = rows.find((item) => Number(item.schedule_id) === id);
+            return row && row.player1_name === a && row.player2_name === b;
+          }, [entry.id, current.player1_name, current.player2_name], { timeout: 6000 });
+          try {
+            await uiKnows();
+          } catch {
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await page.waitForSelector('.office-rail', { state: 'visible' });
+            await openView('Terminarz');
+            await selectDay(day);
+            await uiKnows();
+          }
           const block = page.locator(`[data-schedule-entry][data-schedule-id="${entry.id}"]`);
           await block.scrollIntoViewIfNeeded();
           await block.click();

@@ -150,9 +150,24 @@ export function createOfficeMatchesView() {
       return [...phases].sort((left, right) => left.localeCompare(right));
     },
 
+    officeIsPendingCompetitorName(name) {
+      // "Zwycięzca: Ćwierćfinał 1", "Przegrany PF 2", "1. B2 Men — Grupa A": not a player yet
+      return /^(zwycięzca|przegrany|winner|loser)/i.test(String(name || '').trim())
+        || /^\d+\.\s/.test(String(name || '').trim());
+    },
+
+    officeLiveKnockoutSlot(entry) {
+      const rows = this.dashboard?.progress?.knockout?.matches || [];
+      return rows.find((row) => entry?.id && Number(row.schedule_id) === Number(entry.id)) || null;
+    },
+
     officeIsKnockoutScheduleEntry(entry) {
       if (!entry?.player1_name || !entry?.player2_name || entry?.match_id) return false;
-      if (String(entry.source_type || '').toLowerCase() === 'knockout') return true;
+      if (String(entry.source_type || '').toLowerCase() === 'knockout') {
+        const live = this.officeLiveKnockoutSlot(entry);
+        const names = live ? [live.player1_name, live.player2_name] : [entry.player1_name, entry.player2_name];
+        return !live?.winner_name && names.every((name) => name && !this.officeIsPendingCompetitorName(name));
+      }
       const phase = String(entry.phase || '').toLowerCase();
       if (this.officeNormalizeGroupPhase(entry.phase) === 'Grupowa — Rewanż') return false;
       if (phase.includes('grup')) return false;
@@ -194,8 +209,10 @@ export function createOfficeMatchesView() {
       this.officeNewMatch.lockedFromSlot = true;
       this.officeNewMatch.schedule_id = entry?.id || null;
       this.officeNewMatch.phase = entry?.phase || this.ot('phases.knockout');
-      this.officeNewMatch.player1_name = entry?.player1_name || '';
-      this.officeNewMatch.player2_name = entry?.player2_name || '';
+      // the schedule row can predate the result that decided these players; the draw is current
+      const live = this.officeLiveKnockoutSlot(entry);
+      this.officeNewMatch.player1_name = live?.player1_name || entry?.player1_name || '';
+      this.officeNewMatch.player2_name = live?.player2_name || entry?.player2_name || '';
       this.officeNewMatch.court_id = entry?.court_id || '';
       this.addMatchOpen = true;
     },
