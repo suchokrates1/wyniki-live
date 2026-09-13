@@ -1525,14 +1525,19 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            # Delete existing groups (cascade deletes players)
+            # A group keeps its id when its name stays, so planned slots and played matches
+            # stay linked; only groups that are gone are deleted.
+            cursor.execute("SELECT id, name FROM bracket_groups WHERE tournament_id = ?", (tournament_id,))
+            existing_ids = {str(row["name"]): int(row["id"]) for row in cursor.fetchall()}
             cursor.execute(
                 "DELETE FROM bracket_group_players WHERE group_id IN "
                 "(SELECT id FROM bracket_groups WHERE tournament_id = ?)",
                 (tournament_id,)
             )
-            cursor.execute("DELETE FROM bracket_groups WHERE tournament_id = ?", (tournament_id,))
-            cursor.execute("DELETE FROM tournament_schedule WHERE tournament_id = ? AND source_type IN ('group', 'group_rematch')", (tournament_id,))
+            wanted_names = {str(g.get("name") or "") for g in groups}
+            for name, group_id in existing_ids.items():
+                if name not in wanted_names:
+                    cursor.execute("DELETE FROM bracket_groups WHERE id = ?", (group_id,))
 
             # Build player_id -> full name lookup
             cursor.execute(
@@ -1550,18 +1555,27 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
             )
             team_map = {int(row["id"]): str(row["display_name"] or "") for row in cursor.fetchall()}
 
+            members_by_group: Dict[int, set] = {}
             for idx, g in enumerate(groups):
                 category_id = g.get("tournament_category_id")
                 play_format = normalize_play_format(g.get("play_format"))
-                cursor.execute(
-                    """
-                    INSERT INTO bracket_groups (
-                        tournament_id, name, order_num, tournament_category_id, play_format
-                    ) VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (tournament_id, g["name"], idx, category_id, play_format),
-                )
-                gid = cursor.lastrowid
+                gid = existing_ids.get(str(g["name"]))
+                if gid:
+                    cursor.execute(
+                        "UPDATE bracket_groups SET order_num = ?, tournament_category_id = ?, play_format = ? WHERE id = ?",
+                        (idx, category_id, play_format, gid),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO bracket_groups (
+                            tournament_id, name, order_num, tournament_category_id, play_format
+                        ) VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (tournament_id, g["name"], idx, category_id, play_format),
+                    )
+                    gid = cursor.lastrowid
+                members = members_by_group.setdefault(int(gid), set())
                 for competitor in _iter_group_competitors(g):
                     team_id = competitor.get("team_id")
                     player_id = competitor.get("player_id")
@@ -1576,6 +1590,7 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
                             """,
                             (gid, pname, int(team_id)),
                         )
+                        members.add(pname)
                         continue
                     if not player_id:
                         continue
@@ -1588,6 +1603,27 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
                             """,
                             (gid, player_id, pname),
                         )
+                        members.add(pname)
+
+            # Unplayed slots whose pair is no longer in that group go; everything else stays.
+            cursor.execute(
+                """
+                SELECT id, bracket_group_id, player1_name, player2_name, match_id, status
+                FROM tournament_schedule
+                WHERE tournament_id = ? AND source_type IN ('group', 'group_rematch')
+                """,
+                (tournament_id,),
+            )
+            for row in cursor.fetchall():
+                group_members = members_by_group.get(int(row["bracket_group_id"] or 0))
+                pair_still_there = bool(
+                    group_members
+                    and row["player1_name"] in group_members
+                    and row["player2_name"] in group_members
+                )
+                played = bool(row["match_id"]) or str(row["status"] or "") in {"completed", "in_progress", "live"}
+                if not pair_still_there and not played:
+                    cursor.execute("DELETE FROM tournament_schedule WHERE id = ?", (row["id"],))
             conn.commit()
             logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
         # A new draw means new fixtures: forget matches deleted from the previous one.

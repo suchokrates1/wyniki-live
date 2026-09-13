@@ -3438,3 +3438,62 @@ def test_new_tournament_does_not_inherit_planner_settings_of_a_deleted_one(full_
     config = database.get_autoscheduler_config(new_id)
     courts = [court["kort_id"] for court in database.fetch_courts_for_tournament(new_id)]
     assert config["b1_court_ids"] and set(config["b1_court_ids"]) <= set(courts)
+
+
+def test_saving_groups_keeps_planned_slots_and_played_matches_of_unchanged_pairs(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Regroup Cup", "2026-07-25", "2026-07-26", active=True,
+        office_password_hash=generate_password_hash("regroup"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    ids = {
+        name: database.insert_player(tournament_id, name, "B2", "PL", first_name="R", last_name=name, gender="M")
+        for name in ("RA1", "RA2", "RA3", "RB1", "RB2", "RB3")
+    }
+    def draw(group_a, group_b):
+        database.save_bracket_groups(tournament_id, [
+            {"name": "B2 Mężczyźni — Grupa A", "play_format": "round_robin", "players": [ids[n] for n in group_a]},
+            {"name": "B2 Mężczyźni — Grupa B", "play_format": "round_robin", "players": [ids[n] for n in group_b]},
+        ])
+
+    draw(["RA1", "RA2", "RA3"], ["RB1", "RB2", "RB3"])
+    client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "regroup")
+    planning = client.get("/api/office/1/planning", headers=headers).get_json()
+    group_a = next(group for group in planning["groups"] if group["name"].endswith("Grupa A"))
+    pair = lambda entry: frozenset((entry["player1_name"], entry["player2_name"]))
+    by_pair = {pair(entry): entry for entry in planning["schedule"] if entry.get("source_type") == "group"}
+    court = client.get("/api/office/1/autoschedule/config", headers=headers).get_json()["courts"][0]["kort_id"]
+
+    kept = by_pair[frozenset(("RA1", "RA2"))]
+    moved_away = by_pair[frozenset(("RA1", "RA3"))]
+    for entry, time in ((kept, "10:00"), (moved_away, "11:00")):
+        response = client.put(f"/api/office/1/schedule/{entry['id']}", headers=headers, json={
+            "day_date": "2026-07-25", "scheduled_time": time, "court_id": court,
+        })
+        assert response.status_code == 200, response.get_json()
+    played = by_pair[frozenset(("RA2", "RA3"))]
+    response = client.post("/api/office/1/group-matches", headers=headers, json={
+        "group_id": group_a["id"], "schedule_id": played["id"], "player1_name": played["player1_name"],
+        "player2_name": played["player2_name"], "phase": "Grupowa",
+        "sets": [{"player1_games": 4, "player2_games": 1}, {"player1_games": 4, "player2_games": 2}],
+    })
+    assert response.status_code == 201, response.get_json()
+
+    # RA3 and RB3 swap groups
+    draw(["RA1", "RA2", "RB3"], ["RB1", "RB2", "RA3"])
+    after = client.get("/api/office/1/planning", headers=headers).get_json()
+    assert next(group for group in after["groups"] if group["name"].endswith("Grupa A"))["id"] == group_a["id"]
+    rows = [entry for entry in after["schedule"] if entry.get("source_type") == "group"]
+    after_by_pair = {}
+    for entry in rows:
+        after_by_pair.setdefault(pair(entry), []).append(entry)
+    assert after_by_pair[frozenset(("RA1", "RA2"))][0]["id"] == kept["id"]
+    assert after_by_pair[frozenset(("RA1", "RA2"))][0]["scheduled_time"] == "10:00"
+    assert after_by_pair[frozenset(("RA1", "RA2"))][0]["court_id"] == court
+    assert frozenset(("RA1", "RA3")) not in after_by_pair
+    assert frozenset(("RA1", "RB3")) in after_by_pair and frozenset(("RB1", "RA3")) in after_by_pair
+    assert after_by_pair[frozenset(("RA2", "RA3"))][0]["match_id"]
+    assert len([entry for entry in rows if pair(entry) == frozenset(("RA1", "RA2"))]) == 1
