@@ -3389,3 +3389,22 @@ def test_four_groups_build_vilnius_draw_and_move_winners_and_losers(full_app_wit
     assert (semi["player1_name"], semi["player2_name"]) == ("WA1", "WC2")
     assert (place["player1_name"], place["player2_name"]) == ("WB2", "WD1")
     assert semi["ready"] and semi["schedule_id"]
+
+
+def test_new_tournament_does_not_inherit_planner_settings_of_a_deleted_one(full_app_with_temp_db):
+    from wyniki import database
+
+    old_id = database.insert_tournament("Old Cup", "2026-07-01", "2026-07-02", active=True)
+    database.create_tournament_courts(old_id, 11)
+    old_courts = [court["kort_id"] for court in database.fetch_courts_for_tournament(old_id)]
+    database.save_autoscheduler_config(old_id, {"b1_court_ids": old_courts[-3:], "end_time": "13:00"})
+    assert database.delete_tournament(old_id)
+    assert database.fetch_app_settings([f"autoscheduler:{old_id}"]) == {}
+
+    # a stored config that names courts the tournament does not have is ignored
+    new_id = database.insert_tournament("New Cup", "2026-07-03", "2026-07-04", active=True)
+    database.create_tournament_courts(new_id, 4)
+    database.upsert_app_settings({f"autoscheduler:{new_id}": json.dumps({"b1_court_ids": ["t999-9", "t999-10"]})})
+    config = database.get_autoscheduler_config(new_id)
+    courts = [court["kort_id"] for court in database.fetch_courts_for_tournament(new_id)]
+    assert config["b1_court_ids"] and set(config["b1_court_ids"]) <= set(courts)

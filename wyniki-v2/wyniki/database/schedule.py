@@ -967,7 +967,15 @@ def get_autoscheduler_config(tournament_id: int) -> Dict[str, Any]:
     if not config.get("b1_court_ids") and config.get("b1_court_id"):
         config["b1_court_ids"] = [str(config["b1_court_id"])]
     # Always the tournament's current courts, never a list saved with an older config.
-    config["court_ids"] = auto_scheduler.build_default_config(courts)["court_ids"]
+    defaults = auto_scheduler.build_default_config(courts)
+    config["court_ids"] = defaults["court_ids"]
+    known = set(defaults["court_ids"])
+    b1_ids = [court_id for court_id in config.get("b1_court_ids") or [] if str(court_id) in known]
+    config["b1_court_ids"] = b1_ids or defaults.get("b1_court_ids") or []
+    config["b1_court_id"] = config["b1_court_ids"][0] if config["b1_court_ids"] else defaults.get("b1_court_id")
+    category_courts = config.get("category_courts") or {}
+    if any(str(court_id) not in known for court_id in category_courts.values() if court_id):
+        config["category_courts"] = defaults.get("category_courts") or {}
     return config
 
 def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dict[str, Any]:
