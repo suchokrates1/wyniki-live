@@ -1,5 +1,5 @@
 {
-  "source": "Structure of the IBTA World Blind Tennis Championships 2026 (Vilnius): categories, group sizes, courts and days. No names or results. The B2 Women consolation pool (players already in other groups) is left out.",
+  "source": "Structure of the IBTA World Blind Tennis Championships 2026 (Vilnius): categories, group sizes, courts and days. No names or results. Doubles are straight knockouts of pairs made from the singles players, with the Vilnius pair counts. The B2 Women consolation pool (players already in other groups) is left out.",
   "days": 5,
   "courts": 11,
   "categories": [
@@ -205,6 +205,58 @@
       "name": "B4 Women — Grupa A",
       "category": "B4 Women",
       "size": 5
+    }
+  ],
+  "doubles": [
+    {
+      "label": "B1 Men Doubles",
+      "bands": [
+        "B1"
+      ],
+      "sex": "Men",
+      "pairs": 7
+    },
+    {
+      "label": "B1 Women Doubles",
+      "bands": [
+        "B1"
+      ],
+      "sex": "Women",
+      "pairs": 6
+    },
+    {
+      "label": "B2 Men Doubles",
+      "bands": [
+        "B2"
+      ],
+      "sex": "Men",
+      "pairs": 8
+    },
+    {
+      "label": "B2 Women Doubles",
+      "bands": [
+        "B2"
+      ],
+      "sex": "Women",
+      "pairs": 5
+    },
+    {
+      "label": "B3/B4 Men Doubles",
+      "bands": [
+        "B3",
+        "B4"
+      ],
+      "sex": "Men",
+      "pairs": 11
+    },
+    {
+      "label": "B3/B4 Women Doubles",
+      "bands": [
+        "B3",
+        "B4"
+      ],
+      "sex": "Women",
+      "pairs": 9
     }
   ]
 }

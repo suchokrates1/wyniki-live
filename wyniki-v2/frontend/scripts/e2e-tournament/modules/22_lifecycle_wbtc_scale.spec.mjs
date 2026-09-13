@@ -17,7 +17,7 @@
 import { readFileSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 import {
-  adminLogin, createTournament, addPlayers, confirmCategories, saveGroups, cleanup,
+  adminLogin, createTournament, addPlayers, confirmCategories, saveGroups, cleanup, createTeam,
   resolveOfficeSlot, officeLogin, OFFICE_PASSWORD, fetchPublicSchedule, fetchPublicBracket, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
@@ -155,9 +155,12 @@ export default async function run() {
   log(`Tournament ${tournamentId}: ${STRUCTURE.courts} courts, ${days[0]}…${days[days.length - 1]}`);
 
   // ——— seed: categories, players, groups ———
-  const confirmed = await confirmCategories(adminToken, tournamentId, STRUCTURE.categories.map((category) => ({
-    preset_key: category.preset_key, label: category.label, hint_bands: category.hint_bands, is_doubles: false,
-  })));
+  const confirmed = await confirmCategories(adminToken, tournamentId, [
+    ...STRUCTURE.categories.map((category) => ({
+      preset_key: category.preset_key, label: category.label, hint_bands: category.hint_bands, is_doubles: false,
+    })),
+    ...STRUCTURE.doubles.map((category) => ({ label: category.label, hint_bands: category.bands, is_doubles: true })),
+  ]);
   const categoryId = Object.fromEntries((confirmed.categories || []).map((category) => [category.label, category.id]));
   const byCategory = {};
   for (const group of STRUCTURE.groups) (byCategory[group.category] ||= []).push(group);
@@ -175,15 +178,36 @@ export default async function run() {
   }
   const created = await addPlayers(adminToken, tournamentId, seedPlayers);
   const playerId = Object.fromEntries(seedPlayers.map((player, i) => [player.name, created.players[i].id]));
+  // Doubles pairs are made of the singles players (they play both), straight knockout as in Vilnius.
+  const pairsByDoubles = {};
+  for (const doubles of STRUCTURE.doubles) {
+    const pool = seedPlayers.filter((player) => doubles.bands.includes(player.category) && player.gender === (doubles.sex === 'Men' ? 'M' : 'K'));
+    if (pool.length < doubles.pairs * 2) throw new Error(`${doubles.label}: ${pool.length} players for ${doubles.pairs} pairs`);
+    pairsByDoubles[doubles.label] = [];
+    for (let i = 0; i < doubles.pairs; i += 1) {
+      // partners from different groups: take from both ends of the pool
+      const team = await createTeam(adminToken, tournamentId, categoryId[doubles.label], playerId[pool[i].name], playerId[pool[pool.length - 1 - i].name]);
+      pairsByDoubles[doubles.label].push(team);
+    }
+  }
   // Every category goes on to a knockout phase: one group plays final and 3rd place,
   // three or more groups play the Vilnius draw (main draw, places, consolation).
-  await saveGroups(adminToken, tournamentId, STRUCTURE.groups.map((group) => ({
-    name: group.name,
-    tournament_category_id: categoryId[group.category],
-    play_format: 'groups_knockout',
-    players: playersByGroup[group.name].map((name) => playerId[name]),
-  })));
-  log(`Seeded ${seedPlayers.length} players in ${STRUCTURE.groups.length} groups, all groups followed by a knockout phase`);
+  await saveGroups(adminToken, tournamentId, [
+    ...STRUCTURE.groups.map((group) => ({
+      name: group.name,
+      tournament_category_id: categoryId[group.category],
+      play_format: 'groups_knockout',
+      players: playersByGroup[group.name].map((name) => playerId[name]),
+    })),
+    ...STRUCTURE.doubles.map((doubles) => ({
+      name: doubles.label,
+      tournament_category_id: categoryId[doubles.label],
+      play_format: 'knockout',
+      teams: pairsByDoubles[doubles.label].map((team) => team.id),
+    })),
+  ]);
+  const pairCount = Object.values(pairsByDoubles).reduce((sum, teams) => sum + teams.length, 0);
+  log(`Seeded ${seedPlayers.length} players in ${STRUCTURE.groups.length} groups (all followed by a knockout phase) and ${pairCount} doubles pairs of the same players in ${STRUCTURE.doubles.length} straight knockouts`);
 
   const expectedGroupMatches = STRUCTURE.groups.reduce((sum, group) => sum + (group.size * (group.size - 1)) / 2, 0);
   const slot = await resolveOfficeSlot(tournament.name);
@@ -372,14 +396,14 @@ export default async function run() {
 
     // ——— knockout: Vilnius format for every category ———
     const realNames = new Set(seedPlayers.map((player) => player.name));
-    const isReal = (name) => realNames.has(name);
+    const isReal = (name) => realNames.has(name) || (String(name || '').includes(' / ') && String(name).split(' / ').every((part) => realNames.has(part)));
     const koProgress = async () => ((await api('/dashboard')).progress.knockout.matches || []);
     const firstRound = await waitUntil('knockout draws seeded from the final tables', async () => {
       const rows = await koProgress();
       const categoriesWithDraw = new Set(rows.map((row) => String(row.phase).split(' — ')[0]));
       const seeded = rows.filter((row) => isReal(row.player1_name) || isReal(row.player2_name));
       const noStandingPlaceholders = rows.every((row) => ![row.player1_name, row.player2_name].some((name) => /^\d+\.\s/.test(String(name))));
-      return categoriesWithDraw.size === STRUCTURE.categories.length && noStandingPlaceholders ? { rows, seeded } : null;
+      return categoriesWithDraw.size === STRUCTURE.categories.length + STRUCTURE.doubles.length && noStandingPlaceholders ? { rows, seeded } : null;
     }, { timeout: 60000 });
     const koSlots = firstRound.rows;
     const groupOf = Object.fromEntries(Object.entries(playersByGroup).flatMap(([group, names]) => names.map((name) => [name, group])));
@@ -420,7 +444,15 @@ export default async function run() {
       const opener = fraction || (main.some((row) => /— Ćwierćfinał$/.test(row.phase)) ? 'QF' : (main.some((row) => /— Półfinał$/.test(row.phase)) ? 'SF' : 'F'));
       return `${label} ${rows.length} (${opener}${rows.some((row) => /Pocieszenie/.test(row.phase)) ? ' + pocieszenie' : ''})`;
     });
-    log(`Knockout draws: ${koSlots.length} matches — ${draws.join(', ')}; top two in main draws, the rest in consolation, no group mates in an opener; B2 Men QF A1-B2 D1-C2 B1-A2 C1-D2`);
+    const doublesDraws = STRUCTURE.doubles.map((doubles) => {
+      const rows = koSlots.filter((row) => String(row.phase).startsWith(`${doubles.label} — `));
+      const expected = doubles.pairs - 1 + (doubles.pairs >= 4 ? 1 : 0);
+      if (rows.length !== expected) throw new Error(`${doubles.label}: ${rows.length} matches for ${doubles.pairs} pairs, expected ${expected}`);
+      const seeded = new Set(rows.flatMap((row) => [row.player1_name, row.player2_name]).filter((name) => / \/ /.test(String(name))));
+      if (seeded.size !== doubles.pairs) throw new Error(`${doubles.label}: ${seeded.size} pairs in the draw, expected ${doubles.pairs}`);
+      return `${doubles.label} ${rows.length}`;
+    });
+    log(`Knockout draws: ${koSlots.length} matches — ${draws.join(', ')}; doubles ${doublesDraws.join(', ')}; top two in main draws, the rest in consolation, no group mates in an opener; B2 Men QF A1-B2 D1-C2 B1-A2 C1-D2`);
 
     // ——— plan the knockout phase across the remaining days ———
     await page.reload({ waitUntil: 'domcontentloaded' });
@@ -449,8 +481,23 @@ export default async function run() {
       const start = `${row.day_date} ${String(toMinutes(row.scheduled_time)).padStart(4, '0')}`;
       if (lastGroupEnd[root] && start < lastGroupEnd[root]) throw new Error(`${row.phase} starts ${row.day_date} ${row.scheduled_time}, before the ${root} group phase ends`);
     }
+    // nobody is on two courts at once: singles, doubles (both partners) and knockout together
+    const people = (entry) => [entry.player1_name, entry.player2_name]
+      .flatMap((name) => String(name || '').split(' / '))
+      .filter((name) => realNames.has(name));
+    const busy = new Map();
+    for (const entry of [...groupRows, ...koRows]) {
+      const start = toMinutes(entry.scheduled_time);
+      const end = start + slotMinutes(entry);
+      for (const person of people(entry)) {
+        const key = `${entry.day_date}|${person}`;
+        const clash = (busy.get(key) || []).find(([from, to]) => start < to && end > from);
+        if (clash) throw new Error(`${person} is on two courts on ${entry.day_date} at ${entry.scheduled_time} (${entry.phase})`);
+        busy.set(key, [...(busy.get(key) || []), [start, end]]);
+      }
+    }
     const koDays = [...new Set(koRows.map((row) => row.day_date))].sort();
-    log(`"Rozstaw fazę pucharową": ${koRows.length} matches on ${koDays.map((day) => `${ddmm(day)}: ${koRows.filter((row) => row.day_date === day).length}`).join(', ')}, all after the group phase and by 18:00`);
+    log(`"Rozstaw fazę pucharową": ${koRows.length} matches on ${koDays.map((day) => `${ddmm(day)}: ${koRows.filter((row) => row.day_date === day).length}`).join(', ')}, all after the group phase and by 18:00; no player (singles or doubles partner) on two courts at once`);
 
     // ——— play the knockout phase in schedule order ———
     const koKinds = ['tiebreak', 'straight', 'supertb', 'straight', 'walkover', 'straight', 'retirement', 'straight'];
@@ -575,8 +622,8 @@ export default async function run() {
       const shown = (publicKnockout[row.phase] || []).find((item) => item.position === row.position);
       if (shown?.winner !== row.winner_name) throw new Error(`Public bracket ${row.phase} #${row.position}: winner ${shown?.winner}, expected ${row.winner_name}`);
     }
-    const champions = Object.keys(byCategory).map((label) => {
-      const final = finalKo.find((row) => row.phase === `${label} — Finał` || row.phase === `${byCategory[label][0].name} — Finał`);
+    const champions = [...Object.keys(byCategory), ...STRUCTURE.doubles.map((doubles) => doubles.label)].map((label) => {
+      const final = finalKo.find((row) => row.phase === `${label} — Finał` || (byCategory[label] && row.phase === `${byCategory[label][0].name} — Finał`));
       return `${label}: ${final?.winner_name?.split(' ')[0]}`;
     });
     const kindsPlayed = playedKo.reduce((acc, { kind }) => ({ ...acc, [kind]: (acc[kind] || 0) + 1 }), {});
