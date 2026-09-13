@@ -573,13 +573,15 @@ export default async function run() {
             if (kind === 'retirement') {
               await dialog.locator('input.toggle-warning').check();
               const retiredSelect = dialog.locator('label.form-control:visible').filter({ hasText: 'Kto skreczował' }).locator('select');
+              await retiredSelect.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
               const options = await retiredSelect.locator('option').evaluateAll((items) => items.map((item) => item.value));
               if (!options.includes(loser)) {
                 const form = await page.evaluate(() => {
                   const m = Alpine.$data(document.body).officeNewMatch;
                   return { id: m.schedule_id, mode: m.mode, a: m.player1_name, b: m.player2_name, retirement: m.retirement };
                 });
-                throw new Error(`Retirement options ${JSON.stringify(options)} miss ${loser}; form ${JSON.stringify(form)}; entry ${entry.id} ${entry.phase}`);
+                const html = await dialog.locator('select[x-model="officeNewMatch.retired_player_name"]').evaluateAll((items) => items.map((item) => item.outerHTML.slice(0, 600)));
+                throw new Error(`Retirement options ${JSON.stringify(options)} miss ${loser}; form ${JSON.stringify(form)}; entry ${entry.id} ${entry.phase}; selects ${JSON.stringify(html)}`);
               }
               await retiredSelect.selectOption(loser);
             }
