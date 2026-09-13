@@ -134,14 +134,16 @@ export default async function run() {
   const audit = async (page, lang, where) => {
     await page.waitForTimeout(700);
     let strings;
-    try {
-      strings = await pageStrings(page);
-    } catch (error) {
-      if (!String(error?.message || '').includes('Execution context was destroyed')) throw error;
-      // a navigation was still settling: read the page once it has loaded
-      await page.waitForLoadState('load');
-      await page.waitForTimeout(700);
-      strings = await pageStrings(page);
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        strings = await pageStrings(page);
+        break;
+      } catch (error) {
+        if (attempt >= 3 || !String(error?.message || '').includes('Execution context was destroyed')) throw error;
+        // a navigation was still settling: read the page once it has loaded
+        await page.waitForLoadState('load');
+        await page.waitForTimeout(700);
+      }
     }
     for (const raw of strings) {
       let text = raw;
@@ -171,7 +173,8 @@ export default async function run() {
         ['players', '#players'],
       ];
       for (const [where, hash] of publicRoutes) {
-        await page.goto(`${BASE_URL}/?lang=${lang}${hash}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        // a query that differs per route makes every step a real page load, not a hash change still settling
+        await page.goto(`${BASE_URL}/?lang=${lang}&audit=${encodeURIComponent(where)}${hash}`, { waitUntil: 'load', timeout: 20000 });
         await page.waitForFunction(() => document.body.innerText.length > 200, undefined, { timeout: 15000 }).catch(() => {});
         await audit(page, lang, `public ${where}`);
       }
