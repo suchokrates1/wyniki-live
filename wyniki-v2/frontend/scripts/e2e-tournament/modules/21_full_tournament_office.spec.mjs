@@ -570,7 +570,14 @@ export default async function run() {
     const editedBanner = `${bannerText} — kort 2 opóźniony o 20 minut`;
     await page.locator('#office-quick-info-message').fill(editedBanner);
     await page.getByRole('button', { name: 'Opublikuj', exact: true }).click();
-    await waitUntil('banner edited', async () => (await publicInfo()).message === editedBanner);
+    await waitUntil('banner edited', async () => (await publicInfo()).message === editedBanner).catch(async (error) => {
+      const ui = await page.evaluate(() => {
+        const data = Alpine.$data(document.body);
+        return { message: data.quickInfoMessage, dirty: data.quickInfoDirty, saving: data.quickInfoSaving };
+      }).catch((e) => String(e));
+      const toasts = await page.locator('.toast .alert').allInnerTexts().catch(() => []);
+      throw new Error(`${error.message}; public ${JSON.stringify(await publicInfo())}; UI ${JSON.stringify(ui)}; toasts ${toasts.join(' | ')}`);
+    });
     await page.getByRole('button', { name: 'Ukryj baner' }).click();
     await waitUntil('banner hidden', async () => !(await publicInfo()).message);
     log('Viewer banner published, edited and hidden (checked on the public API)');

@@ -38,6 +38,8 @@ export function createOfficeQuickInfoView() {
           return;
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.quickInfoFailed'));
+        // a dashboard requested before this save would bring back the old banner text
+        this.dashboardSeq = (this.dashboardSeq || 0) + 1;
         if (payload.quick_info) this.applyQuickInfo(payload.quick_info);
         this.quickInfoDirty = false;
         this.flushPendingOfficeRefresh();

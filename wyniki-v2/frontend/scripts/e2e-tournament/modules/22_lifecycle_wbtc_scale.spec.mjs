@@ -266,7 +266,7 @@ export default async function run() {
     // ——— B1 on the last three courts, day 09:00–18:00 ———
     const config = await api('/autoschedule/config');
     const courtIds = config.courts.map((court) => String(court.kort_id));
-    const b1Target = new Set(courtIds.slice(-3));
+    const b1Target = new Set(courtIds.slice(-4)); // Vilnius played B1 on four courts
     const headers = page.locator('.office-timetable__court');
     for (let index = 0; index < courtIds.length; index += 1) {
       const pill = headers.nth(index).locator('button', { hasText: 'B1' });
