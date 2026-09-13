@@ -404,7 +404,9 @@ export default async function run() {
     if (b2Quarters.join(' ') !== 'A1-B2 D1-C2 B1-A2 C1-D2') throw new Error(`B2 Men quarterfinals ${b2Quarters.join(' ')}, expected A1-B2 D1-C2 B1-A2 C1-D2`);
     const draws = Object.keys(byCategory).map((label) => {
       const rows = koSlots.filter((row) => String(row.phase).startsWith(`${label} — `));
-      const opener = rows.find((row) => /1\/\d+ finału/.test(row.phase)) ? '1/8' : (rows.find((row) => /— Ćwierćfinał$/.test(row.phase)) ? 'QF' : (rows.find((row) => /— Półfinał$/.test(row.phase)) ? 'SF' : 'F'));
+      const main = rows.filter((row) => !/Pocieszenie/.test(row.phase));
+      const fraction = main.map((row) => row.phase.match(/— (1\/\d+) finału$/)?.[1]).find(Boolean);
+      const opener = fraction || (main.some((row) => /— Ćwierćfinał$/.test(row.phase)) ? 'QF' : (main.some((row) => /— Półfinał$/.test(row.phase)) ? 'SF' : 'F'));
       return `${label} ${rows.length} (${opener}${rows.some((row) => /Pocieszenie/.test(row.phase)) ? ' + pocieszenie' : ''})`;
     });
     log(`Knockout draws: ${koSlots.length} matches — ${draws.join(', ')}; top two in main draws, the rest in consolation, no group mates in an opener; B2 Men QF A1-B2 D1-C2 B1-A2 C1-D2`);
