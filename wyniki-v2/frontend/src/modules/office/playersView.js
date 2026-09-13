@@ -95,13 +95,14 @@ export function createOfficePlayersView() {
         });
         if (!allAssigned) return false;
       }
-      const coveredIds = new Set();
-      for (const team of teams) {
-        if (!this.planningTeamAssignments[team.id]) continue;
-        if (team.player1_id) coveredIds.add(Number(team.player1_id));
-        if (team.player2_id) coveredIds.add(Number(team.player2_id));
+      // Doubles players are the singles players too: playing in a pair does not excuse a
+      // player from the singles category they belong to.
+      const singlesCategories = categories.filter(item => !item.is_doubles);
+      const singlesIds = new Set();
+      for (const cat of singlesCategories) {
+        for (const player of this.planningPlayersMatchingCategory(cat)) singlesIds.add(Number(player.id));
       }
-      const singlesPlayers = (this.planningPlayers || []).filter(player => !coveredIds.has(Number(player.id)));
+      const singlesPlayers = (this.planningPlayers || []).filter(player => singlesIds.has(Number(player.id)));
       if (singlesPlayers.length) {
         return singlesPlayers.every(player => this.planningGroupAssignments[player.id]);
       }

@@ -152,7 +152,7 @@ export function createOfficeMatchesView() {
 
     officeIsPendingCompetitorName(name) {
       // "Zwycięzca: Ćwierćfinał 1", "Przegrany PF 2", "1. B2 Men — Grupa A": not a player yet
-      return /^(zwycięzca|przegrany|winner|loser)/i.test(String(name || '').trim())
+      return /^(zwycięzca|przegrany|winner|loser)\b/i.test(String(name || '').trim())
         || /^\d+\.\s/.test(String(name || '').trim());
     },
 

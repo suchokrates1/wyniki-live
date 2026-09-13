@@ -326,3 +326,20 @@ def test_phase_rank_orders_vilnius_draw_rounds():
     assert ranks == sorted(ranks) and len(set(ranks)) == len(ranks)
     assert sched._phase_rank("B1 Men — o miejsca 9–16") == sched._phase_rank("B1 Men — Ćwierćfinał")
     assert sched._phase_rank("B1 Men — o miejsca 5–8") == sched._phase_rank("B1 Men — Półfinał")
+
+
+def test_a_pair_blocks_both_partners_and_pending_names_never_clash():
+    config = sched.build_default_config(_courts())
+    config["start_time"] = "09:00"
+    config["end_time"] = "18:00"
+    matches = [
+        {"id": 1, "category_name": "B2 Men", "phase": "Grupowa", "player1_name": "Jan Kos", "player2_name": "Ola Wit", "sort_order": 1},
+        {"id": 2, "category_name": "B2 Men Doubles", "phase": "B2 Men Doubles — Ćwierćfinał", "player1_name": "Jan Kos / Piotr Lis", "player2_name": "Ada Nowak / Ewa Sosna", "sort_order": 2},
+        {"id": 3, "category_name": "B3 Men", "phase": "B3 Men — Finał", "player1_name": "Zwycięzca: Półfinał 1", "player2_name": "Zwycięzca: Półfinał 2", "sort_order": 3},
+        {"id": 4, "category_name": "B2 Women", "phase": "B2 Women — Finał", "player1_name": "Zwycięzca: Półfinał 1", "player2_name": "Zwycięzca: Półfinał 2", "sort_order": 4},
+    ]
+    assert sched._players(matches[1]) == {"jan kos", "piotr lis", "ada nowak", "ewa sosna"}
+    assert sched._players(matches[2]) == set()
+    placements = {p["match"]["id"]: p for p in sched.place_matches(matches, config, "2026-08-25")}
+    assert placements[1]["scheduled_time"] != placements[2]["scheduled_time"]
+    assert placements[3]["scheduled_time"] == placements[4]["scheduled_time"] == "09:00"

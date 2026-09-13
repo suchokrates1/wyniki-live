@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from .teams import split_team_display_name
+
 DEFAULT_SLOT_MINUTES = 60
 B1_SLOT_MINUTES = 75
 DEFAULT_START_TIME = "09:30"
@@ -156,11 +158,21 @@ def _phase_rank(phase: Optional[str]) -> int:
     return 9
 
 
+_PENDING_NAME = re.compile(r"^(zwycięzca|przegrany|winner|loser)\b|^\d+\.\s", re.IGNORECASE)
+
+
 def _players(match: Dict[str, Any]) -> Set[str]:
-    return {
-        str(match.get("player1_name") or "").strip().lower(),
-        str(match.get("player2_name") or "").strip().lower(),
-    } - {""}
+    """People on court: a pair counts as both partners (they also play singles); names of
+    players not known yet ("Zwycięzca: Półfinał 1") are not people and never clash."""
+    people: Set[str] = set()
+    for field in ("player1_name", "player2_name"):
+        name = str(match.get(field) or "").strip()
+        if not name or _PENDING_NAME.search(name):
+            continue
+        partners = split_team_display_name(name)
+        for person in (partners or (name,)):
+            people.add(person.strip().lower())
+    return people
 
 
 def order_with_rest(matches: List[Dict[str, Any]], rest_slots: int = 1) -> List[Dict[str, Any]]:

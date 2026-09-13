@@ -125,11 +125,18 @@ def _round_name(place_from: int, size: int) -> str:
     return f"o miejsca {place_from}–{place_from + size - 1}"
 
 
-def build_elimination(prefix: str, lines: Sequence[Source], *, label: str = "") -> List[Dict[str, Any]]:
-    """Single elimination with every place played out, byes collapsed.
+def build_elimination(
+    prefix: str,
+    lines: Sequence[Source],
+    *,
+    label: str = "",
+    all_places: bool = True,
+) -> List[Dict[str, Any]]:
+    """Single elimination with byes collapsed.
 
     ``prefix`` is the category ("B2 Men"), ``label`` an optional draw name
-    ("Pocieszenie"). Returns bracket_knockout slot dicts with feed targets.
+    ("Pocieszenie"). With ``all_places`` every place is played out; without it only the
+    title and the 3rd place are. Returns bracket_knockout slot dicts with feed targets.
     """
     nodes: List[Dict[str, Any]] = []
 
@@ -150,7 +157,8 @@ def build_elimination(prefix: str, lines: Sequence[Source], *, label: str = "") 
             winners.append(("win", key))
             losers.append(("lose", key))
         bracket(winners, place_from)
-        bracket(losers, place_from + size // 2)
+        if all_places or (place_from == 1 and size == 4):
+            bracket(losers, place_from + size // 2)
 
     bracket(list(lines), 1)
 
@@ -247,3 +255,18 @@ def build_group_draws(
         sources: List[Source] = [("seed", entrant[1]) if entrant else DEAD for entrant in lines]
         slots.extend(build_elimination(prefix, sources, label=label))
     return slots
+
+
+def build_direct_draw(prefix: str, names: Sequence[str]) -> List[Dict[str, Any]]:
+    """Straight knockout for a list in seeding order (doubles in Vilnius): byes to the top
+    seeds, a final and a 3rd-place match."""
+    entrants = [str(name) for name in names if str(name or "").strip()]
+    if len(entrants) < 2:
+        return []
+    size = _next_power_of_two(len(entrants))
+    order = seed_lines(size)
+    sources: List[Source] = [
+        ("seed", entrants[seed - 1]) if seed <= len(entrants) else DEAD
+        for seed in order
+    ]
+    return build_elimination(prefix, sources, all_places=False)

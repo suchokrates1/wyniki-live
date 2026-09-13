@@ -11,7 +11,7 @@ from werkzeug.security import generate_password_hash
 from ..config import settings, logger
 
 from .connection import db_conn
-from ..services.draw_builder import build_group_draws
+from ..services.draw_builder import build_direct_draw, build_group_draws
 from ..services.teams import (
     DEFAULT_PLAY_FORMAT,
     PLAY_FORMAT_GROUPS_KNOCKOUT,
@@ -489,7 +489,10 @@ def _slots_for_knockout_unit(
         return _build_provisional_knockout_slots_for_category(label, groups)
 
     if unit_type == "direct_pool":
-        return _build_direct_knockout_slots(label, _group_competitor_names(groups[0] if groups else {}))
+        names = _group_competitor_names(groups[0] if groups else {})
+        if len(names) > 8:
+            return [_encode_feeds(slot) for slot in build_direct_draw(label, names)]
+        return _build_direct_knockout_slots(label, names)
 
     if unit_type == "group_draw":
         # Vilnius 2026 format: top two of each group in the main draw, the rest in consolation.
