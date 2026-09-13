@@ -49,7 +49,7 @@ export default async function run() {
     await chrome.expectStats();
     console.log('  Refresh and notification controls visible');
 
-    await chrome.openTab('Postęp grup');
+    await chrome.openTab('Faza grupowa');
     await chrome.openTab('Drabinka');
     await chrome.openTab('Terminarz');
     await chrome.openTab('Grupy startowe');

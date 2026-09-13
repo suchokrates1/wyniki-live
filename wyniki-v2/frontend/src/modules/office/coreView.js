@@ -122,6 +122,7 @@ export function createOfficeCoreView() {
     officeKnockoutSwapFrom: null,
     planningGroupCountDivision: null,
     planningInspectorDirtyId: null,
+    planningLoadedOnce: false,
 
     planningRematchOpen: false,
 
@@ -297,9 +298,8 @@ export function createOfficeCoreView() {
       this.token = window.sessionStorage.getItem(this.officeTokenKey()) || '';
       this.hydrateNotificationPreferences();
       if (this.token) {
-        this.loadDashboard();
         this.connectOfficeSSE();
-        this.openOfficeView(this.activeTab);
+        this.openOfficePathStart();
       }
     },
 
@@ -357,6 +357,7 @@ export function createOfficeCoreView() {
 
     logout(message = '') {
       this.stopOfficeSSE();
+      this.planningLoadedOnce = false;
       this.setToken('');
       this.dashboard = null;
       this.seenMatchKeys = [];
@@ -449,7 +450,7 @@ export function createOfficeCoreView() {
         this.authPassword = '';
         this.authError = '';
         this.connectOfficeSSE();
-        this.openOfficeView(this.activeTab);
+        this.openOfficePathStart();
         this.showToast(this.ot('toast.unlocked'), 'success');
       } catch (error) {
         console.error('Office auth failed:', error);

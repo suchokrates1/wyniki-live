@@ -125,7 +125,24 @@
       </div>
 
       <div class="office-rail__items">
-        <template x-for="item in officeViewItems()" :key="'office_view_'+item.id">
+        <div class="office-rail__section office-rail__label" x-text="ot('path.sectionSteps')"></div>
+        <template x-for="step in officePathSteps()" :key="'office_step_'+step.view">
+          <button type="button"
+                  class="office-tab office-rail__item office-step"
+                  :class="['is-' + step.state, activeTab === step.view ? 'is-active' : '']"
+                  :aria-current="activeTab === step.view ? 'page' : null"
+                  :data-step-state="step.state"
+                  @click="openOfficeView(step.view); if ($event.detail > 0) officeRailResting = true">
+            <span class="office-rail__icon office-step__num" aria-hidden="true" x-text="step.state === 'done' ? '✓' : step.number"></span>
+            <span class="office-rail__label office-step__text">
+              <span class="office-step__title" x-text="step.label"></span>
+              <span class="sr-only" x-text="officePathStateLabel(step)"></span>
+              <span class="office-step__meta" x-show="step.meta" x-text="step.meta"></span>
+            </span>
+          </button>
+        </template>
+        <div class="office-rail__section office-rail__label" x-text="ot('path.sectionTools')"></div>
+        <template x-for="item in officeViewItems().filter((entry) => entry.id === 'history' || entry.id === 'quickinfo')" :key="'office_view_'+item.id">
           <button type="button"
                   class="office-tab office-rail__item"
                   :class="{'is-active': activeTab === item.id}"
@@ -222,6 +239,25 @@
           <button type="button" class="office-btn office-btn--primary" @click="openAddMatchModal()" x-text="ot('hero.addResult')"></button>
         </div>
       </header>
+
+      <template x-if="officePathVisible()">
+        <div class="office-next" :class="{'is-finished': officePathNext()?.finished}" role="status" data-office-next>
+          <span class="office-next__tag" x-text="officePathNext()?.finished ? ot('path.tagDone') : ot('path.tagNext')"></span>
+          <div class="office-next__text">
+            <span x-text="officePathNext()?.text"></span>
+            <div class="office-next__chips" x-show="(officePathNext()?.chips || []).length">
+              <template x-for="chip in (officePathNext()?.chips || [])" :key="'office_next_chip_'+chip">
+                <span class="office-next__chip" x-text="chip"></span>
+              </template>
+            </div>
+          </div>
+          <button type="button" class="office-btn office-btn--primary office-next__cta"
+                  x-show="officePathNext()?.view && officePathNext()?.view !== activeTab"
+                  @click="openOfficeView(officePathNext().view)"
+                  x-text="officePathNext()?.cta"></button>
+          <button type="button" class="office-next__dismiss" @click="dismissOfficePath()" :aria-label="ot('path.dismiss')" :title="ot('path.dismiss')">✕</button>
+        </div>
+      </template>
 
       <div class="office-views">
 

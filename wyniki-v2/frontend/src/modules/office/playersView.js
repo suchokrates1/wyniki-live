@@ -39,6 +39,7 @@ export function createOfficePlayersView() {
           this.pendingRemoteRefresh = true;
           return;
         }
+        this.planningLoadedOnce = true;
         this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
         this.tournamentCategories = Array.isArray(payload.tournament_categories) ? payload.tournament_categories : [];
         this.planningTeams = Array.isArray(payload.teams) ? payload.teams : [];

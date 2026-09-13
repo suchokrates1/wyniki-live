@@ -21,7 +21,7 @@ export class OfficeChromePage {
   }
 
   async expectTabs() {
-    for (const name of ['Terminarz', 'Grupy startowe', 'Postęp grup', 'Drabinka', 'Ostatnie mecze', 'Komunikat dla widzów']) {
+    for (const name of ['Grupy startowe', 'Terminarz', 'Faza grupowa', 'Drabinka', 'Ostatnie mecze', 'Komunikat dla widzów']) {
       const tab = this.page.locator('.office-tab').filter({ hasText: name });
       if (!(await tab.count())) {
         throw new Error(`Missing office tab: ${name}`);

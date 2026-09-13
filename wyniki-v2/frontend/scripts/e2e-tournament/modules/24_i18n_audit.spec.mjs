@@ -138,7 +138,9 @@ export default async function run() {
       for (const value of dataStrings) text = text.split(value).join(' ');
       if (KEY_PATTERN.test(text) && !/https?:|@/.test(text)) record(lang, where, raw, 'raw key');
       if (lang === 'pl') continue;
-      if ((lang === 'lt' ? POLISH_ONLY_LETTERS : POLISH_LETTERS).test(text) || WORD_PATTERN.test(text)) record(lang, where, raw, 'Polish');
+      const polishWord = WORD_PATTERN.exec(text)?.[2];
+      const lithuanianToo = lang === 'lt' && polishWord === 'Biuro'; // "biuro" is also Lithuanian (of the office)
+      if ((lang === 'lt' ? POLISH_ONLY_LETTERS : POLISH_LETTERS).test(text) || (polishWord && !lithuanianToo)) record(lang, where, raw, 'Polish');
     }
   };
 

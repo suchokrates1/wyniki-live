@@ -42,9 +42,9 @@ export class OfficePlanningPage {
   }
 
   async openProgressTab() {
-    await this.page.locator('.office-tab').filter({ hasText: 'Postęp grup' }).click();
+    await this.page.locator('.office-tab').filter({ hasText: 'Faza grupowa' }).click();
     await this.page.waitForFunction(
-      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Postęp grup'),
+      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Faza grupowa'),
       undefined,
       { timeout: 10000 },
     );

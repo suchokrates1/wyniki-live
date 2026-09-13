@@ -187,6 +187,20 @@ export default async function run() {
     await login.login(OFFICE_PASSWORD);
     log('Office login through the UI');
 
+    // office path on a fresh tournament: step 1 is the current one and the strip says where to start
+    const pathState = () => page.evaluate(() => ({
+      steps: [...document.querySelectorAll('.office-step')].map((node) => node.dataset.stepState),
+      next: document.querySelector('[data-office-next]')?.innerText || '',
+      active: Alpine.$data(document.body).activeTab,
+    }));
+    const fresh = await waitUntil('office path on a fresh tournament', async () => {
+      const state = await pathState();
+      return state.next.includes('Nie masz jeszcze grup startowych') ? state : null;
+    });
+    if (fresh.steps.join(',') !== 'current,later,later,later') throw new Error(`Fresh tournament steps: ${fresh.steps.join(',')}`);
+    if (fresh.active !== 'groups') throw new Error(`Entering a fresh tournament should open Grupy startowe, opened ${fresh.active}`);
+    log('Office path: fresh tournament opens Grupy startowe, step 1 current, strip "Nie masz jeszcze grup startowych"');
+
     markStep('categories');
     // ——— categories ———
     await openView('Grupy startowe');
@@ -273,6 +287,17 @@ export default async function run() {
       return groups.length === 1 && groups[0].players.length === 4 && groups[0].players.every((row) => row.team_id);
     });
     log(`${catDbl.label}: four pairs added through the form and drawn into one group`);
+
+    const drawn = await waitUntil('step 1 done after the draw', async () => {
+      const state = await pathState();
+      return state.steps[0] === 'done' && state.next.includes('Wszystkie grupy gotowe') ? state : null;
+    }, { timeout: 15000 }).catch(async (error) => {
+      throw new Error(`${error.message}: ${JSON.stringify(await pathState())}`);
+    });
+    if (drawn.steps[1] !== 'current') throw new Error(`After the draw step 2 should be current: ${drawn.steps.join(',')}`);
+    await page.locator('[data-office-next]').getByRole('button', { name: 'Przejdź do terminarza' }).click();
+    await page.waitForFunction(() => Alpine.$data(document.body).activeTab === 'planning');
+    log('Office path: all groups drawn → step 1 done (✓, greyed), step 2 current, "Przejdź do terminarza" opens Terminarz');
 
     markStep('matches');
     // ——— matches ———
