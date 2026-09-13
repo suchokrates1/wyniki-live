@@ -405,7 +405,7 @@ export default async function run() {
       const dialog = modal();
       await dialog.waitFor({ state: 'visible' });
       if (walkover) {
-        await dialog.locator('input.toggle').check();
+        await dialog.locator('input.toggle-success').check();
         const winnerSelect = dialog.locator('label.form-control:visible').filter({ hasText: 'Zwycięzca walkowerem' }).locator('select');
         await winnerSelect.selectOption({ index: 1 });
       } else {
