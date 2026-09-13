@@ -572,7 +572,16 @@ export default async function run() {
             await fill(dialog.locator('.office-tb input').nth(0), shaped.sets[0][2] ?? '');
             if (kind === 'retirement') {
               await dialog.locator('input.toggle-warning').check();
-              await dialog.locator('label.form-control:visible').filter({ hasText: 'Kto skreczował' }).locator('select').selectOption(loser);
+              const retiredSelect = dialog.locator('label.form-control:visible').filter({ hasText: 'Kto skreczował' }).locator('select');
+              const options = await retiredSelect.locator('option').evaluateAll((items) => items.map((item) => item.value));
+              if (!options.includes(loser)) {
+                const form = await page.evaluate(() => {
+                  const m = Alpine.$data(document.body).officeNewMatch;
+                  return { id: m.schedule_id, mode: m.mode, a: m.player1_name, b: m.player2_name, retirement: m.retirement };
+                });
+                throw new Error(`Retirement options ${JSON.stringify(options)} miss ${loser}; form ${JSON.stringify(form)}; entry ${entry.id} ${entry.phase}`);
+              }
+              await retiredSelect.selectOption(loser);
             }
           }
           await dialog.getByRole('button', { name: 'Zapisz wynik' }).click();

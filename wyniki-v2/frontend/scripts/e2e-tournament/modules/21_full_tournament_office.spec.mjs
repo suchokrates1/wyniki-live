@@ -92,7 +92,7 @@ export default async function run() {
   const page = await context.newPage();
   const pageErrors = [];
   // A thrown non-Error reaches Playwright as a bare "Object"; record what it really was.
-  await context.addInitScript(() => {
+  await page.addInitScript(() => {
     window.__thrown = [];
     const describe = (value) => {
       try {
