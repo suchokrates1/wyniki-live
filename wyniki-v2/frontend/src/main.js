@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import { ignoreCancelledAlpineTransitions } from './shared/alpineTransitions.js';
 import {
   describeSpeechSet as describeSpeechSetForScreenReader,
   describeSpeechSetSequence as describeSpeechSetSequenceForScreenReader,
@@ -275,6 +276,7 @@ Alpine.data('tennisApp', () => ({
   /* --- History view methods are composed from modules/historyView.js --- */
 }));
 
+ignoreCancelledAlpineTransitions();
 Alpine.start();
 
 // APG keyboard support (roving tabindex + arrow keys) for all [role=tablist].

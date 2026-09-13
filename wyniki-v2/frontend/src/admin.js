@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import { ignoreCancelledAlpineTransitions } from './shared/alpineTransitions.js';
 import './main.css';
 import { createAuthAdmin, installAdminFetchAuth } from './admin/auth.js';
 import { createCourtsAdmin } from './admin/courts.js';
@@ -68,4 +69,5 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createOverlayAdmin(),
 ));
 
+ignoreCancelledAlpineTransitions();
 Alpine.start();

@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import { ignoreCancelledAlpineTransitions } from './shared/alpineTransitions.js';
 import { mergeAdminModules } from './admin/merge.js';
 import { createOfficeI18n } from './i18n/officeI18n.js';
 import { createOfficeCoreView } from './modules/office/coreView.js';
@@ -45,4 +46,5 @@ Alpine.data('officeApp', () => mergeAdminModules(
   createOfficePathView(),
 ));
 
+ignoreCancelledAlpineTransitions();
 Alpine.start();
