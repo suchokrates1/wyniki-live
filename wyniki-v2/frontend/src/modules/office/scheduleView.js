@@ -79,8 +79,12 @@ export function createOfficeScheduleView() {
       return available.length ? available : [];
     },
 
+    /** A B1 match always lasts the B1 slot, on any court: say so on the other courts. */
     autoSlotMinutesLabel(courtId) {
-      return this.ot('planning.slotMinutes', { minutes: this.autoSlotMinutes(this.autoBandForCourt(courtId), courtId) });
+      const minutes = this.autoSlotMinutes(this.autoBandForCourt(courtId), courtId);
+      const b1 = this.autoSlotMinutes('B1');
+      if (this.autoIsB1Court(courtId) || Number(b1) === Number(minutes)) return this.ot('planning.slotMinutes', { minutes });
+      return this.ot('planning.slotMinutesB1', { minutes, b1 });
     },
 
     planningUnassignedTitle() {

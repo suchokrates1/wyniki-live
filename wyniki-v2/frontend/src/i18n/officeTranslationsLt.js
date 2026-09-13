@@ -295,6 +295,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       removeEntry: 'Pašalinti įrašą',
       toggleB1Court: 'Pažymėti arba nuimti specialaus B1 korto žymą',
       slotMinutes: 'langelis {minutes} min',
+      slotMinutesB1: 'langelis {minutes} min · B1 {b1} min',
       dropMatchHere: 'Paleiskite mačą čia',
       unassignedTitle: 'Nepriskirti turnyro mačai ({count})',
       unassignedHint: 'Viso turnyro mačai be korto arba valandos. Pasirinkite dieną aukščiau ir vilkite mačą ant korto. Mačai, jau priskirti kortui, matomi tik dienos lentoje.',
