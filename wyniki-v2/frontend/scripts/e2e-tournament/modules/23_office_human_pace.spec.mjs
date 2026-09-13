@@ -126,6 +126,18 @@ export default async function run() {
     const b1Groups = await waitUntil('B1 draw saved as two groups', async () => {
       const groups = ((await api('/planning')).groups || []).filter((group) => Number(group.tournament_category_id) === Number(b1.id));
       return groups.length === 2 && groups.every((group) => group.players.length === 2) ? groups : null;
+    }).catch(async (error) => {
+      const groups = ((await api('/planning')).groups || []).map((group) => [group.name, group.players.map((player) => player.name)]);
+      const ui = await alpine(() => {
+        const data = Alpine.$data(document.body);
+        return {
+          count: data.planningGroupCount, division: data.planningSelectedDivision, revision: data.planningEditRevision,
+          saving: data.planningSaving, timer: Boolean(data.planningSaveTimer), pending: data.pendingRemoteRefresh,
+          assignments: data.planningGroupAssignments, targets: data.planningTargetGroupNames(),
+        };
+      });
+      const toasts = await page.locator('.toast .alert').allInnerTexts().catch(() => []);
+      throw new Error(`${error.message}; saved ${JSON.stringify(groups)}; UI ${JSON.stringify(ui)}; toasts ${toasts.join(' | ')}`);
     });
     await page.waitForTimeout(PAUSE_MS);
     const uiAssigned = await alpine(() => Object.values(Alpine.$data(document.body).planningGroupAssignments || {}).filter(Boolean).length);
