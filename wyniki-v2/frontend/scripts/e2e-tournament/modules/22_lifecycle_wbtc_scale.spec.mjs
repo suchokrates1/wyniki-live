@@ -503,6 +503,15 @@ export default async function run() {
           const rows = await koProgress();
           const row = rows.find((item) => item.schedule_id === entry.id);
           return row?.winner_name ? rows : null;
+        }).catch(async (error) => {
+          const toasts = await page.locator('.toast .alert').allInnerTexts().catch(() => []);
+          const dialogOpen = await modal().isVisible().catch(() => false);
+          const form = await page.evaluate(() => {
+            const data = Alpine.$data(document.body);
+            const m = data.officeNewMatch || {};
+            return { mode: m.mode, phase: m.phase, p1: m.player1_name, p2: m.player2_name, schedule_id: m.schedule_id, walkover: m.walkover, retirement: m.retirement, retired: m.retired_player_name, winner: m.winner_name, sets: [m.set1_p1, m.set1_p2, m.set1_tb, m.set2_p1, m.set2_p2] };
+          }).catch((e) => String(e));
+          throw new Error(`${error.message} (kind ${kind}, ${current.player1_name} v ${current.player2_name}); dialog open: ${dialogOpen}; toasts: ${toasts.join(' | ')}; form: ${JSON.stringify(form)}`);
         });
         const row = after.find((item) => item.schedule_id === entry.id);
         if (row.winner_name !== winner) throw new Error(`${entry.phase}: winner ${row.winner_name}, expected ${winner}`);
