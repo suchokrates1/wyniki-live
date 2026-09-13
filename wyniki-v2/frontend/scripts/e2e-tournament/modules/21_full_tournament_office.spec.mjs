@@ -92,8 +92,11 @@ export default async function run() {
   const page = await context.newPage();
   const pageErrors = [];
   // A thrown non-Error reaches Playwright as a bare "Object"; record what it really was.
+  // Reported to the test process, so a later reload does not lose it.
+  const thrown = [];
+  await page.exposeFunction('__reportThrown', (entry) => { thrown.push({ step: currentStep, ...entry }); });
   await page.addInitScript(() => {
-    window.__thrown = [];
+    window.__thrown = { push: (entry) => window.__reportThrown?.(entry) };
     const describe = (value) => {
       try {
         return {
@@ -188,6 +191,10 @@ export default async function run() {
     // ——— categories ———
     await openView('Grupy startowe');
     const presetBox = (label) => page.locator('label').filter({ has: page.locator('span', { hasText: new RegExp(`^${label}$`) }) }).locator('input.checkbox-primary');
+    // a fresh tournament has all eight B1–B4 K/M presets ticked
+    const ticked = await page.locator('input.checkbox-primary:visible').evaluateAll((boxes) => boxes.filter((box) => box.checked).length);
+    if (ticked !== 8) throw new Error(`Expected the 8 standard categories ticked by default, found ${ticked}`);
+    for (const box of await page.locator('input.checkbox-primary:visible').all()) await box.uncheck();
     await presetBox('B1 M').check();
     await presetBox('B2 K').check();
     await page.locator('input[placeholder*="B2 Mixed"]:visible').first().fill('B3 Double');
@@ -682,7 +689,7 @@ export default async function run() {
     console.log(`  DIAG ui=${JSON.stringify(ui)}`);
     if (pageErrors.length) {
       console.log(`  DIAG pageErrors=${JSON.stringify(pageErrors)}`);
-      console.log(`  DIAG thrown=${JSON.stringify(await page.evaluate(() => window.__thrown || []).catch((error) => String(error)))}`);
+      console.log(`  DIAG thrown=${JSON.stringify(thrown)}`);
     }
     if (transportErrors.length) console.log(`  DIAG transport=${JSON.stringify(transportErrors)}`);
     console.log(`  DIAG error=${error?.message} cause=${error?.cause ? `${error.cause.code || ''} ${error.cause.message || ''}` : ''}`);

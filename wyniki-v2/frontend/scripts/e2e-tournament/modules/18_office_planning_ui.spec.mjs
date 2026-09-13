@@ -26,6 +26,7 @@ export default async function run() {
 
     const customInput = page.locator('input[placeholder*="B2 Mixed"]').first();
     await customInput.waitFor({ state: 'visible', timeout: 10000 });
+    for (const box of await page.locator('input.checkbox-primary:visible').all()) await box.uncheck();
     await customInput.fill('B1 Double');
     await page.locator('label.mt-2:visible').filter({ hasText: 'Debel' }).locator('input[type="checkbox"]').check();
     await page.getByRole('button', { name: 'Zatwierdź kategorie' }).click();

@@ -58,7 +58,7 @@ export function createTournamentsAdmin() {
       adminCategoryEditId: null,
       adminCategoryEditLabel: '',
       adminCategorySetupOpen: true,
-      newCategoryPresetSelected: {},
+      newCategoryPresetSelected: { B1K: true, B1M: true, B2K: true, B2M: true, B3K: true, B3M: true, B4K: true, B4M: true },
       newCategoryPresetDoubles: {},
       newCategoryCustomLabel: '',
       newCategoryCustomHints: '',
@@ -216,7 +216,7 @@ export function createTournamentsAdmin() {
         office_password: '',
         logo: null,
       };
-      this.newCategoryPresetSelected = {};
+      this.newCategoryPresetSelected = this.allAdminCategoryPresets();
       this.newCategoryPresetDoubles = {};
       this.newCategoryCustomLabel = '';
       this.newCategoryCustomHints = '';
@@ -291,7 +291,12 @@ export function createTournamentsAdmin() {
       },
 
       adminCategoryPresetKeys() {
-    return ['B1M', 'B1K', 'B2M', 'B2K', 'B3M', 'B3K', 'B4M', 'B4K'];
+    return ['B1K', 'B1M', 'B2K', 'B2M', 'B3K', 'B3M', 'B4K', 'B4M'];
+      },
+
+      // a fresh tournament starts with the standard B1–B4 women and men categories ticked
+      allAdminCategoryPresets() {
+    return Object.fromEntries(this.adminCategoryPresetKeys().map((key) => [key, true]));
       },
 
       adminCategoryPresetLabel(key) {
@@ -331,6 +336,7 @@ export function createTournamentsAdmin() {
       this.adminTournamentCategories = categories;
       this.tournamentCategoriesCache[tournamentId] = categories;
       this.adminCategorySetupOpen = !categories.length;
+      if (!categories.length) this.adminCategoryPresetSelected = this.allAdminCategoryPresets();
     } catch (error) {
       console.error('Failed to load tournament categories:', error);
       this.showToast('Błąd ładowania kategorii turnieju', 'error');

@@ -63,6 +63,10 @@ export function createOfficePlayersView() {
         this.planningSelectedCategoryId = Number(this.planningSelectedDivision);
       }
       this.categorySetupOpen = !this.tournamentCategories.length;
+      // A fresh tournament starts with the standard B1–B4 women and men categories ticked.
+      if (!this.tournamentCategories.length && !Object.keys(this.categoryPresetSelected || {}).length) {
+        this.categoryPresetSelected = Object.fromEntries(this.planningCategoryPresetKeys().map((key) => [key, true]));
+      }
       const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
       // Empty groups are not saved, so a count picked with + / − for this category wins over
       // the saved groups until another category is chosen.
@@ -165,7 +169,7 @@ export function createOfficePlayersView() {
     },
 
     planningCategoryPresetKeys() {
-      return ['B1M', 'B1K', 'B2M', 'B2K', 'B3M', 'B3K', 'B4M', 'B4K'];
+      return ['B1K', 'B1M', 'B2K', 'B2M', 'B3K', 'B3M', 'B4K', 'B4M'];
     },
 
     planningCategoryPresetLabel(key) {
