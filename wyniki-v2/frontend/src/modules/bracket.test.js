@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  getKnockoutFamily,
   buildBracketCategories,
   buildKnockoutTrees,
   compareBracketCategoryNames,
@@ -179,4 +180,16 @@ test('9-16 semi is not interleaved with the championship tree', () => {
     'B1 Men — Finał',
     'B1 Men — 10 9–16 Półfinał',
   ]);
+});
+
+test('generated Vilnius-format phases fall into main, places and consolation families', () => {
+  assert.equal(getKnockoutFamily('B2 Men — Ćwierćfinał'), 0);
+  assert.equal(getKnockoutFamily('B2 Men — o 3. miejsce'), 0);
+  assert.equal(getKnockoutFamily('B2 Men — o miejsca 5–8'), 1);
+  assert.equal(getKnockoutFamily('B2 Men — o 7. miejsce'), 1);
+  assert.equal(getKnockoutFamily('B1 Men — o miejsca 9–12'), 4);
+  assert.equal(getKnockoutFamily('B1 Men — o 13. miejsce'), 5);
+  assert.equal(getKnockoutFamily('B2 Men — Pocieszenie Półfinał'), 2);
+  assert.equal(getKnockoutFamily('B2 Men — Pocieszenie o 5. miejsce'), 3);
+  assert.equal(getKnockoutFamily('B1 Men — 08 Consolation 7. miejsce'), 3);
 });

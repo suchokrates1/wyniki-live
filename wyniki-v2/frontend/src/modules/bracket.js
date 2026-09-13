@@ -193,13 +193,15 @@ function normalizePhaseText(phase) {
 
 export function getKnockoutFamily(phase) {
   const text = normalizePhaseText(phase);
-  const consolation = text.includes('consolation');
-  if (/13\s*-\s*16/.test(text)) return consolation ? 6 : 5;
-  if (/9\s*-\s*16/.test(text)) return consolation ? 6 : 4;
-  if (consolation && (/5\s*-\s*8/.test(text) || /7\.\s*miejsce/.test(text))) return 3;
-  if (consolation) return 2;
-  if (/5\s*-\s*8/.test(text) || /7\.\s*miejsce/.test(text)) return 1;
-  return 0;
+  const consolation = text.includes('consolation') || text.includes('pocieszenie');
+  // Lowest place a round decides: "5-8 Runda 1" / "o miejsca 9-12" / "o 13. miejsce".
+  const range = text.match(/(\d+)\s*-\s*(\d+)/);
+  const single = text.match(/(\d+)\.\s*miejsce/);
+  const place = range ? Number(range[1]) : (single ? Number(single[1]) : 0);
+  if (place >= 13) return consolation ? 6 : 5;
+  if (place >= 9) return consolation ? 6 : 4;
+  if (place >= 5) return consolation ? 3 : 1;
+  return consolation ? 2 : 0;
 }
 
 function knockoutRoundNumber(phase) {

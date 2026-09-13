@@ -6,9 +6,11 @@
  * player), publishing, then the whole group stage day by day with every result type
  * (sets, set tie-break, super tie-break, retirement, walkover) — a sample of each per day
  * typed into the result dialog, the rest through the same office endpoints. Standings of
- * every group are recomputed independently and compared. Categories whose groups the
- * system turns into a knockout (one group here) get their bracket planned with
- * "Rozstaw fazę pucharową" and played in "Drabinka"; the public bracket must agree.
+ * every group are recomputed independently and compared. Then the knockout phase in the
+ * Vilnius format (top two per group in a seeded main draw, every place played out, the rest
+ * in consolation) is checked against the tables, planned with "Rozstaw fazę pucharową" and
+ * played day by day in schedule order; every winner and loser must reach the slot the draw
+ * names, and the public bracket must agree.
  *
  * Set E2E_KEEP=1 to keep the tournament.
  */
@@ -173,16 +175,15 @@ export default async function run() {
   }
   const created = await addPlayers(adminToken, tournamentId, seedPlayers);
   const playerId = Object.fromEntries(seedPlayers.map((player, i) => [player.name, created.players[i].id]));
-  // A category with one group is turned into a knockout by the system; the Vilnius
-  // categories with 3+ groups had their brackets built by hand, so they stay round robin.
-  const knockoutCategories = Object.entries(byCategory).filter(([, groups]) => groups.length <= 2).map(([label]) => label);
+  // Every category goes on to a knockout phase: one group plays final and 3rd place,
+  // three or more groups play the Vilnius draw (main draw, places, consolation).
   await saveGroups(adminToken, tournamentId, STRUCTURE.groups.map((group) => ({
     name: group.name,
     tournament_category_id: categoryId[group.category],
-    play_format: knockoutCategories.includes(group.category) ? 'groups_knockout' : 'round_robin',
+    play_format: 'groups_knockout',
     players: playersByGroup[group.name].map((name) => playerId[name]),
   })));
-  log(`Seeded ${seedPlayers.length} players in ${STRUCTURE.groups.length} groups; system knockout for: ${knockoutCategories.join(', ')}`);
+  log(`Seeded ${seedPlayers.length} players in ${STRUCTURE.groups.length} groups, all groups followed by a knockout phase`);
 
   const expectedGroupMatches = STRUCTURE.groups.reduce((sum, group) => sum + (group.size * (group.size - 1)) / 2, 0);
   const slot = await resolveOfficeSlot(tournament.name);
@@ -358,27 +359,57 @@ export default async function run() {
     if (incomplete.length) throw new Error(`Groups not complete: ${incomplete.map((group) => group.name).join(', ')}`);
     log(`Standings: all ${STRUCTURE.groups.length} groups match the independent calculation (wins, sets, games, order); every group complete`);
 
-    // ——— knockout: generated where the system supports it, planned and played ———
+    // ——— knockout: Vilnius format for every category ———
     const realNames = new Set(seedPlayers.map((player) => player.name));
-    const slots = await waitUntil('knockout slots filled from the final tables', async () => {
-      const rows = ((await api('/dashboard')).progress.knockout.matches || []);
-      return rows.length && rows.every((row) => realNames.has(row.player1_name) && realNames.has(row.player2_name)) ? rows : null;
-    });
-    for (const label of knockoutCategories) {
-      const group = byCategory[label][0];
-      const table = standingsByGroup[group.name];
-      const final = slots.find((row) => row.phase === `${group.name} — Finał` || row.phase === `${label} — Finał`);
-      if (!final) throw new Error(`No final generated for ${label}: ${slots.map((row) => row.phase).join(', ')}`);
-      const finalists = new Set([final.player1_name, final.player2_name]);
-      if (!finalists.has(table[0].name) || !finalists.has(table[1].name)) throw new Error(`${label} final is ${[...finalists]}, table top two are ${table[0].name}, ${table[1].name}`);
-      if (table.length >= 4) {
-        const third = slots.find((row) => /o 3\. miejsce/.test(row.phase) && row.phase.startsWith(group.name.split(' — ')[0]));
-        if (!third || !new Set([third.player1_name, third.player2_name]).has(table[2].name)) throw new Error(`${label} 3rd-place match does not hold the table's 3rd and 4th`);
-      }
-    }
-    const multiGroup = Object.keys(byCategory).filter((label) => !knockoutCategories.includes(label));
-    log(`Knockout generated: ${slots.length} slots (${slots.map((row) => row.phase).join('; ')}); no automatic bracket for ${multiGroup.length} categories with 3+ groups (${multiGroup.join(', ')})`);
+    const isReal = (name) => realNames.has(name);
+    const koProgress = async () => ((await api('/dashboard')).progress.knockout.matches || []);
+    const firstRound = await waitUntil('knockout draws seeded from the final tables', async () => {
+      const rows = await koProgress();
+      const categoriesWithDraw = new Set(rows.map((row) => String(row.phase).split(' — ')[0]));
+      const seeded = rows.filter((row) => isReal(row.player1_name) || isReal(row.player2_name));
+      const noStandingPlaceholders = rows.every((row) => ![row.player1_name, row.player2_name].some((name) => /^\d+\.\s/.test(String(name))));
+      return categoriesWithDraw.size === STRUCTURE.categories.length && noStandingPlaceholders ? { rows, seeded } : null;
+    }, { timeout: 60000 });
+    const koSlots = firstRound.rows;
+    const groupOf = Object.fromEntries(Object.entries(playersByGroup).flatMap(([group, names]) => names.map((name) => [name, group])));
+    const rankOf = Object.fromEntries(Object.values(standingsByGroup).flatMap((rows) => rows.map((row, index) => [row.name, index + 1])));
 
+    // every player lands in exactly one draw: top two in the main draw, the rest in consolation
+    for (const [label, groups] of Object.entries(byCategory)) {
+      const rows = koSlots.filter((row) => String(row.phase).startsWith(`${label} — `));
+      const seededNames = (predicate) => new Set(rows.filter(predicate).flatMap((row) => [row.player1_name, row.player2_name]).filter(isReal));
+      if (groups.length === 1) {
+        const table = standingsByGroup[groups[0].name];
+        const final = rows.find((row) => /— Finał$/.test(row.phase));
+        if (!final || new Set([final.player1_name, final.player2_name]).size !== 2 || ![table[0].name, table[1].name].every((name) => [final.player1_name, final.player2_name].includes(name))) {
+          throw new Error(`${label}: final should be ${table[0].name} v ${table[1].name}, got ${JSON.stringify(final)}`);
+        }
+        continue;
+      }
+      const main = seededNames((row) => !/Pocieszenie/.test(row.phase));
+      const consolation = seededNames((row) => /Pocieszenie/.test(row.phase));
+      for (const group of groups) {
+        for (const [index, row] of standingsByGroup[group.name].entries()) {
+          const inMain = main.has(row.name);
+          const inConsolation = consolation.has(row.name);
+          if (index < 2 && (!inMain || inConsolation)) throw new Error(`${label}: ${row.name} (${index + 1}. ${group.name}) should be in the main draw only`);
+          if (index >= 2 && (inMain || !inConsolation)) throw new Error(`${label}: ${row.name} (${index + 1}. ${group.name}) should be in consolation only`);
+        }
+      }
+      const sameGroupOpeners = rows.filter((row) => isReal(row.player1_name) && isReal(row.player2_name) && groupOf[row.player1_name] === groupOf[row.player2_name]);
+      if (sameGroupOpeners.length) throw new Error(`${label}: group mates meet in their first match: ${sameGroupOpeners.map((row) => `${row.player1_name} v ${row.player2_name}`).join(', ')}`);
+    }
+    const b2Quarters = koSlots.filter((row) => row.phase === 'B2 Men — Ćwierćfinał').sort((a, b) => a.position - b.position)
+      .map((row) => `${groupOf[row.player1_name].slice(-1)}${rankOf[row.player1_name]}-${groupOf[row.player2_name].slice(-1)}${rankOf[row.player2_name]}`);
+    if (b2Quarters.join(' ') !== 'A1-B2 D1-C2 B1-A2 C1-D2') throw new Error(`B2 Men quarterfinals ${b2Quarters.join(' ')}, expected A1-B2 D1-C2 B1-A2 C1-D2`);
+    const draws = Object.keys(byCategory).map((label) => {
+      const rows = koSlots.filter((row) => String(row.phase).startsWith(`${label} — `));
+      const opener = rows.find((row) => /1\/\d+ finału/.test(row.phase)) ? '1/8' : (rows.find((row) => /— Ćwierćfinał$/.test(row.phase)) ? 'QF' : (rows.find((row) => /— Półfinał$/.test(row.phase)) ? 'SF' : 'F'));
+      return `${label} ${rows.length} (${opener}${rows.some((row) => /Pocieszenie/.test(row.phase)) ? ' + pocieszenie' : ''})`;
+    });
+    log(`Knockout draws: ${koSlots.length} matches — ${draws.join(', ')}; top two in main draws, the rest in consolation, no group mates in an opener; B2 Men QF A1-B2 D1-C2 B1-A2 C1-D2`);
+
+    // ——— plan the knockout phase across the remaining days ———
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.office-rail', { state: 'visible' });
     await openView('Terminarz');
@@ -387,50 +418,119 @@ export default async function run() {
     await page.getByRole('button', { name: 'Zatwierdź terminarz' }).click();
     const koRows = await waitUntil('knockout placed', async () => {
       const rows = (await schedule()).filter((entry) => entry.source_type === 'knockout');
-      return rows.length >= slots.length && rows.every(isPlaced) ? rows : null;
-    }).catch(async (error) => {
+      return rows.length >= koSlots.length && rows.every(isPlaced) ? rows : null;
+    }, { timeout: 60000 }).catch(async (error) => {
       const rows = (await schedule()).filter((entry) => entry.source_type === 'knockout');
-      const toasts = await page.locator('.toast .alert').allInnerTexts().catch(() => []);
-      const state = await page.evaluate(() => {
-        const data = Alpine.$data(document.body);
-        return { day: data.autoDayDate, scope: data.autoPhaseScope, start: data.autoStartTime, end: data.autoEndTime };
-      }).catch((e) => String(e));
-      throw new Error(`${error.message}
-KO rows: ${JSON.stringify(rows.map((row) => [row.id, row.phase, row.day_date, row.court_id, row.scheduled_time, row.status]))}
-UI: ${JSON.stringify(state)}
-Toasts: ${toasts.join(' | ')}`);
+      throw new Error(`${error.message}: ${rows.filter((row) => !isPlaced(row)).length} of ${rows.length} unplaced, e.g. ${JSON.stringify(rows.filter((row) => !isPlaced(row)).slice(0, 5).map((row) => row.phase))}`);
     });
+    const lateKo = koRows.filter((entry) => toMinutes(entry.scheduled_time) + slotMinutes(entry) > 18 * 60);
+    if (lateKo.length) throw new Error(`${lateKo.length} knockout matches end after 18:00`);
+    const lastGroupEnd = {};
+    for (const entry of groupRows) {
+      const root = String(entry.category_name).split(' — ')[0];
+      const end = `${entry.day_date} ${String(toMinutes(entry.scheduled_time) + slotMinutes(entry)).padStart(4, '0')}`;
+      if (!lastGroupEnd[root] || end > lastGroupEnd[root]) lastGroupEnd[root] = end;
+    }
     for (const row of koRows) {
       const root = String(row.phase).split(' — ')[0];
-      const lastGroup = groupRows.filter((entry) => String(entry.category_name).startsWith(root))
-        .map((entry) => `${entry.day_date} ${String(toMinutes(entry.scheduled_time) + slotMinutes(entry)).padStart(4, '0')}`)
-        .sort().pop();
-      const koStart = `${row.day_date} ${String(toMinutes(row.scheduled_time)).padStart(4, '0')}`;
-      if (lastGroup && koStart < lastGroup) throw new Error(`${row.phase} starts ${row.day_date} ${row.scheduled_time}, before the ${root} group phase ends`);
+      const start = `${row.day_date} ${String(toMinutes(row.scheduled_time)).padStart(4, '0')}`;
+      if (lastGroupEnd[root] && start < lastGroupEnd[root]) throw new Error(`${row.phase} starts ${row.day_date} ${row.scheduled_time}, before the ${root} group phase ends`);
     }
-    log(`"Rozstaw fazę pucharową": ${koRows.map((row) => `${row.phase} ${ddmm(row.day_date)} ${row.scheduled_time}`).join('; ')} — each after its group phase ends`);
+    const koDays = [...new Set(koRows.map((row) => row.day_date))].sort();
+    log(`"Rozstaw fazę pucharową": ${koRows.length} matches on ${koDays.map((day) => `${ddmm(day)}: ${koRows.filter((row) => row.day_date === day).length}`).join(', ')}, all after the group phase and by 18:00`);
 
-    await openView('Drabinka');
-    for (const row of slots) {
-      const card = page.locator('section.office-view:visible article').filter({ hasText: row.player1_name }).filter({ hasText: row.player2_name }).first();
-      await card.getByRole('button', { name: 'Dodaj wynik' }).click();
-      const dialog = modal();
-      await dialog.waitFor({ state: 'visible' });
-      const numbers = dialog.locator('input[type="number"]');
-      await fill(numbers.nth(0), 4);
-      await fill(numbers.nth(1), 3);
-      await fill(dialog.locator('.office-tb input').nth(0), 6);
-      await fill(numbers.nth(2), 4);
-      await fill(numbers.nth(3), 2);
-      await dialog.getByRole('button', { name: 'Zapisz wynik' }).click();
-      await waitUntil(`knockout ${row.phase}`, async () => ((await api('/dashboard')).progress.knockout.matches || []).find((item) => item.source_ref_id === row.source_ref_id)?.winner_name === row.player1_name);
+    // ——— play the knockout phase in schedule order ———
+    const koKinds = ['tiebreak', 'straight', 'supertb', 'straight', 'walkover', 'straight', 'retirement', 'straight'];
+    const slotTarget = (feed) => {
+      if (!feed) return null;
+      const [phase, position, side] = String(feed).split('|');
+      return { phase, position: Number(position), side: Number(side) };
+    };
+    const playedKo = [];
+    let koIndex = 0;
+    for (const day of koDays) {
+      const dayRows = koRows.filter((row) => row.day_date === day)
+        .sort((left, right) => left.scheduled_time.localeCompare(right.scheduled_time) || String(left.court_id).localeCompare(String(right.court_id)));
+      const typedToday = new Set();
+      await selectDay(day);
+      for (const entry of dayRows) {
+        const current = (await koProgress()).find((row) => row.schedule_id === entry.id);
+        if (!current || !isReal(current.player1_name) || !isReal(current.player2_name)) {
+          throw new Error(`${entry.phase} on ${day} ${entry.scheduled_time} has no confirmed players at its time: ${current?.player1_name} v ${current?.player2_name}`);
+        }
+        const kind = koKinds[koIndex % koKinds.length];
+        koIndex += 1;
+        const shaped = plannedResult({ id: entry.id }, KINDS.indexOf(kind));
+        const winner = shaped.winnerIsA ? current.player1_name : current.player2_name;
+        const loser = shaped.winnerIsA ? current.player2_name : current.player1_name;
+        if (!typedToday.has(kind) && ['tiebreak', 'walkover', 'retirement'].includes(kind)) {
+          typedToday.add(kind);
+          const block = page.locator(`[data-schedule-entry][data-schedule-id="${entry.id}"]`);
+          await block.scrollIntoViewIfNeeded();
+          await block.click();
+          await page.locator('.office-inspector').getByRole('button', { name: 'Dodaj wynik' }).click();
+          const dialog = modal();
+          await dialog.waitFor({ state: 'visible' });
+          const numbers = dialog.locator('input[type="number"]');
+          if (kind === 'walkover') {
+            await dialog.locator('input.toggle-success').check();
+            await dialog.locator('label.form-control:visible').filter({ hasText: 'Zwycięzca walkowerem' }).locator('select').selectOption(winner);
+          } else {
+            await fill(numbers.nth(0), shaped.sets[0][0]);
+            await fill(numbers.nth(1), shaped.sets[0][1]);
+            await fill(numbers.nth(2), shaped.sets[1][0]);
+            await fill(numbers.nth(3), shaped.sets[1][1]);
+            await fill(dialog.locator('.office-tb input').nth(0), shaped.sets[0][2] ?? '');
+            if (kind === 'retirement') {
+              await dialog.locator('input.toggle-warning').check();
+              await dialog.locator('label.form-control:visible').filter({ hasText: 'Kto skreczował' }).locator('select').selectOption(loser);
+            }
+          }
+          await dialog.getByRole('button', { name: 'Zapisz wynik' }).click();
+        } else {
+          const body = { schedule_id: entry.id };
+          if (kind === 'walkover') Object.assign(body, { walkover: true, winner_name: winner, sets: [] });
+          else {
+            body.sets = shaped.sets.map(([p1, p2, tb]) => ({ player1_games: p1, player2_games: p2, ...(tb != null ? { tiebreak_loser_points: tb } : {}) }));
+            if (shaped.stb) body.sets.push({ player1_games: shaped.stb[0], player2_games: shaped.stb[1], is_super_tiebreak: true });
+            if (kind === 'retirement') Object.assign(body, { retirement: true, retired_player_name: loser });
+          }
+          await api('/knockout-matches', { method: 'POST', body: JSON.stringify(body) });
+        }
+        const after = await waitUntil(`${entry.phase} #${current.position} recorded`, async () => {
+          const rows = await koProgress();
+          const row = rows.find((item) => item.schedule_id === entry.id);
+          return row?.winner_name ? rows : null;
+        });
+        const row = after.find((item) => item.schedule_id === entry.id);
+        if (row.winner_name !== winner) throw new Error(`${entry.phase}: winner ${row.winner_name}, expected ${winner}`);
+        for (const [feed, name] of [[current.winner_to, winner], [current.loser_to, loser]]) {
+          const next = slotTarget(feed);
+          if (!next) continue;
+          const nextRow = after.find((item) => item.phase === next.phase && item.position === next.position);
+          const seated = next.side === 1 ? nextRow?.player1_name : nextRow?.player2_name;
+          if (seated !== name) throw new Error(`${entry.phase} #${current.position}: ${name} should move to ${next.phase} #${next.position} side ${next.side}, found ${seated}`);
+        }
+        playedKo.push({ phase: entry.phase, position: current.position, winner, kind });
+      }
+      log(`Knockout day ${ddmm(day)}: ${dayRows.length} matches played in schedule order (${[...typedToday].join(', ')} typed in the dialog); every winner and loser moved to the slot the draw names`);
     }
+
+    // ——— final state: all slots decided, public bracket agrees, podiums complete ———
+    const finalKo = await koProgress();
+    const undecided = finalKo.filter((row) => !row.winner_name);
+    if (undecided.length) throw new Error(`${undecided.length} knockout matches without a result: ${undecided.slice(0, 5).map((row) => row.phase).join(', ')}`);
     const publicKnockout = (await fetchPublicBracket(tournamentId)).knockout || {};
-    for (const row of slots) {
+    for (const row of finalKo) {
       const shown = (publicKnockout[row.phase] || []).find((item) => item.position === row.position);
-      if (shown?.winner !== row.player1_name) throw new Error(`Public bracket ${row.phase}: winner ${shown?.winner}, expected ${row.player1_name}`);
+      if (shown?.winner !== row.winner_name) throw new Error(`Public bracket ${row.phase} #${row.position}: winner ${shown?.winner}, expected ${row.winner_name}`);
     }
-    log(`Played ${slots.length} knockout matches in "Drabinka" (with set tie-breaks); public bracket shows every winner`);
+    const champions = Object.keys(byCategory).map((label) => {
+      const final = finalKo.find((row) => row.phase === `${label} — Finał` || row.phase === `${byCategory[label][0].name} — Finał`);
+      return `${label}: ${final?.winner_name?.split(' ')[0]}`;
+    });
+    const kindsPlayed = playedKo.reduce((acc, { kind }) => ({ ...acc, [kind]: (acc[kind] || 0) + 1 }), {});
+    log(`Knockout complete: ${finalKo.length} matches (${Object.entries(kindsPlayed).map(([kind, count]) => `${kind} ${count}`).join(', ')}); public bracket shows every winner; champions ${champions.join(', ')}`);
 
     if (pageErrors.length) throw new Error(`Page errors: ${pageErrors.join(' | ')}`);
   } finally {

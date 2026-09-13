@@ -293,12 +293,16 @@ def _phase_kind(phase: Optional[str]) -> Optional[str]:
         return "quarterfinal"
     if "półfina" in normalized or "semif" in normalized:
         return "semifinal"
-    if "3." in normalized or "3 " in normalized or "third" in normalized or "3rd" in normalized:
+    if "miejsca " in normalized:
+        return "placement"
+    if re.search(r"(?<!\d)3[. ]", normalized) or "third" in normalized or "3rd" in normalized:
         return "third_place"
-    if "5." in normalized or "5 " in normalized or "fifth" in normalized or "5th" in normalized:
+    if re.search(r"(?<!\d)5[. ]", normalized) or "fifth" in normalized or "5th" in normalized:
         return "fifth_place"
-    if "7." in normalized or "7 " in normalized or "seventh" in normalized or "7th" in normalized:
+    if re.search(r"(?<!\d)7[. ]", normalized) or "seventh" in normalized or "7th" in normalized:
         return "seventh_place"
+    if re.search(r"\d+\.\s*miejsc", normalized):
+        return "placement"
     if normalized == "pucharowa":
         return "knockout"
     if "fina" in normalized or normalized == "final":

@@ -373,6 +373,8 @@ def _office_knockout_item(
         "phase": phase,
         "category": _bracket_category_from_group(phase),
         "position": int(slot.get('position') or 1),
+        "winner_to": slot.get('winner_to') or None,
+        "loser_to": slot.get('loser_to') or None,
         "player1_name": player1_name,
         "player2_name": player2_name,
         "winner_name": winner_name or None,

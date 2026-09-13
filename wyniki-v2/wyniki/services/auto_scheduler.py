@@ -121,23 +121,39 @@ def apply_b1_courts(config: Dict[str, Any], b1_court_ids: Optional[List[str]]) -
 
 
 def _phase_rank(phase: Optional[str]) -> int:
+    """Playing order of a phase: group play, then knockout rounds from the widest draw down.
+
+    Knockout rounds rank by how many players are still in that part of the draw, so
+    "1/8 finału" (16) comes before "Ćwierćfinał" and "o miejsca 5–8" (8), then semifinals
+    (4), then two-player matches: other places, 3rd place, final.
+    """
     text = str(phase or "").lower()
     if not text:
         return 0
-    # "B4 Men — Grupa A — Finał" is a final: knockout words win over the group name
-    if "grup" in text and not re.search(r"ćwierć|cwierc|quarter|półfinał|polfinal|semi|miejsc|finał|final", text):
+    suffix = text.rsplit(" — ", 1)[-1]
+    knockout_words = r"ćwierć|cwierc|quarter|półfinał|polfinal|semi|miejsc|finał|final|1/\d+"
+    if "grup" in text and not re.search(knockout_words, suffix):
         return 0
-    if "ćwierć" in text or "cwierc" in text or "quarter" in text:
-        return 1
-    if "półfinał" in text or "polfinal" in text or "semi" in text:
-        return 2
-    if re.search(r"o\s*[57]\.?\s*miejsc", text):
-        return 3
-    if re.search(r"o\s*3\.?\s*miejsc", text):
-        return 4
-    if "finał" in text or "final" in text:
-        return 5
-    return 6
+    size = None
+    fraction = re.search(r"1/(\d+)", suffix)
+    places = re.search(r"miejsca\s+(\d+)\s*[–-]\s*(\d+)", suffix)
+    if fraction:
+        size = int(fraction.group(1)) * 2
+    elif places:
+        size = int(places.group(2)) - int(places.group(1)) + 1
+    elif "ćwierć" in suffix or "cwierc" in suffix or "quarter" in suffix:
+        size = 8
+    elif "półfinał" in suffix or "polfinal" in suffix or "semi" in suffix:
+        size = 4
+    if size is not None and size > 2:
+        return max(1, 6 - (size.bit_length() - 1))  # 32→1, 16→2, 8→3, 4→4
+    if re.search(r"(?<!\d)3\.?\s*miejsc", suffix):
+        return 7
+    if re.search(r"(?<!\d)\d+\.?\s*miejsc", suffix):
+        return 6
+    if "finał" in suffix or "final" in suffix:
+        return 8
+    return 9
 
 
 def _players(match: Dict[str, Any]) -> Set[str]:

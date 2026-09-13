@@ -294,8 +294,8 @@ def test_flex_courts_push_a_match_later_instead_of_double_booking():
 
 
 def test_phase_rank_knockout_of_single_group_is_not_group_phase():
-    assert sched._phase_rank("B4 Men — Grupa A — Finał") == 5
-    assert sched._phase_rank("B4 Men — Grupa A — o 3. miejsce") == 4
+    assert sched._phase_rank("B4 Men — Grupa A — Finał") == 8
+    assert sched._phase_rank("B4 Men — Grupa A — o 3. miejsce") == 7
     assert sched._phase_rank("Grupowa") == 0
     assert sched._phase_rank("Grupowa — Rewanż") == 0
 
@@ -315,3 +315,14 @@ def test_knockout_waits_for_the_end_of_its_group_phase():
     assert by_id[9]["day_date"] == "2026-08-25"
     assert by_id[9]["scheduled_time"] >= "15:00"
     assert by_id[8]["day_date"] == "2026-08-24"
+
+
+def test_phase_rank_orders_vilnius_draw_rounds():
+    order = [
+        "B1 Men — 1/8 finału", "B1 Men — Ćwierćfinał", "B1 Men — Półfinał",
+        "B1 Men — o 13. miejsce", "B1 Men — o 3. miejsce", "B1 Men — Finał",
+    ]
+    ranks = [sched._phase_rank(phase) for phase in order]
+    assert ranks == sorted(ranks) and len(set(ranks)) == len(ranks)
+    assert sched._phase_rank("B1 Men — o miejsca 9–16") == sched._phase_rank("B1 Men — Ćwierćfinał")
+    assert sched._phase_rank("B1 Men — o miejsca 5–8") == sched._phase_rank("B1 Men — Półfinał")
