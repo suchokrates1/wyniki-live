@@ -44,7 +44,7 @@ export function createOfficePlayersView() {
         this.planningTeams = Array.isArray(payload.teams) ? payload.teams : [];
         this.planningMixedCategories = inferMixedPlayerBands(this.tournamentCategories);
         this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
-        this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
+        this.planningSchedule = this.keepInspectorEdits(Array.isArray(payload.schedule) ? payload.schedule : []);
         this.planningCourts = Array.isArray(payload.courts) ? payload.courts : [];
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.syncPlanningGroupAssignments();

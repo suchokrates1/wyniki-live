@@ -473,7 +473,7 @@
             <div class="office-kicker" x-text="ot('planning.inspectorTitle')"></div>
             <p class="mt-2 text-sm text-slate-500" x-show="!planningOpenCardId" x-text="ot('planning.inspectorEmpty')"></p>
             <template x-for="entry in planningInspectorEntries()" :key="'insp_'+autoEntryId(entry)">
-              <div class="mt-3 space-y-2" x-show="!autoIsPreview()" @input="planningEditRevision++" @change="planningEditRevision++">
+              <div class="mt-3 space-y-2" x-show="!autoIsPreview()" @input="planningEditRevision++; planningInspectorDirtyId = autoEntryId(entry)" @change="planningEditRevision++; planningInspectorDirtyId = autoEntryId(entry)">
                 <div class="text-sm font-semibold leading-tight space-y-0.5">
                   <div class="competitor-name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
                   <div class="office-block__vs" x-text="ot('versus')"></div>

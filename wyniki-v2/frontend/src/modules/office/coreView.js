@@ -121,6 +121,7 @@ export function createOfficeCoreView() {
     planningDropCell: null,
     officeKnockoutSwapFrom: null,
     planningGroupCountDivision: null,
+    planningInspectorDirtyId: null,
 
     planningRematchOpen: false,
 

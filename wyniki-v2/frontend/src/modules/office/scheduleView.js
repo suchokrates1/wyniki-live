@@ -103,6 +103,21 @@ export function createOfficeScheduleView() {
     togglePlanningCard(entry) {
       const id = this.autoEntryId(entry);
       this.planningOpenCardId = this.planningOpenCardId === id ? null : id;
+      this.planningInspectorDirtyId = null;
+    },
+
+    /** Unsaved inspector edits survive a reload that replaces the schedule rows. */
+    keepInspectorEdits(nextSchedule) {
+      const dirtyId = this.planningInspectorDirtyId;
+      if (!dirtyId || !Array.isArray(nextSchedule)) return nextSchedule;
+      const edited = (this.planningSchedule || []).find((row) => this.autoEntryId(row) === dirtyId);
+      const fresh = nextSchedule.find((row) => this.autoEntryId(row) === dirtyId);
+      if (edited && fresh) {
+        for (const field of ['day_date', 'scheduled_time', 'court_id', 'status', 'notes_public', 'notes_internal']) {
+          fresh[field] = edited[field];
+        }
+      }
+      return nextSchedule;
     },
 
     async publishAllSchedule() {
@@ -344,6 +359,7 @@ export function createOfficeScheduleView() {
         if (!response.ok) {
           throw new Error(payload.error || this.ot('errors.scheduleEntryFailed'));
         }
+        this.planningInspectorDirtyId = null;
         if (payload.schedule) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.showToast(this.ot('toast.scheduleSaved'), 'success');
