@@ -4,6 +4,8 @@ import { getMatchSets } from '../history.js';
 export function createOfficeMatchesView() {
   return {
     ensureDefaultGroupSelection() {
+      // A refresh while the result dialog is open must not swap the players being entered.
+      if (this.addMatchOpen || this.officeNewMatch.lockedFromSlot || this.officeNewMatch.mode === 'knockout') return;
       if (!this.officeNewMatch.group_id && this.officeGroups.length) {
         this.officeNewMatch.group_id = this.officeGroups[0].id;
         this.onOfficeGroupChanged();
