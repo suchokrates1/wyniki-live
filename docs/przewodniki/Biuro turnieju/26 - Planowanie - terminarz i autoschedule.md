@@ -1,65 +1,74 @@
 ---
 title: Planowanie - terminarz i autoschedule
 tags: [wyniki, biuro, office, planowanie]
-aliases: [Autoschedule, Office schedule]
+aliases: [Autoschedule, Office schedule, Terminarz]
 ---
 
-# Planowanie — terminarz i autoschedule (krok 2)
+# Terminarz i planer
 
 ## Cel
 
-Generowanie meczów, publikacja, automatyczne / ręczne układanie na kortach.
+Mecze na kortach i godzinach, na wiele dni, z publikacją dla widzów.
 
-Układ kroku 2: **lewa szyna poleceń** (etapy Mecze → Układ → Publikacja) | **siatka czas × kort** | **prawy inspektor** wybranego meczu. Pula nieprzypisanych jest paskiem pod siatką, nie osobną kolumną. Rewanże grup są za przełącznikiem **Rewanże…**.
+## Układ
 
-## Generowanie i publikacja
+Szyna → **Terminarz**: pasek narzędzi u góry, siatka **godzina × kort** dla wybranego dnia, **inspektor** wybranego meczu po prawej, **szuflada** nieprzypisanych meczów na dole.
 
-| Kontrolka | Co robi | API |
-|-----------|---------|-----|
-| **Generuj mecze** | RR z grup `groups_knockout` / `round_robin`; **pomija** `knockout` | `POST …/schedule/generate` |
-| **Generuj rewanże** | Rewanże dla wybranych grup (nie dla KO-only); grupy za **Rewanże…** | `POST …/schedule/generate-rematch` |
-| **Opublikuj wszystkie** | Publikacja draftów | `POST …/schedule/publish` |
-| Chipy dnia | Filtr dnia | — |
-
-## Autoschedule
+## Pasek narzędzi
 
 | Kontrolka | Co robi | API |
 |-----------|---------|-----|
-| **Zakres** (Faza grupowa / pucharowa / Wszystko) | Scope propozycji | — |
-| **Start (HH:MM)** | Godzina startu | — |
-| Checkboxy **Korty B1 (specjalne)** | Oznaczenie kortów | `PUT …/autoschedule/config` |
-| **Generuj propozycję** | Podgląd układu | `POST …/autoschedule/generate` |
-| **Zatwierdź terminarz** | Zastosuj | `POST …/autoschedule/apply` |
-| **Odrzuć propozycję** | Anuluj podgląd | Client |
-| DnD na komórkę siatki (kort × godzina) | Przesuń mecz | `POST …/autoschedule/move` |
-| Drop do nieprzypisanych | Odłącz od kortu | `POST …/autoschedule/unassign` |
-| **Usuń wszystkie** (unassigned) | Czyść pulę | `DELETE …/schedule/unassigned` |
+| Zakładki dni | Wybór dnia siatki | — |
+| **Wyczyść dzień** | Zdejmuje z siatki wszystkie mecze dnia do szuflady; rozegrane i trwające zostają | `POST …/schedule/clear-day` |
+| **Zakres** | Faza grupowa / pucharowa / wszystko | — |
+| **Start (HH:MM)** / **Koniec (HH:MM)** | Okno dnia dla planera | zapis w konfiguracji |
+| **Rozstaw ten dzień** | Wybrany dzień: tyle meczów, ile się zmieści; reszta zostaje w szufladzie | `POST …/autoschedule/generate` (`mode=day`) |
+| **Rozstaw fazę grupową** / **Rozstaw fazę pucharową** / **Rozstaw cały turniej** | Wszystkie mecze zakresu od startu do końca dnia, dzień po dniu (najpierw pierwsze dni, żeby na końcu był zapas) | `mode=all` |
+| **Zatwierdź terminarz** / **Odrzuć propozycję** | Zastosuj / anuluj podgląd | `POST …/autoschedule/apply` |
+| **Generuj mecze** | Mecze grupowe z grup (`groups_knockout` / `round_robin`) | `POST …/schedule/generate` |
+| **Rewanże…** | Druga runda dla wybranych grup | `POST …/schedule/generate-rematch` |
+| **Opublikuj wszystkie** | Wpisy robocze stają się publiczne | `POST …/schedule/publish` |
 
-## Inspektor meczu (panel po prawej)
+Nagłówek kolumny kortu: pigułka **B1** oznacza kort specjalny B1 (slot 75 min; inne korty 60 min).
 
-Klik w blok na siatce otwiera inspektor (zamiast rozwijania karty w kolumnie).
+## Zasady planera
+
+- Mecze B1 tylko na kortach B1; pozostałe kategorie na wszystkich pozostałych kortach.
+- **Nikt nie gra na dwóch kortach naraz.** Para „A / B” blokuje oboje partnerów, więc zawodnik nie dostanie o tej samej godzinie singla i debla.
+- Przerwa między meczami zawodnika jest zachowywana, jeśli kort nie musiałby przez nią stać pusty.
+- Rundy pucharowe idą od najszerszej: 1/8 → ćwierćfinały i o miejsca 9–16 → półfinały i o miejsca 5–8 → mecze o miejsca, 3. miejsce, finał. Mecz późniejszej fazy zaczyna się po ostatnim meczu wcześniejszej fazy swojej kategorii (także między dniami).
+- Rozegrane i trwające mecze zostają na miejscu i blokują swój czas.
+- Mecz, który nie mieści się przed końcem dnia, zostaje w szufladzie; kategoria czeka wtedy z kolejnymi rundami do następnego dnia.
+- Korty B1 i okno dnia są zapisane dla turnieju; usunięcie turnieju je czyści.
+
+## Siatka i szuflada
+
+| Akcja | Efekt | API |
+|-------|-------|-----|
+| Przeciągnij mecz na komórkę | Nowy kort / godzina | `POST …/autoschedule/move` |
+| Przeciągnij mecz na szufladę | Zdjęcie z siatki | `POST …/autoschedule/unassign` |
+| Zakładki kategorii w szufladzie | Filtr szuflady | — |
+| **Usuń wszystkie** | Usuwa wszystkie nieprzypisane mecze (ręczne, rewanże i wygenerowane). Nie wracają same — przywraca je **Generuj mecze** | `DELETE …/schedule/unassigned` |
+
+## Inspektor meczu
+
+Klik w blok na siatce.
 
 | Pole / przycisk | Co robi | API |
 |-----------------|---------|-----|
-| Czas, kort, status, uwagi | Edycja | `PATCH …/schedule/{id}` |
-| **Dodaj wynik** | Modal wyniku | [[27 - Wprowadzanie i edycja wyniku]] |
-| **Zapisz** | Zapis karty | PATCH |
-| **Usuń** / × | Usunięcie wpisu | `DELETE …/schedule/{id}` |
+| Czas, kort, status, uwagi publiczne / wewnętrzne | Edycja | `PATCH …/schedule/{id}` |
+| **Dodaj wynik** | Modal wyniku (mecz pucharowy: dopiero gdy obaj gracze są znani) | [[27 - Wprowadzanie i edycja wyniku]] |
+| **Zapisz** / **Usuń** | Zapis / usunięcie wpisu | PATCH / DELETE |
 
 Statusy: **Roboczy** / **Opublikowany** / **W trakcie** / **Zakończony**.
 
-## Ręczny wpis
-
-Formularz **+ Dodaj ręczny wpis**: data, czas, kort, kategoria, faza, status, **gracze albo pary** (dropdown zależy od `is_doubles` kategorii), uwagi → **Dodaj** (`POST …/schedule`).
-
-Karty i siatka pokazują `formatCompetitorName` — długie `"A / B"` łamią się po separatorze.
-
 ## E2E
 
-`03_schedule_publish.spec.mjs` — tablica po publikacji. `05_rematch.spec.mjs` — rewanże. `19_office_autoschedule.spec.mjs` — zakres, start, **Generuj propozycję**. `11` / `14` — etykiety par w terminarzu.
+`03_schedule_publish`, `05_rematch`, `19_office_autoschedule` — podstawy. `21_full_tournament_office` — dni, szuflada, przeciąganie, **Wyczyść dzień**, **Usuń wszystkie**. `22_lifecycle_wbtc_scale` — skala Wilna: 152 mecze grupowe na 3 dni i 146 pucharowych na 4 dni, bez podwójnych rezerwacji (także singiel + debel).
 
 ## Powiązane
 
 - [[25 - Planowanie - grupy]]
+- [[24 - Puchar]]
 - [[13 - Terminarz]] (publiczny odczyt)
 - [[28 - Debel w biurze]]

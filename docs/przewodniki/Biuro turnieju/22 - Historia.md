@@ -12,7 +12,7 @@ Podgląd zakończonych meczów i szybka korekta wyniku.
 
 ## Elementy UI
 
-Karty scoreboardu + sidebar grup. Ten sam system wizualny co chrome (panele 20px, kicker, chipy).
+Szyna → **Ostatnie mecze**. Karty wyników + boczny panel grup.
 
 | Kontrolka | Co robi | Efekt |
 |-----------|---------|-------|

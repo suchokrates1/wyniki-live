@@ -8,7 +8,7 @@ aliases: [Postęp grup, Office progress]
 
 ## Cel
 
-Karty per grupa z pillami Plan / Gotowe / Zostało i chipami składu.
+Szyna → **Postęp grup**. Karty per grupa z liczbami Plan / Gotowe / Zostało i chipami składu.
 
 ## Elementy UI
 

@@ -11,7 +11,7 @@ aliases: [URL map, Hash routes]
 | URL | Powierzchnia |
 |-----|--------------|
 | `/` | Strona publiczna |
-| `/office`, `/office/<slot>` | Biuro turnieju |
+| `/office` | Biuro turnieju (lista turniejów na ekranie logowania). Stare `/office/<slot>` otwiera ten turniej i zmienia adres na `/office` |
 | `/admin` | Admin |
 | `/overlay/<id>`, `/overlay/<slot>/<id>` | Overlay OBS |
 | `/embed` | Stub (nieużywać) |

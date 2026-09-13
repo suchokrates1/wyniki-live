@@ -16,7 +16,7 @@ Trzy powierzchnie produktu web:
 | Powierzchnia | URL (produkcja) | Hasło |
 |--------------|-----------------|-------|
 | Strona publiczna | `/` (np. blindtennis.app / score.vestmedia.pl) | Brak (opcjonalnie `access_key`) |
-| Biuro turnieju | `/office` lub `/office/<slot>` | Hasło biura turnieju |
+| Biuro turnieju | `/office` (wybór turnieju z listy) | Hasło biura turnieju |
 | Admin | `/admin` | Hasło administratora |
 | Overlay OBS | `/overlay/<id>` lub `/overlay/<slot>/<id>` | Brak (tylko podgląd) |
 
@@ -43,6 +43,8 @@ Trzy powierzchnie produktu web:
 - [[26 - Planowanie - terminarz i autoschedule]]
 - [[27 - Wprowadzanie i edycja wyniku]]
 - [[28 - Debel w biurze]] (kategorie Double, pary, tryb grupy, wynik na drużynach)
+
+Układ biura „Kort”: szyna widoków (Terminarz, Grupy startowe, Postęp grup, Drabinka, Ostatnie mecze, Komunikat dla widzów), pasek górny z liczbami i akcjami — [[21 - Chrome i quick-info]].
 
 ## Admin (`/admin`)
 
