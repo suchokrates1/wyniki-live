@@ -76,3 +76,8 @@ ENV/
 client_secret*.json
 **/token.json
 youtube-ibta/
+
+# local one-off scripts and downloads (may hold credentials or production data) — never commit
+wyniki-v2/scripts/_tmp_*
+wyniki-v2/frontend/scripts/_tmp_*
+wyniki-v2/frontend/scripts/_verify_*
