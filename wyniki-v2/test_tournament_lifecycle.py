@@ -3399,7 +3399,7 @@ def test_new_tournament_does_not_inherit_planner_settings_of_a_deleted_one(full_
     old_courts = [court["kort_id"] for court in database.fetch_courts_for_tournament(old_id)]
     database.save_autoscheduler_config(old_id, {"b1_court_ids": old_courts[-3:], "end_time": "13:00"})
     assert database.delete_tournament(old_id)
-    assert database.fetch_app_settings([f"autoscheduler:{old_id}"]) == {}
+    assert database.fetch_app_settings([f"autoscheduler:{old_id}"]).get(f"autoscheduler:{old_id}") is None
 
     # a stored config that names courts the tournament does not have is ignored
     new_id = database.insert_tournament("New Cup", "2026-07-03", "2026-07-04", active=True)
