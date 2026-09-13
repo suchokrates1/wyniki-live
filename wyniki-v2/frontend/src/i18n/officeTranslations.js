@@ -193,6 +193,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         refreshing: 'Odświeżanie danych...',
       },
       planning: {
+        startNumber: 'Numer startowy',
         title: 'Grupy i terminarz',
         subtitle: 'Przygotowanie turnieju',
         description: 'Biuro zawodów może tutaj rozdzielić zawodników na grupy A/B/C i ułożyć plan dnia bez wchodzenia do panelu administratora.',
@@ -783,6 +784,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         refreshing: 'Daten werden aktualisiert...',
       },
       planning: {
+        startNumber: 'Startnummer',
         title: 'Gruppen und Zeitplan',
         subtitle: 'Turniervorbereitung',
         description: 'Das Turnierbüro kann hier Spieler auf Gruppen A/B/C verteilen und den Tagesplan erstellen, ohne das Admin-Panel zu öffnen.',
@@ -1356,6 +1358,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         refreshing: 'Refreshing data...',
       },
       planning: {
+        startNumber: 'Start number',
         title: 'Groups and schedule',
         subtitle: 'Tournament preparation',
         description: 'The tournament office can assign players to groups A/B/C and build the day plan here without opening the admin panel.',
@@ -1929,6 +1932,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         refreshing: 'Aggiornamento dati...',
       },
       planning: {
+        startNumber: 'Numero di partenza',
         confirmCategoriesFirst: 'Conferma prima le categorie del torneo.',
         categoriesSetup: 'Categorie del torneo',
         categoriesSetupHint: 'Seleziona le categorie standard (B1–B4 M/F) e/o aggiungine una personalizzata (es. B2 Mixed, B3/4 Mixed). Conferma prima di aggiungere i giocatori.',
@@ -2502,6 +2506,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         refreshing: 'Actualizando datos...',
       },
       planning: {
+        startNumber: 'Número de salida',
         confirmCategoriesFirst: 'Confirma primero las categorías del torneo.',
         categoriesSetup: 'Categorías del torneo',
         categoriesSetupHint: 'Selecciona las categorías estándar (B1–B4 M/F) y/o añade una personalizada (p. ej. B2 Mixed, B3/4 Mixed). Confirma antes de añadir jugadores.',
@@ -3075,6 +3080,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         refreshing: 'Actualisation des données...',
       },
       planning: {
+        startNumber: 'Numéro de départ',
         confirmCategoriesFirst: 'Confirmez d\'abord les catégories du tournoi.',
         categoriesSetup: 'Catégories du tournoi',
         categoriesSetupHint: 'Sélectionnez les catégories standard (B1–B4 H/F) et/ou ajoutez-en une personnalisée (p. ex. B2 Mixed, B3/4 Mixed). Confirmez avant d\'ajouter des joueurs.',

@@ -250,11 +250,26 @@ export default async function run() {
     await page.waitForTimeout(2500);
     const groupCount = await page.evaluate(() => Alpine.$data(document.body).planningGroupCount);
     if (Number(groupCount) !== 2) throw new Error(`Group count went back to ${groupCount} after a refresh`);
+    // start numbers are the players' own: the draw must not renumber them
+    const shownNumbers = () => page.locator('.office-groups [data-start-number]:visible').evaluateAll((nodes) => Object.fromEntries(
+      nodes.map((node) => [node.parentElement.querySelector('.truncate')?.textContent.trim(), node.textContent.trim()]),
+    ));
+    const numbersBeforeDraw = await shownNumbers();
+    const storedNumbers = Object.fromEntries(((await planning()).players || []).map((player) => [player.name, String(player.start_number)]));
+    const numberMismatch = Object.entries(numbersBeforeDraw).filter(([name, number]) => storedNumbers[name] !== number);
+    if (!Object.keys(numbersBeforeDraw).length || numberMismatch.length) throw new Error(`Start numbers before the draw: ${JSON.stringify(numberMismatch)}`);
     await page.getByRole('button', { name: 'Rozdziel automatycznie' }).click();
     await waitUntil('B2 K in two groups of four', async () => {
       const groups = ((await planning()).groups || []).filter((group) => Number(group.tournament_category_id) === Number(catB2.id));
       return groups.length === 2 && groups.every((group) => group.players.length === 4);
     });
+    const numbersAfterDraw = await waitUntil('drawn players shown in groups', async () => {
+      const shown = await shownNumbers();
+      return Object.keys(numbersBeforeDraw).every((name) => shown[name]) ? shown : null;
+    });
+    const renumbered = Object.entries(numbersBeforeDraw).filter(([name, number]) => numbersAfterDraw[name] !== number);
+    if (renumbered.length) throw new Error(`The draw renumbered players: ${JSON.stringify(renumbered.map(([name, number]) => [name, number, numbersAfterDraw[name]]))}`);
+    log(`Start numbers ${Object.values(numbersBeforeDraw).join(', ')} kept after the draw into groups`);
     log(`${catB2.label}: two groups of four`);
 
     await divisionCard(catB1.label).click();

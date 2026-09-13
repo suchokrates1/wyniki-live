@@ -10,6 +10,11 @@ import {
 } from '../../shared/categories.js';
 import { DEFAULT_PLAY_FORMAT, PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
 
+/** Players and pairs keep the order of their start numbers (then creation order). */
+function byStartNumber(rows) {
+  return [...rows].sort((a, b) => (Number(a.start_number) || Infinity) - (Number(b.start_number) || Infinity) || Number(a.id) - Number(b.id));
+}
+
 export function createOfficePlayersView() {
   return {
     async loadOfficePlanningData() {
@@ -40,9 +45,9 @@ export function createOfficePlayersView() {
           return;
         }
         this.planningLoadedOnce = true;
-        this.planningPlayers = Array.isArray(payload.players) ? payload.players : [];
+        this.planningPlayers = byStartNumber(Array.isArray(payload.players) ? payload.players : []);
         this.tournamentCategories = Array.isArray(payload.tournament_categories) ? payload.tournament_categories : [];
-        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : [];
+        this.planningTeams = byStartNumber(Array.isArray(payload.teams) ? payload.teams : []);
         this.planningMixedCategories = inferMixedPlayerBands(this.tournamentCategories);
         this.planningGroups = Array.isArray(payload.groups) ? payload.groups : [];
         this.planningSchedule = this.keepInspectorEdits(Array.isArray(payload.schedule) ? payload.schedule : []);
@@ -521,9 +526,9 @@ export function createOfficePlayersView() {
       ));
     },
 
+    /** The pair's start number: given once when the pair is created, never renumbered. */
     planningTeamOrdinal(team) {
-      const pool = this.planningUnassignedTeams();
-      return pool.findIndex(item => Number(item.id) === Number(team.id)) + 1;
+      return team?.start_number || '';
     },
 
     planningTeamPartnerOptions(excludeId = null) {
@@ -565,11 +570,9 @@ export function createOfficePlayersView() {
       return this.planningPlayersForDivision().filter(player => !this.planningEffectiveGroup(player));
     },
 
+    /** The player's start number: given once when the player is added, never renumbered. */
     planningOrdinal(player) {
-      const pool = this.planningUsesTournamentCategories()
-        ? this.planningUnassignedPlayers()
-        : this.planningPlayersForDivision();
-      return pool.findIndex(item => item.id === player.id) + 1;
+      return player?.start_number || '';
     },
 
     planningCategoryAssignedCount(categoryId = this.planningSelectedCategoryId) {
@@ -965,7 +968,7 @@ export function createOfficePlayersView() {
           return;
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.teamAddFailed'));
-        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
+        this.planningTeams = Array.isArray(payload.teams) ? byStartNumber(payload.teams) : this.planningTeams;
         this.planningNewTeam = { player1_id: '', player2_id: '' };
         this.showToast(this.ot('toast.teamAdded'), 'success');
       } catch (error) {
@@ -995,7 +998,7 @@ export function createOfficePlayersView() {
           return;
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.teamDeleteFailed'));
-        this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
+        this.planningTeams = Array.isArray(payload.teams) ? byStartNumber(payload.teams) : this.planningTeams;
         const assignments = { ...this.planningTeamAssignments };
         delete assignments[team.id];
         this.planningTeamAssignments = assignments;
@@ -1033,7 +1036,7 @@ export function createOfficePlayersView() {
         if (!response.ok) {
           throw new Error(payload.error || this.ot('errors.playerAddFailed'));
         }
-        this.planningPlayers = Array.isArray(payload.players) ? payload.players : this.planningPlayers;
+        this.planningPlayers = Array.isArray(payload.players) ? byStartNumber(payload.players) : this.planningPlayers;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.planningNewPlayer = {
           first_name: '',

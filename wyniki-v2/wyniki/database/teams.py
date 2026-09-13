@@ -10,7 +10,7 @@ from ..services.teams import (
     ordered_player_ids,
     pair_key_from_player_ids,
 )
-from .connection import _utc_now, db_conn
+from .connection import _utc_now, db_conn, next_start_number
 
 
 class TeamValidationError(ValueError):
@@ -48,6 +48,7 @@ def _team_payload(
         "display_name": str(row["display_name"] or ""),
         "pair_key": str(row["pair_key"] or ""),
         "created_at": str(row["created_at"] or ""),
+        "start_number": row["start_number"] if "start_number" in row.keys() else None,
     }
     if player1 is not None:
         payload["player1"] = player1
@@ -166,8 +167,8 @@ def insert_tournament_team(
                 """
                 INSERT INTO tournament_teams (
                     tournament_id, category_id, player1_id, player2_id,
-                    display_name, pair_key, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    display_name, pair_key, created_at, start_number
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     tournament_id,
@@ -177,6 +178,7 @@ def insert_tournament_team(
                     display_name,
                     pair_key,
                     _utc_now(),
+                    next_start_number(cursor, tournament_id, "tournament_teams"),
                 ),
             )
             team_id = int(cursor.lastrowid)

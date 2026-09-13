@@ -757,7 +757,7 @@
                 <template x-for="player in planningUnassignedPlayers()" :key="'office_pool_player_'+player.id">
                   <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 cursor-move hover:border-emerald-300"
                        draggable="true" @dragstart="onPlanningPlayerDragStart(player, $event)">
-                    <span class="font-mono font-semibold text-slate-400 tabular-nums w-6 text-center" x-text="planningOrdinal(player)"></span>
+                    <span class="font-mono font-semibold text-slate-400 tabular-nums min-w-8 text-center" data-start-number :title="ot('planning.startNumber')" x-text="planningOrdinal(player)"></span>
                     <div class="flex-1 min-w-0">
                       <div class="font-semibold text-sm text-slate-900 truncate" x-text="player.name"></div>
                       <div class="text-[11px] text-slate-500">
@@ -794,7 +794,7 @@
                     <template x-for="player in planningAssignedPlayers(groupName)" :key="'office_group_player_'+groupName+'_'+player.id">
                       <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 cursor-move"
                            draggable="true" @dragstart="onPlanningPlayerDragStart(player, $event)">
-                        <span class="font-mono font-semibold text-emerald-600 tabular-nums w-6 text-center" x-text="planningOrdinal(player)"></span>
+                        <span class="font-mono font-semibold text-emerald-600 tabular-nums min-w-8 text-center" data-start-number :title="ot('planning.startNumber')" x-text="planningOrdinal(player)"></span>
                         <div class="flex-1 min-w-0">
                           <div class="font-semibold text-sm text-slate-900 truncate" x-text="player.name"></div>
                           <div class="text-[11px] text-slate-500" x-text="playerClassificationLabel(player)"></div>
@@ -819,7 +819,7 @@
                 <template x-for="team in planningUnassignedTeams()" :key="'office_pool_team_'+team.id">
                   <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 cursor-move hover:border-emerald-300"
                        draggable="true" @dragstart="onPlanningTeamDragStart(team, $event)">
-                    <span class="font-mono font-semibold text-slate-400 tabular-nums w-6 text-center" x-text="planningTeamOrdinal(team)"></span>
+                    <span class="font-mono font-semibold text-slate-400 tabular-nums min-w-8 text-center" data-start-number :title="ot('planning.startNumber')" x-text="planningTeamOrdinal(team)"></span>
                     <div class="flex-1 min-w-0">
                       <div class="font-semibold text-sm text-slate-900 competitor-name leading-tight" x-text="formatCompetitorName(team.display_name)"></div>
                     </div>
@@ -851,7 +851,7 @@
                     <template x-for="team in planningAssignedTeams(groupName)" :key="'office_group_team_'+groupName+'_'+team.id">
                       <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 cursor-move"
                            draggable="true" @dragstart="onPlanningTeamDragStart(team, $event)">
-                        <span class="font-mono font-semibold text-emerald-600 tabular-nums w-6 text-center" x-text="planningTeamOrdinal(team)"></span>
+                        <span class="font-mono font-semibold text-emerald-600 tabular-nums min-w-8 text-center" data-start-number :title="ot('planning.startNumber')" x-text="planningTeamOrdinal(team)"></span>
                         <div class="flex-1 min-w-0">
                           <div class="font-semibold text-sm text-slate-900 competitor-name leading-tight" x-text="formatCompetitorName(team.display_name)"></div>
                         </div>

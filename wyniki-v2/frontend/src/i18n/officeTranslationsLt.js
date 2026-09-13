@@ -190,6 +190,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       refreshing: 'Atnaujinami duomenys...',
     },
     planning: {
+      startNumber: 'Starto numeris',
       title: 'Grupės ir tvarkaraštis',
       subtitle: 'Turnyro paruošimas',
       description: 'Varžybų biuras čia gali paskirstyti žaidėjus į grupes A/B/C ir sudaryti dienos planą neįeidamas į administratoriaus skydelį.',
