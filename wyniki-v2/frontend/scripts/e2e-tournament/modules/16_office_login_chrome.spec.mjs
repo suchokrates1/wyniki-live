@@ -25,10 +25,15 @@ export default async function run() {
     if (!loginText.includes(tournament.name)) {
       throw new Error(`Login meta missing tournament name ${tournament.name}`);
     }
-    if (!loginText.includes(`Biuro slot ${slot}`) && !loginText.includes('Biuro slot')) {
-      throw new Error('Login screen missing slot chip');
-    }
-    console.log('  Login screen: language select, slot chip, tournament meta');
+    // /office/<n> still opens, but the office lives at /office with a tournament list
+    await page.waitForFunction(() => window.location.pathname === '/office', undefined, { timeout: 5000 });
+    const selected = await page.locator('#officeTournamentSelect').evaluate((select) => select.options[select.selectedIndex]?.textContent || '');
+    if (!selected.includes(tournament.name)) throw new Error(`Tournament list selected "${selected}", expected ${tournament.name}`);
+    await page.goto(`${BASE_URL}/office`, { waitUntil: 'domcontentloaded' });
+    await loginPage.expectLoginScreen();
+    const remembered = await page.locator('#officeTournamentSelect').evaluate((select) => select.options[select.selectedIndex]?.textContent || '');
+    if (!remembered.includes(tournament.name)) throw new Error(`/office did not remember the tournament: "${remembered}"`);
+    console.log('  Login screen: /office with the tournament list, the chosen tournament remembered on a plain /office visit');
 
     await loginPage.loginExpectFail('wrong-password');
     console.log('  Wrong password stays on login');

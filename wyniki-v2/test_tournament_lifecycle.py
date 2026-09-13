@@ -3523,3 +3523,27 @@ def test_saving_groups_keeps_planned_slots_and_played_matches_of_unchanged_pairs
     assert frozenset(("RA1", "RB3")) in after_by_pair and frozenset(("RB1", "RA3")) in after_by_pair
     assert after_by_pair[frozenset(("RA2", "RA3"))][0]["match_id"]
     assert len([entry for entry in rows if pair(entry) == frozenset(("RA1", "RA2"))]) == 1
+
+
+def test_office_lists_tournaments_and_a_session_survives_a_slot_shift(full_app_with_temp_db):
+    from wyniki import database
+
+    later = database.insert_tournament("Later Cup", "2026-08-10", "2026-08-11", active=True,
+                                       office_password_hash=generate_password_hash("later"))
+    client = full_app_with_temp_db.test_client()
+    listed = client.get("/api/office/tournaments").get_json()["tournaments"]
+    slot = next(item["slot"] for item in listed if item["id"] == later)
+    token = client.post(f"/api/office/{slot}/auth", json={"password": "later"}).get_json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # a newer tournament takes the slot; the session follows its tournament to the new slot
+    database.insert_tournament("Newer Cup", "2026-09-01", "2026-09-02", active=True,
+                               office_password_hash=generate_password_hash("newer"))
+    listed = client.get("/api/office/tournaments").get_json()["tournaments"]
+    new_slot = next(item["slot"] for item in listed if item["id"] == later)
+    assert new_slot != slot
+    assert client.get(f"/api/office/{new_slot}/dashboard", headers=headers).status_code == 200
+    assert client.get(f"/api/office/{slot}/dashboard", headers=headers).status_code == 403
+    session = client.post(f"/api/office/{new_slot}/session", headers=headers)
+    assert session.status_code == 200
+    assert f"office_stream_{new_slot}" in session.headers.get("Set-Cookie", "")

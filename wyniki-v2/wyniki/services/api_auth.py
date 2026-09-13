@@ -146,7 +146,10 @@ def require_admin_access() -> tuple | None:
 
 
 def require_office_access(slot: int, tournament_id: int) -> tuple | None:
-    """Validate an office token bound to slot + tournament_id."""
+    """Validate an office token for this tournament.
+
+    The token names the tournament it was issued for; the slot number is only where that
+    tournament sits in the office list today and may shift when tournaments come and go."""
     token = _office_token_from_request(slot)
     if not token:
         return jsonify({"error": "Office authorization required"}), 401
@@ -158,8 +161,6 @@ def require_office_access(slot: int, tournament_id: int) -> tuple | None:
         return jsonify({"error": "Office session expired"}), 401
     except BadSignature:
         return jsonify({"error": "Invalid office session"}), 401
-    if int(payload.get("slot") or 0) != int(slot) or int(payload.get("tournament_id") or 0) != int(
-        tournament_id
-    ):
+    if int(payload.get("tournament_id") or 0) != int(tournament_id):
         return jsonify({"error": "Office session no longer matches active tournament"}), 403
     return None

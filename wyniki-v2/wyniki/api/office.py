@@ -82,6 +82,7 @@ blueprint = Blueprint('office', __name__, url_prefix='/api/office')
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _NON_MUTATING_ENDPOINTS = {
     "office_auth",
+    "office_session_cookie",
     "office_autoschedule_generate",
 }
 
@@ -160,6 +161,27 @@ def _emit_office_mutation_invalidation(response):
     if not error and tournament:
         emit_office_invalidation(int(tournament["id"]), ["dashboard"])
     return response
+
+
+@blueprint.route('/tournaments', methods=['GET'])
+def office_tournament_list():
+    """Tournaments the office can open, with the slot each one uses today (before login)."""
+    return _json_no_cache({
+        'tournaments': [
+            _office_tournament_payload(tournament, index)
+            for index, tournament in enumerate(_office_slot_tournaments(), start=1)
+        ],
+    })
+
+
+@blueprint.route('/<int:slot>/session', methods=['POST'])
+def office_session_cookie(slot: int):
+    """Re-issue the event-stream cookie after the tournament moved to another slot."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    response = _json_no_cache({'slot': int(slot), 'tournament': _office_tournament_payload(tournament, slot)})
+    return _set_office_stream_cookie(response, slot, int(tournament["id"]))
 
 
 @blueprint.route('/<int:slot>/meta', methods=['GET'])

@@ -20,6 +20,8 @@ export function createOfficeCoreView() {
     dashboard: null,
 
     tournamentMeta: null,
+    officeTournaments: [],
+    officeTournamentId: null,
 
     loading: false,
 
@@ -226,14 +228,7 @@ export function createOfficeCoreView() {
     init() {
       this.initOfficeLang();
       this.slot = this.resolveSlot();
-      this.token = window.sessionStorage.getItem(this.officeTokenKey()) || '';
-      this.hydrateNotificationPreferences();
-      this.loadMeta();
-      if (this.token) {
-        this.loadDashboard();
-        this.connectOfficeSSE();
-        this.openOfficeView(this.activeTab);
-      }
+      this.startOffice();
       window.addEventListener('visibilitychange', () => {
         if (!this.isAuthenticated || document.hidden) return;
         this.officeSseFailures = 0;
@@ -241,9 +236,92 @@ export function createOfficeCoreView() {
         this.loadDashboard(false);
       });
       window.addEventListener('pagehide', () => this.stopOfficeSSE());
-      window.addEventListener('office-session-expired', () => {
-        if (this.token) this.logout(this.ot('errors.sessionExpired'));
+      window.addEventListener('office-session-expired', async () => {
+        if (!this.token) return;
+        // The tournament may only have moved to another slot; follow it before giving up.
+        if (await this.followOfficeTournamentSlot()) return;
+        this.logout(this.ot('errors.sessionExpired'));
       });
+    },
+
+    /** /office lists the tournaments; an old /office/<n> link picks that tournament once. */
+    async startOffice() {
+      const legacySlot = /\/office\/\d+/.test(window.location.pathname) ? this.slot : null;
+      await this.loadOfficeTournaments();
+      const list = this.officeTournaments;
+      let chosen = legacySlot ? list.find((item) => Number(item.slot) === Number(legacySlot)) : null;
+      if (!chosen) {
+        let stored = null;
+        try {
+          stored = Number(window.localStorage.getItem('office-tournament-id') || 0) || null;
+        } catch {
+          stored = null;
+        }
+        chosen = list.find((item) => Number(item.id) === stored) || list[0] || null;
+      }
+      if (legacySlot) {
+        const query = window.location.search || '';
+        window.history.replaceState(null, '', `/office${query}`);
+      }
+      if (chosen) this.selectOfficeTournament(chosen.id);
+      else this.loadMeta();
+    },
+
+    async loadOfficeTournaments() {
+      try {
+        const response = await fetch('/api/office/tournaments');
+        const payload = await response.json().catch(() => ({}));
+        this.officeTournaments = Array.isArray(payload.tournaments) ? payload.tournaments : [];
+      } catch (error) {
+        console.error('Failed to load office tournaments:', error);
+        this.officeTournaments = [];
+      }
+      return this.officeTournaments;
+    },
+
+    selectOfficeTournament(tournamentId) {
+      const chosen = this.officeTournaments.find((item) => Number(item.id) === Number(tournamentId));
+      if (!chosen) return;
+      if (this.token && Number(this.officeTournamentId) !== Number(chosen.id)) this.logout();
+      this.officeTournamentId = Number(chosen.id);
+      this.slot = Number(chosen.slot);
+      this.tournamentMeta = chosen;
+      this.authError = '';
+      try {
+        window.localStorage.setItem('office-tournament-id', String(chosen.id));
+      } catch {
+        // private mode: the choice just is not remembered
+      }
+      this.token = window.sessionStorage.getItem(this.officeTokenKey()) || '';
+      this.hydrateNotificationPreferences();
+      if (this.token) {
+        this.loadDashboard();
+        this.connectOfficeSSE();
+        this.openOfficeView(this.activeTab);
+      }
+    },
+
+    async followOfficeTournamentSlot() {
+      if (!this.officeTournamentId) return false;
+      const previous = this.slot;
+      await this.loadOfficeTournaments();
+      const current = this.officeTournaments.find((item) => Number(item.id) === Number(this.officeTournamentId));
+      if (!current || Number(current.slot) === Number(previous)) return false;
+      this.slot = Number(current.slot);
+      this.tournamentMeta = current;
+      try {
+        await fetch(`/api/office/${this.slot}/session`, { method: 'POST', headers: this.officeHeaders() });
+      } catch (error) {
+        console.error('Failed to renew the office stream cookie:', error);
+      }
+      this.connectOfficeSSE();
+      this.loadDashboard(false);
+      return true;
+    },
+
+    officeTournamentOptionLabel(item) {
+      const dates = [item.start_date, item.end_date].filter(Boolean).join(' – ');
+      return dates ? `${item.name} (${dates})` : item.name;
     },
 
     resolveSlot() {
@@ -252,11 +330,11 @@ export function createOfficeCoreView() {
     },
 
     officeTokenKey() {
-      return `office-token-${this.slot}`;
+      return this.officeTournamentId ? `office-token-t${this.officeTournamentId}` : `office-token-${this.slot}`;
     },
 
     officeNotificationsKey() {
-      return `office-notifications-${this.slot}`;
+      return this.officeTournamentId ? `office-notifications-t${this.officeTournamentId}` : `office-notifications-${this.slot}`;
     },
 
     setToken(nextToken) {

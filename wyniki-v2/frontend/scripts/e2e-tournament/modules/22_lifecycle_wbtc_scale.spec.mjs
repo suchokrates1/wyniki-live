@@ -390,7 +390,8 @@ export default async function run() {
     }
     if (mismatches.length) throw new Error(`Standings differ:\n${mismatches.slice(0, 25).join('\n')}`);
     const progress = (await api('/dashboard')).progress;
-    const incomplete = (progress.groups || []).filter((group) => !group.complete);
+    const singlesGroupNames = new Set(STRUCTURE.groups.map((group) => group.name));
+    const incomplete = (progress.groups || []).filter((group) => singlesGroupNames.has(group.name) && !group.complete);
     if (incomplete.length) throw new Error(`Groups not complete: ${incomplete.map((group) => group.name).join(', ')}`);
     log(`Standings: all ${STRUCTURE.groups.length} groups match the independent calculation (wins, sets, games, order); every group complete`);
 

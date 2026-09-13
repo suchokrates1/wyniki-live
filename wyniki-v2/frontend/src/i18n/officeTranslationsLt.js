@@ -6,7 +6,9 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
     login: {
       slotChip: 'Biuro langelis {slot}',
       title: 'Įėjimas į varžybų biurą',
-      tournamentAssigned: 'Šiam langeliui priskirtas turnyras',
+      tournamentAssigned: 'Pasirinktas turnyras',
+      tournamentLabel: 'Turnyras',
+      noTournaments: 'Biure nėra prieinamų turnyrų',
       loadingTournament: 'Kraunama turnyro informacija...',
       noDate: 'nėra datos',
       activeTournament: 'Aktyvus turnyras',
