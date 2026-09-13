@@ -633,6 +633,7 @@ export function createTournamentsAdmin() {
       },
 
       ensurePlanningDefaults() {
+        const previousDivision = this.planningSelectedDivision;
         const divisions = this.planningDivisions();
         if (!divisions.find(division => String(division.key) === String(this.planningSelectedDivision))) {
      this.planningSelectedDivision = divisions[0]?.key || '';
@@ -644,7 +645,8 @@ export function createTournamentsAdmin() {
         const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
         if (selectedGroups.length) {
      this.planningGroupCount = Math.max(1, selectedGroups.length);
-        } else {
+        } else if (String(previousDivision) !== String(this.planningSelectedDivision)) {
+     // keep a group count picked for a category that has no saved groups yet
      this.planningGroupCount = 1;
         }
         const tournament = this.getTournamentById(this.planningTournamentId);
@@ -796,19 +798,26 @@ export function createTournamentsAdmin() {
         return (this.planningGroups || []).filter(group => this.planningDivisionFromGroupName(group.name) === key);
       },
 
+      // A lone group may be stored as "B1 Mężczyźni — Grupa A" (office, imports); keep that
+      // name, otherwise its players look undrawn and saving drops the group.
+      planningLoneGroupName(label) {
+        const stored = this.planningGroupsForDivision();
+        return stored.length === 1 && stored[0]?.name ? stored[0].name : label;
+      },
+
       planningTargetGroupNames() {
         if (this.planningUsesTournamentCategories()) {
           const cat = this.planningSelectedCategory();
           if (!cat) return [];
           const label = cat.label;
           const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
-          if (count === 1) return [label];
+          if (count === 1) return [this.planningLoneGroupName(label)];
           return Array.from({ length: count }, (_, index) => `${label} — Grupa ${String.fromCharCode(65 + index)}`);
         }
         const count = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1)));
         const label = this.planningDivisionLabel();
         if (!this.planningSelectedDivision) return [];
-        if (count === 1) return [label];
+        if (count === 1) return [this.planningLoneGroupName(label)];
         return Array.from({ length: count }, (_, index) => `${label} — Grupa ${String.fromCharCode(65 + index)}`);
       },
 
