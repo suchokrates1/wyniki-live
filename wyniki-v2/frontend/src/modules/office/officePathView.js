@@ -218,7 +218,9 @@ export function createOfficePathView() {
     /** On entering the office, open the first unfinished step — unless the user already moved. */
     async openOfficePathStart() {
       this.officeUserNavigated = false;
-      await Promise.all([this.loadDashboard(false), this.loadOfficePlanningData(), this.loadDrawFormats()]);
+      await Promise.all([this.loadDashboard(false), this.loadOfficePlanningData()]);
+      // after planning: its own draws refresh is older, so this one is the one applied
+      await this.loadDrawFormats();
       if (this.officeUserNavigated) return;
       const next = this.officePathNext();
       await this.openOfficeView(next?.view || this.activeTab, { auto: true });
