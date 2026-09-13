@@ -109,7 +109,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         state: {
           locked: 'w trakcie',
           changed: 'niezapisana zmiana',
-          none: 'bez drabinki',
+          none: '✓ bez drabinki',
           confirmed: '✓ zatwierdzona',
           default: 'do zatwierdzenia',
         },
@@ -703,7 +703,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         state: {
           locked: 'läuft',
           changed: 'nicht gespeichert',
-          none: 'ohne Turnierbaum',
+          none: '✓ ohne Turnierbaum',
           confirmed: '✓ bestätigt',
           default: 'zu bestätigen',
         },
@@ -1280,7 +1280,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         state: {
           locked: 'in play',
           changed: 'unsaved change',
-          none: 'no draw',
+          none: '✓ no draw',
           confirmed: '✓ confirmed',
           default: 'to confirm',
         },
@@ -1857,7 +1857,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         state: {
           locked: 'in corso',
           changed: 'modifica non salvata',
-          none: 'senza tabellone',
+          none: '✓ senza tabellone',
           confirmed: '✓ confermato',
           default: 'da confermare',
         },
@@ -2434,7 +2434,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         state: {
           locked: 'en juego',
           changed: 'cambio sin guardar',
-          none: 'sin cuadro',
+          none: '✓ sin cuadro',
           confirmed: '✓ confirmado',
           default: 'por confirmar',
         },
@@ -3011,7 +3011,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         state: {
           locked: 'en cours',
           changed: 'modification non enregistrée',
-          none: 'sans tableau',
+          none: '✓ sans tableau',
           confirmed: '✓ validé',
           default: 'à valider',
         },

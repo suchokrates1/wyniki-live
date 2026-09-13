@@ -1661,8 +1661,9 @@ body.office-body {
 .office-draws__cat.is-changed .office-draws__cat-icon { background: var(--kort-warn); color: var(--kort-lime-ink); }
 .office-draws__cat.is-confirmed { border-color: rgba(74, 222, 128, 0.35); background: rgba(74, 222, 128, 0.07); box-shadow: inset 4px 0 0 var(--kort-ok); }
 .office-draws__cat.is-confirmed .office-draws__cat-icon { background: var(--kort-ok); color: var(--kort-void); }
-.office-draws__cat.is-none { border-color: transparent; background: transparent; box-shadow: inset 4px 0 0 var(--kort-raise); opacity: 0.72; }
-.office-draws__cat.is-none .office-draws__cat-icon { border: 1.5px solid var(--kort-line); color: var(--kort-mist); }
+/* nothing to decide (no knockout possible): done, like a confirmed one, in a quieter green */
+.office-draws__cat.is-none { border-color: rgba(74, 222, 128, 0.25); background: rgba(74, 222, 128, 0.04); box-shadow: inset 4px 0 0 rgba(74, 222, 128, 0.6); }
+.office-draws__cat.is-none .office-draws__cat-icon { background: rgba(74, 222, 128, 0.7); color: var(--kort-void); }
 .office-draws__cat.is-locked { border-color: rgba(232, 93, 4, 0.45); box-shadow: inset 4px 0 0 var(--kort-live); }
 .office-draws__cat.is-locked .office-draws__cat-icon { color: var(--kort-live); font-size: 0.6rem; }
 
@@ -1672,7 +1673,7 @@ body.office-body {
 .office-draws__badge.is-confirmed { background: var(--kort-ok); border-color: var(--kort-ok); color: var(--kort-void); font-weight: 700; }
 .office-draws__badge.is-default { background: rgba(245, 184, 61, 0.12); }
 .office-draws__badge.is-changed { background: var(--kort-warn); border-color: var(--kort-warn); color: var(--kort-lime-ink); font-weight: 700; }
-.office-draws__badge.is-none { border-color: transparent; }
+.office-draws__badge.is-none { border-color: rgba(74, 222, 128, 0.45); color: var(--kort-ok); }
 
 .office-draws__cat { grid-template-columns: minmax(0, 1fr); }
 .office-draws__cat .office-draws__badge { justify-self: start; }

@@ -106,7 +106,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       state: {
         locked: 'vyksta',
         changed: 'neišsaugotas pakeitimas',
-        none: 'be lentelės',
+        none: '✓ be lentelės',
         confirmed: '✓ patvirtinta',
         default: 'laukia patvirtinimo',
       },
