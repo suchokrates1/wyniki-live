@@ -420,51 +420,6 @@ def _iter_knockout_units(bracket_groups: List[Dict[str, Any]]) -> List[Dict[str,
     return units
 
 
-def _build_direct_knockout_slots(label: str, names: List[str]) -> List[Dict[str, Any]]:
-    """Build a 2/4/8 knockout tree from a group's member list (list order = seeding)."""
-    seeds = [str(name).strip() for name in names if str(name or "").strip()]
-    count = len(seeds)
-    if count < 2 or count > 8:
-        return []
-    if count == 2:
-        return [_knockout_slot(label, "final", 1, seeds[0], seeds[1])]
-
-    if count <= 4:
-        padded = seeds + [None] * (4 - count)
-        slots: List[Dict[str, Any]] = []
-        final_players: List[Optional[str]] = [None, None]
-        for position, (left, right) in enumerate(((padded[0], padded[3]), (padded[1], padded[2])), start=1):
-            if left and right:
-                slots.append(_knockout_slot(label, "semifinal", position, left, right))
-            else:
-                final_players[position - 1] = left or right
-        slots.append(_knockout_slot(label, "final", 1, final_players[0], final_players[1]))
-        if count == 4:
-            slots.append(_knockout_slot(label, "third_place", 1, None, None))
-        return slots
-
-    padded = seeds + [None] * (8 - count)
-    qf_pairs = (
-        (padded[0], padded[7], 1),
-        (padded[3], padded[4], 2),
-        (padded[1], padded[6], 3),
-        (padded[2], padded[5], 4),
-    )
-    slots = []
-    sf_players: List[Optional[str]] = [None, None, None, None]
-    for left, right, position in qf_pairs:
-        if left and right:
-            slots.append(_knockout_slot(label, "quarterfinal", position, left, right))
-        else:
-            sf_players[position - 1] = left or right
-    slots.append(_knockout_slot(label, "semifinal", 1, sf_players[0], sf_players[1]))
-    slots.append(_knockout_slot(label, "semifinal", 2, sf_players[2], sf_players[3]))
-    slots.append(_knockout_slot(label, "final", 1, None, None))
-    if count >= 4:
-        slots.append(_knockout_slot(label, "third_place", 1, None, None))
-    return slots
-
-
 def _slots_for_knockout_unit(
     unit: Dict[str, Any],
     *,
