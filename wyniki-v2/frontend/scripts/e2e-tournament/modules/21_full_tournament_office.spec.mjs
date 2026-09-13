@@ -399,6 +399,18 @@ export default async function run() {
     // ——— results ———
     const addResultFromBoard = async (entry, { sets = [[4, 1], [4, 2]], walkover = false } = {}) => {
       await selectDay(entry.day_date);
+      if (!(await block(entry.id).count())) {
+        await page.waitForTimeout(1500);
+      }
+      if (!(await block(entry.id).count())) {
+        const rows = ((await planning()).schedule || []).filter((row) => row.day_date === entry.day_date && String(row.court_id) === String(entry.court_id));
+        const ui = await page.evaluate(([id, court]) => {
+          const data = Alpine.$data(document.body);
+          const row = (data.planningSchedule || []).find((item) => item.id === id);
+          return { day: data.autoDayDate, row, board: (data.autoBoardEntries(court) || []).map((item) => [item.id, item.scheduled_time]) };
+        }, [entry.id, String(entry.court_id)]).catch((error) => String(error));
+        throw new Error(`Match ${entry.id} (${entry.day_date} ${entry.scheduled_time} court ${entry.court_id}) is not on the board. Same court that day: ${JSON.stringify(rows.map((row) => [row.id, row.scheduled_time, row.status, row.match_id]))}; UI: ${JSON.stringify(ui)}`);
+      }
       await block(entry.id).scrollIntoViewIfNeeded();
       await block(entry.id).click();
       await inspector.getByRole('button', { name: 'Dodaj wynik' }).click();
