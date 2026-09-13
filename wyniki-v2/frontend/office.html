@@ -887,10 +887,10 @@
                       :data-draw-category="item.label"
                       @click="selectDrawCategory(item)">
                 <span class="office-draws__cat-name">
-                  <span class="office-draws__cat-icon" aria-hidden="true" x-text="({confirmed: '✓', none: '✓', locked: '●', changed: '!', default: '?'})[drawItemState(item)]"></span>
+                  <span class="office-draws__cat-icon" aria-hidden="true" :data-draw-state="drawItemState(item)" :title="ot('draws.state.' + drawItemState(item))" x-text="({confirmed: '✓', none: '✓', locked: '●', changed: '!', default: '?'})[drawItemState(item)]"></span>
                   <span x-text="drawCategoryLabel(item)"></span>
                 </span>
-                <span class="office-draws__badge" :class="'is-' + drawItemState(item)" :data-draw-state="drawItemState(item)" x-text="ot('draws.state.' + drawItemState(item))"></span>
+                <span class="sr-only" x-text="ot('draws.state.' + drawItemState(item))"></span>
                 <span class="office-draws__cat-groups" x-text="drawGroupsText(item)"></span>
                 <span class="office-draws__cat-format" x-text="drawFormatName(drawItemFormat(item)) + ' · ' + ot('draws.matchesShort', { count: drawItemMatches(item) })"></span>
               </button>
