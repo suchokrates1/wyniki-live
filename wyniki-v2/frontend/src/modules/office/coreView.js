@@ -120,6 +120,7 @@ export function createOfficeCoreView() {
 
     planningDropCell: null,
     officeKnockoutSwapFrom: null,
+    planningGroupCountDivision: null,
 
     planningRematchOpen: false,
 

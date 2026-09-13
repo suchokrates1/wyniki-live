@@ -76,6 +76,7 @@ export function createTournamentsAdmin() {
      planningSelectedDivision: '',
      planningSelectedCategoryId: null,
      planningGroupCount: 1,
+     planningGroupCountDivision: null,
      planningCategoryFilterEnabled: true,
      planningGroupAssignments: {},
      planningTeamAssignments: {},
@@ -643,7 +644,12 @@ export function createTournamentsAdmin() {
           this.planningSelectedCategoryId = Number(this.planningSelectedDivision);
         }
         const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
-        if (selectedGroups.length) {
+        // empty groups are not saved: a count typed for this category wins until another is chosen
+        const pickedHere = this.planningGroupCountDivision !== null
+          && String(this.planningGroupCountDivision) === String(this.planningSelectedDivision);
+        if (pickedHere) {
+     this.planningGroupCount = Math.max(Number(this.planningGroupCount || 1), selectedGroups.length, 1);
+        } else if (selectedGroups.length) {
      this.planningGroupCount = Math.max(1, selectedGroups.length);
         } else if (String(previousDivision) !== String(this.planningSelectedDivision)) {
      // keep a group count picked for a category that has no saved groups yet

@@ -817,7 +817,7 @@
                   </div>
                   <div class="form-control">
                     <label class="label"><span class="label-text">Liczba grup</span></label>
-                    <input type="number" min="1" max="8" x-model.number="planningGroupCount" class="input input-bordered">
+                    <input type="number" min="1" max="8" x-model.number="planningGroupCount" @input="planningGroupCountDivision = String(planningSelectedDivision)" class="input input-bordered">
                   </div>
                   <div class="form-control justify-end">
                     <div class="join" x-show="planningUsesTournamentCategories()">

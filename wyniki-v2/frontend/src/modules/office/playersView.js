@@ -64,10 +64,15 @@ export function createOfficePlayersView() {
       }
       this.categorySetupOpen = !this.tournamentCategories.length;
       const selectedGroups = this.planningGroupsForDivision(this.planningSelectedDivision);
-      if (selectedGroups.length) {
+      // Empty groups are not saved, so a count picked with + / − for this category wins over
+      // the saved groups until another category is chosen.
+      const pickedHere = this.planningGroupCountDivision !== null
+        && String(this.planningGroupCountDivision) === String(this.planningSelectedDivision);
+      if (pickedHere) {
+        this.planningGroupCount = Math.max(Number(this.planningGroupCount || 1), selectedGroups.length, 1);
+      } else if (selectedGroups.length) {
         this.planningGroupCount = Math.max(1, selectedGroups.length);
       } else if (String(previousDivision) !== String(this.planningSelectedDivision)) {
-        // Keep a group count the user picked for a category that has no saved groups yet.
         this.planningGroupCount = 1;
       }
       this.planningNewSchedule.day_date = this.planningNewSchedule.day_date || this.tournamentMeta?.start_date || this.dashboard?.tournament?.start_date || '';
@@ -582,6 +587,7 @@ export function createOfficePlayersView() {
         this.planningSelectedCategoryId = Number(key);
       }
       const groups = this.planningGroupsForDivision(key);
+      this.planningGroupCountDivision = null;
       this.planningGroupCount = groups.length ? Math.max(1, Math.min(8, groups.length)) : 1;
       if (this.planningSelectedCategoryIsDoubles()) this.planningAddTeamOpen = true;
     },
@@ -590,6 +596,7 @@ export function createOfficePlayersView() {
       const next = Math.max(1, Math.min(8, Number(this.planningGroupCount || 1) + Number(delta || 0)));
       if (next === this.planningGroupCount) return;
       this.planningGroupCount = next;
+      this.planningGroupCountDivision = String(this.planningSelectedDivision);
       const valid = new Set(this.planningTargetGroupNames());
       const assignments = { ...this.planningGroupAssignments };
       const teamAssignments = { ...this.planningTeamAssignments };

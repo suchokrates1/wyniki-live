@@ -224,6 +224,11 @@ export default async function run() {
     const divisionCard = (label) => page.locator('.office-groups button.rounded-2xl').filter({ hasText: label }).first();
     await divisionCard(catB2.label).click();
     await page.locator('.office-groups button').filter({ hasText: /^\+$/ }).click();
+    // an empty second group is not saved; a refresh must not take the count back to 1
+    await page.locator('.office-topbar').getByRole('button', { name: 'Odśwież' }).click();
+    await page.waitForTimeout(2500);
+    const groupCount = await page.evaluate(() => Alpine.$data(document.body).planningGroupCount);
+    if (Number(groupCount) !== 2) throw new Error(`Group count went back to ${groupCount} after a refresh`);
     await page.getByRole('button', { name: 'Rozdziel automatycznie' }).click();
     await waitUntil('B2 K in two groups of four', async () => {
       const groups = ((await planning()).groups || []).filter((group) => Number(group.tournament_category_id) === Number(catB2.id));
