@@ -11,7 +11,15 @@ let _adminToken = null;
 let _activeMarker = `E2E-${Date.now()}`;
 
 async function fetchJson(url, options = {}) {
-  const resp = await fetch(url, options);
+  let resp;
+  try {
+    resp = await fetch(url, options);
+  } catch (error) {
+    // gunicorn closes idle keep-alive sockets; a request sent on one never reached the server
+    console.log(`  [fetch] retry ${options.method || 'GET'} ${url}: ${error?.cause?.code || error?.message}`);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    resp = await fetch(url, options);
+  }
   const body = await resp.json().catch(() => ({}));
   if (!resp.ok) {
     throw new Error(`${options.method || 'GET'} ${url} → ${resp.status}: ${body.error || resp.statusText}`);
