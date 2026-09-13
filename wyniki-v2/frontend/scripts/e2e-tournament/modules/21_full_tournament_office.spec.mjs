@@ -406,7 +406,7 @@ export default async function run() {
       const court = courtIds[index % courtIds.length];
       const cellId = await page.evaluate((wanted) => {
         const cells = [...document.querySelectorAll('[data-cell]')].filter((node) => node.getAttribute('data-cell').startsWith(`${wanted}|`));
-        const empty = cells.find((node) => !node.querySelector('[data-schedule-entry]'));
+        const empty = cells.find((node) => !node.hasAttribute('data-occupied'));
         return (empty || cells[0])?.getAttribute('data-cell') || null;
       }, court);
       if (!cellId) throw new Error(`No cell for court ${court} on day 2`);
@@ -425,7 +425,7 @@ export default async function run() {
     const mover = day2Placed[0];
     const otherCourt = courtIds.find((court) => court !== String(mover.court_id));
     const moverCell = await page.evaluate((wanted) => (
-      [...document.querySelectorAll('[data-cell]')].find((node) => node.getAttribute('data-cell').startsWith(`${wanted}|`) && !node.querySelector('[data-schedule-entry]'))
+      [...document.querySelectorAll('[data-cell]')].find((node) => node.getAttribute('data-cell').startsWith(`${wanted}|`) && !node.hasAttribute('data-occupied'))
       || [...document.querySelectorAll('[data-cell]')].find((node) => node.getAttribute('data-cell').startsWith(`${wanted}|`))
     )?.getAttribute('data-cell'), otherCourt);
     await block(mover.id).scrollIntoViewIfNeeded();
@@ -448,6 +448,32 @@ export default async function run() {
     const afterEnd = spread.filter(endsAfter('13:00'));
     if (afterEnd.length) throw new Error(`Phase plan ignored the 13:00 end: ${afterEnd.length} matches`);
     log(`"Rozstaw fazę grupową": all 24 placed, ${spread.filter((entry) => entry.day_date === day1).length} on day 1 and ${spread.filter((entry) => entry.day_date === day2).length} on day 2, all finished by 13:00`);
+
+    markStep('board drawn to scale');
+    // the board runs from the day's start to its end hour, and a match is as tall as it lasts
+    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('21:00');
+    const board = await waitUntil('board to 21:00', async () => {
+      const state = await page.evaluate(() => {
+        const cells = [...document.querySelectorAll('[data-cell]')].map((node) => node.getAttribute('data-cell').split('|')[1]);
+        const tick = parseFloat(getComputedStyle(document.querySelector('.office-timetable')).getPropertyValue('--kort-tick')) || 0;
+        const blocks = [...document.querySelectorAll('[data-schedule-entry][data-minutes]')].map((node) => ({ minutes: Number(node.dataset.minutes), height: node.getBoundingClientRect().height }));
+        const drawer = document.querySelector('.office-drawer')?.getBoundingClientRect();
+        return { first: cells[0], last: cells[cells.length - 1], tick, blocks, drawerBottom: drawer?.bottom, viewport: window.innerHeight };
+      });
+      return state.last === '20:45' ? state : null;
+    });
+    if (board.first !== '09:00') throw new Error(`Board should start at 09:00, starts at ${board.first}`);
+    const perMinute = board.blocks.map((item) => (item.height + 4) / item.minutes);
+    const minutesSeen = [...new Set(board.blocks.map((item) => item.minutes))].sort((a, b) => a - b);
+    if (minutesSeen.length < 2) throw new Error(`Expected matches of different lengths on the board, saw ${minutesSeen.join(',')}`);
+    if (Math.max(...perMinute) - Math.min(...perMinute) > 0.05) throw new Error(`Block heights are not proportional to minutes: ${JSON.stringify(board.blocks.slice(0, 6))}`);
+    if (Math.abs(perMinute[0] - board.tick / 15) > 0.05) throw new Error(`A 15-minute row should be ${board.tick}px, blocks give ${perMinute[0] * 15}px`);
+    await page.locator('.office-views').evaluate((node) => { node.scrollTop = 0; });
+    const drawerBox = await page.locator('.office-drawer').boundingBox();
+    if (!drawerBox || drawerBox.y + drawerBox.height > board.viewport + 1 || drawerBox.y > board.viewport) throw new Error(`The unassigned drawer should stay at the bottom of the screen: ${JSON.stringify(drawerBox)}`);
+    await page.screenshot({ path: 'test-results/office-board-scale.png' });
+    log(`Board 09:00–21:00 in 15-minute rows of ${board.tick}px; ${minutesSeen.join(' and ')}-minute matches proportional; drawer stays at the bottom`);
+    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('13:00');
 
     markStep('publish');
     const day2PlacedNow = ((await planning()).schedule || []).filter((entry) => entry.day_date === day2 && isPlaced(entry));

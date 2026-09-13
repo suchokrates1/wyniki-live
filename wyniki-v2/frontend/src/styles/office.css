@@ -49,6 +49,8 @@
   --kort-err: #f87171;
 
   --kort-rail: 72px;
+  /* schedule board scale: 15 minutes of play (30 min = 2 rows, 60 = 4, 75 = 5) */
+  --kort-tick: 26px;
   --kort-rail-open: 300px;
   --kort-mono: 'Chivo Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
   --kort-sans: Chivo, 'Segoe UI', system-ui, sans-serif;
@@ -763,8 +765,8 @@ body.office-body {
 .office-timetable__time {
   position: sticky;
   left: 0;
-  z-index: 1;
-  padding: 8px;
+  z-index: 3;
+  padding: 3px 8px;
   background: var(--kort-deep);
   font-family: var(--kort-mono);
   font-size: 0.72rem;
@@ -774,11 +776,15 @@ body.office-body {
 
 .office-timetable__corner { left: 0; z-index: 3; }
 
+.office-timetable__time:not(.is-hour) { color: var(--kort-mist); font-weight: 600; }
+
 .office-timetable__cell {
-  min-height: 92px;
-  padding: 5px;
+  min-height: 0;
   background: transparent;
+  border-bottom-color: rgba(18, 61, 72, 0.45);
 }
+.office-timetable__cell.is-hour { border-top: 1px solid var(--kort-line); }
+.office-timetable__cell.is-half { border-top: 1px dashed var(--kort-grid); }
 
 .office-timetable__cell.is-drop {
   background: rgba(198, 233, 83, 0.1);
@@ -792,10 +798,12 @@ body.office-body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  height: 100%;
-  min-height: 80px;
+  z-index: 2;
+  min-height: 0;
+  margin: 2px 4px;
+  overflow: hidden;
   box-sizing: border-box;
-  padding: 7px 9px;
+  padding: 5px 9px;
   border-radius: 8px;
   border: 0;
   border-left: 3px solid var(--kort-line);
@@ -879,6 +887,9 @@ body.office-body {
 
 /* ——— schedule: drawer with matches to place ——— */
 .office-drawer {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
   flex: none;
   margin-top: 12px;
   border: 1px solid rgba(232, 93, 4, 0.45);

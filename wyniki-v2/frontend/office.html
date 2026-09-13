@@ -336,10 +336,10 @@
           <div class="office-stage">
             <p class="office-hint" x-show="!autoIsPreview()" x-text="ot('planning.dragHint')"></p>
             <div class="office-timetable-wrap">
-              <div class="office-timetable office-timetable--head" :style="officeTimetableStyle()">
-                <div class="office-timetable__corner"></div>
+              <div class="office-timetable" :style="officeTimetableStyle()">
+                <div class="office-timetable__corner" style="grid-column: 1; grid-row: 1;"></div>
                 <template x-for="court in autoCourts" :key="'gridh_'+court.kort_id">
-                  <div class="office-timetable__court">
+                  <div class="office-timetable__court" :style="`grid-column: ${autoCourts.indexOf(court) + 2}; grid-row: 1;`">
                     <div class="flex items-start justify-between gap-1">
                       <div>
                         <div x-text="autoCourtLabel(court.kort_id)"></div>
@@ -354,47 +354,50 @@
                     </div>
                   </div>
                 </template>
-              </div>
-              <template x-for="time in autoGridTimes()" :key="'gridt_'+time">
-                <div class="office-timetable office-timetable--row" :style="officeTimetableStyle()">
-                  <div class="office-timetable__time" x-text="time"></div>
-                  <template x-for="court in autoCourts" :key="'gridc_'+time+'_'+court.kort_id">
-                    <div class="office-timetable__cell"
-                         :data-cell="court.kort_id + '|' + time"
-                         :class="{'is-drop': planningDropCell === court.kort_id + '|' + time}"
-                         @dragover.prevent
-                         @dragenter.prevent="if (autoDragId) planningDropCell = court.kort_id + '|' + time"
-                         @drop.prevent="planningDropCell = null; onAutoDropAt(court.kort_id, time)">
-                      <template x-for="entry in autoEntriesAt(court.kort_id, time)" :key="'cell_'+autoEntryId(entry)">
-                        <div class="office-block"
+                <template x-for="tick in autoGridTicks().filter((item) => item.label)" :key="'gridt_'+tick.time">
+                  <div class="office-timetable__time" :class="{'is-hour': tick.hour}" :style="`grid-column: 1; grid-row: ${tick.row} / span 2;`" x-text="tick.time"></div>
+                </template>
+                <template x-for="cell in autoGridCells()" :key="cell.key">
+                  <div class="office-timetable__cell"
+                       :style="cell.style"
+                       :data-cell="cell.key"
+                       :data-occupied="cell.occupied ? '' : null"
+                       :class="{'is-hour': cell.hour, 'is-half': cell.half, 'is-drop': planningDropCell === cell.key}"
+                       @dragover.prevent
+                       @dragenter.prevent="if (autoDragId) planningDropCell = cell.key"
+                       @drop.prevent="planningDropCell = null; onAutoDropAt(cell.courtId, cell.time)"></div>
+                </template>
+                <template x-for="block in autoBoardBlocks()" :key="'block_'+autoEntryId(block.entry)">
+                  <div class="office-block"
+                       :style="block.style"
+                       :data-minutes="block.minutes"
+                       @dragover.prevent
+                       @dragenter.prevent="if (autoDragId) planningDropCell = block.courtId + '|' + block.time"
+                       @drop.prevent.stop="planningDropCell = null; onAutoDropAt(block.courtId, block.time)"
                              data-schedule-entry
-                             :data-schedule-id="autoEntryId(entry)"
+                             :data-schedule-id="autoEntryId(block.entry)"
                              :class="[
-                               officeScheduleStatusClass(entry.status),
-                               autoIsPlaceholder(entry) ? 'is-placeholder' : '',
-                               planningOpenCardId === autoEntryId(entry) ? 'is-selected' : ''
+                               officeScheduleStatusClass(block.entry.status),
+                               autoIsPlaceholder(block.entry) ? 'is-placeholder' : '',
+                               planningOpenCardId === autoEntryId(block.entry) ? 'is-selected' : ''
                              ]"
                              :draggable="!autoLoading"
-                             @dragstart="onAutoDragStart(entry, $event)"
+                             @dragstart="onAutoDragStart(block.entry, $event)"
                              @dragend="autoDragId = null; planningDropCell = null"
-                             @click="!autoIsPreview() && togglePlanningCard(entry)">
-                          <span class="sr-only" x-text="entry.scheduled_time"></span>
+                             @click="!autoIsPreview() && togglePlanningCard(block.entry)">
+                          <span class="sr-only" x-text="block.entry.scheduled_time"></span>
                           <div class="office-block__tag">
-                            <span x-text="officeDisplayLabel(entry.category_name)"></span>
-                            <span x-show="entry.category_name && entry.phase" aria-hidden="true">&middot;</span>
-                            <span x-text="officeDisplayLabel(entry.phase)"></span>
+                            <span x-text="officeDisplayLabel(block.entry.category_name)"></span>
+                            <span x-show="block.entry.category_name && block.entry.phase" aria-hidden="true">&middot;</span>
+                            <span x-text="officeDisplayLabel(block.entry.phase)"></span>
                           </div>
-                          <div class="competitor-name office-block__name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
+                          <div class="competitor-name office-block__name" x-text="formatCompetitorName(block.entry.player1_name || '—')"></div>
                           <span class="sr-only" x-text="ot('versus')"></span>
-                          <div class="competitor-name office-block__name office-block__name--b" x-text="formatCompetitorName(entry.player2_name || '—')"></div>
-                          <div class="office-block__note" x-text="officeScheduleHasResult(entry) ? officeScheduleResultLabel(entry) : officeScheduleStatusLabel(entry.status)"></div>
+                          <div class="competitor-name office-block__name office-block__name--b" x-text="formatCompetitorName(block.entry.player2_name || '—')"></div>
+                          <div class="office-block__note" x-text="officeScheduleHasResult(block.entry) ? officeScheduleResultLabel(block.entry) : officeScheduleStatusLabel(block.entry.status)"></div>
                         </div>
-                      </template>
-                      <div class="h-full min-h-[64px] grid place-items-center text-[10px] text-slate-300" x-show="!autoEntriesAt(court.kort_id, time).length" x-text="ot('planning.emptySlot')"></div>
-                    </div>
-                  </template>
-                </div>
-              </template>
+                </template>
+              </div>
             </div>
 
         <div class="mt-4">

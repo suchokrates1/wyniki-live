@@ -304,7 +304,109 @@ export function createOfficeAutoScheduleView() {
 
     officeTimetableStyle() {
       const count = Math.max(1, (this.autoCourts || []).length);
-      return `grid-template-columns: 64px repeat(${count}, minmax(148px, 1fr));`;
+      const rows = this.autoGridTicks().length;
+      return `grid-template-columns: 64px repeat(${count}, minmax(148px, 1fr)); grid-template-rows: auto repeat(${rows}, var(--kort-tick));`;
+    },
+
+    // ——— the board is drawn to scale: one row per 15 minutes ———
+    autoTimeMinutes(value) {
+      const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})/);
+      return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+    },
+
+    autoMinutesTime(total) {
+      const clamped = Math.max(0, Math.min(Number(total) || 0, 24 * 60 - 15));
+      return `${String(Math.floor(clamped / 60)).padStart(2, '0')}:${String(clamped % 60).padStart(2, '0')}`;
+    },
+
+    autoEntryMinutes(entry) {
+      return Math.max(15, Number(this.autoSlotMinutes(this.autoMatchBand(entry), entry?.court_id)) || 60);
+    },
+
+    /** From the day's start hour to its end hour, stretched to fit any match placed outside it. */
+    autoBoardWindow() {
+      let start = this.autoTimeMinutes(this.autoStartTime) ?? 9 * 60 + 30;
+      let end = this.autoTimeMinutes(this.autoEndTime) ?? 18 * 60;
+      if (end <= start) end = start + 4 * 60;
+      for (const court of this.autoCourts || []) {
+        for (const entry of this.autoBoardEntries(court.kort_id)) {
+          const from = this.autoTimeMinutes(entry.scheduled_time);
+          if (from == null) continue;
+          start = Math.min(start, from);
+          end = Math.max(end, from + this.autoEntryMinutes(entry));
+        }
+      }
+      return { start: Math.floor(start / 15) * 15, end: Math.min(24 * 60, Math.ceil(end / 15) * 15) };
+    },
+
+    autoGridTicks() {
+      const { start, end } = this.autoBoardWindow();
+      const ticks = [];
+      for (let minutes = start; minutes < end; minutes += 15) {
+        ticks.push({ time: this.autoMinutesTime(minutes), row: ticks.length + 2, label: minutes % 30 === 0, hour: minutes % 60 === 0 });
+      }
+      return ticks;
+    },
+
+    autoGridTimes() {
+      return this.autoGridTicks().map((tick) => tick.time);
+    },
+
+    /** Every match of the day with its place on the grid: row from its start, rows as long as it lasts. */
+    autoBoardBlocks() {
+      const { start } = this.autoBoardWindow();
+      const blocks = [];
+      (this.autoCourts || []).forEach((court, index) => {
+        for (const entry of this.autoBoardEntries(court.kort_id)) {
+          const from = this.autoTimeMinutes(entry.scheduled_time);
+          if (from == null) continue;
+          const rowStart = Math.floor((from - start) / 15) + 2;
+          const span = Math.max(1, Math.round(this.autoEntryMinutes(entry) / 15));
+          blocks.push({
+            entry,
+            courtId: court.kort_id,
+            time: this.autoNormalizeTime(entry.scheduled_time),
+            style: `grid-column: ${index + 2}; grid-row: ${rowStart} / span ${span};`,
+            minutes: this.autoEntryMinutes(entry),
+          });
+        }
+      });
+      return blocks;
+    },
+
+    /** One drop cell per court per 15 minutes; cells under a match are marked occupied. */
+    autoGridCells() {
+      const ticks = this.autoGridTicks();
+      const cells = [];
+      (this.autoCourts || []).forEach((court, index) => {
+        const spans = this.autoBoardEntries(court.kort_id)
+          .map((entry) => {
+            const from = this.autoTimeMinutes(entry.scheduled_time);
+            return from == null ? null : [Math.floor(from / 15) * 15, from + this.autoEntryMinutes(entry)];
+          })
+          .filter(Boolean);
+        for (const tick of ticks) {
+          const at = this.autoTimeMinutes(tick.time);
+          cells.push({
+            key: `${court.kort_id}|${tick.time}`,
+            courtId: court.kort_id,
+            time: tick.time,
+            style: `grid-column: ${index + 2}; grid-row: ${tick.row};`,
+            hour: tick.hour,
+            half: tick.label && !tick.hour,
+            occupied: spans.some(([from, to]) => at >= from && at < to),
+          });
+        }
+      });
+      return cells;
+    },
+
+    autoCellOccupied(courtId, time) {
+      const at = this.autoTimeMinutes(time);
+      return this.autoBoardEntries(courtId).some((entry) => {
+        const from = this.autoTimeMinutes(entry.scheduled_time);
+        return from != null && at >= Math.floor(from / 15) * 15 && at < from + this.autoEntryMinutes(entry);
+      });
     },
 
     planningSelectedEntry() {
