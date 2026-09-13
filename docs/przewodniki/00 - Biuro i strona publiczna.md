@@ -43,8 +43,9 @@ Trzy powierzchnie produktu web:
 - [[26 - Planowanie - terminarz i autoschedule]]
 - [[27 - Wprowadzanie i edycja wyniku]]
 - [[28 - Debel w biurze]] (kategorie Double, pary, tryb grupy, wynik na drużynach)
+- [[29 - Drabinki (format pucharu)]] (krok 2: format fazy pucharowej każdej kategorii)
 
-Układ biura „Kort”: szyna widoków (Terminarz, Grupy startowe, Postęp grup, Drabinka, Ostatnie mecze, Komunikat dla widzów), pasek górny z liczbami i akcjami — [[21 - Chrome i quick-info]].
+Układ biura „Kort”: szyna z krokami (1. Grupy startowe, 2. Drabinki, 3. Terminarz, 4. Faza grupowa, 5. Faza pucharowa) i narzędziami (Ostatnie mecze, Komunikat dla widzów), pasek górny z liczbami i akcjami — [[21 - Chrome i quick-info]].
 
 ## Admin (`/admin`)
 

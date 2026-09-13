@@ -14,12 +14,20 @@ Stały układ operatora: szyna widoków po lewej, pasek górny z liczbami i akcj
 
 Wąska szyna z ikonami; po najechaniu (lub przejściu klawiaturą) rozwija się z nazwami. Po kliknięciu zwija się z powrotem.
 
+Sekcja **Przygotowanie i rozgrywki** to numerowane kroki turnieju (gotowe zostają na szynie, wyszarzone, z ✓; bieżący jest podświetlony):
+
+| Krok | Notatka |
+|------|---------|
+| **1. Grupy startowe** | [[25 - Planowanie - grupy]], [[28 - Debel w biurze]] |
+| **2. Drabinki** | [[29 - Drabinki (format pucharu)]] |
+| **3. Terminarz** | [[26 - Planowanie - terminarz i autoschedule]] |
+| **4. Faza grupowa** | [[23 - Postęp]] |
+| **5. Faza pucharowa** | [[24 - Puchar]] |
+
+Sekcja **Zawsze pod ręką**:
+
 | Widok | Notatka |
 |-------|---------|
-| **Terminarz** | [[26 - Planowanie - terminarz i autoschedule]] |
-| **Grupy startowe** | [[25 - Planowanie - grupy]], [[28 - Debel w biurze]] |
-| **Postęp grup** | [[23 - Postęp]] |
-| **Drabinka** | [[24 - Puchar]] |
 | **Ostatnie mecze** | [[22 - Historia]] |
 | **Komunikat dla widzów** | niżej |
 

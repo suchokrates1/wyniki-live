@@ -4,7 +4,7 @@ tags: [wyniki, biuro, office]
 aliases: [Office drabinka, Knockout office, Format Wilno]
 ---
 
-# Biuro — Drabinka (Puchar)
+# Biuro — Faza pucharowa
 
 ## Cel
 
@@ -12,7 +12,7 @@ Faza pucharowa: podgląd meczów, wyniki, korekty i zamiana graczy w drabince.
 
 ## Jak powstaje drabinka
 
-Drabinka tworzy się sama, gdy kategoria skończy grupy (dla grup w trybie „grupy + puchar”). Wcześniej widać szkic z miejscami typu „1. B2 Men — Grupa A”.
+Drabinka tworzy się sama, gdy kategoria skończy grupy (dla grup w trybie „grupy + puchar”). Format każdej kategorii biuro wybiera i zatwierdza wcześniej, w kroku [[29 - Drabinki (format pucharu)]]; poniższa tabela to formaty domyślne. Wcześniej widać szkic z miejscami typu „1. B2 Men — Grupa A”.
 
 | Kategoria | Format |
 |-----------|--------|
