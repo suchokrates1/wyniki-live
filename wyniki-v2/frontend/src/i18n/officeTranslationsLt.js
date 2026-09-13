@@ -378,6 +378,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       noHistoryEntry: 'Šis rezultatas dar neturi įrašo istorijoje',
       resultCorrected: 'Rezultatas pataisytas',
       correctionError: 'Rezultato pataisos klaida',
+      correctionBlocked: 'Pirmiausia pataisykite {phase} rezultatą — tas mačas jau sužaistas',
       noPlacements: 'Nėra vietų, kurias būtų galima patvirtinti.',
       scheduleApproved: 'Tvarkaraštis patvirtintas.',
       approveToMove: 'Patvirtinkite pasiūlymą, kad galėtumėte perkelti mačus.',

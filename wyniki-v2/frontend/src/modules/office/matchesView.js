@@ -503,6 +503,10 @@ export function createOfficeMatchesView() {
           this.logout(this.ot('errors.sessionExpired'));
           return;
         }
+        if (response.status === 409 && payload.blocked_by) {
+          this.showToast(this.ot('toast.correctionBlocked', { phase: this.officeDisplayLabel(payload.blocked_by) }), 'warning');
+          return;
+        }
         if (!response.ok) {
           throw new Error(payload.error || this.ot('errors.correctionFailed'));
         }
