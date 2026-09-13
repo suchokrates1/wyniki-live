@@ -590,7 +590,10 @@ export default async function run() {
     await openView('Faza pucharowa');
     const readySlot = await waitUntil('a knockout slot ready to play', async () => (
       ((await dashboard()).progress?.knockout?.matches || []).find((slotRow) => slotRow.ready && !slotRow.winner_name && slotRow.player1_name && slotRow.player2_name)
-    ), { timeout: 30000 });
+    ), { timeout: 30000 }).catch(async (error) => {
+      const slots = ((await dashboard()).progress?.knockout?.matches || []).map((row) => [row.phase, row.player1_name, row.player2_name, row.ready, row.winner_name]);
+      throw new Error(`${error.message}: ${JSON.stringify(slots)}`);
+    });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.office-rail', { state: 'visible' });
     await openView('Faza pucharowa');

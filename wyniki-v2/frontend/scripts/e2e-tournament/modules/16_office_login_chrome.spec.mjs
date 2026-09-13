@@ -64,6 +64,12 @@ export default async function run() {
 
     // A session the server no longer accepts sends the office back to the login screen.
     await loginPage.login(OFFICE_PASSWORD);
+    // let the office finish opening its first step, so the expired token is used by the refresh below
+    await page.waitForFunction(() => {
+      const data = Alpine.$data(document.body);
+      return data.planningLoadedOnce && data.drawFormatsLoaded && !data.loading;
+    }, undefined, { timeout: 15000 });
+    await page.waitForTimeout(2000);
     await page.evaluate(() => { Alpine.$data(document.body).token = 'expired-token'; });
     await chrome.refresh();
     await page.waitForFunction(
