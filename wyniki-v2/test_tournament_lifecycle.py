@@ -3420,6 +3420,32 @@ def test_four_groups_build_vilnius_draw_and_move_winners_and_losers(full_app_wit
     })
     assert rescored.status_code == 200, rescored.get_json()
 
+    # before they play, two players of one category can swap places in the draw
+    ko = {(row["phase"], row["position"]): row for row in rescored.get_json()["dashboard"]["progress"]["knockout"]["matches"]}
+    third_quarter, fourth_quarter = ko[("B2 Kobiety — Ćwierćfinał", 3)], ko[("B2 Kobiety — Ćwierćfinał", 4)]
+    swapped = client.post("/api/office/1/knockout/swap", headers=headers, json={
+        "first": {"slot_id": third_quarter["slot_id"], "side": 2},
+        "second": {"slot_id": fourth_quarter["slot_id"], "side": 2},
+    })
+    assert swapped.status_code == 200, swapped.get_json()
+    ko = {(row["phase"], row["position"]): row for row in swapped.get_json()["dashboard"]["progress"]["knockout"]["matches"]}
+    assert ko[("B2 Kobiety — Ćwierćfinał", 3)]["player2_name"] == fourth_quarter["player2_name"]
+    assert ko[("B2 Kobiety — Ćwierćfinał", 4)]["player2_name"] == third_quarter["player2_name"]
+    schedule_pairs = {
+        frozenset((entry["player1_name"], entry["player2_name"]))
+        for entry in client.get("/api/office/1/planning", headers=headers).get_json()["schedule"]
+        if entry.get("source_type") == "knockout"
+    }
+    assert frozenset((third_quarter["player1_name"], fourth_quarter["player2_name"])) in schedule_pairs
+    # a player who already played cannot be moved
+    semi = ko[("B2 Kobiety — Półfinał", 2)]
+    refused = client.post("/api/office/1/knockout/swap", headers=headers, json={
+        "first": {"slot_id": third_quarter["slot_id"], "side": 1},
+        "second": {"slot_id": ko[("B2 Kobiety — o miejsca 5–8", 1)]["slot_id"], "side": 1},
+    })
+    assert refused.status_code == 409 and refused.get_json()["error"] == "already_played"
+    assert semi
+
 
 def test_new_tournament_does_not_inherit_planner_settings_of_a_deleted_one(full_app_with_temp_db):
     from wyniki import database

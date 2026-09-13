@@ -117,6 +117,7 @@ export function createOfficeCoreView() {
     planningDrawerCategory: '',
 
     planningDropCell: null,
+    officeKnockoutSwapFrom: null,
 
     planningRematchOpen: false,
 

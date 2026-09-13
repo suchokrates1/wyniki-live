@@ -156,6 +156,72 @@ export function createOfficeMatchesView() {
         || /^\d+\.\s/.test(String(name || '').trim());
     },
 
+    officeKnockoutSideName(slot, side) {
+      return side === 1 ? slot?.player1_name : slot?.player2_name;
+    },
+
+    officeKnockoutCategory(slot) {
+      return String(slot?.phase || '').split(' — ')[0];
+    },
+
+    officeKnockoutSideSwappable(slot, side) {
+      const name = this.officeKnockoutSideName(slot, side);
+      return Boolean(name) && !slot?.winner_name && !slot?.match_id && !this.officeIsPendingCompetitorName(name);
+    },
+
+    officeKnockoutSwapIsOrigin(slot, side) {
+      const from = this.officeKnockoutSwapFrom;
+      return Boolean(from) && from.slot_id === slot.slot_id && from.side === side;
+    },
+
+    officeKnockoutSwapCandidate(slot, side) {
+      const from = this.officeKnockoutSwapFrom;
+      return Boolean(from)
+        && !this.officeKnockoutSwapIsOrigin(slot, side)
+        && from.category === this.officeKnockoutCategory(slot)
+        && this.officeKnockoutSideSwappable(slot, side);
+    },
+
+    startOfficeKnockoutSwap(slot, side) {
+      this.officeKnockoutSwapFrom = {
+        slot_id: slot.slot_id,
+        side,
+        name: this.officeKnockoutSideName(slot, side),
+        category: this.officeKnockoutCategory(slot),
+      };
+    },
+
+    cancelOfficeKnockoutSwap() {
+      this.officeKnockoutSwapFrom = null;
+    },
+
+    async finishOfficeKnockoutSwap(slot, side) {
+      const from = this.officeKnockoutSwapFrom;
+      if (!from) return;
+      this.officeKnockoutSwapFrom = null;
+      try {
+        const response = await fetch(`/api/office/${this.slot}/knockout/swap`, {
+          method: 'POST',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({ first: { slot_id: from.slot_id, side: from.side }, second: { slot_id: slot.slot_id, side } }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) {
+          this.showToast(this.ot('toast.swapBlocked'), 'warning');
+          return;
+        }
+        this.applyDashboard(payload.dashboard, { notify: false });
+        this.showToast(this.ot('toast.playersSwapped'), 'success');
+      } catch (error) {
+        console.error('Failed to swap knockout players:', error);
+        this.showToast(this.ot('toast.swapBlocked'), 'error');
+      }
+    },
+
     officeLiveKnockoutSlot(entry) {
       const rows = this.dashboard?.progress?.knockout?.matches || [];
       return rows.find((row) => entry?.id && Number(row.schedule_id) === Number(entry.id)) || null;

@@ -1391,3 +1391,10 @@ body.office-body {
 
   .office-live__dot { animation: none; }
 }
+
+/* knockout swap: the player picked first */
+.office-swap-origin {
+  border-radius: 10px;
+  outline: 2px solid var(--kort-lime);
+  outline-offset: 4px;
+}

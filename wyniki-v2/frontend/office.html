@@ -981,6 +981,7 @@
           </article>
         </template>
 
+        <p class="office-hint mb-3" role="status" x-show="officeKnockoutSwapFrom" x-text="ot('knockout.swapHint', { name: officeKnockoutSwapFrom?.name || '' })"></p>
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <template x-for="slot in officeKnockoutMatches" :key="'office_knockout_'+slot.slot_id">
             <article class="office-panel rounded-[20px] p-6">
@@ -1000,14 +1001,23 @@
               </div>
 
               <div class="mt-5 rounded-2xl border border-slate-200/80 bg-white/70 p-4 space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(slot.player1_name) || ot('knockout.previousRoundWinner')"></span>
-                  <span class="office-chip shrink-0" x-show="slot.winner_name === slot.player1_name" x-text="ot('knockout.winShort')"></span>
-                </div>
-                <div class="flex items-start justify-between gap-3">
-                  <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(slot.player2_name) || ot('knockout.previousRoundWinner')"></span>
-                  <span class="office-chip shrink-0" x-show="slot.winner_name === slot.player2_name" x-text="ot('knockout.winShort')"></span>
-                </div>
+                <template x-for="side in [1, 2]" :key="'ko_side_'+slot.slot_id+'_'+side">
+                  <div class="flex items-start justify-between gap-3" :class="officeKnockoutSwapIsOrigin(slot, side) ? 'office-swap-origin' : ''">
+                    <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(officeKnockoutSideName(slot, side)) || ot('knockout.previousRoundWinner')"></span>
+                    <span class="flex shrink-0 items-center gap-2">
+                      <span class="office-chip" x-show="slot.winner_name && slot.winner_name === officeKnockoutSideName(slot, side)" x-text="ot('knockout.winShort')"></span>
+                      <button type="button" class="btn btn-xs btn-ghost" data-knockout-swap
+                              x-show="!officeKnockoutSwapFrom && officeKnockoutSideSwappable(slot, side)"
+                              @click="startOfficeKnockoutSwap(slot, side)" x-text="ot('knockout.swap')"></button>
+                      <button type="button" class="btn btn-xs office-btn-accent" data-knockout-swap-here
+                              x-show="officeKnockoutSwapCandidate(slot, side)"
+                              @click="finishOfficeKnockoutSwap(slot, side)" x-text="ot('knockout.swapHere')"></button>
+                      <button type="button" class="btn btn-xs btn-ghost" data-knockout-swap-cancel
+                              x-show="officeKnockoutSwapIsOrigin(slot, side)"
+                              @click="cancelOfficeKnockoutSwap()" x-text="ot('knockout.swapCancel')"></button>
+                    </span>
+                  </div>
+                </template>
               </div>
 
               <div class="mt-4 text-sm text-slate-600" x-show="slot.score_text">

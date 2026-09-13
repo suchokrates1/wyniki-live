@@ -1484,6 +1484,69 @@ def correct_knockout_result(match_id: int, tournament_id: int, previous_winner: 
         return False
 
 
+def swap_knockout_players(
+    tournament_id: int,
+    first: Dict[str, Any],
+    second: Dict[str, Any],
+) -> Optional[str]:
+    """Swap two players between knockout slots of one category before either has played.
+
+    ``first`` / ``second`` are ``{"slot_id": int, "side": 1|2}``. Returns an error code or None.
+    """
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        rows = []
+        for ref in (first, second):
+            cursor.execute(
+                "SELECT id, phase, player1_name, player2_name, winner_name FROM bracket_knockout WHERE tournament_id = ? AND id = ?",
+                (tournament_id, int(ref.get("slot_id") or 0)),
+            )
+            row = cursor.fetchone()
+            side = int(ref.get("side") or 0)
+            if not row or side not in (1, 2):
+                return "slot_not_found"
+            rows.append((row, side))
+        (row_a, side_a), (row_b, side_b) = rows
+        if row_a["id"] == row_b["id"] and side_a == side_b:
+            return "same_place"
+        if row_a["phase"].split(" — ")[0] != row_b["phase"].split(" — ")[0]:
+            return "different_category"
+        name_a = row_a["player1_name" if side_a == 1 else "player2_name"]
+        name_b = row_b["player1_name" if side_b == 1 else "player2_name"]
+        if _is_knockout_placeholder_name(name_a) or _is_knockout_placeholder_name(name_b):
+            return "player_not_known"
+        if row_a["winner_name"] or row_b["winner_name"]:
+            return "already_played"
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS played FROM bracket_knockout
+            WHERE tournament_id = ? AND winner_name IS NOT NULL
+              AND (player1_name IN (?, ?) OR player2_name IN (?, ?))
+            """,
+            (tournament_id, name_a, name_b, name_a, name_b),
+        )
+        if int(cursor.fetchone()["played"] or 0):
+            return "already_played"
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS started FROM tournament_schedule
+            WHERE tournament_id = ? AND source_type = 'knockout' AND source_ref_id IN (?, ?)
+              AND (match_id IS NOT NULL OR status IN ('in_progress', 'live', 'completed'))
+            """,
+            (tournament_id, row_a["id"], row_b["id"]),
+        )
+        if int(cursor.fetchone()["started"] or 0):
+            return "already_played"
+        column_a = "player1_name" if side_a == 1 else "player2_name"
+        column_b = "player1_name" if side_b == 1 else "player2_name"
+        cursor.execute(f"UPDATE bracket_knockout SET {column_a} = ? WHERE id = ?", (name_b, row_a["id"]))
+        cursor.execute(f"UPDATE bracket_knockout SET {column_b} = ? WHERE id = ?", (name_a, row_b["id"]))
+        conn.commit()
+    ensure_knockout_schedule_entries(tournament_id)
+    logger.info("knockout_players_swapped", tournament_id=tournament_id, first=name_a, second=name_b)
+    return None
+
+
 def _iter_group_competitors(group: Dict) -> List[Dict[str, Optional[int]]]:
     """Normalize group payload into person vs team competitor rows."""
     entries: List[Dict[str, Optional[int]]] = []

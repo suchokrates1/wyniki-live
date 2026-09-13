@@ -18,6 +18,7 @@ from ..database import (
     advance_knockout,
     correct_knockout_result,
     knockout_correction_blocker,
+    swap_knockout_players,
     apply_autoschedule_placements,
     fetch_bracket_groups,
     fetch_courts_for_tournament,
@@ -801,6 +802,21 @@ def office_group_match(slot: int):
     except OfficeWorkflowError as exc:
         return jsonify({"error": str(exc)}), exc.status_code
     return _json_no_cache(payload, status)
+
+
+@blueprint.route('/<int:slot>/knockout/swap', methods=['POST'])
+def office_knockout_swap(slot: int):
+    """Swap two players between knockout slots of one category before they have played."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    problem = swap_knockout_players(tournament_id, data.get('first') or {}, data.get('second') or {})
+    if problem:
+        status = 404 if problem == 'slot_not_found' else 409
+        return jsonify({"error": problem}), status
+    return _json_no_cache({"message": "Players swapped", "dashboard": _build_office_dashboard(tournament_id)})
 
 
 @blueprint.route('/<int:slot>/knockout-matches', methods=['POST'])
