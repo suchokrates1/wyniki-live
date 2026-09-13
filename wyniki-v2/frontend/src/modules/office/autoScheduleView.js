@@ -197,6 +197,38 @@ export function createOfficeAutoScheduleView() {
       this.autoSaveB1Courts();
     },
 
+    /** The day's hours are kept as soon as they change, so the board keeps its length after a refresh. */
+    async autoSaveDayHours() {
+      if (!this.token) return;
+      const start = this.autoNormalizeTime(this.autoStartTime);
+      const end = this.autoNormalizeTime(this.autoEndTime);
+      if (!start || !end) return;
+      if (end <= start) {
+        this.showToast(this.ot('toast.endBeforeStart'), 'warning');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/office/${this.slot}/autoschedule/config`, {
+          method: 'PUT',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({ start_time: start, end_time: end }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
+        // a newer change typed while this was saving stays on the screen
+        if (this.autoNormalizeTime(this.autoStartTime) === start && this.autoNormalizeTime(this.autoEndTime) === end) {
+          this.autoConfig = payload.config || this.autoConfig;
+        }
+      } catch (error) {
+        console.error('Failed to save day hours:', error);
+        this.showToast(error.message || this.ot('errors.configFailed'), 'error');
+      }
+    },
+
     async autoSaveB1Courts() {
       if (!this.token) return;
       const b1Courts = (this.autoB1Courts || []).map(String).filter(Boolean);

@@ -347,6 +347,31 @@ export default async function run() {
     });
     log(`Generated ${groupEntries.length} group matches`);
 
+    // nothing placed yet: the empty board already covers the whole day, to its end hour
+    await page.locator('.office-toolbar input[type="time"]').nth(0).fill('09:00');
+    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('21:00');
+    const emptyBoard = await waitUntil('empty board 09:00–21:00', async () => {
+      const state = await page.evaluate(() => {
+        const cells = [...document.querySelectorAll('[data-cell]')].map((node) => node.getAttribute('data-cell').split('|')[1]);
+        return { first: cells[0], last: cells[cells.length - 1], blocks: document.querySelectorAll('[data-schedule-entry][data-minutes]').length };
+      });
+      return state.first === '09:00' && state.last === '20:45' ? state : null;
+    }).catch(async (error) => {
+      throw new Error(`${error.message}: ${JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('[data-cell]')].slice(-1).map((node) => node.getAttribute('data-cell'))))}`);
+    });
+    await waitUntil('day hours saved', async () => {
+      const config = (await api('/autoschedule/config')).config || {};
+      return config.start_time === '09:00' && config.end_time === '21:00';
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.office-rail', { state: 'visible' });
+    await openView('Terminarz');
+    await waitUntil('board still to 21:00 after a reload', async () => page.evaluate(() => {
+      const cells = [...document.querySelectorAll('[data-cell]')];
+      return cells.length > 0 && cells[cells.length - 1].getAttribute('data-cell').endsWith('|20:45');
+    }));
+    log(`Empty board (${emptyBoard.blocks} matches placed) runs 09:00–21:00; the hours are saved and survive a reload`);
+
     markStep('day 1 plan with the auto-scheduler');
     // ——— day 1 plan with the auto-scheduler ———
     const endsAfter = (end) => (entry) => {

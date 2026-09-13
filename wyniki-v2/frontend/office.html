@@ -291,11 +291,11 @@
           </label>
           <label class="office-field">
             <span class="office-kicker" x-text="ot('planning.startTime')"></span>
-            <input type="time" class="input input-bordered input-sm" x-model="autoStartTime">
+            <input type="time" class="input input-bordered input-sm" x-model="autoStartTime" @change="autoSaveDayHours()">
           </label>
           <label class="office-field">
             <span class="office-kicker" x-text="ot('planning.endTime')"></span>
-            <input type="time" class="input input-bordered input-sm" x-model="autoEndTime">
+            <input type="time" class="input input-bordered input-sm" x-model="autoEndTime" @change="autoSaveDayHours()">
           </label>
 
           <div class="office-toolbar__spacer"></div>
