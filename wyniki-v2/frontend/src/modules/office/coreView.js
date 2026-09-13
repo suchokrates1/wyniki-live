@@ -358,6 +358,11 @@ export function createOfficeCoreView() {
     logout(message = '') {
       this.stopOfficeSSE();
       this.planningLoadedOnce = false;
+      this.drawFormatsLoaded = false;
+      this.drawFormats = [];
+      this.drawActiveId = null;
+      this.drawDraft = null;
+      this.drawDraftBase = null;
       this.setToken('');
       this.dashboard = null;
       this.seenMatchKeys = [];

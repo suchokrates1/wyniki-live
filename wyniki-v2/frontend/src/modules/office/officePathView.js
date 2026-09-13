@@ -76,7 +76,7 @@ export function createOfficePathView() {
     },
 
     officePathSteps() {
-      if (!this.planningLoadedOnce) return STEP_VIEWS.map((view, index) => ({ index, number: index + 1, view, label: [this.ot('path.stepGroups'), this.ot('path.stepDraws'), this.ot('path.stepSchedule'), this.ot('path.stepGroupPhase'), this.ot('path.stepKnockout')][index], meta: '', state: 'later' }));
+      if (!this.planningLoadedOnce || !this.drawFormatsLoaded) return STEP_VIEWS.map((view, index) => ({ index, number: index + 1, view, label: [this.ot('path.stepGroups'), this.ot('path.stepDraws'), this.ot('path.stepSchedule'), this.ot('path.stepGroupPhase'), this.ot('path.stepKnockout')][index], meta: '', state: 'later' }));
       const facts = this.officePathFacts();
       const t = (key, values) => this.ot(`path.${key}`, values);
       const groupsDone = facts.categories.length > 0 && !facts.missing.length && facts.groupCount > 0;
@@ -130,7 +130,7 @@ export function createOfficePathView() {
 
     /** The single next thing to do, or null while planning data is not loaded yet. */
     officePathNext() {
-      if (!this.dashboard || !this.planningLoadedOnce) return null;
+      if (!this.dashboard || !this.planningLoadedOnce || !this.drawFormatsLoaded) return null;
       const facts = this.officePathFacts();
       const current = this.officePathCurrentIndex();
       const t = (key, values) => this.ot(`path.${key}`, values);
