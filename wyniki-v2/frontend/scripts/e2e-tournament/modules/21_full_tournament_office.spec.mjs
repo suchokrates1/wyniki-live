@@ -197,7 +197,7 @@ export default async function run() {
       const state = await pathState();
       return state.next.includes('Nie masz jeszcze grup startowych') ? state : null;
     });
-    if (fresh.steps.join(',') !== 'current,later,later,later') throw new Error(`Fresh tournament steps: ${fresh.steps.join(',')}`);
+    if (fresh.steps.join(',') !== 'current,later,later,later,later') throw new Error(`Fresh tournament steps: ${fresh.steps.join(',')}`);
     if (fresh.active !== 'groups') throw new Error(`Entering a fresh tournament should open Grupy startowe, opened ${fresh.active}`);
     log('Office path: fresh tournament opens Grupy startowe, step 1 current, strip "Nie masz jeszcze grup startowych"');
 
@@ -290,14 +290,28 @@ export default async function run() {
 
     const drawn = await waitUntil('step 1 done after the draw', async () => {
       const state = await pathState();
-      return state.steps[0] === 'done' && state.next.includes('Wszystkie grupy gotowe') ? state : null;
+      return state.steps[0] === 'done' && state.next.includes('Sprawdź, jak powstaną drabinki') ? state : null;
     }, { timeout: 15000 }).catch(async (error) => {
       throw new Error(`${error.message}: ${JSON.stringify(await pathState())}`);
     });
-    if (drawn.steps[1] !== 'current') throw new Error(`After the draw step 2 should be current: ${drawn.steps.join(',')}`);
+    if (drawn.steps[1] !== 'current') throw new Error(`After the draw step 2 (Drabinki) should be current: ${drawn.steps.join(',')}`);
+    await page.locator('[data-office-next]').getByRole('button', { name: 'Przejdź do drabinek' }).click();
+    await page.waitForFunction(() => Alpine.$data(document.body).activeTab === 'draws');
+    const drawCategories = page.locator('[data-draw-category]');
+    await waitUntil('three categories in Drabinki', async () => (await drawCategories.count()) === 3);
+    const defaults = await drawCategories.evaluateAll((nodes) => nodes.map((node) => node.querySelector('[data-draw-state]')?.dataset.drawState));
+    if (defaults.some((state) => state === 'confirmed')) throw new Error(`Nothing is confirmed before the office looks: ${defaults.join(',')}`);
+    await page.locator('[data-office-next]').getByRole('button', { name: 'Zatwierdź wszystkie' }).click();
+    await toast('Wszystkie drabinki zatwierdzone');
+    const drawsConfirmed = await waitUntil('step 2 done after confirming the draws', async () => {
+      const state = await pathState();
+      return state.steps[1] === 'done' && state.steps[2] === 'current' && state.next.includes('Wszystkie grupy gotowe') ? state : null;
+    }, { timeout: 15000 }).catch(async (error) => {
+      throw new Error(`${error.message}: ${JSON.stringify(await pathState())}`);
+    });
     await page.locator('[data-office-next]').getByRole('button', { name: 'Przejdź do terminarza' }).click();
     await page.waitForFunction(() => Alpine.$data(document.body).activeTab === 'planning');
-    log('Office path: all groups drawn → step 1 done (✓, greyed), step 2 current, "Przejdź do terminarza" opens Terminarz');
+    log(`Office path: all groups drawn → step 1 done, step 2 Drabinki current; "Zatwierdź wszystkie" → ${drawsConfirmed.steps.join(',')}, "Przejdź do terminarza" opens Terminarz`);
 
     markStep('matches');
     // ——— matches ———
@@ -573,13 +587,13 @@ export default async function run() {
     });
     log(`${catB1.label} group complete (${b1Progress.finished_matches}/${b1Progress.expected_matches})`);
 
-    await openView('Drabinka');
+    await openView('Faza pucharowa');
     const readySlot = await waitUntil('a knockout slot ready to play', async () => (
       ((await dashboard()).progress?.knockout?.matches || []).find((slotRow) => slotRow.ready && !slotRow.winner_name && slotRow.player1_name && slotRow.player2_name)
     ), { timeout: 30000 });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.office-rail', { state: 'visible' });
-    await openView('Drabinka');
+    await openView('Faza pucharowa');
     const slotCard = page.locator('section.office-view:visible article').filter({ hasText: readySlot.player1_name }).filter({ hasText: readySlot.player2_name }).first();
     await slotCard.getByRole('button', { name: 'Dodaj wynik' }).click();
     const koDialog = modal();

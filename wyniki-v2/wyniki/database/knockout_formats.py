@@ -39,7 +39,8 @@ def default_config(fmt: str) -> Dict[str, Any]:
 def normalize_config(raw: Dict[str, Any], *, allowed: List[str], expected: str, max_qualifiers: int) -> Dict[str, Any]:
     raw = raw if isinstance(raw, dict) else {}
     fmt = str(raw.get("format") or expected)
-    if fmt not in allowed:
+    fits = fmt in allowed
+    if not fits:
         fmt = expected
     places = str(raw.get("places") or default_places(fmt))
     if places not in PLACES:
@@ -65,7 +66,8 @@ def normalize_config(raw: Dict[str, Any], *, allowed: List[str], expected: str, 
         "places": places,
         "consolation": bool(raw.get("consolation", True)),
         "swaps": swaps,
-        "confirmed": bool(raw.get("confirmed", False)),
+        # a format chosen for a different number of groups has to be looked at again
+        "confirmed": bool(raw.get("confirmed", False)) and fits,
     }
 
 

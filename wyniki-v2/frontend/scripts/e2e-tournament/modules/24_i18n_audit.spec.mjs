@@ -25,13 +25,13 @@ const POLISH_LETTERS = /[ąćęłńśźżĄĆĘŁŃŚŹŻ]/;
 const POLISH_ONLY_LETTERS = /[ćłńśźżĆŁŃŚŹŻ]/; // Lithuanian also has ą and ę
 const POLISH_WORDS = [
   'Wszystkie', 'Wszyscy', 'Grupa', 'Grupy', 'Kobiety', 'Mężczyźni', 'Zwycięzca', 'Przegrany', 'miejsce', 'miejsca',
-  'Pocieszenie', 'Ćwierćfinał', 'Półfinał', 'Finał', 'Terminarz', 'Drabinka', 'Wynik', 'Wyniki', 'Debel', 'Zawodnik',
+  'Pocieszenie', 'Ćwierćfinał', 'Półfinał', 'Finał', 'Terminarz', 'Drabinka', 'Drabinki', 'Zatwierdź', 'Rozstawienie', 'Wynik', 'Wyniki', 'Debel', 'Zawodnik',
   'Zawodnicy', 'Dodaj', 'Zapisz', 'Usuń', 'Anuluj', 'Opublikuj', 'Brak', 'Mecz', 'Mecze', 'meczów', 'Kategoria', 'Dzień',
   'Zamknij', 'Wyczyść', 'Odśwież', 'Wyloguj', 'Biuro', 'Pary', 'Rozstaw', 'Rewanże', 'Postęp', 'Pozostało', 'Zakończone',
   'Komunikat', 'Grupowa', 'Pucharowa', 'Kort', 'oraz', 'lub', 'dla', 'się', 'jest', 'nie', 'Turniej', 'Zamień', 'Tutaj',
 ];
 const WORD_PATTERN = new RegExp(`(^|[^\\p{L}])(${POLISH_WORDS.join('|')})(?=$|[^\\p{L}])`, 'u');
-const KEY_PATTERN = /\b(?:planning|modals|toast|errors|login|hero|stats|tabs|bracket|knockout|history|quickInfo|status|phases|confirm|gender|categories|scope|playerSection|schedule|ui)\.[a-zA-Z][a-zA-Z0-9]*\b/;
+const KEY_PATTERN = /\b(?:draws|path|planning|modals|toast|errors|login|hero|stats|tabs|bracket|knockout|history|quickInfo|status|phases|confirm|gender|categories|scope|playerSection|schedule|ui)\.[a-zA-Z][a-zA-Z0-9]*\b/;
 
 async function waitUntil(label, probe, { timeout = 20000, interval = 400 } = {}) {
   const started = Date.now();
@@ -173,10 +173,27 @@ export default async function run() {
       await page.locator('input[type="password"]').fill(OFFICE_PASSWORD);
       await page.locator('form button[type="submit"]').click();
       await page.waitForSelector('.office-rail', { state: 'visible', timeout: 20000 });
-      const views = ['planning', 'groups', 'progress', 'knockout', 'history', 'quickinfo'];
+      const views = ['planning', 'groups', 'draws', 'progress', 'knockout', 'history', 'quickinfo'];
       for (const view of views) {
         await page.evaluate((id) => Alpine.$data(document.body).openOfficeView(id), view);
         await audit(page, lang, `office ${view}`);
+        if (view === 'draws') {
+          for (const tab of ['places', 'consolation']) {
+            const button = page.locator(`[data-draw-tab="${tab}"]:visible`).first();
+            if (await button.count()) {
+              await button.click();
+              await audit(page, lang, `office draws ${tab}`);
+            }
+          }
+          const mainTab = page.locator('[data-draw-tab="main"]:visible').first();
+          if (await mainTab.count()) await mainTab.click();
+          const line = page.locator('.office-draws__line.is-swappable:visible').first();
+          if (await line.count()) {
+            await line.click();
+            await audit(page, lang, 'office draws picked line');
+            await page.evaluate(() => Alpine.$data(document.body).cancelDrawPick());
+          }
+        }
         if (view === 'knockout') {
           const swap = page.locator('[data-knockout-swap]:visible').first();
           if (await swap.count()) {
@@ -221,6 +238,6 @@ export default async function run() {
     });
     throw new Error(`${findings.size} untranslated strings:\n${lines.join('\n')}`);
   }
-  log(`No raw keys and no Polish text outside Polish in ${LANGS.length} languages (public: 9 sections, office: login, 6 views, rail, knockout swap, result and correction dialogs)`);
+  log(`No raw keys and no Polish text outside Polish in ${LANGS.length} languages (public: 9 sections, office: login, 7 views, draws tabs, rail, knockout swap, result and correction dialogs)`);
   if (!KEEP) await cleanup(adminToken);
 }

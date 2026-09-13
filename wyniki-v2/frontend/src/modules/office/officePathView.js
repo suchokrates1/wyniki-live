@@ -1,9 +1,10 @@
 /**
- * The office path: four steps a tournament goes through (starting groups, schedule, group
- * phase, knockout), each done or not from the data itself, and the one next step to take.
+ * The office path: five steps a tournament goes through (starting groups, knockout draws,
+ * schedule, group phase, knockout), each done or not from the data itself, and the one
+ * next step to take.
  * Nothing is locked: every view stays open at any time.
  */
-const STEP_VIEWS = ['groups', 'planning', 'progress', 'knockout'];
+const STEP_VIEWS = ['groups', 'draws', 'planning', 'progress', 'knockout'];
 
 export function createOfficePathView() {
   return {
@@ -75,14 +76,15 @@ export function createOfficePathView() {
     },
 
     officePathSteps() {
-      if (!this.planningLoadedOnce) return STEP_VIEWS.map((view, index) => ({ index, number: index + 1, view, label: [this.ot('path.stepGroups'), this.ot('path.stepSchedule'), this.ot('path.stepGroupPhase'), this.ot('path.stepKnockout')][index], meta: '', state: 'later' }));
+      if (!this.planningLoadedOnce) return STEP_VIEWS.map((view, index) => ({ index, number: index + 1, view, label: [this.ot('path.stepGroups'), this.ot('path.stepDraws'), this.ot('path.stepSchedule'), this.ot('path.stepGroupPhase'), this.ot('path.stepKnockout')][index], meta: '', state: 'later' }));
       const facts = this.officePathFacts();
       const t = (key, values) => this.ot(`path.${key}`, values);
       const groupsDone = facts.categories.length > 0 && !facts.missing.length && facts.groupCount > 0;
+      const drawsDone = groupsDone && this.drawAllConfirmed();
       const scheduleDone = facts.groupRows.length > 0 && facts.groupUnplaced === 0 && facts.groupDrafts === 0;
       const groupPhaseDone = facts.groupsComplete;
       const knockoutDone = groupPhaseDone && (facts.knockoutExpected === 0 || facts.knockoutFinished >= facts.knockoutExpected);
-      const done = [groupsDone, scheduleDone, groupPhaseDone, knockoutDone];
+      const done = [groupsDone, drawsDone, scheduleDone, groupPhaseDone, knockoutDone];
       const current = done.findIndex((value) => !value);
 
       const meta = [
@@ -91,6 +93,9 @@ export function createOfficePathView() {
           : groupsDone
             ? t('metaGroupsReady', { categories: facts.categories.length, groups: facts.groupCount })
             : t('metaDrawn', { assigned: facts.singlesAssigned, total: facts.singlesTotal }),
+        this.drawFormatsLoaded && this.drawFormats.length
+          ? t('metaDraws', { confirmed: this.drawConfirmedCount(), total: this.drawFormats.length })
+          : '—',
         !facts.groupRows.length
           ? t('metaScheduleNone')
           : facts.groupUnplaced
@@ -103,7 +108,7 @@ export function createOfficePathView() {
           ? t('metaKnockout', { finished: facts.knockoutFinished, expected: facts.knockoutExpected })
           : groupPhaseDone ? t('metaNoKnockout') : '—',
       ];
-      const labels = [t('stepGroups'), t('stepSchedule'), t('stepGroupPhase'), t('stepKnockout')];
+      const labels = [t('stepGroups'), t('stepDraws'), t('stepSchedule'), t('stepGroupPhase'), t('stepKnockout')];
       return STEP_VIEWS.map((view, index) => ({
         index,
         number: index + 1,
@@ -136,30 +141,52 @@ export function createOfficePathView() {
         return { step: 0, variant: 'drawing', text: t('nextDrawing', { assigned: facts.singlesAssigned, total: facts.singlesTotal }), chips: facts.missing.slice(0, 6).map(chip), cta: t('ctaFinishDraw'), view: 'groups' };
       }
       if (current === 1) {
-        if (!facts.groupRows.length) return { step: 1, variant: 'generate', text: t('nextGenerate'), cta: t('ctaSchedule'), view: 'planning' };
-        if (facts.groupUnplaced === facts.groupRows.length) return { step: 1, variant: 'plan', text: t('nextPlanGroups'), cta: t('ctaSchedule'), view: 'planning' };
-        if (facts.groupUnplaced) {
-          const chips = Object.entries(facts.unplacedByCategory).slice(0, 6).map(([category, count]) => t('missingUnplaced', { category, count }));
-          return { step: 1, variant: 'placing', text: t('nextPlacing', { placed: facts.groupRows.length - facts.groupUnplaced, total: facts.groupRows.length, left: facts.groupUnplaced }), chips, cta: t('ctaSchedule'), view: 'planning' };
-        }
-        return { step: 1, variant: 'publish', text: t('nextPublish', { drafts: facts.groupDrafts }), cta: t('ctaSchedule'), view: 'planning' };
+        const left = this.drawFormats.length - this.drawConfirmedCount();
+        return {
+          step: 1,
+          variant: 'draws',
+          text: t('nextDraws', { left, total: this.drawFormats.length, matches: this.drawTotalMatches() }),
+          cta: t('ctaDraws'),
+          view: 'draws',
+          action: this.activeTab === 'draws' ? 'confirmAllDraws' : null,
+          actionLabel: t('ctaConfirmAllDraws'),
+        };
       }
       if (current === 2) {
-        return { step: 2, variant: 'groupPhase', text: t('nextGroupPhase', { finished: facts.resultsFinished, expected: facts.resultsExpected }), cta: t('ctaProgress'), view: 'progress' };
+        if (!facts.groupRows.length) return { step: 2, variant: 'generate', text: t('nextGenerate'), cta: t('ctaSchedule'), view: 'planning' };
+        if (facts.groupUnplaced === facts.groupRows.length) return { step: 2, variant: 'plan', text: t('nextPlanGroups'), cta: t('ctaSchedule'), view: 'planning' };
+        if (facts.groupUnplaced) {
+          const chips = Object.entries(facts.unplacedByCategory).slice(0, 6).map(([category, count]) => t('missingUnplaced', { category, count }));
+          return { step: 2, variant: 'placing', text: t('nextPlacing', { placed: facts.groupRows.length - facts.groupUnplaced, total: facts.groupRows.length, left: facts.groupUnplaced }), chips, cta: t('ctaSchedule'), view: 'planning' };
+        }
+        return { step: 2, variant: 'publish', text: t('nextPublish', { drafts: facts.groupDrafts }), cta: t('ctaSchedule'), view: 'planning' };
       }
       if (current === 3) {
-        if (facts.knockoutUnplaced) return { step: 3, variant: 'planKnockout', text: t('nextPlanKnockout', { count: facts.knockoutExpected }), cta: t('ctaSchedule'), view: 'planning' };
-        if (facts.knockoutDrafts) return { step: 3, variant: 'publishKnockout', text: t('nextPublishKnockout', { drafts: facts.knockoutDrafts }), cta: t('ctaSchedule'), view: 'planning' };
-        return { step: 3, variant: 'knockout', text: t('nextKnockout', { finished: facts.knockoutFinished, expected: facts.knockoutExpected }), cta: t('ctaKnockout'), view: 'knockout' };
+        return { step: 3, variant: 'groupPhase', text: t('nextGroupPhase', { finished: facts.resultsFinished, expected: facts.resultsExpected }), cta: t('ctaProgress'), view: 'progress' };
+      }
+      if (current === 4) {
+        if (facts.knockoutUnplaced) return { step: 4, variant: 'planKnockout', text: t('nextPlanKnockout', { count: facts.knockoutExpected }), cta: t('ctaSchedule'), view: 'planning' };
+        if (facts.knockoutDrafts) return { step: 4, variant: 'publishKnockout', text: t('nextPublishKnockout', { drafts: facts.knockoutDrafts }), cta: t('ctaSchedule'), view: 'planning' };
+        return { step: 4, variant: 'knockout', text: t('nextKnockout', { finished: facts.knockoutFinished, expected: facts.knockoutExpected }), cta: t('ctaKnockout'), view: 'knockout' };
       }
       return {
-        step: 4,
+        step: 5,
         variant: 'finished',
         finished: true,
         text: facts.knockoutExpected ? t('nextFinished') : t('nextNoKnockout'),
         cta: t('ctaKnockout'),
         view: facts.knockoutExpected ? 'knockout' : 'progress',
       };
+    },
+
+    async runOfficePathNext() {
+      const next = this.officePathNext();
+      if (!next) return;
+      if (next.action === 'confirmAllDraws') {
+        await this.confirmAllDrawFormats();
+        return;
+      }
+      if (next.view) await this.openOfficeView(next.view);
     },
 
     officePathDismissKey() {
@@ -191,7 +218,7 @@ export function createOfficePathView() {
     /** On entering the office, open the first unfinished step — unless the user already moved. */
     async openOfficePathStart() {
       this.officeUserNavigated = false;
-      await Promise.all([this.loadDashboard(false), this.loadOfficePlanningData()]);
+      await Promise.all([this.loadDashboard(false), this.loadOfficePlanningData(), this.loadDrawFormats()]);
       if (this.officeUserNavigated) return;
       const next = this.officePathNext();
       await this.openOfficeView(next?.view || this.activeTab, { auto: true });

@@ -252,9 +252,10 @@
             </div>
           </div>
           <button type="button" class="office-btn office-btn--primary office-next__cta"
-                  x-show="officePathNext()?.view && officePathNext()?.view !== activeTab"
-                  @click="openOfficeView(officePathNext().view)"
-                  x-text="officePathNext()?.cta"></button>
+                  x-show="officePathNext()?.action || (officePathNext()?.view && officePathNext()?.view !== activeTab)"
+                  :disabled="drawSaving"
+                  @click="runOfficePathNext()"
+                  x-text="officePathNext()?.action ? officePathNext()?.actionLabel : officePathNext()?.cta"></button>
           <button type="button" class="office-next__dismiss" @click="dismissOfficePath()" :aria-label="ot('path.dismiss')" :title="ot('path.dismiss')">✕</button>
         </div>
       </template>
@@ -863,6 +864,209 @@
             </div>
           </div>
         </div>
+        </div>
+      </section>
+
+      <section class="office-view office-draws" x-show="activeTab === 'draws'" x-cloak data-office-draws>
+        <template x-if="drawFormatsLoaded && !drawFormats.length">
+          <p class="office-hint" x-text="ot('draws.empty')"></p>
+        </template>
+        <div class="office-draws__workspace" x-show="drawFormats.length">
+          <div class="office-draws__cats" role="list" :aria-label="ot('draws.categories')">
+            <template x-for="item in drawFormats" :key="'draw_cat_'+item.category_id">
+              <button type="button" role="listitem" class="office-draws__cat"
+                      :class="{'is-active': item.category_id === drawActiveId}"
+                      :aria-current="item.category_id === drawActiveId ? 'true' : null"
+                      :data-draw-category="item.label"
+                      @click="selectDrawCategory(item)">
+                <span class="office-draws__cat-name" x-text="drawCategoryLabel(item)"></span>
+                <span class="office-draws__badge" :class="'is-' + drawItemState(item)" :data-draw-state="drawItemState(item)" x-text="ot('draws.state.' + drawItemState(item))"></span>
+                <span class="office-draws__cat-groups" x-text="drawGroupsText(item)"></span>
+                <span class="office-draws__cat-format" x-text="drawFormatName(drawItemFormat(item)) + ' · ' + ot('draws.matchesShort', { count: drawItemMatches(item) })"></span>
+              </button>
+            </template>
+          </div>
+
+          <div class="office-draws__detail" x-show="drawActive() && drawDraft" aria-live="polite">
+            <div class="office-draws__head">
+              <h2 x-text="drawCategoryLabel(drawActive())"></h2>
+              <span class="office-draws__groups" x-text="drawGroupsText(drawActive())"></span>
+            </div>
+            <p class="office-draws__locked" role="status" x-show="drawActive()?.locked" x-text="ot('draws.lockedNote')"></p>
+
+            <div>
+              <div class="office-kicker office-draws__label" x-text="ot('draws.formatTitle')"></div>
+              <div class="office-draws__formats">
+                <template x-for="card in drawFormatCards()" :key="'draw_format_'+card.format">
+                  <button type="button" class="office-draws__format" :data-draw-format="card.format"
+                          :aria-pressed="drawDraft?.format === card.format ? 'true' : 'false'"
+                          :disabled="!card.allowed || drawActive()?.locked"
+                          :title="card.allowed ? '' : ot('draws.formatNotFitting')"
+                          @click="chooseDrawFormat(card.format)">
+                    <svg viewBox="0 0 104 48" aria-hidden="true"><path :d="card.icon"></path></svg>
+                    <span class="office-draws__format-name" x-text="drawFormatName(card.format)"></span>
+                    <span class="office-draws__format-desc" x-text="drawFormatDesc(card.format)"></span>
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <div class="office-draws__settings" x-show="drawDraft && drawDraft.format !== 'none'">
+              <div class="office-draws__setting" x-show="drawDraft?.format === 'main'">
+                <span class="office-draws__setting-label" x-text="ot('draws.qualifiers')"></span>
+                <div class="office-draws__seg" role="group" :aria-label="ot('draws.qualifiers')">
+                  <template x-for="option in drawQualifierOptions()" :key="'draw_q_'+option.value">
+                    <button type="button" :data-draw-qualifiers="option.value"
+                            :aria-pressed="drawDraft?.qualifiers === option.value ? 'true' : 'false'"
+                            :disabled="!option.allowed || drawActive()?.locked"
+                            @click="updateDrawDraft({ qualifiers: option.value }, { resetSwaps: true })"
+                            x-text="option.value"></button>
+                  </template>
+                </div>
+                <span class="office-hint" x-text="drawQualifiersHint()"></span>
+              </div>
+              <div class="office-draws__setting">
+                <span class="office-draws__setting-label" x-text="ot('draws.places')"></span>
+                <div class="office-draws__seg" role="group" :aria-label="ot('draws.places')">
+                  <template x-for="option in drawPlacesOptions()" :key="'draw_p_'+option">
+                    <button type="button" :data-draw-places="option"
+                            :aria-pressed="drawDraft?.places === option ? 'true' : 'false'"
+                            :disabled="drawActive()?.locked"
+                            @click="updateDrawDraft({ places: option })"
+                            x-text="ot('draws.placesOption.' + option)"></button>
+                  </template>
+                </div>
+                <span class="office-hint" x-text="drawPlacesHint()"></span>
+              </div>
+              <div class="office-draws__setting" x-show="drawDraft?.format === 'main'">
+                <span class="office-draws__setting-label" x-text="ot('draws.rest')"></span>
+                <label class="office-draws__check">
+                  <input type="checkbox" data-draw-consolation :checked="drawDraft?.consolation" :disabled="drawActive()?.locked"
+                         @change="updateDrawDraft({ consolation: $event.target.checked }, { resetSwaps: true })">
+                  <span x-text="ot('draws.consolation')"></span>
+                </label>
+                <span class="office-hint" x-text="drawDraft?.consolation ? ot('draws.consolationOn') : ot('draws.consolationOff')"></span>
+              </div>
+              <div class="office-draws__setting" x-show="drawDraft?.format !== 'table'">
+                <span class="office-draws__setting-label" x-text="ot('draws.seeding')"></span>
+                <span class="office-hint" x-text="drawDraft?.format === 'direct' ? ot('draws.seedingDirect') : ot('draws.seedingGroups')"></span>
+              </div>
+            </div>
+
+            <div class="office-draws__preview">
+              <template x-if="drawDraft?.format === 'none'">
+                <p class="office-hint office-draws__pad" x-text="ot('draws.noneNote')"></p>
+              </template>
+
+              <template x-if="drawDraft?.format === 'table'">
+                <div>
+                  <div class="office-draws__bar"><span class="office-draws__summary" data-draw-summary x-text="drawSummaryText()"></span></div>
+                  <div class="office-draws__table">
+                    <template x-for="match in drawTableMatches()" :key="'draw_table_'+match.key">
+                      <div class="office-draws__round">
+                        <div class="office-draws__round-name" x-text="match.name"></div>
+                        <div class="office-draws__match">
+                          <div class="office-draws__line is-seed"><span class="office-draws__who" x-text="match.a"></span></div>
+                          <div class="office-draws__line"><span class="office-draws__who" x-text="match.b"></span></div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="drawTabs().length">
+                <div>
+                  <div class="office-draws__bar">
+                    <div class="office-draws__tabs" role="tablist">
+                      <template x-for="tab in drawTabs()" :key="'draw_tab_'+tab.key">
+                        <button type="button" role="tab" :data-draw-tab="tab.key" :aria-selected="drawTab === tab.key ? 'true' : 'false'"
+                                @click="drawTab = tab.key; cancelDrawPick()" x-text="tab.label"></button>
+                      </template>
+                    </div>
+                    <span class="office-draws__summary" data-draw-summary x-text="drawSummaryText()"></span>
+                  </div>
+
+                  <template x-if="drawTab === 'places'">
+                    <div class="office-draws__placements">
+                      <template x-for="row in drawPlacementRows()" :key="'draw_place_'+row.key">
+                        <div class="office-draws__placement">
+                          <strong x-text="row.name"></strong>
+                          <span x-text="ot('draws.matchesShort', { count: row.matches })"></span>
+                        </div>
+                      </template>
+                      <p class="office-hint" x-show="!drawPlacementRows().length" x-text="ot('draws.noPlacements')"></p>
+                    </div>
+                  </template>
+
+                  <template x-if="drawTab !== 'places'">
+                    <div>
+                      <div class="office-draws__bracket">
+                        <div class="office-draws__rounds">
+                          <template x-for="round in drawRounds(drawTab)" :key="round.key">
+                            <div class="office-draws__round">
+                              <div class="office-draws__round-name" x-text="round.name"></div>
+                              <div class="office-draws__round-matches">
+                                <template x-for="match in round.matches" :key="match.key">
+                                  <div class="office-draws__match" :class="{'is-bye': match.bye}">
+                                    <template x-for="(entry, side) in [match.a, match.b]" :key="match.key + '_' + side">
+                                      <div class="office-draws__line"
+                                           :class="drawLineClass(entry, drawTab, round.depth === 0 ? match.lines[side] : null, { depth: round.depth, clash: match.clash })"
+                                           :data-draw-line="round.depth === 0 ? match.lines[side] : null"
+                                           :role="drawCanSwap() && round.depth === 0 ? 'button' : null"
+                                           :tabindex="drawCanSwap() && round.depth === 0 ? 0 : null"
+                                           :aria-label="drawCanSwap() && round.depth === 0 ? ot('draws.swapLine', { name: drawEntryLabel(entry) }) : null"
+                                           @click="round.depth === 0 && pickDrawLine(drawTab, match.lines[side])"
+                                           @keydown.enter.prevent="round.depth === 0 && pickDrawLine(drawTab, match.lines[side])"
+                                           @keydown.space.prevent="round.depth === 0 && pickDrawLine(drawTab, match.lines[side])">
+                                        <span class="office-draws__who competitor-name" x-text="drawEntryLabel(entry)"></span>
+                                        <span class="office-draws__from" x-text="drawEntryFrom(entry)"></span>
+                                      </div>
+                                    </template>
+                                  </div>
+                                </template>
+                                <template x-if="round.third">
+                                  <div>
+                                    <div class="office-draws__round-name office-draws__round-name--third" x-text="ot('bracket.placeFor', { number: 3 })"></div>
+                                    <div class="office-draws__match is-third">
+                                      <template x-for="entry in round.third" :key="entry.label">
+                                        <div class="office-draws__line is-feed"><span class="office-draws__who" x-text="entry.label"></span></div>
+                                      </template>
+                                    </div>
+                                  </div>
+                                </template>
+                              </div>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                      <div class="office-draws__edit" x-show="drawCanSwap()">
+                        <template x-if="drawPicked">
+                          <span>
+                            <strong x-text="ot('draws.picked', { name: formatCompetitorName(drawPicked.label) })"></strong>
+                            <span x-text="ot('draws.pickSecond')"></span>
+                            <button type="button" class="office-btn office-btn--ghost office-btn--sm" @click="cancelDrawPick()" x-text="ot('draws.cancel')"></button>
+                          </span>
+                        </template>
+                        <span x-show="!drawPicked" x-text="ot('draws.editHint')"></span>
+                        <span class="office-draws__warn" role="status" data-draw-clash x-show="drawClashCount(drawTab)" x-text="ot('draws.clash', { count: drawClashCount(drawTab) })"></span>
+                        <button type="button" class="office-btn office-btn--ghost office-btn--sm" data-draw-reset x-show="drawSwapCount()" @click="resetDrawSwaps()" x-text="ot('draws.resetSwaps', { count: drawSwapCount() })"></button>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+
+            <div class="office-draws__actions">
+              <button type="button" class="office-btn office-btn--primary" data-draw-confirm
+                      :disabled="drawSaving || drawActive()?.locked || (drawActive()?.config.confirmed && !drawDraftDirty())"
+                      @click="confirmDrawFormat()"
+                      x-text="drawActive()?.config.confirmed && !drawDraftDirty() ? ot('draws.confirmedButton') : ot('draws.confirmButton', { category: drawCategoryLabel(drawActive()) })"></button>
+              <span class="office-draws__dirty" x-show="drawDraftDirty()" x-text="ot('draws.unsaved')"></span>
+              <span class="office-hint" x-text="ot('draws.note')"></span>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -48,6 +48,7 @@ export function createOfficePlayersView() {
         this.planningSchedule = this.keepInspectorEdits(Array.isArray(payload.schedule) ? payload.schedule : []);
         this.planningCourts = Array.isArray(payload.courts) ? payload.courts : [];
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.loadDrawFormats?.();
         this.syncPlanningGroupAssignments();
         this.ensurePlanningDefaults();
       } catch (error) {
@@ -855,6 +856,7 @@ export function createOfficePlayersView() {
         this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.loadDrawFormats?.();
         // edits made while this save was on its way are newer; the next save sends them
         if (revision === this.planningEditRevision) this.syncPlanningGroupAssignments();
       } catch (error) {
@@ -896,6 +898,7 @@ export function createOfficePlayersView() {
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.syncPlanningGroupAssignments();
+        this.loadDrawFormats?.();
         this.showToast(this.ot('toast.groupsSaved'), 'success');
       } catch (error) {
         console.error('Failed to save office planning groups:', error);

@@ -13,6 +13,10 @@ export function createOfficeScheduleView() {
     async openOfficeView(view, { auto = false } = {}) {
       if (!auto) this.officeUserNavigated = true;
       this.activeTab = view;
+      if (view === 'draws') {
+        await this.loadDrawFormats();
+        return;
+      }
       if (!this.officeViewUsesPlanningData(view)) return;
       if (!this.planningPlayers.length) {
         await this.loadOfficePlanningData();
@@ -26,8 +30,9 @@ export function createOfficeScheduleView() {
       return [
         { id: 'planning', label: this.ot('planning.step2Title'), icon: 'M3 5h18v15H3zM3 10h18M9 5v15M15 5v15' },
         { id: 'groups', label: this.ot('planning.step1Title'), icon: 'M4 4h6v16H4zM14 4h6v16h-6z' },
+        { id: 'draws', label: this.ot('path.stepDraws'), icon: 'M4 5h5v5H4zM4 14h5v5H4zM9 7.5h5v9H9M14 12h6' },
         { id: 'progress', label: this.ot('path.stepGroupPhase'), icon: 'M4 19V9M10 19V5M16 19v-7M21 19H3' },
-        { id: 'knockout', label: this.ot('tabs.knockout'), icon: 'M4 6h6v12H4zM14 6h6v5h-6zM14 13h6v5h-6z' },
+        { id: 'knockout', label: this.ot('path.stepKnockout'), icon: 'M4 6h6v12H4zM14 6h6v5h-6zM14 13h6v5h-6z' },
         { id: 'history', label: this.ot('tabs.history'), icon: 'M4 7h16M4 12h16M4 17h10' },
         { id: 'quickinfo', label: this.ot('quickInfo.subtitle'), icon: 'M4 10v4l11 5V5L4 10zM15 8.5c1.8.5 3 1.8 3 3.5s-1.2 3-3 3.5' },
       ];

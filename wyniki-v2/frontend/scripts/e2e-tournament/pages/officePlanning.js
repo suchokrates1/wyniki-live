@@ -33,9 +33,9 @@ export class OfficePlanningPage {
   }
 
   async openKnockoutTab() {
-    await this.page.getByRole('button', { name: 'Drabinka' }).click();
+    await this.page.locator('.office-tab').filter({ hasText: 'Faza pucharowa' }).click();
     await this.page.waitForFunction(
-      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Drabinka'),
+      () => document.querySelector('.office-tab.is-active')?.textContent?.includes('Faza pucharowa'),
       undefined,
       { timeout: 10000 }
     );

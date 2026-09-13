@@ -11,6 +11,7 @@ import { createOfficeScheduleView } from './modules/office/scheduleView.js';
 import { createOfficeAutoScheduleView } from './modules/office/autoScheduleView.js';
 import { createOfficeSseView } from './modules/office/sseView.js';
 import { createOfficePathView } from './modules/office/officePathView.js';
+import { createOfficeDrawsView } from './modules/office/drawsView.js';
 import './main.css';
 import './styles/office.css';
 
@@ -44,6 +45,7 @@ Alpine.data('officeApp', () => mergeAdminModules(
   createOfficeScheduleView(),
   createOfficePlayersView(),
   createOfficePathView(),
+  createOfficeDrawsView(),
 ));
 
 ignoreCancelledAlpineTransitions();
