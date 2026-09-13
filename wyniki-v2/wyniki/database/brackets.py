@@ -489,10 +489,10 @@ def _slots_for_knockout_unit(
         return _build_provisional_knockout_slots_for_category(label, groups)
 
     if unit_type == "direct_pool":
+        # Seeding order = member order; matches waiting for a result carry "Zwycięzca: …"
+        # names, so every round is on the schedule from the start.
         names = _group_competitor_names(groups[0] if groups else {})
-        if len(names) > 8:
-            return [_encode_feeds(slot) for slot in build_direct_draw(label, names)]
-        return _build_direct_knockout_slots(label, names)
+        return [_encode_feeds(slot) for slot in build_direct_draw(label, names)]
 
     if unit_type == "group_draw":
         # Vilnius 2026 format: top two of each group in the main draw, the rest in consolation.
