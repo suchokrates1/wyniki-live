@@ -1358,6 +1358,132 @@ def _advance_quarterfinal(cursor, tournament_id: int, quarter_phase: str, qf_pos
         return
     _assign_knockout_slot_player(cursor, semis[sf_index], side, winner)
 
+def _knockout_slot_targets(cursor, tournament_id: int, slot) -> List[tuple]:
+    """Where a slot's winner and loser go: ``[(target_row, side, "winner"|"loser")]``."""
+    cursor.execute(
+        "SELECT id, phase, position, player1_name, player2_name, winner_name FROM bracket_knockout WHERE tournament_id = ?",
+        (tournament_id,),
+    )
+    rows = cursor.fetchall()
+    targets: List[tuple] = []
+    if slot["winner_to"] or slot["loser_to"]:
+        for feed, role in ((slot["winner_to"], "winner"), (slot["loser_to"], "loser")):
+            target = _decode_feed(feed)
+            if not target:
+                continue
+            phase, position, side = target
+            row = next((item for item in rows if item["phase"] == phase and int(item["position"] or 0) == position), None)
+            if row:
+                targets.append((row, side, role))
+        return targets
+    kind = _phase_kind(slot["phase"])
+    prefix, _ = _split_bracket_label(slot["phase"])
+    if kind == "semifinal":
+        side = 1 if int(slot["position"] or 1) == 1 else 2
+        final = next((row for row in rows if _slot_phase_matches(row["phase"], "final", prefix)), None)
+        third = next((row for row in rows if _slot_phase_matches(row["phase"], "third_place", prefix)), None)
+        if final:
+            targets.append((final, side, "winner"))
+        if third:
+            targets.append((third, side, "loser"))
+    elif kind == "quarterfinal":
+        semis = sorted(
+            (row for row in rows if _slot_phase_matches(row["phase"], "semifinal", prefix)),
+            key=lambda row: int(row["position"] or 0),
+        )
+        position = int(slot["position"] or 1)
+        index = 0 if position <= 2 else 1
+        if index < len(semis):
+            targets.append((semis[index], 1 if position % 2 == 1 else 2, "winner"))
+    return targets
+
+
+def _find_decided_knockout_slot(cursor, tournament_id: int, player1: str, player2: str, phase: Optional[str]):
+    cursor.execute(
+        """
+        SELECT id, phase, position, winner_name, winner_to, loser_to FROM bracket_knockout
+        WHERE tournament_id = ?
+          AND ((player1_name = ? AND player2_name = ?) OR (player1_name = ? AND player2_name = ?))
+        ORDER BY CASE WHEN phase = ? THEN 0 ELSE 1 END, CASE WHEN winner_name IS NULL THEN 1 ELSE 0 END, id
+        """,
+        (tournament_id, player1, player2, player2, player1, phase or ""),
+    )
+    return cursor.fetchone()
+
+
+def knockout_correction_blocker(
+    tournament_id: int,
+    player1: str,
+    player2: str,
+    phase: Optional[str],
+    new_winner: str,
+) -> Optional[str]:
+    """Phase of an already played later match that a changed winner would invalidate, if any."""
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        slot = _find_decided_knockout_slot(cursor, tournament_id, player1, player2, phase)
+        if not slot or not slot["winner_name"] or slot["winner_name"] == new_winner:
+            return None
+        old_winner = slot["winner_name"]
+        old_loser = player2 if old_winner == player1 else player1
+        for row, side, role in _knockout_slot_targets(cursor, tournament_id, slot):
+            seated = row["player1_name"] if side == 1 else row["player2_name"]
+            moved = old_winner if role == "winner" else old_loser
+            if seated == moved and row["winner_name"]:
+                return str(row["phase"])
+        return None
+
+
+def correct_knockout_result(match_id: int, tournament_id: int, previous_winner: Optional[str]) -> bool:
+    """Apply a corrected knockout result: update the slot and, when the winner changed,
+    swap the players already moved on (the later matches must not be played yet)."""
+    try:
+        from ..db_models import Match as MatchModel
+        from ..db_models import db
+        match = db.session.get(MatchModel, match_id)
+        if not match or match.status != "finished":
+            return False
+        p1, p2 = match.player1_name, match.player2_name
+        winner = match.winner_name or (p1 if (match.player1_sets or 0) > (match.player2_sets or 0) else p2)
+        loser = p2 if winner == p1 else p1
+        sets_history = json.loads(match.sets_history) if match.sets_history else []
+        score_summary = " ".join(
+            f"{s.get('player1_games', 0)}:{s.get('player2_games', 0)}"
+            for s in sets_history
+            if s.get("player1_games", 0) or s.get("player2_games", 0) or s.get("tiebreak_loser_points") is not None
+        )
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            slot = _find_decided_knockout_slot(cursor, tournament_id, p1, p2, match.phase)
+            if not slot:
+                return False
+            old_winner = slot["winner_name"] or previous_winner
+            cursor.execute(
+                "UPDATE bracket_knockout SET winner_name = ?, score_summary = ?, finish_reason = ?, result_note = ? WHERE id = ?",
+                (winner, score_summary, match.finish_reason or "normal", match.result_note, slot["id"]),
+            )
+            if old_winner and old_winner != winner and old_winner in (p1, p2):
+                old_loser = p2 if old_winner == p1 else p1
+                for row, side, role in _knockout_slot_targets(cursor, tournament_id, slot):
+                    column = "player1_name" if side == 1 else "player2_name"
+                    seated = row[column]
+                    moved, replacement = (old_winner, winner) if role == "winner" else (old_loser, loser)
+                    if row["winner_name"]:
+                        continue
+                    if seated == moved or _is_knockout_placeholder_name(seated):
+                        cursor.execute(f"UPDATE bracket_knockout SET {column} = ? WHERE id = ?", (replacement, row["id"]))
+            elif not old_winner:
+                for row, side, role in _knockout_slot_targets(cursor, tournament_id, slot):
+                    _assign_knockout_slot_player(cursor, row, side, winner if role == "winner" else loser)
+            conn.commit()
+        ensure_knockout_schedule_entries(tournament_id)
+        logger.info("knockout_result_corrected", match_id=match_id, winner=winner, previous=old_winner)
+        return True
+    except Exception as e:
+        logger.error("correct_knockout_result_error", error=str(e), match_id=match_id)
+        return False
+
+
 def _iter_group_competitors(group: Dict) -> List[Dict[str, Optional[int]]]:
     """Normalize group payload into person vs team competitor rows."""
     entries: List[Dict[str, Optional[int]]] = []

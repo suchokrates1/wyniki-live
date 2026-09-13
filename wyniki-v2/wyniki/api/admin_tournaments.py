@@ -58,6 +58,8 @@ from ..database import (
     bulk_insert_players,
     maybe_generate_knockout_from_completed_groups,
     advance_knockout,
+    correct_knockout_result,
+    knockout_correction_blocker,
     ensure_group_schedule_entries,
     clear_removed_fixtures,
     ensure_knockout_schedule_entries,
@@ -84,6 +86,7 @@ from ..services.office_workflow import (
     _office_history_payload,
     _office_match_payload,
     _sync_office_match_history,
+    office_result_outcome,
 )
 
 blueprint = Blueprint('admin_tournaments', __name__, url_prefix='/admin/api/tournaments')
@@ -1160,14 +1163,22 @@ def update_office_match_result(tournament_id: int, match_id: int):
 
     try:
         sets_history, player1_sets, player2_sets = _normalize_office_sets(data, match.player1_name, match.player2_name)
+        outcome = office_result_outcome(data, match.player1_name, match.player2_name)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    previous_winner = match.winner_name
+    if _is_knockout_phase(match.phase):
+        new_winner = outcome["winner_name"] or (match.player1_name if player1_sets > player2_sets else match.player2_name)
+        blocker = knockout_correction_blocker(tournament_id, match.player1_name, match.player2_name, match.phase, new_winner)
+        if blocker:
+            return jsonify({"error": f"The next match ({blocker}) already has a result; correct that one first", "blocked_by": blocker}), 409
+
     match.status = 'finished'
-    match.finish_reason = 'walkover' if _normalize_bool(data.get('walkover', False)) else 'normal'
-    match.winner_name = (data.get('winner_name') or '').strip() if match.finish_reason == 'walkover' else None
-    match.injured_player_name = None
-    match.result_note = 'Walkower' if match.finish_reason == 'walkover' else None
+    match.finish_reason = outcome["finish_reason"]
+    match.winner_name = outcome["winner_name"]
+    match.injured_player_name = outcome["injured_player_name"]
+    match.result_note = outcome["result_note"]
     match.player1_sets = player1_sets
     match.player2_sets = player2_sets
     match.sets_history = json.dumps(sets_history)
@@ -1189,7 +1200,7 @@ def update_office_match_result(tournament_id: int, match_id: int):
     if match.phase == 'Grupowa':
         generation = maybe_generate_knockout_from_completed_groups(tournament_id)
     elif _is_knockout_phase(match.phase):
-        advance_knockout(match.id, tournament_id)
+        correct_knockout_result(match.id, tournament_id, previous_winner)
 
     return _json_no_cache({
         "message": "Match result updated",

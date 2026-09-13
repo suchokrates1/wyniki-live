@@ -16,6 +16,8 @@ from ..services.api_auth import (
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 from ..database import (
     advance_knockout,
+    correct_knockout_result,
+    knockout_correction_blocker,
     apply_autoschedule_placements,
     fetch_bracket_groups,
     fetch_courts_for_tournament,
@@ -835,6 +837,12 @@ def office_update_match(slot: int, match_id: int):
             outcome = office_result_outcome(data, history.player_a, history.player_b)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
+        history_winner = outcome["winner_name"] or (history.player_a if player1_sets > player2_sets else history.player_b)
+        if _is_knockout_phase(history.phase):
+            blocker = knockout_correction_blocker(tournament_id, history.player_a, history.player_b, history.phase, history_winner)
+            if blocker:
+                return jsonify({"error": f"The next match ({blocker}) already has a result; correct that one first", "blocked_by": blocker}), 409
+        previous_history_winner = history.winner_name
 
         history.score_a = json.dumps([set_score.get('player1_games', 0) for set_score in sets_history])
         history.score_b = json.dumps([set_score.get('player2_games', 0) for set_score in sets_history])
@@ -867,6 +875,8 @@ def office_update_match(slot: int, match_id: int):
                 phase=history.phase,
                 bracket_group_id=_infer_group_id_for_players(history.player_a, history.player_b, player_groups) if history.phase == 'Grupowa' else None,
             )
+            if _is_knockout_phase(history.phase):
+                correct_knockout_result(history.match_id, tournament_id, previous_history_winner)
         return _json_no_cache({
             "message": "Match result updated",
             "match": _office_history_payload(history, group_lookup, player_groups),
@@ -883,6 +893,13 @@ def office_update_match(slot: int, match_id: int):
         outcome = office_result_outcome(data, match.player1_name, match.player2_name)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+    previous_winner = match.winner_name
+    if _is_knockout_phase(match.phase):
+        new_winner = outcome["winner_name"] or (match.player1_name if player1_sets > player2_sets else match.player2_name)
+        blocker = knockout_correction_blocker(tournament_id, match.player1_name, match.player2_name, match.phase, new_winner)
+        if blocker:
+            return jsonify({"error": f"The next match ({blocker}) already has a result; correct that one first", "blocked_by": blocker}), 409
 
     match.status = 'finished'
     match.finish_reason = outcome["finish_reason"]
@@ -910,7 +927,7 @@ def office_update_match(slot: int, match_id: int):
     if match.phase == 'Grupowa':
         generation = maybe_generate_knockout_from_completed_groups(tournament_id)
     elif _is_knockout_phase(match.phase):
-        advance_knockout(match.id, tournament_id)
+        correct_knockout_result(match.id, tournament_id, previous_winner)
 
     return _json_no_cache({
         "message": "Match result updated",

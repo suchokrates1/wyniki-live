@@ -3390,6 +3390,36 @@ def test_four_groups_build_vilnius_draw_and_move_winners_and_losers(full_app_wit
     assert (place["player1_name"], place["player2_name"]) == ("WB2", "WD1")
     assert semi["ready"] and semi["schedule_id"]
 
+    # correcting quarterfinal 1 (WA1 beat WB2) to WB2 swaps both players already moved on
+    quarter = ko[("B2 Kobiety — Ćwierćfinał", 1)]
+    corrected = client.put(f"/api/office/1/matches/{quarter['match_id']}", headers=headers, json={
+        "sets": [{"player1_games": 2, "player2_games": 4}, {"player1_games": 1, "player2_games": 4}],
+    })
+    assert corrected.status_code == 200, corrected.get_json()
+    ko = {(row["phase"], row["position"]): row for row in corrected.get_json()["dashboard"]["progress"]["knockout"]["matches"]}
+    assert ko[("B2 Kobiety — Ćwierćfinał", 1)]["winner_name"] == "WB2"
+    assert (ko[("B2 Kobiety — Półfinał", 1)]["player1_name"], ko[("B2 Kobiety — Półfinał", 1)]["player2_name"]) == ("WB2", "WC2")
+    assert (ko[("B2 Kobiety — o miejsca 5–8", 1)]["player1_name"], ko[("B2 Kobiety — o miejsca 5–8", 1)]["player2_name"]) == ("WA1", "WD1")
+    schedule_names = {
+        (entry["phase"], entry["player1_name"], entry["player2_name"])
+        for entry in client.get("/api/office/1/planning", headers=headers).get_json()["schedule"]
+        if entry.get("source_type") == "knockout"
+    }
+    assert ("B2 Kobiety — Półfinał", "WB2", "WC2") in schedule_names
+
+    # once the semifinal is played, quarterfinal 1 can no longer change its winner
+    dashboard = play("B2 Kobiety — Półfinał", 1)
+    blocked = client.put(f"/api/office/1/matches/{quarter['match_id']}", headers=headers, json={
+        "sets": [{"player1_games": 4, "player2_games": 2}, {"player1_games": 4, "player2_games": 1}],
+    })
+    assert blocked.status_code == 409
+    assert blocked.get_json()["blocked_by"] == "B2 Kobiety — Półfinał"
+    # the same winner with a different score is still a valid correction
+    rescored = client.put(f"/api/office/1/matches/{quarter['match_id']}", headers=headers, json={
+        "sets": [{"player1_games": 3, "player2_games": 5, "tiebreak_loser_points": 3}, {"player1_games": 1, "player2_games": 4}],
+    })
+    assert rescored.status_code == 200, rescored.get_json()
+
 
 def test_new_tournament_does_not_inherit_planner_settings_of_a_deleted_one(full_app_with_temp_db):
     from wyniki import database
