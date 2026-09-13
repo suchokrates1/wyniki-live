@@ -56,26 +56,57 @@ export function overlayPhaseToken(phase) {
   if (/1\s*\/\s*8|r16|round of 16|ósem/.test(lower)) return 'r16';
   if (/1\s*\/\s*4|ćwierć|cwierc|quarter/.test(lower)) return 'qf';
   if (/1\s*\/\s*2|półfina|polfina|semif/.test(lower)) return 'sf';
-  if (/3\.\s*miejsce|3rd|third place|bronze/.test(lower)) return 'third';
+  if (/miejsca\s+\d+|(?<!\d)(?:[5-9]|\d{2,})\.\s*miejsce/.test(lower)) return '';
+  if (/(?<!\d)3\.\s*miejsce|3rd|third place|bronze/.test(lower)) return 'third';
   if (/pucharowa|knockout|k\.\-o|eliminazione|eliminatoria|élimination|atkrintam/.test(lower)) return 'knockout';
   if (/(?:^|\s)fina[lł]|final/.test(lower) && !/semi|pół|1\s*\/\s*2/.test(lower)) return 'final';
   return '';
 }
 
-export function overlayPhaseLabel(phase) {
+const CONSOLATION_PREFIX = /^(pocieszenie|consolation)\s+/i;
+
+/** Places decided by a generated draw round: "o miejsca 5–8", "o 7. miejsce". */
+function placementPhase(suffix) {
+  const range = suffix.match(/miejsca\s+(\d+)\s*[–-]\s*(\d+)/i);
+  if (range) return { from: range[1], to: range[2] };
+  const single = suffix.match(/(?<!\d)(\d+)\.\s*miejsce/i);
+  if (single && single[1] !== '3') return { number: single[1] };
+  return null;
+}
+
+function ordinalEn(number) {
+  const n = Number(number);
+  const tail = n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ({ 1: 'ST', 2: 'ND', 3: 'RD' }[n % 10] || 'TH');
+  return `${n}${tail}`;
+}
+
+function phaseLabel(phase, labels, english) {
   const text = String(phase || '').trim();
   if (!text) return '';
-  const token = overlayPhaseToken(phase);
-  if (token) return OVERLAY_PHASE_EN[token];
-  return text.includes(' — ') ? text.split(' — ').pop().trim() : text;
+  let suffix = text.includes(' — ') ? text.split(' — ').pop().trim() : text;
+  const consolation = CONSOLATION_PREFIX.test(suffix);
+  if (consolation) suffix = suffix.replace(CONSOLATION_PREFIX, '');
+  let label;
+  const place = placementPhase(suffix);
+  if (place?.from) {
+    label = english ? `PLACES ${place.from}–${place.to}` : (labels.placesRange || 'PLACES {from}–{to}').replace('{from}', place.from).replace('{to}', place.to);
+  } else if (place?.number) {
+    label = english ? `${ordinalEn(place.number)} PLACE` : (labels.placeFor || `${ordinalEn(place.number)} PLACE`).replace('{number}', place.number);
+  } else {
+    const token = overlayPhaseToken(suffix);
+    label = token ? ((!english && labels[token]) || OVERLAY_PHASE_EN[token]) : suffix;
+  }
+  if (!consolation) return label;
+  const word = english ? 'CONSOLATION' : (labels.consolation || 'CONSOLATION');
+  return `${word} ${label}`;
+}
+
+export function overlayPhaseLabel(phase) {
+  return phaseLabel(phase, {}, true);
 }
 
 export function localizeScoreboardPhase(phase, labels = {}) {
-  const text = String(phase || '').trim();
-  if (!text) return '';
-  const token = overlayPhaseToken(phase);
-  if (token) return labels[token] || OVERLAY_PHASE_EN[token];
-  return text.includes(' — ') ? text.split(' — ').pop().trim() : text;
+  return phaseLabel(phase, labels, false);
 }
 
 export function localizeScoreboardCategory(category, labels = {}) {

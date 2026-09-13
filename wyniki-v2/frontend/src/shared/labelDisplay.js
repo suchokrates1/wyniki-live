@@ -21,7 +21,18 @@ export function translateStoredScheduleLabel(name, labels = {}) {
   if (text === 'Grupowa — Rewanż' || text === 'Faza grupowa — rewanż') return groupRematch;
   if (text === 'Pucharowa' || text === 'Faza pucharowa') return knockout;
 
+  // "Zwycięzca: Ćwierćfinał 1" — translate the match it refers to, then the prefix
+  const fed = text.match(/^(Zwycięzca|Przegrany): (.+)$/);
+  if (fed) {
+    const template = fed[1] === 'Zwycięzca' ? (labels.winnerOf || 'Zwycięzca: {match}') : (labels.loserOf || 'Przegrany: {match}');
+    return formatTemplate(template, { match: translateStoredScheduleLabel(fed[2], labels) });
+  }
+
   let result = text
+    .replace(/1\/(\d+) finału/g, (_, n) => formatTemplate(labels.roundOf || '1/{n} finału', { n, players: Number(n) * 2 }))
+    .replace(/o miejsca (\d+)–(\d+)/g, (_, from, to) => formatTemplate(labels.placesRange || 'o miejsca {from}–{to}', { from, to }))
+    .replace(/Pocieszenie/g, labels.consolation || 'Pocieszenie')
+    .replace(/Ćwierćfinał/g, labels.quarterfinal || 'Ćwierćfinał')
     .replace(/Półfinał/g, semifinal)
     .replace(/Finał/g, finalLabel);
 

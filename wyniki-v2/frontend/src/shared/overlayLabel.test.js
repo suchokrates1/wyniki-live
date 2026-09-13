@@ -57,3 +57,12 @@ test('meta parts skip empty values', () => {
   assert.deepEqual(overlayMetaParts({ phase: 'Finał' }), ['FINAL']);
   assert.deepEqual(overlayMetaParts({}), []);
 });
+
+test('generated draw phases get overlay labels', () => {
+  assert.equal(overlayPhaseLabel('B1 Men — 1/8 finału'), '1/8');
+  assert.equal(overlayPhaseLabel('B2 Men — o miejsca 5–8'), 'PLACES 5–8');
+  assert.equal(overlayPhaseLabel('B1 Men — o 13. miejsce'), '13TH PLACE');
+  assert.equal(overlayPhaseLabel('B1 Men — o 3. miejsce'), '3RD PLACE');
+  assert.equal(overlayPhaseLabel('B2 Men — Pocieszenie Finał'), 'CONSOLATION FINAL');
+  assert.equal(overlayPhaseLabel('B2 Men — Pocieszenie o 7. miejsce'), 'CONSOLATION 7TH PLACE');
+});

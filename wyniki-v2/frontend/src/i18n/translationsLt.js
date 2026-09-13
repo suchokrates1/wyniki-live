@@ -98,6 +98,12 @@ export const TRANSLATIONS_LT = {
     setsHeader: 'Setai', gamesHeader: 'Geimai', matchesTitle: 'Grupių mačai',
     knockoutTitle: 'Turnyrinė lentelė', semifinal: 'Pusfinalis',
     finalLabel: 'Finalas', thirdPlace: 'Mačas dėl 3 vietos', forPlace: 'dėl',
+    quarterfinal: 'Ketvirtfinalis',
+    roundOf: '1/{n} finalo',
+    placesRange: '{from}–{to} vietos',
+    consolation: 'Paguodos turnyras',
+    winnerOf: 'Nugalėtojas: {match}',
+    loserOf: 'Pralaimėjęs: {match}',
     doubles: 'Dvejetai',
     legendTitle: 'Lentelės legenda', legendWins: 'laimėti mačai', legendLosses: 'pralaimėti mačai',
     legendSets: 'laimėti setai prieš pralaimėtus', legendGames: 'laimėti geimai prieš pralaimėtus'
