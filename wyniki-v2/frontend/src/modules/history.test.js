@@ -91,10 +91,12 @@ test('history filters by surname, category, court and date', () => {
   ];
   assert.equal(filterMatchHistory(matches, { search: 'haskett' }).length, 1);
   assert.equal(filterMatchHistory(matches, { search: 'arbos' })[0].category, 'B1 Men Doubles');
-  assert.equal(filterMatchHistory(matches, { category: 'B1 Women' })[0].player_a, 'Tess Whelan');
+  assert.equal(filterMatchHistory(matches, { category: 'B1K' })[0].player_a, 'Tess Whelan');
+  assert.equal(filterMatchHistory(matches, { category: 'B1M-D' })[0].category, 'B1 Men Doubles');
   assert.equal(filterMatchHistory(matches, { court: '2' })[0].player_a, 'Mark Haskett');
   assert.equal(filterMatchHistory(matches, { date: '2026-08-27' })[0].category, 'B1 Men Doubles');
   const options = historyFilterOptions(matches);
   assert.deepEqual(options.dates, ['2026-08-29', '2026-08-28', '2026-08-27']);
   assert.equal(options.courts.length, 3);
+  assert.deepEqual(options.categories, ['B1K', 'B1M', 'B2K', 'B2M', 'B3K', 'B3M', 'B4K', 'B4M', 'B1M-D']);
 });

@@ -5,6 +5,9 @@ import {
   planningDivisionKey as sharedPlanningDivisionKey,
   playerMatchesDoublesCategory,
   playerMatchesTournamentCategory,
+  categoryFilterKey,
+  categoryFilterKeys,
+  categoryFilterLabel,
 } from '../shared/categories.js';
 import { PLAY_FORMATS, normalizePlayFormat } from '../shared/playFormat.js';
 
@@ -1006,7 +1009,12 @@ export function createTournamentsAdmin() {
       },
 
       planningScheduleCategories() {
-        return [...new Set((this.planningSchedule || []).map(entry => entry.category_name || entry.group_name || entry.phase).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pl'));
+        const keys = (this.planningSchedule || []).map(entry => categoryFilterKey(entry.category_name || entry.group_name || entry.phase));
+        return categoryFilterKeys(keys);
+      },
+
+      planningScheduleCategoryLabel(key) {
+        return categoryFilterLabel(key);
       },
 
       planningScheduleEntries() {
@@ -1015,7 +1023,7 @@ export function createTournamentsAdmin() {
      if (this.planningScheduleFilter.court && entry.court_id !== this.planningScheduleFilter.court) return false;
      if (this.planningScheduleFilter.category) {
        const category = entry.category_name || entry.group_name || entry.phase || '';
-       if (category !== this.planningScheduleFilter.category) return false;
+       if (categoryFilterKey(category) !== this.planningScheduleFilter.category) return false;
      }
      return true;
         });

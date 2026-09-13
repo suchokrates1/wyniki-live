@@ -58,3 +58,19 @@ test('doubles partner pool uses visual class only, not singles gender', () => {
   assert.equal(playerMatchesDoublesCategory({ category: 'B1', gender: 'M' }, openDouble), true);
   assert.equal(playerMatchesDoublesCategory({ category: 'B1', gender: 'K' }, openDouble), true);
 });
+
+test('category filter keys map every label to one set of values', async () => {
+  const { categoryFilterKey, categoryFilterKeys, categoryFilterLabel } = await import('./categories.js');
+  assert.equal(categoryFilterKey('B1 Mężczyźni — Grupa A'), 'B1M');
+  assert.equal(categoryFilterKey('B2 Kobiety'), 'B2K');
+  assert.equal(categoryFilterKey('B1 Women'), 'B1K');
+  assert.equal(categoryFilterKey('B3/B4 Men Doubles'), 'B34M-D');
+  assert.equal(categoryFilterKey('B2 Men Doubles — Ćwierćfinał'), 'B2M-D');
+  assert.equal(categoryFilterKey('B3/4 Mixed'), 'B34X');
+  assert.equal(categoryFilterKey('B2', 'F'), 'B2K');
+  assert.equal(categoryFilterKey('B4', 'M'), 'B4M');
+  assert.equal(categoryFilterKey('Open'), '');
+  assert.deepEqual(categoryFilterKeys(['B1M', 'B2M-D', 'B34X-D', 'B1M-D']), ['B1K', 'B1M', 'B2K', 'B2M', 'B3K', 'B3M', 'B4K', 'B4M', 'B1M-D', 'B2M-D', 'B34X-D']);
+  assert.equal(categoryFilterLabel('B34M-D', { women: 'Women', men: 'Men', doubles: 'Doubles' }), 'B3/4 Men Doubles');
+  assert.equal(categoryFilterLabel('B1K'), 'B1 Kobiety');
+});

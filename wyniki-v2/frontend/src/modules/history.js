@@ -1,4 +1,5 @@
 import { competitorSearchTokens, lastNameToken } from '../shared/teamDisplay.js';
+import { categoryFilterKey, categoryFilterKeys } from '../shared/categories.js';
 
 function asInt(value, fallback = 0) {
   const n = Number(value);
@@ -219,7 +220,7 @@ function historySearchHaystack(match) {
 export function filterMatchHistory(matches = [], { search = '', category = '', court = '', date = '' } = {}) {
   const needle = String(search || '').trim().toLowerCase();
   return (matches || []).filter((match) => {
-    if (category && String(match?.category || '') !== String(category)) return false;
+    if (category && categoryFilterKey(match?.category) !== String(category)) return false;
     if (court && matchCourtKey(match) !== String(court)) return false;
     if (date && matchEndedDateKey(match) !== String(date)) return false;
     if (needle && !historySearchHaystack(match).includes(needle)) return false;
@@ -228,16 +229,13 @@ export function filterMatchHistory(matches = [], { search = '', category = '', c
 }
 
 export function historyFilterOptions(matches = []) {
-  const categories = [];
+  const categoryKeys = [];
   const courts = [];
   const dates = [];
-  const seen = { category: new Set(), court: new Set(), date: new Set() };
+  const seen = { court: new Set(), date: new Set() };
   for (const match of matches || []) {
-    const category = String(match?.category || '').trim();
-    if (category && !seen.category.has(category)) {
-      seen.category.add(category);
-      categories.push(category);
-    }
+    const key = categoryFilterKey(match?.category);
+    if (key) categoryKeys.push(key);
     const court = matchCourtKey(match);
     if (court && !seen.court.has(court)) {
       seen.court.add(court);
@@ -254,5 +252,6 @@ export function historyFilterOptions(matches = []) {
   }
   courts.sort((left, right) => left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' }));
   dates.sort((left, right) => right.localeCompare(left));
-  return { categories, courts, dates };
+  // the eight standard categories always, doubles and others when they have matches
+  return { categories: categoryFilterKeys(categoryKeys), courts, dates };
 }

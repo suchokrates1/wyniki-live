@@ -717,7 +717,7 @@
                         <select id="live-history-category" class="player-dropdown" x-model="historyCategory">
                             <option value="" x-text="tr().history?.allCategories || 'Wszystkie kategorie'"></option>
                             <template x-for="cat in historyFilterChoices(history).categories" :key="'lhcat-'+cat">
-                                <option :value="cat" x-text="bracketCategoryLabel(cat) || translateCategory(cat)"></option>
+                                <option :value="cat" x-text="categoryFilterOptionLabel(cat)"></option>
                             </template>
                         </select>
                         <label for="live-history-court" class="sr-only" x-text="tr().history?.court || 'Kort'"></label>
@@ -1190,7 +1190,7 @@
                         <select id="tournament-history-category" class="player-dropdown" x-model="historyCategory">
                             <option value="" x-text="tr().history?.allCategories || 'Wszystkie kategorie'"></option>
                             <template x-for="cat in historyFilterChoices(tournamentHistory).categories" :key="'thcat-'+cat">
-                                <option :value="cat" x-text="bracketCategoryLabel(cat) || translateCategory(cat)"></option>
+                                <option :value="cat" x-text="categoryFilterOptionLabel(cat)"></option>
                             </template>
                         </select>
                         <label for="tournament-history-court" class="sr-only" x-text="tr().history?.court || 'Kort'"></label>
@@ -1329,7 +1329,7 @@
                     <select id="player-category-select" class="player-dropdown" x-model="playerCategory" @change="filterPlayers()">
                         <option value="" x-text="(tr().playerSection?.allCategories || 'Wszystkie kategorie') + ' (' + allPlayers.length + ')'"></option>
                         <template x-for="opt in playerCategoryOptions()" :key="forKey('pcat', opt.name)">
-                            <option :value="opt.name" x-text="opt.name + ' (' + opt.count + ')'"></option>
+                            <option :value="opt.name" x-text="categoryFilterOptionLabel(opt.name) + ' (' + opt.count + ')'"></option>
                         </template>
                     </select>
                 </div>

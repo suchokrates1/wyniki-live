@@ -1,5 +1,6 @@
 import { publicApi } from '../api/publicApi.js';
 import { registerCompetitorName } from '../shared/teamDisplay.js';
+import { categoryFilterLabel } from '../shared/categories.js';
 import {
   filterMatchHistory,
   getMatchSets as getHistoryMatchSets,
@@ -54,10 +55,20 @@ export function createHistoryView() {
     historyFilterChoices(matches = this.history) {
       const options = historyFilterOptions(matches);
       return {
-        categories: [...options.categories].sort((left, right) => this.compareBracketCategoryNames(left, right)),
+        categories: options.categories,
         courts: options.courts,
         dates: options.dates,
       };
+    },
+
+    categoryFilterOptionLabel(key) {
+      const t = this.tr();
+      return categoryFilterLabel(key, {
+        women: t.history?.catWomen || 'Women',
+        men: t.history?.catMen || 'Men',
+        mixed: t.history?.catMixed || 'Mixed',
+        doubles: t.bracket?.doubles || t.history?.catDoubles || 'Doubles',
+      });
     },
 
     historyDateLabel(dateKey) {

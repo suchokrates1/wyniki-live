@@ -989,7 +989,7 @@
                     <select class="select select-bordered" x-model="planningScheduleFilter.category">
                       <option value="">Wszystkie kategorie</option>
                       <template x-for="category in planningScheduleCategories()" :key="'planning_category_'+category">
-                        <option :value="category" x-text="category"></option>
+                        <option :value="category" x-text="planningScheduleCategoryLabel(category)"></option>
                       </template>
                     </select>
                   </div>
@@ -1359,7 +1359,12 @@
               <option value="M">M&#281;&#380;czyzna</option>
               <option value="F">Kobieta</option>
             </select>
-            <input type="text" x-model="globalPlayersFilter.category" @input.debounce.300ms="loadGlobalPlayers()" placeholder="Kategoria" class="input input-sm input-bordered">
+            <select x-model="globalPlayersFilter.category" @change="loadGlobalPlayers()" class="select select-sm select-bordered">
+              <option value="">Kategoria</option>
+              <template x-for="key in globalPlayerCategoryKeys()" :key="'gp_cat_'+key">
+                <option :value="key" x-text="globalPlayerCategoryLabel(key)"></option>
+              </template>
+            </select>
             <input type="text" x-model="globalPlayersFilter.country" @input.debounce.300ms="loadGlobalPlayers()" placeholder="Kraj" class="input input-sm input-bordered" maxlength="2">
             <button @click="globalPlayersFilter = {q:'',gender:'',category:'',country:''}; loadGlobalPlayers()" class="btn btn-sm btn-ghost">Wyczy&#347;&#263;</button>
           </div>

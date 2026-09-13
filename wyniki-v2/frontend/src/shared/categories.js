@@ -263,3 +263,56 @@ export function planningResolveStoredGroupName(groupName, divisionKey, count, mi
   }
   return targets[0] || '';
 }
+
+// ——— one set of category values for every filter (history, players, admin schedule) ———
+
+/** The eight standard singles categories, women before men. */
+export const STANDARD_CATEGORY_KEYS = ['B1K', 'B1M', 'B2K', 'B2M', 'B3K', 'B3M', 'B4K', 'B4M'];
+
+const DOUBLES_WORD = /\b(doubles?|debl\w*|doppel|doppio|dobles|dvejet\w*)\b/i;
+
+/**
+ * Filter key of a category: "B1K", "B2M", doubles "B3M-D", mixed "B34X-D".
+ * `label` is a category or group label ("B1 Mężczyźni — Grupa A", "B3/B4 Men Doubles") or a
+ * player's class ("B2"); `gender` is the player's gender when the label has none.
+ */
+export function categoryFilterKey(label, gender = '') {
+  const text = String(label || '').trim();
+  if (!text) return '';
+  const base = text.split(' — ')[0];
+  const pair = base.match(/^B\s*(\d)\s*\/\s*B?\s*(\d)/i);
+  const division = pair ? `B${pair[1]}${pair[2]}` : extractCategoryCodeFromLabel(base) || normalizeCategoryCode(base);
+  if (!/^B\d{1,2}$/.test(division)) return '';
+  const normalized = base.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const mixed = isMixedSectionLabel(base.replace(/^B\S*\s*/i, '').replace(DOUBLES_WORD, '').trim()) || /\bmix/.test(normalized);
+  let sex = mixed ? 'X' : inferPlanningGenderFromLabel(base);
+  if (!sex) {
+    const raw = String(gender || '').trim().toUpperCase();
+    sex = raw === 'M' ? 'M' : (raw === 'K' || raw === 'F' || raw === 'W') ? 'K' : '';
+  }
+  return `${division}${sex}${DOUBLES_WORD.test(base) ? '-D' : ''}`;
+}
+
+/** Standard keys always, then any other key found in `keys` (doubles, mixed, class only). */
+export function categoryFilterKeys(keys = []) {
+  const extra = [...new Set(keys.filter((key) => key && !STANDARD_CATEGORY_KEYS.includes(key)))];
+  const order = (key) => {
+    const match = key.match(/^B(\d+)([KMX]?)(-D)?$/) || [];
+    const division = Number(String(match[1] || '99').slice(0, 1)) + (String(match[1] || '').length > 1 ? 0.5 : 0);
+    return [match[3] ? 1 : 0, division, { K: 0, M: 1, X: 2, '': 3 }[match[2] || ''] ?? 4];
+  };
+  extra.sort((left, right) => {
+    const a = order(left);
+    const b = order(right);
+    return a[0] - b[0] || a[1] - b[1] || a[2] - b[2] || left.localeCompare(right);
+  });
+  return [...STANDARD_CATEGORY_KEYS, ...extra];
+}
+
+/** "B1K" → "B1 Kobiety"; "B34X-D" → "B3/4 Mieszane Debel" (labels in the viewer's language). */
+export function categoryFilterLabel(key, { women = 'Kobiety', men = 'Mężczyźni', mixed = 'Mieszane', doubles = 'Debel' } = {}) {
+  const match = String(key || '').match(/^(B\d+)([KMX]?)(-D)?$/);
+  if (!match) return String(key || '');
+  const sex = { K: women, M: men, X: mixed }[match[2]] || '';
+  return [formatCategoryDisplay(match[1]), sex, match[3] ? doubles : ''].filter(Boolean).join(' ');
+}

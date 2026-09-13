@@ -1,3 +1,5 @@
+import { categoryFilterKey, categoryFilterKeys } from '../shared/categories.js';
+
 export function dedupePlayersList(players = []) {
   const seen = new Map();
   for (const player of Array.isArray(players) ? players : []) {
@@ -36,7 +38,7 @@ export function filterPlayersList(players = [], { search = '', gender = '', coun
     list = list.filter((player) => String(player?.country || '').toUpperCase() === String(country).toUpperCase());
   }
   if (category) {
-    list = list.filter((player) => player?.category === category);
+    list = list.filter((player) => categoryFilterKey(player?.category, player?.gender) === category);
   }
   return list;
 }
@@ -53,10 +55,10 @@ export function getPlayerCountryOptions(players = []) {
 export function getPlayerCategoryOptions(players = []) {
   const map = {};
   for (const player of Array.isArray(players) ? players : []) {
-    const category = player?.category || '';
-    if (category) map[category] = (map[category] || 0) + 1;
+    const key = categoryFilterKey(player?.category, player?.gender);
+    if (key) map[key] = (map[key] || 0) + 1;
   }
-  return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).map(([name, count]) => ({ name, count }));
+  return categoryFilterKeys(Object.keys(map)).map((name) => ({ name, count: map[name] || 0 }));
 }
 
 export function normalizePlayerProfileMode(mode = 'auto') {

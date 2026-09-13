@@ -1,3 +1,5 @@
+import { STANDARD_CATEGORY_KEYS, categoryFilterLabel } from '../shared/categories.js';
+
 export function createGlobalPlayersAdmin() {
   return {
       // Global Players
@@ -11,13 +13,25 @@ export function createGlobalPlayersAdmin() {
       addToTournamentCategory: '',
       globalMigrated: false,
 
+     globalPlayerCategoryKeys() {
+       return STANDARD_CATEGORY_KEYS;
+     },
+
+     globalPlayerCategoryLabel(key) {
+       return categoryFilterLabel(key);
+     },
+
      // ===== GLOBAL PLAYERS =====
      async loadGlobalPlayers() {
        try {
          const params = new URLSearchParams();
          if (this.globalPlayersFilter.q) params.set('q', this.globalPlayersFilter.q);
-         if (this.globalPlayersFilter.gender) params.set('gender', this.globalPlayersFilter.gender);
-         if (this.globalPlayersFilter.category) params.set('category', this.globalPlayersFilter.category);
+         // "B1K" = class B1, women: the class goes to the server, the sex narrows the gender filter
+         const categoryKey = String(this.globalPlayersFilter.category || '').match(/^(B\d+)([KM]?)$/);
+         const genderFromCategory = categoryKey?.[2] === 'K' ? 'F' : categoryKey?.[2] === 'M' ? 'M' : '';
+         const gender = this.globalPlayersFilter.gender || genderFromCategory;
+         if (gender) params.set('gender', gender);
+         if (categoryKey) params.set('category', categoryKey[1]);
          if (this.globalPlayersFilter.country) params.set('country', this.globalPlayersFilter.country);
          const url = '/admin/api/global-players' + (params.toString() ? '?' + params : '');
          const r = await fetch(url);
