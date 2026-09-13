@@ -7,7 +7,7 @@
  * person would and checks nothing typed or picked was lost or swapped:
  *
  * - "+" on a category that already has a saved group keeps the new, still empty group
- * - "Rozdziel automatycznie" followed at once by a refresh keeps the draw
+ * - "Wyczyść" and "Rozdziel automatycznie", each followed at once by a refresh, keep the count and the draw
  * - the header result dialog keeps its group, players and scores
  * - the viewer banner keeps the text being edited
  * - the match inspector keeps a changed time
@@ -120,7 +120,12 @@ export default async function run() {
     await page.getByText(`${b1.label} — Grupa B`).first().waitFor({ state: 'visible', timeout: 5000 });
     log(`"+" on ${b1.label} (one saved group): still 2 groups with the empty Grupa B after a refresh`);
 
-    // ——— auto draw immediately followed by a refresh ———
+    // ——— clear, then auto draw, each followed at once by a refresh ———
+    // ("Rozdziel automatycznie" only draws players who are not in a group yet)
+    await page.locator('.office-groups').getByRole('button', { name: 'Wyczyść', exact: true }).click();
+    await humanPause();
+    const countAfterClear = await alpine(() => Alpine.$data(document.body).planningGroupCount);
+    if (Number(countAfterClear) !== 2) throw new Error(`"Wyczyść" and a refresh took the group count to ${countAfterClear}`);
     await page.getByRole('button', { name: 'Rozdziel automatycznie' }).click();
     await humanPause();
     const b1Groups = await waitUntil('B1 draw saved as two groups', async () => {
@@ -142,7 +147,7 @@ export default async function run() {
     await page.waitForTimeout(PAUSE_MS);
     const uiAssigned = await alpine(() => Object.values(Alpine.$data(document.body).planningGroupAssignments || {}).filter(Boolean).length);
     if (uiAssigned < 4) throw new Error(`After the draw and a refresh the office shows ${uiAssigned} of 4 players in groups`);
-    log(`"Rozdziel automatycznie" then an immediate refresh: saved as ${b1Groups.map((group) => `${group.name.split('— ').pop()} (${group.players.length})`).join(', ')} and still shown`);
+    log(`"Wyczyść", "Rozdziel automatycznie", each with an immediate refresh: saved as ${b1Groups.map((group) => `${group.name.split('— ').pop()} (${group.players.length})`).join(', ')} and still shown`);
 
     // ——— header result dialog ———
     const groupB = b1Groups.find((group) => group.name.endsWith('Grupa B'));
