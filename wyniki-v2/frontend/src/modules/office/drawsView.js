@@ -33,6 +33,7 @@ export function createOfficeDrawsView() {
     drawFormatsLoaded: false,
     drawActiveId: null,
     drawDraft: null,
+    drawDraftBase: null,
     drawPreview: null,
     drawTab: 'main',
     drawPicked: null,
@@ -73,7 +74,8 @@ export function createOfficeDrawsView() {
         this.drawPreview = null;
         return;
       }
-      const editing = active.category_id === this.drawActiveId && this.drawDraftDirty();
+      // only the office's own changes survive a refresh; a draft nobody touched follows the server
+      const editing = active.category_id === this.drawActiveId && this.drawDraftEdited();
       if (active.category_id !== this.drawActiveId) {
         this.drawTab = 'main';
         this.drawPicked = null;
@@ -83,8 +85,17 @@ export function createOfficeDrawsView() {
         this.refreshDrawPreview();
         return;
       }
-      this.drawDraft = clone(active.config);
-      this.drawPreview = active;
+      this.setDrawDraft(active);
+    },
+
+    setDrawDraft(item) {
+      this.drawDraft = clone(item.config);
+      this.drawDraftBase = clone(item.config);
+      this.drawPreview = item;
+    },
+
+    drawDraftEdited() {
+      return Boolean(this.drawDraft && this.drawDraftBase && !sameDraw(this.drawDraftBase, this.drawDraft));
     },
 
     drawActive() {
@@ -94,15 +105,14 @@ export function createOfficeDrawsView() {
     selectDrawCategory(item) {
       if (!item || item.category_id === this.drawActiveId) return;
       this.drawActiveId = item.category_id;
-      this.drawDraft = clone(item.config);
-      this.drawPreview = item;
+      this.setDrawDraft(item);
       this.drawTab = 'main';
       this.drawPicked = null;
     },
 
     drawDraftDirty() {
       const active = this.drawActive();
-      return Boolean(active && this.drawDraft && !sameDraw(active.config, this.drawDraft));
+      return Boolean(active && this.drawDraftEdited() && !sameDraw(active.config, this.drawDraft));
     },
 
     drawCategoryLabel(item) {
@@ -271,6 +281,7 @@ export function createOfficeDrawsView() {
         if (response.status === 409) throw new Error(this.ot('draws.lockedError'));
         if (!response.ok) throw new Error(payload.error || this.ot('draws.saveFailed'));
         this.drawDraft = null;
+        this.drawDraftBase = null;
         this.applyDrawFormats(payload.categories);
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         if (payload.rebuilt) this.loadOfficePlanningData();
