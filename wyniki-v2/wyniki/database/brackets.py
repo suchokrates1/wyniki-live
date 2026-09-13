@@ -10,8 +10,13 @@ from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
 
-from .connection import db_conn
-from ..services.draw_builder import build_direct_draw, build_group_draws
+from .connection import db_conn, fetch_app_settings
+from ..services.draw_builder import (
+    build_cross_draw,
+    build_direct_draw,
+    build_group_draws,
+    build_table_final,
+)
 from ..services.teams import (
     DEFAULT_PLAY_FORMAT,
     PLAY_FORMAT_GROUPS_KNOCKOUT,
@@ -417,7 +422,84 @@ def _iter_knockout_units(bracket_groups: List[Dict[str, Any]]) -> List[Dict[str,
                 units.append({"type": "single_table", "label": str(group.get("name") or bucket_name), "groups": [group]})
         for group in knockout_only:
             units.append({"type": "direct_pool", "label": str(group.get("name") or bucket_name), "groups": [group]})
+    for unit in units:
+        unit["category_id"] = next(
+            (group.get("tournament_category_id") for group in unit["groups"] if group.get("tournament_category_id")),
+            None,
+        )
     return units
+
+
+KNOCKOUT_UNIT_FORMAT = {"single_table": "table", "cross": "cross", "group_draw": "main", "direct_pool": "direct"}
+
+
+def knockout_formats_settings_key(tournament_id: int) -> str:
+    return f"knockout_formats:{int(tournament_id)}"
+
+
+def load_knockout_formats(tournament_id: Optional[int]) -> Dict[str, Dict[str, Any]]:
+    """Knockout format chosen per category ({category_id: config}); empty when never set."""
+    if not tournament_id:
+        return {}
+    key = knockout_formats_settings_key(tournament_id)
+    raw = fetch_app_settings([key]).get(key)
+    try:
+        data = json.loads(raw) if raw else {}
+    except (TypeError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _unit_draw_groups(unit: Dict[str, Any], *, complete: bool, counts: Dict[str, int], label: str) -> List[Dict[str, Any]]:
+    """Each group with its finishing order: real names once play is over, else "1. B2 Men — Grupa A"."""
+    draw_groups = []
+    for group in unit.get("groups") or []:
+        group_name = str(group.get("name") or "")
+        standings = group.get("standings") or []
+        size = counts.get(group_name) or len(standings) or len(_group_competitor_names(group))
+        if complete and len(standings) >= size:
+            ranking = [str(row.get("name") or "") for row in standings]
+        else:
+            ranking = [_standing_placeholder(rank, group_name, label) for rank in range(1, size + 1)]
+        draw_groups.append({"name": group_name, "ranking": ranking})
+    return draw_groups
+
+
+def _formatted_unit_slots(
+    unit: Dict[str, Any],
+    config: Dict[str, Any],
+    *,
+    complete: bool,
+    counts: Dict[str, int],
+) -> Optional[List[Dict[str, Any]]]:
+    """Slots for a unit whose category has a chosen format; None when it does not fit the unit."""
+    fmt = str(config.get("format") or "")
+    if fmt == "none":
+        return []
+    if fmt != KNOCKOUT_UNIT_FORMAT.get(unit.get("type")):
+        return None
+    label = str(unit.get("label") or "")
+    places = str(config.get("places") or ("third" if fmt in ("table", "direct") else "all"))
+    swaps = config.get("swaps") or {}
+    if fmt == "direct":
+        names = _group_competitor_names((unit.get("groups") or [{}])[0])
+        slots = build_direct_draw(label, names, places=places, swaps=swaps.get("main"))
+    else:
+        draw_groups = _unit_draw_groups(unit, complete=complete, counts=counts, label=label)
+        if fmt == "table":
+            slots = build_table_final(label, draw_groups[0]["ranking"] if draw_groups else [], places=places)
+        elif fmt == "cross":
+            slots = build_cross_draw(label, draw_groups, places=places, swaps=swaps.get("main"))
+        else:
+            slots = build_group_draws(
+                label,
+                draw_groups,
+                qualifiers=max(1, int(config.get("qualifiers") or 2)),
+                places=places,
+                consolation=bool(config.get("consolation", True)),
+                swaps=swaps,
+            )
+    return [_encode_feeds(slot) for slot in slots]
 
 
 def _slots_for_knockout_unit(
@@ -425,8 +507,14 @@ def _slots_for_knockout_unit(
     *,
     complete: bool,
     player_count_by_name: Optional[Dict[str, int]] = None,
+    formats: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     counts = player_count_by_name or {}
+    config = (formats or {}).get(str(unit.get("category_id"))) if unit.get("category_id") else None
+    if config:
+        formatted = _formatted_unit_slots(unit, config, complete=complete, counts=counts)
+        if formatted is not None:
+            return formatted
     unit_type = unit.get("type")
     label = str(unit.get("label") or "")
     groups = unit.get("groups") or []
@@ -887,6 +975,7 @@ def _compute_provisional_knockout_slots_from_bracket(
     """Build knockout slots with standing placeholders until group play is finished."""
     slots: List[Dict[str, Any]] = []
     units = _iter_knockout_units(bracket_groups)
+    formats = load_knockout_formats(tournament_id)
     completeness: Dict[int, bool] = {}
     if tournament_id:
         with db_conn() as conn:
@@ -912,6 +1001,7 @@ def _compute_provisional_knockout_slots_from_bracket(
             unit,
             complete=completeness.get(index, False),
             player_count_by_name=player_count_by_name,
+            formats=formats,
         ))
 
     if not slots:
@@ -1124,6 +1214,8 @@ def _annotate_groups_with_stored_format(
         stored = by_name.get(str(group.get("name") or "")) or {}
         merged = dict(group)
         merged["play_format"] = stored.get("play_format") or group.get("play_format")
+        if stored.get("tournament_category_id") is not None:
+            merged["tournament_category_id"] = stored["tournament_category_id"]
         if stored.get("id") is not None:
             merged["id"] = stored["id"]
         if stored.get("players") and not merged.get("players"):
@@ -1149,6 +1241,7 @@ def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[st
     }
 
     ready_slots: List[Dict[str, Any]] = []
+    formats = load_knockout_formats(tournament_id)
     pending_units = 0
     eligible_units = 0
     with db_conn() as conn:
@@ -1168,6 +1261,7 @@ def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[st
                 unit,
                 complete=True,
                 player_count_by_name=player_count_by_name,
+                formats=formats,
             ))
 
     if not eligible_units:

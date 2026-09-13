@@ -354,9 +354,10 @@ def delete_tournament(tournament_id: int) -> bool:
             cursor.execute("DELETE FROM courts WHERE tournament_id = ?", (tournament_id,))
             # Per-tournament settings live under the id; a later tournament can reuse it.
             cursor.execute(
-                "DELETE FROM app_settings WHERE key IN (?, ?, ?, ?)",
+                "DELETE FROM app_settings WHERE key IN (?, ?, ?, ?, ?)",
                 (
                     f"autoscheduler:{int(tournament_id)}",
+                    f"knockout_formats:{int(tournament_id)}",
                     f"schedule_removed_fixtures_{int(tournament_id)}",
                     f"mixed_categories:{int(tournament_id)}",
                     _tournament_quick_info_key(tournament_id),

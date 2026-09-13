@@ -19,6 +19,9 @@ from ..database import (
     correct_knockout_result,
     knockout_correction_blocker,
     swap_knockout_players,
+    confirm_all_knockout_formats,
+    knockout_format_overview,
+    save_knockout_format,
     apply_autoschedule_placements,
     fetch_bracket_groups,
     fetch_courts_for_tournament,
@@ -82,6 +85,7 @@ blueprint = Blueprint('office', __name__, url_prefix='/api/office')
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _NON_MUTATING_ENDPOINTS = {
     "office_auth",
+    "office_knockout_format_preview",
     "office_session_cookie",
     "office_autoschedule_generate",
 }
@@ -825,6 +829,63 @@ def office_group_match(slot: int):
     except OfficeWorkflowError as exc:
         return jsonify({"error": str(exc)}), exc.status_code
     return _json_no_cache(payload, status)
+
+
+@blueprint.route('/<int:slot>/knockout-formats', methods=['GET'])
+def office_knockout_formats(slot: int):
+    """Knockout format, allowed formats and a draw preview for every category."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    return _json_no_cache({"categories": knockout_format_overview(int(tournament['id']))})
+
+
+@blueprint.route('/<int:slot>/knockout-formats/preview', methods=['POST'])
+def office_knockout_format_preview(slot: int):
+    """Preview an unsaved format for one category."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    category_id = str(data.get('category_id') or '')
+    overview = knockout_format_overview(int(tournament['id']), drafts={category_id: data.get('config') or {}})
+    category = next((item for item in overview if str(item['category_id']) == category_id), None)
+    if category is None:
+        return jsonify({"error": "category_not_found"}), 404
+    return _json_no_cache({"category": category})
+
+
+@blueprint.route('/<int:slot>/knockout-formats/<int:category_id>', methods=['PUT'])
+def office_save_knockout_format(slot: int, category_id: int):
+    """Save (and confirm) a category's knockout format; rebuilds its draw when it changed."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    result = save_knockout_format(tournament_id, category_id, (request.get_json(silent=True) or {}).get('config') or {})
+    if result.get('error') == 'category_not_found':
+        return jsonify({"error": "category_not_found"}), 404
+    if result.get('error') == 'locked':
+        return jsonify({"error": "locked"}), 409
+    return _json_no_cache({
+        "categories": knockout_format_overview(tournament_id),
+        "rebuilt": result.get("rebuilt", False),
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
+
+
+@blueprint.route('/<int:slot>/knockout-formats/confirm-all', methods=['POST'])
+def office_confirm_all_knockout_formats(slot: int):
+    """Confirm the current format of every category."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    confirm_all_knockout_formats(tournament_id)
+    return _json_no_cache({
+        "categories": knockout_format_overview(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
 
 
 @blueprint.route('/<int:slot>/knockout/swap', methods=['POST'])

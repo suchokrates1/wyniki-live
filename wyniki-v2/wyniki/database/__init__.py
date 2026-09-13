@@ -1,7 +1,7 @@
 """Database access layer for v2 (package facade)."""
 from __future__ import annotations
 
-from . import brackets, categories, connection, courts, history, players, schedule, teams, tournaments
+from . import brackets, categories, connection, courts, history, knockout_formats, players, schedule, teams, tournaments
 
 from .connection import (
     _default_simulation_office_password_hash,
@@ -193,6 +193,12 @@ from .teams import (
     delete_tournament_team,
 )
 
+from .knockout_formats import (
+    confirm_all_knockout_formats,
+    knockout_format_overview,
+    save_knockout_format,
+)
+
 from .history import (
     insert_match_history,
     delete_latest_history_entry,
@@ -241,6 +247,9 @@ for _consumer, _mapping in _INJECTIONS.items():
         setattr(_mod, _sym, getattr(_MODULES[_owner], _sym))
 
 __all__ = [
+    'confirm_all_knockout_formats',
+    'knockout_format_overview',
+    'save_knockout_format',
     '_default_simulation_office_password_hash',
     'db_conn',
     'init_db',
