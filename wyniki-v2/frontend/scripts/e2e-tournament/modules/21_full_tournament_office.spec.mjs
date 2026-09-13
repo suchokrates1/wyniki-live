@@ -325,6 +325,18 @@ export default async function run() {
     await waitUntil('three categories in Drabinki', async () => (await drawCategories.count()) === 3);
     const defaults = await drawCategories.evaluateAll((nodes) => nodes.map((node) => node.querySelector('[data-draw-state]')?.dataset.drawState));
     if (defaults.some((state) => state === 'confirmed')) throw new Error(`Nothing is confirmed before the office looks: ${defaults.join(',')}`);
+    // confirming one category marks its card at once; the others still wait
+    await drawCategories.nth(1).click();
+    await page.locator('[data-draw-confirm]').click();
+    const oneConfirmed = await waitUntil('one card marked confirmed', async () => {
+      const states = await page.locator('[data-draw-state]').evaluateAll((nodes) => nodes.map((node) => node.dataset.drawState));
+      const tally = await page.locator('[data-draw-tally]').innerText();
+      return states.filter((state) => state === 'confirmed').length === 1 && tally.includes('1 z 3') ? states : null;
+    }).catch(async (error) => {
+      throw new Error(`${error.message}: ${JSON.stringify(await page.locator('[data-draw-state]').evaluateAll((nodes) => nodes.map((node) => node.dataset.drawState)))}`);
+    });
+    if ((await page.locator('.office-draws__cat.is-confirmed .office-draws__cat-icon').innerText()).trim() !== '✓') throw new Error('A confirmed card needs its ✓');
+    log(`Drabinki: confirming one category marks its card ✓ at once (${oneConfirmed.join(', ')}; "Zatwierdzone: 1 z 3")`);
     await page.locator('[data-office-next]').getByRole('button', { name: 'Zatwierdź wszystkie' }).click();
     await toast('Wszystkie drabinki zatwierdzone');
     const drawsConfirmed = await waitUntil('step 2 done after confirming the draws', async () => {

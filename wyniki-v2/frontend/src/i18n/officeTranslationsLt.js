@@ -74,6 +74,8 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       ctaConfirmAllDraws: 'Patvirtinti visas',
     },
     draws: {
+      tally: 'Patvirtinta: {confirmed} iš {total}',
+      tallyDone: 'Visos lentelės patvirtintos',
       empty: 'Nėra aktyvių kategorijų. Pirmiausia sudarykite pradines grupes.',
       categories: 'Kategorijos',
       loadFailed: 'Nepavyko įkelti lentelių',
@@ -103,10 +105,10 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       matchesShort: 'mačų: {count}',
       state: {
         locked: 'vyksta',
-        changed: 'pakeista',
+        changed: 'neišsaugotas pakeitimas',
         none: 'be lentelės',
         confirmed: '✓ patvirtinta',
-        default: 'numatytoji',
+        default: 'laukia patvirtinimo',
       },
       lockedNote: 'Šios kategorijos atkrintamosios jau prasidėjo — formatas užrakintas. Žaidėjus sukeisti galite skiltyje „Atkrintamosios“.',
       qualifiers: 'Iš kiekvienos grupės patenka',

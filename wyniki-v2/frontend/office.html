@@ -876,13 +876,20 @@
         </template>
         <div class="office-draws__workspace" x-show="drawFormats.length">
           <div class="office-draws__cats" role="list" :aria-label="ot('draws.categories')">
-            <template x-for="item in drawFormats" :key="'draw_cat_'+item.category_id">
+            <div class="office-draws__tally" data-draw-tally :class="{'is-complete': drawAllConfirmed()}">
+              <span class="office-draws__tally-text" x-text="drawAllConfirmed() ? ot('draws.tallyDone') : ot('draws.tally', { confirmed: drawConfirmedCount(), total: drawFormats.length })"></span>
+              <span class="office-draws__tally-bar" aria-hidden="true"><span :style="`width: ${drawFormats.length ? Math.round(drawConfirmedCount() / drawFormats.length * 100) : 0}%`"></span></span>
+            </div>
+            <template x-for="item in drawFormats" :key="'draw_cat_'+item.category_id+'_'+drawItemState(item)">
               <button type="button" role="listitem" class="office-draws__cat"
-                      :class="{'is-active': item.category_id === drawActiveId}"
+                      :class="['is-' + drawItemState(item), item.category_id === drawActiveId ? 'is-active' : '']"
                       :aria-current="item.category_id === drawActiveId ? 'true' : null"
                       :data-draw-category="item.label"
                       @click="selectDrawCategory(item)">
-                <span class="office-draws__cat-name" x-text="drawCategoryLabel(item)"></span>
+                <span class="office-draws__cat-name">
+                  <span class="office-draws__cat-icon" aria-hidden="true" x-text="({confirmed: '✓', none: '–', locked: '●', changed: '!', default: '?'})[drawItemState(item)]"></span>
+                  <span x-text="drawCategoryLabel(item)"></span>
+                </span>
                 <span class="office-draws__badge" :class="'is-' + drawItemState(item)" :data-draw-state="drawItemState(item)" x-text="ot('draws.state.' + drawItemState(item))"></span>
                 <span class="office-draws__cat-groups" x-text="drawGroupsText(item)"></span>
                 <span class="office-draws__cat-format" x-text="drawFormatName(drawItemFormat(item)) + ' · ' + ot('draws.matchesShort', { count: drawItemMatches(item) })"></span>

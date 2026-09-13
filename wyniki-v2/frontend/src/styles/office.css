@@ -1642,3 +1642,38 @@ body.office-body {
   .office-inspector__entry,
   .office-inspector__entry.is-leaving { animation: none; }
 }
+
+/* ——— draws: the state of every category reads at a glance ——— */
+.office-draws__tally { display: grid; gap: 6px; padding: 4px 6px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--kort-line); }
+.office-draws__tally-text { font: 600 0.72rem/1.3 var(--kort-mono); color: var(--kort-warn); }
+.office-draws__tally.is-complete .office-draws__tally-text { color: var(--kort-ok); }
+.office-draws__tally-bar { height: 4px; border-radius: 999px; background: var(--kort-raise); overflow: hidden; }
+.office-draws__tally-bar > span { display: block; height: 100%; background: var(--kort-warn); transition: width 0.3s ease; }
+.office-draws__tally.is-complete .office-draws__tally-bar > span { background: var(--kort-ok); }
+
+.office-draws__cat { border: 1px solid var(--kort-line); background: var(--kort-deep); box-shadow: inset 4px 0 0 var(--kort-line); padding-left: 14px; }
+.office-draws__cat-name { display: inline-flex; align-items: center; gap: 8px; }
+.office-draws__cat-icon { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 700 0.72rem/1 var(--kort-mono); flex: none; }
+
+.office-draws__cat.is-default { border-style: dashed; border-color: rgba(245, 184, 61, 0.55); box-shadow: inset 4px 0 0 var(--kort-warn); }
+.office-draws__cat.is-default .office-draws__cat-icon { border: 1.5px solid var(--kort-warn); color: var(--kort-warn); }
+.office-draws__cat.is-changed { border-color: var(--kort-warn); box-shadow: inset 4px 0 0 var(--kort-warn); }
+.office-draws__cat.is-changed .office-draws__cat-icon { background: var(--kort-warn); color: var(--kort-lime-ink); }
+.office-draws__cat.is-confirmed { border-color: rgba(74, 222, 128, 0.35); background: rgba(74, 222, 128, 0.07); box-shadow: inset 4px 0 0 var(--kort-ok); }
+.office-draws__cat.is-confirmed .office-draws__cat-icon { background: var(--kort-ok); color: var(--kort-void); }
+.office-draws__cat.is-none { border-color: transparent; background: transparent; box-shadow: inset 4px 0 0 var(--kort-raise); opacity: 0.72; }
+.office-draws__cat.is-none .office-draws__cat-icon { border: 1.5px solid var(--kort-line); color: var(--kort-mist); }
+.office-draws__cat.is-locked { border-color: rgba(232, 93, 4, 0.45); box-shadow: inset 4px 0 0 var(--kort-live); }
+.office-draws__cat.is-locked .office-draws__cat-icon { color: var(--kort-live); font-size: 0.6rem; }
+
+.office-draws__cat.is-active { outline: 2px solid var(--kort-lime); outline-offset: 1px; background-color: var(--kort-court); opacity: 1; }
+.office-draws__cat.is-confirmed.is-active { background: rgba(74, 222, 128, 0.12); }
+
+.office-draws__badge.is-confirmed { background: var(--kort-ok); border-color: var(--kort-ok); color: var(--kort-void); font-weight: 700; }
+.office-draws__badge.is-default { background: rgba(245, 184, 61, 0.12); }
+.office-draws__badge.is-changed { background: var(--kort-warn); border-color: var(--kort-warn); color: var(--kort-lime-ink); font-weight: 700; }
+.office-draws__badge.is-none { border-color: transparent; }
+
+.office-draws__cat { grid-template-columns: minmax(0, 1fr); }
+.office-draws__cat .office-draws__badge { justify-self: start; }
+.office-draws__cat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
