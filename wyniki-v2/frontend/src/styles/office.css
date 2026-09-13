@@ -1598,3 +1598,47 @@ body.office-body {
   .office-draws__cat { min-width: 190px; }
   .office-draws__detail { padding: 14px 12px 18px; }
 }
+
+/* ——— motion: views, inspector, blocks and cards arrive instead of popping ——— */
+.office-view-enter { transition: opacity 0.22s ease-out, transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.office-view-enter-from { opacity: 0; transform: translateY(10px); }
+.office-view-enter-to { opacity: 1; transform: none; }
+
+@keyframes office-arrive { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes office-slide-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes office-slide-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(24px); } }
+@keyframes office-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.office-block,
+.office-drawer__card,
+.office-anim-in,
+.office-draws__rounds,
+.office-draws__placements,
+.office-draws__table,
+.office-view > .grid > article { animation: office-arrive 0.24s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+
+.office-inspector__entry { animation: office-slide-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.office-inspector__entry.is-leaving { animation: office-slide-out 0.2s ease-in forwards; pointer-events: none; }
+.office-anim-fade { animation: office-fade-in 0.2s ease-out both; }
+.office-anim-swap { animation: office-fade-in 0.2s ease-out both; }
+
+.office-daytab,
+.office-draws__cat,
+.office-draws__format,
+.office-draws__seg button,
+.office-draws__tabs button { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .office-view-enter { transition: none; }
+  .office-block,
+  .office-drawer__card,
+  .office-anim-in,
+  .office-anim-fade,
+  .office-anim-swap,
+  .office-draws__rounds,
+  .office-draws__placements,
+  .office-draws__table,
+  .office-view > .grid > article,
+  .office-inspector__entry,
+  .office-inspector__entry.is-leaving { animation: none; }
+}

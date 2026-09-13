@@ -450,7 +450,26 @@ export function createOfficeAutoScheduleView() {
 
     planningInspectorEntries() {
       const entry = this.planningSelectedEntry();
-      return entry ? [entry] : [];
+      if (entry) return [entry];
+      // while it slides out, the inspector still shows the match that was just closed
+      const leaving = (this.autoIsPreview() ? this.autoProposal : this.planningSchedule || [])
+        .find((item) => this.planningInspectorLeavingId != null && String(this.autoEntryId(item)) === String(this.planningInspectorLeavingId));
+      return leaving ? [leaving] : [];
+    },
+
+    trackPlanningInspector(openId) {
+      const previous = this.planningInspectorShownId;
+      this.planningInspectorShownId = openId;
+      if (openId != null && openId !== '') {
+        this.planningInspectorLeavingId = null;
+        return;
+      }
+      if (previous == null || previous === '') return;
+      this.planningInspectorLeavingId = previous;
+      window.clearTimeout(this.planningInspectorLeaveTimer);
+      this.planningInspectorLeaveTimer = window.setTimeout(() => {
+        if (this.planningOpenCardId == null || this.planningOpenCardId === '') this.planningInspectorLeavingId = null;
+      }, 200);
     },
 
     officeScheduleStatusClass(status) {
