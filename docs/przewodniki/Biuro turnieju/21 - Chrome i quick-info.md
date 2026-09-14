@@ -54,6 +54,20 @@ SSE: `/api/office/{slot}/stream` — dane odświeżają się na żywo. Starsza, 
 | **Opublikuj** | Zapis | `PUT …/quick-info` `{message, active}` |
 | **Ukryj baner** | `active=false` + zapis | Baner znika z `/` |
 
+## Uwagi do meczów w terminarzu
+
+Druga sekcja widoku **Komunikat dla widzów**: jedna uwaga publiczna dla wielu meczów naraz. W Terminarzu przycisk **Uwagi…** otwiera ją z dniem, który jest na siatce.
+
+| Kontrolka | Co robi |
+|-----------|---------|
+| **Dzień** / **Faza** (Wszystkie, Grupowa, Pucharowa) / **Tylko nierozegrane mecze** | Zawężają mecze (domyślnie tylko nierozegrane) |
+| **Korty**, **Kategorie** | Wybór kilku; **Wszystkie** czyści wybór |
+| **Co zrobić**: Zastąp / Dopisz / Wyczyść | Nadpisuje uwagę, dopisuje ją po „ · ” (bez powtórzeń) albo usuwa |
+| Podsumowanie + **Pokaż mecze** | Ile meczów pasuje i ile ma już własną uwagę; lista z obecnymi uwagami |
+| **Zapisz uwagi (N)** / **Wyczyść uwagi (N)** | `POST …/schedule/notes` (podgląd: `POST …/schedule/notes/preview`) |
+
+Uwagę widać na karcie meczu w terminarzu („Uwagi: …”) i w publicznym terminarzu. Pojedynczy mecz zmienia się w inspektorze. Nowe mecze nie dostają już żadnej domyślnej uwagi.
+
 ## E2E
 
 `16_office_login_chrome.spec.mjs` — liczby, sześć widoków, Odśwież, Wyloguj. `06_quick_info.spec.mjs` — baner. `10_sse_reconnect.spec.mjs` — SSE.
