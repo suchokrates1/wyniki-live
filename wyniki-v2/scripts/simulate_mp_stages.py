@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import random
 import sys
 from datetime import datetime, timedelta
@@ -28,7 +29,7 @@ from create_mp_simulation import (  # noqa: E402
 from wyniki import database  # noqa: E402
 
 
-DEFAULT_ACCESS_KEY = "***REMOVED***"
+DEFAULT_ACCESS_KEY = os.getenv("MP_SIMULATION_ACCESS_KEY", "")
 BASE_START = datetime(2026, 4, 29, 9, 0, 0)
 
 
@@ -420,6 +421,8 @@ def _create_stage_tournament(stage: int, access_key: str, replace: bool) -> int:
 def seed_stages(args: argparse.Namespace) -> int:
     database.init_db()
     access_key = args.access_key or DEFAULT_ACCESS_KEY
+    if not access_key:
+        raise SystemExit("Missing access key: pass --access-key or set MP_SIMULATION_ACCESS_KEY")
     base = _ensure_base_tournament(access_key)
 
     rng = random.Random(args.seed)
