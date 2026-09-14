@@ -112,7 +112,7 @@ class PlayerRecord(BaseModel):
 
 class AppSettings(BaseModel):
     """Application settings."""
-    ***REMOVED***: Optional[str] = None
+    youtube_api_key: Optional[str] = None
     youtube_stream_id: Optional[str] = None
 
 
