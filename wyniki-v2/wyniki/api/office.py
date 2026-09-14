@@ -15,6 +15,7 @@ from ..services.api_auth import (
 )
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 from ..database import (
+    apply_schedule_notes,
     assign_start_numbers,
     fetch_start_numbers,
     advance_knockout,
@@ -89,6 +90,7 @@ _NON_MUTATING_ENDPOINTS = {
     "office_auth",
     "office_knockout_format_preview",
     "office_planning_start_numbers",
+    "office_schedule_notes_preview",
     "office_session_cookie",
     "office_autoschedule_generate",
 }
@@ -608,6 +610,48 @@ def office_create_player(slot: int):
         "players": fetch_players(tournament_id),
         "dashboard": _build_office_dashboard(tournament_id),
     }), 201
+
+
+def _schedule_notes_request(tournament_id: int, *, apply: bool):
+    data = request.get_json(silent=True) or {}
+    filters = data.get('filters') if isinstance(data.get('filters'), dict) else {}
+    result = apply_schedule_notes(
+        tournament_id,
+        filters,
+        text=str(data.get('text') or ''),
+        mode=str(data.get('mode') or 'replace'),
+        apply=apply,
+    )
+    if result.get('error'):
+        return jsonify({"error": result['error']}), 400
+    return result
+
+
+@blueprint.route('/<int:slot>/schedule/notes/preview', methods=['POST'])
+def office_schedule_notes_preview(slot: int):
+    """Which matches a bulk note would touch, and how."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    result = _schedule_notes_request(int(tournament['id']), apply=False)
+    return result if isinstance(result, tuple) else _json_no_cache(result)
+
+
+@blueprint.route('/<int:slot>/schedule/notes', methods=['POST'])
+def office_schedule_notes_apply(slot: int):
+    """Write (replace, append or clear) the public note of every matching match."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    result = _schedule_notes_request(tournament_id, apply=True)
+    if isinstance(result, tuple):
+        return result
+    return _json_no_cache({
+        **result,
+        "schedule": fetch_tournament_schedule(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id),
+    })
 
 
 @blueprint.route('/<int:slot>/schedule/<int:schedule_id>', methods=['PUT', 'PATCH'])

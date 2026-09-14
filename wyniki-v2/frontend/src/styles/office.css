@@ -1728,3 +1728,16 @@ body.office-body {
 .office-daytab__count { margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--kort-lime-soft); color: var(--kort-lime); font: 600 0.68rem/1.4 var(--kort-mono); }
 
 .office-views { overflow-x: hidden; }
+
+/* ——— notes for many matches at once ——— */
+.office-view--narrow { display: grid; gap: 16px; align-content: start; }
+.office-notes__filters { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; }
+.office-notes__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.office-notes__chip { border: 1px solid var(--kort-line); background: var(--kort-deep); color: var(--kort-mist); border-radius: 999px; padding: 5px 12px; font-size: 0.82rem; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+.office-notes__chip:hover { border-color: var(--kort-mist); }
+.office-notes__chip[aria-pressed="true"] { background: var(--kort-lime); border-color: var(--kort-lime); color: var(--kort-lime-ink); font-weight: 700; }
+.office-notes__summary { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--kort-court); font: 600 0.84rem/1.3 var(--kort-sans); color: var(--kort-ice); }
+.office-notes__list { display: grid; gap: 4px; max-height: 260px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.office-notes__list li { display: grid; gap: 1px; padding: 6px 10px; border-radius: 6px; background: var(--kort-deep); font-size: 0.8rem; }
+.office-notes__match { color: var(--kort-ice); }
+.office-notes__current { color: var(--kort-warn); font-size: 0.74rem; }

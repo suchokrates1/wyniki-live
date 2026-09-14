@@ -282,6 +282,12 @@
                   :aria-disabled="autoLoading"
                   @click="clearPlanningDay()"
                   x-text="ot('planning.clearDay')"></button>
+          <button type="button"
+                  class="office-btn office-btn--ghost"
+                  data-open-schedule-notes
+                  x-show="!autoIsPreview()"
+                  @click="openScheduleNotes({ day: autoDayDate })"
+                  x-text="ot('scheduleNotes.openFromSchedule')"></button>
 
           <label class="office-field">
             <span class="office-kicker" x-text="ot('planning.scope')"></span>
@@ -1108,6 +1114,96 @@
             <button type="button" class="office-btn office-btn--primary" @click="saveQuickInfo()" :class="{'is-busy': quickInfoSaving}" :aria-busy="quickInfoSaving" :aria-disabled="quickInfoSaving" x-text="ot('quickInfo.publish')"></button>
             <button type="button" class="office-btn office-btn--ghost" @click="hideQuickInfo()" x-show="quickInfoActive && quickInfoMessage" :class="{'is-busy': quickInfoSaving}" :aria-disabled="quickInfoSaving" x-text="ot('quickInfo.hide')"></button>
             <span class="office-hint" role="status" aria-live="polite" x-show="quickInfoUpdatedAt" x-text="ot('quickInfo.updated', { time: formatQuickInfoTime(quickInfoUpdatedAt) })"></span>
+          </div>
+        </div>
+
+        <div class="office-panel office-quick office-notes" id="office-schedule-notes" data-schedule-notes aria-labelledby="office-schedule-notes-title">
+          <h2 id="office-schedule-notes-title" class="office-kicker office-kicker--accent" x-text="ot('scheduleNotes.title')"></h2>
+          <p class="office-hint" x-text="ot('scheduleNotes.description')"></p>
+
+          <div class="office-notes__filters">
+            <label class="office-field">
+              <span class="office-kicker" x-text="ot('scheduleNotes.day')"></span>
+              <select class="select select-bordered select-sm" data-notes-day :value="scheduleNotesForm.day_date" @change="updateScheduleNotesForm({ day_date: $event.target.value })">
+                <option value="" x-text="ot('scheduleNotes.allDays')"></option>
+                <template x-for="(day, index) in planningTournamentDays()" :key="'notes_day_'+day">
+                  <option :value="day" :selected="scheduleNotesForm.day_date === day" x-text="planningDayLabel(day, index)"></option>
+                </template>
+              </select>
+            </label>
+            <div class="office-field">
+              <span class="office-kicker" x-text="ot('scheduleNotes.phase')"></span>
+              <div class="office-draws__seg" role="group" :aria-label="ot('scheduleNotes.phase')">
+                <template x-for="phase in ['all', 'group', 'knockout']" :key="'notes_phase_'+phase">
+                  <button type="button" :data-notes-phase="phase" :aria-pressed="scheduleNotesForm.phase === phase ? 'true' : 'false'"
+                          @click="updateScheduleNotesForm({ phase })" x-text="ot('scheduleNotes.phaseOption.' + phase)"></button>
+                </template>
+              </div>
+            </div>
+            <label class="office-toggle">
+              <input type="checkbox" data-notes-unplayed :checked="scheduleNotesForm.only_unplayed" @change="updateScheduleNotesForm({ only_unplayed: $event.target.checked })">
+              <span x-text="ot('scheduleNotes.onlyUnplayed')"></span>
+            </label>
+          </div>
+
+          <div class="office-field">
+            <span class="office-kicker" x-text="ot('scheduleNotes.courts')"></span>
+            <div class="office-notes__chips">
+              <button type="button" class="office-notes__chip" :aria-pressed="!scheduleNotesForm.court_ids.length ? 'true' : 'false'" @click="updateScheduleNotesForm({ court_ids: [] })" x-text="ot('scheduleNotes.all')"></button>
+              <template x-for="court in scheduleNotesCourts()" :key="'notes_court_'+court.id">
+                <button type="button" class="office-notes__chip" :data-notes-court="court.id" :aria-pressed="scheduleNotesForm.court_ids.includes(court.id) ? 'true' : 'false'" @click="toggleScheduleNotesValue('court_ids', court.id)" x-text="court.label"></button>
+              </template>
+            </div>
+          </div>
+
+          <div class="office-field">
+            <span class="office-kicker" x-text="ot('scheduleNotes.categories')"></span>
+            <div class="office-notes__chips">
+              <button type="button" class="office-notes__chip" :aria-pressed="!scheduleNotesForm.categories.length ? 'true' : 'false'" @click="updateScheduleNotesForm({ categories: [] })" x-text="ot('scheduleNotes.all')"></button>
+              <template x-for="category in scheduleNotesCategories()" :key="'notes_cat_'+category.value">
+                <button type="button" class="office-notes__chip" :data-notes-category="category.value" :aria-pressed="scheduleNotesForm.categories.includes(category.value) ? 'true' : 'false'" @click="toggleScheduleNotesValue('categories', category.value)" x-text="category.label"></button>
+              </template>
+            </div>
+          </div>
+
+          <div class="office-field">
+            <span class="office-kicker" x-text="ot('scheduleNotes.mode')"></span>
+            <div class="office-draws__seg" role="group" :aria-label="ot('scheduleNotes.mode')">
+              <template x-for="mode in ['replace', 'append', 'clear']" :key="'notes_mode_'+mode">
+                <button type="button" :data-notes-mode="mode" :aria-pressed="scheduleNotesForm.mode === mode ? 'true' : 'false'"
+                        @click="updateScheduleNotesForm({ mode })" x-text="ot('scheduleNotes.modeOption.' + mode)"></button>
+              </template>
+            </div>
+          </div>
+
+          <label class="office-field" x-show="scheduleNotesForm.mode !== 'clear'">
+            <span class="office-kicker" x-text="ot('scheduleNotes.text')"></span>
+            <input type="text" class="input input-bordered w-full" data-notes-text maxlength="500"
+                   :value="scheduleNotesForm.text" @input="scheduleNotesForm.text = $event.target.value"
+                   :placeholder="ot('scheduleNotes.textPlaceholder')">
+          </label>
+
+          <div class="office-notes__summary" role="status" aria-live="polite" data-notes-summary>
+            <span x-show="scheduleNotesPreview" x-text="scheduleNotesPreview?.count
+              ? (scheduleNotesPreview.with_notes ? ot('scheduleNotes.summaryWithNotes', { count: scheduleNotesPreview.count, notes: scheduleNotesPreview.with_notes }) : ot('scheduleNotes.summary', { count: scheduleNotesPreview.count }))
+              : ot('scheduleNotes.summaryNone')"></span>
+            <button type="button" class="office-btn office-btn--ghost office-btn--sm" x-show="scheduleNotesPreview?.count" @click="scheduleNotesListOpen = !scheduleNotesListOpen"
+                    x-text="scheduleNotesListOpen ? ot('scheduleNotes.hideMatches') : ot('scheduleNotes.showMatches')"></button>
+          </div>
+          <ul class="office-notes__list" x-show="scheduleNotesListOpen && scheduleNotesPreview?.count">
+            <template x-for="item in (scheduleNotesPreview?.matches || [])" :key="'notes_match_'+item.id">
+              <li>
+                <span class="office-notes__match" x-text="scheduleNotesMatchLine(item)"></span>
+                <span class="office-notes__current" x-show="item.current" x-text="ot('scheduleNotes.currentNote', { text: item.current })"></span>
+              </li>
+            </template>
+          </ul>
+
+          <div class="office-quick__controls">
+            <button type="button" class="office-btn office-btn--primary" data-notes-apply
+                    :class="{'is-busy': scheduleNotesSaving}" :aria-disabled="!scheduleNotesCanApply()"
+                    @click="applyScheduleNotes()"
+                    x-text="scheduleNotesForm.mode === 'clear' ? ot('scheduleNotes.applyClear', { count: scheduleNotesPreview?.count || 0 }) : ot('scheduleNotes.apply', { count: scheduleNotesPreview?.count || 0 })"></button>
           </div>
         </div>
       </section>

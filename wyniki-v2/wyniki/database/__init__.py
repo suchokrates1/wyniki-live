@@ -62,6 +62,7 @@ from .players import (
 from .schedule import (
     DEFAULT_GROUP_SCHEDULE_NOTE_PL,
     DEFAULT_KNOCKOUT_SCHEDULE_NOTE_PL,
+    apply_schedule_notes,
     DEFAULT_GROUP_SCHEDULE_NOTE_DE,
     DEFAULT_KNOCKOUT_SCHEDULE_NOTE_DE,
     _tournament_country_code,
@@ -302,6 +303,7 @@ __all__ = [
     'delete_player',
     'bulk_insert_players',
     'DEFAULT_GROUP_SCHEDULE_NOTE_PL',
+    'apply_schedule_notes',
     'DEFAULT_KNOCKOUT_SCHEDULE_NOTE_PL',
     'DEFAULT_GROUP_SCHEDULE_NOTE_DE',
     'DEFAULT_KNOCKOUT_SCHEDULE_NOTE_DE',

@@ -31,7 +31,7 @@ const POLISH_WORDS = [
   'Komunikat', 'Grupowa', 'Pucharowa', 'Kort', 'oraz', 'lub', 'dla', 'się', 'jest', 'nie', 'Turniej', 'Zamień', 'Tutaj',
 ];
 const WORD_PATTERN = new RegExp(`(^|[^\\p{L}])(${POLISH_WORDS.join('|')})(?=$|[^\\p{L}])`, 'u');
-const KEY_PATTERN = /\b(?:draws|path|planning|modals|toast|errors|login|hero|stats|tabs|bracket|knockout|history|quickInfo|status|phases|confirm|gender|categories|scope|playerSection|schedule|ui)\.[a-zA-Z][a-zA-Z0-9]*\b/;
+const KEY_PATTERN = /\b(?:scheduleNotes|draws|path|planning|modals|toast|errors|login|hero|stats|tabs|bracket|knockout|history|quickInfo|status|phases|confirm|gender|categories|scope|playerSection|schedule|ui)\.[a-zA-Z][a-zA-Z0-9]*\b/;
 
 async function waitUntil(label, probe, { timeout = 20000, interval = 400 } = {}) {
   const started = Date.now();

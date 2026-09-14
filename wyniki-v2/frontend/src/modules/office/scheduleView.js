@@ -7,7 +7,8 @@ export function createOfficeScheduleView() {
     },
 
     officeViewUsesPlanningData(view = this.activeTab) {
-      return view === 'planning' || view === 'groups';
+      // the notes for matches need the days, courts and categories
+      return view === 'planning' || view === 'groups' || view === 'quickinfo';
     },
 
     async openOfficeView(view, { auto = false } = {}) {
@@ -17,6 +18,7 @@ export function createOfficeScheduleView() {
         await this.loadDrawFormats();
         return;
       }
+      if (view === 'quickinfo') this.refreshScheduleNotesPreview?.();
       if (!this.officeViewUsesPlanningData(view)) return;
       if (!this.planningPlayers.length) {
         await this.loadOfficePlanningData();

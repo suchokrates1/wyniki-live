@@ -581,6 +581,39 @@ export default async function run() {
     if (!(await remark.innerText()).includes(note)) throw new Error(`Match card should show its notes: ${await remark.innerText()}`);
     log('Match card shows "Uwagi: …" once notes are typed');
 
+    markStep('notes for many matches');
+    // one note for every unplayed match on a court on day 1, previewed, then cleared again
+    await selectDay(day1);
+    await page.locator('[data-open-schedule-notes]').click();
+    await page.waitForFunction(() => Alpine.$data(document.body).activeTab === 'quickinfo');
+    const notesPanel = page.locator('[data-schedule-notes]');
+    await notesPanel.waitFor({ state: 'visible' });
+    if ((await notesPanel.locator('[data-notes-day]').inputValue()) !== day1) throw new Error('"Uwagi…" should open with the day from the board');
+    const notesCourt = String(((await planning()).schedule || []).find((entry) => entry.day_date === day1 && isPlaced(entry) && !entry.match_id)?.court_id || '');
+    await notesPanel.locator(`[data-notes-court="${notesCourt}"]`).click();
+    const bulkNote = `Kort kryty ${tag}`;
+    await notesPanel.locator('[data-notes-text]').fill(bulkNote);
+    const expected = ((await planning()).schedule || []).filter((entry) => entry.day_date === day1 && String(entry.court_id) === notesCourt && !entry.match_id && !['completed', 'in_progress'].includes(String(entry.status)));
+    await waitUntil('notes preview count', async () => (await notesPanel.locator('[data-notes-summary]').innerText()).includes(String(expected.length)));
+    await notesPanel.locator('[data-notes-apply]').click();
+    await toast('Zapisano uwagi');
+    await waitUntil('bulk note saved on the court', async () => {
+      const rows = ((await planning()).schedule || []).filter((entry) => expected.some((item) => item.id === entry.id));
+      return rows.length === expected.length && rows.every((entry) => entry.notes_public === bulkNote);
+    });
+    const untouched = ((await planning()).schedule || []).filter((entry) => String(entry.court_id) !== notesCourt && entry.notes_public === bulkNote);
+    if (untouched.length) throw new Error(`The note reached matches on other courts: ${untouched.map((entry) => entry.id).join(', ')}`);
+    await notesPanel.locator('[data-notes-mode="clear"]').click();
+    await waitUntil('clear preview', async () => (await notesPanel.locator('[data-notes-apply]').textContent()).includes('Wyczyść')).catch(async (error) => {
+      throw new Error(`${error.message}: ${JSON.stringify(await page.evaluate(() => ({ form: Alpine.$data(document.body).scheduleNotesForm, active: Alpine.$data(document.body).activeTab, button: document.querySelector('[data-notes-apply]')?.outerHTML?.slice(0, 400) })))}`);
+    });
+    await notesPanel.locator('[data-notes-apply]').click();
+    await waitUntil('bulk note cleared', async () => ((await planning()).schedule || []).filter((entry) => expected.some((item) => item.id === entry.id)).every((entry) => !entry.notes_public));
+    await notesPanel.locator('[data-notes-mode="replace"]').click();
+    await notesPanel.locator(`[data-notes-court="${notesCourt}"]`).click();
+    await openView('Terminarz');
+    log(`Notes for many matches: "${bulkNote}" on ${expected.length} unplayed matches of court ${notesCourt} on ${day1} (preview count matched), other courts untouched, then cleared`);
+
     markStep('results');
     // ——— results ———
     const addResultFromBoard = async (entry, { sets = [[4, 1], [4, 2]], walkover = false } = {}) => {
