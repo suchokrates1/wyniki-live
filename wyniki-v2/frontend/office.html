@@ -337,7 +337,7 @@
         <div class="office-workspace">
           <div class="office-stage">
             <p class="office-hint" x-show="!autoIsPreview()" x-text="ot('planning.dragHint')"></p>
-            <div class="office-timetable-wrap">
+            <div class="office-timetable-wrap" x-effect="animateBoardDay(autoDayDate, $el)">
               <div class="office-timetable" :style="officeTimetableStyle()">
                 <div class="office-timetable__corner" style="grid-column: 1; grid-row: 1;"></div>
                 <template x-for="court in autoCourts" :key="'gridh_'+court.kort_id">
@@ -371,7 +371,7 @@
                 </template>
                 <template x-for="block in autoBoardBlocks()" :key="'block_'+autoEntryId(block.entry)+'_'+autoDayDate+'_'+block.courtId+'_'+block.time">
                   <div class="office-block"
-                       :style="block.style"
+                       :style="block.style + '--office-delay:' + block.delay + 'ms;'"
                        :data-minutes="block.minutes"
                        @dragover.prevent
                        @dragenter.prevent="if (autoDragId) planningDropCell = block.courtId + '|' + block.time"
@@ -512,7 +512,7 @@
             </section>
           </div>
 
-          <aside class="office-inspector office-panel" x-effect="trackPlanningInspector(planningOpenCardId)">
+          <aside class="office-inspector office-panel" x-effect="trackPlanningInspector(planningOpenCardId, $el)">
             <div class="office-kicker" x-text="ot('planning.inspectorTitle')"></div>
             <p class="mt-2 text-sm text-slate-500 office-anim-fade" x-show="!planningOpenCardId && !planningInspectorLeavingId" x-text="ot('planning.inspectorEmpty')"></p>
             <template x-for="entry in planningInspectorEntries()" :key="'insp_'+autoEntryId(entry)">

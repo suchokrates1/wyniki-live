@@ -90,6 +90,7 @@ export function createOfficeCoreView() {
     planningTeams: [],
     planningStartNumbers: {},
     planningInspectorShownId: null,
+    planningBoardShownDay: null,
     planningInspectorLeavingId: null,
     planningInspectorLeaveTimer: null,
     planningStartNumbersPending: false,

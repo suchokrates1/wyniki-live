@@ -399,6 +399,8 @@ export function createOfficeAutoScheduleView() {
             courtId: court.kort_id,
             time: this.autoNormalizeTime(entry.scheduled_time),
             style: `grid-column: ${index + 2}; grid-row: ${rowStart} / span ${span};`,
+            // the day's matches arrive in a short cascade, earliest first
+            delay: Math.min(420, Math.max(0, rowStart - 2) * 14 + index * 22),
             minutes: this.autoEntryMinutes(entry),
           });
         }
@@ -433,6 +435,18 @@ export function createOfficeAutoScheduleView() {
       return cells;
     },
 
+    /** The board slides in from the side of the day it came from. */
+    animateBoardDay(day, el) {
+      const days = this.planningTournamentDays?.() || [];
+      const previous = this.planningBoardShownDay;
+      this.planningBoardShownDay = day;
+      if (!el || !previous || previous === day) return;
+      const direction = days.indexOf(day) < days.indexOf(previous) ? 'is-day-prev' : 'is-day-next';
+      el.classList.remove('is-day-next', 'is-day-prev');
+      void el.offsetWidth;
+      el.classList.add(direction);
+    },
+
     autoCellOccupied(courtId, time) {
       const at = this.autoTimeMinutes(time);
       return this.autoBoardEntries(courtId).some((entry) => {
@@ -457,11 +471,16 @@ export function createOfficeAutoScheduleView() {
       return leaving ? [leaving] : [];
     },
 
-    trackPlanningInspector(openId) {
+    trackPlanningInspector(openId, el = null) {
       const previous = this.planningInspectorShownId;
       this.planningInspectorShownId = openId;
       if (openId != null && openId !== '') {
         this.planningInspectorLeavingId = null;
+        if (el && String(previous) !== String(openId)) {
+          el.classList.remove('is-opening');
+          void el.offsetWidth;
+          el.classList.add('is-opening');
+        }
         return;
       }
       if (previous == null || previous === '') return;

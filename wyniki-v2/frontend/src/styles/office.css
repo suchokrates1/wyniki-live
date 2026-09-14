@@ -1600,14 +1600,19 @@ body.office-body {
 }
 
 /* ——— motion: views, inspector, blocks and cards arrive instead of popping ——— */
-.office-view-enter { transition: opacity 0.22s ease-out, transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1); }
-.office-view-enter-from { opacity: 0; transform: translateY(10px); }
+:root { --office-ease: cubic-bezier(0.16, 0.84, 0.3, 1); }
+
+.office-view-enter { transition: opacity 0.34s ease-out, transform 0.42s var(--office-ease); }
+.office-view-enter-from { opacity: 0; transform: translateX(48px); }
 .office-view-enter-to { opacity: 1; transform: none; }
 
-@keyframes office-arrive { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
-@keyframes office-slide-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
-@keyframes office-slide-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(24px); } }
+@keyframes office-arrive { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes office-slide-in { from { opacity: 0; transform: translateX(64px); } to { opacity: 1; transform: none; } }
+@keyframes office-slide-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(64px); } }
 @keyframes office-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes office-board-from-right { from { opacity: 0; transform: translateX(56px); } to { opacity: 1; transform: none; } }
+@keyframes office-board-from-left { from { opacity: 0; transform: translateX(-56px); } to { opacity: 1; transform: none; } }
+@keyframes office-flash { 0% { box-shadow: 0 0 0 0 rgba(198, 233, 83, 0.55); } 100% { box-shadow: 0 0 0 14px rgba(198, 233, 83, 0); } }
 
 .office-block,
 .office-drawer__card,
@@ -1615,33 +1620,62 @@ body.office-body {
 .office-draws__rounds,
 .office-draws__placements,
 .office-draws__table,
-.office-view > .grid > article { animation: office-arrive 0.24s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.office-view > .grid > article { animation: office-arrive 0.36s var(--office-ease) backwards; animation-delay: var(--office-delay, 0ms); }
 
-.office-inspector__entry { animation: office-slide-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
-.office-inspector__entry.is-leaving { animation: office-slide-out 0.2s ease-in forwards; pointer-events: none; }
-.office-anim-fade { animation: office-fade-in 0.2s ease-out both; }
-.office-anim-swap { animation: office-fade-in 0.2s ease-out both; }
+.office-inspector__entry { animation: office-slide-in 0.38s var(--office-ease) backwards; }
+.office-inspector__entry.is-leaving { animation: office-slide-out 0.24s ease-in forwards; pointer-events: none; }
+.office-inspector.is-opening { animation: office-flash 0.6s ease-out; }
+.office-anim-fade { animation: office-fade-in 0.3s ease-out both; }
+.office-anim-swap { animation: office-board-from-right 0.34s var(--office-ease) both; }
+.office-timetable-wrap.is-day-next { animation: office-board-from-right 0.38s var(--office-ease); }
+.office-timetable-wrap.is-day-prev { animation: office-board-from-left 0.38s var(--office-ease); }
 
 .office-daytab,
 .office-draws__cat,
 .office-draws__format,
 .office-draws__seg button,
-.office-draws__tabs button { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+.office-draws__tabs button { transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
 
+/* reduced motion: things still fade in, nothing slides */
 @media (prefers-reduced-motion: reduce) {
-  .office-view-enter { transition: none; }
+  .office-view-enter { transition: opacity 0.25s ease-out; }
+  .office-view-enter-from { transform: none; }
   .office-block,
   .office-drawer__card,
   .office-anim-in,
-  .office-anim-fade,
-  .office-anim-swap,
   .office-draws__rounds,
   .office-draws__placements,
   .office-draws__table,
   .office-view > .grid > article,
   .office-inspector__entry,
-  .office-inspector__entry.is-leaving { animation: none; }
+  .office-anim-swap,
+  .office-timetable-wrap.is-day-next,
+  .office-timetable-wrap.is-day-prev { animation: office-fade-in 0.25s ease-out backwards; animation-delay: 0ms; }
+  .office-inspector__entry.is-leaving { animation: none; opacity: 0; }
+  .office-inspector.is-opening { animation: none; }
 }
+
+/* ——— the rail: the view on screen is marked on its row ——— */
+.office-rail__item { position: relative; transition: background-color 0.18s ease, color 0.18s ease; }
+.office-rail__item.is-active {
+  background: rgba(198, 233, 83, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(198, 233, 83, 0.35);
+  color: var(--kort-ice);
+}
+.office-rail__item.is-active::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--kort-lime);
+}
+.office-rail__item.is-active .office-step__title,
+.office-rail__item.is-active .office-rail__label { color: var(--kort-ice); font-weight: 800; }
+.office-rail__item.office-step.is-active.is-done .office-step__title { color: var(--kort-ice); }
+.office-rail__item.office-step.is-active .office-step__meta { color: var(--kort-lime); }
 
 /* ——— draws: the state of every category reads at a glance ——— */
 .office-draws__tally { display: grid; gap: 6px; padding: 4px 6px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--kort-line); }
@@ -1692,3 +1726,5 @@ body.office-body {
 .office-inspector__preview { padding: 8px 10px; border-radius: 8px; background: var(--kort-lime-soft); color: var(--kort-ice); }
 
 .office-daytab__count { margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--kort-lime-soft); color: var(--kort-lime); font: 600 0.68rem/1.4 var(--kort-mono); }
+
+.office-views { overflow-x: hidden; }
