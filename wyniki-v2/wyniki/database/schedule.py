@@ -26,6 +26,26 @@ DEFAULT_GROUP_SCHEDULE_NOTE_DE = "Orientierungszeit wird vom Turnierbüro bekann
 
 DEFAULT_KNOCKOUT_SCHEDULE_NOTE_DE = "Pokalspiel – Uhrzeit noch zu bestätigen"
 
+# Former automatic notes. New matches get no note: the public page already says a time is
+# still to be confirmed, and a note stays on the match after it is placed.
+DEFAULT_SCHEDULE_NOTES = (
+    DEFAULT_GROUP_SCHEDULE_NOTE_PL,
+    DEFAULT_KNOCKOUT_SCHEDULE_NOTE_PL,
+    DEFAULT_GROUP_SCHEDULE_NOTE_DE,
+    DEFAULT_KNOCKOUT_SCHEDULE_NOTE_DE,
+)
+
+
+def clear_default_schedule_notes(cursor) -> int:
+    """Remove the former automatic notes from matches not played yet (typed notes stay)."""
+    placeholders = ",".join("?" for _ in DEFAULT_SCHEDULE_NOTES)
+    cursor.execute(
+        f"UPDATE tournament_schedule SET notes_public = '' WHERE match_id IS NULL AND notes_public IN ({placeholders})",
+        DEFAULT_SCHEDULE_NOTES,
+    )
+    return cursor.rowcount
+
+
 def _tournament_country_code(tournament_id: int) -> str:
     try:
         with db_conn() as conn:
@@ -694,7 +714,7 @@ def _insert_group_round_robin_schedule_entries(
                 (
                     tournament_id, default_day, category_name or group_name, group_id, group_name, phase,
                     player1_name, player2_name, source_type, group_id, next_order,
-                    _default_group_schedule_note(tournament_id), now, now,
+                    '', now, now,
                 ),
             )
             next_order += 1
@@ -824,7 +844,7 @@ def ensure_knockout_schedule_entries(
                     (
                         tournament_id, default_day, category_name or phase_label, phase_label,
                         player1_name, player2_name, status, slot["id"], next_order,
-                        _default_knockout_schedule_note(tournament_id), now, now,
+                        '', now, now,
                     ),
                 )
                 next_order += 1

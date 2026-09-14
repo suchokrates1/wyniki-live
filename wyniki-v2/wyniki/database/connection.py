@@ -567,6 +567,18 @@ def init_db() -> None:
             cursor.execute("ALTER TABLE players ADD COLUMN global_player_id INTEGER REFERENCES global_players(id) ON DELETE SET NULL")
             logger.info("database_migration", action="added_global_player_id_to_players")
 
+        # Migration (once): drop the former automatic schedule notes from unplayed matches
+        cursor.execute("SELECT 1 FROM app_settings WHERE key = 'migration:clear_default_schedule_notes'")
+        if cursor.fetchone() is None:
+            from .schedule import clear_default_schedule_notes
+
+            cleared = clear_default_schedule_notes(cursor)
+            cursor.execute(
+                "INSERT INTO app_settings (key, value) VALUES ('migration:clear_default_schedule_notes', ?)",
+                (str(cleared),),
+            )
+            logger.info("database_migration", action="cleared_default_schedule_notes", count=cleared)
+
         # Start numbers per category (players and pairs)
         from .start_numbers import ensure_start_number_tables, number_existing_teams
 
