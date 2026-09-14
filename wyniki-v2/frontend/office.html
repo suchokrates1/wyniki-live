@@ -1316,79 +1316,82 @@
         </div>
       </section>
 
-      <section class="office-view space-y-5" x-show="activeTab === 'knockout'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak>
-        <div class="office-topbar__stats">
-          <article class="office-pill office-stat">
-            <div class="office-pill__label" x-text="ot('knockout.generated')"></div>
-            <div class="office-pill__value" x-text="officeKnockout.expected_matches || 0"></div>
-          </article>
-          <article class="office-pill office-stat">
-            <div class="office-pill__label" x-text="ot('knockout.ready')"></div>
-            <div class="office-pill__value" x-text="officeKnockout.ready_matches || 0"></div>
-          </article>
-          <article class="office-pill office-stat">
-            <div class="office-pill__label" x-text="ot('knockout.finished')"></div>
-            <div class="office-pill__value" x-text="officeKnockout.finished_matches || 0"></div>
-          </article>
-        </div>
-
+      <section class="office-view office-ko" x-show="activeTab === 'knockout'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak data-office-knockout>
         <template x-if="!officeKnockoutMatches.length">
           <article class="office-panel rounded-[20px] p-8 text-center text-slate-500">
             <span x-text="ot('knockout.empty')"></span>
           </article>
         </template>
 
-        <p class="office-hint mb-3" role="status" x-show="officeKnockoutSwapFrom" x-text="ot('knockout.swapHint', { name: officeKnockoutSwapFrom?.name || '' })"></p>
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <template x-for="slot in officeKnockoutMatches" :key="'office_knockout_'+slot.slot_id">
-            <article class="office-panel rounded-[20px] p-6">
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="office-chip office-chip-knockout" x-text="officeDisplayLabel(slot.phase) || ot('knockout.defaultPhase')"></span>
-                    <span class="office-chip" :class="slot.winner_name ? 'office-chip-group' : (slot.ready ? 'office-chip-knockout' : 'office-chip-neutral')" x-text="officeKnockoutStatusLabel(slot)"></span>
-                  </div>
-                  <div class="mt-3 text-sm text-slate-500">
-                    <span x-text="formatOfficeScheduleDay(slot)"></span>
-                    <span x-show="slot.scheduled_time"> · <span x-text="slot.scheduled_time"></span></span>
-                    <span> · </span><span x-text="officeScheduleCourtLabel(slot)"></span>
-                  </div>
-                </div>
-                <span class="text-sm text-slate-400" x-text="'#' + (slot.position || 1)"></span>
-              </div>
-
-              <div class="mt-5 rounded-2xl border border-slate-200/80 bg-white/70 p-4 space-y-3">
-                <template x-for="side in [1, 2]" :key="'ko_side_'+slot.slot_id+'_'+side">
-                  <div class="flex items-start justify-between gap-3" :class="officeKnockoutSwapIsOrigin(slot, side) ? 'office-swap-origin' : ''">
-                    <span class="font-semibold text-slate-800 competitor-name min-w-0" x-text="formatCompetitorName(officeKnockoutSideName(slot, side)) || ot('knockout.previousRoundWinner')"></span>
-                    <span class="flex shrink-0 items-center gap-2">
-                      <span class="office-chip" x-show="slot.winner_name && slot.winner_name === officeKnockoutSideName(slot, side)" x-text="ot('knockout.winShort')"></span>
-                      <button type="button" class="btn btn-xs btn-ghost" data-knockout-swap
-                              x-show="!officeKnockoutSwapFrom && officeKnockoutSideSwappable(slot, side)"
-                              @click="startOfficeKnockoutSwap(slot, side)" x-text="ot('knockout.swap')"></button>
-                      <button type="button" class="btn btn-xs office-btn-accent" data-knockout-swap-here
-                              x-show="officeKnockoutSwapCandidate(slot, side)"
-                              @click="finishOfficeKnockoutSwap(slot, side)" x-text="ot('knockout.swapHere')"></button>
-                      <button type="button" class="btn btn-xs btn-ghost" data-knockout-swap-cancel
-                              x-show="officeKnockoutSwapIsOrigin(slot, side)"
-                              @click="cancelOfficeKnockoutSwap()" x-text="ot('knockout.swapCancel')"></button>
-                    </span>
-                  </div>
-                </template>
-              </div>
-
-              <div class="mt-4 text-sm text-slate-600" x-show="slot.score_text">
-                <span x-text="ot('knockout.score')"></span> <span class="font-semibold" x-text="slot.score_text"></span>
-              </div>
-              <div class="mt-4 text-sm text-slate-500" x-show="!slot.ready && !slot.winner_name" x-text="ot('knockout.waitingPreviousRound')"></div>
-
-              <div class="mt-5 flex justify-end gap-2">
-                <button type="button" class="btn btn-outline bg-white/80" x-show="slot.match_id" @click="startOfficeEditFromKnockout(slot)" x-text="ot('knockout.editResult')"></button>
-                <button type="button" class="btn office-btn-primary" x-show="officeKnockoutCanAddResult(slot)" @click="openAddKnockoutResult(slot)" x-text="ot('knockout.addResult')"></button>
-              </div>
-            </article>
+        <div class="office-ko__cats" role="tablist" :aria-label="ot('knockout.categories')" x-show="officeKnockoutMatches.length">
+          <template x-for="category in officeKnockoutCategories()" :key="'ko_cat_'+category.name">
+            <button type="button" role="tab" class="office-ko__cat" data-knockout-category
+                    :class="{'is-active': officeKnockoutActiveCategory()?.name === category.name, 'is-complete': category.total && category.finished === category.total}"
+                    :aria-selected="officeKnockoutActiveCategory()?.name === category.name ? 'true' : 'false'"
+                    @click="selectOfficeKnockoutCategory(category)">
+              <span class="office-ko__cat-name" x-text="category.label"></span>
+              <span class="office-ko__cat-meta" x-text="ot('knockout.categoryProgress', { finished: category.finished, total: category.total })"></span>
+              <span class="office-ko__cat-ready" x-show="category.ready" x-text="ot('knockout.categoryReady', { count: category.ready })"></span>
+              <span class="office-ko__cat-bar" aria-hidden="true"><span :style="`width: ${category.total ? Math.round(category.finished / category.total * 100) : 0}%`"></span></span>
+            </button>
           </template>
         </div>
+
+        <p class="office-hint office-ko__swap-hint" role="status" x-show="officeKnockoutSwapFrom" x-text="ot('knockout.swapHint', { name: officeKnockoutSwapFrom?.name || '' })"></p>
+
+        <template x-for="category in [officeKnockoutActiveCategory()].filter(Boolean)" :key="'ko_board_'+category.name">
+          <div class="office-ko__board">
+            <template x-for="(tree, treeIndex) in category.trees" :key="'ko_tree_'+category.name+'_'+treeIndex">
+              <section class="office-ko__tree" :aria-label="officeKnockoutTreeTitle(tree)">
+                <h2 class="office-kicker office-ko__tree-title" x-text="officeKnockoutTreeTitle(tree)"></h2>
+                <div class="office-ko__scroll">
+                  <div class="office-ko__rounds">
+                    <template x-for="(round, roundIndex) in [...tree.rounds, ...tree.placement]" :key="'ko_round_'+round.phase">
+                      <div class="office-ko__round" :class="{'is-placement': roundIndex >= tree.rounds.length, 'is-final': officeKnockoutIsFinal(round.phase)}">
+                        <div class="office-ko__round-name" x-text="officeKnockoutRoundLabel(round.phase)"></div>
+                        <div class="office-ko__round-matches">
+                          <template x-for="slot in round.slots" :key="'office_knockout_'+slot.slot_id">
+                            <article class="office-ko__match"
+                                     :class="{'is-done': slot.winner_name, 'is-ready': slot.ready && !slot.winner_name, 'is-waiting': !slot.ready && !slot.winner_name}"
+                                     :data-knockout-slot="slot.slot_id">
+                              <div class="office-ko__match-head">
+                                <span class="office-ko__match-no" x-text="'#' + (slot.position || 1)"></span>
+                                <span class="office-ko__match-status" x-text="officeKnockoutStatusLabel(slot)"></span>
+                              </div>
+                              <template x-for="side in [1, 2]" :key="'ko_side_'+slot.slot_id+'_'+side">
+                                <div class="office-ko__side" :class="{'is-winner': officeKnockoutSideWon(slot, side), 'office-swap-origin': officeKnockoutSwapIsOrigin(slot, side)}">
+                                  <span class="office-ko__name competitor-name" x-text="formatCompetitorName(officeKnockoutSideName(slot, side)) || ot('knockout.previousRoundWinner')"></span>
+                                  <span class="office-ko__side-actions">
+                                    <button type="button" class="office-ko__icon" data-knockout-swap
+                                            x-show="!officeKnockoutSwapFrom && officeKnockoutSideSwappable(slot, side)"
+                                            :title="ot('knockout.swap')" :aria-label="ot('knockout.swap') + ': ' + officeKnockoutSideName(slot, side)"
+                                            @click="startOfficeKnockoutSwap(slot, side)">⇄</button>
+                                    <button type="button" class="btn btn-xs office-btn-accent" data-knockout-swap-here
+                                            x-show="officeKnockoutSwapCandidate(slot, side)"
+                                            @click="finishOfficeKnockoutSwap(slot, side)" x-text="ot('knockout.swapHere')"></button>
+                                    <button type="button" class="btn btn-xs btn-ghost" data-knockout-swap-cancel
+                                            x-show="officeKnockoutSwapIsOrigin(slot, side)"
+                                            @click="cancelOfficeKnockoutSwap()" x-text="ot('knockout.swapCancel')"></button>
+                                  </span>
+                                </div>
+                              </template>
+                              <div class="office-ko__score" x-show="slot.score_text" x-text="slot.score_text"></div>
+                              <div class="office-ko__when" x-show="officeKnockoutSlotWhen(slot)" x-text="officeKnockoutSlotWhen(slot)"></div>
+                              <div class="office-ko__actions" x-show="slot.match_id || officeKnockoutCanAddResult(slot)">
+                                <button type="button" class="btn btn-xs btn-outline" x-show="slot.match_id" @click="startOfficeEditFromKnockout(slot)" x-text="ot('knockout.editResult')"></button>
+                                <button type="button" class="btn btn-xs office-btn-primary" x-show="officeKnockoutCanAddResult(slot)" @click="openAddKnockoutResult(slot)" x-text="ot('knockout.addResult')"></button>
+                              </div>
+                            </article>
+                          </template>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </section>
+            </template>
+          </div>
+        </template>
       </section>
 
       </div>

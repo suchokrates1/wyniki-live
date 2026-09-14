@@ -1741,3 +1741,47 @@ body.office-body {
 .office-notes__list li { display: grid; gap: 1px; padding: 6px 10px; border-radius: 6px; background: var(--kort-deep); font-size: 0.8rem; }
 .office-notes__match { color: var(--kort-ice); }
 .office-notes__current { color: var(--kort-warn); font-size: 0.74rem; }
+
+/* ——— knockout: category cards on top, the category's draw below ——— */
+.office-ko { display: grid; gap: 16px; align-content: start; }
+.office-ko__cats { display: flex; flex-wrap: wrap; gap: 10px; }
+.office-ko__cat { display: grid; gap: 3px; min-width: 180px; text-align: left; padding: 10px 14px 12px; border: 1px solid var(--kort-line); border-radius: 10px; background: var(--kort-deep); color: var(--kort-ice); cursor: pointer; transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
+.office-ko__cat:hover { border-color: var(--kort-mist); }
+.office-ko__cat.is-active { background: var(--kort-court); border-color: var(--kort-lime); box-shadow: inset 0 0 0 1px var(--kort-lime); }
+.office-ko__cat-name { font-weight: 800; }
+.office-ko__cat-meta { font: 0.74rem/1.3 var(--kort-mono); color: var(--kort-mist); }
+.office-ko__cat-ready { font: 600 0.72rem/1.3 var(--kort-mono); color: var(--kort-lime); }
+.office-ko__cat-bar { height: 4px; margin-top: 4px; border-radius: 999px; background: var(--kort-raise); overflow: hidden; }
+.office-ko__cat-bar > span { display: block; height: 100%; background: var(--kort-lime); transition: width 0.3s ease; }
+.office-ko__cat.is-complete .office-ko__cat-bar > span { background: var(--kort-ok); }
+
+.office-ko__board { display: grid; gap: 18px; animation: office-board-from-right 0.36s var(--office-ease, ease-out); }
+.office-ko__tree { border: 1px solid var(--kort-line); border-radius: 12px; background: var(--kort-void); overflow: hidden; }
+.office-ko__tree-title { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--kort-line); background: var(--kort-deep); }
+.office-ko__scroll { overflow-x: auto; padding: 14px; }
+.office-ko__rounds { display: flex; gap: 26px; min-width: max-content; }
+.office-ko__round { display: flex; flex-direction: column; width: 250px; }
+.office-ko__round.is-placement { border-left: 1px dashed var(--kort-line); padding-left: 22px; }
+.office-ko__round-name { font: 600 0.64rem/1.2 var(--kort-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--kort-mist); margin-bottom: 10px; }
+.office-ko__round.is-final .office-ko__round-name { color: var(--kort-lime); }
+.office-ko__round-matches { display: flex; flex-direction: column; justify-content: space-around; gap: 12px; flex: 1; }
+.office-ko__match { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--kort-line); border-left: 3px solid var(--kort-line); border-radius: 8px; background: var(--kort-deep); }
+.office-ko__match.is-ready { border-left-color: var(--kort-lime); }
+.office-ko__match.is-done { border-left-color: var(--kort-ok); }
+.office-ko__match.is-waiting { opacity: 0.85; }
+.office-ko__round.is-final .office-ko__match { box-shadow: 0 0 0 1px rgba(198, 233, 83, 0.25); }
+.office-ko__match-head { display: flex; justify-content: space-between; gap: 8px; font: 0.66rem/1.2 var(--kort-mono); color: var(--kort-mist); }
+.office-ko__match.is-ready .office-ko__match-status { color: var(--kort-lime); }
+.office-ko__match.is-done .office-ko__match-status { color: var(--kort-ok); }
+.office-ko__side { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 26px; padding: 2px 0; }
+.office-ko__side + .office-ko__side { border-top: 1px solid var(--kort-grid); }
+.office-ko__name { font-size: 0.84rem; font-weight: 600; color: var(--kort-ice); min-width: 0; }
+.office-ko__match.is-waiting .office-ko__name { color: var(--kort-mist); font-weight: 500; }
+.office-ko__side.is-winner .office-ko__name { color: var(--kort-ok); font-weight: 800; }
+.office-ko__side.is-winner .office-ko__name::after { content: ' ✓'; }
+.office-ko__side-actions { display: inline-flex; gap: 4px; flex: none; }
+.office-ko__icon { border: 1px solid var(--kort-line); background: transparent; color: var(--kort-mist); border-radius: 6px; padding: 0 6px; min-height: 22px; cursor: pointer; }
+.office-ko__icon:hover { border-color: var(--kort-lime); color: var(--kort-lime); }
+.office-ko__score { font: 600 0.78rem/1.3 var(--kort-mono); color: var(--kort-ice); }
+.office-ko__when { font-size: 0.7rem; color: var(--kort-mist); }
+.office-ko__actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; padding-top: 2px; }

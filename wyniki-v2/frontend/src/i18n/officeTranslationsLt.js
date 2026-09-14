@@ -390,6 +390,12 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       pairs: 'Poros',
     },
     knockout: {
+      categories: 'Kategorijos',
+      categoryProgress: 'Sužaista: {finished} iš {total}',
+      categoryReady: 'paruošta žaisti: {count}',
+      treeMain: 'Pagrindinė lentelė',
+      treePlaces: 'Mačai dėl vietų',
+      treeConsolation: 'Paguoda',
       generated: 'Sugeneruota',
       ready: 'Paruošta žaisti',
       finished: 'Baigta',
