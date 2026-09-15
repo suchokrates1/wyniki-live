@@ -124,6 +124,70 @@ export function createPlayersView() {
       return getProfileMedalEmoji(medal);
     },
 
+    profileText(key, fallback, values = {}) {
+      return this.formatText(this.tr().playerProfile?.[key] || fallback, values);
+    },
+
+    profileDate(value) {
+      if (!value) return '';
+      const parsed = new Date(`${String(value).slice(0, 10)}T12:00:00`);
+      return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleDateString(this.locale(), { day: 'numeric', month: 'long', year: 'numeric' });
+    },
+
+    /** Class changes as full sentences, oldest first; a player never reclassified shows none. */
+    profileClassHistory() {
+      const rows = this.playerProfile?.classification_history || [];
+      return rows.length > 1 ? rows : [];
+    },
+
+    profileClassEntryText(row) {
+      const since = row.effective_date
+        ? this.profileText('classSince', '{class} od {date}', { class: row.classification, date: this.profileDate(row.effective_date) })
+        : row.classification;
+      let source = this.profileText('classSourceInitial', 'pierwsza klasa w bazie');
+      if (row.source === 'tournament') {
+        source = row.tournament_name
+          ? this.profileText('classSourceTournament', 'klasyfikacja na turnieju {tournament}', { tournament: row.tournament_name })
+          : this.profileText('classSourceTournamentHidden', 'klasyfikacja na turnieju');
+      } else if (row.source === 'manual') {
+        source = this.profileText('classSourceManual', 'zmiana w bazie zawodników');
+      }
+      const parts = [since];
+      if (row.previous_classification) parts.push(this.profileText('classPrevious', 'wcześniej {class}', { class: row.previous_classification }));
+      parts.push(source);
+      if (row.status === 'provisional') parts.push(this.profileText('classProvisional', 'klasa tymczasowa'));
+      return parts.join(', ');
+    },
+
+    profileTournamentCategory(t) {
+      if (!t?.category_label) return '';
+      return this.profileText('playedIn', 'Kategoria: {category}', { category: this.translateCategory(t.category_label) });
+    },
+
+    profileTournamentLabel(t) {
+      const parts = [t.tournament_name];
+      const category = this.profileTournamentCategory(t);
+      if (category) parts.push(category);
+      if (t.medal && ['gold', 'silver', 'bronze'].includes(t.medal)) parts.push(this.tr().playerProfile?.[t.medal] || t.medal);
+      parts.push(`${t.wins} ${this.tr().playerProfile?.wins || 'Wygrane'}, ${t.losses} ${this.tr().playerProfile?.losses || 'Przegrane'}`);
+      return parts.join(' – ');
+    },
+
+    profileMatchSummary(m) {
+      const score = (m.score || []).map((set) => (set.stb ? `[${set.g1}:${set.g2}]` : `${set.g1}:${set.g2}`)).join(', ');
+      const result = m.won ? this.profileText('resultWon', 'Wygrana') : this.profileText('resultLost', 'Porażka');
+      const opponent = `${this.tr().playerProfile?.vs || 'vs'} ${this.resolveBracketName(m.opponent)}`;
+      return [result, opponent, score, m.phase ? this.translatePhase(m.phase) : ''].filter(Boolean).join(', ');
+    },
+
+    profileMedalCategoryText(bucket) {
+      const names = ['gold', 'silver', 'bronze']
+        .filter((key) => bucket[key])
+        .map((key) => `${this.tr().playerProfile?.[key] || key}: ${bucket[key]}`);
+      const category = bucket.category || this.profileText('noCategory', 'bez kategorii');
+      return `${category} – ${names.join(', ')}`;
+    },
+
     profileWinRate() {
       return getProfileWinRate(this.playerProfile);
     },

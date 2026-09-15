@@ -589,6 +589,16 @@ def init_db() -> None:
             number_existing_teams(cursor)
             logger.info("database_migration", action="added_category_start_numbers")
 
+        # Sport classes with their history; one code per sex (K for women)
+        from .classifications import ensure_classification_tables, normalize_stored_genders
+
+        ensure_classification_tables(cursor)
+        cursor.execute("SELECT 1 FROM app_settings WHERE key = 'migration:normalize_genders'")
+        if cursor.fetchone() is None:
+            changed = normalize_stored_genders(cursor)
+            cursor.execute("INSERT INTO app_settings (key, value) VALUES ('migration:normalize_genders', ?)", (str(changed),))
+            logger.info("database_migration", action="normalized_genders", count=changed)
+
         conn.commit()
     
     logger.info("database_initialized", db_path=settings.database_path)

@@ -1387,7 +1387,7 @@
                                 <div class="pp-info">
                                     <h2 class="pp-info__name" x-text="playerProfile.player.full_name"></h2>
                                     <div class="pp-info__details">
-                                        <span x-show="formatPlayerClassification(playerProfile.player.category)" class="pp-badge pp-badge--cat" x-text="formatPlayerClassification(playerProfile.player.category)"></span>
+                                        <span x-show="formatPlayerClassification(playerProfile.player.category)" class="pp-badge pp-badge--cat"><span class="sr-only" x-text="profileText('classLabel', 'Klasa sportowa') + ': '"></span><span x-text="formatPlayerClassification(playerProfile.player.category)"></span></span>
                                         <span x-show="playerProfile.player.gender" class="pp-badge pp-badge--gender" x-text="playerProfile.player.gender === 'M' ? (tr().playerProfile?.male || 'Mężczyzna') : (tr().playerProfile?.female || 'Kobieta')"></span>
                                         <span x-show="playerProfile.player.country" class="pp-badge pp-badge--country">
                                             <img :src="codeToFlag(playerProfile.player.country)" width="16" height="12" alt="">
@@ -1425,11 +1425,32 @@
 
                                 <!-- Medals row -->
                                 <div class="pp-medals" x-show="playerProfile.career.medals.gold || playerProfile.career.medals.silver || playerProfile.career.medals.bronze">
-                                    <span class="pp-medal" x-show="playerProfile.career.medals.gold">🥇 <span x-text="playerProfile.career.medals.gold"></span></span>
-                                    <span class="pp-medal" x-show="playerProfile.career.medals.silver">🥈 <span x-text="playerProfile.career.medals.silver"></span></span>
-                                    <span class="pp-medal" x-show="playerProfile.career.medals.bronze">🥉 <span x-text="playerProfile.career.medals.bronze"></span></span>
+                                    <span class="pp-medal" x-show="playerProfile.career.medals.gold"><span aria-hidden="true">🥇</span> <span class="sr-only" x-text="(tr().playerProfile?.gold || 'Złoto') + ':'"></span> <span x-text="playerProfile.career.medals.gold"></span></span>
+                                    <span class="pp-medal" x-show="playerProfile.career.medals.silver"><span aria-hidden="true">🥈</span> <span class="sr-only" x-text="(tr().playerProfile?.silver || 'Srebro') + ':'"></span> <span x-text="playerProfile.career.medals.silver"></span></span>
+                                    <span class="pp-medal" x-show="playerProfile.career.medals.bronze"><span aria-hidden="true">🥉</span> <span class="sr-only" x-text="(tr().playerProfile?.bronze || 'Brąz') + ':'"></span> <span x-text="playerProfile.career.medals.bronze"></span></span>
                                 </div>
+                                <!-- medals stay with the category they were won in -->
+                                <ul class="pp-medals-by-category" x-show="(playerProfile.career.medals_by_category || []).length" :aria-label="profileText('medalsByCategory', 'Medale według kategorii')">
+                                    <template x-for="bucket in (playerProfile.career.medals_by_category || [])" :key="'ppmc-'+bucket.category">
+                                        <li x-text="profileMedalCategoryText(bucket)"></li>
+                                    </template>
+                                </ul>
                             </div>
+
+                            <!-- Sport class history -->
+                            <section class="pp-classes" x-show="profileClassHistory().length" aria-labelledby="pp-classes-title">
+                                <h3 id="pp-classes-title" class="pp-section-title" x-text="profileText('classTitle', 'Klasyfikacja sportowa')"></h3>
+                                <p class="pp-classes__note" x-text="profileText('classNote', 'Wyniki zostają w kategorii, w której zostały rozegrane.')"></p>
+                                <ol class="pp-classes__list">
+                                    <template x-for="(row, index) in profileClassHistory()" :key="'ppc-'+index">
+                                        <li class="pp-classes__item" :class="{ 'pp-classes__item--current': index === profileClassHistory().length - 1 }">
+                                            <span class="pp-badge pp-badge--cat" aria-hidden="true" x-text="row.classification"></span>
+                                            <span x-text="profileClassEntryText(row)"></span>
+                                            <span class="pp-classes__current" x-show="index === profileClassHistory().length - 1" x-text="profileText('classCurrent', 'aktualna')"></span>
+                                        </li>
+                                    </template>
+                                </ol>
+                            </section>
 
                             <!-- Tournament History -->
                             <h3 class="pp-section-title" x-text="tr().playerProfile?.tournamentHistory || 'Historia turniejów'"></h3>
@@ -1442,12 +1463,13 @@
                                 <template x-for="t in playerProfile.tournaments" :key="'ppt-'+t.tournament_id">
                                     <div class="pp-tourn">
                                         <!-- Tournament header (clickable) -->
-                                        <div class="pp-tourn__header" @click="toggleProfileTournament(t.tournament_id)" role="button" tabindex="0" @keydown.enter="toggleProfileTournament(t.tournament_id)" :aria-expanded="!!profileExpandedTournaments[t.tournament_id]" :aria-label="t.tournament_name + ' – ' + t.wins + ' ' + (tr().playerProfile?.won || 'W') + ' / ' + t.losses + ' ' + (tr().playerProfile?.lost || 'P')">
+                                        <div class="pp-tourn__header" @click="toggleProfileTournament(t.tournament_id)" role="button" tabindex="0" @keydown.enter.prevent="toggleProfileTournament(t.tournament_id)" @keydown.space.prevent="toggleProfileTournament(t.tournament_id)" :aria-expanded="profileExpandedTournaments[t.tournament_id] ? 'true' : 'false'" :aria-controls="'ppt-matches-'+t.tournament_id" :aria-label="profileTournamentLabel(t)">
                                             <div class="pp-tourn__left">
-                                                <span class="pp-tourn__medal" x-show="t.medal" x-text="profileMedalEmoji(t.medal)"></span>
+                                                <span class="pp-tourn__medal" aria-hidden="true" x-show="t.medal" x-text="profileMedalEmoji(t.medal)"></span>
                                                 <div>
                                                     <div class="pp-tourn__name" x-text="t.tournament_name"></div>
                                                     <div class="pp-tourn__dates" x-text="t.start_date + (t.end_date && t.end_date !== t.start_date ? ' – ' + t.end_date : '')"></div>
+                                                    <div class="pp-tourn__category" x-show="t.category_label" x-text="profileTournamentCategory(t)"></div>
                                                 </div>
                                             </div>
                                             <div class="pp-tourn__right">
@@ -1456,24 +1478,25 @@
                                                     <span class="pp-tourn__l" x-text="t.losses + (tr().playerProfile?.lost || 'P')"></span>
                                                 </span>
                                                 <span class="pp-tourn__group" x-show="t.group_name" x-text="(tr().playerProfile?.group || 'Grupa') + ' ' + translateCategory(t.group_name) + ': ' + t.group_position + '/' + t.group_total"></span>
-                                                <span class="pp-tourn__chevron" :class="{ 'pp-tourn__chevron--open': profileExpandedTournaments[t.tournament_id] }">▸</span>
+                                                <span class="pp-tourn__chevron" aria-hidden="true" :class="{ 'pp-tourn__chevron--open': profileExpandedTournaments[t.tournament_id] }">▸</span>
                                             </div>
                                         </div>
 
                                         <!-- Expanded: match list -->
-                                        <div x-show="profileExpandedTournaments[t.tournament_id]" class="pp-tourn__matches">
+                                        <div x-show="profileExpandedTournaments[t.tournament_id]" class="pp-tourn__matches" :id="'ppt-matches-'+t.tournament_id">
                                             <template x-for="(m, mi) in t.matches" :key="'ppm-'+t.tournament_id+'-'+mi">
                                                 <div class="pp-match" :class="{ 'pp-match--won': m.won, 'pp-match--lost': !m.won }">
-                                                    <span class="pp-match__result" x-text="m.won ? '✓' : '✗'"></span>
-                                                    <span class="pp-match__opponent" x-text="(tr().playerProfile?.vs || 'vs') + ' ' + resolveBracketName(m.opponent)"></span>
-                                                    <span class="pp-match__sets">
+                                                    <span class="sr-only" x-text="profileMatchSummary(m)"></span>
+                                                    <span class="pp-match__result" aria-hidden="true" x-text="m.won ? '✓' : '✗'"></span>
+                                                    <span class="pp-match__opponent" aria-hidden="true" x-text="(tr().playerProfile?.vs || 'vs') + ' ' + resolveBracketName(m.opponent)"></span>
+                                                    <span class="pp-match__sets" aria-hidden="true">
                                                         <template x-for="(s, si) in m.score" :key="'ppms-'+mi+'-'+si">
                                                             <span class="pp-match__set" :class="{ 'pp-match__set--stb': s.stb }">
                                                                 <span x-text="s.stb ? '['+s.g1+':'+s.g2+']' : s.g1+':'+s.g2"></span><sup class="pp-match__tb" x-show="s.tb !== null && s.tb !== undefined" x-text="s.tb"></sup>
                                                             </span>
                                                         </template>
                                                     </span>
-                                                    <span class="pp-match__phase" x-show="m.phase" x-text="translatePhase(m.phase)"></span>
+                                                    <span class="pp-match__phase" aria-hidden="true" x-show="m.phase" x-text="translatePhase(m.phase)"></span>
                                                 </div>
                                             </template>
                                             <div x-show="!t.matches || t.matches.length === 0" class="pp-tourn__no-matches">

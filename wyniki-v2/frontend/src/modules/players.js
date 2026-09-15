@@ -32,7 +32,7 @@ export function filterPlayersList(players = [], { search = '', gender = '', coun
   if (gender === 'M') {
     list = list.filter((player) => String(player?.gender || '').toUpperCase() === 'M');
   } else if (gender === 'F') {
-    list = list.filter((player) => String(player?.gender || '').toUpperCase() === 'F');
+    list = list.filter((player) => ['K', 'F', 'W'].includes(String(player?.gender || '').toUpperCase()));
   }
   if (country) {
     list = list.filter((player) => String(player?.country || '').toUpperCase() === String(country).toUpperCase());

@@ -1663,6 +1663,11 @@ def get_player_profile(player_id: int):
         return jsonify({'error': 'Player not found'}), 404
 
     tournament_ids = list({s.tournament_id for s in siblings if s.tournament_id})
+    from wyniki.database import classifications as classification_db
+
+    played_labels = classification_db.played_category_labels([s.id for s in siblings])
+    entry_classes = {s.tournament_id: normalize_player_classification(s.category or '') for s in siblings if s.tournament_id}
+    profile_global_id = gp.id if is_global else (player.global_player_id or None)
 
     # Fetch all matches for this player across all tournaments
     public_stats_filter = (MatchHistory.tournament_id.is_(None)) | _website_stats_filter()
@@ -1857,9 +1862,14 @@ def get_player_profile(player_id: int):
                 'duration': m.duration_seconds or 0
             })
 
+        category_label = played_labels.get(tid, '')
         tournaments_data.append({
             'tournament_id': tid,
             'tournament_name': tourn.name,
+            # the category played in and the class held then: results stay with them
+            'category_label': category_label,
+            'category_classes': sorted(classification_db.classes_in_label(category_label)),
+            'player_class': entry_classes.get(tid, ''),
             'start_date': tourn.start_date or '',
             'end_date': tourn.end_date or '',
             'group_name': group_name,
@@ -1877,9 +1887,29 @@ def get_player_profile(player_id: int):
     total_matches = sum(t['matches_played'] for t in tournaments_data)
     total_wins = sum(t['wins'] for t in tournaments_data)
     medals = {'gold': 0, 'silver': 0, 'bronze': 0}
+    medals_by_category = {}
     for t in tournaments_data:
         if t['medal'] in medals:
             medals[t['medal']] += 1
+            key = '/'.join(t['category_classes']) or t['player_class'] or ''
+            bucket = medals_by_category.setdefault(key, {'category': key, 'gold': 0, 'silver': 0, 'bronze': 0})
+            bucket[t['medal']] += 1
+
+    # class history: tournaments the public cannot see are not named
+    public_tournament_ids = {row.id for row in Tournament.query.filter(_website_stats_filter()).all()}
+    classification_history = []
+    if profile_global_id:
+        for row in classification_db.fetch_classification_history(profile_global_id):
+            public = row.get('tournament_id') in public_tournament_ids
+            classification_history.append({
+                'classification': row['classification'],
+                'previous_classification': row.get('previous_classification') or '',
+                'effective_date': row.get('effective_date') or '',
+                'source': row.get('source') or 'initial',
+                'status': row.get('status') or 'confirmed',
+                'tournament_id': row.get('tournament_id') if public else None,
+                'tournament_name': row.get('tournament_name') if public else None,
+            })
 
     return jsonify({
         'player': {
@@ -1899,7 +1929,9 @@ def get_player_profile(player_id: int):
             'matches': total_matches,
             'wins': total_wins,
             'losses': total_matches - total_wins,
-            'medals': medals
+            'medals': medals,
+            'medals_by_category': sorted(medals_by_category.values(), key=lambda item: item['category']),
         },
+        'classification_history': classification_history,
         'tournaments': sorted(tournaments_data, key=lambda t: t.get('start_date', ''), reverse=True)
     })

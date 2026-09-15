@@ -7,6 +7,7 @@ from ..db_models import db, GlobalPlayer, Player, MatchHistory, Tournament
 from ..config import logger
 from ..services.player_registry import create_tournament_player, find_or_create_global_player, split_player_name
 from ..services.office_event_broker import emit_office_invalidation
+from ..database import classifications
 
 blueprint = Blueprint('admin_global_players', __name__, url_prefix='/admin/api/global-players')
 
@@ -43,7 +44,7 @@ def list_global_players():
             GlobalPlayer.last_name.ilike(pattern),
         ))
     if gender:
-        query = query.filter(GlobalPlayer.gender == gender)
+        query = query.filter(GlobalPlayer.gender == (classifications.normalize_gender(gender) or gender))
     if category:
         query = query.filter(GlobalPlayer.category == category)
     if country:
@@ -86,10 +87,10 @@ def create_global_player():
     gp = GlobalPlayer(
         first_name=first_name,
         last_name=last_name,
-        gender=data.get('gender', '').strip(),
+        gender=classifications.normalize_gender(data.get('gender', '')),
         birth_date=data.get('birth_date', '').strip() or None,
         country=data.get('country', '').strip(),
-        category=data.get('category', '').strip(),
+        category=classifications.normalize_class(data.get('category', '')) or data.get('category', '').strip(),
         notes=data.get('notes', '').strip() or None,
     )
     db.session.add(gp)
@@ -136,19 +137,66 @@ def update_global_player(gp_id: int):
     if 'last_name' in data:
         gp.last_name = data['last_name'].strip()
     if 'gender' in data:
-        gp.gender = data['gender'].strip()
+        gp.gender = classifications.normalize_gender(data['gender'])
     if 'birth_date' in data:
         gp.birth_date = data['birth_date'].strip() or None
     if 'country' in data:
         gp.country = data['country'].strip()
+    new_class = None
     if 'category' in data:
-        gp.category = data['category'].strip()
+        requested = data['category'].strip()
+        code = classifications.normalize_class(requested)
+        if code and code != classifications.normalize_class(gp.category):
+            # a class change goes through the history (below), which also sets the category
+            new_class = code
+        elif not code:
+            gp.category = requested
     if 'notes' in data:
         gp.notes = data['notes'].strip() or None
 
     db.session.commit()
+    if new_class:
+        classifications.record_classification_change(
+            gp_id,
+            new_class,
+            source='manual',
+            effective_date=(data.get('classification_date') or '').strip() or None,
+            status=data.get('classification_status') if data.get('classification_status') in classifications.STATUSES else 'confirmed',
+            note=(data.get('classification_note') or '').strip(),
+        )
+        db.session.expire(gp)
     logger.info("global_player_updated", id=gp_id)
     return jsonify(gp.to_dict())
+
+
+@blueprint.route('/<int:gp_id>/classifications', methods=['GET'])
+def get_classification_history(gp_id: int):
+    """The player's sport class history, oldest first."""
+    if not db.session.get(GlobalPlayer, gp_id):
+        return jsonify({'error': 'Player not found'}), 404
+    return jsonify({'history': classifications.fetch_classification_history(gp_id)})
+
+
+@blueprint.route('/tournaments/<int:tid>/classification-review', methods=['GET'])
+def get_classification_review(tid: int):
+    """Players of a tournament who played outside their sport class."""
+    if not db.session.get(Tournament, tid):
+        return jsonify({'error': 'Tournament not found'}), 404
+    return jsonify(classifications.classification_review(tid))
+
+
+@blueprint.route('/tournaments/<int:tid>/classification-review', methods=['POST'])
+def apply_classification_review(tid: int):
+    """Body: { decisions: [{ global_player_id, decision: reclassify|play_up|skip, classification? }] }"""
+    if not db.session.get(Tournament, tid):
+        return jsonify({'error': 'Tournament not found'}), 404
+    data = request.get_json(silent=True) or {}
+    decisions = data.get('decisions')
+    if not isinstance(decisions, list) or not decisions:
+        return jsonify({'error': 'decisions are required'}), 400
+    result = classifications.apply_classification_decisions(tid, decisions)
+    status = 200 if result['applied'] or not result['errors'] else 422
+    return jsonify(result), status
 
 
 @blueprint.route('/<int:gp_id>', methods=['DELETE'])
@@ -166,6 +214,10 @@ def delete_global_player(gp_id: int):
 
     db.session.delete(gp)
     db.session.commit()
+    with classifications.db_conn() as conn:
+        conn.execute("DELETE FROM player_classifications WHERE global_player_id = ?", (gp_id,))
+        conn.execute("DELETE FROM classification_reviews WHERE global_player_id = ?", (gp_id,))
+        conn.commit()
     logger.info("global_player_deleted", id=gp_id)
     return jsonify({'message': 'Player deleted'})
 
@@ -520,6 +572,7 @@ def merge_players():
 
     transferred = 0
     deleted = 0
+    merged_ids = []
     for src_id in source_ids:
         if src_id == target_id:
             continue
@@ -538,9 +591,12 @@ def merge_players():
 
         # Delete source global player
         db.session.delete(source)
+        merged_ids.append(src_id)
         deleted += 1
 
     db.session.commit()
+    for src_id in merged_ids:
+        classifications.move_classifications(src_id, target_id)
     logger.info("global_players_merged", target_id=target_id, source_ids=source_ids,
                 transferred=transferred, deleted=deleted)
     return jsonify({

@@ -1356,7 +1356,7 @@
             <select x-model="globalPlayersFilter.gender" @change="loadGlobalPlayers()" class="select select-sm select-bordered">
               <option value="">P&#322;e&#263;</option>
               <option value="M">M&#281;&#380;czyzna</option>
-              <option value="F">Kobieta</option>
+              <option value="K">Kobieta</option>
             </select>
             <select x-model="globalPlayersFilter.category" @change="loadGlobalPlayers()" class="select select-sm select-bordered">
               <option value="">Kategoria</option>
@@ -1378,7 +1378,7 @@
                 <div class="form-control"><label class="label py-0"><span class="label-text text-xs">Nazwisko *</span></label><input type="text" x-model="newGlobalPlayer.last_name" class="input input-sm input-bordered"></div>
                 <div class="form-control"><label class="label py-0"><span class="label-text text-xs">P&#322;e&#263;</span></label>
                   <select x-model="newGlobalPlayer.gender" class="select select-sm select-bordered">
-                    <option value="">--</option><option value="M">M</option><option value="F">F</option>
+                    <option value="">--</option><option value="M">M</option><option value="K">K</option>
                   </select>
                 </div>
                 <div class="form-control"><label class="label py-0"><span class="label-text text-xs">Data urodzenia</span></label><input type="date" x-model="newGlobalPlayer.birth_date" class="input input-sm input-bordered"></div>
@@ -1389,6 +1389,72 @@
               </div>
             </div>
           </div>
+
+          <!-- Sport classes after a tournament -->
+          <section class="bg-base-200 rounded-box p-4 mb-4" aria-labelledby="class-review-title">
+            <h3 id="class-review-title" class="font-semibold text-lg">Klasyfikacje po turnieju</h3>
+            <p class="text-sm opacity-80 mb-3">Zawodnicy, kt&oacute;rzy grali w kategorii innej ni&#380; ich klasa sportowa. Wyniki zostaj&#261; w kategorii, w kt&oacute;rej zosta&#322;y rozegrane.</p>
+            <div class="flex flex-wrap items-end gap-2 mb-3">
+              <label class="form-control">
+                <span class="label-text text-sm">Turniej</span>
+                <select x-model="classReviewTournamentId" @change="loadClassReview()" class="select select-sm select-bordered min-h-[2.25rem]">
+                  <option value="">Wybierz turniej</option>
+                  <template x-for="t in tournaments" :key="'class_review_t_'+t.id">
+                    <option :value="t.id" x-text="t.name + (t.start_date ? ' (' + t.start_date + ')' : '')"></option>
+                  </template>
+                </select>
+              </label>
+            </div>
+            <p x-ref="classReviewStatus" tabindex="-1" role="status" aria-live="polite" class="text-sm font-medium mb-2" x-text="classReviewLoading ? 'Wczytywanie…' : classReviewStatus"></p>
+            <form x-show="classReview && classReview.items.length" @submit.prevent="saveClassReview()">
+              <ul class="flex flex-col gap-3 list-none p-0 m-0">
+                <template x-for="item in (classReview ? classReview.items : [])" :key="'class_review_'+item.global_player_id+'_'+(item.decision || 'open')">
+                  <li class="bg-base-100 rounded-box p-3">
+                    <fieldset :disabled="!!item.decision">
+                      <legend class="font-semibold" x-text="item.first_name + ' ' + item.last_name + ' — gra w: ' + item.category_label + ', klasa: ' + (item.entry_class || item.current_class || 'brak')"></legend>
+                      <p class="text-sm mb-2" x-show="!item.decision" x-text="classReviewHint(item)"></p>
+                      <p class="text-sm mb-2" x-show="item.decision" x-text="classReviewDecisionText(item)"></p>
+                      <template x-if="!item.decision && classReviewDraft[item.global_player_id]">
+                        <div class="flex flex-wrap gap-x-6 gap-y-2 items-center">
+                          <label class="flex items-center gap-2 min-h-[2.25rem] cursor-pointer">
+                            <input type="radio" class="radio radio-sm" :name="'class_decision_'+item.global_player_id" value="reclassify" x-model="classReviewDraft[item.global_player_id].decision">
+                            <span>Zmiana klasy na</span>
+                          </label>
+                          <select class="select select-sm select-bordered min-h-[2.25rem]" x-model="classReviewDraft[item.global_player_id].classification"
+                                  :aria-label="'Nowa klasa: ' + item.first_name + ' ' + item.last_name"
+                                  :disabled="classReviewDraft[item.global_player_id].decision !== 'reclassify'">
+                            <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option><option value="B4">B4</option>
+                          </select>
+                          <label class="flex items-center gap-2 min-h-[2.25rem] cursor-pointer" x-show="item.hint !== 'reclassification_required'">
+                            <input type="radio" class="radio radio-sm" :name="'class_decision_'+item.global_player_id" value="play_up" x-model="classReviewDraft[item.global_player_id].decision">
+                            <span>Gra w wy&#380;szej kategorii (klasa bez zmian)</span>
+                          </label>
+                          <label class="flex items-center gap-2 min-h-[2.25rem] cursor-pointer">
+                            <input type="radio" class="radio radio-sm" :name="'class_decision_'+item.global_player_id" value="skip" x-model="classReviewDraft[item.global_player_id].decision">
+                            <span>Pomi&#324;</span>
+                          </label>
+                        </div>
+                      </template>
+                    </fieldset>
+                  </li>
+                </template>
+              </ul>
+              <button type="submit" class="btn btn-primary btn-sm mt-3" :disabled="classReviewSaving || !classReview || !classReview.pending"
+                      x-text="classReviewSaving ? 'Zapisywanie…' : 'Zapisz decyzje'"></button>
+            </form>
+          </section>
+
+          <section id="class-history-panel" class="bg-base-200 rounded-box p-4 mb-4" x-show="classHistoryOpenId" aria-labelledby="class-history-title">
+            <h3 id="class-history-title" class="font-semibold" x-text="classHistoryTitle()"></h3>
+            <p role="status" class="text-sm" x-show="classHistoryLoading">Wczytywanie…</p>
+            <p class="text-sm" x-show="!classHistoryLoading && !classHistory.length">Brak klasy w bazie.</p>
+            <ol class="list-decimal pl-6 mt-2 text-sm" x-show="classHistory.length">
+              <template x-for="(row, index) in classHistory" :key="'class_history_'+index">
+                <li x-text="classHistoryText(row)"></li>
+              </template>
+            </ol>
+            <button type="button" class="btn btn-xs btn-ghost mt-2" @click="classHistoryOpenId = null">Zamknij histori&#281;</button>
+          </section>
 
           <!-- Global players table -->
           <div class="overflow-x-auto">
@@ -1413,14 +1479,18 @@
                     <template x-if="editingGlobalId !== gp.id"><td class="font-semibold" x-text="gp.last_name"></td></template>
                     <template x-if="editingGlobalId === gp.id"><td><input type="text" x-model="editGlobalData.last_name" class="input input-xs input-bordered w-full"></td></template>
                     <!-- Gender -->
-                    <template x-if="editingGlobalId !== gp.id"><td><span class="badge badge-sm" :class="gp.gender==='F'?'badge-secondary':'badge-primary'" x-text="gp.gender || '-'"></span></td></template>
-                    <template x-if="editingGlobalId === gp.id"><td><select x-model="editGlobalData.gender" class="select select-xs select-bordered"><option value="">--</option><option value="M">M</option><option value="F">F</option></select></td></template>
+                    <template x-if="editingGlobalId !== gp.id"><td><span class="badge badge-sm" :class="gp.gender==='K'?'badge-secondary':'badge-primary'" x-text="gp.gender || '-'"></span></td></template>
+                    <template x-if="editingGlobalId === gp.id"><td><select x-model="editGlobalData.gender" class="select select-xs select-bordered"><option value="">--</option><option value="M">M</option><option value="K">K</option></select></td></template>
                     <!-- Age / Birth date -->
                     <template x-if="editingGlobalId !== gp.id"><td><span x-text="gp.age ?? '-'" class="text-sm"></span></td></template>
                     <template x-if="editingGlobalId === gp.id"><td><input type="date" x-model="editGlobalData.birth_date" class="input input-xs input-bordered w-32"></td></template>
                     <!-- Category -->
                     <template x-if="editingGlobalId !== gp.id"><td><span class="badge badge-sm badge-outline" x-text="gp.category || '-'"></span></td></template>
-                    <template x-if="editingGlobalId === gp.id"><td><input type="text" x-model="editGlobalData.category" class="input input-xs input-bordered w-16"></td></template>
+                    <template x-if="editingGlobalId === gp.id"><td>
+                      <select x-model="editGlobalData.category" class="select select-xs select-bordered" :aria-label="'Klasa sportowa: ' + gp.first_name + ' ' + gp.last_name">
+                        <option value="">--</option><option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option><option value="B4">B4</option>
+                      </select>
+                    </td></template>
                     <!-- Country -->
                     <template x-if="editingGlobalId !== gp.id"><td x-text="gp.country || '-'"></td></template>
                     <template x-if="editingGlobalId === gp.id"><td><input type="text" x-model="editGlobalData.country" class="input input-xs input-bordered w-12" maxlength="2"></td></template>
@@ -1441,6 +1511,9 @@
                       <template x-if="editingGlobalId !== gp.id">
                         <div class="flex gap-1">
                           <button @click="editGlobal(gp)" class="btn btn-xs btn-ghost" title="Edytuj">&#9999;&#65039;</button>
+                          <button type="button" @click="toggleClassHistory(gp)" class="btn btn-xs btn-ghost" aria-controls="class-history-panel"
+                                  :aria-expanded="classHistoryOpenId === gp.id ? 'true' : 'false'"
+                                  :aria-label="'Historia klas: ' + gp.first_name + ' ' + gp.last_name">Klasy</button>
                           <button @click="deleteGlobal(gp.id)" class="btn btn-xs btn-ghost text-error" title="Usu&#324;">&#128465;</button>
                           <button x-show="selectedTournament" @click="addGlobalToTournament(gp.id)" class="btn btn-xs btn-accent" title="Dodaj do turnieju">+&#127942;</button>
                         </div>
