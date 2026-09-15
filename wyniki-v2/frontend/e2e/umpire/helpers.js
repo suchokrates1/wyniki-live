@@ -96,6 +96,10 @@ export async function openUmpire(page, hash = '', options = {}) {
 }
 
 export async function openUmpireWithPwaGate(page) {
+  // the tutorial offer has its own test; here it would cover the language picker after the gate
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('umpire.tutorial_prompted')) localStorage.setItem('umpire.tutorial_prompted', '1');
+  });
   await page.goto('/umpire.html');
   await page.locator('.ump-title').waitFor();
 }

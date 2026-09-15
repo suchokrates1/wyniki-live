@@ -49,7 +49,14 @@ test('16–17–19 Basic chrome, server, and WIN to 15', async ({ page }) => {
   const finishBox = await finish.boundingBox();
   const winBox = await page.locator('.ump-win').first().boundingBox();
   expect(undoBox.y).toBeGreaterThan(winBox.y);
-  expect(finishBox.y).toBeGreaterThan(undoBox.y);
+  // Finish comes after Undo: below it in portrait, beside it on a short landscape tablet
+  const landscape = await page.evaluate(() => window.matchMedia('(orientation: landscape) and (max-height: 900px)').matches);
+  if (landscape) {
+    expect(finishBox.x).toBeGreaterThan(undoBox.x);
+    expect(Math.abs(finishBox.y - undoBox.y)).toBeLessThan(undoBox.height);
+  } else {
+    expect(finishBox.y).toBeGreaterThan(undoBox.y);
+  }
   const pts = page.locator('.ump-board__pts').first();
   await pts.evaluate((el) => {
     window.__umpSawPulse = el.classList.contains('is-pulse');

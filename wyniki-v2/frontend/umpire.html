@@ -575,7 +575,7 @@
       </div>
     </div>
 
-    <div class="ump-pin ump-guide-banner" data-testid="tutorial-banner" x-show="tutorialBanner" x-cloak>
+    <div class="ump-pin ump-guide-banner" data-testid="tutorial-banner" x-show="tutorialBanner && !pwaGate()" x-cloak>
       <div class="ump-card ump-pin__card">
         <h2 x-text="t('tutorialBannerTitle')">Learn the umpire app?</h2>
         <p x-text="t('tutorialBannerMessage')"></p>

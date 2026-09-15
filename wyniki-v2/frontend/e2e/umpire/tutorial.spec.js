@@ -4,10 +4,14 @@ import { mockUmpireApi, openUmpire, seedLanguage } from './helpers.js';
 async function tapNamedTutorialButton(page, name, tutorialId) {
   const loc = page.getByRole('button', { name, exact: typeof name === 'string' }).locator('visible=true').first();
   await expect(loc).toBeVisible();
-  await expect.poll(async () => (await loc.boundingBox())?.width || 0, {
+  // keep the box that proved the button is on screen: a re-render in between returns null
+  let box = null;
+  await expect.poll(async () => {
+    box = await loc.boundingBox();
+    return box?.width || 0;
+  }, {
     message: `${name} must be on screen`,
   }).toBeGreaterThan(8);
-  const box = await loc.boundingBox();
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
   const hit = await page.evaluate(({ px, py, expected }) => {
