@@ -19,12 +19,12 @@ Sekcja **Przygotowanie i rozgrywki** to numerowane kroki turnieju (gotowe zostaj
 | Krok | Notatka |
 |------|---------|
 | **1. Grupy startowe** | [[25 - Planowanie - grupy]], [[28 - Debel w biurze]] |
-| **2. Drabinki** | [[29 - Drabinki (format pucharu)]] |
+| **2. Forma rozgrywek** | [[29 - Drabinki (format pucharu)]] |
 | **3. Terminarz** | [[26 - Planowanie - terminarz i autoschedule]] |
 | **4. Faza grupowa** | [[23 - Postęp]] |
 | **5. Faza pucharowa** | [[24 - Puchar]] |
 
-Sekcja **Zawsze pod ręką**:
+Sekcja **Zawsze pod ręką** (z przyciskiem **Przewodnik** — klikany samouczek, [[19 - Przewodnik krok po kroku]]):
 
 | Widok | Notatka |
 |-------|---------|

@@ -52,7 +52,7 @@ Numer przy zawodniku (w liście do rozlosowania i w grupach) to jego **numer sta
 | **Wyczyść** | Czyści przypisania |
 | **Filtr** / **Wszyscy** | Pula: tylko klasa wybranej kategorii albo wszyscy nieprzypisani |
 | Przeciąganie graczy / par do grup | Ręczny układ |
-| **Tryb rozgrywek** na karcie grupy | **Grupy + puchar** / **Tylko każdy z każdym** / **Tylko puchar**; blokada, gdy grupa ma mecze |
+| Forma rozgrywek | Nie wybiera się jej na karcie grupy — ustala ją krok **Forma rozgrywek** ([[29 - Drabinki (format pucharu)]]) |
 
 Pojedyncza grupa zapisana jako „B1 Mężczyźni — Grupa A” (np. z importu) zachowuje tę nazwę — w biurze i w adminie.
 

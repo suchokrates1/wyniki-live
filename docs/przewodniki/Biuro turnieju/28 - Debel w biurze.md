@@ -18,7 +18,7 @@ Nowe funkcje kategorii **Double**: konkurentem jest **para** (`"Imię Nazwisko /
 | Grupy startowe — kategorie | Checkbox **Debel** przy presecie i kategorii niestandardowej; po zatwierdzeniu badge **Debel** |
 | Grupy startowe — pary | **+ Dodaj drużynę**: Partner 1 + Partner 2 (także gracze już w grupach singla; para K / M / mix). Filtr = klasa wzrokowa, nie płeć. **Usuń parę** (gdy para nie jest w grupie) |
 | Grupy startowe — grupy | Przeciąganie **par** (nie osób); licznik **Pary**; **Przypisz wszystkie pary** / **Rozdziel pary automatycznie** |
-| Karta grupy | **Tryb rozgrywek**: Grupy + puchar / Tylko każdy z każdym / Tylko puchar |
+| Forma rozgrywek | W kroku **Forma rozgrywek**: grupa z finałem, sama drabinka albo tylko faza grupowa ([[29 - Drabinki (format pucharu)]]) |
 | Terminarz | Bloki i szuflada pokazują pary; planer traktuje parę jako oboje partnerów |
 | Modal wyniku | Etykiety **Para A / Para B**; walkower i korekta na `display_name` pary |
 | Historia / Postęp / Drabinka | Scoreboard i chipy składu pokazują pary; postęp: nagłówek **Pary** zamiast **Zawodnicy** |

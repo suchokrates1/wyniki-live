@@ -34,6 +34,7 @@ Trzy powierzchnie produktu web:
 
 ## Biuro turnieju (`/office`)
 
+- [[19 - Przewodnik krok po kroku]] (od pustego turnieju do opublikowanego terminarza; klikany przewodnik w biurze)
 - [[20 - Logowanie office]]
 - [[21 - Chrome i quick-info]]
 - [[22 - Historia]]
@@ -43,9 +44,9 @@ Trzy powierzchnie produktu web:
 - [[26 - Planowanie - terminarz i autoschedule]]
 - [[27 - Wprowadzanie i edycja wyniku]]
 - [[28 - Debel w biurze]] (kategorie Double, pary, tryb grupy, wynik na drużynach)
-- [[29 - Drabinki (format pucharu)]] (krok 2: format fazy pucharowej każdej kategorii)
+- [[29 - Drabinki (format pucharu)]] (krok 2: forma rozgrywek każdej kategorii)
 
-Układ biura „Kort”: szyna z krokami (1. Grupy startowe, 2. Drabinki, 3. Terminarz, 4. Faza grupowa, 5. Faza pucharowa) i narzędziami (Ostatnie mecze, Komunikat dla widzów), pasek górny z liczbami i akcjami — [[21 - Chrome i quick-info]].
+Układ biura „Kort”: szyna z krokami (1. Grupy startowe, 2. Forma rozgrywek, 3. Terminarz, 4. Faza grupowa, 5. Faza pucharowa) i narzędziami (Ostatnie mecze, Komunikat dla widzów), pasek górny z liczbami i akcjami — [[21 - Chrome i quick-info]].
 
 ## Admin (`/admin`)
 

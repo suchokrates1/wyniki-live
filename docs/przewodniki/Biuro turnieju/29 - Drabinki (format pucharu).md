@@ -4,7 +4,7 @@ tags: [wyniki, biuro, office]
 aliases: [Office drabinki, Format drabinki, Krok 2 biura]
 ---
 
-# Biuro — Drabinki (krok 2)
+# Biuro — Forma rozgrywek (krok 2)
 
 ## Cel
 
@@ -13,8 +13,20 @@ Po utworzeniu grup, a przed terminarzem, biuro decyduje, jak dla każdej kategor
 ## Kiedy
 
 - Krok 2 staje się bieżący, gdy wszyscy zawodnicy są w grupach (krok 1 gotowy). Pasek „Następny krok” prowadzi przyciskiem **Przejdź do drabinek**.
-- Krok jest gotowy, gdy wszystkie kategorie są zatwierdzone (kategorie bez fazy pucharowej liczą się same). W widoku Drabinki pasek ma przycisk **Zatwierdź wszystkie**.
+- Krok jest gotowy, gdy wszystkie kategorie są zatwierdzone (kategorie bez fazy pucharowej liczą się same). W widoku Forma rozgrywek pasek ma przycisk **Zatwierdź wszystkie**.
 - Nic nie jest blokowane: terminarz można układać wcześniej. Zmiana formatu przebudowuje mecze pucharowe kategorii w terminarzu.
+
+## Forma gry grup
+
+Wybrany format ustala formę gry grup kategorii (wcześniej był to dropdown na karcie grupy):
+
+| Format | Grupy grają | Uwagi |
+|--------|-------------|-------|
+| **Tylko faza grupowa** | każdy z każdym, bez pucharu | mecze pucharowe kategorii znikają |
+| **Finał z tabeli** / **Półfinały krzyżowe** / **Drabinka główna** | grupy, potem puchar | przy 1 / 2 / 3+ grupach |
+| **Sama drabinka** | bez meczów grupowych | tylko przy jednej grupie; niemożliwa po rozegranym meczu grupowym (API 409 `groups_started`) |
+
+Zmiana formy usuwa albo przywraca nierozegrane mecze grupowe w terminarzu; pod kartami formatów widać żółtą informację, co się stanie po zatwierdzeniu.
 
 ## Elementy UI
 
