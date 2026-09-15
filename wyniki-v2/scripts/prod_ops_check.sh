@@ -38,7 +38,11 @@ check_free() {
     return 0
   fi
   local avail_kb
-  avail_kb="$(df -Pk "$path" | awk 'NR==2 {print $4}')"
+  # an automount whose disk is gone still has a directory, but df cannot read it
+  if ! avail_kb="$(df -Pk "$path" 2>/dev/null | awk 'NR==2 {print $4}')" || [ -z "$avail_kb" ]; then
+    echo "disk_skip path=$path (not mounted)"
+    return 0
+  fi
   local avail_gib
   avail_gib="$(python3 -c "print(int($avail_kb)/1024/1024)")"
   python3 -c "import sys; sys.exit(0 if float('$avail_gib') >= float('$MIN_FREE_GIB') else 1)" \
@@ -49,6 +53,20 @@ check_free() {
 check_free /var/lib/docker
 check_free "${HOME}/wyniki-backups"
 check_free /mnt/dysk12tb
+
+# --- Nightly copy of the wyniki database (wyniki-db-snapshot.sh, picked up by backup.sh) ---
+DB_SNAPSHOT="${DB_SNAPSHOT:-$HOME/backup/snapshots/wyniki.sqlite3}"
+MAX_DB_SNAPSHOT_AGE_HOURS="${MAX_DB_SNAPSHOT_AGE_HOURS:-26}"
+if [ ! -f "$DB_SNAPSHOT" ]; then
+  echo "Missing wyniki database snapshot: $DB_SNAPSHOT" >&2
+  exit 1
+fi
+snapshot_age_hours="$(( ($(date +%s) - $(stat -c %Y "$DB_SNAPSHOT")) / 3600 ))"
+if [ "$snapshot_age_hours" -gt "$MAX_DB_SNAPSHOT_AGE_HOURS" ]; then
+  echo "wyniki database snapshot is too old: ${snapshot_age_hours} h ($DB_SNAPSHOT)" >&2
+  exit 1
+fi
+echo "db_snapshot_ok age_hours=$snapshot_age_hours"
 
 # --- Container log scan (umpire sync / auth failures) ---
 if command -v docker >/dev/null 2>&1; then

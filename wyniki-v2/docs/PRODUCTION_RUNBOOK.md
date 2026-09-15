@@ -69,6 +69,21 @@ npm run verify:production
 
 This command validates translation key completeness, builds the public frontend, and checks 6 languages across the public routes on `https://score.vestmedia.pl`.
 
+## Nightly Database Copy
+
+The nightly minipc backup (`~/backup/backup.sh`, 03:00) runs as the backup user, which cannot read the Docker volume `count_wyniki_data`. The wyniki database therefore gets its own copy first:
+
+```cron
+55 2 * * * /home/suchokrates1/backup/wyniki-db-snapshot.sh >> /home/suchokrates1/backup/wyniki-db-snapshot.log 2>&1
+```
+
+- The script (in the repo: `scripts/wyniki_db_snapshot.sh`) makes a consistent copy inside the running container with Python's `sqlite3` backup API, checks `PRAGMA integrity_check` and writes `~/backup/snapshots/wyniki.sqlite3`.
+- `~/backup/backup.conf` lists it in `BACKUP_SQLITE` (`wyniki-v2.sqlite3`) and in `BACKUP_CRITICAL`, so it goes to the NAS, the 1 TB disk, Google Drive and the VPS.
+- `~/backup.conf` is a link to `~/backup/backup.conf` for the daily ops check.
+- The daily ops check fails when the copy is older than 26 hours (`MAX_DB_SNAPSHOT_AGE_HOURS`).
+
+Before any production deploy, still take a full volume archive with `scripts/prod_backup.py`.
+
 ## Daily Ops Check
 
 The minipc runs a lightweight daily check after the 03:00 backup:
@@ -82,6 +97,8 @@ It checks:
 - `https://score.vestmedia.pl/`
 - `https://score.vestmedia.pl/api/snapshot`
 - the latest dated NAS backup under `/volume1/Backup/minipc`, using `NAS_*` from `~/backup.conf`
+- the nightly wyniki database copy (`~/backup/snapshots/wyniki.sqlite3`, at most 26 h old)
+- free space; a backup disk that is not mounted (e.g. `/mnt/dysk12tb`) is skipped
 
 Manual run:
 

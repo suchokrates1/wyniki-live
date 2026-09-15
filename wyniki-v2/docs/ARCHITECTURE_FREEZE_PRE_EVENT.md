@@ -17,7 +17,7 @@
 ## Process rule (po każdym większym PR)
 
 ```powershell
-$env:E2E_BASE_URL = 'http://192.168.31.5:18087'
+$env:E2E_BASE_URL = 'http://192.168.31.10:18087'
 $env:E2E_ADMIN_PASSWORD = 'e2e-admin'
 python scripts/e2e_tournament/run.py full --skip-android
 # Gdy AVD żyje:

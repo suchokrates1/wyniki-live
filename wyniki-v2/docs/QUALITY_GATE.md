@@ -3,7 +3,7 @@
 ## Mandatory after larger PRs (office / admin / umpire / scoring / auth)
 
 ```powershell
-$env:E2E_BASE_URL = 'http://192.168.31.5:18087'   # or local http://localhost:18087
+$env:E2E_BASE_URL = 'http://192.168.31.10:18087'   # or local http://localhost:18087
 $env:E2E_ADMIN_PASSWORD = 'e2e-admin'
 Set-Location "C:\Users\sucho\Wyniki\wyniki-live\wyniki-v2"
 python scripts/e2e_tournament/run.py full --skip-android
@@ -15,12 +15,12 @@ DoD: all office modules PASS; public assert PASS; wall time ideally &lt; 2 minut
 
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
-$env:E2E_BASE_URL = 'http://192.168.31.5:18087'
+$env:E2E_BASE_URL = 'http://192.168.31.10:18087'
 $env:E2E_ADMIN_PASSWORD = 'e2e-admin'
 Set-Location "C:\Users\sucho\Vest Tennis\android-tennis-referee"
 .\scripts\run_parallel_courts.ps1 -MaxCourts 4 `
-  -BaseUrl 'http://192.168.31.5:18087' `
-  -HostBaseUrl 'http://192.168.31.5:18087'
+  -BaseUrl 'http://192.168.31.10:18087' `
+  -HostBaseUrl 'http://192.168.31.10:18087'
 ```
 
 Notes:

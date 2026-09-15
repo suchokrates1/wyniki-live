@@ -8,7 +8,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$BaseUrl = $(if ($env:E2E_BASE_URL) { $env:E2E_BASE_URL } else { "http://192.168.31.5:18087" }),
+    [string]$BaseUrl = $(if ($env:E2E_BASE_URL) { $env:E2E_BASE_URL } else { "http://192.168.31.10:18087" }),
     [string]$AdminPassword = $(if ($env:E2E_ADMIN_PASSWORD) { $env:E2E_ADMIN_PASSWORD } else { "e2e-admin" })
 )
 
