@@ -1445,8 +1445,7 @@
                                     <template x-for="(row, index) in profileClassHistory()" :key="'ppc-'+index">
                                         <li class="pp-classes__item" :class="{ 'pp-classes__item--current': index === profileClassHistory().length - 1 }">
                                             <span class="pp-badge pp-badge--cat" aria-hidden="true" x-text="row.classification"></span>
-                                            <span x-text="profileClassEntryText(row)"></span>
-                                            <span class="pp-classes__current" x-show="index === profileClassHistory().length - 1" x-text="profileText('classCurrent', 'aktualna')"></span>
+                                            <span class="pp-classes__text"><span x-text="profileClassEntryText(row)"></span><span x-show="index === profileClassHistory().length - 1">, <span class="pp-classes__current" x-text="profileText('classCurrent', 'aktualna')"></span></span></span>
                                         </li>
                                     </template>
                                 </ol>
