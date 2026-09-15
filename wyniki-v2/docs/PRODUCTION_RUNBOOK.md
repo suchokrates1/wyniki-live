@@ -43,7 +43,7 @@ c:/Users/sucho/Wyniki/wyniki-live/.venv/Scripts/python.exe .\scripts\prod_backup
 Defaults:
 
 - remote host: `minipc`
-- backup root: `/mnt/dysk12tb/wyniki-backups`, with automatic fallback to `$HOME/wyniki-backups` when the mounted disk is not writable from the current account
+- backup root: `/mnt/dysk1tb/wyniki-backups` (the 1TB backup disk), with automatic fallback to `$HOME/wyniki-backups` when the mounted disk is not writable from the current account
 - volume: `count_wyniki_data`
 
 ## Production Smoke Test
@@ -98,7 +98,7 @@ It checks:
 - `https://score.vestmedia.pl/api/snapshot`
 - the latest dated NAS backup under `/volume1/Backup/minipc`, using `NAS_*` from `~/backup.conf`
 - the nightly wyniki database copy (`~/backup/snapshots/wyniki.sqlite3`, at most 26 h old)
-- free space; a backup disk that is not mounted (e.g. `/mnt/dysk12tb`) is skipped
+- the 1TB backup disk `/mnt/dysk1tb` is mounted, has free space and holds a backup from today or yesterday
 
 Manual run:
 
@@ -117,7 +117,7 @@ Command:
 
 ```powershell
 Set-Location "c:\Users\sucho\Wyniki\wyniki-live\wyniki-v2"
-c:/Users/sucho/Wyniki/wyniki-live/.venv/Scripts/python.exe .\scripts\prod_restore.py --backup-file "/mnt/dysk12tb/wyniki-backups/wyniki/wyniki-data-YYYYMMDDTHHMMSSZ.tar.gz" --git-revision <commit> --yes
+c:/Users/sucho/Wyniki/wyniki-live/.venv/Scripts/python.exe .\scripts\prod_restore.py --backup-file "/mnt/dysk1tb/wyniki-backups/wyniki/wyniki-data-YYYYMMDDTHHMMSSZ.tar.gz" --git-revision <commit> --yes
 ```
 
 The restore script creates a pre-restore safety backup before replacing the volume contents.

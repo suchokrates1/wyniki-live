@@ -19,7 +19,7 @@ def main() -> int:
     parser.add_argument("--volume", default="count_wyniki_data")
     parser.add_argument("--backup-file", required=True)
     parser.add_argument("--git-revision", required=True)
-    parser.add_argument("--safety-backup-root", default="/mnt/dysk12tb/wyniki-backups/pre-restore")
+    parser.add_argument("--safety-backup-root", default="/mnt/dysk1tb/wyniki-backups/pre-restore")
     parser.add_argument("--yes", action="store_true")
     args = parser.parse_args()
 

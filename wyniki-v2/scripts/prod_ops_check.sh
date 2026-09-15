@@ -52,7 +52,20 @@ check_free() {
 
 check_free /var/lib/docker
 check_free "${HOME}/wyniki-backups"
-check_free /mnt/dysk12tb
+# the 1TB disk holds the second local copy of every nightly backup: it must be there
+BACKUP_DISK="${BACKUP_DISK:-/mnt/dysk1tb}"
+SECONDARY_BACKUP_DIR="${SECONDARY_BACKUP_DIR:-$BACKUP_DISK/backups/minipc}"
+if ! ls "$BACKUP_DISK" >/dev/null 2>&1 || ! mountpoint -q "$BACKUP_DISK"; then
+  echo "Backup disk is not mounted: $BACKUP_DISK" >&2
+  exit 1
+fi
+check_free "$BACKUP_DISK"
+latest_secondary="$(ls -1 "$SECONDARY_BACKUP_DIR" 2>/dev/null | grep -E '^20[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort | tail -n 1)"
+if [ -z "$latest_secondary" ] || [ "$latest_secondary" \< "$(date -d '1 day ago' +%F)" ]; then
+  echo "No recent backup on $SECONDARY_BACKUP_DIR (latest: ${latest_secondary:-none})" >&2
+  exit 1
+fi
+echo "secondary_backup_ok latest=$latest_secondary"
 
 # --- Nightly copy of the wyniki database (wyniki-db-snapshot.sh, picked up by backup.sh) ---
 DB_SNAPSHOT="${DB_SNAPSHOT:-$HOME/backup/snapshots/wyniki.sqlite3}"
