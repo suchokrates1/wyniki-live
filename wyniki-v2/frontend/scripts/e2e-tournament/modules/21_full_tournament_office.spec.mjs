@@ -516,7 +516,7 @@ export default async function run() {
       const state = await page.evaluate(() => {
         const cells = [...document.querySelectorAll('[data-cell]')].map((node) => node.getAttribute('data-cell').split('|')[1]);
         const tick = parseFloat(getComputedStyle(document.querySelector('.office-timetable')).getPropertyValue('--kort-tick')) || 0;
-        const blocks = [...document.querySelectorAll('[data-schedule-entry][data-minutes]')].map((node) => ({ minutes: Number(node.dataset.minutes), height: node.getBoundingClientRect().height }));
+        const blocks = [...document.querySelectorAll('[data-schedule-entry][data-minutes]')].map((node) => ({ minutes: Number(node.dataset.minutes), height: node.offsetHeight }));
         const drawer = document.querySelector('.office-drawer')?.getBoundingClientRect();
         return { first: cells[0], last: cells[cells.length - 1], tick, blocks, drawerBottom: drawer?.bottom, viewport: window.innerHeight };
       });
