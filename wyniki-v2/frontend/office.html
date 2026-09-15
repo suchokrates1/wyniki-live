@@ -793,16 +793,6 @@
                     <div class="font-semibold text-slate-800 text-sm truncate" x-text="planningGroupDisplayName(groupName)"></div>
                     <span class="office-chip office-chip-group" x-text="planningAssignedPlayers(groupName).length"></span>
                   </div>
-                  <label class="block office-kicker mb-1" x-text="ot('planning.playFormat')"></label>
-                  <select class="select select-bordered select-xs w-full mb-2 bg-white/90"
-                          :value="planningGroupPlayFormat(groupName)"
-                          :disabled="planningGroupHasLockedFormat(groupName)"
-                          @click.stop
-                          @change="setPlanningGroupPlayFormat(groupName, $event.target.value)">
-                    <template x-for="option in planningPlayFormatOptions()" :key="'office_fmt_'+groupName+'_'+option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
                   <div class="space-y-2 min-h-[60px]">
                     <template x-for="player in planningAssignedPlayers(groupName)" :key="'office_group_player_'+groupName+'_'+player.id">
                       <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 cursor-move office-anim-in"
@@ -850,16 +840,6 @@
                     <div class="font-semibold text-slate-800 text-sm truncate" x-text="planningGroupDisplayName(groupName)"></div>
                     <span class="office-chip office-chip-group" x-text="planningAssignedTeams(groupName).length"></span>
                   </div>
-                  <label class="block office-kicker mb-1" x-text="ot('planning.playFormat')"></label>
-                  <select class="select select-bordered select-xs w-full mb-2 bg-white/90"
-                          :value="planningGroupPlayFormat(groupName)"
-                          :disabled="planningGroupHasLockedFormat(groupName)"
-                          @click.stop
-                          @change="setPlanningGroupPlayFormat(groupName, $event.target.value)">
-                    <template x-for="option in planningPlayFormatOptions()" :key="'office_team_fmt_'+groupName+'_'+option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
                   <div class="space-y-2 min-h-[60px]">
                     <template x-for="team in planningAssignedTeams(groupName)" :key="'office_group_team_'+groupName+'_'+team.id">
                       <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 cursor-move office-anim-in"
@@ -913,6 +893,9 @@
               <span class="office-draws__groups" x-text="drawGroupsText(drawActive())"></span>
             </div>
             <p class="office-draws__locked" role="status" x-show="drawActive()?.locked" x-text="ot('draws.lockedNote')"></p>
+            <p class="office-hint office-draws__play-note" role="status" data-draw-play-note
+               x-show="drawDraft && drawActive() && drawPlayFormatFor(drawDraft.format) !== drawActive().play_format"
+               x-text="ot('draws.playFormatChange.' + drawPlayFormatFor(drawDraft?.format))"></p>
 
             <div>
               <div class="office-kicker office-draws__label" x-text="ot('draws.formatTitle')"></div>

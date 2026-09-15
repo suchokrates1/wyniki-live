@@ -314,12 +314,12 @@ export default async function run() {
 
     const drawn = await waitUntil('step 1 done after the draw', async () => {
       const state = await pathState();
-      return state.steps[0] === 'done' && state.next.includes('Sprawdź, jak powstaną drabinki') ? state : null;
+      return state.steps[0] === 'done' && state.next.includes('Wybierz formę rozgrywek każdej kategorii') ? state : null;
     }, { timeout: 15000 }).catch(async (error) => {
       throw new Error(`${error.message}: ${JSON.stringify(await pathState())}`);
     });
     if (drawn.steps[1] !== 'current') throw new Error(`After the draw step 2 (Drabinki) should be current: ${drawn.steps.join(',')}`);
-    await page.locator('[data-office-next]').getByRole('button', { name: 'Przejdź do drabinek' }).click();
+    await page.locator('[data-office-next]').getByRole('button', { name: 'Wybierz formę rozgrywek' }).click();
     await page.waitForFunction(() => Alpine.$data(document.body).activeTab === 'draws');
     const drawCategories = page.locator('[data-draw-category]');
     await waitUntil('three categories in Drabinki', async () => (await drawCategories.count()) === 3);

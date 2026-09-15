@@ -160,7 +160,7 @@ export default async function run() {
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.office-rail', { state: 'visible' });
-    await page.locator('.office-tab').filter({ hasText: 'Drabinki' }).click();
+    await page.locator('.office-tab').filter({ hasText: 'Forma rozgrywek' }).click();
     await waitUntil('locked badge', async () => (await page.locator('[data-draw-state]').first().getAttribute('data-draw-state')) === 'locked');
     if (!(await page.locator('[data-draw-format="main"]').isDisabled())) throw new Error('Format cards should be disabled once the knockout started');
     if (!(await page.locator('.office-draws__locked').isVisible())) throw new Error('Locked note missing');

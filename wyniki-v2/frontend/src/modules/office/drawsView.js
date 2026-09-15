@@ -117,6 +117,13 @@ export function createOfficeDrawsView() {
       return Boolean(active && this.drawDraftEdited() && !sameDraw(active.config, this.drawDraft));
     },
 
+    /** The form of play a format means for the category's groups (as the server applies it). */
+    drawPlayFormatFor(format) {
+      if (format === 'none') return 'round_robin';
+      if (format === 'direct') return 'knockout';
+      return 'groups_knockout';
+    },
+
     drawCategoryLabel(item) {
       return this.officeDisplayLabel(item?.label || '');
     },
@@ -280,7 +287,7 @@ export function createOfficeDrawsView() {
           this.logout(this.ot('errors.sessionExpired'));
           return;
         }
-        if (response.status === 409) throw new Error(this.ot('draws.lockedError'));
+        if (response.status === 409) throw new Error(payload.error === 'groups_started' ? this.ot('draws.groupsStartedError') : this.ot('draws.lockedError'));
         if (!response.ok) throw new Error(payload.error || this.ot('draws.saveFailed'));
         this.drawDraft = null;
         this.drawDraftBase = null;

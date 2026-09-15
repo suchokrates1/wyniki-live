@@ -1,5 +1,5 @@
 /**
- * Module 12: Group play format — dropdown on the card; RR-only has no KO; knockout-only has no RR; two groups+KO cross.
+ * Module 12: Group play format — chosen in the "Forma rozgrywek" step (no dropdown on the group cards); RR-only has no KO; knockout-only has no RR; two groups+KO cross.
  */
 import { chromium } from '@playwright/test';
 import {
@@ -53,19 +53,15 @@ export default async function run() {
     const planningPage = new OfficePlanningPage(page);
     await planningPage.navigateToTab();
     await planningPage.expandStep1();
-    const formats = await page.waitForFunction(
-      () => {
-        const match = [...document.querySelectorAll('select')].find((select) => {
-          const values = [...select.options].map((option) => option.value);
-          return values.includes('groups_knockout') && values.includes('round_robin') && values.includes('knockout');
-        });
-        return match ? [...match.options].map((option) => option.value) : null;
-      },
-      undefined,
-      { timeout: 12000 },
-    );
-    if (!formats) throw new Error('Play-format dropdown with three modes not found');
-    console.log('  Office: play-format dropdown has groups_knockout / round_robin / knockout');
+    await page.waitForTimeout(800);
+    const dropdowns = await page.evaluate(() => [...document.querySelectorAll('select')].filter((select) => {
+      const values = [...select.options].map((option) => option.value);
+      return values.includes('groups_knockout') && values.includes('round_robin');
+    }).length);
+    if (dropdowns) throw new Error('Group cards must not choose the form of play any more');
+    await page.locator('.office-tab').filter({ hasText: 'Forma rozgrywek' }).click();
+    await page.locator('[data-draw-format="none"]').first().waitFor({ state: 'visible', timeout: 12000 });
+    console.log('  Office: no play-format dropdown on group cards; the form of play is chosen in "Forma rozgrywek"');
   } finally {
     await browser.close();
   }

@@ -50,7 +50,7 @@ export default async function run() {
     console.log('  Refresh and notification controls visible');
 
     await chrome.openTab('Faza grupowa');
-    await chrome.openTab('Drabinki');
+    await chrome.openTab('Forma rozgrywek');
     await chrome.openTab('Faza pucharowa');
     await chrome.openTab('Terminarz');
     await chrome.openTab('Grupy startowe');
