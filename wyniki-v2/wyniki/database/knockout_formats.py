@@ -33,13 +33,15 @@ def default_places(fmt: str) -> str:
 
 
 def default_config(fmt: str) -> Dict[str, Any]:
-    return {"format": fmt, "qualifiers": 2, "places": default_places(fmt), "consolation": True, "swaps": {}, "confirmed": False}
+    return {"format": fmt, "qualifiers": 2, "places": default_places(fmt), "consolation": True, "swaps": {}, "confirmed": False, "imported": False}
 
 
 def normalize_config(raw: Dict[str, Any], *, allowed: List[str], expected: str, max_qualifiers: int) -> Dict[str, Any]:
     raw = raw if isinstance(raw, dict) else {}
+    # a draw made outside these formats (an import, an older tournament) stays as it was played
+    imported = bool(raw.get("imported", False))
     fmt = str(raw.get("format") or expected)
-    fits = fmt in allowed
+    fits = fmt in allowed or imported
     if not fits:
         fmt = expected
     places = str(raw.get("places") or default_places(fmt))
@@ -67,7 +69,8 @@ def normalize_config(raw: Dict[str, Any], *, allowed: List[str], expected: str, 
         "consolation": bool(raw.get("consolation", True)),
         "swaps": swaps,
         # a format chosen for a different number of groups has to be looked at again
-        "confirmed": bool(raw.get("confirmed", False)) and fits,
+        "confirmed": (bool(raw.get("confirmed", False)) and fits) or imported,
+        "imported": imported,
     }
 
 
@@ -235,13 +238,22 @@ def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict
         expected = _default_format(category_groups, structure)
         allowed = [*structure, "none"] if structure else ["none"]
         sizes = [len(group.get("players") or []) for group in category_groups]
-        raw = (drafts or {}).get(key) or stored.get(key) or default_config(expected)
+        saved_raw = stored.get(key) or {}
+        draft = (drafts or {}).get(key)
+        # only the upgrade marks a draw as imported: a draft from the office cannot set or clear it
+        raw = {**draft, "imported": bool(saved_raw.get("imported"))} if isinstance(draft, dict) else (saved_raw or default_config(expected))
         config = normalize_config(raw, allowed=allowed, expected=expected, max_qualifiers=min(sizes) if sizes else 2)
         play_format = implied_play_format(config["format"])
         category_units = _units_for(category_groups, play_format)
         labels = {str(unit.get("label") or "") for kind in ("groups_knockout", "knockout") for unit in _units_for(category_groups, kind)}
         prefixes = sorted(labels | {category.get("label") or ""})
         locked = any(row.get("winner_name") and _phase_in_category(row.get("phase"), prefixes) for row in knockout_rows)
+        imported = bool(config.get("imported"))
+        if imported:
+            existing = sum(1 for row in knockout_rows if _phase_in_category(row.get("phase"), prefixes))
+            preview = {"draws": [], "table": [], "placements": [], "matches": existing, "main_matches": existing, "consolation_matches": 0}
+        else:
+            preview = _safe_preview(tournament_id, category, category_units, category_groups, config)
         overview.append({
             "category_id": category["id"],
             "label": category.get("label") or "",
@@ -252,9 +264,10 @@ def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict
             "play_format": play_format,
             "saved": key in stored,
             "config": config,
-            "locked": locked,
+            "locked": locked or imported,
+            "imported": imported,
             "groups_started": _played_group_matches(tournament_id, [int(group["id"]) for group in category_groups if group.get("id")]) > 0,
-            "preview": _safe_preview(tournament_id, category, category_units, category_groups, config),
+            "preview": preview,
         })
     return overview
 
@@ -304,7 +317,7 @@ def save_knockout_format(tournament_id: int, category_id: int, raw: Dict[str, An
     if current is None:
         return {"error": "category_not_found"}
     config = normalize_config(
-        raw,
+        {**(raw if isinstance(raw, dict) else {}), "imported": current["imported"]},
         allowed=current["allowed_formats"],
         expected=current["default_format"],
         max_qualifiers=min([group["size"] for group in current["groups"]] or [2]),

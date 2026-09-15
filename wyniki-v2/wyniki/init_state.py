@@ -156,6 +156,13 @@ def initialize_state() -> None:
         logger.info("Database schema initialized")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
+
+    try:
+        from .database.tournament_upgrade import upgrade_existing_tournaments
+
+        upgrade_existing_tournaments()
+    except Exception as e:
+        logger.error(f"Failed to upgrade existing tournaments: {e}")
     
     # Ensure at least one active tournament exists (skip under pytest — tests insert their own).
     try:

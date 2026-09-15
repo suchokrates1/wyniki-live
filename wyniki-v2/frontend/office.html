@@ -898,12 +898,12 @@
                       :data-draw-category="item.label"
                       @click="selectDrawCategory(item)">
                 <span class="office-draws__cat-name">
-                  <span class="office-draws__cat-icon" aria-hidden="true" :data-draw-state="drawItemState(item)" :title="ot('draws.state.' + drawItemState(item))" x-text="({confirmed: '✓', none: '✓', locked: '●', changed: '!', default: '?'})[drawItemState(item)]"></span>
+                  <span class="office-draws__cat-icon" aria-hidden="true" :data-draw-state="drawItemState(item)" :title="ot('draws.state.' + drawItemState(item))" x-text="({confirmed: '✓', none: '✓', imported: '✓', locked: '●', changed: '!', default: '?'})[drawItemState(item)]"></span>
                   <span x-text="drawCategoryLabel(item)"></span>
                 </span>
                 <span class="sr-only" x-text="ot('draws.state.' + drawItemState(item))"></span>
                 <span class="office-draws__cat-groups" x-text="drawGroupsText(item)"></span>
-                <span class="office-draws__cat-format" x-text="drawFormatName(drawItemFormat(item)) + ' · ' + ot('draws.matchesShort', { count: drawItemMatches(item) })"></span>
+                <span class="office-draws__cat-format" x-text="drawItemFormatName(item) + ' · ' + ot('draws.matchesShort', { count: drawItemMatches(item) })"></span>
               </button>
             </template>
           </div>
@@ -913,7 +913,9 @@
               <h2 x-text="drawCategoryLabel(drawActive())"></h2>
               <span class="office-draws__groups" x-text="drawGroupsText(drawActive())"></span>
             </div>
-            <p class="office-draws__locked" role="status" x-show="drawActive()?.locked" x-text="ot('draws.lockedNote')"></p>
+            <p class="office-draws__locked" role="status" x-show="drawActive()?.locked && !drawActive()?.imported" x-text="ot('draws.lockedNote')"></p>
+            <p class="office-draws__locked" role="status" data-draw-imported x-show="drawActive()?.imported" x-text="ot('draws.importedNote')"></p>
+            <template x-if="!drawActive()?.imported"><div class="office-draws__editor">
             <p class="office-hint office-draws__play-note" role="status" data-draw-play-note
                x-show="drawDraft && drawActive() && drawPlayFormatFor(drawDraft.format) !== drawActive().play_format"
                x-text="ot('draws.playFormatChange.' + drawPlayFormatFor(drawDraft?.format))"></p>
@@ -1090,6 +1092,7 @@
               <span class="office-draws__dirty" x-show="drawDraftDirty()" x-text="ot('draws.unsaved')"></span>
               <span class="office-hint" x-text="ot('draws.note')"></span>
             </div>
+            </div></template>
           </div>
         </div>
       </section>

@@ -143,6 +143,10 @@ export function createOfficeDrawsView() {
       return this.ot(`draws.format.${format}`);
     },
 
+    drawItemFormatName(item) {
+      return item?.imported ? this.ot('draws.importedFormat') : this.drawFormatName(this.drawItemFormat(item));
+    },
+
     drawFormatDesc(format) {
       return this.ot(`draws.formatDesc.${format}`);
     },
@@ -167,6 +171,7 @@ export function createOfficeDrawsView() {
     },
 
     drawItemState(item) {
+      if (item.imported) return 'imported';
       if (item.locked) return 'locked';
       if (item.category_id === this.drawActiveId && this.drawDraftDirty()) return 'changed';
       if (item.allowed_formats.length <= 1) return 'none';
