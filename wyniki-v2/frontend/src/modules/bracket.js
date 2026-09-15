@@ -1,3 +1,12 @@
+import {
+  extractCategoryCodeFromLabel,
+  formatCategoryDisplay,
+  inferPlanningGenderFromLabel,
+  isMixedSectionLabel,
+} from '../shared/categories.js';
+import { isPendingCompetitorName } from '../shared/labelDisplay.js';
+import { PLAY_FORMAT_ROUND_ROBIN, normalizePlayFormat } from '../shared/playFormat.js';
+
 export function getGroupStandingsRows(group, siblingGroups = []) {
   const rows = Array.isArray(group?.standings) ? [...group.standings] : [];
   const maxRows = Math.max(0, ...siblingGroups.map((entry) => Array.isArray(entry?.standings) ? entry.standings.length : 0));
@@ -51,11 +60,66 @@ export function getKnockoutPlaceNumber(phase) {
   return match ? Number(match[1]) : null;
 }
 
-export function getKnockoutSlotLoser(slot) {
+function isDecidedCompetitorName(name) {
+  const text = String(name || '').trim();
+  return Boolean(text) && !isPendingCompetitorName(text);
+}
+
+function decidedKnockoutWinner(slot) {
   const winner = knockoutSlotWinner(slot);
+  if (!isDecidedCompetitorName(winner)) return '';
+  if (!isDecidedCompetitorName(slot?.player1) || !isDecidedCompetitorName(slot?.player2)) return '';
+  return winner;
+}
+
+function isConsolationPhase(phase) {
+  return /consolation|pocieszenie/i.test(String(phase || ''));
+}
+
+function roundRobinPairKey(left, right) {
+  const a = String(left || '').trim();
+  const b = String(right || '').trim();
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+export function groupCompetitorCount(group) {
+  const fromStandings = (group?.standings || []).filter((row) => row?.name && !row._placeholder);
+  if (fromStandings.length) return fromStandings.length;
+  return (group?.players || []).filter((player) => String(player?.name || player || '').trim()).length;
+}
+
+export function expectedRoundRobinMatchCount(playerCount) {
+  const n = Number(playerCount) || 0;
+  if (n < 2) return 0;
+  return (n * (n - 1)) / 2;
+}
+
+export function isRoundRobinGroupComplete(group) {
+  const playerCount = groupCompetitorCount(group);
+  const expected = expectedRoundRobinMatchCount(playerCount);
+  if (expected < 1) return false;
+  const finishedPairs = new Set();
+  for (const match of group?.matches || []) {
+    if (!groupMatchWinner(match)) continue;
+    const left = match.player_a || match.player1;
+    const right = match.player_b || match.player2;
+    if (!String(left || '').trim() || !String(right || '').trim()) continue;
+    finishedPairs.add(roundRobinPairKey(left, right));
+  }
+  return finishedPairs.size >= expected;
+}
+
+export function categoryUsesKnockoutMedals(category = {}) {
+  const groups = category?.groups || [];
+  if (!groups.length) return (category?.knockout || []).length > 0;
+  return groups.some((group) => normalizePlayFormat(group?.play_format) !== PLAY_FORMAT_ROUND_ROBIN);
+}
+
+export function getKnockoutSlotLoser(slot) {
+  const winner = decidedKnockoutWinner(slot);
   if (!slot || !winner) return '';
-  if (winner === slot.player1) return slot.player2 || '';
-  if (winner === slot.player2) return slot.player1 || '';
+  if (winner === slot.player1) return isDecidedCompetitorName(slot.player2) ? slot.player2 : '';
+  if (winner === slot.player2) return isDecidedCompetitorName(slot.player1) ? slot.player1 : '';
   return '';
 }
 
@@ -63,17 +127,18 @@ export function getKnockoutPodiumEntries(knockout = []) {
   const entries = [];
   const finalPhase = knockout.find((entry) => {
     const phase = String(entry.phase || '');
-    return isFinalPhase(phase) && !/consolation/i.test(phase) && knockoutSlotWinner(entry.slots?.[0]);
+    return isFinalPhase(phase) && !isConsolationPhase(phase) && decidedKnockoutWinner(entry.slots?.[0]);
   });
   const thirdPlacePhase = knockout.find((entry) => (
-    getKnockoutPlaceNumber(entry.phase) === 3 && knockoutSlotWinner(entry.slots?.[0])
+    getKnockoutPlaceNumber(entry.phase) === 3
+    && !isConsolationPhase(entry.phase)
+    && decidedKnockoutWinner(entry.slots?.[0])
   ));
   const finalSlot = finalPhase?.slots?.[0];
-  const finalWinner = knockoutSlotWinner(finalSlot);
+  const finalWinner = decidedKnockoutWinner(finalSlot);
   if (!finalWinner) return [];
   const secondPlace = getKnockoutSlotLoser(finalSlot);
-  const thirdSlot = thirdPlacePhase?.slots?.[0];
-  const thirdPlace = knockoutSlotWinner(thirdSlot);
+  const thirdPlace = decidedKnockoutWinner(thirdPlacePhase?.slots?.[0]);
   if (!secondPlace || !thirdPlace) return [];
   entries.push({ medal: '🥇', cls: 'bt-podium-item--gold', player: finalWinner, place: '1.' });
   entries.push({ medal: '🥈', cls: 'bt-podium-item--silver', player: secondPlace, place: '2.' });
@@ -83,7 +148,10 @@ export function getKnockoutPodiumEntries(knockout = []) {
 
 export function getGroupPodiumEntries(groups = []) {
   const tables = (groups || []).filter((group) => (
-    groupShowsStandingsTable(group) && Array.isArray(group?.standings) && group.standings.length >= 3
+    normalizePlayFormat(group?.play_format) === PLAY_FORMAT_ROUND_ROBIN
+    && Array.isArray(group?.standings)
+    && group.standings.length >= 3
+    && isRoundRobinGroupComplete(group)
   ));
   if (tables.length !== 1) return [];
   const top = tables[0].standings.slice(0, 3).filter((row) => row?.name && !row._placeholder);
@@ -96,17 +164,11 @@ export function getGroupPodiumEntries(groups = []) {
 }
 
 export function getCategoryPodiumEntries(category = {}) {
-  const fromKnockout = getKnockoutPodiumEntries(category?.knockout || []);
-  if (fromKnockout.length === 3) return fromKnockout;
+  if (categoryUsesKnockoutMedals(category)) {
+    return getKnockoutPodiumEntries(category?.knockout || []);
+  }
   return getGroupPodiumEntries(category?.groups || []);
 }
-
-import {
-  extractCategoryCodeFromLabel,
-  formatCategoryDisplay,
-  inferPlanningGenderFromLabel,
-  isMixedSectionLabel,
-} from '../shared/categories.js';
 
 export function parseBracketCategory(name) {
   const rawName = String(name || '').trim();

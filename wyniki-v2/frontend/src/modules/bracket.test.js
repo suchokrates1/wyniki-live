@@ -40,16 +40,49 @@ test('podium uses championship final, not quarterfinal or consolation', () => {
   assert.equal(podium[2].player, 'G');
 });
 
-test('round-robin category podium uses the top three in the group table', () => {
+function rrMatch(playerA, playerB, winner) {
+  return { player_a: playerA, player_b: playerB, winner, sets: [{ g1: winner === playerA ? 4 : 0, g2: winner === playerB ? 4 : 0 }] };
+}
+
+test('round-robin podium waits until every group match is finished', () => {
+  const standings = [
+    { name: 'Ivan' },
+    { name: 'Arato' },
+    { name: 'Ewan' },
+    { name: 'Mateusz' },
+  ];
+  const unfinished = {
+    knockout: [],
+    groups: [{ play_format: 'round_robin', standings, matches: [] }],
+  };
+  assert.equal(getCategoryPodiumEntries(unfinished).length, 0);
+  assert.equal(getCategoryPodiumEntries({
+    knockout: [],
+    groups: [{
+      play_format: 'round_robin',
+      standings,
+      matches: [
+        rrMatch('Ivan', 'Arato', 'Ivan'),
+        rrMatch('Ivan', 'Ewan', 'Ivan'),
+        rrMatch('Ivan', 'Mateusz', 'Ivan'),
+        rrMatch('Arato', 'Ewan', 'Arato'),
+        rrMatch('Arato', 'Mateusz', 'Arato'),
+      ],
+    }],
+  }).length, 0);
+
   const podium = getCategoryPodiumEntries({
     knockout: [],
     groups: [{
       play_format: 'round_robin',
-      standings: [
-        { name: 'Ivan' },
-        { name: 'Arato' },
-        { name: 'Ewan' },
-        { name: 'Mateusz' },
+      standings,
+      matches: [
+        rrMatch('Ivan', 'Arato', 'Ivan'),
+        rrMatch('Ivan', 'Ewan', 'Ivan'),
+        rrMatch('Ivan', 'Mateusz', 'Ivan'),
+        rrMatch('Arato', 'Ewan', 'Arato'),
+        rrMatch('Arato', 'Mateusz', 'Arato'),
+        rrMatch('Ewan', 'Mateusz', 'Ewan'),
       ],
     }],
   });
@@ -57,6 +90,36 @@ test('round-robin category podium uses the top three in the group table', () => 
   assert.equal(podium[1].player, 'Arato');
   assert.equal(podium[2].player, 'Ewan');
   assert.equal(getGroupPodiumEntries([{ play_format: 'knockout', standings: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] }]).length, 0);
+});
+
+test('groups-knockout does not take medals from the table before the cup is finished', () => {
+  const podium = getCategoryPodiumEntries({
+    knockout: [
+      { phase: 'B1 Men — Finał', slots: [{ player1: '1. B1 Men', player2: '2. B1 Men' }] },
+      { phase: 'B1 Men — o 3. miejsce', slots: [{ player1: '3. B1 Men', player2: '4. B1 Men' }] },
+    ],
+    groups: [{
+      play_format: 'groups_knockout',
+      standings: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }],
+      matches: [
+        rrMatch('A', 'B', 'A'),
+        rrMatch('A', 'C', 'A'),
+        rrMatch('A', 'D', 'A'),
+        rrMatch('B', 'C', 'B'),
+        rrMatch('B', 'D', 'B'),
+        rrMatch('C', 'D', 'C'),
+      ],
+    }],
+  });
+  assert.equal(podium.length, 0);
+});
+
+test('knockout podium ignores placeholder winners before matches are played', () => {
+  const podium = getKnockoutPodiumEntries([
+    { phase: 'B1 Men — Finał', slots: [{ player1: 'Zwycięzca: Półfinał 1', player2: 'Zwycięzca: Półfinał 2', winner: 'Zwycięzca: Półfinał 1' }] },
+    { phase: 'B1 Men — o 3. miejsce', slots: [{ player1: 'Przegrany: Półfinał 1', player2: 'Przegrany: Półfinał 2', winner: 'Przegrany: Półfinał 1' }] },
+  ]);
+  assert.equal(podium.length, 0);
 });
 
 test('doubles categories get a distinct label and sort above singles', () => {

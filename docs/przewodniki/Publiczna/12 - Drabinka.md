@@ -24,7 +24,7 @@ Także w szczegółach turnieju z listy ([[15 - Lista turniejów]]).
 | Tabele grup (W/L, sety, gemy) | Standings | Odczyt; wiersze to osoby **albo pary** `"A / B"` |
 | Wyniki meczów grupowych | Scoreboardy | Odczyt; grupa `knockout` **nie** pokazuje tabeli RR |
 | Drabinka pucharowa | Drzewo KO | Odczyt; strony to pary w Double |
-| Podium (1–3) | Gdy są miejsca | Odczyt |
+| Podium (1–3) | Medale dopiero po zakończeniu grupy: każdy z każdym (wszystkie mecze RR) albo puchar (finał i mecz o 3. miejsce) | Odczyt |
 
 ## Dane
 
