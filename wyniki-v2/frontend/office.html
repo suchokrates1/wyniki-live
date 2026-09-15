@@ -37,7 +37,7 @@
     </div>
   </div>
 
-  <main x-show="!isAuthenticated" x-cloak>
+  <main x-show="!isAuthenticated && !officeStarting" x-cloak>
     <section class="office-login office-panel">
       <h1 class="office-title mt-3" x-text="ot('login.title')"></h1>
       <label class="form-control mt-6" x-show="officeTournaments.length">

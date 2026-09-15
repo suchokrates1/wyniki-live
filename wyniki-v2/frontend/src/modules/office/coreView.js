@@ -8,6 +8,8 @@ export function createOfficeCoreView() {
     slot: 1,
 
     token: '',
+    // true until the saved session is restored: a reload must not flash the login screen
+    officeStarting: true,
 
     authPassword: '',
 
@@ -274,6 +276,7 @@ export function createOfficeCoreView() {
       }
       if (chosen) this.selectOfficeTournament(chosen.id);
       else this.loadMeta();
+      this.officeStarting = false;
     },
 
     async loadOfficeTournaments() {
