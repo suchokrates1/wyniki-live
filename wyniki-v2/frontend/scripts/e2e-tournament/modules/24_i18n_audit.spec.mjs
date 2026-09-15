@@ -220,6 +220,14 @@ export default async function run() {
       await page.locator('.office-rail').hover();
       await audit(page, lang, 'office rail');
       await page.mouse.move(900, 500);
+      // the guide: first, a schedule step and the last step
+      await page.evaluate(() => Alpine.$data(document.body).startTour(0));
+      for (const step of [0, 6, 14]) {
+        await page.evaluate((index) => Alpine.$data(document.body).showTourStep(index), step);
+        await page.waitForTimeout(500);
+        await audit(page, lang, `office guide step ${step + 1}`);
+      }
+      await page.evaluate(() => Alpine.$data(document.body).endTour());
       // dialogs: new result (walkover and retirement open), correction
       await page.evaluate(() => Alpine.$data(document.body).openAddMatchModal());
       await page.evaluate(() => { const data = Alpine.$data(document.body); data.officeNewMatch.walkover = true; });
@@ -251,6 +259,6 @@ export default async function run() {
     });
     throw new Error(`${findings.size} untranslated strings:\n${lines.join('\n')}`);
   }
-  log(`No raw keys and no Polish text outside Polish in ${LANGS.length} languages (public: 9 sections, office: login, 7 views, draws tabs, rail, knockout swap, result and correction dialogs)`);
+  log(`No raw keys and no Polish text outside Polish in ${LANGS.length} languages (public: 9 sections, office: login, 7 views, draws tabs, rail, guide, knockout swap, result and correction dialogs)`);
   if (!KEEP) await cleanup(adminToken);
 }
