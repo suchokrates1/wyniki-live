@@ -1529,7 +1529,7 @@ body.office-body {
 .office-draws__head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
 .office-draws__head h2 { margin: 0; font-size: 1.15rem; font-weight: 800; }
 .office-draws__groups { font: 0.76rem/1.3 var(--kort-mono); color: var(--kort-mist); }
-.office-draws__locked { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--kort-live-soft); color: #ffb37f; font-size: 0.85rem; }
+.office-draws__locked, .office-draws__imported { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--kort-live-soft); color: #ffb37f; font-size: 0.85rem; }
 .office-draws__label { margin-bottom: 8px; }
 
 .office-draws__formats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }

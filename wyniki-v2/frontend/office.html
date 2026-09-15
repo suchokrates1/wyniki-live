@@ -914,7 +914,7 @@
               <span class="office-draws__groups" x-text="drawGroupsText(drawActive())"></span>
             </div>
             <p class="office-draws__locked" role="status" x-show="drawActive()?.locked && !drawActive()?.imported" x-text="ot('draws.lockedNote')"></p>
-            <p class="office-draws__locked" role="status" data-draw-imported x-show="drawActive()?.imported" x-text="ot('draws.importedNote')"></p>
+            <p class="office-draws__imported" role="status" data-draw-imported x-show="drawActive()?.imported" x-text="ot('draws.importedNote')"></p>
             <template x-if="!drawActive()?.imported"><div class="office-draws__editor">
             <p class="office-hint office-draws__play-note" role="status" data-draw-play-note
                x-show="drawDraft && drawActive() && drawPlayFormatFor(drawDraft.format) !== drawActive().play_format"
