@@ -935,6 +935,8 @@ def office_save_knockout_format(slot: int, category_id: int):
         return jsonify({"error": "category_not_found"}), 404
     if result.get('error') == 'locked':
         return jsonify({"error": "locked"}), 409
+    if result.get('error') == 'groups_started':
+        return jsonify({"error": "groups_started"}), 409
     return _json_no_cache({
         "categories": knockout_format_overview(tournament_id),
         "rebuilt": result.get("rebuilt", False),

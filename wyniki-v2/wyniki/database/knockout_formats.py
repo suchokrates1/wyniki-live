@@ -172,6 +172,53 @@ def _safe_preview(tournament_id: int, category, units, groups, config) -> Dict[s
         return {"draws": [], "table": [], "placements": [], "matches": 0, "main_matches": 0, "consolation_matches": 0, "error": True}
 
 
+# The form of play follows the format: only groups, groups then a draw, or a draw only.
+FORMAT_PLAY_FORMAT = {"none": "round_robin", "direct": "knockout"}
+
+
+def implied_play_format(fmt: str) -> str:
+    return FORMAT_PLAY_FORMAT.get(str(fmt or ""), "groups_knockout")
+
+
+def _structure_formats(group_count: int) -> List[str]:
+    if group_count <= 0:
+        return []
+    if group_count == 1:
+        return ["table", "direct"]
+    if group_count == 2:
+        return ["cross"]
+    return ["main"]
+
+
+def _default_format(category_groups: List[Dict[str, Any]], structure: List[str]) -> str:
+    if not structure:
+        return "none"
+    play_formats = {str(group.get("play_format") or "") for group in category_groups}
+    if play_formats == {"knockout"} and "direct" in structure:
+        return "direct"
+    if play_formats == {"round_robin"}:
+        return "none"
+    return structure[0]
+
+
+def _units_for(category_groups: List[Dict[str, Any]], play_format: str) -> List[Dict[str, Any]]:
+    virtual = [{**group, "play_format": play_format} for group in category_groups]
+    return _brackets()._iter_knockout_units(virtual)
+
+
+def _played_group_matches(tournament_id: int, group_ids: List[int]) -> int:
+    if not group_ids:
+        return 0
+    placeholders = ",".join("?" for _ in group_ids)
+    with db_conn() as conn:
+        row = conn.execute(
+            f"SELECT COUNT(*) FROM tournament_schedule WHERE tournament_id = ? AND source_type IN ('group', 'group_rematch') "
+            f"AND match_id IS NOT NULL AND bracket_group_id IN ({placeholders})",
+            (tournament_id, *group_ids),
+        ).fetchone()
+    return int(row[0] or 0)
+
+
 def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
     """Every active category with its allowed formats, chosen config and a draw preview."""
     brackets = _brackets()
@@ -179,19 +226,21 @@ def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict
 
     stored = brackets.load_knockout_formats(tournament_id)
     groups = brackets.fetch_bracket_groups(tournament_id)
-    units = _category_units(tournament_id)
     knockout_rows = brackets.fetch_bracket_knockout(tournament_id)
     overview = []
     for category in fetch_tournament_categories(tournament_id, active_only=True):
         key = str(category["id"])
-        category_groups = [group for group in groups if str(group.get("tournament_category_id")) == key]
-        category_units = units.get(key, [])
-        expected = brackets.KNOCKOUT_UNIT_FORMAT.get(category_units[0]["type"], "none") if category_units else "none"
-        allowed = [expected, "none"] if expected != "none" else ["none"]
-        sizes = [len(group.get("players") or []) for group in category_groups if group.get("play_format") != "knockout"]
+        category_groups = [group for group in groups if str(group.get("tournament_category_id")) == key and (group.get("players") or [])]
+        structure = _structure_formats(len(category_groups))
+        expected = _default_format(category_groups, structure)
+        allowed = [*structure, "none"] if structure else ["none"]
+        sizes = [len(group.get("players") or []) for group in category_groups]
         raw = (drafts or {}).get(key) or stored.get(key) or default_config(expected)
         config = normalize_config(raw, allowed=allowed, expected=expected, max_qualifiers=min(sizes) if sizes else 2)
-        prefixes = sorted({str(unit.get("label") or "") for unit in category_units} | {category.get("label") or ""})
+        play_format = implied_play_format(config["format"])
+        category_units = _units_for(category_groups, play_format)
+        labels = {str(unit.get("label") or "") for kind in ("groups_knockout", "knockout") for unit in _units_for(category_groups, kind)}
+        prefixes = sorted(labels | {category.get("label") or ""})
         locked = any(row.get("winner_name") and _phase_in_category(row.get("phase"), prefixes) for row in knockout_rows)
         overview.append({
             "category_id": category["id"],
@@ -200,9 +249,11 @@ def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict
             "groups": [{"name": group["name"], "letter": _group_letter(group["name"]), "size": len(group.get("players") or []), "play_format": group.get("play_format")} for group in category_groups],
             "allowed_formats": allowed,
             "default_format": expected,
+            "play_format": play_format,
             "saved": key in stored,
             "config": config,
             "locked": locked,
+            "groups_started": _played_group_matches(tournament_id, [int(group["id"]) for group in category_groups if group.get("id")]) > 0,
             "preview": _safe_preview(tournament_id, category, category_units, category_groups, config),
         })
     return overview
@@ -212,8 +263,41 @@ def _effective(config: Dict[str, Any]) -> str:
     return json.dumps({k: config.get(k) for k in ("format", "qualifiers", "places", "consolation", "swaps")}, sort_keys=True)
 
 
+def _set_category_play_format(tournament_id: int, category_id: int, play_format: str) -> None:
+    """Give the category's groups the form of play of the chosen format and fix their matches."""
+    brackets = _brackets()
+    from .schedule import ensure_group_schedule_entries
+
+    groups = brackets.fetch_bracket_groups(tournament_id)
+    payload = []
+    switched = []
+    for group in groups:
+        rows = group.get("players") or []
+        in_category = str(group.get("tournament_category_id")) == str(int(category_id))
+        if in_category and group.get("play_format") != play_format and group.get("id"):
+            switched.append(int(group["id"]))
+        payload.append({
+            "name": group["name"],
+            "tournament_category_id": group.get("tournament_category_id"),
+            "play_format": play_format if in_category else group.get("play_format"),
+            "players": [row["player_id"] for row in rows if row.get("player_id") and not row.get("team_id")],
+            "teams": [row["team_id"] for row in rows if row.get("team_id")],
+        })
+    brackets.save_bracket_groups(tournament_id, payload)
+    if play_format == "knockout" and switched:
+        placeholders = ",".join("?" for _ in switched)
+        with db_conn() as conn:
+            conn.execute(
+                f"DELETE FROM tournament_schedule WHERE tournament_id = ? AND source_type IN ('group', 'group_rematch') "
+                f"AND match_id IS NULL AND bracket_group_id IN ({placeholders})",
+                (tournament_id, *switched),
+            )
+            conn.commit()
+    ensure_group_schedule_entries(tournament_id)
+
+
 def save_knockout_format(tournament_id: int, category_id: int, raw: Dict[str, Any]) -> Dict[str, Any]:
-    """Store a category's format; rebuild its draw when the draw itself changes."""
+    """Store a category's format (and the form of play it implies); rebuild its draw when it changes."""
     brackets = _brackets()
     key = str(int(category_id))
     current = next((item for item in knockout_format_overview(tournament_id) if str(item["category_id"]) == key), None)
@@ -223,17 +307,24 @@ def save_knockout_format(tournament_id: int, category_id: int, raw: Dict[str, An
         raw,
         allowed=current["allowed_formats"],
         expected=current["default_format"],
-        max_qualifiers=min([group["size"] for group in current["groups"] if group.get("play_format") != "knockout"] or [2]),
+        max_qualifiers=min([group["size"] for group in current["groups"]] or [2]),
     )
-    changed = _effective(config) != _effective(current["config"])
+    play_format = implied_play_format(config["format"])
+    play_changed = any(group.get("play_format") != play_format for group in current["groups"])
+    changed = _effective(config) != _effective(current["config"]) or play_changed
     if changed and current["locked"]:
         return {"error": "locked"}
+    touches_group_matches = play_changed and "knockout" in {play_format, *[group.get("play_format") for group in current["groups"]]}
+    if touches_group_matches and current["groups_started"]:
+        return {"error": "groups_started"}
     stored = brackets.load_knockout_formats(tournament_id)
     stored[key] = config
     upsert_app_settings({brackets.knockout_formats_settings_key(tournament_id): json.dumps(stored)})
+    if play_changed:
+        _set_category_play_format(tournament_id, category_id, play_format)
     if changed:
         _rebuild_category_draw(tournament_id, category_id)
-    logger.info("knockout_format_saved", tournament_id=tournament_id, category_id=category_id, format=config["format"], rebuilt=changed)
+    logger.info("knockout_format_saved", tournament_id=tournament_id, category_id=category_id, format=config["format"], play_format=play_format, rebuilt=changed)
     return {"status": "ok", "rebuilt": changed}
 
 
@@ -252,11 +343,12 @@ def confirm_all_knockout_formats(tournament_id: int) -> Dict[str, Any]:
 def _rebuild_category_draw(tournament_id: int, category_id: int) -> None:
     """Drop the category's knockout slots and unplayed knockout schedule rows, then rebuild."""
     brackets = _brackets()
-    units = _category_units(tournament_id).get(str(int(category_id)), [])
     from .categories import fetch_tournament_category
 
     category = fetch_tournament_category(category_id) or {}
-    prefixes = sorted({str(unit.get("label") or "") for unit in units} | {category.get("label") or ""})
+    category_groups = [group for group in brackets.fetch_bracket_groups(tournament_id) if str(group.get("tournament_category_id")) == str(int(category_id))]
+    labels = {str(unit.get("label") or "") for kind in ("groups_knockout", "knockout") for unit in _units_for(category_groups, kind)}
+    prefixes = sorted(labels | {category.get("label") or ""})
     slots = _category_slots_with_results(tournament_id, prefixes)
     ids = [int(slot["id"]) for slot in slots if slot.get("id")]
     if ids:

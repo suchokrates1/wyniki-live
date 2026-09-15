@@ -85,7 +85,7 @@ def test_default_formats_preview_what_is_generated(full_app_with_temp_db):
     assert [line["label"] for line in main_lines] == ["A1", "B2", "D1", "C2", "B1", "A2", "C1", "D2"]
     assert women["preview"]["main_matches"] == 12 and women["preview"]["consolation_matches"] == 4
     pairs = overview[doubles["id"]]
-    assert pairs["allowed_formats"] == ["direct", "none"] and pairs["preview"]["matches"] == 5
+    assert pairs["allowed_formats"] == ["table", "direct", "none"] and pairs["config"]["format"] == "direct" and pairs["preview"]["matches"] == 5
 
     _finish_groups(client, headers)
     assert len(_category_slots(database, tournament_id, b2["label"])) == women["preview"]["matches"]
@@ -154,3 +154,58 @@ def test_preview_survives_a_group_still_being_drawn(full_app_with_temp_db):
     item = response.get_json()["categories"][0]
     assert item["allowed_formats"] == ["cross", "none"]
     assert item["preview"]["matches"] == 0
+
+
+def test_form_of_play_follows_the_chosen_format(full_app_with_temp_db):
+    from wyniki import database
+
+    with database.db_conn() as conn:
+        conn.execute("UPDATE tournaments SET active = 0, is_simulation = 0")
+        conn.commit()
+    tournament_id = database.insert_tournament(
+        "Form Cup", "2026-08-01", "2026-08-03", active=True,
+        office_password_hash=generate_password_hash("formats"),
+    )
+    category = database.confirm_tournament_categories(tournament_id, [{"preset_key": "B4M"}])[0]
+    ids = [database.insert_player(tournament_id, f"P{n}", "B4", "PL", gender="M") for n in range(4)]
+    database.save_bracket_groups(tournament_id, [{"name": category["label"], "tournament_category_id": category["id"], "play_format": "groups_knockout", "players": ids}])
+    client = full_app_with_temp_db.test_client()
+    headers = _headers(client)
+    url = f"/api/office/1/knockout-formats/{category['id']}"
+
+    def group_rows():
+        return [row for row in database.fetch_tournament_schedule(tournament_id) if row["source_type"] == "group"]
+
+    def play_format():
+        return database.fetch_bracket_groups(tournament_id)[0]["play_format"]
+
+    overview = client.get("/api/office/1/knockout-formats", headers=headers).get_json()["categories"][0]
+    assert overview["allowed_formats"] == ["table", "direct", "none"] and overview["config"]["format"] == "table"
+    assert len(group_rows()) == 6
+
+    # a draw only: no group matches, the whole group goes into the draw
+    direct = client.put(url, headers=headers, json={"config": {"format": "direct", "places": "third", "confirmed": True}})
+    assert direct.status_code == 200
+    assert play_format() == "knockout" and group_rows() == []
+    slots = [row for row in database.fetch_bracket_knockout(tournament_id) if row["phase"].startswith(category["label"])]
+    assert len(slots) == 4
+
+    # only groups: group matches are back, no knockout
+    only_groups = client.put(url, headers=headers, json={"config": {"format": "none", "confirmed": True}})
+    assert only_groups.status_code == 200
+    assert play_format() == "round_robin" and len(group_rows()) == 6
+    assert not [row for row in database.fetch_bracket_knockout(tournament_id) if row["phase"].startswith(category["label"])]
+
+    # groups then a final from the table
+    table = client.put(url, headers=headers, json={"config": {"format": "table", "places": "third", "confirmed": True}})
+    assert table.status_code == 200 and play_format() == "groups_knockout"
+
+    # once a group match is played, the category cannot become a draw only
+    row = group_rows()[0]
+    played = client.post("/api/office/1/group-matches", headers=headers, json={
+        "group_id": row["bracket_group_id"], "schedule_id": row["id"], "player1_name": row["player1_name"], "player2_name": row["player2_name"],
+        "sets": [{"player1_games": 4, "player2_games": 1}, {"player1_games": 4, "player2_games": 2}],
+    })
+    assert played.status_code == 201
+    refused = client.put(url, headers=headers, json={"config": {"format": "direct", "confirmed": True}})
+    assert refused.status_code == 409 and refused.get_json()["error"] == "groups_started"
