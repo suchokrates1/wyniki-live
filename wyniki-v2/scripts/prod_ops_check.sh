@@ -38,7 +38,11 @@ check_free() {
     return 0
   fi
   local avail_kb
-  avail_kb="$(df -Pk "$path" | awk 'NR==2 {print $4}')"
+  # an automount whose disk is gone still has a directory, but df cannot read it
+  if ! avail_kb="$(df -Pk "$path" 2>/dev/null | awk 'NR==2 {print $4}')" || [ -z "$avail_kb" ]; then
+    echo "disk_skip path=$path (not mounted)"
+    return 0
+  fi
   local avail_gib
   avail_gib="$(python3 -c "print(int($avail_kb)/1024/1024)")"
   python3 -c "import sys; sys.exit(0 if float('$avail_gib') >= float('$MIN_FREE_GIB') else 1)" \
@@ -48,7 +52,34 @@ check_free() {
 
 check_free /var/lib/docker
 check_free "${HOME}/wyniki-backups"
-check_free /mnt/dysk12tb
+# the 1TB disk holds the second local copy of every nightly backup: it must be there
+BACKUP_DISK="${BACKUP_DISK:-/mnt/dysk1tb}"
+SECONDARY_BACKUP_DIR="${SECONDARY_BACKUP_DIR:-$BACKUP_DISK/backups/minipc}"
+if ! ls "$BACKUP_DISK" >/dev/null 2>&1 || ! mountpoint -q "$BACKUP_DISK"; then
+  echo "Backup disk is not mounted: $BACKUP_DISK" >&2
+  exit 1
+fi
+check_free "$BACKUP_DISK"
+latest_secondary="$(ls -1 "$SECONDARY_BACKUP_DIR" 2>/dev/null | grep -E '^20[0-9]{2}-[0-9]{2}-[0-9]{2}$' | sort | tail -n 1)"
+if [ -z "$latest_secondary" ] || [ "$latest_secondary" \< "$(date -d '1 day ago' +%F)" ]; then
+  echo "No recent backup on $SECONDARY_BACKUP_DIR (latest: ${latest_secondary:-none})" >&2
+  exit 1
+fi
+echo "secondary_backup_ok latest=$latest_secondary"
+
+# --- Nightly copy of the wyniki database (wyniki-db-snapshot.sh, picked up by backup.sh) ---
+DB_SNAPSHOT="${DB_SNAPSHOT:-$HOME/backup/snapshots/wyniki.sqlite3}"
+MAX_DB_SNAPSHOT_AGE_HOURS="${MAX_DB_SNAPSHOT_AGE_HOURS:-26}"
+if [ ! -f "$DB_SNAPSHOT" ]; then
+  echo "Missing wyniki database snapshot: $DB_SNAPSHOT" >&2
+  exit 1
+fi
+snapshot_age_hours="$(( ($(date +%s) - $(stat -c %Y "$DB_SNAPSHOT")) / 3600 ))"
+if [ "$snapshot_age_hours" -gt "$MAX_DB_SNAPSHOT_AGE_HOURS" ]; then
+  echo "wyniki database snapshot is too old: ${snapshot_age_hours} h ($DB_SNAPSHOT)" >&2
+  exit 1
+fi
+echo "db_snapshot_ok age_hours=$snapshot_age_hours"
 
 # --- Container log scan (umpire sync / auth failures) ---
 if command -v docker >/dev/null 2>&1; then

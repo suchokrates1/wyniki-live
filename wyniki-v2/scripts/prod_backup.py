@@ -17,7 +17,7 @@ def main() -> int:
     parser.add_argument("--host", default="minipc")
     parser.add_argument("--project-path", default="/home/suchokrates1/count/wyniki-v2")
     parser.add_argument("--volume", default="count_wyniki_data")
-    parser.add_argument("--backup-root", default="/mnt/dysk12tb/wyniki-backups")
+    parser.add_argument("--backup-root", default="/mnt/dysk1tb/wyniki-backups")
     parser.add_argument("--name", default="wyniki")
     args = parser.parse_args()
 
