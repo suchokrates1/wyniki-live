@@ -24,6 +24,81 @@ export const OFFICE_TRANSLATION_PATCHES = {
         enter: 'Wejdź do biura',
         loggingIn: 'Logowanie...',
       },
+      tour: {
+        start: 'Przewodnik',
+        counter: 'Krok {current} z {total}',
+        back: 'Wstecz',
+        next: 'Dalej',
+        finish: 'Zakończ',
+        close: 'Zamknij przewodnik',
+        offerTitle: 'Pierwszy raz w biurze?',
+        offerText: 'Przewodnik poprowadzi Cię krok po kroku: kategorie, grupy, forma rozgrywek, terminarz i uwagi.',
+        offerStart: 'Uruchom przewodnik',
+        offerLater: 'Nie teraz',
+        missing: 'Tego elementu nie ma teraz na ekranie — pojawi się po wcześniejszych krokach. Możesz iść dalej.',
+        steps: {
+          categories: {
+            title: '1. Kategorie',
+            text: 'Zaznacz kategorie turnieju (B1–B4 K i M są już zaznaczone), dodaj własną — np. debel albo mixt — i kliknij „Zatwierdź kategorie”. Zatwierdzone kategorie zmienisz później przyciskami „Edytuj” i „+ Dodaj kategorię”.',
+          },
+          players: {
+            title: 'Zawodnicy',
+            text: 'Pojedynczego zawodnika dodasz tutaj, całą listę — importem w panelu administratora. Pary do debla tworzysz po wybraniu kategorii deblowej.',
+          },
+          divisions: {
+            title: '2. Grupy — wybierz kategorię',
+            text: 'Kliknij kategorię. Pod nazwą widać, ilu ma zawodników i ilu z nich jest już w grupach.',
+          },
+          groups: {
+            title: 'Grupy i zawodnicy',
+            text: 'Ustaw liczbę grup i kliknij „Rozdziel automatycznie” albo przeciągaj zawodników z listy do grup. Numer przy nazwisku to stały numer startowy w kategorii. Zmiany zapisują się same.',
+          },
+          formats: {
+            title: '3. Forma rozgrywek',
+            text: 'Dla każdej kategorii wybierz: tylko faza grupowa, grupy i drabinka, albo sama drabinka (przy jednej grupie). Podgląd pokazuje, kto z kim zagra i ile będzie meczów.',
+          },
+          formatConfirm: {
+            title: 'Zatwierdź formę',
+            text: 'Zatwierdź kategorię tutaj albo wszystkie naraz przyciskiem w pasku u góry. Zatwierdzona kategoria ma ✓ na liście.',
+          },
+          b1Courts: {
+            title: '4. Terminarz — korty B1',
+            text: 'Zaznacz korty dla B1 przyciskiem „B1” w nagłówku kortu. Mecz B1 zawsze trwa 75 minut — także gdy wypadnie na innym korcie — więc zajmuje więcej miejsca na siatce.',
+          },
+          generate: {
+            title: 'Wygeneruj mecze',
+            text: 'Kliknij „Generuj mecze”: powstaną wszystkie mecze grupowe i trafią do Nieprzypisanych na dole ekranu.',
+          },
+          hours: {
+            title: 'Godziny dnia',
+            text: 'Ustaw godzinę startu i końca dnia. Siatka pokaże cały dzień, a planer nie wyjdzie poza te godziny.',
+          },
+          autoPlan: {
+            title: 'Ułóż automatycznie',
+            text: '„Rozstaw ten dzień” układa wybrany dzień, a przycisk obok — całą fazę albo turniej. Najpierw zobaczysz propozycję: przejrzyj ją i zatwierdź albo odrzuć.',
+          },
+          days: {
+            title: 'Sprawdź wszystkie dni',
+            text: 'Przełączaj dni, żeby obejrzeć propozycję na każdym z nich. Liczba przy dniu to mecze, które na nim wypadają.',
+          },
+          drag: {
+            title: 'Przesuwaj ręcznie',
+            text: 'Mecze możesz przeciągać: z Nieprzypisanych na siatkę, między kortami i godzinami albo z powrotem do szuflady. Kliknięcie meczu otwiera inspektor.',
+          },
+          publish: {
+            title: 'Zatwierdź i opublikuj',
+            text: 'Propozycję planera zatwierdzasz przyciskiem „Zatwierdź terminarz”. Potem „Opublikuj wszystkie” — dopiero wtedy widzowie zobaczą terminarz na stronie.',
+          },
+          notesOpen: {
+            title: '5. Uwagi do meczów',
+            text: '„Uwagi…” otwiera uwagi hurtem — dla dnia, kortów, kategorii albo wszystkich meczów naraz.',
+          },
+          notes: {
+            title: 'Uwagi hurtem albo pojedynczo',
+            text: 'Wybierz mecze, wpisz treść i zapisz — podgląd pokaże, ilu meczów to dotyczy. Uwagę jednego meczu zmienisz w inspektorze po kliknięciu meczu w terminarzu. To wszystko — turniej gotowy!',
+          },
+        },
+      },
       path: {
         sectionSteps: 'Przygotowanie i rozgrywki',
         sectionTools: 'Zawsze pod ręką',
@@ -668,6 +743,81 @@ export const OFFICE_TRANSLATION_PATCHES = {
         enter: 'Büro betreten',
         loggingIn: 'Anmeldung...',
       },
+      tour: {
+        start: 'Anleitung',
+        counter: 'Schritt {current} von {total}',
+        back: 'Zurück',
+        next: 'Weiter',
+        finish: 'Fertig',
+        close: 'Anleitung schließen',
+        offerTitle: 'Zum ersten Mal im Turnierbüro?',
+        offerText: 'Die Anleitung führt dich Schritt für Schritt: Kategorien, Gruppen, Spielform, Spielplan und Hinweise.',
+        offerStart: 'Anleitung starten',
+        offerLater: 'Nicht jetzt',
+        missing: 'Dieses Element ist gerade nicht zu sehen — es erscheint nach den vorherigen Schritten. Du kannst weitergehen.',
+        steps: {
+          categories: {
+            title: '1. Kategorien',
+            text: 'Wähle die Kategorien des Turniers (B1–B4 Damen und Herren sind schon markiert), füge eigene hinzu — z. B. Doppel oder Mixed — und klicke „Kategorien bestätigen“. Später änderst du sie mit „Bearbeiten“ und „+ Kategorie hinzufügen“.',
+          },
+          players: {
+            title: 'Spieler',
+            text: 'Einzelne Spieler fügst du hier hinzu, ganze Listen per Import im Adminbereich. Doppelpaare legst du in der Doppelkategorie an.',
+          },
+          divisions: {
+            title: '2. Gruppen — Kategorie wählen',
+            text: 'Klicke eine Kategorie. Darunter steht, wie viele Spieler sie hat und wie viele schon in Gruppen sind.',
+          },
+          groups: {
+            title: 'Gruppen und Spieler',
+            text: 'Stelle die Anzahl der Gruppen ein und klicke „Automatisch verteilen“ oder ziehe Spieler aus der Liste in die Gruppen. Die Zahl beim Namen ist die feste Startnummer in der Kategorie. Änderungen werden automatisch gespeichert.',
+          },
+          formats: {
+            title: '3. Spielform',
+            text: 'Wähle für jede Kategorie: nur Gruppenphase, Gruppen und Turnierbaum oder nur Turnierbaum (bei einer Gruppe). Die Vorschau zeigt, wer gegen wen spielt und wie viele Spiele es werden.',
+          },
+          formatConfirm: {
+            title: 'Spielform bestätigen',
+            text: 'Bestätige die Kategorie hier oder alle auf einmal mit der Schaltfläche oben. Eine bestätigte Kategorie hat ein ✓ in der Liste.',
+          },
+          b1Courts: {
+            title: '4. Spielplan — B1-Plätze',
+            text: 'Markiere die Plätze für B1 mit „B1“ im Platzkopf. Ein B1-Spiel dauert immer 75 Minuten — auch auf einem anderen Platz — und braucht daher mehr Raum im Raster.',
+          },
+          generate: {
+            title: 'Spiele generieren',
+            text: 'Klicke „Spiele generieren“: alle Gruppenspiele entstehen und landen unten bei den nicht zugewiesenen.',
+          },
+          hours: {
+            title: 'Tageszeiten',
+            text: 'Stelle Beginn und Ende des Tages ein. Das Raster zeigt den ganzen Tag, und der Planer bleibt innerhalb dieser Zeiten.',
+          },
+          autoPlan: {
+            title: 'Automatisch planen',
+            text: '„Diesen Tag planen“ plant den gewählten Tag, die Schaltfläche daneben die ganze Phase oder das Turnier. Zuerst siehst du einen Vorschlag: prüfen und bestätigen oder verwerfen.',
+          },
+          days: {
+            title: 'Alle Tage prüfen',
+            text: 'Wechsle die Tage, um den Vorschlag für jeden Tag zu sehen. Die Zahl beim Tag sind die Spiele an diesem Tag.',
+          },
+          drag: {
+            title: 'Von Hand verschieben',
+            text: 'Spiele lassen sich ziehen: von den nicht zugewiesenen ins Raster, zwischen Plätzen und Uhrzeiten oder zurück. Ein Klick auf ein Spiel öffnet den Inspektor.',
+          },
+          publish: {
+            title: 'Bestätigen und veröffentlichen',
+            text: 'Den Vorschlag bestätigst du mit „Zeitplan bestätigen“. Dann „Alle veröffentlichen“ — erst dann sehen die Zuschauer den Spielplan.',
+          },
+          notesOpen: {
+            title: '5. Hinweise zu Spielen',
+            text: '„Hinweise…“ öffnet Hinweise für viele Spiele — für einen Tag, Plätze, Kategorien oder alle Spiele.',
+          },
+          notes: {
+            title: 'Hinweise für viele oder ein Spiel',
+            text: 'Wähle die Spiele, schreibe den Text und speichere — die Vorschau zeigt, wie viele Spiele betroffen sind. Den Hinweis eines einzelnen Spiels änderst du im Inspektor. Das war’s — das Turnier ist bereit!',
+          },
+        },
+      },
       path: {
         sectionSteps: 'Vorbereitung und Spiele',
         sectionTools: 'Immer griffbereit',
@@ -1294,6 +1444,81 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hidePassword: 'Hide password',
         enter: 'Enter office',
         loggingIn: 'Signing in...',
+      },
+      tour: {
+        start: 'Guide',
+        counter: 'Step {current} of {total}',
+        back: 'Back',
+        next: 'Next',
+        finish: 'Finish',
+        close: 'Close the guide',
+        offerTitle: 'First time in the office?',
+        offerText: 'The guide takes you step by step: categories, groups, form of play, schedule and notes.',
+        offerStart: 'Start the guide',
+        offerLater: 'Not now',
+        missing: 'This control is not on screen right now — it appears after the earlier steps. You can go on.',
+        steps: {
+          categories: {
+            title: '1. Categories',
+            text: 'Tick the tournament categories (B1–B4 women and men are already ticked), add your own — e.g. doubles or mixed — and click “Confirm categories”. Change them later with “Edit” and “+ Add category”.',
+          },
+          players: {
+            title: 'Players',
+            text: 'Add a single player here; import a whole list in the admin panel. Doubles pairs are created in the doubles category.',
+          },
+          divisions: {
+            title: '2. Groups — pick a category',
+            text: 'Click a category. Below its name you see how many players it has and how many are already in groups.',
+          },
+          groups: {
+            title: 'Groups and players',
+            text: 'Set the number of groups and click “Distribute automatically”, or drag players from the list into groups. The number next to a name is the player’s fixed start number in the category. Changes save by themselves.',
+          },
+          formats: {
+            title: '3. Form of play',
+            text: 'For every category choose: group stage only, groups and a draw, or a draw only (with one group). The preview shows who meets whom and how many matches there will be.',
+          },
+          formatConfirm: {
+            title: 'Confirm the form',
+            text: 'Confirm the category here, or all at once with the button at the top. A confirmed category has a ✓ in the list.',
+          },
+          b1Courts: {
+            title: '4. Schedule — B1 courts',
+            text: 'Mark the courts for B1 with “B1” in the court header. A B1 match always lasts 75 minutes — even on another court — so it takes more room on the board.',
+          },
+          generate: {
+            title: 'Generate matches',
+            text: 'Click “Generate matches”: every group match is created and goes to Unassigned at the bottom of the screen.',
+          },
+          hours: {
+            title: 'Hours of the day',
+            text: 'Set when the day starts and ends. The board shows the whole day and the planner stays within those hours.',
+          },
+          autoPlan: {
+            title: 'Plan automatically',
+            text: '“Plan this day” places the chosen day; the button next to it the whole stage or tournament. You first get a proposal: review it, then approve or drop it.',
+          },
+          days: {
+            title: 'Check every day',
+            text: 'Switch days to look at the proposal on each of them. The number next to a day is how many matches fall on it.',
+          },
+          drag: {
+            title: 'Move by hand',
+            text: 'Drag matches: from Unassigned onto the board, between courts and times, or back to the drawer. Clicking a match opens the inspector.',
+          },
+          publish: {
+            title: 'Approve and publish',
+            text: 'Approve the planner’s proposal with “Approve schedule”. Then “Publish all” — only then do spectators see the schedule.',
+          },
+          notesOpen: {
+            title: '5. Notes for matches',
+            text: '“Notes…” opens notes for many matches at once — for a day, courts, categories or every match.',
+          },
+          notes: {
+            title: 'Notes for many or one',
+            text: 'Pick the matches, type the note and save — the preview shows how many matches it touches. Change a single match’s note in the inspector. That’s it — the tournament is ready!',
+          },
+        },
       },
       path: {
         sectionSteps: 'Setup and play',
@@ -1922,6 +2147,81 @@ export const OFFICE_TRANSLATION_PATCHES = {
         enter: 'Entra nell\'ufficio',
         loggingIn: 'Accesso in corso...',
       },
+      tour: {
+        start: 'Guida',
+        counter: 'Passo {current} di {total}',
+        back: 'Indietro',
+        next: 'Avanti',
+        finish: 'Fine',
+        close: 'Chiudi la guida',
+        offerTitle: 'Prima volta in ufficio?',
+        offerText: 'La guida ti accompagna passo per passo: categorie, gironi, formula di gioco, calendario e note.',
+        offerStart: 'Avvia la guida',
+        offerLater: 'Non ora',
+        missing: 'Questo elemento ora non è sullo schermo — comparirà dopo i passi precedenti. Puoi andare avanti.',
+        steps: {
+          categories: {
+            title: '1. Categorie',
+            text: 'Seleziona le categorie del torneo (B1–B4 donne e uomini sono già selezionate), aggiungine una tua — ad es. doppio o misto — e fai clic su «Conferma categorie». Poi le modifichi con «Modifica» e «+ Aggiungi categoria».',
+          },
+          players: {
+            title: 'Giocatori',
+            text: 'Un singolo giocatore si aggiunge qui, un elenco intero con l’importazione nel pannello amministratore. Le coppie di doppio si creano nella categoria di doppio.',
+          },
+          divisions: {
+            title: '2. Gironi — scegli la categoria',
+            text: 'Fai clic su una categoria. Sotto il nome vedi quanti giocatori ha e quanti sono già nei gironi.',
+          },
+          groups: {
+            title: 'Gironi e giocatori',
+            text: 'Imposta il numero di gironi e fai clic su «Distribuisci automaticamente», oppure trascina i giocatori dall’elenco nei gironi. Il numero accanto al nome è il numero di partenza fisso nella categoria. Le modifiche si salvano da sole.',
+          },
+          formats: {
+            title: '3. Formula di gioco',
+            text: 'Per ogni categoria scegli: solo fase a gironi, gironi e tabellone, oppure solo tabellone (con un girone). L’anteprima mostra chi incontra chi e quante partite ci saranno.',
+          },
+          formatConfirm: {
+            title: 'Conferma la formula',
+            text: 'Conferma la categoria qui oppure tutte insieme con il pulsante in alto. Una categoria confermata ha ✓ nell’elenco.',
+          },
+          b1Courts: {
+            title: '4. Calendario — campi B1',
+            text: 'Segna i campi per B1 con «B1» nell’intestazione del campo. Una partita B1 dura sempre 75 minuti — anche su un altro campo — quindi occupa più spazio nella griglia.',
+          },
+          generate: {
+            title: 'Genera le partite',
+            text: 'Fai clic su «Genera partite»: tutte le partite dei gironi vengono create e finiscono nelle non assegnate in fondo allo schermo.',
+          },
+          hours: {
+            title: 'Orari del giorno',
+            text: 'Imposta inizio e fine del giorno. La griglia mostra tutto il giorno e il pianificatore resta in quegli orari.',
+          },
+          autoPlan: {
+            title: 'Pianifica automaticamente',
+            text: '«Pianifica questo giorno» sistema il giorno scelto, il pulsante accanto l’intera fase o il torneo. Prima vedi una proposta: controllala e approvala o scartala.',
+          },
+          days: {
+            title: 'Controlla tutti i giorni',
+            text: 'Cambia giorno per vedere la proposta su ciascuno. Il numero accanto al giorno sono le partite di quel giorno.',
+          },
+          drag: {
+            title: 'Sposta a mano',
+            text: 'Trascina le partite: dalle non assegnate alla griglia, tra campi e orari o di nuovo nel cassetto. Un clic sulla partita apre l’ispettore.',
+          },
+          publish: {
+            title: 'Approva e pubblica',
+            text: 'Approva la proposta con «Conferma programma». Poi «Pubblica tutto» — solo allora il pubblico vede il calendario.',
+          },
+          notesOpen: {
+            title: '5. Note per le partite',
+            text: '«Note…» apre le note per molte partite insieme — per un giorno, campi, categorie o tutte le partite.',
+          },
+          notes: {
+            title: 'Note per molte o una partita',
+            text: 'Scegli le partite, scrivi la nota e salva — l’anteprima mostra quante partite riguarda. La nota di una sola partita si modifica nell’ispettore. Ecco fatto — il torneo è pronto!',
+          },
+        },
+      },
       path: {
         sectionSteps: 'Preparazione e gioco',
         sectionTools: 'Sempre a portata di mano',
@@ -2549,6 +2849,81 @@ export const OFFICE_TRANSLATION_PATCHES = {
         enter: 'Entrar a la oficina',
         loggingIn: 'Iniciando sesión...',
       },
+      tour: {
+        start: 'Guía',
+        counter: 'Paso {current} de {total}',
+        back: 'Atrás',
+        next: 'Siguiente',
+        finish: 'Terminar',
+        close: 'Cerrar la guía',
+        offerTitle: '¿Primera vez en la oficina?',
+        offerText: 'La guía te lleva paso a paso: categorías, grupos, formato de juego, calendario y notas.',
+        offerStart: 'Iniciar la guía',
+        offerLater: 'Ahora no',
+        missing: 'Este elemento no está ahora en pantalla — aparecerá tras los pasos anteriores. Puedes continuar.',
+        steps: {
+          categories: {
+            title: '1. Categorías',
+            text: 'Marca las categorías del torneo (B1–B4 mujeres y hombres ya están marcadas), añade la tuya — p. ej. dobles o mixto — y haz clic en «Confirmar categorías». Después las cambias con «Editar» y «+ Añadir categoría».',
+          },
+          players: {
+            title: 'Jugadores',
+            text: 'Un jugador se añade aquí; una lista entera, importándola en el panel de administración. Las parejas de dobles se crean en la categoría de dobles.',
+          },
+          divisions: {
+            title: '2. Grupos — elige la categoría',
+            text: 'Haz clic en una categoría. Bajo el nombre ves cuántos jugadores tiene y cuántos ya están en grupos.',
+          },
+          groups: {
+            title: 'Grupos y jugadores',
+            text: 'Ajusta el número de grupos y haz clic en «Distribuir automáticamente», o arrastra jugadores de la lista a los grupos. El número junto al nombre es el número de salida fijo en la categoría. Los cambios se guardan solos.',
+          },
+          formats: {
+            title: '3. Formato de juego',
+            text: 'Para cada categoría elige: solo fase de grupos, grupos y cuadro, o solo cuadro (con un grupo). La vista previa muestra quién juega contra quién y cuántos partidos habrá.',
+          },
+          formatConfirm: {
+            title: 'Confirma el formato',
+            text: 'Confirma la categoría aquí o todas a la vez con el botón de arriba. Una categoría confirmada tiene ✓ en la lista.',
+          },
+          b1Courts: {
+            title: '4. Calendario — pistas B1',
+            text: 'Marca las pistas para B1 con «B1» en la cabecera de la pista. Un partido B1 dura siempre 75 minutos — también en otra pista — así que ocupa más espacio en la cuadrícula.',
+          },
+          generate: {
+            title: 'Genera los partidos',
+            text: 'Haz clic en «Generar partidos»: se crean todos los partidos de grupo y van a Sin asignar, abajo en la pantalla.',
+          },
+          hours: {
+            title: 'Horario del día',
+            text: 'Ajusta el inicio y el final del día. La cuadrícula muestra el día entero y el planificador no sale de ese horario.',
+          },
+          autoPlan: {
+            title: 'Planifica automáticamente',
+            text: '«Planificar este día» coloca el día elegido; el botón de al lado, toda la fase o el torneo. Primero verás una propuesta: revísala y apruébala o descártala.',
+          },
+          days: {
+            title: 'Revisa todos los días',
+            text: 'Cambia de día para ver la propuesta en cada uno. El número junto al día son los partidos de ese día.',
+          },
+          drag: {
+            title: 'Mueve a mano',
+            text: 'Arrastra los partidos: de Sin asignar a la cuadrícula, entre pistas y horas o de vuelta al cajón. Un clic en un partido abre el inspector.',
+          },
+          publish: {
+            title: 'Aprueba y publica',
+            text: 'Aprueba la propuesta con «Confirmar calendario». Después «Publicar todo» — solo entonces el público verá el calendario.',
+          },
+          notesOpen: {
+            title: '5. Notas de los partidos',
+            text: '«Notas…» abre las notas para muchos partidos a la vez — para un día, pistas, categorías o todos los partidos.',
+          },
+          notes: {
+            title: 'Notas para muchos o uno',
+            text: 'Elige los partidos, escribe la nota y guarda — la vista previa muestra a cuántos partidos afecta. La nota de un solo partido se cambia en el inspector. ¡Listo — el torneo está preparado!',
+          },
+        },
+      },
       path: {
         sectionSteps: 'Preparación y juego',
         sectionTools: 'Siempre a mano',
@@ -3175,6 +3550,81 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hidePassword: 'Masquer le mot de passe',
         enter: 'Entrer au bureau',
         loggingIn: 'Connexion...',
+      },
+      tour: {
+        start: 'Guide',
+        counter: 'Étape {current} sur {total}',
+        back: 'Retour',
+        next: 'Suivant',
+        finish: 'Terminer',
+        close: 'Fermer le guide',
+        offerTitle: 'Première fois au bureau ?',
+        offerText: 'Le guide vous accompagne pas à pas : catégories, poules, formule de jeu, programme et remarques.',
+        offerStart: 'Lancer le guide',
+        offerLater: 'Pas maintenant',
+        missing: 'Cet élément n’est pas à l’écran pour l’instant — il apparaîtra après les étapes précédentes. Vous pouvez continuer.',
+        steps: {
+          categories: {
+            title: '1. Catégories',
+            text: 'Cochez les catégories du tournoi (B1–B4 dames et messieurs sont déjà cochées), ajoutez la vôtre — par ex. double ou mixte — puis cliquez sur « Confirmer les catégories ». Modifiez-les ensuite avec « Modifier » et « + Ajouter une catégorie ».',
+          },
+          players: {
+            title: 'Joueurs',
+            text: 'Un joueur s’ajoute ici ; une liste entière par import dans le panneau d’administration. Les paires de double se créent dans la catégorie de double.',
+          },
+          divisions: {
+            title: '2. Poules — choisissez la catégorie',
+            text: 'Cliquez sur une catégorie. Sous son nom, vous voyez combien de joueurs elle compte et combien sont déjà en poule.',
+          },
+          groups: {
+            title: 'Poules et joueurs',
+            text: 'Réglez le nombre de poules et cliquez sur « Répartir automatiquement », ou glissez les joueurs de la liste vers les poules. Le numéro près du nom est le numéro de départ fixe dans la catégorie. Les changements s’enregistrent seuls.',
+          },
+          formats: {
+            title: '3. Formule de jeu',
+            text: 'Pour chaque catégorie, choisissez : phase de poules seulement, poules puis tableau, ou tableau seul (avec une poule). L’aperçu montre qui rencontre qui et combien de matchs il y aura.',
+          },
+          formatConfirm: {
+            title: 'Validez la formule',
+            text: 'Validez la catégorie ici, ou toutes d’un coup avec le bouton en haut. Une catégorie validée porte un ✓ dans la liste.',
+          },
+          b1Courts: {
+            title: '4. Programme — courts B1',
+            text: 'Marquez les courts pour B1 avec « B1 » dans l’en-tête du court. Un match B1 dure toujours 75 minutes — même sur un autre court — il prend donc plus de place sur la grille.',
+          },
+          generate: {
+            title: 'Générez les matchs',
+            text: 'Cliquez sur « Générer les matchs » : tous les matchs de poule sont créés et vont dans Non placés, en bas de l’écran.',
+          },
+          hours: {
+            title: 'Horaires du jour',
+            text: 'Réglez le début et la fin de la journée. La grille montre toute la journée et le planificateur reste dans ces horaires.',
+          },
+          autoPlan: {
+            title: 'Planifiez automatiquement',
+            text: '« Planifier cette journée » organise le jour choisi ; le bouton voisin, toute la phase ou le tournoi. Vous voyez d’abord une proposition : vérifiez-la, puis validez-la ou abandonnez-la.',
+          },
+          days: {
+            title: 'Vérifiez chaque jour',
+            text: 'Changez de jour pour voir la proposition sur chacun. Le nombre près du jour indique les matchs de ce jour.',
+          },
+          drag: {
+            title: 'Déplacez à la main',
+            text: 'Glissez les matchs : de Non placés vers la grille, entre courts et horaires, ou de retour dans le tiroir. Un clic sur un match ouvre l’inspecteur.',
+          },
+          publish: {
+            title: 'Validez et publiez',
+            text: 'Validez la proposition avec « Valider le planning ». Puis « Tout publier » — ce n’est qu’alors que le public voit le programme.',
+          },
+          notesOpen: {
+            title: '5. Remarques sur les matchs',
+            text: '« Remarques… » ouvre les remarques pour plusieurs matchs à la fois — pour un jour, des courts, des catégories ou tous les matchs.',
+          },
+          notes: {
+            title: 'Remarques pour plusieurs ou un seul',
+            text: 'Choisissez les matchs, saisissez la remarque et enregistrez — l’aperçu indique combien de matchs sont concernés. La remarque d’un seul match se modifie dans l’inspecteur. C’est tout — le tournoi est prêt !',
+          },
+        },
       },
       path: {
         sectionSteps: 'Préparation et matchs',

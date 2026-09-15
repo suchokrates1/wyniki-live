@@ -21,6 +21,81 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       enter: 'Įeiti į biurą',
       loggingIn: 'Jungiamasi...',
     },
+    tour: {
+      start: 'Gidas',
+      counter: '{current} žingsnis iš {total}',
+      back: 'Atgal',
+      next: 'Toliau',
+      finish: 'Baigti',
+      close: 'Uždaryti gidą',
+      offerTitle: 'Pirmą kartą biure?',
+      offerText: 'Gidas žingsnis po žingsnio parodys: kategorijas, grupes, varžybų formą, tvarkaraštį ir pastabas.',
+      offerStart: 'Paleisti gidą',
+      offerLater: 'Ne dabar',
+      missing: 'Šio elemento dabar nėra ekrane — jis atsiras po ankstesnių žingsnių. Galite eiti toliau.',
+      steps: {
+        categories: {
+          title: '1. Kategorijos',
+          text: 'Pažymėkite turnyro kategorijas (B1–B4 moterų ir vyrų jau pažymėtos), pridėkite savo — pvz., dvejetų ar mišrią — ir spustelėkite „Patvirtinti kategorijas“. Vėliau jas keisite mygtukais „Redaguoti“ ir „+ Pridėti kategoriją“.',
+        },
+        players: {
+          title: 'Žaidėjai',
+          text: 'Pavienį žaidėją pridėsite čia, visą sąrašą — importuodami administratoriaus skydelyje. Dvejetų poras kuriate dvejetų kategorijoje.',
+        },
+        divisions: {
+          title: '2. Grupės — pasirinkite kategoriją',
+          text: 'Spustelėkite kategoriją. Po pavadinimu matysite, kiek joje žaidėjų ir kiek jų jau grupėse.',
+        },
+        groups: {
+          title: 'Grupės ir žaidėjai',
+          text: 'Nustatykite grupių skaičių ir spustelėkite „Paskirstyti automatiškai“ arba tempkite žaidėjus iš sąrašo į grupes. Skaičius prie pavardės — pastovus starto numeris kategorijoje. Pakeitimai išsaugomi patys.',
+        },
+        formats: {
+          title: '3. Varžybų forma',
+          text: 'Kiekvienai kategorijai pasirinkite: tik grupių etapas, grupės ir lentelė arba tik lentelė (kai yra viena grupė). Peržiūra rodo, kas su kuo žais ir kiek bus mačų.',
+        },
+        formatConfirm: {
+          title: 'Patvirtinkite formą',
+          text: 'Patvirtinkite kategoriją čia arba visas iš karto viršuje esančiu mygtuku. Patvirtinta kategorija sąraše turi ✓.',
+        },
+        b1Courts: {
+          title: '4. Tvarkaraštis — B1 kortai',
+          text: 'Pažymėkite B1 kortus mygtuku „B1“ korto antraštėje. B1 mačas visada trunka 75 minutes — net ir kitame korte — todėl tinklelyje užima daugiau vietos.',
+        },
+        generate: {
+          title: 'Sukurkite mačus',
+          text: 'Spustelėkite „Generuoti mačus“: bus sukurti visi grupių mačai ir pateks į nepriskirtus ekrano apačioje.',
+        },
+        hours: {
+          title: 'Dienos valandos',
+          text: 'Nustatykite dienos pradžią ir pabaigą. Tinklelis rodys visą dieną, o planuoklis neišeis už šių valandų.',
+        },
+        autoPlan: {
+          title: 'Išdėstykite automatiškai',
+          text: '„Suplanuoti šią dieną“ sutvarko pasirinktą dieną, šalia esantis mygtukas — visą etapą ar turnyrą. Pirmiausia pamatysite pasiūlymą: peržiūrėkite ir patvirtinkite arba atmeskite.',
+        },
+        days: {
+          title: 'Patikrinkite visas dienas',
+          text: 'Perjunkite dienas, kad pamatytumėte pasiūlymą kiekvienai. Skaičius prie dienos — tos dienos mačai.',
+        },
+        drag: {
+          title: 'Perkelkite ranka',
+          text: 'Mačus galima tempti: iš nepriskirtų į tinklelį, tarp kortų ir valandų arba atgal į stalčių. Spustelėjus mačą atsidaro inspektorius.',
+        },
+        publish: {
+          title: 'Patvirtinkite ir paskelbkite',
+          text: 'Pasiūlymą patvirtinate mygtuku „Patvirtinti tvarkaraštį“. Tada „Paskelbti visus“ — tik tada žiūrovai pamatys tvarkaraštį.',
+        },
+        notesOpen: {
+          title: '5. Mačų pastabos',
+          text: '„Pastabos…“ atveria pastabas daugeliui mačų iš karto — dienai, kortams, kategorijoms ar visiems mačams.',
+        },
+        notes: {
+          title: 'Pastabos daugeliui ar vienam',
+          text: 'Pasirinkite mačus, įrašykite tekstą ir išsaugokite — peržiūra parodys, kiek mačų tai paveiks. Vieno mačo pastabą keisite inspektoriuje. Viskas — turnyras paruoštas!',
+        },
+      },
+    },
     path: {
       sectionSteps: 'Pasiruošimas ir varžybos',
       sectionTools: 'Visada po ranka',

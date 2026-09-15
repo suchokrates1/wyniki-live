@@ -1787,3 +1787,49 @@ body.office-body {
 .office-ko__actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; padding-top: 2px; }
 
 .office-draws__play-note { margin: 0; padding: 8px 12px; border-radius: 8px; background: rgba(245, 184, 61, 0.1); color: var(--kort-warn); }
+
+/* ——— the guide: a bubble next to the control, the control ringed ——— */
+.office-tour { position: fixed; inset: 0; z-index: 90; pointer-events: none; }
+.office-tour__ring {
+  position: fixed;
+  border: 2px solid var(--kort-lime);
+  border-radius: 12px;
+  box-shadow: 0 0 0 4px rgba(198, 233, 83, 0.25), 0 0 32px rgba(198, 233, 83, 0.35);
+  transition: top 0.25s var(--office-ease, ease), left 0.25s var(--office-ease, ease), width 0.25s var(--office-ease, ease), height 0.25s var(--office-ease, ease);
+  animation: office-tour-pulse 1.8s ease-in-out infinite;
+}
+@keyframes office-tour-pulse { 50% { box-shadow: 0 0 0 8px rgba(198, 233, 83, 0.12), 0 0 40px rgba(198, 233, 83, 0.25); } }
+.office-tour__bubble {
+  position: fixed;
+  pointer-events: auto;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--kort-lime);
+  border-radius: 12px;
+  background: var(--kort-deep);
+  color: var(--kort-ice);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  transition: top 0.25s var(--office-ease, ease), left 0.25s var(--office-ease, ease);
+  animation: office-arrive 0.3s var(--office-ease, ease) backwards;
+}
+.office-tour__head { display: flex; justify-content: space-between; align-items: center; }
+.office-tour__counter { font: 600 0.68rem/1 var(--kort-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--kort-lime); }
+.office-tour__close { border: 0; background: transparent; color: var(--kort-mist); cursor: pointer; font-size: 0.9rem; }
+.office-tour__title { margin: 0; font-size: 1rem; font-weight: 800; text-wrap: balance; }
+.office-tour__text { margin: 0; font-size: 0.86rem; line-height: 1.5; color: var(--kort-ice); }
+.office-tour__missing { margin: 0; padding: 6px 8px; border-radius: 6px; background: rgba(245, 184, 61, 0.1); color: var(--kort-warn); font-size: 0.78rem; }
+.office-tour__dots { display: flex; flex-wrap: wrap; gap: 4px; }
+.office-tour__dots span { width: 14px; height: 4px; border-radius: 999px; background: var(--kort-raise); }
+.office-tour__dots span.is-done { background: rgba(198, 233, 83, 0.5); }
+.office-tour__dots span.is-current { background: var(--kort-lime); width: 22px; }
+.office-tour__actions { display: flex; align-items: center; gap: 8px; }
+.office-tour__spacer { flex: 1; }
+
+.office-tour-offer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 12px 20px 0; padding: 12px 16px; border: 1px solid var(--kort-lime); border-radius: 10px; background: var(--kort-lime-soft); }
+.office-tour-offer__text { display: grid; gap: 2px; flex: 1 1 320px; }
+.office-tour-offer__text span { color: var(--kort-mist); font-size: 0.86rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .office-tour__ring, .office-tour__bubble { transition: none; animation: none; }
+}
