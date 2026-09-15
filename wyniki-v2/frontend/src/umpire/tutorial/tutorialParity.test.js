@@ -7,8 +7,10 @@ import { hydrateMatchState } from '../match/matchStateIo.js';
 import { tutorialScript } from './tutorialController.js';
 import { tutorialSnapshotIds } from './presets.js';
 
+// the Android app is a separate repository: CI has no checkout of it, so the parity check runs where it exists
 const androidScript = path.resolve(
-  'C:/Users/sucho/Vest Tennis/android-tennis-referee/app/src/main/assets/tutorial/script.json',
+  process.env.ANDROID_TUTORIAL_SCRIPT
+    || 'C:/Users/sucho/Vest Tennis/android-tennis-referee/app/src/main/assets/tutorial/script.json',
 );
 
 test('tutorial script has unique step ids and required fields', () => {
@@ -39,8 +41,7 @@ test('tutorial script has unique step ids and required fields', () => {
   assert.equal(sideChange?.snapshot, 'side-change');
 });
 
-test('Android assets script keeps the same step ids', () => {
-  assert.equal(existsSync(androidScript), true, 'android script.json missing');
+test('Android assets script keeps the same step ids', { skip: existsSync(androidScript) ? false : `no Android checkout at ${androidScript}` }, () => {
   const copied = JSON.parse(readFileSync(androidScript, 'utf8'));
   assert.deepEqual(
     copied.steps.map((step) => step.id),
