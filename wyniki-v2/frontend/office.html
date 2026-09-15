@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700&family=Chivo:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://stats.dawidsuchodolski.pl/script.js" data-website-id="b49919d3-6628-40cc-9213-72ec52409e28"></script>
 </head>
 <body class="office-body" x-data="officeApp()" x-init="init()" x-effect="applyOfficeDocumentLang()">
@@ -70,6 +69,9 @@
         </template>
       </div>
       <form class="mt-6 space-y-4" @submit.prevent="authenticate">
+        <!-- password managers file the office password under the tournament -->
+        <input type="text" class="sr-only" tabindex="-1" aria-hidden="true" autocomplete="username" readonly
+               :value="tournamentMeta ? tournamentMeta.name : ''">
         <label class="form-control">
           <span class="label-text text-slate-700 font-semibold mb-2" x-text="ot('login.passwordLabel')"></span>
           <div class="relative">

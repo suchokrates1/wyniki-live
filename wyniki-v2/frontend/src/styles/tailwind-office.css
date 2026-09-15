@@ -1,0 +1,5 @@
+/* Imported last so utilities keep the precedence the CDN's runtime <style> had */
+@config "../../tailwind.pages.config.js";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -1,6 +1,7 @@
 import Alpine from 'alpinejs';
 import { ignoreCancelledAlpineTransitions } from './shared/alpineTransitions.js';
 import './main.css';
+import './styles/tailwind-admin.css';
 import { createAuthAdmin, installAdminFetchAuth } from './admin/auth.js';
 import { createCourtsAdmin } from './admin/courts.js';
 import { createTournamentsAdmin } from './admin/tournaments.js';

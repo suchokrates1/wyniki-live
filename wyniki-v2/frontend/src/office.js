@@ -17,6 +17,7 @@ import { createOfficeKnockoutBoardView } from './modules/office/knockoutBoardVie
 import { createOfficeTourView } from './modules/office/tourView.js';
 import './main.css';
 import './styles/office.css';
+import './styles/tailwind-office.css';
 
 window.Alpine = Alpine;
 
