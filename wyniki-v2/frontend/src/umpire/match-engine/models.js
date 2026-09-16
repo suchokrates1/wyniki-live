@@ -2,9 +2,18 @@
  * Port of android `domain/match/model/*`.
  * Kotlin data-class defaults and scoring helpers are the oracle.
  */
-function randomUUID() {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  throw new Error('crypto.randomUUID is required');
+/**
+ * UUID v4 for clientMatchUuid. crypto.randomUUID exists only on secure pages (https, localhost):
+ * a tablet on a venue server over plain http still has getRandomValues.
+ */
+export function randomUUID(cryptoApi = globalThis.crypto) {
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
+  if (!cryptoApi?.getRandomValues) throw new Error('crypto.getRandomValues is required');
+  const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export const StatsMode = Object.freeze({
