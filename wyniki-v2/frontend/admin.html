@@ -465,7 +465,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label class="form-control">
                 <span class="label-text">Kort (ID)</span>
-                <select class="select select-bordered select-sm" x-model="directorForm.courtId">
+                <select class="select select-bordered select-sm" x-model="directorForm.courtId" @change="loadDirectorPlayers(directorForm.courtId)">
                   <template x-for="court in courts" :key="court.kort_id">
                     <option :value="court.kort_id" x-text="(court.name || court.kort_id) + ' (' + court.kort_id + ')'"></option>
                   </template>
@@ -478,14 +478,43 @@
                   <input type="number" min="1" class="input input-bordered input-sm w-20" x-model="directorForm.setsToWin">
                 </div>
               </label>
-              <label class="form-control md:col-span-2">
-                <span class="label-text">Zawodnik 1</span>
-                <input type="text" class="input input-bordered input-sm" x-model="directorForm.player1Name">
-              </label>
-              <label class="form-control md:col-span-2">
-                <span class="label-text">Zawodnik 2</span>
-                <input type="text" class="input input-bordered input-sm" x-model="directorForm.player2Name">
-              </label>
+              <template x-for="side in [{ n: 1, key: 'player1Name', label: 'Zawodnik 1' }, { n: 2, key: 'player2Name', label: 'Zawodnik 2' }]" :key="'dir-player-' + side.n">
+                <div class="form-control md:col-span-2" @click.outside="closeDirectorPlayerPicker(side.n)">
+                  <span class="label-text" x-text="side.label"></span>
+                  <div class="relative">
+                    <button type="button" class="btn btn-sm w-full justify-between font-normal border border-base-300 bg-base-100 hover:bg-base-200"
+                      @click="directorPlayerPicker === side.n ? closeDirectorPlayerPicker(side.n) : openDirectorPlayerPicker(side.n)">
+                      <span class="truncate"
+                        :class="directorForm[side.key] && directorForm[side.key] !== '-' ? '' : 'opacity-50'"
+                        x-text="directorForm[side.key] && directorForm[side.key] !== '-' ? directorForm[side.key] : 'Wybierz z listy zawodników'"></span>
+                      <span class="opacity-40 text-xs">▾</span>
+                    </button>
+                    <div x-show="directorPlayerPicker === side.n" x-cloak class="absolute left-0 right-0 z-[60] mt-1 overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-xl">
+                      <div class="border-b border-base-300 p-2">
+                        <input type="search" :data-director-player-search="side.n" autocomplete="off" placeholder="Szukaj nazwiska…"
+                          class="input input-sm input-bordered w-full"
+                          x-model="directorPlayerQuery"
+                          @keydown.enter.prevent="pickFirstDirectorPlayer()"
+                          @keydown.escape.prevent="closeDirectorPlayerPicker(side.n)">
+                      </div>
+                      <ul class="max-h-56 overflow-y-auto py-1">
+                        <template x-for="player in directorFilteredPlayers()" :key="player.id">
+                          <li>
+                            <button type="button" class="flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-base-200"
+                              :class="directorForm[side.key] === directorPlayerName(player) ? 'bg-base-200 font-semibold' : ''"
+                              @click="pickDirectorPlayer(side.n, player)">
+                              <span x-text="directorPlayerName(player)"></span>
+                              <span class="shrink-0 text-xs opacity-50" x-show="player.category || player.country" x-text="[player.category, player.country].filter(Boolean).join(' · ')"></span>
+                            </button>
+                          </li>
+                        </template>
+                      </ul>
+                      <p class="px-3 py-2 text-xs opacity-60" x-show="!directorPlayers.length">Brak zawodników tego turnieju w bazie.</p>
+                      <p class="px-3 py-2 text-xs opacity-60" x-show="directorPlayers.length && !directorFilteredPlayers().length">Brak wyników.</p>
+                    </div>
+                  </div>
+                </div>
+              </template>
               <label class="form-control">
                 <span class="label-text">Sety</span>
                 <div class="flex gap-2">

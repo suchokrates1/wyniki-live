@@ -1,4 +1,12 @@
-import { applyTabletToDirectorForm, directorDeviceCard, formatScoreLine } from './directorDevice.js';
+import {
+  applyTabletToDirectorForm,
+  asPlayerList,
+  directorDeviceCard,
+  filterTournamentPlayers,
+  formatScoreLine,
+  playerDisplayName,
+  tournamentIdFromCourtId,
+} from './directorDevice.js';
 
 export function createCourtsAdmin() {
   return {
@@ -315,6 +323,10 @@ export function createCourtsAdmin() {
       directorTablets: [],
       directorSelected: null,
       directorLoadedScore: null,
+      directorPlayers: [],
+      directorPlayersTournamentId: null,
+      directorPlayerPicker: 0,
+      directorPlayerQuery: '',
       directorForm: {
         sessionCourtId: '',
         matchId: null,
@@ -337,12 +349,15 @@ export function createCourtsAdmin() {
       async openDirectorPanel(kortId) {
         this.directorPanelOpen = true;
         this.directorLoading = true;
+        this.directorPlayerPicker = 0;
+        this.directorPlayerQuery = '';
         this.directorForm.sessionCourtId = kortId;
         this.directorForm.courtId = kortId;
         try {
           const [tabletsRes, matchHint] = await Promise.all([
             fetch('/admin/api/director/tablets?court_id=' + encodeURIComponent(kortId)),
             Promise.resolve(this.courtData[kortId] || {}),
+            this.loadDirectorPlayers(kortId),
           ]);
           if (!tabletsRes.ok) throw new Error('Nie udało się wczytać tabletów');
           const payload = await tabletsRes.json();
@@ -366,6 +381,63 @@ export function createCourtsAdmin() {
           this.directorLoadedScore = this.directorScorePayload();
           this.directorLoading = false;
         }
+      },
+
+      directorFilteredPlayers() {
+        return filterTournamentPlayers(this.directorPlayers, this.directorPlayerQuery);
+      },
+
+      directorPlayerName(player) {
+        return playerDisplayName(player);
+      },
+
+      async loadDirectorPlayers(courtId) {
+        const row = this.courts.find((court) => court.kort_id === courtId);
+        const tournamentId = row?.tournament_id || tournamentIdFromCourtId(courtId);
+        if (!tournamentId) {
+          this.directorPlayers = [];
+          this.directorPlayersTournamentId = null;
+          return;
+        }
+        if (this.directorPlayersTournamentId === tournamentId && this.directorPlayers.length) return;
+        try {
+          const response = await fetch('/admin/api/tournaments/' + tournamentId + '/players');
+          if (!response.ok) throw new Error('Nie udało się wczytać zawodników');
+          this.directorPlayers = asPlayerList(await response.json());
+          this.directorPlayersTournamentId = tournamentId;
+        } catch (err) {
+          console.error(err);
+          this.directorPlayers = [];
+          this.directorPlayersTournamentId = null;
+          this.showToast(err.message || 'Błąd listy zawodników', 'error');
+        }
+      },
+
+      openDirectorPlayerPicker(side) {
+        this.directorPlayerPicker = side;
+        this.directorPlayerQuery = '';
+        this.$nextTick(() => {
+          const field = this.$root?.querySelector?.(`[data-director-player-search="${side}"]`);
+          field?.focus();
+          field?.select?.();
+        });
+      },
+
+      closeDirectorPlayerPicker(side) {
+        if (this.directorPlayerPicker === side) this.directorPlayerPicker = 0;
+      },
+
+      pickDirectorPlayer(side, player) {
+        const name = playerDisplayName(player);
+        if (side === 1) this.directorForm.player1Name = name;
+        else this.directorForm.player2Name = name;
+        this.directorPlayerPicker = 0;
+        this.directorPlayerQuery = '';
+      },
+
+      pickFirstDirectorPlayer() {
+        const first = this.directorFilteredPlayers()[0];
+        if (first) this.pickDirectorPlayer(this.directorPlayerPicker, first);
       },
 
       directorTabletLabel(tablet) {

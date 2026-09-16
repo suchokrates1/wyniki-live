@@ -3,8 +3,11 @@ import test from 'node:test';
 import {
   applyTabletToDirectorForm,
   directorDeviceCard,
+  filterTournamentPlayers,
   formatClock,
+  playerDisplayName,
   tennisPoints,
+  tournamentIdFromCourtId,
 } from './directorDevice.js';
 
 test('tennis points match overlay display', () => {
@@ -73,4 +76,22 @@ test('device card shows court, clock, names and live points', () => {
 
 test('clock uses start time while the match is live', () => {
   assert.equal(formatClock({ match_start_time_ms: 1_000 }, 61_000), '01:00');
+});
+
+test('tournament id is read from the court id', () => {
+  assert.equal(tournamentIdFromCourtId('t32-1'), 32);
+  assert.equal(tournamentIdFromCourtId('t7-12'), 7);
+  assert.equal(playerDisplayName({ first_name: 'Jessica', last_name: 'González' }), 'Jessica González');
+});
+
+test('director player search filters the tournament roster as you type', () => {
+  const players = [
+    { id: 1, first_name: 'Jessica', last_name: 'González', category: 'B1K' },
+    { id: 2, first_name: 'Daniela', last_name: 'Schmidt', category: 'B1K' },
+    { id: 3, first_name: 'Justyna', last_name: 'Stopierzyńska', category: 'B2K' },
+  ];
+  assert.equal(filterTournamentPlayers(players, '').length, 3);
+  assert.deepEqual(filterTournamentPlayers(players, 'gonz').map((row) => row.id), [1]);
+  assert.deepEqual(filterTournamentPlayers(players, 'B2').map((row) => row.last_name), ['Stopierzyńska']);
+  assert.equal(filterTournamentPlayers(players, 'xyz').length, 0);
 });

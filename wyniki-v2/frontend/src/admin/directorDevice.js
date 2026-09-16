@@ -90,6 +90,41 @@ export function directorDeviceCard(tablet, nowMs = Date.now()) {
   };
 }
 
+export function playerDisplayName(player = {}) {
+  const full = `${player.first_name || ''} ${player.last_name || ''}`.trim();
+  return full || player.name || '';
+}
+
+export function tournamentIdFromCourtId(courtId) {
+  const match = String(courtId || '').trim().match(/^t(\d+)(?:-|$)/i);
+  return match ? Number(match[1]) : null;
+}
+
+export function asPlayerList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.players)) return payload.players;
+  return [];
+}
+
+export function filterTournamentPlayers(players = [], query = '') {
+  const rows = [...players].sort((a, b) =>
+    playerDisplayName(a).localeCompare(playerDisplayName(b), 'pl', { sensitivity: 'base' })
+  );
+  const q = String(query || '').trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter((player) => {
+    const hay = [
+      playerDisplayName(player),
+      player.name,
+      player.first_name,
+      player.last_name,
+      player.category,
+      player.country,
+    ].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+}
+
 export function applyTabletToDirectorForm(tablet = {}) {
   const snapshot = tablet.snapshot || {};
   return {
