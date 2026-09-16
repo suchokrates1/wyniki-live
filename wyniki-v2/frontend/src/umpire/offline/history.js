@@ -29,7 +29,8 @@ export function createHistory({ table } = {}) {
     async save(entry) {
       if (!entry?.clientMatchUuid) return null;
       const existing = (await table.all()).find((row) => row.clientMatchUuid === entry.clientMatchUuid);
-      return table.put({ id: existing?.id, ...entry });
+      // a new row has no id key at all: IndexedDB rejects id: undefined on an autoIncrement store
+      return table.put(existing?.id != null ? { id: existing.id, ...entry } : { ...entry });
     },
 
     async list() {

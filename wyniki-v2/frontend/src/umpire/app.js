@@ -1515,7 +1515,14 @@ function createUmpireApp() {
 
     async syncMatch(reason, state, extra) {
       if (this.tutorialMode) return { failed: false };
-      if (reason === 'finalize') await this.persistHistory(state);
+      if (reason === 'finalize') {
+        // the tablet's own history must never stop the result reaching the server
+        try {
+          await this.persistHistory(state);
+        } catch (error) {
+          console.error('Umpire history save failed:', error);
+        }
+      }
       if (!this._outbox) {
         return { failed: true, offline: !navigator.onLine };
       }

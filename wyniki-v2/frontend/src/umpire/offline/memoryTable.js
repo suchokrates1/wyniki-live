@@ -8,6 +8,8 @@ export function createMemoryTable() {
     },
 
     async put(row) {
+      // same rule as an IndexedDB autoIncrement store: a present but empty key is a DataError
+      if ('id' in row && row.id == null) throw new Error('DataError: the id key path yielded an invalid key');
       const next = { ...row };
       if (next.id == null) next.id = seq++;
       const index = rows.findIndex((item) => item.id === next.id);

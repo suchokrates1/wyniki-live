@@ -24,3 +24,16 @@ test('history skips TEST finishes and lists newest first', async () => {
   assert.equal(listed[0].winnerName, 'Kowalski');
   assert.equal(formatHistoryDuration({ duration: 8_000 }), '00:08');
 });
+
+test('history saves a new match without an empty id and updates it on the next save', async () => {
+  const history = createHistory({ table: createMemoryTable() });
+  const state = matchState();
+  state.matchStartTime = 1_000;
+  MatchFinishOutcomeApplier.apply(state, new FinishMatchRequest({ finishReason: MatchFinishReason.NORMAL }), 9_000);
+  await history.save(historyEntryFromState(state, 9_000));
+  state.player1Sets = 2;
+  await history.save(historyEntryFromState(state, 10_000));
+  const listed = await history.list();
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0].player1Sets, 2);
+});
