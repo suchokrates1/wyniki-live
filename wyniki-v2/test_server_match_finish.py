@@ -202,3 +202,30 @@ def test_create_without_explicit_config_still_stores_defaults(umpire_app_with_te
     config = created.get_json()["match_config"]
     assert config["sets_to_win"] == 2
     assert config["games_per_set"] == 4
+
+
+def test_put_walkover_with_awarded_sets_stays_a_walkover(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Walkover Cup", "2026-09-04", "2026-09-04", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+    client = umpire_app_with_temp_db.test_client()
+    court_id = f"t{tournament_id}-1"
+    match = _create_match(client, court_id, {"games_per_set": 4, "sets_to_win": 2})
+
+    # the tablet awards the match: the score already meets the format
+    done = client.put(
+        f"/api/matches/{match['id']}",
+        json={
+            "status": "finished",
+            "finish_reason": "walkover",
+            "winner_name": "Dutra",
+            "score": _score(player1_sets=0, player2_sets=2),
+            "match_config": {"games_per_set": 4, "sets_to_win": 2},
+        },
+    )
+    assert done.status_code == 200, done.get_data(as_text=True)
+    assert done.get_json()["finish_reason"] == "walkover"
+    assert done.get_json()["winner_name"] == "Dutra"
+    again = client.post(f"/api/matches/{match['id']}/finish", json={"finish_reason": "walkover", "winner_name": "Dutra"})
+    assert again.get_json()["finish_reason"] == "walkover"

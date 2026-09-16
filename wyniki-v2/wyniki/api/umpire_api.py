@@ -1400,20 +1400,21 @@ def update_match(match_id: int):
         became_finished = False
         already_finished = match.status == "finished"
         explicit_reason = str(data.get("finish_reason") or "").strip().lower()
-        if not already_finished and match_score_satisfies_format(match):
-            _finalize_match_record(match, {
-                "finish_reason": FINISH_REASON_NORMAL,
-                "winner_name": data.get("winner_name"),
-            })
-            became_finished = True
-        elif not already_finished and explicit_reason in {
+        if not already_finished and explicit_reason in {
             FINISH_REASON_RETIREMENT,
             FINISH_REASON_WALKOVER,
             FINISH_REASON_TEST,
         }:
             # PWA/Android finalize PUTs the outcome before POST /finish.
-            # Ignoring it left Vilnius-style 403 finishes stuck in_progress.
+            # Ignoring it left Vilnius-style 403 finishes stuck in_progress. Checked before the score:
+            # a walkover awards the sets, and that must not turn it into a normal finish.
             _finalize_match_record(match, data)
+            became_finished = True
+        elif not already_finished and match_score_satisfies_format(match):
+            _finalize_match_record(match, {
+                "finish_reason": FINISH_REASON_NORMAL,
+                "winner_name": data.get("winner_name"),
+            })
             became_finished = True
         elif not already_finished:
             requested = str(data.get("status") or "in_progress")
