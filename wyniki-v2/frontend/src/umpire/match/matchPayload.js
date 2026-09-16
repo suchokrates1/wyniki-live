@@ -67,6 +67,36 @@ export function toMatchPayload(state) {
   };
 }
 
+/** Live editable fields as they sit on the tablet — for the director panel. */
+export function toDirectorSnapshot(state) {
+  if (!state) return null;
+  const payload = toMatchPayload(state);
+  return {
+    court_id: payload.court_id || '',
+    court_name: state.courtName || payload.court_id || '',
+    player1_name: payload.player1_name || '',
+    player2_name: payload.player2_name || '',
+    is_doubles: Boolean(state.isDoubles),
+    player1_sets: payload.score.player1_sets,
+    player2_sets: payload.score.player2_sets,
+    player1_games: payload.score.player1_games,
+    player2_games: payload.score.player2_games,
+    player1_points: payload.score.player1_points,
+    player2_points: payload.score.player2_points,
+    sets_history: payload.score.sets_history,
+    is_player1_serving: Boolean(state.isPlayer1Serving),
+    is_tiebreak: Boolean(state.isTiebreak),
+    is_super_tiebreak: Boolean(state.isSuperTiebreak),
+    match_start_time_ms: payload.match_start_time_ms,
+    match_duration_ms: state.matchDuration || 0,
+    games_per_set: payload.match_config.games_per_set,
+    sets_to_win: payload.match_config.sets_to_win,
+    no_advantage: Boolean(payload.match_config.no_advantage),
+    tiebreak_only: Boolean(payload.match_config.tiebreak_only),
+    stats_mode: payload.match_config.stats_mode || 'ADVANCED',
+  };
+}
+
 export function toFinishPayload(request) {
   return {
     finish_reason: toApiFinishReason(request.finishReason),

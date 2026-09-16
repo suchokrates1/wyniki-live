@@ -74,6 +74,31 @@ test('ignoresCommandForAnotherMatch', () => {
   assert.equal(DirectorCommandApplier.appliesTo(state, command), false);
 });
 
+test('courtMoveWithoutScoreKeepsGamePoints', () => {
+  const state = new MatchState({
+    matchId: 671,
+    clientMatchUuid: 'uuid-gonzalez',
+    player1: playerOne,
+    player2: playerTwo,
+    courtId: 't31-2',
+    courtName: 'Kort 2',
+  });
+  state.player1Points = 1;
+  state.player2Points = 0;
+  const next = DirectorCommandApplier.apply(
+    state,
+    directorCommandDto({
+      matchId: 671,
+      clientMatchUuid: 'uuid-gonzalez',
+      courtId: 't31-8',
+      courtName: 'Kort 8',
+    }),
+  );
+  assert.equal(next.courtId, 't31-8');
+  assert.equal(next.player1Points, 1);
+  assert.equal(next.player2Points, 0);
+});
+
 test('doublesRenameUpdatesTeamDisplayNames', () => {
   const state = new MatchState({
     matchId: 10,

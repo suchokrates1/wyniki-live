@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { FinishMatchRequest, MatchFinishReason } from '../match-engine/models.js';
 import { matchState } from '../match-engine/testSupport.js';
-import { toApiFinishReason, toFinishPayload, toMatchEventPayload, toMatchPayload, toStatisticsPayload } from './matchPayload.js';
+import { toApiFinishReason, toDirectorSnapshot, toFinishPayload, toMatchEventPayload, toMatchPayload, toStatisticsPayload } from './matchPayload.js';
 
 test('match payload uses Android snake_case and lowercase finish reasons', () => {
   const state = matchState();
@@ -21,6 +21,25 @@ test('match payload uses Android snake_case and lowercase finish reasons', () =>
   assert.equal(toApiFinishReason(MatchFinishReason.WALKOVER), 'walkover');
   assert.equal(toFinishPayload(new FinishMatchRequest({ finishReason: MatchFinishReason.TEST })).finish_reason, 'test');
   assert.equal(toStatisticsPayload(state), null);
+});
+
+test('director snapshot is the live tablet fields, including in-game points', () => {
+  const state = matchState({ matchId: 42, clientMatchUuid: 'uuid-live' });
+  state.matchId = 42;
+  state.courtName = 'Kort 2';
+  state.matchStartTime = 1_000;
+  state.player1Games = 1;
+  state.player1Points = 2;
+  state.isPlayer1Serving = true;
+  const snapshot = toDirectorSnapshot(state);
+  assert.equal(snapshot.court_id, '1');
+  assert.equal(snapshot.court_name, 'Kort 2');
+  assert.equal(snapshot.player1_name, 'Jan Kowalski');
+  assert.equal(snapshot.player1_games, 1);
+  assert.equal(snapshot.player1_points, 2);
+  assert.equal(snapshot.is_player1_serving, true);
+  assert.equal(snapshot.match_start_time_ms, 1_000);
+  assert.equal(snapshot.games_per_set, 4);
 });
 
 test('match payload omits start time before the umpire clock starts', () => {

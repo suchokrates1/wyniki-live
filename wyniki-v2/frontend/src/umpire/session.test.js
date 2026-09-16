@@ -82,12 +82,23 @@ test('todayKey is yyyy-mm-dd', () => {
   assert.equal(todayKey(new Date('2026-09-01T23:00:00')), '2026-09-01');
 });
 
-test('last config and active match live in sessionStorage', () => {
-  const session = createUmpireSession({ localStore: memoryStore(), sessionStore: memoryStore() });
+test('last config stays in the tab; the active match survives a browser restart for 12 hours', () => {
+  const local = memoryStore();
+  let clock = new Date('2026-09-26T09:00:00Z');
+  const session = createUmpireSession({ localStore: local, sessionStore: memoryStore(), now: () => clock });
   session.saveLastMatchConfig({ gamesPerSet: 6, statsMode: 'BASIC' });
   assert.equal(session.getLastMatchConfig().gamesPerSet, 6);
   session.saveActiveMatch({ view: 'BASIC_SCORING' });
-  assert.equal(session.getActiveMatch().view, 'BASIC_SCORING');
+
+  // Chrome restarted: a new tab has an empty sessionStorage, the same localStorage
+  const restarted = createUmpireSession({ localStore: local, sessionStore: memoryStore(), now: () => clock });
+  assert.equal(restarted.getActiveMatch().view, 'BASIC_SCORING');
+  assert.equal(restarted.getLastMatchConfig(), null);
+
+  clock = new Date('2026-09-26T22:00:00Z');
+  assert.equal(restarted.getActiveMatch(), null, 'a match left from the morning is not resumed at night');
+
+  session.saveActiveMatch({ view: 'BASIC_SCORING' });
   session.clearActiveMatch();
   assert.equal(session.getActiveMatch(), null);
 });

@@ -30,6 +30,17 @@ test('heartbeat sends court, version, and battery when the PWA can read it', () 
   assert.equal(withBattery.is_charging, true);
 });
 
+test('heartbeat carries the live match snapshot for the director panel', () => {
+  const body = heartbeatBody({
+    courtId: 't31-2',
+    snapshot: { court_id: 't31-2', player1_points: 2, player1_name: 'Ada' },
+    nowMs: 1,
+    appVersion: '2.0.0',
+  });
+  assert.equal(body.snapshot.player1_points, 2);
+  assert.equal(body.snapshot.player1_name, 'Ada');
+});
+
 test('heartbeat does not POST before a court token exists', async () => {
   const sent = [];
   const beat = createHeartbeat({

@@ -4,6 +4,8 @@ const COURT_SESSION_KEY = 'umpire.court_session';
 const DRAFT_KEY = 'umpire.match_draft';
 const LAST_CONFIG_KEY = 'umpire.last_match_config';
 const ACTIVE_MATCH_KEY = 'umpire.active_match';
+// same window the server keeps live matches for (live_rehydrate_max_age_hours)
+const ACTIVE_MATCH_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 const TUTORIAL_MODE_KEY = 'umpire.tutorial_mode';
 const TUTORIAL_DONE_KEY = 'umpire.tutorial_done';
 const TUTORIAL_PROMPTED_KEY = 'umpire.tutorial_prompted';
@@ -132,15 +134,23 @@ export function createUmpireSession({
       sessionStore.removeItem(LAST_CONFIG_KEY);
     },
 
+    // The match in progress survives a Chrome restart (Android keeps it too), but not the next day.
     saveActiveMatch(snapshot) {
-      sessionStore.setItem(ACTIVE_MATCH_KEY, JSON.stringify(snapshot));
+      localStore.setItem(ACTIVE_MATCH_KEY, JSON.stringify({ ...snapshot, savedAt: now().getTime() }));
     },
 
     getActiveMatch() {
-      return readJson(sessionStore, ACTIVE_MATCH_KEY);
+      const saved = readJson(localStore, ACTIVE_MATCH_KEY) || readJson(sessionStore, ACTIVE_MATCH_KEY);
+      if (!saved) return null;
+      if (saved.savedAt && now().getTime() - saved.savedAt > ACTIVE_MATCH_MAX_AGE_MS) {
+        this.clearActiveMatch();
+        return null;
+      }
+      return saved;
     },
 
     clearActiveMatch() {
+      localStore.removeItem(ACTIVE_MATCH_KEY);
       sessionStore.removeItem(ACTIVE_MATCH_KEY);
     },
 

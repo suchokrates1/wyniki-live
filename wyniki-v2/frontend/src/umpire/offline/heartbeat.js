@@ -10,6 +10,7 @@ export function heartbeatBody({
   appVersion = APP_VERSION,
   batteryLevel = null,
   isCharging = null,
+  snapshot = null,
 } = {}) {
   const body = {
     court_id: courtId || '',
@@ -21,6 +22,7 @@ export function heartbeatBody({
   if (clientMatchUuid) body.client_match_uuid = clientMatchUuid;
   if (batteryLevel != null) body.battery_level = batteryLevel;
   if (isCharging != null) body.is_charging = Boolean(isCharging);
+  if (snapshot) body.snapshot = snapshot;
   return body;
 }
 

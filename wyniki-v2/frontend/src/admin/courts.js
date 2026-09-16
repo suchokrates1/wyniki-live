@@ -1,3 +1,5 @@
+import { applyTabletToDirectorForm, directorDeviceCard, formatScoreLine } from './directorDevice.js';
+
 export function createCourtsAdmin() {
   return {
       // Courts
@@ -311,6 +313,8 @@ export function createCourtsAdmin() {
       directorLoading: false,
       directorSaving: false,
       directorTablets: [],
+      directorSelected: null,
+      directorLoadedScore: null,
       directorForm: {
         sessionCourtId: '',
         matchId: null,
@@ -344,9 +348,10 @@ export function createCourtsAdmin() {
           const payload = await tabletsRes.json();
           this.directorTablets = payload.tablets || [];
           const first = this.directorTablets[0];
-          if (first?.match_id) {
+          if (first) {
             await this.selectDirectorTablet(first);
           } else {
+            this.directorSelected = null;
             const a = matchHint.A || {};
             const b = matchHint.B || {};
             this.directorForm.player1Name = a.full_name || a.surname || '';
@@ -358,6 +363,7 @@ export function createCourtsAdmin() {
           console.error(err);
           this.showToast(err.message || 'Błąd reżyserki', 'error');
         } finally {
+          this.directorLoadedScore = this.directorScorePayload();
           this.directorLoading = false;
         }
       },
@@ -371,19 +377,34 @@ export function createCourtsAdmin() {
           bits.push(tablet.battery_level + '%' + (tablet.is_charging ? ' ⚡' : ''));
         }
         bits.push((tablet.player1_name || '?') + ' vs ' + (tablet.player2_name || '?'));
+        if (tablet.snapshot) bits.push(formatScoreLine(tablet.snapshot));
         if (tablet.match_id) bits.push('#' + tablet.match_id);
         if (tablet.session_court_id) bits.push(tablet.session_court_id);
         return bits.join(' · ');
       },
 
+      directorDeviceCard() {
+        return directorDeviceCard(this.directorSelected, Date.now()) || {
+          title: '', source: '', court: '', clock: '', names: '', score: '', rules: '', fresh: false,
+        };
+      },
+
       async selectDirectorTablet(tablet) {
-        this.directorForm.matchId = tablet.match_id || null;
-        this.directorForm.player1Name = tablet.player1_name || '';
-        this.directorForm.player2Name = tablet.player2_name || '';
-        this.directorForm.sessionCourtId = tablet.session_court_id || this.directorForm.sessionCourtId;
-        if (!tablet.match_id) return;
+        this.directorSelected = tablet || null;
+        Object.assign(this.directorForm, applyTabletToDirectorForm(tablet || {}));
+        if (!tablet?.match_id) {
+          this.directorLoadedScore = this.directorScorePayload();
+          return;
+        }
+        if (tablet.snapshot) {
+          this.directorLoadedScore = this.directorScorePayload();
+          return;
+        }
         const response = await fetch('/api/matches/' + tablet.match_id);
-        if (!response.ok) return;
+        if (!response.ok) {
+          this.directorLoadedScore = this.directorScorePayload();
+          return;
+        }
         const match = await response.json();
         const score = match.score || {};
         this.directorForm.courtId = match.court_id || this.directorForm.courtId;
@@ -401,6 +422,18 @@ export function createCourtsAdmin() {
         this.directorForm.noAdvantage = !!config.no_advantage;
         this.directorForm.tiebreakOnly = !!config.tiebreak_only;
         this.directorForm.statsMode = config.stats_mode || 'ADVANCED';
+        this.directorLoadedScore = this.directorScorePayload();
+      },
+
+      directorScorePayload() {
+        return {
+          player1_sets: Number(this.directorForm.player1Sets) || 0,
+          player2_sets: Number(this.directorForm.player2Sets) || 0,
+          player1_games: Number(this.directorForm.player1Games) || 0,
+          player2_games: Number(this.directorForm.player2Games) || 0,
+          player1_points: Number(this.directorForm.player1Points) || 0,
+          player2_points: Number(this.directorForm.player2Points) || 0,
+        };
       },
 
       async applyDirectorControl() {
@@ -418,14 +451,11 @@ export function createCourtsAdmin() {
               court_id: this.directorForm.courtId,
               player1_name: this.directorForm.player1Name,
               player2_name: this.directorForm.player2Name,
-              score: {
-                player1_sets: Number(this.directorForm.player1Sets) || 0,
-                player2_sets: Number(this.directorForm.player2Sets) || 0,
-                player1_games: Number(this.directorForm.player1Games) || 0,
-                player2_games: Number(this.directorForm.player2Games) || 0,
-                player1_points: Number(this.directorForm.player1Points) || 0,
-                player2_points: Number(this.directorForm.player2Points) || 0,
-              },
+              // the loaded score is the last game the tablet sent, not the points of the game in play:
+              // sending it unchanged with a court move would roll the tablet back
+              ...(JSON.stringify(this.directorScorePayload()) !== JSON.stringify(this.directorLoadedScore || null)
+                ? { score: this.directorScorePayload() }
+                : {}),
               match_config: {
                 games_per_set: Number(this.directorForm.gamesPerSet) || 4,
                 sets_to_win: Number(this.directorForm.setsToWin) || 2,

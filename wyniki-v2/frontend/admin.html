@@ -436,7 +436,7 @@
             <div class="flex items-start justify-between gap-3">
               <div>
                 <h3 class="card-title">Sterowanie tabletem</h3>
-                <p class="text-sm opacity-70">Zmiana idzie od razu na apkę sędziego (kort, nazwiska, wynik, zasady).</p>
+                <p class="text-sm opacity-70">Poniżej widać to, co jest teraz na tablecie. Pola edytujesz tylko tam, gdzie sędzia się pomylił.</p>
               </div>
               <button class="btn btn-sm btn-ghost" @click="directorPanelOpen = false">Zamknij</button>
             </div>
@@ -453,6 +453,15 @@
                 </template>
               </select>
             </label>
+            <div class="rounded-lg bg-base-200 p-3 text-sm space-y-1" x-show="directorSelected" x-cloak>
+              <p class="font-semibold" x-text="directorDeviceCard().title"></p>
+              <p class="opacity-70" x-text="directorDeviceCard().source"></p>
+              <p x-show="directorDeviceCard().court"><span class="opacity-70">Kort:</span> <span class="font-semibold" x-text="directorDeviceCard().court"></span></p>
+              <p x-show="directorDeviceCard().clock"><span class="opacity-70">Czas:</span> <span class="font-semibold" x-text="directorDeviceCard().clock"></span></p>
+              <p class="font-semibold" x-text="directorDeviceCard().names"></p>
+              <p x-show="directorDeviceCard().score" x-text="directorDeviceCard().score"></p>
+              <p class="opacity-70" x-show="directorDeviceCard().rules" x-text="directorDeviceCard().rules"></p>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label class="form-control">
                 <span class="label-text">Kort (ID)</span>

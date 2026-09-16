@@ -17,7 +17,7 @@ import { buildBasicScoring } from './match/basicScoringView.js';
 import { createMatchFromDraft } from './match/createMatchFromDraft.js';
 import { createMatchController } from './match/matchController.js';
 import { finishStatRows, finishStatValue } from './match/finishView.js';
-import { finishWinnerName } from './match/matchPayload.js';
+import { finishWinnerName, toDirectorSnapshot } from './match/matchPayload.js';
 import { hydrateMatchState, serializeMatchState } from './match/matchStateIo.js';
 import { matchTimerText } from './match/matchTimer.js';
 import { MatchView, SyncStatus } from './match/matchViews.js';
@@ -325,13 +325,14 @@ function createUmpireApp() {
             : this.screen;
       const bat = this._battery.get();
       return heartbeatBody({
-        courtId: court?.courtId || '',
+        courtId: court?.courtId || state?.courtId || '',
         screen,
         matchId: state?.matchId ?? null,
         clientMatchUuid: state?.clientMatchUuid || null,
         appVersion: APP_VERSION,
         batteryLevel: bat.level,
         isCharging: bat.charging,
+        snapshot: state ? toDirectorSnapshot(state) : null,
       });
     },
 

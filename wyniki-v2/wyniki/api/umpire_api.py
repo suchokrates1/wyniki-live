@@ -1674,6 +1674,21 @@ def log_match_event():
             device=event_meta.get("device"),
             device_model=event_meta.get("device_model"),
             device_manufacturer=event_meta.get("device_manufacturer"),
+            snapshot={
+                "court_id": kort_id,
+                "player1_name": player1.get("full_name") or player1.get("name"),
+                "player2_name": player2.get("full_name") or player2.get("name"),
+                "player1_sets": score.get("player1_sets"),
+                "player2_sets": score.get("player2_sets"),
+                "player1_games": score.get("player1_games"),
+                "player2_games": score.get("player2_games"),
+                "player1_points": score.get("player1_points"),
+                "player2_points": score.get("player2_points"),
+                "sets_history": score.get("sets_history"),
+                "is_tiebreak": score.get("is_tiebreak"),
+                "is_super_tiebreak": score.get("is_super_tiebreak"),
+                "is_player1_serving": player1.get("is_serving"),
+            },
         )
 
         expected_court = str(active_match.court_id or "").strip() if active_match else ""
@@ -1848,6 +1863,7 @@ def umpire_heartbeat():
                 court_state["umpire_screen"] = screen
 
             heartbeat_meta = _request_client_meta(data)
+            snapshot = data.get("snapshot")
             tablet_presence.record(
                 session_court_id=kort_id,
                 match_id=match_id,
@@ -1860,6 +1876,7 @@ def umpire_heartbeat():
                 device_model=heartbeat_meta.get("device_model"),
                 device_manufacturer=heartbeat_meta.get("device_manufacturer"),
                 is_charging=is_charging,
+                snapshot=snapshot,
             )
 
         commands = director_command_broker.pending_for(kort_id, match_id, client_match_uuid)

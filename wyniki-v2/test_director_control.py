@@ -454,3 +454,98 @@ def test_stale_court_events_do_not_overwrite_overlay(director_app):
     assert (overlay_a.get("A") or {}).get("surname") == "Justyna Stopierzyńska"
     assert justyna["id"]
 
+
+
+def test_court_move_without_score_does_not_roll_the_tablet_back(director_app):
+    director_command_broker.clear()
+    tablet_presence.clear()
+
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Move Cup", "2026-09-26", "2026-09-27", active=True)
+    court_a, court_b = database.create_tournament_courts(tournament_id, 2)[:2]
+    client = director_app.test_client()
+    match = _create_match(client, court_a, "Ada Mid", "Bea Game", "uuid-mid-game", _score(player1_games=1))
+
+    control = client.post(f"/admin/api/matches/{match['id']}/control", json={"court_id": court_b})
+    assert control.status_code == 200, control.get_data(as_text=True)
+    command = control.get_json()["command"]
+    assert command["court_id"] == court_b
+    # the row only knows the last game; the tablet keeps the points of the game in play
+    assert "score" not in command
+
+    rescored = client.post(f"/admin/api/matches/{match['id']}/control", json={"score": _score(player1_games=2)})
+    assert rescored.get_json()["command"]["score"]["player1_games"] == 2
+
+
+def test_court_move_keeps_overlay_points_of_the_game_in_play(director_app):
+    director_command_broker.clear()
+    tablet_presence.clear()
+
+    from wyniki import database
+    from wyniki.services.court_manager import STATE_LOCK, ensure_court_state, get_court_state
+
+    tournament_id = database.insert_tournament("Overlay Move", "2026-09-26", "2026-09-27", active=True)
+    court_a, court_b = database.create_tournament_courts(tournament_id, 2)[:2]
+    client = director_app.test_client()
+    match = _create_match(client, court_a, "Ada Mid", "Bea Game", "uuid-overlay-pts", _score(player1_games=1))
+
+    src = ensure_court_state(court_a)
+    with STATE_LOCK:
+        src["A"]["points"] = "15"
+        src["A"]["current_games"] = 1
+        src["B"]["points"] = "0"
+        src["match_status"]["active"] = True
+
+    control = client.post(f"/admin/api/matches/{match['id']}/control", json={"court_id": court_b})
+    assert control.status_code == 200, control.get_data(as_text=True)
+    assert "score" not in control.get_json()["command"]
+
+    overlay_b = get_court_state(court_b) or {}
+    assert (overlay_b.get("A") or {}).get("points") == "15"
+    assert (overlay_b.get("A") or {}).get("current_games") == 1
+    overlay_a = get_court_state(court_a) or {}
+    assert not (overlay_a.get("match_status") or {}).get("active")
+
+
+def test_heartbeat_snapshot_is_what_the_director_sees(director_app):
+    director_command_broker.clear()
+    tablet_presence.clear()
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Snapshot Cup", "2026-09-26", "2026-09-27", active=True)
+    court_id = database.create_tournament_courts(tournament_id, 1)[0]
+    client = director_app.test_client()
+    match = _create_match(client, court_id, "Ada Mid", "Bea Game", "uuid-snap")
+
+    heartbeat = client.post(
+        "/api/umpire-heartbeat",
+        json={
+            "court_id": court_id,
+            "match_id": str(match["id"]),
+            "client_match_uuid": "uuid-snap",
+            "screen": "Match:BASIC_SCORING",
+            "snapshot": {
+                "court_id": court_id,
+                "court_name": "Kort 1",
+                "player1_name": "Ada Mid",
+                "player2_name": "Bea Game",
+                "player1_games": 1,
+                "player2_games": 0,
+                "player1_points": 2,
+                "player2_points": 0,
+                "match_start_time_ms": 1_700_000_000_000,
+                "games_per_set": 4,
+                "sets_to_win": 1,
+                "is_player1_serving": True,
+            },
+        },
+    )
+    assert heartbeat.status_code == 200, heartbeat.get_data(as_text=True)
+    tablets = client.get(f"/admin/api/director/tablets?court_id={court_id}").get_json()["tablets"]
+    row = next(item for item in tablets if item.get("match_id") == match["id"])
+    assert row["snapshot"]["player1_points"] == 2
+    assert row["snapshot"]["player1_games"] == 1
+    assert row["snapshot"]["player1_name"] == "Ada Mid"
+    assert row["snapshot"]["is_player1_serving"] is True
+    assert row["player1_name"] == "Ada Mid"

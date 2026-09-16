@@ -10,6 +10,7 @@ import re
 import threading
 import time
 import uuid
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
@@ -175,6 +176,7 @@ class TabletPresenceStore:
         device_model: str | None = None,
         device_manufacturer: str | None = None,
         is_charging: Any = None,
+        snapshot: Any = None,
     ) -> None:
         session_court_id = str(session_court_id or "").strip()
         if not session_court_id:
@@ -185,12 +187,17 @@ class TabletPresenceStore:
             charging = existing.get("is_charging")
             if is_charging is not None:
                 charging = is_charging in (True, "true", "True", 1, "1")
+            incoming = normalize_device_snapshot(snapshot)
+            stored_snapshot = dict(existing.get("snapshot") or {})
+            if incoming:
+                stored_snapshot.update(incoming)
+            names_from_snap = stored_snapshot or {}
             self._tablets[key] = {
                 "session_court_id": session_court_id,
                 "match_id": int(match_id) if match_id else existing.get("match_id"),
                 "client_match_uuid": (client_match_uuid or existing.get("client_match_uuid")),
-                "player1_name": player1_name or existing.get("player1_name"),
-                "player2_name": player2_name or existing.get("player2_name"),
+                "player1_name": player1_name or names_from_snap.get("player1_name") or existing.get("player1_name"),
+                "player2_name": player2_name or names_from_snap.get("player2_name") or existing.get("player2_name"),
                 "screen": screen or existing.get("screen"),
                 "battery_level": _optional_int(battery_level, existing.get("battery_level")),
                 "is_charging": charging,
@@ -199,6 +206,7 @@ class TabletPresenceStore:
                 "device": device or existing.get("device"),
                 "device_model": device_model or existing.get("device_model"),
                 "device_manufacturer": device_manufacturer or existing.get("device_manufacturer"),
+                "snapshot": stored_snapshot or None,
                 "last_seen": datetime.now(timezone.utc).isoformat(),
                 "last_seen_epoch": time.time(),
             }
@@ -330,7 +338,17 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
         "is_player1_serving": (score or {}).get("is_player1_serving"),
     }
 
-    _paint_match_on_court(new_court_id, match, score_payload, _sync_live_score_to_court_state, _apply_db_flags_to_court_state)
+    # The SQLite row only has the last completed game. In-game points live in overlay RAM
+    # (and on the tablet). Painting from the row would flash 0:0 on a court move / rename.
+    live_source_id = session_court_id if session_court_id != new_court_id else (
+        old_court_id if old_court_id != new_court_id else None
+    )
+    if score:
+        _paint_match_on_court(new_court_id, match, score_payload, _sync_live_score_to_court_state, _apply_db_flags_to_court_state)
+    elif live_source_id and not _relocate_live_overlay(live_source_id, new_court_id, match, _apply_db_flags_to_court_state):
+        _paint_match_on_court(new_court_id, match, score_payload, _sync_live_score_to_court_state, _apply_db_flags_to_court_state)
+    elif not live_source_id:
+        _retitle_live_overlay(new_court_id, match, _apply_db_flags_to_court_state)
     if tablet_court_changed:
         _restore_or_clear_court(session_court_id, except_match_id=match.id, _sync_live_score_to_court_state=_sync_live_score_to_court_state, _apply_db_flags_to_court_state=_apply_db_flags_to_court_state)
     if db_court_changed and old_court_id and old_court_id != new_court_id and old_court_id != session_court_id:
@@ -351,9 +369,12 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
         "court_name": _mobile_court_name(match.court_id),
         "player1_name": match.player1_name,
         "player2_name": match.player2_name,
-        "score": score_payload,
         "match_config": parse_stored_match_config(match.match_config),
     }
+    # The row keeps the score of the last game only (points arrive as events): sending it with a
+    # court or name change would roll the tablet back to 0:0 in the middle of a game.
+    if score:
+        command["score"] = score_payload
     # Always mint a token for the target court so a tablet still authorized
     # on the old PIN/session (Vilnius: SQL already moved the row) can switch.
     if new_court_id:
@@ -371,6 +392,65 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
         command_id=stored["id"],
     )
     return stored
+
+
+def _relocate_live_overlay(src_id: str, dst_id: str, match: Match, _apply_db_flags_to_court_state) -> bool:
+    """Move the in-memory overlay frame to another court, keeping in-game points."""
+    if not src_id or not dst_id or src_id == dst_id:
+        return False
+    src = get_court_state(src_id)
+    if not src:
+        return False
+    a = src.get("A") or {}
+    has_live = bool((src.get("match_status") or {}).get("active")) or a.get("points") not in (None, "", "0")
+    if not has_live:
+        return False
+    snapshot = deepcopy(src)
+    dst = ensure_court_state(dst_id)
+    with STATE_LOCK:
+        identity = {
+            "court_name": dst.get("court_name"),
+            "display_order": dst.get("display_order"),
+            "tournament_id": dst.get("tournament_id") or match.tournament_id,
+            "tournament_name": dst.get("tournament_name"),
+        }
+        snapshot.update(identity)
+        snapshot.setdefault("A", {})["surname"] = match.player1_name
+        snapshot["A"]["full_name"] = match.player1_name
+        snapshot.setdefault("B", {})["surname"] = match.player2_name
+        snapshot["B"]["full_name"] = match.player2_name
+        snapshot.setdefault("match_status", {})["active"] = match.status == "in_progress"
+        snapshot["updated"] = utc_now_iso()
+        _apply_db_flags_to_court_state(
+            snapshot,
+            match.tournament_id,
+            match.player1_name,
+            match.player2_name,
+        )
+        dst.clear()
+        dst.update(snapshot)
+    emit_score_update(dst_id, dst)
+    return True
+
+
+def _retitle_live_overlay(kort_id: str, match: Match, _apply_db_flags_to_court_state) -> None:
+    """Change overlay names without touching the live points of the game in play."""
+    if not kort_id:
+        return
+    court_state = ensure_court_state(kort_id)
+    with STATE_LOCK:
+        court_state["A"]["surname"] = match.player1_name
+        court_state["A"]["full_name"] = match.player1_name
+        court_state["B"]["surname"] = match.player2_name
+        court_state["B"]["full_name"] = match.player2_name
+        _apply_db_flags_to_court_state(
+            court_state,
+            match.tournament_id,
+            match.player1_name,
+            match.player2_name,
+        )
+        court_state["updated"] = utc_now_iso()
+    emit_score_update(kort_id, court_state)
 
 
 def _paint_match_on_court(
@@ -523,3 +603,72 @@ def _optional_int(value: Any, fallback: Any = None) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return fallback
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if value in (None, ""):
+        return None
+    if value in (True, "true", "True", 1, "1"):
+        return True
+    if value in (False, "false", "False", 0, "0"):
+        return False
+    return bool(value)
+
+
+def normalize_device_snapshot(raw: Any) -> dict[str, Any] | None:
+    """Whitelist the live tablet fields the director panel may show and edit."""
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except Exception:
+            return None
+    if not isinstance(raw, dict) or not raw:
+        return None
+    out: dict[str, Any] = {}
+    for key in ("court_id", "court_name", "player1_name", "player2_name", "stats_mode"):
+        if raw.get(key) not in (None, ""):
+            out[key] = str(raw[key]).strip()
+    for key in (
+        "player1_sets",
+        "player2_sets",
+        "player1_games",
+        "player2_games",
+        "player1_points",
+        "player2_points",
+        "games_per_set",
+        "sets_to_win",
+        "match_start_time_ms",
+        "match_duration_ms",
+    ):
+        if key in raw and raw.get(key) not in (None, ""):
+            parsed = _optional_int(raw.get(key))
+            if parsed is not None:
+                out[key] = parsed
+    for key in (
+        "is_doubles",
+        "is_player1_serving",
+        "is_tiebreak",
+        "is_super_tiebreak",
+        "no_advantage",
+        "tiebreak_only",
+    ):
+        if key in raw:
+            flag = _optional_bool(raw.get(key))
+            if flag is not None:
+                out[key] = flag
+    history = raw.get("sets_history")
+    if isinstance(history, list):
+        cleaned = []
+        for item in history[:5]:
+            if not isinstance(item, dict):
+                continue
+            cleaned.append({
+                "set_number": _optional_int(item.get("set_number"), len(cleaned) + 1),
+                "player1_games": _optional_int(item.get("player1_games"), 0) or 0,
+                "player2_games": _optional_int(item.get("player2_games"), 0) or 0,
+                "tiebreak_loser_points": _optional_int(item.get("tiebreak_loser_points")),
+                "is_super_tiebreak": bool(item.get("is_super_tiebreak")),
+            })
+        if cleaned:
+            out["sets_history"] = cleaned
+    return out or None
