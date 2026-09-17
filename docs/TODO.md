@@ -2,7 +2,7 @@
 
 ## [P0] Zdalne sterowanie tabletem sędziego z reżyserki
 
-**Status:** w toku (kanał + panel + apka; komenda idzie na sesję tabletu nawet gdy panel otwarto z nowego kortu po SQL-move — do potwierdzenia live / Bramka 6)  
+**Status:** zrobione i zweryfikowane 2026-09-17 — Dell `:18087` PWA umpire-live 10/10 (Bramki 6, 6b, 6c) + Android `DirectorControlE2ETest` 2/2 (emulator → e2e). Reżyserka pcha kort, nazwiska, wynik i `MatchConfig` na tablecie/PWA bez restartu. Patch zasad scala się z zapisanym configiem (nie nadpisuje `stats_mode` BASIC na ADVANCED).  
 **Źródło:** IBTA Vilnius 2026, kort 2, 28.08.2026  
 **Repo:** `wyniki-live` (admin + API) + `android-tennis-referee`
 
@@ -36,7 +36,7 @@ González–Schmidt przeniesiony na kort 8 w bazie i overlayu; tablet nadal auto
 
 ## [P1] Domykanie meczu po stronie serwera
 
-**Status:** zaimplementowane — zweryfikowane lokalnie (API + unit); do potwierdzenia na teście live  
+**Status:** zrobione i zweryfikowane 2026-09-17 — unit + live PUT na Dell `:18087` (Bramka P1): wynik spełniający `sets_to_win` kończy mecz bez `POST /finish`.  
 **Źródło:** ten sam dzień, kort 16 (Malicki–Dutra 4:2 4:2)
 
 Przy create zapisujemy `MatchConfig`. Przy PUT, gdy `player1_sets`/`player2_sets` spełniają `sets_to_win` — ten sam tor co `POST /finish` (historia, overlay, e-mail, drabinka). Ponowny `/finish` jest idempotentny. `/finish` zostaje na krecz / W/O / test. Outbox PWA: 403/404 drop.
