@@ -193,11 +193,12 @@ test('Gate 6c: the director corrects the live score and shortens the set format'
           player1_points: 2,
           player2_points: 0,
         },
-        match_config: { games_per_set: 3, sets_to_win: 1, no_advantage: true },
+        match_config: { games_per_set: 3, sets_to_win: 1, no_advantage: true, stats_mode: 'BASIC' },
       },
     });
     await expect(page.getByText(/director|reżyser/i).first()).toBeVisible({ timeout: 25_000 });
     await expect(page.locator('.ump-board__pts').first()).toHaveText('30', { timeout: 10_000 });
+    await expect(page.getByRole('button', { name: 'WIN' }).first()).toBeVisible({ timeout: 10_000 });
     await waitForSnapshot(court, (s) => s.A?.current_games === 2 && s.A?.points === '30', 'director score 2:0 30:0');
 
     await basicPoint(page, true);

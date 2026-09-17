@@ -51,18 +51,21 @@ def _score(**overrides):
     return payload
 
 
-def _create_match(client, court_id, p1, p2, uuid, score=None):
+def _create_match(client, court_id, p1, p2, uuid, score=None, extra=None):
+    payload = {
+        "court_id": court_id,
+        "player1_name": p1,
+        "player2_name": p2,
+        "status": "in_progress",
+        "client_match_uuid": uuid,
+        "score": score or _score(),
+        "match_config": {"games_per_set": 4, "sets_to_win": 2},
+    }
+    if extra:
+        payload.update(extra)
     response = client.post(
         "/api/matches",
-        json={
-            "court_id": court_id,
-            "player1_name": p1,
-            "player2_name": p2,
-            "status": "in_progress",
-            "client_match_uuid": uuid,
-            "score": score or _score(),
-            "match_config": {"games_per_set": 4, "sets_to_win": 2},
-        },
+        json=payload,
     )
     assert response.status_code == 201, response.get_data(as_text=True)
     return response.get_json()
@@ -206,6 +209,37 @@ def test_director_renames_and_rewrites_score(director_app):
     command = body["command"]
     assert command["player1_name"] == "Justyna Stopierzyńska"
     assert command["score"]["player2_games"] == 4
+
+
+def test_director_config_patch_keeps_existing_stats_mode(director_app):
+    director_command_broker.clear()
+    tablet_presence.clear()
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Basic Cup", "2026-09-17", "2026-09-17", active=True)
+    court_id = database.create_tournament_courts(tournament_id, 1)[0]
+    client = director_app.test_client()
+    match = _create_match(
+        client,
+        court_id,
+        "Ada",
+        "Bea",
+        "uuid-basic",
+        extra={"match_config": {"games_per_set": 4, "sets_to_win": 1, "stats_mode": "BASIC"}},
+    )
+    assert match["match_config"]["stats_mode"] == "BASIC"
+
+    control = client.post(
+        f"/admin/api/matches/{match['id']}/control",
+        json={"match_config": {"games_per_set": 3, "sets_to_win": 1, "no_advantage": True}},
+    )
+    assert control.status_code == 200, control.get_data(as_text=True)
+    body = control.get_json()
+    config = body["match"]["match_config"]
+    assert config["games_per_set"] == 3
+    assert config["no_advantage"] is True
+    assert config["stats_mode"] == "BASIC"
+    assert body["command"]["match_config"]["stats_mode"] == "BASIC"
 
 
 def test_director_command_wakes_waiting_poll(director_app):

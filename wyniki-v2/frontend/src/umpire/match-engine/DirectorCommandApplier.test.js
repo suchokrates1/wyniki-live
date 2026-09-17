@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { MatchState } from './models.js';
+import { MatchConfig, MatchState, StatsMode } from './models.js';
 import { Player } from './player.js';
 import { DirectorCommandApplier } from './directorCommandApplier.js';
 import { directorCommandDto, directorScoreDto, matchConfigDto } from './directorDtos.js';
@@ -97,6 +97,31 @@ test('courtMoveWithoutScoreKeepsGamePoints', () => {
   assert.equal(next.courtId, 't31-8');
   assert.equal(next.player1Points, 1);
   assert.equal(next.player2Points, 0);
+});
+
+test('rulesPatchWithoutStatsModeKeepsBasicScoring', () => {
+  const state = new MatchState({
+    matchId: 12,
+    clientMatchUuid: 'uuid-basic',
+    player1: playerOne,
+    player2: playerTwo,
+    courtId: 't31-1',
+    courtName: 'Kort 1',
+    matchConfig: new MatchConfig({ statsMode: StatsMode.BASIC }),
+    statsMode: StatsMode.BASIC,
+  });
+  const next = DirectorCommandApplier.apply(
+    state,
+    directorCommandDto({
+      matchId: 12,
+      clientMatchUuid: 'uuid-basic',
+      matchConfig: matchConfigDto({ gamesPerSet: 3, setsToWin: 1, noAdvantage: true }),
+    }),
+  );
+  assert.equal(next.matchConfig.gamesPerSet, 3);
+  assert.equal(next.matchConfig.noAdvantage, true);
+  assert.equal(next.statsMode, StatsMode.BASIC);
+  assert.equal(next.matchConfig.statsMode, StatsMode.BASIC);
 });
 
 test('doublesRenameUpdatesTeamDisplayNames', () => {

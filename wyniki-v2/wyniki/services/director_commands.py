@@ -309,7 +309,9 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
             match.sets_history = json.dumps(score.get("sets_history") or [])
 
     if "match_config" in patch:
-        match.match_config = dump_match_config(patch.get("match_config"))
+        current = parse_stored_match_config(match.match_config)
+        incoming = patch.get("match_config") if isinstance(patch.get("match_config"), dict) else {}
+        match.match_config = dump_match_config({**current, **incoming})
 
     if db_court_changed:
         target = db.session.get(Court, new_court_id)
