@@ -44,6 +44,12 @@ export function adminApi(path, options = {}) {
   return admin().then((token) => api(path, { ...options, token }));
 }
 
+export async function authorizeCourtApi(courtId, pin = PIN) {
+  const auth = await api(`/api/courts/${courtId}/authorize`, { method: 'POST', body: { pin } });
+  if (!auth?.token) throw new Error(`authorize ${courtId} missing token: ${JSON.stringify(auth)}`);
+  return auth.token;
+}
+
 /** A public test tournament with courts (PIN set) and named players; cleaned up by marker. */
 export async function createFixture({ label, courts = 2, players = 4 }) {
   const marker = `E2E-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;

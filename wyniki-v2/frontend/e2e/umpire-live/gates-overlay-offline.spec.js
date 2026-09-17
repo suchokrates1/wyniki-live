@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
-  adminApi, authorizeCourt, basicPoint, boardPoints, cleanupFixture, courtSnapshot, createFixture, dismissAnnouncement,
+  adminApi, authorizeCourt, authorizeCourtApi, api, basicPoint, boardPoints, cleanupFixture, courtSnapshot, createFixture, dismissAnnouncement,
   openUmpire, playGame, startMatch, waitForMatch,
 } from './live.js';
 
@@ -160,6 +160,107 @@ test('Gate 6b: the director renames a live player and moves the tablet to anothe
     );
     expect(row.court_id).toBe(fixture.court(2));
     expect(page.__errors || []).toEqual([]);
+  } finally {
+    await cleanupFixture(fixture);
+  }
+});
+
+test('Gate 6c: the director corrects the live score and shortens the set format', async ({ context }) => {
+  const fixture = await createFixture({ label: 'PWA gate 6c score+rules' });
+  try {
+    const page = await openUmpire(context);
+    await authorizeCourt(page, fixture, 1);
+    const [a, b] = fixture.players;
+    await startMatch(page, { players: [a, b], gamesPerSet: 4, setsToWin: 1 });
+    await playGame(page, true);
+    await playGame(page, true);
+    const court = fixture.court(1);
+    const { match } = await waitForMatch(
+      fixture.marker,
+      (row) => row.player1_name === a.full && row.status === 'in_progress',
+      { message: '2-0 in a 4-game set' },
+    );
+    await waitForSnapshot(court, (s) => s.A?.current_games === 2, 'overlay 2:0 before director');
+
+    await adminApi(`/admin/api/matches/${match.id}/control`, {
+      method: 'POST',
+      body: {
+        score: {
+          player1_sets: 0,
+          player2_sets: 0,
+          player1_games: 2,
+          player2_games: 0,
+          player1_points: 2,
+          player2_points: 0,
+        },
+        match_config: { games_per_set: 3, sets_to_win: 1, no_advantage: true },
+      },
+    });
+    await expect(page.getByText(/director|reżyser/i).first()).toBeVisible({ timeout: 25_000 });
+    await expect(page.locator('.ump-board__pts').first()).toHaveText('30', { timeout: 10_000 });
+    await waitForSnapshot(court, (s) => s.A?.current_games === 2 && s.A?.points === '30', 'director score 2:0 30:0');
+
+    await basicPoint(page, true);
+    await basicPoint(page, true);
+    await dismissAnnouncement(page);
+    await expect(page.getByRole('heading', { name: 'Match Finished!' })).toBeVisible({ timeout: 20_000 });
+    await waitForMatch(
+      fixture.marker,
+      (row) => row.id === match.id && row.status === 'finished',
+      { message: '3-game set ended the match' },
+    );
+    expect(page.__errors || []).toEqual([]);
+  } finally {
+    await cleanupFixture(fixture);
+  }
+});
+
+test('P1: a PUT that reaches sets_to_win finishes the match without POST /finish', async () => {
+  const fixture = await createFixture({ label: 'P1 server finish' });
+  try {
+    const court = fixture.court(1);
+    const [a, b] = fixture.players;
+    const token = await authorizeCourtApi(court);
+    const created = await api('/api/matches', {
+      method: 'POST',
+      token,
+      body: {
+        court_id: court,
+        player1_name: a.full,
+        player2_name: b.full,
+        status: 'in_progress',
+        client_match_uuid: `p1-${Date.now()}`,
+        score: {
+          player1_sets: 0, player2_sets: 0, player1_games: 0, player2_games: 0,
+          player1_points: 0, player2_points: 0, sets_history: [],
+        },
+        match_config: { games_per_set: 4, sets_to_win: 1 },
+      },
+    });
+    expect(created.status).toBe('in_progress');
+    const updated = await api(`/api/matches/${created.id}`, {
+      method: 'PUT',
+      token,
+      body: {
+        score: {
+          player1_sets: 1,
+          player2_sets: 0,
+          player1_games: 0,
+          player2_games: 0,
+          player1_points: 0,
+          player2_points: 0,
+          sets_history: [{ set_number: 1, player1_games: 4, player2_games: 2 }],
+        },
+        match_config: { games_per_set: 4, sets_to_win: 1 },
+      },
+    });
+    expect(updated.status).toBe('finished');
+    const { match } = await waitForMatch(
+      fixture.marker,
+      (row) => row.id === created.id && row.status === 'finished',
+      { message: 'server auto-finished Malicki–Dutra style PUT' },
+    );
+    expect(match.status).toBe('finished');
   } finally {
     await cleanupFixture(fixture);
   }
