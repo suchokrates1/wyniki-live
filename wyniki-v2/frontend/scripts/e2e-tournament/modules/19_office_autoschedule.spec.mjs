@@ -48,6 +48,10 @@ export default async function run() {
     }
 
     await page.getByRole('button', { name: 'Opublikuj wszystkie' }).click();
+    const publishConfirm = page.locator('[data-publish-confirm]');
+    if (await publishConfirm.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await publishConfirm.click();
+    }
     await page.waitForTimeout(800);
     console.log('  Publish-all clicked');
   } finally {

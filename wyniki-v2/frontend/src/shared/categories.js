@@ -85,7 +85,12 @@ export function mixedCategoryDisplayLabel(category, mixedCategories = []) {
 }
 
 export function extractCategoryCodeFromLabel(label) {
-  const match = String(label || '').trim().match(/^B(?:\d(?:\/\d)?|\d{2})/i);
+  const text = String(label || '').trim();
+  const range = text.match(/^B\s*([1-4])\s*[\/–-]\s*(?:B\s*)?([1-4])/i);
+  if (range && range[1] !== range[2]) {
+    return normalizeCategoryCode(`B${range[1]}${range[2]}`);
+  }
+  const match = text.match(/^B(?:\d(?:\/\d)?|\d{2})/i);
   return match ? normalizeCategoryCode(match[0]) : '';
 }
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   doublesPartnerBands,
+  extractCategoryCodeFromLabel,
   inferPlanningGenderFromLabel,
   planningDivisionFromGroupName,
   playerMatchesDoublesCategory,
@@ -38,6 +39,13 @@ test('English Women label without preset still selects women, not men', () => {
 test('group names with Women/Men parse to B1K/B1M', () => {
   assert.equal(planningDivisionFromGroupName('B1 Women — Grupa A'), 'B1K');
   assert.equal(planningDivisionFromGroupName('B1 Men — Grupa B'), 'B1M');
+});
+
+test('hyphenated B3-B4 labels parse as B34', () => {
+  assert.equal(extractCategoryCodeFromLabel('B3-B4 Kobiety'), 'B34');
+  assert.equal(extractCategoryCodeFromLabel('B3–B4 Kobiet'), 'B34');
+  assert.equal(extractCategoryCodeFromLabel('B3/4 Kobiety'), 'B34');
+  assert.equal(planningDivisionFromGroupName('B3-B4 Kobiety'), 'B34K');
 });
 
 test('B3/4 mixed matches B3 and B4 of any gender', () => {

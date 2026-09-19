@@ -122,6 +122,17 @@ test('knockout podium ignores placeholder winners before matches are played', ()
   assert.equal(podium.length, 0);
 });
 
+test('B3-B4 women stays a combined category tab, not B3 only', () => {
+  assert.equal(
+    getBracketCategoryLabel('B3-B4 Kobiety', { womenLabel: 'Kobiety', menLabel: 'Mężczyźni' }),
+    'B3/4 Kobiety',
+  );
+  assert.equal(
+    getBracketCategoryLabel('B3/4 Kobiety', { womenLabel: 'Kobiety', menLabel: 'Mężczyźni' }),
+    'B3/4 Kobiety',
+  );
+});
+
 test('doubles categories get a distinct label and sort above singles', () => {
   const doubles = getBracketCategoryLabel('B1 Men Doubles', {
     womenLabel: 'Women',

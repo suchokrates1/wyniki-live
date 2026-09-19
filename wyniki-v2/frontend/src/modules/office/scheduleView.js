@@ -141,15 +141,49 @@ export function createOfficeScheduleView() {
       return nextSchedule;
     },
 
-    async publishAllSchedule() {
+    planningDraftEntries() {
+      return (this.planningSchedule || []).filter((entry) => String(entry?.status || '') === 'draft');
+    },
+
+    planningPublishDays() {
+      return [...new Set(
+        this.planningDraftEntries()
+          .map((entry) => String(entry?.day_date || '').trim())
+          .filter(Boolean),
+      )].sort();
+    },
+
+    planningPublishDayCount(day) {
+      return this.planningDraftEntries().filter((entry) => String(entry?.day_date || '') === String(day || '')).length;
+    },
+
+    openPublishModal() {
       if (!this.token) return;
-      if (!confirm(this.ot('confirm.publishAll'))) return;
+      if (!this.planningDraftEntries().length) {
+        this.showToast(this.ot('toast.noDraftEntries'), 'info');
+        return;
+      }
+      this.publishScope = '';
+      this.publishModalOpen = true;
+    },
+
+    closePublishModal() {
+      this.publishModalOpen = false;
+    },
+
+    async publishAllSchedule() {
+      this.openPublishModal();
+    },
+
+    async confirmPublishSchedule() {
+      if (!this.token || this.planningPublishing) return;
+      const dayDate = String(this.publishScope || '').trim();
       this.planningPublishing = true;
       try {
         const response = await fetch(`/api/office/${this.slot}/schedule/publish`, {
           method: 'POST',
           headers: this.officeHeaders(),
-          body: JSON.stringify({}),
+          body: JSON.stringify(dayDate ? { day_date: dayDate } : {}),
         });
         const payload = await response.json().catch(() => ({}));
         if (response.status === 401) {
@@ -157,9 +191,10 @@ export function createOfficeScheduleView() {
           return;
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.publishFailed'));
-        if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
+        if (Array.isArray(payload.schedule)) this.planningSchedule = this.keepInspectorEdits(payload.schedule);
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         const count = Number(payload.published || 0);
+        this.publishModalOpen = false;
         this.showToast(
           count ? this.ot('toast.publishedCount', { count }) : this.ot('toast.noDraftEntries'),
           count ? 'success' : 'info',

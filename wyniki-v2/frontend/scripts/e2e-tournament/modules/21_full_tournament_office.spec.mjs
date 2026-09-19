@@ -541,6 +541,7 @@ export default async function run() {
 
     // ——— publish ———
     await page.getByRole('button', { name: 'Opublikuj wszystkie' }).click();
+    await page.locator('[data-publish-confirm]').click();
     await waitUntil('placed matches published', async () => {
       const rows = ((await planning()).schedule || []).filter((entry) => entry.source_type === 'group' && isPlaced(entry));
       return rows.length && rows.every((entry) => entry.status === 'planned');

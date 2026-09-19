@@ -306,6 +306,7 @@ export default async function run() {
     log(`"Rozstaw fazę grupową": ${groupRows.length} matches on ${planDays.length} days (${planDays.map((day) => `${ddmm(day)}: ${groupRows.filter((entry) => entry.day_date === day).length}`).join(', ')}), all by 18:00, B1 only on B1 courts, nobody double-booked`);
 
     await page.getByRole('button', { name: 'Opublikuj wszystkie' }).click();
+    await page.locator('[data-publish-confirm]').click();
     await waitUntil('group phase published', async () => (await schedule()).filter((entry) => entry.source_type === 'group').every((entry) => entry.status === 'planned'));
     const publicDays = ((await fetchPublicSchedule(tournamentId)).days || []).map((day) => day.date);
     if (planDays.some((day) => !publicDays.includes(day))) throw new Error(`Public schedule days ${publicDays} miss ${planDays}`);

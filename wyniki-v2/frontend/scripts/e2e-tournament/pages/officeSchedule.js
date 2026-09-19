@@ -33,6 +33,10 @@ export class OfficeSchedulePage {
     const btn = this.page.getByRole('button', { name: /Opublikuj wszystkie/i });
     if (await btn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await btn.click();
+      const confirm = this.page.locator('[data-publish-confirm]');
+      if (await confirm.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await confirm.click();
+      }
       await this.page.waitForTimeout(1000);
     }
   }

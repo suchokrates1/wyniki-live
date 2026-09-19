@@ -27,7 +27,7 @@ Szyna → **Terminarz**: pasek narzędzi u góry, siatka **godzina × kort** dla
 | **Zatwierdź terminarz** / **Odrzuć propozycję** | Zastosuj / anuluj podgląd | `POST …/autoschedule/apply` |
 | **Generuj mecze** | Mecze grupowe z grup (`groups_knockout` / `round_robin`) | `POST …/schedule/generate` |
 | **Rewanże…** | Druga runda dla wybranych grup | `POST …/schedule/generate-rematch` |
-| **Opublikuj wszystkie** | Wpisy robocze stają się publiczne | `POST …/schedule/publish` |
+| **Opublikuj wszystkie** | Modal: wszystkie dni albo jeden dzień; wpisy robocze stają się publiczne | `POST …/schedule/publish` (`day_date` opcjonalnie) |
 
 Nagłówek kolumny kortu: pigułka **B1** oznacza kort specjalny B1 (slot 75 min; inne korty 60 min).
 
@@ -64,7 +64,7 @@ Statusy: **Roboczy** / **Opublikowany** / **W trakcie** / **Zakończony**.
 
 ## E2E
 
-`03_schedule_publish`, `05_rematch`, `19_office_autoschedule` — podstawy. `21_full_tournament_office` — dni, szuflada, przeciąganie, **Wyczyść dzień**, **Usuń wszystkie**. `22_lifecycle_wbtc_scale` — skala Wilna: 152 mecze grupowe na 3 dni i 146 pucharowych na 4 dni, bez podwójnych rezerwacji (także singiel + debel).
+`03_schedule_publish`, `05_rematch`, `19_office_autoschedule` — podstawy. `27_publish_modal` — modal **Opublikuj**: jeden dzień albo wszystkie, Anuluj zostawia szkice. `21_full_tournament_office` — dni, szuflada, przeciąganie, **Wyczyść dzień**, **Usuń wszystkie**. `22_lifecycle_wbtc_scale` — skala Wilna: 152 mecze grupowe na 3 dni i 146 pucharowych na 4 dni, bez podwójnych rezerwacji (także singiel + debel).
 
 ## Powiązane
 

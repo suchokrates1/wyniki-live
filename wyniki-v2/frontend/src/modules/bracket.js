@@ -180,7 +180,7 @@ export function parseBracketCategory(name) {
     .replace(/[\u0300-\u036f]/g, '');
   const doubles = /\b(doubles?|debl\w*|doppel|doppio|dobles|dvejet\w*)\b/.test(normalized);
   const sectionLabel = baseName
-    .replace(/^B(?:\d(?:\/\d)?|\d{2})\s*/i, '')
+    .replace(/^B(?:\s*[1-4]\s*[\/–-]\s*(?:B\s*)?[1-4]|\d(?:\/\d)?|\d{2})\s*/i, '')
     .replace(/\b(doubles?|debl\w*|doppel|doppio|dobles|dvejet\w*)\b/gi, '')
     .trim();
   let gender = '';

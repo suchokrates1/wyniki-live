@@ -136,6 +136,10 @@ export function createOfficeCoreView() {
 
     planningPublishing: false,
 
+    publishModalOpen: false,
+
+    publishScope: '',
+
     planningNewSchedule: defaultOfficeScheduleForm(),
 
     planningRematchGroupIds: [],
@@ -377,6 +381,7 @@ export function createOfficeCoreView() {
       this.seenMatchKeys = [];
       this.addMatchOpen = false;
       this.editMatchOpen = false;
+      this.publishModalOpen = false;
       this.authError = message;
       this.authPassword = '';
       this.quickInfoDirty = false;
