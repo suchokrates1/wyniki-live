@@ -17,7 +17,7 @@ export function createTournamentsAdmin() {
       tournaments: [],
       selectedTournament: null,
       editingTournamentId: null,
-      courtStreams: { days: [], today: '', courts: [], links: {}, shared: {} },
+      courtStreams: { days: [], today: '', courts: [], links: {}, shared: {}, off_courts: [] },
       streamsSharedAll: false,
       streamsSaving: false,
       newTournament: {
@@ -279,6 +279,7 @@ export function createTournamentsAdmin() {
           courts: Array.isArray(payload.courts) ? payload.courts : [],
           links: payload.links && typeof payload.links === 'object' ? payload.links : {},
           shared: payload.shared && typeof payload.shared === 'object' ? payload.shared : {},
+          off_courts: Array.isArray(payload.off_courts) ? payload.off_courts.map(String) : [],
         };
         this.streamsSharedAll = !!payload.shared_all_courts;
       },
@@ -301,9 +302,22 @@ export function createTournamentsAdmin() {
         this.courtStreams.shared[day] = value;
       },
 
+      isAdminStreamCourtOn(kortId) {
+        return !(this.courtStreams.off_courts || []).includes(String(kortId));
+      },
+
+      toggleAdminStreamCourtOn(kortId) {
+        const id = String(kortId);
+        const current = new Set(this.courtStreams.off_courts || []);
+        if (current.has(id)) current.delete(id);
+        else current.add(id);
+        this.courtStreams.off_courts = [...current];
+      },
+
       toggleAdminStreamsSharedAll() {
         this.streamsSharedAll = !this.streamsSharedAll;
         if (!this.streamsSharedAll) return;
+        if (!this.courtStreams.off_courts) this.courtStreams.off_courts = [];
         if (!this.courtStreams.shared) this.courtStreams.shared = {};
         for (const day of this.courtStreams.days || []) {
           if (this.courtStreams.shared[day]) continue;
@@ -350,6 +364,7 @@ export function createTournamentsAdmin() {
             body: JSON.stringify({
               shared_all_courts: !!this.streamsSharedAll,
               shared: this.courtStreams.shared || {},
+              off_courts: this.courtStreams.off_courts || [],
               links: this.courtStreams.links || {},
             }),
           });
@@ -390,7 +405,7 @@ export function createTournamentsAdmin() {
     };
     this.adminTournamentCategories = [];
     this.adminCategorySetupOpen = true;
-    this.courtStreams = { days: [], today: '', courts: [], links: {}, shared: {} };
+    this.courtStreams = { days: [], today: '', courts: [], links: {}, shared: {}, off_courts: [] };
     this.streamsSharedAll = false;
       },
 

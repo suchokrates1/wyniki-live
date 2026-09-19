@@ -61,8 +61,8 @@ Siatka URL-i na każdy dzień turnieju i każdy kort. Publiczna nazwa kortu dost
 
 | Kontrolka | Co robi | Efekt |
 |-----------|---------|-------|
-| **Jeden stream na wszystkie korty** | Jeden URL na dzień dla całej hali | Play na każdym korcie otwiera ten sam feed |
-| Komórka dzień × kort | URL YouTube lub inny `http(s)` (gdy przełącznik wyłączony) | — |
+| **Jeden stream na wszystkie korty** | Jeden URL na dzień + chipy kortów w transmisji | Play tylko na zaznaczonych kortach |
+| Komórka dzień × kort | URL YouTube lub inny `http(s)` (gdy przełącznik wyłączony) | Puste pole = brak Play |
 | **Zapisz linki** | Zapis siatki | `PUT …/court-streams` `{links, shared, shared_all_courts}` |
 
 To samo pole jest w adminie przy edycji turnieju (`GET`/`PUT /admin/api/tournaments/{id}/court-streams`). Overlay OBS nie dostaje Play.

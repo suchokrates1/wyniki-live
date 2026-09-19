@@ -99,6 +99,22 @@ def test_shared_url_applies_to_every_court_and_court_link_wins(db, monkeypatch):
     assert court_b not in urls
 
 
+def test_shared_url_skips_courts_marked_off(db, monkeypatch):
+    monkeypatch.setattr("wyniki.database.court_streams.today_warsaw", lambda now=None: "2026-09-26")
+    tournament_id = db.insert_tournament("Partial Hall", "2026-09-26", "2026-09-26", active=True)
+    court_a, court_b = db.create_tournament_courts(tournament_id, 2)
+    db.save_tournament_court_streams(tournament_id, {
+        "shared_all_courts": True,
+        "shared": {"2026-09-26": "https://youtu.be/hall"},
+        "off_courts": [court_b],
+    })
+    urls = db.fetch_watch_urls_for_date()
+    assert urls[court_a] == "https://youtu.be/hall"
+    assert court_b not in urls
+    assert "watch_url" not in db.attach_watch_url(court_b, {"court_name": "2"})
+    assert db.get_tournament_court_streams(tournament_id)["off_courts"] == [court_b]
+
+
 def test_today_warsaw_follows_europe_warsaw(monkeypatch):
     from wyniki.database import court_streams
 

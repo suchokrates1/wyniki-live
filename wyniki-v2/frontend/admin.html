@@ -1183,7 +1183,15 @@
             <input type="checkbox" class="toggle toggle-info" :checked="streamsSharedAll" @change="toggleAdminStreamsSharedAll()">
             <span class="label-text">Jeden stream na wszystkie korty</span>
           </label>
-          <p class="text-xs opacity-70">Ten sam link Play na każdym korcie — gdy jedna kamera / jeden kanał obejmuje całą halę.</p>
+          <p class="text-xs opacity-70">Ten sam link Play na korcie z kamerą. Puste pole albo odznaczony kort = zwykły napis, bez Play.</p>
+          <div class="flex flex-wrap gap-2 mt-3" x-show="streamsSharedAll && courtStreams.courts.length">
+            <template x-for="court in courtStreams.courts" :key="'admin_stream_on_'+court.kort_id">
+              <label class="label cursor-pointer justify-start gap-2 py-0">
+                <input type="checkbox" class="checkbox checkbox-sm" :checked="isAdminStreamCourtOn(court.kort_id)" @change="toggleAdminStreamCourtOn(court.kort_id)">
+                <span class="label-text" x-text="court.name || court.kort_id"></span>
+              </label>
+            </template>
+          </div>
           <div class="grid gap-3 mt-3" x-show="courtStreams.days.length && streamsSharedAll">
             <template x-for="day in courtStreams.days" :key="'admin_stream_shared_'+day">
               <div class="form-control">

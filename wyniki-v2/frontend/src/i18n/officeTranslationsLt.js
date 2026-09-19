@@ -314,8 +314,11 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       today: 'šiandien',
       placeholder: 'https://youtube.com/…',
       sharedAll: 'Viena transliacija visiems kortams',
-      sharedAllHint: 'Ta pati Play nuoroda prie kiekvieno korto — kai viena kamera / vienas kanalas apima visą salę.',
+      sharedAllHint: 'Ta pati Play nuoroda prie kortų su kamera — kai viena kamera / vienas kanalas apima salę.',
       sharedUrlLabel: 'Bendra transliacijos nuoroda',
+      emptyMeansOff: 'Tuščias laukas = nėra Play ir nėra paspaudžiamo korto pavadinimo.',
+      offCourts: 'Kortai transliacijoje',
+      offCourtsHint: 'Palikite pažymėtus kortus su kamera. Nuimkite kortą be transliacijos — liks paprastas užrašas.',
     },
     tabs: {
       history: 'Naujausi mačai',

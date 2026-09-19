@@ -1107,6 +1107,16 @@
             <span x-text="ot('streams.sharedAll')"></span>
           </label>
           <p class="office-hint" x-text="ot('streams.sharedAllHint')"></p>
+          <p class="office-hint" x-text="ot('streams.emptyMeansOff')"></p>
+          <div class="office-streams__courts" x-show="streamsSharedAll && courtStreams.courts.length">
+            <span class="office-kicker" x-text="ot('streams.offCourts')"></span>
+            <p class="office-hint" x-text="ot('streams.offCourtsHint')"></p>
+            <div class="office-notes__chips">
+              <template x-for="court in courtStreams.courts" :key="'stream_on_'+court.kort_id">
+                <button type="button" class="office-notes__chip" :aria-pressed="isStreamCourtOn(court.kort_id)" @click="toggleStreamCourtOn(court.kort_id)" x-text="court.name || court.kort_id"></button>
+              </template>
+            </div>
+          </div>
           <p class="office-hint" x-show="!courtStreams.courts.length" x-text="ot('streams.emptyCourts')"></p>
           <div class="office-streams__shared" x-show="courtStreams.days.length && streamsSharedAll">
             <template x-for="day in courtStreams.days" :key="'stream_shared_'+day">

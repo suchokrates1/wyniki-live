@@ -1129,6 +1129,10 @@ body.office-body {
 .office-streams__shared .office-field.is-today .office-kicker {
   color: var(--kort-lime);
 }
+.office-streams__courts {
+  display: grid;
+  gap: 8px;
+}
 
 .office-toggle {
   display: inline-flex;

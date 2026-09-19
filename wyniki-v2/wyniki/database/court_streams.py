@@ -18,6 +18,7 @@ from .tournaments import fetch_tournament
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 ALL_COURTS_ID = "__all__"
+NO_STREAM_URL = "__none__"
 MAX_DAYS = 21
 MAX_URL_LEN = 500
 
@@ -119,6 +120,7 @@ def get_tournament_court_streams(tournament_id: int) -> Dict[str, Any]:
     days = tournament_days(tournament.get("start_date"), tournament.get("end_date"))
     links: Dict[str, Dict[str, str]] = {day: {cid: "" for cid in court_ids} for day in days}
     shared: Dict[str, str] = {}
+    off_courts: set[str] = set()
 
     try:
         with db_conn() as conn:
@@ -142,8 +144,12 @@ def get_tournament_court_streams(tournament_id: int) -> Dict[str, Any]:
                 if kort_id == ALL_COURTS_ID:
                     shared[day] = url
                     continue
-                if kort_id in court_ids:
-                    links[day][kort_id] = url
+                if kort_id not in court_ids:
+                    continue
+                if url == NO_STREAM_URL:
+                    off_courts.add(kort_id)
+                    continue
+                links[day][kort_id] = url
     except Exception as exc:
         logger.error("get_tournament_court_streams_error", error=str(exc), tournament_id=tournament_id)
 
@@ -157,6 +163,7 @@ def get_tournament_court_streams(tournament_id: int) -> Dict[str, Any]:
         "links": {day: links.get(day, {cid: "" for cid in court_ids}) for day in ordered_days},
         "shared": {day: shared.get(day, "") for day in ordered_days},
         "shared_all_courts": any(bool(shared.get(day)) for day in ordered_days),
+        "off_courts": [cid for cid in court_ids if cid in off_courts],
     }
 
 
@@ -187,7 +194,15 @@ def save_tournament_court_streams(tournament_id: int, payload: Any) -> Dict[str,
         if url:
             rows.append((int(tournament_id), kid, day_key, url, _utc_now()))
 
+    off_raw = payload.get("off_courts") if isinstance(payload, dict) else None
+    off_courts = {
+        str(kid)
+        for kid in (off_raw or [])
+        if str(kid) in court_ids
+    }
+
     if shared_mode:
+        shared_days: List[str] = []
         for day_raw, url_raw in shared_incoming.items():
             day = parse_iso_date(day_raw)
             if day is None:
@@ -196,6 +211,10 @@ def save_tournament_court_streams(tournament_id: int, payload: Any) -> Dict[str,
             if allowed_days and day_key not in allowed_days:
                 continue
             _append_row(ALL_COURTS_ID, day_key, url_raw)
+            shared_days.append(day_key)
+        for kid in off_courts:
+            for day_key in shared_days or sorted(allowed_days):
+                rows.append((int(tournament_id), kid, day_key, NO_STREAM_URL, _utc_now()))
     else:
         for day_raw, cell in incoming.items():
             day = parse_iso_date(day_raw)
@@ -248,6 +267,7 @@ def fetch_watch_urls_for_date(day: Optional[str] = None) -> Dict[str, str]:
 
     urls: Dict[str, str] = {}
     shared_by_tournament: Dict[int, str] = {}
+    off_courts: set[str] = set()
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -270,11 +290,14 @@ def fetch_watch_urls_for_date(day: Optional[str] = None) -> Dict[str, str]:
                     except (TypeError, ValueError):
                         continue
                     continue
+                if url == NO_STREAM_URL:
+                    off_courts.add(kid)
+                    continue
                 urls[kid] = url
         for tournament_id, url in shared_by_tournament.items():
             for court in fetch_courts_for_tournament(tournament_id):
                 kid = str(court.get("kort_id") or "")
-                if kid and kid not in urls:
+                if kid and kid not in urls and kid not in off_courts:
                     urls[kid] = url
     except Exception as exc:
         logger.error("fetch_watch_urls_error", error=str(exc), day=target)
