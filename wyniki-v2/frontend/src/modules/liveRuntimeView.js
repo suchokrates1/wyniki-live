@@ -103,7 +103,7 @@ export function createLiveRuntimeView() {
 
       eventSource.addEventListener('court_update', (e) => {
         try {
-          const data = JSON.parse(e.data);
+          let data = JSON.parse(e.data);
           const courtId = String(data.court_id);
           if (!this.publicCourtIds[courtId]) return;
           const prev = this.courts[courtId];
