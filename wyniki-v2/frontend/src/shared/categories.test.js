@@ -48,6 +48,12 @@ test('hyphenated B3-B4 labels parse as B34', () => {
   assert.equal(planningDivisionFromGroupName('B3-B4 Kobiety'), 'B34K');
 });
 
+test('B3-B4 women label beats a leftover B3K preset', () => {
+  const cat = { preset_key: 'B3K', label: 'B3-B4 Kobiety', hint_bands: ['B3', 'B4'] };
+  assert.equal(tournamentCategoryDivisionKey(cat), 'B34K');
+  assert.equal(playerMatchesTournamentCategory({ category: 'B4', gender: 'K' }, cat), true);
+});
+
 test('B3/4 mixed matches B3 and B4 of any gender', () => {
   const cat = { preset_key: '', label: 'B3/4 Mixed', hint_bands: ['B3', 'B4'] };
   assert.equal(tournamentCategoryDivisionKey(cat), 'B34');

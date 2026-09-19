@@ -6,6 +6,56 @@
  */
 const STEP_VIEWS = ['groups', 'draws', 'planning', 'progress', 'knockout'];
 
+export function assignmentOf(map, id) {
+  if (!map || id == null) return '';
+  return map[id] || map[Number(id)] || map[String(id)] || '';
+}
+
+/** Unique roster + group rows from planning data. Do not rematch class/gender across categories. */
+export function officePathRosterFacts({
+  categories = [],
+  groups = [],
+  players = [],
+  assignments = {},
+  teams = [],
+  teamAssignments = {},
+  matchPlayer = () => false,
+} = {}) {
+  const active = categories.filter((cat) => cat?.is_active !== 0);
+  const seen = new Set();
+  const roster = [];
+  for (const player of players) {
+    if (player?.id == null || seen.has(Number(player.id))) continue;
+    seen.add(Number(player.id));
+    roster.push(player);
+  }
+  const missing = [];
+  for (const category of active) {
+    const groupNames = new Set(
+      groups
+        .filter((group) => Number(group.tournament_category_id) === Number(category.id))
+        .map((group) => group.name),
+    );
+    if (category.is_doubles) {
+      const catTeams = teams.filter((team) => Number(team.category_id) === Number(category.id));
+      const open = catTeams.filter((team) => !groupNames.has(assignmentOf(teamAssignments, team.id)));
+      if (!catTeams.length) missing.push({ key: 'missingNoPairs', category });
+      else if (open.length) missing.push({ key: 'missingPairs', category, count: open.length });
+      continue;
+    }
+    const inGroups = roster.filter((player) => groupNames.has(assignmentOf(assignments, player.id)));
+    const matching = roster.filter((player) => matchPlayer(player, category));
+    const open = matching.filter((player) => !assignmentOf(assignments, player.id));
+    if (!inGroups.length && !matching.length) missing.push({ key: 'missingNoPlayers', category });
+    else if (open.length) missing.push({ key: 'missingPlayers', category, count: open.length });
+  }
+  return {
+    singlesTotal: roster.length,
+    singlesAssigned: roster.filter((player) => assignmentOf(assignments, player.id)).length,
+    missing,
+  };
+}
+
 export function createOfficePathView() {
   return {
     officeUserNavigated: false,
@@ -19,27 +69,16 @@ export function createOfficePathView() {
     officePathFacts() {
       const categories = (this.tournamentCategories || []).filter((cat) => cat.is_active !== 0);
       const groups = this.planningGroups || [];
-      const missing = [];
-      let singlesTotal = 0;
-      let singlesAssigned = 0;
-      for (const category of categories) {
-        const groupNames = new Set(groups
-          .filter((group) => Number(group.tournament_category_id) === Number(category.id))
-          .map((group) => group.name));
-        if (category.is_doubles) {
-          const teams = (this.planningTeams || []).filter((team) => Number(team.category_id) === Number(category.id));
-          const open = teams.filter((team) => !groupNames.has(this.planningTeamAssignments?.[team.id]));
-          if (!teams.length) missing.push({ key: 'missingNoPairs', category });
-          else if (open.length) missing.push({ key: 'missingPairs', category, count: open.length });
-          continue;
-        }
-        const players = this.planningPlayersMatchingCategory(category);
-        const open = players.filter((player) => !groupNames.has(this.planningGroupAssignments?.[player.id]));
-        singlesTotal += players.length;
-        singlesAssigned += players.length - open.length;
-        if (!players.length) missing.push({ key: 'missingNoPlayers', category });
-        else if (open.length) missing.push({ key: 'missingPlayers', category, count: open.length });
-      }
+      const roster = officePathRosterFacts({
+        categories,
+        groups,
+        players: this.planningPlayers || [],
+        assignments: this.planningGroupAssignments || {},
+        teams: this.planningTeams || [],
+        teamAssignments: this.planningTeamAssignments || {},
+        matchPlayer: (player, category) => this.planningPlayersMatchingCategory(category).some((row) => Number(row.id) === Number(player.id)),
+      });
+      const { singlesTotal, singlesAssigned, missing } = roster;
 
       const schedule = this.officeSchedule || [];
       const isPlaced = (entry) => Boolean(String(entry.court_id || '').trim() && String(entry.scheduled_time || '').trim());

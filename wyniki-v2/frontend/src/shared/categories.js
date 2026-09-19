@@ -150,12 +150,23 @@ function playerBandMatches(playerCategory, bands) {
 /** Canonical B1K/B1M/… key for a tournament category row (preset first). */
 export function tournamentCategoryDivisionKey(category, mixedCategories = []) {
   if (!category) return '';
-  const preset = String(category.preset_key || '').trim().toUpperCase();
-  if (/^B\d{1,2}[KM]$/.test(preset)) return preset;
-
   const label = String(category.label || '');
   const hints = normalizeMixedCategories(category.hint_bands || []);
   const code = extractCategoryCodeFromLabel(label) || (hints.length === 1 ? hints[0] : '');
+  const combined = code === 'B34'
+    || hints.includes('B34')
+    || (hints.includes('B3') && hints.includes('B4'));
+  if (combined) {
+    if (isMixedCategory(code, mixedCategories) || isMixedSectionLabel(label) || /mixed|\bmix\b|mieszan/i.test(label)) {
+      return 'B34';
+    }
+    const combinedGender = inferPlanningGenderFromLabel(label);
+    if (combinedGender) return `B34${combinedGender}`;
+    return 'B34';
+  }
+
+  const preset = String(category.preset_key || '').trim().toUpperCase();
+  if (/^B\d{1,2}[KM]$/.test(preset)) return preset;
   const mixed = isMixedCategory(code, mixedCategories)
     || isMixedSectionLabel(label)
     || hints.length > 1
@@ -182,6 +193,13 @@ export function playerMatchesTournamentCategory(player, category, mixedCategorie
   if (/^B\d{1,2}$/.test(expected)) {
     const hints = normalizeMixedCategories(category.hint_bands || []);
     return playerBandMatches(player.category, hints.length ? hints : [expected]);
+  }
+  const combined = String(expected).match(/^(B34)([KM])?$/);
+  if (combined) {
+    if (!playerBandMatches(player.category, ['B3', 'B4', 'B34'])) return false;
+    if (!combined[2]) return true;
+    const sex = planningDivisionKey(player.category, player.gender, mixedCategories);
+    return sex.endsWith(combined[2]);
   }
   return planningDivisionKey(player.category, player.gender, mixedCategories) === expected;
 }

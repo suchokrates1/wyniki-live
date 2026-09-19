@@ -115,14 +115,13 @@ export function createOfficePlayersView() {
       }
       // Doubles players are the singles players too: playing in a pair does not excuse a
       // player from the singles category they belong to.
-      const singlesCategories = categories.filter(item => !item.is_doubles);
-      const singlesIds = new Set();
-      for (const cat of singlesCategories) {
-        for (const player of this.planningPlayersMatchingCategory(cat)) singlesIds.add(Number(player.id));
-      }
-      const singlesPlayers = (this.planningPlayers || []).filter(player => singlesIds.has(Number(player.id)));
+      const singlesPlayers = this.planningPlayers || [];
       if (singlesPlayers.length) {
-        return singlesPlayers.every(player => this.planningGroupAssignments[player.id]);
+        return singlesPlayers.every(player => Boolean(
+          this.planningGroupAssignments[player.id]
+          || this.planningGroupAssignments[Number(player.id)]
+          || this.planningGroupAssignments[String(player.id)],
+        ));
       }
       return teams.some(team => this.planningTeamAssignments[team.id]) || (this.planningPlayers || []).length > 0;
     },
