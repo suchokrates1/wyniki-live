@@ -150,7 +150,7 @@
           </span>
           <span class="office-rail__label" x-text="ot('tour.start')"></span>
         </button>
-        <template x-for="item in officeViewItems().filter((entry) => entry.id === 'history' || entry.id === 'quickinfo')" :key="'office_view_'+item.id">
+        <template x-for="item in officeViewItems().filter((entry) => entry.id === 'history' || entry.id === 'quickinfo' || entry.id === 'streams')" :key="'office_view_'+item.id">
           <button type="button"
                   class="office-tab office-rail__item"
                   :class="{'is-active': activeTab === item.id}"
@@ -1097,6 +1097,75 @@
         </div>
       </section>
 
+
+      <section class="office-view" x-show="activeTab === 'streams'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak aria-labelledby="office-streams-title">
+        <div class="office-panel office-streams">
+          <h2 id="office-streams-title" class="office-kicker office-kicker--accent" x-text="ot('streams.title')"></h2>
+          <p class="office-hint" x-text="ot('streams.description')"></p>
+          <label class="office-toggle" for="office-streams-shared">
+            <input type="checkbox" id="office-streams-shared" :checked="streamsSharedAll" @change="toggleStreamsSharedAll()">
+            <span x-text="ot('streams.sharedAll')"></span>
+          </label>
+          <p class="office-hint" x-text="ot('streams.sharedAllHint')"></p>
+          <p class="office-hint" x-show="!courtStreams.courts.length" x-text="ot('streams.emptyCourts')"></p>
+          <div class="office-streams__shared" x-show="courtStreams.days.length && streamsSharedAll">
+            <template x-for="day in courtStreams.days" :key="'stream_shared_'+day">
+              <label class="office-field" :class="{'is-today': isStreamToday(day)}">
+                <span class="office-kicker">
+                  <span x-text="formatStreamDay(day)"></span>
+                  <span class="office-streams__today" x-show="isStreamToday(day)" x-text="ot('streams.today')"></span>
+                </span>
+                <input
+                  type="url"
+                  class="input input-bordered input-sm w-full"
+                  :placeholder="ot('streams.placeholder')"
+                  :aria-label="ot('streams.sharedUrlLabel') + ' — ' + day"
+                  :value="sharedStreamUrl(day)"
+                  @input="setSharedStreamUrl(day, $event.target.value)"
+                >
+              </label>
+            </template>
+          </div>
+          <div class="office-streams__table-wrap" x-show="courtStreams.courts.length && !streamsSharedAll">
+            <table class="office-streams__table">
+              <thead>
+                <tr>
+                  <th scope="col"></th>
+                  <template x-for="court in courtStreams.courts" :key="'stream_head_'+court.kort_id">
+                    <th scope="col" x-text="court.name || court.kort_id"></th>
+                  </template>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="day in courtStreams.days" :key="'stream_day_'+day">
+                  <tr :class="{'is-today': isStreamToday(day)}">
+                    <th scope="row" class="office-streams__day">
+                      <span x-text="formatStreamDay(day)"></span>
+                      <span class="office-streams__today" x-show="isStreamToday(day)" x-text="ot('streams.today')"></span>
+                    </th>
+                    <template x-for="court in courtStreams.courts" :key="'stream_cell_'+day+'_'+court.kort_id">
+                      <td>
+                        <label class="sr-only" :for="'office-stream-'+day+'-'+court.kort_id" x-text="ot('streams.urlLabel') + ' — ' + (court.name || court.kort_id) + ' — ' + day"></label>
+                        <input
+                          :id="'office-stream-'+day+'-'+court.kort_id"
+                          type="url"
+                          class="input input-bordered input-sm w-full"
+                          :placeholder="ot('streams.placeholder')"
+                          :value="streamUrl(day, court.kort_id)"
+                          @input="setStreamUrl(day, court.kort_id, $event.target.value)"
+                        >
+                      </td>
+                    </template>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="office-quick__controls">
+            <button type="button" class="office-btn office-btn--primary" @click="saveCourtStreams()" :class="{'is-busy': streamsSaving}" :aria-busy="streamsSaving" :aria-disabled="streamsSaving" x-text="ot('streams.save')"></button>
+          </div>
+        </div>
+      </section>
 
       <section class="office-view office-view--narrow" x-show="activeTab === 'quickinfo'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak aria-labelledby="office-quick-info-title">
         <div class="office-panel office-quick">

@@ -19,6 +19,7 @@ from ..database import (
     fetch_courts_for_tournament,
     fetch_tournament,
     fetch_tournament_schedule,
+    get_tournament_court_streams,
     get_tournament_quick_info,
     is_group_stage_phase,
     is_knockout_stage_phase,
@@ -766,4 +767,5 @@ def _build_office_dashboard(tournament_id: int) -> Dict[str, Any]:
         "schedule": schedule,
         "courts": fetch_courts_for_tournament(tournament_id),
         "quick_info": get_tournament_quick_info(tournament_id),
+        "court_streams": get_tournament_court_streams(tournament_id),
     }

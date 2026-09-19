@@ -30,6 +30,7 @@ Sekcja **Zawsze pod ręką** (z przyciskiem **Przewodnik** — klikany samouczek
 |-------|---------|
 | **Ostatnie mecze** | [[22 - Historia]] |
 | **Komunikat dla zawodników** | niżej |
+| **Transmisje** | siatka dzień × kort z URL-ami YouTube; strona live bierze dzisiejszy link |
 
 Na dole szyny: język, **Powiadomienia o nowych meczach** (Notification API), **Test powiadomienia**, **Wyloguj**.
 
@@ -53,6 +54,18 @@ SSE: `/api/office/{slot}/stream` — dane odświeżają się na żywo. Starsza, 
 | Checkbox **Pokaż na stronie publicznej** | `active` | — |
 | **Opublikuj** | Zapis | `PUT …/quick-info` `{message, active}` |
 | **Ukryj baner** | `active=false` + zapis | Baner znika z `/` |
+
+## Transmisje (dzień × kort)
+
+Siatka URL-i na każdy dzień turnieju i każdy kort. Publiczna nazwa kortu dostaje ikonę Play i otwiera **dzisiejszy** link (strefa Europe/Warsaw). Pusty URL = brak Play.
+
+| Kontrolka | Co robi | Efekt |
+|-----------|---------|-------|
+| **Jeden stream na wszystkie korty** | Jeden URL na dzień dla całej hali | Play na każdym korcie otwiera ten sam feed |
+| Komórka dzień × kort | URL YouTube lub inny `http(s)` (gdy przełącznik wyłączony) | — |
+| **Zapisz linki** | Zapis siatki | `PUT …/court-streams` `{links, shared, shared_all_courts}` |
+
+To samo pole jest w adminie przy edycji turnieju (`GET`/`PUT /admin/api/tournaments/{id}/court-streams`). Overlay OBS nie dostaje Play.
 
 ## Uwagi do meczów w terminarzu
 

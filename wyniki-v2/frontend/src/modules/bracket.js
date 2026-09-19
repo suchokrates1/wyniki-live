@@ -4,7 +4,7 @@ import {
   isMixedSectionLabel,
 } from '../shared/categories.js';
 import { isPendingCompetitorName } from '../shared/labelDisplay.js';
-import { PLAY_FORMAT_ROUND_ROBIN, normalizePlayFormat } from '../shared/playFormat.js';
+import { PLAY_FORMAT_KNOCKOUT, PLAY_FORMAT_ROUND_ROBIN, normalizePlayFormat } from '../shared/playFormat.js';
 
 export function getGroupStandingsRows(group, siblingGroups = []) {
   const rows = Array.isArray(group?.standings) ? [...group.standings] : [];
@@ -167,6 +167,38 @@ export function getCategoryPodiumEntries(category = {}) {
     return getKnockoutPodiumEntries(category?.knockout || []);
   }
   return getGroupPodiumEntries(category?.groups || []);
+}
+
+export function getCategoryFormatFacts(category = {}) {
+  const groups = (category?.groups || []).filter((group) => (
+    normalizePlayFormat(group?.play_format) !== PLAY_FORMAT_KNOCKOUT
+  ));
+  const knockout = category?.knockout || [];
+  const usesKnockout = categoryUsesKnockoutMedals(category);
+  const kind = usesKnockout
+    ? (groups.length ? 'groups_knockout' : 'knockout')
+    : 'round_robin';
+  const qualifiers = usesKnockout && groups.some((group) => (group?.standings || []).length > 2)
+    ? 2
+    : 0;
+  const hasPlaces = knockout.some((round) => {
+    const place = getKnockoutPlaceNumber(round.phase);
+    return (place && place >= 5) || getKnockoutFamily(round.phase) === 1;
+  });
+  return { kind, qualifiers, hasPlaces, groupCount: groups.length };
+}
+
+export function matchBracketCategoryName(categories = [], rawCategory = '') {
+  const want = getBracketCategoryLabel(rawCategory);
+  if (!want) return '';
+  const list = Array.isArray(categories) ? categories : [];
+  const exact = list.find((category) => (
+    category?.name === rawCategory || getBracketCategoryLabel(category?.name) === want
+  ));
+  if (exact) return exact.name;
+  const folded = want.toLowerCase();
+  const loose = list.find((category) => getBracketCategoryLabel(category?.name).toLowerCase() === folded);
+  return loose?.name || want;
 }
 
 export function parseBracketCategory(name) {

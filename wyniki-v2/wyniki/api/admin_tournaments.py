@@ -68,6 +68,9 @@ from ..database import (
     update_tournament_schedule_entry,
     delete_tournament_schedule_entry,
     link_schedule_to_match,
+    StreamUrlError,
+    get_tournament_court_streams,
+    save_tournament_court_streams,
 )
 from ..config import logger, settings
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
@@ -1038,6 +1041,29 @@ def get_tournament_office_dashboard(tournament_id: int):
     if error:
         return error
     return _json_no_cache(_build_office_dashboard(tournament_id))
+
+
+@blueprint.route('/<int:tournament_id>/court-streams', methods=['GET'])
+def admin_tournament_court_streams_get(tournament_id: int):
+    """Return the day × court stream URL grid for a tournament."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    return _json_no_cache({"court_streams": get_tournament_court_streams(tournament_id)})
+
+
+@blueprint.route('/<int:tournament_id>/court-streams', methods=['PUT'])
+def admin_tournament_court_streams_save(tournament_id: int):
+    """Save YouTube / stream URLs per tournament day and court."""
+    _, error = _require_tournament(tournament_id)
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    try:
+        court_streams = save_tournament_court_streams(tournament_id, data)
+    except StreamUrlError as exc:
+        return _json_no_cache({"error": "invalid_url", "cells": exc.cells}, 400)
+    return _json_no_cache({"court_streams": court_streams})
 
 
 @blueprint.route('/<int:tournament_id>/office/stream', methods=['GET'])

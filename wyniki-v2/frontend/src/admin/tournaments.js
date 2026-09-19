@@ -17,6 +17,9 @@ export function createTournamentsAdmin() {
       tournaments: [],
       selectedTournament: null,
       editingTournamentId: null,
+      courtStreams: { days: [], today: '', courts: [], links: {}, shared: {} },
+      streamsSharedAll: false,
+      streamsSaving: false,
       newTournament: {
         name: '',
         start_date: '',
@@ -265,7 +268,103 @@ export function createTournamentsAdmin() {
     this.adminCategoryPresetSelected = {};
     this.adminCategoryPresetDoubles = {};
     await this.loadAdminTournamentCategories(tournament.id);
+    await this.loadAdminCourtStreams(tournament.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+
+      applyAdminCourtStreams(payload = {}) {
+        this.courtStreams = {
+          days: Array.isArray(payload.days) ? payload.days : [],
+          today: payload.today || '',
+          courts: Array.isArray(payload.courts) ? payload.courts : [],
+          links: payload.links && typeof payload.links === 'object' ? payload.links : {},
+          shared: payload.shared && typeof payload.shared === 'object' ? payload.shared : {},
+        };
+        this.streamsSharedAll = !!payload.shared_all_courts;
+      },
+
+      adminStreamUrl(day, kortId) {
+        return this.courtStreams.links?.[day]?.[kortId] || '';
+      },
+
+      setAdminStreamUrl(day, kortId, value) {
+        if (!this.courtStreams.links[day]) this.courtStreams.links[day] = {};
+        this.courtStreams.links[day][kortId] = value;
+      },
+
+      adminSharedStreamUrl(day) {
+        return this.courtStreams.shared?.[day] || '';
+      },
+
+      setAdminSharedStreamUrl(day, value) {
+        if (!this.courtStreams.shared) this.courtStreams.shared = {};
+        this.courtStreams.shared[day] = value;
+      },
+
+      toggleAdminStreamsSharedAll() {
+        this.streamsSharedAll = !this.streamsSharedAll;
+        if (!this.streamsSharedAll) return;
+        if (!this.courtStreams.shared) this.courtStreams.shared = {};
+        for (const day of this.courtStreams.days || []) {
+          if (this.courtStreams.shared[day]) continue;
+          const row = this.courtStreams.links?.[day] || {};
+          const first = Object.values(row).find((url) => String(url || '').trim());
+          this.courtStreams.shared[day] = first || '';
+        }
+      },
+
+      formatAdminStreamDay(day) {
+        const date = new Date(`${day}T12:00:00`);
+        if (Number.isNaN(date.getTime())) return String(day || '');
+        try {
+          return new Intl.DateTimeFormat('pl', { weekday: 'short', day: 'numeric', month: 'short' }).format(date);
+        } catch {
+          return String(day || '');
+        }
+      },
+
+      isAdminStreamToday(day) {
+        return String(day || '') === String(this.courtStreams.today || '');
+      },
+
+      async loadAdminCourtStreams(tournamentId) {
+        if (!tournamentId) return;
+        try {
+          const response = await fetch(`/admin/api/tournaments/${tournamentId}/court-streams`);
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error || 'Błąd ładowania linków transmisji');
+          this.applyAdminCourtStreams(payload.court_streams || {});
+        } catch (err) {
+          console.error('Failed to load court streams:', err);
+          this.showToast('Błąd ładowania linków transmisji', 'error');
+        }
+      },
+
+      async saveAdminCourtStreams() {
+        if (!this.editTournament.id) return;
+        this.streamsSaving = true;
+        try {
+          const response = await fetch(`/admin/api/tournaments/${this.editTournament.id}/court-streams`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              shared_all_courts: !!this.streamsSharedAll,
+              shared: this.courtStreams.shared || {},
+              links: this.courtStreams.links || {},
+            }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(payload.error === 'invalid_url' ? 'Nieprawidłowy adres URL' : (payload.error || 'Błąd zapisu linków'));
+          }
+          this.applyAdminCourtStreams(payload.court_streams || {});
+          this.showToast('Zapisano linki do transmisji', 'success');
+        } catch (err) {
+          console.error('Failed to save court streams:', err);
+          this.showToast(err.message || 'Błąd zapisu linków transmisji', 'error');
+        } finally {
+          this.streamsSaving = false;
+        }
       },
 
       cancelTournamentEdit() {
@@ -291,6 +390,8 @@ export function createTournamentsAdmin() {
     };
     this.adminTournamentCategories = [];
     this.adminCategorySetupOpen = true;
+    this.courtStreams = { days: [], today: '', courts: [], links: {}, shared: {} };
+    this.streamsSharedAll = false;
       },
 
       adminCategoryPresetKeys() {

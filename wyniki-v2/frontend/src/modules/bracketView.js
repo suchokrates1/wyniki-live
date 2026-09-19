@@ -8,7 +8,9 @@ import {
   buildKnockoutTrees,
   compareBracketCategoryNames as compareBracketCategoryNamesData,
   getBracketCategoryLabel,
+  getCategoryFormatFacts,
   getGroupStandingsRows,
+  matchBracketCategoryName,
   getKnockoutPhaseClass,
   getCategoryPodiumEntries,
   getKnockoutPodiumEntries,
@@ -64,6 +66,39 @@ export function createBracketView() {
 
     categoryPodiumEntries(category = {}) {
       return getCategoryPodiumEntries(category);
+    },
+
+    categoryFormatText(category = {}) {
+      const facts = getCategoryFormatFacts(category);
+      const b = this.tr().bracket || {};
+      const body = facts.kind === 'round_robin'
+        ? (b.formatRoundRobin || '')
+        : facts.kind === 'knockout'
+          ? (b.formatKnockout || '')
+          : fmt(b.formatGroupsKnockout || '', { count: facts.qualifiers || 2 });
+      const extra = facts.hasPlaces ? (b.formatPlaces || '') : '';
+      return [body, extra].filter(Boolean).join(' ');
+    },
+
+    historyCategoryAria(match) {
+      return fmt(this.tr().history?.openCategory || 'Pokaż kategorię {category} na drabince', {
+        category: this.bracketCategoryLabel(match?.category) || this.translateCategory(match?.category) || '',
+      });
+    },
+
+    openHistoryCategory(match) {
+      const raw = match?.category;
+      if (!raw) return;
+      if (this.selectedTournamentId) {
+        const name = matchBracketCategoryName(this.tournamentBracketCategories(), raw);
+        this.historySubTab = 'bracket';
+        this.tournamentBracketCategory = name;
+        this._pendingTournamentCategory = name;
+        this.fetchTournamentBracket(this.selectedTournamentId);
+        this._updateHash();
+        return;
+      }
+      this.switchToBracket(matchBracketCategoryName(this.bracketCategories(), raw));
     },
 
     standingsRowQualifies(row, rowIndex, group, category) {
@@ -178,7 +213,10 @@ export function createBracketView() {
     switchToBracket(cat) {
       this.activeTab = 'live';
       this.liveSubTab = 'bracket';
-      if (cat) this.bracketCategory = cat;
+      if (cat) {
+        this.bracketCategory = cat;
+        this._pendingCategory = cat;
+      }
       this.fetchBracket();
       this._updateHash();
     },

@@ -48,6 +48,23 @@
   white-space: nowrap;
   text-shadow: 0 0 18px rgba(255, 212, 0, .28);
 }
+a.sb-tv-court {
+  display: inline-flex;
+  align-items: center;
+  gap: .32em;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+a.sb-tv-court:hover,
+a.sb-tv-court:focus-visible {
+  color: #FFD400;
+}
+.sb-tv-play {
+  width: .78em;
+  height: .78em;
+  flex: 0 0 auto;
+}
 .sb-tv-meta {
   flex: 1 1 auto;
   min-width: 0;

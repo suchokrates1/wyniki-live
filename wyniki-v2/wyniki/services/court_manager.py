@@ -267,10 +267,21 @@ def serialize_public_snapshot() -> Dict[str, Any]:
 
     When DEMO_OVERLAY_ACTIVE is True, returns DEMO_COURTS data.
     Otherwise returns real COURTS data.
+    Today's stream URL (if any) is attached as watch_url per court.
     """
+    from ..database.court_streams import fetch_watch_urls_for_date
+
+    urls = fetch_watch_urls_for_date()
     with STATE_LOCK:
         source = DEMO_COURTS if (DEMO_OVERLAY_ACTIVE and DEMO_COURTS) else COURTS
-        return {kort_id: serialize_public_court_state(state) for kort_id, state in source.items()}
+        snapshot = {}
+        for kort_id, state in source.items():
+            public = serialize_public_court_state(state)
+            url = urls.get(str(kort_id))
+            if url:
+                public["watch_url"] = url
+            snapshot[kort_id] = public
+        return snapshot
 
 
 # ============ DEMO DATA MANAGEMENT ============

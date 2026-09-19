@@ -6,9 +6,11 @@ import {
   buildKnockoutTrees,
   compareBracketCategoryNames,
   getBracketCategoryLabel,
+  getCategoryFormatFacts,
   getCategoryPodiumEntries,
   getGroupPodiumEntries,
   getKnockoutPodiumEntries,
+  matchBracketCategoryName,
   getKnockoutRoundKind,
   groupMatchWinner,
   isFinalPhase,
@@ -241,6 +243,28 @@ test('9-16 semi is not interleaved with the championship tree', () => {
     'B1 Men — Finał',
     'B1 Men — 10 9–16 Półfinał',
   ]);
+});
+
+test('category format facts distinguish RR, groups+KO and places', () => {
+  assert.deepEqual(getCategoryFormatFacts({
+    groups: [{ play_format: 'round_robin', standings: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] }],
+    knockout: [],
+  }), { kind: 'round_robin', qualifiers: 0, hasPlaces: false, groupCount: 1 });
+  const groupsKo = getCategoryFormatFacts({
+    groups: [
+      { play_format: 'groups_knockout', standings: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }] },
+      { play_format: 'groups_knockout', standings: [{ name: 'E' }, { name: 'F' }, { name: 'G' }, { name: 'H' }] },
+    ],
+    knockout: [
+      { phase: 'B2 Men — Półfinał', slots: [] },
+      { phase: 'B2 Men — o miejsca 5–8', slots: [] },
+    ],
+  });
+  assert.equal(groupsKo.kind, 'groups_knockout');
+  assert.equal(groupsKo.qualifiers, 2);
+  assert.equal(groupsKo.hasPlaces, true);
+  assert.equal(groupsKo.groupCount, 2);
+  assert.equal(matchBracketCategoryName([{ name: 'B3-B4 Kobiety' }], 'B3-B4 Kobiety'), 'B3-B4 Kobiety');
 });
 
 test('generated Vilnius-format phases fall into main, places and consolation families', () => {

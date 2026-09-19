@@ -21,6 +21,7 @@ import { calcMatchTime } from '../shared/matchTime.js';
 import { formatTemplate as fmt } from '../shared/text.js';
 import { formatTeamLabelForWrap, isTeamDisplayName, TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
 import { renderTvScoreboard } from '../shared/tvScoreboard.js';
+import { sanitizeWatchUrl } from '../shared/watchUrl.js';
 
 export function createLiveCourtView() {
   return {
@@ -258,6 +259,10 @@ export function createLiveCourtView() {
       };
     },
 
+    courtWatchUrl(courtId) {
+      return sanitizeWatchUrl(this.courts[courtId]?.watch_url);
+    },
+
     renderLiveTvScoreboard(courtId) {
       // Decorative only — homepage keeps the spoken heading + .score-summary live region.
       // `lang` is passed from the template so Alpine rebuilds the header word (Kort/Court/Platz/Kortas).
@@ -277,6 +282,7 @@ export function createLiveCourtView() {
           scale: 1,
           anim_speed: 1,
           anim_set: true,
+          watch: true,
           labels: this.scoreboardLabels(),
         },
         onAnimTick: () => { this.serveAnimTick += 1; },

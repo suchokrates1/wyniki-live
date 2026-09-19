@@ -593,6 +593,9 @@ def init_db() -> None:
         from .classifications import ensure_classification_tables, normalize_stored_genders
 
         ensure_classification_tables(cursor)
+        from .court_streams import ensure_court_stream_tables
+
+        ensure_court_stream_tables(cursor)
         cursor.execute("SELECT 1 FROM app_settings WHERE key = 'migration:normalize_genders'")
         if cursor.fetchone() is None:
             changed = normalize_stored_genders(cursor)

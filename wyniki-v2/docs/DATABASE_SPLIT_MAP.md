@@ -11,6 +11,7 @@ Nowe funkcje tylko w modułach; fasada nie rośnie poza re-exportami.
 | `connection.py` | `db_conn`, `init_db`, ustawienia aplikacji (`fetch_app_settings`, `upsert_app_settings`) |
 | `courts.py` | `fetch_courts*`, `fetch_court`, `insert_court`, `upsert_court`, `delete_court`, `rename_court`, `get_tournament_id_for_court`, `create_tournament_courts`, `sync_tournament_courts` |
 | `tournaments.py` | `fetch_tournament*`, `insert_tournament`, `update_tournament`, `delete_tournament`, `set_active_tournament*`, `get_active_tournament_*`, `mark_tournament_summary_sent`, quick-info |
+| `court_streams.py` | day × court stream URLs (`tournament_court_streams`), today's `watch_url` |
 | `players.py` | `fetch_players*`, `insert_player`, `update_player`, `delete_player`, bulk insert, global player sync helpers |
 | `schedule.py` | `fetch_tournament_schedule`, `upsert_tournament_schedule_entries`, `update/delete` schedule, `link_schedule_to_match`, `ensure_group_schedule_entries`, `ensure_knockout_schedule_entries`, `ensure_group_rematch_schedule_entries` |
 | `brackets.py` | bracket detect/seed/advance, knockout slot builders, `maybe_generate_knockout_from_completed_groups`, `advance_knockout`, phase helpers (`is_group_stage_phase`, `normalize_group_stage_phase`, …) |

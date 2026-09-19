@@ -87,6 +87,36 @@ test('live court uses localized homepage phase instead of GROUP', () => {
   assert.equal(html.includes('GROUP'), false);
 });
 
+test('watch look turns the court name into a play link', () => {
+  const html = renderTvScoreboard({
+    courtId: 'tv-watch',
+    courtName: 'Kort 1',
+    look: { watch: true },
+    court: {
+      watch_url: 'https://youtu.be/abc',
+      match_status: { active: true },
+      A: { full_name: 'Ada Nowak', points: '0' },
+      B: { full_name: 'Ewa Lis', points: '0' },
+    },
+  });
+  assert.match(html, /class="sb-tv-court is-watch"/);
+  assert.match(html, /href="https:\/\/youtu.be\/abc"/);
+  assert.match(html, /sb-tv-play/);
+  assert.match(html, /tabindex="-1"/);
+});
+
+test('watch look ignores javascript URLs and stays a plain court title', () => {
+  const html = renderTvScoreboard({
+    courtId: 'tv-watch-bad',
+    courtName: 'Kort 2',
+    look: { watch: true },
+    court: { watch_url: 'javascript:alert(1)', A: { full_name: 'Ada' }, B: { full_name: 'Ewa' } },
+  });
+  assert.equal(html.includes('is-watch'), false);
+  assert.equal(html.includes('javascript:'), false);
+  assert.match(html, /<span class="sb-tv-court">Kort 2<\/span>/);
+});
+
 test('tvFlagSpans splits only when partner country differs', () => {
   const split = tvFlagSpans({
     flag_url: 'https://flagcdn.com/w80/pl.png',

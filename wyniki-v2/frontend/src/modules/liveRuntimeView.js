@@ -116,6 +116,9 @@ export function createLiveRuntimeView() {
           });
 
           this.prevCourts[courtId] = prev ? { ...prev } : {};
+          if (prev?.watch_url && !data.watch_url) {
+            data = { ...data, watch_url: prev.watch_url };
+          }
           this.courts[courtId] = data;
           this.lastUpdate = new Date();
           if (prev?.match_status?.active && !data?.match_status?.active) {

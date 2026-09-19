@@ -1516,6 +1516,21 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
+button.hm-cat-badge {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  line-height: inherit;
+}
+button.hm-cat-badge:hover,
+button.hm-cat-badge:focus-visible {
+  text-decoration: underline;
+}
+button.hm-cat-badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 [data-theme="dark"] .hm-cat-badge {
   background: rgba(154, 209, 255, 0.12);
 }
@@ -1996,6 +2011,14 @@ body {
 /* ============================================================
    BRACKET: Tree / Ladder
    ============================================================ */
+.bt-format {
+  max-width: 40rem;
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .bracket-tree {
   margin-top: 28px;
   scroll-margin-top: 132px;

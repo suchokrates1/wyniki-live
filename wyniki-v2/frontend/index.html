@@ -128,6 +128,7 @@
                 <template x-for="courtId in getCourtIds()" :key="forKey('court', courtId)">
                     <section class="court-tv" :id="'kort-'+courtId" :aria-labelledby="'heading-'+courtId">
                         <h2 class="sr-only" :id="'heading-'+courtId" x-text="getHeadingAria(courtId)"></h2>
+                        <a class="sr-only" x-show="courtWatchUrl(courtId)" :href="courtWatchUrl(courtId)" target="_blank" rel="noopener noreferrer" x-text="t('watchCourt', { court: getCourtDisplayLabel(courtId) })"></a>
                         <div aria-hidden="true" x-html="renderLiveTvScoreboard(courtId, serveAnimTick, lang)"></div>
                         <p class="sr-only score-summary" :id="'k'+courtId+'-summary'" aria-live="polite"
                            x-text="getScoreSummary(courtId)"></p>
@@ -175,6 +176,8 @@
                                  role="tabpanel"
                                  :id="'cat-panel-'+cat.name.replace(/\s+/g,'-')"
                                  :aria-labelledby="'cat-tab-'+cat.name.replace(/\s+/g,'-')">
+
+                                <p class="bt-format" x-show="categoryFormatText(cat)" x-text="categoryFormatText(cat)"></p>
 
                                 <div class="bt-podium bt-podium--top" role="list" :aria-label="tr().bracket?.podiumLabel || 'Podium'" x-show="categoryPodiumEntries(cat).length === 3">
                                     <template x-for="(entry, pi) in categoryPodiumEntries(cat)" :key="'pod-top-'+cat.name+'-'+pi">
@@ -770,7 +773,7 @@
                                 <div class="hm-meta">
                                     <div class="hm-meta-left">
                                         <span class="hm-court-badge" x-text="(tr().history?.court || 'Kort') + ' ' + match.kort_id"></span>
-                                        <span class="hm-cat-badge" x-show="match.category" x-text="bracketCategoryLabel(match.category) || translateCategory(match.category)"></span>
+                                        <button type="button" class="hm-cat-badge" x-show="match.category" @click="openHistoryCategory(match)" :aria-label="historyCategoryAria(match)" x-text="bracketCategoryLabel(match.category) || translateCategory(match.category)"></button>
                                         <span class="hm-phase" x-show="match.phase" x-text="translatePhase(match.phase)"></span>
                                         <span class="hm-time" x-show="match.duration_seconds">
                                             <svg class="hm-time-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v4.5l3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -907,6 +910,8 @@
                                          role="tabpanel"
                                          :id="'tcat-panel-'+cat.name.replace(/\s+/g,'-')"
                                          :aria-labelledby="'tcat-tab-'+cat.name.replace(/\s+/g,'-')">
+
+                                        <p class="bt-format" x-show="categoryFormatText(cat)" x-text="categoryFormatText(cat)"></p>
 
                                         <div class="bt-podium bt-podium--top" role="list" :aria-label="tr().bracket?.podiumLabel || 'Podium'" x-show="categoryPodiumEntries(cat).length === 3">
                                             <template x-for="(entry, pi) in categoryPodiumEntries(cat)" :key="'tpod-top-'+cat.name+'-'+pi">
@@ -1243,7 +1248,7 @@
                                     <div class="hm-meta">
                                         <div class="hm-meta-left">
                                             <span class="hm-court-badge" x-text="(tr().history?.court || 'Kort') + ' ' + match.kort_id"></span>
-                                            <span class="hm-cat-badge" x-show="match.category" x-text="bracketCategoryLabel(match.category) || translateCategory(match.category)"></span>
+                                            <button type="button" class="hm-cat-badge" x-show="match.category" @click="openHistoryCategory(match)" :aria-label="historyCategoryAria(match)" x-text="bracketCategoryLabel(match.category) || translateCategory(match.category)"></button>
                                             <span class="hm-phase" x-show="match.phase" x-text="translatePhase(match.phase)"></span>
                                             <span class="hm-time" x-show="match.duration_seconds">
                                                 <svg class="hm-time-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v4.5l3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>

@@ -1177,6 +1177,56 @@
             </template>
           </div>
 
+          <div class="divider">Linki do transmisji</div>
+          <p class="text-sm opacity-70 -mt-2">Adres YouTube (lub inny) na każdy dzień i kort. Strona live tego dnia sama podmienia link przy nazwie kortu.</p>
+          <label class="label cursor-pointer justify-start gap-3 py-0 mt-3">
+            <input type="checkbox" class="toggle toggle-info" :checked="streamsSharedAll" @change="toggleAdminStreamsSharedAll()">
+            <span class="label-text">Jeden stream na wszystkie korty</span>
+          </label>
+          <p class="text-xs opacity-70">Ten sam link Play na każdym korcie — gdy jedna kamera / jeden kanał obejmuje całą halę.</p>
+          <div class="grid gap-3 mt-3" x-show="courtStreams.days.length && streamsSharedAll">
+            <template x-for="day in courtStreams.days" :key="'admin_stream_shared_'+day">
+              <div class="form-control">
+                <label class="label py-1">
+                  <span class="label-text" x-text="formatAdminStreamDay(day)"></span>
+                  <span class="badge badge-warning badge-xs" x-show="isAdminStreamToday(day)">dziś</span>
+                </label>
+                <input type="url" class="input input-bordered input-sm w-full" placeholder="https://youtube.com/…" :value="adminSharedStreamUrl(day)" @input="setAdminSharedStreamUrl(day, $event.target.value)">
+              </div>
+            </template>
+          </div>
+          <div class="overflow-x-auto mt-3" x-show="courtStreams.courts.length && !streamsSharedAll">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th></th>
+                  <template x-for="court in courtStreams.courts" :key="'admin_stream_head_'+court.kort_id">
+                    <th x-text="court.name || court.kort_id"></th>
+                  </template>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="day in courtStreams.days" :key="'admin_stream_day_'+day">
+                  <tr :class="{'bg-base-200': isAdminStreamToday(day)}">
+                    <th class="whitespace-nowrap">
+                      <span x-text="formatAdminStreamDay(day)"></span>
+                      <span class="badge badge-warning badge-xs ml-2" x-show="isAdminStreamToday(day)">dziś</span>
+                    </th>
+                    <template x-for="court in courtStreams.courts" :key="'admin_stream_cell_'+day+'_'+court.kort_id">
+                      <td>
+                        <input type="url" class="input input-bordered input-sm w-full min-w-[12rem]" placeholder="https://youtube.com/…" :value="adminStreamUrl(day, court.kort_id)" @input="setAdminStreamUrl(day, court.kort_id, $event.target.value)">
+                      </td>
+                    </template>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-sm opacity-70 mt-2" x-show="!courtStreams.courts.length">Brak kortów w tym turnieju — dodaj je w zakładce Korty.</p>
+          <div class="mt-3">
+            <button type="button" class="btn btn-primary btn-sm" @click="saveAdminCourtStreams()" :class="{'btn-disabled': streamsSaving}" :disabled="streamsSaving">Zapisz linki</button>
+          </div>
+
           <div class="divider">Kategorie turnieju</div>
           <p class="text-sm opacity-70 -mt-2">Standardowe kategorie (B1–B4 K/M) i własne (np. B2 Mixed, B3/4 Mixed). Zatwierdź przed dodaniem zawodników.</p>
 

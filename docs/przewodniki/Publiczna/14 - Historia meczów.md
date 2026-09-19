@@ -19,6 +19,7 @@ Lista zakończonych meczów z możliwością rozwinięcia statystyk.
 | Kontrolka | Co robi | Efekt |
 |-----------|---------|-------|
 | Karty meczów | Lista wyników | Z `GET /api/history` lub `…/tournament/{id}/history` |
+| Niebieski badge kategorii | Otwiera drabinkę tej kategorii | `#live/bracket` albo zakładka drabinki turnieju |
 | **Szczegóły** / **Zwiń** | Rozwinięcie | `GET /api/match-stats/{id}` — asy, DF, winners, 1. serwis % itd. |
 
 ## Powiązane

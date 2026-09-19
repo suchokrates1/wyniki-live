@@ -192,6 +192,8 @@ export function createOfficeCoreView() {
 
     quickInfoDirty: false,
 
+    streamsDirty: false,
+
     officeEventSource: null,
 
     officeSseReconnectTimer: null,
@@ -385,11 +387,16 @@ export function createOfficeCoreView() {
       this.authError = message;
       this.authPassword = '';
       this.quickInfoDirty = false;
+      this.streamsDirty = false;
+      this.streamsLoaded = false;
+      this.streamsSharedAll = false;
     },
 
     officeHasUnsavedWork() {
       return this.quickInfoDirty
         || this.quickInfoSaving
+        || this.streamsDirty
+        || this.streamsSaving
         || this.addMatchOpen
         || this.editMatchOpen
         || this.planningSaving
@@ -410,6 +417,9 @@ export function createOfficeCoreView() {
       this.tournamentMeta = nextDashboard?.tournament || this.tournamentMeta;
       if (nextDashboard?.quick_info && !this.quickInfoDirty && !this.quickInfoSaving) {
         this.applyQuickInfo(nextDashboard.quick_info);
+      }
+      if (nextDashboard?.court_streams && !this.streamsDirty && !this.streamsSaving) {
+        this.applyCourtStreams(nextDashboard.court_streams);
       }
       this.ensureDefaultGroupSelection();
       this.rememberSeenMatches(nextMatches);

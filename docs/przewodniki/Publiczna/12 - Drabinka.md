@@ -21,6 +21,7 @@ Także w szczegółach turnieju z listy ([[15 - Lista turniejów]]).
 | Element | Co robi | Efekt |
 |---------|---------|-------|
 | Zakładki kategorii (dynamiczne) | Filtr kategorii | Przeładowanie drabinki |
+| Opis formatu pod zakładkami | RR vs grupy+puchar, awans, skąd medale | Odczyt; per kategoria |
 | Tabele grup (W/L, sety, gemy) | Standings | Odczyt; wiersze to osoby **albo pary** `"A / B"` |
 | Wyniki meczów grupowych | Scoreboardy | Odczyt; grupa `knockout` **nie** pokazuje tabeli RR |
 | Drabinka pucharowa | Drzewo KO | Odczyt; strony to pary w Double |

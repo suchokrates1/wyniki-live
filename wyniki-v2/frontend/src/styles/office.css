@@ -1078,6 +1078,58 @@ body.office-body {
   gap: 10px;
 }
 
+.office-streams {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+.office-streams__table-wrap {
+  overflow-x: auto;
+}
+.office-streams__table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+}
+.office-streams__table th,
+.office-streams__table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--kort-line);
+  text-align: left;
+  vertical-align: middle;
+}
+.office-streams__table thead th {
+  font-size: 0.78rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--kort-mist);
+}
+.office-streams__day {
+  white-space: nowrap;
+  font-size: 0.88rem;
+  color: var(--kort-ice);
+}
+.office-streams__table tr.is-today .office-streams__day {
+  color: var(--kort-lime);
+}
+.office-streams__today {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--kort-lime);
+}
+.office-streams__shared {
+  display: grid;
+  gap: 12px;
+}
+.office-streams__shared .office-field.is-today .office-kicker {
+  color: var(--kort-lime);
+}
+
 .office-toggle {
   display: inline-flex;
   align-items: center;

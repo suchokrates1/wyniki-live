@@ -7,6 +7,7 @@ import { createOfficeMatchesView } from './modules/office/matchesView.js';
 import { createOfficeNotificationsView } from './modules/office/notificationsView.js';
 import { createOfficePlayersView } from './modules/office/playersView.js';
 import { createOfficeQuickInfoView } from './modules/office/quickInfoView.js';
+import { createOfficeStreamsView } from './modules/office/streamsView.js';
 import { createOfficeScheduleView } from './modules/office/scheduleView.js';
 import { createOfficeAutoScheduleView } from './modules/office/autoScheduleView.js';
 import { createOfficeSseView } from './modules/office/sseView.js';
@@ -44,6 +45,7 @@ Alpine.data('officeApp', () => mergeAdminModules(
   createOfficeSseView(),
   createOfficeNotificationsView(),
   createOfficeQuickInfoView(),
+  createOfficeStreamsView(),
   createOfficeMatchesView(),
   createOfficeAutoScheduleView(),
   createOfficeScheduleView(),

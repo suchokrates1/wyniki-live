@@ -47,14 +47,20 @@ def emit_score_update(kort_id: str, court_state: Dict[str, Any]) -> None:
     to avoid conflicting with demo data in overlays.
     """
     from .court_manager import serialize_public_court_state, is_demo_overlay_active
+    from ..database.court_streams import fetch_watch_urls_for_date
 
     if is_demo_overlay_active():
         return  # suppress real updates while demo overlay is active
 
+    data = serialize_public_court_state(court_state)
+    url = fetch_watch_urls_for_date().get(str(kort_id))
+    if url:
+        data["watch_url"] = url
+
     payload = {
         "type": "state_update",
         "kort_id": kort_id,
-        "data": serialize_public_court_state(court_state)
+        "data": data,
     }
     
     event_broker.broadcast(payload)

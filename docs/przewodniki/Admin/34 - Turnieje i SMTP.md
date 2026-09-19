@@ -26,6 +26,7 @@ Tworzenie / edycja turniejów, kluczy dostępu, haseł biura, flag oraz ustawie�
 | Toggle **Liczy statystyki** | Statystyki |
 | Toggle **Symulacja** | Tryb symulacji (`etap`) |
 | Toggle **Turniej aktywny** (edycja) | Aktywacja |
+| **Linki do transmisji** | Siatka dzień × kort albo **jeden stream na wszystkie korty** (`GET`/`PUT …/{id}/court-streams`). Publiczna nazwa kortu dostaje Play na dzisiejszy URL. |
 | Kategorie (presety + custom) | **Zatwierdź kategorie**, CRUD |
 | **Utwórz turniej** / **Zapisz turniej** | `POST` / `PUT /admin/api/tournaments[/{id}]` |
 

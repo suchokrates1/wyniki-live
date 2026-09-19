@@ -7,6 +7,9 @@ import {
   overlayPhaseLabel,
 } from './overlayLabel.js';
 import { isPlaceholderName } from './scoreboardHold.js';
+import { sanitizeWatchUrl } from './watchUrl.js';
+
+export const TV_PLAY_SVG = '<svg class="sb-tv-play" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M10 8.2v7.6L16.8 12z" fill="currentColor"></path></svg>';
 
 export const TV_SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
 
@@ -65,6 +68,15 @@ export function tvNameVariantsHtml(full, className, { literal = false } = {}) {
     + '<span class="sb-name-init">' + (keepFull ? safe : escapeTvHtml(abbreviateCompetitorName(full))) + '</span>'
     + '<span class="sb-name-last">' + (keepFull ? safe : escapeTvHtml(lastNameOnly(full))) + '</span>'
     + '</span>';
+}
+
+function courtTitleHtml(courtName, watchUrl) {
+  if (!courtName) return '';
+  const label = escapeTvHtml(courtName);
+  if (!watchUrl) return '<span class="sb-tv-court">' + label + '</span>';
+  return '<a class="sb-tv-court is-watch" href="' + escapeTvHtml(watchUrl)
+    + '" target="_blank" rel="noopener noreferrer" tabindex="-1">'
+    + TV_PLAY_SVG + label + '</a>';
 }
 
 function setCellHtml(val, sup, kind, flashCls) {
@@ -278,7 +290,7 @@ export function renderTvScoreboard({
   return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + '--sb-cols:' + gridCols + ';--sb-speed:' + speed + ';transform:scale(' + scale + ');transform-origin:top left;">'
     + '<div class="sb-tv-card">'
     + '<div class="sb-tv-header">'
-    + (courtName ? '<span class="sb-tv-court">' + escapeTvHtml(courtName) + '</span>' : '')
+    + courtTitleHtml(courtName, look.watch ? sanitizeWatchUrl(court.watch_url || look.watchUrl) : '')
     + '<span class="sb-tv-meta">' + escapeTvHtml(metaParts) + '</span>'
     + tbHtml
     + clockHtml + '</div>'

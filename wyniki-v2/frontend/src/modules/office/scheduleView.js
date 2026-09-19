@@ -19,6 +19,7 @@ export function createOfficeScheduleView() {
         return;
       }
       if (view === 'quickinfo') this.refreshScheduleNotesPreview?.();
+      if (view === 'streams' && !this.streamsLoaded) this.loadCourtStreams?.();
       if (!this.officeViewUsesPlanningData(view)) return;
       if (!this.planningPlayers.length) {
         await this.loadOfficePlanningData();
@@ -37,6 +38,7 @@ export function createOfficeScheduleView() {
         { id: 'knockout', label: this.ot('path.stepKnockout'), icon: 'M4 6h6v12H4zM14 6h6v5h-6zM14 13h6v5h-6z' },
         { id: 'history', label: this.ot('tabs.history'), icon: 'M4 7h16M4 12h16M4 17h10' },
         { id: 'quickinfo', label: this.ot('quickInfo.subtitle'), icon: 'M4 10v4l11 5V5L4 10zM15 8.5c1.8.5 3 1.8 3 3.5s-1.2 3-3 3.5' },
+        { id: 'streams', label: this.ot('streams.subtitle'), icon: 'M8 5v14l11-7z' },
       ];
     },
 

@@ -57,7 +57,10 @@ from ..database import (
     seed_knockout_rematch_for_groups,
     save_autoscheduler_config,
     save_bracket_groups,
+    StreamUrlError,
+    get_tournament_court_streams,
     get_tournament_quick_info,
+    save_tournament_court_streams,
     save_tournament_quick_info,
     upsert_tournament_schedule_entries,
     update_tournament_schedule_entry,
@@ -727,6 +730,31 @@ def office_quick_info_save(slot: int):
         active=_normalize_bool(data.get('active', True)),
     )
     return _json_no_cache({"quick_info": quick_info})
+
+
+@blueprint.route('/<int:slot>/court-streams', methods=['GET'])
+def office_court_streams_get(slot: int):
+    """Return the day × court stream URL grid for the authenticated office."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    return _json_no_cache({"court_streams": get_tournament_court_streams(tournament_id)})
+
+
+@blueprint.route('/<int:slot>/court-streams', methods=['PUT'])
+def office_court_streams_save(slot: int):
+    """Save YouTube / stream URLs per tournament day and court."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    data = request.get_json(silent=True) or {}
+    try:
+        court_streams = save_tournament_court_streams(tournament_id, data)
+    except StreamUrlError as exc:
+        return _json_no_cache({"error": "invalid_url", "cells": exc.cells}, 400)
+    return _json_no_cache({"court_streams": court_streams})
 
 
 @blueprint.route('/<int:slot>/autoschedule/config', methods=['GET'])

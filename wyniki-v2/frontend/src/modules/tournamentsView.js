@@ -100,7 +100,10 @@ export function createTournamentView() {
         }
         this._buildBracketNameMap(this.tournamentBracket);
         const categories = this.tournamentBracketCategories();
-        if (categories.length > 0 && !categories.find((category) => category.name === this.tournamentBracketCategory)) {
+        if (this._pendingTournamentCategory && categories.find((category) => category.name === this._pendingTournamentCategory)) {
+          this.tournamentBracketCategory = this._pendingTournamentCategory;
+          this._pendingTournamentCategory = null;
+        } else if (categories.length > 0 && !categories.find((category) => category.name === this.tournamentBracketCategory)) {
           this.tournamentBracketCategory = categories[0].name;
         }
       } catch {
