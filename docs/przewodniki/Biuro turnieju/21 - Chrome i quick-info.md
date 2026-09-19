@@ -4,7 +4,7 @@ tags: [wyniki, biuro, office]
 aliases: [Office chrome, Quick info, Kort]
 ---
 
-# Układ biura („Kort”) i komunikat dla widzów
+# Układ biura („Kort”) i komunikat dla zawodników
 
 ## Cel
 
