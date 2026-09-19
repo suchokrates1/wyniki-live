@@ -122,28 +122,15 @@ test('knockout podium ignores placeholder winners before matches are played', ()
   assert.equal(podium.length, 0);
 });
 
-test('B3-B4 women stays a combined category tab, not B3 only', () => {
-  assert.equal(
-    getBracketCategoryLabel('B3-B4 Kobiety', { womenLabel: 'Kobiety', menLabel: 'Mężczyźni' }),
-    'B3/4 Kobiety',
-  );
-  assert.equal(
-    getBracketCategoryLabel('B3/4 Kobiety', { womenLabel: 'Kobiety', menLabel: 'Mężczyźni' }),
-    'B3/4 Kobiety',
-  );
+test('bracket tab uses the stored category name as-is', () => {
+  assert.equal(getBracketCategoryLabel('B3-B4 Kobiety'), 'B3-B4 Kobiety');
+  assert.equal(getBracketCategoryLabel('B3/4 Kobiety'), 'B3/4 Kobiety');
+  assert.equal(getBracketCategoryLabel('B2 Mężczyźni — Grupa A'), 'B2 Mężczyźni');
 });
 
 test('doubles categories get a distinct label and sort above singles', () => {
-  const doubles = getBracketCategoryLabel('B1 Men Doubles', {
-    womenLabel: 'Women',
-    menLabel: 'Men',
-    doublesLabel: 'Doubles',
-  });
-  const singles = getBracketCategoryLabel('B1 Men', {
-    womenLabel: 'Women',
-    menLabel: 'Men',
-    doublesLabel: 'Doubles',
-  });
+  const doubles = getBracketCategoryLabel('B1 Men Doubles');
+  const singles = getBracketCategoryLabel('B1 Men');
   assert.equal(singles, 'B1 Men');
   assert.equal(doubles, 'B1 Men Doubles');
   const cats = buildBracketCategories({

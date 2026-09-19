@@ -1,6 +1,5 @@
 import {
   extractCategoryCodeFromLabel,
-  formatCategoryDisplay,
   inferPlanningGenderFromLabel,
   isMixedSectionLabel,
 } from '../shared/categories.js';
@@ -192,29 +191,9 @@ export function parseBracketCategory(name) {
   return { rawName, baseName, division, gender, doubles };
 }
 
-export function getBracketCategoryLabel(name, {
-  translateCategory = (value) => value,
-  womenLabel = 'Women',
-  menLabel = 'Men',
-  mixedLabel = 'Mixed',
-  doublesLabel = 'Doubles',
-} = {}) {
+export function getBracketCategoryLabel(name) {
   const parsed = parseBracketCategory(name);
-  let label = '';
-  if (parsed.gender === 'mixed' && parsed.division) {
-    label = `${formatCategoryDisplay(parsed.division)} ${mixedLabel}`.trim();
-  } else if (!parsed.division || !parsed.gender) {
-    label = translateCategory(name);
-  } else {
-    const genderLabel = parsed.gender === 'women' ? womenLabel : menLabel;
-    label = `${formatCategoryDisplay(parsed.division)} ${genderLabel}`.trim();
-  }
-  if (parsed.doubles && doublesLabel) {
-    const already = label.toLowerCase().includes(String(doublesLabel).toLowerCase())
-      || parseBracketCategory(label).doubles;
-    if (!already) label = `${label} ${doublesLabel}`.trim();
-  }
-  return label;
+  return parsed.baseName || String(name || '').trim();
 }
 
 export function compareBracketCategoryNames(leftName, rightName, { getCategoryLabel = (name) => String(name || ''), lang = 'pl' } = {}) {

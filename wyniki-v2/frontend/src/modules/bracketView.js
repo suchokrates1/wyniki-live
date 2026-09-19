@@ -225,14 +225,7 @@ export function createBracketView() {
     },
 
     bracketCategoryLabel(name) {
-      const t = this.tr();
-      return getBracketCategoryLabel(name, {
-        translateCategory: (value) => this.translateCategory(value),
-        womenLabel: t.history?.catWomen || 'Women',
-        menLabel: t.history?.catMen || 'Men',
-        mixedLabel: t.history?.catMixed || 'Mixed',
-        doublesLabel: t.bracket?.doubles || t.history?.catDoubles || 'Doubles',
-      });
+      return getBracketCategoryLabel(name);
     },
 
     compareBracketCategoryNames(leftName, rightName) {
