@@ -96,7 +96,7 @@ export default async function run() {
       await next.click();
     }
     await bubble.waitFor({ state: 'hidden', timeout: 5000 });
-    log(`Guide walked ${EXPECTED.length} steps across Grupy startowe, Forma rozgrywek, Terminarz and Komunikat dla widzów (controls not on screen yet marked *: ${visited.join(' ')})`);
+    log(`Guide walked ${EXPECTED.length} steps across Grupy startowe, Forma rozgrywek, Terminarz and Komunikat dla zawodników (controls not on screen yet marked *: ${visited.join(' ')})`);
 
     // the offer stays away once the guide was started, also after a reload; the rail restarts it
     await page.reload({ waitUntil: 'domcontentloaded' });

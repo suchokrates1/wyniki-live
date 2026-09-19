@@ -54,7 +54,7 @@ export default async function run() {
     await chrome.openTab('Faza pucharowa');
     await chrome.openTab('Terminarz');
     await chrome.openTab('Grupy startowe');
-    await chrome.openTab('Komunikat dla widzów');
+    await chrome.openTab('Komunikat dla zawodników');
     await chrome.openTab('Ostatnie mecze');
     console.log('  Tabs switch');
 

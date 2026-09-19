@@ -1,5 +1,5 @@
 /**
- * Page object: quick info — "Komunikat dla widzów" view.
+ * Page object: quick info — "Komunikat dla zawodników" view.
  */
 export class OfficeQuickInfoPage {
   constructor(page) {
@@ -9,7 +9,7 @@ export class OfficeQuickInfoPage {
   async ensureVisible() {
     const textarea = this.page.locator('#office-quick-info-message');
     if (!(await textarea.isVisible().catch(() => false))) {
-      await this.page.locator('.office-tab').filter({ hasText: 'Komunikat dla widzów' }).click();
+      await this.page.locator('.office-tab').filter({ hasText: 'Komunikat dla zawodników' }).click();
     }
     await textarea.waitFor({ state: 'visible', timeout: 10000 });
   }

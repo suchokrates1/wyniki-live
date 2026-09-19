@@ -12,7 +12,7 @@ Ten dokument prowadzi przez przygotowanie turnieju w biurze od pustego turnieju 
 
 - Na świeżym turnieju (bez kategorii) nad paskiem „Następny krok” pojawia się propozycja **„Pierwszy raz w biurze?”** z przyciskami **Uruchom przewodnik** i **Nie teraz**. Po wyborze propozycja nie wraca dla tego turnieju w tej przeglądarce.
 - W każdej chwili przewodnik uruchomisz przyciskiem **Przewodnik** (ikona „?”) w szynie po lewej, w sekcji „Zawsze pod ręką”.
-- Dymek stoi obok przycisku, o którym mówi; sam przycisk jest podświetlony. Przewodnik sam przełącza widok (Grupy startowe → Forma rozgrywek → Terminarz → Komunikat dla widzów).
+- Dymek stoi obok przycisku, o którym mówi; sam przycisk jest podświetlony. Przewodnik sam przełącza widok (Grupy startowe → Forma rozgrywek → Terminarz → Komunikat dla zawodników).
 - Przewodnik **nie blokuje strony**: możesz od razu klikać to, co podpowiada, i przejść dalej przyciskiem **Dalej**. **Wstecz** wraca o krok, **✕** albo klawisz **Esc** zamyka.
 - Jeśli wskazanego elementu jeszcze nie ma (np. grupy przed zatwierdzeniem kategorii), dymek mówi o tym i można iść dalej.
 - Licznik „Krok N z 15” i kropki pokazują postęp.
@@ -73,7 +73,7 @@ Szczegóły: [[26 - Planowanie - terminarz i autoschedule]].
 
 Uwagi są publiczne: widać je na karcie meczu w terminarzu („Uwagi: …”) i w publicznym terminarzu. Nowe mecze nie mają żadnej domyślnej uwagi.
 
-- **Hurtem:** w Terminarzu przycisk **Uwagi…** otwiera sekcję **Uwagi do meczów w terminarzu** w widoku **Komunikat dla widzów** (z dniem z siatki). Wybierz dzień, fazę, korty i kategorie (domyślnie tylko nierozegrane mecze), wpisz treść i wybierz **Zastąp**, **Dopisz** albo **Wyczyść**. Podsumowanie pokazuje, ilu meczów to dotyczy; **Zapisz uwagi (N)**.
+- **Hurtem:** w Terminarzu przycisk **Uwagi…** otwiera sekcję **Uwagi do meczów w terminarzu** w widoku **Komunikat dla zawodników** (z dniem z siatki). Wybierz dzień, fazę, korty i kategorie (domyślnie tylko nierozegrane mecze), wpisz treść i wybierz **Zastąp**, **Dopisz** albo **Wyczyść**. Podsumowanie pokazuje, ilu meczów to dotyczy; **Zapisz uwagi (N)**.
 - **Pojedynczo:** kliknij mecz w terminarzu i zmień **Uwagi publiczne** w inspektorze, potem **Zapisz**.
 
 Szczegóły: [[21 - Chrome i quick-info]].

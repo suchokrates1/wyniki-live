@@ -182,7 +182,7 @@ export default async function run() {
     log(`Header result dialog: group, players and 4:2 3:4 10:8 survived a refresh from another operator; saved for ${first.split(' ')[0]} v ${second.split(' ')[0]}`);
 
     // ——— viewer banner being edited ———
-    await openView('Komunikat dla widzów');
+    await openView('Komunikat dla zawodników');
     const bannerText = `Kort 2 wolny od 15:00 ${tag}`;
     await page.locator('#office-quick-info-message').fill(bannerText);
     await humanPause();

@@ -294,7 +294,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       openFromSchedule: 'Pastabos…',
     },
     quickInfo: {
-      subtitle: 'Pranešimas žiūrovams',
+      subtitle: 'Pranešimas žaidėjams',
       title: 'Trumpa turnyro informacija',
       description: 'Trumpas pranešimas gyvųjų rezultatų puslapio viršuje (pvz. vėlavimai, kortų pakeitimai, svarbūs skelbimai).',
       placeholder: 'pvz. B2 mačai prasideda 30 min. vėliau dėl lietaus.',

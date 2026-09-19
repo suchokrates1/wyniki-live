@@ -29,7 +29,7 @@ Sekcja **Zawsze pod ręką** (z przyciskiem **Przewodnik** — klikany samouczek
 | Widok | Notatka |
 |-------|---------|
 | **Ostatnie mecze** | [[22 - Historia]] |
-| **Komunikat dla widzów** | niżej |
+| **Komunikat dla zawodników** | niżej |
 
 Na dole szyny: język, **Powiadomienia o nowych meczach** (Notification API), **Test powiadomienia**, **Wyloguj**.
 
@@ -45,7 +45,7 @@ Na dole szyny: język, **Powiadomienia o nowych meczach** (Notification API), **
 
 SSE: `/api/office/{slot}/stream` — dane odświeżają się na żywo. Starsza, wolniejsza odpowiedź nie nadpisuje nowszej (np. tuż po zapisaniu wyniku).
 
-## Komunikat dla widzów (baner publiczny)
+## Komunikat dla zawodników (baner publiczny)
 
 | Kontrolka | Co robi | Efekt |
 |-----------|---------|-------|
@@ -56,7 +56,7 @@ SSE: `/api/office/{slot}/stream` — dane odświeżają się na żywo. Starsza, 
 
 ## Uwagi do meczów w terminarzu
 
-Druga sekcja widoku **Komunikat dla widzów**: jedna uwaga publiczna dla wielu meczów naraz. W Terminarzu przycisk **Uwagi…** otwiera ją z dniem, który jest na siatce.
+Druga sekcja widoku **Komunikat dla zawodników**: jedna uwaga publiczna dla wielu meczów naraz. W Terminarzu przycisk **Uwagi…** otwiera ją z dniem, który jest na siatce.
 
 | Kontrolka | Co robi |
 |-----------|---------|

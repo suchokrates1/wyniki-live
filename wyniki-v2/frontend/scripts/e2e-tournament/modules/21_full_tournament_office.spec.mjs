@@ -763,7 +763,7 @@ export default async function run() {
 
     markStep('viewer banner: publish, edit, hide');
     // ——— viewer banner: publish, edit, hide ———
-    await openView('Komunikat dla widzów');
+    await openView('Komunikat dla zawodników');
     const bannerText = `Mecze ${tag} startują o 9:00`;
     const publicInfo = () => fetch(new URL(`/api/tournament/${tournamentId}/info`, BASE_URL)).then((response) => response.json());
     await page.locator('#office-quick-info-message').fill(bannerText);

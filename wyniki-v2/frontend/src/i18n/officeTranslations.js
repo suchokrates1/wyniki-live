@@ -297,7 +297,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         openFromSchedule: 'Uwagi…',
       },
       quickInfo: {
-        subtitle: 'Komunikat dla widzów',
+        subtitle: 'Komunikat dla zawodników',
         title: 'Szybka informacja turniejowa',
         description: 'Krótki komunikat na górze strony wyników live (np. opóźnienia, zmiany kortów, ważne ogłoszenia).',
         placeholder: 'np. Mecze B2 startują z 30-minutowym opóźnieniem z powodu deszczu.',
@@ -1024,7 +1024,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         openFromSchedule: 'Hinweise…',
       },
       quickInfo: {
-        subtitle: 'Nachricht für Zuschauer',
+        subtitle: 'Nachricht für Spieler',
         title: 'Schnelle Turnierinfo',
         description: 'Kurze Meldung oben auf der Live-Ergebnisseite (z. B. Verzögerungen, Platzwechsel, wichtige Hinweise).',
         placeholder: 'z. B. B2-Spiele starten mit 30 Minuten Verspätung wegen Regen.',
@@ -1734,7 +1734,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         openFromSchedule: 'Notes…',
       },
       quickInfo: {
-        subtitle: 'Message for spectators',
+        subtitle: 'Message for players',
         title: 'Quick tournament info',
         description: 'Short banner at the top of the live scores page (e.g. delays, court changes, important announcements).',
         placeholder: 'e.g. B2 matches start 30 minutes late due to rain.',
@@ -2444,7 +2444,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         openFromSchedule: 'Note…',
       },
       quickInfo: {
-        subtitle: 'Messaggio per gli spettatori',
+        subtitle: 'Messaggio per i giocatori',
         title: 'Info rapida sul torneo',
         description: 'Breve messaggio in cima alla pagina dei risultati live (es. ritardi, cambi campo, avvisi importanti).',
         placeholder: 'es. Le partite B2 iniziano con 30 minuti di ritardo per pioggia.',
@@ -3154,7 +3154,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         openFromSchedule: 'Notas…',
       },
       quickInfo: {
-        subtitle: 'Mensaje para espectadores',
+        subtitle: 'Mensaje para jugadores',
         title: 'Info rápida del torneo',
         description: 'Mensaje breve en la parte superior de la página de resultados en vivo (p. ej. retrasos, cambios de pista, avisos importantes).',
         placeholder: 'p. ej. Los partidos B2 empiezan con 30 minutos de retraso por lluvia.',
@@ -3864,7 +3864,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         openFromSchedule: 'Remarques…',
       },
       quickInfo: {
-        subtitle: 'Message pour les spectateurs',
+        subtitle: 'Message pour les joueurs',
         title: 'Info rapide du tournoi',
         description: 'Court message en haut de la page des résultats en direct (p. ex. retards, changements de court, annonces importantes).',
         placeholder: 'p. ex. Les matchs B2 commencent avec 30 minutes de retard à cause de la pluie.',
