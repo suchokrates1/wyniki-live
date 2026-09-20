@@ -150,7 +150,15 @@ export default async function run() {
     await target.scrollIntoViewIfNeeded();
     const from = await source.boundingBox();
     const to = await target.boundingBox();
-    const started = await page.evaluate(() => { window.__dragSeen = false; document.addEventListener('dragstart', () => { window.__dragSeen = true; }, { once: true, capture: true }); return true; });
+    const started = await page.evaluate(() => {
+      window.__dragSeen = false;
+      window.__dragSource = null;
+      document.addEventListener('dragstart', (event) => {
+        window.__dragSeen = true;
+        window.__dragSource = event.target;
+      }, { once: true, capture: true });
+      return true;
+    });
     if (from && to && started) {
       await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
       await page.mouse.down();
@@ -158,7 +166,8 @@ export default async function run() {
       await page.mouse.move(to.x + to.width / 2, to.y + Math.min(to.height / 2, 40), { steps: 12 });
       await page.mouse.up();
     }
-    if (await page.evaluate(() => window.__dragSeen)) {
+    const nativeFromSource = await source.evaluate((node) => node === window.__dragSource || node.contains(window.__dragSource));
+    if (nativeFromSource) {
       dragPaths.native += 1;
       return;
     }

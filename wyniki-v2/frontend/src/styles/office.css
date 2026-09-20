@@ -922,6 +922,9 @@ body.office-body {
   transition: transform 0.1s ease, background-color 0.12s ease;
 }
 
+.office-block,
+.office-timetable__cell { scroll-margin-bottom: 220px; }
+
 .office-block:hover { transform: translateY(-1px); background: var(--kort-raise); }
 .office-block:active { cursor: grabbing; }
 
