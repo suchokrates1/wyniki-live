@@ -31,15 +31,13 @@ export class OfficeQuickInfoPage {
 
   /** The saved text arrives with the dashboard, a moment after the page (re)loads. */
   async getDisplayedContent(timeoutMs = 10000) {
-    const read = () => this.page.evaluate(() => {
-      const ta = document.querySelector('#office-quick-info-message') || document.querySelector('textarea');
-      return ta ? ta.value : '';
-    });
+    await this.ensureVisible();
+    const textarea = this.page.locator('#office-quick-info-message');
     const deadline = Date.now() + timeoutMs;
-    let value = await read();
+    let value = await textarea.inputValue();
     while (!value && Date.now() < deadline) {
       await this.page.waitForTimeout(250);
-      value = await read();
+      value = await textarea.inputValue();
     }
     return value;
   }
