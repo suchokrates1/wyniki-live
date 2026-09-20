@@ -72,6 +72,19 @@ def umpire_icons(filename):
     return response
 
 
+@blueprint.route('/privacy')
+@blueprint.route('/privacy/')
+@blueprint.route('/privacy.html')
+def privacy():
+    """Serve the public privacy policy."""
+    response = send_from_directory(STATIC_DIR, 'privacy.html')
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
 @blueprint.route('/office')
 @blueprint.route('/office/')
 @blueprint.route('/office/<int:slot>')

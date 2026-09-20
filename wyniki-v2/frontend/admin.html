@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=Chivo+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script defer src="https://stats.dawidsuchodolski.pl/script.js" data-website-id="b49919d3-6628-40cc-9213-72ec52409e28"></script>
   <style>
     /* 16:9 preview canvas */
     .canvas-outer {
@@ -324,6 +323,10 @@
           </label>
           <p x-show="adminAuthError" x-text="adminAuthError" class="text-error" role="alert"></p>
           <button class="btn btn-primary" type="submit">Zaloguj</button>
+          <p class="text-sm mt-3 opacity-80">
+            Logowanie zapisuje sesję administratora na tym urządzeniu.
+            <a class="link link-primary underline" href="/privacy?lang=pl">Polityka prywatności</a>
+          </p>
         </div>
       </form>
     </div>
@@ -2180,6 +2183,26 @@
   <div class="toast toast-end" x-data x-show="$store.toast?.show" x-cloak>
     <div class="alert" :class="'alert-' + ($store.toast?.type || 'info')">
       <span x-text="$store.toast?.message"></span>
+    </div>
+  </div>
+
+  <div
+    x-data="analyticsConsent"
+    class="consent-banner"
+    x-show="visible"
+    x-cloak
+    role="region"
+    aria-labelledby="admin-consent-title"
+    aria-describedby="admin-consent-body"
+  >
+    <div class="consent-banner__inner">
+      <h2 id="admin-consent-title" class="consent-banner__title" x-text="consentText().title">Analityka odwiedzin</h2>
+      <p id="admin-consent-body" class="consent-banner__body" x-text="consentText().body"></p>
+      <div class="consent-banner__actions">
+        <a class="consent-banner__link" :href="privacyHref()" x-text="consentText().privacyLink">Więcej w polityce prywatności</a>
+        <button type="button" class="consent-banner__btn consent-banner__btn--ghost" @click="reject()" x-text="consentText().reject">Odrzuć</button>
+        <button type="button" class="consent-banner__btn" @click="accept()" x-text="consentText().accept">Akceptuj</button>
+      </div>
     </div>
   </div>
 

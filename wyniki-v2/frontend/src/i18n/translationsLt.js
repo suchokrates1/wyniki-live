@@ -131,6 +131,23 @@ export const TRANSLATION_PATCHES_LT = {
     skipToContent: 'Eiti prie turinio',
     languageSelect: 'Pasirinkite kalbą',
     poweredBy: 'Technologija',
+    privacyPolicy: 'Privatumo politika',
+    privacyPageTitle: 'Privatumo politika',
+    privacyPageDescription: 'Kaip Vest Media tvarko duomenis svetainėje blindtennis.app ir programėlėje Blind Tennis Referee.',
+    backToScores: 'Grįžti prie rezultatų',
+    privacyToc: 'Turinys',
+  },
+  consent: {
+    title: 'Apsilankymų statistika',
+    body: 'Galime skaičiuoti apsilankymus, kad matytume, ar svetainė veikia. Kalba, tema ir prisijungimo sesija visada lieka.',
+    accept: 'Sutinku',
+    reject: 'Atmesti',
+    privacyLink: 'Daugiau privatumo politikoje',
+  },
+  office: {
+    login: {
+      privacyNotice: 'Prisijungimas šiame įrenginyje išsaugo biuro sesiją.',
+    },
   },
   meta: { lastRefresh: 'Paskutinis atnaujinimas: {time}.' },
   history: { title: 'Naujausi rezultatai', noMatchesActive: 'Nėra baigtų aktyvaus turnyro mačų', openCategory: 'Rodyti kategoriją {category} turnyrinėje lentelėje' },

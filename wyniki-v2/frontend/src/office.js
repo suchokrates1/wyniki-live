@@ -16,11 +16,13 @@ import { createOfficeDrawsView } from './modules/office/drawsView.js';
 import { createOfficeScheduleNotesView } from './modules/office/scheduleNotesView.js';
 import { createOfficeKnockoutBoardView } from './modules/office/knockoutBoardView.js';
 import { createOfficeTourView } from './modules/office/tourView.js';
+import { registerAnalyticsConsent } from './consent/banner.js';
 import './main.css';
 import './styles/office.css';
 import './styles/tailwind-office.css';
 
 window.Alpine = Alpine;
+registerAnalyticsConsent(Alpine);
 
 const nativeFetch = window.fetch.bind(window);
 window.fetch = async (input, init) => {

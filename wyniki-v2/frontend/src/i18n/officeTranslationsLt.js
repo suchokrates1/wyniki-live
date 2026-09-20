@@ -20,6 +20,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       hidePassword: 'Slėpti slaptažodį',
       enter: 'Įeiti į biurą',
       loggingIn: 'Jungiamasi...',
+      privacyNotice: 'Prisijungimas šiame įrenginyje išsaugo biuro sesiją.',
     },
     tour: {
       start: 'Gidas',

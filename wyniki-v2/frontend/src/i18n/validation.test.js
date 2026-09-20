@@ -33,6 +33,15 @@ test('public tab title is the brand name in every language', () => {
   }
 });
 
+test('privacy and consent labels exist in every language', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const catalog = TRANSLATIONS[lang];
+    assert.equal(typeof catalog.ui.privacyPolicy, 'string', `${lang} ui.privacyPolicy`);
+    assert.equal(typeof catalog.consent.accept, 'string', `${lang} consent.accept`);
+    assert.equal(typeof catalog.office.login.privacyNotice, 'string', `${lang} office.login.privacyNotice`);
+  }
+});
+
 test('every supported language has the full PL public and office catalog', () => {
   assert.deepEqual(
     findMissingTranslationKeys(TRANSLATIONS, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE),

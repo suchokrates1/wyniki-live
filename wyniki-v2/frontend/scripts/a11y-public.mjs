@@ -14,6 +14,7 @@ const ROUTES = [
   { name: 'live history', hash: 'live/history' },
   { name: 'tournaments', hash: 'tournaments' },
   { name: 'players', hash: 'players' },
+  { name: 'privacy', path: '/privacy' },
 ];
 
 function argValue(name, fallback = '') {
@@ -31,10 +32,10 @@ function listArg(name, fallback) {
   return value.split(',').map((entry) => entry.trim()).filter(Boolean);
 }
 
-function pageUrl(baseUrl, lang, hash) {
-  const url = new URL(baseUrl);
+function pageUrl(baseUrl, lang, route) {
+  const url = new URL(route.path || '/', baseUrl);
   url.searchParams.set('lang', lang);
-  url.hash = hash;
+  if (route.hash) url.hash = route.hash;
   return url.toString();
 }
 
@@ -78,7 +79,7 @@ try {
           colorScheme: theme === 'dark' ? 'dark' : 'light',
         });
         const page = await context.newPage();
-        const url = pageUrl(baseUrl, lang, route.hash);
+        const url = pageUrl(baseUrl, lang, route);
         const label = `${theme}/${lang}/${route.name}`;
         console.log(`scan ${label}`);
 

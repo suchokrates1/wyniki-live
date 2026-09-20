@@ -52,7 +52,10 @@ export function start(port = 8811) {
       return;
     }
 
-    const file = normalize(join(STATIC, p === '/' ? '/index.html' : p));
+    const mapped = p === '/' ? '/index.html'
+      : (p === '/privacy' || p === '/privacy/') ? '/privacy.html'
+      : p;
+    const file = normalize(join(STATIC, mapped));
     if (!file.startsWith(STATIC)) { res.writeHead(403); res.end('forbidden'); return; }
     try {
       const s = await stat(file);

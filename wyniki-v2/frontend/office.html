@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@500;700&family=Chivo:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script defer src="https://stats.dawidsuchodolski.pl/script.js" data-website-id="b49919d3-6628-40cc-9213-72ec52409e28"></script>
 </head>
 <body class="office-body" x-data="officeApp()" x-init="init()" x-effect="applyOfficeDocumentLang()">
   <div class="office-lang-bar" x-show="!isAuthenticated">
@@ -105,6 +104,10 @@
           <span x-show="!authLoading" x-text="ot('login.enter')"></span>
           <span x-show="authLoading" x-text="ot('login.loggingIn')"></span>
         </button>
+        <p class="mt-4 text-sm text-slate-600">
+          <span x-text="ot('login.privacyNotice')"></span>
+          <a class="link link-primary underline" :href="'/privacy?lang=' + lang" x-text="officeUi().privacyPolicy"></a>
+        </p>
       </form>
     </section>
   </main>
@@ -1836,6 +1839,26 @@
         <button type="button" class="btn office-btn-accent" @click="saveOfficeMatchEdit()" x-text="ot('modals.saveCorrection')"></button>
       </div>
     </section>
+  </div>
+
+  <div
+    x-data="analyticsConsent"
+    class="consent-banner"
+    x-show="visible"
+    x-cloak
+    role="region"
+    aria-labelledby="office-consent-title"
+    aria-describedby="office-consent-body"
+  >
+    <div class="consent-banner__inner">
+      <h2 id="office-consent-title" class="consent-banner__title" x-text="consentText().title">Analityka odwiedzin</h2>
+      <p id="office-consent-body" class="consent-banner__body" x-text="consentText().body"></p>
+      <div class="consent-banner__actions">
+        <a class="consent-banner__link" :href="privacyHref()" x-text="consentText().privacyLink">Więcej w polityce prywatności</a>
+        <button type="button" class="consent-banner__btn consent-banner__btn--ghost" @click="reject()" x-text="consentText().reject">Odrzuć</button>
+        <button type="button" class="consent-banner__btn" @click="accept()" x-text="consentText().accept">Akceptuj</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="/src/office.js"></script>

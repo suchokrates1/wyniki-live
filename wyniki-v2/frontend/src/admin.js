@@ -9,8 +9,10 @@ import { createOfficeTabAdmin } from './admin/officeTab.js';
 import { createGlobalPlayersAdmin } from './admin/globalPlayers.js';
 import { createOverlayAdmin } from './admin/overlay.js';
 import { mergeAdminModules } from './admin/merge.js';
+import { registerAnalyticsConsent } from './consent/banner.js';
 
 window.Alpine = Alpine;
+registerAnalyticsConsent(Alpine);
 installAdminFetchAuth();
 
 Alpine.data('adminApp', () => mergeAdminModules(

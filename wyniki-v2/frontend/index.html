@@ -10,7 +10,6 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/brand/blindtennis-icon-512.svg">
     <meta name="description" content="blindtennis.app - live scores">
-    <script defer src="https://stats.dawidsuchodolski.pl/script.js" data-website-id="b49919d3-6628-40cc-9213-72ec52409e28"></script>
 </head>
 <body>
     <div x-data="tennisApp" x-cloak class="wrap" x-effect="document.title = tr().pageTitle || 'blindtennis.app - live scores'; document.documentElement.lang = tr().htmlLang || lang || 'pl'">
@@ -1526,12 +1525,34 @@
         <footer class="vm-footer">
             <span class="vm-footer__refresh" x-show="lastUpdate" x-text="(tr().meta?.lastRefresh || 'Ostatnia aktualizacja: {time}').replace('{time}', lastUpdate ? lastUpdate.toLocaleTimeString(locale()) : '')"></span>
             <span class="vm-footer__sep" x-show="lastUpdate" aria-hidden="true">|</span>
+            <a class="vm-footer__legal" :href="privacyHref()" x-text="uiText().privacyPolicy || 'Polityka prywatności'">Polityka prywatności</a>
+            <span class="vm-footer__sep" aria-hidden="true">|</span>
             <span x-text="uiText().poweredBy || 'Powered by'">Powered by</span>
             <a href="https://vestmedia.pl" target="_blank" rel="noopener noreferrer" class="vm-footer__link">
                 <img src="https://vestmedia.pl/wp-content/uploads/2024/12/Vest-Media-5.png"
                      alt="Vest Media" class="vm-footer__logo" loading="lazy">
             </a>
         </footer>
+    </div>
+
+    <div
+        x-data="analyticsConsent"
+        class="consent-banner"
+        x-show="visible"
+        x-cloak
+        role="region"
+        aria-labelledby="consent-title"
+        aria-describedby="consent-body"
+    >
+        <div class="consent-banner__inner">
+            <h2 id="consent-title" class="consent-banner__title" x-text="consentText().title">Analityka odwiedzin</h2>
+            <p id="consent-body" class="consent-banner__body" x-text="consentText().body"></p>
+            <div class="consent-banner__actions">
+                <a class="consent-banner__link" :href="privacyHref()" x-text="consentText().privacyLink">Więcej w polityce prywatności</a>
+                <button type="button" class="consent-banner__btn consent-banner__btn--ghost" @click="reject()" x-text="consentText().reject">Odrzuć</button>
+                <button type="button" class="consent-banner__btn" @click="accept()" x-text="consentText().accept">Akceptuj</button>
+            </div>
+        </div>
     </div>
     
     <script type="module" src="/src/main.js"></script>

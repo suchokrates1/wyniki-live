@@ -434,6 +434,7 @@ const STRINGS = {
 
 const PWA_ONLY = {
   en: {
+    privacyPolicy: 'Privacy policy',
     fullscreen: 'Full screen',
     exitFullscreen: 'Exit full screen',
     installApp: 'Install app',
@@ -454,6 +455,7 @@ const PWA_ONLY = {
     announceSetMsgStay: '{winner} won the set {p1}–{p2}. Set break: 120 seconds. Players stay on the same ends. Press Continue after the break.',
   },
   pl: {
+    privacyPolicy: 'Polityka prywatności',
     fullscreen: 'Pełny ekran',
     exitFullscreen: 'Zamknij pełny ekran',
     installApp: 'Zainstaluj aplikację',
@@ -474,6 +476,7 @@ const PWA_ONLY = {
     announceSetMsgStay: '{winner} wygrywa seta {p1}–{p2}. Przerwa między setami: 120 sekund. Zawodnicy zostają na tych samych stronach. Naciśnij Dalej po przerwie.',
   },
   lt: {
+    privacyPolicy: 'Privatumo politika',
     fullscreen: 'Visas ekranas',
     exitFullscreen: 'Išeiti iš viso ekrano',
     installApp: 'Įdiegti programėlę',
@@ -494,6 +497,7 @@ const PWA_ONLY = {
     announceSetMsgStay: '{winner} laimi setą {p1}–{p2}. Pertrauka tarp setų: 120 sekundžių. Žaidėjai lieka tose pačiose pusėse. Po pertraukos spauskite Toliau.',
   },
   de: {
+    privacyPolicy: 'Datenschutzerklärung',
     fullscreen: 'Vollbild',
     exitFullscreen: 'Vollbild beenden',
     installApp: 'App installieren',
@@ -514,6 +518,7 @@ const PWA_ONLY = {
     announceSetMsgStay: '{winner} gewinnt den Satz {p1}–{p2}. Satzpause: 120 Sekunden. Die Spieler bleiben auf derselben Seite. Nach der Pause auf Weiter tippen.',
   },
   es: {
+    privacyPolicy: 'Política de privacidad',
     fullscreen: 'Pantalla completa',
     exitFullscreen: 'Salir de pantalla completa',
     installApp: 'Instalar aplicación',
@@ -534,6 +539,7 @@ const PWA_ONLY = {
     announceSetMsgStay: '{winner} gana el set {p1}–{p2}. Descanso entre sets: 120 segundos. Los jugadores se quedan en el mismo lado. Pulsa Continuar después del descanso.',
   },
   fr: {
+    privacyPolicy: 'Politique de confidentialité',
     fullscreen: 'Plein écran',
     exitFullscreen: 'Quitter le plein écran',
     installApp: 'Installer l’application',
@@ -554,6 +560,7 @@ const PWA_ONLY = {
     announceSetMsgStay: '{winner} gagne le set {p1}–{p2}. Pause entre les sets : 120 secondes. Les joueurs restent du même côté. Appuyez sur Continuer après la pause.',
   },
   it: {
+    privacyPolicy: 'Informativa sulla privacy',
     fullscreen: 'Schermo intero',
     exitFullscreen: 'Esci da schermo intero',
     installApp: 'Installa app',

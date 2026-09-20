@@ -21,6 +21,8 @@ import { applyHashRoute, updateHashFromState } from './modules/routing.js';
 import { formatTemplate as fmt } from './shared/text.js';
 import { formatPlayerClassification } from './shared/categories.js';
 import { isTeamDisplayName } from './shared/teamDisplay.js';
+import { privacyHref } from './shared/privacyHref.js';
+import { registerAnalyticsConsent } from './consent/banner.js';
 import './main.css';
 
 function codeToFlag(code) {
@@ -42,6 +44,7 @@ function getTranslation(lang) {
    ALPINE.JS APP
    ============================================================ */
 window.Alpine = Alpine;
+registerAnalyticsConsent(Alpine);
 
 Alpine.data('tennisApp', () => ({
   lang: 'pl',
@@ -191,6 +194,10 @@ Alpine.data('tennisApp', () => ({
 
   formatText(str, values = {}) {
     return fmt(str || '', values);
+  },
+
+  privacyHref(hash = '') {
+    return privacyHref(this.lang, hash);
   },
 
   onLangChange() {

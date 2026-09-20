@@ -23,6 +23,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hidePassword: 'Ukryj hasło',
         enter: 'Wejdź do biura',
         loggingIn: 'Logowanie...',
+        privacyNotice: 'Logowanie zapisuje sesję biura na tym urządzeniu.',
       },
       tour: {
         start: 'Przewodnik',
@@ -784,6 +785,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hidePassword: 'Passwort verbergen',
         enter: 'Büro betreten',
         loggingIn: 'Anmeldung...',
+        privacyNotice: 'Die Anmeldung speichert eine Bürositzung auf diesem Gerät.',
       },
       tour: {
         start: 'Anleitung',
@@ -1528,6 +1530,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hidePassword: 'Hide password',
         enter: 'Enter office',
         loggingIn: 'Signing in...',
+        privacyNotice: 'Signing in stores an office session on this device.',
       },
       tour: {
         start: 'Guide',
@@ -2272,6 +2275,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hidePassword: 'Nascondi password',
         enter: 'Entra nell\'ufficio',
         loggingIn: 'Accesso in corso...',
+        privacyNotice: 'L’accesso salva una sessione dell’ufficio su questo dispositivo.',
       },
       tour: {
         start: 'Guida',
@@ -3016,6 +3020,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hidePassword: 'Ocultar contraseña',
         enter: 'Entrar a la oficina',
         loggingIn: 'Iniciando sesión...',
+        privacyNotice: 'Al entrar se guarda una sesión de oficina en este dispositivo.',
       },
       tour: {
         start: 'Guía',
@@ -3760,6 +3765,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hidePassword: 'Masquer le mot de passe',
         enter: 'Entrer au bureau',
         loggingIn: 'Connexion...',
+        privacyNotice: 'La connexion enregistre une session de bureau sur cet appareil.',
       },
       tour: {
         start: 'Guide',
