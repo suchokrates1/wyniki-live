@@ -137,6 +137,11 @@ export function createOfficeCoreView() {
     planningPublishing: false,
 
     publishModalOpen: false,
+    planningReplaceModalOpen: false,
+    planningReplaceSchedulePending: false,
+    planningReplacePendingKey: '',
+    planningReplaceHandledKey: '',
+    planningReplaceApplying: false,
 
     publishScope: '',
 
@@ -384,6 +389,11 @@ export function createOfficeCoreView() {
       this.addMatchOpen = false;
       this.editMatchOpen = false;
       this.publishModalOpen = false;
+      this.planningReplaceModalOpen = false;
+      this.planningReplaceSchedulePending = false;
+      this.planningReplacePendingKey = '';
+      this.planningReplaceHandledKey = '';
+      this.planningReplaceApplying = false;
       this.authError = message;
       this.authPassword = '';
       this.quickInfoDirty = false;

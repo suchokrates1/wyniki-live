@@ -782,6 +782,12 @@
             </div>
             <button type="button" class="btn btn-sm btn-outline bg-white/80" @click="autoAssignPlanningGroups()" x-text="planningSelectedCategoryIsDoubles() ? (Number(planningGroupCount || 1) === 1 ? ot('planning.assignAllTeams') : ot('planning.autoAssignTeams')) : (Number(planningGroupCount || 1) === 1 ? ot('planning.assignAll') : ot('planning.autoAssign'))"></button>
             <button type="button" class="btn btn-sm btn-ghost" @click="clearPlanningDivisionAssignments()" x-text="ot('planning.clear')"></button>
+            <button type="button"
+              class="btn btn-sm office-btn-primary"
+              data-confirm-groups
+              x-show="planningReplaceSchedulePending"
+              @click="confirmPlanningGroups()"
+              x-text="ot('planning.confirmGroups')"></button>
           </div>
 
           <div class="mt-5 grid gap-4 lg:grid-cols-[0.8fr_2fr]" x-show="planningSelectedDivision && !planningSelectedCategoryIsDoubles()">
@@ -1566,6 +1572,23 @@
       <div class="mt-6 flex justify-end gap-2">
         <button type="button" class="btn btn-ghost" @click="closePublishModal()" x-text="ot('modals.cancel')"></button>
         <button type="button" class="btn office-btn-primary" data-publish-confirm :class="{'is-busy': planningPublishing}" :aria-disabled="planningPublishing" @click="confirmPublishSchedule()" x-text="ot('planning.publishConfirm')"></button>
+      </div>
+    </section>
+  </div>
+
+  <div class="office-modal-backdrop" x-show="planningReplaceModalOpen" x-transition.opacity x-cloak @keydown.escape.window="closePlanningReplaceModal()">
+    <section class="office-modal office-panel" @click.away="closePlanningReplaceModal()" role="dialog" aria-modal="true" :aria-label="ot('planning.replaceScheduleModalTitle')">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="office-kicker" x-text="ot('planning.step1Title')"></div>
+          <h2 class="mt-2 text-xl font-semibold" x-text="ot('planning.replaceScheduleModalTitle')"></h2>
+          <p class="mt-2 text-sm text-slate-600" x-text="ot('planning.replaceScheduleModalText')"></p>
+        </div>
+        <button type="button" class="btn btn-sm btn-ghost" @click="closePlanningReplaceModal()" x-text="ot('modals.close')"></button>
+      </div>
+      <div class="mt-6 flex justify-end gap-2 flex-wrap">
+        <button type="button" class="btn btn-ghost" data-replace-schedule-keep @click="keepPlanningScheduleAfterGroups()" x-text="ot('planning.replaceScheduleKeep')"></button>
+        <button type="button" class="btn office-btn-primary" data-replace-schedule-confirm :class="{'is-busy': planningReplaceApplying}" :aria-disabled="planningReplaceApplying" @click="replacePlanningScheduleAfterGroups()" x-text="ot('planning.replaceScheduleConfirm')"></button>
       </div>
     </section>
   </div>

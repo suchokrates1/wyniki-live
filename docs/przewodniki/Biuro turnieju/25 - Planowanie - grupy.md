@@ -58,16 +58,18 @@ Pojedyncza grupa zapisana jako „B1 Mężczyźni — Grupa A” (np. z importu)
 
 ## Zmiana składu grup w trakcie
 
-Zapis grup **nie kasuje terminarza**:
+Zapis grup **nie kasuje terminarza od razu**:
 
 - grupa o tej samej nazwie zachowuje swoje id,
 - mecze par, które nadal są w tej samej grupie, zostają z godziną, kortem i notatkami,
 - rozegrane mecze zostają i liczą się do postępu grupy,
 - znikają tylko nierozegrane mecze par, które przestały istnieć; nowe pary dostają nowe wpisy w szufladzie terminarza.
 
+Gdy terminarz grup **jest już rozstawiony** (mecze mają kort i godzinę), a zmiana składu dodała albo usunęła pary, w grupach pojawia się **Zatwierdź grupy**. Po kliknięciu biuro pyta, czy wygenerować mecze na nowo i podmienić je na siatce. Tak — nierozegrane mecze grupowe schodzą z siatki i autoschedule fazy grupowej układa je od nowa; rozegrane i live zostają. Nie — nowe mecze zostają w szufladzie, a stare pary na swoich slotach.
+
 ## E2E
 
-`02_groups_draw.spec.mjs` — grupy singla. `11_doubles_category_teams.spec.mjs`, `12_group_play_format.spec.mjs` — pary i tryb. `18_office_planning_ui.spec.mjs`, `21_full_tournament_office.spec.mjs` — kategorie, zawodnicy, pary i losowanie z UI. Backend: `test_saving_groups_keeps_planned_slots_and_played_matches_of_unchanged_pairs`.
+`02_groups_draw.spec.mjs` — grupy singla. `11_doubles_category_teams.spec.mjs`, `12_group_play_format.spec.mjs` — pary i tryb. `18_office_planning_ui.spec.mjs`, `21_full_tournament_office.spec.mjs` — kategorie, zawodnicy, pary i losowanie z UI. `28_group_schedule_replace.spec.mjs` — zatwierdzenie grup podmienia rozstawiony terminarz. Backend: `test_saving_groups_keeps_planned_slots_and_played_matches_of_unchanged_pairs`, `test_confirming_group_changes_replaces_laid_out_group_schedule`.
 
 ## Powiązane
 

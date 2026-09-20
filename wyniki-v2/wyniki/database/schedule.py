@@ -1249,6 +1249,100 @@ def apply_autoschedule_placements(
         logger.error("apply_autoschedule_error", error=str(e), tournament_id=tournament_id)
     return fetch_tournament_schedule(tournament_id)
 
+
+def _is_group_phase_entry(entry: Dict[str, Any]) -> bool:
+    source = str(entry.get("source_type") or "").lower()
+    if source == "knockout":
+        return False
+    phase = str(entry.get("phase") or "").lower()
+    return source in {"group", "group_rematch"} or "grup" in phase
+
+
+def _schedule_entry_is_locked(entry: Dict[str, Any]) -> bool:
+    status = str(entry.get("status") or "").lower()
+    return bool(entry.get("match_id")) or status in {"completed", "in_progress", "live"}
+
+
+def group_schedule_replace_hint(
+    before: List[Dict[str, Any]], after: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """True when a laid-out group timetable should be offered a regenerate+replace."""
+    before_group = [entry for entry in before if _is_group_phase_entry(entry)]
+    after_group = [entry for entry in after if _is_group_phase_entry(entry)]
+    before_ids = {int(entry["id"]) for entry in before_group if entry.get("id")}
+    after_ids = {int(entry["id"]) for entry in after_group if entry.get("id")}
+    removed = before_ids - after_ids
+    added = after_ids - before_ids
+    had_placed = any(
+        _schedule_entry_is_assigned(entry.get("court_id"), entry.get("scheduled_time"))
+        for entry in before_group
+    )
+    unplaced_after = [
+        entry
+        for entry in after_group
+        if not _schedule_entry_is_locked(entry)
+        and not _schedule_entry_is_assigned(entry.get("court_id"), entry.get("scheduled_time"))
+    ]
+    return {
+        "ask_replace_schedule": bool(had_placed and (removed or added)),
+        "removed_unplayed": len(removed),
+        "added_unplaced": len(added),
+        "unplaced_group": len(unplaced_after),
+    }
+
+
+def replace_unplayed_group_schedule(tournament_id: int) -> Dict[str, Any]:
+    """Unplace unplayed group fixtures, then auto-place the group phase and apply it.
+
+    Played and live matches stay put and block their slots. Unplayed group matches
+    come off the board so the group-phase autoscheduler can pack the new pairings.
+    """
+    ensure_group_schedule_entries(tournament_id)
+    now = _utc_now()
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, match_id, status, source_type, phase
+                FROM tournament_schedule
+                WHERE tournament_id = ?
+                """,
+                (tournament_id,),
+            )
+            to_unplace = [
+                int(row["id"])
+                for row in cursor.fetchall()
+                if _is_group_phase_entry(dict(row)) and not _schedule_entry_is_locked(dict(row))
+            ]
+            for schedule_id in to_unplace:
+                cursor.execute(
+                    """
+                    UPDATE tournament_schedule
+                    SET court_id = '', court_label = '', scheduled_time = '',
+                        status = CASE
+                            WHEN LOWER(COALESCE(status, '')) IN ('in_progress', 'completed', 'live')
+                            THEN status ELSE 'draft' END,
+                        updated_at = ?
+                    WHERE id = ? AND tournament_id = ?
+                    """,
+                    (now, schedule_id, tournament_id),
+                )
+            conn.commit()
+    except Exception as e:
+        logger.error("replace_group_schedule_unplace_error", error=str(e), tournament_id=tournament_id)
+        return {"schedule": fetch_tournament_schedule(tournament_id), "summary": {}}
+
+    proposal = generate_autoschedule_proposal(tournament_id, mode="all", phases=["group"])
+    placements = [
+        row
+        for row in (proposal.get("placements") or [])
+        if row.get("court_id") and row.get("scheduled_time")
+    ]
+    schedule = apply_autoschedule_placements(tournament_id, placements)
+    return {"schedule": schedule, "summary": proposal.get("summary") or {}}
+
+
 def move_schedule_entry_with_cascade(
     tournament_id: int,
     schedule_id: int,

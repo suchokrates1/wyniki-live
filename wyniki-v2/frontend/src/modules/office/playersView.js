@@ -898,12 +898,7 @@ export function createOfficePlayersView() {
           return;
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.groupsFailed'));
-        this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
-        this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
-        if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
-        this.loadDrawFormats?.();
-        // edits made while this save was on its way are newer; the next save sends them
-        if (revision === this.planningEditRevision) this.syncPlanningGroupAssignments();
+        this.applyPlanningGroupsSave(payload, { syncAssignments: revision === this.planningEditRevision });
       } catch (error) {
         console.error('Failed to auto-save office planning groups:', error);
         this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
@@ -939,15 +934,89 @@ export function createOfficePlayersView() {
           return;
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.groupsFailed'));
-        this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
-        this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
-        if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
-        this.syncPlanningGroupAssignments();
-        this.loadDrawFormats?.();
+        this.applyPlanningGroupsSave(payload, { syncAssignments: true });
         this.showToast(this.ot('toast.groupsSaved'), 'success');
       } catch (error) {
         console.error('Failed to save office planning groups:', error);
         this.showToast(error.message || this.ot('toast.groupsSaveError'), 'error');
+      }
+    },
+
+    planningReplaceFingerprint(groups = this.planningGroups) {
+      const rows = (groups || []).map((group) => ({
+        name: group.name,
+        players: [...(group.players || []).map((player) => player.player_id || player.id || player)].sort(),
+        teams: [...(group.teams || []).map((team) => team.team_id || team.id || team)].sort(),
+      }));
+      rows.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      return JSON.stringify(rows);
+    },
+
+    applyPlanningGroupsSave(payload, { syncAssignments = false } = {}) {
+      this.planningGroups = Array.isArray(payload.groups) ? payload.groups : this.planningGroups;
+      this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
+      if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+      this.loadDrawFormats?.();
+      if (syncAssignments) this.syncPlanningGroupAssignments();
+      const fingerprint = this.planningReplaceFingerprint(payload.groups || this.planningGroups);
+      if (payload.ask_replace_schedule && fingerprint !== this.planningReplaceHandledKey) {
+        this.planningReplaceSchedulePending = true;
+        this.planningReplacePendingKey = fingerprint;
+        return;
+      }
+      if (fingerprint !== this.planningReplacePendingKey) {
+        this.planningReplaceSchedulePending = false;
+      }
+    },
+
+    async confirmPlanningGroups() {
+      if (this.planningSaveTimer) {
+        clearTimeout(this.planningSaveTimer);
+        this.planningSaveTimer = null;
+        await this.autoSavePlanningGroups();
+      }
+      if (this.planningReplaceSchedulePending) {
+        this.planningReplaceModalOpen = true;
+        return;
+      }
+      this.showToast(this.ot('toast.groupsSaved'), 'success');
+    },
+
+    closePlanningReplaceModal() {
+      this.planningReplaceModalOpen = false;
+    },
+
+    keepPlanningScheduleAfterGroups() {
+      this.planningReplaceHandledKey = this.planningReplacePendingKey || this.planningReplaceFingerprint();
+      this.planningReplaceSchedulePending = false;
+      this.planningReplaceModalOpen = false;
+      this.showToast(this.ot('toast.replaceScheduleKept'), 'success');
+    },
+
+    async replacePlanningScheduleAfterGroups() {
+      this.planningReplaceApplying = true;
+      try {
+        const response = await fetch(`/api/office/${this.slot}/planning/groups/replace-schedule`, {
+          method: 'POST',
+          headers: this.officeHeaders(),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) throw new Error(payload.error || this.ot('toast.replaceScheduleError'));
+        this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
+        if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
+        this.planningReplaceHandledKey = this.planningReplacePendingKey || this.planningReplaceFingerprint();
+        this.planningReplaceSchedulePending = false;
+        this.planningReplaceModalOpen = false;
+        this.showToast(this.ot('toast.replaceScheduleDone'), 'success');
+      } catch (error) {
+        console.error('Failed to replace group schedule:', error);
+        this.showToast(error.message || this.ot('toast.replaceScheduleError'), 'error');
+      } finally {
+        this.planningReplaceApplying = false;
       }
     },
 

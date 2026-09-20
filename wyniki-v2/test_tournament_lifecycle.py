@@ -3525,6 +3525,86 @@ def test_saving_groups_keeps_planned_slots_and_played_matches_of_unchanged_pairs
     assert len([entry for entry in rows if pair(entry) == frozenset(("RA1", "RA2"))]) == 1
 
 
+def test_confirming_group_changes_replaces_laid_out_group_schedule(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Replace Grid Cup", "2026-07-25", "2026-07-26", active=True,
+        office_password_hash=generate_password_hash("replacegrid"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    ids = {
+        name: database.insert_player(tournament_id, name, "B2", "PL", first_name="R", last_name=name, gender="M")
+        for name in ("RA1", "RA2", "RA3", "RB1", "RB2", "RB3")
+    }
+
+    def groups_payload(group_a, group_b):
+        return [
+            {"name": "B2 Mężczyźni — Grupa A", "play_format": "round_robin", "players": [ids[n] for n in group_a]},
+            {"name": "B2 Mężczyźni — Grupa B", "play_format": "round_robin", "players": [ids[n] for n in group_b]},
+        ]
+
+    client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "replacegrid")
+    saved = client.put("/api/office/1/planning/groups", headers=headers, json={"groups": groups_payload(
+        ["RA1", "RA2", "RA3"], ["RB1", "RB2", "RB3"],
+    )})
+    assert saved.status_code == 200, saved.get_json()
+    assert saved.get_json().get("ask_replace_schedule") is False
+
+    planning = client.get("/api/office/1/planning", headers=headers).get_json()
+    group_a = next(group for group in planning["groups"] if group["name"].endswith("Grupa A"))
+    pair = lambda entry: frozenset((entry["player1_name"], entry["player2_name"]))
+    by_pair = {pair(entry): entry for entry in planning["schedule"] if entry.get("source_type") == "group"}
+    court = client.get("/api/office/1/autoschedule/config", headers=headers).get_json()["courts"][0]["kort_id"]
+
+    kept = by_pair[frozenset(("RA1", "RA2"))]
+    moved_away = by_pair[frozenset(("RA1", "RA3"))]
+    played = by_pair[frozenset(("RA2", "RA3"))]
+    for entry, time in ((kept, "10:00"), (moved_away, "11:00"), (played, "12:00")):
+        response = client.put(f"/api/office/1/schedule/{entry['id']}", headers=headers, json={
+            "day_date": "2026-07-25", "scheduled_time": time, "court_id": court,
+        })
+        assert response.status_code == 200, response.get_json()
+    response = client.post("/api/office/1/group-matches", headers=headers, json={
+        "group_id": group_a["id"], "schedule_id": played["id"], "player1_name": played["player1_name"],
+        "player2_name": played["player2_name"], "phase": "Grupowa",
+        "sets": [{"player1_games": 4, "player2_games": 1}, {"player1_games": 4, "player2_games": 2}],
+    })
+    assert response.status_code == 201, response.get_json()
+
+    swapped = client.put("/api/office/1/planning/groups", headers=headers, json={"groups": groups_payload(
+        ["RA1", "RA2", "RB3"], ["RB1", "RB2", "RA3"],
+    )})
+    assert swapped.status_code == 200, swapped.get_json()
+    payload = swapped.get_json()
+    assert payload["ask_replace_schedule"] is True
+    assert payload["schedule_replaced"] is False
+    rows = [entry for entry in payload["schedule"] if entry.get("source_type") == "group"]
+    after_by_pair = {}
+    for entry in rows:
+        after_by_pair.setdefault(pair(entry), []).append(entry)
+    assert after_by_pair[frozenset(("RA1", "RA2"))][0]["scheduled_time"] == "10:00"
+    assert after_by_pair[frozenset(("RA1", "RB3"))][0]["scheduled_time"] in (None, "")
+    assert after_by_pair[frozenset(("RA2", "RA3"))][0]["match_id"]
+
+    replaced = client.post("/api/office/1/planning/groups/replace-schedule", headers=headers)
+    assert replaced.status_code == 200, replaced.get_json()
+    assert replaced.get_json()["schedule_replaced"] is True
+    placed = [entry for entry in replaced.get_json()["schedule"] if entry.get("source_type") == "group"]
+    placed_by_pair = {}
+    for entry in placed:
+        placed_by_pair.setdefault(pair(entry), []).append(entry)
+    for names in (("RA1", "RB3"), ("RA2", "RB3"), ("RB1", "RA3"), ("RB2", "RA3"), ("RA1", "RA2")):
+        entry = placed_by_pair[frozenset(names)][0]
+        assert entry["court_id"], names
+        assert entry["scheduled_time"], names
+    played_after = placed_by_pair[frozenset(("RA2", "RA3"))][0]
+    assert played_after["match_id"]
+    assert played_after["court_id"] == court
+    assert played_after["scheduled_time"] == "12:00"
+
+
 def test_office_lists_tournaments_and_a_session_survives_a_slot_shift(full_app_with_temp_db):
     from wyniki import database
 

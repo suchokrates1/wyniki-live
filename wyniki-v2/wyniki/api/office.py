@@ -26,6 +26,8 @@ from ..database import (
     knockout_format_overview,
     save_knockout_format,
     apply_autoschedule_placements,
+    group_schedule_replace_hint,
+    replace_unplayed_group_schedule,
     fetch_bracket_groups,
     fetch_courts_for_tournament,
     fetch_players,
@@ -487,15 +489,46 @@ def office_planning_groups(slot: int):
     # An empty draw is only saved when asked for explicitly ("Wyczyść" on the last category).
     if not groups and not data.get("allow_empty"):
         return jsonify({"error": "No groups provided"}), 400
+    before = fetch_tournament_schedule(tournament_id)
     if not save_bracket_groups(tournament_id, groups):
         return jsonify({"error": "Failed to save groups"}), 500
     ensure_group_schedule_entries(tournament_id)
     ensure_knockout_schedule_entries(tournament_id)
+    after = fetch_tournament_schedule(tournament_id)
+    hint = group_schedule_replace_hint(before, after)
+    replaced = False
+    replace_summary: dict = {}
+    if data.get("replace_schedule"):
+        result = replace_unplayed_group_schedule(tournament_id)
+        after = result["schedule"]
+        replaced = True
+        replace_summary = result.get("summary") or {}
     dashboard = _build_office_dashboard(tournament_id)
     return _json_no_cache({
         "groups": fetch_bracket_groups(tournament_id),
-        "schedule": fetch_tournament_schedule(tournament_id),
+        "schedule": after,
         "dashboard": dashboard,
+        "ask_replace_schedule": bool(hint.get("ask_replace_schedule")) and not replaced,
+        "schedule_replaced": replaced,
+        "removed_unplayed": hint.get("removed_unplayed", 0),
+        "added_unplaced": hint.get("added_unplaced", 0),
+        "replace_summary": replace_summary,
+    })
+
+
+@blueprint.route('/<int:slot>/planning/groups/replace-schedule', methods=['POST'])
+def office_planning_groups_replace_schedule(slot: int):
+    """Regenerate unplayed group fixtures and put them back on the timetable."""
+    tournament, error = _require_office_access(slot)
+    if error:
+        return error
+    tournament_id = int(tournament['id'])
+    result = replace_unplayed_group_schedule(tournament_id)
+    return _json_no_cache({
+        "schedule": result["schedule"],
+        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule_replaced": True,
+        "replace_summary": result.get("summary") or {},
     })
 
 
