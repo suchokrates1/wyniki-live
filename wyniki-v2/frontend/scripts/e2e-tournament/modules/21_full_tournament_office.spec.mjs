@@ -589,7 +589,7 @@ export default async function run() {
     await page.waitForFunction(() => Alpine.$data(document.body).activeTab === 'quickinfo');
     const notesPanel = page.locator('[data-schedule-notes]');
     await notesPanel.waitFor({ state: 'visible' });
-    if ((await notesPanel.locator('[data-notes-day]').inputValue()) !== day1) throw new Error('"Uwagi…" should open with the day from the board');
+    if ((await notesPanel.locator('[data-notes-day]').inputValue()) !== day1) throw new Error('"Uwagi do meczów" should open with the day from the board');
     const notesCourt = String(((await planning()).schedule || []).find((entry) => entry.day_date === day1 && isPlaced(entry) && !entry.match_id)?.court_id || '');
     await notesPanel.locator(`[data-notes-court="${notesCourt}"]`).click();
     const bulkNote = `Kort kryty ${tag}`;

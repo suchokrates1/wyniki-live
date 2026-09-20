@@ -71,7 +71,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           hours: {
             title: 'Godziny dnia',
-            text: 'Ustaw godzinę startu i końca dnia. Siatka pokaże cały dzień, a planer nie wyjdzie poza te godziny.',
+            text: 'Godziny dnia są po prawej stronie belki siatki. Ustaw start i koniec — siatka pokaże cały dzień, a planer nie wyjdzie poza te godziny.',
           },
           autoPlan: {
             title: 'Ułóż automatycznie',
@@ -79,7 +79,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           days: {
             title: 'Sprawdź wszystkie dni',
-            text: 'Przełączaj dni, żeby obejrzeć propozycję na każdym z nich. Liczba przy dniu to mecze, które na nim wypadają.',
+            text: 'Zakładki dni są nagłówkiem siatki. Przełączaj je, żeby obejrzeć każdy dzień. Liczba przy dniu to mecze, które na nim wypadają.',
           },
           drag: {
             title: 'Przesuwaj ręcznie',
@@ -91,7 +91,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           notesOpen: {
             title: '5. Uwagi do meczów',
-            text: '„Uwagi…” otwiera uwagi hurtem — dla dnia, kortów, kategorii albo wszystkich meczów naraz.',
+            text: '„Uwagi do meczów” otwiera uwagi hurtem — dla dnia, kortów, kategorii albo wszystkich meczów naraz.',
           },
           notes: {
             title: 'Uwagi hurtem albo pojedynczo',
@@ -294,7 +294,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         applied: 'Zapisano uwagi w meczach: {count}',
         failed: 'Nie udało się zapisać uwag',
         emptyText: 'Wpisz treść uwagi albo wybierz „Wyczyść”.',
-        openFromSchedule: 'Uwagi…',
+        openFromSchedule: 'Uwagi do meczów',
       },
       quickInfo: {
         subtitle: 'Komunikat dla zawodników',
@@ -445,7 +445,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         slotMinutesB1: 'slot {minutes} min · B1 {b1} min',
         dropMatchHere: 'Upuść mecz tutaj',
         unassignedTitle: 'Nieprzypisane mecze turnieju ({count})',
-        unassignedHint: 'Mecze z całego turnieju bez kortu lub godziny. Wybierz dzień powyżej i przeciągnij mecz na kort. Mecze już przypisane do kortu są widoczne tylko na tablicy dnia.',
+        unassignedHint: 'Mecze z całego turnieju bez kortu lub godziny. Wybierz dzień na belce siatki i przeciągnij mecz na kort. Mecze już przypisane do kortu są widoczne tylko na tablicy dnia.',
         unassignedPhaseGroup: 'Faza grupowa',
         unassignedPhaseReplay: 'Rewanże',
         unassignedPhaseKnockout: 'Faza pucharowa',
@@ -469,6 +469,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         save: 'Zapisz',
         delete: 'Usuń',
         dayLabel: 'Dzień {number} · {date}',
+        daysNav: 'Dni turnieju',
         groupSuffix: 'Grupa {letter}',
         specialCourt: ' (specjalny)',
         commands: 'Polecenia',
@@ -818,7 +819,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           hours: {
             title: 'Tageszeiten',
-            text: 'Stelle Beginn und Ende des Tages ein. Das Raster zeigt den ganzen Tag, und der Planer bleibt innerhalb dieser Zeiten.',
+            text: 'Die Tageszeiten stehen rechts in der Rasterleiste. Stelle Beginn und Ende ein — das Raster zeigt den ganzen Tag, und der Planer bleibt innerhalb dieser Zeiten.',
           },
           autoPlan: {
             title: 'Automatisch planen',
@@ -826,7 +827,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           days: {
             title: 'Alle Tage prüfen',
-            text: 'Wechsle die Tage, um den Vorschlag für jeden Tag zu sehen. Die Zahl beim Tag sind die Spiele an diesem Tag.',
+            text: 'Die Tagesreiter sind die Kopfzeile des Rasters. Wechsle sie, um jeden Tag zu sehen. Die Zahl beim Tag sind die Spiele an diesem Tag.',
           },
           drag: {
             title: 'Von Hand verschieben',
@@ -838,7 +839,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           notesOpen: {
             title: '5. Hinweise zu Spielen',
-            text: '„Hinweise…“ öffnet Hinweise für viele Spiele — für einen Tag, Plätze, Kategorien oder alle Spiele.',
+            text: '„Hinweise zu Spielen“ öffnet Hinweise für viele Spiele — für einen Tag, Plätze, Kategorien oder alle Spiele.',
           },
           notes: {
             title: 'Hinweise für viele oder ein Spiel',
@@ -1041,7 +1042,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         applied: 'Hinweise gespeichert in Spielen: {count}',
         failed: 'Hinweise konnten nicht gespeichert werden',
         emptyText: 'Gib einen Hinweistext ein oder wähle „Löschen“.',
-        openFromSchedule: 'Hinweise…',
+        openFromSchedule: 'Hinweise zu Spielen',
       },
       quickInfo: {
         subtitle: 'Nachricht für Spieler',
@@ -1193,7 +1194,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         slotMinutesB1: 'Slot {minutes} Min. · B1 {b1} Min.',
         dropMatchHere: 'Spiel hier ablegen',
         unassignedTitle: 'Nicht zugewiesene Turnierspiele ({count})',
-        unassignedHint: 'Spiele des gesamten Turniers ohne Platz oder Uhrzeit. Wählen Sie oben einen Tag und ziehen Sie das Spiel auf einen Platz. Bereits zugewiesene Spiele stehen nur auf der Tagesübersicht.',
+        unassignedHint: 'Spiele des gesamten Turniers ohne Platz oder Uhrzeit. Wählen Sie den Tag in der Rasterleiste und ziehen Sie das Spiel auf einen Platz. Bereits zugewiesene Spiele stehen nur auf der Tagesübersicht.',
         unassignedPhaseGroup: 'Gruppenphase',
         unassignedPhaseReplay: 'Revanchen',
         unassignedPhaseKnockout: 'K.-o.-Phase',
@@ -1217,6 +1218,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         save: 'Speichern',
         delete: 'Löschen',
         dayLabel: 'Tag {number} · {date}',
+        daysNav: 'Turniertage',
         groupSuffix: 'Gruppe {letter}',
         specialCourt: ' (speziell)',
         commands: 'Befehle',
@@ -1548,7 +1550,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           hours: {
             title: 'Hours of the day',
-            text: 'Set when the day starts and ends. The board shows the whole day and the planner stays within those hours.',
+            text: 'The hours sit on the right of the board header. Set start and end — the board shows the whole day and the planner stays within those hours.',
           },
           autoPlan: {
             title: 'Plan automatically',
@@ -1556,7 +1558,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           days: {
             title: 'Check every day',
-            text: 'Switch days to look at the proposal on each of them. The number next to a day is how many matches fall on it.',
+            text: 'The day tabs are the header of the board. Switch them to look at each day. The number next to a day is how many matches fall on it.',
           },
           drag: {
             title: 'Move by hand',
@@ -1568,7 +1570,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           notesOpen: {
             title: '5. Notes for matches',
-            text: '“Notes…” opens notes for many matches at once — for a day, courts, categories or every match.',
+            text: '“Notes for matches” opens notes for many matches at once — for a day, courts, categories or every match.',
           },
           notes: {
             title: 'Notes for many or one',
@@ -1771,7 +1773,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         applied: 'Notes saved on matches: {count}',
         failed: 'Could not save the notes',
         emptyText: 'Type a note or choose “Clear”.',
-        openFromSchedule: 'Notes…',
+        openFromSchedule: 'Notes for matches',
       },
       quickInfo: {
         subtitle: 'Message for players',
@@ -1923,7 +1925,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         slotMinutesB1: 'slot {minutes} min · B1 {b1} min',
         dropMatchHere: 'Drop match here',
         unassignedTitle: 'Unassigned tournament matches ({count})',
-        unassignedHint: 'Matches from the whole tournament without a court or time. Pick a day above and drag a match onto a court.',
+        unassignedHint: 'Matches from the whole tournament without a court or time. Pick a day on the board header and drag a match onto a court.',
         unassignedPhaseGroup: 'Group phase',
         unassignedPhaseReplay: 'Replays',
         unassignedPhaseKnockout: 'Knockout phase',
@@ -1947,6 +1949,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         save: 'Save',
         delete: 'Delete',
         dayLabel: 'Day {number} · {date}',
+        daysNav: 'Tournament days',
         groupSuffix: 'Group {letter}',
         specialCourt: ' (special)',
         commands: 'Commands',
@@ -2278,7 +2281,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           hours: {
             title: 'Orari del giorno',
-            text: 'Imposta inizio e fine del giorno. La griglia mostra tutto il giorno e il pianificatore resta in quegli orari.',
+            text: 'Gli orari stanno a destra della testata della griglia. Imposta inizio e fine — la griglia mostra tutto il giorno e il pianificatore resta in quegli orari.',
           },
           autoPlan: {
             title: 'Pianifica automaticamente',
@@ -2286,7 +2289,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           days: {
             title: 'Controlla tutti i giorni',
-            text: 'Cambia giorno per vedere la proposta su ciascuno. Il numero accanto al giorno sono le partite di quel giorno.',
+            text: 'Le schede dei giorni sono l’intestazione della griglia. Cambiale per vedere ogni giorno. Il numero accanto al giorno sono le partite di quel giorno.',
           },
           drag: {
             title: 'Sposta a mano',
@@ -2298,7 +2301,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           notesOpen: {
             title: '5. Note per le partite',
-            text: '«Note…» apre le note per molte partite insieme — per un giorno, campi, categorie o tutte le partite.',
+            text: '«Note per le partite» apre le note per molte partite insieme — per un giorno, campi, categorie o tutte le partite.',
           },
           notes: {
             title: 'Note per molte o una partita',
@@ -2501,7 +2504,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         applied: 'Note salvate nelle partite: {count}',
         failed: 'Impossibile salvare le note',
         emptyText: 'Scrivi una nota o scegli «Cancella».',
-        openFromSchedule: 'Note…',
+        openFromSchedule: 'Note per le partite',
       },
       quickInfo: {
         subtitle: 'Messaggio per i giocatori',
@@ -2653,7 +2656,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         slotMinutesB1: 'slot {minutes} min · B1 {b1} min',
         dropMatchHere: 'Rilascia partita qui',
         unassignedTitle: 'Partite del torneo non assegnate ({count})',
-        unassignedHint: 'Partite di tutto il torneo senza campo o orario. Scegli il giorno sopra e trascina la partita su un campo.',
+        unassignedHint: 'Partite di tutto il torneo senza campo o orario. Scegli il giorno nella testata della griglia e trascina la partita su un campo.',
         unassignedPhaseGroup: 'Fase a gironi',
         unassignedPhaseReplay: 'Ripescaggi',
         unassignedPhaseKnockout: 'Fase a eliminazione',
@@ -2677,6 +2680,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         save: 'Salva',
         delete: 'Elimina',
         dayLabel: 'Giorno {number} · {date}',
+        daysNav: 'Giorni del torneo',
         groupSuffix: 'Girone {letter}',
         specialCourt: ' (speciale)',
         commands: 'Comandi',
@@ -3008,7 +3012,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           hours: {
             title: 'Horario del día',
-            text: 'Ajusta el inicio y el final del día. La cuadrícula muestra el día entero y el planificador no sale de ese horario.',
+            text: 'El horario está a la derecha de la cabecera de la cuadrícula. Ajusta inicio y final — la cuadrícula muestra el día entero y el planificador no sale de ese horario.',
           },
           autoPlan: {
             title: 'Planifica automáticamente',
@@ -3016,7 +3020,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           days: {
             title: 'Revisa todos los días',
-            text: 'Cambia de día para ver la propuesta en cada uno. El número junto al día son los partidos de ese día.',
+            text: 'Las pestañas de días son la cabecera de la cuadrícula. Cámbialas para ver cada día. El número junto al día son los partidos de ese día.',
           },
           drag: {
             title: 'Mueve a mano',
@@ -3028,7 +3032,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           notesOpen: {
             title: '5. Notas de los partidos',
-            text: '«Notas…» abre las notas para muchos partidos a la vez — para un día, pistas, categorías o todos los partidos.',
+            text: '«Notas de partidos» abre las notas para muchos partidos a la vez — para un día, pistas, categorías o todos los partidos.',
           },
           notes: {
             title: 'Notas para muchos o uno',
@@ -3231,7 +3235,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         applied: 'Notas guardadas en partidos: {count}',
         failed: 'No se pudieron guardar las notas',
         emptyText: 'Escribe una nota o elige «Borrar».',
-        openFromSchedule: 'Notas…',
+        openFromSchedule: 'Notas de partidos',
       },
       quickInfo: {
         subtitle: 'Mensaje para jugadores',
@@ -3383,7 +3387,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         slotMinutesB1: 'slot {minutes} min · B1 {b1} min',
         dropMatchHere: 'Suelta el partido aquí',
         unassignedTitle: 'Partidos del torneo sin asignar ({count})',
-        unassignedHint: 'Partidos de todo el torneo sin pista u hora. Elige el día arriba y arrastra el partido a una pista.',
+        unassignedHint: 'Partidos de todo el torneo sin pista u hora. Elige el día en la cabecera de la cuadrícula y arrastra el partido a una pista.',
         unassignedPhaseGroup: 'Fase de grupos',
         unassignedPhaseReplay: 'Desempates',
         unassignedPhaseKnockout: 'Fase eliminatoria',
@@ -3407,6 +3411,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         save: 'Guardar',
         delete: 'Eliminar',
         dayLabel: 'Día {number} · {date}',
+        daysNav: 'Días del torneo',
         groupSuffix: 'Grupo {letter}',
         specialCourt: ' (especial)',
         commands: 'Comandos',
@@ -3738,7 +3743,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           hours: {
             title: 'Horaires du jour',
-            text: 'Réglez le début et la fin de la journée. La grille montre toute la journée et le planificateur reste dans ces horaires.',
+            text: 'Les horaires sont à droite de l’en-tête de la grille. Réglez le début et la fin — la grille montre toute la journée et le planificateur reste dans ces horaires.',
           },
           autoPlan: {
             title: 'Planifiez automatiquement',
@@ -3746,7 +3751,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           days: {
             title: 'Vérifiez chaque jour',
-            text: 'Changez de jour pour voir la proposition sur chacun. Le nombre près du jour indique les matchs de ce jour.',
+            text: 'Les onglets de jours sont l’en-tête de la grille. Changez-les pour voir chaque jour. Le nombre près du jour indique les matchs de ce jour.',
           },
           drag: {
             title: 'Déplacez à la main',
@@ -3758,7 +3763,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
           },
           notesOpen: {
             title: '5. Remarques sur les matchs',
-            text: '« Remarques… » ouvre les remarques pour plusieurs matchs à la fois — pour un jour, des courts, des catégories ou tous les matchs.',
+            text: '« Remarques sur les matchs » ouvre les remarques pour plusieurs matchs à la fois — pour un jour, des courts, des catégories ou tous les matchs.',
           },
           notes: {
             title: 'Remarques pour plusieurs ou un seul',
@@ -3961,7 +3966,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         applied: 'Remarques enregistrées sur les matchs : {count}',
         failed: 'Impossible d\'enregistrer les remarques',
         emptyText: 'Saisissez une remarque ou choisissez « Effacer ».',
-        openFromSchedule: 'Remarques…',
+        openFromSchedule: 'Remarques sur les matchs',
       },
       quickInfo: {
         subtitle: 'Message pour les joueurs',
@@ -4113,7 +4118,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         slotMinutesB1: 'créneau {minutes} min · B1 {b1} min',
         dropMatchHere: 'Déposer le match ici',
         unassignedTitle: 'Matchs du tournoi non assignés ({count})',
-        unassignedHint: 'Matchs de tout le tournoi sans court ni heure. Choisissez le jour ci-dessus et faites glisser le match vers un court.',
+        unassignedHint: 'Matchs de tout le tournoi sans court ni heure. Choisissez le jour dans l’en-tête de la grille et faites glisser le match vers un court.',
         unassignedPhaseGroup: 'Phase de poules',
         unassignedPhaseReplay: 'Barrages',
         unassignedPhaseKnockout: 'Phase à élimination',
@@ -4137,6 +4142,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         save: 'Enregistrer',
         delete: 'Supprimer',
         dayLabel: 'Jour {number} · {date}',
+        daysNav: 'Jours du tournoi',
         groupSuffix: 'Poule {letter}',
         specialCourt: ' (spécial)',
         commands: 'Commandes',

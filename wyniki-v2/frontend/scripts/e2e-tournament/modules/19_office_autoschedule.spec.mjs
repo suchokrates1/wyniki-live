@@ -38,6 +38,9 @@ export default async function run() {
     if (!body.includes('zakres') || !body.includes('koniec')) {
       throw new Error('Schedule step 2 missing Zakres control');
     }
+    if (!(await page.locator('.office-daybar').isVisible())) {
+      throw new Error('Schedule day header missing');
+    }
     console.log('  Step 2 generate/publish/autoschedule controls visible');
 
     await page.getByRole('button', { name: 'Rozstaw ten dzień' }).click();

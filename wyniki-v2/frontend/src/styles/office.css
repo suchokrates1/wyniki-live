@@ -201,6 +201,8 @@ body.office-body {
   transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
 }
 
+.office-btn svg { flex: 0 0 auto; }
+
 .office-btn:hover { border-color: var(--kort-mist); }
 
 .office-btn--ghost.is-armed {
@@ -232,6 +234,28 @@ body.office-body {
 }
 
 .office-btn--danger:hover { background: rgba(248, 113, 113, 0.12); border-color: var(--kort-err); }
+
+.office-btn--ok {
+  border-color: transparent;
+  background: #2f9e5a;
+  color: #f3fff6;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.office-btn--ok:hover { background: #37b066; border-color: transparent; }
+
+.office-btn--danger.office-btn--fill {
+  border-color: transparent;
+  background: #b4232a;
+  color: #fff5f5;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.office-btn--danger.office-btn--fill:hover { background: #c62d34; border-color: transparent; }
 
 .office-btn.is-busy {
   opacity: 0.55;
@@ -650,13 +674,35 @@ body.office-body {
 
 .office-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-end;
-  gap: 10px 14px;
+  justify-content: space-between;
+  gap: 28px;
   padding: 12px 20px;
   border-bottom: 1px solid var(--kort-grid);
   background: var(--kort-deep);
 }
+
+.office-toolbar__quiet,
+.office-toolbar__work,
+.office-toolbar__public {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.office-toolbar__quiet { flex: 0 1 auto; }
+
+.office-toolbar__work {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: 0 18px;
+  border-left: 1px solid var(--kort-line);
+  border-right: 1px solid var(--kort-line);
+}
+
+.office-toolbar__public { flex: 0 0 auto; }
 
 .office-toolbar__group {
   display: flex;
@@ -669,18 +715,34 @@ body.office-body {
 
 .office-daytab {
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 1px solid var(--kort-line);
+  border-bottom: 0;
   background: transparent;
   color: var(--kort-mist);
   font-family: var(--kort-sans);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
 }
 
-.office-daytab + .office-daytab { margin-left: -7px; }
-.office-daytab.is-active { background: var(--kort-raise); color: var(--kort-ice); border-color: var(--kort-mist); position: relative; }
+.office-daytab + .office-daytab { margin-left: -1px; }
+
+.office-daytab.is-active {
+  background: var(--kort-void);
+  color: var(--kort-ice);
+  position: relative;
+}
+
+.office-daytab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--kort-lime);
+}
 
 .office-field {
   display: flex;
@@ -720,12 +782,59 @@ body.office-body {
 
 .office-stage > .office-hint { margin-bottom: 8px; }
 
+.office-board {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--kort-line);
+  background: var(--kort-void);
+}
+
+.office-daybar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px 0;
+  background: #08222b;
+  border-bottom: 1px solid var(--kort-line);
+}
+
+.office-daybar__tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.office-daybar__hours {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding-bottom: 8px;
+}
+
+.office-daybar .input {
+  min-height: 36px;
+  min-width: 110px;
+}
+
 .office-timetable-wrap {
   position: relative;
   overflow: auto;
   max-height: calc(100vh - 260px);
   border: 1px solid var(--kort-line);
   background: var(--kort-void);
+}
+
+.office-board > .office-timetable-wrap {
+  border: 0;
+  flex: 1 1 auto;
+  min-height: 180px;
 }
 
 .office-timetable {
@@ -1334,7 +1443,15 @@ body.office-body {
     padding-bottom: 12px;
   }
 
-  .office-stage > .office-timetable-wrap {
+  .office-stage > .office-board {
+    flex: 1 1 auto;
+    min-height: 180px;
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .office-stage > .office-timetable-wrap,
+  .office-board > .office-timetable-wrap {
     flex: 1 1 auto;
     min-height: 180px;
     max-height: none;
@@ -1353,6 +1470,15 @@ body.office-body {
 }
 
 @media (max-width: 1180px) {
+  .office-toolbar { flex-wrap: wrap; }
+  .office-toolbar__work {
+    border: 0;
+    padding: 0;
+    justify-content: flex-start;
+  }
+
+  .office-daybar { flex-wrap: wrap; }
+
   .office-workspace { grid-template-columns: minmax(0, 1fr); }
 
   .office-inspector {

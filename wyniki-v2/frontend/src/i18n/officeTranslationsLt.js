@@ -68,7 +68,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
         },
         hours: {
           title: 'Dienos valandos',
-          text: 'Nustatykite dienos pradžią ir pabaigą. Tinklelis rodys visą dieną, o planuoklis neišeis už šių valandų.',
+          text: 'Dienos valandos yra tinklelio juostos dešinėje. Nustatykite pradžią ir pabaigą — tinklelis rodys visą dieną, o planuoklis neišeis už šių valandų.',
         },
         autoPlan: {
           title: 'Išdėstykite automatiškai',
@@ -76,7 +76,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
         },
         days: {
           title: 'Patikrinkite visas dienas',
-          text: 'Perjunkite dienas, kad pamatytumėte pasiūlymą kiekvienai. Skaičius prie dienos — tos dienos mačai.',
+          text: 'Dienų kortelės yra tinklelio antraštė. Perjunkite jas, kad pamatytumėte kiekvieną dieną. Skaičius prie dienos — tos dienos mačai.',
         },
         drag: {
           title: 'Perkelkite ranka',
@@ -88,7 +88,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
         },
         notesOpen: {
           title: '5. Mačų pastabos',
-          text: '„Pastabos…“ atveria pastabas daugeliui mačų iš karto — dienai, kortams, kategorijoms ar visiems mačams.',
+          text: '„Mačų pastabos“ atveria pastabas daugeliui mačų iš karto — dienai, kortams, kategorijoms ar visiems mačams.',
         },
         notes: {
           title: 'Pastabos daugeliui ar vienam',
@@ -291,7 +291,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       applied: 'Pastabos išsaugotos mačuose: {count}',
       failed: 'Nepavyko išsaugoti pastabų',
       emptyText: 'Įrašykite pastabą arba pasirinkite „Išvalyti“.',
-      openFromSchedule: 'Pastabos…',
+      openFromSchedule: 'Mačų pastabos',
     },
     quickInfo: {
       subtitle: 'Pranešimas žaidėjams',
@@ -443,7 +443,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       slotMinutesB1: 'langelis {minutes} min · B1 {b1} min',
       dropMatchHere: 'Paleiskite mačą čia',
       unassignedTitle: 'Nepriskirti turnyro mačai ({count})',
-      unassignedHint: 'Viso turnyro mačai be korto arba valandos. Pasirinkite dieną aukščiau ir vilkite mačą ant korto. Mačai, jau priskirti kortui, matomi tik dienos lentoje.',
+      unassignedHint: 'Viso turnyro mačai be korto arba valandos. Pasirinkite dieną tinklelio juostoje ir vilkite mačą ant korto. Mačai, jau priskirti kortui, matomi tik dienos lentoje.',
       unassignedPhaseGroup: 'Grupių etapas',
       unassignedPhaseReplay: 'Revanšai',
       unassignedPhaseKnockout: 'Atkrintamosios',
@@ -467,6 +467,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       save: 'Išsaugoti',
       delete: 'Pašalinti',
       dayLabel: 'Diena {number} · {date}',
+      daysNav: 'Turnyro dienos',
       groupSuffix: 'Grupė {letter}',
       specialCourt: ' (specialus)',
       commands: 'Komandos',
