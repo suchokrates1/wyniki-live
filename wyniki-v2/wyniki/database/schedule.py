@@ -1427,94 +1427,45 @@ def move_schedule_entry_with_cascade(
     scheduled_time: Optional[str] = None,
     day_date: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Move one entry to a court/time and re-cascade times on the affected courts.
+    """Move one entry to a court/time. Neighbours keep their times so the hole stays.
 
-    Moves the entry onto the target court (optionally at a requested time), then recomputes
-    sequential start times for every entry on both the source and target courts for that day,
-    using the configured slot lengths.
+    Packing and spreading happen only when category match duration changes.
     """
-    from ..services import auto_scheduler
-
-    config = get_autoscheduler_config(tournament_id)
     schedule = fetch_tournament_schedule(tournament_id)
     moved = next((e for e in schedule if int(e["id"]) == int(schedule_id)), None)
     if not moved:
         return schedule
 
-    source_court = str(moved.get("court_id") or "")
-    target_court = str(court_id or source_court)
+    target_court = str(court_id or moved.get("court_id") or "")
     target_day = str(day_date or moved.get("day_date") or "")
+    target_time = str(scheduled_time or moved.get("scheduled_time") or "")
     courts = {str(c.get("kort_id")): c for c in fetch_courts_for_tournament(tournament_id)}
-
-    # Apply the move in-memory first.
-    moved["court_id"] = target_court
-    moved["court_label"] = courts.get(target_court, {}).get("name") or target_court
-    if day_date:
-        moved["day_date"] = target_day
-    if scheduled_time:
-        moved["scheduled_time"] = str(scheduled_time)
-
-    def _court_entries(court, day):
-        items = [
-            e
-            for e in schedule
-            if str(e.get("court_id") or "") == court and str(e.get("day_date") or "") == day
-        ]
-        items.sort(key=lambda e: (str(e.get("scheduled_time") or "99:99"), int(e.get("sort_order") or 0), int(e.get("id") or 0)))
-        return items
-
-    updates: List[Dict[str, Any]] = []
-
-    # Target court: pin the moved match at its drop time, cascade only the matches after it
-    # (matches earlier on the court keep their times). This matches the "shift by slot" mental model.
-    target_entries = _court_entries(target_court, target_day)
-    if scheduled_time:
-        pivot_index = next(
-            (i for i, e in enumerate(target_entries) if int(e["id"]) == int(schedule_id)), 0
-        )
-        cursor = str(moved.get("scheduled_time") or "")
-        for entry in target_entries[pivot_index:]:
-            entry["scheduled_time"] = cursor
-            cursor = auto_scheduler.add_minutes(
-                cursor,
-                auto_scheduler.slot_minutes_for_entry(entry, config, target_court),
-            )
-        updates.extend(target_entries)
-    else:
-        updates.extend(auto_scheduler.recompute_court_times(target_entries, config))
-
-    # Source court (if different): close the gap left behind by cascading from its start.
-    source_day = str(moved.get("day_date") or target_day)
-    if source_court and (source_court, source_day) != (target_court, target_day):
-        updates.extend(auto_scheduler.recompute_court_times(_court_entries(source_court, source_day), config))
-
     now = _utc_now()
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            for entry in updates:
-                cursor.execute(
-                    """
-                    UPDATE tournament_schedule
-                    SET court_id = ?, court_label = ?, day_date = ?, scheduled_time = ?,
-                        status = CASE WHEN status IN ('in_progress','completed') THEN status
-                                      WHEN status = 'draft' THEN 'planned' ELSE status END,
-                        updated_at = ?
-                    WHERE id = ? AND tournament_id = ?
-                    """,
-                    (
-                        str(entry.get("court_id") or ""),
-                        courts.get(str(entry.get("court_id") or ""), {}).get("name") or str(entry.get("court_id") or ""),
-                        str(entry.get("day_date") or ""),
-                        str(entry.get("scheduled_time") or ""),
-                        now,
-                        int(entry["id"]),
-                        tournament_id,
-                    ),
-                )
+            cursor.execute(
+                """
+                UPDATE tournament_schedule
+                SET court_id = ?, court_label = ?, day_date = ?, scheduled_time = ?,
+                    status = CASE WHEN status IN ('in_progress','completed') THEN status
+                                  WHEN status = 'draft' THEN 'planned' ELSE status END,
+                    updated_at = ?
+                WHERE id = ? AND tournament_id = ?
+                """,
+                (
+                    target_court,
+                    courts.get(target_court, {}).get("name") or target_court,
+                    target_day,
+                    target_time,
+                    now,
+                    int(schedule_id),
+                    tournament_id,
+                ),
+            )
             conn.commit()
     except Exception as e:
-        logger.error("move_schedule_cascade_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
+        logger.error("move_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
     return fetch_tournament_schedule(tournament_id)
 
 def unassign_schedule_entry(
@@ -1523,17 +1474,12 @@ def unassign_schedule_entry(
     *,
     day_date: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Move a schedule entry back to the unassigned pool (no court/time)."""
-    from ..services import auto_scheduler
-
-    config = get_autoscheduler_config(tournament_id)
+    """Move a schedule entry back to the unassigned pool. The hole on the court stays."""
     schedule = fetch_tournament_schedule(tournament_id)
     moved = next((e for e in schedule if int(e["id"]) == int(schedule_id)), None)
     if not moved:
         return schedule
 
-    source_court = str(moved.get("court_id") or "")
-    source_day = str(day_date or moved.get("day_date") or "")
     now = _utc_now()
     try:
         with db_conn() as conn:
@@ -1550,43 +1496,6 @@ def unassign_schedule_entry(
     except Exception as e:
         logger.error("unassign_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
         return schedule
-
-    if source_court and source_day:
-        remaining = [
-            e
-            for e in fetch_tournament_schedule(tournament_id)
-            if str(e.get("court_id") or "") == source_court and str(e.get("day_date") or "") == source_day
-        ]
-        remaining.sort(
-            key=lambda e: (
-                str(e.get("scheduled_time") or "99:99"),
-                int(e.get("sort_order") or 0),
-                int(e.get("id") or 0),
-            )
-        )
-        updates = auto_scheduler.recompute_court_times(remaining, config)
-        courts = {str(c.get("kort_id")): c for c in fetch_courts_for_tournament(tournament_id)}
-        now = _utc_now()
-        try:
-            with db_conn() as conn:
-                cursor = conn.cursor()
-                for entry in updates:
-                    cursor.execute(
-                        """
-                        UPDATE tournament_schedule
-                        SET scheduled_time = ?, updated_at = ?
-                        WHERE id = ? AND tournament_id = ?
-                        """,
-                        (
-                            str(entry.get("scheduled_time") or ""),
-                            now,
-                            int(entry["id"]),
-                            tournament_id,
-                        ),
-                    )
-                conn.commit()
-        except Exception as e:
-            logger.error("unassign_schedule_cascade_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
     return fetch_tournament_schedule(tournament_id)
 
 def clear_schedule_day(tournament_id: int, day_date: str) -> Dict[str, int]:

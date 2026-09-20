@@ -29,7 +29,7 @@ Szyna → **Terminarz**: pasek narzędzi u góry, siatka **godzina × kort** dla
 | **Rewanże…** | Druga runda dla wybranych grup | `POST …/schedule/generate-rematch` |
 | **Opublikuj wszystkie** | Modal: wszystkie dni albo jeden dzień; wpisy robocze stają się publiczne | `POST …/schedule/publish` (`day_date` opcjonalnie) |
 
-Nagłówek kolumny kortu: pigułka **B1** oznacza kort specjalny B1 (przypisanie meczów B1). Czas meczu nie jest w nagłówku kortu — ustawia się go przy kategorii (Grupy startowe) i widać go na karcie meczu. To ten czas liczy plan.
+Nagłówek kolumny kortu: pigułka **B1** oznacza kort specjalny B1 (przypisanie meczów B1). Czas meczu nie jest w nagłówku kortu — ustawia się go przy kategorii (Grupy startowe) i widać go na karcie meczu. To ten czas liczy plan. Zsuwanie i rozsuwanie przerw jest tylko po zmianie tego czasu, nie po przeciągnięciu meczu.
 
 ## Zasady planera
 
@@ -45,8 +45,8 @@ Nagłówek kolumny kortu: pigułka **B1** oznacza kort specjalny B1 (przypisanie
 
 | Akcja | Efekt | API |
 |-------|-------|-----|
-| Przeciągnij mecz na komórkę | Nowy kort / godzina | `POST …/autoschedule/move` |
-| Przeciągnij mecz na szufladę | Zdjęcie z siatki | `POST …/autoschedule/unassign` |
+| Przeciągnij mecz na komórkę | Tylko ten mecz zmienia kort / godzinę. Dziura na starym miejscu zostaje | `POST …/autoschedule/move` |
+| Przeciągnij mecz na szufladę | Zdjęcie z siatki; pozostałe mecze nie zsuwają się | `POST …/autoschedule/unassign` |
 | Zakładki kategorii w szufladzie | Filtr szuflady | — |
 | **Usuń wszystkie** | Usuwa wszystkie nieprzypisane mecze (ręczne, rewanże i wygenerowane). Nie wracają same — przywraca je **Generuj mecze** | `DELETE …/schedule/unassigned` |
 

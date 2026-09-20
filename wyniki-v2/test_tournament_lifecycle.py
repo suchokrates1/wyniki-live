@@ -2466,7 +2466,12 @@ def test_office_autoschedule_generate_apply_and_move(full_app_with_temp_db):
     assert b1_entries[0]["scheduled_time"] == "09:30"
     assert b1_entries[0]["status"] == "planned"
 
-    # Move the first B1 entry later and check the court re-cascades.
+    # Dragging one match must not pack or shift the others — the hole stays.
+    others_before = sorted(
+        (e["id"], e["scheduled_time"])
+        for e in b1_entries[1:]
+        if e["scheduled_time"]
+    )
     target = b1_entries[0]
     moved = client.post(
         "/api/office/1/autoschedule/move",
@@ -2475,15 +2480,30 @@ def test_office_autoschedule_generate_apply_and_move(full_app_with_temp_db):
     )
     assert moved.status_code == 200
     moved_schedule = moved.get_json()["schedule"]
-    # The moved match is pinned at its drop time; the match after it cascades by one slot.
     moved_entry = next(e for e in moved_schedule if e["id"] == target["id"])
     assert moved_entry["scheduled_time"] == "11:00"
-    later_b1 = sorted(
-        e["scheduled_time"]
+    others_after = sorted(
+        (e["id"], e["scheduled_time"])
         for e in moved_schedule
-        if e["scheduled_time"] and "B1" in (e["category_name"] or "") and e["scheduled_time"] > "11:00"
+        if e["id"] != target["id"] and e["scheduled_time"] and "B1" in (e["category_name"] or "")
     )
-    assert later_b1 and later_b1[0] == "12:15"  # +75 cascade after the moved match
+    assert others_after == others_before
+
+    hole = next(e for e in b1_entries[1:] if e["scheduled_time"])
+    pulled = client.post(
+        "/api/office/1/autoschedule/unassign",
+        headers=headers,
+        json={"schedule_id": hole["id"]},
+    )
+    assert pulled.status_code == 200
+    remaining = [
+        (e["id"], e["scheduled_time"])
+        for e in pulled.get_json()["schedule"]
+        if e["scheduled_time"] and "B1" in (e["category_name"] or "")
+    ]
+    assert (target["id"], "11:00") in remaining
+    assert hole["id"] not in [row[0] for row in remaining]
+    assert (b1_entries[-1]["id"], b1_entries[-1]["scheduled_time"]) in remaining
 
 
 def test_office_category_duration_reflows_placed_schedule(full_app_with_temp_db):

@@ -870,7 +870,7 @@ def office_autoschedule_apply(slot: int):
 
 @blueprint.route('/<int:slot>/autoschedule/move', methods=['POST'])
 def office_autoschedule_move(slot: int):
-    """Move one match to a court/time and cascade times on affected courts."""
+    """Move one match to a court/time. Other matches keep their times."""
     tournament, error = _require_office_access(slot)
     if error:
         return error

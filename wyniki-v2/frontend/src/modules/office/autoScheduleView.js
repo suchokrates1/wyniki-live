@@ -822,7 +822,6 @@ export function createOfficeAutoScheduleView() {
       const index = proposal.findIndex(entry => String(this.autoEntryId(entry)) === String(scheduleId));
       if (index < 0) return;
       const moved = proposal[index];
-      const sourceCourt = String(moved.court_id || '');
       const targetCourt = String(courtId);
       proposal[index] = {
         ...moved,
@@ -830,10 +829,6 @@ export function createOfficeAutoScheduleView() {
         day_date: day,
         scheduled_time: dropTime,
       };
-      this.autoRecomputeProposalFromPivot(proposal, targetCourt, scheduleId, dropTime);
-      if (sourceCourt && sourceCourt !== targetCourt) {
-        this.autoRecomputeProposalCourt(proposal, sourceCourt);
-      }
       this.autoProposal = proposal;
     },
 
@@ -881,9 +876,7 @@ export function createOfficeAutoScheduleView() {
         const proposal = this.autoProposal.map(entry => ({ ...entry }));
         const index = proposal.findIndex(entry => String(this.autoEntryId(entry)) === String(scheduleId));
         if (index < 0) return;
-        const sourceCourt = String(proposal[index].court_id || '');
         proposal[index] = { ...proposal[index], court_id: '', scheduled_time: '' };
-        if (sourceCourt) this.autoRecomputeProposalCourt(proposal, sourceCourt);
         this.autoProposal = proposal;
         return;
       }

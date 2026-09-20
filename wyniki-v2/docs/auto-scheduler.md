@@ -2,7 +2,7 @@
 
 Cel: biuro turnieju nie układa godzin ręcznie. System proponuje terminarz (korty + godziny),
 który zatwierdza się na interaktywnej tablicy z przeciąganiem meczów. Edycja w trakcie turnieju
-działa tak samo (drag & drop z kaskadą godzin).
+działa tak samo (drag & drop jednego meczu; dziura zostaje).
 
 ## Źródło prawdy: III Mistrzostwa Polski (tournament_id = 25)
 
@@ -62,14 +62,14 @@ data dnia. Wyjście: lista placementów `{schedule_id|key, court_id, day_date, s
 - `POST /autoschedule/generate` — body: `{start_time, b1_court_id, day_date?}`; zwraca propozycję
   (placementy nałożone na aktualne wpisy terminarza), NIE zapisuje statusu publikacji.
 - `POST /autoschedule/apply` — zapisuje placementy (czas/kort) do `tournament_schedule`.
-- `POST /autoschedule/move` — body: `{schedule_id, court_id, scheduled_time}`; przesuwa jeden mecz
-  i kaskadowo przelicza godziny kolejnych meczów na docelowym (i źródłowym) korcie.
+- `POST /autoschedule/move` — body: `{schedule_id, court_id, scheduled_time}`; przesuwa tylko
+  ten mecz. Dziura zostaje. Zsuwanie/rozsuwanie jest przy zmianie `category_slot_minutes`.
 
 ## Frontend: interaktywna tablica
 
 Zakładka „Autorozmieszczanie" w `/office`: kolumny = korty, wiersze = godziny (sloty).
 Karta meczu przeciągana (HTML5 drag & drop) między kortami/slotami; po upuszczeniu wywołanie
-`/autoschedule/move`, które zwraca przeliczony terminarz. Przycisk „Zatwierdź" → `/autoschedule/apply`.
+`/autoschedule/move` (tylko ten mecz). Przycisk „Zatwierdź" → `/autoschedule/apply`.
 
 ## Etapy wdrożenia
 
