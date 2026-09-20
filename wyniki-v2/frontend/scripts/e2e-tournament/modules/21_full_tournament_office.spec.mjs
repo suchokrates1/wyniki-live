@@ -360,8 +360,8 @@ export default async function run() {
     log(`Generated ${groupEntries.length} group matches`);
 
     // nothing placed yet: the empty board already covers the whole day, to its end hour
-    await page.locator('.office-toolbar input[type="time"]').nth(0).fill('09:00');
-    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('21:00');
+    await page.locator('.office-daybar input[type="time"]').nth(0).fill('09:00');
+    await page.locator('.office-daybar input[type="time"]').nth(1).fill('21:00');
     const emptyBoard = await waitUntil('empty board 09:00–21:00', async () => {
       const state = await page.evaluate(() => {
         const cells = [...document.querySelectorAll('[data-cell]')].map((node) => node.getAttribute('data-cell').split('|')[1]);
@@ -394,8 +394,8 @@ export default async function run() {
     };
     await selectDay(day1);
     await page.locator('.office-toolbar select').selectOption('group');
-    await page.locator('.office-toolbar input[type="time"]').nth(0).fill('09:00');
-    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('13:00');
+    await page.locator('.office-daybar input[type="time"]').nth(0).fill('09:00');
+    await page.locator('.office-daybar input[type="time"]').nth(1).fill('13:00');
     await page.getByRole('button', { name: 'Rozstaw ten dzień' }).click();
     // a block of the proposal opens the inspector; moving it there moves it on the board
     const proposed = page.locator('[data-schedule-entry][data-minutes]').first();
@@ -511,7 +511,7 @@ export default async function run() {
 
     markStep('board drawn to scale');
     // the board runs from the day's start to its end hour, and a match is as tall as it lasts
-    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('21:00');
+    await page.locator('.office-daybar input[type="time"]').nth(1).fill('21:00');
     const board = await waitUntil('board to 21:00', async () => {
       const state = await page.evaluate(() => {
         const cells = [...document.querySelectorAll('[data-cell]')].map((node) => node.getAttribute('data-cell').split('|')[1]);
@@ -533,7 +533,7 @@ export default async function run() {
     if (!drawerBox || drawerBox.y + drawerBox.height > board.viewport + 1 || drawerBox.y > board.viewport) throw new Error(`The unassigned drawer should stay at the bottom of the screen: ${JSON.stringify(drawerBox)}`);
     await page.screenshot({ path: 'test-results/office-board-scale.png' });
     log(`Board 09:00–21:00 in 15-minute rows of ${board.tick}px; ${minutesSeen.join(' and ')}-minute matches proportional; drawer stays at the bottom`);
-    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('13:00');
+    await page.locator('.office-daybar input[type="time"]').nth(1).fill('13:00');
 
     markStep('publish');
     const day2PlacedNow = ((await planning()).schedule || []).filter((entry) => entry.day_date === day2 && isPlaced(entry));

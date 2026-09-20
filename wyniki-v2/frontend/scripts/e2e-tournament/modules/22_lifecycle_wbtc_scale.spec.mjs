@@ -260,6 +260,8 @@ export default async function run() {
     const login = new OfficeLoginPage(page, BASE_URL);
     await login.goto(slot);
     await login.login(OFFICE_PASSWORD);
+    await page.waitForFunction(() => Alpine.$data(document.body)?.planningLoadedOnce, undefined, { timeout: 30000 });
+    await page.locator('[data-office-next] .office-next__dismiss').click({ timeout: 3000 }).catch(() => {});
     await openView('Terminarz');
     await page.waitForSelector('.office-timetable__court');
 
@@ -274,8 +276,8 @@ export default async function run() {
       if (isOn !== b1Target.has(courtIds[index])) await pill.click();
     }
     await page.locator('.office-toolbar select').selectOption('group');
-    await page.locator('.office-toolbar input[type="time"]').nth(0).fill('09:00');
-    await page.locator('.office-toolbar input[type="time"]').nth(1).fill('18:00');
+    await page.locator('.office-daybar input[type="time"]').nth(0).fill('09:00');
+    await page.locator('.office-daybar input[type="time"]').nth(1).fill('18:00');
 
     // ——— whole group phase across the days ———
     await page.getByRole('button', { name: 'Rozstaw fazę grupową' }).click();
