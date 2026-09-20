@@ -69,6 +69,12 @@ export function createOfficePathView() {
     officePathFacts() {
       const categories = (this.tournamentCategories || []).filter((cat) => cat.is_active !== 0);
       const groups = this.planningGroups || [];
+      const matchingIds = new Map();
+      for (const category of categories) {
+        matchingIds.set(Number(category.id), new Set(
+          this.planningPlayersMatchingCategory(category).map((row) => Number(row.id)),
+        ));
+      }
       const roster = officePathRosterFacts({
         categories,
         groups,
@@ -76,7 +82,7 @@ export function createOfficePathView() {
         assignments: this.planningGroupAssignments || {},
         teams: this.planningTeams || [],
         teamAssignments: this.planningTeamAssignments || {},
-        matchPlayer: (player, category) => this.planningPlayersMatchingCategory(category).some((row) => Number(row.id) === Number(player.id)),
+        matchPlayer: (player, category) => matchingIds.get(Number(category.id))?.has(Number(player.id)) || false,
       });
       const { singlesTotal, singlesAssigned, missing } = roster;
 

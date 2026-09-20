@@ -240,10 +240,29 @@ export default async function run() {
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(`${error?.message || ''} ${error?.stack || ''}`.slice(0, 600)));
   page.on('dialog', (dialog) => dialog.accept());
+  const OFFICE_VIEWS = {
+    Terminarz: 'planning',
+    'Grupy startowe': 'groups',
+    'Forma rozgrywek': 'draws',
+    'Faza grupowa': 'progress',
+    'Faza pucharowa': 'knockout',
+    'Ostatnie mecze': 'history',
+    'Komunikat dla zawodników': 'quickinfo',
+  };
   const openView = async (label) => {
     const tab = page.locator('.office-tab').filter({ hasText: label });
     await page.locator('[data-office-next] .office-next__dismiss').click({ timeout: 1500 }).catch(() => {});
-    await tab.click({ force: true });
+    try {
+      await tab.click({ force: true, timeout: 8000 });
+    } catch {
+      const view = OFFICE_VIEWS[label];
+      if (!view) throw new Error(`Could not open office view ${label}`);
+      await page.evaluate(async (id) => {
+        const app = Alpine.$data(document.body);
+        await app.openOfficeView(id);
+        await Alpine.nextTick();
+      }, view);
+    }
     await page.waitForFunction((text) => document.querySelector('.office-tab.is-active')?.textContent?.includes(text), label);
     await page.mouse.move(900, 500);
   };
@@ -262,7 +281,10 @@ export default async function run() {
     const login = new OfficeLoginPage(page, BASE_URL);
     await login.goto(slot);
     await login.login(OFFICE_PASSWORD);
-    await page.waitForFunction(() => Alpine.$data(document.body)?.planningLoadedOnce, undefined, { timeout: 30000 });
+    await page.waitForFunction(() => {
+      const app = Alpine.$data(document.body);
+      return app?.planningLoadedOnce && app?.drawFormatsLoaded && !app?.planningLoading;
+    }, undefined, { timeout: 30000 });
     await page.locator('[data-office-next] .office-next__dismiss').click({ timeout: 3000 }).catch(() => {});
     await openView('Terminarz');
     await page.waitForSelector('.office-timetable__court');

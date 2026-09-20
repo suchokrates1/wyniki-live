@@ -134,7 +134,7 @@
                   :class="['is-' + step.state, activeTab === step.view ? 'is-active' : '']"
                   :aria-current="activeTab === step.view ? 'page' : null"
                   :data-step-state="step.state"
-                  @click="openOfficeView(step.view); if ($event.detail > 0) officeRailResting = true">
+                  @click="void openOfficeView(step.view); if ($event.detail > 0) officeRailResting = true">
             <span class="office-rail__icon office-step__num" aria-hidden="true" x-text="step.state === 'done' ? '✓' : step.number"></span>
             <span class="office-rail__label office-step__text">
               <span class="office-step__title" x-text="step.label"></span>
@@ -155,7 +155,7 @@
                   class="office-tab office-rail__item"
                   :class="{'is-active': activeTab === item.id}"
                   :aria-current="activeTab === item.id ? 'page' : null"
-                  @click="openOfficeView(item.id); if ($event.detail > 0) officeRailResting = true">
+                  @click="void openOfficeView(item.id); if ($event.detail > 0) officeRailResting = true">
             <span class="office-rail__icon" aria-hidden="true">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path :d="item.icon"></path></svg>
             </span>
@@ -281,7 +281,8 @@
 
       <div class="office-views">
 
-      <section class="office-view office-view--schedule" x-show="activeTab === 'planning'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak>
+      <template x-if="activeTab === 'planning'">
+      <section class="office-view office-view--schedule" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to">
         <div class="office-toolbar">
           <div class="office-toolbar__quiet">
             <button type="button" class="office-btn office-btn--ghost" data-tour="generate" @click="generatePlanningSchedule()" x-text="ot('planning.generateMatches')"></button>
@@ -605,9 +606,10 @@
           </aside>
         </div>
       </section>
+      </template>
 
-
-      <section class="office-view office-view--groups" x-show="activeTab === 'groups'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak>
+      <template x-if="activeTab === 'groups'">
+      <section class="office-view office-view--groups" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to">
         <div class="office-view__head">
           <div class="office-view__lead">
             <div class="office-kicker" x-text="ot('planning.subtitle')"></div>
@@ -898,8 +900,10 @@
         </div>
         </div>
       </section>
+      </template>
 
-      <section class="office-view office-draws" x-show="activeTab === 'draws'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak data-office-draws>
+      <template x-if="activeTab === 'draws'">
+      <section class="office-view office-draws" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" data-office-draws>
         <template x-if="drawFormatsLoaded && !drawFormats.length">
           <p class="office-hint" x-text="ot('draws.empty')"></p>
         </template>
@@ -1114,9 +1118,10 @@
           </div>
         </div>
       </section>
+      </template>
 
-
-      <section class="office-view" x-show="activeTab === 'streams'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak aria-labelledby="office-streams-title">
+      <template x-if="activeTab === 'streams'">
+      <section class="office-view" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" aria-labelledby="office-streams-title">
         <div class="office-panel office-streams">
           <h2 id="office-streams-title" class="office-kicker office-kicker--accent" x-text="ot('streams.title')"></h2>
           <p class="office-hint" x-text="ot('streams.description')"></p>
@@ -1194,8 +1199,10 @@
           </div>
         </div>
       </section>
+      </template>
 
-      <section class="office-view office-view--narrow" x-show="activeTab === 'quickinfo'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak aria-labelledby="office-quick-info-title">
+      <template x-if="activeTab === 'quickinfo'">
+      <section class="office-view office-view--narrow" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" aria-labelledby="office-quick-info-title">
         <div class="office-panel office-quick">
           <h2 id="office-quick-info-title" class="office-kicker office-kicker--accent" x-text="ot('quickInfo.title')"></h2>
           <p id="office-quick-info-desc" class="office-hint" x-text="ot('quickInfo.description')"></p>
@@ -1311,9 +1318,10 @@
           </div>
         </div>
       </section>
+      </template>
 
-
-      <section class="office-view office-summary-grid" x-show="activeTab === 'history'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak>
+      <template x-if="activeTab === 'history'">
+      <section class="office-view office-summary-grid" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to">
         <div class="space-y-4">
           <template x-if="!officeMatches.length">
             <article class="office-panel rounded-[20px] p-8 text-center text-slate-500">
@@ -1382,8 +1390,10 @@
           </article>
         </aside>
       </section>
+      </template>
 
-      <section class="office-view" x-show="activeTab === 'progress'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak>
+      <template x-if="activeTab === 'progress'">
+      <section class="office-view" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to">
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <template x-for="group in officeGroups" :key="group.id">
             <article class="office-panel rounded-[20px] p-6">
@@ -1419,8 +1429,10 @@
           </template>
         </div>
       </section>
+      </template>
 
-      <section class="office-view office-ko" x-show="activeTab === 'knockout'" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" x-cloak data-office-knockout>
+      <template x-if="activeTab === 'knockout'">
+      <section class="office-view office-ko" x-transition:enter="office-view-enter" x-transition:enter-start="office-view-enter-from" x-transition:enter-end="office-view-enter-to" data-office-knockout>
         <template x-if="!officeKnockoutMatches.length">
           <article class="office-panel rounded-[20px] p-8 text-center text-slate-500">
             <span x-text="ot('knockout.empty')"></span>
@@ -1497,6 +1509,7 @@
           </div>
         </template>
       </section>
+      </template>
 
       </div>
     </main>

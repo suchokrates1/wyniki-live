@@ -188,7 +188,12 @@ export default async function run() {
       await page.waitForSelector('.office-rail', { state: 'visible', timeout: 20000 });
       const views = ['planning', 'groups', 'draws', 'progress', 'knockout', 'history', 'quickinfo'];
       for (const view of views) {
-        await page.evaluate((id) => Alpine.$data(document.body).openOfficeView(id), view);
+        await page.evaluate(async (id) => {
+          const app = Alpine.$data(document.body);
+          await app.openOfficeView(id);
+          await Alpine.nextTick();
+        }, view);
+        await page.waitForSelector('section.office-view', { timeout: 10000 });
         await audit(page, lang, `office ${view}`);
         if (view === 'draws') {
           for (const tab of ['places', 'consolation']) {

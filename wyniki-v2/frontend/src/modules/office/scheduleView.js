@@ -14,18 +14,25 @@ export function createOfficeScheduleView() {
     async openOfficeView(view, { auto = false } = {}) {
       if (!auto) this.officeUserNavigated = true;
       this.activeTab = view;
+      if (typeof requestAnimationFrame === 'function') {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      if (view === 'quickinfo') this.refreshScheduleNotesPreview?.();
+      if (view === 'streams' && !this.streamsLoaded) this.loadCourtStreams?.();
       if (view === 'draws') {
         await this.loadDrawFormats();
         return;
       }
-      if (view === 'quickinfo') this.refreshScheduleNotesPreview?.();
-      if (view === 'streams' && !this.streamsLoaded) this.loadCourtStreams?.();
+      if (view === 'planning') {
+        const loads = [];
+        if (!this.planningPlayers.length) loads.push(this.loadOfficePlanningData());
+        if (!this.autoConfig) loads.push(this.loadAutoConfig());
+        if (loads.length) await Promise.all(loads);
+        return;
+      }
       if (!this.officeViewUsesPlanningData(view)) return;
       if (!this.planningPlayers.length) {
         await this.loadOfficePlanningData();
-      }
-      if (!this.autoConfig) {
-        await this.loadAutoConfig();
       }
     },
 
