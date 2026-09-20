@@ -36,6 +36,9 @@ export default async function run() {
       undefined,
       { timeout: 12000 },
     );
+    if (!(await page.locator('[data-category-minutes]').first().isVisible())) {
+      throw new Error('Category match duration input missing');
+    }
     console.log('  Confirmed custom Double category from UI');
 
     await page.getByRole('button', { name: '+ Dodaj zawodnika' }).click();

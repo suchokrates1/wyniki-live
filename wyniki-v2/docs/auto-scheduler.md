@@ -30,13 +30,15 @@ Przechowywany w `app_settings` jako JSON pod kluczem `autoscheduler:{tournament_
   "b1_court_id": "t25-4",
   "category_courts": { "B1": "t25-4", "B2": "t25-3", "B3": "t25-2", "B4": "t25-1" },
   "slot_minutes": { "B1": 75, "default": 60 },
+  "category_slot_minutes": { "12": 45, "label:B2 Mężczyźni": 45 },
   "rest_slots": 1
 }
 ```
 
 - `start_time`, `b1_court_id` — pytane od użytkownika przy generowaniu.
 - `category_courts` — przypisanie kategorii do kortu; pozostałe korty wypełniane po kolei.
-- `slot_minutes` — długość slotu na kategorię (B1 dłuższy), `default` dla reszty.
+- `slot_minutes` — domyślna długość meczu wg pasma B (`B1` 75, `default` 60), gdy kategoria nie ma własnego czasu.
+- `category_slot_minutes` — czas meczu danej kategorii (id albo `label:`). On liczy plan; kort nie nadpisuje czasu.
 - `rest_slots` — ile slotów odpoczynku minimum między meczami tego samego zawodnika.
 
 ## Algorytm (pure function, `services/auto_scheduler.py`)
@@ -48,7 +50,7 @@ data dnia. Wyjście: lista placementów `{schedule_id|key, court_id, day_date, s
 2. W obrębie kortu uporządkuj mecze: najpierw faza grupowa (kolejność round-robin metodą okręgu,
    minimalizując sąsiednie mecze tego samego zawodnika), potem pucharowe wg rundy
    (ćwierć → półfinał → o miejsca → finał).
-3. Układaj sekwencyjnie od `start_time`, krok = `slot_minutes[kategoria]` (lub `default`).
+3. Układaj sekwencyjnie od `start_time`, krok = czas kategorii (`category_slot_minutes`) albo pasmo B (`slot_minutes`).
 4. Twardy warunek odpoczynku: jeśli zawodnik gra w slocie t, nie może grać w t+1..t+rest_slots
    na tym samym korcie ⇒ przesuń mecz w kolejce (swap z następnym).
 5. Wynik to PROPOZYCJA — zapisywana jako `status='planned'` dopiero po zatwierdzeniu.

@@ -23,7 +23,7 @@ export function createOfficeScheduleView() {
         await this.loadDrawFormats();
         return;
       }
-      if (view === 'planning') {
+      if (view === 'planning' || view === 'groups') {
         const loads = [];
         if (!this.planningPlayers.length) loads.push(this.loadOfficePlanningData());
         if (!this.autoConfig) loads.push(this.loadAutoConfig());
@@ -94,12 +94,8 @@ export function createOfficeScheduleView() {
       return available.length ? available : [];
     },
 
-    /** A B1 match always lasts the B1 slot, on any court: say so on the other courts. */
-    autoSlotMinutesLabel(courtId) {
-      const minutes = this.autoSlotMinutes(this.autoBandForCourt(courtId), courtId);
-      const b1 = this.autoSlotMinutes('B1');
-      if (this.autoIsB1Court(courtId) || Number(b1) === Number(minutes)) return this.ot('planning.slotMinutes', { minutes });
-      return this.ot('planning.slotMinutesB1', { minutes, b1 });
+    autoMatchMinutesLabel(entry) {
+      return this.ot('planning.matchMinutes', { minutes: this.autoEntryMinutes(entry) });
     },
 
     planningUnassignedTitle() {

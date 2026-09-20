@@ -29,7 +29,7 @@ Szyna → **Terminarz**: pasek narzędzi u góry, siatka **godzina × kort** dla
 | **Rewanże…** | Druga runda dla wybranych grup | `POST …/schedule/generate-rematch` |
 | **Opublikuj wszystkie** | Modal: wszystkie dni albo jeden dzień; wpisy robocze stają się publiczne | `POST …/schedule/publish` (`day_date` opcjonalnie) |
 
-Nagłówek kolumny kortu: pigułka **B1** oznacza kort specjalny B1 (slot 75 min; inne korty 60 min).
+Nagłówek kolumny kortu: pigułka **B1** oznacza kort specjalny B1 (przypisanie meczów B1). Czas meczu nie jest w nagłówku kortu — ustawia się go przy kategorii (Grupy startowe) i widać go na karcie meczu. To ten czas liczy plan.
 
 ## Zasady planera
 

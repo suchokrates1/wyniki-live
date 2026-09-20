@@ -58,6 +58,7 @@ from ..database import (
     seed_provisional_knockout_from_groups,
     seed_knockout_rematch_for_groups,
     save_autoscheduler_config,
+    reflow_placed_schedule,
     save_bracket_groups,
     StreamUrlError,
     get_tournament_court_streams,
@@ -823,7 +824,8 @@ def office_autoschedule_config_save(slot: int):
     tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
     config = save_autoscheduler_config(tournament_id, data)
-    return _json_no_cache({"config": config})
+    schedule = reflow_placed_schedule(tournament_id)
+    return _json_no_cache({"config": config, "schedule": schedule})
 
 
 @blueprint.route('/<int:slot>/autoschedule/generate', methods=['POST'])

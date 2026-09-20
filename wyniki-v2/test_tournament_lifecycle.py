@@ -2486,6 +2486,63 @@ def test_office_autoschedule_generate_apply_and_move(full_app_with_temp_db):
     assert later_b1 and later_b1[0] == "12:15"  # +75 cascade after the moved match
 
 
+def test_office_category_duration_reflows_placed_schedule(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament(
+        "Category Duration Cup",
+        "2026-06-10",
+        "2026-06-12",
+        active=True,
+        office_password_hash=generate_password_hash("auto"),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    b2 = [
+        database.insert_player(tournament_id, "B2 One", "B2", "PL", first_name="B2", last_name="One", gender="M"),
+        database.insert_player(tournament_id, "B2 Two", "B2", "PL", first_name="B2", last_name="Two", gender="M"),
+        database.insert_player(tournament_id, "B2 Three", "B2", "PL", first_name="B2", last_name="Three", gender="M"),
+    ]
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "auto"})
+    assert auth.status_code == 200
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+    database.save_bracket_groups(tournament_id, [{"name": "B2 Mężczyźni — Grupa A", "players": b2}])
+    courts = [
+        court["kort_id"]
+        for court in client.get("/api/office/1/autoschedule/config", headers=headers).get_json()["courts"]
+    ]
+    gen = client.post(
+        "/api/office/1/autoschedule/generate",
+        headers=headers,
+        json={"start_time": "09:30", "day_date": "2026-06-10", "phases": ["group"], "b1_court_id": courts[-1]},
+    )
+    assert gen.status_code == 200
+    applied = client.post(
+        "/api/office/1/autoschedule/apply",
+        headers=headers,
+        json={"placements": gen.get_json()["placements"]},
+    )
+    assert applied.status_code == 200
+    placed = sorted(
+        [row for row in applied.get_json()["schedule"] if row["scheduled_time"] and "B2" in (row["category_name"] or "")],
+        key=lambda row: row["scheduled_time"],
+    )
+    assert [row["scheduled_time"] for row in placed[:2]] == ["09:30", "10:30"]
+
+    saved = client.put(
+        "/api/office/1/autoschedule/config",
+        headers=headers,
+        json={"category_slot_minutes": {"label:B2 Mężczyźni": 45}},
+    )
+    assert saved.status_code == 200
+    assert saved.get_json()["config"]["category_slot_minutes"]["label:B2 Mężczyźni"] == 45
+    reflowed = sorted(
+        [row for row in saved.get_json()["schedule"] if row["scheduled_time"] and "B2" in (row["category_name"] or "")],
+        key=lambda row: row["scheduled_time"],
+    )
+    assert [row["scheduled_time"] for row in reflowed[:2]] == ["09:30", "10:15"]
+
+
 def test_office_schedule_publish_promotes_draft_entries(full_app_with_temp_db):
     from wyniki import database
 

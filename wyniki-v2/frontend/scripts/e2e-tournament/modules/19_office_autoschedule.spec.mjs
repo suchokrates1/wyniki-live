@@ -41,6 +41,10 @@ export default async function run() {
     if (!(await page.locator('.office-daybar').isVisible())) {
       throw new Error('Schedule day header missing');
     }
+    const courtHeader = await page.locator('.office-timetable__court').first().innerText();
+    if (/slot\s+\d+\s+min/i.test(courtHeader)) {
+      throw new Error('Court header still shows slot duration');
+    }
     console.log('  Step 2 generate/publish/autoschedule controls visible');
 
     await page.getByRole('button', { name: 'Rozstaw ten dzień' }).click();

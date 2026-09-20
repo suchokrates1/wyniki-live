@@ -44,6 +44,22 @@ def time_to_minutes(time_str: str) -> int:
         return 9 * 60 + 30
 
 
+def _int_minutes_map(raw: Any) -> Dict[str, int]:
+    if not isinstance(raw, dict):
+        return {}
+    out: Dict[str, int] = {}
+    for key, value in raw.items():
+        name = str(key or "").strip()
+        if not name:
+            continue
+        try:
+            minutes = int(value)
+        except (TypeError, ValueError):
+            continue
+        out[name] = max(15, min(180, minutes))
+    return out
+
+
 def slot_minutes_for(band: str, config: Dict[str, Any]) -> int:
     """Return slot length in minutes for a band, honouring config overrides."""
     slot_config = config.get("slot_minutes") or {}
@@ -52,6 +68,43 @@ def slot_minutes_for(band: str, config: Dict[str, Any]) -> int:
     if band == "B1":
         return B1_SLOT_MINUTES
     return int(slot_config.get("default", DEFAULT_SLOT_MINUTES))
+
+
+def slot_minutes_for_entry(
+    entry: Optional[Dict[str, Any]],
+    config: Dict[str, Any],
+    court_id: str = "",
+) -> int:
+    """Match duration comes from the category (or its B-band), never from the court."""
+    payload = dict(entry or {})
+    match = payload.get("match") if isinstance(payload.get("match"), dict) else {}
+    cat_slots = _int_minutes_map(config.get("category_slot_minutes"))
+    cat_id = str(
+        payload.get("tournament_category_id")
+        or payload.get("category_id")
+        or match.get("tournament_category_id")
+        or ""
+    ).strip()
+    if cat_id and cat_id in cat_slots:
+        return cat_slots[cat_id]
+    label = str(payload.get("category_name") or match.get("category_name") or "").strip()
+    if label:
+        keyed = cat_slots.get(f"label:{label}")
+        if keyed:
+            return keyed
+        for key, minutes in cat_slots.items():
+            prefix = str(key).removeprefix("label:")
+            if prefix and (label == prefix or label.startswith(f"{prefix} —")):
+                return minutes
+    band = normalize_band(
+        payload.get("category_name")
+        or payload.get("group_name")
+        or payload.get("band")
+        or match.get("category_name")
+        or match.get("group_name")
+        or ""
+    )
+    return slot_minutes_for(band, config)
 
 
 def normalize_b1_court_ids(config: Dict[str, Any]) -> List[str]:
@@ -89,6 +142,7 @@ def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
         "b1_court_ids": [b1_court_id] if b1_court_id else [],
         "category_courts": category_courts,
         "slot_minutes": {"B1": B1_SLOT_MINUTES, "default": DEFAULT_SLOT_MINUTES},
+        "category_slot_minutes": {},
         "rest_slots": 1,
     }
 
@@ -237,8 +291,7 @@ def _b1_court_for_match(
 
 
 def _slot_minutes_for_court(court_id: str, config: Dict[str, Any], band: str = "") -> int:
-    if is_b1_court(court_id, config):
-        return slot_minutes_for("B1", config)
+    """Duration follows the match band, not the court column."""
     return slot_minutes_for(band, config)
 
 
@@ -255,7 +308,7 @@ def _placement_window(placement: Dict[str, Any], config: Dict[str, Any]) -> Tupl
         or placement.get("group_name")
     )
     court_id = str(placement.get("court_id") or "")
-    duration = _slot_minutes_for_court(court_id, config, band)
+    duration = slot_minutes_for_entry(placement.get("match") or placement, config, court_id)
     return start, start + duration
 
 
@@ -398,7 +451,7 @@ def _place_in_pool(
         def earliest(rest: int) -> Optional[Tuple[int, int, str]]:
             found: Optional[Tuple[int, int, str]] = None
             for order, court_id in enumerate(courts):
-                duration = _slot_minutes_for_court(court_id, config, band)
+                duration = slot_minutes_for_entry(match, config, court_id)
                 start = time_to_minutes(court_next_time[court_id])
                 while start < floor:
                     start += duration
@@ -433,7 +486,7 @@ def _place_in_pool(
         scheduled.append(placement)
         court_next_time[court_id] = add_minutes(
             placement["scheduled_time"],
-            _slot_minutes_for_court(court_id, config, band),
+            slot_minutes_for_entry(match, config, court_id),
         )
     return placements
 
@@ -542,11 +595,58 @@ def recompute_court_times(
     result: List[Dict[str, Any]] = []
     court_id = str(ordered_entries[0].get("court_id") or "").strip()
     for entry in ordered_entries:
-        band = normalize_band(entry.get("category_name") or entry.get("group_name"))
         updated = dict(entry)
         updated["scheduled_time"] = cursor
         result.append(updated)
-        cursor = add_minutes(cursor, _slot_minutes_for_court(court_id, config, band))
+        cursor = add_minutes(cursor, slot_minutes_for_entry(entry, config, court_id))
+    return result
+
+
+def reflow_court_entries(
+    ordered_entries: List[Dict[str, Any]],
+    config: Dict[str, Any],
+    *,
+    locked_fn=None,
+) -> List[Dict[str, Any]]:
+    """Pack unlocked matches back-to-back using category durations; locked rows keep their start."""
+    if not ordered_entries:
+        return []
+    is_locked = locked_fn or (lambda _entry: False)
+    court_id = str(ordered_entries[0].get("court_id") or "").strip()
+    locked_spans: List[Tuple[int, int]] = []
+    for entry in ordered_entries:
+        start_raw = str(entry.get("scheduled_time") or "").strip()
+        if not is_locked(entry) or not start_raw:
+            continue
+        start = time_to_minutes(start_raw)
+        locked_spans.append((start, start + slot_minutes_for_entry(entry, config, court_id)))
+
+    result: List[Dict[str, Any]] = []
+    cursor: Optional[int] = None
+    for entry in ordered_entries:
+        duration = slot_minutes_for_entry(entry, config, court_id)
+        updated = dict(entry)
+        if is_locked(entry):
+            start_raw = str(entry.get("scheduled_time") or "").strip()
+            updated["scheduled_time"] = start_raw
+            if start_raw:
+                end = time_to_minutes(start_raw) + duration
+                cursor = end if cursor is None else max(cursor, end)
+            result.append(updated)
+            continue
+        start = cursor if cursor is not None else time_to_minutes(
+            str(entry.get("scheduled_time") or "").strip() or str(config.get("start_time") or DEFAULT_START_TIME)
+        )
+        moved = True
+        while moved:
+            moved = False
+            for locked_start, locked_end in locked_spans:
+                if start < locked_end and (start + duration) > locked_start:
+                    start = locked_end
+                    moved = True
+        updated["scheduled_time"] = f"{start // 60:02d}:{start % 60:02d}"
+        result.append(updated)
+        cursor = start + duration
     return result
 
 

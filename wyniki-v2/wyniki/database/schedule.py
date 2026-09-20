@@ -5,7 +5,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional, Tuple
 from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
@@ -975,6 +975,8 @@ def get_autoscheduler_config(tournament_id: int) -> Dict[str, Any]:
                     merged_slots = dict(config.get("slot_minutes") or {})
                     merged_slots.update(saved["slot_minutes"])
                     config["slot_minutes"] = merged_slots
+                if isinstance(saved.get("category_slot_minutes"), dict):
+                    config["category_slot_minutes"] = saved["category_slot_minutes"]
                 if isinstance(saved.get("category_courts"), dict):
                     config["category_courts"] = saved["category_courts"]
                 if isinstance(saved.get("b1_court_ids"), list):
@@ -1003,10 +1005,32 @@ def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dic
     from ..services import auto_scheduler
 
     current = get_autoscheduler_config(tournament_id)
-    allowed = {"start_time", "end_time", "b1_court_id", "b1_court_ids", "category_courts", "slot_minutes", "rest_slots"}
+    allowed = {
+        "start_time", "end_time", "b1_court_id", "b1_court_ids", "category_courts",
+        "slot_minutes", "rest_slots",
+    }
     for key in allowed:
         if key in config and config[key] not in (None, ""):
             current[key] = config[key]
+    if isinstance(config.get("category_slot_minutes"), dict):
+        merged = dict(current.get("category_slot_minutes") or {})
+        for raw_key, raw_value in config["category_slot_minutes"].items():
+            key = str(raw_key or "").strip()
+            if not key:
+                continue
+            try:
+                minutes = int(raw_value)
+            except (TypeError, ValueError):
+                continue
+            if minutes <= 0:
+                merged.pop(key, None)
+            else:
+                merged[key] = max(15, min(180, minutes))
+        current["category_slot_minutes"] = merged
+    if isinstance(config.get("slot_minutes"), dict):
+        merged_slots = dict(current.get("slot_minutes") or {})
+        merged_slots.update(config["slot_minutes"])
+        current["slot_minutes"] = merged_slots
     if isinstance(current.get("b1_court_ids"), list):
         ids = [str(court_id).strip() for court_id in current["b1_court_ids"] if str(court_id or "").strip()]
         if ids:
@@ -1263,6 +1287,58 @@ def _schedule_entry_is_locked(entry: Dict[str, Any]) -> bool:
     return bool(entry.get("match_id")) or status in {"completed", "in_progress", "live"}
 
 
+def reflow_placed_schedule(tournament_id: int) -> List[Dict[str, Any]]:
+    """Repack unlocked matches on each court/day using current category durations."""
+    from ..services import auto_scheduler
+
+    config = get_autoscheduler_config(tournament_id)
+    entries = fetch_tournament_schedule(tournament_id)
+    grouped: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    for entry in entries:
+        court_id = str(entry.get("court_id") or "").strip()
+        time = str(entry.get("scheduled_time") or "").strip()
+        if not court_id or not time:
+            continue
+        day = str(entry.get("day_date") or "").strip()
+        grouped.setdefault((day, court_id), []).append(entry)
+
+    updates: List[Tuple[int, str]] = []
+    for _key, items in grouped.items():
+        items.sort(
+            key=lambda entry: (
+                str(entry.get("scheduled_time") or "99:99"),
+                int(entry.get("sort_order") or 0),
+                int(entry.get("id") or 0),
+            )
+        )
+        packed = auto_scheduler.reflow_court_entries(
+            items, config, locked_fn=_schedule_entry_is_locked
+        )
+        for before, after in zip(items, packed):
+            new_time = str(after.get("scheduled_time") or "").strip()
+            if new_time and new_time != str(before.get("scheduled_time") or "").strip():
+                updates.append((int(before["id"]), new_time))
+
+    if updates:
+        now = _utc_now()
+        try:
+            with db_conn() as conn:
+                cursor = conn.cursor()
+                for schedule_id, scheduled_time in updates:
+                    cursor.execute(
+                        """
+                        UPDATE tournament_schedule
+                        SET scheduled_time = ?, updated_at = ?
+                        WHERE id = ? AND tournament_id = ?
+                        """,
+                        (scheduled_time, now, schedule_id, tournament_id),
+                    )
+                conn.commit()
+        except Exception as e:
+            logger.error("reflow_placed_schedule_error", error=str(e), tournament_id=tournament_id)
+    return fetch_tournament_schedule(tournament_id)
+
+
 def group_schedule_replace_hint(
     before: List[Dict[str, Any]], after: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
@@ -1398,11 +1474,10 @@ def move_schedule_entry_with_cascade(
         )
         cursor = str(moved.get("scheduled_time") or "")
         for entry in target_entries[pivot_index:]:
-            band = auto_scheduler.normalize_band(entry.get("category_name") or entry.get("group_name"))
             entry["scheduled_time"] = cursor
             cursor = auto_scheduler.add_minutes(
                 cursor,
-                auto_scheduler._slot_minutes_for_court(target_court, config, band),
+                auto_scheduler.slot_minutes_for_entry(entry, config, target_court),
             )
         updates.extend(target_entries)
     else:

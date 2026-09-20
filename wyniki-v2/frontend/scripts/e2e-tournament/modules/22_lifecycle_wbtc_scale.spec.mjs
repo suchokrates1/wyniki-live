@@ -310,7 +310,7 @@ export default async function run() {
       const rows = (await schedule()).filter((entry) => entry.source_type === 'group');
       return rows.length === expectedGroupMatches && rows.every(isPlaced) ? rows : null;
     }, { timeout: 60000 });
-    const slotMinutes = (entry) => (b1Target.has(String(entry.court_id)) ? 75 : 60);
+    const slotMinutes = (entry) => (/B\s*1/i.test(String(entry.category_name || entry.group_name || '')) ? 75 : 60);
     const late = groupRows.filter((entry) => toMinutes(entry.scheduled_time) + slotMinutes(entry) > 18 * 60);
     if (late.length) throw new Error(`${late.length} group matches end after 18:00`);
     const byDayPlayer = new Map();

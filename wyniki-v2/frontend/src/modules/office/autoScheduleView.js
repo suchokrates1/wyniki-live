@@ -222,6 +222,9 @@ export function createOfficeAutoScheduleView() {
         // a newer change typed while this was saving stays on the screen
         if (this.autoNormalizeTime(this.autoStartTime) === start && this.autoNormalizeTime(this.autoEndTime) === end) {
           this.autoConfig = payload.config || this.autoConfig;
+          if (Array.isArray(payload.schedule)) {
+            this.planningSchedule = this.keepInspectorEdits(payload.schedule);
+          }
         }
       } catch (error) {
         console.error('Failed to save day hours:', error);
@@ -248,6 +251,9 @@ export function createOfficeAutoScheduleView() {
         }
         if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
         this.autoConfig = payload.config || this.autoConfig;
+        if (Array.isArray(payload.schedule)) {
+          this.planningSchedule = this.keepInspectorEdits(payload.schedule);
+        }
       } catch (error) {
         console.error('Failed to save B1 courts:', error);
         this.showToast(error.message || this.ot('toast.b1CourtsSaveError'), 'error');
@@ -277,12 +283,65 @@ export function createOfficeAutoScheduleView() {
       return match ? `B${match[1]}` : '';
     },
 
-    autoSlotMinutes(band, courtId = '') {
-      if (courtId && this.autoIsB1Court(courtId)) return 75;
+    autoSlotMinutes(band, _courtId = '') {
       const slots = this.autoConfig?.slot_minutes || {};
       if (band && slots[band] != null) return Number(slots[band]);
       if (band === 'B1') return 75;
       return Number(slots.default || 60);
+    },
+
+    autoCategoryBand(cat) {
+      const label = String(cat?.label || '');
+      const fromLabel = label.match(/B\s*([1-4])/i);
+      if (fromLabel) return `B${fromLabel[1]}`;
+      const hints = Array.isArray(cat?.hint_bands) ? cat.hint_bands : [];
+      for (const hint of hints) {
+        const match = String(hint || '').match(/B\s*([1-4])/i);
+        if (match) return `B${match[1]}`;
+      }
+      return '';
+    },
+
+    autoCategoryMinutes(cat) {
+      const map = this.autoConfig?.category_slot_minutes || {};
+      const id = String(cat?.id || '').trim();
+      if (id && map[id] != null) return Number(map[id]);
+      const label = String(cat?.label || '').trim();
+      if (label && map[`label:${label}`] != null) return Number(map[`label:${label}`]);
+      return this.autoSlotMinutes(this.autoCategoryBand(cat));
+    },
+
+    async autoSaveCategoryMinutes(cat, rawValue) {
+      if (!this.token || !cat) return;
+      const minutes = Math.max(15, Math.min(180, Number(rawValue) || 0));
+      if (!minutes) return;
+      const next = {};
+      const id = String(cat.id || '').trim();
+      const label = String(cat.label || '').trim();
+      if (id) next[id] = minutes;
+      if (label) next[`label:${label}`] = minutes;
+      if (!Object.keys(next).length) return;
+      try {
+        const response = await fetch(`/api/office/${this.slot}/autoschedule/config`, {
+          method: 'PUT',
+          headers: this.officeHeaders(),
+          body: JSON.stringify({ category_slot_minutes: next }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          this.logout(this.ot('errors.sessionExpired'));
+          return;
+        }
+        if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
+        this.autoConfig = payload.config || this.autoConfig;
+        if (Array.isArray(payload.schedule)) {
+          this.planningSchedule = this.keepInspectorEdits(payload.schedule);
+        }
+        this.showToast(this.ot('toast.categoryDurationSaved'), 'success');
+      } catch (error) {
+        console.error('Failed to save category match duration:', error);
+        this.showToast(error.message || this.ot('errors.configFailed'), 'error');
+      }
     },
 
     autoAddMinutes(timeStr, minutes) {
@@ -352,7 +411,20 @@ export function createOfficeAutoScheduleView() {
     },
 
     autoEntryMinutes(entry) {
-      return Math.max(15, Number(this.autoSlotMinutes(this.autoMatchBand(entry), entry?.court_id)) || 60);
+      const map = this.autoConfig?.category_slot_minutes || {};
+      const id = String(entry?.tournament_category_id || entry?.category_id || '').trim();
+      if (id && map[id] != null) return Math.max(15, Number(map[id]) || 60);
+      const label = String(entry?.category_name || '').trim();
+      if (label && map[`label:${label}`] != null) return Math.max(15, Number(map[`label:${label}`]) || 60);
+      if (label) {
+        for (const [key, minutes] of Object.entries(map)) {
+          const prefix = String(key).replace(/^label:/, '');
+          if (prefix && (label === prefix || label.startsWith(`${prefix} —`))) {
+            return Math.max(15, Number(minutes) || 60);
+          }
+        }
+      }
+      return Math.max(15, Number(this.autoSlotMinutes(this.autoMatchBand(entry))) || 60);
     },
 
     /** From the day's start hour to its end hour, stretched to fit any match placed outside it. */
@@ -694,7 +766,7 @@ export function createOfficeAutoScheduleView() {
       const entries = this.autoBoardEntries(courtId);
       if (!entries.length) return this.autoStartTime;
       const last = entries[entries.length - 1];
-      return this.autoAddMinutes(last.scheduled_time, this.autoSlotMinutes(this.autoBandForCourt(courtId)));
+      return this.autoAddMinutes(last.scheduled_time, this.autoEntryMinutes(last));
     },
 
     onAutoDragStart(entry, event) {
@@ -715,9 +787,8 @@ export function createOfficeAutoScheduleView() {
       for (const entry of entries) {
         const index = proposal.findIndex(p => String(this.autoEntryId(p)) === String(this.autoEntryId(entry)));
         if (index < 0) continue;
-        const band = this.autoMatchBand(entry);
         proposal[index] = { ...proposal[index], scheduled_time: cursor, court_id: String(courtId), day_date: day };
-        cursor = this.autoAddMinutes(cursor, this.autoSlotMinutes(band, courtId));
+        cursor = this.autoAddMinutes(cursor, this.autoEntryMinutes(proposal[index]));
       }
       return proposal;
     },
@@ -734,14 +805,13 @@ export function createOfficeAutoScheduleView() {
         const entry = entries[index];
         const proposalIndex = proposal.findIndex(p => String(this.autoEntryId(p)) === String(this.autoEntryId(entry)));
         if (proposalIndex < 0) continue;
-        const band = this.autoMatchBand(entry);
         proposal[proposalIndex] = {
           ...proposal[proposalIndex],
           scheduled_time: cursor,
           court_id: String(courtId),
           day_date: day,
         };
-        cursor = this.autoAddMinutes(cursor, this.autoSlotMinutes(band, courtId));
+        cursor = this.autoAddMinutes(cursor, this.autoEntryMinutes(proposal[proposalIndex]));
       }
       return proposal;
     },

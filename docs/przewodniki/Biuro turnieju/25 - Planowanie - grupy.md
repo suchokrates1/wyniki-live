@@ -22,6 +22,7 @@ Szyna → **Grupy startowe**. Zmiany zapisują się automatycznie (`PUT …/plan
 | Pole kategorii niestandardowej (np. B2 Mixed, B3/4 Mixed) | Nazwa + wskazówki + **Debel** | — |
 | **Zatwierdź kategorie** / **Anuluj** | Potwierdzenie zestawu | `POST …/categories/confirm` |
 | **+ Dodaj kategorię** / **Edytuj** / **Usuń** / **Zapisz** | CRUD | `POST/PATCH/DELETE …/categories` |
+| **Czas meczu** (minuty przy chipie) | Długość meczu tej kategorii w planie. Po zmianie terminarz się przelicza i zsuwa przerwy; rozegrane i trwające zostają | `PUT …/autoschedule/config` (`category_slot_minutes`) |
 
 ## Zawodnicy
 

@@ -41,6 +41,32 @@ def test_slot_minutes_for():
     assert sched.slot_minutes_for("", config) == 60
 
 
+def test_slot_minutes_for_entry_uses_category_not_court():
+    config = sched.build_default_config(_courts())
+    config["category_slot_minutes"] = {"7": 45, "label:B2 Mężczyźni": 45}
+    b2_on_b1_court = {"category_name": "B2 Mężczyźni — Grupa A", "court_id": "c4"}
+    b1_default = {"category_name": "B1 Mężczyźni", "court_id": "c1"}
+    assert sched.slot_minutes_for_entry(b2_on_b1_court, config, "c4") == 45
+    assert sched.slot_minutes_for_entry(b1_default, config, "c1") == 75
+    assert sched.slot_minutes_for_entry({"category_id": 7, "category_name": "Other"}, config) == 45
+
+
+def test_reflow_court_entries_collapses_gaps_and_keeps_locked():
+    config = sched.build_default_config(_courts())
+    config["category_slot_minutes"] = {"label:B2": 45}
+    entries = [
+        {"id": 1, "category_name": "B2", "scheduled_time": "09:30", "status": "planned"},
+        {"id": 2, "category_name": "B2", "scheduled_time": "11:30", "status": "in_progress"},
+        {"id": 3, "category_name": "B2", "scheduled_time": "14:00", "status": "planned"},
+    ]
+    result = sched.reflow_court_entries(
+        entries,
+        config,
+        locked_fn=lambda entry: str(entry.get("status") or "") in {"in_progress", "completed", "live"},
+    )
+    assert [row["scheduled_time"] for row in result] == ["09:30", "11:30", "12:15"]
+
+
 def test_apply_b1_court_swaps_bands():
     config = sched.build_default_config(_courts())  # B1->c4, B2->c3
     moved = sched.apply_b1_court(config, "c3")

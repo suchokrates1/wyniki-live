@@ -387,10 +387,7 @@
                 <template x-for="court in autoCourts" :key="'gridh_'+court.kort_id">
                   <div class="office-timetable__court" :style="`grid-column: ${autoCourts.indexOf(court) + 2}; grid-row: 1;`">
                     <div class="flex items-start justify-between gap-1">
-                      <div>
-                        <div x-text="autoCourtLabel(court.kort_id)"></div>
-                        <div class="text-[10px] font-medium text-slate-400" x-text="autoSlotMinutesLabel(court.kort_id)"></div>
-                      </div>
+                      <div x-text="autoCourtLabel(court.kort_id)"></div>
                       <button type="button"
                               class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
                               :class="autoIsB1Court(court.kort_id) ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-400'"
@@ -437,6 +434,8 @@
                             <span x-text="officeDisplayLabel(block.entry.category_name)"></span>
                             <span x-show="block.entry.category_name && block.entry.phase" aria-hidden="true">&middot;</span>
                             <span x-text="officeDisplayLabel(block.entry.phase)"></span>
+                            <span aria-hidden="true">&middot;</span>
+                            <span x-text="autoMatchMinutesLabel(block.entry)"></span>
                           </div>
                           <div class="competitor-name office-block__name" x-text="formatCompetitorName(block.entry.player1_name || '—')"></div>
                           <span class="sr-only" x-text="ot('versus')"></span>
@@ -546,6 +545,8 @@
                         <span x-text="autoUnplacedPhaseLabel(autoUnplacedPhaseKey(entry))"></span>
                         <span aria-hidden="true">&middot;</span>
                         <span x-text="planningUnassignedDayLabel(entry)"></span>
+                        <span aria-hidden="true">&middot;</span>
+                        <span x-text="autoMatchMinutesLabel(entry)"></span>
                       </div>
                       <div class="competitor-name office-block__name" x-text="formatCompetitorName(entry.player1_name || '—')"></div>
                       <span class="sr-only" x-text="ot('versus')"></span>
@@ -669,6 +670,15 @@
               <div class="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm flex items-center gap-2">
                 <span class="font-semibold" x-text="officeDisplayLabel(cat.label)"></span>
                 <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800" x-show="cat.is_doubles" x-text="ot('planning.doubles')"></span>
+                <label class="ml-1 inline-flex items-center gap-1 text-[11px] text-slate-500" :title="ot('planning.categoryDurationHint')">
+                  <input type="number" min="15" max="180" step="5"
+                         class="input input-bordered input-xs w-14 text-center"
+                         data-category-minutes
+                         :aria-label="ot('planning.categoryDuration')"
+                         :value="autoCategoryMinutes(cat)"
+                         @change="autoSaveCategoryMinutes(cat, $event.target.value)">
+                  <span x-text="ot('planning.min')"></span>
+                </label>
                 <button type="button" class="text-emerald-700 text-xs" @click="startCategoryEdit(cat)" x-text="ot('planning.edit')"></button>
                 <button type="button" class="text-rose-600 text-xs" @click="deleteTournamentCategory(cat.id)" x-text="ot('planning.delete')"></button>
               </div>
