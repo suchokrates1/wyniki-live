@@ -241,7 +241,9 @@ export default async function run() {
   page.on('pageerror', (error) => pageErrors.push(`${error?.message || ''} ${error?.stack || ''}`.slice(0, 600)));
   page.on('dialog', (dialog) => dialog.accept());
   const openView = async (label) => {
-    await page.locator('.office-tab').filter({ hasText: label }).click();
+    const tab = page.locator('.office-tab').filter({ hasText: label });
+    await page.locator('[data-office-next] .office-next__dismiss').click({ timeout: 1500 }).catch(() => {});
+    await tab.click({ force: true });
     await page.waitForFunction((text) => document.querySelector('.office-tab.is-active')?.textContent?.includes(text), label);
     await page.mouse.move(900, 500);
   };
