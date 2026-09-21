@@ -13,8 +13,15 @@
 /* court switch in the schedule: the light pill background left light text unreadable in the dark theme */
 [data-theme="dark"] .schedule-switcher__tab:not(.is-active) { background: var(--card); border-color: var(--line); }
 
+/* footer: privacy policy on the left, "powered by" on the right */
+.vm-footer { justify-content: space-between; }
+.vm-footer__powered { display: inline-flex; align-items: center; gap: 10px; }
+
 /* the privacy link in the footer is a stand-alone control: at least 24 px (WCAG 2.5.8), 44 px on phones */
 .vm-footer__legal { display: inline-flex; align-items: center; min-height: 24px; }
+
+/* the knockout ladder scrolls sideways on narrow screens: keyboard users reach it too (WCAG 2.1.1) */
+.bt-ladder:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 @media (max-width: 640px) {
   :root { --m-bottom-nav: 64px; }
@@ -65,7 +72,7 @@
   .vm-footer__legal { min-height: 44px; padding-inline: 4px; }
   .vm-footer {
     position: static; margin-top: 24px; padding: 14px 12px;
-    flex-wrap: wrap; row-gap: 4px; background: transparent; box-shadow: none; border-top: 1px solid var(--line);
+    flex-wrap: nowrap; gap: 12px; background: transparent; box-shadow: none; border-top: 1px solid var(--line);
   }
 
   /* ---------- one row of switches, kept in reach while scrolling ---------- */

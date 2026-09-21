@@ -14,6 +14,21 @@ async function open(page, hash, lang = 'pl') {
   await expect(page.locator('.tab-bar')).toBeVisible();
   await page.waitForFunction(() => ![...document.querySelectorAll('.loading-state')].some((el) => el.offsetParent !== null), undefined, { timeout: 15_000 }).catch(() => {});
   await page.waitForTimeout(300);
+  await answerConsent(page);
+}
+
+/** First visit: the analytics consent banner asks; the tests answer like a careful user — reject. */
+async function answerConsent(page) {
+  const banner = page.locator('.consent-banner');
+  if (!(await banner.isVisible().catch(() => false))) return;
+  const barFixed = await page.locator('.tab-bar').evaluate((el) => getComputedStyle(el).position === 'fixed');
+  if (barFixed) {
+    const box = await banner.boundingBox();
+    const bar = await page.locator('.tab-bar').boundingBox();
+    expect(box.y + box.height, 'the consent banner stays above the bottom bar').toBeLessThanOrEqual(bar.y + 1);
+  }
+  await banner.locator('.consent-banner__btn--ghost').click();
+  await expect(banner).toBeHidden();
 }
 
 /** Scrolls the page; a short page gets a spacer first, so sticky and fixed parts can be checked. */
@@ -281,4 +296,17 @@ test.describe('live stack only', () => {
     await expect(page.locator('.header-updated')).toBeVisible();
     await expect(page.locator('.header-updated')).toHaveText(/\d{1,2}:\d{2}/);
   });
+});
+
+test('footer: the privacy policy on the left, "powered by" on the right, no last-update line', async ({ page }) => {
+  await open(page, 'players');
+  const footer = page.locator('.vm-footer');
+  await footer.scrollIntoViewIfNeeded();
+  await expect(footer).not.toContainText(/aktualizacja|update/i);
+  const legal = await footer.locator('.vm-footer__legal').boundingBox();
+  const powered = await footer.locator('.vm-footer__powered').boundingBox();
+  const bar = await footer.boundingBox();
+  expect(Math.abs(legal.y + legal.height / 2 - (powered.y + powered.height / 2)), 'one line').toBeLessThanOrEqual(8);
+  expect(legal.x).toBeLessThan(bar.x + bar.width / 3);
+  expect(powered.x + powered.width).toBeGreaterThan(bar.x + (bar.width * 2) / 3);
 });

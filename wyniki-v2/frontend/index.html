@@ -293,7 +293,7 @@
 
                                         <template x-for="(tree, ti) in knockoutTrees(cat.knockout)" :key="'kot-'+cat.name+'-'+ti">
                                             <div class="bt-tree">
-                                                <div class="bt-ladder bt-ladder--ltr" x-show="tree.rounds.length">
+                                                <div class="bt-ladder bt-ladder--ltr" x-show="tree.rounds.length" tabindex="0" role="group" :aria-label="bracketTreeAriaLabel(cat.name)">
                                                     <template x-for="(ko, ki) in tree.rounds" :key="'ko-'+cat.name+'-'+ti+'-'+ki">
                                                         <div class="bt-round" :class="knockoutPhaseClass(ko.phase)">
                                                             <div class="bt-round-label" x-text="translateCategory(ko.phase)"></div>
@@ -1026,7 +1026,7 @@
 
                                                 <template x-for="(tree, ti) in knockoutTrees(cat.knockout)" :key="'tkot-'+cat.name+'-'+ti">
                                                     <div class="bt-tree">
-                                                        <div class="bt-ladder bt-ladder--ltr" x-show="tree.rounds.length">
+                                                        <div class="bt-ladder bt-ladder--ltr" x-show="tree.rounds.length" tabindex="0" role="group" :aria-label="bracketTreeAriaLabel(cat.name)">
                                                             <template x-for="(ko, ki) in tree.rounds" :key="'tko-'+cat.name+'-'+ti+'-'+ki">
                                                                 <div class="bt-round" :class="knockoutPhaseClass(ko.phase)">
                                                                     <div class="bt-round-label" x-text="translateCategory(ko.phase)"></div>
@@ -1524,15 +1524,14 @@
 
         <!-- Vestmedia Footer -->
         <footer class="vm-footer">
-            <span class="vm-footer__refresh" x-show="lastUpdate" x-text="(tr().meta?.lastRefresh || 'Ostatnia aktualizacja: {time}').replace('{time}', lastUpdate ? lastUpdate.toLocaleTimeString(locale()) : '')"></span>
-            <span class="vm-footer__sep" x-show="lastUpdate" aria-hidden="true">|</span>
             <a class="vm-footer__legal" :href="privacyHref()" x-text="uiText().privacyPolicy || 'Polityka prywatności'">Polityka prywatności</a>
-            <span class="vm-footer__sep" aria-hidden="true">|</span>
-            <span x-text="uiText().poweredBy || 'Powered by'">Powered by</span>
-            <a href="https://vestmedia.pl" target="_blank" rel="noopener noreferrer" class="vm-footer__link">
-                <img src="https://vestmedia.pl/wp-content/uploads/2024/12/Vest-Media-5.png"
-                     alt="Vest Media" class="vm-footer__logo" loading="lazy">
-            </a>
+            <span class="vm-footer__powered">
+                <span x-text="uiText().poweredBy || 'Powered by'">Powered by</span>
+                <a href="https://vestmedia.pl" target="_blank" rel="noopener noreferrer" class="vm-footer__link">
+                    <img src="https://vestmedia.pl/wp-content/uploads/2024/12/Vest-Media-5.png"
+                         alt="Vest Media" class="vm-footer__logo" loading="lazy">
+                </a>
+            </span>
         </footer>
     </div>
 
