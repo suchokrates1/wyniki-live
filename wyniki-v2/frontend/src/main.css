@@ -2523,7 +2523,7 @@ button.hm-cat-badge:focus-visible {
   letter-spacing: 0.3px;
 }
 .player-card__stat--wins .player-card__stat-val { color: var(--accent); }
-.player-card__stat--losses .player-card__stat-val { color: #e53935; }
+.player-card__stat--losses .player-card__stat-val { color: var(--loss); }
 
 /* Empty & loading states */
 .empty-state {
@@ -2602,7 +2602,7 @@ button.hm-cat-badge:focus-visible {
 .pp-stat__val { font-size: 22px; font-weight: 700; color: var(--text); }
 .pp-stat__label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; margin-top: 2px; }
 .pp-stat--wins .pp-stat__val { color: var(--accent); }
-.pp-stat--losses .pp-stat__val { color: #e53935; }
+.pp-stat--losses .pp-stat__val { color: var(--loss); }
 
 .pp-medals {
   display: flex; gap: 16px; justify-content: center; margin-top: 12px;
