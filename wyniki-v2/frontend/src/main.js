@@ -24,6 +24,7 @@ import { isTeamDisplayName } from './shared/teamDisplay.js';
 import { privacyHref } from './shared/privacyHref.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
 import './main.css';
+import './styles/mobile.css';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';

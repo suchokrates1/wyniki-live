@@ -42,6 +42,9 @@ jobs:
       - name: WCAG 2.2 AA scan (axe, color-contrast enabled) on mocked build
         run: npm run test:a11y:ci
 
+      - name: Public site on phones (layout, touch targets, axe) on mocked build
+        run: npm run e2e:public-mobile -- --project=android-pixel7 --project=android-small-360 --project=android-dark
+
   umpire-e2e:
     runs-on: ubuntu-latest
     defaults:

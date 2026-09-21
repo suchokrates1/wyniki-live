@@ -47,6 +47,10 @@ export function start(port = 8811) {
         return; // intentionally left open
       }
       if (API_MAP[p]) return serveFixture(res, API_MAP[p]);
+      // one tournament's pages and a player profile reuse the same sample data
+      const tournamentPage = p.match(/^\/api\/tournament\/\d+\/(history|bracket|schedule|info)$/);
+      if (tournamentPage) return serveFixture(res, { history: 'history.json', bracket: 'tournament-bracket.json', schedule: 'tournament-schedule.json', info: 'tournament-info.json' }[tournamentPage[1]]);
+      if (/^\/api\/players\/\d+\/profile$/.test(p)) return serveFixture(res, 'player-profile.json');
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end('null');
       return;

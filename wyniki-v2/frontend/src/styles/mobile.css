@@ -1,0 +1,168 @@
+/*
+ * Phone layout of the public site (≤ 640 px). Same look — colours, type, components — laid out
+ * for a phone: a slim header, the main tabs at the bottom under the thumb, one row of
+ * switches and filters, rows instead of tall cards. Text sizes do not go down: many viewers
+ * see poorly, so the room comes from chrome, not from letters. Every touch target stays ≥ 44 px.
+ */
+
+.lang-select-wrap { position: relative; display: inline-flex; }
+.lang-select__code,
+.header-updated,
+.tab-btn__icon { display: none; }
+
+/* court switch in the schedule: the light pill background left light text unreadable in the dark theme */
+[data-theme="dark"] .schedule-switcher__tab:not(.is-active) { background: var(--card); border-color: var(--line); }
+
+@media (max-width: 640px) {
+  :root { --m-bottom-nav: 64px; }
+
+  .wrap { max-width: 100%; }
+  main#main { padding-inline: 12px; }
+
+  /* ---------- header: 56 px, time of the last update, language as a code ---------- */
+  .header { padding: 6px 0; }
+  .header-bar { padding-inline: 12px; gap: 8px; }
+  .header-logo { height: 34px; }
+  .header-actions { gap: 8px; }
+  .header-updated {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 400 13px/1 ui-monospace, "Chivo Mono", monospace; color: var(--header-fg); opacity: .85;
+  }
+  .header-updated__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; }
+  .lang-select-wrap { width: 48px; height: 44px; }
+  .lang-select {
+    width: 48px; height: 44px; padding: 0; color: transparent; text-align: center;
+    border-radius: 10px;
+  }
+  .lang-select option { color: initial; }
+  .lang-select__code {
+    display: grid; place-items: center; position: absolute; inset: 0; pointer-events: none;
+    font-weight: 700; font-size: 14px; color: var(--header-fg);
+  }
+  .dark-mode-toggle { width: 44px; height: 44px; border-radius: 10px; font-size: 18px; }
+
+  /* ---------- main tabs: a bar at the bottom ---------- */
+  .tab-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    margin: 0; max-width: none; padding: 0 0 env(safe-area-inset-bottom, 0px);
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    background: var(--bg); border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, .08);
+  }
+  .tab-bar .tab-btn {
+    min-height: var(--m-bottom-nav); margin: 0; border: 0; border-radius: 0; background: transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    font-size: 13px; font-weight: 700; color: var(--muted); box-shadow: none;
+  }
+  .tab-bar .tab-btn--active { color: var(--accent); background: var(--accent-bg); box-shadow: inset 0 3px 0 var(--accent); border-bottom: 0; }
+  .tab-btn__icon { display: block; }
+  body { padding-bottom: calc(var(--m-bottom-nav) + env(safe-area-inset-bottom, 0px)); }
+
+  /* the footer is no longer pinned over the lists: it ends the page, above the bottom bar */
+  .vm-footer {
+    position: static; margin-top: 24px; padding: 14px 12px;
+    flex-wrap: wrap; row-gap: 4px; background: transparent; box-shadow: none; border-top: 1px solid var(--line);
+  }
+
+  /* ---------- one row of switches, kept in reach while scrolling ---------- */
+  .live-tournament-name { font-size: 21px; text-align: left; margin: 12px 0 0; }
+  .live-subnav,
+  .th-subtabs,
+  .cat-tabs,
+  .schedule-switcher__tabs {
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; overscroll-behavior-x: contain;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity; gap: 8px;
+  }
+  .live-subnav::-webkit-scrollbar,
+  .th-subtabs::-webkit-scrollbar,
+  .cat-tabs::-webkit-scrollbar,
+  .schedule-switcher__tabs::-webkit-scrollbar { display: none; }
+  .live-subnav > *, .th-subtabs > *, .cat-tabs > *, .schedule-switcher__tabs > * { flex: none; scroll-snap-align: start; }
+
+  .live-subnav {
+    position: sticky; top: var(--m-header, 57px); z-index: 30;
+    margin: 0 0 12px; padding: 10px 0;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+  }
+  .live-subnav__card {
+    min-height: 44px; padding: 8px 16px; border-radius: 999px; border-width: 1px;
+    font-size: 16px; box-shadow: none;
+  }
+  .live-subnav__card--active { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-on); }
+  .live-subnav__icon { display: none; }
+
+  .cat-tabs { padding: 4px 0 10px; margin: 0 0 8px; }
+  .cat-tab { min-height: 44px; padding: 8px 14px; white-space: nowrap; }
+
+  /* ---------- live courts: the scoreboard stays exactly as on the full site, only fitted to the width ---------- */
+  .grid { grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 8px 0 16px; }
+
+  /* ---------- schedule: one filter row, a match per row ---------- */
+  .schedule-heading-row { display: none; }
+  .schedule-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 8px; }
+  .schedule-search { flex: 1 1 100%; min-width: 0; }
+  .schedule-search__input { min-height: 44px; width: 100%; }
+  .schedule-sort { flex: 1 1 100%; }
+  .schedule-sort__buttons { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .schedule-sort__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .schedule-sort__button { min-height: 44px; padding: 6px 10px; font-size: 14px; }
+  .schedule-day__title { font-size: 17px; margin: 14px 0 6px; }
+  .schedule-switcher { border-radius: 12px; }
+  .schedule-switcher__tabs { padding: 8px; background: var(--card); }
+  .schedule-switcher__tab { min-height: 44px; }
+  .schedule-panel { padding: 0; }
+  .schedule-panel__title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .schedule-cards { gap: 0; }
+  .schedule-card {
+    display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px;
+    grid-template-areas: "time match status" "time meta meta" "notes notes notes";
+    align-items: center; padding: 10px 12px; border-radius: 0; border: 0; border-bottom: 1px solid var(--line);
+    background: var(--bg); box-shadow: none;
+  }
+  .schedule-card__topline { display: contents; }
+  .schedule-card__time { grid-area: time; align-self: start; font: 700 16px/1.4 ui-monospace, "Chivo Mono", monospace; padding-top: 2px; }
+  .schedule-card__topline > .schedule-status { grid-area: status; align-self: start; min-height: 0; padding: 2px 8px; font-size: 13px; border-radius: 999px; }
+  .schedule-card__match { grid-area: match; display: block; font-weight: 700; font-size: 17px; line-height: 1.3; }
+  .schedule-card__player { display: inline; }
+  .schedule-card__versus { display: inline; margin: 0 4px; font-weight: 400; color: var(--muted); }
+  .schedule-card__meta { grid-area: meta; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+  .schedule-card { margin: 0; }
+  .schedule-card__badge { font-size: 13px; min-height: 0; padding: 2px 8px; }
+  .schedule-card__notes { grid-area: notes; }
+
+  /* ---------- players: one row per player ---------- */
+  .section-heading { font-size: 22px; margin: 14px 0 10px; }
+  .player-filters { gap: 8px; margin-bottom: 8px; }
+  .player-filters .player-search { width: 100%; min-height: 48px; }
+  .player-filter-btns { display: flex; gap: 6px; flex-wrap: nowrap; }
+  .player-filter-btns .filter-btn { min-height: 44px; flex: 1 1 0; padding: 6px 8px; }
+  .player-filters--row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .player-filters--row2 .player-dropdown { min-height: 44px; min-width: 0; width: 100%; }
+  .player-list { gap: 0; }
+  .player-card {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px;
+    min-height: 60px; padding: 10px 4px; margin: 0; border: 0; border-bottom: 1px solid var(--line);
+    border-radius: 0; background: transparent; box-shadow: none;
+  }
+  .player-card__main { flex-wrap: wrap; row-gap: 4px; min-width: 0; }
+  .player-card__name { font-size: 17px; font-weight: 700; }
+  .player-card__stats { gap: 10px; }
+  .player-card__stat { display: grid; justify-items: center; min-width: 30px; }
+  .player-card__stat-val { font-size: 16px; font-weight: 700; }
+  .player-card__stat-label { font-size: 11px; }
+
+  /* ---------- player profile: avatar beside the name, statistics in one row ---------- */
+  .pp-header { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; padding: 14px; text-align: left; }
+  .pp-header .pp-info { text-align: left; }
+  .pp-header .pp-info__details { justify-content: flex-start; }
+  .pp-info__name { font-size: 22px; }
+  .pp-career { padding: 10px; }
+  .pp-stat-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .pp-stat { min-width: 0; padding: 8px 2px; }
+  .pp-stat__val { font-size: 20px; }
+  .pp-stat__label { font-size: 10px; letter-spacing: 0; hyphens: auto; -webkit-hyphens: auto; }
+
+  /* anything pinned stays clear of the bottom bar */
+  .toast, .cookie-banner, .consent-banner { bottom: calc(var(--m-bottom-nav) + 12px + env(safe-area-inset-bottom, 0px)); }
+}
