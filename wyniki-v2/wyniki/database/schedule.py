@@ -15,6 +15,7 @@ from ..services.teams import (
     normalize_play_format,
     sql_two_sided_name_match,
 )
+from ..services.match_result import resolve_match_winner
 
 from .connection import _utc_now, db_conn, fetch_app_settings, upsert_app_settings
 
@@ -273,9 +274,20 @@ def _schedule_match_result(data: Dict[str, Any]) -> Dict[str, Any]:
     has_match = data.get("match_id") not in (None, "", 0)
     sets_history_raw = data.get("match_sets_history")
     score_text = _format_score_text(sets_history_raw)
+    winner_name = data.get("match_winner_name") or ""
+    if has_match and data.get("match_status") == "finished":
+        winner_name = resolve_match_winner(
+            player1=data.get("match_player1_name"),
+            player2=data.get("match_player2_name"),
+            stored_winner=winner_name,
+            finish_reason=data.get("match_finish_reason"),
+            sets_history=sets_history_raw,
+            player1_sets=data.get("match_player1_sets"),
+            player2_sets=data.get("match_player2_sets"),
+        ) or ""
     return {
         "match_status": data.get("match_status") or "",
-        "winner_name": data.get("match_winner_name") or "",
+        "winner_name": winner_name,
         "result_note": data.get("match_result_note") or "",
         "finish_reason": data.get("match_finish_reason") or "",
         "player1_sets": int(data.get("match_player1_sets") or 0) if has_match else None,
@@ -326,7 +338,8 @@ def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) 
                        m.status AS match_status, m.winner_name AS match_winner_name,
                        m.result_note AS match_result_note, m.finish_reason AS match_finish_reason,
                        m.player1_sets AS match_player1_sets, m.player2_sets AS match_player2_sets,
-                       m.sets_history AS match_sets_history
+                       m.sets_history AS match_sets_history,
+                       m.player1_name AS match_player1_name, m.player2_name AS match_player2_name
                 FROM tournament_schedule ts
                 LEFT JOIN courts c ON c.kort_id = ts.court_id
                 LEFT JOIN matches m ON m.id = ts.match_id

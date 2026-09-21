@@ -1,6 +1,7 @@
 """Bracket API: group management, standings, knockout bracket."""
 from flask import Blueprint, jsonify, request
 from wyniki.services.office_event_broker import emit_office_invalidation
+from wyniki.api.courts import history_page_args
 
 from wyniki.database import (
     get_active_tournament_id,
@@ -206,8 +207,10 @@ def public_tournament_history(tid: int):
     if error:
         return error
     authorized_private = int(tournament.get("is_public") or 0) != 1
+    limit, offset = history_page_args(500)
     history_data = fetch_match_history(
-        limit=500,
+        limit=limit,
+        offset=offset,
         tournament_id=tournament["id"],
         public_only=not authorized_private,
         stats_enabled_only=False,

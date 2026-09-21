@@ -9,8 +9,51 @@ from typing import Any, Dict, Generator, List, Optional
 from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
+from ..services.match_result import plausible_duration
 
 from .connection import db_conn, website_visible_sql
+
+
+def _seconds_between(start: Any, end: Any) -> Optional[int]:
+    try:
+        started = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
+        ended = datetime.fromisoformat(str(end).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    if ended.tzinfo is None:
+        ended = ended.replace(tzinfo=timezone.utc)
+    return int((ended - started).total_seconds())
+
+
+def _history_timing(stored_seconds: Any, tablet_seconds: Any, started_at: Any,
+                    created_at: Any, ended_ts: Any) -> tuple[int, Optional[str]]:
+    """Duration and start of a finished match, from the most trustworthy source.
+
+    The umpire's own clock (match statistics) wins. The stored value came from the
+    overlay clock, which before September 2026 kept running between matches, so it is
+    only used when plausible. The start is the tablet's start time; without it, the end
+    minus the umpire's duration beats the row's creation time, which lags the first ball.
+    """
+    tablet = plausible_duration(tablet_seconds)
+    duration = tablet or plausible_duration(stored_seconds)
+    if duration is None and started_at:
+        duration = plausible_duration(_seconds_between(started_at, ended_ts))
+    start = started_at
+    if not start and tablet and ended_ts:
+        try:
+            ended = datetime.fromisoformat(str(ended_ts).replace("Z", "+00:00"))
+            if ended.tzinfo is None:
+                ended = ended.replace(tzinfo=timezone.utc)
+            derived = datetime.fromtimestamp(ended.timestamp() - tablet, tz=timezone.utc).isoformat()
+            # A backfilled end time moves the derived start past the row's creation: distrust it.
+            lead = _seconds_between(derived, created_at) if created_at else None
+            if lead is not None and 0 <= lead <= 1800:
+                start = derived
+        except (TypeError, ValueError):
+            start = None
+    return duration or 0, start or created_at
 
 def insert_match_history(entry: Dict[str, Any]) -> None:
     """Insert a match history entry."""
@@ -102,6 +145,7 @@ def fetch_match_history(
     tournament_id: Optional[int] = None,
     public_only: bool = False,
     stats_enabled_only: bool = False,
+    offset: int = 0,
 ) -> List[Dict]:
     """Fetch match history from database, enriched with full names."""
     try:
@@ -122,9 +166,9 @@ def fetch_match_history(
                 SELECT mh.* FROM match_history mh
                 LEFT JOIN tournaments t ON t.id = mh.tournament_id
                 {where_clause}
-                ORDER BY mh.ended_ts DESC
-                LIMIT ?
-            """, (*params, limit))
+                ORDER BY mh.ended_ts DESC, mh.id DESC
+                LIMIT ? OFFSET ?
+            """, (*params, limit, max(0, int(offset or 0))))
             rows = cursor.fetchall()
             
             # Detect available columns
@@ -144,7 +188,8 @@ def fetch_match_history(
                     match_lookup[mr["id"]] = {
                         "p1": mr["player1_name"],
                         "p2": mr["player2_name"],
-                        "started_at": mr["started_at"] or mr["created_at"],
+                        "started_at": mr["started_at"],
+                        "created_at": mr["created_at"],
                     }
                 # Fetch duration from match_statistics for entries with duration=0
                 cursor.execute(
@@ -225,15 +270,15 @@ def fetch_match_history(
                 if ml:
                     raw_a = ml["p1"] or raw_a
                     raw_b = ml["p2"] or raw_b
-                    entry["started_at"] = ml["started_at"]
-                else:
-                    entry["started_at"] = None
                 entry["player_a"] = _resolve_name(raw_a, player_name_map)
                 entry["player_b"] = _resolve_name(raw_b, player_name_map)
-
-                # Fallback duration from match_statistics
-                if not entry["duration_seconds"] and mid and mid in duration_lookup:
-                    entry["duration_seconds"] = duration_lookup[mid]
+                entry["duration_seconds"], entry["started_at"] = _history_timing(
+                    entry["duration_seconds"],
+                    duration_lookup.get(mid) if mid else None,
+                    ml["started_at"] if ml else None,
+                    ml["created_at"] if ml else None,
+                    entry["ended_ts"],
+                )
 
                 court_meta = court_lookup.get(entry["kort_id"], {})
                 entry["court_name"] = court_meta.get("court_name")

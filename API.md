@@ -305,6 +305,12 @@ curl -X POST https://score.vestmedia.pl/api/players \
 }
 ```
 
+### GET `/api/history`
+**Opis:** Zakończone mecze aktywnego publicznego turnieju (albo `tournament_id`), od najnowszego.  
+**Parametry:** `tournament_id`, `limit` (domyślnie 100, 1–500), `offset` (domyślnie 0). To samo stronicowanie ma `/api/tournament/<id>/history` (domyślny `limit` 500).  
+**Pola czasu:** `duration_seconds` pochodzi z zegara sędziego (statystyki meczu); `0` znaczy, że wiarygodnego czasu nie ma. `started_at` to start z tabletu, a przy starszych meczach koniec minus czas sędziego albo moment utworzenia meczu.  
+**Zwycięzca:** w planie gier (`/api/tournament/<id>/schedule`) `winner_name` wynika z setów; walkower i krecz zachowują zapisanego zwycięzcę.
+
 ### GET `/api/stream`
 **Opis:** Server-Sent Events stream ze zmianami stanu  
 **Response:** text/event-stream

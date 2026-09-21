@@ -50,6 +50,17 @@ def snapshot():
         return _json_no_cache({"error": str(e)}, 500)
 
 
+HISTORY_PAGE_MAX = 500
+
+
+def history_page_args(default_limit: int) -> tuple[int, int]:
+    """?limit= and ?offset= for history pages; out-of-range values are clamped, not rejected."""
+    limit = request.args.get("limit", type=int)
+    offset = request.args.get("offset", type=int)
+    limit = default_limit if limit is None else max(1, min(limit, HISTORY_PAGE_MAX))
+    return limit, max(0, offset or 0)
+
+
 @blueprint.route('/history')
 def history():
     """Get match history, optionally filtered by tournament."""
@@ -58,9 +69,10 @@ def history():
         from ..config import settings
         tournament_id = request.args.get("tournament_id", type=int)
         tid = tournament_id if tournament_id is not None else get_active_tournament_id(public_only=True)
-        # Serve from DB filtered by tournament
+        limit, offset = history_page_args(settings.match_history_size)
         history_data = fetch_match_history(
-            limit=settings.match_history_size,
+            limit=limit,
+            offset=offset,
             tournament_id=tid,
             public_only=True,
         )

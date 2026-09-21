@@ -20,6 +20,7 @@ from ..services.player_registry import create_tournament_player, player_payload
 from ..services.api_auth import court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
 from ..services.director_commands import director_command_broker, dump_match_config, normalize_match_config, tablet_presence
 from ..services.match_format import match_score_satisfies_format
+from ..services.match_result import resolve_match_winner, same_competitor
 from ..services.match_timer import apply_match_start_from_payload, sync_court_match_timer_from_match
 from ..config import logger
 
@@ -343,7 +344,19 @@ def _apply_finish_outcome(match: Match, data: dict) -> None:
         injured_player_name = None
         result_note = result_note or "Mecz testowy"
     else:
-        winner_name = winner_name or _winner_from_score(match)
+        scored_winner = resolve_match_winner(
+            player1=match.player1_name,
+            player2=match.player2_name,
+            stored_winner=winner_name,
+            finish_reason=reason,
+            sets_history=match.sets_history,
+            player1_sets=match.player1_sets,
+            player2_sets=match.player2_sets,
+        )
+        if winner_name and scored_winner and not same_competitor(winner_name, scored_winner):
+            logger.warning("finish_winner_contradicts_score", match_id=match.id,
+                           sent=winner_name, from_score=scored_winner)
+        winner_name = scored_winner
         injured_player_name = None
 
     match.finish_reason = reason
