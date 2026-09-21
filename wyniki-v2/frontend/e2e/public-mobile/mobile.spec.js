@@ -196,7 +196,8 @@ test('schedule: search and court switch work; a match is a compact row', async (
   test.skip((await cards.count()) === 0, 'no schedule published');
   const first = cards.first();
   const box = await first.boundingBox();
-  expect(box.height, 'a match row, not a tall card').toBeLessThanOrEqual(150);
+  // two long names may each wrap to two lines on a 360 px phone
+  expect(box.height, 'a match row, not a tall card').toBeLessThanOrEqual(170);
   const columns = await first.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
   expect(columns).toBe(3);
   const name = (await first.locator('.schedule-card__player').first().textContent()).trim().split(/\s+/).slice(-1)[0];
