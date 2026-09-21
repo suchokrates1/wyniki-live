@@ -352,6 +352,8 @@ async function routeToday(page) {
   // the app adds a cache-busting query (?_=...)
   await page.route(/\/api\/tournament\/schedule(\?|$)/, (route) => route.fulfill({ json: scheduleForToday() }));
   await page.route(/\/api\/snapshot(\?|$)/, (route) => route.fulfill({ json: SNAPSHOT }));
+  // no live stream: on a real stack it would push that stack's courts into the stubbed page
+  await page.route(/\/api\/stream(\?|$)/, (route) => route.fulfill({ status: 204, body: '' }));
 }
 
 test('next match: the live court names what follows, an idle court what it waits for', async ({ page }) => {
