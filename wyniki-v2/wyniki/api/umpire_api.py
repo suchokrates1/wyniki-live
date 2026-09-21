@@ -352,6 +352,7 @@ def _apply_finish_outcome(match: Match, data: dict) -> None:
             sets_history=match.sets_history,
             player1_sets=match.player1_sets,
             player2_sets=match.player2_sets,
+            score_is_final=match_score_satisfies_format(match),
         )
         if winner_name and scored_winner and not same_competitor(winner_name, scored_winner):
             logger.warning("finish_winner_contradicts_score", match_id=match.id,

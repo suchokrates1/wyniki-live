@@ -59,17 +59,23 @@ def winner_from_score(player1: Any, player2: Any, sets_history: Any = None,
 
 def resolve_match_winner(*, player1: Any, player2: Any, stored_winner: Any = None,
                          finish_reason: Any = None, sets_history: Any = None,
-                         player1_sets: Any = None, player2_sets: Any = None) -> Optional[str]:
-    """The winner as the match row names them.
+                         player1_sets: Any = None, player2_sets: Any = None,
+                         score_is_final: bool = False) -> Optional[str]:
+    """The winner as the match row names them (doubles partners in the row's order).
 
-    Walkovers and retirements keep the recorded winner. Every other finish takes the
-    winner from the score, so an empty or contradicting stored name cannot leak out.
+    Walkovers and retirements keep the recorded winner. A score complete under the
+    match format outranks any recorded name. Otherwise a recorded winner who is one of
+    the players stands, since the office may have decided an unfinished match, and the
+    score only fills an empty or unknown name.
     """
     stored = str(stored_winner or "").strip() or None
-    canonical = next((p for p in (player1, player2) if stored and same_competitor(p, stored)), stored)
+    player = next((p for p in (player1, player2) if stored and same_competitor(p, stored)), None)
     if str(finish_reason or "").strip().lower() in _WINNER_WITHOUT_SCORE:
-        return canonical
-    return winner_from_score(player1, player2, sets_history, player1_sets, player2_sets) or canonical
+        return player or stored
+    scored = winner_from_score(player1, player2, sets_history, player1_sets, player2_sets)
+    if score_is_final and scored:
+        return scored
+    return player or scored or stored
 
 
 def plausible_duration(seconds: Any) -> Optional[int]:

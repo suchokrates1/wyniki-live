@@ -12,9 +12,22 @@ SETS_P2 = [
 ]
 
 
-def test_score_beats_a_contradicting_stored_winner():
+def test_a_complete_score_beats_a_contradicting_stored_winner():
     assert resolve_match_winner(player1="Skarżyński", player2="Balčikonis", stored_winner="Skarżyński",
-                                finish_reason="normal", sets_history=SETS_P2) == "Balčikonis"
+                                finish_reason="normal", sets_history=SETS_P2, score_is_final=True) == "Balčikonis"
+
+
+def test_an_unfinished_score_does_not_overrule_a_recorded_winner():
+    # Vilnius match 712: one set at 3:2, the office named the other pair
+    partial = [{"set_number": 1, "player1_games": 3, "player2_games": 2}]
+    assert resolve_match_winner(player1="Balčikonis / Damskis", player2="Balwierz / Skarżyński",
+                                stored_winner="Skarżyński / Balwierz", finish_reason="normal",
+                                sets_history=partial, player1_sets=1, player2_sets=0) == "Balwierz / Skarżyński"
+
+
+def test_an_unknown_stored_name_is_replaced_by_the_score():
+    assert resolve_match_winner(player1="Kokot", player2="Nowak", stored_winner="Kowalski",
+                                finish_reason="normal", sets_history=SETS_P2) == "Nowak"
 
 
 def test_empty_stored_winner_is_filled_from_the_set_counters():
@@ -65,14 +78,14 @@ def test_schedule_result_names_the_winner_from_the_score():
     from wyniki.database.schedule import _schedule_match_result
     import json
 
-    row = {"match_id": 712, "match_status": "finished", "match_winner_name": "Skarżyński / Balwierz",
+    row = {"match_id": 551, "match_status": "finished", "match_winner_name": "Ethan Cook / Oliver Fanshawe",
            "match_finish_reason": "normal", "match_sets_history": json.dumps(SETS_P2),
-           "match_player1_name": "Skarżyński / Balwierz", "match_player2_name": "Balčikonis / Damskis",
+           "match_player1_name": "Grace Hobbs / Caroline Lane", "match_player2_name": "Oliver Fanshawe / Ethan Cook",
            "match_player1_sets": 1, "match_player2_sets": 2}
-    assert _schedule_match_result(row)["winner_name"] == "Balčikonis / Damskis"
+    assert _schedule_match_result(row)["winner_name"] == "Oliver Fanshawe / Ethan Cook"
 
     row.update(match_winner_name="", match_sets_history=None, match_player1_sets=2, match_player2_sets=0)
-    assert _schedule_match_result(row)["winner_name"] == "Skarżyński / Balwierz"
+    assert _schedule_match_result(row)["winner_name"] == "Grace Hobbs / Caroline Lane"
 
 
 @pytest.fixture()
@@ -118,28 +131,43 @@ def test_history_pages_with_limit_and_offset(full_app):
     assert [m["player_a"] for m in paged] == ["Player 1", "Player 0"]
 
 
-def test_finish_takes_the_winner_from_the_score_not_the_client(full_app):
-    from wyniki import database
-
-    tid = database.insert_tournament("Winner Cup", "2026-09-26", "2026-09-27", active=True)
-    database.create_tournament_courts(tid, 1)
-    court_id = f"t{tid}-1"
-    client = full_app.test_client()
+def _start_match(client, court_id, uuid):
     created = client.post("/api/matches", json={
         "court_id": court_id, "player1_name": "Malicki", "player2_name": "Dutra", "status": "in_progress",
-        "client_match_uuid": "winner-uuid-1", "match_config": {"games_per_set": 4, "sets_to_win": 2},
+        "client_match_uuid": uuid, "match_config": {"games_per_set": 4, "sets_to_win": 2},
         "score": {"player1_sets": 0, "player2_sets": 0, "player1_games": 0, "player2_games": 0,
                   "player1_points": 0, "player2_points": 0, "sets_history": []},
     })
     assert created.status_code == 201, created.get_json()
-    match_id = created.get_json()["id"]
-    client.put(f"/api/matches/{match_id}", json={
-        "status": "in_progress", "match_config": {"games_per_set": 4, "sets_to_win": 3},
-        "score": {"player1_sets": 0, "player2_sets": 2, "player1_games": 0, "player2_games": 0,
-                  "player1_points": 0, "player2_points": 0, "sets_history": [
-                      {"set_number": 1, "player1_games": 2, "player2_games": 4},
-                      {"set_number": 2, "player1_games": 3, "player2_games": 4, "tiebreak_loser_points": 5}]},
+    return created.get_json()["id"]
+
+
+def _finish(client, match_id, sets, winner):
+    s1 = sum(1 for a, b in sets if a > b)
+    return client.put(f"/api/matches/{match_id}", json={
+        "status": "finished", "finish_reason": "normal", "winner_name": winner,
+        "match_config": {"games_per_set": 4, "sets_to_win": 2},
+        "score": {"player1_sets": s1, "player2_sets": len(sets) - s1, "player1_games": 0, "player2_games": 0,
+                  "player1_points": 0, "player2_points": 0,
+                  "sets_history": [{"set_number": i + 1, "player1_games": a, "player2_games": b}
+                                   for i, (a, b) in enumerate(sets)]},
     })
-    done = client.post(f"/api/matches/{match_id}/finish", json={"finish_reason": "normal", "winner_name": "Malicki"})
-    assert done.status_code == 200, done.get_json()
-    assert done.get_json()["winner_name"] == "Dutra"
+
+
+def test_finish_takes_the_winner_from_a_complete_score_not_the_client(full_app):
+    from wyniki import database
+
+    tid = database.insert_tournament("Winner Cup", "2026-09-26", "2026-09-27", active=True)
+    database.create_tournament_courts(tid, 2)
+    client = full_app.test_client()
+
+    complete = _finish(client, _start_match(client, f"t{tid}-1", "winner-uuid-1"), [(2, 4), (3, 4)], "Malicki")
+    assert complete.status_code == 200, complete.get_json()
+    assert complete.get_json()["winner_name"] == "Dutra"
+
+    # stopped after one set: the umpire's named winner stands
+    match_id = _start_match(client, f"t{tid}-2", "winner-uuid-2")
+    assert _finish(client, match_id, [(3, 2)], "Dutra").get_json()["status"] == "in_progress"
+    stopped = client.post(f"/api/matches/{match_id}/finish", json={"finish_reason": "normal", "winner_name": "Dutra"})
+    assert stopped.status_code == 200, stopped.get_json()
+    assert stopped.get_json()["winner_name"] == "Dutra"
