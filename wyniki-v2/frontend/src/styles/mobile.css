@@ -13,6 +13,9 @@
 /* court switch in the schedule: the light pill background left light text unreadable in the dark theme */
 [data-theme="dark"] .schedule-switcher__tab:not(.is-active) { background: var(--card); border-color: var(--line); }
 
+/* the privacy link in the footer is a stand-alone control: at least 24 px (WCAG 2.5.8), 44 px on phones */
+.vm-footer__legal { display: inline-flex; align-items: center; min-height: 24px; }
+
 @media (max-width: 640px) {
   :root { --m-bottom-nav: 64px; }
 
@@ -59,6 +62,7 @@
   body { padding-bottom: calc(var(--m-bottom-nav) + env(safe-area-inset-bottom, 0px)); }
 
   /* the footer is no longer pinned over the lists: it ends the page, above the bottom bar */
+  .vm-footer__legal { min-height: 44px; padding-inline: 4px; }
   .vm-footer {
     position: static; margin-top: 24px; padding: 14px 12px;
     flex-wrap: wrap; row-gap: 4px; background: transparent; box-shadow: none; border-top: 1px solid var(--line);
