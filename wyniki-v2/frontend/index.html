@@ -130,6 +130,17 @@
                         <h2 class="sr-only" :id="'heading-'+courtId" x-text="getHeadingAria(courtId)"></h2>
                         <a class="sr-only" x-show="courtWatchUrl(courtId)" :href="courtWatchUrl(courtId)" target="_blank" rel="noopener noreferrer" x-text="t('watchCourt', { court: getCourtDisplayLabel(courtId) })"></a>
                         <div aria-hidden="true" x-html="renderLiveTvScoreboard(courtId, serveAnimTick, lang)"></div>
+                        <template x-if="courtNext(courtId)">
+                            <p class="court-next" :class="{ 'court-next--last': courtNext(courtId).last }">
+                                <span class="sr-only" x-text="courtNextSpoken(courtNext(courtId))"></span>
+                                <span class="court-next__row" aria-hidden="true">
+                                    <span class="court-next__label" x-text="tr().courtNext?.label"></span>
+                                    <span class="court-next__time" x-show="!courtNext(courtId).last && courtNext(courtId).scheduled_time" x-text="courtNext(courtId).scheduled_time"></span>
+                                    <span class="court-next__names" x-text="courtNext(courtId).last ? tr().courtNext?.last : courtNextNames(courtNext(courtId))"></span>
+                                    <span class="court-next__meta" x-show="!courtNext(courtId).last" x-text="scheduleCategoryLabel(courtNext(courtId))"></span>
+                                </span>
+                            </p>
+                        </template>
                         <p class="sr-only score-summary" :id="'k'+courtId+'-summary'" aria-live="polite"
                            x-text="getScoreSummary(courtId)"></p>
                     </section>
@@ -505,13 +516,13 @@
                                                         </div>
 
                                                         <div class="schedule-card__match">
-                                                            <span class="schedule-card__player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                            <span class="schedule-card__player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                             <span class="schedule-card__versus" aria-hidden="true">vs</span>
-                                                            <span class="schedule-card__player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                            <span class="schedule-card__player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                         </div>
 
                                                         <div class="schedule-card__meta">
-                                                            <span class="schedule-card__badge" x-show="scheduleSortMode !== 'court'" x-text="scheduleCourtLabel(match)"></span>
+                                                            <span class="schedule-card__badge" x-show="scheduleSortMode !== 'court' || scheduleSearch.trim()" x-text="scheduleCourtLabel(match)"></span>
                                                             <span class="schedule-card__badge schedule-card__badge--accent" x-text="scheduleCategoryLabel(match)"></span>
                                                             <span class="schedule-card__badge" x-text="translatePhase(match.phase || '')"></span>
                                                         </div>
@@ -554,10 +565,10 @@
                                                                 <td x-text="scheduleCategoryLabel(match)"></td>
                                                                 <td x-text="translatePhase(match.phase || '')"></td>
                                                                 <td>
-                                                                    <span class="schedule-player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                    <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                                     <span aria-hidden="true"> vs </span>
                                                                     <span class="sr-only" x-text="acc().versus"></span>
-                                                                    <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                    <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                                 </td>
                                                                 <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                                 <td x-text="match.notes_public || ''"></td>
@@ -633,13 +644,13 @@
                                                                 </div>
 
                                                                 <div class="schedule-card__match">
-                                                                    <span class="schedule-card__player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                    <span class="schedule-card__player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                                     <span class="schedule-card__versus" aria-hidden="true">vs</span>
-                                                                    <span class="schedule-card__player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                    <span class="schedule-card__player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                                 </div>
 
                                                                 <div class="schedule-card__meta">
-                                                                    <span class="schedule-card__badge" x-show="scheduleSortMode !== 'court'" x-text="scheduleCourtLabel(match)"></span>
+                                                                    <span class="schedule-card__badge" x-show="scheduleSortMode !== 'court' || scheduleSearch.trim()" x-text="scheduleCourtLabel(match)"></span>
                                                                     <span class="schedule-card__badge schedule-card__badge--accent" x-text="scheduleCategoryLabel(match)"></span>
                                                                     <span class="schedule-card__badge" x-text="translatePhase(match.phase || '')"></span>
                                                                 </div>
@@ -682,10 +693,10 @@
                                                                         <td x-text="scheduleCategoryLabel(match)"></td>
                                                                         <td x-text="translatePhase(match.phase || '')"></td>
                                                                         <td>
-                                                                            <span class="schedule-player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                            <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                                             <span aria-hidden="true"> vs </span>
                                                                             <span class="sr-only" x-text="acc().versus"></span>
-                                                                            <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                            <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                                         </td>
                                                                         <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                                         <td x-text="match.notes_public || ''"></td>
@@ -1159,10 +1170,10 @@
                                                             <td x-text="scheduleCourtLabel(match)"></td>
                                                             <td x-text="translatePhase(match.phase || '')"></td>
                                                             <td>
-                                                                <span class="schedule-player" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                                 <span aria-hidden="true"> vs </span>
                                                                 <span class="sr-only" x-text="acc().versus"></span>
-                                                                <span class="schedule-player" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                             </td>
                                                             <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                             <td x-text="match.notes_public || ''"></td>

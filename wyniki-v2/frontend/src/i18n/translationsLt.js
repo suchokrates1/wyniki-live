@@ -157,6 +157,8 @@ export const TRANSLATION_PATCHES_LT = {
   playerProfile: { ageLabel: '{years} m.', classLabel: 'Sporto klasė', classTitle: 'Sporto klasifikacija', classNote: 'Rezultatai lieka toje kategorijoje, kurioje buvo sužaisti.', classSince: '{class} nuo {date}', classPrevious: 'anksčiau {class}', classSourceTournament: 'klasifikacija turnyre {tournament}', classSourceTournamentHidden: 'klasifikacija turnyre', classSourceManual: 'pakeista žaidėjų duomenų bazėje', classSourceInitial: 'pirmoji klasė duomenų bazėje', classProvisional: 'laikina klasė', classCurrent: 'dabartinė', playedIn: 'Kategorija: {category}', medalsByCategory: 'Medaliai pagal kategoriją', noCategory: 'be kategorijos', resultWon: 'Pergalė', resultLost: 'Pralaimėjimas', noMatches: 'Nėra mačų', notFound: 'Žaidėjas nerastas' },
   liveSub: { navLabel: 'Gyvosios skiltys', scores: 'Mačai gyvai', schedule: 'Turnyro planas', history: 'Rezultatai' },
   schedule: { title: 'Turnyro planas', emptyTitle: 'Turnyro planas dar nepaskelbtas', loading: 'Kraunamas turnyro planas...', updated: 'Turnyro planas atnaujintas' },
+  courtNext: { label: 'Kitas', last: 'Paskutinis šios dienos mačas šiame korte', spoken: 'Kitas mačas šiame korte' },
+  scheduleExtra: { searchResults: 'Paieškos rezultatai', winner: 'Nugalėtojas' },
   bracket: {
     categoryTabsLabel: 'Turnyro kategorijos', podiumLabel: 'Pjedestalas',
     groupTableLabel: 'Grupės {group} lentelė', treeLabel: 'Lentelė {category}',

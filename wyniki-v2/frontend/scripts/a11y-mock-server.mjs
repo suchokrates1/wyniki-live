@@ -64,7 +64,13 @@ export function start(port = 8811) {
     try {
       const s = await stat(file);
       if (s.isDirectory()) throw new Error('dir');
-      const body = await readFile(file);
+      let body = await readFile(file);
+      // ?features=court-next stamps the same meta tag the Flask index adds for PUBLIC_FEATURES
+      const features = (url.searchParams.get('features') || '').split(',').filter((f) => /^[a-z0-9-]+$/.test(f));
+      if (mapped === '/index.html' && features.length) {
+        body = body.toString('utf8').replace('</head>', `<meta name="bt-features" content="${features.join(' ')}">
+</head>`);
+      }
       res.writeHead(200, { 'content-type': TYPES[extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
       res.end(body);
     } catch {

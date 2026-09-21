@@ -539,6 +539,24 @@ main { padding: 16px 0; }
   overflow-wrap: anywhere;
 }
 
+/* Played matches: the winner keeps the heavy type and a dot, as in the results list. */
+.schedule-card__match:has(.is-winner) .schedule-card__player:not(.is-winner),
+td:has(> .schedule-player.is-winner) .schedule-player:not(.is-winner) {
+  font-weight: 500;
+  color: var(--muted);
+}
+.schedule-card__player.is-winner::before,
+.schedule-player.is-winner::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  vertical-align: 0.15em;
+}
+
 .schedule-card__versus {
   font-size: 0.78rem;
   font-weight: 700;
@@ -2859,4 +2877,53 @@ button.hm-cat-badge:focus-visible {
     flex: 1 1 0;
     min-width: 0;
   }
+}
+
+/* Next match on a court, under its scoreboard (feature "court-next"). The board itself is untouched. */
+.court-next {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--text);
+}
+.court-next__row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.court-next__label {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.court-next__time {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.court-next__names {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.court-next__meta {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.court-next--last .court-next__names {
+  font-weight: 400;
+  color: var(--muted);
 }

@@ -124,6 +124,7 @@ export function createLiveRuntimeView() {
           if (prev?.match_status?.active && !data?.match_status?.active) {
             this.fetchHistory();
             if (this.liveSubTab === 'schedule') this.fetchSchedule();
+            else this.refreshCourtNextSchedule();
           }
         } catch { /* ignore parse errors */ }
       });

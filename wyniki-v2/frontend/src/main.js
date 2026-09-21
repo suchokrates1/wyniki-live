@@ -108,6 +108,10 @@ Alpine.data('tennisApp', () => ({
     this.fetchHistory();
     this.fetchTournaments();
     this.fetchAllPlayers();
+    if (this.courtNextEnabled()) {
+      this.refreshCourtNextSchedule();
+      setInterval(() => this.refreshCourtNextSchedule(), 3 * 60 * 1000);
+    }
   },
 
   /* --- Hash routing --- */

@@ -91,10 +91,16 @@ export function flattenScheduleDay(day) {
 export function buildScheduleGroups(day, options = {}) {
   const mode = options.sortMode === 'category' ? 'category' : 'court';
   const query = normalizeScheduleText(options.search);
+  if (query) {
+    // One list per day while searching, so a player's matches on other courts are not hidden behind tabs.
+    const found = flattenScheduleDay(day).filter((match) => scheduleMatchMatchesQuery(match, query, options));
+    if (found.length === 0) return [];
+    found.sort((left, right) => compareScheduleMatches(left, right, options));
+    return [{ id: 'search', title: options.searchResultsLabel || 'Wyniki wyszukiwania', sortOrder: 0, matches: found }];
+  }
   const groups = new Map();
 
   for (const match of flattenScheduleDay(day)) {
-    if (query && !scheduleMatchMatchesQuery(match, query, options)) continue;
     const meta = getScheduleGroupMeta(match, mode, options);
     if (!groups.has(meta.key)) {
       groups.set(meta.key, {

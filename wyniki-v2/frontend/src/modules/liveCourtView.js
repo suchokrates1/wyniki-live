@@ -19,7 +19,9 @@ import {
 import { formatDuration } from '../shared/date.js';
 import { calcMatchTime } from '../shared/matchTime.js';
 import { formatTemplate as fmt } from '../shared/text.js';
-import { formatTeamLabelForWrap, isTeamDisplayName, TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
+import { formatTeamLabelForWrap, isTeamDisplayName, lastNameToken, splitTeamDisplayName, TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
+import { publicApi } from '../api/publicApi.js';
+import { nextMatchForCourt, pageFeatures } from './courtNext.js';
 import { renderTvScoreboard } from '../shared/tvScoreboard.js';
 import { sanitizeWatchUrl } from '../shared/watchUrl.js';
 
@@ -261,6 +263,53 @@ export function createLiveCourtView() {
 
     courtWatchUrl(courtId) {
       return sanitizeWatchUrl(this.courts[courtId]?.watch_url);
+    },
+
+    courtNextEnabled() {
+      if (!this._pageFeatures) this._pageFeatures = pageFeatures();
+      return this._pageFeatures.has('court-next');
+    },
+
+    /** Refresh the schedule behind the court strips without the schedule tab's spinner or announcement. */
+    async refreshCourtNextSchedule() {
+      if (!this.courtNextEnabled()) return;
+      try {
+        const data = await publicApi.getActiveSchedule();
+        if (data) this.scheduleData = data;
+      } catch { /* keep the last schedule */ }
+    },
+
+    courtNext(courtId) {
+      if (!this.courtNextEnabled()) return null;
+      const court = this.courts[courtId];
+      const live = !!court?.match_status?.active;
+      const liveNames = live
+        ? ['A', 'B'].map((side) => court?.[side]?.full_name || court?.[side]?.surname || '')
+        : null;
+      const next = nextMatchForCourt(this.scheduleData, courtId, { liveNames });
+      // an idle court with nothing left today has nothing to announce
+      if (next?.last && !live) return null;
+      return next;
+    },
+
+    courtNextShortName(name, otherName) {
+      const full = this.scheduleParticipantName(name, otherName);
+      const pair = splitTeamDisplayName(full);
+      if (pair) return `${lastNameToken(pair[0])} / ${lastNameToken(pair[1])}`;
+      return lastNameToken(full) || full;
+    },
+
+    courtNextNames(next) {
+      if (!next || next.last) return '';
+      return `${this.courtNextShortName(next.player1_name, next.player2_name)} – ${this.courtNextShortName(next.player2_name, next.player1_name)}`;
+    },
+
+    courtNextSpoken(next) {
+      const text = this.tr().courtNext || {};
+      if (!next) return '';
+      if (next.last) return text.last || '';
+      const time = next.scheduled_time ? `${next.scheduled_time}, ` : '';
+      return `${text.spoken || text.label || ''}: ${time}${this.scheduleMatchupLabel(next)}. ${this.scheduleCategoryLabel(next)}`;
     },
 
     renderLiveTvScoreboard(courtId) {

@@ -4,13 +4,14 @@
  * does lost on the way — the live scoreboard in particular stays exactly as it is.
  */
 import AxeBuilder from '@axe-core/playwright';
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
 const LIVE = !!process.env.PUBLIC_MOBILE_BASE_URL;
 
-async function open(page, hash, lang = 'pl') {
+async function open(page, hash, lang = 'pl', query = '') {
   await page.addInitScript((code) => { try { localStorage.setItem('lang', code); } catch { /* private mode */ } }, lang);
-  await page.goto(`/?lang=${lang}#${hash}`);
+  await page.goto(`/?lang=${lang}${query}#${hash}`);
   await expect(page.locator('.tab-bar')).toBeVisible();
   await page.waitForFunction(() => ![...document.querySelectorAll('.loading-state')].some((el) => el.offsetParent !== null), undefined, { timeout: 15_000 }).catch(() => {});
   await page.waitForTimeout(300);
@@ -309,4 +310,104 @@ test('footer: the privacy policy on the left, "powered by" on the right, no last
   expect(Math.abs(legal.y + legal.height / 2 - (powered.y + powered.height / 2)), 'one line').toBeLessThanOrEqual(8);
   expect(legal.x).toBeLessThan(bar.x + bar.width / 3);
   expect(powered.x + powered.width).toBeGreaterThan(bar.x + (bar.width * 2) / 3);
+});
+
+
+/* ---- next match under each court, search on one list, played winner ---- */
+
+const SNAPSHOT = JSON.parse(readFileSync(new URL('../../scripts/a11y-fixtures/snapshot.json', import.meta.url), 'utf8'));
+
+function localDate() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function scheduleForToday() {
+  const today = localDate();
+  const row = (id, court, time, p1, p2, extra = {}) => ({
+    id, court_id: court, court_label: court.split('-')[1], court_display_order: Number(court.split('-')[1]),
+    day_date: today, scheduled_time: time, status: 'planned', has_result: false, match_status: '', winner_name: '',
+    player1_name: p1, player2_name: p2, category_name: 'B2 Mężczyźni', group_name: 'B2 Mężczyźni', phase: 'Grupowa',
+    notes_public: '', score_text: '', result_note: '', ...extra,
+  });
+  return {
+    tournament: { id: 28, name: 'Test' },
+    days: [{
+      date: today,
+      categories: [{
+        name: 'B2 Mężczyźni',
+        matches: [
+          row(1, 't28-1', '09:00', 'Michał Stypa', 'Emil Stopierzyński', { status: 'completed', has_result: true, match_status: 'finished', winner_name: 'Emil Stopierzyński', score_text: '2:4 3:4(5)' }),
+          row(2, 't28-1', '10:00', 'Anna Nowak', 'Béla Kovács'),
+          row(3, 't28-1', '11:30', 'Łukasz Konklewski', 'Michał Orchowski'),
+          row(4, 't28-2', '12:00', 'Mateusz Ciborowski', 'Michał Stypa'),
+        ],
+      }],
+    }],
+  };
+}
+
+async function routeToday(page) {
+  // the app adds a cache-busting query (?_=...)
+  await page.route(/\/api\/tournament\/schedule(\?|$)/, (route) => route.fulfill({ json: scheduleForToday() }));
+  await page.route(/\/api\/snapshot(\?|$)/, (route) => route.fulfill({ json: SNAPSHOT }));
+}
+
+test('next match: the live court names what follows, an idle court what it waits for', async ({ page }) => {
+  await routeToday(page);
+  await open(page, 'live/scores', 'pl', LIVE ? '' : '&features=court-next');
+  const enabled = await page.locator('meta[name="bt-features"][content~="court-next"]').count();
+  test.skip(!enabled, 'court-next is switched off on this stack');
+  const live = page.locator('#kort-t28-1 .court-next');
+  await expect(live).toBeVisible();
+  await expect(live.locator('.court-next__time')).toHaveText('11:30');
+  await expect(live.locator('.court-next__names')).toHaveText('Konklewski – Orchowski');
+  await expect(live.locator('.sr-only')).toContainText('Łukasz Konklewski');
+  const idle = page.locator('#kort-t28-2 .court-next');
+  await expect(idle.locator('.court-next__names')).toHaveText('Ciborowski – Stypa');
+  await expect(page.locator('#kort-t28-3 .court-next')).toHaveCount(0);
+  const box = await live.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box.x + box.width, 'the strip fits the phone').toBeLessThanOrEqual(viewport.width + 1);
+  const found = await new AxeBuilder({ page }).include('#kort-t28-1').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+  expect(found.violations.map((v) => v.id)).toEqual([]);
+});
+
+test('next match stays off without the feature switch', async ({ page }) => {
+  test.skip(LIVE, 'the mock decides the switch');
+  await routeToday(page);
+  await open(page, 'live/scores');
+  await expect(page.locator('#kort-t28-1')).toBeVisible();
+  await expect(page.locator('.court-next')).toHaveCount(0);
+});
+
+test('schedule search lists a player\'s matches on every court in one list, with the court shown', async ({ page }) => {
+  await routeToday(page);
+  await open(page, 'live/schedule');
+  await page.locator('.schedule-search__input').fill('Stypa');
+  await page.waitForTimeout(300);
+  await expect(page.locator('.schedule-switcher__tab:visible')).toHaveText(['Wyniki wyszukiwania']);
+  const cards = page.locator('.schedule-card:visible');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.nth(0).locator('.schedule-card__time')).toHaveText('09:00');
+  await expect(cards.nth(1).locator('.schedule-card__time')).toHaveText('12:00');
+  await expect(cards.nth(1).locator('.schedule-card__badge').first()).toHaveText(/2/);
+});
+
+test('a played match in the schedule marks its winner for sight and for screen readers', async ({ page }) => {
+  await routeToday(page);
+  await open(page, 'live/schedule');
+  const card = page.locator('.schedule-card:visible').filter({ hasText: 'Stopierzyński' }).first();
+  await expect(card).toBeVisible();
+  const winner = card.locator('.schedule-card__player.is-winner');
+  await expect(winner).toHaveText('Emil Stopierzyński');
+  const loser = card.locator('.schedule-card__player:not(.is-winner)');
+  const [winWeight, loseWeight] = await Promise.all([
+    winner.evaluate((el) => Number(getComputedStyle(el).fontWeight)),
+    loser.evaluate((el) => Number(getComputedStyle(el).fontWeight)),
+  ]);
+  expect(winWeight).toBeGreaterThan(loseWeight);
+  await expect(card).toHaveAttribute('aria-label', /Zwycięzca: Emil Stopierzyński/);
+  const found = await new AxeBuilder({ page }).include('.schedule-cards').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+  expect(found.violations.map((v) => v.id)).toEqual([]);
 });

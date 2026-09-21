@@ -59,6 +59,7 @@ export function createScheduleView() {
       return {
         sortMode: this.scheduleSortMode,
         search: this.scheduleSearch,
+        searchResultsLabel: this.tr().scheduleExtra?.searchResults,
         lang: this.lang || 'pl',
         labels: this.scheduleText(),
         courtLabelPattern: this.tr().courtLabel || 'Kort {court}',
@@ -241,6 +242,13 @@ export function createScheduleView() {
       return this.resolveBracketName(winner) || winner;
     },
 
+    /** True for the side the server names as winner (doubles match regardless of partner order). */
+    scheduleIsWinner(match, name) {
+      if (!this.scheduleMatchHasResult(match)) return false;
+      const key = (value) => String(value || '').split(' / ').map((part) => part.trim().toLocaleLowerCase()).sort().join('|');
+      return !!match?.winner_name && !!name && key(match.winner_name) === key(name);
+    },
+
     scheduleStatusDisplay(match) {
       if (this.scheduleMatchHasResult(match)) {
         const score = this.scheduleMatchScore(match);
@@ -268,6 +276,10 @@ export function createScheduleView() {
         `${labels.phase}: ${this.translatePhase(match?.phase || '')}`,
         match?.notes_public ? `${labels.notes}: ${match.notes_public}` : '',
         `${labels.status}: ${this.scheduleStatusLabel(match?.status)}`,
+        this.scheduleMatchHasResult(match) ? this.scheduleMatchScore(match) : '',
+        this.scheduleMatchHasResult(match) && this.scheduleMatchWinnerName(match)
+          ? `${this.tr().scheduleExtra?.winner || 'Zwycięzca'}: ${this.scheduleMatchWinnerName(match)}`
+          : '',
       ].filter(Boolean).join('. ');
     },
   };

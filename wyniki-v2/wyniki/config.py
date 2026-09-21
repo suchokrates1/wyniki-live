@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"  # "json" or "console"
     
+    # Public-site features still being tried out, comma separated (e.g. "court-next").
+    # Set per stack in compose; production leaves it empty.
+    public_features: str = ""
+
     # History
     match_history_size: int = 100
     log_entries_per_court: int = 50

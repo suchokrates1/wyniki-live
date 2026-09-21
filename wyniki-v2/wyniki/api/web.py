@@ -1,8 +1,17 @@
 """Web page routes for v2."""
+import re
+
 from flask import Blueprint, send_from_directory
 from pathlib import Path
 
 blueprint = Blueprint('web', __name__)
+
+
+def public_feature_list() -> list[str]:
+    """Features switched on for this stack; only [a-z0-9-] names reach the page."""
+    from ..config import settings
+    raw = str(settings.public_features or "")
+    return [f for f in (part.strip().lower() for part in raw.split(",")) if f and re.fullmatch(r"[a-z0-9-]+", f)]
 
 # Get the static directory (where built HTML files are located)
 STATIC_DIR = Path(__file__).parent.parent / 'static'
@@ -14,6 +23,12 @@ APP_ROOT = Path(__file__).parent.parent.parent
 def index():
     """Serve main page."""
     response = send_from_directory(STATIC_DIR, 'index.html')
+    features = public_feature_list()
+    if features:
+        response.direct_passthrough = False
+        html = response.get_data(as_text=True)
+        meta = f'<meta name="bt-features" content="{" ".join(features)}">'
+        response.set_data(html.replace('</head>', f'{meta}\n</head>', 1))
     response.headers['Content-Type'] = 'text/html; charset=utf-8'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'

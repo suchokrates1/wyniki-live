@@ -28,6 +28,8 @@ services:
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
       - UNO_BASE=${UNO_BASE:-https://app.overlays.uno/apiv2/controlapps}
+      # Public-site features on trial here before production (prod compose leaves it unset).
+      - PUBLIC_FEATURES=court-next
       # Intentionally unset: KORT*_ID / UNO_AUTH_BEARER — test must not write prod overlays.
     restart: unless-stopped
     labels:
