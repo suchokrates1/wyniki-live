@@ -9,6 +9,17 @@ def client(tmp_path, monkeypatch):
     from wyniki.config import settings
 
     settings.database_path = str(db_path)
+    # The page itself comes from the Vite build, which CI does not run for the backend
+    # job; a stand-in with the same <head> is all the meta-tag stamping needs.
+    from wyniki.api import web
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text(
+        "<!doctype html><html><head><title>Wyniki</title></head><body></body></html>",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(web, "STATIC_DIR", static_dir)
     from app import create_app
 
     app = create_app()
