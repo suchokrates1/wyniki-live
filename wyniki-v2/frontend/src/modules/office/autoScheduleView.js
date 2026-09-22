@@ -357,30 +357,6 @@ export function createOfficeAutoScheduleView() {
       return `${String(Number(match[1])).padStart(2, '0')}:${match[2]}`;
     },
 
-    autoGridTimes() {
-      const times = new Set();
-      const start = this.autoNormalizeTime(this.autoStartTime) || '09:30';
-      times.add(start);
-      for (const court of this.autoCourts || []) {
-        for (const entry of this.autoBoardEntries(court.kort_id)) {
-          const time = this.autoNormalizeTime(entry.scheduled_time);
-          if (time) times.add(time);
-        }
-      }
-      let sorted = Array.from(times).sort();
-      const min = sorted[0] || start;
-      const last = sorted[sorted.length - 1] || start;
-      const end = this.autoAddMinutes(last, sorted.length > 1 ? 30 : 30 * 8);
-      let cursor = min;
-      let guard = 0;
-      while (cursor <= end && guard < 36) {
-        times.add(cursor);
-        cursor = this.autoAddMinutes(cursor, 30);
-        guard += 1;
-      }
-      return Array.from(times).sort();
-    },
-
     autoEntryAt(courtId, time) {
       const want = this.autoNormalizeTime(time);
       return this.autoBoardEntries(courtId).find(

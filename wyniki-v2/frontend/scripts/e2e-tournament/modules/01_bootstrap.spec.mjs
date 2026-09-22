@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, cleanup,
-  adminHeaders, apiUrl, marker, samplePlayers, launchBrowser,
+  apiUrl, marker, samplePlayers, launchBrowser,
 } from '../fixtures.js';
 import { AdminBootstrapPage } from '../pages/adminBootstrap.js';
 

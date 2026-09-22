@@ -8,7 +8,7 @@ import {
   playerMatchesDoublesCategory,
   playerMatchesTournamentCategory,
 } from '../../shared/categories.js';
-import { DEFAULT_PLAY_FORMAT, PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
+import { PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
 
 export function createOfficePlayersView() {
   return {

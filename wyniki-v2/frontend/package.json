@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lint": "eslint .",
     "icons:umpire": "node scripts/generate-umpire-icons.mjs",
     "build": "npm run icons:umpire && vite build && node scripts/inject-umpire-sw-precache.mjs",
     "preview": "vite preview",
@@ -42,6 +43,8 @@
     "@tailwindcss/typography": "^0.5.10",
     "autoprefixer": "^10.4.16",
     "baseline-browser-mapping": "^2.10.32",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "vite": "^8.0.14"

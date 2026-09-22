@@ -1,4 +1,4 @@
-import { MatchConfig, StatsMode } from './match-engine/models.js';
+import { MatchConfig } from './match-engine/models.js';
 
 export const DEFAULT_MATCH_CONFIG_FORM = Object.freeze({
   gamesPerSet: 4,

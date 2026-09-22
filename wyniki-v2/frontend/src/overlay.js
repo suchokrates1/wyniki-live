@@ -1,16 +1,11 @@
 import {
-  SCOREBOARD_HOLD_MS,
   SCOREBOARD_SLIDE_MS,
   cloneCourt,
-  courtHasPlayers,
   courtIdentityKey,
-  courtSideName,
   holdRemainingMs,
-  isPlaceholderName,
   isScoreboardHeld,
-  parseFinishedAtMs,
 } from './shared/scoreboardHold.js';
-import { calcMatchTime, parseTimestampSeconds, toFiniteSeconds } from './shared/matchTime.js';
+import { calcMatchTime } from './shared/matchTime.js';
 import { overlayCategoryLabel, overlayCourtLabel, overlayPhaseLabel } from './shared/overlayLabel.js';
 import { abbreviatePersonName } from './shared/teamDisplay.js';
 
@@ -132,11 +127,6 @@ function resolveCourtState(courtToken) {
         }
     }
     return courts[courtToken] || {};
-}
-
-function getTrackedCourtIds() {
-    var tournamentCourtIds = getTournamentCourtEntries().map(function(entry) { return entry.kortId; });
-    return tournamentCourtIds.length ? tournamentCourtIds : allCourtIds;
 }
 
 function tbSuperscripts(setInfo) {
