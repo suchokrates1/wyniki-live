@@ -165,34 +165,6 @@ export function getStatsRowsPaired(stats, labels = {}) {
   return rows;
 }
 
-export function getStatsRows(stats, playerKey, otherPlayerKey, labels = {}) {
-  if (!stats || !stats[playerKey]) return [];
-  const player = stats[playerKey];
-  const opponent = stats[otherPlayerKey] || {};
-  const mode = (stats.stats_mode || 'ADVANCED').toUpperCase();
-  const rows = [];
-
-  if (mode === 'ADVANCED') rows.push({ label: labels.aces || 'Aces', value: player.aces ?? 0 });
-  rows.push({ label: labels.doubleFaults || 'Double faults', value: player.double_faults ?? 0 });
-  rows.push({ label: labels.winners || 'Winners', value: player.winners ?? 0 });
-  if (mode === 'ADVANCED') {
-    rows.push({ label: labels.forcedErrors || 'Forced errors', value: player.forced_errors ?? 0 });
-    rows.push({ label: labels.unforcedErrors || 'Unforced errors', value: player.unforced_errors ?? 0 });
-  }
-  if (player.first_serves > 0 || player.first_serve_percentage > 0) {
-    if (mode === 'ADVANCED' && player.first_serves > 0) {
-      rows.push({ label: labels.firstServe || '1st serve', value: `${player.first_serves_in ?? 0}/${player.first_serves}` });
-    }
-    rows.push({ label: labels.firstServePct || '1st serve %', value: firstServePercentage(player) });
-  }
-  if (mode === 'ADVANCED') {
-    const pointsWon = (player.aces ?? 0) + (player.winners ?? 0) + (opponent.double_faults ?? 0) + (opponent.forced_errors ?? 0) + (opponent.unforced_errors ?? 0);
-    rows.push({ label: labels.pointsWon || 'Points won', value: pointsWon });
-  }
-
-  return rows;
-}
-
 export function matchEndedDateKey(match) {
   const raw = match?.ended_ts || match?.timestamp || match?.started_at || '';
   const matchDate = String(raw).match(/^(\d{4}-\d{2}-\d{2})/);

@@ -58,7 +58,7 @@ import {
   shouldShowFullscreenButton,
   wasPwaGateDismissed,
 } from './pwaInstallGate.js';
-import { TUTORIAL_COURT_1, TUTORIAL_PIN, tutorialCatalog } from './tutorial/catalog.js';
+import { TUTORIAL_COURT_1, TUTORIAL_MATCH_UUID, TUTORIAL_PIN, tutorialCatalog } from './tutorial/catalog.js';
 import { loadTutorialSnapshot } from './tutorial/presets.js';
 import {
   tutorialCanAdvance,
@@ -859,7 +859,7 @@ function createUmpireApp() {
           : null,
       });
       if (this.tutorialMode) {
-        draft.clientMatchUuid = 'tutorial-demo-match';
+        draft.clientMatchUuid = TUTORIAL_MATCH_UUID;
         this.draft = draft;
         this.match.initialize(createMatchFromDraft(draft));
         this.tutorialNote('startMatch');
