@@ -184,7 +184,7 @@ def _normalize_import_gender(value: Any) -> str:
     }
     return mapping.get(
         raw,
-        'K' if raw.startswith('kob') else 'M' if raw.startswith('męż') or raw.startswith('mez') else '',
+        'K' if raw.startswith('kob') else 'M' if raw.startswith(('męż', 'mez')) else '',
     )
 
 

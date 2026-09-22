@@ -128,7 +128,6 @@ def test_an_older_tournament_does_not_override_a_newer_class(app):
 
 
 def test_a_manual_class_change_is_kept_in_the_history(app):
-    from wyniki import database
 
     client = app.test_client()
     created = client.post("/admin/api/global-players", json={"first_name": "Eva", "last_name": "Manual", "gender": "F", "category": "B1"}).get_json()

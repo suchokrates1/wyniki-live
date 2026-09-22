@@ -1,0 +1,4 @@
+# Tools the CI and local checks need; not installed in the production image.
+-r requirements.txt
+pytest==8.3.4
+ruff==0.16.8

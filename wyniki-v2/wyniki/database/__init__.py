@@ -51,6 +51,7 @@ from .players import (
 )
 
 from .schedule import (
+    set_schedule_entry_court,
     DEFAULT_GROUP_SCHEDULE_NOTE_PL,
     apply_schedule_notes,
     ensure_group_rematch_schedule_entries,

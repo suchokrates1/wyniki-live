@@ -532,19 +532,9 @@ def _restore_or_clear_court(
 def _move_schedule_court(match: Match, new_court_id: str) -> None:
     if not match.schedule_id:
         return
-    from ..database import db_conn
+    from ..database import set_schedule_entry_court
 
-    label = _court_label(new_court_id)
-    with db_conn() as conn:
-        conn.execute(
-            """
-            UPDATE tournament_schedule
-            SET court_id = ?, court_label = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            (new_court_id, label, utc_now_iso(), match.schedule_id),
-        )
-        conn.commit()
+    set_schedule_entry_court(match.schedule_id, new_court_id, _court_label(new_court_id))
 
 
 def _court_label(kort_id: str) -> str:

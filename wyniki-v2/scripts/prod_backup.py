@@ -39,6 +39,12 @@ archive="$target_dir/wyniki-data-$timestamp.tar.gz"
 checksum="$archive.sha256"
 metadata="$archive.json"
 mkdir -p "$target_dir"
+# SQLite runs in WAL mode: fold the journal into the database file first, so the archived
+# volume holds a complete database even if tar reads the -wal file a moment later.
+container=$(docker ps --filter name=wyniki-tenis-v2 --format '{{{{.Names}}}}' | head -1)
+if [ -n "$container" ]; then
+    docker exec "$container" python -c 'import sqlite3; c = sqlite3.connect("/data/wyniki.sqlite3"); c.execute("PRAGMA wal_checkpoint(TRUNCATE)"); c.close()'
+fi
 docker run --rm \
     -v "$volume_name:/source:ro" \
     -v "$target_dir:/backup" \

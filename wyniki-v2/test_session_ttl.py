@@ -14,7 +14,6 @@ def test_office_and_admin_session_lengths():
 def test_office_token_older_than_a_day_is_still_accepted(full_app_with_temp_db, monkeypatch):
     from werkzeug.security import generate_password_hash
     from wyniki import database
-    from wyniki.services import api_auth
     import itsdangerous.timed as timed
 
     database.insert_tournament(

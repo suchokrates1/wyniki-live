@@ -214,10 +214,7 @@ def delete_global_player(gp_id: int):
 
     db.session.delete(gp)
     db.session.commit()
-    with classifications.db_conn() as conn:
-        conn.execute("DELETE FROM player_classifications WHERE global_player_id = ?", (gp_id,))
-        conn.execute("DELETE FROM classification_reviews WHERE global_player_id = ?", (gp_id,))
-        conn.commit()
+    classifications.delete_classifications(gp_id)
     logger.info("global_player_deleted", id=gp_id)
     return jsonify({'message': 'Player deleted'})
 

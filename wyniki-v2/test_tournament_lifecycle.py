@@ -3103,7 +3103,7 @@ def _office_headers(client, password):
 def test_office_autoschedule_day_mode_leaves_overflow_unassigned(full_app_with_temp_db):
     from wyniki import database
 
-    tournament_id = _planner_cup(database, "Day Window Cup", "window")
+    _planner_cup(database, "Day Window Cup", "window")
     client = full_app_with_temp_db.test_client()
     headers = _office_headers(client, "window")
     courts = [court["kort_id"] for court in client.get("/api/office/1/autoschedule/config", headers=headers).get_json()["courts"]]
@@ -3344,8 +3344,8 @@ def test_office_manual_knockout_result_from_schedule(full_app_with_temp_db):
         office_password_hash=generate_password_hash("ko-manual"),
     )
     database.create_tournament_courts(tournament_id, 2)
-    p1 = database.insert_player(tournament_id, "Final One", "B1", "DE", first_name="Final", last_name="One", gender="M")
-    p2 = database.insert_player(tournament_id, "Final Two", "B1", "DE", first_name="Final", last_name="Two", gender="M")
+    database.insert_player(tournament_id, "Final One", "B1", "DE", first_name="Final", last_name="One", gender="M")
+    database.insert_player(tournament_id, "Final Two", "B1", "DE", first_name="Final", last_name="Two", gender="M")
 
     schedule = database.upsert_tournament_schedule_entries(tournament_id, [{
         "day_date": "2026-07-19",

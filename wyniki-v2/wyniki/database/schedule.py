@@ -569,6 +569,20 @@ def upsert_tournament_schedule_entries(tournament_id: int, entries: List[Dict[st
         conn.commit()
     return fetch_tournament_schedule(tournament_id)
 
+def set_schedule_entry_court(schedule_id: int, court_id: str, court_label: str) -> None:
+    """Point one schedule entry at another court (director move)."""
+    with db_conn() as conn:
+        conn.execute(
+            """
+            UPDATE tournament_schedule
+            SET court_id = ?, court_label = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (court_id, court_label, _utc_now(), int(schedule_id)),
+        )
+        conn.commit()
+
+
 def update_tournament_schedule_entry(tournament_id: int, schedule_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Patch one schedule entry."""
     allowed_fields = {

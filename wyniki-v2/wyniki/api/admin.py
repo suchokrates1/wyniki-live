@@ -300,7 +300,7 @@ def clear_demo():
     # If demo overlay was active, broadcast real courts so overlays recover
     if was_active:
         real_snapshot = court_manager.serialize_all_states()
-        for kort_id, state in real_snapshot.items():
+        for kort_id in real_snapshot:
             payload = {
                 "type": "state_update",
                 "kort_id": kort_id,

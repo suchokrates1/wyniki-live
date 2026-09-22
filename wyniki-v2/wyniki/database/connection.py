@@ -20,15 +20,36 @@ def website_visible_sql(alias: str = "") -> str:
     prefix = f"{alias}." if alias else ""
     return f"COALESCE({prefix}is_public, 1) = 1 AND COALESCE({prefix}is_simulation, 0) = 0"
 
+#: Seconds a writer waits for the other connection (raw sqlite3 vs SQLAlchemy) to finish.
+SQLITE_BUSY_TIMEOUT_SECONDS = 10
+
+
+def apply_sqlite_pragmas(connection) -> None:
+    """Settings both connection paths need.
+
+    The app reaches the same file through raw sqlite3 and through SQLAlchemy, so a
+    reader and a writer are regularly open at once. WAL lets them work in parallel and
+    busy_timeout makes the loser wait instead of raising "database is locked".
+    """
+    connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA journal_mode = WAL")
+    connection.execute("PRAGMA synchronous = NORMAL")
+    connection.execute(f"PRAGMA busy_timeout = {int(SQLITE_BUSY_TIMEOUT_SECONDS * 1000)}")
+
+
 @contextmanager
 def db_conn() -> Generator[sqlite3.Connection, None, None]:
     """Context manager for database connections."""
     db_path = Path(settings.database_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    connection = sqlite3.connect(str(db_path), check_same_thread=False)
+
+    connection = sqlite3.connect(
+        str(db_path),
+        check_same_thread=False,
+        timeout=SQLITE_BUSY_TIMEOUT_SECONDS,
+    )
     connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
+    apply_sqlite_pragmas(connection)
     try:
         yield connection
     finally:

@@ -1,0 +1,16 @@
+# Lint rules the CI enforces. Deliberately narrow: bugs and dead code, not style.
+line-length = 140
+target-version = "py311"
+
+[lint]
+select = ["E9", "F", "B", "PIE"]
+ignore = [
+    "B023",  # closures over loop variables that are called inside the same iteration
+    "B905",  # zip(strict=) — the sequences are built together and always match
+]
+
+[lint.per-file-ignores]
+# The package facade exists to re-export; unused-import is what it does for a living.
+"wyniki/database/__init__.py" = ["F401"]
+# pytest fixtures are imported for their side effect.
+"test_*.py" = ["F811"]

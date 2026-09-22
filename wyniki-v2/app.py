@@ -16,6 +16,7 @@ from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy import event
 
 from wyniki.config import logger, settings
+from wyniki.database.connection import apply_sqlite_pragmas
 from wyniki.db_models import db
 from wyniki.api import courts, admin, health, stream, web, office, admin_auth
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp, tournaments_public_bp
@@ -27,10 +28,13 @@ from wyniki.services.api_auth import require_admin_access
 from wyniki.init_state import initialize_state
 
 
-def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:
+def _apply_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
+    """SQLAlchemy connections get the same WAL / busy-timeout settings as raw sqlite3."""
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys = ON")
-    cursor.close()
+    try:
+        apply_sqlite_pragmas(cursor)
+    finally:
+        cursor.close()
 
 
 def create_app() -> Flask:
@@ -52,7 +56,7 @@ def create_app() -> Flask:
     
     # Create tables
     with app.app_context():
-        event.listen(db.engine, "connect", _enable_sqlite_foreign_keys)
+        event.listen(db.engine, "connect", _apply_sqlite_pragmas)
         db.create_all()
         initialize_state()
     

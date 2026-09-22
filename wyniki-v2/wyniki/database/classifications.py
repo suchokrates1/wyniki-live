@@ -317,6 +317,14 @@ def move_classifications(source_id: int, target_id: int) -> None:
         conn.commit()
 
 
+def delete_classifications(global_player_id: int) -> None:
+    """Drop the classification history and review rows of a deleted global player."""
+    with db_conn() as conn:
+        conn.execute("DELETE FROM player_classifications WHERE global_player_id = ?", (int(global_player_id),))
+        conn.execute("DELETE FROM classification_reviews WHERE global_player_id = ?", (int(global_player_id),))
+        conn.commit()
+
+
 def played_category_labels(player_entry_ids: Iterable[int]) -> Dict[int, str]:
     """{tournament_id: singles category label} for tournament entries of one person."""
     ids = [int(value) for value in player_entry_ids if value]

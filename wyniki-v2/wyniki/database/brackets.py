@@ -595,11 +595,11 @@ def _is_knockout_placeholder_name(name: Optional[str]) -> bool:
     if not value:
         return True
     lowered = value.lower()
-    if lowered.startswith("zwycięzca pf") or lowered.startswith("przegrany pf"):
+    if lowered.startswith(("zwycięzca pf", "przegrany pf")):
         return True
-    if lowered.startswith("zwycięzca:") or lowered.startswith("przegrany:"):
+    if lowered.startswith(("zwycięzca:", "przegrany:")):
         return True
-    if lowered.startswith("winner sf") or lowered.startswith("loser sf"):
+    if lowered.startswith(("winner sf", "loser sf")):
         return True
     if re.match(r"^\d+[A-Za-z]$", value):
         return True

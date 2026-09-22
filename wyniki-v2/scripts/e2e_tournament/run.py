@@ -90,7 +90,7 @@ def cmd_up() -> bool:
 def cmd_down():
     """Stop and remove the E2E container (local compose only)."""
     if "localhost" not in BASE_URL and "127.0.0.1" not in BASE_URL:
-        print(f"[down] Remote BASE_URL — skip compose down (purge via office/android cleanup).")
+        print("[down] Remote BASE_URL — skip compose down (purge via office/android cleanup).")
         return
     print("[down] Stopping E2E container...")
     _run(_compose_cmd("down", "-v"), check=False)
