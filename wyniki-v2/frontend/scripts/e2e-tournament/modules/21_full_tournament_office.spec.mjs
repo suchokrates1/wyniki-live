@@ -775,12 +775,20 @@ export default async function run() {
     await openView('Komunikat dla zawodników');
     const bannerText = `Mecze ${tag} startują o 9:00`;
     const publicInfo = () => fetch(new URL(`/api/tournament/${tournamentId}/info`, BASE_URL)).then((response) => response.json());
-    await page.locator('#office-quick-info-message').fill(bannerText);
+    // Publish only once Alpine holds the typed text: a dashboard refresh landing between
+    // the keystrokes and the click would otherwise publish the previous banner.
+    const typeBanner = async (text) => {
+      await page.locator('#office-quick-info-message').fill(text);
+      await waitUntil('banner text in the form', async () => (
+        await page.evaluate(() => Alpine.$data(document.body).quickInfoMessage)
+      ) === text);
+    };
+    await typeBanner(bannerText);
     await page.locator('#office-quick-info-active').check();
     await page.getByRole('button', { name: 'Opublikuj', exact: true }).click();
     await waitUntil('banner public', async () => (await publicInfo()).message === bannerText);
     const editedBanner = `${bannerText} — kort 2 opóźniony o 20 minut`;
-    await page.locator('#office-quick-info-message').fill(editedBanner);
+    await typeBanner(editedBanner);
     await page.getByRole('button', { name: 'Opublikuj', exact: true }).click();
     await waitUntil('banner edited', async () => (await publicInfo()).message === editedBanner).catch(async (error) => {
       const ui = await page.evaluate(() => {

@@ -148,6 +148,8 @@ export default async function run() {
     for (const raw of strings) {
       let text = raw;
       for (const value of dataStrings) text = text.split(value).join(' ');
+      // Names seeded by any E2E module (including leftovers of a failed one) are data, not UI.
+      if (/E2E-\d+/.test(text)) continue;
       if (KEY_PATTERN.test(text) && !/https?:|@/.test(text)) record(lang, where, raw, 'raw key');
       if (lang === 'pl') continue;
       const polishWord = WORD_PATTERN.exec(text)?.[2];
