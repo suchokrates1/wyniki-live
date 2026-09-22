@@ -18,11 +18,9 @@ Otwórz folder `wyniki-live/docs/przewodniki/` jako vault.
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Deployment procedures (not in git)
 - **[docs/traefik-optimization-proposal.md](docs/traefik-optimization-proposal.md)** - Reverse proxy setup (not in git)
 - **[UMPIRE_API.md](UMPIRE_API.md)** - API endpoints documentation
-- **[INTEGRATION.md](INTEGRATION.md)** - Integration guide with Umpire App
-- **[docs/ARCHITECTURE_FREEZE_MAY2026.md](docs/ARCHITECTURE_FREEZE_MAY2026.md)** - pre-tournament freeze policy
+- **[docs/ARCHITECTURE_FREEZE_PRE_EVENT.md](docs/ARCHITECTURE_FREEZE_PRE_EVENT.md)** - pre-tournament freeze policy
 - **[docs/TOURNAMENT_READINESS_CHECKLIST.md](docs/TOURNAMENT_READINESS_CHECKLIST.md)** - operational checklist before live event
 - **[docs/PRODUCTION_RUNBOOK.md](docs/PRODUCTION_RUNBOOK.md)** - backup, smoke, deploy, rollback procedures
-- **[CLEANUP_UNO.md](CLEANUP_UNO.md)** - UNO system removal notes
 
 ## 🚀 Quick Start
 

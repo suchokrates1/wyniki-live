@@ -65,5 +65,4 @@ Checklist: `~/.config/infrastructure/keystore-rotation-checklist.md`
 
 - Quality gate: [`QUALITY_GATE.md`](QUALITY_GATE.md)
 - Court auth grace: [`COURT_AUTH_GRACE_PLAN.md`](COURT_AUTH_GRACE_PLAN.md)
-- Pre-event week: [`PRE_EVENT_FREEZE.md`](PRE_EVENT_FREEZE.md)
 - Runbook: [`PRODUCTION_RUNBOOK.md`](PRODUCTION_RUNBOOK.md)

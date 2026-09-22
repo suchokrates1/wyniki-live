@@ -187,7 +187,6 @@ Print / tick before each tournament weekend:
 - Scoring / umpire JSON contract: **frozen** w tygodniu T4 (tylko świadome hotfixy)
 - Checklist: `docs/ARCHITECTURE_FREEZE_PRE_EVENT.md`
 - Quality gate: `docs/QUALITY_GATE.md` — po większym PR zawsze `run.py full --skip-android`
-- Pre-event week: `docs/PRE_EVENT_FREEZE.md`
 - Court auth grace: `docs/COURT_AUTH_GRACE_PLAN.md` (e2e dry-run done 2026-07-26)
 
 ## Local E2E Tournament Test

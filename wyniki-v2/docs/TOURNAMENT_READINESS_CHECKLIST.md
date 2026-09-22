@@ -2,7 +2,7 @@
 
 ## Two Weeks Before
 
-- Confirm architecture freeze is in effect (`docs/ARCHITECTURE_FREEZE_PRE_EVENT.md`, `docs/PRE_EVENT_FREEZE.md`).
+- Confirm architecture freeze is in effect (`docs/ARCHITECTURE_FREEZE_PRE_EVENT.md`).
 - Confirm backend baseline commit on production matches intended release.
 - Confirm Android release build installed on all umpire devices.
 - Verify all courts, PINs, tournaments, and overlays are configured.
