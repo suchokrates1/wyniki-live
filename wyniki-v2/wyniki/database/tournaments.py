@@ -17,12 +17,14 @@ PUBLIC_RESULT_GRACE_DAYS = 7
 
 # Prefer the tournament whose dates include today, then the newest start_date.
 # Without this, SQLite LIMIT 1 returns the lowest id (e.g. App Review 26 over IBTA 31).
+# date('now') is UTC. The process timezone is Warsaw in CI and UTC in the image,
+# so "today" follows localtime and matches date.today() in the tests.
 _ACTIVE_TOURNAMENT_ORDER = """
 ORDER BY
   CASE
     WHEN start_date IS NOT NULL
-     AND date('now') >= date(start_date)
-     AND (end_date IS NULL OR date('now') <= date(end_date))
+     AND date('now', 'localtime') >= date(start_date)
+     AND (end_date IS NULL OR date('now', 'localtime') <= date(end_date))
     THEN 0
     ELSE 1
   END,
@@ -37,12 +39,12 @@ _PUBLIC_ACTIVE_TOURNAMENT_ORDER = f"""
 ORDER BY
   CASE
     WHEN start_date IS NOT NULL
-     AND date('now') >= date(start_date)
-     AND (end_date IS NULL OR date('now') <= date(end_date))
+     AND date('now', 'localtime') >= date(start_date)
+     AND (end_date IS NULL OR date('now', 'localtime') <= date(end_date))
     THEN 0
     WHEN end_date IS NOT NULL
-     AND date('now') > date(end_date)
-     AND date('now') <= date(end_date, '+{PUBLIC_RESULT_GRACE_DAYS} days')
+     AND date('now', 'localtime') > date(end_date)
+     AND date('now', 'localtime') <= date(end_date, '+{PUBLIC_RESULT_GRACE_DAYS} days')
     THEN 1
     ELSE 2
   END,
