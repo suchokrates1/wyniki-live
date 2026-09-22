@@ -2,15 +2,12 @@
 import json
 import re
 import sqlite3
-from contextlib import contextmanager
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional
-from werkzeug.security import generate_password_hash
+from typing import Any, Dict, List, Optional
 
-from ..config import settings, logger
+from ..config import logger
 
 from .connection import db_conn, fetch_app_settings
+from .players import _normalize_player_name, _player_surname
 from ..services.draw_builder import (
     build_cross_draw,
     build_direct_draw,
@@ -374,21 +371,6 @@ def _knockout_phase_label(prefix: str, kind: str) -> str:
     suffix = suffixes[kind]
     prefix = (prefix or "").strip()
     return f"{prefix} — {suffix}" if prefix else suffix
-
-
-def _knockout_slot(
-    prefix: str,
-    kind: str,
-    position: int,
-    player1_name: Optional[str],
-    player2_name: Optional[str],
-) -> Dict[str, Any]:
-    return {
-        "phase": _knockout_phase_label(prefix, kind),
-        "position": position,
-        "player1_name": player1_name,
-        "player2_name": player2_name,
-    }
 
 
 def _iter_knockout_units(bracket_groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -2307,3 +2289,12 @@ def generate_knockout_from_standings(tournament_id: int) -> Dict:
     except Exception as e:
         logger.error("generate_knockout_error", error=str(e))
         return {"error": str(e)}
+
+
+# Imported last: schedule imports this module too.
+from .schedule import (  # noqa: E402
+    clear_removed_fixtures,
+    ensure_group_rematch_schedule_entries,
+    ensure_group_schedule_entries,
+    ensure_knockout_schedule_entries,
+)

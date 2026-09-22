@@ -1,11 +1,10 @@
 """Database access layer submodule."""
 import json
-import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List
 from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger

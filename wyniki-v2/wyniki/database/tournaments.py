@@ -1,14 +1,9 @@
 """Database access layer submodule."""
 import json
-import re
-import sqlite3
-from contextlib import contextmanager
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional
-from werkzeug.security import generate_password_hash
+from typing import Any, Dict, List, Optional
 
-from ..config import settings, logger
+from ..config import logger
 
 from .connection import (
     _default_simulation_office_password_hash,
@@ -303,7 +298,6 @@ def update_tournament(
 
 def mark_tournament_summary_sent(tournament_id: int, sent_at: Optional[str] = None) -> bool:
     """Persist the timestamp of a sent tournament summary email."""
-    from datetime import datetime, timezone
 
     try:
         value = sent_at or datetime.now(timezone.utc).isoformat()

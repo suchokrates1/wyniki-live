@@ -1,15 +1,11 @@
 """Database access layer submodule."""
 import json
-import re
 import sqlite3
-from contextlib import contextmanager
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional
-from werkzeug.security import generate_password_hash
+from typing import Any, Dict, List, Optional
 
-from ..config import settings, logger
+from ..config import logger
 
+from .brackets import fetch_bracket_groups
 from .connection import _utc_now, db_conn, fetch_app_settings, upsert_app_settings
 
 def _tournament_category_counts(cursor: sqlite3.Cursor, category_id: int) -> tuple[int, int, int]:

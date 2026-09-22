@@ -20,9 +20,6 @@ from ..services.draw_builder import (
 )
 from .connection import db_conn, upsert_app_settings
 
-FORMATS = ("none", "table", "cross", "main", "direct")
-
-
 def _brackets():
     from . import brackets
     return brackets
@@ -78,16 +75,6 @@ def _group_letter(name: str) -> str:
     label = str(name or "").rsplit(" — ", 1)[-1].strip()
     token = label.split()[-1] if label else ""
     return token.upper() if len(token) == 1 and token.isalpha() else label
-
-
-def _category_units(tournament_id: int) -> Dict[str, List[Dict[str, Any]]]:
-    brackets = _brackets()
-    groups = brackets.fetch_bracket_groups(tournament_id)
-    units: Dict[str, List[Dict[str, Any]]] = {}
-    for unit in brackets._iter_knockout_units(groups):
-        if unit.get("category_id"):
-            units.setdefault(str(unit["category_id"]), []).append(unit)
-    return units
 
 
 def _category_slots_with_results(tournament_id: int, prefixes: List[str]) -> List[Dict[str, Any]]:

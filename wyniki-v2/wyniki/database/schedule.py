@@ -1,14 +1,10 @@
 """Database access layer submodule."""
 import json
-import re
 import sqlite3
-from contextlib import contextmanager
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Tuple
-from werkzeug.security import generate_password_hash
+from typing import Any, Dict, List, Optional, Tuple
 
-from ..config import settings, logger
+from ..config import logger
 from ..services.teams import (
     PLAY_FORMAT_KNOCKOUT,
     competitor_identity_key,
@@ -18,6 +14,8 @@ from ..services.teams import (
 from ..services.match_result import resolve_match_winner
 
 from .connection import _utc_now, db_conn, fetch_app_settings, upsert_app_settings
+from .courts import fetch_courts_for_tournament
+from .tournaments import fetch_tournament
 
 DEFAULT_GROUP_SCHEDULE_NOTE_PL = "Godzina orientacyjna zostanie podana przez biuro zawodow"
 
@@ -1685,3 +1683,14 @@ def apply_schedule_notes(
             conn.commit()
         logger.info("schedule_notes_applied", tournament_id=tournament_id, mode=mode, updated=result["updated"])
     return result
+
+
+# Imported last: brackets imports this module too.
+from .brackets import (  # noqa: E402
+    GROUP_PHASE,
+    GROUP_REMATCH_PHASE,
+    _knockout_schedule_player_names,
+    _split_bracket_label,
+    fetch_bracket_groups,
+    seed_provisional_knockout_from_groups,
+)
