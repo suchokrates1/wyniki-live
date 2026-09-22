@@ -66,11 +66,13 @@ def _ensure_schema_migrations_table(cursor) -> None:
 
 
 def run_once(cursor, name: str, step) -> None:
-    """Run a one-shot data migration and write down that it ran.
+    """Run a data migration that rewrites rows. It runs once.
 
-    Column changes stay idempotent above (they check PRAGMA table_info and are safe to
-    re-run); this is for the migrations that rewrite rows and must not run twice.
-    Databases from before this table recorded the same thing in app_settings.
+    A new migration that rewrites rows goes through run_once. A new column stays an
+    idempotent ALTER in init_db (PRAGMA table_info, or try/except) and has to be visible
+    to test_schema.py, which compares the ORM models with the tables created here.
+    Databases from before schema_migrations stored the same flag in app_settings under
+    migration:<name>. When that key is already present the step is not run again.
     """
     cursor.execute("SELECT 1 FROM schema_migrations WHERE name = ?", (name,))
     if cursor.fetchone() is not None:

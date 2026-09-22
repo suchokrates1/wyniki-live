@@ -14,7 +14,7 @@ import json
 from typing import Any, Dict, List, Set, Tuple
 
 from ..config import logger
-from .connection import db_conn, upsert_app_settings
+from .connection import _ensure_schema_migrations_table, db_conn, run_once, upsert_app_settings
 
 MIGRATION_KEY = "migration:upgrade_existing_tournaments"
 
@@ -119,10 +119,7 @@ def upgrade_tournament(tournament_id: int) -> Dict[str, Any]:
     return {"confirmed": confirmed, "imported": imported, "skipped": skipped, "numbered": numbered}
 
 
-def upgrade_existing_tournaments() -> Dict[str, Any]:
-    """Run once per database; later starts see the flag and do nothing."""
-    if not _claim_migration():
-        return {"status": "already_done"}
+def _apply_upgrade() -> Dict[str, Any]:
     from .tournaments import fetch_tournaments
 
     summary: Dict[str, Any] = {}
@@ -140,3 +137,26 @@ def upgrade_existing_tournaments() -> Dict[str, Any]:
     upsert_app_settings({MIGRATION_KEY: json.dumps(summary, ensure_ascii=False)})
     logger.info("database_migration", action="upgraded_existing_tournaments", summary=summary)
     return {"status": "ok", "tournaments": summary}
+
+
+def upgrade_existing_tournaments() -> Dict[str, Any]:
+    """Run once per database.
+
+    A database that already recorded migration:upgrade_existing_tournaments in
+    app_settings adopts that flag and does not rewrite tournaments again.
+    """
+    outcome: Dict[str, Any] = {"status": "already_done"}
+
+    def step() -> str:
+        nonlocal outcome
+        if not _claim_migration():
+            return "already_claimed"
+        outcome = _apply_upgrade()
+        return f"tournaments={len(outcome.get('tournaments') or {})}"
+
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        _ensure_schema_migrations_table(cursor)
+        run_once(cursor, "upgrade_existing_tournaments", step)
+        conn.commit()
+    return outcome

@@ -69,6 +69,28 @@ def test_old_tournament_is_confirmed_as_played_without_touching_its_draw(db):
     assert upgrade_existing_tournaments() == {"status": "already_done"}
 
 
+def test_an_existing_app_settings_flag_is_adopted_without_rewriting(db):
+    from wyniki.database.tournament_upgrade import MIGRATION_KEY, upgrade_existing_tournaments
+
+    old_id, b2, _ = _tournament(db, "Flagged", active=False)
+    before = _state(db, old_id)
+    with db.db_conn() as conn:
+        conn.execute("INSERT INTO app_settings (key, value) VALUES (?, '{}')", (MIGRATION_KEY,))
+        conn.commit()
+
+    assert upgrade_existing_tournaments() == {"status": "already_done"}
+    assert _state(db, old_id) == before
+    item = next(item for item in db.knockout_format_overview(old_id) if item["category_id"] == b2["id"])
+    assert not item["config"]["confirmed"]
+
+    with db.db_conn() as conn:
+        row = conn.execute(
+            "SELECT detail FROM schema_migrations WHERE name = 'upgrade_existing_tournaments'"
+        ).fetchone()
+    assert row["detail"] == "adopted from app_settings"
+    assert upgrade_existing_tournaments() == {"status": "already_done"}
+
+
 def test_groups_that_disagree_with_one_format_are_left_for_the_office(db):
     from wyniki.database.tournament_upgrade import upgrade_tournament
 
