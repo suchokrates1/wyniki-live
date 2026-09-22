@@ -68,7 +68,9 @@ def test_stored_women_codes_become_k_once(tmp_path, monkeypatch):
 
     database.init_db()
     with database.db_conn() as conn:
+        # forget that the one-shot migration ran, so the next init_db() applies it here
         conn.execute("DELETE FROM app_settings WHERE key = 'migration:normalize_genders'")
+        conn.execute("DELETE FROM schema_migrations WHERE name = 'normalize_genders'")
         conn.executemany("INSERT INTO global_players (first_name, last_name, gender, category) VALUES (?, ?, ?, 'B2')", [("A", "One", "F"), ("B", "Two", "K"), ("C", "Three", "m"), ("D", "Four", "")])
         conn.commit()
     database.init_db()
