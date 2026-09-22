@@ -23,6 +23,10 @@ export function createOfficeQuickInfoView() {
     async saveQuickInfo() {
       if (!this.token) return;
       this.quickInfoSaving = true;
+      // What is being saved. The operator may keep typing while the request is in
+      // flight; echoing the server's copy back over that would erase the new text.
+      const sentMessage = this.quickInfoMessage;
+      const sentActive = this.quickInfoActive;
       try {
         const response = await fetch(`/api/office/${this.slot}/quick-info`, {
           method: 'PUT',
@@ -40,8 +44,14 @@ export function createOfficeQuickInfoView() {
         if (!response.ok) throw new Error(payload.error || this.ot('errors.quickInfoFailed'));
         // a dashboard requested before this save would bring back the old banner text
         this.dashboardSeq = (this.dashboardSeq || 0) + 1;
-        if (payload.quick_info) this.applyQuickInfo(payload.quick_info);
-        this.quickInfoDirty = false;
+        const stillAsSent = this.quickInfoMessage === sentMessage && this.quickInfoActive === sentActive;
+        if (payload.quick_info) {
+          if (stillAsSent) this.applyQuickInfo(payload.quick_info);
+          else this.quickInfoUpdatedAt = payload.quick_info.updated_at || this.quickInfoUpdatedAt;
+        }
+        // Keep the form dirty when it no longer holds what was saved, so the next
+        // dashboard refresh leaves the new text alone and Publish sends it.
+        this.quickInfoDirty = !stillAsSent;
         this.flushPendingOfficeRefresh();
         this.showToast(this.ot('toast.quickInfoSaved'), 'success');
       } catch (error) {
