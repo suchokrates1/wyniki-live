@@ -357,11 +357,34 @@ export { OFFICE_PASSWORD };
  * Retry that one failure mode once and say so in the log.
  */
 export async function launchBrowser(chromium, options = { headless: true }) {
+  let browser;
   try {
-    return await chromium.launch(options);
+    browser = await chromium.launch(options);
   } catch (error) {
     if (!/has been closed|signal 11|SIGSEGV/i.test(String(error?.message || ''))) throw error;
     console.log('  [browser] launch crashed (runner Chromium SIGSEGV) — retrying once');
-    return chromium.launch(options);
+    browser = await chromium.launch(options);
   }
+  return withAnalyticsConsentAnswered(browser);
+}
+
+/**
+ * The analytics consent banner is fixed to the bottom of every page and covers the
+ * buttons there. The office suite is not about consent (privacy-e2e.mjs is), so every
+ * context starts with the banner already answered "rejected".
+ */
+function withAnalyticsConsentAnswered(browser) {
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (contextOptions) => {
+    const context = await newContext(contextOptions);
+    await context.addInitScript(() => {
+      localStorage.setItem('wyniki.analyticsConsent', 'rejected');
+    });
+    return context;
+  };
+  browser.newPage = async (pageOptions) => {
+    const context = await browser.newContext(pageOptions);
+    return context.newPage();
+  };
+  return browser;
 }

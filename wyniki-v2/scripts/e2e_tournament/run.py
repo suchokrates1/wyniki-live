@@ -345,7 +345,8 @@ def cmd_full(*, skip_android: bool = False, max_courts: int = 4) -> bool:
             marker_out=marker_file,
         )
         if marker_file.exists():
-            e2e_marker = marker_file.read_text(encoding="utf-8").strip() or None
+            # PowerShell writes the file with a BOM; utf-8-sig drops it.
+            e2e_marker = marker_file.read_text(encoding="utf-8-sig").strip() or None
 
     results["public"] = cmd_public_assert(e2e_marker=e2e_marker if results.get("android") else None)
 
