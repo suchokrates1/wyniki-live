@@ -297,7 +297,7 @@ def test_director_command_wakes_waiting_poll(director_app):
         },
     )
     assert heartbeat.status_code == 200
-    assert heartbeat.get_json()["commands"][0]["player1_name"] == "Renamed A"
+    assert "commands" not in heartbeat.get_json()
 
     tablets = client.get(f"/admin/api/director/tablets?court_id={court_id}").get_json()
     assert any(row.get("match_id") == match["id"] for row in tablets["tablets"])

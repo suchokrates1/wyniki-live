@@ -300,11 +300,7 @@ function createUmpireApp() {
       this._outbox = stores.outbox;
       this._history = stores.history;
       this._heartbeat = createHeartbeat({
-        send: async (body) => {
-          const result = await api.sendHeartbeat(body);
-          this.applyDirectorCommands(result?.data?.commands);
-          return result;
-        },
+        send: (body) => api.sendHeartbeat(body),
         getBody: () => this.heartbeatPayload(),
         canSend: () => !this.tutorialMode && Boolean(session.getCourtSession()?.token),
       });
