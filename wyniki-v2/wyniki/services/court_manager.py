@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import threading
 import time
-from collections import OrderedDict, deque
+from collections import deque
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
@@ -18,7 +18,6 @@ COURTS: Dict[str, Dict[str, Any]] = {}  # kort_id -> state
 DEMO_COURTS: Dict[str, Dict[str, Any]] = {}  # separate demo storage (never pollutes real data)
 DEMO_OVERLAY_ACTIVE: bool = False  # when True, public APIs serve DEMO_COURTS
 GLOBAL_LOG: Deque[Dict[str, Any]] = deque()
-GLOBAL_HISTORY: Deque[Dict[str, Any]] = deque(maxlen=settings.match_history_size)
 
 
 def _empty_player_state() -> Dict[str, Any]:
@@ -118,12 +117,6 @@ def normalize_kort_id(raw: Any) -> Optional[str]:
     return text
 
 
-def is_known_kort(kort_id: str) -> bool:
-    """Check if court exists in configuration."""
-    with STATE_LOCK:
-        return kort_id in COURTS
-
-
 def ensure_court_state(kort_id: str) -> Dict[str, Any]:
     """Get or create court state."""
     with STATE_LOCK:
@@ -144,9 +137,8 @@ def get_court_state(kort_id: str) -> Optional[Dict[str, Any]]:
         return COURTS.get(kort_id)
 
 
-def refresh_courts_from_db(db_courts: List[Any], seed_if_empty: bool = False) -> None:
+def refresh_courts_from_db(db_courts: List[Any]) -> None:
     """Update court configuration from database."""
-    from ..models import CourtState
     
     with STATE_LOCK:
         configured_ids: List[str] = []

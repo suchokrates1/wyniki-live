@@ -669,7 +669,7 @@ Turniej ma kategorię **B1 Mężczyźni Double** (albo custom z checkboxem).
 | API biura | `wyniki/api/office.py`, `wyniki/services/office_workflow.py` (ręczny wynik) |
 | API admin | `wyniki/api/admin_tournaments.py` |
 | Appka | `wyniki/api/umpire_api.py` (`_mobile_schedule_suggestion_payload`, `_mobile_player_payload_for_name`) |
-| Live overlay | `wyniki/api/events.py` (`_resolve_live_player_name`) |
+| Live overlay | `wyniki/init_state.py` (`_resolve_live_player_name`) |
 | Historia nazw | `wyniki/database/history.py` (`_resolve_name` już umie `"X / Y"`) |
 
 ### Frontend biura / publiczna

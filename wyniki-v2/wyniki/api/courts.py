@@ -2,20 +2,11 @@
 from flask import Blueprint, jsonify, request
 
 from ..services.court_manager import serialize_public_snapshot
-from ..services.history_manager import get_history
 from ..db_models import db, Match, MatchStatistics, Player, Tournament
 from ..config import logger
+from ..utils import json_no_cache as _json_no_cache
 
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
-
-
-def _json_no_cache(payload, status: int = 200):
-    response = jsonify(payload)
-    response.status_code = status
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
 
 
 @blueprint.route('/snapshot')
@@ -64,54 +55,46 @@ def history_page_args(default_limit: int) -> tuple[int, int]:
 @blueprint.route('/history')
 def history():
     """Get match history, optionally filtered by tournament."""
-    try:
-        from ..database import get_active_tournament_id, fetch_match_history
-        from ..config import settings
-        tournament_id = request.args.get("tournament_id", type=int)
-        tid = tournament_id if tournament_id is not None else get_active_tournament_id(public_only=True)
-        limit, offset = history_page_args(settings.match_history_size)
-        history_data = fetch_match_history(
-            limit=limit,
-            offset=offset,
-            tournament_id=tid,
-            public_only=True,
-        )
-        return jsonify(history_data)
-    except Exception as e:
-        logger.error(f"Failed to get history: {e}")
-        return jsonify({"error": str(e)}), 500
+    from ..database import get_active_tournament_id, fetch_match_history
+    from ..config import settings
+    tournament_id = request.args.get("tournament_id", type=int)
+    tid = tournament_id if tournament_id is not None else get_active_tournament_id(public_only=True)
+    limit, offset = history_page_args(settings.match_history_size)
+    history_data = fetch_match_history(
+        limit=limit,
+        offset=offset,
+        tournament_id=tid,
+        public_only=True,
+    )
+    return jsonify(history_data)
 
 
 @blueprint.route('/match-stats/<int:match_id>')
 def match_stats(match_id: int):
     """Get match statistics for Details button in history."""
-    try:
-        match_record = db.session.get(Match, match_id)
-        if match_record and match_record.tournament_id:
-            tournament = db.session.get(Tournament, match_record.tournament_id)
-            if tournament and (
-                int(tournament.is_public or 0) != 1
-                or int(tournament.stats_enabled or 0) != 1
-                or int(tournament.is_simulation or 0) == 1
-            ):
-                return jsonify({"error": "Statistics not found"}), 404
-
-        stats = MatchStatistics.query.filter_by(match_id=match_id).first()
-        if not stats:
+    match_record = db.session.get(Match, match_id)
+    if match_record and match_record.tournament_id:
+        tournament = db.session.get(Tournament, match_record.tournament_id)
+        if tournament and (
+            int(tournament.is_public or 0) != 1
+            or int(tournament.stats_enabled or 0) != 1
+            or int(tournament.is_simulation or 0) == 1
+        ):
             return jsonify({"error": "Statistics not found"}), 404
-        data = stats.to_dict()
-        # Enrich with match timestamps
-        if match_record:
-            data["started_at"] = match_record.started_at or match_record.created_at
-            data["ended_at"] = match_record.updated_at
-        # Resolve winner surname to full name via Player DB
-        if data.get("winner"):
-            winner_name = data["winner"].strip()
-            player = Player.query.filter_by(last_name=winner_name).first()
-            if player:
-                data["winner"] = player.full_name
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f"Failed to get match stats: {e}")
-        return jsonify({"error": str(e)}), 500
+
+    stats = MatchStatistics.query.filter_by(match_id=match_id).first()
+    if not stats:
+        return jsonify({"error": "Statistics not found"}), 404
+    data = stats.to_dict()
+    # Enrich with match timestamps
+    if match_record:
+        data["started_at"] = match_record.started_at or match_record.created_at
+        data["ended_at"] = match_record.updated_at
+    # Resolve winner surname to full name via Player DB
+    if data.get("winner"):
+        winner_name = data["winner"].strip()
+        player = Player.query.filter_by(last_name=winner_name).first()
+        if player:
+            data["winner"] = player.full_name
+    return jsonify(data)
 

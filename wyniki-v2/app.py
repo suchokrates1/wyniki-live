@@ -9,14 +9,15 @@ from __future__ import annotations
 from gevent import monkey
 monkey.patch_all()
 
-from flask import Flask, request
+from flask import Flask, jsonify, request
+from werkzeug.exceptions import HTTPException
 from prometheus_client import CollectorRegistry
 from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy import event
 
 from wyniki.config import logger, settings
 from wyniki.db_models import db
-from wyniki.api import courts, admin, health, stream, web, events, office, admin_auth
+from wyniki.api import courts, admin, health, stream, web, office, admin_auth
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp, tournaments_public_bp
 from wyniki.api.admin_global_players import blueprint as global_players_blueprint
 from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
@@ -71,7 +72,17 @@ def create_app() -> Flask:
         if request.path.startswith("/api/overlay/") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
             return require_admin_access()
         return None
-    
+
+    @app.errorhandler(Exception)
+    def api_error_as_json(exc):
+        """API callers get a JSON error body instead of Flask's HTML 500 page."""
+        if isinstance(exc, HTTPException):
+            return exc
+        if not request.path.startswith(("/api/", "/admin/api/")):
+            raise exc
+        logger.error("unhandled_api_error", path=request.path, error=str(exc), exc_info=True)
+        return jsonify({"error": str(exc)}), 500
+
     # Register blueprints
     app.register_blueprint(web.blueprint)
     app.register_blueprint(courts.blueprint)
@@ -83,21 +94,14 @@ def create_app() -> Flask:
     app.register_blueprint(global_players_blueprint)
     app.register_blueprint(health.blueprint)
     app.register_blueprint(stream.blueprint)
-    app.register_blueprint(events.blueprint)
     app.register_blueprint(office.blueprint)
     app.register_blueprint(umpire_api_blueprint)
     app.register_blueprint(overlay_api_blueprint)
     app.register_blueprint(bracket_public_bp)
     app.register_blueprint(bracket_admin_bp)
     
-    # Add /assets route as alias to /static/assets for Vite compatibility
     from flask import send_from_directory
     import os
-    
-    @app.route('/assets/<path:filename>')
-    def serve_assets(filename):
-        assets_path = os.path.join(settings.static_dir, 'assets')
-        return send_from_directory(assets_path, filename)
 
     # Serve player photos from persistent data volume
     @app.route('/data/photos/<path:filename>')

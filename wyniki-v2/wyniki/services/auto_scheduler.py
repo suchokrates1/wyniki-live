@@ -118,11 +118,6 @@ def normalize_b1_court_ids(config: Dict[str, Any]) -> List[str]:
     return [single] if single else []
 
 
-def is_b1_court(court_id: Optional[str], config: Dict[str, Any]) -> bool:
-    value = str(court_id or "").strip()
-    return bool(value) and value in normalize_b1_court_ids(config)
-
-
 def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Build a sensible default config given the tournament courts."""
     ordered = sorted(
@@ -145,14 +140,6 @@ def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
         "category_slot_minutes": {},
         "rest_slots": 1,
     }
-
-
-def apply_b1_court(config: Dict[str, Any], b1_court_id: Optional[str]) -> Dict[str, Any]:
-    """Backward-compatible helper for a single B1 court."""
-    court_id = str(b1_court_id or "").strip()
-    if not court_id:
-        return dict(config)
-    return apply_b1_courts(config, [court_id])
 
 
 def apply_b1_courts(config: Dict[str, Any], b1_court_ids: Optional[List[str]]) -> Dict[str, Any]:
@@ -273,40 +260,12 @@ def _ordered_flex_court_ids(config: Dict[str, Any]) -> List[str]:
     return seen
 
 
-def _b1_court_for_match(
-    match: Dict[str, Any],
-    config: Dict[str, Any],
-    *,
-    b1_counter: Optional[List[int]] = None,
-) -> Optional[str]:
-    b1_courts = normalize_b1_court_ids(config)
-    if not b1_courts:
-        return None
-    if len(b1_courts) == 1:
-        return b1_courts[0]
-    index = (b1_counter[0] if b1_counter else 0) % len(b1_courts)
-    if b1_counter is not None:
-        b1_counter[0] += 1
-    return b1_courts[index]
-
-
-def _slot_minutes_for_court(court_id: str, config: Dict[str, Any], band: str = "") -> int:
-    """Duration follows the match band, not the court column."""
-    return slot_minutes_for(band, config)
-
-
 def _rest_gap_minutes(config: Dict[str, Any], rest_slots: int) -> int:
     return max(0, rest_slots) * slot_minutes_for("", config)
 
 
 def _placement_window(placement: Dict[str, Any], config: Dict[str, Any]) -> Tuple[int, int]:
     start = time_to_minutes(str(placement.get("scheduled_time") or DEFAULT_START_TIME))
-    band = normalize_band(
-        placement.get("match", {}).get("category_name")
-        or placement.get("match", {}).get("group_name")
-        or placement.get("category_name")
-        or placement.get("group_name")
-    )
     court_id = str(placement.get("court_id") or "")
     duration = slot_minutes_for_entry(placement.get("match") or placement, config, court_id)
     return start, start + duration
@@ -320,7 +279,6 @@ def _slot_available_for_player(
     scheduled: List[Dict[str, Any]],
     rest_slots: int,
 ) -> bool:
-    band = normalize_band(match.get("category_name") or match.get("group_name"))
     start, end = _placement_window(
         {"scheduled_time": start_time, "court_id": court_id, "match": match},
         config,
@@ -361,10 +319,6 @@ def _day_end_minutes(config: Dict[str, Any]) -> Optional[int]:
     if not re.match(r"^\d{1,2}:\d{2}$", value):
         return None
     return time_to_minutes(value)
-
-
-def _category_key(match: Dict[str, Any]) -> str:
-    return str(match.get("category_name") or match.get("group_name") or "").strip().casefold()
 
 
 def _category_root(match: Dict[str, Any]) -> str:
@@ -648,17 +602,3 @@ def reflow_court_entries(
         result.append(updated)
         cursor = start + duration
     return result
-
-
-# Backward-compatible alias used by tests and older imports.
-def _court_for_match(
-    match: Dict[str, Any],
-    config: Dict[str, Any],
-    *,
-    b1_counter: Optional[List[int]] = None,
-) -> Optional[str]:
-    band = normalize_band(match.get("category_name") or match.get("group_name"))
-    if band == "B1":
-        return _b1_court_for_match(match, config, b1_counter=b1_counter)
-    flex_courts = _ordered_flex_court_ids(config)
-    return flex_courts[0] if flex_courts else str(match.get("court_id") or "") or None

@@ -5,6 +5,7 @@ import json
 import re
 from typing import Any
 
+from ..database import is_knockout_stage_phase
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court, utc_now_iso
 from ..services.court_manager import (
     ensure_court_state,
@@ -18,7 +19,7 @@ from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
 from ..services.api_auth import court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
-from ..services.director_commands import director_command_broker, dump_match_config, normalize_match_config, tablet_presence
+from ..services.director_commands import director_command_broker, dump_match_config, tablet_presence
 from ..services.match_format import match_score_satisfies_format
 from ..services.match_result import resolve_match_winner, same_competitor
 from ..services.live_state import read_live_state, set_tiebreak_due, store_live_state
@@ -142,10 +143,6 @@ def _match_client_audit(data: dict | None) -> dict[str, str | None]:
         "client_country": client_country,
         "client_user_agent": user_agent,
     }
-
-
-def _is_knockout_phase(phase: str | None) -> bool:
-    return bool(phase and phase != 'Grupowa')
 
 
 def _apply_live_overlay_meta(court_state: dict, *, phase: str | None = None, category: str | None = None) -> None:
@@ -486,7 +483,7 @@ def _publish_match_finished(match: Match) -> None:
             except Exception as e:
                 logger.warning(f"Could not generate knockout: {e}")
 
-        if match.finish_reason != FINISH_REASON_TEST and _is_knockout_phase(match.phase) and match.tournament_id:
+        if match.finish_reason != FINISH_REASON_TEST and is_knockout_stage_phase(match.phase) and match.tournament_id:
             try:
                 from ..database import advance_knockout
                 advance_knockout(match_id, match.tournament_id)
@@ -1035,21 +1032,17 @@ def get_courts():
 @blueprint.route('/courts/<kort_id>/suggested-match', methods=['GET'])
 def get_court_suggested_match(kort_id: str):
     """Return nearest scheduled match for the selected court and current app time."""
-    try:
-        from ..database import find_suggested_schedule_match, get_active_tournament_id, get_tournament_id_for_court
+    from ..database import find_suggested_schedule_match, get_active_tournament_id, get_tournament_id_for_court
 
-        tournament_id = request.args.get("tournament_id", type=int) or get_tournament_id_for_court(kort_id) or get_active_tournament_id()
-        if not tournament_id:
-            return jsonify({"suggestion": None}), 200
-        entry = find_suggested_schedule_match(
-            tournament_id,
-            normalize_kort_id(kort_id),
-            reference_time=request.args.get("at"),
-        )
-        return jsonify({"suggestion": _mobile_schedule_suggestion_payload(entry, tournament_id)}), 200
-    except Exception as e:
-        logger.error(f"Error getting suggested match: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    tournament_id = request.args.get("tournament_id", type=int) or get_tournament_id_for_court(kort_id) or get_active_tournament_id()
+    if not tournament_id:
+        return jsonify({"suggestion": None}), 200
+    entry = find_suggested_schedule_match(
+        tournament_id,
+        normalize_kort_id(kort_id),
+        reference_time=request.args.get("at"),
+    )
+    return jsonify({"suggestion": _mobile_schedule_suggestion_payload(entry, tournament_id)}), 200
 
 
 @blueprint.route('/players', methods=['GET', 'POST', 'OPTIONS'])
@@ -1177,65 +1170,57 @@ def get_players():
 @blueprint.route('/courts/<kort_id>/authorize', methods=['POST'])
 def authorize_court(kort_id: str):
     """Verify PIN for court access."""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({
-                "ok": False,
-                "authorized": False,
-                "error": "invalid-payload"
-            }), 400
-        
-        provided_pin = str(data.get('pin', '')).strip()
-        
-        if not provided_pin:
-            return jsonify({
-                "ok": False,
-                "authorized": False,
-                "error": "pin-required"
-            }), 400
-        
-        # Get court from database
-        court = db.session.get(Court, kort_id)
-        
-        if not court:
-            logger.warning(f"Court not found: {kort_id}")
-            return jsonify({
-                "ok": False,
-                "authorized": False,
-                "error": "court-not-found"
-            }), 404
-        
-        # Verify PIN
-        correct_pin = court.pin or "0000"
-        authorized = provided_pin == correct_pin
-        
-        logger.info(f"PIN check for kort {kort_id}: authorized={authorized}")
-        
-        if authorized:
-            return jsonify({
-                "ok": True,
-                "authorized": True,
-                "court_id": kort_id,
-                "kort_id": kort_id,
-                "token": issue_court_token(kort_id),
-                "expires_at": court_session_expires_at(),
-                "message": "Access granted"
-            }), 200
-        else:
-            return jsonify({
-                "ok": False,
-                "authorized": False,
-                "error": "invalid-pin"
-            }), 403
-            
-    except Exception as e:
-        logger.error(f"Error authorizing court: {e}", exc_info=True)
+    data = request.get_json()
+    if not data:
         return jsonify({
             "ok": False,
             "authorized": False,
-            "error": "internal-error"
-        }), 500
+            "error": "invalid-payload"
+        }), 400
+    
+    provided_pin = str(data.get('pin', '')).strip()
+    
+    if not provided_pin:
+        return jsonify({
+            "ok": False,
+            "authorized": False,
+            "error": "pin-required"
+        }), 400
+    
+    # Get court from database
+    court = db.session.get(Court, kort_id)
+    
+    if not court:
+        logger.warning(f"Court not found: {kort_id}")
+        return jsonify({
+            "ok": False,
+            "authorized": False,
+            "error": "court-not-found"
+        }), 404
+    
+    # Verify PIN
+    correct_pin = court.pin or "0000"
+    authorized = provided_pin == correct_pin
+    
+    logger.info(f"PIN check for kort {kort_id}: authorized={authorized}")
+    
+    if authorized:
+        return jsonify({
+            "ok": True,
+            "authorized": True,
+            "court_id": kort_id,
+            "kort_id": kort_id,
+            "token": issue_court_token(kort_id),
+            "expires_at": court_session_expires_at(),
+            "message": "Access granted"
+        }), 200
+    else:
+        return jsonify({
+            "ok": False,
+            "authorized": False,
+            "error": "invalid-pin"
+        }), 403
+        
 
 
 @blueprint.route('/matches', methods=['POST'])
@@ -1379,17 +1364,13 @@ def create_match():
 @blueprint.route('/matches/<int:match_id>', methods=['GET'])
 def get_match(match_id: int):
     """Get match details."""
-    try:
-        match = db.session.get(Match, match_id)
-        
-        if not match:
-            return jsonify({"error": "Match not found"}), 404
-        
-        return jsonify(match.to_dict()), 200
-        
-    except Exception as e:
-        logger.error(f"Error getting match: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    match = db.session.get(Match, match_id)
+    
+    if not match:
+        return jsonify({"error": "Match not found"}), 404
+    
+    return jsonify(match.to_dict()), 200
+    
 
 
 @blueprint.route('/matches/<int:match_id>', methods=['PUT'])
@@ -1657,222 +1638,218 @@ def _raw_points_to_tennis(raw_a: int, raw_b: int) -> tuple[str, str]:
 @blueprint.route('/match-events', methods=['POST'])
 def log_match_event():
     """Process match event and push real-time score update via SSE."""
-    try:
-        data = request.get_json()
-        event_type = data.get('event_type', '')
-        kort_id = normalize_kort_id(data.get('court_id'))
-        access_error = require_court_access(kort_id)
-        if access_error:
-            return access_error
+    data = request.get_json()
+    event_type = data.get('event_type', '')
+    kort_id = normalize_kort_id(data.get('court_id'))
+    access_error = require_court_access(kort_id)
+    if access_error:
+        return access_error
 
-        logger.info(f"Match event: {event_type} on court {kort_id}")
+    logger.info(f"Match event: {event_type} on court {kort_id}")
 
-        if not kort_id:
-            return jsonify({"success": True, "message": "No court_id, event logged only"}), 200
+    if not kort_id:
+        return jsonify({"success": True, "message": "No court_id, event logged only"}), 200
 
-        score = data.get('score', {})
-        player1 = data.get('player1', {})
-        player2 = data.get('player2', {})
+    score = data.get('score', {})
+    player1 = data.get('player1', {})
+    player2 = data.get('player2', {})
 
-        raw_pts_a = int(score.get('player1_points', 0))
-        raw_pts_b = int(score.get('player2_points', 0))
-        is_tiebreak = bool(score.get('is_tiebreak', False))
-        is_super_tiebreak = bool(score.get('is_super_tiebreak', False))
-        event_match_id = data.get('match_id')
-        event_client_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
-        active_match = db.session.get(Match, event_match_id) if event_match_id else None
-        if not active_match and event_client_uuid:
-            active_match = (
-                Match.query
-                .filter_by(client_match_uuid=event_client_uuid)
-                .order_by(Match.updated_at.desc(), Match.id.desc())
-                .first()
-            )
-        if not active_match:
-            active_match = (
-                Match.query
-                .filter_by(court_id=kort_id, status='in_progress')
-                .order_by(Match.updated_at.desc(), Match.id.desc())
-                .first()
-            )
-        restore_match_score = bool(
-            active_match and _match_has_recorded_progress(active_match) and _score_payload_is_zeroed(score)
+    raw_pts_a = int(score.get('player1_points', 0))
+    raw_pts_b = int(score.get('player2_points', 0))
+    is_tiebreak = bool(score.get('is_tiebreak', False))
+    is_super_tiebreak = bool(score.get('is_super_tiebreak', False))
+    event_match_id = data.get('match_id')
+    event_client_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
+    active_match = db.session.get(Match, event_match_id) if event_match_id else None
+    if not active_match and event_client_uuid:
+        active_match = (
+            Match.query
+            .filter_by(client_match_uuid=event_client_uuid)
+            .order_by(Match.updated_at.desc(), Match.id.desc())
+            .first()
         )
-        event_meta = _request_client_meta(data)
-        tablet_presence.record(
-            session_court_id=kort_id,
-            match_id=active_match.id if active_match else event_match_id,
-            client_match_uuid=event_client_uuid or (active_match.client_match_uuid if active_match else None),
-            player1_name=(player1.get("full_name") or player1.get("name")),
-            player2_name=(player2.get("full_name") or player2.get("name")),
-            app_version=event_meta.get("app_version"),
-            platform=event_meta.get("platform"),
-            device=event_meta.get("device"),
-            device_model=event_meta.get("device_model"),
-            device_manufacturer=event_meta.get("device_manufacturer"),
-            snapshot={
-                "court_id": kort_id,
-                "player1_name": player1.get("full_name") or player1.get("name"),
-                "player2_name": player2.get("full_name") or player2.get("name"),
-                "player1_sets": score.get("player1_sets"),
-                "player2_sets": score.get("player2_sets"),
-                "player1_games": score.get("player1_games"),
-                "player2_games": score.get("player2_games"),
-                "player1_points": score.get("player1_points"),
-                "player2_points": score.get("player2_points"),
-                "sets_history": score.get("sets_history"),
-                "is_tiebreak": score.get("is_tiebreak"),
-                "is_super_tiebreak": score.get("is_super_tiebreak"),
-                "is_player1_serving": player1.get("is_serving"),
-            },
+    if not active_match:
+        active_match = (
+            Match.query
+            .filter_by(court_id=kort_id, status='in_progress')
+            .order_by(Match.updated_at.desc(), Match.id.desc())
+            .first()
         )
+    restore_match_score = bool(
+        active_match and _match_has_recorded_progress(active_match) and _score_payload_is_zeroed(score)
+    )
+    event_meta = _request_client_meta(data)
+    tablet_presence.record(
+        session_court_id=kort_id,
+        match_id=active_match.id if active_match else event_match_id,
+        client_match_uuid=event_client_uuid or (active_match.client_match_uuid if active_match else None),
+        player1_name=(player1.get("full_name") or player1.get("name")),
+        player2_name=(player2.get("full_name") or player2.get("name")),
+        app_version=event_meta.get("app_version"),
+        platform=event_meta.get("platform"),
+        device=event_meta.get("device"),
+        device_model=event_meta.get("device_model"),
+        device_manufacturer=event_meta.get("device_manufacturer"),
+        snapshot={
+            "court_id": kort_id,
+            "player1_name": player1.get("full_name") or player1.get("name"),
+            "player2_name": player2.get("full_name") or player2.get("name"),
+            "player1_sets": score.get("player1_sets"),
+            "player2_sets": score.get("player2_sets"),
+            "player1_games": score.get("player1_games"),
+            "player2_games": score.get("player2_games"),
+            "player1_points": score.get("player1_points"),
+            "player2_points": score.get("player2_points"),
+            "sets_history": score.get("sets_history"),
+            "is_tiebreak": score.get("is_tiebreak"),
+            "is_super_tiebreak": score.get("is_super_tiebreak"),
+            "is_player1_serving": player1.get("is_serving"),
+        },
+    )
 
-        expected_court = str(active_match.court_id or "").strip() if active_match else ""
-        if active_match and expected_court and expected_court != kort_id:
-            logger.info(
-                "stale_court_match_event_ignored",
-                match_id=active_match.id,
-                event_court=kort_id,
-                match_court=expected_court,
-            )
-            return jsonify({
-                "success": True,
-                "stale_court": True,
-                "expected_court_id": expected_court,
-            }), 200
-
-        court_state = ensure_court_state(kort_id)
-        with STATE_LOCK:
-            # --- Serve ---
-            _apply_serve_from_payload(court_state, data)
-
-            # --- Player names (keep up-to-date) ---
-            if player1.get('name'):
-                court_state["A"]["surname"] = player1["name"]
-                if not court_state["A"].get("full_name"):
-                    court_state["A"]["full_name"] = player1["name"]
-            if player1.get('full_name'):
-                court_state["A"]["full_name"] = player1["full_name"]
-            if player2.get('name'):
-                court_state["B"]["surname"] = player2["name"]
-                if not court_state["B"].get("full_name"):
-                    court_state["B"]["full_name"] = player2["name"]
-            if player2.get('full_name'):
-                court_state["B"]["full_name"] = player2["full_name"]
-
-            flag_tid = (active_match.tournament_id if active_match else None) or court_state.get("tournament_id")
-            _apply_db_flags_to_court_state(
-                court_state,
-                flag_tid,
-                court_state["A"].get("full_name") or court_state["A"].get("surname"),
-                court_state["B"].get("full_name") or court_state["B"].get("surname"),
-            )
-
-            if restore_match_score:
-                _sync_live_score_to_court_state(court_state, active_match, score)
-                court_state["match_status"]["active"] = True
-                _sync_court_match_timer_from_match(court_state, active_match)
-            else:
-                # --- Points ---
-                if is_tiebreak or is_super_tiebreak:
-                    # Tiebreak: raw integers displayed as-is
-                    court_state["A"]["points"] = "0"
-                    court_state["B"]["points"] = "0"
-                    court_state["tie"]["A"] = raw_pts_a
-                    court_state["tie"]["B"] = raw_pts_b
-                    court_state["tie"]["visible"] = True
-                else:
-                    # Normal game: convert raw → tennis display
-                    disp_a, disp_b = _raw_points_to_tennis(raw_pts_a, raw_pts_b)
-                    court_state["A"]["points"] = disp_a
-                    court_state["B"]["points"] = disp_b
-                    court_state["tie"]["A"] = 0
-                    court_state["tie"]["B"] = 0
-                    court_state["tie"]["visible"] = None
-
-                _apply_umpire_put_sets(court_state, score, is_super_tiebreak=is_super_tiebreak)
-                match_finished = bool(score.get("match_finished", False))
-
-                # Store stats_mode for later use
-                stats_mode = score.get('stats_mode')
-                if stats_mode:
-                    court_state["stats_mode"] = stats_mode
-
-                # --- Match status ---
-                court_state["match_status"]["active"] = not match_finished
-                if match_finished:
-                    court_state["match_status"]["last_completed"] = utc_now_iso()
-
-            _refresh_live_overlay_meta_from_match(court_state, active_match)
-
-            # --- Live stats (for overlay) ---
-            live_stats = data.get('stats')
-            if live_stats:
-                court_state["stats"] = {
-                    "player_a": {
-                        "aces": live_stats.get("player1_aces", 0),
-                        "double_faults": live_stats.get("player1_double_faults", 0),
-                        "winners": live_stats.get("player1_winners", 0),
-                        "forced_errors": live_stats.get("player1_forced_errors"),
-                        "unforced_errors": live_stats.get("player1_unforced_errors", 0),
-                        "first_serves_in": live_stats.get("player1_first_serves_in"),
-                        "first_serves_total": live_stats.get("player1_first_serves_total"),
-                        "first_serve_pct": live_stats.get("player1_first_serve_pct", 0),
-                        "second_serves_in": live_stats.get("player1_second_serves_in"),
-                        "second_serves_total": live_stats.get("player1_second_serves_total"),
-                        "second_serve_pct": live_stats.get("player1_second_serve_pct"),
-                    },
-                    "player_b": {
-                        "aces": live_stats.get("player2_aces", 0),
-                        "double_faults": live_stats.get("player2_double_faults", 0),
-                        "winners": live_stats.get("player2_winners", 0),
-                        "forced_errors": live_stats.get("player2_forced_errors"),
-                        "unforced_errors": live_stats.get("player2_unforced_errors", 0),
-                        "first_serves_in": live_stats.get("player2_first_serves_in"),
-                        "first_serves_total": live_stats.get("player2_first_serves_total"),
-                        "first_serve_pct": live_stats.get("player2_first_serve_pct", 0),
-                        "second_serves_in": live_stats.get("player2_second_serves_in"),
-                        "second_serves_total": live_stats.get("player2_second_serves_total"),
-                        "second_serve_pct": live_stats.get("player2_second_serve_pct"),
-                    },
-                }
-
-            court_state["updated"] = utc_now_iso()
-
-            # --- Battery level from tablet ---
-            battery_level = data.get('battery_level')
-            if battery_level is not None:
-                court_state["battery_level"] = int(battery_level)
-            is_charging = data.get('is_charging')
-            if is_charging is not None:
-                court_state["is_charging"] = bool(is_charging)
-
-        # Keep the point state on the match, so a crash or restart rebuilds this point, not the last game.
-        if (
-            active_match
-            and active_match.status == "in_progress"
-            and not restore_match_score
-            and not bool(score.get("match_finished", False))
-        ):
-            try:
-                store_live_state(active_match, score, court_state.get("serve"))
-                db.session.commit()
-            except Exception as exc:
-                db.session.rollback()
-                logger.warning("live_state_store_failed", match_id=active_match.id, error=str(exc))
-
-        # Emit SSE update to all listeners
-        emit_score_update(kort_id, court_state)
-
+    expected_court = str(active_match.court_id or "").strip() if active_match else ""
+    if active_match and expected_court and expected_court != kort_id:
+        logger.info(
+            "stale_court_match_event_ignored",
+            match_id=active_match.id,
+            event_court=kort_id,
+            match_court=expected_court,
+        )
         return jsonify({
             "success": True,
-            "message": "Event processed",
-            "event_id": f"evt_{datetime.now(timezone.utc).timestamp()}"
+            "stale_court": True,
+            "expected_court_id": expected_court,
         }), 200
 
-    except Exception as e:
-        logger.error(f"Error processing match event: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    court_state = ensure_court_state(kort_id)
+    with STATE_LOCK:
+        # --- Serve ---
+        _apply_serve_from_payload(court_state, data)
+
+        # --- Player names (keep up-to-date) ---
+        if player1.get('name'):
+            court_state["A"]["surname"] = player1["name"]
+            if not court_state["A"].get("full_name"):
+                court_state["A"]["full_name"] = player1["name"]
+        if player1.get('full_name'):
+            court_state["A"]["full_name"] = player1["full_name"]
+        if player2.get('name'):
+            court_state["B"]["surname"] = player2["name"]
+            if not court_state["B"].get("full_name"):
+                court_state["B"]["full_name"] = player2["name"]
+        if player2.get('full_name'):
+            court_state["B"]["full_name"] = player2["full_name"]
+
+        flag_tid = (active_match.tournament_id if active_match else None) or court_state.get("tournament_id")
+        _apply_db_flags_to_court_state(
+            court_state,
+            flag_tid,
+            court_state["A"].get("full_name") or court_state["A"].get("surname"),
+            court_state["B"].get("full_name") or court_state["B"].get("surname"),
+        )
+
+        if restore_match_score:
+            _sync_live_score_to_court_state(court_state, active_match, score)
+            court_state["match_status"]["active"] = True
+            _sync_court_match_timer_from_match(court_state, active_match)
+        else:
+            # --- Points ---
+            if is_tiebreak or is_super_tiebreak:
+                # Tiebreak: raw integers displayed as-is
+                court_state["A"]["points"] = "0"
+                court_state["B"]["points"] = "0"
+                court_state["tie"]["A"] = raw_pts_a
+                court_state["tie"]["B"] = raw_pts_b
+                court_state["tie"]["visible"] = True
+            else:
+                # Normal game: convert raw → tennis display
+                disp_a, disp_b = _raw_points_to_tennis(raw_pts_a, raw_pts_b)
+                court_state["A"]["points"] = disp_a
+                court_state["B"]["points"] = disp_b
+                court_state["tie"]["A"] = 0
+                court_state["tie"]["B"] = 0
+                court_state["tie"]["visible"] = None
+
+            _apply_umpire_put_sets(court_state, score, is_super_tiebreak=is_super_tiebreak)
+            match_finished = bool(score.get("match_finished", False))
+
+            # Store stats_mode for later use
+            stats_mode = score.get('stats_mode')
+            if stats_mode:
+                court_state["stats_mode"] = stats_mode
+
+            # --- Match status ---
+            court_state["match_status"]["active"] = not match_finished
+            if match_finished:
+                court_state["match_status"]["last_completed"] = utc_now_iso()
+
+        _refresh_live_overlay_meta_from_match(court_state, active_match)
+
+        # --- Live stats (for overlay) ---
+        live_stats = data.get('stats')
+        if live_stats:
+            court_state["stats"] = {
+                "player_a": {
+                    "aces": live_stats.get("player1_aces", 0),
+                    "double_faults": live_stats.get("player1_double_faults", 0),
+                    "winners": live_stats.get("player1_winners", 0),
+                    "forced_errors": live_stats.get("player1_forced_errors"),
+                    "unforced_errors": live_stats.get("player1_unforced_errors", 0),
+                    "first_serves_in": live_stats.get("player1_first_serves_in"),
+                    "first_serves_total": live_stats.get("player1_first_serves_total"),
+                    "first_serve_pct": live_stats.get("player1_first_serve_pct", 0),
+                    "second_serves_in": live_stats.get("player1_second_serves_in"),
+                    "second_serves_total": live_stats.get("player1_second_serves_total"),
+                    "second_serve_pct": live_stats.get("player1_second_serve_pct"),
+                },
+                "player_b": {
+                    "aces": live_stats.get("player2_aces", 0),
+                    "double_faults": live_stats.get("player2_double_faults", 0),
+                    "winners": live_stats.get("player2_winners", 0),
+                    "forced_errors": live_stats.get("player2_forced_errors"),
+                    "unforced_errors": live_stats.get("player2_unforced_errors", 0),
+                    "first_serves_in": live_stats.get("player2_first_serves_in"),
+                    "first_serves_total": live_stats.get("player2_first_serves_total"),
+                    "first_serve_pct": live_stats.get("player2_first_serve_pct", 0),
+                    "second_serves_in": live_stats.get("player2_second_serves_in"),
+                    "second_serves_total": live_stats.get("player2_second_serves_total"),
+                    "second_serve_pct": live_stats.get("player2_second_serve_pct"),
+                },
+            }
+
+        court_state["updated"] = utc_now_iso()
+
+        # --- Battery level from tablet ---
+        battery_level = data.get('battery_level')
+        if battery_level is not None:
+            court_state["battery_level"] = int(battery_level)
+        is_charging = data.get('is_charging')
+        if is_charging is not None:
+            court_state["is_charging"] = bool(is_charging)
+
+    # Keep the point state on the match, so a crash or restart rebuilds this point, not the last game.
+    if (
+        active_match
+        and active_match.status == "in_progress"
+        and not restore_match_score
+        and not bool(score.get("match_finished", False))
+    ):
+        try:
+            store_live_state(active_match, score, court_state.get("serve"))
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            logger.warning("live_state_store_failed", match_id=active_match.id, error=str(exc))
+
+    # Emit SSE update to all listeners
+    emit_score_update(kort_id, court_state)
+
+    return jsonify({
+        "success": True,
+        "message": "Event processed",
+        "event_id": f"evt_{datetime.now(timezone.utc).timestamp()}"
+    }), 200
+
 
 
 @blueprint.route('/umpire-heartbeat', methods=['POST'])
@@ -1882,100 +1859,88 @@ def umpire_heartbeat():
     Sent every ~2 min regardless of match state, so we always know
     tablet battery level even during breaks between matches.
     """
-    try:
-        data = request.get_json() or {}
-        kort_id = normalize_kort_id(data.get('court_id', ''))
-        access_error = require_court_access(kort_id)
-        if access_error:
-            return access_error
-        battery_level = data.get('battery_level')
-        is_charging = data.get('is_charging')
-        screen = data.get('screen', '')
-        app_version = data.get('app_version', '')
-        match_id = _clean_int(data.get('match_id'))
-        client_match_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
+    data = request.get_json() or {}
+    kort_id = normalize_kort_id(data.get('court_id', ''))
+    access_error = require_court_access(kort_id)
+    if access_error:
+        return access_error
+    battery_level = data.get('battery_level')
+    is_charging = data.get('is_charging')
+    screen = data.get('screen', '')
+    app_version = data.get('app_version', '')
+    match_id = _clean_int(data.get('match_id'))
+    client_match_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
 
-        logger.info(
-            f"Heartbeat: court={kort_id} battery={battery_level}% "
-            f"charging={is_charging} screen={screen} ver={app_version}"
+    logger.info(
+        f"Heartbeat: court={kort_id} battery={battery_level}% "
+        f"charging={is_charging} screen={screen} ver={app_version}"
+    )
+
+    # Update court state with battery info if court is assigned
+    if kort_id:
+        court_state = ensure_court_state(kort_id)
+        with STATE_LOCK:
+            if battery_level:
+                court_state["battery_level"] = int(battery_level)
+            if is_charging is not None:
+                court_state["is_charging"] = is_charging in (True, "true", "True")
+            court_state["last_heartbeat"] = utc_now_iso()
+            court_state["app_version"] = app_version
+            court_state["umpire_screen"] = screen
+
+        heartbeat_meta = _request_client_meta(data)
+        snapshot = data.get("snapshot")
+        tablet_presence.record(
+            session_court_id=kort_id,
+            match_id=match_id,
+            client_match_uuid=client_match_uuid,
+            screen=screen,
+            battery_level=battery_level,
+            app_version=heartbeat_meta.get("app_version") or app_version,
+            platform=heartbeat_meta.get("platform"),
+            device=heartbeat_meta.get("device"),
+            device_model=heartbeat_meta.get("device_model"),
+            device_manufacturer=heartbeat_meta.get("device_manufacturer"),
+            is_charging=is_charging,
+            snapshot=snapshot,
         )
 
-        # Update court state with battery info if court is assigned
-        if kort_id:
-            court_state = ensure_court_state(kort_id)
-            with STATE_LOCK:
-                if battery_level:
-                    court_state["battery_level"] = int(battery_level)
-                if is_charging is not None:
-                    court_state["is_charging"] = is_charging in (True, "true", "True")
-                court_state["last_heartbeat"] = utc_now_iso()
-                court_state["app_version"] = app_version
-                court_state["umpire_screen"] = screen
+    commands = director_command_broker.pending_for(kort_id, match_id, client_match_uuid)
+    return jsonify({"status": "ok", "commands": commands}), 200
 
-            heartbeat_meta = _request_client_meta(data)
-            snapshot = data.get("snapshot")
-            tablet_presence.record(
-                session_court_id=kort_id,
-                match_id=match_id,
-                client_match_uuid=client_match_uuid,
-                screen=screen,
-                battery_level=battery_level,
-                app_version=heartbeat_meta.get("app_version") or app_version,
-                platform=heartbeat_meta.get("platform"),
-                device=heartbeat_meta.get("device"),
-                device_model=heartbeat_meta.get("device_model"),
-                device_manufacturer=heartbeat_meta.get("device_manufacturer"),
-                is_charging=is_charging,
-                snapshot=snapshot,
-            )
-
-        commands = director_command_broker.pending_for(kort_id, match_id, client_match_uuid)
-        return jsonify({"status": "ok", "commands": commands}), 200
-
-    except Exception as e:
-        logger.error(f"Error processing heartbeat: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
 
 
 @blueprint.route('/umpire/commands', methods=['GET'])
 def poll_director_commands():
     """Long-poll pending director commands for the authorized tablet session."""
-    try:
-        session_court_id = court_id_from_bearer() or normalize_kort_id(request.args.get("court_id"))
-        access_error = require_court_access(session_court_id)
-        if access_error:
-            return access_error
-        if not session_court_id:
-            return jsonify({"error": "court_id required"}), 400
+    session_court_id = court_id_from_bearer() or normalize_kort_id(request.args.get("court_id"))
+    access_error = require_court_access(session_court_id)
+    if access_error:
+        return access_error
+    if not session_court_id:
+        return jsonify({"error": "court_id required"}), 400
 
-        match_id = _clean_int(request.args.get("match_id"))
-        client_match_uuid = _clean_client_text(request.args.get("client_match_uuid"), 80)
-        wait_ms = request.args.get("wait_ms", type=int) or 0
-        wait_s = max(0.0, min(float(wait_ms) / 1000.0, 25.0))
-        commands = director_command_broker.wait_for(
-            session_court_id,
-            match_id,
-            client_match_uuid,
-            wait_s,
-        )
-        return jsonify({"commands": commands}), 200
-    except Exception as e:
-        logger.error(f"Error polling director commands: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    match_id = _clean_int(request.args.get("match_id"))
+    client_match_uuid = _clean_client_text(request.args.get("client_match_uuid"), 80)
+    wait_ms = request.args.get("wait_ms", type=int) or 0
+    wait_s = max(0.0, min(float(wait_ms) / 1000.0, 25.0))
+    commands = director_command_broker.wait_for(
+        session_court_id,
+        match_id,
+        client_match_uuid,
+        wait_s,
+    )
+    return jsonify({"commands": commands}), 200
 
 
 @blueprint.route('/umpire/commands/<command_id>/ack', methods=['POST'])
 def ack_director_command(command_id: str):
     """Drop a director command after the tablet applied it."""
-    try:
-        session_court_id = court_id_from_bearer() or normalize_kort_id(
-            (request.get_json(silent=True) or {}).get("court_id") or request.args.get("court_id")
-        )
-        access_error = require_court_access(session_court_id)
-        if access_error:
-            return access_error
-        acked = director_command_broker.ack(command_id)
-        return jsonify({"ok": True, "acked": acked}), 200
-    except Exception as e:
-        logger.error(f"Error acking director command: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+    session_court_id = court_id_from_bearer() or normalize_kort_id(
+        (request.get_json(silent=True) or {}).get("court_id") or request.args.get("court_id")
+    )
+    access_error = require_court_access(session_court_id)
+    if access_error:
+        return access_error
+    acked = director_command_broker.ack(command_id)
+    return jsonify({"ok": True, "acked": acked}), 200

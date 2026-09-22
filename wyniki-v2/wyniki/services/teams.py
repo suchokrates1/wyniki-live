@@ -6,7 +6,7 @@ Matching ignores partner order: "A / B" == "B / A".
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Optional
 
 TEAM_NAME_SEPARATOR = " / "
 

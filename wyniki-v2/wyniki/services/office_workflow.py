@@ -10,6 +10,7 @@ from ..database import (
     GROUP_PHASE,
     advance_knockout,
     count_finished_group_matches,
+    correct_knockout_result,
     count_group_knockout_progress,
     ensure_group_schedule_entries,
     ensure_knockout_schedule_entries,
@@ -23,6 +24,7 @@ from ..database import (
     get_tournament_quick_info,
     is_group_stage_phase,
     is_knockout_stage_phase,
+    knockout_correction_blocker,
     link_schedule_to_match,
     maybe_generate_knockout_from_completed_groups,
     normalize_group_stage_phase,
@@ -33,22 +35,17 @@ from ..services.teams import PLAY_FORMAT_KNOCKOUT, normalize_play_format
 
 
 class OfficeWorkflowError(ValueError):
-    def __init__(self, message: str, status_code: int = 400):
+    def __init__(self, message: str, status_code: int = 400, extra: Dict[str, Any] | None = None):
         super().__init__(message)
         self.status_code = status_code
+        self.extra = extra or {}
+
+    def response(self):
+        return jsonify({"error": str(self), **self.extra}), self.status_code
 
 
 def _is_knockout_phase(phase: str | None) -> bool:
     return is_knockout_stage_phase(phase)
-
-
-def _json_no_cache(payload, status: int = 200):
-    response = jsonify(payload)
-    response.status_code = status
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
 
 
 def _normalize_int(value: Any, default: int = 0) -> int:
@@ -768,4 +765,121 @@ def _build_office_dashboard(tournament_id: int) -> Dict[str, Any]:
         "courts": fetch_courts_for_tournament(tournament_id),
         "quick_info": get_tournament_quick_info(tournament_id),
         "court_streams": get_tournament_court_streams(tournament_id),
+    }
+
+
+def _knockout_blocked(blocker: str) -> OfficeWorkflowError:
+    return OfficeWorkflowError(
+        f"The next match ({blocker}) already has a result; correct that one first",
+        409,
+        extra={"blocked_by": blocker},
+    )
+
+
+def _update_office_match(tournament_id: int, match_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+    """Correct a finished result, by `matches.id` or (source=history) `match_history.id`."""
+    source = (data.get('source') or 'match').strip().lower()
+    groups = fetch_bracket_groups(tournament_id)
+    group_lookup, player_groups = _group_players_index(groups)
+
+    if source == 'history':
+        history = MatchHistory.query.filter_by(id=match_id, tournament_id=tournament_id).first()
+        if not history:
+            raise OfficeWorkflowError("Match not found", 404)
+        sets_history, player1_sets, player2_sets = _normalize_office_sets(data, history.player_a, history.player_b)
+        outcome = office_result_outcome(data, history.player_a, history.player_b)
+        history_winner = outcome["winner_name"] or (history.player_a if player1_sets > player2_sets else history.player_b)
+        if _is_knockout_phase(history.phase):
+            blocker = knockout_correction_blocker(tournament_id, history.player_a, history.player_b, history.phase, history_winner)
+            if blocker:
+                raise _knockout_blocked(blocker)
+        previous_history_winner = history.winner_name
+
+        history.score_a = json.dumps([set_score.get('player1_games', 0) for set_score in sets_history])
+        history.score_b = json.dumps([set_score.get('player2_games', 0) for set_score in sets_history])
+        history.sets_history = json.dumps(sets_history)
+        history.finish_reason = outcome["finish_reason"]
+        history.winner_name = outcome["winner_name"]
+        history.injured_player_name = outcome["injured_player_name"]
+        history.result_note = outcome["result_note"]
+        if history.match_id:
+            match = Match.query.filter_by(id=history.match_id, tournament_id=tournament_id).first()
+            if match:
+                match.status = 'finished'
+                match.finish_reason = history.finish_reason
+                match.winner_name = history.winner_name
+                match.injured_player_name = history.injured_player_name
+                match.result_note = history.result_note
+                match.player1_sets = player1_sets
+                match.player2_sets = player2_sets
+                match.sets_history = json.dumps(sets_history)
+                match.updated_at = utc_now_iso()
+                group_name = group_lookup.get(int(match.bracket_group_id)) if match.bracket_group_id else None
+                _sync_office_match_history(match, group_name)
+        db.session.commit()
+        if history.match_id:
+            link_schedule_to_match(
+                tournament_id,
+                history.match_id,
+                player1_name=history.player_a,
+                player2_name=history.player_b,
+                phase=history.phase,
+                bracket_group_id=_infer_group_id_for_players(history.player_a, history.player_b, player_groups) if history.phase == GROUP_PHASE else None,
+            )
+            if _is_knockout_phase(history.phase):
+                correct_knockout_result(history.match_id, tournament_id, previous_history_winner)
+        return {
+            "message": "Match result updated",
+            "match": _office_history_payload(history, group_lookup, player_groups),
+            "knockout_generation": None,
+            "dashboard": _build_office_dashboard(tournament_id),
+        }
+
+    match = Match.query.filter_by(id=match_id, tournament_id=tournament_id).first()
+    if not match:
+        raise OfficeWorkflowError("Match not found", 404)
+
+    sets_history, player1_sets, player2_sets = _normalize_office_sets(data, match.player1_name, match.player2_name)
+    outcome = office_result_outcome(data, match.player1_name, match.player2_name)
+
+    previous_winner = match.winner_name
+    if _is_knockout_phase(match.phase):
+        new_winner = outcome["winner_name"] or (match.player1_name if player1_sets > player2_sets else match.player2_name)
+        blocker = knockout_correction_blocker(tournament_id, match.player1_name, match.player2_name, match.phase, new_winner)
+        if blocker:
+            raise _knockout_blocked(blocker)
+
+    match.status = 'finished'
+    match.finish_reason = outcome["finish_reason"]
+    match.winner_name = outcome["winner_name"]
+    match.injured_player_name = outcome["injured_player_name"]
+    match.result_note = outcome["result_note"]
+    match.player1_sets = player1_sets
+    match.player2_sets = player2_sets
+    match.sets_history = json.dumps(sets_history)
+    match.updated_at = utc_now_iso()
+
+    group_name = group_lookup.get(int(match.bracket_group_id)) if match.bracket_group_id else None
+    _sync_office_match_history(match, group_name)
+    db.session.commit()
+    link_schedule_to_match(
+        tournament_id,
+        match.id,
+        player1_name=match.player1_name,
+        player2_name=match.player2_name,
+        phase=match.phase,
+        bracket_group_id=int(match.bracket_group_id) if match.bracket_group_id else None,
+    )
+
+    generation = None
+    if match.phase == GROUP_PHASE:
+        generation = maybe_generate_knockout_from_completed_groups(tournament_id)
+    elif _is_knockout_phase(match.phase):
+        correct_knockout_result(match.id, tournament_id, previous_winner)
+
+    return {
+        "message": "Match result updated",
+        "match": _office_match_payload(match, {match.bracket_group_id: group_name} if group_name else {}, player_groups),
+        "knockout_generation": generation,
+        "dashboard": _build_office_dashboard(tournament_id),
     }

@@ -1,7 +1,6 @@
 """Admin API endpoints."""
 from flask import Blueprint, jsonify, request
 
-from ..services.court_manager import refresh_courts_from_db, available_courts
 from ..config import logger
 
 blueprint = Blueprint('admin', __name__, url_prefix='/admin')
@@ -10,168 +9,140 @@ blueprint = Blueprint('admin', __name__, url_prefix='/admin')
 @blueprint.route('/api/courts', methods=['GET'])
 def get_courts():
     """Get courts for active tournaments only."""
-    try:
-        from .. import database
-        
-        courts_data = database.fetch_courts(active_only=True)
-        return jsonify(courts_data)
-    except Exception as e:
-        logger.error(f"Failed to get courts: {e}")
-        return jsonify({"error": str(e)}), 500
+    from .. import database
+    
+    courts_data = database.fetch_courts(active_only=True)
+    return jsonify(courts_data)
 
 
 @blueprint.route('/api/courts', methods=['POST'])
 def add_court():
     """Add a new court."""
-    try:
-        from ..services import court_manager
-        from .. import database
-        
-        data = request.get_json() or {}
-        kort_id = data.get("kort_id")
-        pin = data.get("pin")
-        
-        if not kort_id:
-            return jsonify({"error": "kort_id required"}), 400
-        
-        court_manager.ensure_court_state(kort_id)
-        
-        # Save to database
-        database.upsert_court(kort_id, pin)
-        
-        logger.info(f"Court added: kort={kort_id}, pin={'set' if pin else 'none'}")
-        return jsonify({"status": "ok", "kort_id": kort_id}), 201
-    except Exception as e:
-        logger.error(f"Failed to add court: {e}")
-        return jsonify({"error": str(e)}), 500
+    from ..services import court_manager
+    from .. import database
+    
+    data = request.get_json() or {}
+    kort_id = data.get("kort_id")
+    pin = data.get("pin")
+    
+    if not kort_id:
+        return jsonify({"error": "kort_id required"}), 400
+    
+    court_manager.ensure_court_state(kort_id)
+    
+    # Save to database
+    database.upsert_court(kort_id, pin)
+    
+    logger.info(f"Court added: kort={kort_id}, pin={'set' if pin else 'none'}")
+    return jsonify({"status": "ok", "kort_id": kort_id}), 201
 
 
 @blueprint.route('/api/courts/<kort_id>/pin', methods=['PUT'])
 def update_court_pin(kort_id):
     """Update PIN for a court."""
-    try:
-        from .. import database
-        
-        data = request.get_json() or {}
-        pin = data.get("pin")
-        
-        # Validate PIN format (4 digits or null)
-        if pin and (len(pin) != 4 or not pin.isdigit()):
-            return jsonify({"error": "PIN must be 4 digits"}), 400
-        
-        database.upsert_court(kort_id, pin)
-        
-        logger.info(f"Court PIN updated: kort={kort_id}")
-        return jsonify({"status": "ok", "kort_id": kort_id})
-    except Exception as e:
-        logger.error(f"Failed to update court PIN: {e}")
-        return jsonify({"error": str(e)}), 500
+    from .. import database
+    
+    data = request.get_json() or {}
+    pin = data.get("pin")
+    
+    # Validate PIN format (4 digits or null)
+    if pin and (len(pin) != 4 or not pin.isdigit()):
+        return jsonify({"error": "PIN must be 4 digits"}), 400
+    
+    database.upsert_court(kort_id, pin)
+    
+    logger.info(f"Court PIN updated: kort={kort_id}")
+    return jsonify({"status": "ok", "kort_id": kort_id})
 
 
 @blueprint.route('/api/courts/<kort_id>', methods=['DELETE'])
 def delete_court(kort_id):
     """Delete a court."""
-    try:
-        from ..services import court_manager
-        from .. import database
-        
-        # Delete from database
-        deleted = database.delete_court(kort_id)
-        
-        if not deleted:
-            return jsonify({"error": "Court not found"}), 404
-        
-        # Refresh in-memory state
-        db_courts_list = database.fetch_courts(active_only=True)
-        court_manager.refresh_courts_from_db(db_courts_list)
-        
-        logger.info(f"Court deleted: kort={kort_id}")
-        return jsonify({"status": "ok", "kort_id": kort_id})
-    except Exception as e:
-        logger.error(f"Failed to delete court: {e}")
-        return jsonify({"error": str(e)}), 500
+    from ..services import court_manager
+    from .. import database
+    
+    # Delete from database
+    deleted = database.delete_court(kort_id)
+    
+    if not deleted:
+        return jsonify({"error": "Court not found"}), 404
+    
+    # Refresh in-memory state
+    db_courts_list = database.fetch_courts(active_only=True)
+    court_manager.refresh_courts_from_db(db_courts_list)
+    
+    logger.info(f"Court deleted: kort={kort_id}")
+    return jsonify({"status": "ok", "kort_id": kort_id})
 
 
 @blueprint.route('/api/courts/<kort_id>/reset', methods=['POST'])
 def reset_court(kort_id):
     """Reset court state - clear all match data."""
-    try:
-        from ..services import court_manager
-        from ..services.event_broker import emit_score_update
+    from ..services import court_manager
+    from ..services.event_broker import emit_score_update
 
-        state = court_manager.get_court_state(kort_id)
-        if state is None:
-            return jsonify({"error": "Court not found"}), 404
+    state = court_manager.get_court_state(kort_id)
+    if state is None:
+        return jsonify({"error": "Court not found"}), 404
 
-        with court_manager.STATE_LOCK:
-            identity = {
-                "court_name": state.get("court_name"),
-                "display_order": state.get("display_order"),
-                "tournament_id": state.get("tournament_id"),
-                "tournament_name": state.get("tournament_name"),
-            }
-            fresh = court_manager._empty_court_state()
-            fresh.update(identity)
-            state.clear()
-            state.update(fresh)
+    with court_manager.STATE_LOCK:
+        identity = {
+            "court_name": state.get("court_name"),
+            "display_order": state.get("display_order"),
+            "tournament_id": state.get("tournament_id"),
+            "tournament_name": state.get("tournament_name"),
+        }
+        fresh = court_manager._empty_court_state()
+        fresh.update(identity)
+        state.clear()
+        state.update(fresh)
 
-        emit_score_update(kort_id, state)
-        logger.info(f"Court reset: kort={kort_id}")
-        return jsonify({"status": "ok", "kort_id": kort_id})
-    except Exception as e:
-        logger.error(f"Failed to reset court: {e}")
-        return jsonify({"error": str(e)}), 500
+    emit_score_update(kort_id, state)
+    logger.info(f"Court reset: kort={kort_id}")
+    return jsonify({"status": "ok", "kort_id": kort_id})
 
 
 @blueprint.route('/api/courts/<kort_id>', methods=['PUT'])
 def update_court(kort_id):
     """Update court (rename kort_id)."""
-    try:
-        from ..services import court_manager
-        from .. import database
-        
-        data = request.get_json() or {}
-        new_kort_id = data.get("kort_id")
-        
-        if not new_kort_id:
-            return jsonify({"error": "New kort_id required"}), 400
-        
-        if new_kort_id == kort_id:
-            return jsonify({"status": "ok", "kort_id": kort_id})
-        
-        # Rename in database
-        renamed = database.rename_court(kort_id, new_kort_id)
-        
-        if not renamed:
-            return jsonify({"error": "Court not found or new ID already exists"}), 400
-        
-        # Refresh in-memory state
-        db_courts_list = database.fetch_courts(active_only=True)
-        court_manager.refresh_courts_from_db(db_courts_list)
-        
-        logger.info(f"Court renamed: {kort_id} -> {new_kort_id}")
-        return jsonify({"status": "ok", "kort_id": new_kort_id})
-    except Exception as e:
-        logger.error(f"Failed to update court: {e}")
-        return jsonify({"error": str(e)}), 500
+    from ..services import court_manager
+    from .. import database
+    
+    data = request.get_json() or {}
+    new_kort_id = data.get("kort_id")
+    
+    if not new_kort_id:
+        return jsonify({"error": "New kort_id required"}), 400
+    
+    if new_kort_id == kort_id:
+        return jsonify({"status": "ok", "kort_id": kort_id})
+    
+    # Rename in database
+    renamed = database.rename_court(kort_id, new_kort_id)
+    
+    if not renamed:
+        return jsonify({"error": "Court not found or new ID already exists"}), 400
+    
+    # Refresh in-memory state
+    db_courts_list = database.fetch_courts(active_only=True)
+    court_manager.refresh_courts_from_db(db_courts_list)
+    
+    logger.info(f"Court renamed: {kort_id} -> {new_kort_id}")
+    return jsonify({"status": "ok", "kort_id": new_kort_id})
 
 
 @blueprint.route('/api/history/latest', methods=['DELETE'])
 def delete_latest_history():
     """Delete the latest history entry."""
-    try:
-        from ..services import history_manager
-        
-        deleted = history_manager.delete_latest_history()
-        
-        if deleted:
-            logger.info(f"History entry deleted: {deleted}")
-            return jsonify({"status": "ok", "deleted": deleted})
-        else:
-            return jsonify({"status": "ok", "message": "No history to delete"})
-    except Exception as e:
-        logger.error(f"Failed to delete history: {e}")
-        return jsonify({"error": str(e)}), 500
+    from ..services import history_manager
+    
+    deleted = history_manager.delete_latest_history()
+    
+    if deleted:
+        logger.info(f"History entry deleted: {deleted}")
+        return jsonify({"status": "ok", "deleted": deleted})
+    else:
+        return jsonify({"status": "ok", "message": "No history to delete"})
 
 
 @blueprint.route('/api/e2e/cleanup', methods=['POST'])
@@ -246,165 +217,141 @@ def cleanup_e2e_artifacts():
 @blueprint.route('/api/e2e/artifacts', methods=['GET'])
 def get_e2e_artifacts():
     """Return emulator E2E artifacts created with an E2E-* marker."""
-    try:
-        from ..db_models import Match, MatchHistory, MatchStatistics, Tournament
+    from ..db_models import Match, MatchHistory, MatchStatistics, Tournament
 
-        marker = str(request.args.get("marker") or "").strip()
-        if not marker.startswith("E2E-"):
-            return jsonify({"error": "marker must start with E2E-"}), 400
+    marker = str(request.args.get("marker") or "").strip()
+    if not marker.startswith("E2E-"):
+        return jsonify({"error": "marker must start with E2E-"}), 400
 
-        like_marker = f"%{marker}%"
-        prefix_marker = f"{marker}%"
+    like_marker = f"%{marker}%"
+    prefix_marker = f"{marker}%"
 
-        matches = Match.query.filter(
-            (Match.player1_name.like(like_marker)) |
-            (Match.player2_name.like(like_marker))
-        ).order_by(Match.id.desc()).all()
-        match_ids = [match.id for match in matches]
+    matches = Match.query.filter(
+        (Match.player1_name.like(like_marker)) |
+        (Match.player2_name.like(like_marker))
+    ).order_by(Match.id.desc()).all()
+    match_ids = [match.id for match in matches]
 
-        history_filter = (MatchHistory.player_a.like(like_marker)) | (MatchHistory.player_b.like(like_marker))
-        if match_ids:
-            history_filter = history_filter | MatchHistory.match_id.in_(match_ids)
-        history = MatchHistory.query.filter(history_filter).order_by(MatchHistory.id.desc()).all()
+    history_filter = (MatchHistory.player_a.like(like_marker)) | (MatchHistory.player_b.like(like_marker))
+    if match_ids:
+        history_filter = history_filter | MatchHistory.match_id.in_(match_ids)
+    history = MatchHistory.query.filter(history_filter).order_by(MatchHistory.id.desc()).all()
 
-        statistics = []
-        if match_ids:
-            statistics = MatchStatistics.query.filter(MatchStatistics.match_id.in_(match_ids)).all()
+    statistics = []
+    if match_ids:
+        statistics = MatchStatistics.query.filter(MatchStatistics.match_id.in_(match_ids)).all()
 
-        tournaments = Tournament.query.filter(Tournament.name.like(prefix_marker)).order_by(Tournament.id.desc()).all()
+    tournaments = Tournament.query.filter(Tournament.name.like(prefix_marker)).order_by(Tournament.id.desc()).all()
 
-        return jsonify({
-            "marker": marker,
-            "matches": [match.to_dict() for match in matches],
-            "history": [entry.to_dict() | {"match_id": entry.match_id, "sets_history": entry.sets_history} for entry in history],
-            "statistics": [stat.to_dict() for stat in statistics],
-            "tournaments": [tournament.to_dict() for tournament in tournaments],
-        })
-    except Exception as e:
-        logger.error(f"Failed to fetch E2E artifacts: {e}")
-        return jsonify({"error": str(e)}), 500
+    return jsonify({
+        "marker": marker,
+        "matches": [match.to_dict() for match in matches],
+        "history": [entry.to_dict() | {"match_id": entry.match_id, "sets_history": entry.sets_history} for entry in history],
+        "statistics": [stat.to_dict() for stat in statistics],
+        "tournaments": [tournament.to_dict() for tournament in tournaments],
+    })
 
 
 @blueprint.route('/api/settings/email', methods=['GET'])
 def get_email_settings():
     """Get SMTP/email settings used for match and tournament reports."""
-    try:
-        from ..services.email_reports import get_email_settings as load_email_settings
+    from ..services.email_reports import get_email_settings as load_email_settings
 
-        return jsonify(load_email_settings())
-    except Exception as e:
-        logger.error(f"Failed to get email settings: {e}")
-        return jsonify({"error": str(e)}), 500
+    return jsonify(load_email_settings())
 
 
 @blueprint.route('/api/settings/email', methods=['PUT'])
 def update_email_settings():
     """Persist SMTP/email settings."""
-    try:
-        from ..services.email_reports import save_email_settings
+    from ..services.email_reports import save_email_settings
 
-        data = request.get_json(silent=True) or {}
-        save_email_settings(data)
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        logger.error(f"Failed to update email settings: {e}")
-        return jsonify({"error": str(e)}), 500
+    data = request.get_json(silent=True) or {}
+    save_email_settings(data)
+    return jsonify({"status": "ok"})
 
 
 @blueprint.route('/api/demo', methods=['POST'])
 def seed_demo():
     """Seed demo data for admin preview. Does NOT affect production overlays."""
-    try:
-        from ..services import court_manager
+    from ..services import court_manager
 
-        ok, msg, demo_courts = court_manager.seed_demo_data()
-        if not ok:
-            return jsonify({"error": msg}), 400
+    ok, msg, demo_courts = court_manager.seed_demo_data()
+    if not ok:
+        return jsonify({"error": msg}), 400
 
-        logger.info("Demo data seeded via API (admin preview only)")
-        return jsonify({
-            "status": "ok",
-            "message": msg,
-            "demo_courts": demo_courts,
-            "demo_overlay_active": court_manager.is_demo_overlay_active(),
-        })
-    except Exception as e:
-        logger.error(f"Failed to seed demo data: {e}")
-        return jsonify({"error": str(e)}), 500
+    logger.info("Demo data seeded via API (admin preview only)")
+    return jsonify({
+        "status": "ok",
+        "message": msg,
+        "demo_courts": demo_courts,
+        "demo_overlay_active": court_manager.is_demo_overlay_active(),
+    })
 
 
 @blueprint.route('/api/demo', methods=['DELETE'])
 def clear_demo():
     """Clear demo data and deactivate demo overlay."""
-    try:
-        from ..services import court_manager
-        from ..services.event_broker import event_broker
+    from ..services import court_manager
+    from ..services.event_broker import event_broker
 
-        was_active = court_manager.is_demo_overlay_active()
-        court_manager.clear_demo_data()
+    was_active = court_manager.is_demo_overlay_active()
+    court_manager.clear_demo_data()
 
-        # If demo overlay was active, broadcast real courts so overlays recover
-        if was_active:
-            real_snapshot = court_manager.serialize_all_states()
-            for kort_id, state in real_snapshot.items():
-                payload = {
-                    "type": "state_update",
-                    "kort_id": kort_id,
-                    "data": court_manager.serialize_public_court_state(
-                        court_manager.get_court_state(kort_id) or {}
-                    ),
-                }
-                event_broker.broadcast(payload)
+    # If demo overlay was active, broadcast real courts so overlays recover
+    if was_active:
+        real_snapshot = court_manager.serialize_all_states()
+        for kort_id, state in real_snapshot.items():
+            payload = {
+                "type": "state_update",
+                "kort_id": kort_id,
+                "data": court_manager.serialize_public_court_state(
+                    court_manager.get_court_state(kort_id) or {}
+                ),
+            }
+            event_broker.broadcast(payload)
 
-        return jsonify({"status": "ok", "message": "Demo wyczyszczone"})
-    except Exception as e:
-        logger.error(f"Failed to clear demo: {e}")
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"status": "ok", "message": "Demo wyczyszczone"})
 
 
 @blueprint.route('/api/demo/overlay', methods=['POST'])
 def toggle_demo_overlay():
     """Toggle demo data visibility in production overlays (OBS)."""
-    try:
-        from ..services import court_manager
-        from ..services.event_broker import event_broker
+    from ..services import court_manager
+    from ..services.event_broker import event_broker
 
-        data = request.get_json(silent=True) or {}
-        active = bool(data.get("active", False))
+    data = request.get_json(silent=True) or {}
+    active = bool(data.get("active", False))
 
-        if active and not court_manager.has_demo_data():
-            return jsonify({"error": "Najpierw załaduj dane demo"}), 400
+    if active and not court_manager.has_demo_data():
+        return jsonify({"error": "Najpierw załaduj dane demo"}), 400
 
-        court_manager.set_demo_overlay(active)
+    court_manager.set_demo_overlay(active)
 
-        # Broadcast appropriate courts so overlays update immediately
-        if active:
-            demo_snapshot = court_manager.get_demo_courts_snapshot()
-            for kort_id, state in demo_snapshot.items():
+    # Broadcast appropriate courts so overlays update immediately
+    if active:
+        demo_snapshot = court_manager.get_demo_courts_snapshot()
+        for kort_id, state in demo_snapshot.items():
+            payload = {
+                "type": "state_update",
+                "kort_id": kort_id,
+                "data": state,
+            }
+            event_broker.broadcast(payload)
+    else:
+        # Restore real courts in overlays
+        for kort_id in court_manager.available_courts():
+            real_state = court_manager.get_court_state(kort_id)
+            if real_state:
                 payload = {
                     "type": "state_update",
                     "kort_id": kort_id,
-                    "data": state,
+                    "data": court_manager.serialize_public_court_state(real_state),
                 }
                 event_broker.broadcast(payload)
-        else:
-            # Restore real courts in overlays
-            for kort_id in court_manager.available_courts():
-                real_state = court_manager.get_court_state(kort_id)
-                if real_state:
-                    payload = {
-                        "type": "state_update",
-                        "kort_id": kort_id,
-                        "data": court_manager.serialize_public_court_state(real_state),
-                    }
-                    event_broker.broadcast(payload)
 
-        msg = "Demo widoczne w overlayach" if active else "Overlaye przywrócone do danych produkcyjnych"
-        logger.info(f"Demo overlay toggled: {active}")
-        return jsonify({"status": "ok", "active": active, "message": msg})
-    except Exception as e:
-        logger.error(f"Failed to toggle demo overlay: {e}")
-        return jsonify({"error": str(e)}), 500
+    msg = "Demo widoczne w overlayach" if active else "Overlaye przywrócone do danych produkcyjnych"
+    logger.info(f"Demo overlay toggled: {active}")
+    return jsonify({"status": "ok", "active": active, "message": msg})
 
 
 @blueprint.route('/api/demo/status', methods=['GET'])
@@ -421,45 +368,41 @@ def demo_status():
 @blueprint.route('/api/director/tablets', methods=['GET'])
 def director_tablets():
     """Live umpire tablets (heartbeat/events) plus in-progress matches on a court."""
-    try:
-        from ..db_models import Court, Match
-        from ..services.director_commands import tablet_presence
-        from ..services.tablet_aliases import annotate_tablet
+    from ..db_models import Court, Match
+    from ..services.director_commands import tablet_presence
+    from ..services.tablet_aliases import annotate_tablet
 
-        court_id = str(request.args.get("court_id") or "").strip() or None
-        query = Match.query.filter_by(status="in_progress")
-        if court_id:
-            query = query.filter_by(court_id=court_id)
-        matches_on_court = query.order_by(Match.updated_at.desc()).all()
-        match_ids_on_court = {match.id for match in matches_on_court}
-        tablets = tablet_presence.list_visible_on_court(court_id, match_ids_on_court)
-        seen_match_ids = {row.get("match_id") for row in tablets if row.get("match_id")}
-        for match in matches_on_court:
-            if match.id in seen_match_ids:
-                continue
-            tablets.append({
-                "session_court_id": match.court_id,
-                "match_id": match.id,
-                "client_match_uuid": match.client_match_uuid,
-                "player1_name": match.player1_name,
-                "player2_name": match.player2_name,
-                "screen": None,
-                "battery_level": None,
-                "app_version": None,
-                "last_seen": match.updated_at,
-                "from_db": True,
-            })
-        court_ids = {row.get("session_court_id") for row in tablets if row.get("session_court_id")}
-        names = {}
-        if court_ids:
-            for court in Court.query.filter(Court.kort_id.in_(court_ids)).all():
-                names[court.kort_id] = str(court.name or "").strip()
-        for row in tablets:
-            annotate_tablet(row, names.get(row.get("session_court_id")))
-        return jsonify({"tablets": tablets})
-    except Exception as e:
-        logger.error(f"Failed to list director tablets: {e}")
-        return jsonify({"error": str(e)}), 500
+    court_id = str(request.args.get("court_id") or "").strip() or None
+    query = Match.query.filter_by(status="in_progress")
+    if court_id:
+        query = query.filter_by(court_id=court_id)
+    matches_on_court = query.order_by(Match.updated_at.desc()).all()
+    match_ids_on_court = {match.id for match in matches_on_court}
+    tablets = tablet_presence.list_visible_on_court(court_id, match_ids_on_court)
+    seen_match_ids = {row.get("match_id") for row in tablets if row.get("match_id")}
+    for match in matches_on_court:
+        if match.id in seen_match_ids:
+            continue
+        tablets.append({
+            "session_court_id": match.court_id,
+            "match_id": match.id,
+            "client_match_uuid": match.client_match_uuid,
+            "player1_name": match.player1_name,
+            "player2_name": match.player2_name,
+            "screen": None,
+            "battery_level": None,
+            "app_version": None,
+            "last_seen": match.updated_at,
+            "from_db": True,
+        })
+    court_ids = {row.get("session_court_id") for row in tablets if row.get("session_court_id")}
+    names = {}
+    if court_ids:
+        for court in Court.query.filter(Court.kort_id.in_(court_ids)).all():
+            names[court.kort_id] = str(court.name or "").strip()
+    for row in tablets:
+        annotate_tablet(row, names.get(row.get("session_court_id")))
+    return jsonify({"tablets": tablets})
 
 
 @blueprint.route('/api/matches/<int:match_id>/control', methods=['POST'])

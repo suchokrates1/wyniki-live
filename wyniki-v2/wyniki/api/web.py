@@ -19,20 +19,26 @@ STATIC_DIR = Path(__file__).parent.parent / 'static'
 APP_ROOT = Path(__file__).parent.parent.parent
 
 
+def _html_page(filename: str):
+    """Serve a built HTML page that browsers must always revalidate."""
+    response = send_from_directory(STATIC_DIR, filename)
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
 @blueprint.route('/')
 def index():
     """Serve main page."""
-    response = send_from_directory(STATIC_DIR, 'index.html')
+    response = _html_page('index.html')
     features = public_feature_list()
     if features:
         response.direct_passthrough = False
         html = response.get_data(as_text=True)
         meta = f'<meta name="bt-features" content="{" ".join(features)}">'
         response.set_data(html.replace('</head>', f'{meta}\n</head>', 1))
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
     return response
 
 
@@ -41,12 +47,7 @@ def index():
 @blueprint.route('/admin.html')
 def admin():
     """Serve admin page."""
-    response = send_from_directory(STATIC_DIR, 'admin.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    return _html_page('admin.html')
 
 
 @blueprint.route('/umpire')
@@ -54,12 +55,7 @@ def admin():
 @blueprint.route('/umpire.html')
 def umpire():
     """Serve the umpire PWA (pre-match + scoring)."""
-    response = send_from_directory(STATIC_DIR, 'umpire.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    return _html_page('umpire.html')
 
 
 @blueprint.route('/umpire.webmanifest')
@@ -92,12 +88,7 @@ def umpire_icons(filename):
 @blueprint.route('/privacy.html')
 def privacy():
     """Serve the public privacy policy."""
-    response = send_from_directory(STATIC_DIR, 'privacy.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    return _html_page('privacy.html')
 
 
 @blueprint.route('/office')
@@ -107,12 +98,7 @@ def privacy():
 @blueprint.route('/office.html')
 def office(slot: int | None = None):
     """Serve standalone office page."""
-    response = send_from_directory(STATIC_DIR, 'office.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    return _html_page('office.html')
 
 
 @blueprint.route('/embed')
@@ -120,12 +106,7 @@ def office(slot: int | None = None):
 @blueprint.route('/embed/<lang>/<int:court>')
 def embed(lang=None, court=None):
     """Serve embed page with optional language and court parameters."""
-    response = send_from_directory(STATIC_DIR, 'embed.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    return _html_page('embed.html')
 
 
 @blueprint.route('/assets/<path:filename>')

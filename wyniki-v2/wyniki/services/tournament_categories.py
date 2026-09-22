@@ -16,9 +16,6 @@ CATEGORY_PRESET_DEFAULTS: Dict[str, Dict[str, Any]] = {
     "B4K": {"label": "B4 Kobiety", "hint_bands": ["B4"], "gender_hint": "K"},
 }
 
-PRESET_KEYS = list(CATEGORY_PRESET_DEFAULTS.keys())
-
-
 def preset_defaults(preset_key: str) -> Optional[Dict[str, Any]]:
     key = str(preset_key or "").strip().upper()
     return dict(CATEGORY_PRESET_DEFAULTS[key]) if key in CATEGORY_PRESET_DEFAULTS else None

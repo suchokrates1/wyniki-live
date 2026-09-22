@@ -5,7 +5,6 @@ from wyniki.api.courts import history_page_args
 
 from wyniki.database import (
     get_active_tournament_id,
-    fetch_active_tournaments,
     fetch_tournaments,
     fetch_tournament,
     fetch_bracket_groups,
@@ -21,6 +20,7 @@ from wyniki.database import (
     ensure_knockout_schedule_entries,
     get_public_tournament_quick_info,
 )
+from wyniki.utils import json_no_cache as _json_no_cache
 
 # Public API
 bracket_public_bp = Blueprint('bracket_public', __name__, url_prefix='/api/tournament')
@@ -35,15 +35,6 @@ def _emit_bracket_admin_invalidation(response):
         tournament_id = (request.view_args or {}).get("tid")
         if tournament_id is not None:
             emit_office_invalidation(int(tournament_id), ["groups", "schedule", "dashboard"])
-    return response
-
-
-def _json_no_cache(payload, status: int = 200):
-    response = jsonify(payload)
-    response.status_code = status
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
     return response
 
 
@@ -199,7 +190,6 @@ def public_tournament_bracket(tid: int):
 @bracket_public_bp.route('/<int:tid>/history')
 def public_tournament_history(tid: int):
     """Match history for a specific tournament."""
-    from wyniki.config import settings
     tournament, error = _public_tournament_or_404(tid)
     if error:
         return error

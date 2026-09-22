@@ -284,7 +284,6 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
     new_court_id = str(patch.get("court_id") or old_court_id).strip() or old_court_id
     db_court_changed = new_court_id != old_court_id
     tablet_court_changed = bool(session_court_id and session_court_id != new_court_id)
-    court_changed = db_court_changed or tablet_court_changed
 
     if patch.get("player1_name"):
         match.player1_name = str(patch["player1_name"]).strip()

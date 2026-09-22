@@ -60,7 +60,7 @@ def _crash_and_restore(app, court_id):
 
     with STATE_LOCK:
         COURTS.clear()
-    refresh_courts_from_db(database.fetch_courts(active_only=True), seed_if_empty=False)
+    refresh_courts_from_db(database.fetch_courts(active_only=True))
     with app.app_context():
         rehydrate_live_courts()
     return COURTS[court_id]

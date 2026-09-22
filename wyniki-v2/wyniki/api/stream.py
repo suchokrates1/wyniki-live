@@ -1,6 +1,7 @@
 """SSE Stream endpoints."""
 from flask import Blueprint, Response, stream_with_context
 import json
+import queue
 
 from ..services.event_broker import event_broker
 from ..services.court_manager import serialize_public_snapshot
@@ -29,9 +30,8 @@ def event_stream():
                     state = event.get("data", {})
                     payload = json.dumps({"court_id": kort_id, **state})
                     yield f"event: court_update\ndata: {payload}\n\n"
-                except:
-                    # Send heartbeat
-                    yield f": heartbeat\n\n"
+                except queue.Empty:
+                    yield ": heartbeat\n\n"
         except GeneratorExit:
             logger.info("Client disconnected from SSE stream")
         finally:

@@ -1684,7 +1684,7 @@ def test_rehydrate_live_courts_skips_stale_in_progress_matches(full_app_with_tem
 
     with STATE_LOCK:
         COURTS.clear()
-    refresh_courts_from_db(database.fetch_courts(active_only=True), seed_if_empty=False)
+    refresh_courts_from_db(database.fetch_courts(active_only=True))
 
     with full_app_with_temp_db.app_context():
         restored = rehydrate_live_courts()

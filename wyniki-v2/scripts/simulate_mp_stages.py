@@ -20,7 +20,6 @@ from create_mp_simulation import (  # noqa: E402
     DIVISIONS,
     SIMULATION_NAME,
     _find_existing_tournament,
-    _group_name,
     _insert_simulation_players,
     _save_groups,
     _save_knockout_placeholders,

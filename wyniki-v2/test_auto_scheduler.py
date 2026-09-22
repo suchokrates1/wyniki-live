@@ -69,7 +69,7 @@ def test_reflow_court_entries_collapses_gaps_and_keeps_locked():
 
 def test_apply_b1_court_swaps_bands():
     config = sched.build_default_config(_courts())  # B1->c4, B2->c3
-    moved = sched.apply_b1_court(config, "c3")
+    moved = sched.apply_b1_courts(config, ["c3"])
     assert moved["category_courts"]["B1"] == "c3"
     # band that was on c3 (B2) takes B1's old court c4
     assert moved["category_courts"]["B2"] == "c4"

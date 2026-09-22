@@ -2,12 +2,10 @@
 from __future__ import annotations
 
 import json
-from collections import deque
 from datetime import datetime, timezone
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from ..config import settings, logger
-from .court_manager import GLOBAL_HISTORY, STATE_LOCK
+from ..config import logger
 
 
 def _score_arrays_from_sets_history(sets_history: Optional[List[Dict[str, Any]]]) -> tuple[List[int], List[int]]:
@@ -48,10 +46,6 @@ def add_match_to_history(kort_id: str, state: Dict[str, Any]) -> None:
     
     from ..database import get_tournament_id_for_court, get_active_tournament_id
     entry["tournament_id"] = get_tournament_id_for_court(kort_id) or get_active_tournament_id()
-    
-    with STATE_LOCK:
-        GLOBAL_HISTORY.append(entry)
-    
     logger.info(f"Match added to history: {entry.get('player_a')} vs {entry.get('player_b')}")
     
     # Persist to database
@@ -119,36 +113,7 @@ def _persist_history_entry(entry: Dict[str, Any]) -> None:
         logger.error(f"Failed to persist history entry: {e}")
 
 
-def get_history() -> List[Dict[str, Any]]:
-    """Get match history."""
-    with STATE_LOCK:
-        return list(GLOBAL_HISTORY)
-
-
-def load_history_from_db(entries: List[Dict[str, Any]]) -> None:
-    """Load match history from database."""
-    with STATE_LOCK:
-        GLOBAL_HISTORY.clear()
-        for entry in entries[-settings.match_history_size:]:
-            GLOBAL_HISTORY.append(entry)
-    
-    logger.info(f"Loaded {len(GLOBAL_HISTORY)} history entries")
-
-
 def delete_latest_history() -> bool:
-    """Remove most recent history entry."""
-    with STATE_LOCK:
-        if GLOBAL_HISTORY:
-            removed = GLOBAL_HISTORY.pop()
-            logger.info(f"Removed history entry: {removed.get('player_a')} vs {removed.get('player_b')}")
-            
-            # Also remove from database
-            try:
-                from ..database import delete_latest_history_entry
-                delete_latest_history_entry()
-            except Exception as e:
-                logger.error(f"Failed to delete from DB: {e}")
-            
-            return True
-    return False
-
+    """Remove the most recent history entry."""
+    from ..database import delete_latest_history_entry
+    return delete_latest_history_entry() is not None

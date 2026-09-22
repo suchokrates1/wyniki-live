@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+
+from flask import jsonify
 
 
 def format_duration(seconds: int) -> str:
@@ -17,67 +18,11 @@ def parse_iso_datetime(iso_string: str) -> datetime:
     return datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
 
 
-def safe_copy(data: Any) -> Any:
-    """Deep copy data safely."""
-    from copy import deepcopy
-    return deepcopy(data)
-
-
-def surname(full_name: Optional[str]) -> str:
-    """Extract surname from full name."""
-    if not full_name:
-        return "-"
-    parts = str(full_name).strip().split()
-    return parts[-1] if parts else "-"
-
-
-def shorten(text: str, max_length: int = 20) -> str:
-    """Shorten text to max length."""
-    if len(text) <= max_length:
-        return text
-    return text[: max_length - 3] + "..."
-
-
-def as_int(value: Any, default: int = 0) -> int:
-    """Convert value to int safely."""
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def to_bool(value: Any) -> Optional[bool]:
-    """Convert value to boolean."""
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        return value
-    s = str(value).lower().strip()
-    if s in ("true", "1", "yes", "on"):
-        return True
-    if s in ("false", "0", "no", "off"):
-        return False
-    return None
-
-
-def now_iso() -> str:
-    """Get current time as ISO string."""
-    from datetime import timezone
-    return datetime.now(timezone.utc).isoformat()
-
-
-def step_points(current: str, direction: str = "up") -> str:
-    """Step through tennis point sequence."""
-    sequence = ["0", "15", "30", "40", "ADV"]
-    try:
-        idx = sequence.index(current)
-    except ValueError:
-        idx = 0
-    
-    if direction == "up":
-        idx = min(idx + 1, len(sequence) - 1)
-    else:
-        idx = max(idx - 1, 0)
-    
-    return sequence[idx]
-
+def json_no_cache(payload, status: int = 200):
+    """JSON response that browsers and proxies must not cache."""
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
