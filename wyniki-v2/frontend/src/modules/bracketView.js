@@ -82,7 +82,7 @@ export function createBracketView() {
 
     historyCategoryAria(match) {
       return fmt(this.tr().history?.openCategory || 'Pokaż kategorię {category} na drabince', {
-        category: this.bracketCategoryLabel(match?.category) || this.translateCategory(match?.category) || '',
+        category: this.bracketCategoryLabel(match?.category),
       });
     },
 
@@ -262,8 +262,9 @@ export function createBracketView() {
       });
     },
 
+    /** Category name without the group suffix, in the page language ("B1 Mężczyźni" → "B1 Men"). */
     bracketCategoryLabel(name) {
-      return getBracketCategoryLabel(name);
+      return this.translateStoredLabel(getBracketCategoryLabel(name));
     },
 
     compareBracketCategoryNames(leftName, rightName) {
