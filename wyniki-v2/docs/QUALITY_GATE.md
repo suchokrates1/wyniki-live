@@ -4,11 +4,11 @@
 
 | Workflow | Repo | What runs |
 |---|---|---|
-| `backend.yml` | wyniki-live | `ruff check .` + `pytest -q` (Python 3.11, same as the image) |
+| `backend.yml` | wyniki-live | `ruff check .` + `mypy` (only `wyniki/database/connection.py`) + `pytest -q` (Python 3.11, same as the image) |
 | `a11y.yml` | wyniki-live | i18n, match-engine, build, a11y, public phone suite, umpire E2E |
 | `android.yml` | Umpire-App | `testDebugUnitTest`, `lintDebug`, instrumentation compile |
 
-Locally before a push: `ruff check .` and `pytest -q` in `wyniki-v2`
+Locally before a push: `ruff check .`, `mypy`, and `pytest -q` in `wyniki-v2`
 (`pip install -r requirements-dev.txt` once).
 
 ## Mandatory after larger PRs (office / admin / umpire / scoring / auth)

@@ -1,7 +1,8 @@
 Flask==3.0.0
 Flask-SQLAlchemy==3.1.1
 gunicorn==21.2.0
-gevent==24.2.1
+# Last 24.x release with wheels for the image (Python 3.11) and for a local 3.13 checkout.
+gevent==24.11.1
 requests==2.32.3
 pydantic==2.5.3
 pydantic-settings==2.1.0
