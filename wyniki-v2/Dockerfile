@@ -25,7 +25,6 @@ COPY wyniki ./wyniki
 COPY app.py .
 
 # Overlay page (standalone) + Vest Media TV watermark asset
-COPY overlay.html .
 COPY vest-media-logo.png .
 
 # Copy Vite-built frontend (overwrites any stale static/ files)

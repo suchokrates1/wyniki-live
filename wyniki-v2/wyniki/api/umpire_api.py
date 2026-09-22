@@ -1905,6 +1905,8 @@ def umpire_heartbeat():
             snapshot=snapshot,
         )
 
+    # Tablets on the current build take commands from the long-poll below.
+    # This list stays so an older umpire build, still reading the heartbeat, keeps working.
     commands = director_command_broker.pending_for(kort_id, match_id, client_match_uuid)
     return jsonify({"status": "ok", "commands": commands}), 200
 

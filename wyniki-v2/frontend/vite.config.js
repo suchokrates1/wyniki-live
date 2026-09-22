@@ -27,7 +27,8 @@ export default defineConfig({
         embed: path.resolve(__dirname, 'embed.html'),
         office: path.resolve(__dirname, 'office.html'),
         umpire: path.resolve(__dirname, 'umpire.html'),
-        privacy: path.resolve(__dirname, 'privacy.html')
+        privacy: path.resolve(__dirname, 'privacy.html'),
+        overlay: path.resolve(__dirname, 'overlay.html')
       }
     }
   },

@@ -122,10 +122,7 @@ def assets(filename):
 @blueprint.route('/overlay/<int:tournament_slot>/<overlay_id>')
 def overlay_page(overlay_id, tournament_slot=None):
     """Serve overlay page for any preset (e.g. /overlay/1, /overlay/all, /overlay/split_1_2)."""
-    response = send_from_directory(APP_ROOT, 'overlay.html')
-    response.headers['Content-Type'] = 'text/html; charset=utf-8'
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    return response
+    return _html_page('overlay.html')
 
 
 @blueprint.route('/favicon.svg')
@@ -146,7 +143,7 @@ def brand_assets(filename):
 @blueprint.route('/vest-media-logo.png')
 def vest_media_logo():
     """Vest Media brand mark for TV watermark (same asset as vestmedia.pl)."""
-    # Docker image: Vite public → wyniki/static; also copied next to overlay.html
+    # Docker image copies the file to /app; the Vite build also emits it into static.
     logo_dir = APP_ROOT if (APP_ROOT / 'vest-media-logo.png').is_file() else STATIC_DIR
     response = send_from_directory(logo_dir, 'vest-media-logo.png')
     response.headers['Cache-Control'] = 'public, max-age=86400'

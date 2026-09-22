@@ -55,11 +55,47 @@ def db_conn() -> Generator[sqlite3.Connection, None, None]:
     finally:
         connection.close()
 
+def _ensure_schema_migrations_table(cursor) -> None:
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            name TEXT PRIMARY KEY,
+            applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            detail TEXT
+        )
+    """)
+
+
+def run_once(cursor, name: str, step) -> None:
+    """Run a one-shot data migration and write down that it ran.
+
+    Column changes stay idempotent above (they check PRAGMA table_info and are safe to
+    re-run); this is for the migrations that rewrite rows and must not run twice.
+    Databases from before this table recorded the same thing in app_settings.
+    """
+    cursor.execute("SELECT 1 FROM schema_migrations WHERE name = ?", (name,))
+    if cursor.fetchone() is not None:
+        return
+    cursor.execute("SELECT 1 FROM app_settings WHERE key = ?", (f"migration:{name}",))
+    if cursor.fetchone() is not None:
+        cursor.execute(
+            "INSERT OR IGNORE INTO schema_migrations (name, detail) VALUES (?, 'adopted from app_settings')",
+            (name,),
+        )
+        return
+    detail = step()
+    cursor.execute(
+        "INSERT OR REPLACE INTO schema_migrations (name, applied_at, detail) VALUES (?, ?, ?)",
+        (name, _utc_now(), None if detail is None else str(detail)),
+    )
+    logger.info("database_migration", action=name, detail=detail)
+
+
 def init_db() -> None:
     """Initialize database schema."""
     with db_conn() as conn:
         cursor = conn.cursor()
-        
+        _ensure_schema_migrations_table(cursor)
+
         # Courts table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS courts (
@@ -589,16 +625,12 @@ def init_db() -> None:
             logger.info("database_migration", action="added_global_player_id_to_players")
 
         # Migration (once): drop the former automatic schedule notes from unplayed matches
-        cursor.execute("SELECT 1 FROM app_settings WHERE key = 'migration:clear_default_schedule_notes'")
-        if cursor.fetchone() is None:
+        def _clear_default_schedule_notes():
             from .schedule import clear_default_schedule_notes
 
-            cleared = clear_default_schedule_notes(cursor)
-            cursor.execute(
-                "INSERT INTO app_settings (key, value) VALUES ('migration:clear_default_schedule_notes', ?)",
-                (str(cleared),),
-            )
-            logger.info("database_migration", action="cleared_default_schedule_notes", count=cleared)
+            return clear_default_schedule_notes(cursor)
+
+        run_once(cursor, "clear_default_schedule_notes", _clear_default_schedule_notes)
 
         # Start numbers per category (players and pairs)
         from .start_numbers import ensure_start_number_tables, number_existing_teams
@@ -617,11 +649,7 @@ def init_db() -> None:
         from .court_streams import ensure_court_stream_tables
 
         ensure_court_stream_tables(cursor)
-        cursor.execute("SELECT 1 FROM app_settings WHERE key = 'migration:normalize_genders'")
-        if cursor.fetchone() is None:
-            changed = normalize_stored_genders(cursor)
-            cursor.execute("INSERT INTO app_settings (key, value) VALUES ('migration:normalize_genders', ?)", (str(changed),))
-            logger.info("database_migration", action="normalized_genders", count=changed)
+        run_once(cursor, "normalize_genders", lambda: normalize_stored_genders(cursor))
 
         conn.commit()
     
