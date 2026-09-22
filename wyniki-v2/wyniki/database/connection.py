@@ -435,6 +435,7 @@ def init_db() -> None:
             'result_note': 'TEXT',
             'match_config': 'TEXT',
             'started_at': 'TEXT',
+            'live_state': 'TEXT',
         }
         for column_name, ddl in match_client_columns.items():
             if column_name not in m_cols:

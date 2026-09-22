@@ -265,6 +265,9 @@ class Match(db.Model):
     created_at = db.Column(db.String(50), default=utc_now_iso)
     updated_at = db.Column(db.String(50), default=utc_now_iso, onupdate=utc_now_iso)
     started_at = db.Column(db.String(50), nullable=True)
+    # Last live point state from the tablet (points, games, tiebreak, serve) — rebuilds the
+    # overlay after a crash or restart; never a source for results.
+    live_state = db.Column(db.Text, nullable=True)
     
     # Relationships
     statistics = db.relationship('MatchStatistics', back_populates='match', uselist=False, cascade='all, delete-orphan')

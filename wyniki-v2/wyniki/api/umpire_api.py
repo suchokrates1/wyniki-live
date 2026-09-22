@@ -21,6 +21,7 @@ from ..services.api_auth import court_id_from_bearer, court_session_expires_at, 
 from ..services.director_commands import director_command_broker, dump_match_config, normalize_match_config, tablet_presence
 from ..services.match_format import match_score_satisfies_format
 from ..services.match_result import resolve_match_winner, same_competitor
+from ..services.live_state import read_live_state, set_tiebreak_due, store_live_state
 from ..services.match_timer import apply_match_start_from_payload, sync_court_match_timer_from_match
 from ..config import logger
 
@@ -155,26 +156,29 @@ def _apply_live_overlay_meta(court_state: dict, *, phase: str | None = None, cat
         meta["category"] = category
 
 
-def _apply_serve_from_payload(court_state: dict, data: dict | None) -> None:
-    """Keep the overlay serve ball across PUT-only syncs, not just match-events."""
+def _serve_from_payload(data: dict | None) -> str | None:
     data = data if isinstance(data, dict) else {}
     raw = data.get("serve")
     if raw in ("A", "B"):
-        court_state["serve"] = raw
-        return
+        return raw
     if raw in (1, "1", "player1"):
-        court_state["serve"] = "A"
-        return
+        return "A"
     if raw in (2, "2", "player2"):
-        court_state["serve"] = "B"
-        return
+        return "B"
     player1 = data.get("player1") if isinstance(data.get("player1"), dict) else {}
     player2 = data.get("player2") if isinstance(data.get("player2"), dict) else {}
     if player1.get("is_serving") is True:
-        court_state["serve"] = "A"
-        return
+        return "A"
     if player2.get("is_serving") is True:
-        court_state["serve"] = "B"
+        return "B"
+    return None
+
+
+def _apply_serve_from_payload(court_state: dict, data: dict | None) -> None:
+    """Keep the overlay serve ball across PUT-only syncs, not just match-events."""
+    serve = _serve_from_payload(data)
+    if serve:
+        court_state["serve"] = serve
 
 
 def _refresh_live_overlay_meta_from_match(court_state: dict, match) -> None:
@@ -621,20 +625,34 @@ def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict
     if match.status != "finished" and current_set not in completed_set_nums and current_set <= 3:
         court_state["A"][f"set{current_set}"] = int(match.player1_games or 0)
         court_state["B"][f"set{current_set}"] = int(match.player2_games or 0)
+    stored = read_live_state(match) if not score and match.status == "in_progress" else None
     live_stb = match.status == "in_progress" and (
-        bool(score.get("is_super_tiebreak", False)) or non_stb_count >= 2
+        bool(score.get("is_super_tiebreak", False))
+        or bool(stored and stored.get("stb"))
+        or non_stb_count >= 2
     )
     _set_live_super_tiebreak_flag(court_state, live_stb)
     if match.status == "in_progress":
+        games_a = int(match.player1_games or 0)
+        games_b = int(match.player2_games or 0)
+        if "is_tiebreak" in score:
+            in_tiebreak = bool(score.get("is_tiebreak"))
+        elif stored is not None:
+            in_tiebreak = bool(stored.get("tb"))
+        else:
+            in_tiebreak = set_tiebreak_due(match, games_a, games_b)
         _paint_live_points(
             court_state,
-            int(match.player1_points or 0),
-            int(match.player2_points or 0),
-            is_tiebreak=bool(score.get("is_tiebreak", False)),
+            int(stored["p1"]) if stored else int(match.player1_points or 0),
+            int(stored["p2"]) if stored else int(match.player2_points or 0),
+            is_tiebreak=in_tiebreak,
             is_super_tiebreak=live_stb,
-            player1_games=int(match.player1_games or 0),
-            player2_games=int(match.player2_games or 0),
+            player1_games=games_a,
+            player2_games=games_b,
+            infer_tiebreak=False,
         )
+        if stored and stored.get("serve") in ("A", "B"):
+            court_state["serve"] = stored["serve"]
 
 
 def _match_has_recorded_progress(match: Match | None) -> bool:
@@ -1433,6 +1451,8 @@ def update_match(match_id: int):
         elif not already_finished:
             requested = str(data.get("status") or "in_progress")
             match.status = "in_progress" if requested == "finished" else requested
+        if match.status == "in_progress":
+            store_live_state(match, score, _serve_from_payload(data))
         match.updated_at = utc_now_iso()
         
         db.session.commit()
@@ -1589,6 +1609,7 @@ def _paint_live_points(
     is_super_tiebreak: bool,
     player1_games: int = 0,
     player2_games: int = 0,
+    infer_tiebreak: bool = True,
 ) -> None:
     """Write overlay point columns from tablet raw integers.
 
@@ -1597,7 +1618,8 @@ def _paint_live_points(
     Set TB at 4-4 (or flagged) stays numeric in the tie column.
     """
     in_set_tiebreak = is_tiebreak or (
-        not is_super_tiebreak
+        infer_tiebreak
+        and not is_super_tiebreak
         and player1_games == player2_games
         and player1_games >= 4
     )
@@ -1824,6 +1846,20 @@ def log_match_event():
             is_charging = data.get('is_charging')
             if is_charging is not None:
                 court_state["is_charging"] = bool(is_charging)
+
+        # Keep the point state on the match, so a crash or restart rebuilds this point, not the last game.
+        if (
+            active_match
+            and active_match.status == "in_progress"
+            and not restore_match_score
+            and not bool(score.get("match_finished", False))
+        ):
+            try:
+                store_live_state(active_match, score, court_state.get("serve"))
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                logger.warning("live_state_store_failed", match_id=active_match.id, error=str(exc))
 
         # Emit SSE update to all listeners
         emit_score_update(kort_id, court_state)
