@@ -29,7 +29,9 @@ services:
       # Logging
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
-      
+      # Public-site features, comma separated (e.g. court-next); set in the host's .env, off by default
+      - PUBLIC_FEATURES=${PUBLIC_FEATURES:-}
+
       # UNO Overlays
       - UNO_BASE=${UNO_BASE:-https://app.overlays.uno/apiv2/controlapps}
       - KORT1_ID=${KORT1_ID}
