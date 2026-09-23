@@ -8,12 +8,16 @@ import { createTournamentsAdmin } from './admin/tournaments.js';
 import { createOfficeTabAdmin } from './admin/officeTab.js';
 import { createGlobalPlayersAdmin } from './admin/globalPlayers.js';
 import { createOverlayAdmin } from './admin/overlay.js';
+import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
 
 window.Alpine = Alpine;
 registerAnalyticsConsent(Alpine);
 installAdminFetchAuth();
+
+const adminOverlaySlot = document.getElementById('admin-overlay-panel');
+if (adminOverlaySlot) adminOverlaySlot.outerHTML = overlayPanelHtml.trim();
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {

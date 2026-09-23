@@ -13,6 +13,7 @@ import { createOfficeAutoScheduleView } from './modules/office/autoScheduleView.
 import { createOfficeSseView } from './modules/office/sseView.js';
 import { createOfficePathView } from './modules/office/officePathView.js';
 import { createOfficeDrawsView } from './modules/office/drawsView.js';
+import officeDrawsPanelHtml from './modules/office/drawsPanel.html?raw';
 import { createOfficeScheduleNotesView } from './modules/office/scheduleNotesView.js';
 import { createOfficeKnockoutBoardView } from './modules/office/knockoutBoardView.js';
 import { createOfficeTourView } from './modules/office/tourView.js';
@@ -39,6 +40,9 @@ window.fetch = async (input, init) => {
   }
   return response;
 };
+
+const officeDrawsSlot = document.getElementById('office-draws-panel');
+if (officeDrawsSlot) officeDrawsSlot.outerHTML = officeDrawsPanelHtml.trim();
 
 // Preserve getters (isAuthenticated, officeMatches, …) — object spread would freeze them.
 Alpine.data('officeApp', () => mergeAdminModules(
