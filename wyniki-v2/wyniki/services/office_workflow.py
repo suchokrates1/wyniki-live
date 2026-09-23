@@ -25,12 +25,15 @@ from ..database import (
     is_group_stage_phase,
     is_knockout_stage_phase,
     knockout_correction_blocker,
+    add_row,
+    commit_writes,
+    flush_writes,
     link_schedule_to_match,
     maybe_generate_knockout_from_completed_groups,
     normalize_group_stage_phase,
     _is_knockout_placeholder_name,
 )
-from ..db_models import Match, MatchHistory, TournamentSchedule, db, utc_now_iso
+from ..db_models import Match, MatchHistory, TournamentSchedule, utc_now_iso
 from ..services.teams import PLAY_FORMAT_KNOCKOUT, normalize_play_format
 
 
@@ -278,7 +281,7 @@ def _sync_office_match_history(match: Match, group_name: str | None = None) -> N
     history = MatchHistory.query.filter_by(match_id=match.id).first()
     if not history:
         history = MatchHistory(match_id=match.id, duration_seconds=0)
-        db.session.add(history)
+        add_row(history)
 
     history.kort_id = match.court_id or f"office-{match.tournament_id}"
     history.ended_ts = match.updated_at or utc_now_iso()
@@ -561,10 +564,10 @@ def _create_office_knockout_match(tournament_id: int, data: Dict[str, Any]) -> t
         created_at=data.get('ended_at') or now,
         updated_at=now,
     )
-    db.session.add(match)
-    db.session.flush()
+    add_row(match)
+    flush_writes()
     _sync_office_match_history(match, match.phase)
-    db.session.commit()
+    commit_writes()
 
     link_schedule_to_match(
         tournament_id,
@@ -681,10 +684,10 @@ def _create_office_group_match(tournament_id: int, data: Dict[str, Any]) -> tupl
         created_at=data.get('ended_at') or now,
         updated_at=now,
     )
-    db.session.add(match)
-    db.session.flush()
+    add_row(match)
+    flush_writes()
     _sync_office_match_history(match, group.get('name'))
-    db.session.commit()
+    commit_writes()
     link_schedule_to_match(
         tournament_id,
         match.id,
@@ -816,7 +819,7 @@ def _update_office_match(tournament_id: int, match_id: int, data: Dict[str, Any]
                 match.updated_at = utc_now_iso()
                 group_name = group_lookup.get(int(match.bracket_group_id)) if match.bracket_group_id else None
                 _sync_office_match_history(match, group_name)
-        db.session.commit()
+        commit_writes()
         if history.match_id:
             link_schedule_to_match(
                 tournament_id,
@@ -861,7 +864,7 @@ def _update_office_match(tournament_id: int, match_id: int, data: Dict[str, Any]
 
     group_name = group_lookup.get(int(match.bracket_group_id)) if match.bracket_group_id else None
     _sync_office_match_history(match, group_name)
-    db.session.commit()
+    commit_writes()
     link_schedule_to_match(
         tournament_id,
         match.id,

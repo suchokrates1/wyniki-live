@@ -7,7 +7,7 @@ from ..db_models import db, GlobalPlayer, Player, Tournament
 from ..config import logger
 from ..services.player_registry import create_tournament_player, find_or_create_global_player, split_player_name
 from ..services.office_event_broker import emit_office_invalidation
-from ..database import classifications
+from ..database import add_row, classifications, commit_writes, delete_row, flush_writes
 
 blueprint = Blueprint('admin_global_players', __name__, url_prefix='/admin/api/global-players')
 
@@ -93,8 +93,8 @@ def create_global_player():
         category=classifications.normalize_class(data.get('category', '')) or data.get('category', '').strip(),
         notes=data.get('notes', '').strip() or None,
     )
-    db.session.add(gp)
-    db.session.commit()
+    add_row(gp)
+    commit_writes()
     logger.info("global_player_created", id=gp.id, name=gp.full_name)
     return jsonify(gp.to_dict()), 201
 
@@ -154,7 +154,7 @@ def update_global_player(gp_id: int):
     if 'notes' in data:
         gp.notes = data['notes'].strip() or None
 
-    db.session.commit()
+    commit_writes()
     if new_class:
         classifications.record_classification_change(
             gp_id,
@@ -212,8 +212,8 @@ def delete_global_player(gp_id: int):
             'error': f'Cannot delete: player has {entries_count} tournament entries. Unlink them first.'
         }), 409
 
-    db.session.delete(gp)
-    db.session.commit()
+    delete_row(gp)
+    commit_writes()
     classifications.delete_classifications(gp_id)
     logger.info("global_player_deleted", id=gp_id)
     return jsonify({'message': 'Player deleted'})
@@ -251,7 +251,7 @@ def upload_photo(gp_id: int):
         img.save(filepath, 'JPEG', quality=85)
 
         gp.photo_url = f'/data/photos/{filename}'
-        db.session.commit()
+        commit_writes()
 
         logger.info("global_player_photo_uploaded", id=gp_id)
         return jsonify({'photo_url': gp.photo_url})
@@ -274,7 +274,7 @@ def delete_photo(gp_id: int):
         if os.path.exists(filepath):
             os.remove(filepath)
         gp.photo_url = None
-        db.session.commit()
+        commit_writes()
 
     return jsonify({'message': 'Photo deleted'})
 
@@ -318,8 +318,8 @@ def migrate_existing_players():
             country=g.country or '',
             category=g.category or '',
         )
-        db.session.add(gp)
-        db.session.flush()  # get gp.id
+        add_row(gp)
+        flush_writes()  # get gp.id
 
         # Link all matching players
         matching = Player.query.filter_by(first_name=fn, last_name=ln).all()
@@ -335,9 +335,9 @@ def migrate_existing_players():
         func.lower(Player.last_name) == 'suchodolski'
     ).all()
     for tp in test_players:
-        db.session.delete(tp)
+        delete_row(tp)
 
-    db.session.commit()
+    commit_writes()
     logger.info("global_players_migrated", created=created, linked=linked, skipped=skipped_names)
     return jsonify({
         'message': f'Migration complete: {created} global players created, {linked} tournament entries linked',
@@ -388,7 +388,7 @@ def add_global_to_tournament(tid: int):
         country=gp.country or '',
         global_player=gp,
     )
-    db.session.commit()
+    commit_writes()
 
     logger.info("global_player_added_to_tournament", gp_id=gp_id, tournament_id=tid, player_id=p.id)
     return jsonify(p.to_dict()), 201
@@ -477,7 +477,7 @@ def import_file_to_tournament(tid: int):
         )
         added_tournament += 1
 
-    db.session.commit()
+    commit_writes()
     return jsonify({
         'message': f'Imported {added_tournament} players ({matched_global} matched, {created_global} new)',
         'added': added_tournament,
@@ -587,11 +587,11 @@ def merge_players():
             transferred += 1
 
         # Delete source global player
-        db.session.delete(source)
+        delete_row(source)
         merged_ids.append(src_id)
         deleted += 1
 
-    db.session.commit()
+    commit_writes()
     for src_id in merged_ids:
         classifications.move_classifications(src_id, target_id)
     logger.info("global_players_merged", target_id=target_id, source_ids=source_ids,

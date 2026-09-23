@@ -150,7 +150,7 @@ def cleanup_e2e_artifacts():
     """Delete emulator E2E artifacts created with an E2E-* marker."""
     try:
         from ..db_models import db, GlobalPlayer, Match, MatchHistory, MatchStatistics, Tournament
-        from ..database import delete_tournament, fetch_courts
+        from ..database import commit_writes, delete_tournament, fetch_courts
         from ..services.court_manager import refresh_courts_from_db
 
         data = request.get_json(silent=True) or {}
@@ -192,7 +192,7 @@ def cleanup_e2e_artifacts():
             (GlobalPlayer.last_name.like(like_marker))
         ).delete(synchronize_session=False)
 
-        db.session.commit()
+        commit_writes()
         refresh_courts_from_db(fetch_courts(active_only=True))
 
         return jsonify({
@@ -206,8 +206,8 @@ def cleanup_e2e_artifacts():
         })
     except Exception as e:
         try:
-            from ..db_models import db
-            db.session.rollback()
+            from ..database import rollback_writes
+            rollback_writes()
         except Exception:
             pass
         logger.error(f"Failed to cleanup E2E artifacts: {e}")

@@ -1,4 +1,10 @@
-"""Database access layer for v2 (package facade)."""
+"""Database access layer for v2 (package facade).
+
+A new write goes through a function in this package. A request handler does not
+open the ORM session itself and does not paste SQL. ORM commits live in
+unit_of_work.py. Raw sqlite3 lives in the other modules. One function does not
+use both.
+"""
 from __future__ import annotations
 
 
@@ -160,4 +166,12 @@ from .history import (
     insert_match_history,
     delete_latest_history_entry,
     fetch_match_history,
+)
+
+from .unit_of_work import (
+    add_row,
+    commit_writes,
+    delete_row,
+    flush_writes,
+    rollback_writes,
 )

@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ..config import logger
+from ..database import commit_writes
 from ..db_models import Court, Match, db, utc_now_iso
 from .api_auth import court_session_expires_at, issue_court_token
 from .court_manager import STATE_LOCK, _empty_court_state, ensure_court_state, get_court_state
@@ -321,7 +322,7 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
         raise ValueError(f"Court not found: {new_court_id}")
 
     match.updated_at = utc_now_iso()
-    db.session.commit()
+    commit_writes()
 
     if db_court_changed:
         _move_schedule_court(match, new_court_id)

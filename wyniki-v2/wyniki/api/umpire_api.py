@@ -5,7 +5,12 @@ import json
 import re
 from typing import Any
 
-from ..database import is_knockout_stage_phase
+from ..database import (
+    add_row,
+    commit_writes,
+    is_knockout_stage_phase,
+    rollback_writes,
+)
 from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court, utc_now_iso
 from ..services.court_manager import (
     ensure_court_state,
@@ -1101,7 +1106,7 @@ def get_players():
                 category=normalized_player["category"],
                 gender=normalized_player["gender"],
             )
-            db.session.commit()
+            commit_writes()
             
             logger.info(f"Player created: {player.id} - {player.full_name}")
             country_code = (player.country or '').strip() or None
@@ -1122,7 +1127,7 @@ def get_players():
             }), 201
             
         except Exception as e:
-            db.session.rollback()
+            rollback_writes()
             logger.error(f"Error creating player: {e}", exc_info=True)
             return jsonify({"ok": False, "error": str(e)}), 500
     
@@ -1302,8 +1307,8 @@ def create_match():
         )
         apply_match_start_from_payload(match, data)
         
-        db.session.add(match)
-        db.session.commit()
+        add_row(match)
+        commit_writes()
 
         _link_match_schedule_if_possible(match, status="in_progress")
         if match.tournament_id:
@@ -1356,7 +1361,7 @@ def create_match():
         return jsonify(match.to_dict(bracket_warning=bracket_warning)), 201
         
     except Exception as e:
-        db.session.rollback()
+        rollback_writes()
         logger.error(f"Error creating match: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
@@ -1436,7 +1441,7 @@ def update_match(match_id: int):
             store_live_state(match, score, _serve_from_payload(data))
         match.updated_at = utc_now_iso()
         
-        db.session.commit()
+        commit_writes()
         if became_finished:
             _publish_match_finished(match)
             return jsonify(match.to_dict()), 200
@@ -1476,10 +1481,10 @@ def update_match(match_id: int):
         return jsonify(match.to_dict()), 200
 
     except ValueError as e:
-        db.session.rollback()
+        rollback_writes()
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        db.session.rollback()
+        rollback_writes()
         logger.error(f"Error updating match: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
@@ -1500,15 +1505,15 @@ def finish_match(match_id: int):
             return jsonify(match.to_dict()), 200
 
         _finalize_match_record(match, data)
-        db.session.commit()
+        commit_writes()
         _publish_match_finished(match)
         return jsonify(match.to_dict()), 200
         
     except ValueError as e:
-        db.session.rollback()
+        rollback_writes()
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        db.session.rollback()
+        rollback_writes()
         logger.error(f"Error finishing match: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
@@ -1537,7 +1542,7 @@ def receive_statistics():
         stats = MatchStatistics.query.filter_by(match_id=match_id).first()
         if not stats:
             stats = MatchStatistics(match_id=match_id)
-            db.session.add(stats)
+            add_row(stats)
         
         # Update player 1 stats
         p1_stats = data.get("player1_stats", {})
@@ -1567,7 +1572,7 @@ def receive_statistics():
         stats.stats_mode = data.get("stats_mode")
         stats.received_at = utc_now_iso()
         
-        db.session.commit()
+        commit_writes()
         
         logger.info(f"Statistics saved for match {match_id}")
         logger.info(f"Player 1 stats: Aces={stats.player1_aces}, DF={stats.player1_double_faults}")
@@ -1576,7 +1581,7 @@ def receive_statistics():
         return jsonify({"message": "Statistics received successfully"}), 200
         
     except Exception as e:
-        db.session.rollback()
+        rollback_writes()
         logger.error(f"Error receiving statistics: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
@@ -1836,9 +1841,9 @@ def log_match_event():
     ):
         try:
             store_live_state(active_match, score, court_state.get("serve"))
-            db.session.commit()
+            commit_writes()
         except Exception as exc:
-            db.session.rollback()
+            rollback_writes()
             logger.warning("live_state_store_failed", match_id=active_match.id, error=str(exc))
 
     # Emit SSE update to all listeners
