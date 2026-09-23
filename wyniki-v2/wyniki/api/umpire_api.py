@@ -23,8 +23,8 @@ from ..services.event_broker import emit_score_update
 from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
-from ..services.api_auth import court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
-from ..services.director_commands import director_command_broker, dump_match_config, tablet_presence
+from ..services.api_auth import court_id_from_bearer as court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
+from ..services.director_commands import director_command_broker as director_command_broker, dump_match_config, tablet_presence
 from ..services.match_format import match_score_satisfies_format
 from ..services.match_result import resolve_match_winner, same_competitor
 from ..services.live_state import read_live_state, set_tiebreak_due, store_live_state

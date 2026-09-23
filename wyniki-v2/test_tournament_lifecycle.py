@@ -1070,7 +1070,9 @@ def test_player_import_preview_uses_ai_to_fill_missing_country(app_with_temp_db,
         assert timeout == 5
         return FakeResponse()
 
-    monkeypatch.setattr(admin_tournaments.requests, 'post', fake_post)
+    from wyniki.api import player_import
+
+    monkeypatch.setattr(player_import.requests, 'post', fake_post)
 
     response = app_with_temp_db.test_client().post(
         f"/admin/api/tournaments/{tournament_id}/players/parse-import",

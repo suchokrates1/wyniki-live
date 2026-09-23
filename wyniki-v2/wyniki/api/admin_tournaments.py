@@ -59,7 +59,7 @@ from ..database import (
     get_tournament_court_streams,
     save_tournament_court_streams,
 )
-from ..config import logger, settings
+from ..config import logger as logger, settings
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 from ..utils import json_no_cache as _json_no_cache
 from ..services.office_workflow import (
@@ -72,21 +72,21 @@ from ..services.office_workflow import (
     _update_office_match,
 )
 from .player_import import (
-    _apply_import_ai_suggestions,
-    _build_import_player_entry,
-    _clean_import_line_text,
-    _dedupe_import_warnings,
-    _extract_gemini_json_text,
-    _fetch_import_ai_suggestions,
-    _needs_import_ai_help,
+    _apply_import_ai_suggestions as _apply_import_ai_suggestions,
+    _build_import_player_entry as _build_import_player_entry,
+    _clean_import_line_text as _clean_import_line_text,
+    _dedupe_import_warnings as _dedupe_import_warnings,
+    _extract_gemini_json_text as _extract_gemini_json_text,
+    _fetch_import_ai_suggestions as _fetch_import_ai_suggestions,
+    _needs_import_ai_help as _needs_import_ai_help,
     _normalize_import_category,
     _normalize_import_country,
     _normalize_import_gender,
-    _parse_import_player_line,
+    _parse_import_player_line as _parse_import_player_line,
     _parse_import_players_text,
     _parse_import_players_with_ai,
-    _parse_import_section_header,
-    _should_skip_import_line,
+    _parse_import_section_header as _parse_import_section_header,
+    _should_skip_import_line as _should_skip_import_line,
     _summarize_import_players,
 )
 

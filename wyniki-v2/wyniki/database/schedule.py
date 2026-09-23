@@ -1604,7 +1604,7 @@ def delete_unassigned_schedule_entries(
         return 0
 
 
-from .schedule_notes import SCHEDULE_NOTE_MODES, apply_schedule_notes
+from .schedule_notes import SCHEDULE_NOTE_MODES as SCHEDULE_NOTE_MODES, apply_schedule_notes as apply_schedule_notes
 
 # Imported last: brackets imports this module too.
 from .brackets import (  # noqa: E402

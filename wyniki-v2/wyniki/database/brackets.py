@@ -30,7 +30,7 @@ from .bracket_standings import (
     _compute_standings,
     _format_set_score,
     _is_empty_set,
-    _is_stb,
+    _is_stb as _is_stb,
     _winner_from_set_details,
 )
 
