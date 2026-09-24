@@ -185,8 +185,50 @@ export function tournamentCategoryDivisionKey(category, mixedCategories = []) {
   return code || gender || '';
 }
 
-/** True when a player's visual class + gender belongs in this tournament category. */
-export function playerMatchesTournamentCategory(player, category, mixedCategories = []) {
+function expandMatchBands(bands) {
+  const expanded = new Set();
+  for (const band of bands || []) {
+    if (band === 'B34') {
+      expanded.add('B3');
+      expanded.add('B4');
+    } else if (band) {
+      expanded.add(band);
+    }
+  }
+  return expanded;
+}
+
+/** Bands + optional K/M that a tournament category claims. */
+export function tournamentCategoryMatchScope(category, mixedCategories = []) {
+  const expected = tournamentCategoryDivisionKey(category, mixedCategories);
+  if (!expected) return { bands: new Set(), gender: '' };
+  if (/^B\d{1,2}$/.test(expected)) {
+    const hints = normalizeMixedCategories(category.hint_bands || []);
+    return { bands: new Set(hints.length ? hints : [expected]), gender: '' };
+  }
+  const combined = String(expected).match(/^(B34)([KM])?$/);
+  if (combined) {
+    return { bands: new Set(['B3', 'B4', 'B34']), gender: combined[2] || '' };
+  }
+  const band = (String(expected).match(/^B\d{1,2}/) || [''])[0];
+  const gender = expected.endsWith('K') ? 'K' : expected.endsWith('M') ? 'M' : '';
+  return { bands: new Set(band ? [band] : []), gender };
+}
+
+function isTighterCategoryScope(inner, outer) {
+  const innerBands = expandMatchBands(inner.bands);
+  const outerBands = expandMatchBands(outer.bands);
+  if (!innerBands.size || !outerBands.size) return false;
+  for (const band of innerBands) {
+    if (!outerBands.has(band)) return false;
+  }
+  if (inner.gender && outer.gender && inner.gender !== outer.gender) return false;
+  if (outer.gender && !inner.gender) return false;
+  return innerBands.size < outerBands.size || (!outer.gender && Boolean(inner.gender));
+}
+
+/** Class + gender fit, ignoring sibling categories and group assignment. */
+export function playerFitsTournamentCategoryScope(player, category, mixedCategories = []) {
   if (!player || !category) return false;
   const expected = tournamentCategoryDivisionKey(category, mixedCategories);
   if (!expected) return true;
@@ -202,6 +244,46 @@ export function playerMatchesTournamentCategory(player, category, mixedCategorie
     return sex.endsWith(combined[2]);
   }
   return planningDivisionKey(player.category, player.gender, mixedCategories) === expected;
+}
+
+/** Group the player is already drawn into, if that group belongs to a tournament category. */
+export function assignedTournamentCategoryId(player, { groups = [], assignments = {}, categories = [] } = {}) {
+  if (!player) return null;
+  const assigned = assignments[player.id] || assignments[Number(player.id)] || assignments[String(player.id)];
+  if (!assigned) return null;
+  const group = (groups || []).find((row) => row?.name === assigned);
+  if (group?.tournament_category_id != null && group.tournament_category_id !== '') {
+    return Number(group.tournament_category_id);
+  }
+  const cat = (categories || []).find((row) => {
+    const label = String(row?.label || '');
+    return label && (assigned === label || String(assigned).startsWith(`${label} —`) || String(assigned).startsWith(`${label} - `));
+  });
+  return cat?.id != null ? Number(cat.id) : null;
+}
+
+/**
+ * True when this player belongs in this tournament category.
+ * With `siblings`, a tighter category (B1 Men vs B1 Plus, B3 Women vs B3-B4 Women) wins.
+ * With `assignedCategoryId`, the group they are already in wins over class overlap.
+ */
+export function playerMatchesTournamentCategory(player, category, mixedCategories = [], options = {}) {
+  if (!player || !category) return false;
+  const assignedId = options.assignedCategoryId;
+  if (assignedId != null && assignedId !== '') {
+    return Number(assignedId) === Number(category.id);
+  }
+  if (!playerFitsTournamentCategoryScope(player, category, mixedCategories)) return false;
+  const siblings = options.siblings || [];
+  if (!siblings.length) return true;
+  const mine = tournamentCategoryMatchScope(category, mixedCategories);
+  for (const other of siblings) {
+    if (!other || Number(other.id) === Number(category.id)) continue;
+    if (other.is_active === 0 || other.is_doubles) continue;
+    if (!playerFitsTournamentCategoryScope(player, other, mixedCategories)) continue;
+    if (isTighterCategoryScope(tournamentCategoryMatchScope(other, mixedCategories), mine)) return false;
+  }
+  return true;
 }
 
 /** Visual-class bands for a doubles partner pool. Gender is ignored — pairs may be M, K, or mixed. */

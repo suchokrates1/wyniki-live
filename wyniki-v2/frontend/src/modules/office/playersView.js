@@ -5,6 +5,7 @@ import {
   planningDivisionKey as sharedPlanningDivisionKey,
   planningResolveStoredGroupName as sharedPlanningResolveStoredGroupName,
   planningStoredGroupNames as sharedPlanningStoredGroupNames,
+  assignedTournamentCategoryId,
   playerMatchesDoublesCategory,
   playerMatchesTournamentCategory,
 } from '../../shared/categories.js';
@@ -413,10 +414,19 @@ export function createOfficePlayersView() {
       });
     },
 
+    planningPlayerMatchesCategory(player, category = this.planningSelectedCategory()) {
+      return playerMatchesTournamentCategory(player, category, this.planningMixedCategories, {
+        siblings: this.tournamentCategories,
+        assignedCategoryId: assignedTournamentCategoryId(player, {
+          groups: this.planningGroups,
+          assignments: this.planningGroupAssignments,
+          categories: this.tournamentCategories,
+        }),
+      });
+    },
+
     planningPlayersMatchingCategory(category = this.planningSelectedCategory()) {
-      return (this.planningPlayers || []).filter(player => (
-        playerMatchesTournamentCategory(player, category, this.planningMixedCategories)
-      ));
+      return (this.planningPlayers || []).filter(player => this.planningPlayerMatchesCategory(player, category));
     },
 
     planningPlayersForDivision(key = this.planningSelectedDivision) {
@@ -566,7 +576,12 @@ export function createOfficePlayersView() {
     },
 
     planningUnassignedPlayers() {
-      return this.planningPlayersForDivision().filter(player => !this.planningEffectiveGroup(player));
+      return this.planningPlayersForDivision().filter((player) => {
+        const assigned = this.planningGroupAssignments[player.id]
+          || this.planningGroupAssignments[Number(player.id)]
+          || this.planningGroupAssignments[String(player.id)];
+        return !assigned;
+      });
     },
 
     /** The player's start number in the selected category: given once, never renumbered. */
@@ -593,7 +608,7 @@ export function createOfficePlayersView() {
         const inGroups = new Set(this.planningGroupsForDivision(String(category.id))
           .flatMap((group) => (group.players || []).map((row) => Number(row.player_id)).filter(Boolean)));
         const ids = (this.planningPlayers || [])
-          .filter((player) => playerMatchesTournamentCategory(player, category, this.planningMixedCategories) || inGroups.has(Number(player.id)))
+          .filter((player) => this.planningPlayerMatchesCategory(player, category) || inGroups.has(Number(player.id)))
           .map((player) => Number(player.id))
           .filter((id) => !this.planningStartNumber('player', id, category.id));
         if (ids.length) requests.push({ category_id: category.id, player_ids: ids });

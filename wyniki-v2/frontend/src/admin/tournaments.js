@@ -3,6 +3,7 @@ import {
   mixedCategoryDisplayLabel,
   planningDivisionFromGroupName as sharedPlanningDivisionFromGroupName,
   planningDivisionKey as sharedPlanningDivisionKey,
+  assignedTournamentCategoryId,
   playerMatchesDoublesCategory,
   playerMatchesTournamentCategory,
   categoryFilterKey,
@@ -899,10 +900,19 @@ export function createTournamentsAdmin() {
         });
       },
 
+      planningPlayerMatchesCategory(player, category = this.planningSelectedCategory()) {
+        return playerMatchesTournamentCategory(player, category, this.planningMixedCategories, {
+          siblings: this.tournamentCategoriesFor(this.planningTournamentId),
+          assignedCategoryId: assignedTournamentCategoryId(player, {
+            groups: this.planningGroups,
+            assignments: this.planningGroupAssignments,
+            categories: this.tournamentCategoriesFor(this.planningTournamentId),
+          }),
+        });
+      },
+
       planningPlayersMatchingCategory(category = this.planningSelectedCategory()) {
-        return (this.planningPlayers || []).filter(player => (
-          playerMatchesTournamentCategory(player, category, this.planningMixedCategories)
-        ));
+        return (this.planningPlayers || []).filter(player => this.planningPlayerMatchesCategory(player, category));
       },
 
       planningPlayersForDivision(key = this.planningSelectedDivision) {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  assignedTournamentCategoryId,
   doublesPartnerBands,
   extractCategoryCodeFromLabel,
   inferPlanningGenderFromLabel,
@@ -71,6 +72,45 @@ test('doubles partner pool uses visual class only, not singles gender', () => {
   assert.equal(playerMatchesDoublesCategory({ category: 'B2', gender: 'K' }, fromWomenPreset), false);
   assert.equal(playerMatchesDoublesCategory({ category: 'B1', gender: 'M' }, openDouble), true);
   assert.equal(playerMatchesDoublesCategory({ category: 'B1', gender: 'K' }, openDouble), true);
+});
+
+test('B1 Plus does not steal B1 men or women when those categories exist', () => {
+  const plus = { id: 3, label: 'B1 Plus', hint_bands: ['B1'] };
+  const siblings = [
+    { id: 1, ...B1_WOMEN },
+    { id: 2, ...B1_MEN },
+    plus,
+  ];
+  const man = { category: 'B1', gender: 'M' };
+  const woman = { category: 'B1', gender: 'K' };
+  assert.equal(playerMatchesTournamentCategory(man, siblings[1], [], { siblings }), true);
+  assert.equal(playerMatchesTournamentCategory(man, plus, [], { siblings }), false);
+  assert.equal(playerMatchesTournamentCategory(woman, siblings[0], [], { siblings }), true);
+  assert.equal(playerMatchesTournamentCategory(woman, plus, [], { siblings }), false);
+});
+
+test('B3-B4 women yields to a dedicated B3 women category', () => {
+  const b3k = { id: 1, preset_key: 'B3K', label: 'B3 Kobiety', hint_bands: ['B3'] };
+  const b34k = { id: 2, preset_key: 'B3K', label: 'B3-B4 Kobiety', hint_bands: ['B3', 'B4'] };
+  const siblings = [b3k, b34k];
+  assert.equal(playerMatchesTournamentCategory({ category: 'B3', gender: 'K' }, b3k, [], { siblings }), true);
+  assert.equal(playerMatchesTournamentCategory({ category: 'B3', gender: 'K' }, b34k, [], { siblings }), false);
+  assert.equal(playerMatchesTournamentCategory({ category: 'B4', gender: 'K' }, b34k, [], { siblings }), true);
+  assert.equal(playerMatchesTournamentCategory({ category: 'B4', gender: 'K' }, b3k, [], { siblings }), false);
+});
+
+test('a player already drawn into B1 Plus stays out of B1 Men', () => {
+  const plus = { id: 3, label: 'B1 Plus', hint_bands: ['B1'] };
+  const man = { id: 10, category: 'B1', gender: 'M' };
+  const siblings = [{ id: 2, ...B1_MEN }, plus];
+  const assigned = { assignedCategoryId: 3, siblings };
+  assert.equal(playerMatchesTournamentCategory(man, plus, [], assigned), true);
+  assert.equal(playerMatchesTournamentCategory(man, siblings[0], [], assigned), false);
+  assert.equal(assignedTournamentCategoryId(man, {
+    groups: [{ name: 'B1 Plus', tournament_category_id: 3 }],
+    assignments: { 10: 'B1 Plus' },
+    categories: siblings,
+  }), 3);
 });
 
 test('category filter keys map every label to one set of values', async () => {
