@@ -39,10 +39,14 @@ export function inferMixedPlayerBands(tournamentCategories = []) {
     const rawLabel = String(cat?.label || '');
     const label = rawLabel.toLowerCase();
     const hints = normalizeMixedCategories(cat?.hint_bands || []);
-    const isMixed = label.includes('mixed')
+    const gendered = inferPlanningGenderFromLabel(rawLabel);
+    const isMixed = !gendered && (
+      label.includes('mixed')
       || label.replace(/\//g, ' ').split(/\s+/).includes('mix')
+      || isMixedSectionLabel(rawLabel)
       || hints.length > 1
-      || hints.includes('B34');
+      || hints.includes('B34')
+    );
     if (!isMixed) continue;
     let effectiveHints = hints;
     if (!effectiveHints.length && rawLabel) {

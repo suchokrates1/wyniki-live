@@ -4,6 +4,7 @@ import {
   assignedTournamentCategoryId,
   doublesPartnerBands,
   extractCategoryCodeFromLabel,
+  inferMixedPlayerBands,
   inferPlanningGenderFromLabel,
   planningDivisionFromGroupName,
   playerMatchesDoublesCategory,
@@ -89,14 +90,29 @@ test('B1 Plus does not steal B1 men or women when those categories exist', () =>
   assert.equal(playerMatchesTournamentCategory(woman, plus, [], { siblings }), false);
 });
 
+test('B3-B4 women is a combined class, not a mixed-gender band', () => {
+  const mixed = inferMixedPlayerBands([
+    { preset_key: 'B3K', label: 'B3 Kobiety', hint_bands: ['B3'] },
+    { label: 'B3-B4 Kobiety', hint_bands: ['B3', 'B4'] },
+    { label: 'B3/4 Mixed', hint_bands: ['B3', 'B4'] },
+  ]);
+  assert.deepEqual(mixed, ['B3', 'B4', 'B34']);
+  const onlyCombinedWomen = inferMixedPlayerBands([
+    { preset_key: 'B3K', label: 'B3 Kobiety', hint_bands: ['B3'] },
+    { label: 'B3-B4 Kobiety', hint_bands: ['B3', 'B4'] },
+  ]);
+  assert.deepEqual(onlyCombinedWomen, []);
+});
+
 test('B3-B4 women yields to a dedicated B3 women category', () => {
   const b3k = { id: 1, preset_key: 'B3K', label: 'B3 Kobiety', hint_bands: ['B3'] };
   const b34k = { id: 2, preset_key: 'B3K', label: 'B3-B4 Kobiety', hint_bands: ['B3', 'B4'] };
   const siblings = [b3k, b34k];
-  assert.equal(playerMatchesTournamentCategory({ category: 'B3', gender: 'K' }, b3k, [], { siblings }), true);
-  assert.equal(playerMatchesTournamentCategory({ category: 'B3', gender: 'K' }, b34k, [], { siblings }), false);
-  assert.equal(playerMatchesTournamentCategory({ category: 'B4', gender: 'K' }, b34k, [], { siblings }), true);
-  assert.equal(playerMatchesTournamentCategory({ category: 'B4', gender: 'K' }, b3k, [], { siblings }), false);
+  const mixed = inferMixedPlayerBands(siblings);
+  assert.equal(playerMatchesTournamentCategory({ category: 'B3', gender: 'K' }, b3k, mixed, { siblings }), true);
+  assert.equal(playerMatchesTournamentCategory({ category: 'B3', gender: 'K' }, b34k, mixed, { siblings }), false);
+  assert.equal(playerMatchesTournamentCategory({ category: 'B4', gender: 'K' }, b34k, mixed, { siblings }), true);
+  assert.equal(playerMatchesTournamentCategory({ category: 'B4', gender: 'K' }, b3k, mixed, { siblings }), false);
 });
 
 test('a player already drawn into B1 Plus stays out of B1 Men', () => {
