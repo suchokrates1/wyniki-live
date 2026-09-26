@@ -385,6 +385,49 @@ def test_mobile_finish_retirement_upserts_history_with_last_score(umpire_app_wit
     assert history[0]["score_b"] == [2, 1]
 
 
+def test_mobile_finish_keeps_match_names_when_court_shows_next_pair(umpire_app_with_temp_db):
+    from wyniki import database
+    from wyniki.services.court_manager import ensure_court_state
+
+    tournament_id = database.insert_tournament("Name Shift Cup", "2026-05-25", "2026-05-26", active=True)
+    database.create_tournament_courts(tournament_id, 1)
+    court_id = f"t{tournament_id}-1"
+    client = umpire_app_with_temp_db.test_client()
+    created = client.post("/api/matches", json={
+        "court_id": court_id,
+        "player1_name": "Finished Player One",
+        "player2_name": "Finished Player Two",
+        "status": "in_progress",
+        "score": {
+            "player1_sets": 2,
+            "player2_sets": 0,
+            "player1_games": 0,
+            "player2_games": 0,
+            "sets_history": [
+                {"set_number": 1, "player1_games": 4, "player2_games": 1},
+                {"set_number": 2, "player1_games": 4, "player2_games": 0},
+            ],
+        },
+    })
+    match_id = created.get_json()["id"]
+
+    # Next pair already on the overlay before finish POST arrives.
+    court_state = ensure_court_state(court_id)
+    court_state["A"]["full_name"] = "Next Player One"
+    court_state["B"]["full_name"] = "Next Player Two"
+
+    finished = client.post(f"/api/matches/{match_id}/finish", json={"finish_reason": "normal"})
+    assert finished.status_code == 200
+
+    history = database.fetch_match_history(tournament_id=tournament_id)
+    assert len(history) == 1
+    assert history[0]["player_a"] == "Finished Player One"
+    assert history[0]["player_b"] == "Finished Player Two"
+    assert history[0]["winner_name"] == "Finished Player One"
+    assert history[0]["score_a"] == [4, 4]
+    assert history[0]["score_b"] == [1, 0]
+
+
 def test_mobile_finish_walkover_records_four_zero_history(umpire_app_with_temp_db):
     from wyniki import database
 
@@ -2028,6 +2071,148 @@ def test_group_completion_auto_generates_category_knockout_and_prefixed_semifina
     assert b1_sf1["winner_name"] == "Anna A1"
     assert b1_final["player1_name"] == "Anna A1"
     assert b1_third["player1_name"] == "Anna B1"
+
+
+def test_shifted_history_names_do_not_complete_unfinished_group(full_app_with_temp_db):
+    """History linked to another match must not inflate this group's finished count."""
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Phantom History Cup", "2026-04-26", "2026-04-27", active=True)
+    players = {
+        "A1": database.insert_player(tournament_id, "Group A One", "B3", "PL", first_name="Group", last_name="A One"),
+        "A2": database.insert_player(tournament_id, "Group A Two", "B3", "PL", first_name="Group", last_name="A Two"),
+        "A3": database.insert_player(tournament_id, "Group A Three", "B3", "PL", first_name="Group", last_name="A Three"),
+        "A4": database.insert_player(tournament_id, "Group A Four", "B3", "PL", first_name="Group", last_name="A Four"),
+        "B1": database.insert_player(tournament_id, "Group B One", "B3", "PL", first_name="Group", last_name="B One"),
+        "B2": database.insert_player(tournament_id, "Group B Two", "B3", "PL", first_name="Group", last_name="B Two"),
+        "B3": database.insert_player(tournament_id, "Group B Three", "B3", "PL", first_name="Group", last_name="B Three"),
+    }
+    database.save_bracket_groups(
+        tournament_id,
+        [
+            {"name": "B3 — Grupa A", "players": [players["A1"], players["A2"], players["A3"], players["A4"]]},
+            {"name": "B3 — Grupa B", "players": [players["B1"], players["B2"], players["B3"]]},
+        ],
+    )
+    groups = {group["name"]: group["id"] for group in database.fetch_bracket_groups(tournament_id)}
+    group_a = groups["B3 — Grupa A"]
+    group_b = groups["B3 — Grupa B"]
+
+    with database.db_conn() as conn:
+        cursor = conn.cursor()
+
+        def insert_finished(player1, player2, group_id, created_at):
+            cursor.execute(
+                """
+                INSERT INTO matches (
+                    court_id, player1_name, player2_name, status, tournament_id, bracket_group_id, phase,
+                    player1_sets, player2_sets, finish_reason, winner_name, sets_history, created_at, updated_at
+                ) VALUES (?, ?, ?, 'finished', ?, ?, 'Grupowa', 2, 0, 'normal', ?, ?, ?, ?)
+                """,
+                (
+                    f"t{tournament_id}-1",
+                    player1,
+                    player2,
+                    tournament_id,
+                    group_id,
+                    player1,
+                    json.dumps([
+                        {"set_number": 1, "player1_games": 4, "player2_games": 0},
+                        {"set_number": 2, "player1_games": 4, "player2_games": 1},
+                    ]),
+                    created_at,
+                    created_at,
+                ),
+            )
+            return cursor.lastrowid
+
+        # Four of six group-A matches; two remain for Sunday.
+        insert_finished("Group A One", "Group A Three", group_a, "2026-04-26T09:00:00")
+        insert_finished("Group A Two", "Group A Four", group_a, "2026-04-26T10:00:00")
+        insert_finished("Group A One", "Group A Four", group_a, "2026-04-26T11:00:00")
+        insert_finished("Group A Two", "Group A Three", group_a, "2026-04-26T12:00:00")
+        # Group B complete.
+        insert_finished("Group B One", "Group B Two", group_b, "2026-04-26T13:00:00")
+        insert_finished("Group B One", "Group B Three", group_b, "2026-04-26T14:00:00")
+        foreign_match_id = insert_finished("Group B Two", "Group B Three", group_b, "2026-04-26T15:00:00")
+        conn.commit()
+
+    # Name-shifted history: foreign match_id, but both names from unfinished group A.
+    database.insert_match_history({
+        "kort_id": f"t{tournament_id}-1",
+        "ended_ts": "2026-04-26T15:00:00Z",
+        "duration_seconds": 1800,
+        "player_a": "Group A Three",
+        "player_b": "Group A Four",
+        "score_a": [4, 4],
+        "score_b": [0, 0],
+        "category": "B3",
+        "phase": "Grupowa",
+        "tournament_id": tournament_id,
+        "match_id": foreign_match_id,
+        "winner_name": "Group B Two",
+        "finish_reason": "normal",
+    })
+    # Second phantom row that used to push the count from 4 to 6.
+    database.insert_match_history({
+        "kort_id": f"t{tournament_id}-1",
+        "ended_ts": "2026-04-26T15:30:00Z",
+        "duration_seconds": 1800,
+        "player_a": "Group A One",
+        "player_b": "Group A Two",
+        "score_a": [4, 4],
+        "score_b": [0, 0],
+        "category": "B3",
+        "phase": "Grupowa",
+        "tournament_id": tournament_id,
+        "match_id": foreign_match_id,
+        "winner_name": "Group B Two",
+        "finish_reason": "normal",
+    })
+
+    assert database.count_finished_group_matches(tournament_id, group_a) == 4
+    assert database.expected_group_matches_count(tournament_id, group_a, 4) == 6
+
+    generated = database.maybe_generate_knockout_from_completed_groups(tournament_id)
+    assert generated["status"] in {"ok", "skipped", "pending"}
+    semis = [
+        slot for slot in database.fetch_bracket_knockout(tournament_id)
+        if slot["phase"] == "B3 — Półfinał"
+    ]
+    # Group A is incomplete, so the unit must not seed real A names into semis.
+    real_a_names = {"Group A One", "Group A Two", "Group A Three", "Group A Four"}
+    for slot in semis:
+        assert slot["player1_name"] not in real_a_names
+        assert slot["player2_name"] not in real_a_names
+
+
+def test_legacy_history_without_match_id_still_counts_toward_group(full_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Legacy Count Cup", "2026-04-26", "2026-04-27", active=True)
+    p1 = database.insert_player(tournament_id, "Legacy One", "B1", "PL", first_name="Legacy", last_name="One")
+    p2 = database.insert_player(tournament_id, "Legacy Two", "B1", "PL", first_name="Legacy", last_name="Two")
+    p3 = database.insert_player(tournament_id, "Legacy Three", "B1", "PL", first_name="Legacy", last_name="Three")
+    database.save_bracket_groups(
+        tournament_id,
+        [{"name": "B1 — Grupa A", "players": [p1, p2, p3]}],
+    )
+    group_id = database.fetch_bracket_groups(tournament_id)[0]["id"]
+    database.insert_match_history({
+        "kort_id": "legacy-1",
+        "ended_ts": "2026-04-26T10:00:00Z",
+        "duration_seconds": 1800,
+        "player_a": "Legacy One",
+        "player_b": "Legacy Two",
+        "score_a": [4, 4],
+        "score_b": [1, 2],
+        "category": "B1",
+        "phase": "Grupowa",
+        "tournament_id": tournament_id,
+        "finish_reason": "normal",
+    })
+
+    assert database.count_finished_group_matches(tournament_id, group_id) == 1
 
 
 def test_schedule_office_and_knockout_flow_reaches_winners(full_app_with_temp_db):

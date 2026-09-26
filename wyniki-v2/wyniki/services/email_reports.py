@@ -115,13 +115,14 @@ def send_match_report(match: Any, state: Dict[str, Any], tournament: Optional[Di
 
     court_name = state.get("court_name") or match.court_id
     tournament_name = tournament.get("name") or "Tournament"
-    player_a = state.get("A", {}).get("full_name") or match.player1_name
-    player_b = state.get("B", {}).get("full_name") or match.player2_name
+    # Prefer the finished match row: overlay may already show the next pair.
+    player_a = match.player1_name or state.get("A", {}).get("full_name")
+    player_b = match.player2_name or state.get("B", {}).get("full_name")
     score_a = [state.get("A", {}).get(f"set{i}", 0) for i in [1, 2, 3]]
     score_b = [state.get("B", {}).get(f"set{i}", 0) for i in [1, 2, 3]]
     duration_seconds = state.get("match_time", {}).get("seconds", 0)
     duration_minutes = round(duration_seconds / 60, 1) if duration_seconds else 0
-    phase = state.get("history_meta", {}).get("phase") or match.phase or "Grupowa"
+    phase = match.phase or state.get("history_meta", {}).get("phase") or "Grupowa"
     category = state.get("history_meta", {}).get("category") or "-"
 
     subject = f"{tournament_name}: raport meczu {player_a} vs {player_b}"

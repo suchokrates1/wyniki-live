@@ -755,7 +755,10 @@ def _count_finished_group_matches(
         if not is_group_stage_phase(row["phase"]):
             continue
         match_id = row["match_id"]
-        if match_id not in (None, "", 0) and int(match_id) in counted_match_ids:
+        # Rows linked to a match are owned by the matches table. Counting them
+        # again from history names lets a name-shift (next pair on court) inflate
+        # another group's finished total and fire knockout too early.
+        if match_id not in (None, "", 0):
             continue
         if _both_competitors_in_group(row["player_a"], row["player_b"], group_keys):
             history_extra += 1
