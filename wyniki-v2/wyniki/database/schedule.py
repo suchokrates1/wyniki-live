@@ -879,6 +879,90 @@ def ensure_knockout_schedule_entries(
         logger.error("ensure_knockout_schedule_error", error=str(e), tournament_id=tournament_id)
         return fetch_tournament_schedule(tournament_id)
 
+def _same_match_pair(left_a: str, left_b: str, right_a: str, right_b: str) -> bool:
+    left = {competitor_identity_key(left_a), competitor_identity_key(left_b)}
+    right = {competitor_identity_key(right_a), competitor_identity_key(right_b)}
+    return "" not in left and left == right
+
+
+def _sets_history_is_empty(raw: Any) -> bool:
+    if raw in (None, "", "[]", "null"):
+        return True
+    try:
+        parsed = json.loads(raw) if isinstance(raw, str) else raw
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return False
+    return not parsed
+
+
+def _empty_shell_match_id(
+    cursor,
+    *,
+    slot_match_id: Any,
+    incoming_match_id: int,
+    player1_name: str,
+    player2_name: str,
+) -> Optional[int]:
+    """In-progress 0:0 row for this pair. A later start of the same match may replace it."""
+    if not slot_match_id or int(slot_match_id) == int(incoming_match_id):
+        return None
+    cursor.execute(
+        """
+        SELECT id, status, finish_reason, player1_name, player2_name,
+               player1_sets, player2_sets, player1_games, player2_games,
+               player1_points, player2_points, sets_history
+        FROM matches
+        WHERE id = ?
+        """,
+        (int(slot_match_id),),
+    )
+    holder = cursor.fetchone()
+    if not holder or holder["status"] != "in_progress":
+        return None
+    if (holder["finish_reason"] or "normal") == "test":
+        return None
+    if not _same_match_pair(holder["player1_name"], holder["player2_name"], player1_name, player2_name):
+        return None
+    if any(int(holder[field] or 0) for field in (
+        "player1_sets",
+        "player2_sets",
+        "player1_games",
+        "player2_games",
+        "player1_points",
+        "player2_points",
+    )):
+        return None
+    if not _sets_history_is_empty(holder["sets_history"]):
+        return None
+    return int(holder["id"])
+
+
+def _void_empty_shell(cursor, shell_id: int, replacement_match_id: int) -> None:
+    cursor.execute(
+        """
+        UPDATE matches
+        SET status = 'finished',
+            finish_reason = 'test',
+            schedule_id = NULL,
+            result_note = ?,
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            f"pusty start zastąpiony meczem {int(replacement_match_id)}",
+            _utc_now(),
+            int(shell_id),
+        ),
+    )
+
+
+def _claim_schedule_slot(cursor, slot_id: int, match_id: int, status: str) -> None:
+    cursor.execute(
+        "UPDATE tournament_schedule SET match_id = ?, status = ?, updated_at = ? WHERE id = ?",
+        (match_id, status, _utc_now(), int(slot_id)),
+    )
+
+
 def link_schedule_to_match(
     tournament_id: int,
     match_id: int,
@@ -890,14 +974,18 @@ def link_schedule_to_match(
     bracket_group_id: Optional[int] = None,
     status: str = "completed",
 ) -> Optional[Dict[str, Any]]:
-    """Link a planned schedule slot to the real match row."""
+    """Link a planned schedule slot to the real match row.
+
+    A second start of the same pair replaces the slot when the row already there
+    is still 0:0. A started or finished match stays where it is.
+    """
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             if schedule_id:
                 cursor.execute(
                     """
-                    SELECT id FROM tournament_schedule
+                    SELECT id, match_id FROM tournament_schedule
                     WHERE id = ? AND tournament_id = ? AND (match_id IS NULL OR match_id = ?)
                     LIMIT 1
                     """,
@@ -905,11 +993,23 @@ def link_schedule_to_match(
                 )
                 row = cursor.fetchone()
                 if not row:
-                    return None
-                cursor.execute(
-                    "UPDATE tournament_schedule SET match_id = ?, status = ?, updated_at = ? WHERE id = ?",
-                    (match_id, status, _utc_now(), row["id"]),
-                )
+                    cursor.execute(
+                        "SELECT id, match_id FROM tournament_schedule WHERE id = ? AND tournament_id = ?",
+                        (schedule_id, tournament_id),
+                    )
+                    occupied = cursor.fetchone()
+                    shell_id = _empty_shell_match_id(
+                        cursor,
+                        slot_match_id=occupied["match_id"] if occupied else None,
+                        incoming_match_id=match_id,
+                        player1_name=player1_name,
+                        player2_name=player2_name,
+                    ) if occupied else None
+                    if shell_id is None:
+                        return None
+                    _void_empty_shell(cursor, shell_id, match_id)
+                    row = occupied
+                _claim_schedule_slot(cursor, row["id"], match_id, status)
                 conn.commit()
                 return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(row["id"])), None)
 
@@ -924,10 +1024,7 @@ def link_schedule_to_match(
                 params.append(phase)
             filters.append("(match_id IS NULL OR match_id = ?)")
             params.append(match_id)
-            cursor.execute(
-                f"""
-                SELECT id FROM tournament_schedule
-                WHERE {' AND '.join(filters)}
+            order_by = """
                 ORDER BY
                     CASE
                         WHEN COALESCE(court_id, '') != '' AND COALESCE(scheduled_time, '') != '' THEN 0
@@ -936,16 +1033,34 @@ def link_schedule_to_match(
                     CASE WHEN match_id IS NULL THEN 0 ELSE 1 END,
                     id
                 LIMIT 1
-                """,
+            """
+            cursor.execute(
+                f"SELECT id, match_id FROM tournament_schedule WHERE {' AND '.join(filters)} {order_by}",
                 params,
             )
             row = cursor.fetchone()
             if not row:
-                return None
-            cursor.execute(
-                "UPDATE tournament_schedule SET match_id = ?, status = ?, updated_at = ? WHERE id = ?",
-                (match_id, status, _utc_now(), row["id"]),
-            )
+                occupied_filters = [item for item in filters if "match_id" not in item]
+                occupied_params = params[:-1]
+                occupied_filters.append("match_id IS NOT NULL AND match_id != ?")
+                occupied_params.append(match_id)
+                cursor.execute(
+                    f"SELECT id, match_id FROM tournament_schedule WHERE {' AND '.join(occupied_filters)} {order_by}",
+                    occupied_params,
+                )
+                occupied = cursor.fetchone()
+                shell_id = _empty_shell_match_id(
+                    cursor,
+                    slot_match_id=occupied["match_id"] if occupied else None,
+                    incoming_match_id=match_id,
+                    player1_name=player1_name,
+                    player2_name=player2_name,
+                ) if occupied else None
+                if shell_id is None:
+                    return None
+                _void_empty_shell(cursor, shell_id, match_id)
+                row = occupied
+            _claim_schedule_slot(cursor, row["id"], match_id, status)
             _prune_duplicate_schedule_entries(cursor, tournament_id)
             conn.commit()
             schedule_id = row["id"]

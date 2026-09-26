@@ -460,6 +460,118 @@ def test_link_schedule_to_match_does_not_overwrite_different_match(umpire_app_wi
     assert schedule[0]["match_id"] == 101
 
 
+def test_second_start_replaces_empty_shell_on_the_same_schedule_slot(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Restart Cup", "2026-09-26", "2026-09-26", active=True)
+    database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
+    with database.db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO tournament_schedule (
+                tournament_id, day_date, scheduled_time, court_id, court_label,
+                phase, player1_name, player2_name, status, source_type, sort_order
+            ) VALUES (?, '2026-09-26', '12:45', ?, '1', 'Grupowa', ?, ?, 'planned', 'manual', 1)
+            """,
+            (tournament_id, f"t{tournament_id}-1", "Katarzyna Pietruszyńska", "Justyna Stopierzyńska"),
+        )
+        conn.commit()
+    schedule_id = database.fetch_tournament_schedule(tournament_id)[0]["id"]
+    client = umpire_app_with_temp_db.test_client()
+    empty = {
+        "player1_sets": 0,
+        "player2_sets": 0,
+        "player1_games": 0,
+        "player2_games": 0,
+        "player1_points": 0,
+        "player2_points": 0,
+        "sets_history": [],
+    }
+
+    first = client.post("/api/matches", json={
+        "court_id": f"t{tournament_id}-1",
+        "schedule_id": schedule_id,
+        "client_match_uuid": "leave-and-back",
+        "player1_name": "Katarzyna Pietruszyńska",
+        "player2_name": "Justyna Stopierzyńska",
+        "status": "in_progress",
+        "score": empty,
+    })
+    second = client.post("/api/matches", json={
+        "court_id": f"t{tournament_id}-1",
+        "schedule_id": schedule_id,
+        "client_match_uuid": "real-start",
+        "player1_name": "Justyna Stopierzyńska",
+        "player2_name": "Katarzyna Pietruszyńska",
+        "status": "in_progress",
+        "score": empty,
+    })
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    first_id = first.get_json()["id"]
+    second_id = second.get_json()["id"]
+    assert first_id != second_id
+    slot = database.fetch_tournament_schedule(tournament_id)[0]
+    assert slot["match_id"] == second_id
+    assert slot["status"] == "in_progress"
+    with database.db_conn() as conn:
+        shell = conn.execute(
+            "SELECT status, finish_reason, schedule_id FROM matches WHERE id = ?",
+            (first_id,),
+        ).fetchone()
+    assert shell["status"] == "finished"
+    assert shell["finish_reason"] == "test"
+    assert shell["schedule_id"] is None
+
+
+def test_second_start_does_not_replace_a_match_that_already_has_points(umpire_app_with_temp_db):
+    from wyniki import database
+
+    tournament_id = database.insert_tournament("Live Guard Cup", "2026-09-26", "2026-09-26", active=True)
+    database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
+    with database.db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO tournament_schedule (
+                tournament_id, day_date, scheduled_time, court_id, court_label,
+                phase, player1_name, player2_name, status, source_type, sort_order
+            ) VALUES (?, '2026-09-26', '11:15', ?, '2', 'Grupowa', ?, ?, 'planned', 'manual', 1)
+            """,
+            (tournament_id, f"t{tournament_id}-1", "Michał Orchowski", "Tomasz Gawrych"),
+        )
+        conn.commit()
+    schedule_id = database.fetch_tournament_schedule(tournament_id)[0]["id"]
+    client = umpire_app_with_temp_db.test_client()
+
+    first = client.post("/api/matches", json={
+        "court_id": f"t{tournament_id}-1",
+        "schedule_id": schedule_id,
+        "client_match_uuid": "already-playing",
+        "player1_name": "Michał Orchowski",
+        "player2_name": "Tomasz Gawrych",
+        "status": "in_progress",
+        "score": {"player1_games": 2, "player2_games": 0, "sets_history": []},
+    })
+    second = client.post("/api/matches", json={
+        "court_id": f"t{tournament_id}-1",
+        "schedule_id": schedule_id,
+        "client_match_uuid": "another-start",
+        "player1_name": "Michał Orchowski",
+        "player2_name": "Tomasz Gawrych",
+        "status": "in_progress",
+        "score": {"sets_history": []},
+    })
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    slot = database.fetch_tournament_schedule(tournament_id)[0]
+    assert slot["match_id"] == first.get_json()["id"]
+    with database.db_conn() as conn:
+        kept = conn.execute("SELECT status FROM matches WHERE id = ?", (first.get_json()["id"],)).fetchone()
+    assert kept["status"] == "in_progress"
+
+
 def test_link_schedule_to_match_uses_explicit_schedule_id_before_name_heuristic(umpire_app_with_temp_db):
     from wyniki import database
 
