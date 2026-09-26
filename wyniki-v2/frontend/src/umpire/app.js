@@ -2,7 +2,12 @@ import Alpine from 'alpinejs';
 import { createUmpireApi } from './api.js';
 import { umpireText } from './i18n.js';
 import { courtDisplayName } from './courtDisplay.js';
-import { buildMatchConfig, DEFAULT_MATCH_CONFIG_FORM, startDraft } from './matchConfigForm.js';
+import {
+  buildMatchConfig,
+  DEFAULT_MATCH_CONFIG_FORM,
+  normalizeTiebreakAtGames,
+  startDraft,
+} from './matchConfigForm.js';
 import { createPinPad } from './pinPad.js';
 import {
   AVAILABLE_LANGUAGES,
@@ -10,7 +15,7 @@ import {
   firstScreen,
   parseExpiresAt,
 } from './session.js';
-import { FinishMatchRequest, MatchFinishReason } from './match-engine/models.js';
+import { FinishMatchRequest, MatchFinishReason, tiebreakAtOptions } from './match-engine/models.js';
 import { announcementContent } from './match/announcementView.js';
 import { buildAdvancedRally, buildAdvancedServe } from './match/advancedScoringView.js';
 import { buildBasicScoring } from './match/basicScoringView.js';
@@ -95,6 +100,10 @@ function formFromLastConfig(last) {
     setsToWin: last.setsToWin ?? DEFAULT_MATCH_CONFIG_FORM.setsToWin,
     tiebreakPoints: last.tiebreakPoints ?? DEFAULT_MATCH_CONFIG_FORM.tiebreakPoints,
     superTiebreakPoints: last.superTiebreakPoints ?? DEFAULT_MATCH_CONFIG_FORM.superTiebreakPoints,
+    tiebreakAtGames: normalizeTiebreakAtGames(
+      last.gamesPerSet ?? DEFAULT_MATCH_CONFIG_FORM.gamesPerSet,
+      last.tiebreakAtGames,
+    ),
     tbOnlyPoints: last.tbOnlyPoints ?? DEFAULT_MATCH_CONFIG_FORM.tbOnlyPoints,
     noAdvantage: Boolean(last.noAdvantage),
     tiebreakOnly: Boolean(last.tiebreakOnly),
@@ -829,6 +838,15 @@ function createUmpireApp() {
       const last = session.getLastMatchConfig();
       this.configForm = last ? formFromLastConfig(last) : { ...DEFAULT_MATCH_CONFIG_FORM };
       this.go('config');
+    },
+
+    tiebreakAtChoices() {
+      return tiebreakAtOptions(this.configForm.gamesPerSet);
+    },
+
+    setGamesPerSet(value) {
+      this.configForm.gamesPerSet = value;
+      this.configForm.tiebreakAtGames = normalizeTiebreakAtGames(value, this.configForm.tiebreakAtGames);
     },
 
     startMatch() {

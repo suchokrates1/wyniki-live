@@ -1,5 +1,11 @@
 const TENNIS = ['0', '15', '30', '40'];
 
+/** Mirrors the umpire engine: short sets open the tiebreak a game early, longer ones at set length. */
+export function defaultTiebreakAtGames(gamesPerSet) {
+  const games = Number(gamesPerSet) || 4;
+  return games <= 3 ? games - 1 : games;
+}
+
 export function tennisPoints(rawA = 0, rawB = 0, { isTiebreak = false, isSuperTiebreak = false } = {}) {
   const a = Number(rawA) || 0;
   const b = Number(rawB) || 0;
@@ -72,8 +78,12 @@ export function directorDeviceCard(tablet, nowMs = Date.now()) {
   const serve = snapshot.is_player1_serving == null
     ? ''
     : (snapshot.is_player1_serving ? 'serwuje strona 1' : 'serwuje strona 2');
+  const tiebreakAt = snapshot.tiebreak_at_games || (
+    snapshot.games_per_set ? defaultTiebreakAtGames(snapshot.games_per_set) : null
+  );
   const rules = [
     snapshot.games_per_set ? `${snapshot.games_per_set} gemy` : null,
+    tiebreakAt ? `TB przy ${tiebreakAt}:${tiebreakAt}` : null,
     snapshot.sets_to_win ? `${snapshot.sets_to_win} sety do wygranej` : null,
     snapshot.no_advantage ? 'No-Ad' : null,
     snapshot.tiebreak_only ? 'tylko TB' : null,
@@ -141,6 +151,7 @@ export function applyTabletToDirectorForm(tablet = {}) {
     player2Points: snapshot.player2_points ?? 0,
     gamesPerSet: snapshot.games_per_set || 4,
     setsToWin: snapshot.sets_to_win || 2,
+    tiebreakAtGames: snapshot.tiebreak_at_games || defaultTiebreakAtGames(snapshot.games_per_set || 4),
     noAdvantage: !!snapshot.no_advantage,
     tiebreakOnly: !!snapshot.tiebreak_only,
     statsMode: snapshot.stats_mode || 'ADVANCED',

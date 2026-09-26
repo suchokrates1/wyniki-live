@@ -1,6 +1,7 @@
 import {
   applyTabletToDirectorForm,
   asPlayerList,
+  defaultTiebreakAtGames,
   directorDeviceCard,
   filterTournamentPlayers,
   formatScoreLine,
@@ -341,6 +342,7 @@ export function createCourtsAdmin() {
         player2Points: 0,
         gamesPerSet: 4,
         setsToWin: 2,
+        tiebreakAtGames: 4,
         noAdvantage: false,
         tiebreakOnly: false,
         statsMode: 'ADVANCED',
@@ -491,6 +493,8 @@ export function createCourtsAdmin() {
         const config = match.match_config || {};
         this.directorForm.gamesPerSet = config.games_per_set || 4;
         this.directorForm.setsToWin = config.sets_to_win || 2;
+        this.directorForm.tiebreakAtGames = config.tiebreak_at_games
+          || defaultTiebreakAtGames(config.games_per_set || 4);
         this.directorForm.noAdvantage = !!config.no_advantage;
         this.directorForm.tiebreakOnly = !!config.tiebreak_only;
         this.directorForm.statsMode = config.stats_mode || 'ADVANCED';
@@ -531,6 +535,8 @@ export function createCourtsAdmin() {
               match_config: {
                 games_per_set: Number(this.directorForm.gamesPerSet) || 4,
                 sets_to_win: Number(this.directorForm.setsToWin) || 2,
+                tiebreak_at_games: Number(this.directorForm.tiebreakAtGames)
+                  || defaultTiebreakAtGames(Number(this.directorForm.gamesPerSet) || 4),
                 no_advantage: !!this.directorForm.noAdvantage,
                 tiebreak_only: !!this.directorForm.tiebreakOnly,
                 stats_mode: this.directorForm.statsMode || 'ADVANCED',

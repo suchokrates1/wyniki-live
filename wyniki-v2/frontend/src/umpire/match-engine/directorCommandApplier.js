@@ -75,6 +75,7 @@ function applyConfig(current, patch) {
     setsToWin: patch.setsToWin ?? current.setsToWin,
     tiebreakPoints: patch.tiebreakPoints ?? current.tiebreakPoints,
     superTiebreakPoints: patch.superTiebreakPoints ?? current.superTiebreakPoints,
+    tiebreakAtGames: patch.tiebreakAtGames ?? current.tiebreakAtGames,
     noAdvantage: patch.noAdvantage ?? current.noAdvantage,
     tiebreakOnly: patch.tiebreakOnly ?? current.tiebreakOnly,
     statsMode: parseStatsMode(patch.statsMode) ?? current.statsMode,

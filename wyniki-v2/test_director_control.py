@@ -239,7 +239,17 @@ def test_director_config_patch_keeps_existing_stats_mode(director_app):
     assert config["games_per_set"] == 3
     assert config["no_advantage"] is True
     assert config["stats_mode"] == "BASIC"
+    # A shorter set moves its tiebreak with it unless the director names one.
+    assert config["tiebreak_at_games"] == 2
     assert body["command"]["match_config"]["stats_mode"] == "BASIC"
+
+    early = client.post(
+        f"/admin/api/matches/{match['id']}/control",
+        json={"match_config": {"games_per_set": 4, "sets_to_win": 1, "tiebreak_at_games": 3}},
+    )
+    assert early.status_code == 200, early.get_data(as_text=True)
+    assert early.get_json()["match"]["match_config"]["tiebreak_at_games"] == 3
+    assert early.get_json()["command"]["match_config"]["tiebreak_at_games"] == 3
 
 
 def test_director_command_wakes_waiting_poll(director_app):

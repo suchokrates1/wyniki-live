@@ -28,8 +28,10 @@ def _score(g1, g2, p1=0, p2=0, sets=(), **flags):
     }
 
 
-def _start(client, court_id, games_per_set=4):
+def _start(client, court_id, games_per_set=4, tiebreak_at_games=None):
     config = {"games_per_set": games_per_set, "sets_to_win": 2}
+    if tiebreak_at_games is not None:
+        config["tiebreak_at_games"] = tiebreak_at_games
     created = client.post("/api/matches", json={
         "court_id": court_id, "player1_name": "Stypa", "player2_name": "Gawrych", "status": "in_progress",
         "client_match_uuid": f"live-{court_id}", "match_config": config, "score": _score(0, 0),
@@ -105,6 +107,16 @@ def test_a_tiebreak_reached_by_a_put_alone_is_inferred_from_the_format(app):
     court_id = _court(app)
     match_id, config = _start(client, court_id)
     _put(client, match_id, config, _score(4, 4))
+
+    court = _crash_and_restore(app, court_id)
+    assert court["tie"]["visible"] is True
+
+
+def test_a_format_with_the_tiebreak_at_three_all_is_inferred_from_a_put(app):
+    client = app.test_client()
+    court_id = _court(app)
+    match_id, config = _start(client, court_id, tiebreak_at_games=3)
+    _put(client, match_id, config, _score(3, 3))
 
     court = _crash_and_restore(app, court_id)
     assert court["tie"]["visible"] is True

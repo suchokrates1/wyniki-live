@@ -83,6 +83,38 @@ test('standardSetStartsTiebreakAtSixAll', () => {
   assert.equal(state.shouldStartTiebreak(), true);
 });
 
+test('fourGameSetCanStartTheTiebreakAtThreeAll', () => {
+  const config = new MatchConfig({ gamesPerSet: 4, tiebreakAtGames: 3 });
+  assert.equal(config.tiebreakAt, 3);
+
+  const state = matchState({ matchConfig: config });
+  state.player1Games = 3;
+  state.player2Games = 3;
+  assert.equal(state.shouldStartTiebreak(), true);
+  assert.equal(state.isSetWon(), false);
+
+  // 4:0, 4:1 and 4:2 still take the set outright.
+  for (const games of [0, 1, 2]) {
+    state.player1Games = 4;
+    state.player2Games = games;
+    assert.equal(state.isSetWon(), true);
+  }
+
+  // 4:3 only exists as the game won in the tiebreak, which the reducer awards itself.
+  state.player1Games = 4;
+  state.player2Games = 3;
+  assert.equal(state.isSetWon(), false);
+});
+
+test('tiebreakAtGamesOutsideTheFormatFallsBackToTheDefault', () => {
+  assert.equal(new MatchConfig({ gamesPerSet: 4 }).tiebreakAt, 4);
+  assert.equal(new MatchConfig({ gamesPerSet: 3 }).tiebreakAt, 2);
+  assert.equal(new MatchConfig({ gamesPerSet: 6 }).tiebreakAt, 6);
+  assert.equal(new MatchConfig({ gamesPerSet: 4, tiebreakAtGames: 9 }).tiebreakAt, 4);
+  assert.equal(new MatchConfig({ gamesPerSet: 4, tiebreakAtGames: null }).tiebreakAt, 4);
+  assert.equal(new MatchConfig({ gamesPerSet: 6, tiebreakAtGames: 5 }).copy().tiebreakAt, 5);
+});
+
 test('tiebreakPointsDisplayAsRawNumbers', () => {
   const state = matchState();
   state.isTiebreak = true;

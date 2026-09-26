@@ -47,6 +47,18 @@ export const ActionType = Object.freeze({
   SET_WON: 'SET_WON',
 });
 
+/** Games each side holds when the set tiebreak starts, unless the format overrides it. */
+export function defaultTiebreakAtGames(gamesPerSet) {
+  const games = Number(gamesPerSet) || 4;
+  return games <= 3 ? games - 1 : games;
+}
+
+/** The two tiebreak triggers a format can offer: one game early, or at the set length. */
+export function tiebreakAtOptions(gamesPerSet) {
+  const games = Number(gamesPerSet) || 4;
+  return games > 1 ? [games - 1, games] : [games];
+}
+
 export class MatchConfig {
   constructor({
     gamesPerSet = 4,
@@ -56,6 +68,7 @@ export class MatchConfig {
     statsMode = StatsMode.ADVANCED,
     noAdvantage = false,
     tiebreakOnly = false,
+    tiebreakAtGames = null,
   } = {}) {
     this.gamesPerSet = gamesPerSet;
     this.setsToWin = setsToWin;
@@ -64,10 +77,15 @@ export class MatchConfig {
     this.statsMode = statsMode;
     this.noAdvantage = noAdvantage;
     this.tiebreakOnly = tiebreakOnly;
+    this.tiebreakAtGames = tiebreakAtGames;
   }
 
   get tiebreakAt() {
-    return this.gamesPerSet;
+    const chosen = Number(this.tiebreakAtGames);
+    if (Number.isInteger(chosen) && chosen >= 1) {
+      return Math.min(chosen, this.gamesPerSet);
+    }
+    return defaultTiebreakAtGames(this.gamesPerSet);
   }
 
   get gamesForSetWinWithMargin() {
@@ -83,6 +101,7 @@ export class MatchConfig {
       statsMode: this.statsMode,
       noAdvantage: this.noAdvantage,
       tiebreakOnly: this.tiebreakOnly,
+      tiebreakAtGames: this.tiebreakAtGames,
       ...overrides,
     });
   }
@@ -540,9 +559,7 @@ export class MatchState {
     }
 
     const gps = this.matchConfig.gamesPerSet;
-    if (gps <= 3) {
-      return this.player1Games >= gps || this.player2Games >= gps;
-    }
+    const tbAt = this.matchConfig.tiebreakAt;
 
     if (
       (this.player1Games >= gps && this.player1Games - this.player2Games >= 2)
@@ -550,6 +567,14 @@ export class MatchState {
     ) {
       return true;
     }
+
+    // Short sets: the game won in the tiebreak lands on gps (3:2 with three-game sets).
+    if (gps <= 3 && tbAt < gps && (this.player1Games >= gps || this.player2Games >= gps)) {
+      return true;
+    }
+
+    // 5:3 and 7:5 only exist while the tiebreak waits for gps:gps.
+    if (tbAt < gps) return false;
 
     const gpsPlus1 = gps + 1;
     const gpsMinus1 = gps - 1;
@@ -560,10 +585,9 @@ export class MatchState {
   }
 
   shouldStartTiebreak() {
-    const gps = this.matchConfig.gamesPerSet;
-    const tbTrigger = gps <= 3 ? gps - 1 : gps;
-    return this.player1Games === tbTrigger
-      && this.player2Games === tbTrigger
+    const tbAt = this.matchConfig.tiebreakAt;
+    return this.player1Games === tbAt
+      && this.player2Games === tbAt
       && !this.isTiebreak
       && !this.isSuperTiebreak;
   }

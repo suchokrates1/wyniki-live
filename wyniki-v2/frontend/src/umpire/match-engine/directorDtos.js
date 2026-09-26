@@ -53,6 +53,7 @@ export function matchConfigDto(fields = {}) {
     setsToWin: fields.setsToWin ?? null,
     tiebreakPoints: fields.tiebreakPoints ?? null,
     superTiebreakPoints: fields.superTiebreakPoints ?? null,
+    tiebreakAtGames: fields.tiebreakAtGames ?? null,
     noAdvantage: fields.noAdvantage ?? null,
     tiebreakOnly: fields.tiebreakOnly ?? null,
     statsMode: fields.statsMode ?? null,

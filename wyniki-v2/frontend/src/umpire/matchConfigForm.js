@@ -1,10 +1,11 @@
-import { MatchConfig } from './match-engine/models.js';
+import { defaultTiebreakAtGames, MatchConfig, tiebreakAtOptions } from './match-engine/models.js';
 
 export const DEFAULT_MATCH_CONFIG_FORM = Object.freeze({
   gamesPerSet: 4,
   setsToWin: 2,
   tiebreakPoints: 7,
   superTiebreakPoints: 10,
+  tiebreakAtGames: defaultTiebreakAtGames(4),
   tbOnlyPoints: 10,
   noAdvantage: false,
   tiebreakOnly: false,
@@ -12,6 +13,13 @@ export const DEFAULT_MATCH_CONFIG_FORM = Object.freeze({
   manualStartTime: null,
   advancedStats: false,
 });
+
+/** A trigger from another set length would be unreachable, so fall back to this format's default. */
+export function normalizeTiebreakAtGames(gamesPerSet, tiebreakAtGames) {
+  const options = tiebreakAtOptions(gamesPerSet);
+  const chosen = Number(tiebreakAtGames);
+  return options.includes(chosen) ? chosen : defaultTiebreakAtGames(gamesPerSet);
+}
 
 export function buildMatchConfig(form, statsMode) {
   if (form.tiebreakOnly) {
@@ -31,6 +39,7 @@ export function buildMatchConfig(form, statsMode) {
     setsToWin,
     tiebreakPoints: form.tiebreakPoints === 10 ? 10 : 7,
     superTiebreakPoints: form.superTiebreakPoints === 7 ? 7 : 10,
+    tiebreakAtGames: normalizeTiebreakAtGames(gamesPerSet, form.tiebreakAtGames),
     statsMode,
     noAdvantage: Boolean(form.noAdvantage),
   });
@@ -78,6 +87,7 @@ export function startDraft({
       setsToWin: config.setsToWin,
       tiebreakPoints: config.tiebreakPoints,
       superTiebreakPoints: config.superTiebreakPoints,
+      tiebreakAtGames: config.tiebreakAtGames,
       statsMode: config.statsMode,
       noAdvantage: config.noAdvantage,
       tiebreakOnly: config.tiebreakOnly,

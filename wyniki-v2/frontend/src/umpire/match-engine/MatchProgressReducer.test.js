@@ -103,6 +103,33 @@ test('gameAtTiebreakBoundaryStartsTiebreakAnnouncement', () => {
   assert.equal(result.nextScreen, MatchProgressScreen.Announcement);
 });
 
+test('fourGameSetWithTiebreakAtThreeAllEndsFourThree', () => {
+  const state = matchState({
+    matchConfig: new MatchConfig({ gamesPerSet: 4, setsToWin: 2, tiebreakAtGames: 3 }),
+  });
+  state.player1Games = 2;
+  state.player2Games = 3;
+  state.player1Points = 4;
+  state.player2Points = 0;
+
+  const toTiebreak = MatchProgressReducer.reduceAfterPoint(state, null, 9_000);
+  assert.equal(state.isTiebreak, true);
+  assert.equal(state.player1Games, 3);
+  assert.equal(state.player2Games, 3);
+  assert.equal(toTiebreak.announcementType, MatchProgressReducer.ANNOUNCEMENT_TIEBREAK);
+
+  state.player1Points = 7;
+  state.player2Points = 5;
+  const setDone = MatchProgressReducer.reduceAfterPoint(state, null, 9_000);
+
+  assert.equal(state.isTiebreak, false);
+  assert.equal(state.player1Sets, 1);
+  assert.equal(state.setsHistory[0].player1Games, 4);
+  assert.equal(state.setsHistory[0].player2Games, 3);
+  assert.equal(state.setsHistory[0].tiebreakLoserPoints, 5);
+  assert.equal(setDone.finalizeMatch, false);
+});
+
 test('splitSetsStartSuperTiebreak', () => {
   const state = matchState({ matchConfig: new MatchConfig({ gamesPerSet: 6, setsToWin: 2 }) });
   state.player1Sets = 0;

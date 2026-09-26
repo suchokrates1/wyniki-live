@@ -170,7 +170,15 @@
                   <p class="ump-config-row__label" x-text="t('gamesPerSet')"></p>
                   <div class="ump-seg" role="group" :aria-label="t('gamesPerSet')">
                     <template x-for="value in [3,4,5,6]" :key="'g'+value">
-                      <button type="button" class="ump-seg__btn" :aria-pressed="configForm.gamesPerSet === value" @click="configForm.gamesPerSet = value" x-text="value"></button>
+                      <button type="button" class="ump-seg__btn" :aria-pressed="configForm.gamesPerSet === value" @click="setGamesPerSet(value)" x-text="value"></button>
+                    </template>
+                  </div>
+                </div>
+                <div class="ump-config-row">
+                  <p class="ump-config-row__label" x-text="t('tiebreakAt')"></p>
+                  <div class="ump-seg" role="group" :aria-label="t('tiebreakAt')">
+                    <template x-for="value in tiebreakAtChoices()" :key="'tba'+value">
+                      <button type="button" class="ump-seg__btn" :aria-pressed="configForm.tiebreakAtGames === value" @click="configForm.tiebreakAtGames = value" x-text="value + ':' + value"></button>
                     </template>
                   </div>
                 </div>

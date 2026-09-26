@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { StatsMode } from './match-engine/models.js';
-import { buildMatchConfig, DEFAULT_MATCH_CONFIG_FORM, startDraft } from './matchConfigForm.js';
+import { StatsMode, tiebreakAtOptions } from './match-engine/models.js';
+import {
+  buildMatchConfig,
+  DEFAULT_MATCH_CONFIG_FORM,
+  normalizeTiebreakAtGames,
+  startDraft,
+} from './matchConfigForm.js';
 
 test('default form matches Android dialog defaults', () => {
   const config = buildMatchConfig(DEFAULT_MATCH_CONFIG_FORM, StatsMode.BASIC);
@@ -10,7 +15,28 @@ test('default form matches Android dialog defaults', () => {
   assert.equal(config.tiebreakPoints, 7);
   assert.equal(config.superTiebreakPoints, 10);
   assert.equal(config.tiebreakOnly, false);
+  assert.equal(config.tiebreakAt, 4);
   assert.equal(config.statsMode, StatsMode.BASIC);
+});
+
+test('tiebreak trigger is kept, and a trigger from another set length is dropped', () => {
+  const early = buildMatchConfig({
+    ...DEFAULT_MATCH_CONFIG_FORM,
+    gamesPerSet: 4,
+    tiebreakAtGames: 3,
+  }, StatsMode.BASIC);
+  assert.equal(early.tiebreakAt, 3);
+
+  const stale = buildMatchConfig({
+    ...DEFAULT_MATCH_CONFIG_FORM,
+    gamesPerSet: 6,
+    tiebreakAtGames: 3,
+  }, StatsMode.BASIC);
+  assert.equal(stale.tiebreakAt, 6);
+
+  assert.deepEqual(tiebreakAtOptions(4), [3, 4]);
+  assert.equal(normalizeTiebreakAtGames(3, 2), 2);
+  assert.equal(normalizeTiebreakAtGames(3, 5), 2);
 });
 
 test('tiebreak-only uses STB points and one set', () => {

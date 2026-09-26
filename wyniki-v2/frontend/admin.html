@@ -475,10 +475,11 @@
                 </select>
               </label>
               <label class="form-control">
-                <span class="label-text">Format (gemy / sety do wygranej)</span>
+                <span class="label-text">Format (gemy / sety do wygranej / TB przy)</span>
                 <div class="flex gap-2">
                   <input type="number" min="1" class="input input-bordered input-sm w-20" x-model="directorForm.gamesPerSet">
                   <input type="number" min="1" class="input input-bordered input-sm w-20" x-model="directorForm.setsToWin">
+                  <input type="number" min="1" class="input input-bordered input-sm w-20" x-model="directorForm.tiebreakAtGames">
                 </div>
               </label>
               <template x-for="side in [{ n: 1, key: 'player1Name', label: 'Zawodnik 1' }, { n: 2, key: 'player2Name', label: 'Zawodnik 2' }]" :key="'dir-player-' + side.n">

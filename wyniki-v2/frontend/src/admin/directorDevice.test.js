@@ -45,6 +45,24 @@ test('form is filled from the tablet snapshot, not the database row', () => {
   assert.equal(form.player1Points, 2);
   assert.equal(form.noAdvantage, true);
   assert.equal(form.courtId, 't31-2');
+  assert.equal(form.tiebreakAtGames, 4);
+});
+
+test('an early tiebreak from the tablet reaches the form and the rules line', () => {
+  const tablet = {
+    session_court_id: 't32-1',
+    last_seen: new Date().toISOString(),
+    snapshot: {
+      court_id: 't32-1',
+      player1_name: 'Kamil Szulc',
+      player2_name: 'Mateusz Balwierz',
+      games_per_set: 4,
+      sets_to_win: 2,
+      tiebreak_at_games: 3,
+    },
+  };
+  assert.equal(applyTabletToDirectorForm(tablet).tiebreakAtGames, 3);
+  assert.match(directorDeviceCard(tablet).rules, /TB przy 3:3/);
 });
 
 test('device card shows court, clock, names and live points', () => {

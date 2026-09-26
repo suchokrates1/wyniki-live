@@ -27,6 +27,7 @@ MATCH_CONFIG_DEFAULTS = {
     "sets_to_win": 2,
     "tiebreak_points": 7,
     "super_tiebreak_points": 10,
+    "tiebreak_at_games": 4,
     "no_advantage": False,
     "tiebreak_only": False,
     "stats_mode": "ADVANCED",
@@ -36,12 +37,25 @@ _PRESENCE_TTL_SECONDS = 15 * 60
 _COMMAND_TTL_SECONDS = 5 * 60
 
 
+def default_tiebreak_at_games(games_per_set: Any) -> int:
+    """Short sets open the tiebreak one game early (2:2 of three); longer ones at the set length."""
+    games = max(1, int(games_per_set or 4))
+    return games - 1 if games <= 3 else games
+
+
 def normalize_match_config(raw: Any) -> dict[str, Any]:
     config = dict(MATCH_CONFIG_DEFAULTS)
     if not isinstance(raw, dict):
         return config
     if raw.get("games_per_set") is not None:
         config["games_per_set"] = max(1, int(raw["games_per_set"]))
+    games_per_set = config["games_per_set"]
+    tiebreak_at = raw.get("tiebreak_at_games")
+    config["tiebreak_at_games"] = (
+        max(1, min(int(tiebreak_at), games_per_set))
+        if tiebreak_at is not None
+        else default_tiebreak_at_games(games_per_set)
+    )
     if raw.get("sets_to_win") is not None:
         config["sets_to_win"] = max(1, int(raw["sets_to_win"]))
     if raw.get("tiebreak_points") is not None:
@@ -311,7 +325,13 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
     if "match_config" in patch:
         current = parse_stored_match_config(match.match_config)
         incoming = patch.get("match_config") if isinstance(patch.get("match_config"), dict) else {}
-        match.match_config = dump_match_config({**current, **incoming})
+        merged = {**current, **incoming}
+        # A trigger kept from the previous set length would be unreachable, so re-derive it.
+        if "tiebreak_at_games" not in incoming and int(merged.get("games_per_set") or 4) != int(
+            current.get("games_per_set") or 4
+        ):
+            merged["tiebreak_at_games"] = default_tiebreak_at_games(merged.get("games_per_set"))
+        match.match_config = dump_match_config(merged)
 
     if db_court_changed:
         target = db.session.get(Court, new_court_id)
@@ -629,6 +649,7 @@ def normalize_device_snapshot(raw: Any) -> dict[str, Any] | None:
         "player2_points",
         "games_per_set",
         "sets_to_win",
+        "tiebreak_at_games",
         "match_start_time_ms",
         "match_duration_ms",
     ):

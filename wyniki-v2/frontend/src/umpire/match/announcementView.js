@@ -46,7 +46,7 @@ export function announcementContent(type, state, t) {
         icon: '🎾',
         title: t('announceTiebreak'),
         message: t('announceTiebreakMsg', {
-          games: state.matchConfig.gamesPerSet,
+          games: state.matchConfig.tiebreakAt,
           points: state.matchConfig.tiebreakPoints,
         }),
         showSkipSides: false,

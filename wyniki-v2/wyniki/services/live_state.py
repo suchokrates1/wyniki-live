@@ -87,7 +87,9 @@ def read_live_state(match: Any) -> Optional[dict]:
 
 
 def set_tiebreak_due(match: Any, games_a: int, games_b: int) -> bool:
-    """Level at the set's game count (4:4 with four-game sets) means a set tiebreak."""
+    """Level at the format's tiebreak games (4:4 by default, 3:3 when the format says so)."""
+    from .director_commands import default_tiebreak_at_games
+
     config = {}
     raw = getattr(match, "match_config", None)
     if raw:
@@ -98,4 +100,10 @@ def set_tiebreak_due(match: Any, games_a: int, games_b: int) -> bool:
     if config.get("tiebreak_only"):
         return True
     games_per_set = int(config.get("games_per_set") or 4)
-    return games_a == games_b and games_a >= games_per_set
+    tiebreak_at = config.get("tiebreak_at_games")
+    trigger = (
+        max(1, min(int(tiebreak_at), games_per_set))
+        if tiebreak_at is not None
+        else default_tiebreak_at_games(games_per_set)
+    )
+    return games_a == games_b and games_a >= trigger

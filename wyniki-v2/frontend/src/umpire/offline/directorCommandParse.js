@@ -42,6 +42,7 @@ function parseDirectorConfig(config) {
     setsToWin: config.sets_to_win ?? config.setsToWin,
     tiebreakPoints: config.tiebreak_points ?? config.tiebreakPoints,
     superTiebreakPoints: config.super_tiebreak_points ?? config.superTiebreakPoints,
+    tiebreakAtGames: config.tiebreak_at_games ?? config.tiebreakAtGames,
     noAdvantage: config.no_advantage ?? config.noAdvantage,
     tiebreakOnly: config.tiebreak_only ?? config.tiebreakOnly,
     statsMode: config.stats_mode ?? config.statsMode,

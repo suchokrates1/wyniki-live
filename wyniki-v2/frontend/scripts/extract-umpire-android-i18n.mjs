@@ -74,6 +74,7 @@ const MAP = {
   setTime: 'match_config_set_datetime',
   clearTime: 'match_config_clear_datetime',
   gamesPerSet: 'match_config_games_per_set',
+  tiebreakAt: 'match_config_tiebreak_at',
   setsToWin: 'match_config_sets_to_win',
   tiebreak: 'match_config_tiebreak_to',
   superTiebreak: 'match_config_super_tiebreak_to',
