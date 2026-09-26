@@ -21,7 +21,12 @@ import { buildAdvancedRally, buildAdvancedServe } from './match/advancedScoringV
 import { buildBasicScoring } from './match/basicScoringView.js';
 import { createMatchFromDraft } from './match/createMatchFromDraft.js';
 import { createMatchController } from './match/matchController.js';
-import { finishStatRows, finishStatValue } from './match/finishView.js';
+import {
+  finalSetBySetLine,
+  finalSetsLine,
+  finishStatRows,
+  finishStatValue,
+} from './match/finishView.js';
 import { finishWinnerName, toDirectorSnapshot } from './match/matchPayload.js';
 import { hydrateMatchState, serializeMatchState } from './match/matchStateIo.js';
 import { matchTimerText } from './match/matchTimer.js';
@@ -1472,6 +1477,16 @@ function createUmpireApp() {
     winnerName() {
       this.matchRev;
       return this.match?.state ? finishWinnerName(this.match.state) : '';
+    },
+
+    finalSets() {
+      this.matchRev;
+      return this.match?.state ? finalSetsLine(this.match.state) : '';
+    },
+
+    finalSetBySet() {
+      this.matchRev;
+      return this.match?.state ? finalSetBySetLine(this.match.state) : '';
     },
 
     finishStats() {

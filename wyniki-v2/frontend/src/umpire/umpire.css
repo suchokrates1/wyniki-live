@@ -1204,6 +1204,18 @@ body {
   font-weight: 700;
 }
 
+.ump-finish__sets {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 4px 0 0;
+}
+
+.ump-finish__setbyset {
+  font-size: 1.05rem;
+  margin: 2px 0 0;
+  opacity: 0.85;
+}
+
 .ump-stats {
   margin: 0;
   text-align: left;

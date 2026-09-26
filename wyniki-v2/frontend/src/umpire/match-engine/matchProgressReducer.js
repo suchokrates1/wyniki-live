@@ -83,6 +83,10 @@ export const MatchProgressReducer = {
 
       state.player1Games = 0;
       state.player2Games = 0;
+      // The tiebreak score is already in setsHistory. Clearing the points with the flags
+      // keeps a finished match from rendering them as a normal game ("ADV:40").
+      state.player1Points = 0;
+      state.player2Points = 0;
       state.isTiebreak = false;
       state.isSuperTiebreak = false;
       state.sidesSwapped = !state.sidesSwapped;

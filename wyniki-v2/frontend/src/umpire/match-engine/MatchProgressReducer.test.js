@@ -103,6 +103,27 @@ test('gameAtTiebreakBoundaryStartsTiebreakAnnouncement', () => {
   assert.equal(result.nextScreen, MatchProgressScreen.Announcement);
 });
 
+test('aMatchWonInTheSuperTiebreakLeavesNoPointsToRenderAsAGame', () => {
+  const state = matchState({ matchConfig: new MatchConfig({ gamesPerSet: 4, setsToWin: 2 }) });
+  state.player1Sets = 1;
+  state.player2Sets = 1;
+  state.isSuperTiebreak = true;
+  state.player1Points = 10;
+  state.player2Points = 8;
+
+  const result = MatchProgressReducer.reduceAfterPoint(state, null, 9_000);
+
+  assert.equal(result.finalizeMatch, true);
+  assert.equal(state.isMatchFinished, true);
+  assert.equal(state.setsHistory.at(-1).player1Games, 10);
+  assert.equal(state.setsHistory.at(-1).player2Games, 8);
+  // Leftover tiebreak points with the flags cleared used to read as "ADV" / "40".
+  assert.equal(state.player1Points, 0);
+  assert.equal(state.player2Points, 0);
+  assert.equal(state.getPlayer1PointsDisplay(), '0');
+  assert.equal(state.getPlayer2PointsDisplay(), '0');
+});
+
 test('fourGameSetWithTiebreakAtThreeAllEndsFourThree', () => {
   const state = matchState({
     matchConfig: new MatchConfig({ gamesPerSet: 4, setsToWin: 2, tiebreakAtGames: 3 }),

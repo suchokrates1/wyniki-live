@@ -367,6 +367,8 @@
       <div class="ump-panel ump-card ump-finish" data-tutorial="done" :class="panelClass('MATCH_FINISHED')">
         <h2 x-text="t('matchFinished')"></h2>
         <p class="ump-finish__winner" x-text="t('winnerLabel', { name: winnerName() })"></p>
+        <p class="ump-finish__sets" x-text="finalSets()"></p>
+        <p class="ump-finish__setbyset" x-show="finalSetBySet()" x-text="finalSetBySet()"></p>
         <dl class="ump-stats">
           <template x-for="row in finishStats()" :key="row.key">
             <div>
