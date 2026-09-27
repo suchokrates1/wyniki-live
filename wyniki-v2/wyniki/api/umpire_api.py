@@ -1499,6 +1499,16 @@ def finish_match(match_id: int):
             return jsonify({"error": "Match not found"}), 404
         access_error = require_court_access(match.court_id)
         if access_error:
+            # Stale Android outbox: tablet on court A retries finish for an
+            # already-finished match from court B → 403 forever, blocking
+            # finalize of the live match. Ack idempotently so outbox drops it.
+            if match.status == "finished":
+                logger.info(
+                    "stale_finish_ack",
+                    match_id=match_id,
+                    match_court=match.court_id,
+                )
+                return jsonify(match.to_dict()), 200
             return access_error
         
         if match.status == "finished":
@@ -1534,6 +1544,13 @@ def receive_statistics():
             return jsonify({"error": "Match not found"}), 404
         access_error = require_court_access(match.court_id)
         if access_error:
+            if match.status == "finished":
+                logger.info(
+                    "stale_statistics_ack",
+                    match_id=match_id,
+                    match_court=match.court_id,
+                )
+                return jsonify({"message": "Statistics ignored (stale outbox)"}), 200
             return access_error
         if match.finish_reason == FINISH_REASON_TEST:
             return jsonify({"message": "Statistics ignored for test match"}), 200
