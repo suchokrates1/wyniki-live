@@ -77,6 +77,45 @@ self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    /* a push with no usable body still deserves a notification */
+  }
+  if (payload.type && payload.type !== 'match_started') return;
+
+  const court = payload.court_name || payload.court_id || '';
+  const title = court ? `Kort ${court}` : 'blindtennis.app';
+  const players = [payload.player_a, payload.player_b].filter(Boolean).join(' – ');
+  event.waitUntil(self.registration.showNotification(title, {
+    body: players || 'Mecz się rozpoczął',
+    icon: '/site-icons/icon-192.png',
+    badge: '/site-icons/icon-192.png',
+    // One court, one notification: a restart must not stack a second card.
+    tag: `match-${payload.court_id || 'any'}`,
+    renotify: true,
+    data: { url: payload.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  event.waitUntil((async () => {
+    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // Reuse a tab that is already on the site rather than opening another one.
+    const existing = clientList.find((client) => client.url.startsWith(self.location.origin));
+    if (existing) {
+      await existing.focus();
+      if (existing.url !== target && 'navigate' in existing) await existing.navigate(target);
+      return;
+    }
+    await self.clients.openWindow(target);
+  })());
+});
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()

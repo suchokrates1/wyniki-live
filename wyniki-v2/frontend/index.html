@@ -41,6 +41,20 @@
                         <option value="lt">Lietuvių</option>
                     </select>
                     </span>
+                    <span x-data="pwaPush" x-show="available" x-cloak>
+                        <button
+                            type="button"
+                            class="dark-mode-toggle push-toggle"
+                            :class="enabled && 'push-toggle--on'"
+                            :disabled="busy || denied"
+                            :aria-pressed="enabled ? 'true' : 'false'"
+                            :aria-label="label()"
+                            :title="label()"
+                            @click="toggle()"
+                        >
+                            <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="enabled ? '🔔' : '🔕'"></span>
+                        </button>
+                    </span>
                     <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')" :title="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')">
                         <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="darkMode ? '☀️' : '🌙'"></span>
                     </button>

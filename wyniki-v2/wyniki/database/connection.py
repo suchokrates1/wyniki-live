@@ -619,6 +619,25 @@ def init_db() -> None:
             )
         """)
 
+        # Web Push subscriptions for the public site. The endpoint is the browser's
+        # own identifier for a device, so it is the natural unique key; a row is
+        # deleted when the push service reports it gone (404/410).
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS push_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                endpoint TEXT NOT NULL UNIQUE,
+                p256dh TEXT NOT NULL,
+                auth TEXT NOT NULL,
+                court_id TEXT,
+                lang TEXT NOT NULL DEFAULT 'pl',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                last_sent_at TEXT
+            )
+        """)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_push_subscriptions_court ON push_subscriptions(court_id)"
+        )
+
         # Migration: Add global_player_id column to players
         cursor.execute("PRAGMA table_info(players)")
         p_cols3 = [row[1] for row in cursor.fetchall()]

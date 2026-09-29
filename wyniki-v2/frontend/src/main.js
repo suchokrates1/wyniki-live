@@ -15,7 +15,7 @@ import { createHistoryView } from './modules/historyView.js';
 import { createLiveCourtView } from './modules/liveCourtView.js';
 import { createLiveRuntimeView } from './modules/liveRuntimeView.js';
 import { createPlayersView } from './modules/playersView.js';
-import { registerPwaShell } from './modules/pwaShellView.js';
+import { registerPwaPush, registerPwaShell } from './modules/pwaShellView.js';
 import { createScheduleView } from './modules/scheduleView.js';
 import { createTournamentView } from './modules/tournamentsView.js';
 import { applyHashRoute, updateHashFromState } from './modules/routing.js';
@@ -48,6 +48,7 @@ function getTranslation(lang) {
 window.Alpine = Alpine;
 registerAnalyticsConsent(Alpine);
 registerPwaShell(Alpine);
+registerPwaPush(Alpine);
 
 Alpine.data('tennisApp', () => ({
   lang: 'pl',

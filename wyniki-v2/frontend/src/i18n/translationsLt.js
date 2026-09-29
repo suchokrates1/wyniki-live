@@ -151,6 +151,9 @@ export const TRANSLATION_PATCHES_LT = {
     installTitle: 'Įtraukti į pradžios ekraną',
     installBody: 'Palieskite Bendrinti, tada „Į pradžios ekraną“.',
     installDismiss: 'Ne dabar',
+    pushEnable: 'Pranešti, kai prasidės mačas',
+    pushDisable: 'Išjungti pranešimus',
+    pushBlocked: 'Pranešimai užblokuoti naršyklėje',
   },
   office: {
     login: {

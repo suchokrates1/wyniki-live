@@ -8,6 +8,7 @@ import { DEFAULT_LANGUAGE, isSupportedLanguage } from '../i18n/locale.js';
 import { lookupTranslation } from '../i18n/runtime.js';
 import { TRANSLATIONS } from '../i18n/translations.js';
 import { rememberDismissed, shouldShowIosInstallHint } from './iosInstallHint.js';
+import { fetchPushKey, isPushSupported, subscribe, unsubscribe } from './pushClient.js';
 import { applyUpdate, reloadOnControllerChange, watchForUpdate } from './swUpdate.js';
 
 function resolveLang() {
@@ -27,6 +28,75 @@ function text(lang) {
     ...(TRANSLATIONS[DEFAULT_LANGUAGE]?.pwa || {}),
     ...(lookupTranslation(TRANSLATIONS, lang)?.pwa || {}),
   };
+}
+
+/** The bell in the header. Hidden entirely unless the browser can do push and
+ * the server has VAPID keys, so nothing is offered that cannot work. */
+export function registerPwaPush(Alpine) {
+  Alpine.data('pwaPush', () => ({
+    available: false,
+    enabled: false,
+    busy: false,
+    denied: false,
+    lang: DEFAULT_LANGUAGE,
+
+    async init() {
+      this.lang = resolveLang();
+      this._observer = new MutationObserver(() => { this.lang = resolveLang(); });
+      this._observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+
+      if (!isPushSupported(window)) return;
+      const key = await fetchPushKey();
+      if (!key.enabled || !key.public_key) return;
+
+      this._publicKey = key.public_key;
+      try {
+        this._registration = await navigator.serviceWorker.ready;
+      } catch {
+        return;
+      }
+      this.denied = window.Notification?.permission === 'denied';
+      this.enabled = !!(await this._registration.pushManager.getSubscription());
+      this.available = true;
+    },
+
+    destroy() {
+      this._observer?.disconnect();
+    },
+
+    pwaText() {
+      return text(this.lang);
+    },
+
+    label() {
+      const t = this.pwaText();
+      if (this.denied) return t.pushBlocked;
+      return this.enabled ? t.pushDisable : t.pushEnable;
+    },
+
+    async toggle() {
+      if (this.busy || this.denied) return;
+      this.busy = true;
+      try {
+        if (this.enabled) {
+          await unsubscribe({ registration: this._registration });
+          this.enabled = false;
+          return;
+        }
+        const result = await subscribe({
+          registration: this._registration,
+          publicKey: this._publicKey,
+          lang: this.lang,
+        });
+        this.enabled = result.ok;
+        if (!result.ok && result.reason === 'denied') this.denied = true;
+      } catch {
+        this.enabled = false;
+      } finally {
+        this.busy = false;
+      }
+    },
+  }));
 }
 
 export function registerPwaShell(Alpine, { registration = null } = {}) {

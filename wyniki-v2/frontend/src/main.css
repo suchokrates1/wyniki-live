@@ -1292,6 +1292,10 @@ body.has-consent-banner {
   border: 1px solid var(--line);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
 }
+/* The notification bell sits with the theme toggle and borrows its shape. */
+.push-toggle[disabled] { opacity: .5; cursor: not-allowed; }
+.push-toggle--on { border-color: var(--ok, #3fb950); }
+
 /* The consent banner owns the bottom edge while it is up; sit above it. */
 body.has-consent-banner .pwa-toast { bottom: calc(var(--consent-banner-space, 0px) + 12px); }
 .pwa-toast__text { font-size: 14px; }

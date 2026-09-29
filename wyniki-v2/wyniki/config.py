@@ -53,6 +53,14 @@ class Settings(BaseSettings):
     live_rehydrate_max_age_hours: int = 12
     overlay_snapshot_path: str = "/data/overlay_snapshot.json"
     overlay_snapshot_max_age_seconds: int = 1800
+
+    # Web Push for the public site. Both keys empty = the feature is off, which
+    # is the default: the private key belongs in the prod env, never in the repo.
+    # Generate a pair with:
+    #   python -c "from py_vapid import Vapid01; v=Vapid01(); v.generate_keys(); print(v.public_key_urlsafe_base64(), v.private_key_urlsafe_base64())"
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:kontakt@vestmedia.pl"
     
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent

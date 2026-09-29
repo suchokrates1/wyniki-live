@@ -23,6 +23,7 @@ from ..services.event_broker import emit_score_update
 from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
+from ..services import web_push
 from ..services.api_auth import court_id_from_bearer as court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
 from ..services.director_commands import director_command_broker as director_command_broker, dump_match_config, tablet_presence
 from ..services.match_format import match_score_satisfies_format
@@ -1357,7 +1358,19 @@ def create_match():
             f"Match created: {match.id} on court {kort_id}, phase={bracket_ctx.get('phase')}, "
             f"warning={bracket_warning}, country={client_audit['client_country']}, ip={client_audit['client_ip']}"
         )
-        
+
+        # Tell spectators watching this court. Best-effort and last: the umpire's
+        # match must already be safely created before anyone else is notified.
+        try:
+            web_push.notify_match_started(
+                kort_id,
+                (court_state or {}).get("court_name") or kort_id,
+                match.player1_name,
+                match.player2_name,
+            )
+        except Exception as push_error:  # noqa: BLE001
+            logger.warning("match_started_push_failed", error=str(push_error), kort_id=kort_id)
+
         return jsonify(match.to_dict(bracket_warning=bracket_warning)), 201
         
     except Exception as e:
