@@ -154,6 +154,14 @@ export const TRANSLATION_PATCHES_LT = {
     pushEnable: 'Pranešti, kai prasidės mačas',
     pushDisable: 'Išjungti pranešimus',
     pushBlocked: 'Pranešimai užblokuoti naršyklėje',
+    pushTitle: 'Pranešimai',
+    pushOnStart: 'Mačo pradžia',
+    pushOnPlan: 'Mano mačas yra tvarkaraštyje',
+    pushOnChange: 'Mano mačo pakeitimas',
+    pushPlayersHint: 'Pasirinkite žaidėjus, apie kurių mačus norite žinoti.',
+    pushSearch: 'Ieškoti žaidėjo',
+    pushRemove: 'Pašalinti',
+    pushSave: 'Išsaugoti',
   },
   office: {
     login: {

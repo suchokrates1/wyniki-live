@@ -15,6 +15,7 @@ import structlog
 
 from ..config import settings
 from ..database import push_subscriptions
+from . import notification_texts
 
 logger = structlog.get_logger()
 
@@ -59,35 +60,29 @@ def _send_one(subscription: dict[str, Any], payload: str) -> int | None:
         return None
 
 
-def notify_match_started(court_id: str, court_name: str, player_a: str, player_b: str) -> int:
-    """Tell everyone watching this court that a match just started.
+def send_to(subscribers: list[dict[str, Any]], build_payload) -> int:
+    """Push to many devices, each in the language it asked for.
 
-    Returns how many notifications went out. Never raises: the caller is the
-    umpire's match-create request and it must not fail over this.
+    `build_payload` takes a language and returns the payload for it; it is
+    called once per distinct language, not once per device. Returns how many
+    were delivered. Never raises: every caller is a request doing something
+    more important than a notification.
     """
-    if not is_enabled():
+    if not subscribers or not is_enabled():
         return 0
-    try:
-        subscribers = push_subscriptions.subscriptions_for_court(court_id)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("web_push_lookup_failed", error=str(exc), court_id=court_id)
-        return 0
-    if not subscribers:
-        return 0
+    if not callable(build_payload):
+        payload = build_payload
+        def build_payload(_lang, _payload=payload):  # noqa: E306 - keeps old callers working
+            return _payload
 
-    payload = json.dumps({
-        "type": "match_started",
-        "court_id": court_id,
-        "court_name": court_name,
-        "player_a": player_a,
-        "player_b": player_b,
-        "url": "/",
-    })
-
+    bodies: dict[str, str] = {}
     sent: list[str] = []
     gone: list[str] = []
     for subscription in subscribers:
-        status = _send_one(subscription, payload)
+        lang = str(subscription.get("lang") or "pl")
+        if lang not in bodies:
+            bodies[lang] = json.dumps(build_payload(lang))
+        status = _send_one(subscription, bodies[lang])
         if status in GONE_STATUS_CODES:
             gone.append(subscription["endpoint"])
         elif status and 200 <= status < 300:
@@ -103,5 +98,32 @@ def notify_match_started(court_id: str, court_name: str, player_a: str, player_b
     except Exception as exc:  # noqa: BLE001
         logger.warning("web_push_mark_failed", error=str(exc))
 
-    logger.info("web_push_sent", court_id=court_id, sent=len(sent), pruned=len(gone))
+    logger.info("web_push_sent", sent=len(sent), pruned=len(gone))
     return len(sent)
+
+
+def notify_match_started(court_id: str, court_name: str, player_a: str, player_b: str) -> int:
+    """Tell everyone watching this court that a match just started.
+
+    Returns how many notifications went out. Never raises: the caller is the
+    umpire's match-create request and it must not fail over this.
+    """
+    if not is_enabled():
+        return 0
+    try:
+        subscribers = push_subscriptions.subscriptions_for_court(court_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("web_push_lookup_failed", error=str(exc), court_id=court_id)
+        return 0
+
+    def payload(lang: str) -> dict[str, Any]:
+        players = " – ".join(name for name in (player_a, player_b) if name)
+        return {
+            "type": "match_started",
+            "title": notification_texts.text(lang, "match_started_title", court=court_name or court_id),
+            "body": players or notification_texts.text(lang, "match_started_body"),
+            "tag": f"match-{court_id}",
+            "url": "/",
+        }
+
+    return send_to(subscribers, payload)

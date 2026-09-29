@@ -29,7 +29,15 @@ export async function fetchPushKey(fetchImpl = fetch) {
 }
 
 /** Ask the browser, then the push service, then tell our server. */
-export async function subscribe({ registration, publicKey, courtId = null, lang = 'pl', fetchImpl = fetch }) {
+export async function subscribe({
+  registration,
+  publicKey,
+  courtId = null,
+  lang = 'pl',
+  players = null,
+  preferences = null,
+  fetchImpl = fetch,
+}) {
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return { ok: false, reason: permission };
 
@@ -42,6 +50,8 @@ export async function subscribe({ registration, publicKey, courtId = null, lang 
   });
 
   const body = { ...subscription.toJSON(), court_id: courtId, lang };
+  if (players) body.players = players;
+  if (preferences) body.preferences = preferences;
   const response = await fetchImpl('/api/push/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

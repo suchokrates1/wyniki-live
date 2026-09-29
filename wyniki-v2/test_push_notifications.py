@@ -160,3 +160,171 @@ def test_a_failing_push_service_never_breaks_the_caller(app_client, with_keys, m
     # the umpire's match-create request.
     monkeypatch.setattr(web_push, "_send_one", lambda *_: None)
     assert web_push.notify_match_started("t32-1", "1", "A", "B") == 0
+
+
+def test_player_keys_fold_case_and_polish_accents():
+    from wyniki.database.push_subscriptions import player_key, players_in_fixture
+
+    # The office types names by hand, so these must all land on one key.
+    assert player_key("Bernadeta Kozioł") == player_key("bernadeta koziol")
+    assert player_key("  KOZIOŁ,  Bernadeta ".replace(",", "")) == "koziol bernadeta"
+    assert player_key("Łukasz Konklewski") == "lukasz konklewski"
+    assert player_key("") == ""
+
+    # A doubles fixture counts for all four players.
+    assert players_in_fixture("Anna Bujak / Łukasz Konklewski", "Jerzy Janas") == {
+        "anna bujak", "lukasz konklewski", "jerzy janas",
+    }
+
+
+def test_only_devices_following_the_player_and_wanting_the_type_are_picked(app_client, with_keys):
+    from wyniki.database import push_subscriptions
+
+    app_client.post("/api/push/subscribe", json={
+        "endpoint": "https://push.example/fan",
+        "keys": {"p256dh": "p", "auth": "a"},
+        "players": ["Bernadeta Kozioł"],
+        "preferences": {"notify_plan": True, "notify_change": False},
+    })
+    app_client.post("/api/push/subscribe", json={
+        "endpoint": "https://push.example/other",
+        "keys": {"p256dh": "p", "auth": "a"},
+        "players": ["Jerzy Janas"],
+        "preferences": {"notify_plan": True},
+    })
+
+    # Accent-insensitive match, and only the follower who asked for this type.
+    found = push_subscriptions.subscriptions_for_players({"bernadeta koziol"}, "notify_plan")
+    assert [s["endpoint"] for s in found] == ["https://push.example/fan"]
+    assert push_subscriptions.subscriptions_for_players({"bernadeta koziol"}, "notify_change") == []
+
+
+def test_publishing_a_plan_notifies_only_the_players_in_it(app_client, with_keys, monkeypatch):
+    from wyniki.services import schedule_notifications, web_push
+
+    app_client.post("/api/push/subscribe", json={
+        "endpoint": "https://push.example/kowalski",
+        "keys": {"p256dh": "p", "auth": "a"},
+        "players": ["Jan Kowalski"],
+        "preferences": {"notify_plan": True},
+    })
+
+    pushed = []
+    monkeypatch.setattr(web_push, "_send_one", lambda sub, body: pushed.append(body) or 201)
+
+    sent = schedule_notifications.notify_plan_published([
+        {"player1_name": "Jan Kowalski", "player2_name": "Adam Nowak",
+         "court_label": "2", "day_date": "2026-10-03", "scheduled_time": "09:00"},
+        {"player1_name": "Ktoś Inny", "player2_name": "Jeszcze Inny", "court_label": "3"},
+    ])
+
+    assert sent == 1
+    assert len(pushed) == 1
+    assert "Jan Kowalski" in pushed[0]
+
+
+def test_a_fixture_change_notifies_both_the_old_and_the_new_cast(app_client, with_keys, monkeypatch):
+    from wyniki.services import schedule_notifications, web_push
+
+    for name in ("Jan Kowalski", "Adam Nowak"):
+        app_client.post("/api/push/subscribe", json={
+            "endpoint": f"https://push.example/{name.split()[1].lower()}",
+            "keys": {"p256dh": "p", "auth": "a"},
+            "players": [name],
+            "preferences": {"notify_change": True},
+        })
+
+    monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
+
+    before = {"player1_name": "Jan Kowalski", "player2_name": "Piotr Zielinski",
+              "court_label": "2", "scheduled_time": "09:00", "status": "planned"}
+    after = dict(before, player2_name="Adam Nowak", court_label="5")
+
+    # The player who lost the fixture is told too, not only the new opponent.
+    assert schedule_notifications.notify_fixture_changed(before, after) == 2
+
+
+def test_noise_in_the_schedule_does_not_wake_anyone(app_client, with_keys, monkeypatch):
+    from wyniki.services import schedule_notifications, web_push
+
+    app_client.post("/api/push/subscribe", json={
+        "endpoint": "https://push.example/quiet",
+        "keys": {"p256dh": "p", "auth": "a"},
+        "players": ["Jan Kowalski"],
+        "preferences": {"notify_change": True},
+    })
+    monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
+
+    entry = {"player1_name": "Jan Kowalski", "player2_name": "Adam Nowak",
+             "court_label": "2", "scheduled_time": "09:00", "status": "planned"}
+
+    # Notes and ordering churn constantly while the office works.
+    assert schedule_notifications.notify_fixture_changed(entry, dict(entry, notes_public="x")) == 0
+    assert schedule_notifications.notify_fixture_changed(entry, dict(entry, sort_order=7)) == 0
+    # A draft is not public yet, so nobody hears about it moving.
+    assert schedule_notifications.notify_fixture_changed(
+        entry, dict(entry, court_label="9", status="draft")) == 0
+
+
+def test_following_is_capped_so_nobody_subscribes_to_the_whole_draw(app_client, with_keys):
+    from wyniki.database import push_subscriptions
+
+    app_client.post("/api/push/subscribe", json={
+        "endpoint": "https://push.example/greedy",
+        "keys": {"p256dh": "p", "auth": "a"},
+        "players": [f"Gracz Numer{i}" for i in range(40)],
+    })
+    assert len(push_subscriptions.followed_players("https://push.example/greedy")) == 10
+
+
+def test_each_device_is_notified_in_the_language_it_asked_for(app_client, with_keys, monkeypatch):
+    import json
+
+    from wyniki.services import schedule_notifications, web_push
+
+    for name, lang in (("pl", "pl"), ("lt", "lt"), ("en", "en")):
+        app_client.post("/api/push/subscribe", json={
+            "endpoint": f"https://push.example/{name}",
+            "keys": {"p256dh": "p", "auth": "a"},
+            "players": ["Jan Kowalski"],
+            "lang": lang,
+            "preferences": {"notify_plan": True},
+        })
+
+    seen = {}
+
+    def capture(subscription, body):
+        seen[subscription["endpoint"]] = json.loads(body)["title"]
+        return 201
+
+    monkeypatch.setattr(web_push, "_send_one", capture)
+    schedule_notifications.notify_plan_published([
+        {"player1_name": "Jan Kowalski", "player2_name": "Adam Nowak", "court_label": "2"},
+    ])
+
+    assert seen["https://push.example/pl"] == "Twój mecz jest w planie"
+    assert seen["https://push.example/lt"] == "Jūsų mačas yra tvarkaraštyje"
+    assert seen["https://push.example/en"] == "Your match is in the schedule"
+
+
+def test_the_payload_is_built_once_per_language_not_once_per_device(app_client, with_keys, monkeypatch):
+    from wyniki.services import web_push
+
+    for i in range(5):
+        app_client.post("/api/push/subscribe", json={
+            "endpoint": f"https://push.example/pl{i}",
+            "keys": {"p256dh": "p", "auth": "a"},
+            "lang": "pl",
+        })
+
+    builds = []
+    monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
+    subscribers = [{"endpoint": f"https://push.example/pl{i}", "p256dh": "p", "auth": "a", "lang": "pl"}
+                   for i in range(5)]
+
+    def build(lang):
+        builds.append(lang)
+        return {"type": "x", "title": "t", "body": "b"}
+
+    assert web_push.send_to(subscribers, build) == 5
+    assert builds == ["pl"], "five devices, one language, one payload built"

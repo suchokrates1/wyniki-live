@@ -638,6 +638,36 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_push_subscriptions_court ON push_subscriptions(court_id)"
         )
 
+        # Which notifications this device asked for. Defaults match the first
+        # version, where subscribing meant "tell me when a match starts".
+        cursor.execute("PRAGMA table_info(push_subscriptions)")
+        push_cols = {row[1] for row in cursor.fetchall()}
+        for column, ddl in (
+            ("notify_match_start", "INTEGER NOT NULL DEFAULT 1"),
+            ("notify_plan", "INTEGER NOT NULL DEFAULT 1"),
+            ("notify_change", "INTEGER NOT NULL DEFAULT 1"),
+            ("notify_reminder", "INTEGER NOT NULL DEFAULT 0"),
+            ("notify_delay", "INTEGER NOT NULL DEFAULT 0"),
+            ("reminder_minutes", "INTEGER NOT NULL DEFAULT 30"),
+        ):
+            if column not in push_cols:
+                cursor.execute(f"ALTER TABLE push_subscriptions ADD COLUMN {column} {ddl}")
+                logger.info("database_migration", action=f"added_{column}_to_push_subscriptions")
+
+        # Players a device follows. Matched on a normalised name because the
+        # schedule stores names as free text, not player ids.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS push_subscription_players (
+                subscription_id INTEGER NOT NULL REFERENCES push_subscriptions(id) ON DELETE CASCADE,
+                player_key TEXT NOT NULL,
+                player_name TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (subscription_id, player_key)
+            )
+        """)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_push_subscription_players_key ON push_subscription_players(player_key)"
+        )
+
         # Migration: Add global_player_id column to players
         cursor.execute("PRAGMA table_info(players)")
         p_cols3 = [row[1] for row in cursor.fetchall()]

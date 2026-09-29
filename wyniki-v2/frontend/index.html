@@ -41,19 +41,62 @@
                         <option value="lt">Lietuvių</option>
                     </select>
                     </span>
-                    <span x-data="pwaPush" x-show="available" x-cloak>
+                    <span x-data="pwaPush" x-show="available" x-cloak class="push-wrap" @keydown.escape="open = false">
                         <button
                             type="button"
                             class="dark-mode-toggle push-toggle"
                             :class="enabled && 'push-toggle--on'"
                             :disabled="busy || denied"
-                            :aria-pressed="enabled ? 'true' : 'false'"
+                            :aria-expanded="open ? 'true' : 'false'"
                             :aria-label="label()"
                             :title="label()"
-                            @click="toggle()"
+                            @click="togglePanel()"
                         >
                             <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="enabled ? '🔔' : '🔕'"></span>
                         </button>
+
+                        <div class="push-panel" x-show="open" x-transition.opacity @click.outside="open = false" role="dialog" :aria-label="pwaText().pushTitle">
+                            <h2 class="push-panel__title" x-text="pwaText().pushTitle">Powiadomienia</h2>
+
+                            <label class="push-panel__row">
+                                <input type="checkbox" x-model="prefs.notify_match_start">
+                                <span x-text="pwaText().pushOnStart">Start meczu</span>
+                            </label>
+                            <label class="push-panel__row">
+                                <input type="checkbox" x-model="prefs.notify_plan">
+                                <span x-text="pwaText().pushOnPlan">Mój mecz trafił do planu</span>
+                            </label>
+                            <label class="push-panel__row">
+                                <input type="checkbox" x-model="prefs.notify_change">
+                                <span x-text="pwaText().pushOnChange">Zmiana w moim meczu</span>
+                            </label>
+
+                            <p class="push-panel__hint" x-text="pwaText().pushPlayersHint">Wybierz zawodników, o których meczach chcesz wiedzieć.</p>
+
+                            <ul class="push-panel__chips" x-show="players.length">
+                                <template x-for="name in players" :key="name">
+                                    <li class="push-chip">
+                                        <span x-text="name"></span>
+                                        <button type="button" class="push-chip__x" @click="removePlayer(name)" :aria-label="pwaText().pushRemove + ' ' + name">×</button>
+                                    </li>
+                                </template>
+                            </ul>
+
+                            <input
+                                type="search"
+                                class="push-panel__search"
+                                x-model="search"
+                                :placeholder="pwaText().pushSearch"
+                                :aria-label="pwaText().pushSearch"
+                            >
+                            <ul class="push-panel__results" x-show="matchingPlayers().length">
+                                <template x-for="name in matchingPlayers()" :key="name">
+                                    <li><button type="button" class="push-panel__result" @click="addPlayer(name)" x-text="name"></button></li>
+                                </template>
+                            </ul>
+
+                            <button type="button" class="push-panel__save" :disabled="busy" @click="save()" x-text="busy ? '…' : pwaText().pushSave">Zapisz</button>
+                        </div>
                     </span>
                     <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')" :title="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')">
                         <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="darkMode ? '☀️' : '🌙'"></span>

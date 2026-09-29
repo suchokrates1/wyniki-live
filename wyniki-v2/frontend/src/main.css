@@ -1293,8 +1293,44 @@ body.has-consent-banner {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
 }
 /* The notification bell sits with the theme toggle and borrows its shape. */
+.push-wrap { position: relative; display: inline-flex; }
 .push-toggle[disabled] { opacity: .5; cursor: not-allowed; }
 .push-toggle--on { border-color: var(--ok, #3fb950); }
+
+.push-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 80;
+  width: min(320px, calc(100vw - 24px));
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  text-align: left;
+}
+.push-panel__title { margin: 0 0 10px; font-size: 16px; }
+.push-panel__row { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; cursor: pointer; }
+.push-panel__hint { margin: 10px 0 6px; font-size: 13px; opacity: .8; }
+.push-panel__chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; padding: 0; }
+.push-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 6px 4px 10px; border-radius: 999px;
+  background: rgba(127, 127, 127, .16); font-size: 13px;
+}
+.push-chip__x { border: 0; background: none; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.push-panel__search { width: 100%; min-height: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--text); }
+.push-panel__results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 180px; overflow: auto; }
+.push-panel__result { width: 100%; text-align: left; min-height: 40px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--text); font-size: 14px; cursor: pointer; }
+.push-panel__result:hover, .push-panel__result:focus { background: rgba(127, 127, 127, .16); }
+.push-panel__save {
+  width: 100%; min-height: 44px; margin-top: 12px;
+  border: 0; border-radius: 10px;
+  background: var(--accent, #2f81f7); color: #fff;
+  font: 700 14px/1 inherit; cursor: pointer;
+}
+.push-panel__save[disabled] { opacity: .6; cursor: progress; }
 
 /* The consent banner owns the bottom edge while it is up; sit above it. */
 body.has-consent-banner .pwa-toast { bottom: calc(var(--consent-banner-space, 0px) + 12px); }

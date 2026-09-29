@@ -84,17 +84,19 @@ self.addEventListener('push', (event) => {
   } catch {
     /* a push with no usable body still deserves a notification */
   }
-  if (payload.type && payload.type !== 'match_started') return;
+  // The server renders the text, because only it knows which language this
+  // subscription asked for. The fallbacks are for a payload from an older build.
+  const title = payload.title || 'blindtennis.app';
+  const body = payload.body || '';
+  if (!title && !body) return;
 
-  const court = payload.court_name || payload.court_id || '';
-  const title = court ? `Kort ${court}` : 'blindtennis.app';
-  const players = [payload.player_a, payload.player_b].filter(Boolean).join(' – ');
   event.waitUntil(self.registration.showNotification(title, {
-    body: players || 'Mecz się rozpoczął',
+    body,
     icon: '/site-icons/icon-192.png',
     badge: '/site-icons/icon-192.png',
-    // One court, one notification: a restart must not stack a second card.
-    tag: `match-${payload.court_id || 'any'}`,
+    // One notification per subject: a repeat replaces the card rather than
+    // stacking a second one.
+    tag: payload.tag || `match-${payload.court_id || 'any'}`,
     renotify: true,
     data: { url: payload.url || '/' },
   }));

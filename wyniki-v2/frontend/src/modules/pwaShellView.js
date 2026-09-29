@@ -38,7 +38,12 @@ export function registerPwaPush(Alpine) {
     enabled: false,
     busy: false,
     denied: false,
+    open: false,
     lang: DEFAULT_LANGUAGE,
+    players: [],          // names this device follows
+    roster: [],           // everyone in the active tournament, for the picker
+    search: '',
+    prefs: { notify_match_start: true, notify_plan: true, notify_change: true },
 
     async init() {
       this.lang = resolveLang();
@@ -74,21 +79,69 @@ export function registerPwaPush(Alpine) {
       return this.enabled ? t.pushDisable : t.pushEnable;
     },
 
-    async toggle() {
+    togglePanel() {
+      if (this.denied) return;
+      this.open = !this.open;
+      if (this.open && !this.roster.length) this.loadRoster();
+    },
+
+    async loadRoster() {
+      try {
+        const response = await fetch('/api/players/active');
+        if (!response.ok) return;
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : (data.players || []);
+        this.roster = list
+          .map((p) => String(p.full_name || [p.first_name, p.last_name].filter(Boolean).join(' ')).trim())
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b));
+      } catch {
+        this.roster = [];
+      }
+    },
+
+    matchingPlayers() {
+      const needle = this.search.trim().toLowerCase();
+      if (!needle) return [];
+      return this.roster
+        .filter((name) => name.toLowerCase().includes(needle) && !this.players.includes(name))
+        .slice(0, 8);
+    },
+
+    addPlayer(name) {
+      if (this.players.length >= 10 || this.players.includes(name)) return;
+      this.players.push(name);
+      this.search = '';
+    },
+
+    removePlayer(name) {
+      this.players = this.players.filter((p) => p !== name);
+    },
+
+    /** Anything ticked is worth a subscription; nothing ticked means unsubscribe. */
+    wantsAnything() {
+      return Object.values(this.prefs).some(Boolean);
+    },
+
+    async save() {
       if (this.busy || this.denied) return;
       this.busy = true;
       try {
-        if (this.enabled) {
+        if (!this.wantsAnything()) {
           await unsubscribe({ registration: this._registration });
           this.enabled = false;
+          this.open = false;
           return;
         }
         const result = await subscribe({
           registration: this._registration,
           publicKey: this._publicKey,
           lang: this.lang,
+          players: this.players,
+          preferences: this.prefs,
         });
         this.enabled = result.ok;
+        if (result.ok) this.open = false;
         if (!result.ok && result.reason === 'denied') this.denied = true;
       } catch {
         this.enabled = false;

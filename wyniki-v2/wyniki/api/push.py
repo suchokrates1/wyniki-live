@@ -17,6 +17,8 @@ blueprint = Blueprint("push", __name__, url_prefix="/api/push")
 # A push endpoint is a URL from the browser vendor; anything longer is not one.
 MAX_ENDPOINT_LENGTH = 1024
 MAX_KEY_LENGTH = 256
+# Following a whole draw would be a notification firehose, not a feature.
+MAX_FOLLOWED_PLAYERS = 10
 
 
 @blueprint.route("/key", methods=["GET"])
@@ -45,8 +47,24 @@ def subscribe():
     court_id = str(court_id).strip() if court_id else None
     lang = str(data.get("lang") or "pl").strip()[:5] or "pl"
 
-    push_subscriptions.save_subscription(endpoint, p256dh, auth, court_id, lang)
-    return jsonify({"status": "ok", "court_id": court_id})
+    raw_players = data.get("players")
+    if not isinstance(raw_players, list):
+        raw_players = []
+    players = [str(name).strip()[:120] for name in raw_players[:MAX_FOLLOWED_PLAYERS] if str(name).strip()]
+
+    raw_prefs = data.get("preferences")
+    preferences = raw_prefs if isinstance(raw_prefs, dict) else {}
+    reminder = preferences.get("reminder_minutes")
+    if reminder is not None:
+        try:
+            preferences["reminder_minutes"] = max(5, min(180, int(reminder)))
+        except (TypeError, ValueError):
+            preferences.pop("reminder_minutes", None)
+
+    push_subscriptions.save_subscription(
+        endpoint, p256dh, auth, court_id, lang, preferences=preferences, players=players
+    )
+    return jsonify({"status": "ok", "court_id": court_id, "players": players})
 
 
 @blueprint.route("/unsubscribe", methods=["POST"])

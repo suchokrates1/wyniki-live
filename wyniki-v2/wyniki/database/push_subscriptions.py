@@ -9,6 +9,7 @@ gone, which is the only reliable unsubscribe signal browsers give us.
 
 from __future__ import annotations
 
+import unicodedata
 from typing import Any
 
 import structlog
@@ -17,6 +18,40 @@ from .connection import db_conn
 
 logger = structlog.get_logger()
 
+DEFAULT_REMINDER_MINUTES = 30
+PREFERENCE_COLUMNS = (
+    "notify_match_start",
+    "notify_plan",
+    "notify_change",
+    "notify_reminder",
+    "notify_delay",
+)
+
+
+def player_key(name: str) -> str:
+    """A name reduced to something two spellings of the same player share.
+
+    The schedule stores names as free text typed by the office, so "Kozioł",
+    "koziol" and "KOZIOŁ" have to land on the same key. Accents are folded
+    rather than stripped by hand so this holds for every language we show.
+    """
+    folded = unicodedata.normalize("NFKD", str(name or ""))
+    ascii_only = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    # Polish ł has no combining form, so it survives NFKD and needs folding here.
+    ascii_only = ascii_only.replace("ł", "l").replace("Ł", "L")
+    return " ".join(ascii_only.lower().split())
+
+
+def players_in_fixture(*names: str) -> set[str]:
+    """Every player a schedule row refers to, splitting doubles pairs."""
+    keys: set[str] = set()
+    for name in names:
+        for part in str(name or "").split("/"):
+            key = player_key(part)
+            if key:
+                keys.add(key)
+    return keys
+
 
 def save_subscription(
     endpoint: str,
@@ -24,29 +59,82 @@ def save_subscription(
     auth: str,
     court_id: str | None = None,
     lang: str = "pl",
+    preferences: dict[str, Any] | None = None,
+    players: list[str] | None = None,
 ) -> bool:
-    """Store or refresh one subscription. Returns False only on a real failure."""
+    """Store or refresh one subscription, its preferences and followed players."""
     if not endpoint or not p256dh or not auth:
         return False
+    prefs = preferences or {}
+    # Anything the caller does not mention keeps the first version's behaviour:
+    # tell me about match starts and about my plan, stay quiet about the rest.
+    defaults = {
+        "notify_match_start": True,
+        "notify_plan": True,
+        "notify_change": True,
+        "notify_reminder": False,
+        "notify_delay": False,
+    }
+    stored = {column: 1 if prefs.get(column, defaults[column]) else 0 for column in PREFERENCE_COLUMNS}
+    stored["reminder_minutes"] = int(prefs.get("reminder_minutes") or DEFAULT_REMINDER_MINUTES)
+
+    columns = ("endpoint", "p256dh", "auth", "court_id", "lang", *stored)
+    updatable = [c for c in columns if c != "endpoint"]
+    sql = (
+        f"INSERT INTO push_subscriptions ({', '.join(columns)})"
+        f" VALUES ({', '.join('?' for _ in columns)})"
+        f" ON CONFLICT(endpoint) DO UPDATE SET {', '.join(f'{c} = excluded.{c}' for c in updatable)}"
+    )
+    params = (endpoint, p256dh, auth, court_id or None, lang or "pl", *stored.values())
+
     try:
         with db_conn() as conn:
-            conn.execute(
-                """
-                INSERT INTO push_subscriptions (endpoint, p256dh, auth, court_id, lang)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(endpoint) DO UPDATE SET
-                    p256dh = excluded.p256dh,
-                    auth = excluded.auth,
-                    court_id = excluded.court_id,
-                    lang = excluded.lang
-                """,
-                (endpoint, p256dh, auth, court_id or None, lang or "pl"),
-            )
+            conn.execute(sql, params)
+            row = conn.execute("SELECT id FROM push_subscriptions WHERE endpoint = ?", (endpoint,)).fetchone()
+            subscription_id = row[0]
+            conn.execute("DELETE FROM push_subscription_players WHERE subscription_id = ?", (subscription_id,))
+            for name in players or []:
+                key = player_key(name)
+                if not key:
+                    continue
+                conn.execute(
+                    "INSERT OR REPLACE INTO push_subscription_players (subscription_id, player_key, player_name)"
+                    " VALUES (?, ?, ?)",
+                    (subscription_id, key, str(name).strip()),
+                )
             conn.commit()
         return True
     except Exception as exc:  # noqa: BLE001 - surfaced by the caller as a 500
         logger.error("push_subscription_save_error", error=str(exc))
         raise
+
+
+def subscriptions_for_players(player_keys: set[str], preference: str) -> list[dict[str, Any]]:
+    """Devices following any of these players that asked for this notification."""
+    if not player_keys or preference not in PREFERENCE_COLUMNS:
+        return []
+    placeholders = ",".join("?" for _ in player_keys)
+    with db_conn() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT DISTINCT s.endpoint, s.p256dh, s.auth, s.lang
+            FROM push_subscriptions s
+            JOIN push_subscription_players p ON p.subscription_id = s.id
+            WHERE p.player_key IN ({placeholders}) AND s.{preference} = 1
+            """,
+            tuple(player_keys),
+        ).fetchall()
+    return [{"endpoint": r[0], "p256dh": r[1], "auth": r[2], "lang": r[3]} for r in rows]
+
+
+def followed_players(endpoint: str) -> list[str]:
+    with db_conn() as conn:
+        rows = conn.execute(
+            "SELECT p.player_name FROM push_subscription_players p"
+            " JOIN push_subscriptions s ON s.id = p.subscription_id WHERE s.endpoint = ?",
+            (endpoint,),
+        ).fetchall()
+    return [r[0] for r in rows]
 
 
 def delete_subscription(endpoint: str) -> bool:
@@ -68,7 +156,7 @@ def subscriptions_for_court(court_id: str | None) -> list[dict[str, Any]]:
             """
             SELECT endpoint, p256dh, auth, lang
             FROM push_subscriptions
-            WHERE court_id IS NULL OR court_id = ?
+            WHERE notify_match_start = 1 AND (court_id IS NULL OR court_id = ?)
             """,
             (court_id,),
         ).fetchall()

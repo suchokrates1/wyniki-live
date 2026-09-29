@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 import queue
 
+import structlog
+
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 from werkzeug.security import check_password_hash
 
@@ -14,6 +16,7 @@ from ..services.api_auth import (
     require_office_access,
 )
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
+from ..services import schedule_notifications
 from ..database import (
     apply_schedule_notes,
     assign_start_numbers,
@@ -78,7 +81,22 @@ from ..services.office_workflow import (
     _update_office_match,
 )
 
+logger = structlog.get_logger()
+
 blueprint = Blueprint('office', __name__, url_prefix='/api/office')
+
+
+def _notify_quietly(send, kind: str) -> None:
+    """Run a push send without letting it touch the office's own response.
+
+    The office publishing a schedule must succeed whether or not a push service
+    is reachable, so anything this raises is logged and dropped.
+    """
+    try:
+        send()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("schedule_notification_failed", kind=kind, error=str(exc))
+
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _NON_MUTATING_ENDPOINTS = {
     "office_auth",
@@ -686,9 +704,15 @@ def office_schedule_update(slot: int, schedule_id: int):
     if error:
         return error
     tournament_id = int(tournament['id'])
+    before = next(
+        (e for e in fetch_tournament_schedule(tournament_id) if int(e.get('id') or 0) == schedule_id),
+        None,
+    )
     entry = update_tournament_schedule_entry(tournament_id, schedule_id, request.get_json(silent=True) or {})
     if not entry:
         return jsonify({"error": "Schedule entry not found"}), 404
+    if before:
+        _notify_quietly(lambda: schedule_notifications.notify_fixture_changed(before, entry), "fixture_changed")
     return _json_no_cache({
         "schedule_entry": entry,
         "schedule": fetch_tournament_schedule(tournament_id),
@@ -720,7 +744,17 @@ def office_schedule_publish(slot: int):
     tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
     day_date = (data.get('day_date') or '').strip() or None
+
+    # Capture what is about to be published so the right players can be told.
+    drafts = [
+        entry for entry in fetch_tournament_schedule(tournament_id)
+        if str(entry.get('status') or '') == 'draft'
+        and (not day_date or str(entry.get('day_date') or '') == day_date)
+    ]
     published = publish_tournament_schedule(tournament_id, day_date)
+    if published:
+        _notify_quietly(lambda: schedule_notifications.notify_plan_published(drafts), "plan_published")
+
     return _json_no_cache({
         "published": published,
         "schedule": fetch_tournament_schedule(tournament_id),
