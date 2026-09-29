@@ -480,16 +480,11 @@ test('public PWA: manifest is linked and the service worker controls the page', 
   expect(manifest.body.start_url).toBe('/');
   expect(manifest.body.display).toBe('standalone');
 
-  await page.waitForFunction(async () => {
-    if (!('serviceWorker' in navigator)) return false;
-    const reg = await navigator.serviceWorker.getRegistration('/');
-    return !!(reg && (reg.active || reg.installing || reg.waiting));
-  }, undefined, { timeout: 15_000 });
-
-  const sw = await page.evaluate(async () => {
-    const reg = await navigator.serviceWorker.getRegistration('/');
-    const script = reg?.active?.scriptURL || reg?.installing?.scriptURL || reg?.waiting?.scriptURL || '';
-    return { script, controlled: !!navigator.serviceWorker.controller };
-  });
-  expect(sw.script).toMatch(/site-sw\.js$/);
+  await expect.poll(async () => {
+    return page.evaluate(async () => {
+      if (!('serviceWorker' in navigator)) return '';
+      const reg = await navigator.serviceWorker.getRegistration('/');
+      return reg?.active?.scriptURL || reg?.installing?.scriptURL || reg?.waiting?.scriptURL || '';
+    });
+  }, { timeout: 15_000 }).toMatch(/site-sw\.js$/);
 });

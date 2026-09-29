@@ -313,7 +313,12 @@ document.addEventListener(
 );
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  const registerSiteSw = () => {
     navigator.serviceWorker.register('/site-sw.js').catch(() => {});
-  });
+  };
+  if (document.readyState === 'complete') {
+    registerSiteSw();
+  } else {
+    window.addEventListener('load', registerSiteSw);
+  }
 }
