@@ -64,28 +64,32 @@ Przy create zapisujemy `MatchConfig`. Przy PUT, gdy `player1_sets`/`player2_sets
 
 ## [P2] Public PWA (blindtennis.app)
 
-**Status:** v1 wdrożone 2026-09-29 (manifest + site-sw + ikony + e2e) · roadmapa v2–v5 poniżej  
+**Status:** v1–v4 wdrożone na prod (v1 2026-09-29, v2–v4 2026-09-30) · otwarte zostaje v5  
 **Zakres:** tylko public (`/`), nie office/admin/umpire
 
 ### v1 — Shell + install — DONE
 
 Manifest (`/site.webmanifest`) + `site-sw.js` (precache shell/assets, `/api/` bez SW), ikony PNG, rejestracja w `main.js`, e2e public-mobile.
 
-### v2 — Offline ostatni snapshot (~2–3 dni)
+**Poprawka 2026-09-30:** `site-sw` i `umpire-sw` obie rejestrowały się na scope `/`, więc trzymała się tylko jedna, a każda kasowała przy aktywacji cudze cache — otwarcie strony publicznej zdejmowało offline'owy shell PWA sędziego i odwrotnie. Sędzia rejestruje się teraz na `/umpire`, manifest zgodny, każdy worker kasuje tylko własny prefiks. Outbox był bezpieczny (IndexedDB). Zweryfikowane na prodzie: dwie rejestracje obok siebie, oba cache żyją.
 
-Cache snapshotu live; banner „Brak sieci · dane z HH:MM”.
+### v2 — Offline ostatni snapshot — DONE
 
-### v3 — Update UX SW (~0,5–1 dzień)
+Snapshot w `localStorage` (`modules/offlineSnapshot.js`), banner „Brak sieci · dane z HH:MM”. SW nadal nie dotyka `/api/` — zamiast po cichu cache'ować żywy wynik, mówimy wprost, z której godziny są dane. Wygasa po 12 h; pusty snapshot nie nadpisuje dobrego. Zweryfikowane na tescie symulacją padającego `fetch`.
 
-Toast „Nowa wersja · Odśwież” po nowym SW.
+### v3 — Update UX SW — DONE
 
-### v4 — Hint A2HS iOS (~0,5 dnia)
+`site-sw` nie woła już `skipWaiting()` przy instalacji, więc nowy shell nie podmienia działającego w trakcie wizyty. Toast „Nowa wersja · Odśwież” → `SKIP_WAITING` → reload na `controllerchange`. Przetestowane pełnym cyklem na tescie.
 
-Zamykalny banner w Safari mobile (brak `beforeinstallprompt` na iOS).
+### v4 — Hint A2HS iOS — DONE
 
-### v5 — Web Push (~3–5 dni)
+Zamykalny banner tylko dla Safari na iOS (Chrome/Firefox na iOS nie potrafią instalować, więc są wykluczone). Nie pokazuje się, dopóki wisi banner zgody — jedna prośba naraz.
+
+### v5 — Web Push (~3–5 dni) — OTWARTE
 
 VAPID + subscribe; default: start meczu na wybranym korcie; iOS tylko po A2HS (16.4+).
+
+Czego wymaga, zanim się zacznie: para kluczy VAPID (prywatny **nie** do repo — do env prod jak `SECRET_KEY`), zależność `pywebpush` w obrazie, tabela subskrypcji w bazie, endpointy subscribe/unsubscribe, wyzwalacz przy starcie meczu i obsługa `push` / `notificationclick` w `site-sw.js`. To jedyny punkt roadmapy dokładający zależność backendową i sekret.
 
 ### Poza roadmapą
 
