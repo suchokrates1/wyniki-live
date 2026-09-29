@@ -3,6 +3,7 @@
  * both stay out of the way of the scores.
  */
 
+import { readAnalyticsConsent } from '../consent/analytics.js';
 import { DEFAULT_LANGUAGE, isSupportedLanguage } from '../i18n/locale.js';
 import { lookupTranslation } from '../i18n/runtime.js';
 import { TRANSLATIONS } from '../i18n/translations.js';
@@ -40,7 +41,10 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
       this._observer = new MutationObserver(this._onLang);
       this._observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
-      this.installHint = shouldShowIosInstallHint({
+      // One ask at a time. While the consent banner is still unanswered it owns
+      // the bottom of the screen, and stacking a second bar there both overlaps
+      // it and pesters the reader twice on a first visit.
+      this.installHint = !!readAnalyticsConsent() && shouldShowIosInstallHint({
         userAgent: navigator.userAgent,
         maxTouchPoints: navigator.maxTouchPoints,
         platform: navigator.platform,
@@ -62,7 +66,11 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
 
     watch(reg) {
       this._registration = reg;
-      watchForUpdate(reg, () => { this.updateReady = true; }, navigator.serviceWorker);
+      watchForUpdate(reg, () => {
+        this.updateReady = true;
+        // The toast is actionable and transient; the install hint can wait.
+        this.installHint = false;
+      }, navigator.serviceWorker);
     },
 
     pwaText() {

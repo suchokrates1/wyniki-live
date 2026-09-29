@@ -192,4 +192,7 @@
   /* anything pinned stays clear of the bottom bar */
   .toast, .cookie-banner, .consent-banner { bottom: calc(var(--m-bottom-nav) + 12px + env(safe-area-inset-bottom, 0px)); }
   .pwa-toast, .pwa-install-hint { bottom: calc(var(--m-bottom-nav) + 12px + env(safe-area-inset-bottom, 0px)); }
+  body.has-consent-banner .pwa-toast {
+    bottom: calc(var(--consent-banner-space, 0px) + var(--m-bottom-nav) + 12px + env(safe-area-inset-bottom, 0px));
+  }
 }
