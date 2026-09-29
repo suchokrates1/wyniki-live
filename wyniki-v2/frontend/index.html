@@ -80,6 +80,11 @@
             <span class="error" x-text="error"></span>
         </div>
 
+        <!-- Offline: scores from storage, with the time they are from -->
+        <div x-show="staleSince && !loading" x-cloak class="stale-bar" role="status" aria-live="polite">
+            <span x-text="staleBannerText()"></span>
+        </div>
+
         <!-- Main content -->
         <main id="main" tabindex="-1">
 
@@ -1549,6 +1554,38 @@
                 </a>
             </span>
         </footer>
+    </div>
+
+    <div x-data="pwaShell" x-cloak>
+        <div
+            class="pwa-toast"
+            x-show="updateReady"
+            x-transition.opacity
+            role="status"
+            aria-live="polite"
+        >
+            <span class="pwa-toast__text" x-text="pwaText().updateTitle">Nowa wersja</span>
+            <button type="button" class="pwa-toast__btn" @click="refresh()" x-text="pwaText().updateAction">Odśwież</button>
+        </div>
+
+        <div
+            class="pwa-install-hint"
+            x-show="installHint"
+            x-transition.opacity
+            role="region"
+            aria-labelledby="pwa-install-title"
+        >
+            <div class="pwa-install-hint__text">
+                <strong id="pwa-install-title" x-text="pwaText().installTitle">Dodaj do ekranu głównego</strong>
+                <span x-text="pwaText().installBody"></span>
+            </div>
+            <button
+                type="button"
+                class="pwa-install-hint__btn"
+                @click="dismissInstallHint()"
+                x-text="pwaText().installDismiss"
+            >Nie teraz</button>
+        </div>
     </div>
 
     <div

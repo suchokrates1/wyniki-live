@@ -144,6 +144,14 @@ export const TRANSLATION_PATCHES_LT = {
     reject: 'Atmesti',
     privacyLink: 'Daugiau privatumo politikoje',
   },
+  pwa: {
+    staleBanner: 'Neprisijungus · duomenys nuo {time}',
+    updateTitle: 'Nauja versija',
+    updateAction: 'Atnaujinti',
+    installTitle: 'Įtraukti į pradžios ekraną',
+    installBody: 'Palieskite Bendrinti, tada „Į pradžios ekraną“.',
+    installDismiss: 'Ne dabar',
+  },
   office: {
     login: {
       privacyNotice: 'Prisijungimas šiame įrenginyje išsaugo biuro sesiją.',

@@ -1262,6 +1262,78 @@ body.has-consent-banner {
 }
 .error { color: var(--err); }
 
+/* Scores served from storage while the network is down. Warning-coloured, not
+   error-coloured: the page is working, it is just behind. */
+.stale-bar {
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(255, 176, 32, 0.12);
+  border: 1px solid rgba(255, 176, 32, 0.35);
+  color: var(--text);
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+/* "New version · Refresh", bottom centre, above the consent banner. */
+.pwa-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 16px;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+.pwa-toast__text { font-size: 14px; }
+.pwa-toast__btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent, #2f81f7);
+  color: #fff;
+  font: 700 14px/1 inherit;
+  cursor: pointer;
+}
+
+/* iOS has no install prompt, so the Share-sheet route has to be spelled out. */
+.pwa-install-hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.16);
+}
+.pwa-install-hint__text { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.pwa-install-hint__btn {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: 400 14px/1 inherit;
+  cursor: pointer;
+}
+
 .tournament-info-banner {
   margin: 0 0 12px;
   padding: 0 16px;

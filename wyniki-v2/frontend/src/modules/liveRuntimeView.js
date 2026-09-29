@@ -1,5 +1,15 @@
 import { publicApi } from '../api/publicApi.js';
+import { loadSnapshot, saveSnapshot } from './offlineSnapshot.js';
 import { formatQuickInfoHtml as renderQuickInfoHtml } from './quickInfoFormat.js';
+
+/** localStorage throws outright in some private-mode browsers. */
+function safeLocalStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 function flash(el) {
   if (!el) return;
@@ -46,6 +56,8 @@ export function createLiveRuntimeView() {
     loading: true,
     error: null,
     lastUpdate: null,
+    // When set, the scores on screen came from storage, not from the server.
+    staleSince: null,
     tournamentName: null,
     tournamentQuickInfo: null,
     _eventSource: null,
@@ -56,21 +68,46 @@ export function createLiveRuntimeView() {
     async fetchInitialData() {
       try {
         const data = await publicApi.getSnapshot();
-        const courts = data.courts || {};
-        this.courts = courts;
-        this.publicCourtIds = Object.keys(courts).reduce((acc, courtId) => {
-          acc[String(courtId)] = true;
-          return acc;
-        }, {});
-        this.tournamentName = data.tournament_name || null;
+        this.applySnapshot(data);
+        this.staleSince = null;
         this.loading = false;
         this.lastUpdate = new Date();
         this.error = null;
+        saveSnapshot(safeLocalStorage(), data);
         this.fetchTournamentQuickInfo();
       } catch (err) {
-        this.error = err.message;
+        // Offline, or the server is unreachable. Showing the last scores we had,
+        // clearly marked with when they are from, beats showing an error page.
+        const cached = loadSnapshot(safeLocalStorage());
+        if (cached) {
+          this.applySnapshot(cached);
+          this.staleSince = new Date(cached.savedAt);
+          this.error = null;
+        } else {
+          this.error = err.message;
+        }
         this.loading = false;
       }
+    },
+
+    applySnapshot(data) {
+      const courts = data.courts || {};
+      this.courts = courts;
+      this.publicCourtIds = Object.keys(courts).reduce((acc, courtId) => {
+        acc[String(courtId)] = true;
+        return acc;
+      }, {});
+      this.tournamentName = data.tournament_name || null;
+    },
+
+    staleTime() {
+      if (!this.staleSince) return '';
+      return this.staleSince.toLocaleTimeString(this.locale(), { hour: '2-digit', minute: '2-digit' });
+    },
+
+    staleBannerText() {
+      const template = this.tr()?.pwa?.staleBanner || 'Brak sieci · dane z {time}';
+      return template.replace('{time}', this.staleTime());
     },
 
     _bindVisibilityReconnect() {
@@ -110,6 +147,8 @@ export function createLiveRuntimeView() {
 
           this._sseFailures = 0;
           this.error = null;
+          // Live data is flowing again, so what is on screen is no longer stale.
+          this.staleSince = null;
 
           this.$nextTick(() => {
             this.animateChanges(courtId, prev, data);

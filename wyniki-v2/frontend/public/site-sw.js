@@ -64,13 +64,17 @@ function networkFirst(request) {
 }
 
 self.addEventListener('install', (event) => {
+  // No skipWaiting() here on purpose: a new shell must not replace the running
+  // one mid-visit. The page offers a "refresh" and sends SKIP_WAITING on a yes.
   event.waitUntil(
-    caches.open(CACHE)
-      .then(async (cache) => {
-        await precacheUrls(cache, await collectPrecacheUrls());
-      })
-      .then(() => self.skipWaiting()),
+    caches.open(CACHE).then(async (cache) => {
+      await precacheUrls(cache, await collectPrecacheUrls());
+    }),
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

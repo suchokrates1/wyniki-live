@@ -15,6 +15,7 @@ import { createHistoryView } from './modules/historyView.js';
 import { createLiveCourtView } from './modules/liveCourtView.js';
 import { createLiveRuntimeView } from './modules/liveRuntimeView.js';
 import { createPlayersView } from './modules/playersView.js';
+import { registerPwaShell } from './modules/pwaShellView.js';
 import { createScheduleView } from './modules/scheduleView.js';
 import { createTournamentView } from './modules/tournamentsView.js';
 import { applyHashRoute, updateHashFromState } from './modules/routing.js';
@@ -46,6 +47,7 @@ function getTranslation(lang) {
    ============================================================ */
 window.Alpine = Alpine;
 registerAnalyticsConsent(Alpine);
+registerPwaShell(Alpine);
 
 Alpine.data('tennisApp', () => ({
   lang: 'pl',
@@ -314,7 +316,12 @@ document.addEventListener(
 
 if ('serviceWorker' in navigator) {
   const registerSiteSw = () => {
-    navigator.serviceWorker.register('/site-sw.js').catch(() => {});
+    navigator.serviceWorker.register('/site-sw.js').then((registration) => {
+      // The update toast needs the registration, and it may mount either side
+      // of this promise, so publish it both ways.
+      window.__wynikiSwRegistration = registration;
+      window.dispatchEvent(new CustomEvent('wyniki:sw-registered', { detail: registration }));
+    }).catch(() => {});
   };
   if (document.readyState === 'complete') {
     registerSiteSw();

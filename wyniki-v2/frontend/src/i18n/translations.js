@@ -528,6 +528,14 @@ export const TRANSLATION_PATCHES = {
       reject: 'Odrzuć',
       privacyLink: 'Więcej w polityce prywatności',
     },
+    pwa: {
+      staleBanner: 'Brak sieci · dane z {time}',
+      updateTitle: 'Nowa wersja',
+      updateAction: 'Odśwież',
+      installTitle: 'Dodaj do ekranu głównego',
+      installBody: 'Dotknij Udostępnij, a potem „Do ekranu początkowego”.',
+      installDismiss: 'Nie teraz',
+    },
     office: {
       login: {
         privacyNotice: 'Logowanie zapisuje sesję biura na tym urządzeniu.',
@@ -556,6 +564,7 @@ export const TRANSLATION_PATCHES = {
   de: {
     ui: { appName: 'Tennis-Ergebnisse', pageDescription: 'Live-Tennis-Ergebnisse, Turnierbaum, Turnierplan und Spielhistorie.', skipToContent: 'Zum Inhalt springen', languageSelect: 'Sprache auswählen', poweredBy: 'Bereitgestellt von', privacyPolicy: 'Datenschutzerklärung', privacyPageTitle: 'Datenschutzerklärung', privacyPageDescription: 'Wie Vest Media Daten auf blindtennis.app und in der App Blind Tennis Referee verarbeitet.', backToScores: 'Zurück zu den Ergebnissen', privacyToc: 'Inhalt' },
     consent: { title: 'Besuchsstatistik', body: 'Wir können Besuche zählen, um zu sehen, ob die Seite funktioniert. Sprache, Design und die Anmeldesitzung bleiben immer.', accept: 'Akzeptieren', reject: 'Ablehnen', privacyLink: 'Mehr in der Datenschutzerklärung' },
+    pwa: { staleBanner: 'Offline · Stand {time}', updateTitle: 'Neue Version', updateAction: 'Aktualisieren', installTitle: 'Zum Home-Bildschirm', installBody: 'Auf Teilen tippen, dann „Zum Home-Bildschirm“.', installDismiss: 'Später' },
     office: { login: { privacyNotice: 'Die Anmeldung speichert eine Bürositzung auf diesem Gerät.' } },
     tabs: { navLabel: 'Hauptnavigation' },
     history: { title: 'Letzte Ergebnisse', noMatchesActive: 'Keine abgeschlossenen Spiele des aktiven Turniers', openCategory: 'Kategorie {category} im Turnierbaum zeigen' },
@@ -579,6 +588,7 @@ export const TRANSLATION_PATCHES = {
   en: {
     ui: { appName: 'Tennis Scores', pageDescription: 'Live tennis scores, brackets, tournament schedule and match history.', skipToContent: 'Skip to main content', languageSelect: 'Select language', poweredBy: 'Powered by', privacyPolicy: 'Privacy policy', privacyPageTitle: 'Privacy policy', privacyPageDescription: 'How Vest Media processes data on blindtennis.app and in the Blind Tennis Referee app.', backToScores: 'Back to scores', privacyToc: 'Contents' },
     consent: { title: 'Visit analytics', body: 'We can count visits to see if the site works. Language, theme and the login session always stay.', accept: 'Accept', reject: 'Reject', privacyLink: 'More in the privacy policy' },
+    pwa: { staleBanner: 'Offline · showing {time}', updateTitle: 'New version', updateAction: 'Refresh', installTitle: 'Add to Home Screen', installBody: 'Tap Share, then “Add to Home Screen”.', installDismiss: 'Not now' },
     office: { login: { privacyNotice: 'Signing in stores an office session on this device.' } },
     tabs: { navLabel: 'Main navigation' },
     history: { title: 'Latest results', noMatchesActive: 'No finished matches for the active tournament', openCategory: 'Show {category} on the bracket' },
@@ -602,6 +612,7 @@ export const TRANSLATION_PATCHES = {
   it: {
     ui: { appName: 'Risultati tennis', pageDescription: 'Risultati tennis in diretta, tabelloni, programma del torneo e storico partite.', skipToContent: 'Vai al contenuto principale', languageSelect: 'Seleziona lingua', poweredBy: 'Offerto da', privacyPolicy: 'Informativa sulla privacy', privacyPageTitle: 'Informativa sulla privacy', privacyPageDescription: 'Come Vest Media tratta i dati su blindtennis.app e nell’app Blind Tennis Referee.', backToScores: 'Torna ai risultati', privacyToc: 'Indice' },
     consent: { title: 'Statistiche delle visite', body: 'Possiamo contare le visite per capire se il sito funziona. Lingua, tema e sessione di accesso restano sempre.', accept: 'Accetta', reject: 'Rifiuta', privacyLink: 'Altro nell’informativa sulla privacy' },
+    pwa: { staleBanner: 'Offline · dati delle {time}', updateTitle: 'Nuova versione', updateAction: 'Aggiorna', installTitle: 'Aggiungi alla Home', installBody: 'Tocca Condividi, poi “Aggiungi a Home”.', installDismiss: 'Non ora' },
     office: { login: { privacyNotice: 'L’accesso salva una sessione dell’ufficio su questo dispositivo.' } },
     tabs: { navLabel: 'Navigazione principale' },
     history: { title: 'Ultimi risultati', noMatchesActive: 'Nessuna partita conclusa del torneo attivo', openCategory: 'Mostra la categoria {category} nel tabellone' },
@@ -625,6 +636,7 @@ export const TRANSLATION_PATCHES = {
   es: {
     ui: { appName: 'Resultados de tenis', pageDescription: 'Resultados de tenis en vivo, cuadros, calendario del torneo e historial de partidos.', skipToContent: 'Saltar al contenido principal', languageSelect: 'Seleccionar idioma', poweredBy: 'Desarrollado por', privacyPolicy: 'Política de privacidad', privacyPageTitle: 'Política de privacidad', privacyPageDescription: 'Cómo Vest Media trata los datos en blindtennis.app y en la app Blind Tennis Referee.', backToScores: 'Volver a los resultados', privacyToc: 'Índice' },
     consent: { title: 'Analítica de visitas', body: 'Podemos contar visitas para ver si el sitio funciona. El idioma, el tema y la sesión de acceso se quedan siempre.', accept: 'Aceptar', reject: 'Rechazar', privacyLink: 'Más en la política de privacidad' },
+    pwa: { staleBanner: 'Sin conexión · datos de las {time}', updateTitle: 'Nueva versión', updateAction: 'Actualizar', installTitle: 'Añadir a inicio', installBody: 'Toca Compartir y luego “Añadir a inicio”.', installDismiss: 'Ahora no' },
     office: { login: { privacyNotice: 'Al entrar se guarda una sesión de oficina en este dispositivo.' } },
     tabs: { navLabel: 'Navegación principal' },
     history: { title: 'Últimos resultados', noMatchesActive: 'No hay partidos finalizados del torneo activo', openCategory: 'Mostrar la categoría {category} en el cuadro' },
@@ -648,6 +660,7 @@ export const TRANSLATION_PATCHES = {
   fr: {
     ui: { appName: 'Résultats tennis', pageDescription: 'Résultats tennis en direct, tableaux, programme du tournoi et historique des matchs.', skipToContent: 'Aller au contenu principal', languageSelect: 'Choisir la langue', poweredBy: 'Propulsé par', privacyPolicy: 'Politique de confidentialité', privacyPageTitle: 'Politique de confidentialité', privacyPageDescription: 'Comment Vest Media traite les données sur blindtennis.app et dans l’application Blind Tennis Referee.', backToScores: 'Retour aux scores', privacyToc: 'Sommaire' },
     consent: { title: 'Statistiques de visite', body: 'Nous pouvons compter les visites pour voir si le site fonctionne. La langue, le thème et la session de connexion restent toujours.', accept: 'Accepter', reject: 'Refuser', privacyLink: 'Plus dans la politique de confidentialité' },
+    pwa: { staleBanner: 'Hors ligne · données de {time}', updateTitle: 'Nouvelle version', updateAction: 'Actualiser', installTitle: 'Ajouter à l’écran d’accueil', installBody: 'Touchez Partager, puis « Sur l’écran d’accueil ».', installDismiss: 'Plus tard' },
     office: { login: { privacyNotice: 'La connexion enregistre une session de bureau sur cet appareil.' } },
     tabs: { navLabel: 'Navigation principale' },
     history: { title: 'Derniers résultats', noMatchesActive: 'Aucun match terminé pour le tournoi actif', openCategory: 'Afficher la catégorie {category} dans le tableau' },
