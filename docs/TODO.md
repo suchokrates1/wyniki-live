@@ -85,11 +85,19 @@ Snapshot w `localStorage` (`modules/offlineSnapshot.js`), banner „Brak sieci �
 
 Zamykalny banner tylko dla Safari na iOS (Chrome/Firefox na iOS nie potrafią instalować, więc są wykluczone). Nie pokazuje się, dopóki wisi banner zgody — jedna prośba naraz.
 
-### v5 — Web Push (~3–5 dni) — OTWARTE
+### v5 — Web Push — KOD WDROŻONY, CZEKA NA KLUCZE
 
-VAPID + subscribe; default: start meczu na wybranym korcie; iOS tylko po A2HS (16.4+).
+Wdrożone 2026-09-30: `pywebpush` w obrazie, tabela `push_subscriptions`, `GET /api/push/key`, `POST /api/push/subscribe|unsubscribe`, wysyłka przy `POST /api/umpire/matches`, obsługa `push` / `notificationclick` w `site-sw.js`, dzwonek w nagłówku, stringi w 7 językach.
 
-Czego wymaga, zanim się zacznie: para kluczy VAPID (prywatny **nie** do repo — do env prod jak `SECRET_KEY`), zależność `pywebpush` w obrazie, tabela subskrypcji w bazie, endpointy subscribe/unsubscribe, wyzwalacz przy starcie meczu i obsługa `push` / `notificationclick` w `site-sw.js`. To jedyny punkt roadmapy dokładający zależność backendową i sekret.
+**Feature jest wyłączony, dopóki nie ma kluczy VAPID** — `push/key` zwraca `enabled:false`, dzwonek się nie pokazuje, `subscribe` odpowiada 503. Żeby włączyć:
+
+```bash
+python -c "from py_vapid import Vapid01; v=Vapid01(); v.generate_keys(); print('PUBLIC:', v.public_key_urlsafe_base64()); print('PRIVATE:', v.private_key_urlsafe_base64())"
+```
+
+Klucz prywatny idzie do env produkcji obok `SECRET_KEY` (`VAPID_PRIVATE_KEY`), publiczny jako `VAPID_PUBLIC_KEY`, opcjonalnie `VAPID_SUBJECT`. Do repo **nie trafia żaden z nich**. Po ustawieniu: restart kontenera, `GET /api/push/key` ma pokazać `enabled:true`.
+
+Zostaje do rozważenia: wybór konkretnego kortu w UI. Backend już to obsługuje (`court_id` w subskrypcji, `NULL` = wszystkie korty), dzwonek na razie zapisuje się na wszystkie.
 
 ### Poza roadmapą
 
