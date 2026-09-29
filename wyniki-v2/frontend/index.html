@@ -46,7 +46,7 @@
                             type="button"
                             class="dark-mode-toggle push-toggle"
                             :class="enabled && 'push-toggle--on'"
-                            :disabled="busy || denied"
+                            :disabled="busy"
                             :aria-expanded="open ? 'true' : 'false'"
                             :aria-label="label()"
                             :title="label()"
@@ -58,6 +58,10 @@
                         <div class="push-panel" x-show="open" x-transition.opacity @click.outside="open = false" role="dialog" :aria-label="pwaText().pushTitle">
                             <h2 class="push-panel__title" x-text="pwaText().pushTitle">Powiadomienia</h2>
 
+                            <p class="push-panel__blocked" x-show="denied" x-text="pwaText().pushBlocked">Powiadomienia zablokowane w przeglądarce</p>
+
+                            <template x-if="!denied">
+                            <div>
                             <label class="push-panel__row">
                                 <input type="checkbox" x-model="prefs.notify_match_start">
                                 <span x-text="pwaText().pushOnStart">Start meczu</span>
@@ -96,6 +100,8 @@
                             </ul>
 
                             <button type="button" class="push-panel__save" :disabled="busy" @click="save()" x-text="busy ? '…' : pwaText().pushSave">Zapisz</button>
+                            </div>
+                            </template>
                         </div>
                     </span>
                     <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')" :title="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')">

@@ -1311,6 +1311,7 @@ body.has-consent-banner {
   text-align: left;
 }
 .push-panel__title { margin: 0 0 10px; font-size: 16px; }
+.push-panel__blocked { margin: 0; font-size: 14px; color: var(--err); }
 .push-panel__row { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; cursor: pointer; }
 .push-panel__hint { margin: 10px 0 6px; font-size: 13px; opacity: .8; }
 .push-panel__chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; padding: 0; }

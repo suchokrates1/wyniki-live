@@ -80,9 +80,10 @@ export function registerPwaPush(Alpine) {
     },
 
     togglePanel() {
-      if (this.denied) return;
+      // The panel opens even when the browser has blocked notifications: a bell
+      // that does nothing on click tells the reader nothing about why.
       this.open = !this.open;
-      if (this.open && !this.roster.length) this.loadRoster();
+      if (this.open && !this.denied && !this.roster.length) this.loadRoster();
     },
 
     async loadRoster() {
