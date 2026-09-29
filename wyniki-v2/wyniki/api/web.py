@@ -83,6 +83,31 @@ def umpire_icons(filename):
     return response
 
 
+@blueprint.route('/site.webmanifest')
+def site_manifest():
+    response = send_from_directory(STATIC_DIR, 'site.webmanifest')
+    response.headers['Content-Type'] = 'application/manifest+json'
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
+
+
+@blueprint.route('/site-sw.js')
+def site_service_worker():
+    response = send_from_directory(STATIC_DIR, 'site-sw.js')
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    response.headers['CDN-Cache-Control'] = 'no-store'
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
+
+
+@blueprint.route('/site-icons/<path:filename>')
+def site_icons(filename):
+    response = send_from_directory(STATIC_DIR / 'site-icons', filename)
+    response.headers['Cache-Control'] = 'public, max-age=300, must-revalidate'
+    return response
+
+
 @blueprint.route('/privacy')
 @blueprint.route('/privacy/')
 @blueprint.route('/privacy.html')
