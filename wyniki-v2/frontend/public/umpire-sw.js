@@ -1,4 +1,7 @@
 const CACHE = 'umpire-pwa-v4';
+// Only ever drop our own caches. The public PWA shares this origin and keeps its
+// shell under `site-pwa-*`; wiping everything took that down on every umpire load.
+const CACHE_PREFIX = 'umpire-pwa-';
 const SHELL = [
   '/umpire',
   '/umpire.html',
@@ -72,7 +75,9 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(
+        keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE).map((key) => caches.delete(key)),
+      ))
       .then(() => self.clients.claim()),
   );
 });

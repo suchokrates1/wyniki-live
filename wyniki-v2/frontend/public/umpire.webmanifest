@@ -3,7 +3,7 @@
   "name": "Blind Tennis Referee",
   "short_name": "Blind Tennis Referee",
   "start_url": "/umpire",
-  "scope": "/",
+  "scope": "/umpire",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0b1220",

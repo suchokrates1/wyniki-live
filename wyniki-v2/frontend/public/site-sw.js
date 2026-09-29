@@ -1,4 +1,8 @@
 const CACHE = 'site-pwa-v1';
+// Only ever drop our own caches. The umpire PWA lives on the same origin with its
+// own worker and its own `umpire-pwa-*` cache; wiping everything took its offline
+// shell down whenever someone opened the public page in the same browser.
+const CACHE_PREFIX = 'site-pwa-';
 const SHELL = [
   '/',
   '/index.html',
@@ -72,7 +76,9 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(
+        keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE).map((key) => caches.delete(key)),
+      ))
       .then(() => self.clients.claim()),
   );
 });

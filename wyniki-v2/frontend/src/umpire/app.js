@@ -83,6 +83,41 @@ import './umpire.css';
 const session = createUmpireSession();
 const wakeLock = createWakeLock();
 
+/** Scope for this worker. The public PWA owns '/', so we must not register there too.
+ *
+ * Both workers sit in the site root, so both used to default to scope '/'. A scope holds
+ * one registration, so whichever page was opened last replaced the other's worker — and
+ * each worker then dropped every cache but its own. Opening the public page in the same
+ * browser therefore took the referee's offline shell with it. A nested scope keeps both:
+ * the longest matching scope wins, so '/umpire*' stays with this worker and '/' with the
+ * public one. Pages under this scope still route every request they make through this
+ * worker, '/assets/*' included.
+ */
+const UMPIRE_SW_SCOPE = '/umpire';
+
+async function registerUmpireServiceWorker() {
+  try {
+    await navigator.serviceWorker.register('/umpire-sw.js', { scope: UMPIRE_SW_SCOPE });
+  } catch {
+    return;
+  }
+  // Drop the root-scoped registration left by earlier releases, so it stops fighting
+  // the public worker for '/'.
+  try {
+    const stale = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(stale
+      .filter((registration) => {
+        const scope = new URL(registration.scope).pathname;
+        const script = registration.active?.scriptURL || registration.waiting?.scriptURL
+          || registration.installing?.scriptURL || '';
+        return scope === '/' && script.endsWith('/umpire-sw.js');
+      })
+      .map((registration) => registration.unregister().catch(() => false)));
+  } catch {
+    /* the new registration is in place either way */
+  }
+}
+
 function playerId(player) {
   return player?.id;
 }
@@ -512,7 +547,7 @@ function createUmpireApp() {
         this._installEvent = null;
       });
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/umpire-sw.js').catch(() => {});
+        registerUmpireServiceWorker();
       }
       detectOsInstalledPwa({
         storage: globalThis.localStorage,

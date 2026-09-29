@@ -16,10 +16,8 @@ function assetUrlsFromHtml(html) {
 }
 
 const html = await readFile(htmlPath, 'utf8');
-const assets = assetUrlsFromHtml(html).filter((url) => {
-  // Public shell only — skip admin/office/umpire hashed bundles if linked from shared chunks naming
-  return true;
-});
+// Public shell only: index.html links just its own bundles, so no filtering is needed.
+const assets = assetUrlsFromHtml(html);
 const sw = await readFile(swPath, 'utf8');
 const marker = 'const PRECACHE_ASSETS = [];';
 if (!sw.includes(marker)) {
