@@ -39,10 +39,14 @@
     font: 400 13px/1 ui-monospace, "Chivo Mono", monospace; color: var(--header-fg); opacity: .85;
   }
   .header-updated__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; }
-  .lang-select-wrap { width: 48px; height: 44px; }
+  .lang-select-wrap { width: 48px; height: 44px; min-width: 44px; min-height: 44px; }
   .lang-select {
-    width: 48px; height: 44px; padding: 0; color: transparent; text-align: center;
+    width: 48px; height: 44px; min-width: 44px; min-height: 44px;
+    padding: 0; color: transparent; text-align: center;
     border-radius: 10px;
+    /* WKWebView / iOS Chrome: keep native picker chrome for reliable open-on-tap */
+    -webkit-appearance: menulist-button;
+    appearance: auto;
   }
   .lang-select option { color: initial; }
   .lang-select__code {
@@ -142,14 +146,25 @@
   .schedule-card__badge { font-size: 13px; min-height: 0; padding: 2px 8px; }
   .schedule-card__notes { grid-area: notes; }
 
-  /* ---------- players: one row per player ---------- */
+  /* ---------- players / history filters: clear of the bottom tab bar ---------- */
   .section-heading { font-size: 22px; margin: 14px 0 10px; }
   .player-filters { gap: 8px; margin-bottom: 8px; }
   .player-filters .player-search { width: 100%; min-height: 48px; }
   .player-filter-btns { display: flex; gap: 6px; flex-wrap: nowrap; }
   .player-filter-btns .filter-btn { min-height: 44px; flex: 1 1 0; padding: 6px 8px; }
   .player-filters--row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .player-filters--row2 .player-dropdown { min-height: 44px; min-width: 0; width: 100%; }
+  .player-filters--row2 .player-dropdown,
+  .hm-filters .player-dropdown {
+    min-height: 44px; min-width: 0; width: 100%;
+    /* keep focused select away from the fixed tab bar when the OS opens the picker */
+    scroll-margin-bottom: calc(var(--m-bottom-nav) + 24px + env(safe-area-inset-bottom, 0px));
+    scroll-margin-top: calc(var(--m-header, 57px) + 12px);
+  }
+  .player-filters.hm-filters,
+  .player-filters--row2.hm-filters {
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+  }
   .player-list { gap: 0; }
   .player-card {
     display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px;

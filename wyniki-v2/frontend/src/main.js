@@ -293,3 +293,27 @@ Alpine.start();
 
 // APG keyboard support (roving tabindex + arrow keys) for all [role=tablist].
 initTabsA11y();
+
+/** Keep native <select> filters clear of the fixed phone tab bar before the OS picker opens. */
+function keepSelectClearOfTabBar(select) {
+  if (!(select instanceof HTMLSelectElement)) return;
+  if (!select.classList.contains('player-dropdown') && select.id !== 'langSelect') return;
+  if (!window.matchMedia('(max-width: 640px)').matches) return;
+  select.scrollIntoView({ block: 'center', inline: 'nearest' });
+}
+
+document.addEventListener('focusin', (event) => keepSelectClearOfTabBar(event.target), true);
+document.addEventListener(
+  'pointerdown',
+  (event) => {
+    const select = event.target instanceof Element ? event.target.closest('select') : null;
+    keepSelectClearOfTabBar(select);
+  },
+  true,
+);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/site-sw.js').catch(() => {});
+  });
+}

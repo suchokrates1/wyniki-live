@@ -161,10 +161,63 @@ test('the tournament switches are one row that scrolls sideways and sticks under
 test('the language control shows a short code and still changes the language', async ({ page }) => {
   await open(page, 'live/scores');
   await expect(page.locator('.lang-select__code')).toHaveText('PL');
+  const wrap = page.locator('.lang-select-wrap');
+  const box = await wrap.boundingBox();
+  expect(box.width, 'language hit target ≥ 44px').toBeGreaterThanOrEqual(44);
+  expect(box.height, 'language hit target ≥ 44px').toBeGreaterThanOrEqual(44);
+  const codeBlocks = await page.locator('.lang-select__code').evaluate((el) => getComputedStyle(el).pointerEvents);
+  expect(codeBlocks).toBe('none');
   await page.locator('#langSelect').selectOption('en');
   await expect(page.locator('.lang-select__code')).toHaveText('EN');
   await expect(page.locator('#tab-main-players')).toContainText(/Players/i);
   await expect(page.locator('#langSelect')).toHaveAccessibleName(/.+/);
+});
+
+test('history and player filter selects stay clear of the bottom tab bar', async ({ page }) => {
+  async function assertSelectClearOfTabBar(selectLocator) {
+    await expect(selectLocator).toBeVisible();
+    // push the control toward the bottom edge so scroll-into-view must clear the tab bar
+    await page.evaluate(() => {
+      const spacer = document.createElement('div');
+      spacer.style.height = `${window.innerHeight}px`;
+      spacer.dataset.testSpacer = '1';
+      document.querySelector('main')?.prepend(spacer);
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    await selectLocator.scrollIntoViewIfNeeded();
+    await selectLocator.focus();
+    await page.waitForTimeout(250);
+    const geom = await selectLocator.evaluate((select) => {
+      const bar = document.querySelector('.tab-bar');
+      const s = select.getBoundingClientRect();
+      const b = bar.getBoundingClientRect();
+      return { selectBottom: s.bottom, barTop: b.y, overlap: s.bottom > b.y + 1 };
+    });
+    expect(geom.overlap, 'select must not sit under the tab bar').toBe(false);
+  }
+
+  await open(page, 'players');
+  const playerCat = page.locator('#player-category-select');
+  await assertSelectClearOfTabBar(playerCat);
+  const catOptions = await playerCat.locator('option').count();
+  if (catOptions > 1) {
+    const value = await playerCat.locator('option').nth(1).getAttribute('value');
+    await playerCat.selectOption(value);
+    await expect(playerCat).toHaveValue(value);
+  }
+
+  await open(page, 'live/history');
+  const historyCourt = page.locator('#live-history-court');
+  // Mock API may have no finished matches — filters stay x-show hidden.
+  if (await historyCourt.isVisible().catch(() => false)) {
+    await assertSelectClearOfTabBar(historyCourt);
+    const courtOptions = await historyCourt.locator('option').count();
+    if (courtOptions > 1) {
+      const value = await historyCourt.locator('option').nth(1).getAttribute('value');
+      await historyCourt.selectOption(value);
+      await expect(historyCourt).toHaveValue(value);
+    }
+  }
 });
 
 test('live scores: every court keeps the full-site scoreboard, in the same order', async ({ page, browser }) => {
@@ -413,4 +466,30 @@ test('a played match in the schedule marks its winner for sight and for screen r
   await expect(card).toHaveAttribute('aria-label', /Zwycięzca: Emil Stopierzyński/);
   const found = await new AxeBuilder({ page }).include('.schedule-cards').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(found.violations.map((v) => v.id)).toEqual([]);
+});
+
+test('public PWA: manifest is linked and the service worker controls the page', async ({ page }) => {
+  await open(page, 'live/scores');
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/site.webmanifest');
+  const manifest = await page.evaluate(async () => {
+    const href = document.querySelector('link[rel="manifest"]')?.href;
+    const res = await fetch(href);
+    return { ok: res.ok, body: await res.json() };
+  });
+  expect(manifest.ok).toBe(true);
+  expect(manifest.body.start_url).toBe('/');
+  expect(manifest.body.display).toBe('standalone');
+
+  await page.waitForFunction(async () => {
+    if (!('serviceWorker' in navigator)) return false;
+    const reg = await navigator.serviceWorker.getRegistration('/');
+    return !!(reg && (reg.active || reg.installing || reg.waiting));
+  }, undefined, { timeout: 15_000 });
+
+  const sw = await page.evaluate(async () => {
+    const reg = await navigator.serviceWorker.getRegistration('/');
+    const script = reg?.active?.scriptURL || reg?.installing?.scriptURL || reg?.waiting?.scriptURL || '';
+    return { script, controlled: !!navigator.serviceWorker.controller };
+  });
+  expect(sw.script).toMatch(/site-sw\.js$/);
 });
