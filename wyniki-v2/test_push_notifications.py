@@ -328,3 +328,77 @@ def test_the_payload_is_built_once_per_language_not_once_per_device(app_client, 
 
     assert web_push.send_to(subscribers, build) == 5
     assert builds == ["pl"], "five devices, one language, one payload built"
+
+
+def _cup_with_drafts(database, name, password):
+    """A tournament with a group, so the office can generate draft fixtures."""
+    from werkzeug.security import generate_password_hash
+
+    tournament_id = database.insert_tournament(
+        name, "2026-10-03", "2026-10-04", active=True,
+        office_password_hash=generate_password_hash(password),
+    )
+    database.create_tournament_courts(tournament_id, 2)
+    ids = [
+        database.insert_player(tournament_id, f"P{i}", "B2", "PL",
+                               first_name="P", last_name=str(i), gender="M")
+        for i in range(1, 5)
+    ]
+    database.save_bracket_groups(
+        tournament_id,
+        [{"name": "B2 Mezczyzni - Grupa A", "play_format": "round_robin", "players": ids}],
+    )
+    return tournament_id
+
+
+def test_the_office_publishing_a_plan_really_fires_the_notification(full_app_with_temp_db, monkeypatch):
+    """The hook itself, not just the service it calls.
+
+    The unit tests above exercise schedule_notifications directly; this proves
+    the office endpoint is wired to it and hands over the drafts it published.
+    """
+    from wyniki import database
+    from wyniki.api import office
+
+    _cup_with_drafts(database, "Push Cup", "pushpass")
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "pushpass"})
+    assert auth.status_code == 200, auth.get_data(as_text=True)
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+
+    generated = client.post("/api/office/1/schedule/generate", headers=headers)
+    assert generated.status_code == 200
+    assert any(e["status"] == "draft" for e in generated.get_json()["schedule"])
+
+    seen = {}
+    monkeypatch.setattr(office.schedule_notifications, "notify_plan_published",
+                        lambda entries: seen.update(entries=entries) or 0)
+
+    response = client.post("/api/office/1/schedule/publish", headers=headers, json={})
+    assert response.status_code == 200
+    assert response.get_json()["published"] >= 1
+
+    assert "entries" in seen, "publishing must hand the drafts to the notifier"
+    assert seen["entries"], "the notifier must receive the fixtures, not an empty list"
+    assert all(e.get("player1_name") for e in seen["entries"])
+
+
+def test_a_failing_notifier_never_breaks_the_office_publishing(full_app_with_temp_db, monkeypatch):
+    from wyniki import database
+    from wyniki.api import office
+
+    _cup_with_drafts(database, "Resilient Cup", "resilient")
+    client = full_app_with_temp_db.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "resilient"})
+    headers = {"Authorization": f"Bearer {auth.get_json()['token']}"}
+    client.post("/api/office/1/schedule/generate", headers=headers)
+
+    def explode(entries):
+        raise RuntimeError("push service on fire")
+
+    monkeypatch.setattr(office.schedule_notifications, "notify_plan_published", explode)
+
+    # The office must still get its published schedule back.
+    response = client.post("/api/office/1/schedule/publish", headers=headers, json={})
+    assert response.status_code == 200
+    assert response.get_json()["published"] >= 1

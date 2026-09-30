@@ -28,22 +28,6 @@ def app_with_temp_db(tmp_path, monkeypatch):
 
 
 @pytest.fixture()
-def full_app_with_temp_db(tmp_path, monkeypatch):
-    db_path = tmp_path / "wyniki-full.sqlite3"
-    monkeypatch.setenv("DATABASE_PATH", str(db_path))
-
-    from wyniki.config import settings
-
-    settings.database_path = str(db_path)
-
-    from app import create_app
-
-    app = create_app()
-    app.config["TESTING"] = True
-    return app
-
-
-@pytest.fixture()
 def umpire_app_with_temp_db(tmp_path, monkeypatch):
     db_path = tmp_path / "wyniki-umpire.sqlite3"
     monkeypatch.setenv("DATABASE_PATH", str(db_path))

@@ -5,7 +5,6 @@ gets "database is locked" instead of waiting — during a tournament that is a l
 """
 from __future__ import annotations
 
-from test_tournament_lifecycle import full_app_with_temp_db  # noqa: F401 (fixture)
 from wyniki.database.connection import SQLITE_BUSY_TIMEOUT_SECONDS
 
 EXPECTED_BUSY_MS = int(SQLITE_BUSY_TIMEOUT_SECONDS * 1000)

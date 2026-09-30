@@ -1,5 +1,4 @@
 """Office and administrator sessions last long enough for a tournament week."""
-from test_tournament_lifecycle import full_app_with_temp_db  # noqa: F401 (fixture)
 
 
 def test_office_and_admin_session_lengths():
