@@ -268,3 +268,30 @@ def test_a_fixture_abandoned_long_ago_is_left_alone(push_app, monkeypatch):
     monkeypatch.setattr(match_reminders, "court_busy_for", lambda court: 40)
     monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
     assert match_reminders.run_pass(now=now) == {"reminders": 0, "delays": 0}
+
+
+def test_the_delay_message_says_how_long_the_court_is_still_needed(push_app, monkeypatch):
+    """The threshold is the lateness; the wording is the remaining match time.
+
+    Mixing the two would tell a player "the match before yours needs 45 more
+    minutes" when it needs 20 - a number they would plan around and get wrong.
+    """
+    import json
+
+    from wyniki import database
+    from wyniki.services import match_reminders, web_push
+
+    tournament_id = database.insert_tournament("Wording Cup", "2026-10-03", "2026-10-04", active=True)
+    now = datetime(2026, 10, 3, 10, 0, tzinfo=timezone.utc)
+    _fixture_row(database, tournament_id, now - timedelta(minutes=25))
+    _subscribe(push_app, "https://push.example/w", {"notify_delay": True, "notify_reminder": False})
+
+    bodies = []
+    monkeypatch.setattr(match_reminders, "court_busy_for", lambda court: 20)
+    monkeypatch.setattr(web_push, "_send_one",
+                        lambda sub, body: bodies.append(json.loads(body)["body"]) or 201)
+
+    assert match_reminders.run_pass(now=now)["delays"] == 1
+    # 20 minutes of match left, 45 minutes late: the reader is told the 20.
+    assert "20" in bodies[0], bodies[0]
+    assert "45" not in bodies[0], bodies[0]

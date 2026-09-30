@@ -159,9 +159,11 @@ def run_pass(now: datetime | None = None, tz: timezone = timezone.utc) -> dict[s
             continue
         if not push_subscriptions.claim_send(fixture["id"], "delay"):
             continue
+        # The threshold is the lateness, but the message says how much longer the
+        # match in the way still needs - that is the number a player can act on.
         sent = _send(
             fixture, followers(fixture, "notify_delay"), "delay",
-            lambda lang, court, m=delay: notification_texts.join_details(
+            lambda lang, court, m=still_busy: notification_texts.join_details(
                 notification_texts.text(lang, "delay_body", minutes=m),
                 notification_texts.text(lang, "court", court=court) if court else "",
             ),
