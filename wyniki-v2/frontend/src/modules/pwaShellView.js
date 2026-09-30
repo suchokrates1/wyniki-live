@@ -43,7 +43,10 @@ export function registerPwaPush(Alpine) {
     players: [],          // names this device follows
     roster: [],           // everyone in the active tournament, for the picker
     search: '',
-    prefs: { notify_match_start: true, notify_plan: true, notify_change: true },
+    prefs: {
+      notify_match_start: true, notify_plan: true, notify_change: true,
+      notify_reminder: false, notify_delay: false, reminder_minutes: 30,
+    },
 
     async init() {
       this.lang = resolveLang();
@@ -121,7 +124,10 @@ export function registerPwaPush(Alpine) {
 
     /** Anything ticked is worth a subscription; nothing ticked means unsubscribe. */
     wantsAnything() {
-      return Object.values(this.prefs).some(Boolean);
+      // reminder_minutes is a setting, not a wish - only the flags count.
+      return Object.entries(this.prefs)
+        .filter(([key]) => key.startsWith('notify_'))
+        .some(([, value]) => value);
     },
 
     async save() {

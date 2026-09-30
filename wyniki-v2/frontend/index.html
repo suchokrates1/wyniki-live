@@ -74,6 +74,23 @@
                                 <input type="checkbox" x-model="prefs.notify_change">
                                 <span x-text="pwaText().pushOnChange">Zmiana w moim meczu</span>
                             </label>
+                            <label class="push-panel__row">
+                                <input type="checkbox" x-model="prefs.notify_reminder">
+                                <span x-text="pwaText().pushOnReminder">Przypomnienie przed meczem</span>
+                            </label>
+                            <label class="push-panel__row push-panel__row--indent" x-show="prefs.notify_reminder">
+                                <span x-text="pwaText().pushLeadTime">Ile wcześniej</span>
+                                <select class="push-panel__lead" x-model.number="prefs.reminder_minutes">
+                                    <option :value="15">15 min</option>
+                                    <option :value="30">30 min</option>
+                                    <option :value="60">60 min</option>
+                                    <option :value="120">120 min</option>
+                                </select>
+                            </label>
+                            <label class="push-panel__row">
+                                <input type="checkbox" x-model="prefs.notify_delay">
+                                <span x-text="pwaText().pushOnDelay">Opóźnienie mojego meczu</span>
+                            </label>
 
                             <p class="push-panel__hint" x-text="pwaText().pushPlayersHint">Wybierz zawodników, o których meczach chcesz wiedzieć.</p>
 

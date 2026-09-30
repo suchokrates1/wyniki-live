@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     vapid_public_key: str = ""
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:kontakt@vestmedia.pl"
+    # Off switch for the periodic reminder pass, for a host that should not send.
+    reminder_loop_enabled: bool = True
     
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent

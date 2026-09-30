@@ -668,6 +668,18 @@ def init_db() -> None:
             "CREATE INDEX IF NOT EXISTS idx_push_subscription_players_key ON push_subscription_players(player_key)"
         )
 
+        # What has already been sent for a fixture. Without this a restart would
+        # send every reminder again, and the periodic job would repeat itself
+        # on every pass.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS push_sent_log (
+                schedule_id INTEGER NOT NULL,
+                kind TEXT NOT NULL,
+                sent_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (schedule_id, kind)
+            )
+        """)
+
         # Migration: Add global_player_id column to players
         cursor.execute("PRAGMA table_info(players)")
         p_cols3 = [row[1] for row in cursor.fetchall()]

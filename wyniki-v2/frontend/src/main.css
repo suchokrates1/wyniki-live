@@ -3045,3 +3045,10 @@ button.hm-cat-badge:focus-visible {
   font-weight: 400;
   color: var(--muted);
 }
+
+/* The lead-time picker sits under its checkbox, so it reads as its setting. */
+.push-panel__row--indent { padding-left: 24px; justify-content: space-between; }
+.push-panel__lead {
+  min-height: 36px; padding: 0 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: transparent; color: var(--text);
+}

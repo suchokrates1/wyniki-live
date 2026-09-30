@@ -19,6 +19,7 @@ from wyniki.config import logger, settings
 from wyniki.database.connection import apply_sqlite_pragmas
 from wyniki.db_models import db
 from wyniki.api import courts, admin, health, push, stream, web, office, admin_auth
+from wyniki.services import reminder_loop
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp, tournaments_public_bp
 from wyniki.api.admin_global_players import blueprint as global_players_blueprint
 from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
@@ -59,7 +60,12 @@ def create_app() -> Flask:
         event.listen(db.engine, "connect", _apply_sqlite_pragmas)
         db.create_all()
         initialize_state()
-    
+
+    # Match reminders need something to watch the clock; the loop declines to
+    # start unless Web Push is configured, and never starts under pytest.
+    with app.app_context():
+        reminder_loop.start()
+
     # Initialize Prometheus metrics
     metrics = PrometheusMetrics(app, registry=CollectorRegistry())
     metrics.info('wyniki_live_v2', 'Tennis Live Scores v2', version='2.0.0')

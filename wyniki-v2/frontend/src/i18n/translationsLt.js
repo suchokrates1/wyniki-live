@@ -162,6 +162,9 @@ export const TRANSLATION_PATCHES_LT = {
     pushSearch: 'Ieškoti žaidėjo',
     pushRemove: 'Pašalinti',
     pushSave: 'Išsaugoti',
+    pushOnReminder: 'Priminimas prieš mačą',
+    pushLeadTime: 'Kiek anksčiau',
+    pushOnDelay: 'Mano mačas vėluoja',
   },
   office: {
     login: {

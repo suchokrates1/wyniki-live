@@ -117,14 +117,17 @@ def subscriptions_for_players(player_keys: set[str], preference: str) -> list[di
     with db_conn() as conn:
         rows = conn.execute(
             f"""
-            SELECT DISTINCT s.endpoint, s.p256dh, s.auth, s.lang
+            SELECT DISTINCT s.endpoint, s.p256dh, s.auth, s.lang, s.reminder_minutes
             FROM push_subscriptions s
             JOIN push_subscription_players p ON p.subscription_id = s.id
             WHERE p.player_key IN ({placeholders}) AND s.{preference} = 1
             """,
             tuple(player_keys),
         ).fetchall()
-    return [{"endpoint": r[0], "p256dh": r[1], "auth": r[2], "lang": r[3]} for r in rows]
+    return [
+        {"endpoint": r[0], "p256dh": r[1], "auth": r[2], "lang": r[3], "reminder_minutes": r[4]}
+        for r in rows
+    ]
 
 
 def followed_players(endpoint: str) -> list[str]:
@@ -176,6 +179,48 @@ def mark_sent(endpoints: list[str]) -> None:
             endpoints,
         )
         conn.commit()
+
+
+def claim_send(schedule_id: int, kind: str) -> bool:
+    """Reserve one notification for a fixture. False when it already went out.
+
+    The insert itself is the lock: the primary key makes a second attempt fail,
+    so a restart mid-pass cannot send anything twice.
+    """
+    try:
+        with db_conn() as conn:
+            cursor = conn.execute(
+                "INSERT OR IGNORE INTO push_sent_log (schedule_id, kind) VALUES (?, ?)",
+                (int(schedule_id), str(kind)),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    except Exception as exc:  # noqa: BLE001 - a missed reminder beats a crashed job
+        logger.warning("push_sent_log_claim_failed", error=str(exc), schedule_id=schedule_id, kind=kind)
+        return False
+
+
+def release_send(schedule_id: int, kind: str) -> None:
+    """Give a claim back when the send turned out to reach nobody."""
+    try:
+        with db_conn() as conn:
+            conn.execute(
+                "DELETE FROM push_sent_log WHERE schedule_id = ? AND kind = ?",
+                (int(schedule_id), str(kind)),
+            )
+            conn.commit()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("push_sent_log_release_failed", error=str(exc), schedule_id=schedule_id)
+
+
+def forget_sends(schedule_id: int) -> None:
+    """Drop a fixture's history, so a rescheduled match can notify again."""
+    try:
+        with db_conn() as conn:
+            conn.execute("DELETE FROM push_sent_log WHERE schedule_id = ?", (int(schedule_id),))
+            conn.commit()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("push_sent_log_forget_failed", error=str(exc), schedule_id=schedule_id)
 
 
 def count_subscriptions() -> int:
