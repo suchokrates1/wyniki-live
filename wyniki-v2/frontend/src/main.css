@@ -1294,6 +1294,9 @@ body.has-consent-banner {
 }
 /* The notification bell sits with the theme toggle and borrows its shape. */
 .push-wrap { position: relative; display: inline-flex; }
+/* Its own icon class on purpose: `.dark-mode-toggle__icon` is flipped 180° in
+   dark mode so the moon turns over, which left the bell hanging upside down. */
+.push-toggle__icon { transition: transform .3s ease; }
 .push-toggle[disabled] { opacity: .5; cursor: not-allowed; }
 .push-toggle--on { border-color: var(--ok, #3fb950); }
 

@@ -52,7 +52,7 @@
                             :title="label()"
                             @click="togglePanel()"
                         >
-                            <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="enabled ? '🔔' : '🔕'"></span>
+                            <span class="push-toggle__icon" aria-hidden="true" x-text="enabled ? '🔔' : '🔕'"></span>
                         </button>
 
                         <div class="push-panel" x-show="open" x-transition.opacity @click.outside="open = false" role="dialog" :aria-label="pwaText().pushTitle">

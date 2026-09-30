@@ -39,7 +39,13 @@ services:
       - KORT3_ID=${KORT3_ID}
       - KORT4_ID=${KORT4_ID}
       - UNO_AUTH_BEARER=${UNO_AUTH_BEARER:-}
-      
+
+      # Web Push for the public site. Empty = the feature stays off, which is
+      # the default everywhere the keys are not set in the host's .env.
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:kontakt@vestmedia.pl}
+
     restart: unless-stopped
     
     labels:

@@ -56,8 +56,9 @@ class Settings(BaseSettings):
 
     # Web Push for the public site. Both keys empty = the feature is off, which
     # is the default: the private key belongs in the prod env, never in the repo.
-    # Generate a pair with:
-    #   python -c "from py_vapid import Vapid01; v=Vapid01(); v.generate_keys(); print(v.public_key_urlsafe_base64(), v.private_key_urlsafe_base64())"
+    # Generate a pair with scripts/generate_vapid_keys.py (py_vapid hands back
+    # cryptography objects, not the base64url strings the browser and pywebpush
+    # want, so the serialisation has to be done by hand).
     vapid_public_key: str = ""
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:kontakt@vestmedia.pl"
