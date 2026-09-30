@@ -116,7 +116,21 @@ Dwa zdarzenia, bo dzieją się wewnątrz żądania, które biuro i tak wykonuje:
 
 Teksty renderuje serwer w języku subskrypcji — worker nie wie, o jaki język prosiło urządzenie.
 
-### Etap 2 — przypomnienia i estymacja opóźnień — OTWARTE
+### Etap 2 — przypomnienia i estymacja opóźnień — DONE
+
+Wdrożone 2026-09-30. Greenlet gevent przemiata raz na minutę (`services/reminder_loop.py`); nie startuje, gdy push jest niewłączony, i nigdy pod pytest. Każde powiadomienie rezerwuje miejsce w `push_sent_log` **przed** wysyłką, więc restart w połowie przebiegu niczego nie powtórzy, a wysyłka, która nikogo nie zastała, oddaje rezerwację.
+
+Każda subskrypcja ma własne wyprzedzenie (15/30/60/120 min), więc odbiorcy są grupowani po nim — na 60 minut przed meczem słyszą tylko ci, którzy o 60 prosili.
+
+**Opóźnienie liczone jako poślizg względem planu**, nie jako czas do końca poprzedniego meczu: mecz na 40 minut na korcie potrzebnym za 30 to 10 minut spóźnienia. Próg: 15 minut.
+
+**Estymator** (`services/match_pace.py`): pozostałe gemy × minuty na gema. Strojony na 311 zmierzonych meczach, próbkowanych na każdym gemie drugiego seta (1680 punktów) — **mediana błędu bezwzględnego 7,6 min, p90 około 60**. Zaniża o ~8 min, bo liczy tylko rozgrywany set; pokrycie mniejszości meczów idących do decydującego seta zeruje obciążenie, ale podwaja typowy błąd do 16 min. Zaniżanie jest bezpieczniejszym kierunkiem: zawodnik przyjdzie i poczeka, zamiast oddalić się od kortu. Komunikat zawsze mówi „około".
+
+Pierwsza wersja formuły miała człon odwrotnie i czytała 3:0 jako dłuższe niż 3:3 — złapał to test monotoniczności, który został w zestawie.
+
+Tempo kalibrowane **wyłącznie** z `match_statistics.match_duration_ms`.
+
+### Etap 2 — oryginalny zakres (zachowane dla kontekstu)
 
 Wymaga **zadania cyklicznego**, którego aplikacja nie ma. Przy jednym workerze gunicorna wystarczy greenlet, ale potrzebuje tabeli „już wysłane", żeby restart nie wysłał drugi raz.
 
