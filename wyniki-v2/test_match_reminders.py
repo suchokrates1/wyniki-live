@@ -229,3 +229,42 @@ def test_the_loop_never_starts_under_pytest():
 
     # PYTEST_CURRENT_TEST is set while this runs, which is exactly the guard.
     assert reminder_loop.should_start() is False
+
+
+def test_an_overdue_match_still_gets_its_delay_warning(push_app, monkeypatch):
+    """The case that matters most: the match should have started already.
+
+    A window that began at "now" skipped every overdue fixture, which is
+    precisely when a player wants to hear that the court is still busy.
+    """
+    from wyniki import database
+    from wyniki.services import match_reminders, web_push
+
+    tournament_id = database.insert_tournament("Overdue Cup", "2026-10-03", "2026-10-04", active=True)
+    now = datetime(2026, 10, 3, 10, 0, tzinfo=timezone.utc)
+    _fixture_row(database, tournament_id, now - timedelta(minutes=25))
+    _subscribe(push_app, "https://push.example/late", {"notify_delay": True, "notify_reminder": True})
+
+    monkeypatch.setattr(match_reminders, "court_busy_for", lambda court: 20)
+    monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
+    result = match_reminders.run_pass(now=now)
+
+    # 20 minutes of match left against a start 25 minutes ago is 45 minutes late.
+    assert result["delays"] == 1
+    assert result["reminders"] == 0, "'before the match' has been and gone"
+
+
+def test_a_fixture_abandoned_long_ago_is_left_alone(push_app, monkeypatch):
+    from wyniki import database
+    from wyniki.services import match_reminders, web_push
+
+    tournament_id = database.insert_tournament("Stale Cup", "2026-10-03", "2026-10-04", active=True)
+    now = datetime(2026, 10, 3, 18, 0, tzinfo=timezone.utc)
+    # Five hours past its time: played, walked over or dropped without the plan
+    # being updated. Saying anything now would only confuse.
+    _fixture_row(database, tournament_id, now - timedelta(hours=5))
+    _subscribe(push_app, "https://push.example/stale", {"notify_delay": True})
+
+    monkeypatch.setattr(match_reminders, "court_busy_for", lambda court: 40)
+    monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
+    assert match_reminders.run_pass(now=now) == {"reminders": 0, "delays": 0}

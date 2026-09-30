@@ -34,6 +34,11 @@ DELAY_THRESHOLD_MINUTES = 15
 # How far ahead to look. Nobody sets a reminder longer than this.
 MAX_REMINDER_MINUTES = 180
 
+# How far past its time a fixture is still worth watching. Beyond this it was
+# almost certainly played, walked over or dropped without the plan being updated,
+# and a notification would only confuse.
+MAX_OVERDUE_MINUTES = 120
+
 
 def _parse_fixture_start(day_date: str, scheduled_time: str, tz: timezone) -> datetime | None:
     try:
@@ -44,12 +49,19 @@ def _parse_fixture_start(day_date: str, scheduled_time: str, tz: timezone) -> da
 
 
 def upcoming_fixtures(now: datetime, tz: timezone) -> list[dict[str, Any]]:
-    """Published fixtures starting inside the reminder window."""
+    """Fixtures worth looking at: due soon, or already overdue and not started.
+
+    Overdue ones matter most. A match that should have begun half an hour ago,
+    on a court still finishing the previous one, is exactly the case a player
+    wants to hear about, and a window that started at `now` would have skipped
+    every one of them.
+    """
     horizon = now + timedelta(minutes=MAX_REMINDER_MINUTES)
+    earliest = now - timedelta(minutes=MAX_OVERDUE_MINUTES)
     fixtures = []
     for row in reminders_db.published_fixtures_with_times():
         start = _parse_fixture_start(row["day_date"], row["scheduled_time"], tz)
-        if not start or not (now <= start <= horizon):
+        if not start or not (earliest <= start <= horizon):
             continue
         fixtures.append({
             **row,
@@ -112,12 +124,15 @@ def run_pass(now: datetime | None = None, tz: timezone = timezone.utc) -> dict[s
         minutes_away = fixture["minutes_away"]
 
         # Everyone picks their own lead time, so the due ones are grouped by it:
-        # 60 minutes out, only those who asked for 60 hear anything.
+        # 60 minutes out, only those who asked for 60 hear anything. A fixture
+        # already past its time gets no reminder - "before the match" has been
+        # and gone, and the delay notice below is what fits that case.
         by_lead: dict[int, list[dict[str, Any]]] = {}
-        for subscriber in followers(fixture, "notify_reminder"):
-            lead = int(subscriber.get("reminder_minutes") or 30)
-            if minutes_away <= lead:
-                by_lead.setdefault(lead, []).append(subscriber)
+        if minutes_away >= 0:
+            for subscriber in followers(fixture, "notify_reminder"):
+                lead = int(subscriber.get("reminder_minutes") or 30)
+                if minutes_away <= lead:
+                    by_lead.setdefault(lead, []).append(subscriber)
 
         for lead, group in by_lead.items():
             if not push_subscriptions.claim_send(fixture["id"], f"reminder:{lead}"):
