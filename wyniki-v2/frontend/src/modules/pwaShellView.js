@@ -9,7 +9,7 @@ import { lookupTranslation } from '../i18n/runtime.js';
 import { TRANSLATIONS } from '../i18n/translations.js';
 import { rememberDismissed, shouldShowIosInstallHint } from './iosInstallHint.js';
 import { fetchPushKey, isPushSupported, subscribe, unsubscribe } from './pushClient.js';
-import { applyUpdate, reloadOnControllerChange, watchForUpdate } from './swUpdate.js';
+import { applyUpdate, createUpdateSession, reloadOnControllerChange, watchForUpdate } from './swUpdate.js';
 
 function resolveLang() {
   const htmlLang = String(document.documentElement.lang || '').slice(0, 2);
@@ -181,7 +181,8 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
       if (ready) this.watch(ready);
       else window.addEventListener('wyniki:sw-registered', (event) => this.watch(event.detail), { once: true });
 
-      reloadOnControllerChange(navigator.serviceWorker, () => window.location.reload());
+      this._session = createUpdateSession();
+      reloadOnControllerChange(navigator.serviceWorker, () => window.location.reload(), this._session);
     },
 
     destroy() {
@@ -203,7 +204,7 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
 
     refresh() {
       this.updateReady = false;
-      applyUpdate(this._registration);
+      applyUpdate(this._registration, this._session);
       // If the worker never answers (it was already gone), reload anyway.
       setTimeout(() => window.location.reload(), 1500);
     },

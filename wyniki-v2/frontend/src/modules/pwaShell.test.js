@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { isIosSafari, shouldShowIosInstallHint } from './iosInstallHint.js';
-import { applyUpdate, reloadOnControllerChange, SKIP_WAITING, watchForUpdate } from './swUpdate.js';
+import { applyUpdate, createUpdateSession, reloadOnControllerChange, SKIP_WAITING, watchForUpdate } from './swUpdate.js';
 
 const IPHONE_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
 const IPHONE_CHROME = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/123.0 Mobile/15E148 Safari/604.1';
@@ -109,13 +109,34 @@ test('applying an update asks the waiting worker to take over', () => {
   assert.doesNotThrow(() => applyUpdate(null));
 });
 
-test('the page reloads once when the new worker takes control', () => {
+function fakeServiceWorker() {
   const listeners = {};
-  const serviceWorker = { addEventListener: (type, fn) => { (listeners[type] ||= []).push(fn); } };
-  let reloads = 0;
-  reloadOnControllerChange(serviceWorker, () => { reloads += 1; });
+  return {
+    addEventListener: (type, fn) => { (listeners[type] ||= []).push(fn); },
+    fire: (type) => (listeners[type] || []).forEach((fn) => fn()),
+  };
+}
 
-  listeners.controllerchange.forEach((fn) => fn());
-  listeners.controllerchange.forEach((fn) => fn());
+test('a first visit is not reloaded when the first worker claims the page', () => {
+  // The controller changes on a first visit too, because the new worker calls
+  // clients.claim(). Reloading then bounced every new reader once.
+  const serviceWorker = fakeServiceWorker();
+  const session = createUpdateSession();
+  let reloads = 0;
+  reloadOnControllerChange(serviceWorker, () => { reloads += 1; }, session);
+
+  serviceWorker.fire('controllerchange');
+  assert.equal(reloads, 0, 'nobody asked for an update, so nothing reloads');
+});
+
+test('the page reloads once, and only after the reader asked to refresh', () => {
+  const serviceWorker = fakeServiceWorker();
+  const session = createUpdateSession();
+  let reloads = 0;
+  reloadOnControllerChange(serviceWorker, () => { reloads += 1; }, session);
+
+  applyUpdate({ waiting: { postMessage() {} } }, session);
+  serviceWorker.fire('controllerchange');
+  serviceWorker.fire('controllerchange');
   assert.equal(reloads, 1);
 });

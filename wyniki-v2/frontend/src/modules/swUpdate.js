@@ -41,17 +41,30 @@ export function watchForUpdate(registration, onReady, serviceWorker = globalThis
   return () => registration.removeEventListener('updatefound', onUpdateFound);
 }
 
+/** Shared between `applyUpdate` and `reloadOnControllerChange`.
+ *
+ * The controller also changes on a first visit, when the very first worker
+ * activates and claims the page. Reloading then would bounce every new reader
+ * once, for no reason, so the reload waits for someone to actually press
+ * "refresh". Passed around explicitly rather than kept as module state, so a
+ * test can hold two independent sessions.
+ */
+export function createUpdateSession() {
+  return { requested: false };
+}
+
 /** Hand control to the waiting worker. The page reloads on `controllerchange`. */
-export function applyUpdate(registration) {
+export function applyUpdate(registration, session = null) {
+  if (session) session.requested = true;
   registration?.waiting?.postMessage({ type: SKIP_WAITING });
 }
 
-/** Reload once the new worker takes over, and only once. */
-export function reloadOnControllerChange(serviceWorker, reload) {
+/** Reload once the worker the reader asked for takes over, and only once. */
+export function reloadOnControllerChange(serviceWorker, reload, session = null) {
   if (!serviceWorker) return;
   let reloaded = false;
   serviceWorker.addEventListener('controllerchange', () => {
-    if (reloaded) return;
+    if (reloaded || !session?.requested) return;
     reloaded = true;
     reload();
   });
