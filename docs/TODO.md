@@ -85,19 +85,49 @@ Snapshot w `localStorage` (`modules/offlineSnapshot.js`), banner „Brak sieci �
 
 Zamykalny banner tylko dla Safari na iOS (Chrome/Firefox na iOS nie potrafią instalować, więc są wykluczone). Nie pokazuje się, dopóki wisi banner zgody — jedna prośba naraz.
 
-### v5 — Web Push — KOD WDROŻONY, CZEKA NA KLUCZE
+### v5 — Web Push — DZIAŁA NA PRODUKCJI
 
 Wdrożone 2026-09-30: `pywebpush` w obrazie, tabela `push_subscriptions`, `GET /api/push/key`, `POST /api/push/subscribe|unsubscribe`, wysyłka przy `POST /api/umpire/matches`, obsługa `push` / `notificationclick` w `site-sw.js`, dzwonek w nagłówku, stringi w 7 językach.
 
-**Feature jest wyłączony, dopóki nie ma kluczy VAPID** — `push/key` zwraca `enabled:false`, dzwonek się nie pokazuje, `subscribe` odpowiada 503. Żeby włączyć:
+Klucze VAPID ustawione na prodzie (`.env` na minipc, uprawnienia 600) i na stosie testowym (`.env.test` na dellu — **osobna, tymczasowa para**). `docker-compose.yml` przekazuje je jawnie; puste = feature wyłączony. Nowa para:
 
 ```bash
-python -c "from py_vapid import Vapid01; v=Vapid01(); v.generate_keys(); print('PUBLIC:', v.public_key_urlsafe_base64()); print('PRIVATE:', v.private_key_urlsafe_base64())"
+python scripts/generate_vapid_keys.py --append .env   # klucz prywatny nie przechodzi przez terminal
 ```
 
-Klucz prywatny idzie do env produkcji obok `SECRET_KEY` (`VAPID_PRIVATE_KEY`), publiczny jako `VAPID_PUBLIC_KEY`, opcjonalnie `VAPID_SUBJECT`. Do repo **nie trafia żaden z nich**. Po ustawieniu: restart kontenera, `GET /api/push/key` ma pokazać `enabled:true`.
+Klucz prywatny nie trafia do repo. Jego wymiana unieważnia wszystkie istniejące subskrypcje.
 
-Zostaje do rozważenia: wybór konkretnego kortu w UI. Backend już to obsługuje (`court_id` w subskrypcji, `NULL` = wszystkie korty), dzwonek na razie zapisuje się na wszystkie.
+Zostaje do rozważenia: wybór konkretnego kortu w UI. Backend obsługuje (`court_id` w subskrypcji, `NULL` = wszystkie korty), dzwonek zapisuje się na wszystkie.
+
+---
+
+## [P2] Powiadomienia per zawodnik („jestem Kowalski")
+
+**Status:** etap 1 na produkcji 2026-09-30 · etap 2 otwarty
+
+### Etap 1 — subskrypcja zawodnika + zdarzenia planu — DONE
+
+Kibic wybiera zawodników z listy turnieju i zaznacza, o czym chce wiedzieć. Dopasowanie po znormalizowanej nazwie (składa wielkość liter i polskie znaki: „Kozioł" = „koziol" = „KOZIOŁ"), bo plan trzyma nazwiska jako tekst wpisany przez biuro, nie id zawodnika. Debel liczy się dla obu graczy. Maks. 10 obserwowanych na urządzenie.
+
+Dwa zdarzenia, bo dzieją się wewnątrz żądania, które biuro i tak wykonuje:
+
+- **mecz trafił do planu** — przy publikacji (`draft` → `planned`)
+- **zmiana w moim meczu** — kort, godzina, dzień lub przeciwnik; notatki i kolejność nie budzą nikogo, drafty nie powiadamiają, a zmiana idzie też do zawodnika, który z meczu wypadł
+
+Teksty renderuje serwer w języku subskrypcji — worker nie wie, o jaki język prosiło urządzenie.
+
+### Etap 2 — przypomnienia i estymacja opóźnień — OTWARTE
+
+Wymaga **zadania cyklicznego**, którego aplikacja nie ma. Przy jednym workerze gunicorna wystarczy greenlet, ale potrzebuje tabeli „już wysłane", żeby restart nie wysłał drugi raz.
+
+- przypomnienie X minut przed meczem (kolumny `notify_reminder`, `reminder_minutes` już są w bazie)
+- powiadomienie o opóźnieniu **tylko gdy poślizg > 15 min** (`notify_delay`)
+
+**Estymator — model i dane.** Liczyć z tempa, nie ze średniej długości meczu w kategorii: rozkład minut na gema jest dużo ciaśniejszy (mediana **3,78 min**, rozstęp ćwiartkowy 2,98–4,50) niż rozkład długości meczu (22–166 min). Pozostały czas ≈ pozostałe gemy × tempo, gdzie pozostałe gemy wynikają z aktualnego wyniku i `match_config` (sety do wygranej, gemy na set). Backtest na 338 meczach, prognoza z połowy meczu: **mediana błędu 3,8 min**, średnia 7,0, p90 19,8 — podawać przedział, nie punkt.
+
+Źródłem czasów jest **wyłącznie `match_statistics.match_duration_ms`** (czasy z aplikacji sędziego). `match_history.duration_seconds` jest zanieczyszczone — mediana 8,5 h dla meczów jednosetowych, czyli zostawione biegnące zegary. To osobny błąd do naprawienia.
+
+Niezweryfikowany wariant: dostrojenie tempa do trwającego meczu. Mój backtest wyszedł idealnie, ale to **artefakt** — czas, który upłynął, liczyłem proporcjonalnie z całości, więc obserwowane tempo z definicji równało się prawdziwemu. Brak znaczników czasu poszczególnych gemów w danych zbiorczych, więc offline tego nie potwierdzę.
 
 ### Poza roadmapą
 
