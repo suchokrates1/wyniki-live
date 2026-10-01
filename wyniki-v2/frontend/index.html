@@ -185,7 +185,7 @@
             <h2 class="live-tournament-name" x-show="tournamentName" x-text="tournamentName"></h2>
 
             <!-- Live sub-navigation cards -->
-            <div class="live-subnav" role="tablist" :aria-label="tr().liveSub?.navLabel || 'Podzakładki Na żywo'">
+            <div class="live-subnav" role="tablist" :aria-label="tr().liveSub?.navLabel || 'Podzakładki Na żywo'" x-init="bindLiveSubnavOverflow($el)">
                 <button class="live-subnav__card" id="tab-live-scores" role="tab" aria-controls="panel-live-scores" :aria-selected="liveSubTab === 'scores'" :class="{ 'live-subnav__card--active': liveSubTab === 'scores' }" @click="openLiveSubTab('scores')">
                     <span class="live-subnav__icon" aria-hidden="true">🎾</span>
                     <span class="live-subnav__label" x-text="tr().liveSub?.scores || 'Wyniki live'"></span>

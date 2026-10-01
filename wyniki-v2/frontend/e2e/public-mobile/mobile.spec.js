@@ -143,6 +143,8 @@ test('the tournament switches are one row that scrolls sideways and sticks under
   const tops = new Set();
   for (let index = 0; index < count; index += 1) tops.add(Math.round((await tabs.nth(index).boundingBox()).y));
   expect(tops.size, 'all switches in one row').toBe(1);
+  const overflow = await row.evaluate((el) => el.scrollWidth - el.clientWidth);
+  if (overflow > 8) await expect(row).toHaveClass(/can-scroll-(start|end)/);
   await tabs.last().scrollIntoViewIfNeeded();
   await tabs.last().click();
   await expect(tabs.last()).toHaveAttribute('aria-selected', 'true');

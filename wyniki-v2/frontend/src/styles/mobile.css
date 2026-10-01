@@ -106,6 +106,19 @@
   }
   .live-subnav__card--active { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-on); }
   .live-subnav__icon { display: none; }
+  /* hidden scrollbar: fade the edge that still has tabs, so Terminarz is discoverable */
+  .live-subnav.can-scroll-end {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  .live-subnav.can-scroll-start:not(.can-scroll-end) {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);
+    mask-image: linear-gradient(to right, transparent, #000 28px);
+  }
+  .live-subnav.can-scroll-start.can-scroll-end {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  }
 
   .cat-tabs { padding: 4px 0 10px; margin: 0 0 8px; }
   .cat-tab { min-height: 44px; padding: 8px 14px; white-space: nowrap; }

@@ -17,6 +17,7 @@ import { createLiveRuntimeView } from './modules/liveRuntimeView.js';
 import { createPlayersView } from './modules/playersView.js';
 import { registerPwaPush, registerPwaShell } from './modules/pwaShellView.js';
 import { createScheduleView } from './modules/scheduleView.js';
+import { bindSubnavOverflow } from './modules/subnavOverflow.js';
 import { createTournamentView } from './modules/tournamentsView.js';
 import { applyHashRoute, updateHashFromState } from './modules/routing.js';
 import { formatTemplate as fmt } from './shared/text.js';
@@ -146,6 +147,10 @@ Alpine.data('tennisApp', () => ({
       await this.fetchAllPlayers();
     }
     this._updateHash();
+  },
+
+  bindLiveSubnavOverflow(el) {
+    bindSubnavOverflow(el);
   },
 
   async openLiveSubTab(subTab) {
