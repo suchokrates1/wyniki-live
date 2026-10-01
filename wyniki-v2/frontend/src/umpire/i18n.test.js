@@ -52,7 +52,7 @@ test('all umpire locales keep Android language titles', () => {
 test('PWA install gate strings exist in every locale', () => {
   for (const { code } of AVAILABLE_LANGUAGES) {
     for (const key of [
-      'installGateTitle', 'installGateMessage', 'openGateTitle', 'openGateMessage', 'openApp', 'notNow',
+      'installGateTitle', 'installGateMessage', 'installGateIosMessage', 'openGateTitle', 'openGateMessage', 'openApp', 'notNow',
       'announceSet', 'announceSetMsgChange', 'announceSetMsgStay',
     ]) {
       assert.ok(umpireText(code, key), `${code}.${key}`);

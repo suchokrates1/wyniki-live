@@ -7,7 +7,7 @@ import { readAnalyticsConsent } from '../consent/analytics.js';
 import { DEFAULT_LANGUAGE, isSupportedLanguage } from '../i18n/locale.js';
 import { lookupTranslation } from '../i18n/runtime.js';
 import { TRANSLATIONS } from '../i18n/translations.js';
-import { rememberDismissed, shouldShowIosInstallHint } from './iosInstallHint.js';
+import { installOffer, rememberDismissed } from './iosInstallHint.js';
 import { fetchPushKey, isPushSupported, subscribe, unsubscribe } from './pushClient.js';
 import { applyUpdate, createUpdateSession, reloadOnControllerChange, watchForUpdate } from './swUpdate.js';
 
@@ -219,6 +219,8 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
   Alpine.data('pwaShell', () => ({
     updateReady: false,
     installHint: false,
+    installMode: '',
+    installEvent: null,
     lang: DEFAULT_LANGUAGE,
     // Same reason as the bell: a field born inside init() would land on the
     // page around this component, and the update toast would lose its worker.
@@ -236,13 +238,18 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
       // One ask at a time. While the consent banner is still unanswered it owns
       // the bottom of the screen, and stacking a second bar there both overlaps
       // it and pesters the reader twice on a first visit.
-      this.installHint = !!readAnalyticsConsent() && shouldShowIosInstallHint({
-        userAgent: navigator.userAgent,
-        maxTouchPoints: navigator.maxTouchPoints,
-        platform: navigator.platform,
-        navigatorLike: navigator,
-        matchMedia: window.matchMedia?.bind(window),
-        storage: window.localStorage,
+      this.refreshInstallOffer();
+      window.addEventListener('wyniki:consent', () => this.refreshInstallOffer());
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        this.installEvent = event;
+        this.refreshInstallOffer();
+      });
+      window.addEventListener('appinstalled', () => {
+        this.installEvent = null;
+        this.installHint = false;
+        this.installMode = '';
+        rememberDismissed(window.localStorage);
       });
 
       const ready = registration || window.__wynikiSwRegistration;
@@ -255,6 +262,46 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
 
     destroy() {
       this.langObserver?.disconnect();
+    },
+
+    refreshInstallOffer() {
+      if (!readAnalyticsConsent() || this.updateReady) {
+        this.installHint = false;
+        return;
+      }
+      const mode = installOffer({
+        userAgent: navigator.userAgent,
+        maxTouchPoints: navigator.maxTouchPoints,
+        platform: navigator.platform,
+        navigatorLike: navigator,
+        matchMedia: window.matchMedia?.bind(window),
+        storage: window.localStorage,
+        hasNativePrompt: !!this.installEvent,
+      });
+      this.installMode = mode || '';
+      this.installHint = !!mode;
+    },
+
+    installBody() {
+      const copy = this.pwaText();
+      if (this.installMode === 'ios') return copy.installBody;
+      if (this.installMode === 'mac') return copy.installBodyMac || copy.installBody;
+      return copy.installBodyChromium || copy.installBody;
+    },
+
+    async installApp() {
+      const event = this.installEvent;
+      if (!event) return;
+      await event.prompt();
+      const choice = await event.userChoice;
+      this.installEvent = null;
+      if (choice?.outcome === 'accepted') {
+        this.installHint = false;
+        this.installMode = '';
+        rememberDismissed(window.localStorage);
+      } else {
+        this.refreshInstallOffer();
+      }
     },
 
     watch(reg) {

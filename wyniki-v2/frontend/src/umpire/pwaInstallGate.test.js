@@ -36,6 +36,12 @@ test('install is offered when Chrome can prompt and it is not installed yet', ()
   }), null);
 });
 
+test('iOS Safari is told how to add the umpire app', () => {
+  assert.equal(pwaGateMode({
+    standalone: false, canInstall: false, osInstalled: false, dismissed: false, iosSafari: true,
+  }), 'ios');
+});
+
 test('fullscreen button is hidden in an installed PWA', () => {
   assert.equal(shouldShowFullscreenButton({
     matchMedia: () => ({ matches: true }),

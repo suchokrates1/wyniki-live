@@ -100,12 +100,14 @@ export function registerAnalyticsConsent(Alpine) {
       applyAnalyticsConsent('accepted');
       this.visible = false;
       this.syncBannerClass();
+      window.dispatchEvent(new Event('wyniki:consent'));
     },
 
     reject() {
       applyAnalyticsConsent('rejected');
       this.visible = false;
       this.syncBannerClass();
+      window.dispatchEvent(new Event('wyniki:consent'));
     },
   }));
 }

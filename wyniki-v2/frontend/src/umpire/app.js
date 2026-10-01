@@ -68,6 +68,7 @@ import {
   shouldShowFullscreenButton,
   wasPwaGateDismissed,
 } from './pwaInstallGate.js';
+import { isIosSafari } from '../modules/iosInstallHint.js';
 import { TUTORIAL_COURT_1, TUTORIAL_MATCH_UUID, TUTORIAL_PIN, tutorialCatalog } from './tutorial/catalog.js';
 import { loadTutorialSnapshot } from './tutorial/presets.js';
 import {
@@ -253,6 +254,7 @@ function createUmpireApp() {
         canInstall: this.canInstall,
         osInstalled: this.osInstalled,
         dismissed: this.pwaGateDismissed,
+        iosSafari: isIosSafari(navigator.userAgent, navigator.maxTouchPoints, navigator.platform),
       });
     },
 
@@ -1008,7 +1010,7 @@ function createUmpireApp() {
       this.panicStatus = '';
       const court = session.getCourtSession();
       const result = await api.sendPanic({
-        courtId: court?.courtId || '',
+        courtId: court?.courtId || this.pinCourt?.kort_id || this.pinCourt?.id || this.match?.state?.courtId || '',
         note: this.panicNote,
       });
       if (result.status === 429) {

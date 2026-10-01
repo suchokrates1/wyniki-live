@@ -12,10 +12,11 @@ export function shouldShowFullscreenButton(win = window) {
   return !isStandaloneDisplay(win);
 }
 
-export function pwaGateMode({ standalone, canInstall, osInstalled, dismissed }) {
+export function pwaGateMode({ standalone, canInstall, osInstalled, dismissed, iosSafari = false }) {
   if (standalone || dismissed) return null;
   if (osInstalled) return 'open';
   if (canInstall) return 'install';
+  if (iosSafari) return 'ios';
   return null;
 }
 

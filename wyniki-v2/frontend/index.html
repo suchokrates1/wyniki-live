@@ -1667,14 +1667,23 @@
         >
             <div class="pwa-install-hint__text">
                 <strong id="pwa-install-title" x-text="pwaText().installTitle">Dodaj do ekranu głównego</strong>
-                <span x-text="pwaText().installBody"></span>
+                <span x-text="installBody()"></span>
             </div>
-            <button
-                type="button"
-                class="pwa-install-hint__btn"
-                @click="dismissInstallHint()"
-                x-text="pwaText().installDismiss"
-            >Nie teraz</button>
+            <div class="pwa-install-hint__actions">
+                <button
+                    type="button"
+                    class="pwa-install-hint__btn pwa-install-hint__btn--primary"
+                    x-show="installMode === 'native'"
+                    @click="installApp()"
+                    x-text="pwaText().installAction"
+                >Zainstaluj</button>
+                <button
+                    type="button"
+                    class="pwa-install-hint__btn"
+                    @click="dismissInstallHint()"
+                    x-text="pwaText().installDismiss"
+                >Nie teraz</button>
+            </div>
         </div>
     </div>
 

@@ -1350,7 +1350,7 @@ body.has-consent-banner .pwa-toast { bottom: calc(var(--consent-banner-space, 0p
   cursor: pointer;
 }
 
-/* iOS has no install prompt, so the Share-sheet route has to be spelled out. */
+/* Shown wherever this browser can install the site. */
 .pwa-install-hint {
   position: fixed;
   left: 12px;
@@ -1368,8 +1368,8 @@ body.has-consent-banner .pwa-toast { bottom: calc(var(--consent-banner-space, 0p
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.16);
 }
 .pwa-install-hint__text { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.pwa-install-hint__actions { margin-left: auto; display: flex; gap: 8px; flex: none; }
 .pwa-install-hint__btn {
-  margin-left: auto;
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--line);
@@ -1378,6 +1378,12 @@ body.has-consent-banner .pwa-toast { bottom: calc(var(--consent-banner-space, 0p
   color: var(--text);
   font: 400 14px/1 inherit;
   cursor: pointer;
+}
+.pwa-install-hint__btn--primary {
+  border-color: transparent;
+  background: var(--accent, #2f81f7);
+  color: #fff;
+  font-weight: 700;
 }
 
 .tournament-info-banner {

@@ -18,6 +18,17 @@ def test_compose_message_includes_court_players_and_note():
     assert text.endswith("brak piłek")
 
 
+def test_a_missing_court_is_not_a_question_mark():
+    text = panic.compose_message(tournament="", court_id="", players="", note="")
+    assert text == "Sędzia potrzebuje pomocy."
+    assert "?" not in text
+
+
+def test_the_message_uses_the_court_number_the_umpire_sees(monkeypatch):
+    monkeypatch.setattr(panic, "get_court_state", lambda _court_id: {"court_name": "Kort 3", "A": {}, "B": {}})
+    assert panic.court_context("t32-3")["court_id"] == "3"
+
+
 def test_cooldown_blocks_the_second_call(monkeypatch):
     panic.reset_cooldowns()
     monkeypatch.setattr(panic.settings, "panic_cooldown_seconds", 60)

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { isIosSafari, shouldShowIosInstallHint } from './iosInstallHint.js';
+import { installOffer, isIosSafari, shouldShowIosInstallHint } from './iosInstallHint.js';
 import { applyUpdate, createUpdateSession, reloadOnControllerChange, SKIP_WAITING, watchForUpdate } from './swUpdate.js';
 
 const IPHONE_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
@@ -39,6 +39,23 @@ test('the hint stays away once installed or waved away', () => {
     false,
   );
   assert.equal(shouldShowIosInstallHint({ ...base, userAgent: ANDROID_CHROME }), false);
+});
+
+const MAC_SAFARI = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15';
+const FIREFOX = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0';
+
+test('the install hint is offered wherever a PWA can actually be installed', () => {
+  const storage = memoryStorage();
+  assert.equal(installOffer({ userAgent: IPHONE_SAFARI, storage }), 'ios');
+  assert.equal(installOffer({ userAgent: ANDROID_CHROME, storage }), 'chromium');
+  assert.equal(installOffer({ userAgent: ANDROID_CHROME, storage, hasNativePrompt: true }), 'native');
+  assert.equal(installOffer({ userAgent: MAC_SAFARI, storage, maxTouchPoints: 0 }), 'mac');
+  assert.equal(installOffer({ userAgent: IPHONE_CHROME, storage }), null);
+  assert.equal(installOffer({ userAgent: FIREFOX, storage }), null);
+  assert.equal(installOffer({
+    userAgent: ANDROID_CHROME,
+    storage: memoryStorage({ 'wyniki.iosInstallHintDismissed': '1' }),
+  }), null);
 });
 
 function fakeRegistration() {

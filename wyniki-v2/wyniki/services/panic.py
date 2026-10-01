@@ -1,6 +1,7 @@
 """Umpire panic: one WhatsApp fan-out, with a short cooldown."""
 from __future__ import annotations
 
+import re
 import time
 from datetime import datetime
 from typing import Any
@@ -59,10 +60,39 @@ def delete_recipient(recipient_id: int) -> bool:
     return delete_panic_recipient(recipient_id)
 
 
+_COURT_PREFIX = re.compile(r"^(court|kort|platz|campo|cancha|kortas)\s+", re.IGNORECASE)
+_COURT_ID = re.compile(r"^t\d+-(\d+)$", re.IGNORECASE)
+
+
+def _court_ordinal(value: str) -> str:
+    text = str(value or "").strip()
+    if not text or text == "?":
+        return ""
+    plain = _COURT_PREFIX.sub("", text).strip()
+    if plain.isdigit():
+        return plain
+    match = _COURT_ID.fullmatch(plain)
+    return match.group(1) if match else ""
+
+
+def display_court(court_id: str) -> str:
+    """The number the umpire sees, never a question mark for a missing court."""
+    state = get_court_state(court_id) or {}
+    name = str(state.get("court_name") or "").strip()
+    for candidate in (name, court_id):
+        ordinal = _court_ordinal(candidate)
+        if ordinal:
+            return ordinal
+    return name or str(court_id or "").strip()
+
+
 def compose_message(*, tournament: str, court_id: str, players: str, note: str, when: datetime | None = None) -> str:
     del when
-    court = court_id or "?"
-    text = f"Sędzia na korcie {court} potrzebuje pomocy."
+    court = str(court_id or "").strip()
+    if court and court != "?":
+        text = f"Sędzia na korcie {court} potrzebuje pomocy."
+    else:
+        text = "Sędzia potrzebuje pomocy."
     if players:
         text += f" {players}."
     if tournament:
@@ -81,10 +111,9 @@ def court_context(court_id: str) -> dict[str, str]:
         label = (player.get("full_name") or player.get("surname") or "").strip()
         if label and label != "-":
             names.append(label)
-    label = str(state.get("court_name") or "").strip() or court_id
     return {
         "tournament": str(state.get("tournament_name") or "").strip(),
-        "court_id": label,
+        "court_id": display_court(court_id),
         "players": " – ".join(names),
     }
 

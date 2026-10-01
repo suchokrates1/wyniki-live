@@ -514,11 +514,12 @@
     <div class="ump-pin" x-show="pwaGate()" x-cloak>
       <div class="ump-card ump-pin__card">
         <h2 x-text="gt(pwaGate() === 'open' ? 'openGateTitle' : 'installGateTitle')"></h2>
-        <p x-text="gt(pwaGate() === 'open' ? 'openGateMessage' : 'installGateMessage')"></p>
+        <p x-text="gt(pwaGate() === 'open' ? 'openGateMessage' : pwaGate() === 'ios' ? 'installGateIosMessage' : 'installGateMessage')"></p>
         <div class="ump-toggle" style="margin-top:16px">
           <button
             class="ump-btn ump-btn--accent"
             type="button"
+            x-show="pwaGate() !== 'ios'"
             @click="acceptPwaGate()"
             x-text="gt(pwaGate() === 'open' ? 'openApp' : 'installApp')"
           ></button>

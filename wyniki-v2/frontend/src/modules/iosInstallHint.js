@@ -1,8 +1,9 @@
-/* The "Add to Home Screen" nudge for iOS.
+/* Where this site can be installed, and how to say so.
  *
- * Safari fires no `beforeinstallprompt`, so on iPhone and iPad there is no
- * install button to offer — only the Share sheet, which people have to be told
- * about. Everywhere else the browser handles this itself and we stay quiet.
+ * iOS Safari has no install event, only the Share sheet. Chromium (Chrome,
+ * Edge, Samsung Internet) fires `beforeinstallprompt` and can install from our
+ * own button. macOS Safari installs through the File menu. iOS Chrome and
+ * Firefox cannot install a PWA at all, so a hint there would be a lie.
  */
 
 const STORAGE_KEY = 'wyniki.iosInstallHintDismissed';
@@ -44,7 +45,31 @@ export function rememberDismissed(storage) {
 
 /** Show the hint only on iOS Safari, not already installed, not waved away. */
 export function shouldShowIosInstallHint({ userAgent, maxTouchPoints, platform, navigatorLike, matchMedia, storage }) {
-  if (!isIosSafari(userAgent, maxTouchPoints, platform)) return false;
-  if (isStandalone(navigatorLike, matchMedia)) return false;
-  return !wasDismissed(storage);
+  return installOffer({ userAgent, maxTouchPoints, platform, navigatorLike, matchMedia, storage }) === 'ios';
+}
+
+/**
+ * How to offer installation, or null when this browser cannot install.
+ * `native` means Chromium has already handed us `beforeinstallprompt`.
+ * `chromium` means it can install, but the event has not arrived yet.
+ */
+export function installOffer({
+  userAgent,
+  maxTouchPoints,
+  platform,
+  navigatorLike,
+  matchMedia,
+  storage,
+  hasNativePrompt = false,
+}) {
+  if (isStandalone(navigatorLike, matchMedia) || wasDismissed(storage)) return null;
+  if (isIosSafari(userAgent, maxTouchPoints, platform)) return 'ios';
+  const ua = String(userAgent || '');
+  if (/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua)) return null;
+  if (/Firefox\//.test(ua)) return null;
+  if (/Chrome|Chromium|Edg\/|SamsungBrowser|OPR\//.test(ua)) {
+    return hasNativePrompt ? 'native' : 'chromium';
+  }
+  if (/Macintosh/.test(ua) && /Safari/.test(ua)) return 'mac';
+  return null;
 }
