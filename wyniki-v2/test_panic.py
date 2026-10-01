@@ -30,7 +30,7 @@ def test_a_missing_court_names_the_tablet():
             "platform": "android",
         }),
     )
-    assert text == "Sędzia na Tablet 6 potrzebuje pomocy."
+    assert text == "Sędzia na OnePlus OPD2480 potrzebuje pomocy."
     assert "?" not in text
 
 
@@ -47,7 +47,7 @@ def test_a_teclast_without_a_court_is_still_named():
         note="",
         tablet=panic.tablet_label({"device": "Teclast P50Ai_ROW", "platform": "android"}),
     )
-    assert text == "Sędzia na Tablet (Teclast) potrzebuje pomocy."
+    assert text == "Sędzia na Teclast P50Ai_ROW potrzebuje pomocy."
 
 
 def test_the_message_uses_the_court_number_the_umpire_sees(monkeypatch):

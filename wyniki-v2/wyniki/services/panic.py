@@ -15,7 +15,6 @@ from ..database.panic import (
     update_panic_recipient,
 )
 from .court_manager import get_court_state
-from .tablet_aliases import fleet_label
 from .waha_client import send_text, waha_configured
 
 _PANIC_ENABLED_KEY = "panic_enabled"
@@ -88,13 +87,12 @@ def display_court(court_id: str) -> str:
 
 
 def tablet_label(client: dict[str, Any] | None) -> str:
+    """Model string from the umpire app. Sticker numbers are not in the database."""
     meta = client or {}
-    return fleet_label(
-        device=meta.get("device"),
-        device_model=meta.get("device_model"),
-        device_manufacturer=meta.get("device_manufacturer"),
-        platform=meta.get("platform"),
-    )
+    device = str(meta.get("device") or "").strip()
+    if device:
+        return device
+    return str(meta.get("device_model") or "").strip()
 
 
 def compose_message(*, tournament: str, court_id: str, players: str, note: str, tablet: str = "", when: datetime | None = None) -> str:
