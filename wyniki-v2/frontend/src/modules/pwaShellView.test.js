@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { courtsFromSnapshot } from './pwaShellView.js';
+import { courtsFromSnapshot, createPwaPushData } from './pwaShellView.js';
+
+// Alpine's merged scope writes a property onto the first object that already
+// owns it, and onto the outermost component otherwise. A field invented inside
+// init() therefore leaves the bell, and Zapisz subscribes with an empty key.
+function writeLikeAlpine(component, parent, name, value) {
+  const objects = [{}, component, parent];
+  const target = objects.find((obj) => Object.prototype.hasOwnProperty.call(obj, name)) || objects.at(-1);
+  target[name] = value;
+}
 
 test('courts from the snapshot keep the number the public site shows', () => {
   const courts = courtsFromSnapshot({
@@ -17,4 +26,17 @@ test('courts from the snapshot keep the number the public site shows', () => {
 test('a snapshot without courts is an empty picker', () => {
   assert.deepEqual(courtsFromSnapshot(null), []);
   assert.deepEqual(courtsFromSnapshot({ courts: [] }), []);
+});
+
+test('the bell keeps the push key it learns at startup', () => {
+  const component = createPwaPushData();
+  const parent = {};
+  writeLikeAlpine(component, parent, 'pushKey', 'vapid-public');
+  writeLikeAlpine(component, parent, 'pushRegistration', { pushManager: {} });
+  writeLikeAlpine(component, parent, 'langObserver', { disconnect() {} });
+  assert.equal(component.pushKey, 'vapid-public');
+  assert.ok(component.pushRegistration.pushManager);
+  assert.equal(typeof component.langObserver.disconnect, 'function');
+  assert.equal(parent.pushKey, undefined);
+  assert.equal(parent.pushRegistration, undefined);
 });

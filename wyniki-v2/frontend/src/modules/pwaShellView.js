@@ -46,9 +46,15 @@ function text(lang) {
 }
 
 /** The bell in the header. Hidden entirely unless the browser can do push and
- * the server has VAPID keys, so nothing is offered that cannot work. */
-export function registerPwaPush(Alpine) {
-  Alpine.data('pwaPush', () => ({
+ * the server has VAPID keys, so nothing is offered that cannot work.
+ *
+ * `pushKey`, `pushRegistration` and `langObserver` are declared here on purpose.
+ * Alpine runs init() against a merged scope and writes a brand-new property
+ * onto the outermost component, not onto this one. Zapisz then looks for the
+ * key on the bell and finds nothing, so the subscription never leaves the phone.
+ */
+export function createPwaPushData() {
+  return {
     available: false,
     enabled: false,
     busy: false,
@@ -60,6 +66,9 @@ export function registerPwaPush(Alpine) {
     courts: [],           // live courts; empty courtId means all of them
     courtId: '',
     search: '',
+    pushKey: '',
+    pushRegistration: null,
+    langObserver: null,
     prefs: {
       notify_match_start: true, notify_plan: true, notify_change: true,
       notify_reminder: false, notify_delay: false, reminder_minutes: 30,
@@ -67,26 +76,26 @@ export function registerPwaPush(Alpine) {
 
     async init() {
       this.lang = resolveLang();
-      this._observer = new MutationObserver(() => { this.lang = resolveLang(); });
-      this._observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+      this.langObserver = new MutationObserver(() => { this.lang = resolveLang(); });
+      this.langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
       if (!isPushSupported(window)) return;
       const key = await fetchPushKey();
       if (!key.enabled || !key.public_key) return;
 
-      this._publicKey = key.public_key;
+      this.pushKey = key.public_key;
       try {
-        this._registration = await navigator.serviceWorker.ready;
+        this.pushRegistration = await navigator.serviceWorker.ready;
       } catch {
         return;
       }
       this.denied = window.Notification?.permission === 'denied';
-      this.enabled = !!(await this._registration.pushManager.getSubscription());
+      this.enabled = !!(await this.pushRegistration.pushManager.getSubscription());
       this.available = true;
     },
 
     destroy() {
-      this._observer?.disconnect();
+      this.langObserver?.disconnect();
     },
 
     pwaText() {
@@ -171,7 +180,7 @@ export function registerPwaPush(Alpine) {
       this.busy = true;
       try {
         if (!this.wantsAnything()) {
-          await unsubscribe({ registration: this._registration });
+          await unsubscribe({ registration: this.pushRegistration });
           this.enabled = false;
           this.open = false;
           return;
@@ -183,8 +192,8 @@ export function registerPwaPush(Alpine) {
           /* remembering the court is optional */
         }
         const result = await subscribe({
-          registration: this._registration,
-          publicKey: this._publicKey,
+          registration: this.pushRegistration,
+          publicKey: this.pushKey,
           courtId,
           lang: this.lang,
           players: this.players,
@@ -199,7 +208,11 @@ export function registerPwaPush(Alpine) {
         this.busy = false;
       }
     },
-  }));
+  };
+}
+
+export function registerPwaPush(Alpine) {
+  Alpine.data('pwaPush', createPwaPushData);
 }
 
 export function registerPwaShell(Alpine, { registration = null } = {}) {
@@ -207,12 +220,18 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
     updateReady: false,
     installHint: false,
     lang: DEFAULT_LANGUAGE,
+    // Same reason as the bell: a field born inside init() would land on the
+    // page around this component, and the update toast would lose its worker.
+    langObserver: null,
+    onLang: null,
+    updateSession: null,
+    swRegistration: null,
 
     init() {
       this.lang = resolveLang();
-      this._onLang = () => { this.lang = resolveLang(); };
-      this._observer = new MutationObserver(this._onLang);
-      this._observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+      this.onLang = () => { this.lang = resolveLang(); };
+      this.langObserver = new MutationObserver(this.onLang);
+      this.langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 
       // One ask at a time. While the consent banner is still unanswered it owns
       // the bottom of the screen, and stacking a second bar there both overlaps
@@ -230,16 +249,16 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
       if (ready) this.watch(ready);
       else window.addEventListener('wyniki:sw-registered', (event) => this.watch(event.detail), { once: true });
 
-      this._session = createUpdateSession();
-      reloadOnControllerChange(navigator.serviceWorker, () => window.location.reload(), this._session);
+      this.updateSession = createUpdateSession();
+      reloadOnControllerChange(navigator.serviceWorker, () => window.location.reload(), this.updateSession);
     },
 
     destroy() {
-      this._observer?.disconnect();
+      this.langObserver?.disconnect();
     },
 
     watch(reg) {
-      this._registration = reg;
+      this.swRegistration = reg;
       watchForUpdate(reg, () => {
         this.updateReady = true;
         // The toast is actionable and transient; the install hint can wait.
@@ -253,7 +272,7 @@ export function registerPwaShell(Alpine, { registration = null } = {}) {
 
     refresh() {
       this.updateReady = false;
-      applyUpdate(this._registration, this._session);
+      applyUpdate(this.swRegistration, this.updateSession);
       // If the worker never answers (it was already gone), reload anyway.
       setTimeout(() => window.location.reload(), 1500);
     },

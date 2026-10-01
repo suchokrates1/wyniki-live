@@ -402,3 +402,37 @@ def test_a_failing_notifier_never_breaks_the_office_publishing(full_app_with_tem
     response = client.post("/api/office/1/schedule/publish", headers=headers, json={})
     assert response.status_code == 200
     assert response.get_json()["published"] >= 1
+
+
+def test_a_push_waits_for_a_phone_that_reconnects(monkeypatch):
+    import sys
+    import types
+
+    captured = {}
+
+    def fake_webpush(**kwargs):
+        captured.update(kwargs)
+
+        class Response:
+            status_code = 201
+
+        return Response()
+
+    class WebPushException(Exception):
+        def __init__(self, message, response=None):
+            super().__init__(message)
+            self.response = response
+
+    fake = types.ModuleType("pywebpush")
+    fake.webpush = fake_webpush
+    fake.WebPushException = WebPushException
+    monkeypatch.setitem(sys.modules, "pywebpush", fake)
+    from wyniki.services.web_push import PUSH_TTL_SECONDS, _send_one
+
+    status = _send_one(
+        {"endpoint": "https://push.example/a", "p256dh": "k", "auth": "a"},
+        "{}",
+    )
+    assert status == 201
+    assert captured["ttl"] == PUSH_TTL_SECONDS
+    assert PUSH_TTL_SECONDS >= 60

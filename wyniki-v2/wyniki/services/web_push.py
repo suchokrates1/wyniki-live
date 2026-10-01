@@ -23,6 +23,13 @@ logger = structlog.get_logger()
 # be temporary, so the row stays and we try again next time.
 GONE_STATUS_CODES = (404, 410)
 
+# How long the push service keeps a message for a phone that is not connected
+# right now. Zero, which is what the library does if we say nothing, means
+# "deliver this second or throw it away", so a reconnect a moment later never
+# sees the reminder. Ten minutes covers a network change without delivering
+# "your match is in 7 minutes" half an hour late.
+PUSH_TTL_SECONDS = 600
+
 
 def is_enabled() -> bool:
     return bool(settings.vapid_public_key and settings.vapid_private_key)
@@ -50,6 +57,7 @@ def _send_one(subscription: dict[str, Any], payload: str) -> int | None:
             data=payload,
             vapid_private_key=settings.vapid_private_key,
             vapid_claims=_vapid_claims(),
+            ttl=PUSH_TTL_SECONDS,
             timeout=10,
         )
         return getattr(response, "status_code", 201)
