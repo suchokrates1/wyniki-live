@@ -27,6 +27,7 @@ def _client() -> dict[str, str]:
         "device": "X-TennisReferee-Device",
         "device_model": "X-TennisReferee-Model",
         "device_manufacturer": "X-TennisReferee-Manufacturer",
+        "android_id": "X-TennisReferee-Android-Id",
     }
     meta: dict[str, str] = {}
     for key, header in headers.items():

@@ -54,6 +54,40 @@ def test_a_model_that_already_starts_with_the_brand_is_not_repeated():
     assert text == "Sędzia na OnePlus8Pro potrzebuje pomocy. Notatka: dzmyta"
 
 
+def test_a_help_request_includes_the_android_id(tmp_path, monkeypatch):
+    db_path = tmp_path / "panic-id.sqlite3"
+    monkeypatch.setenv("DATABASE_PATH", str(db_path))
+    from wyniki.config import settings
+    settings.database_path = str(db_path)
+    settings.waha_url = "http://waha.local"
+    settings.waha_api_key = "test-key"
+    from wyniki.database import init_db
+    init_db()
+    panic.reset_cooldowns()
+    panic.add_recipient("Dawid", "48000000000@c.us")
+    sent = []
+    monkeypatch.setattr(panic, "send_text", lambda chat_id, text: sent.append(text) or True)
+    body, status = panic.dispatch_panic(
+        court_id="",
+        note="",
+        remote_addr="10.0.0.8",
+        client={
+            "device": "Teclast P50Ai_ROW",
+            "device_manufacturer": "Teclast",
+            "device_model": "P50Ai_ROW",
+            "android_id": "9774d56d682e549c",
+            "platform": "android",
+        },
+    )
+    assert status == 200
+    assert body["sent"] == 1
+    assert sent[0].startswith("Sędzia na Teclast P50Ai_ROW potrzebuje pomocy. Id: 9774d56d682e549c.")
+    from wyniki.database.connection import db_conn
+    with db_conn() as conn:
+        row = conn.execute("SELECT model FROM umpire_devices WHERE android_id = ?", ("9774d56d682e549c",)).fetchone()
+    assert row["model"] == "P50Ai_ROW"
+
+
 def test_a_teclast_without_a_court_is_still_named():
     text = panic.compose_message(
         tournament="",

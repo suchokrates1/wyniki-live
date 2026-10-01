@@ -47,6 +47,7 @@ _CLIENT_HEADER_MAP = {
     "locale": ("X-TennisReferee-Locale", 40),
     "country": ("X-TennisReferee-Country", 10),
     "timezone": ("X-TennisReferee-Timezone", 80),
+    "android_id": ("X-TennisReferee-Android-Id", 32),
 }
 
 

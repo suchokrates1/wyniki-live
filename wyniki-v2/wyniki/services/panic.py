@@ -14,6 +14,7 @@ from ..database.panic import (
     list_panic_recipients,
     update_panic_recipient,
 )
+from ..database.umpire_devices import remember_umpire_device
 from .court_manager import get_court_state
 from .waha_client import send_text, waha_configured
 
@@ -108,16 +109,19 @@ def tablet_label(client: dict[str, Any] | None) -> str:
     return model
 
 
-def compose_message(*, tournament: str, court_id: str, players: str, note: str, tablet: str = "", when: datetime | None = None) -> str:
+def compose_message(*, tournament: str, court_id: str, players: str, note: str, tablet: str = "", android_id: str = "", when: datetime | None = None) -> str:
     del when
     court = str(court_id or "").strip()
     who = str(tablet or "").strip()
+    ident = str(android_id or "").strip()
     if court and court != "?":
         text = f"Sędzia na korcie {court} potrzebuje pomocy."
     elif who and who not in {"Tablet", "PWA"}:
         text = f"Sędzia na {who} potrzebuje pomocy."
     else:
         text = "Sędzia potrzebuje pomocy."
+    if ident:
+        text += f" Id: {ident}."
     if players:
         text += f" {players}."
     if tournament:
@@ -180,12 +184,23 @@ def dispatch_panic(*, court_id: str, note: str, remote_addr: str, client: dict[s
         return {"error": "Cooldown", "retry_after": remaining}, 429
 
     ctx = court_context(court_id) if court_id else {"tournament": "", "court_id": "", "players": ""}
+    meta = client or {}
+    android_id = str(meta.get("android_id") or "").strip()
+    remember_umpire_device(
+        android_id=android_id,
+        manufacturer=str(meta.get("device_manufacturer") or ""),
+        model=str(meta.get("device_model") or ""),
+        device=str(meta.get("device") or ""),
+        platform=str(meta.get("platform") or ""),
+        court_id=court_id,
+    )
     text = compose_message(
         tournament=ctx["tournament"],
         court_id=ctx["court_id"],
         players=ctx["players"],
         note=note,
         tablet="" if ctx["court_id"] else tablet_label(client),
+        android_id=android_id,
     )
     sent = 0
     failed = 0

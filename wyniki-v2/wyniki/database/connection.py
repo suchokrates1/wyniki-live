@@ -683,6 +683,18 @@ def init_db() -> None:
         # WhatsApp recipients for the umpire panic button. Numbers live here,
         # not in the app.
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS umpire_devices (
+                android_id TEXT PRIMARY KEY,
+                manufacturer TEXT DEFAULT '',
+                model TEXT DEFAULT '',
+                device TEXT DEFAULT '',
+                platform TEXT DEFAULT '',
+                last_court_id TEXT DEFAULT '',
+                last_seen TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS panic_recipients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,

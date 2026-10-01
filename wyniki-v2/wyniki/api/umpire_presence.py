@@ -5,6 +5,7 @@ from ..config import logger
 from ..db_models import utc_now_iso
 from ..services.api_auth import court_id_from_bearer, require_court_access
 from ..services.court_manager import STATE_LOCK, ensure_court_state, normalize_kort_id
+from ..database.umpire_devices import remember_umpire_device
 from ..services.director_commands import director_command_broker, tablet_presence
 
 
@@ -48,6 +49,14 @@ def register(blueprint) -> None:
                 court_state["umpire_screen"] = screen
 
             heartbeat_meta = _request_client_meta(data)
+            remember_umpire_device(
+                android_id=heartbeat_meta.get("android_id") or "",
+                manufacturer=heartbeat_meta.get("device_manufacturer") or "",
+                model=heartbeat_meta.get("device_model") or "",
+                device=heartbeat_meta.get("device") or "",
+                platform=heartbeat_meta.get("platform") or "",
+                court_id=kort_id,
+            )
             snapshot = data.get("snapshot")
             tablet_presence.record(
                 session_court_id=kort_id,
