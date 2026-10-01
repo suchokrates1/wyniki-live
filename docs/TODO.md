@@ -151,7 +151,7 @@ Periodic Background Sync, PWA biura, install gate jak umpire.
 
 ## [P2] Panic button sędziego → WhatsApp (WAHA)
 
-**Status:** wdrożone 2026-10-01 — `POST /api/umpire/panic`, admin CRUD odbiorców, przycisk SOS w PWA sędziego, menu „Wezwij reżyserię” w Androidzie. Wysyłka idzie tylko gdy w `.env` są `WAHA_URL` i `WAHA_API_KEY` oraz jest choć jeden włączony odbiorca. Numery wpisuje się w adminie (Panic), nie w repo.  
+**Status:** wdrożone 2026-10-01 — `POST /api/umpire/panic`, admin CRUD odbiorców, przycisk SOS w PWA sędziego, menu w Androidzie. Po udanym wezwaniu sędzia widzi „Obsługa techniczna jest w drodze.” Wysyłka idzie tylko gdy w `.env` są `WAHA_URL` i `WAHA_API_KEY` oraz jest choć jeden włączony odbiorca. Numery wpisuje się w adminie (Panic), nie w repo.  
 **Źródło:** RAKIETY ATNiS VII — ops / bezpieczeństwo turnieju  
 **Repo:** `wyniki-live` (admin + API) + `android-tennis-referee` (+ PWA sędziego jeśli aktywna)  
 **Infra:** WAHA na minipc (`tenis_waha`)
