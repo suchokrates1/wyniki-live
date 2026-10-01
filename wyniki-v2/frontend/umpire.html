@@ -35,6 +35,13 @@
         <button
           class="ump-icon-btn"
           type="button"
+          x-show="screen !== 'language'"
+          :aria-label="t('panic')"
+          @click="openPanic()"
+        >SOS</button>
+        <button
+          class="ump-icon-btn"
+          type="button"
           x-show="screen === 'court'"
           :aria-label="t('settings')"
           @click="openSettings()"
@@ -51,6 +58,7 @@
     </header>
 
     <p class="ump-toast" x-show="directorToast" x-text="t('directorUpdated')"></p>
+    <p class="ump-toast" x-show="panicToast" x-text="panicToast"></p>
     <p class="ump-error" x-show="error" x-text="error"></p>
     <p x-show="loading" x-text="t('loading')"></p>
 
@@ -513,6 +521,19 @@
             x-text="gt(pwaGate() === 'open' ? 'openApp' : 'installApp')"
           ></button>
           <button class="ump-btn" type="button" @click="skipPwaGate()" x-text="gt('notNow')"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ump-pin" x-show="dialog === 'panic'" x-cloak>
+      <div class="ump-card ump-pin__card">
+        <h2 x-text="t('panicTitle')"></h2>
+        <p x-text="t('panicMessage')"></p>
+        <textarea class="ump-input" rows="3" x-model="panicNote" :placeholder="t('panicNote')"></textarea>
+        <p class="ump-error" x-show="panicStatus" x-text="panicStatus"></p>
+        <div class="ump-toggle">
+          <button class="ump-btn ump-btn--accent" type="button" @click="confirmPanic()" x-text="t('panicSend')"></button>
+          <button class="ump-btn" type="button" @click="dialog = null" x-text="t('cancel')"></button>
         </div>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { createTournamentsAdmin } from './admin/tournaments.js';
 import { createOfficeTabAdmin } from './admin/officeTab.js';
 import { createGlobalPlayersAdmin } from './admin/globalPlayers.js';
 import { createOverlayAdmin } from './admin/overlay.js';
+import { createPanicAdmin } from './admin/panic.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
@@ -38,6 +39,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
       this.loadEmailSettings();
       this.loadOverlaySettings();
       this.loadGlobalPlayers();
+      this.loadPanic();
       this._loadDemoStatus();
       // Load live court data (battery, scores) for courts tab
       fetch('/api/snapshot').then(r => r.json()).then(d => {
@@ -74,6 +76,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createOfficeTabAdmin(),
   createGlobalPlayersAdmin(),
   createOverlayAdmin(),
+  createPanicAdmin(),
 ));
 
 ignoreCancelledAlpineTransitions();

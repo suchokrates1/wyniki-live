@@ -46,6 +46,12 @@ services:
       - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
       - VAPID_SUBJECT=${VAPID_SUBJECT:-mailto:kontakt@vestmedia.pl}
 
+      # Umpire panic → WAHA. Empty = the endpoint stays off.
+      - WAHA_URL=${WAHA_URL:-}
+      - WAHA_API_KEY=${WAHA_API_KEY:-}
+      - WAHA_SESSION=${WAHA_SESSION:-default}
+      - PANIC_COOLDOWN_SECONDS=${PANIC_COOLDOWN_SECONDS:-60}
+
     restart: unless-stopped
     
     labels:

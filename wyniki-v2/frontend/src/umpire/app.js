@@ -994,6 +994,35 @@ function createUmpireApp() {
       this.leaveMatch();
     },
 
+    panicNote: '',
+    panicStatus: '',
+    panicToast: '',
+
+    openPanic() {
+      this.panicNote = '';
+      this.panicStatus = '';
+      this.dialog = 'panic';
+    },
+
+    async confirmPanic() {
+      this.panicStatus = '';
+      const court = session.getCourtSession();
+      const result = await api.sendPanic({
+        courtId: court?.courtId || '',
+        note: this.panicNote,
+      });
+      if (result.status === 429) {
+        this.panicStatus = this.t('panicCooldown');
+        return;
+      }
+      if (!result.ok) {
+        this.panicStatus = this.t('panicFailed');
+        return;
+      }
+      this.dialog = null;
+      this.panicToast = this.t('panicSent');
+    },
+
     openSettings() {
       this.settingsFrom = this.screen;
       this.diagnosticsCopyOk = false;

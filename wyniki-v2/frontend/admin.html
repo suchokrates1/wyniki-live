@@ -342,11 +342,46 @@
           <button @click="activeTab = 'global_players'" :class="{'btn-primary': activeTab === 'global_players'}" class="btn btn-sm">&#127941; Zawodnicy</button>
           <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze turnieju</button>
           <button @click="activeTab = 'settings'; $nextTick(() => { updateCanvasScale(); _fitPreviewNames(); })" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
+          <button @click="activeTab = 'panic'; loadPanic()" :class="{'btn-primary': activeTab === 'panic'}" class="btn btn-sm">Panic</button>
         </div>
       </div>
     </header>
 
     <!-- Courts Tab -->
+    <div x-show="activeTab === 'panic'" x-cloak class="card bg-base-100 shadow">
+      <div class="card-body gap-4">
+        <h2 class="card-title">Panic — WhatsApp</h2>
+        <p>Sędzia woła reżyserię z tabletu. Numery są tylko tutaj, w formacie WAHA (<span class="font-mono">48123456789@c.us</span>).</p>
+        <label class="label cursor-pointer justify-start gap-3">
+          <input type="checkbox" class="toggle" x-model="panicEnabled" @change="savePanicEnabled()">
+          <span>Włączone</span>
+        </label>
+        <p class="text-error" x-show="panicError" x-text="panicError"></p>
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead><tr><th>Nazwa</th><th>Czat</th><th></th></tr></thead>
+            <tbody>
+              <template x-for="row in panicRecipients" :key="row.id">
+                <tr>
+                  <td x-text="row.name"></td>
+                  <td class="font-mono" x-text="row.chat_id"></td>
+                  <td class="flex gap-2">
+                    <button type="button" class="btn btn-sm" @click="togglePanicRecipient(row)" x-text="row.enabled ? 'Wyłącz' : 'Włącz'"></button>
+                    <button type="button" class="btn btn-sm btn-ghost" @click="deletePanicRecipient(row)">Usuń</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <input class="input input-bordered" placeholder="Imię" x-model="panicName">
+          <input class="input input-bordered font-mono" placeholder="48123456789@c.us" x-model="panicChatId">
+          <button type="button" class="btn btn-primary" @click="addPanicRecipient()">Dodaj</button>
+        </div>
+      </div>
+    </div>
+
     <div x-show="activeTab === 'courts'" x-cloak>
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body">

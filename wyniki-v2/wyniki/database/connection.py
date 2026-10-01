@@ -680,6 +680,18 @@ def init_db() -> None:
             )
         """)
 
+        # WhatsApp recipients for the umpire panic button. Numbers live here,
+        # not in the app.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS panic_recipients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                chat_id TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # Migration: Add global_player_id column to players
         cursor.execute("PRAGMA table_info(players)")
         p_cols3 = [row[1] for row in cursor.fetchall()]

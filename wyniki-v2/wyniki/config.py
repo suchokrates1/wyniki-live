@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     vapid_subject: str = "mailto:kontakt@vestmedia.pl"
     # Off switch for the periodic reminder pass, for a host that should not send.
     reminder_loop_enabled: bool = True
+
+    # WhatsApp alerts for the umpire panic button. Empty URL or key = the
+    # feature answers 503 and sends nothing. The key stays in the host .env.
+    waha_url: str = ""
+    waha_api_key: str = ""
+    waha_session: str = "default"
+    panic_cooldown_seconds: int = 60
     
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent

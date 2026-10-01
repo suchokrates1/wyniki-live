@@ -110,6 +110,16 @@ export function createUmpireApi({
       return request(`/api/umpire/commands${query}`);
     },
 
+    sendPanic({ courtId, note } = {}) {
+      return request('/api/umpire/panic', {
+        method: 'POST',
+        body: JSON.stringify({
+          court_id: courtId || undefined,
+          note: note || '',
+        }),
+      });
+    },
+
     ackDirectorCommand(commandId, courtId) {
       return request(`/api/umpire/commands/${encodeURIComponent(commandId)}/ack`, {
         method: 'POST',

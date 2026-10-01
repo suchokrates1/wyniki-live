@@ -23,6 +23,7 @@ from wyniki.services import reminder_loop
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp, tournaments_public_bp
 from wyniki.api.admin_global_players import blueprint as global_players_blueprint
 from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
+from wyniki.api.panic import admin_blueprint as panic_admin_blueprint, umpire_blueprint as panic_umpire_blueprint
 from wyniki.api.overlay_api import blueprint as overlay_api_blueprint
 from wyniki.api.brackets import bracket_public_bp, bracket_admin_bp
 from wyniki.services.api_auth import require_admin_access
@@ -107,6 +108,8 @@ def create_app() -> Flask:
     app.register_blueprint(push.blueprint)
     app.register_blueprint(office.blueprint)
     app.register_blueprint(umpire_api_blueprint)
+    app.register_blueprint(panic_umpire_blueprint)
+    app.register_blueprint(panic_admin_blueprint)
     app.register_blueprint(overlay_api_blueprint)
     app.register_blueprint(bracket_public_bp)
     app.register_blueprint(bracket_admin_bp)
