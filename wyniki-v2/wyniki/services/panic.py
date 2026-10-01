@@ -102,9 +102,10 @@ def court_context(court_id: str) -> dict[str, str]:
         label = (player.get("full_name") or player.get("surname") or "").strip()
         if label and label != "-":
             names.append(label)
+    label = str(state.get("court_name") or "").strip() or court_id
     return {
         "tournament": str(state.get("tournament_name") or "").strip(),
-        "court_id": court_id,
+        "court_id": label,
         "players": " – ".join(names),
     }
 
