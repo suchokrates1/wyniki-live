@@ -15,6 +15,7 @@ from ..database.panic import (
     update_panic_recipient,
 )
 from .court_manager import get_court_state
+from .tablet_aliases import fleet_label
 from .waha_client import send_text, waha_configured
 
 _PANIC_ENABLED_KEY = "panic_enabled"
@@ -86,11 +87,24 @@ def display_court(court_id: str) -> str:
     return name or str(court_id or "").strip()
 
 
-def compose_message(*, tournament: str, court_id: str, players: str, note: str, when: datetime | None = None) -> str:
+def tablet_label(client: dict[str, Any] | None) -> str:
+    meta = client or {}
+    return fleet_label(
+        device=meta.get("device"),
+        device_model=meta.get("device_model"),
+        device_manufacturer=meta.get("device_manufacturer"),
+        platform=meta.get("platform"),
+    )
+
+
+def compose_message(*, tournament: str, court_id: str, players: str, note: str, tablet: str = "", when: datetime | None = None) -> str:
     del when
     court = str(court_id or "").strip()
+    who = str(tablet or "").strip()
     if court and court != "?":
         text = f"Sędzia na korcie {court} potrzebuje pomocy."
+    elif who and who not in {"Tablet", "PWA"}:
+        text = f"Sędzia na {who} potrzebuje pomocy."
     else:
         text = "Sędzia potrzebuje pomocy."
     if players:
@@ -99,7 +113,7 @@ def compose_message(*, tournament: str, court_id: str, players: str, note: str, 
         text += f" {tournament}."
     clean_note = " ".join((note or "").split())
     if clean_note:
-        text += f" {clean_note[:280]}"
+        text += f" Notatka: {clean_note[:280]}"
     return text
 
 
@@ -140,7 +154,7 @@ def reset_cooldowns() -> None:
     _last_sent.clear()
 
 
-def dispatch_panic(*, court_id: str, note: str, remote_addr: str) -> tuple[dict[str, Any], int]:
+def dispatch_panic(*, court_id: str, note: str, remote_addr: str, client: dict[str, Any] | None = None) -> tuple[dict[str, Any], int]:
     if not waha_configured():
         return {"error": "Panic is not configured"}, 503
     if not panic_enabled():
@@ -160,6 +174,7 @@ def dispatch_panic(*, court_id: str, note: str, remote_addr: str) -> tuple[dict[
         court_id=ctx["court_id"],
         players=ctx["players"],
         note=note,
+        tablet="" if ctx["court_id"] else tablet_label(client),
     )
     sent = 0
     failed = 0

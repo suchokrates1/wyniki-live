@@ -15,13 +15,39 @@ def test_compose_message_includes_court_players_and_note():
     )
     assert text.startswith("Sędzia na korcie 3 potrzebuje pomocy. Kowalski – Nowak.")
     assert "RAKIETY" in text
-    assert text.endswith("brak piłek")
+    assert text.endswith("Notatka: brak piłek")
 
 
-def test_a_missing_court_is_not_a_question_mark():
-    text = panic.compose_message(tournament="", court_id="", players="", note="")
-    assert text == "Sędzia potrzebuje pomocy."
+def test_a_missing_court_names_the_tablet():
+    text = panic.compose_message(
+        tournament="",
+        court_id="",
+        players="",
+        note="",
+        tablet=panic.tablet_label({
+            "device": "OnePlus OPD2480",
+            "device_model": "OPD2480",
+            "platform": "android",
+        }),
+    )
+    assert text == "Sędzia na Tablet 6 potrzebuje pomocy."
     assert "?" not in text
+
+
+def test_a_missing_court_without_a_known_tablet_stays_plain():
+    text = panic.compose_message(tournament="", court_id="", players="", note="odvkrk", tablet="")
+    assert text == "Sędzia potrzebuje pomocy. Notatka: odvkrk"
+
+
+def test_a_teclast_without_a_court_is_still_named():
+    text = panic.compose_message(
+        tournament="",
+        court_id="",
+        players="",
+        note="",
+        tablet=panic.tablet_label({"device": "Teclast P50Ai_ROW", "platform": "android"}),
+    )
+    assert text == "Sędzia na Tablet (Teclast) potrzebuje pomocy."
 
 
 def test_the_message_uses_the_court_number_the_umpire_sees(monkeypatch):

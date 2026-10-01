@@ -21,6 +21,21 @@ def _note() -> str:
     return str(payload.get("note") or "")
 
 
+def _client() -> dict[str, str]:
+    headers = {
+        "platform": "X-TennisReferee-Platform",
+        "device": "X-TennisReferee-Device",
+        "device_model": "X-TennisReferee-Model",
+        "device_manufacturer": "X-TennisReferee-Manufacturer",
+    }
+    meta: dict[str, str] = {}
+    for key, header in headers.items():
+        value = str(request.headers.get(header) or "").strip()
+        if value:
+            meta[key] = value[:160]
+    return meta
+
+
 def _court_id() -> str:
     bound = court_id_from_bearer()
     if bound:
@@ -35,6 +50,7 @@ def post_panic():
         court_id=_court_id(),
         note=_note(),
         remote_addr=request.headers.get("CF-Connecting-IP") or request.remote_addr or "",
+        client=_client(),
     )
     response = jsonify(body)
     if status == 429:

@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { mockUmpireApi, openUmpire, openUmpireWithPwaGate, startBasicMatch } from './helpers.js';
 
-test('iOS WebKit: language picker opens without an install gate', async ({ page, browserName }) => {
+test('iOS WebKit: the install hint dismisses and the language picker opens', async ({ page, browserName }) => {
   expect(browserName).toBe('webkit');
   await mockUmpireApi(page);
   await openUmpireWithPwaGate(page);
-  await expect(page.getByRole('heading', { name: 'Install Blind Tennis Referee?' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Open Blind Tennis Referee?' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Install Blind Tennis Referee?' })).toBeVisible();
+  await expect(page.getByText(/Share, then Add to Home Screen/)).toBeVisible();
+  await page.getByRole('button', { name: 'Not now' }).click();
   await expect(page.locator('h1.ump-title')).toHaveText('Select Language');
   await expect(page.getByRole('button', { name: /English/ })).toBeVisible();
 });
