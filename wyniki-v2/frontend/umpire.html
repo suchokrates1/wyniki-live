@@ -58,7 +58,9 @@
     </header>
 
     <p class="ump-toast" x-show="directorToast" x-text="t('directorUpdated')"></p>
-    <p class="ump-toast" x-show="panicToast" x-text="panicToast"></p>
+    <template x-if="panicToast">
+      <p class="ump-toast" x-text="panicToast"></p>
+    </template>
     <p class="ump-error" x-show="error" x-text="error"></p>
     <p x-show="loading" x-text="t('loading')"></p>
 
