@@ -39,6 +39,21 @@ def test_a_missing_court_without_a_known_tablet_stays_plain():
     assert text == "Sędzia potrzebuje pomocy. Notatka: odvkrk"
 
 
+def test_a_model_that_already_starts_with_the_brand_is_not_repeated():
+    text = panic.compose_message(
+        tournament="",
+        court_id="",
+        players="",
+        note="dzmyta",
+        tablet=panic.tablet_label({
+            "device": "OnePlus OnePlus8Pro",
+            "device_manufacturer": "OnePlus",
+            "device_model": "OnePlus8Pro",
+        }),
+    )
+    assert text == "Sędzia na OnePlus8Pro potrzebuje pomocy. Notatka: dzmyta"
+
+
 def test_a_teclast_without_a_court_is_still_named():
     text = panic.compose_message(
         tournament="",

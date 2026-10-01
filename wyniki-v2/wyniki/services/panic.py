@@ -86,13 +86,26 @@ def display_court(court_id: str) -> str:
     return name or str(court_id or "").strip()
 
 
+def _without_repeated_prefix(text: str) -> str:
+    parts = text.split()
+    if len(parts) >= 2 and parts[1].lower().startswith(parts[0].lower()):
+        return " ".join(parts[1:])
+    return text
+
+
 def tablet_label(client: dict[str, Any] | None) -> str:
     """Model string from the umpire app. Sticker numbers are not in the database."""
     meta = client or {}
+    manufacturer = str(meta.get("device_manufacturer") or "").strip()
+    model = str(meta.get("device_model") or "").strip()
     device = str(meta.get("device") or "").strip()
+    if manufacturer and model:
+        if model.lower().startswith(manufacturer.lower()):
+            return model
+        return f"{manufacturer} {model}"
     if device:
-        return device
-    return str(meta.get("device_model") or "").strip()
+        return _without_repeated_prefix(device)
+    return model
 
 
 def compose_message(*, tournament: str, court_id: str, players: str, note: str, tablet: str = "", when: datetime | None = None) -> str:
