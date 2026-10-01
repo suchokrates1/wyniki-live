@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from ..config import logger, settings
@@ -81,19 +81,16 @@ def delete_recipient(recipient_id: int) -> bool:
 
 
 def compose_message(*, tournament: str, court_id: str, players: str, note: str, when: datetime | None = None) -> str:
-    stamp = (when or datetime.now(timezone.utc)).astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    parts = []
-    if tournament:
-        parts.append(tournament)
-    if court_id:
-        parts.append(f"Kort {court_id}")
+    del when
+    court = court_id or "?"
+    text = f"Sędzia na korcie {court} potrzebuje pomocy."
     if players:
-        parts.append(players)
-    parts.append(stamp)
-    text = "[PANIC] " + " · ".join(parts)
+        text += f" {players}."
+    if tournament:
+        text += f" {tournament}."
     clean_note = " ".join((note or "").split())
     if clean_note:
-        text = f"{text} · {clean_note[:280]}"
+        text += f" {clean_note[:280]}"
     return text
 
 

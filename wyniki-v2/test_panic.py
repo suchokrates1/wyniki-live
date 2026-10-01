@@ -13,7 +13,8 @@ def test_compose_message_includes_court_players_and_note():
         note="brak piłek",
         when=datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc),
     )
-    assert text.startswith("[PANIC] RAKIETY · Kort 3 · Kowalski – Nowak · 2026-10-01 12:00 UTC")
+    assert text.startswith("Sędzia na korcie 3 potrzebuje pomocy. Kowalski – Nowak.")
+    assert "RAKIETY" in text
     assert text.endswith("brak piłek")
 
 
@@ -45,7 +46,7 @@ def test_dispatch_sends_once_then_cools_down(tmp_path, monkeypatch):
     body, status = panic.dispatch_panic(court_id="2", note="medyczny", remote_addr="10.0.0.1")
     assert status == 200
     assert body["sent"] == 1
-    assert "Kort 2" in sent[0][1]
+    assert "Sędzia na korcie 2 potrzebuje pomocy." in sent[0][1]
     assert "medyczny" in sent[0][1]
 
     again, again_status = panic.dispatch_panic(court_id="2", note="", remote_addr="10.0.0.1")
