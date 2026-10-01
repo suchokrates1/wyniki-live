@@ -6,7 +6,13 @@ from datetime import datetime
 from typing import Any
 
 from ..config import logger, settings
-from ..database.connection import db_conn, fetch_app_settings, upsert_app_settings
+from ..database.connection import fetch_app_settings, upsert_app_settings
+from ..database.panic import (
+    delete_panic_recipient,
+    insert_panic_recipient,
+    list_panic_recipients,
+    update_panic_recipient,
+)
 from .court_manager import get_court_state
 from .waha_client import send_text, waha_configured
 
@@ -24,20 +30,7 @@ def set_panic_enabled(enabled: bool) -> None:
 
 
 def list_recipients() -> list[dict[str, Any]]:
-    with db_conn() as conn:
-        rows = conn.execute(
-            "SELECT id, name, chat_id, enabled, created_at FROM panic_recipients ORDER BY id"
-        ).fetchall()
-    return [
-        {
-            "id": row["id"],
-            "name": row["name"],
-            "chat_id": row["chat_id"],
-            "enabled": bool(row["enabled"]),
-            "created_at": row["created_at"],
-        }
-        for row in rows
-    ]
+    return list_panic_recipients()
 
 
 def add_recipient(name: str, chat_id: str) -> dict[str, Any]:
@@ -45,13 +38,7 @@ def add_recipient(name: str, chat_id: str) -> dict[str, Any]:
     clean_chat = chat_id.strip()
     if not clean_name or not clean_chat:
         raise ValueError("name and chat_id are required")
-    with db_conn() as conn:
-        cursor = conn.execute(
-            "INSERT INTO panic_recipients (name, chat_id, enabled) VALUES (?, ?, 1)",
-            (clean_name, clean_chat),
-        )
-        conn.commit()
-        new_id = cursor.lastrowid
+    new_id = insert_panic_recipient(clean_name, clean_chat)
     return {"id": new_id, "name": clean_name, "chat_id": clean_chat, "enabled": True}
 
 
@@ -64,20 +51,12 @@ def update_recipient(recipient_id: int, *, name: str | None = None, chat_id: str
     next_enabled = current["enabled"] if enabled is None else bool(enabled)
     if not next_name or not next_chat:
         raise ValueError("name and chat_id are required")
-    with db_conn() as conn:
-        conn.execute(
-            "UPDATE panic_recipients SET name = ?, chat_id = ?, enabled = ? WHERE id = ?",
-            (next_name, next_chat, 1 if next_enabled else 0, recipient_id),
-        )
-        conn.commit()
+    update_panic_recipient(recipient_id, next_name, next_chat, next_enabled)
     return {"id": recipient_id, "name": next_name, "chat_id": next_chat, "enabled": next_enabled}
 
 
 def delete_recipient(recipient_id: int) -> bool:
-    with db_conn() as conn:
-        cursor = conn.execute("DELETE FROM panic_recipients WHERE id = ?", (recipient_id,))
-        conn.commit()
-        return cursor.rowcount > 0
+    return delete_panic_recipient(recipient_id)
 
 
 def compose_message(*, tournament: str, court_id: str, players: str, note: str, when: datetime | None = None) -> str:
