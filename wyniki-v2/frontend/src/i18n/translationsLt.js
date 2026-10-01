@@ -165,6 +165,8 @@ export const TRANSLATION_PATCHES_LT = {
     pushOnReminder: 'Priminimas prieš mačą',
     pushLeadTime: 'Kiek anksčiau',
     pushOnDelay: 'Mano mačas vėluoja',
+    pushCourt: 'Kortas',
+    pushAllCourts: 'Visi kortai',
   },
   office: {
     login: {

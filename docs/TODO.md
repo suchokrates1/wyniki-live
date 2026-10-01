@@ -97,7 +97,7 @@ python scripts/generate_vapid_keys.py --append .env   # klucz prywatny nie przec
 
 Klucz prywatny nie trafia do repo. Jego wymiana unieważnia wszystkie istniejące subskrypcje.
 
-Zostaje do rozważenia: wybór konkretnego kortu w UI. Backend obsługuje (`court_id` w subskrypcji, `NULL` = wszystkie korty), dzwonek zapisuje się na wszystkie.
+Wybór kortu w dzwonku jest od 2026-10-01: puste = wszystkie korty, konkretny numer idzie jako `court_id`. Backend już to przyjmował.
 
 ---
 

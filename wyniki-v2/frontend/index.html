@@ -92,6 +92,16 @@
                                 <span x-text="pwaText().pushOnDelay">Opóźnienie mojego meczu</span>
                             </label>
 
+                            <label class="push-panel__row push-panel__row--indent">
+                                <span x-text="pwaText().pushCourt">Kort</span>
+                                <select class="push-panel__lead" x-model="courtId" :aria-label="pwaText().pushCourt">
+                                    <option value="" x-text="pwaText().pushAllCourts">Wszystkie korty</option>
+                                    <template x-for="court in courts" :key="court.id">
+                                        <option :value="court.id" x-text="court.label"></option>
+                                    </template>
+                                </select>
+                            </label>
+
                             <p class="push-panel__hint" x-text="pwaText().pushPlayersHint">Wybierz zawodników, o których meczach chcesz wiedzieć.</p>
 
                             <ul class="push-panel__chips" x-show="players.length">

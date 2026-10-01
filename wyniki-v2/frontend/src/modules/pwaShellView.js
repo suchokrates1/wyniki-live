@@ -23,6 +23,21 @@ function resolveLang() {
   return DEFAULT_LANGUAGE;
 }
 
+const COURT_STORAGE_KEY = 'wyniki.pushCourt';
+
+/** Courts the public snapshot is showing, in display order. An empty id means every court. */
+export function courtsFromSnapshot(data) {
+  const courts = data?.courts;
+  if (!courts || typeof courts !== 'object' || Array.isArray(courts)) return [];
+  return Object.entries(courts)
+    .map(([id, state]) => ({
+      id,
+      label: String(state?.court_name || id),
+      order: Number(state?.display_order) || 0,
+    }))
+    .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, undefined, { numeric: true }));
+}
+
 function text(lang) {
   return {
     ...(TRANSLATIONS[DEFAULT_LANGUAGE]?.pwa || {}),
@@ -42,6 +57,8 @@ export function registerPwaPush(Alpine) {
     lang: DEFAULT_LANGUAGE,
     players: [],          // names this device follows
     roster: [],           // everyone in the active tournament, for the picker
+    courts: [],           // live courts; empty courtId means all of them
+    courtId: '',
     search: '',
     prefs: {
       notify_match_start: true, notify_plan: true, notify_change: true,
@@ -86,7 +103,26 @@ export function registerPwaPush(Alpine) {
       // The panel opens even when the browser has blocked notifications: a bell
       // that does nothing on click tells the reader nothing about why.
       this.open = !this.open;
-      if (this.open && !this.denied && !this.roster.length) this.loadRoster();
+      if (this.open && !this.denied) {
+        if (!this.roster.length) this.loadRoster();
+        if (!this.courts.length) this.loadCourts();
+      }
+    },
+
+    async loadCourts() {
+      try {
+        const saved = localStorage.getItem(COURT_STORAGE_KEY) || '';
+        if (saved && !this.courtId) this.courtId = saved;
+      } catch {
+        /* a private window can refuse storage; the picker still works */
+      }
+      try {
+        const response = await fetch('/api/snapshot');
+        if (!response.ok) return;
+        this.courts = courtsFromSnapshot(await response.json());
+      } catch {
+        this.courts = [];
+      }
     },
 
     async loadRoster() {
@@ -140,9 +176,16 @@ export function registerPwaPush(Alpine) {
           this.open = false;
           return;
         }
+        const courtId = this.courtId || null;
+        try {
+          localStorage.setItem(COURT_STORAGE_KEY, courtId || '');
+        } catch {
+          /* remembering the court is optional */
+        }
         const result = await subscribe({
           registration: this._registration,
           publicKey: this._publicKey,
+          courtId,
           lang: this.lang,
           players: this.players,
           preferences: this.prefs,
