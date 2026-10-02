@@ -63,6 +63,26 @@ def test_admin_can_name_a_tablet_and_set_its_battery_threshold(tmp_path, monkeyp
     assert body["model"] == "Teclast P50Ai_ROW"
     listed = client.get("/admin/api/devices", headers=headers)
     assert listed.get_json()["devices"][0]["android_id"] == "abc"
+    marked = client.put(
+        "/admin/api/devices/abc",
+        headers=headers,
+        json={"is_test": True},
+    )
+    assert marked.status_code == 200
+    assert marked.get_json()["is_test"] is True
+
+
+def test_a_test_device_does_not_warn_about_its_battery(tmp_path, monkeypatch):
+    _db(tmp_path, monkeypatch)
+    remember_umpire_device(
+        android_id="8b0b074f321aee23",
+        manufacturer="OnePlus",
+        model="OnePlus8Pro",
+        battery_level=10,
+        is_charging=False,
+    )
+    update_umpire_device("8b0b074f321aee23", battery_alert_percent=20, is_test=True)
+    assert consider_low_battery("8b0b074f321aee23") is None
 
 
 def test_a_tablet_is_listed_before_it_enters_a_court(tmp_path, monkeypatch):

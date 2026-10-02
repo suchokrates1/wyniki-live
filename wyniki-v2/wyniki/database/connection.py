@@ -704,6 +704,7 @@ def init_db() -> None:
             ("app_version", "ALTER TABLE umpire_devices ADD COLUMN app_version TEXT DEFAULT ''"),
             ("battery_alert_percent", "ALTER TABLE umpire_devices ADD COLUMN battery_alert_percent INTEGER"),
             ("battery_alert_active", "ALTER TABLE umpire_devices ADD COLUMN battery_alert_active INTEGER DEFAULT 0"),
+            ("is_test", "ALTER TABLE umpire_devices ADD COLUMN is_test INTEGER DEFAULT 0"),
         ):
             if device_cols and column not in device_cols:
                 cursor.execute(ddl)

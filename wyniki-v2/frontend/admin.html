@@ -351,7 +351,7 @@
     <div x-show="activeTab === 'devices'" x-cloak class="card bg-base-100 shadow">
       <div class="card-body gap-4">
         <h2 class="card-title">Tablety</h2>
-        <p>Każdy tablet, który otworzy aplikację, pojawia się w sekcji Nowe. Wpisz mu numer albo imię i zapisz — przejdzie do nazwanych. Puste pole progu oznacza brak WhatsAppa o baterii. Gdy bateria spadnie do tego procentu i tablet nie jest na ładowarce, reżyserka dostaje jedną wiadomość. Kolejna pójdzie dopiero, gdy bateria wróci powyżej progu.</p>
+        <p>Każdy tablet, który otworzy aplikację, pojawia się w sekcji Nowe. Wpisz mu numer albo imię i zapisz — przejdzie do nazwanych. Puste pole progu oznacza brak WhatsAppa o baterii. Gdy bateria spadnie do tego procentu i tablet nie jest na ładowarce, reżyserka dostaje jedną wiadomość. Kolejna pójdzie dopiero, gdy bateria wróci powyżej progu. Ptaszkiem Test oznaczasz urządzenie, które nie wysyła żadnego WhatsAppa.</p>
         <p class="text-sm opacity-70">Starsze mecze nie mają identyfikatora urządzenia. Pięć takich samych Teclastów z września nie rozdzieli się na osobne wiersze, dopóki każdy nie włączy aktualnej aplikacji.</p>
         <p class="text-error" x-show="devicesError" x-text="devicesError"></p>
 
@@ -369,6 +369,7 @@
                 <th>Kort</th>
                 <th>Wersja</th>
                 <th>Widziany</th>
+                <th>Test</th>
                 <th></th>
               </tr>
             </thead>
@@ -383,6 +384,7 @@
                   <td x-text="row.last_court_id || '—'"></td>
                   <td x-text="row.app_version || '—'"></td>
                   <td x-text="deviceSeen(row)"></td>
+                  <td><input type="checkbox" class="checkbox checkbox-sm" x-model="row.testDraft" title="Nie wysyła WhatsAppa"></td>
                   <td><button type="button" class="btn btn-sm btn-primary" @click="saveDevice(row)">Zapisz</button></td>
                 </tr>
               </template>
@@ -404,6 +406,7 @@
                 <th>Kort</th>
                 <th>Wersja</th>
                 <th>Widziany</th>
+                <th>Test</th>
                 <th></th>
               </tr>
             </thead>
@@ -418,6 +421,7 @@
                   <td x-text="row.last_court_id || '—'"></td>
                   <td x-text="row.app_version || '—'"></td>
                   <td x-text="deviceSeen(row)"></td>
+                  <td><input type="checkbox" class="checkbox checkbox-sm" x-model="row.testDraft" title="Nie wysyła WhatsAppa"></td>
                   <td><button type="button" class="btn btn-sm btn-primary" @click="saveDevice(row)">Zapisz</button></td>
                 </tr>
               </template>

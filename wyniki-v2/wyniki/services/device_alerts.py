@@ -5,7 +5,7 @@ from typing import Any
 
 from ..config import logger
 from ..database.panic import list_panic_recipients
-from ..database.umpire_devices import claim_low_battery_alert, list_umpire_devices
+from ..database.umpire_devices import claim_low_battery_alert, device_is_test, list_umpire_devices
 from .panic import tablet_label
 from .waha_client import send_text, waha_configured
 
@@ -39,11 +39,13 @@ def _who(row: dict) -> str:
     model = tablet_label(row)
     if model:
         return model
-    return str(row.get("android_id") or "Tablet")
+    return "Tablet"
 
 
 def consider_low_battery(android_id: str) -> str | None:
     """Return the WhatsApp text once, when the level first falls to the threshold."""
+    if device_is_test(android_id):
+        return None
     data = claim_low_battery_alert(android_id)
     if data is None:
         return None
@@ -81,6 +83,7 @@ def device_rows() -> list[dict]:
             "is_charging": bool(row.get("is_charging")) if row.get("is_charging") is not None else False,
             "app_version": row.get("app_version") or "",
             "battery_alert_percent": row.get("battery_alert_percent"),
+            "is_test": bool(row.get("is_test")),
             "last_seen": seen,
         })
     return rows

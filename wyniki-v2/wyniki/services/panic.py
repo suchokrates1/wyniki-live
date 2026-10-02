@@ -22,7 +22,9 @@ from ..database.panic_threads import (
     thread_view,
     waiting_thread_count,
 )
-from ..database.umpire_devices import device_sticker, remember_umpire_device
+from ..database.courts import get_tournament_id_for_court
+from ..database.tournaments import fetch_tournament, get_active_tournament_name
+from ..database.umpire_devices import device_is_test, device_sticker, remember_umpire_device
 from .court_manager import get_court_state
 from .waha_client import recent_messages, send_text, waha_configured
 
@@ -117,11 +119,24 @@ def tablet_label(client: dict[str, Any] | None) -> str:
     return model
 
 
+def tournament_label(court_id: str, from_state: str = "") -> str:
+    name = str(from_state or "").strip()
+    if name:
+        return name
+    if court_id:
+        tournament_id = get_tournament_id_for_court(court_id)
+        if tournament_id:
+            row = fetch_tournament(tournament_id) or {}
+            named = str(row.get("name") or "").strip()
+            if named:
+                return named
+    return str(get_active_tournament_name() or "").strip()
+
+
 def compose_message(*, tournament: str, court_id: str, players: str, note: str, tablet: str = "", android_id: str = "", sticker: str = "", when: datetime | None = None) -> str:
-    del when
+    del when, android_id
     court = str(court_id or "").strip()
     who = str(tablet or "").strip()
-    ident = str(android_id or "").strip()
     number = str(sticker or "").strip()
     if number and court and court != "?":
         text = f"Sędzia na tablecie {number}, kort {court}, potrzebuje pomocy."
@@ -133,12 +148,11 @@ def compose_message(*, tournament: str, court_id: str, players: str, note: str, 
         text = f"Sędzia na {who} potrzebuje pomocy."
     else:
         text = "Sędzia potrzebuje pomocy."
-    if ident:
-        text += f" Id: {ident}."
+    named = str(tournament or "").strip()
+    if named:
+        text += f" Turniej: {named}."
     if players:
         text += f" {players}."
-    if tournament:
-        text += f" {tournament}."
     clean_note = " ".join((note or "").split())
     if clean_note:
         text += f" Notatka: {clean_note[:280]}"
@@ -207,9 +221,12 @@ def dispatch_panic(*, court_id: str, note: str, remote_addr: str, client: dict[s
         platform=str(meta.get("platform") or ""),
         court_id=court_id,
     )
+    if device_is_test(android_id):
+        logger.info("panic_suppressed", reason="test device")
+        return {"ok": True, "sent": 0, "thread_token": None}, 200
     sticker = device_sticker(android_id)
     text = compose_message(
-        tournament=ctx["tournament"],
+        tournament=tournament_label(court_id, ctx["tournament"]),
         court_id=ctx["court_id"],
         players=ctx["players"],
         note=note,
@@ -292,6 +309,8 @@ def send_follow_up(token: str, note: str) -> tuple[dict[str, Any], int]:
         return {"error": "Note is required"}, 400
     if not waha_configured():
         return {"error": "Panic is not configured"}, 503
+    if device_is_test(view["android_id"]):
+        return {"ok": True, "sent": 0}, 200
     sticker = device_sticker(view["android_id"])
     who = f"Tablet {sticker}" if sticker else "Sędzia"
     outgoing = f"{who}: {text[:280]}"

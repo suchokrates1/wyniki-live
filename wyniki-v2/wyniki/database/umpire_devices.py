@@ -4,6 +4,18 @@ from __future__ import annotations
 from .connection import db_conn
 
 
+def device_is_test(android_id: str) -> bool:
+    ident = str(android_id or "").strip()[:32]
+    if not ident:
+        return False
+    with db_conn() as conn:
+        row = conn.execute(
+            "SELECT is_test FROM umpire_devices WHERE android_id = ?",
+            (ident,),
+        ).fetchone()
+    return bool(row and row["is_test"])
+
+
 def device_sticker(android_id: str) -> str:
     ident = str(android_id or "").strip()[:32]
     if not ident:
@@ -84,7 +96,7 @@ def list_umpire_devices() -> list[dict]:
         rows = conn.execute(
             """
             SELECT android_id, manufacturer, model, device, platform, last_court_id, sticker,
-                   battery_level, is_charging, app_version, battery_alert_percent, last_seen
+                   battery_level, is_charging, app_version, battery_alert_percent, is_test, last_seen
             FROM umpire_devices
             ORDER BY last_seen DESC
             """
@@ -92,7 +104,14 @@ def list_umpire_devices() -> list[dict]:
     return [dict(row) for row in rows]
 
 
-def update_umpire_device(android_id: str, *, name: str | None = None, battery_alert_percent: int | None = None, clear_alert: bool = False) -> bool:
+def update_umpire_device(
+    android_id: str,
+    *,
+    name: str | None = None,
+    battery_alert_percent: int | None = None,
+    clear_alert: bool = False,
+    is_test: bool | None = None,
+) -> bool:
     ident = str(android_id or "").strip()[:32]
     if not ident:
         return False
@@ -106,6 +125,9 @@ def update_umpire_device(android_id: str, *, name: str | None = None, battery_al
     elif battery_alert_percent is not None:
         assignments.append("battery_alert_percent = ?")
         values.append(int(battery_alert_percent))
+    if is_test is not None:
+        assignments.append("is_test = ?")
+        values.append(1 if is_test else 0)
     if not assignments:
         return True
     values.append(ident)

@@ -16,6 +16,7 @@ export function createDevicesAdmin() {
         ...row,
         nameDraft: row.name || '',
         alertDraft: row.battery_alert_percent == null ? '' : String(row.battery_alert_percent),
+        testDraft: !!row.is_test,
       }));
     },
 
@@ -52,6 +53,7 @@ export function createDevicesAdmin() {
         body: JSON.stringify({
           name: row.nameDraft,
           battery_alert_percent: row.alertDraft === '' ? null : Number(row.alertDraft),
+          is_test: !!row.testDraft,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -63,6 +65,8 @@ export function createDevicesAdmin() {
       row.nameDraft = row.name;
       row.battery_alert_percent = data.battery_alert_percent;
       row.alertDraft = data.battery_alert_percent == null ? '' : String(data.battery_alert_percent);
+      row.is_test = !!data.is_test;
+      row.testDraft = row.is_test;
     },
   };
 }

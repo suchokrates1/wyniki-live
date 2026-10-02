@@ -13,7 +13,7 @@ def test_compose_message_includes_court_players_and_note():
         note="brak piłek",
         when=datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc),
     )
-    assert text.startswith("Sędzia na korcie 3 potrzebuje pomocy. Kowalski – Nowak.")
+    assert text.startswith("Sędzia na korcie 3 potrzebuje pomocy. Turniej: RAKIETY. Kowalski – Nowak.")
     assert "RAKIETY" in text
     assert text.endswith("Notatka: brak piłek")
 
@@ -54,15 +54,16 @@ def test_a_model_that_already_starts_with_the_brand_is_not_repeated():
     assert text == "Sędzia na OnePlus8Pro potrzebuje pomocy. Notatka: dzmyta"
 
 
-def test_a_help_request_includes_the_android_id(tmp_path, monkeypatch):
+def test_a_help_request_names_the_tournament_and_hides_the_android_id(tmp_path, monkeypatch):
     db_path = tmp_path / "panic-id.sqlite3"
     monkeypatch.setenv("DATABASE_PATH", str(db_path))
     from wyniki.config import settings
     settings.database_path = str(db_path)
     settings.waha_url = "http://waha.local"
     settings.waha_api_key = "test-key"
-    from wyniki.database import init_db
+    from wyniki.database import init_db, insert_tournament
     init_db()
+    insert_tournament("RAKIETY", "2026-10-01", "2026-10-02", active=True)
     panic.reset_cooldowns()
     panic.add_recipient("Dawid", "48000000000@c.us")
     sent = []
@@ -81,11 +82,40 @@ def test_a_help_request_includes_the_android_id(tmp_path, monkeypatch):
     )
     assert status == 200
     assert body["sent"] == 1
-    assert sent[0].startswith("Sędzia na Teclast P50Ai_ROW potrzebuje pomocy. Id: 9774d56d682e549c.")
+    assert sent[0].startswith("Sędzia na Teclast P50Ai_ROW potrzebuje pomocy. Turniej: RAKIETY.")
+    assert "9774d56d682e549c" not in sent[0]
+    assert "Id:" not in sent[0]
     from wyniki.database.connection import db_conn
     with db_conn() as conn:
         row = conn.execute("SELECT model FROM umpire_devices WHERE android_id = ?", ("9774d56d682e549c",)).fetchone()
     assert row["model"] == "P50Ai_ROW"
+
+
+def test_a_test_device_does_not_send_whatsapp(tmp_path, monkeypatch):
+    db_path = tmp_path / "panic-test-device.sqlite3"
+    monkeypatch.setenv("DATABASE_PATH", str(db_path))
+    from wyniki.config import settings
+    settings.database_path = str(db_path)
+    settings.waha_url = "http://waha.local"
+    settings.waha_api_key = "test-key"
+    from wyniki.database import init_db
+    from wyniki.database.umpire_devices import remember_umpire_device, update_umpire_device
+    init_db()
+    panic.reset_cooldowns()
+    panic.add_recipient("Dawid", "48000000000@c.us")
+    remember_umpire_device(android_id="8b0b074f321aee23", manufacturer="OnePlus", model="OnePlus8Pro")
+    update_umpire_device("8b0b074f321aee23", is_test=True)
+    sent = []
+    monkeypatch.setattr(panic, "send_text", lambda chat_id, text: sent.append(text) or True)
+    body, status = panic.dispatch_panic(
+        court_id="",
+        note="spam",
+        remote_addr="10.0.0.9",
+        client={"android_id": "8b0b074f321aee23", "device_model": "OnePlus8Pro", "device_manufacturer": "OnePlus"},
+    )
+    assert status == 200
+    assert body["sent"] == 0
+    assert sent == []
 
 
 def test_a_teclast_without_a_court_is_still_named():
