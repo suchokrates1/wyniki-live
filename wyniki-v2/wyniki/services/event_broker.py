@@ -1,42 +1,15 @@
 """Event broadcasting system with SSE support."""
 from __future__ import annotations
 
-import queue
-import threading
 from typing import Any, Dict
 
+from .listener_fanout import ListenerFanOut
 
-class EventBroker:
+
+class EventBroker(ListenerFanOut):
     """Thread-safe event broadcasting to multiple SSE listeners."""
-    
-    def __init__(self) -> None:
-        self.listeners: set[queue.Queue] = set()
-        self.lock = threading.Lock()
-
-    def listen(self) -> queue.Queue:
-        """Register a new listener queue."""
-        listener: queue.Queue = queue.Queue(maxsize=25)
-        with self.lock:
-            self.listeners.add(listener)
-        return listener
-
-    def discard(self, listener: queue.Queue) -> None:
-        """Remove a listener queue."""
-        with self.lock:
-            self.listeners.discard(listener)
-
-    def broadcast(self, payload: Dict[str, Any]) -> None:
-        """Send event to all connected listeners."""
-        with self.lock:
-            listeners = list(self.listeners)
-        for listener in listeners:
-            try:
-                listener.put_nowait(payload)
-            except queue.Full:
-                continue
 
 
-# Global singleton instance
 event_broker = EventBroker()
 
 
@@ -50,19 +23,15 @@ def emit_score_update(kort_id: str, court_state: Dict[str, Any]) -> None:
     from ..database.court_streams import fetch_watch_urls_for_date
 
     if is_demo_overlay_active():
-        return  # suppress real updates while demo overlay is active
+        return
 
     data = serialize_public_court_state(court_state)
     url = fetch_watch_urls_for_date().get(str(kort_id))
     if url:
         data["watch_url"] = url
 
-    payload = {
+    event_broker.broadcast({
         "type": "state_update",
         "kort_id": kort_id,
         "data": data,
-    }
-    
-    event_broker.broadcast(payload)
-
-
+    })

@@ -209,7 +209,7 @@ def cleanup_e2e_artifacts():
             from ..database import rollback_writes
             rollback_writes()
         except Exception:
-            pass
+            logger.exception("Failed to roll back after E2E cleanup error")
         logger.error(f"Failed to cleanup E2E artifacts: {e}")
         return jsonify({"error": str(e)}), 500
 

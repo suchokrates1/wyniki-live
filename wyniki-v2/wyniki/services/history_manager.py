@@ -98,7 +98,7 @@ def _build_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
                 if match_record.sets_history:
                     sets_history_data = json.loads(match_record.sets_history)
         except Exception:
-            pass
+            logger.exception(f"Failed to read match {match_id} while building history")
 
     score_a = [a_data.get(f"set{i}", 0) for i in [1, 2, 3]]
     score_b = [b_data.get(f"set{i}", 0) for i in [1, 2, 3]]
