@@ -63,3 +63,28 @@ def test_admin_can_name_a_tablet_and_set_its_battery_threshold(tmp_path, monkeyp
     assert body["model"] == "Teclast P50Ai_ROW"
     listed = client.get("/admin/api/devices", headers=headers)
     assert listed.get_json()["devices"][0]["android_id"] == "abc"
+
+
+def test_a_tablet_is_listed_before_it_enters_a_court(tmp_path, monkeypatch):
+    _db(tmp_path, monkeypatch)
+    from flask import Flask
+    from wyniki.api.umpire_api import blueprint as umpire_blueprint
+    from wyniki.database.umpire_devices import list_umpire_devices
+
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.register_blueprint(umpire_blueprint)
+    response = app.test_client().post(
+        "/api/umpire-heartbeat",
+        json={"court_id": "", "battery_level": 40, "is_charging": False, "app_version": "1.0.0-dev.51"},
+        headers={
+            "X-TennisReferee-Android-Id": "abc123",
+            "X-TennisReferee-Manufacturer": "Teclast",
+            "X-TennisReferee-Model": "P50Ai_ROW",
+        },
+    )
+    assert response.status_code == 200
+    rows = list_umpire_devices()
+    assert rows[0]["android_id"] == "abc123"
+    assert not str(rows[0]["sticker"] or "").strip()
+    assert rows[0]["battery_level"] == 40

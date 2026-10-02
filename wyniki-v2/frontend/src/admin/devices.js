@@ -36,6 +36,14 @@ export function createDevicesAdmin() {
       return `${row.battery_level}%${row.is_charging ? ' ⚡' : ''}`;
     },
 
+    newDevices() {
+      return this.devices.filter((row) => !String(row.name || '').trim());
+    },
+
+    namedDevices() {
+      return this.devices.filter((row) => String(row.name || '').trim());
+    },
+
     async saveDevice(row) {
       this.devicesError = '';
       const response = await fetch('/admin/api/devices/' + encodeURIComponent(row.android_id), {

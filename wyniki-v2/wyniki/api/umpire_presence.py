@@ -22,20 +22,40 @@ def register(blueprint) -> None:
         """
         data = request.get_json() or {}
         kort_id = normalize_kort_id(data.get('court_id', ''))
-        access_error = require_court_access(kort_id)
-        if access_error:
-            return access_error
         battery_level = data.get('battery_level')
         is_charging = data.get('is_charging')
         screen = data.get('screen', '')
         app_version = data.get('app_version', '')
         match_id = _clean_int(data.get('match_id'))
         client_match_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
+        heartbeat_meta = _request_client_meta(data)
+        android_id = heartbeat_meta.get("android_id") or ""
+        access_error = require_court_access(kort_id) if kort_id else None
 
         logger.info(
             f"Heartbeat: court={kort_id} battery={battery_level}% "
             f"charging={is_charging} screen={screen} ver={app_version}"
         )
+
+        # The tablet is listed as soon as the app sends its id, even before a court PIN.
+        if android_id:
+            remember_umpire_device(
+                android_id=android_id,
+                manufacturer=heartbeat_meta.get("device_manufacturer") or "",
+                model=heartbeat_meta.get("device_model") or "",
+                device=heartbeat_meta.get("device") or "",
+                platform=heartbeat_meta.get("platform") or "",
+                court_id=kort_id if kort_id and access_error is None else "",
+                battery_level=battery_percent(battery_level),
+                is_charging=charging_flag(is_charging),
+                app_version=heartbeat_meta.get("app_version") or app_version or "",
+            )
+            warning = consider_low_battery(android_id)
+            if warning:
+                notify_low_battery(warning)
+
+        if access_error:
+            return access_error
 
         # Update court state with battery info if court is assigned
         if kort_id:
@@ -49,22 +69,6 @@ def register(blueprint) -> None:
                 court_state["app_version"] = app_version
                 court_state["umpire_screen"] = screen
 
-            heartbeat_meta = _request_client_meta(data)
-            android_id = heartbeat_meta.get("android_id") or ""
-            remember_umpire_device(
-                android_id=android_id,
-                manufacturer=heartbeat_meta.get("device_manufacturer") or "",
-                model=heartbeat_meta.get("device_model") or "",
-                device=heartbeat_meta.get("device") or "",
-                platform=heartbeat_meta.get("platform") or "",
-                court_id=kort_id,
-                battery_level=battery_percent(battery_level),
-                is_charging=charging_flag(is_charging),
-                app_version=heartbeat_meta.get("app_version") or app_version or "",
-            )
-            warning = consider_low_battery(android_id)
-            if warning:
-                notify_low_battery(warning)
             snapshot = data.get("snapshot")
             tablet_presence.record(
                 session_court_id=kort_id,
