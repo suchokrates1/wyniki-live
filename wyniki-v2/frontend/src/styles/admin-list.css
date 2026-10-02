@@ -337,3 +337,35 @@
   overflow-y: auto;
 }
 .adm-modal .adm-card__footer { flex-shrink: 0; margin-top: 16px; }
+
+/* Court PINs: the warning band and the drawn-PIN list */
+.adm-pinbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 13px 16px;
+  border: 1px solid #E4BFAE;
+  border-radius: 12px;
+  background: var(--adm-accent-soft);
+  color: #8A2F00;
+}
+.adm-pinbar__text { flex: 1; min-width: 220px; font-size: 14px; line-height: 1.45; }
+.adm-pins { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.adm-pin {
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+.adm-pin__court { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--adm-muted); }
+.adm-pin__value {
+  display: block;
+  margin: 6px 0 2px;
+  font-family: 'Chivo Mono', monospace;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.adm-pin__was { display: block; font-size: 12px; color: var(--adm-muted); }

@@ -1,0 +1,39 @@
+<div class="adm-pinbar" x-show="adminWeakPinCourts().length" x-cloak>
+  <span class="adm-pinbar__text">
+    <strong x-text="adminWeakPinCourts().length"></strong>
+    <span x-text="adminWeakPinCourts().length === 1 ? ' kort ma PIN, który zgadnie każdy' : ' korty mają PIN, który zgadnie każdy'"></span>
+    — sędzia wpisuje go raz, przy wejściu na kort.
+  </span>
+  <button type="button" class="adm-btn adm-btn--primary" @click="openPinDialog()">Wylosuj nowe PIN-y</button>
+</div>
+
+<div class="adm-modal" x-show="pinDialogOpen" x-cloak @keydown.escape.window="closePinDialog()">
+  <div class="adm-modal__box" role="dialog" aria-modal="true" aria-labelledby="adm-pins-title">
+    <div class="adm-modal__head">
+      <div>
+        <h2 class="adm-modal__title" id="adm-pins-title">Nowe PIN-y kortów</h2>
+        <p class="adm-modal__lead">Każdy kort dostaje własny, losowy PIN. Wydrukuj je na stoliki sędziowskie — sędziowie wpiszą je przy następnym wejściu.</p>
+      </div>
+      <button type="button" class="adm-btn adm-btn--quiet" @click="closePinDialog()" aria-label="Zamknij okno">×</button>
+    </div>
+
+    <div class="adm-modal__body">
+      <ul class="adm-pins" role="list">
+        <template x-for="proposal in pinProposals" :key="proposal.kort_id">
+          <li class="adm-pin">
+            <span class="adm-pin__court" x-text="'Kort ' + proposal.name"></span>
+            <span class="adm-pin__value" x-text="proposal.pin"></span>
+            <span class="adm-pin__was" x-text="'było ' + proposal.was"></span>
+          </li>
+        </template>
+      </ul>
+      <p class="adm-empty" x-show="!pinProposals.length">Nie ma kortów do zmiany — wybierz turniej w filtrze powyżej.</p>
+    </div>
+
+    <div class="adm-card__footer">
+      <button type="button" class="adm-btn adm-btn--primary" @click="savePinProposals()" :disabled="pinSaving || !pinProposals.length" x-text="pinSaving ? 'Zapisuję…' : 'Zapisz PIN-y'"></button>
+      <button type="button" class="adm-btn" @click="rerollPins()" :disabled="pinSaving">Losuj ponownie</button>
+      <button type="button" class="adm-btn adm-btn--quiet" @click="closePinDialog()">Anuluj</button>
+    </div>
+  </div>
+</div>

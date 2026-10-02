@@ -386,8 +386,8 @@
           </template>
         </div>
 
-    <div x-show="activeTab === 'devices'" x-cloak class="card bg-base-100 shadow">
-      <div class="card-body gap-4">
+    <div x-show="activeTab === 'devices'" x-cloak class="adm-card">
+      <div class="card-body gap-4 p-0">
         <h2 class="card-title">Tablety</h2>
         <p>Każdy tablet, który otworzy aplikację, pojawia się w sekcji Nowe. Wpisz mu numer albo imię i zapisz — przejdzie do nazwanych. Puste pole progu oznacza brak WhatsAppa o baterii. Gdy bateria spadnie do tego procentu i tablet nie jest na ładowarce, reżyserka dostaje jedną wiadomość. Kolejna pójdzie dopiero, gdy bateria wróci powyżej progu. Ptaszkiem Test oznaczasz urządzenie, które nie wysyła żadnego WhatsAppa.</p>
         <p class="text-sm opacity-70">Starsze mecze nie mają identyfikatora urządzenia. Pięć takich samych Teclastów z września nie rozdzieli się na osobne wiersze, dopóki każdy nie włączy aktualnej aplikacji.</p>
@@ -505,6 +505,7 @@
     </div>
 
     <div x-show="activeTab === 'courts'" x-cloak>
+      <div id="admin-court-pins"></div>
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
           <div class="flex items-center justify-between gap-4 flex-wrap">

@@ -14,7 +14,13 @@ export const PLAYERS = [
 // Who is already entered in tournament 32
 export const ENTRIES = [{ id: 501, global_player_id: 7, first_name: 'Mateusz', last_name: 'Ciborowski', category: 'B2' }];
 
-export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, onRequest = () => {} } = {}) {
+export const COURTS = [
+  { kort_id: 't32-1', name: '1', pin: '0000', tournament_id: 32, tournament_name: 'RAKIETY ATNiS VII', active: 1 },
+  { kort_id: 't32-2', name: '2', pin: '0000', tournament_id: 32, tournament_name: 'RAKIETY ATNiS VII', active: 1 },
+  { kort_id: 't32-3', name: '3', pin: '8261', tournament_id: 32, tournament_name: 'RAKIETY ATNiS VII', active: 1 },
+];
+
+export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, onRequest = () => {} } = {}) {
   await page.addInitScript(() => {
     try { sessionStorage.setItem('wyniki-admin-token', 'e2e-token'); } catch { /* private mode */ }
   });
@@ -27,7 +33,7 @@ export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLA
     onRequest({ url, method: request.method(), body });
     if (request.method() !== 'GET') return route.fulfill({ json: { success: true } });
     if (/\/admin\/api\/tournaments(\?|$)/.test(url)) return route.fulfill({ json: tournaments });
-    if (url.includes('/admin/api/courts')) return route.fulfill({ json: [] });
+    if (url.includes('/admin/api/courts')) return route.fulfill({ json: courts });
     if (url.includes('/admin/api/devices')) return route.fulfill({ json: { devices: [] } });
     if (/\/admin\/api\/global-players(\?|$)/.test(url)) return route.fulfill({ json: players });
     if (url.includes('/admin/api/global-players')) return route.fulfill({ json: [] });
