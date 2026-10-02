@@ -76,13 +76,5 @@ export function createTournamentsListView() {
     adminTournamentCount() {
       return (Array.isArray(this.tournaments) ? this.tournaments : []).length;
     },
-
-    /** The create form lives above the list; jump to it and put the cursor in reach. */
-    openTournamentCreate() {
-      const heading = document.getElementById('adm-new-tournament');
-      if (!heading) return;
-      heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      heading.focus({ preventScroll: true });
-    },
   };
 }

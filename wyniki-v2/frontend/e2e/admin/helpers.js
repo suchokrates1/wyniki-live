@@ -13,7 +13,9 @@ export async function openAdmin(page, { tournaments = TOURNAMENTS, onRequest = (
   await page.route(/\/admin\/api\/.*/, async (route) => {
     const request = route.request();
     const url = request.url();
-    onRequest({ url, method: request.method(), body: request.postDataJSON?.() || null });
+    let body = null;
+    try { body = request.postDataJSON(); } catch { body = request.postData(); } // create sends FormData
+    onRequest({ url, method: request.method(), body });
     if (request.method() !== 'GET') return route.fulfill({ json: { success: true } });
     if (/\/admin\/api\/tournaments(\?|$)/.test(url)) return route.fulfill({ json: tournaments });
     if (url.includes('/admin/api/courts')) return route.fulfill({ json: [] });

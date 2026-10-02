@@ -40,12 +40,65 @@ test('a tournament with no entries at all tells you where to start', async ({ pa
   await expect(page.locator('.adm-empty')).toContainText('Nie ma jeszcze żadnego turnieju');
 });
 
-test('"Nowy turniej" jumps to the create form', async ({ page }) => {
-  await openAdmin(page);
+test('"Nowy turniej" opens a dialog that insists on a name and both dates', async ({ page }) => {
+  const calls = [];
+  await openAdmin(page, { onRequest: (call) => calls.push(call) });
   await page.getByRole('button', { name: 'Nowy turniej' }).click();
-  const heading = page.locator('#adm-new-tournament');
-  await expect(heading).toBeInViewport();
-  await expect(heading).toBeFocused();
+  const dialog = page.getByRole('dialog', { name: 'Nowy turniej' });
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('#adm-new-name')).toBeFocused();
+
+  await dialog.getByRole('button', { name: 'Utwórz turniej' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Nazwa i obie daty');
+  expect(calls.filter((call) => call.method === 'POST')).toEqual([]);
+
+  await page.locator('#adm-new-name').fill('Puchar Jesienny');
+  await page.locator('#adm-new-start-date').fill('2026-11-07');
+  await page.locator('#adm-new-end-date').fill('2026-11-08');
+  await dialog.getByRole('button', { name: 'Utwórz turniej' }).click();
+  await expect.poll(() => calls.filter((call) => call.method === 'POST' && call.url.endsWith('/admin/api/tournaments')).length).toBe(1);
+  expect(calls.find((call) => call.method === 'POST').body).toContain('Puchar Jesienny');
+});
+
+test('the create dialog closes on Anuluj and on Escape, keeping nothing behind', async ({ page }) => {
+  await openAdmin(page);
+  const dialog = page.getByRole('dialog', { name: 'Nowy turniej' });
+  await page.getByRole('button', { name: 'Nowy turniej' }).click();
+  await dialog.getByRole('button', { name: 'Anuluj' }).click();
+  await expect(dialog).toBeHidden();
+
+  await page.getByRole('button', { name: 'Nowy turniej' }).click();
+  await page.locator('#adm-new-name').fill('Zapomniany');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await page.getByRole('button', { name: 'Nowy turniej' }).click();
+  await expect(page.locator('#adm-new-name')).toHaveValue('');
+});
+
+test('Ustawienia opens the tournament with its fields, flags and extras', async ({ page }) => {
+  const calls = [];
+  await openAdmin(page, { onRequest: (call) => calls.push(call) });
+  await page.locator('.adm-row').first().getByRole('button', { name: 'Ustawienia' }).click();
+
+  await expect(page.locator('#adm-edit-name')).toHaveValue('RAKIETY ATNiS VII');
+  await expect(page.locator('#adm-edit-start-date')).toHaveValue('2026-09-26');
+  await expect(page.locator('#adm-edit-court-count')).toHaveValue('4');
+  const settings = page.locator('#admin-tournament-settings');
+  await expect(settings.locator('.adm-flag')).toHaveCount(4);
+  await expect(settings.locator('.adm-flag.is-on')).toHaveCount(3);
+  await expect(page.getByText('Transmisje i kategorie')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Zapisz turniej' }).click();
+  await expect.poll(() => calls.filter((call) => call.method === 'PUT' && call.url.includes('/tournaments/32')).length).toBeGreaterThan(0);
+});
+
+test('a simulation cannot be public: those two switches are off limits', async ({ page }) => {
+  await openAdmin(page);
+  await page.locator('.adm-row').filter({ hasText: 'App Review Access' }).getByRole('button', { name: 'Ustawienia' }).click();
+  const flags = page.locator('#admin-tournament-settings .adm-flag');
+  await expect(flags.filter({ hasText: 'Publiczny' }).locator('input')).toBeDisabled();
+  await expect(flags.filter({ hasText: 'Liczy statystyki' }).locator('input')).toBeDisabled();
+  await expect(flags.filter({ hasText: 'Symulacja' }).locator('input')).toBeEnabled();
 });
 
 test('every row control is a real target, at least 44 px tall', async ({ page }) => {

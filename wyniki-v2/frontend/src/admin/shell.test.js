@@ -17,11 +17,11 @@ test('every old tab has a home in the new rail', () => {
   }
 });
 
-test('the office tabs are not in the rail but still land somewhere', () => {
+test('the office dashboard is not a section of its own but still lands somewhere', () => {
   const railTabs = ADMIN_SECTIONS.flatMap((section) => section.tabs);
-  assert.ok(!railTabs.includes('office') && !railTabs.includes('planning'));
+  assert.ok(!railTabs.includes('office'));
   assert.equal(sectionForTab('office'), 'turnieje');
-  assert.equal(sectionForTab('planning'), 'turnieje');
+  assert.equal(sectionForTab('planning'), 'turnieje', 'an old link still opens something sane');
 });
 
 test('the address bar carries the section, and the sub-tab where a section has two', () => {

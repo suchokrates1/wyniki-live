@@ -29,8 +29,8 @@ export const SECTION_TAB_LABELS = {
   devices: 'Tablety',
 };
 
-// Tabs the office owns: reachable from inside a section, never from the rail.
-const GUEST_TABS = { office: 'turnieje', planning: 'turnieje' };
+// The office dashboard still opens from a row; it is not a section of its own.
+const GUEST_TABS = { office: 'turnieje' };
 
 export const DEFAULT_SECTION = ADMIN_SECTIONS[0].id;
 
