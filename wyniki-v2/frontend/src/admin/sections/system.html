@@ -1,0 +1,102 @@
+<div class="adm-stack">
+  <section class="adm-card" aria-labelledby="adm-panic-title">
+    <div class="adm-card__head">
+      <h2 id="adm-panic-title" class="adm-card__title">Panic — WhatsApp</h2>
+      <span class="adm-card__hint">sędzia woła reżyserię z tabletu; numery są tylko tutaj</span>
+      <div class="adm-card__actions">
+        <label class="adm-device__test">
+          <input type="checkbox" x-model="panicEnabled" @change="savePanicEnabled()">
+          <span x-text="panicEnabled ? 'Włączone' : 'Wyłączone'"></span>
+        </label>
+      </div>
+    </div>
+
+    <p class="adm-modal__error" role="alert" x-show="panicError" x-text="panicError"></p>
+
+    <ul class="adm-rows" role="list">
+      <template x-for="row in panicRecipients" :key="row.id">
+        <li class="adm-row">
+          <div class="adm-row__main">
+            <div class="adm-row__title">
+              <span class="adm-row__name" x-text="row.name"></span>
+              <span class="adm-chip" :class="row.enabled ? 'adm-chip--ok' : ''" x-text="row.enabled ? 'dostaje alarm' : 'wyciszony'"></span>
+            </div>
+            <div class="adm-row__meta adm-mono" x-text="row.chat_id"></div>
+          </div>
+          <div class="adm-row__actions">
+            <button type="button" class="adm-btn" @click="togglePanicRecipient(row)" x-text="row.enabled ? 'Wycisz' : 'Włącz'"></button>
+            <button type="button" class="adm-btn adm-btn--danger" @click="deletePanicRecipient(row)">Usuń</button>
+          </div>
+        </li>
+      </template>
+    </ul>
+
+    <p class="adm-empty" x-show="!panicRecipients.length">Nikt nie dostaje alarmu. Dodaj numer poniżej.</p>
+
+    <div class="adm-addrow">
+      <label class="sr-only" for="adm-panic-name">Imię odbiorcy</label>
+      <input id="adm-panic-name" type="text" class="adm-input" placeholder="Imię" x-model="panicName">
+      <label class="sr-only" for="adm-panic-chat">Numer w formacie WAHA</label>
+      <input id="adm-panic-chat" type="text" class="adm-input adm-mono" placeholder="48123456789@c.us" x-model="panicChatId">
+      <button type="button" class="adm-btn adm-btn--primary" @click="addPanicRecipient()">Dodaj odbiorcę</button>
+    </div>
+  </section>
+
+  <section class="adm-card" aria-labelledby="adm-smtp-title">
+    <div class="adm-card__head">
+      <h2 id="adm-smtp-title" class="adm-card__title">Poczta (SMTP)</h2>
+      <span class="adm-card__hint">stąd wychodzą raporty po turnieju</span>
+    </div>
+
+    <div class="adm-grid">
+      <template x-for="field in adminSmtpFields()" :key="field.id">
+        <div class="adm-field">
+          <label class="adm-field__label" :for="field.id" x-text="field.label"></label>
+          <input
+            class="adm-input adm-field__input"
+            :id="field.id"
+            :type="field.type"
+            :placeholder="field.placeholder || ''"
+            :value="emailSettings[field.key]"
+            @input="emailSettings[field.key] = $event.target.value"
+          >
+        </div>
+      </template>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-smtp-pass">Hasło</label>
+        <input
+          id="adm-smtp-pass"
+          class="adm-input adm-field__input"
+          :type="passwordVisible.smtp ? 'text' : 'password'"
+          autocomplete="new-password"
+          x-model="emailSettings.smtp_password"
+        >
+        <span class="adm-field__hint">
+          <button type="button" class="adm-link" @click="passwordVisible.smtp = !passwordVisible.smtp" x-text="passwordVisible.smtp ? 'Ukryj hasło' : 'Pokaż hasło'"></button>
+        </span>
+      </div>
+    </div>
+
+    <div class="adm-card__footer">
+      <button type="button" class="adm-btn adm-btn--primary" @click="saveEmailSettings()">Zapisz SMTP</button>
+      <label class="adm-device__test">
+        <input type="checkbox" x-model="emailSettings.smtp_use_tls">
+        <span>Użyj STARTTLS</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="adm-card" aria-labelledby="adm-access-title">
+    <div class="adm-card__head">
+      <h2 id="adm-access-title" class="adm-card__title">Dostęp do panelu</h2>
+      <span class="adm-card__hint">sesja siedzi w tej przeglądarce, nie na serwerze</span>
+    </div>
+    <p class="adm-empty">
+      Hasło administratora ustawia się w konfiguracji serwera (<span class="adm-mono">ADMIN_PASSWORD</span>), nie stąd.
+      Wylogowanie kasuje sesję tylko na tym urządzeniu.
+    </p>
+    <div class="adm-card__footer">
+      <button type="button" class="adm-btn" @click="logoutAdmin()">Wyloguj z tego urządzenia</button>
+    </div>
+  </section>
+</div>

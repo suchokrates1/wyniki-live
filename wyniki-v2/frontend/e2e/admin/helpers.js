@@ -26,7 +26,20 @@ export const DEVICES = [
   { android_id: 'tab-3', name: 'Tablet 3', battery_level: 17, is_charging: false, app_version: '1.0.0-dev.37', court_id: 't32-3', last_seen: new Date().toISOString() },
 ];
 
-export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, snapshot = {}, onRequest = () => {} } = {}) {
+export const PANIC = {
+  enabled: true,
+  recipients: [
+    { id: 1, name: 'Reżyserka', chat_id: '48111222333@c.us', enabled: true },
+    { id: 2, name: 'Dawid', chat_id: '48444555666@c.us', enabled: false },
+  ],
+};
+
+export const EMAIL_SETTINGS = {
+  smtp_host: 'smtp.ovh.net', smtp_port: 587, smtp_username: 'turniej@blindtennis.app',
+  smtp_from_email: 'turniej@blindtennis.app', smtp_from_name: 'Wyniki Live', smtp_use_tls: true,
+};
+
+export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {} } = {}) {
   await page.addInitScript(() => {
     try { sessionStorage.setItem('wyniki-admin-token', 'e2e-token'); } catch { /* private mode */ }
   });
@@ -44,7 +57,8 @@ export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLA
     if (/\/admin\/api\/global-players(\?|$)/.test(url)) return route.fulfill({ json: players });
     if (url.includes('/admin/api/global-players')) return route.fulfill({ json: [] });
     if (/\/tournaments\/\d+\/players(\?|$)/.test(url)) return route.fulfill({ json: entries });
-    if (url.includes('/admin/api/panic')) return route.fulfill({ json: { enabled: false, recipients: [] } });
+    if (url.includes('/admin/api/panic')) return route.fulfill({ json: panic });
+    if (url.includes('/admin/api/settings/email')) return route.fulfill({ json: emailSettings });
     if (url.includes('/admin/api/overlay')) return route.fulfill({ json: { overlays: {}, settings: {} } });
     return route.fulfill({ json: {} });
   });

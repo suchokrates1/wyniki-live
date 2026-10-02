@@ -4,8 +4,11 @@ import './main.css';
 import './styles/tailwind-admin.css';
 import './styles/admin.css';
 import './styles/admin-list.css';
+import './styles/admin-forms.css';
+import './styles/admin-courts.css';
 import { createAuthAdmin, installAdminFetchAuth } from './admin/auth.js';
 import { createCourtsAdmin } from './admin/courts.js';
+import { createDirectorPanel } from './admin/directorPanel.js';
 import { createTournamentsAdmin } from './admin/tournaments.js';
 import { createOfficeTabAdmin } from './admin/officeTab.js';
 import { createGlobalPlayersAdmin } from './admin/globalPlayers.js';
@@ -31,6 +34,8 @@ import { createCourtsListView } from './admin/courtsList.js';
 import devicesListHtml from './admin/sections/devicesList.html?raw';
 import { createDevicesListView } from './admin/devicesList.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
+import systemHtml from './admin/sections/system.html?raw';
+import { createSystemView } from './admin/systemView.js';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
 
@@ -55,6 +60,7 @@ mountAdminPartial('admin-player-create', playerCreateHtml);
 mountAdminPartial('admin-court-pins', courtPinsHtml);
 mountAdminPartial('admin-courts-list', courtsListHtml);
 mountAdminPartial('admin-devices-list', devicesListHtml);
+mountAdminPartial('admin-system', systemHtml);
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {
@@ -108,6 +114,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   },
   createAuthAdmin(),
   createCourtsAdmin(),
+  createDirectorPanel(),
   createTournamentsAdmin(),
   createOfficeTabAdmin(),
   createGlobalPlayersAdmin(),
@@ -122,6 +129,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createCourtPinsView(),
   createCourtsListView(),
   createDevicesListView(),
+  createSystemView(),
 ));
 
 ignoreCancelledAlpineTransitions();

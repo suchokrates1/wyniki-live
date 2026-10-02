@@ -1,15 +1,7 @@
 import {
   inferMixedPlayerBands,
-  mixedCategoryDisplayLabel,
   planningDivisionKey as sharedPlanningDivisionKey,
-  assignedTournamentCategoryId,
-  playerMatchesDoublesCategory,
-  playerMatchesTournamentCategory,
-  categoryFilterKey,
-  categoryFilterKeys,
-  categoryFilterLabel,
 } from '../shared/categories.js';
-import { PLAY_FORMATS, normalizePlayFormat } from '../shared/playFormat.js';
 
 export function createTournamentsAdmin() {
   return {
