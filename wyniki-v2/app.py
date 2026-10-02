@@ -17,6 +17,7 @@ from sqlalchemy import event
 
 from wyniki.config import logger, settings
 from wyniki.database.connection import apply_sqlite_pragmas
+from wyniki.database.errors import StorageError
 from wyniki.db_models import db
 from wyniki.api import courts, admin, health, push, stream, web, office, admin_auth
 from wyniki.services import reminder_loop
@@ -84,6 +85,14 @@ def create_app() -> Flask:
         if request.path.startswith("/api/overlay/") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
             return require_admin_access()
         return None
+
+    @app.errorhandler(StorageError)
+    def storage_error_as_json(exc):
+        """A database failure is a server error, not an empty result."""
+        logger.error("storage_error", path=request.path, error=str(exc), exc_info=True)
+        if not request.path.startswith(("/api/", "/admin/api/")):
+            raise exc
+        return jsonify({"error": "Save failed"}), 500
 
     @app.errorhandler(Exception)
     def api_error_as_json(exc):

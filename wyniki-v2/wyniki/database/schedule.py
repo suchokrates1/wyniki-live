@@ -140,7 +140,7 @@ def ensure_group_rematch_schedule_entries(
         }
     except Exception as e:
         logger.error("ensure_group_rematch_schedule_error", error=str(e), tournament_id=tournament_id)
-        return {"status": "error", "error": str(e)}
+        raise StorageError("ensure_group_rematch_schedule_entries") from e
 
 def _schedule_day_for_tournament(cursor: sqlite3.Cursor, tournament_id: int) -> str:
     cursor.execute("SELECT start_date FROM tournaments WHERE id = ?", (tournament_id,))
@@ -648,7 +648,7 @@ def publish_tournament_schedule(tournament_id: int, day_date: Optional[str] = No
             return int(cursor.rowcount or 0)
     except Exception as e:
         logger.error("publish_tournament_schedule_error", error=str(e), tournament_id=tournament_id)
-        return 0
+        raise StorageError("publish_tournament_schedule") from e
 
 
 def _removed_fixtures_key(tournament_id: int) -> str:
@@ -778,7 +778,7 @@ def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
         return fetch_tournament_schedule(tournament_id)
     except Exception as e:
         logger.error("ensure_group_schedule_error", error=str(e), tournament_id=tournament_id)
-        return fetch_tournament_schedule(tournament_id)
+        raise StorageError("ensure_group_schedule_entries") from e
 
 def ensure_knockout_schedule_entries(
     tournament_id: int,
@@ -878,7 +878,7 @@ def ensure_knockout_schedule_entries(
         return fetch_tournament_schedule(tournament_id)
     except Exception as e:
         logger.error("ensure_knockout_schedule_error", error=str(e), tournament_id=tournament_id)
-        return fetch_tournament_schedule(tournament_id)
+        raise StorageError("ensure_knockout_schedule_entries") from e
 
 def _same_match_pair(left_a: str, left_b: str, right_a: str, right_b: str) -> bool:
     left = {competitor_identity_key(left_a), competitor_identity_key(left_b)}
@@ -1068,7 +1068,7 @@ def link_schedule_to_match(
         return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)), None)
     except Exception as e:
         logger.error("link_schedule_to_match_error", error=str(e), tournament_id=tournament_id, match_id=match_id)
-        return None
+        raise StorageError("link_schedule_to_match") from e
 
 def unlink_schedule_from_match(match_id: int, *, fallback_status: str = "planned") -> int:
     """Detach schedule slots from a match that must not count for tournament lifecycle."""
@@ -1093,7 +1093,7 @@ def unlink_schedule_from_match(match_id: int, *, fallback_status: str = "planned
             return affected
     except Exception as e:
         logger.error("unlink_schedule_from_match_error", error=str(e), match_id=match_id)
-        return 0
+        raise StorageError("unlink_schedule_from_match") from e
 
 def _autoscheduler_settings_key(tournament_id: int) -> str:
     return f"autoscheduler:{int(tournament_id)}"
@@ -1412,6 +1412,7 @@ def apply_autoschedule_placements(
             conn.commit()
     except Exception as e:
         logger.error("apply_autoschedule_error", error=str(e), tournament_id=tournament_id)
+        raise StorageError("apply_autoschedule_placements") from e
     return fetch_tournament_schedule(tournament_id)
 
 
@@ -1477,6 +1478,7 @@ def reflow_placed_schedule(tournament_id: int) -> List[Dict[str, Any]]:
                 conn.commit()
         except Exception as e:
             logger.error("reflow_placed_schedule_error", error=str(e), tournament_id=tournament_id)
+            raise StorageError("reflow_placed_schedule") from e
     return fetch_tournament_schedule(tournament_id)
 
 
@@ -1548,7 +1550,7 @@ def replace_unplayed_group_schedule(tournament_id: int) -> Dict[str, Any]:
             conn.commit()
     except Exception as e:
         logger.error("replace_group_schedule_unplace_error", error=str(e), tournament_id=tournament_id)
-        return {"schedule": fetch_tournament_schedule(tournament_id), "summary": {}}
+        raise StorageError("replace_unplayed_group_schedule") from e
 
     proposal = generate_autoschedule_proposal(tournament_id, mode="all", phases=["group"])
     placements = [
@@ -1607,6 +1609,7 @@ def move_schedule_entry_with_cascade(
             conn.commit()
     except Exception as e:
         logger.error("move_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
+        raise StorageError("move_schedule_entry_with_cascade") from e
     return fetch_tournament_schedule(tournament_id)
 
 def unassign_schedule_entry(
@@ -1636,7 +1639,7 @@ def unassign_schedule_entry(
             conn.commit()
     except Exception as e:
         logger.error("unassign_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
-        return schedule
+        raise StorageError("unassign_schedule_entry") from e
     return fetch_tournament_schedule(tournament_id)
 
 def clear_schedule_day(tournament_id: int, day_date: str) -> Dict[str, int]:
@@ -1679,7 +1682,7 @@ def clear_schedule_day(tournament_id: int, day_date: str) -> Dict[str, int]:
             return {"cleared": cleared, "kept": kept}
     except Exception as e:
         logger.error("clear_schedule_day_error", error=str(e), tournament_id=tournament_id, day_date=day)
-        return {"cleared": 0, "kept": 0}
+        raise StorageError("clear_schedule_day") from e
 
 
 def delete_unassigned_schedule_entries(
@@ -1717,7 +1720,7 @@ def delete_unassigned_schedule_entries(
         return deleted
     except Exception as e:
         logger.error("delete_unassigned_schedule_error", error=str(e), tournament_id=tournament_id)
-        return 0
+        raise StorageError("delete_unassigned_schedule_entries") from e
 
 
 from .schedule_notes import SCHEDULE_NOTE_MODES as SCHEDULE_NOTE_MODES, apply_schedule_notes as apply_schedule_notes

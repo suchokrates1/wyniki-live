@@ -24,7 +24,7 @@ RECORDED_LINES = {
     "wyniki/database/brackets.py": 2175,
     "frontend/admin.html": 2033,
     "wyniki/api/umpire_api.py": 1891,
-    "wyniki/database/schedule.py": 1733,
+    "wyniki/database/schedule.py": 1736,
     "frontend/index.html": 1712,
     "frontend/office.html": 1650,
     "frontend/src/umpire/app.js": 1641,
