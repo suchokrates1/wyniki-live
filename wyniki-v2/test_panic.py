@@ -169,3 +169,49 @@ def test_endpoint_requires_configuration(tmp_path, monkeypatch):
     listed = client.get("/admin/api/panic/settings", headers={"Authorization": f"Bearer {token}"})
     assert listed.status_code == 200
     assert listed.get_json()["recipients"] == []
+
+
+def test_a_known_sticker_names_the_tablet_instead_of_the_model():
+    text = panic.compose_message(
+        tournament="",
+        court_id="",
+        players="",
+        note="",
+        tablet="Teclast P50Ai_ROW",
+        android_id="deace65c4fba06cd",
+        sticker="3",
+    )
+    assert text.startswith("Sędzia na tablecie 3 potrzebuje pomocy.")
+    assert "Teclast" not in text
+
+
+def test_a_desk_reply_to_the_whatsapp_shows_up_in_the_thread(tmp_path, monkeypatch):
+    db_path = tmp_path / "panic-chat.sqlite3"
+    monkeypatch.setenv("DATABASE_PATH", str(db_path))
+    from wyniki.config import settings
+    settings.database_path = str(db_path)
+    settings.waha_url = "http://waha.local"
+    settings.waha_api_key = "test-key"
+    from wyniki.database import init_db
+    init_db()
+    panic.reset_cooldowns()
+    panic.add_recipient("Dawid", "48000000000@c.us")
+    monkeypatch.setattr(panic, "send_text", lambda chat_id, text: "true_chat_OUT")
+    monkeypatch.setattr(panic, "recent_messages", lambda chat_id: [{
+        "id": "true_chat_IN",
+        "fromMe": False,
+        "body": "Już idę",
+        "timestamp": 1_790_000_000,
+        "_data": {"parentMsgId": "OUT"},
+    }])
+    body, status = panic.dispatch_panic(
+        court_id="",
+        note="brak piłek",
+        remote_addr="10.0.0.4",
+        client={"android_id": "abc123", "device_model": "P50Ai_ROW", "device_manufacturer": "Teclast", "device": "Teclast P50Ai_ROW"},
+    )
+    assert status == 200
+    token = body["thread_token"]
+    viewed = panic.read_thread(token)
+    assert viewed["messages"][0]["text"] == "brak piłek"
+    assert viewed["messages"][1] == {"direction": "desk", "text": "Już idę"}

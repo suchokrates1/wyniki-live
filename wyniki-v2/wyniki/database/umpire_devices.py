@@ -4,6 +4,37 @@ from __future__ import annotations
 from .connection import db_conn
 
 
+def device_sticker(android_id: str) -> str:
+    ident = str(android_id or "").strip()[:32]
+    if not ident:
+        return ""
+    with db_conn() as conn:
+        row = conn.execute(
+            "SELECT sticker FROM umpire_devices WHERE android_id = ?",
+            (ident,),
+        ).fetchone()
+    if row is None:
+        return ""
+    return str(row["sticker"] or "").strip()
+
+
+def set_device_sticker(android_id: str, sticker: str) -> None:
+    ident = str(android_id or "").strip()[:32]
+    label = str(sticker or "").strip()[:8]
+    if not ident or not label:
+        return
+    with db_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO umpire_devices (android_id, sticker)
+            VALUES (?, ?)
+            ON CONFLICT(android_id) DO UPDATE SET sticker = excluded.sticker
+            """,
+            (ident, label),
+        )
+        conn.commit()
+
+
 def remember_umpire_device(
     *,
     android_id: str,

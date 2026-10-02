@@ -1,6 +1,7 @@
 """Umpire panic: one WhatsApp fan-out, with a short cooldown."""
 from __future__ import annotations
 
+import calendar
 import re
 import time
 from datetime import datetime
@@ -14,9 +15,16 @@ from ..database.panic import (
     list_panic_recipients,
     update_panic_recipient,
 )
-from ..database.umpire_devices import remember_umpire_device
+from ..database.panic_threads import (
+    add_message,
+    known_waha_ids,
+    open_thread,
+    thread_view,
+    waiting_thread_count,
+)
+from ..database.umpire_devices import device_sticker, remember_umpire_device
 from .court_manager import get_court_state
-from .waha_client import send_text, waha_configured
+from .waha_client import recent_messages, send_text, waha_configured
 
 _PANIC_ENABLED_KEY = "panic_enabled"
 _last_sent: dict[str, float] = {}
@@ -95,7 +103,7 @@ def _without_repeated_prefix(text: str) -> str:
 
 
 def tablet_label(client: dict[str, Any] | None) -> str:
-    """Model string from the umpire app. Sticker numbers are not in the database."""
+    """Model string from the umpire app, used when the tablet has no sticker number."""
     meta = client or {}
     manufacturer = str(meta.get("device_manufacturer") or "").strip()
     model = str(meta.get("device_model") or "").strip()
@@ -109,12 +117,17 @@ def tablet_label(client: dict[str, Any] | None) -> str:
     return model
 
 
-def compose_message(*, tournament: str, court_id: str, players: str, note: str, tablet: str = "", android_id: str = "", when: datetime | None = None) -> str:
+def compose_message(*, tournament: str, court_id: str, players: str, note: str, tablet: str = "", android_id: str = "", sticker: str = "", when: datetime | None = None) -> str:
     del when
     court = str(court_id or "").strip()
     who = str(tablet or "").strip()
     ident = str(android_id or "").strip()
-    if court and court != "?":
+    number = str(sticker or "").strip()
+    if number and court and court != "?":
+        text = f"Sędzia na tablecie {number}, kort {court}, potrzebuje pomocy."
+    elif number:
+        text = f"Sędzia na tablecie {number} potrzebuje pomocy."
+    elif court and court != "?":
         text = f"Sędzia na korcie {court} potrzebuje pomocy."
     elif who and who not in {"Tablet", "PWA"}:
         text = f"Sędzia na {who} potrzebuje pomocy."
@@ -194,24 +207,142 @@ def dispatch_panic(*, court_id: str, note: str, remote_addr: str, client: dict[s
         platform=str(meta.get("platform") or ""),
         court_id=court_id,
     )
+    sticker = device_sticker(android_id)
     text = compose_message(
         tournament=ctx["tournament"],
         court_id=ctx["court_id"],
         players=ctx["players"],
         note=note,
-        tablet="" if ctx["court_id"] else tablet_label(client),
+        tablet="" if ctx["court_id"] or sticker else tablet_label(client),
         android_id=android_id,
+        sticker=sticker,
     )
     sent = 0
     failed = 0
+    deliveries: list[tuple[str, str]] = []
     for recipient in recipients:
-        if send_text(recipient["chat_id"], text):
+        message_id = send_text(recipient["chat_id"], text)
+        if message_id:
             sent += 1
+            deliveries.append((recipient["chat_id"], message_id if isinstance(message_id, str) else ""))
         else:
             failed += 1
     if sent == 0:
         logger.warning("panic_delivery_failed", court_id=court_id or None, failed=failed)
         return {"error": "WhatsApp delivery failed", "failed": failed}, 502
     mark_sent(key)
+    token = open_thread(android_id)
+    shown = " ".join((note or "").split()) or "Prośba o pomoc"
+    for chat_id, message_id in deliveries:
+        add_message(token, direction="umpire", body=shown, waha_id=message_id, chat_id=chat_id)
     logger.info("panic_sent", court_id=court_id or None, sent=sent, failed=failed)
-    return {"ok": True, "sent": sent, "failed": failed}, 200
+    return {"ok": True, "sent": sent, "failed": failed, "thread_token": token}, 200
+
+
+def _unix(text: str) -> float:
+    raw = str(text or "").strip().replace("T", " ")[:19]
+    try:
+        parsed = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return 0
+    return float(calendar.timegm(parsed.timetuple()))
+
+
+def _message_id(message: dict[str, Any]) -> str:
+    ident = message.get("id")
+    if isinstance(ident, dict):
+        ident = ident.get("id") or ident.get("_serialized") or ""
+    return str(ident or "")
+
+
+def _parent_id(message: dict[str, Any]) -> str:
+    raw = message.get("_data") if isinstance(message.get("_data"), dict) else {}
+    parent = raw.get("parentMsgId") or message.get("replyTo") or ""
+    if isinstance(parent, dict):
+        parent = parent.get("id") or parent.get("_serialized") or ""
+    return str(parent or "")
+
+
+def _quotes(parent: str, outbound_id: str) -> bool:
+    if not parent or not outbound_id or outbound_id == "sent":
+        return False
+    return parent == outbound_id or outbound_id.endswith(parent) or parent.endswith(outbound_id)
+
+
+def _public_messages(view: dict[str, Any]) -> list[dict[str, str]]:
+    return [{"direction": row["direction"], "text": row["text"]} for row in view["messages"]]
+
+
+def read_thread(token: str) -> dict[str, Any] | None:
+    """Pull new WhatsApp replies, then return the conversation."""
+    view = thread_view(token)
+    if view is None:
+        return None
+    _absorb_replies(view)
+    view = thread_view(token) or view
+    return {"messages": _public_messages(view)}
+
+
+def send_follow_up(token: str, note: str) -> tuple[dict[str, Any], int]:
+    view = thread_view(token)
+    if view is None:
+        return {"error": "Thread not found"}, 404
+    text = " ".join((note or "").split())
+    if not text:
+        return {"error": "Note is required"}, 400
+    if not waha_configured():
+        return {"error": "Panic is not configured"}, 503
+    sticker = device_sticker(view["android_id"])
+    who = f"Tablet {sticker}" if sticker else "Sędzia"
+    outgoing = f"{who}: {text[:280]}"
+    chats = []
+    seen = set()
+    for row in view["messages"]:
+        chat_id = row.get("chat_id") or ""
+        if chat_id and chat_id not in seen:
+            seen.add(chat_id)
+            chats.append(chat_id)
+    if not chats:
+        chats = [row["chat_id"] for row in list_recipients() if row["enabled"] and row["chat_id"]]
+    sent = False
+    for chat_id in chats:
+        message_id = send_text(chat_id, outgoing)
+        if not message_id:
+            continue
+        sent = True
+        add_message(
+            token,
+            direction="umpire",
+            body=text,
+            waha_id=message_id if isinstance(message_id, str) else "",
+            chat_id=chat_id,
+        )
+    if not sent:
+        return {"error": "WhatsApp delivery failed"}, 502
+    refreshed = read_thread(token) or {"messages": []}
+    return refreshed, 200
+
+
+def _absorb_replies(view: dict[str, Any]) -> None:
+    outbound = {row["waha_id"] for row in view["messages"] if row.get("waha_id")}
+    chats = {row["chat_id"] for row in view["messages"] if row.get("chat_id")}
+    if not chats or not waha_configured():
+        return
+    started = _unix(view["created_at"])
+    only_waiting = waiting_thread_count() <= 1
+    seen = known_waha_ids()
+    for chat_id in chats:
+        for message in recent_messages(chat_id):
+            if message.get("fromMe"):
+                continue
+            message_id = _message_id(message)
+            body = " ".join(str(message.get("body") or "").split())
+            if not message_id or not body or message_id in seen:
+                continue
+            parent = _parent_id(message)
+            quoted = any(_quotes(parent, outbound_id) for outbound_id in outbound)
+            timestamp = float(message.get("timestamp") or 0)
+            if not quoted and not (only_waiting and timestamp >= started - 2):
+                continue
+            add_message(view["token"], direction="desk", body=body, waha_id=message_id, chat_id=chat_id)
+            seen.add(message_id)

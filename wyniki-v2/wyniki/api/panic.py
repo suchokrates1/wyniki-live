@@ -8,6 +8,8 @@ from ..services.panic import (
     dispatch_panic,
     list_recipients,
     panic_enabled,
+    read_thread,
+    send_follow_up,
     set_panic_enabled,
     update_recipient,
 )
@@ -57,6 +59,20 @@ def post_panic():
     if status == 429:
         response.headers["Retry-After"] = str(body.get("retry_after") or 60)
     return response, status
+
+
+@umpire_blueprint.route("/api/umpire/panic/<token>", methods=["GET"])
+def get_panic_thread(token: str):
+    body = read_thread(token)
+    if body is None:
+        return jsonify({"error": "Thread not found"}), 404
+    return jsonify(body)
+
+
+@umpire_blueprint.route("/api/umpire/panic/<token>", methods=["POST"])
+def post_panic_follow_up(token: str):
+    body, status = send_follow_up(token, _note())
+    return jsonify(body), status
 
 
 @admin_blueprint.route("/settings", methods=["GET"])

@@ -690,7 +690,31 @@ def init_db() -> None:
                 device TEXT DEFAULT '',
                 platform TEXT DEFAULT '',
                 last_court_id TEXT DEFAULT '',
+                sticker TEXT DEFAULT '',
                 last_seen TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("PRAGMA table_info(umpire_devices)")
+        device_cols = [row[1] for row in cursor.fetchall()]
+        if device_cols and "sticker" not in device_cols:
+            cursor.execute("ALTER TABLE umpire_devices ADD COLUMN sticker TEXT DEFAULT ''")
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS panic_threads (
+                token TEXT PRIMARY KEY,
+                android_id TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS panic_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token TEXT NOT NULL,
+                direction TEXT NOT NULL,
+                body TEXT NOT NULL,
+                waha_id TEXT DEFAULT '',
+                chat_id TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
