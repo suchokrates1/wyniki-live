@@ -64,6 +64,17 @@ ssh dell "python3 ~/traefik/generate_peer_forwards.py --force-sync"
 
 First-time only: clone `git@github.com:suchokrates1/wyniki-live.git` into `~/wyniki-live`, copy `.env.test.example` → `.env.test`, fill `SECRET_KEY` and `ADMIN_PASSWORD`.
 
+## Admin E2E against this stack
+
+The admin suite normally runs on a local mock server. Point it at the deployed test stack with
+`ADMIN_BASE_URL`; `/admin/api` stays stubbed, so nothing in the test database is read or written.
+
+```powershell
+cd wyniki-v2/frontend
+$env:ADMIN_BASE_URL = 'https://test.blindtennis.app'
+npx playwright test --config=playwright.admin.config.js
+```
+
 ## Health
 
 ```powershell
