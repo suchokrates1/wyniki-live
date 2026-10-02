@@ -90,9 +90,19 @@
   padding-top: 16px;
   border-top: 1px solid var(--adm-line);
 }
+/* On a phone a court is one card: number, state and battery on the first line,
+   the PIN beside them, the three buttons across the bottom. */
 @media (max-width: 860px) {
   .adm-court__no, .adm-court__pin { width: auto; }
   .adm-addrow .adm-input { flex: 1 1 140px; }
+  .adm-court__no { display: flex; align-items: baseline; gap: 8px; order: 1; }
+  .adm-court__name { font-size: 20px; }
+  .adm-court__battery { order: 2; margin-left: auto; width: auto; }
+  .adm-row--court .adm-row__main { order: 3; flex-basis: 100%; }
+  .adm-court__pin { order: 4; width: 100%; display: flex; align-items: baseline; gap: 8px; }
+  .adm-court__pininput { width: 92px; }
+  .adm-row--court .adm-row__actions { order: 5; width: 100%; }
+  .adm-row--court .adm-row__actions .adm-btn { flex: 1; }
 }
 
 /* Tablets */
@@ -101,6 +111,11 @@
 .adm-device__alert { width: 100%; box-sizing: border-box; text-align: center; font-family: 'Chivo Mono', monospace; font-weight: 700; }
 .adm-device__test { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; color: var(--adm-muted); cursor: pointer; }
 .adm-device__test input { width: 20px; height: 20px; }
+/* On a phone the tablet card reads top down: name, what it is, then the battery
+   row, the test flag and the button. */
 @media (max-width: 860px) {
-  .adm-device__field { width: 100%; }
+  .adm-row--device .adm-device__field { width: auto; flex: 1 1 130px; }
+  .adm-row--device .adm-court__battery { align-self: flex-end; margin-left: auto; }
+  .adm-row--device .adm-row__actions { width: 100%; }
+  .adm-row--device .adm-row__actions .adm-btn { flex: 1; }
 }

@@ -17,7 +17,7 @@
 
       <ul class="adm-rows" role="list">
         <template x-for="row in bucket.rows" :key="row.android_id">
-          <li class="adm-row">
+          <li class="adm-row adm-row--device">
             <div class="adm-row__main">
               <label class="sr-only" :for="'adm-dev-name-' + row.android_id">Nazwa tabletu</label>
               <input

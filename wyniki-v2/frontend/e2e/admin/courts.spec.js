@@ -1,12 +1,11 @@
 /** Korty i tablety: the warning about guessable PINs, and handing out fresh ones. */
 import { expect, test } from '@playwright/test';
 
-import { openAdmin } from './helpers.js';
+import { openAdmin, openSection, press } from './helpers.js';
 
 async function openCourts(page, options) {
   await openAdmin(page, options);
-  await page.locator('.adm-rail__item', { hasText: 'Korty i tablety' }).click();
-  await expect(page.locator('.adm-main__head h1')).toHaveText('Korty i tablety');
+  await openSection(page, 'korty', 'Korty i tablety');
 }
 
 test('courts left on the default PIN are called out, in the banner and on the row', async ({ page }) => {
@@ -26,7 +25,7 @@ test('nothing is said when every court has its own PIN', async ({ page }) => {
 test('drawing PINs shows one per court, re-draws, and saves them one by one', async ({ page }) => {
   const calls = [];
   await openCourts(page, { onRequest: (call) => calls.push(call) });
-  await page.locator('.adm-card__actions').getByRole('button', { name: 'Wylosuj nowe PIN-y' }).click();
+  await page.locator('.adm-pinbar').getByRole('button', { name: 'Wylosuj nowe PIN-y' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nowe PIN-y kortów' });
   await expect(dialog.locator('.adm-pin')).toHaveCount(3);
   const drawn = await dialog.locator('.adm-pin__value').allTextContents();
@@ -50,7 +49,7 @@ test('drawing PINs shows one per court, re-draws, and saves them one by one', as
 
 test('the tablets sub-tab opens from the section', async ({ page }) => {
   await openCourts(page);
-  await page.getByRole('tab', { name: 'Tablety' }).click();
+  await press(page.getByRole('tab', { name: 'Tablety' }), page);
   await expect(page).toHaveURL(/#\/korty\/devices$/);
   await expect(page.locator('#admin-devices-list .adm-card__title')).toHaveText('Tablety');
 });
@@ -65,7 +64,7 @@ test('a court row shows what is being played and the tablet battery', async ({ p
       },
     },
   });
-  await page.locator('.adm-rail__item', { hasText: 'Korty i tablety' }).click();
+  await openSection(page, 'korty', 'Korty i tablety');
   const row = page.locator('.adm-row').filter({ hasText: 'Kokot' });
   await expect(row.locator('.adm-chip--live')).toHaveText('W GRZE');
   await expect(row.locator('.adm-row__meta')).toContainText('2:1 (30:15)');
@@ -76,8 +75,8 @@ test('a court row shows what is being played and the tablet battery', async ({ p
 test('tablets: new ones wait for a name, the named fleet shows court, version and battery', async ({ page }) => {
   const calls = [];
   await openAdmin(page, { onRequest: (call) => calls.push(call) });
-  await page.locator('.adm-rail__item', { hasText: 'Korty i tablety' }).click();
-  await page.getByRole('tab', { name: 'Tablety' }).click();
+  await openSection(page, 'korty', 'Korty i tablety');
+  await press(page.getByRole('tab', { name: 'Tablety' }), page);
 
   const groups = page.locator('#admin-devices-list .adm-group');
   await expect(groups.first().locator('.adm-group__title')).toContainText('Nowe');

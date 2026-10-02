@@ -35,7 +35,9 @@ import devicesListHtml from './admin/sections/devicesList.html?raw';
 import { createDevicesListView } from './admin/devicesList.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import systemHtml from './admin/sections/system.html?raw';
+import moreHtml from './admin/sections/more.html?raw';
 import { createSystemView } from './admin/systemView.js';
+import { createPluralView } from './admin/plural.js';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
 
@@ -61,6 +63,7 @@ mountAdminPartial('admin-court-pins', courtPinsHtml);
 mountAdminPartial('admin-courts-list', courtsListHtml);
 mountAdminPartial('admin-devices-list', devicesListHtml);
 mountAdminPartial('admin-system', systemHtml);
+mountAdminPartial('admin-more', moreHtml);
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {
@@ -130,6 +133,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createCourtsListView(),
   createDevicesListView(),
   createSystemView(),
+  createPluralView(),
 ));
 
 ignoreCancelledAlpineTransitions();

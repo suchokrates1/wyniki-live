@@ -39,6 +39,18 @@ export const EMAIL_SETTINGS = {
   smtp_from_email: 'turniej@blindtennis.app', smtp_from_name: 'Wyniki Live', smtp_use_tls: true,
 };
 
+/** Opens a section by its address: on a phone two of them live behind the "Więcej" menu. */
+export async function openSection(page, id, heading) {
+  await page.evaluate((hash) => { window.location.hash = hash; }, `#/${id}`);
+  await page.locator('.adm-main__head h1').filter({ hasText: heading }).waitFor();
+}
+
+/** Phone emulation mis-hits elements the bottom bar overlaps; the keyboard path is real too. */
+export async function press(locator, page) {
+  await locator.focus();
+  await page.keyboard.press('Enter');
+}
+
 export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {} } = {}) {
   await page.addInitScript(() => {
     try { sessionStorage.setItem('wyniki-admin-token', 'e2e-token'); } catch { /* private mode */ }

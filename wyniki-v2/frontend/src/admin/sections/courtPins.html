@@ -1,7 +1,7 @@
 <div class="adm-pinbar" x-show="adminWeakPinCourts().length" x-cloak>
   <span class="adm-pinbar__text">
     <strong x-text="adminWeakPinCourts().length"></strong>
-    <span x-text="adminWeakPinCourts().length === 1 ? ' kort ma PIN, który zgadnie każdy' : ' korty mają PIN, który zgadnie każdy'"></span>
+    <span x-text="' ' + admCourtsWord(adminWeakPinCourts().length) + ' ' + admCourtsHave(adminWeakPinCourts().length) + ' PIN, który zgadnie każdy'"></span>
     — sędzia wpisuje go raz, przy wejściu na kort.
   </span>
   <button type="button" class="adm-btn adm-btn--primary" @click="openPinDialog()">Wylosuj nowe PIN-y</button>

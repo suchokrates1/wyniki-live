@@ -247,5 +247,19 @@
   .adm-main__head h1 { font-size: 24px; }
   .adm-subtabs { margin-left: 0; width: 100%; }
   .adm-subtab { flex: 1; padding: 0 10px; }
-  .adm-top { padding: 10px 16px; gap: 12px; }
+  /* The top bar keeps the brand on one line and the running tournament on the next. */
+  .adm-top { padding: 10px 16px 12px; gap: 8px 12px; min-height: 0; }
+  .adm-top__tag { display: none; }
+  .adm-top__spacer { display: none; }
+  .adm-top__chip {
+    order: 3;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+  .adm-top__chip span[aria-hidden] { color: var(--adm-lime); }
+  .adm-top__link { margin-left: auto; }
+  .adm-top__link + .adm-top__link { margin-left: 0; }
 }

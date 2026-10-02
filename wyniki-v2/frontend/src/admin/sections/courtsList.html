@@ -4,7 +4,7 @@
     <span class="adm-card__hint">PIN wpisuje sędzia raz, przy wejściu na kort</span>
     <div class="adm-card__actions">
       <button type="button" class="adm-btn" @click="courtTournamentFilterOpen = !courtTournamentFilterOpen" x-text="selectedCourtTournamentSummary"></button>
-      <button type="button" class="adm-btn adm-btn--primary" @click="openPinDialog()">Wylosuj nowe PIN-y</button>
+      <button type="button" class="adm-btn adm-btn--primary" x-show="!adminWeakPinCourts().length" @click="openPinDialog()">Wylosuj nowe PIN-y</button>
     </div>
   </div>
 
@@ -29,11 +29,11 @@
     <div class="adm-group">
       <h3 class="adm-group__title">
         <span x-text="group.name"></span>
-        <span class="adm-chip" x-text="group.courts.length + (group.courts.length === 1 ? ' kort' : ' korty')"></span>
+        <span class="adm-chip" x-text="admCourts(group.courts.length)"></span>
       </h3>
       <ul class="adm-rows" role="list">
         <template x-for="row in group.courts" :key="row.kortId">
-          <li class="adm-row">
+          <li class="adm-row adm-row--court">
             <div class="adm-court__no">
               <span class="adm-court__label">KORT</span>
               <span class="adm-court__name" x-text="row.name"></span>

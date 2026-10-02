@@ -1,12 +1,11 @@
 /** System: who gets the panic alarm, the SMTP that sends the reports, and the way out of the panel. */
 import { expect, test } from '@playwright/test';
 
-import { openAdmin } from './helpers.js';
+import { openAdmin, openSection } from './helpers.js';
 
 async function openSystem(page, options) {
   await openAdmin(page, options);
-  await page.locator('.adm-rail__item', { hasText: 'System' }).click();
-  await expect(page.locator('.adm-main__head h1')).toHaveText('System');
+  await openSection(page, 'system', 'System');
 }
 
 test('the panic list says who hears the alarm and who is muted', async ({ page }) => {

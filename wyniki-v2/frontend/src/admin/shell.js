@@ -7,11 +7,25 @@
  */
 
 export const ADMIN_SECTIONS = [
-  { id: 'turnieje', label: 'Turnieje', tabs: ['tournaments'] },
-  { id: 'zawodnicy', label: 'Zawodnicy', tabs: ['global_players', 'players'] },
-  { id: 'korty', label: 'Korty i tablety', tabs: ['courts', 'devices'] },
-  { id: 'overlay', label: 'Overlay TV', tabs: ['settings'] },
-  { id: 'system', label: 'System', tabs: ['panic'] },
+  { id: 'turnieje', label: 'Turnieje', short: 'Turnieje', tabs: ['tournaments'] },
+  { id: 'zawodnicy', label: 'Zawodnicy', short: 'Zawodnicy', tabs: ['global_players', 'players'] },
+  { id: 'korty', label: 'Korty i tablety', short: 'Korty', tabs: ['courts', 'devices'] },
+  { id: 'overlay', label: 'Overlay TV', short: 'Overlay', tabs: ['settings'] },
+  { id: 'system', label: 'System', short: 'System', tabs: ['panic'] },
+];
+
+/**
+ * On a phone the rail is a bottom bar, and four tabs is all that fits side by side.
+ * Overlay and System move behind a "Więcej" menu; on a wide screen they stay in the rail.
+ */
+export const MORE_SECTION = { id: 'wiecej', label: 'Więcej', short: 'Więcej', tabs: ['more'] };
+export const PHONE_TAB_COUNT = 4;
+
+export const MORE_ENTRIES = [
+  { section: 'overlay', label: 'Overlay TV', hint: 'układ, elementy, animacje, źródła OBS' },
+  { section: 'system', label: 'Panic', hint: 'odbiorcy alarmu na WhatsApp' },
+  { section: 'system', label: 'Poczta (SMTP)', hint: 'raporty po turnieju' },
+  { section: 'system', label: 'Dostęp do panelu', hint: 'sesja i hasło administratora' },
 ];
 
 export const SECTION_HEADINGS = {
@@ -20,6 +34,7 @@ export const SECTION_HEADINGS = {
   korty: ['Korty i tablety', 'PIN-y, przypisanie, bateria'],
   overlay: ['Overlay TV', 'to, co widzi widz na transmisji'],
   system: ['System', 'poczta, alarmy, dostęp do panelu'],
+  wiecej: ['Więcej', 'overlay, system, biuro'],
 };
 
 export const SECTION_TAB_LABELS = {
@@ -35,13 +50,28 @@ const GUEST_TABS = { office: 'turnieje' };
 export const DEFAULT_SECTION = ADMIN_SECTIONS[0].id;
 
 export function sectionForTab(tab) {
+  if (tab === 'more') return MORE_SECTION.id;
   const found = ADMIN_SECTIONS.find((section) => section.tabs.includes(tab));
   if (found) return found.id;
   return GUEST_TABS[tab] || DEFAULT_SECTION;
 }
 
 export function sectionById(id) {
+  if (id === MORE_SECTION.id) return MORE_SECTION;
   return ADMIN_SECTIONS.find((section) => section.id === id) || null;
+}
+
+/** The bottom bar: the three sections used on the day of setup, then the menu.
+    Four labels share one line, so each item uses its short name. */
+export function phoneSections() {
+  return [...ADMIN_SECTIONS.slice(0, PHONE_TAB_COUNT - 1), MORE_SECTION]
+    .map((section) => ({ ...section, label: section.short || section.label }));
+}
+
+/** Which bar item is lit: on a phone, Overlay and System light up "Więcej". */
+export function railSectionFor(section, phone) {
+  if (!phone) return section;
+  return phoneSections().some((item) => item.id === section) ? section : MORE_SECTION.id;
 }
 
 export function tabsForSection(id) {
@@ -63,14 +93,22 @@ export function adminHashFor(tab) {
   return tabs.length > 1 && tabs.includes(tab) ? `#/${section}/${tab}` : `#/${section}`;
 }
 
+export const PHONE_QUERY = '(max-width: 860px)';
+
 export function createAdminShell() {
   return {
+    adminPhone: false,
+
     adminSection() {
       return sectionForTab(this.activeTab);
     },
 
     adminSections() {
-      return ADMIN_SECTIONS;
+      return this.adminPhone ? phoneSections() : ADMIN_SECTIONS;
+    },
+
+    adminMoreEntries() {
+      return MORE_ENTRIES;
     },
 
     adminSectionTabs() {
@@ -81,7 +119,7 @@ export function createAdminShell() {
     },
 
     isAdminSection(id) {
-      return this.adminSection() === id;
+      return railSectionFor(this.adminSection(), this.adminPhone) === id;
     },
 
     adminSectionTitle() {
@@ -116,10 +154,22 @@ export function createAdminShell() {
 
     applyAdminHash() {
       const { tab } = parseAdminHash(window.location.hash);
+      if (tab === 'more' && !this.adminPhone) return this.openAdminSection('overlay');
       if (tab && tab !== this.activeTab) this.openAdminTab(tab);
     },
 
+    /** The menu is a phone screen: on a wide one its entries are rail items again. */
+    adminPhoneChanged(phone) {
+      this.adminPhone = phone;
+      if (!phone && this.activeTab === 'more') this.openAdminSection('overlay');
+    },
+
     initAdminShell() {
+      const query = window.matchMedia?.(PHONE_QUERY);
+      if (query) {
+        this.adminPhone = query.matches;
+        query.addEventListener?.('change', (event) => this.adminPhoneChanged(event.matches));
+      }
       this.applyAdminHash();
       window.addEventListener('hashchange', () => this.applyAdminHash());
     },

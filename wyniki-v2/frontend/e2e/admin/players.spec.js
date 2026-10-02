@@ -24,7 +24,9 @@ test('without a tournament picked nobody can be added; picking one opens the but
 
   await page.locator('#adm-players-tournament').selectOption('32');
   await expect(page.locator('#admin-players-base .adm-chip--ok:visible')).toHaveCount(1);
-  const addButtons = page.locator('#admin-players-base .adm-row__actions button:visible').filter({ hasText: 'Dopisz do: RAKIETY ATNiS VII' });
+  // The phone bar has no room for the tournament name, so there the button says just "Dopisz".
+  const label = test.info().project.name === 'phone' ? 'Dopisz' : 'Dopisz do: RAKIETY ATNiS VII';
+  const addButtons = page.locator('#admin-players-base .adm-row__actions button:visible').filter({ hasText: label });
   await expect(addButtons).toHaveCount(2);
 });
 

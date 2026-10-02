@@ -1,7 +1,7 @@
 <section class="adm-card" aria-labelledby="adm-players-title">
   <div class="adm-card__head">
     <h2 id="adm-players-title" class="adm-card__title">Baza zawodników</h2>
-    <span class="adm-card__hint" x-text="globalPlayers.length + ' osób · wspólna dla wszystkich turniejów'"></span>
+    <span class="adm-card__hint" x-text="admPeople(globalPlayers.length) + ' · wspólna dla wszystkich turniejów'"></span>
     <div class="adm-card__actions">
       <label class="sr-only" for="adm-players-tournament">Turniej, do którego dopisujesz</label>
       <select
@@ -63,7 +63,7 @@
             class="adm-btn"
             x-show="row.canAdd"
             @click="addGlobalToTournament(row.id)"
-            x-text="'Dopisz do: ' + adminPlayersTournamentName()"
+            x-text="adminPhone ? 'Dopisz' : 'Dopisz do: ' + adminPlayersTournamentName()"
           ></button>
           <button type="button" class="adm-btn adm-btn--quiet" @click="toggleClassHistory(row.player)">Historia klas</button>
         </div>

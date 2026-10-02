@@ -7,7 +7,8 @@ import { expect, test } from '@playwright/test';
 
 import { openAdmin } from './helpers.js';
 
-test('the rail holds the five setup sections and nothing the office owns', async ({ page }) => {
+test('the rail holds the five setup sections and nothing the office owns', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'phone', 'the phone bar holds four: see phone.spec.js');
   await openAdmin(page);
   const items = page.locator('.adm-rail__item');
   await expect(items).toHaveText(['Turnieje', 'Zawodnicy', 'Korty i tablety', 'Overlay TV', 'System']);
@@ -18,7 +19,7 @@ test('picking a section changes the heading and the address, and reload keeps it
   await openAdmin(page);
   await expect(page.locator('.adm-main__head h1')).toHaveText('Turnieje');
 
-  await page.getByRole('button', { name: 'Korty i tablety' }).click();
+  await page.getByRole('button', { name: /^Korty/ }).click(); // the phone bar shortens it
   await expect(page.locator('.adm-main__head h1')).toHaveText('Korty i tablety');
   await expect(page).toHaveURL(/#\/korty\/courts$/);
 
