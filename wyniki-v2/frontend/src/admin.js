@@ -2,6 +2,7 @@ import Alpine from 'alpinejs';
 import { ignoreCancelledAlpineTransitions } from './shared/alpineTransitions.js';
 import './main.css';
 import './styles/tailwind-admin.css';
+import './styles/admin.css';
 import { createAuthAdmin, installAdminFetchAuth } from './admin/auth.js';
 import { createCourtsAdmin } from './admin/courts.js';
 import { createTournamentsAdmin } from './admin/tournaments.js';
@@ -10,6 +11,7 @@ import { createGlobalPlayersAdmin } from './admin/globalPlayers.js';
 import { createOverlayAdmin } from './admin/overlay.js';
 import { createPanicAdmin } from './admin/panic.js';
 import { createDevicesAdmin } from './admin/devices.js';
+import { createAdminShell } from './admin/shell.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
@@ -23,7 +25,7 @@ if (adminOverlaySlot) adminOverlaySlot.outerHTML = overlayPanelHtml.trim();
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {
-    activeTab: 'courts',
+    activeTab: 'tournaments',
 
     // UI State
     loading: {
@@ -79,6 +81,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createOverlayAdmin(),
   createPanicAdmin(),
   createDevicesAdmin(),
+  createAdminShell(),
 ));
 
 ignoreCancelledAlpineTransitions();

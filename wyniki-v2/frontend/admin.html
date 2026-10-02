@@ -304,8 +304,8 @@
     .ov-wm-pos.is-on { border-color:#FFD400; background:#FFD400; color:#06222B; }
   </style>
 </head>
-<body class="min-h-screen bg-base-200">
-  <div x-data="adminApp" @admin-session-expired.window="handleAdminSessionExpired()" class="container mx-auto px-4 py-8" :class="activeTab === 'settings' ? 'max-w-[1440px]' : 'max-w-7xl'">
+<body class="adm-body">
+  <div x-data="adminApp" x-init="initAdminShell()" @admin-session-expired.window="handleAdminSessionExpired()" class="adm-app">
     <div x-show="adminNeedsAuth" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-base-300/90 p-4">
       <form @submit.prevent="loginAdmin" class="card w-full max-w-sm bg-base-100 shadow-xl">
         <div class="card-body">
@@ -331,22 +331,60 @@
       </form>
     </div>
 
-    <header class="mb-8">
-      <div class="flex justify-between items-center">
-        <h1 class="text-4xl font-bold">&#9881;&#65039; Panel Administracyjny</h1>
-        <div class="flex gap-2">
-          <button @click="activeTab = 'courts'" :class="{'btn-primary': activeTab === 'courts'}" class="btn btn-sm">Korty</button>
-          <button @click="openOfficeDashboard()" :class="{'btn-primary': activeTab === 'office'}" class="btn btn-sm">Biuro turnieju</button>
-          <button @click="openPlanningDashboard()" :class="{'btn-primary': activeTab === 'planning'}" class="btn btn-sm">Plan turnieju</button>
-          <button @click="activeTab = 'tournaments'" :class="{'btn-primary': activeTab === 'tournaments'}" class="btn btn-sm">Turnieje</button>
-          <button @click="activeTab = 'global_players'" :class="{'btn-primary': activeTab === 'global_players'}" class="btn btn-sm">&#127941; Zawodnicy</button>
-          <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze turnieju</button>
-          <button @click="activeTab = 'settings'; $nextTick(() => { updateCanvasScale(); _fitPreviewNames(); })" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
-          <button @click="activeTab = 'panic'; loadPanic()" :class="{'btn-primary': activeTab === 'panic'}" class="btn btn-sm">Panic</button>
-          <button @click="activeTab = 'devices'; loadDevices()" :class="{'btn-primary': activeTab === 'devices'}" class="btn btn-sm">Tablety</button>
+    <div class="adm-top">
+      <span class="adm-top__brand">wyniki<span>.</span>admin</span>
+      <span class="adm-top__tag">setup systemu i turniejów</span>
+      <div class="adm-top__spacer"></div>
+      <template x-if="adminActiveTournamentName()">
+        <span class="adm-top__chip">
+          <span aria-hidden="true">●</span>
+          <span x-text="'Aktywny: ' + adminActiveTournamentName()"></span>
+        </span>
+      </template>
+      <a class="adm-top__link" href="/" target="_blank" rel="noopener">Strona publiczna</a>
+      <button type="button" class="adm-top__link" @click="logoutAdmin()">Wyloguj</button>
+    </div>
+
+    <div class="adm-shell">
+      <nav class="adm-rail" aria-label="Sekcje panelu">
+        <span class="adm-rail__title">SETUP</span>
+        <template x-for="section in adminSections()" :key="section.id">
+          <button
+            type="button"
+            class="adm-rail__item"
+            :class="{ 'is-active': isAdminSection(section.id) }"
+            :aria-current="isAdminSection(section.id) ? 'page' : false"
+            @click="openAdminSection(section.id)"
+            x-text="section.label"
+          ></button>
+        </template>
+        <div class="adm-rail__office">
+          <h2>Dzień turnieju prowadzi biuro</h2>
+          <p>Terminarz, grupy, wyniki i drabinka są w module biura. Admin ich nie dubluje.</p>
+          <a href="/office" target="_blank" rel="noopener">Otwórz biuro turnieju</a>
         </div>
-      </div>
-    </header>
+      </nav>
+
+      <main class="adm-main">
+        <div class="adm-main__head">
+          <h1 x-text="adminSectionTitle()"></h1>
+          <span class="adm-main__hint" x-text="adminSectionHint()"></span>
+          <template x-if="adminSectionTabs().length">
+            <div class="adm-subtabs" role="tablist" aria-label="Widoki sekcji">
+              <template x-for="item in adminSectionTabs()" :key="item.tab">
+                <button
+                  type="button"
+                  role="tab"
+                  class="adm-subtab"
+                  :class="{ 'is-active': activeTab === item.tab }"
+                  :aria-selected="activeTab === item.tab"
+                  @click="openAdminTab(item.tab)"
+                  x-text="item.label"
+                ></button>
+              </template>
+            </div>
+          </template>
+        </div>
 
     <div x-show="activeTab === 'devices'" x-cloak class="card bg-base-100 shadow">
       <div class="card-body gap-4">
@@ -1999,6 +2037,8 @@
       </div>
     </dialog>
 
+      </main>
+    </div>
   </div>
 
   <!-- Toast -->
