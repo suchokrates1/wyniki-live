@@ -116,6 +116,17 @@ def test_a_test_device_does_not_send_whatsapp(tmp_path, monkeypatch):
     assert status == 200
     assert body["sent"] == 0
     assert sent == []
+    settings.waha_url = ""
+    settings.waha_api_key = ""
+    quiet, quiet_status = panic.dispatch_panic(
+        court_id="",
+        note="spam",
+        remote_addr="10.0.0.9",
+        client={"android_id": "8b0b074f321aee23", "device_model": "OnePlus8Pro"},
+    )
+    assert quiet_status == 200
+    assert quiet["sent"] == 0
+    assert sent == []
 
 
 def test_a_teclast_without_a_court_is_still_named():

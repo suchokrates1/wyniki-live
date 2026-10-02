@@ -60,6 +60,7 @@ from ..database import (
     save_tournament_court_streams,
 )
 from ..config import logger as logger, settings
+from ..database.errors import StorageError
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 from ..utils import json_no_cache as _json_no_cache
 from ..services.office_workflow import (
@@ -231,7 +232,11 @@ def update_tournament_schedule(tournament_id: int, schedule_id: int):
     _, error = _require_tournament(tournament_id)
     if error:
         return error
-    entry = update_tournament_schedule_entry(tournament_id, schedule_id, request.get_json(silent=True) or {})
+    try:
+        entry = update_tournament_schedule_entry(tournament_id, schedule_id, request.get_json(silent=True) or {})
+    except StorageError:
+        logger.exception("schedule_update_failed", tournament_id=tournament_id, schedule_id=schedule_id)
+        return jsonify({"error": "Schedule save failed"}), 500
     if not entry:
         return jsonify({"error": "Schedule entry not found"}), 404
     return _json_no_cache({"schedule_entry": entry, "schedule": fetch_tournament_schedule(tournament_id)})
@@ -243,7 +248,12 @@ def delete_tournament_schedule(tournament_id: int, schedule_id: int):
     _, error = _require_tournament(tournament_id)
     if error:
         return error
-    if not delete_tournament_schedule_entry(tournament_id, schedule_id):
+    try:
+        deleted = delete_tournament_schedule_entry(tournament_id, schedule_id)
+    except StorageError:
+        logger.exception("schedule_delete_failed", tournament_id=tournament_id, schedule_id=schedule_id)
+        return jsonify({"error": "Schedule save failed"}), 500
+    if not deleted:
         return jsonify({"error": "Schedule entry not found"}), 404
     return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
 

@@ -197,6 +197,20 @@ def reset_cooldowns() -> None:
 
 
 def dispatch_panic(*, court_id: str, note: str, remote_addr: str, client: dict[str, Any] | None = None) -> tuple[dict[str, Any], int]:
+    meta = client or {}
+    android_id = str(meta.get("android_id") or "").strip()
+    remember_umpire_device(
+        android_id=android_id,
+        manufacturer=str(meta.get("device_manufacturer") or ""),
+        model=str(meta.get("device_model") or ""),
+        device=str(meta.get("device") or ""),
+        platform=str(meta.get("platform") or ""),
+        court_id=court_id,
+    )
+    if device_is_test(android_id):
+        logger.info("panic_suppressed", reason="test device")
+        return {"ok": True, "sent": 0, "thread_token": None}, 200
+
     if not waha_configured():
         return {"error": "Panic is not configured"}, 503
     if not panic_enabled():
@@ -211,19 +225,6 @@ def dispatch_panic(*, court_id: str, note: str, remote_addr: str, client: dict[s
         return {"error": "Cooldown", "retry_after": remaining}, 429
 
     ctx = court_context(court_id) if court_id else {"tournament": "", "court_id": "", "players": ""}
-    meta = client or {}
-    android_id = str(meta.get("android_id") or "").strip()
-    remember_umpire_device(
-        android_id=android_id,
-        manufacturer=str(meta.get("device_manufacturer") or ""),
-        model=str(meta.get("device_model") or ""),
-        device=str(meta.get("device") or ""),
-        platform=str(meta.get("platform") or ""),
-        court_id=court_id,
-    )
-    if device_is_test(android_id):
-        logger.info("panic_suppressed", reason="test device")
-        return {"ok": True, "sent": 0, "thread_token": None}, 200
     sticker = device_sticker(android_id)
     text = compose_message(
         tournament=tournament_label(court_id, ctx["tournament"]),

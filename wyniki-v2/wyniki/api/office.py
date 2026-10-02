@@ -69,6 +69,7 @@ from ..database import (
     delete_tournament_schedule_entry,
     publish_tournament_schedule,
 )
+from ..database.errors import StorageError
 from ..db_models import Tournament, db
 from ..utils import json_no_cache as _json_no_cache
 from ..services.office_workflow import (
@@ -708,7 +709,10 @@ def office_schedule_update(slot: int, schedule_id: int):
         (e for e in fetch_tournament_schedule(tournament_id) if int(e.get('id') or 0) == schedule_id),
         None,
     )
-    entry = update_tournament_schedule_entry(tournament_id, schedule_id, request.get_json(silent=True) or {})
+    try:
+        entry = update_tournament_schedule_entry(tournament_id, schedule_id, request.get_json(silent=True) or {})
+    except StorageError:
+        return jsonify({"error": "Schedule save failed"}), 500
     if not entry:
         return jsonify({"error": "Schedule entry not found"}), 404
     if before:
@@ -727,7 +731,11 @@ def office_schedule_delete(slot: int, schedule_id: int):
     if error:
         return error
     tournament_id = int(tournament['id'])
-    if not delete_tournament_schedule_entry(tournament_id, schedule_id):
+    try:
+        deleted = delete_tournament_schedule_entry(tournament_id, schedule_id)
+    except StorageError:
+        return jsonify({"error": "Schedule save failed"}), 500
+    if not deleted:
         return jsonify({"error": "Schedule entry not found"}), 404
     return _json_no_cache({
         "schedule": fetch_tournament_schedule(tournament_id),

@@ -14,6 +14,7 @@ from ..services.teams import (
 from ..services.match_result import resolve_match_winner
 
 from .connection import _utc_now, db_conn, fetch_app_settings, upsert_app_settings
+from .errors import StorageError
 from .courts import fetch_courts_for_tournament
 from .tournaments import fetch_tournament
 
@@ -610,7 +611,7 @@ def update_tournament_schedule_entry(tournament_id: int, schedule_id: int, data:
         return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)), None)
     except Exception as e:
         logger.error("update_tournament_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
-        return None
+        raise StorageError("update_tournament_schedule_entry") from e
 
 def delete_tournament_schedule_entry(tournament_id: int, schedule_id: int) -> bool:
     """Delete one schedule entry (a deleted group/knockout fixture stays gone until regenerated)."""
@@ -630,7 +631,7 @@ def delete_tournament_schedule_entry(tournament_id: int, schedule_id: int) -> bo
         return deleted
     except Exception as e:
         logger.error("delete_tournament_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
-        return False
+        raise StorageError("delete_tournament_schedule_entry") from e
 
 def publish_tournament_schedule(tournament_id: int, day_date: Optional[str] = None) -> int:
     """Promote all draft schedule entries to 'planned' (published). Returns updated count."""
