@@ -26,6 +26,10 @@ import playerCreateHtml from './admin/sections/playerCreate.html?raw';
 import { createPlayersView } from './admin/playersView.js';
 import { createCourtPinsView } from './admin/courtPins.js';
 import courtPinsHtml from './admin/sections/courtPins.html?raw';
+import courtsListHtml from './admin/sections/courtsList.html?raw';
+import { createCourtsListView } from './admin/courtsList.js';
+import devicesListHtml from './admin/sections/devicesList.html?raw';
+import { createDevicesListView } from './admin/devicesList.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
@@ -49,6 +53,8 @@ mountAdminPartial('admin-players-base', playersBaseHtml);
 mountAdminPartial('admin-players-extras', playersExtrasHtml);
 mountAdminPartial('admin-player-create', playerCreateHtml);
 mountAdminPartial('admin-court-pins', courtPinsHtml);
+mountAdminPartial('admin-courts-list', courtsListHtml);
+mountAdminPartial('admin-devices-list', devicesListHtml);
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {
@@ -114,6 +120,8 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createTournamentCreateView(),
   createPlayersView(),
   createCourtPinsView(),
+  createCourtsListView(),
+  createDevicesListView(),
 ));
 
 ignoreCancelledAlpineTransitions();

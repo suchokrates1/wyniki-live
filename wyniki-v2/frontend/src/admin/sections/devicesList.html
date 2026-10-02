@@ -1,0 +1,60 @@
+<section class="adm-card" aria-labelledby="adm-devices-title">
+  <div class="adm-card__head">
+    <h2 id="adm-devices-title" class="adm-card__title">Tablety</h2>
+    <span class="adm-card__hint">każdy tablet, który otworzy aplikację, pojawia się tu jako nowy — nazwij go, a przejdzie niżej</span>
+  </div>
+
+  <p class="adm-modal__error" role="alert" x-show="devicesError" x-text="devicesError"></p>
+
+  <template x-for="bucket in adminDeviceBuckets()" :key="bucket.id">
+    <div class="adm-group" x-show="bucket.rows.length || bucket.id === 'new'">
+      <h3 class="adm-group__title">
+        <span x-text="bucket.title"></span>
+        <span class="adm-chip" :class="bucket.id === 'new' ? 'adm-chip--live' : ''" x-text="bucket.rows.length"></span>
+      </h3>
+
+      <p class="adm-empty" x-show="!bucket.rows.length" x-text="bucket.empty"></p>
+
+      <ul class="adm-rows" role="list">
+        <template x-for="row in bucket.rows" :key="row.android_id">
+          <li class="adm-row">
+            <div class="adm-row__main">
+              <label class="sr-only" :for="'adm-dev-name-' + row.android_id">Nazwa tabletu</label>
+              <input
+                :id="'adm-dev-name-' + row.android_id"
+                type="text"
+                class="adm-input adm-device__name"
+                placeholder="np. Tablet 5"
+                x-model="row.nameDraft"
+              >
+              <div class="adm-row__meta" x-text="adminDeviceMeta(row)"></div>
+            </div>
+
+            <div class="adm-device__field">
+              <label class="adm-field__label" :for="'adm-dev-alert-' + row.android_id">Próg baterii</label>
+              <input
+                :id="'adm-dev-alert-' + row.android_id"
+                type="text"
+                inputmode="numeric"
+                class="adm-input adm-device__alert"
+                placeholder="20"
+                x-model="row.alertDraft"
+              >
+            </div>
+
+            <span class="adm-court__battery" :class="'is-' + adminDeviceBattery(row).tone" x-text="adminDeviceBattery(row).text"></span>
+
+            <label class="adm-device__test">
+              <input type="checkbox" x-model="row.testDraft">
+              <span>Testowy</span>
+            </label>
+
+            <div class="adm-row__actions">
+              <button type="button" class="adm-btn adm-btn--primary" @click="saveDevice(row)" x-text="bucket.id === 'new' ? 'Nazwij' : 'Zapisz'"></button>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </div>
+  </template>
+</section>

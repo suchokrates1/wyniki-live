@@ -1,0 +1,89 @@
+<section class="adm-card" aria-labelledby="adm-courts-title">
+  <div class="adm-card__head">
+    <h2 id="adm-courts-title" class="adm-card__title">Korty</h2>
+    <span class="adm-card__hint">PIN wpisuje sędzia raz, przy wejściu na kort</span>
+    <div class="adm-card__actions">
+      <button type="button" class="adm-btn" @click="courtTournamentFilterOpen = !courtTournamentFilterOpen" x-text="selectedCourtTournamentSummary"></button>
+      <button type="button" class="adm-btn adm-btn--primary" @click="openPinDialog()">Wylosuj nowe PIN-y</button>
+    </div>
+  </div>
+
+  <div class="adm-filterbox" x-show="courtTournamentFilterOpen" x-cloak @click.outside="courtTournamentFilterOpen = false">
+    <div class="adm-filterbox__head">
+      <span>Pokaż korty turniejów</span>
+      <span>
+        <button type="button" class="adm-btn adm-btn--quiet" @click="selectAllCourtTournaments()">Wszystkie</button>
+        <button type="button" class="adm-btn adm-btn--quiet" @click="clearCourtTournamentSelection()">Wyczyść</button>
+      </span>
+    </div>
+    <template x-for="option in availableCourtTournamentOptions" :key="'adm_ct_' + option.id">
+      <label class="adm-filterbox__row">
+        <input type="checkbox" :checked="selectedCourtTournamentIds.includes(String(option.id))" @change="toggleCourtTournament(String(option.id))">
+        <span x-text="option.name"></span>
+        <span class="adm-filterbox__count" x-text="'(' + option.count + ')'"></span>
+      </label>
+    </template>
+  </div>
+
+  <template x-for="group in adminCourtGroups()" :key="'adm_cg_' + group.id">
+    <div class="adm-group">
+      <h3 class="adm-group__title">
+        <span x-text="group.name"></span>
+        <span class="adm-chip" x-text="group.courts.length + (group.courts.length === 1 ? ' kort' : ' korty')"></span>
+      </h3>
+      <ul class="adm-rows" role="list">
+        <template x-for="row in group.courts" :key="row.kortId">
+          <li class="adm-row">
+            <div class="adm-court__no">
+              <span class="adm-court__label">KORT</span>
+              <span class="adm-court__name" x-text="row.name"></span>
+            </div>
+
+            <div class="adm-court__pin">
+              <label class="adm-field__label" :for="'adm-pin-' + row.kortId">PIN</label>
+              <input
+                :id="'adm-pin-' + row.kortId"
+                type="text"
+                inputmode="numeric"
+                maxlength="4"
+                class="adm-input adm-court__pininput"
+                :class="{ 'is-weak': row.weakPin }"
+                :value="row.pin"
+                @change="updateCourtPin(row.kortId, $event.target.value)"
+              >
+            </div>
+
+            <div class="adm-row__main">
+              <div class="adm-row__title">
+                <span class="adm-chip" :class="row.active ? 'adm-chip--live' : 'adm-chip--idle'" x-text="row.state.label"></span>
+                <span class="adm-row__name" x-show="row.players" x-text="row.players"></span>
+              </div>
+              <div class="adm-row__meta">
+                <span x-show="row.score" x-text="row.score"></span>
+                <span x-show="!row.active" x-text="row.kortId"></span>
+              </div>
+            </div>
+
+            <span class="adm-court__battery" :class="'is-' + row.battery.tone" x-text="row.battery.text"></span>
+
+            <div class="adm-row__actions">
+              <button type="button" class="adm-btn" @click="openDirectorPanel(row.kortId)">Reżyserka</button>
+              <button type="button" class="adm-btn adm-btn--quiet" x-show="row.active" @click="resetCourt(row.kortId)">Zresetuj mecz</button>
+              <button type="button" class="adm-btn adm-btn--danger" @click="deleteCourt(row.kortId)">Usuń</button>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </div>
+  </template>
+
+  <p class="adm-empty" x-show="!adminCourtGroups().length">Brak kortów dla wybranych turniejów.</p>
+
+  <div class="adm-addrow">
+    <label class="sr-only" for="adm-new-court-id">ID nowego kortu</label>
+    <input id="adm-new-court-id" type="text" class="adm-input" placeholder="ID nowego kortu (np. t32-5)" x-model="newCourtId">
+    <label class="sr-only" for="adm-new-court-pin">PIN nowego kortu</label>
+    <input id="adm-new-court-pin" type="text" class="adm-input" placeholder="PIN (4 cyfry)" maxlength="4" x-model="newCourtPin">
+    <button type="button" class="adm-btn adm-btn--primary" @click="addCourt()">Dodaj kort</button>
+  </div>
+</section>

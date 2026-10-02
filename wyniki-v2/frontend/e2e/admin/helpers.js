@@ -20,7 +20,13 @@ export const COURTS = [
   { kort_id: 't32-3', name: '3', pin: '8261', tournament_id: 32, tournament_name: 'RAKIETY ATNiS VII', active: 1 },
 ];
 
-export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, onRequest = () => {} } = {}) {
+export const DEVICES = [
+  { android_id: 'new-1', name: '', battery_level: 96, is_charging: false, app_version: '1.0.0-dev.38', device_model: 'SM-X115', court_id: null, last_seen: new Date().toISOString() },
+  { android_id: 'tab-1', name: 'Tablet 1', battery_level: 82, is_charging: false, app_version: '1.0.0-dev.38', court_id: 't32-1', last_seen: new Date().toISOString() },
+  { android_id: 'tab-3', name: 'Tablet 3', battery_level: 17, is_charging: false, app_version: '1.0.0-dev.37', court_id: 't32-3', last_seen: new Date().toISOString() },
+];
+
+export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, snapshot = {}, onRequest = () => {} } = {}) {
   await page.addInitScript(() => {
     try { sessionStorage.setItem('wyniki-admin-token', 'e2e-token'); } catch { /* private mode */ }
   });
@@ -34,7 +40,7 @@ export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLA
     if (request.method() !== 'GET') return route.fulfill({ json: { success: true } });
     if (/\/admin\/api\/tournaments(\?|$)/.test(url)) return route.fulfill({ json: tournaments });
     if (url.includes('/admin/api/courts')) return route.fulfill({ json: courts });
-    if (url.includes('/admin/api/devices')) return route.fulfill({ json: { devices: [] } });
+    if (url.includes('/admin/api/devices')) return route.fulfill({ json: { devices } });
     if (/\/admin\/api\/global-players(\?|$)/.test(url)) return route.fulfill({ json: players });
     if (url.includes('/admin/api/global-players')) return route.fulfill({ json: [] });
     if (/\/tournaments\/\d+\/players(\?|$)/.test(url)) return route.fulfill({ json: entries });
@@ -42,7 +48,7 @@ export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLA
     if (url.includes('/admin/api/overlay')) return route.fulfill({ json: { overlays: {}, settings: {} } });
     return route.fulfill({ json: {} });
   });
-  await page.route(/\/api\/snapshot(\?|$)/, (route) => route.fulfill({ json: { courts: {} } }));
+  await page.route(/\/api\/snapshot(\?|$)/, (route) => route.fulfill({ json: { courts: snapshot } }));
   await page.route(/\/api\/stream(\?|$)/, (route) => route.fulfill({ status: 204, body: '' }));
 
   await page.goto('/admin.html');
