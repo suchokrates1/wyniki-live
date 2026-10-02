@@ -1,5 +1,6 @@
 """Report mail: what is sent, to whom, and when the summary is marked as sent."""
 
+import secrets
 from types import SimpleNamespace
 
 import pytest
@@ -19,7 +20,7 @@ SMTP_OK = {
     "smtp_host": "smtp.example.com",
     "smtp_port": "587",
     "smtp_username": "biuro@example.com",
-    "smtp_password": "sekret",
+    "smtp_password": "pw-" + secrets.token_urlsafe(12),  # made up: a literal reads as a credential
     "smtp_use_tls": "true",
     "smtp_from_email": "biuro@example.com",
     "smtp_from_name": "Wyniki Live",

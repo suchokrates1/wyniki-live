@@ -1,5 +1,6 @@
 """The small pieces nothing else tests: the helpers, /health, and the admin login."""
 
+import secrets
 from datetime import timezone
 
 import pytest
@@ -8,6 +9,10 @@ from flask import Flask
 from wyniki.api import admin_auth, health
 from wyniki.config import settings
 from wyniki.utils import format_duration, json_no_cache, parse_iso_datetime
+
+
+# Made up on the spot: a literal here reads as a credential to secret scanners.
+PASSWORD = "pw-" + secrets.token_urlsafe(12)
 
 
 @pytest.fixture
@@ -56,15 +61,15 @@ def test_health_answers_what_the_monitoring_checks_after_every_deploy(client):
 
 
 def test_the_admin_login_hands_out_a_token_for_the_right_password(client, monkeypatch):
-    monkeypatch.setattr(settings, "admin_password", "tajne-haslo")
-    body = client.post("/admin/api/auth", json={"password": "tajne-haslo"}).get_json()
+    monkeypatch.setattr(settings, "admin_password", PASSWORD)
+    body = client.post("/admin/api/auth", json={"password": PASSWORD}).get_json()
     assert body["token"]
     assert body["expires_in"] == settings.admin_session_ttl_hours * 3600
 
 
 def test_a_wrong_or_missing_password_gets_nothing(client, monkeypatch):
-    monkeypatch.setattr(settings, "admin_password", "tajne-haslo")
-    assert client.post("/admin/api/auth", json={"password": "tajne-haslo "}).status_code == 403
+    monkeypatch.setattr(settings, "admin_password", PASSWORD)
+    assert client.post("/admin/api/auth", json={"password": PASSWORD + " "}).status_code == 403
     assert client.post("/admin/api/auth", json={"password": ""}).status_code == 403
     assert client.post("/admin/api/auth", json={}).status_code == 403
     assert client.post("/admin/api/auth").status_code == 403, "no body is not a login"
