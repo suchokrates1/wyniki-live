@@ -8,6 +8,8 @@
       <button type="button" class="adm-btn adm-btn--quiet" @click="closeTournamentCreate()" aria-label="Zamknij okno">×</button>
     </div>
 
+    <div class="adm-modal__body">
+
     <div class="adm-grid">
       <template x-for="field in adminCreateFields()" :key="field.id">
         <div class="adm-field" :class="field.wide ? 'adm-field--wide' : ''">
@@ -40,6 +42,7 @@
     </div>
 
     <p class="adm-modal__error" role="alert" x-show="tournamentCreateError" x-text="tournamentCreateError"></p>
+    </div>
 
     <div class="adm-card__footer">
       <button type="button" class="adm-btn adm-btn--primary" @click="submitTournamentCreate()">Utwórz turniej</button>

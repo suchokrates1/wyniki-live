@@ -20,6 +20,10 @@ import tournamentExtrasHtml from './admin/sections/tournamentExtras.html?raw';
 import { createTournamentSettingsView } from './admin/tournamentSettings.js';
 import { createTournamentCreateView } from './admin/tournamentCreate.js';
 import tournamentCreateHtml from './admin/sections/tournamentCreate.html?raw';
+import playersBaseHtml from './admin/sections/playersBase.html?raw';
+import playersExtrasHtml from './admin/sections/playersExtras.html?raw';
+import playerCreateHtml from './admin/sections/playerCreate.html?raw';
+import { createPlayersView } from './admin/playersView.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
@@ -39,6 +43,9 @@ mountAdminPartial('admin-tournaments-list', tournamentsListHtml);
 mountAdminPartial('admin-tournament-settings', tournamentSettingsHtml);
 mountAdminPartial('admin-tournament-extras', tournamentExtrasHtml);
 mountAdminPartial('admin-tournament-create', tournamentCreateHtml);
+mountAdminPartial('admin-players-base', playersBaseHtml);
+mountAdminPartial('admin-players-extras', playersExtrasHtml);
+mountAdminPartial('admin-player-create', playerCreateHtml);
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {
@@ -102,6 +109,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createTournamentsListView(),
   createTournamentSettingsView(),
   createTournamentCreateView(),
+  createPlayersView(),
 ));
 
 ignoreCancelledAlpineTransitions();

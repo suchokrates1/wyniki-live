@@ -5,7 +5,16 @@ export const TOURNAMENTS = [
   { id: 26, name: 'App Review Access', start_date: '2026-05-23', end_date: '2027-05-23', city: 'Review', country: 'US', court_count: 1, active: 1, is_public: 0, stats_enabled: 0, is_simulation: 1, report_email: '' },
 ];
 
-export async function openAdmin(page, { tournaments = TOURNAMENTS, onRequest = () => {} } = {}) {
+export const PLAYERS = [
+  { id: 7, first_name: 'Mateusz', last_name: 'Ciborowski', country: 'PL', category: 'B2', birth_date: '1990-05-10', tournaments_count: 3 },
+  { id: 9, first_name: 'Indrė', last_name: 'Zuzevičiūtė Praškevičienė', country: 'LT', category: 'B2', tournaments_count: 1 },
+  { id: 11, first_name: 'Dajana', last_name: 'Zgrzebska', country: 'PL', category: 'B4', tournaments_count: 2 },
+];
+
+// Who is already entered in tournament 32
+export const ENTRIES = [{ id: 501, global_player_id: 7, first_name: 'Mateusz', last_name: 'Ciborowski', category: 'B2' }];
+
+export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, onRequest = () => {} } = {}) {
   await page.addInitScript(() => {
     try { sessionStorage.setItem('wyniki-admin-token', 'e2e-token'); } catch { /* private mode */ }
   });
@@ -20,7 +29,9 @@ export async function openAdmin(page, { tournaments = TOURNAMENTS, onRequest = (
     if (/\/admin\/api\/tournaments(\?|$)/.test(url)) return route.fulfill({ json: tournaments });
     if (url.includes('/admin/api/courts')) return route.fulfill({ json: [] });
     if (url.includes('/admin/api/devices')) return route.fulfill({ json: { devices: [] } });
+    if (/\/admin\/api\/global-players(\?|$)/.test(url)) return route.fulfill({ json: players });
     if (url.includes('/admin/api/global-players')) return route.fulfill({ json: [] });
+    if (/\/tournaments\/\d+\/players(\?|$)/.test(url)) return route.fulfill({ json: entries });
     if (url.includes('/admin/api/panic')) return route.fulfill({ json: { enabled: false, recipients: [] } });
     if (url.includes('/admin/api/overlay')) return route.fulfill({ json: { overlays: {}, settings: {} } });
     return route.fulfill({ json: {} });

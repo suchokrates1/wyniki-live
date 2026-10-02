@@ -1,0 +1,59 @@
+<div class="adm-modal" x-show="playerCreateOpen" x-cloak @keydown.escape.window="closePlayerCreate()">
+  <div class="adm-modal__box" role="dialog" aria-modal="true" aria-labelledby="adm-player-create-title">
+    <div class="adm-modal__head">
+      <div>
+        <h2 class="adm-modal__title" id="adm-player-create-title">Nowy zawodnik w bazie</h2>
+        <p class="adm-modal__lead">Baza jest wspólna dla wszystkich turniejów. Do konkretnego turnieju dopiszesz go z listy, jednym kliknięciem.</p>
+      </div>
+      <button type="button" class="adm-btn adm-btn--quiet" @click="closePlayerCreate()" aria-label="Zamknij okno">×</button>
+    </div>
+
+    <div class="adm-modal__body">
+
+    <div class="adm-grid">
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-player-first-name">Imię</label>
+        <input id="adm-player-first-name" type="text" class="adm-input adm-field__input" x-model="newGlobalPlayer.first_name">
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-player-last-name">Nazwisko</label>
+        <input id="adm-player-last-name" type="text" class="adm-input adm-field__input" x-model="newGlobalPlayer.last_name">
+        <span class="adm-field__hint">Jedyne pole, bez którego się nie obejdzie.</span>
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-player-gender">Płeć</label>
+        <select id="adm-player-gender" class="adm-input adm-field__input" x-model="newGlobalPlayer.gender">
+          <option value="">—</option>
+          <option value="M">Mężczyzna</option>
+          <option value="K">Kobieta</option>
+        </select>
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-player-birth">Data urodzenia</label>
+        <input id="adm-player-birth" type="date" class="adm-input adm-field__input" x-model="newGlobalPlayer.birth_date">
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-player-category">Klasa sportowa</label>
+        <input id="adm-player-category" type="text" class="adm-input adm-field__input" placeholder="B1, B2, B3, B4" x-model="newGlobalPlayer.category">
+        <span class="adm-field__hint">Zmianę klasy po turnieju zatwierdza się osobno.</span>
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-player-country">Kraj</label>
+        <input id="adm-player-country" type="text" class="adm-input adm-field__input" placeholder="PL" x-model="newGlobalPlayer.country">
+      </div>
+      <div class="adm-field adm-field--wide">
+        <label class="adm-field__label" for="adm-player-notes">Notatki</label>
+        <input id="adm-player-notes" type="text" class="adm-input adm-field__input" placeholder="np. prowadzący, kontakt" x-model="newGlobalPlayer.notes">
+      </div>
+    </div>
+
+    <p class="adm-modal__error" role="alert" x-show="playerCreateError" x-text="playerCreateError"></p>
+    </div>
+
+    <div class="adm-card__footer">
+      <button type="button" class="adm-btn adm-btn--primary" @click="submitPlayerCreate()">Zapisz zawodnika</button>
+      <button type="button" class="adm-btn adm-btn--quiet" @click="closePlayerCreate()">Anuluj</button>
+      <span class="adm-modal__note">Zdjęcie dodasz w wierszu zawodnika.</span>
+    </div>
+  </div>
+</div>

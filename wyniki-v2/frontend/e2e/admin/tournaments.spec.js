@@ -5,7 +5,7 @@ import { openAdmin, TOURNAMENTS } from './helpers.js';
 
 test('the running tournament is on top, with its state and the switch on', async ({ page }) => {
   await openAdmin(page);
-  const rows = page.locator('.adm-row');
+  const rows = page.locator('#admin-tournaments-list .adm-row');
   await expect(rows).toHaveCount(3);
   await expect(rows.first().locator('.adm-row__name')).toHaveText('RAKIETY ATNiS VII');
   await expect(rows.first().locator('.adm-chip')).toHaveText('AKTYWNY');
@@ -17,18 +17,18 @@ test('the running tournament is on top, with its state and the switch on', async
 test('search narrows the list and says so when nothing matches', async ({ page }) => {
   await openAdmin(page);
   await page.getByPlaceholder('Szukaj turnieju').fill('wilno');
-  await expect(page.locator('.adm-row')).toHaveCount(1);
-  await expect(page.locator('.adm-row__name')).toContainText('IBTA');
+  await expect(page.locator('#admin-tournaments-list .adm-row')).toHaveCount(1);
+  await expect(page.locator('#admin-tournaments-list .adm-row__name')).toContainText('IBTA');
 
   await page.getByPlaceholder('Szukaj turnieju').fill('nie ma takiego');
-  await expect(page.locator('.adm-row')).toHaveCount(0);
-  await expect(page.locator('.adm-empty')).toContainText('Żaden turniej nie pasuje');
+  await expect(page.locator('#admin-tournaments-list .adm-row')).toHaveCount(0);
+  await expect(page.locator('#admin-tournaments-list .adm-empty')).toContainText('Żaden turniej nie pasuje');
 });
 
 test('the switch activates a tournament through the API', async ({ page }) => {
   const calls = [];
   await openAdmin(page, { onRequest: (call) => calls.push(call) });
-  const wilno = page.locator('.adm-row').filter({ hasText: 'IBTA' });
+  const wilno = page.locator('#admin-tournaments-list .adm-row').filter({ hasText: 'IBTA' });
   await wilno.locator('.adm-switch input').check();
   await expect.poll(() => calls.filter((call) => call.method === 'PUT' && call.url.includes('/tournaments/31/active')).length).toBe(1);
   const call = calls.find((item) => item.url.includes('/tournaments/31/active'));
@@ -37,7 +37,7 @@ test('the switch activates a tournament through the API', async ({ page }) => {
 
 test('a tournament with no entries at all tells you where to start', async ({ page }) => {
   await openAdmin(page, { tournaments: [] });
-  await expect(page.locator('.adm-empty')).toContainText('Nie ma jeszcze żadnego turnieju');
+  await expect(page.locator('#admin-tournaments-list .adm-empty')).toContainText('Nie ma jeszcze żadnego turnieju');
 });
 
 test('"Nowy turniej" opens a dialog that insists on a name and both dates', async ({ page }) => {
@@ -78,7 +78,7 @@ test('the create dialog closes on Anuluj and on Escape, keeping nothing behind',
 test('Ustawienia opens the tournament with its fields, flags and extras', async ({ page }) => {
   const calls = [];
   await openAdmin(page, { onRequest: (call) => calls.push(call) });
-  await page.locator('.adm-row').first().getByRole('button', { name: 'Ustawienia' }).click();
+  await page.locator('#admin-tournaments-list .adm-row').first().getByRole('button', { name: 'Ustawienia' }).click();
 
   await expect(page.locator('#adm-edit-name')).toHaveValue('RAKIETY ATNiS VII');
   await expect(page.locator('#adm-edit-start-date')).toHaveValue('2026-09-26');
@@ -94,7 +94,7 @@ test('Ustawienia opens the tournament with its fields, flags and extras', async 
 
 test('a simulation cannot be public: those two switches are off limits', async ({ page }) => {
   await openAdmin(page);
-  await page.locator('.adm-row').filter({ hasText: 'App Review Access' }).getByRole('button', { name: 'Ustawienia' }).click();
+  await page.locator('#admin-tournaments-list .adm-row').filter({ hasText: 'App Review Access' }).getByRole('button', { name: 'Ustawienia' }).click();
   const flags = page.locator('#admin-tournament-settings .adm-flag');
   await expect(flags.filter({ hasText: 'Publiczny' }).locator('input')).toBeDisabled();
   await expect(flags.filter({ hasText: 'Liczy statystyki' }).locator('input')).toBeDisabled();
@@ -103,7 +103,7 @@ test('a simulation cannot be public: those two switches are off limits', async (
 
 test('every row control is a real target, at least 44 px tall', async ({ page }) => {
   await openAdmin(page);
-  const small = await page.evaluate(() => [...document.querySelectorAll('.adm-row button, .adm-row input, .adm-card__actions button, .adm-card__actions input')]
+  const small = await page.evaluate(() => [...document.querySelectorAll('#admin-tournaments-list .adm-row button, #admin-tournaments-list .adm-row input, #admin-tournaments-list .adm-card__actions button, #admin-tournaments-list .adm-card__actions input')]
     .filter((el) => el.offsetParent !== null)
     .map((el) => ({ el: el.className || el.tagName, h: Math.round(el.getBoundingClientRect().height) }))
     .filter((item) => item.h < 44));

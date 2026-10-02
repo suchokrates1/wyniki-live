@@ -1,0 +1,77 @@
+<section class="adm-card" aria-labelledby="adm-players-title">
+  <div class="adm-card__head">
+    <h2 id="adm-players-title" class="adm-card__title">Baza zawodników</h2>
+    <span class="adm-card__hint" x-text="globalPlayers.length + ' osób · wspólna dla wszystkich turniejów'"></span>
+    <div class="adm-card__actions">
+      <label class="sr-only" for="adm-players-tournament">Turniej, do którego dopisujesz</label>
+      <select
+        id="adm-players-tournament"
+        class="adm-input"
+        :value="selectedTournament || ''"
+        @change="selectedTournament = (+$event.target.value || null); if (selectedTournament) loadPlayers(selectedTournament)"
+      >
+        <option value="">Dopisuj do turnieju…</option>
+        <template x-for="tournament in activeTournamentsList()" :key="'adm_pl_t_' + tournament.id">
+          <option :value="tournament.id" x-text="tournament.name"></option>
+        </template>
+      </select>
+      <button type="button" class="adm-btn adm-btn--primary" @click="openPlayerCreate()">Dodaj zawodnika</button>
+    </div>
+  </div>
+
+  <div class="adm-filters">
+    <label class="sr-only" for="adm-players-search">Szukaj zawodnika</label>
+    <input
+      id="adm-players-search"
+      type="search"
+      class="adm-input adm-input--search"
+      placeholder="Szukaj nazwiska"
+      x-model="globalPlayersFilter.q"
+      @input.debounce.300ms="loadGlobalPlayers()"
+    >
+    <label class="sr-only" for="adm-players-gender">Płeć</label>
+    <select id="adm-players-gender" class="adm-input" x-model="globalPlayersFilter.gender" @change="loadGlobalPlayers()">
+      <option value="">Każda płeć</option>
+      <option value="M">Mężczyźni</option>
+      <option value="K">Kobiety</option>
+    </select>
+    <label class="sr-only" for="adm-players-category">Klasa sportowa</label>
+    <select id="adm-players-category" class="adm-input" x-model="globalPlayersFilter.category" @change="loadGlobalPlayers()">
+      <option value="">Każda klasa</option>
+      <template x-for="key in globalPlayerCategoryKeys()" :key="'adm_gp_cat_' + key">
+        <option :value="key" x-text="globalPlayerCategoryLabel(key)"></option>
+      </template>
+    </select>
+    <label class="sr-only" for="adm-players-country">Kraj</label>
+    <input id="adm-players-country" type="text" class="adm-input" placeholder="Kraj" x-model="globalPlayersFilter.country" @input.debounce.300ms="loadGlobalPlayers()">
+    <button type="button" class="adm-btn adm-btn--quiet" @click="globalPlayersFilter = { q: '', gender: '', category: '', country: '' }; loadGlobalPlayers()">Wyczyść</button>
+  </div>
+
+  <ul class="adm-rows" role="list">
+    <template x-for="row in adminPlayerRows()" :key="'adm_gp_' + row.id">
+      <li class="adm-row">
+        <div class="adm-row__main">
+          <div class="adm-row__title">
+            <span class="adm-row__name" x-text="row.name"></span>
+            <span class="adm-chip adm-chip--ok" x-show="row.inTournament" x-text="'w turnieju'"></span>
+          </div>
+          <div class="adm-row__meta" x-text="row.meta"></div>
+        </div>
+        <div class="adm-row__actions">
+          <button
+            type="button"
+            class="adm-btn"
+            x-show="row.canAdd"
+            @click="addGlobalToTournament(row.id)"
+            x-text="'Dopisz do: ' + adminPlayersTournamentName()"
+          ></button>
+          <button type="button" class="adm-btn adm-btn--quiet" @click="toggleClassHistory(row.player)">Historia klas</button>
+        </div>
+      </li>
+    </template>
+  </ul>
+
+  <p class="adm-empty" x-show="adminPlayerRows().length === 0">
+    Nikt nie pasuje do filtrów. Wyczyść je albo dodaj zawodnika.
+  </p>
+</section>

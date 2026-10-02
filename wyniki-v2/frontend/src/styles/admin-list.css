@@ -279,6 +279,9 @@
 .adm-modal__box {
   width: min(760px, 100%);
   box-sizing: border-box;
+  /* a tall form scrolls inside the dialog, so its buttons stay reachable on a phone */
+  max-height: 100%;
+  overflow-y: auto;
   background: var(--adm-surface);
   border-radius: 18px;
   padding: 24px 26px;
@@ -304,7 +307,33 @@
 }
 .adm-modal__note { margin-left: auto; align-self: center; font-size: 13px; color: var(--adm-muted); }
 @media (max-width: 860px) {
-  .adm-modal { padding: 12px; align-items: flex-start; }
-  .adm-modal__box { padding: 16px; }
+  /* the bottom bar is fixed: leave room so a dialog's buttons are never under it */
+  .adm-modal {
+    padding: 12px 12px calc(84px + env(safe-area-inset-bottom));
+    align-items: stretch;
+  }
+  .adm-modal__box { padding: 16px; max-height: 100%; }
   .adm-modal__note { display: none; }
 }
+
+.adm-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.adm-filters .adm-input { min-width: 140px; }
+@media (max-width: 860px) {
+  .adm-filters .adm-input,
+  .adm-filters .adm-btn { flex: 1 1 140px; }
+}
+
+/* In a dialog only the middle scrolls: the buttons never slide under the fold. */
+.adm-modal { overflow: hidden; }
+.adm-modal__box { display: flex; flex-direction: column; }
+.adm-modal__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.adm-modal .adm-card__footer { flex-shrink: 0; margin-top: 16px; }
