@@ -4,9 +4,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..config import logger
-from ..database.connection import db_conn
 from ..database.panic import list_panic_recipients
-from ..database.umpire_devices import list_umpire_devices
+from ..database.umpire_devices import claim_low_battery_alert, list_umpire_devices
 from .panic import tablet_label
 from .waha_client import send_text, waha_configured
 
@@ -45,47 +44,10 @@ def _who(row: dict) -> str:
 
 def consider_low_battery(android_id: str) -> str | None:
     """Return the WhatsApp text once, when the level first falls to the threshold."""
-    ident = str(android_id or "").strip()[:32]
-    if not ident:
+    data = claim_low_battery_alert(android_id)
+    if data is None:
         return None
-    with db_conn() as conn:
-        row = conn.execute(
-            """
-            SELECT android_id, manufacturer, model, device, sticker,
-                   battery_level, is_charging, battery_alert_percent, battery_alert_active
-            FROM umpire_devices WHERE android_id = ?
-            """,
-            (ident,),
-        ).fetchone()
-        if row is None:
-            return None
-        level = row["battery_level"]
-        threshold = row["battery_alert_percent"]
-        charging = bool(row["is_charging"])
-        active = bool(row["battery_alert_active"])
-        low = (
-            level is not None
-            and threshold is not None
-            and not charging
-            and int(level) <= int(threshold)
-        )
-        if not low:
-            if active:
-                conn.execute(
-                    "UPDATE umpire_devices SET battery_alert_active = 0 WHERE android_id = ?",
-                    (ident,),
-                )
-                conn.commit()
-            return None
-        if active:
-            return None
-        conn.execute(
-            "UPDATE umpire_devices SET battery_alert_active = 1 WHERE android_id = ?",
-            (ident,),
-        )
-        conn.commit()
-        data = dict(row)
-    return f"{_who(data)} ma {int(level)}% baterii."
+    return f"{_who(data)} ma {int(data['battery_level'])}% baterii."
 
 
 def notify_low_battery(text: str) -> None:

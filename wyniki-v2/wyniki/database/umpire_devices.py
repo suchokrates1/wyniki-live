@@ -35,6 +35,50 @@ def set_device_sticker(android_id: str, sticker: str) -> None:
         conn.commit()
 
 
+def claim_low_battery_alert(android_id: str) -> dict | None:
+    """Latch a low-battery warning. Return the row once, when WhatsApp should go out."""
+    ident = str(android_id or "").strip()[:32]
+    if not ident:
+        return None
+    with db_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT android_id, manufacturer, model, device, sticker,
+                   battery_level, is_charging, battery_alert_percent, battery_alert_active
+            FROM umpire_devices WHERE android_id = ?
+            """,
+            (ident,),
+        ).fetchone()
+        if row is None:
+            return None
+        level = row["battery_level"]
+        threshold = row["battery_alert_percent"]
+        charging = bool(row["is_charging"])
+        active = bool(row["battery_alert_active"])
+        low = (
+            level is not None
+            and threshold is not None
+            and not charging
+            and int(level) <= int(threshold)
+        )
+        if not low:
+            if active:
+                conn.execute(
+                    "UPDATE umpire_devices SET battery_alert_active = 0 WHERE android_id = ?",
+                    (ident,),
+                )
+                conn.commit()
+            return None
+        if active:
+            return None
+        conn.execute(
+            "UPDATE umpire_devices SET battery_alert_active = 1 WHERE android_id = ?",
+            (ident,),
+        )
+        conn.commit()
+        return dict(row)
+
+
 def list_umpire_devices() -> list[dict]:
     with db_conn() as conn:
         rows = conn.execute(
