@@ -1,0 +1,55 @@
+<section class="adm-card" aria-labelledby="adm-tournaments-title">
+  <div class="adm-card__head">
+    <h2 id="adm-tournaments-title" class="adm-card__title">Turnieje</h2>
+    <span class="adm-card__hint">przełącznik decyduje, co widzi strona i tablet sędziego</span>
+    <div class="adm-card__actions">
+      <label class="sr-only" for="adm-tournament-search">Szukaj turnieju</label>
+      <input
+        id="adm-tournament-search"
+        type="search"
+        class="adm-input adm-input--search"
+        placeholder="Szukaj turnieju"
+        x-model="tournamentSearch"
+      >
+      <button type="button" class="adm-btn adm-btn--primary" @click="openTournamentCreate()">Nowy turniej</button>
+    </div>
+  </div>
+
+  <div x-show="loading.tournaments" class="adm-loading" role="status">Ładowanie turniejów…</div>
+
+  <ul class="adm-rows" x-show="!loading.tournaments" role="list">
+    <template x-for="row in adminTournamentRows()" :key="row.id">
+      <li class="adm-row" :class="{ 'is-active': row.isActive }">
+        <div class="adm-row__main">
+          <div class="adm-row__title">
+            <span class="adm-row__name" x-text="row.name"></span>
+            <span class="adm-chip" :class="'adm-chip--' + row.state.tone" x-text="row.state.label"></span>
+          </div>
+          <div class="adm-row__meta" x-text="row.meta"></div>
+        </div>
+
+        <label class="adm-switch">
+          <span class="sr-only" x-text="(row.isActive ? 'Wyłącz turniej ' : 'Włącz turniej ') + row.name"></span>
+          <input
+            type="checkbox"
+            :checked="row.isActive"
+            @change="toggleTournamentActive(row.id, $event.target.checked)"
+          >
+          <span class="adm-switch__track" aria-hidden="true"><span class="adm-switch__knob"></span></span>
+        </label>
+
+        <div class="adm-row__actions">
+          <button type="button" class="adm-btn" @click="openTournamentEditor(row.tournament)">Ustawienia</button>
+          <button type="button" class="adm-btn adm-btn--quiet" @click="selectTournament(row.id)">Zawodnicy</button>
+          <button type="button" class="adm-btn adm-btn--quiet" @click="openOfficeDashboard(row.id)">Biuro</button>
+          <button type="button" class="adm-btn adm-btn--danger" @click="deleteTournament(row.id)">Usuń</button>
+        </div>
+      </li>
+    </template>
+  </ul>
+
+  <p class="adm-empty" x-show="!loading.tournaments && adminTournamentRows().length === 0">
+    <span x-show="adminTournamentCount() === 0">Nie ma jeszcze żadnego turnieju. Zacznij od „Nowy turniej”.</span>
+    <span x-show="adminTournamentCount() > 0">Żaden turniej nie pasuje do wyszukiwania.</span>
+  </p>
+</section>

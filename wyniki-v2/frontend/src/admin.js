@@ -3,6 +3,7 @@ import { ignoreCancelledAlpineTransitions } from './shared/alpineTransitions.js'
 import './main.css';
 import './styles/tailwind-admin.css';
 import './styles/admin.css';
+import './styles/admin-list.css';
 import { createAuthAdmin, installAdminFetchAuth } from './admin/auth.js';
 import { createCourtsAdmin } from './admin/courts.js';
 import { createTournamentsAdmin } from './admin/tournaments.js';
@@ -12,6 +13,8 @@ import { createOverlayAdmin } from './admin/overlay.js';
 import { createPanicAdmin } from './admin/panic.js';
 import { createDevicesAdmin } from './admin/devices.js';
 import { createAdminShell } from './admin/shell.js';
+import { createTournamentsListView } from './admin/tournamentsList.js';
+import tournamentsListHtml from './admin/sections/tournamentsList.html?raw';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
@@ -20,8 +23,14 @@ window.Alpine = Alpine;
 registerAnalyticsConsent(Alpine);
 installAdminFetchAuth();
 
+const mountAdminPartial = (id, html) => {
+  const slot = document.getElementById(id);
+  if (slot) slot.innerHTML = html.trim();
+};
+
 const adminOverlaySlot = document.getElementById('admin-overlay-panel');
 if (adminOverlaySlot) adminOverlaySlot.outerHTML = overlayPanelHtml.trim();
+mountAdminPartial('admin-tournaments-list', tournamentsListHtml);
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {
@@ -82,6 +91,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createPanicAdmin(),
   createDevicesAdmin(),
   createAdminShell(),
+  createTournamentsListView(),
 ));
 
 ignoreCancelledAlpineTransitions();

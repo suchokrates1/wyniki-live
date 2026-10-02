@@ -1465,18 +1465,19 @@
         </div>
       </div>
 
+      <div x-show="!editingTournamentId" id="admin-tournaments-list"></div>
       <div x-show="!editingTournamentId" class="card bg-base-100 shadow-xl mb-6">
         <div class="card-body">
-          <h2 class="card-title">Dodaj nowy turniej</h2>
+          <h2 class="card-title" id="adm-new-tournament" tabindex="-1">Dodaj nowy turniej</h2>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <div class="form-control"><label class="label"><span class="label-text">Nazwa turnieju</span></label><input type="text" x-model="newTournament.name" class="input input-bordered" placeholder="np. IPC WIMCO 2025"></div>
-            <div class="form-control"><label class="label"><span class="label-text">Data rozpocz&#281;cia</span></label><input type="date" x-model="newTournament.start_date" class="input input-bordered"></div>
-            <div class="form-control"><label class="label"><span class="label-text">Data zako&#324;czenia</span></label><input type="date" x-model="newTournament.end_date" class="input input-bordered"></div>
+            <div class="form-control"><label class="label" for="adm-new-start"><span class="label-text">Data rozpocz&#281;cia</span></label><input id="adm-new-start" type="date" x-model="newTournament.start_date" class="input input-bordered"></div>
+            <div class="form-control"><label class="label" for="adm-new-end"><span class="label-text">Data zako&#324;czenia</span></label><input id="adm-new-end" type="date" x-model="newTournament.end_date" class="input input-bordered"></div>
             <div class="form-control"><label class="label"><span class="label-text">Liczba kort&#243;w</span></label><input type="number" min="1" x-model="newTournament.court_count" class="input input-bordered" placeholder="np. 5"></div>
             <div class="form-control"><label class="label"><span class="label-text">Miasto</span></label><input type="text" x-model="newTournament.city" class="input input-bordered" placeholder="np. Zielona G&#243;ra"></div>
             <div class="form-control"><label class="label"><span class="label-text">Kraj</span></label><input type="text" x-model="newTournament.country" class="input input-bordered" maxlength="2" placeholder="PL"></div>
             <div class="form-control"><label class="label"><span class="label-text">Email raport&#243;w</span></label><input type="email" x-model="newTournament.report_email" class="input input-bordered" placeholder="np. turniej@vestmedia.pl"></div>
-            <div class="form-control"><label class="label"><span class="label-text">Logo turnieju</span></label><input type="file" accept="image/*" @change="onTournamentLogoSelected" class="file-input file-input-bordered"></div>
+            <div class="form-control"><label class="label" for="adm-new-logo"><span class="label-text">Logo turnieju</span></label><input id="adm-new-logo" type="file" accept="image/*" @change="onTournamentLogoSelected" class="file-input file-input-bordered"></div>
             <div class="form-control"><label class="label"><span class="label-text">Klucz dostępu</span></label><input type="text" x-model="newTournament.access_key" class="input input-bordered" placeholder="opcjonalnie"></div>
             <div class="form-control"><label class="label"><span class="label-text">Hasło modułu biura</span></label>
               <div class="relative">
@@ -1530,67 +1531,23 @@
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <div class="form-control"><label class="label"><span class="label-text">Host SMTP</span></label><input type="text" x-model="emailSettings.smtp_host" class="input input-bordered" placeholder="smtp.example.com"></div>
             <div class="form-control"><label class="label"><span class="label-text">Port</span></label><input type="number" x-model="emailSettings.smtp_port" class="input input-bordered" placeholder="587"></div>
-            <div class="form-control"><label class="label"><span class="label-text">Login</span></label><input type="text" x-model="emailSettings.smtp_username" class="input input-bordered"></div>
-            <div class="form-control"><label class="label"><span class="label-text">Has&#322;o</span></label>
+            <div class="form-control"><label class="label" for="adm-smtp-login"><span class="label-text">Login</span></label><input id="adm-smtp-login" type="text" x-model="emailSettings.smtp_username" class="input input-bordered"></div>
+            <div class="form-control"><label class="label" for="adm-smtp-password"><span class="label-text">Has&#322;o</span></label>
               <div class="relative">
-                <input type="password" :type="passwordVisible.smtp ? 'text' : 'password'" x-model="emailSettings.smtp_password" class="input input-bordered w-full pr-12" autocomplete="new-password">
+                <input id="adm-smtp-password" type="password" :type="passwordVisible.smtp ? 'text' : 'password'" x-model="emailSettings.smtp_password" class="input input-bordered w-full pr-12" autocomplete="new-password">
                 <button type="button" class="absolute inset-y-0 right-0 z-10 flex w-11 items-center justify-center opacity-60 hover:opacity-100" @click="passwordVisible.smtp = !passwordVisible.smtp" :aria-label="passwordVisible.smtp ? 'Ukryj hasło' : 'Pokaż hasło'" :aria-pressed="passwordVisible.smtp">
                   <svg x-show="!passwordVisible.smtp" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                   <svg x-show="passwordVisible.smtp" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
                 </button>
               </div>
             </div>
-            <div class="form-control"><label class="label"><span class="label-text">Email nadawcy</span></label><input type="email" x-model="emailSettings.smtp_from_email" class="input input-bordered"></div>
-            <div class="form-control"><label class="label"><span class="label-text">Nazwa nadawcy</span></label><input type="text" x-model="emailSettings.smtp_from_name" class="input input-bordered"></div>
+            <div class="form-control"><label class="label" for="adm-smtp-from-email"><span class="label-text">Email nadawcy</span></label><input id="adm-smtp-from-email" type="email" x-model="emailSettings.smtp_from_email" class="input input-bordered"></div>
+            <div class="form-control"><label class="label" for="adm-smtp-from-name"><span class="label-text">Nazwa nadawcy</span></label><input id="adm-smtp-from-name" type="text" x-model="emailSettings.smtp_from_name" class="input input-bordered"></div>
             <div class="form-control justify-end">
               <label class="label cursor-pointer justify-start gap-3 mt-8"><input type="checkbox" class="toggle toggle-primary" x-model="emailSettings.smtp_use_tls"><span class="label-text">U&#380;yj STARTTLS</span></label>
             </div>
           </div>
           <div class="card-actions justify-end mt-4"><button @click="saveEmailSettings()" class="btn btn-primary">Zapisz SMTP</button></div>
-        </div>
-      </div>
-      <div x-show="!editingTournamentId" class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title">Lista turniej&#243;w</h2>
-          <div x-show="loading.tournaments" class="space-y-4"><div class="skeleton h-12 w-full"></div><div class="skeleton h-12 w-full"></div></div>
-          <div x-show="!loading.tournaments" class="overflow-x-auto">
-            <table class="table table-zebra">
-              <thead><tr><th>Nazwa</th><th>Lokalizacja</th><th>Korty</th><th>Email</th><th>Rozpocz&#281;cie</th><th>Zako&#324;czenie</th><th>Status</th><th>Akcje</th></tr></thead>
-              <tbody>
-                <template x-for="tournament in tournaments" :key="tournament.id">
-                  <tr :class="{'bg-success bg-opacity-10': tournament.active}">
-                    <td>
-                      <span class="font-semibold" x-text="tournament.name"></span>
-                      <span x-show="tournament.active" class="badge badge-success badge-sm ml-2">Aktywny</span>
-                      <span x-show="!tournament.is_public" class="badge badge-warning badge-sm ml-2">Prywatny</span>
-                      <span x-show="!tournament.stats_enabled" class="badge badge-info badge-sm ml-2">Bez statystyk</span>
-                      <span x-show="tournament.is_simulation" class="badge badge-outline badge-sm ml-2">Symulacja</span>
-                    </td>
-                    <td x-text="[tournament.city, tournament.country].filter(Boolean).join(', ') || '-' "></td>
-                    <td x-text="tournament.court_count || 0"></td>
-                    <td x-text="tournament.report_email || '-' "></td>
-                    <td x-text="tournament.start_date"></td>
-                    <td x-text="tournament.end_date"></td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        class="toggle toggle-success"
-                        :checked="!!tournament.active"
-                        @change="toggleTournamentActive(tournament.id, $event.target.checked)"
-                      >
-                    </td>
-                    <td class="flex gap-2">
-                      <button @click="openOfficeDashboard(tournament.id)" class="btn btn-xs btn-primary">Biuro</button>
-                      <button @click="openTournamentEditor(tournament)" class="btn btn-xs btn-outline">Edytuj</button>
-                      <button @click="selectTournament(tournament.id)" class="btn btn-xs btn-ghost">&#128203; Gracze</button>
-                      <button @click="deleteTournament(tournament.id)" class="btn btn-xs btn-error">Usu&#324;</button>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-            </table>
-          </div>
-          <div class="alert alert-info mt-4" x-show="tournaments.length === 0"><span>Brak turniej&#243;w. Dodaj pierwszy turniej powy&#380;ej.</span></div>
         </div>
       </div>
     </div>
@@ -1725,7 +1682,7 @@
                     <!-- Photo -->
                     <td class="w-10">
                       <div class="w-8 h-8 rounded-full overflow-hidden bg-base-300 flex items-center justify-center">
-                        <img x-show="gp.photo_url" :src="gp.photo_url" class="w-full h-full object-cover">
+                        <img x-show="gp.photo_url" :src="gp.photo_url" :alt="'Zdjęcie: ' + (gp.last_name || '')" class="w-full h-full object-cover">
                         <span x-show="!gp.photo_url" class="text-xs opacity-50" x-text="(gp.first_name?.[0]||'')+(gp.last_name?.[0]||'')"></span>
                       </div>
                     </td>
@@ -2020,14 +1977,14 @@
       <div class="modal-box">
         <h3 class="font-bold text-lg mb-4">Przytnij logo (kwadrat)</h3>
         <div class="crop-area" x-ref="cropArea">
-          <img x-ref="cropImg" :src="cropImgSrc" draggable="false"
+          <img x-ref="cropImg" :src="cropImgSrc" alt="Logo turnieju — podgląd kadru" draggable="false"
                @pointerdown.prevent="startCropDrag($event)"
                @pointermove="onCropDrag($event)"
                @pointerup="endCropDrag()" @pointerleave="endCropDrag()">
         </div>
         <div class="flex items-center gap-2 mt-3">
           <span class="text-xs opacity-60">Zoom</span>
-          <input type="range" class="range range-sm flex-1" min="100" max="400" step="10"
+          <input type="range" class="range range-sm flex-1" aria-label="Powiększenie logo" min="100" max="400" step="10"
                  x-model.number="cropZoom" @input="updateCropTransform()">
         </div>
         <div class="modal-action">
