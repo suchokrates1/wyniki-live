@@ -343,9 +343,50 @@
           <button @click="activeTab = 'players'" :class="{'btn-primary': activeTab === 'players'}" class="btn btn-sm">Gracze turnieju</button>
           <button @click="activeTab = 'settings'; $nextTick(() => { updateCanvasScale(); _fitPreviewNames(); })" :class="{'btn-primary': activeTab === 'settings'}" class="btn btn-sm">&#128250; Overlay</button>
           <button @click="activeTab = 'panic'; loadPanic()" :class="{'btn-primary': activeTab === 'panic'}" class="btn btn-sm">Panic</button>
+          <button @click="activeTab = 'devices'; loadDevices()" :class="{'btn-primary': activeTab === 'devices'}" class="btn btn-sm">Tablety</button>
         </div>
       </div>
     </header>
+
+    <div x-show="activeTab === 'devices'" x-cloak class="card bg-base-100 shadow">
+      <div class="card-body gap-4">
+        <h2 class="card-title">Tablety</h2>
+        <p>Moja nazwa to numer albo imię, które sam nadajesz. Puste pole progu oznacza brak WhatsAppa o baterii. Gdy bateria spadnie do tego procentu i tablet nie jest na ładowarce, reżyserka dostaje jedną wiadomość. Kolejna pójdzie dopiero, gdy bateria wróci powyżej progu.</p>
+        <p class="text-error" x-show="devicesError" x-text="devicesError"></p>
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Moja nazwa</th>
+                <th>Id</th>
+                <th>Urządzenie</th>
+                <th>Bateria</th>
+                <th>Próg %</th>
+                <th>Kort</th>
+                <th>Wersja</th>
+                <th>Widziany</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in devices" :key="row.android_id">
+                <tr>
+                  <td><input class="input input-bordered input-sm w-28" x-model="row.nameDraft"></td>
+                  <td class="font-mono text-xs" x-text="row.android_id"></td>
+                  <td x-text="row.model"></td>
+                  <td x-text="deviceBattery(row)"></td>
+                  <td><input class="input input-bordered input-sm w-20" type="number" min="1" max="99" placeholder="—" x-model="row.alertDraft"></td>
+                  <td x-text="row.last_court_id || '—'"></td>
+                  <td x-text="row.app_version || '—'"></td>
+                  <td x-text="deviceSeen(row)"></td>
+                  <td><button type="button" class="btn btn-sm btn-primary" @click="saveDevice(row)">Zapisz</button></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
     <!-- Courts Tab -->
     <div x-show="activeTab === 'panic'" x-cloak class="card bg-base-100 shadow">

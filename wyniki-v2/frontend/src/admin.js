@@ -9,6 +9,7 @@ import { createOfficeTabAdmin } from './admin/officeTab.js';
 import { createGlobalPlayersAdmin } from './admin/globalPlayers.js';
 import { createOverlayAdmin } from './admin/overlay.js';
 import { createPanicAdmin } from './admin/panic.js';
+import { createDevicesAdmin } from './admin/devices.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
@@ -77,6 +78,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createGlobalPlayersAdmin(),
   createOverlayAdmin(),
   createPanicAdmin(),
+  createDevicesAdmin(),
 ));
 
 ignoreCancelledAlpineTransitions();

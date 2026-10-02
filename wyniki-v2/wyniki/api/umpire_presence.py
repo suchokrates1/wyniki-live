@@ -6,6 +6,7 @@ from ..db_models import utc_now_iso
 from ..services.api_auth import court_id_from_bearer, require_court_access
 from ..services.court_manager import STATE_LOCK, ensure_court_state, normalize_kort_id
 from ..database.umpire_devices import remember_umpire_device
+from ..services.device_alerts import battery_percent, charging_flag, consider_low_battery, notify_low_battery
 from ..services.director_commands import director_command_broker, tablet_presence
 
 
@@ -49,14 +50,21 @@ def register(blueprint) -> None:
                 court_state["umpire_screen"] = screen
 
             heartbeat_meta = _request_client_meta(data)
+            android_id = heartbeat_meta.get("android_id") or ""
             remember_umpire_device(
-                android_id=heartbeat_meta.get("android_id") or "",
+                android_id=android_id,
                 manufacturer=heartbeat_meta.get("device_manufacturer") or "",
                 model=heartbeat_meta.get("device_model") or "",
                 device=heartbeat_meta.get("device") or "",
                 platform=heartbeat_meta.get("platform") or "",
                 court_id=kort_id,
+                battery_level=battery_percent(battery_level),
+                is_charging=charging_flag(is_charging),
+                app_version=heartbeat_meta.get("app_version") or app_version or "",
             )
+            warning = consider_low_battery(android_id)
+            if warning:
+                notify_low_battery(warning)
             snapshot = data.get("snapshot")
             tablet_presence.record(
                 session_court_id=kort_id,

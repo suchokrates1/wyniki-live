@@ -698,6 +698,15 @@ def init_db() -> None:
         device_cols = [row[1] for row in cursor.fetchall()]
         if device_cols and "sticker" not in device_cols:
             cursor.execute("ALTER TABLE umpire_devices ADD COLUMN sticker TEXT DEFAULT ''")
+        for column, ddl in (
+            ("battery_level", "ALTER TABLE umpire_devices ADD COLUMN battery_level INTEGER"),
+            ("is_charging", "ALTER TABLE umpire_devices ADD COLUMN is_charging INTEGER"),
+            ("app_version", "ALTER TABLE umpire_devices ADD COLUMN app_version TEXT DEFAULT ''"),
+            ("battery_alert_percent", "ALTER TABLE umpire_devices ADD COLUMN battery_alert_percent INTEGER"),
+            ("battery_alert_active", "ALTER TABLE umpire_devices ADD COLUMN battery_alert_active INTEGER DEFAULT 0"),
+        ):
+            if device_cols and column not in device_cols:
+                cursor.execute(ddl)
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS panic_threads (
