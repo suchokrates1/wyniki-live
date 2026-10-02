@@ -1,4 +1,4 @@
-export const PRIVACY_UPDATED_DATE = '2026-09-21';
+export const PRIVACY_UPDATED_DATE = '2026-10-02';
 
 export const PRIVACY_SECTION_IDS = Object.freeze([
   'controller',
@@ -57,6 +57,7 @@ export const PRIVACY_CONTENT = {
         'Odwiedzający tablicę wyników: adres IP, data i godzina, żądany adres, przeglądarka — w logach serwera i u Cloudflare.',
         'Zawodnicy: imię, nazwisko, kraj, płeć, klasa startowa B1–B4, zdjęcie (jeśli organizator je wgra), wyniki, drabinki, plan i historia meczów. Klasa B1–B4 dotyczy niepełnosprawności wzrokowej — to dana szczególnej kategorii.',
         'Sędziowie i obsługa: imię sędziego lub inicjały, kort, PIN, wybór języka i motywu, dane urządzenia potrzebne do synchronizacji.',
+        'Aplikacja Android wysyła na nasz serwer identyfikator ANDROID_ID oraz producenta i model telefonu lub tabletu, żeby odróżnić urządzenia o tym samym modelu. To nie jest identyfikator reklamowy. Nie przekazujemy go firmom trzecim.',
         'Biuro turnieju i administrator: hasło, cookie sesji, adres e-mail do raportów, jeśli go ustawiono.',
       ]),
       section('purposes', 'Cele i podstawy prawne', [
@@ -101,6 +102,7 @@ export const PRIVACY_CONTENT = {
       section('app', 'Aplikacja Blind Tennis Referee', [
         'Aplikacja na Androida i PWA sędziego służą do sędziowania: wybór turnieju i kortu, PIN, nazwiska, wynik, statystyki i synchronizacja z serwerem.',
         'Aplikacja nie buduje profilu sędziego do marketingu. Może zapisać na urządzeniu język, motyw, historię meczów i dane diagnostyczne synchronizacji.',
+        'Przy każdym połączeniu z serwerem aplikacja dołącza ANDROID_ID oraz producenta i model telefonu lub tabletu. Zapisujemy je u siebie, żeby rozpoznać urządzenie przy prośbie o pomoc i na liście obecności. Użytkownik nie może tego wyłączyć. Nie używamy tego identyfikatora do reklamy.',
         'Ta sama polityka dotyczy aplikacji. Link znajdziesz w Ustawieniach. Google Play wymaga publicznego adresu tej strony.',
       ]),
       section('updates', 'Zmiany tej polityki', [
@@ -125,6 +127,7 @@ export const PRIVACY_CONTENT = {
         'Scoreboard visitors: IP address, time, requested URL and browser — in server logs and at Cloudflare.',
         'Players: first name, last name, country, gender, sport class B1–B4, photo if the organiser uploads one, results, brackets, schedule and match history. Class B1–B4 relates to visual impairment and is special-category data.',
         'Umpires and staff: umpire name or initials, court, PIN, language and theme, plus device details needed for sync.',
+        'The Android app sends ANDROID_ID, plus the phone or tablet manufacturer and model, to our server so we can tell identical models apart. This is not an advertising ID. We do not pass it to third parties.',
         'Tournament office and admin: password, session cookie, and a report email address if one is set.',
       ]),
       section('purposes', 'Purposes and legal bases', [
@@ -169,6 +172,7 @@ export const PRIVACY_CONTENT = {
       section('app', 'Blind Tennis Referee app', [
         'The Android app and umpire PWA are for officiating: tournament and court, PIN, names, score, stats and sync with the server.',
         'The app does not build a marketing profile. It may store language, theme, match history and sync diagnostics on the device.',
+        'On every connection the app attaches ANDROID_ID and the phone or tablet manufacturer and model. We store them so a help request and the presence list can name the device. The user cannot turn this off. We do not use the identifier for advertising.',
         'This policy also covers the app. The link is in Settings. Google Play requires this public URL.',
       ]),
       section('updates', 'Changes to this policy', [
@@ -193,6 +197,7 @@ export const PRIVACY_CONTENT = {
         'Besucher der Anzeigetafel: IP-Adresse, Zeit, aufgerufene Adresse, Browser — in Serverprotokollen und bei Cloudflare.',
         'Spieler: Vorname, Nachname, Land, Geschlecht, Startklasse B1–B4, Foto falls der Veranstalter eines hochlädt, Ergebnisse, Tableau, Zeitplan und Spielhistorie. Klasse B1–B4 betrifft eine Sehbehinderung und ist eine besondere Datenkategorie.',
         'Schiedsrichter und Team: Name oder Initialen, Platz, PIN, Sprache und Design sowie Gerätedaten für die Synchronisation.',
+        'Die Android-App sendet ANDROID_ID sowie Hersteller und Modell des Telefons oder Tablets an unseren Server, damit gleiche Modelle unterscheidbar sind. Das ist keine Werbe-ID. Wir geben sie nicht an Dritte weiter.',
         'Turnierbüro und Admin: Passwort, Sitzungscookie und eine Report-E-Mail, falls hinterlegt.',
       ]),
       section('purposes', 'Zwecke und Rechtsgrundlagen', [
@@ -237,6 +242,7 @@ export const PRIVACY_CONTENT = {
       section('app', 'App Blind Tennis Referee', [
         'Die Android-App und die Schiedsrichter-PWA dienen der Leitung: Turnier, Platz, PIN, Namen, Stand, Statistik und Sync.',
         'Die App erstellt kein Marketingprofil. Sie kann Sprache, Design, Spielhistorie und Sync-Diagnose speichern.',
+        'Bei jeder Verbindung hängt die App ANDROID_ID sowie Hersteller und Modell des Telefons oder Tablets an. Wir speichern sie, damit eine Hilfeanfrage und die Anwesenheitsliste das Gerät benennen können. Der Nutzer kann das nicht abschalten. Wir nutzen die Kennung nicht für Werbung.',
         'Diese Erklärung gilt auch für die App. Den Link finden Sie in den Einstellungen.',
       ]),
       section('updates', 'Änderungen', [
@@ -261,6 +267,7 @@ export const PRIVACY_CONTENT = {
         'Visitatori del tabellone: indirizzo IP, orario, URL e browser — nei log del server e presso Cloudflare.',
         'Giocatori: nome, cognome, paese, genere, classe B1–B4, foto se l’organizzatore la carica, risultati, tabelloni, programma e storico. La classe B1–B4 riguarda la disabilità visiva ed è una categoria particolare.',
         'Arbitri e staff: nome o iniziali, campo, PIN, lingua e tema, dati del dispositivo per la sincronizzazione.',
+        'L’app Android invia ANDROID_ID, produttore e modello del telefono o del tablet al nostro server, per distinguere dispositivi dello stesso modello. Non è un ID pubblicitario. Non lo passiamo a terzi.',
         'Ufficio e admin: password, cookie di sessione e indirizzo e-mail dei report, se impostato.',
       ]),
       section('purposes', 'Finalità e basi giuridiche', [
@@ -305,6 +312,7 @@ export const PRIVACY_CONTENT = {
       section('app', 'App Blind Tennis Referee', [
         'L’app Android e la PWA arbitro servono a dirigere: torneo, campo, PIN, nomi, punteggio, statistiche e sync.',
         'L’app non crea un profilo di marketing. Può salvare lingua, tema, storico e diagnostica di sync.',
+        'A ogni connessione l’app allega ANDROID_ID, il produttore e il modello del telefono o del tablet. Li conserviamo per riconoscere il dispositivo in una richiesta di aiuto e nell’elenco presenze. L’utente non può disattivarlo. Non lo usiamo per la pubblicità.',
         'Questa informativa vale anche per l’app. Il link è in Impostazioni.',
       ]),
       section('updates', 'Modifiche', [
@@ -329,6 +337,7 @@ export const PRIVACY_CONTENT = {
         'Visitantes del marcador: dirección IP, hora, URL y navegador — en registros del servidor y en Cloudflare.',
         'Jugadores: nombre, apellidos, país, género, clase B1–B4, foto si el organizador la sube, resultados, cuadros, calendario e historial. La clase B1–B4 se refiere a discapacidad visual y es una categoría especial.',
         'Árbitros y equipo: nombre o iniciales, pista, PIN, idioma y tema, datos del dispositivo para la sincronización.',
+        'La app de Android envía ANDROID_ID, fabricante y modelo del teléfono o de la tableta a nuestro servidor, para distinguir dispositivos del mismo modelo. No es un identificador publicitario. No lo cedemos a terceros.',
         'Oficina y administración: contraseña, cookie de sesión y correo de informes si está configurado.',
       ]),
       section('purposes', 'Fines y bases jurídicas', [
@@ -373,6 +382,7 @@ export const PRIVACY_CONTENT = {
       section('app', 'App Blind Tennis Referee', [
         'La app de Android y la PWA de árbitro sirven para arbitrar: torneo, pista, PIN, nombres, marcador, estadísticas y sincronización.',
         'La app no crea un perfil de marketing. Puede guardar idioma, tema, historial y diagnóstico de sincronización.',
+        'En cada conexión la app adjunta ANDROID_ID, el fabricante y el modelo del teléfono o de la tableta. Los guardamos para reconocer el dispositivo en una petición de ayuda y en la lista de presencia. El usuario no puede desactivarlo. No lo usamos para publicidad.',
         'Esta política también cubre la app. El enlace está en Ajustes.',
       ]),
       section('updates', 'Cambios', [
@@ -397,6 +407,7 @@ export const PRIVACY_CONTENT = {
         'Visiteurs du tableau : adresse IP, heure, URL et navigateur — dans les journaux serveur et chez Cloudflare.',
         'Joueurs : prénom, nom, pays, genre, classe B1–B4, photo si l’organisateur en ajoute une, résultats, tableaux, programme et historique. La classe B1–B4 concerne un handicap visuel : donnée particulière.',
         'Arbitres et équipe : nom ou initiales, court, code PIN, langue et thème, données de l’appareil pour la synchronisation.',
+        'L’application Android envoie ANDROID_ID, le fabricant et le modèle du téléphone ou de la tablette à notre serveur, afin de distinguer des appareils du même modèle. Ce n’est pas un identifiant publicitaire. Nous ne le transmettons pas à des tiers.',
         'Bureau et administration : mot de passe, cookie de session et e-mail de rapports s’il est renseigné.',
       ]),
       section('purposes', 'Finalités et bases légales', [
@@ -441,6 +452,7 @@ export const PRIVACY_CONTENT = {
       section('app', 'Application Blind Tennis Referee', [
         'L’application Android et la PWA arbitre servent à arbitrer : tournoi, court, code PIN, noms, score, statistiques et synchronisation.',
         'L’application ne crée pas de profil marketing. Elle peut enregistrer langue, thème, historique et diagnostic de sync.',
+        'À chaque connexion l’application joint ANDROID_ID, le fabricant et le modèle du téléphone ou de la tablette. Nous les conservons pour reconnaître l’appareil dans une demande d’aide et dans la liste de présence. L’utilisateur ne peut pas le désactiver. Nous ne l’utilisons pas pour la publicité.',
         'Cette politique couvre aussi l’application. Le lien est dans Réglages.',
       ]),
       section('updates', 'Modifications', [
@@ -465,6 +477,7 @@ export const PRIVACY_CONTENT = {
         'Rezultatų lentos lankytojai: IP adresas, laikas, URL ir naršyklė — serverio žurnaluose ir Cloudflare.',
         'Žaidėjai: vardas, pavardė, šalis, lytis, klasė B1–B4, nuotrauka, jei organizatorius ją įkelia, rezultatai, lentelės, tvarkaraštis ir istorija. Klasė B1–B4 susijusi su regos negalia — tai ypatingų kategorijų duomenys.',
         'Teisėjai ir komanda: vardas ar inicialai, kortas, PIN, kalba ir tema, įrenginio duomenys sinchronizacijai.',
+        'Android programėlė siunčia ANDROID_ID, gamintoją ir telefono ar planšetės modelį į mūsų serverį, kad atskirtume vienodus įrenginius. Tai ne reklamos identifikatorius. Trečiosioms šalims jo neperduodame.',
         'Biuras ir administratorius: slaptažodis, sesijos slapukas ir ataskaitų el. paštas, jei nustatytas.',
       ]),
       section('purposes', 'Tikslai ir teisiniai pagrindai', [
@@ -509,6 +522,7 @@ export const PRIVACY_CONTENT = {
       section('app', 'Programėlė Blind Tennis Referee', [
         'Android programėlė ir teisėjo PWA skirti teisėjavimui: turnyras, kortas, PIN, vardai, rezultatas, statistika ir sinchronizacija.',
         'Programėlė nekuria rinkodaros profilio. Gali saugoti kalbą, temą, mačų istoriją ir sinchronizacijos diagnostiką.',
+        'Kiekvieno ryšio metu programėlė prideda ANDROID_ID, gamintoją ir telefono ar planšetės modelį. Saugome juos, kad pagalbos prašymas ir dalyvavimo sąrašas atpažintų įrenginį. Naudotojas negali to išjungti. Reklamai šio identifikatoriaus nenaudojame.',
         'Ši politika taikoma ir programėlei. Nuoroda yra Nustatymuose.',
       ]),
       section('updates', 'Pakeitimai', [

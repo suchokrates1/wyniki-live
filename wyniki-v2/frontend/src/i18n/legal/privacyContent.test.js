@@ -32,6 +32,14 @@ test('privacy content has no empty strings', () => {
   }
 });
 
+test('every language says the app stores ANDROID_ID and the device model', () => {
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const text = JSON.stringify(getPrivacyContent(lang));
+    assert.match(text, /ANDROID_ID/, lang);
+    assert.match(text, /mod[eè]l/i, lang);
+  }
+});
+
 test('cookie section keeps the analityka anchor', () => {
   for (const lang of SUPPORTED_LANGUAGES) {
     const cookies = getPrivacyContent(lang).sections.find((item) => item.id === 'analityka');
