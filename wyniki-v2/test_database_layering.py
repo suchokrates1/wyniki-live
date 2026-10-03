@@ -44,9 +44,10 @@ def test_database_layer_does_not_use_the_orm_session():
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             if ORM.search(line) and "db_models" not in line:
                 offenders.append(f"{path.name}:{number}")
-    # brackets.py still writes two Match rows through the ORM; nothing new may join it.
     # unit_of_work.py and orm_rows.py are the only modules allowed to touch the session.
-    assert len(offenders) <= 2, f"new ORM use inside the database layer: {offenders}"
+    # brackets.py used to read a match through it while writing through db_conn(); one
+    # function reading the same rows down two connections is what this forbids.
+    assert offenders == [], f"ORM use inside the database layer: {offenders}"
 
 
 ORM_WRITE = re.compile(r"\bdb\.session\.(?:add|commit|delete|flush|rollback)\b")

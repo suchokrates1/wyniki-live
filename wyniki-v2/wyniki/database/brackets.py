@@ -1279,31 +1279,47 @@ def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[st
         return {"status": "skipped", "reason": "knockout_already_configured"}
     return merged
 
+def _finished_match_row(cursor: sqlite3.Cursor, match_id: int) -> Optional[sqlite3.Row]:
+    """The finished match a knockout slot is about, read on the same connection the
+    writes below use. Reading it through the ORM session instead would be the one
+    place in this package where two connections look at the same rows, and the
+    session can hold a version the raw connection has already changed."""
+    cursor.execute(
+        """
+        SELECT id, status, phase, player1_name, player2_name, winner_name,
+               player1_sets, player2_sets, sets_history, result_note, finish_reason
+        FROM matches WHERE id = ?
+        """,
+        (int(match_id),),
+    )
+    row = cursor.fetchone()
+    return row if row and row["status"] == "finished" else None
+
+
 def advance_knockout(match_id: int, tournament_id: int) -> bool:
     """After a knockout match finishes, find the matching slot, persist the result,
     and auto-advance winners to the next round (SF→Final/3rd place)."""
     try:
-        from ..db_models import Match as MatchModel
-        from ..db_models import db
-        match = db.session.get(MatchModel, match_id)
-        if not match or match.status != "finished":
-            return False
-
-        p1 = match.player1_name
-        p2 = match.player2_name
-        winner = match.winner_name or (p1 if match.player1_sets > match.player2_sets else p2)
-
-        sets_history = json.loads(match.sets_history) if match.sets_history else []
-        score_parts = []
-        for s in sets_history:
-            g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
-            if g1 == 0 and g2 == 0 and s.get("tiebreak_loser_points") is None:
-                continue
-            score_parts.append(f"{g1}:{g2}")
-        score_summary = " ".join(score_parts)
-
         with db_conn() as conn:
             cursor = conn.cursor()
+            match = _finished_match_row(cursor, match_id)
+            if not match:
+                return False
+
+            p1 = match["player1_name"]
+            p2 = match["player2_name"]
+            winner = match["winner_name"] or (
+                p1 if (match["player1_sets"] or 0) > (match["player2_sets"] or 0) else p2
+            )
+
+            sets_history = json.loads(match["sets_history"]) if match["sets_history"] else []
+            score_parts = []
+            for s in sets_history:
+                g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
+                if g1 == 0 and g2 == 0 and s.get("tiebreak_loser_points") is None:
+                    continue
+                score_parts.append(f"{g1}:{g2}")
+            score_summary = " ".join(score_parts)
             # Find the knockout slot matching these two players
             cursor.execute("""
                 SELECT id, phase, position, winner_to, loser_to FROM bracket_knockout
@@ -1312,7 +1328,7 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
                     OR (player1_name = ? AND player2_name = ?))
                   AND winner_name IS NULL
                 ORDER BY CASE WHEN phase = ? THEN 0 ELSE 1 END, id
-            """, (tournament_id, p1, p2, p2, p1, match.phase or ""))
+            """, (tournament_id, p1, p2, p2, p1, match["phase"] or ""))
             slot = cursor.fetchone()
             if not slot:
                 return False
@@ -1322,7 +1338,7 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
                 UPDATE bracket_knockout
                 SET winner_name = ?, score_summary = ?, finish_reason = ?, result_note = ?
                 WHERE id = ?
-            """, (winner, score_summary, match.finish_reason or 'normal', match.result_note, slot["id"]))
+            """, (winner, score_summary, match["finish_reason"] or 'normal', match["result_note"], slot["id"]))
 
             loser = p2 if winner == p1 else p1
             kind = _phase_kind(slot["phase"])
@@ -1483,29 +1499,29 @@ def correct_knockout_result(match_id: int, tournament_id: int, previous_winner: 
     """Apply a corrected knockout result: update the slot and, when the winner changed,
     swap the players already moved on (the later matches must not be played yet)."""
     try:
-        from ..db_models import Match as MatchModel
-        from ..db_models import db
-        match = db.session.get(MatchModel, match_id)
-        if not match or match.status != "finished":
-            return False
-        p1, p2 = match.player1_name, match.player2_name
-        winner = match.winner_name or (p1 if (match.player1_sets or 0) > (match.player2_sets or 0) else p2)
-        loser = p2 if winner == p1 else p1
-        sets_history = json.loads(match.sets_history) if match.sets_history else []
-        score_summary = " ".join(
-            f"{s.get('player1_games', 0)}:{s.get('player2_games', 0)}"
-            for s in sets_history
-            if s.get("player1_games", 0) or s.get("player2_games", 0) or s.get("tiebreak_loser_points") is not None
-        )
         with db_conn() as conn:
             cursor = conn.cursor()
-            slot = _find_decided_knockout_slot(cursor, tournament_id, p1, p2, match.phase)
+            match = _finished_match_row(cursor, match_id)
+            if not match:
+                return False
+            p1, p2 = match["player1_name"], match["player2_name"]
+            winner = match["winner_name"] or (
+                p1 if (match["player1_sets"] or 0) > (match["player2_sets"] or 0) else p2
+            )
+            loser = p2 if winner == p1 else p1
+            sets_history = json.loads(match["sets_history"]) if match["sets_history"] else []
+            score_summary = " ".join(
+                f"{s.get('player1_games', 0)}:{s.get('player2_games', 0)}"
+                for s in sets_history
+                if s.get("player1_games", 0) or s.get("player2_games", 0) or s.get("tiebreak_loser_points") is not None
+            )
+            slot = _find_decided_knockout_slot(cursor, tournament_id, p1, p2, match["phase"])
             if not slot:
                 return False
             old_winner = slot["winner_name"] or previous_winner
             cursor.execute(
                 "UPDATE bracket_knockout SET winner_name = ?, score_summary = ?, finish_reason = ?, result_note = ? WHERE id = ?",
-                (winner, score_summary, match.finish_reason or "normal", match.result_note, slot["id"]),
+                (winner, score_summary, match["finish_reason"] or "normal", match["result_note"], slot["id"]),
             )
             if old_winner and old_winner != winner and old_winner in (p1, p2):
                 old_loser = p2 if old_winner == p1 else p1
