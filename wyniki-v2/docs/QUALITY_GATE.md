@@ -4,7 +4,7 @@
 
 | Workflow | Repo | What runs |
 |---|---|---|
-| `backend.yml` | wyniki-live | `ruff check .` + `mypy` (only `wyniki/database/connection.py`) + `pytest -q` (Python 3.11, same as the image) |
+| `backend.yml` | wyniki-live | `ruff check .` + `mypy` (the whole package bar `db_models.py`) + `pytest -q` (Python 3.13, same as the image) |
 | `a11y.yml` | wyniki-live | `npm run lint`, i18n, match-engine, build, a11y, public phone suite, umpire E2E |
 | `android.yml` | Umpire-App | `testDebugUnitTest`, `lintDebug`, instrumentation compile |
 
