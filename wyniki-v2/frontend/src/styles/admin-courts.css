@@ -1,0 +1,121 @@
+/* Korty i tablety: the PIN warning band, the court rows and the tablet rows. */
+
+/* Court PINs: the warning band and the drawn-PIN list */
+.adm-pinbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 13px 16px;
+  border: 1px solid #E4BFAE;
+  border-radius: 12px;
+  background: var(--adm-accent-soft);
+  color: #8A2F00;
+}
+.adm-pinbar__text { flex: 1; min-width: 220px; font-size: 14px; line-height: 1.45; }
+.adm-pins { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.adm-pin {
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+.adm-pin__court { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--adm-muted); }
+.adm-pin__value {
+  display: block;
+  margin: 6px 0 2px;
+  font-family: 'Chivo Mono', monospace;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.adm-pin__was { display: block; font-size: 12px; color: var(--adm-muted); }
+
+/* Courts: number, PIN, what is being played, battery */
+.adm-group { margin-bottom: 18px; }
+.adm-group__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.adm-court__no { width: 58px; flex-shrink: 0; }
+.adm-court__label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--adm-muted); }
+.adm-court__name { display: block; font-size: 24px; font-weight: 900; line-height: 1.1; }
+.adm-court__pin { width: 104px; flex-shrink: 0; }
+.adm-court__pininput {
+  width: 100%;
+  font-family: 'Chivo Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+.adm-court__pininput.is-weak { border-color: #E4BFAE; background: var(--adm-accent-soft); color: #8A2F00; }
+.adm-court__battery {
+  flex-shrink: 0;
+  min-width: 56px;
+  text-align: right;
+  font-family: 'Chivo Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+.adm-court__battery.is-ok { color: var(--adm-ok); }
+.adm-court__battery.is-warn { color: var(--adm-warn); }
+.adm-court__battery.is-alert { color: #8A2F00; }
+.adm-court__battery.is-muted { color: var(--adm-muted); }
+.adm-chip--live { background: var(--adm-accent-soft); color: #8A2F00; }
+.adm-chip--idle { background: #EEF1F3; color: var(--adm-muted); }
+
+.adm-filterbox {
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: var(--adm-surface-2);
+}
+.adm-filterbox__head { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.adm-filterbox__row { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; cursor: pointer; }
+.adm-filterbox__row input { width: 20px; height: 20px; }
+.adm-filterbox__count { color: var(--adm-muted); font-size: 13px; }
+
+.adm-addrow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--adm-line);
+}
+/* On a phone a court is one card: number, state and battery on the first line,
+   the PIN beside them, the three buttons across the bottom. */
+@media (max-width: 860px) {
+  .adm-court__no, .adm-court__pin { width: auto; }
+  .adm-addrow .adm-input { flex: 1 1 140px; }
+  .adm-court__no { display: flex; align-items: baseline; gap: 8px; order: 1; }
+  .adm-court__name { font-size: 20px; }
+  .adm-court__battery { order: 2; margin-left: auto; width: auto; }
+  .adm-row--court .adm-row__main { order: 3; flex-basis: 100%; }
+  .adm-court__pin { order: 4; width: 100%; display: flex; align-items: baseline; gap: 8px; }
+  .adm-court__pininput { width: 92px; }
+  .adm-row--court .adm-row__actions { order: 5; width: 100%; }
+  .adm-row--court .adm-row__actions .adm-btn { flex: 1; }
+}
+
+/* Tablets */
+.adm-device__name { width: 100%; box-sizing: border-box; font-weight: 700; }
+.adm-device__field { width: 118px; flex-shrink: 0; }
+.adm-device__alert { width: 100%; box-sizing: border-box; text-align: center; font-family: 'Chivo Mono', monospace; font-weight: 700; }
+.adm-device__test { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; color: var(--adm-muted); cursor: pointer; }
+.adm-device__test input { width: 20px; height: 20px; }
+/* On a phone the tablet card reads top down: name, what it is, then the battery
+   row, the test flag and the button. */
+@media (max-width: 860px) {
+  .adm-row--device .adm-device__field { width: auto; flex: 1 1 130px; }
+  .adm-row--device .adm-court__battery { align-self: flex-end; margin-left: auto; }
+  .adm-row--device .adm-row__actions { width: 100%; }
+  .adm-row--device .adm-row__actions .adm-btn { flex: 1; }
+}

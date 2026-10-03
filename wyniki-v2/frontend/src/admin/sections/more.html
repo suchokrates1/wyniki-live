@@ -1,0 +1,14 @@
+<div class="adm-more">
+  <template x-for="entry in adminMoreEntries()" :key="entry.label">
+    <button type="button" class="adm-more__item" @click="openAdminSection(entry.section)">
+      <span class="adm-more__body">
+        <span class="adm-more__label" x-text="entry.label"></span>
+        <span class="adm-more__hint" x-text="entry.hint"></span>
+      </span>
+      <span class="adm-more__chevron" aria-hidden="true">›</span>
+    </button>
+  </template>
+
+  <a class="adm-more__office" href="/office" target="_blank" rel="noopener">Otwórz biuro turnieju</a>
+  <p class="adm-more__note">Terminarz, grupy, wyniki i drabinka są w module biura. Admin ich nie dubluje.</p>
+</div>
