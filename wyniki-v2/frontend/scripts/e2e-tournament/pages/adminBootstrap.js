@@ -16,8 +16,11 @@ export class AdminBootstrapPage {
     const form = this.page.locator('form').filter({ hasText: 'Panel administratora' });
     await form.locator('input[type="password"]').fill(password);
     await form.getByRole('button', { name: /Zaloguj|Login/i }).click();
+    // The panel is in once the section rail is drawn and the login dialog is gone.
+    // (Before the 2026-10 redesign this waited for an "Panel Administracyjny" heading,
+    // which the new shell does not have.)
     await this.page.waitForFunction(
-      () => document.body.innerText.includes('Panel Administracyjny')
+      () => document.querySelectorAll('.adm-rail__item').length > 0
         && !document.body.innerText.includes('Podaj hasło administratora'),
       undefined,
       { timeout: 10000 }
