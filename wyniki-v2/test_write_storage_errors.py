@@ -128,5 +128,6 @@ def test_the_four_writes_that_stay_quiet_on_purpose(locked, monkeypatch):
 
     locked(push_subscriptions)
     assert push_subscriptions.claim_send(1, "reminder:30") is False
-    with pytest.raises(Exception):
+    # This one already re-raises what the database threw, which the app turns into a 500.
+    with pytest.raises(sqlite3.OperationalError):
         push_subscriptions.save_subscription("https://push.example/1", "key", "auth")
