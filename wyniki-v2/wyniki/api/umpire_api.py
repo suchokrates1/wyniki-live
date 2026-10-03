@@ -6,9 +6,15 @@ import re
 from typing import Any
 
 from ..database import (
+    active_tournament_row,
     add_row,
     commit_writes,
+    first_row_where,
     get_row,
+    latest_match_on_court,
+    latest_match_with_uuid,
+    rows_where,
+    tournament_players_by_name,
     write_session,
     is_knockout_stage_phase,
     rollback_writes,
@@ -243,8 +249,8 @@ def _resolve_live_overlay_category(
             break
 
     if tournament_id and player1_name and player2_name:
-        p1 = Player.query.filter_by(tournament_id=tournament_id, name=player1_name).first()
-        p2 = Player.query.filter_by(tournament_id=tournament_id, name=player2_name).first()
+        p1 = first_row_where(Player, tournament_id=tournament_id, name=player1_name)
+        p2 = first_row_where(Player, tournament_id=tournament_id, name=player2_name)
         if p1 and p2 and p1.category and p1.category == p2.category:
             band = str(p1.category).strip().upper()
             g1 = str(p1.gender or "").upper()
@@ -444,14 +450,8 @@ def _publish_match_finished(match: Match) -> None:
 
             try:
                 if match.tournament_id:
-                    p1 = Player.query.filter_by(
-                        tournament_id=match.tournament_id,
-                        name=match.player1_name
-                    ).first()
-                    p2 = Player.query.filter_by(
-                        tournament_id=match.tournament_id,
-                        name=match.player2_name
-                    ).first()
+                    p1 = first_row_where(Player, tournament_id=match.tournament_id, name=match.player1_name)
+                    p2 = first_row_where(Player, tournament_id=match.tournament_id, name=match.player2_name)
                     if p1 and p2 and p1.category and p2.category:
                         if p1.category == p2.category:
                             court_state["history_meta"]["category"] = p1.category
@@ -725,7 +725,7 @@ def _resolve_tournament_for_court(kort_id: str | None) -> Tournament | None:
         court = get_row(Court, normalized)
         if court and court.tournament_id:
             return get_row(Tournament, court.tournament_id)
-    return Tournament.query.filter_by(active=1).first()
+    return active_tournament_row()
 
 
 def _format_mobile_court_name(court: dict) -> str:
@@ -831,7 +831,7 @@ def _mobile_player_payload_for_name(tournament_id: int, player_name: str) -> dic
     normalized_name = (player_name or '').strip()
     if not tournament_id or not normalized_name:
         return None
-    players = Player.query.filter_by(tournament_id=tournament_id).all()
+    players = rows_where(Player, tournament_id=tournament_id)
     player = next((item for item in players if item.full_name == normalized_name or item.name == normalized_name), None)
     if player:
         return _mobile_person_payload(
@@ -1150,7 +1150,7 @@ def get_players():
                 "message": "No tournament for selected court"
             }), 200
         
-        players = Player.query.filter_by(tournament_id=tournament.id).order_by(Player.name).all()
+        players = tournament_players_by_name(tournament.id)
         
         players_data = []
         for player in players:
@@ -1265,12 +1265,7 @@ def create_match():
         p2_name = data.get("player2_name")
 
         if client_match_uuid:
-            existing_match = (
-                Match.query
-                .filter_by(client_match_uuid=client_match_uuid)
-                .order_by(Match.id.desc())
-                .first()
-            )
+            existing_match = latest_match_with_uuid(client_match_uuid)
             if existing_match:
                 logger.info(f"Idempotent match create reused: {existing_match.id} uuid={client_match_uuid}")
                 return jsonify(existing_match.to_dict()), 200
@@ -1575,7 +1570,7 @@ def receive_statistics():
             return jsonify({"message": "Statistics ignored for test match"}), 200
         
         # Get or create statistics
-        stats = MatchStatistics.query.filter_by(match_id=match_id).first()
+        stats = first_row_where(MatchStatistics, match_id=match_id)
         if not stats:
             stats = MatchStatistics(match_id=match_id)
             add_row(stats)
@@ -1703,19 +1698,9 @@ def log_match_event():
     event_client_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
     active_match = get_row(Match, event_match_id) if event_match_id else None
     if not active_match and event_client_uuid:
-        active_match = (
-            Match.query
-            .filter_by(client_match_uuid=event_client_uuid)
-            .order_by(Match.updated_at.desc(), Match.id.desc())
-            .first()
-        )
+        active_match = latest_match_with_uuid(event_client_uuid, by_update=True)
     if not active_match:
-        active_match = (
-            Match.query
-            .filter_by(court_id=kort_id, status='in_progress')
-            .order_by(Match.updated_at.desc(), Match.id.desc())
-            .first()
-        )
+        active_match = latest_match_on_court(kort_id)
     restore_match_score = bool(
         active_match and _match_has_recorded_progress(active_match) and _score_payload_is_zeroed(score)
     )

@@ -1,7 +1,6 @@
 """Admin API routes for global players management."""
 import os
 from flask import Blueprint, jsonify, request
-from sqlalchemy import or_, func
 
 from ..db_models import GlobalPlayer, Player, Tournament
 from ..config import logger
@@ -9,6 +8,18 @@ from ..services.player_registry import create_tournament_player, find_or_create_
 from ..services.office_event_broker import emit_office_invalidation
 from ..database import (
     add_row,
+    counting_tournaments_of_global_player,
+    entries_count_of_global_player,
+    entries_named,
+    entries_named_loosely,
+    entries_of_global_player,
+    entry_named_in_tournament,
+    entry_of_global_player_in_tournament,
+    global_player_by_name,
+    global_player_count,
+    global_players_with_surname,
+    global_players_without_first_name,
+    search_global_players,
     classifications,
     commit_writes,
     delete_row,
@@ -47,22 +58,12 @@ def list_global_players():
     category = request.args.get('category', '').strip()
     country = request.args.get('country', '').strip()
 
-    query = GlobalPlayer.query
-
-    if q:
-        pattern = f'%{q}%'
-        query = query.filter(or_(
-            GlobalPlayer.first_name.ilike(pattern),
-            GlobalPlayer.last_name.ilike(pattern),
-        ))
-    if gender:
-        query = query.filter(GlobalPlayer.gender == (classifications.normalize_gender(gender) or gender))
-    if category:
-        query = query.filter(GlobalPlayer.category == category)
-    if country:
-        query = query.filter(func.upper(GlobalPlayer.country) == country.upper())
-
-    players = query.order_by(GlobalPlayer.last_name, GlobalPlayer.first_name).all()
+    players = search_global_players(
+        q,
+        gender=(classifications.normalize_gender(gender) or gender) if gender else "",
+        category=category,
+        country=country,
+    )
     player_ids = [player.id for player in players]
     tournament_counts = tournament_counts_for_players(player_ids)
 
@@ -112,7 +113,7 @@ def get_global_player(gp_id: int):
     d = gp.to_dict()
 
     # Tournament entries
-    entries = Player.query.filter_by(global_player_id=gp_id).all()
+    entries = entries_of_global_player(gp_id)
     d['tournament_entries'] = [{
         'id': e.id,
         'tournament_id': e.tournament_id,
@@ -209,7 +210,7 @@ def delete_global_player(gp_id: int):
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
-    entries_count = Player.query.filter_by(global_player_id=gp_id).count()
+    entries_count = entries_count_of_global_player(gp_id)
     if entries_count > 0:
         return jsonify({
             'error': f'Cannot delete: player has {entries_count} tournament entries. Unlink them first.'
@@ -286,7 +287,7 @@ def migrate_existing_players():
     """One-time migration: create GlobalPlayer records from existing players.
     Groups by first_name+last_name, creates global records, links players."""
     # Check if already migrated
-    existing = GlobalPlayer.query.count()
+    existing = global_player_count()
     if existing > 0:
         return jsonify({'message': f'Already migrated ({existing} global players exist)', 'count': existing})
 
@@ -317,7 +318,7 @@ def migrate_existing_players():
         flush_writes()  # get gp.id
 
         # Link all matching players
-        matching = Player.query.filter_by(first_name=fn, last_name=ln).all()
+        matching = entries_named(fn, ln)
         for p in matching:
             p.global_player_id = gp.id
             linked += 1
@@ -325,10 +326,7 @@ def migrate_existing_players():
         created += 1
 
     # Also delete the test player entries
-    test_players = Player.query.filter(
-        func.lower(Player.first_name) == 'dawid',
-        func.lower(Player.last_name) == 'suchodolski'
-    ).all()
+    test_players = entries_named_loosely('dawid', 'suchodolski')
     for tp in test_players:
         delete_row(tp)
 
@@ -366,7 +364,7 @@ def add_global_to_tournament(tid: int):
         return jsonify({'error': 'Global player not found'}), 404
 
     # Check if already registered
-    existing = Player.query.filter_by(tournament_id=tid, global_player_id=gp_id).first()
+    existing = entry_of_global_player_in_tournament(tid, gp_id)
     if existing:
         return jsonify({'error': 'Player already in this tournament'}), 409
 
@@ -435,10 +433,7 @@ def import_file_to_tournament(tid: int):
 
         gp = None
         if int(tournament.is_simulation or 0) != 1:
-            gp_exists = GlobalPlayer.query.filter(
-                func.lower(func.trim(GlobalPlayer.first_name)) == fn.lower(),
-                func.lower(func.trim(GlobalPlayer.last_name)) == ln.lower(),
-            ).first()
+            gp_exists = global_player_by_name(fn, ln)
             gp = find_or_create_global_player(write_session(), fn, ln, category, country)
             if not gp:
                 continue
@@ -447,15 +442,11 @@ def import_file_to_tournament(tid: int):
             else:
                 created_global += 1
 
-            existing = Player.query.filter_by(tournament_id=tid, global_player_id=gp.id).first()
+            existing = entry_of_global_player_in_tournament(tid, gp.id)
             if existing:
                 continue
         else:
-            existing = Player.query.filter(
-                Player.tournament_id == tid,
-                func.lower(func.trim(Player.first_name)) == fn.lower(),
-                func.lower(func.trim(Player.last_name)) == ln.lower(),
-            ).first()
+            existing = entry_named_in_tournament(tid, fn, ln)
             if existing:
                 continue
 
@@ -484,23 +475,16 @@ def import_file_to_tournament(tid: int):
 @blueprint.route('/duplicates', methods=['GET'])
 def find_duplicates():
     """Find duplicate global players (same last_name or same first+last)."""
-    from sqlalchemy import func as sqf
 
     # Find by same last_name
     dupes_by_lastname = repeated_global_player_surnames()
 
     result = []
     for ln, cnt in dupes_by_lastname:
-        players = GlobalPlayer.query.filter(
-            sqf.lower(sqf.trim(GlobalPlayer.last_name)) == ln
-        ).all()
+        players = global_players_with_surname(ln)
         entries = []
         for gp in players:
-            tournament_count = (
-                Player.query.join(Tournament, Player.tournament_id == Tournament.id)
-                .filter(Player.global_player_id == gp.id, Tournament.stats_enabled == 1)
-                .count()
-            )
+            tournament_count = counting_tournaments_of_global_player(gp.id)
             entries.append({
                 **gp.to_dict(),
                 'tournaments_count': tournament_count,
@@ -517,20 +501,13 @@ def find_duplicates():
 @blueprint.route('/no-first-name', methods=['GET'])
 def find_no_first_name():
     """Find global players without first names."""
-    from sqlalchemy import func as sqf
 
-    players = GlobalPlayer.query.filter(
-        or_(GlobalPlayer.first_name.is_(None), sqf.trim(GlobalPlayer.first_name) == '')
-    ).order_by(GlobalPlayer.last_name).all()
+    players = global_players_without_first_name()
 
     result = []
     for gp in players:
         d = gp.to_dict()
-        d['tournaments_count'] = (
-            Player.query.join(Tournament, Player.tournament_id == Tournament.id)
-            .filter(Player.global_player_id == gp.id, Tournament.stats_enabled == 1)
-            .count()
-        )
+        d['tournaments_count'] = counting_tournaments_of_global_player(gp.id)
         result.append(d)
 
     return jsonify(result)
@@ -566,7 +543,7 @@ def merge_players():
             continue
 
         # Transfer all tournament entries from source to target
-        entries = Player.query.filter_by(global_player_id=src_id).all()
+        entries = entries_of_global_player(src_id)
         for entry in entries:
             entry.global_player_id = target_id
             entry.first_name = target.first_name

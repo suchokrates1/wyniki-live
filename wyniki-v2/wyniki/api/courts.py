@@ -2,7 +2,7 @@
 from flask import Blueprint, jsonify, request
 
 from ..services.court_manager import serialize_public_snapshot
-from ..database import get_row
+from ..database import first_row_where, get_row
 from ..db_models import Match, MatchStatistics, Player, Tournament
 from ..config import logger
 from ..utils import json_no_cache as _json_no_cache
@@ -83,7 +83,7 @@ def match_stats(match_id: int):
         ):
             return jsonify({"error": "Statistics not found"}), 404
 
-    stats = MatchStatistics.query.filter_by(match_id=match_id).first()
+    stats = first_row_where(MatchStatistics, match_id=match_id)
     if not stats:
         return jsonify({"error": "Statistics not found"}), 404
     data = stats.to_dict()
@@ -94,7 +94,7 @@ def match_stats(match_id: int):
     # Resolve winner surname to full name via Player DB
     if data.get("winner"):
         winner_name = data["winner"].strip()
-        player = Player.query.filter_by(last_name=winner_name).first()
+        player = first_row_where(Player, last_name=winner_name)
         if player:
             data["winner"] = player.full_name
     return jsonify(data)

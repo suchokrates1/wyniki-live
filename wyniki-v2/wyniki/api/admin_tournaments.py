@@ -12,9 +12,16 @@ from werkzeug.utils import secure_filename
 
 from sqlalchemy import func
 
-from ..db_models import Match, Tournament
+from ..db_models import Tournament
 from ..database import (
+    counting_entries_named,
+    counting_entries_of_global_player,
+    counting_history_for,
+    counting_tournament_ids,
+    entries_in_counting_tournaments,
     fetch_tournaments,
+    global_player_matching,
+    phases_of_matches,
     get_row,
     fetch_active_tournaments,
     fetch_umpire_active_tournaments,
@@ -963,27 +970,15 @@ def get_all_players():
     Deduplicates by global_player_id (or name), preferring the latest tournament entry.
     """
     import json
-    from wyniki.db_models import Player, GlobalPlayer, Tournament, MatchHistory
+    from wyniki.db_models import GlobalPlayer, Player
     from wyniki.services.categories import normalize_player_classification
-    from sqlalchemy import func, or_
 
-    players = (
-        Player.query.join(Tournament)
-        .filter(_website_stats_filter())
-        .order_by(Tournament.start_date.desc(), Tournament.id.desc(), Player.id.desc())
-        .all()
-    )
+    players = entries_in_counting_tournaments()
 
     def _dedup_key(player: Player) -> str:
         if player.global_player_id:
             return f"g:{player.global_player_id}"
-        gp = (
-            GlobalPlayer.query.filter(
-                func.lower(func.trim(GlobalPlayer.first_name)) == (player.first_name or '').strip().lower(),
-                func.lower(func.trim(GlobalPlayer.last_name)) == (player.last_name or '').strip().lower(),
-            )
-            .first()
-        )
+        gp = global_player_matching(player.first_name, player.last_name)
         if gp:
             return f"g:{gp.id}"
         return f"n:{player.full_name.strip().lower()}"
@@ -1019,18 +1014,11 @@ def get_all_players():
         global_player = get_row(GlobalPlayer, gid) if gid else None
         full_name = canonical.full_name
 
-        match_filter = or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
-        public_stats_matches = (
-            MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
-            .filter(
-                match_filter,
-                (MatchHistory.tournament_id.is_(None)) | _website_stats_filter(),
-            )
-        )
-        match_count = public_stats_matches.count()
+        counting_matches = counting_history_for(full_name)
+        match_count = len(counting_matches)
 
         wins = 0
-        for match in public_stats_matches.all():
+        for match in counting_matches:
             if not match.score_a or not match.score_b:
                 continue
             try:
@@ -1071,10 +1059,9 @@ def get_player_profile(player_id: int):
     Accepts either a Player id (tournament entry) or a GlobalPlayer id via ?global=1
     """
     import json
-    from wyniki.db_models import Player, GlobalPlayer, Tournament, MatchHistory
+    from wyniki.db_models import Player, GlobalPlayer, Tournament
     from wyniki.database import get_full_bracket
     from wyniki.services.categories import normalize_player_classification
-    from sqlalchemy import or_
 
     is_global = request.args.get('global', '0') == '1'
 
@@ -1091,16 +1078,9 @@ def get_player_profile(player_id: int):
         photo_url = gp.photo_url or ''
         birth_date = gp.birth_date or ''
         age_val = gp.age
-        siblings = Player.query.join(Tournament).filter(
-            Player.global_player_id == gp.id,
-            _website_stats_filter(),
-        ).all()
+        siblings = counting_entries_of_global_player(gp.id)
         if not siblings and last_name:
-            siblings = Player.query.join(Tournament).filter(
-                Player.last_name == last_name,
-                Player.first_name == gp.first_name,
-                _website_stats_filter(),
-            ).all()
+            siblings = counting_entries_named(gp.first_name, last_name)
     else:
         player = get_row(Player, player_id)
         if not player:
@@ -1132,16 +1112,9 @@ def get_player_profile(player_id: int):
                 photo_url = gp.photo_url or ''
                 birth_date = gp.birth_date or ''
                 age_val = gp.age
-            siblings = Player.query.join(Tournament).filter(
-                Player.global_player_id == player.global_player_id,
-                _website_stats_filter(),
-            ).all()
+            siblings = counting_entries_of_global_player(player.global_player_id)
         elif last_name:
-            siblings = Player.query.join(Tournament).filter(
-                Player.last_name == last_name,
-                Player.first_name == player.first_name,
-                _website_stats_filter(),
-            ).all()
+            siblings = counting_entries_named(player.first_name, last_name)
         else:
             siblings = [player]
 
@@ -1156,28 +1129,11 @@ def get_player_profile(player_id: int):
     profile_global_id = gp.id if is_global else (player.global_player_id or None)
 
     # Fetch all matches for this player across all tournaments
-    public_stats_filter = (MatchHistory.tournament_id.is_(None)) | _website_stats_filter()
-    all_matches = (
-        MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
-        .filter(
-            or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name),
-            public_stats_filter,
-        )
-        .order_by(MatchHistory.ended_ts.desc())
-        .all()
-    )
+    all_matches = counting_history_for(full_name)
 
     # Also try matching by last_name alone (match_history stores surnames)
     if last_name and last_name != full_name:
-        surname_matches = (
-            MatchHistory.query.outerjoin(Tournament, MatchHistory.tournament_id == Tournament.id)
-            .filter(
-                or_(MatchHistory.player_a == last_name, MatchHistory.player_b == last_name),
-                public_stats_filter,
-            )
-            .order_by(MatchHistory.ended_ts.desc())
-            .all()
-        )
+        surname_matches = counting_history_for(last_name)
         existing_ids = {m.id for m in all_matches}
         for sm in surname_matches:
             if sm.id not in existing_ids:
@@ -1186,10 +1142,7 @@ def get_player_profile(player_id: int):
     match_phase_lookup = {}
     match_ids = sorted({m.match_id for m in all_matches if getattr(m, 'match_id', None)})
     if match_ids:
-        match_phase_lookup = {
-            row.id: (row.phase or '')
-            for row in Match.query.filter(Match.id.in_(match_ids)).all()
-        }
+        match_phase_lookup = phases_of_matches(match_ids)
 
     def parse_sets_history(m):
         """Parse sets_history from a MatchHistory entry."""
@@ -1382,7 +1335,7 @@ def get_player_profile(player_id: int):
             bucket[t['medal']] += 1
 
     # class history: tournaments the public cannot see are not named
-    public_tournament_ids = {row.id for row in Tournament.query.filter(_website_stats_filter()).all()}
+    public_tournament_ids = counting_tournament_ids()
     classification_history = []
     if profile_global_id:
         for row in classification_db.fetch_classification_history(profile_global_id):
