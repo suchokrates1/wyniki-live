@@ -1,9 +1,10 @@
 """The app reaches SQLite two ways; each one stays on its own side of the line.
 
 Raw sqlite3 belongs to `wyniki/database/`. ORM writes (add, delete, flush, commit,
-rollback) belong to `unit_of_work.py` or `db_models.py`. A request handler calls
-those functions and does not open the transaction itself. Mixing both connections
-inside one function means a write that a read in the same request does not see.
+rollback) belong to `unit_of_work.py` or `db_models.py`, ORM reads by id to
+`orm_rows.py`. A request handler calls those functions and does not hold the
+session itself. Mixing both connections inside one function means a write that a
+read in the same request does not see.
 """
 from __future__ import annotations
 
@@ -38,17 +39,18 @@ def test_raw_sql_stays_in_the_database_layer():
 def test_database_layer_does_not_use_the_orm_session():
     offenders = []
     for path in DATABASE_LAYER.glob("*.py"):
-        if path.name == "unit_of_work.py":
+        if path.name in {"unit_of_work.py", "orm_rows.py"}:
             continue
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             if ORM.search(line) and "db_models" not in line:
                 offenders.append(f"{path.name}:{number}")
     # brackets.py still writes two Match rows through the ORM; nothing new may join it.
-    # unit_of_work.py is the only other module allowed to touch the session.
+    # unit_of_work.py and orm_rows.py are the only modules allowed to touch the session.
     assert len(offenders) <= 2, f"new ORM use inside the database layer: {offenders}"
 
 
 ORM_WRITE = re.compile(r"\bdb\.session\.(?:add|commit|delete|flush|rollback)\b")
+SESSION = re.compile(r"\bdb\.session\b")
 
 
 def test_orm_writes_stay_behind_the_database_layer():
@@ -63,4 +65,23 @@ def test_orm_writes_stay_behind_the_database_layer():
         "db.session add/commit outside wyniki/database and db_models: "
         f"{offenders}. Call add_row, delete_row, flush_writes, commit_writes "
         "or rollback_writes instead."
+    )
+
+
+def test_request_handlers_do_not_hold_the_orm_session():
+    """`wyniki/api` asks the database layer for rows; it does not reach for the session.
+
+    A handler holding `db.session` can read a row the layer below has already
+    changed, or cache one it is about to. get_row, forget_row and write_session
+    in orm_rows.py are the door.
+    """
+    offenders = []
+    for path in (PACKAGE / "api").rglob("*.py"):
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if SESSION.search(line):
+                offenders.append(f"{path.relative_to(PACKAGE).as_posix()}:{number}")
+    assert offenders == [], (
+        "db.session inside wyniki/api: "
+        f"{offenders}. Use get_row, forget_row, forget_all_rows or write_session "
+        "from wyniki.database instead."
     )

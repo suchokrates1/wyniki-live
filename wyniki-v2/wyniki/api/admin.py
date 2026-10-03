@@ -149,8 +149,8 @@ def delete_latest_history():
 def cleanup_e2e_artifacts():
     """Delete emulator E2E artifacts created with an E2E-* marker."""
     try:
-        from ..db_models import db, GlobalPlayer, Match, MatchHistory, MatchStatistics, Tournament
-        from ..database import commit_writes, delete_tournament, fetch_courts
+        from ..db_models import GlobalPlayer, Match, MatchHistory, MatchStatistics, Tournament
+        from ..database import commit_writes, delete_tournament, fetch_courts, forget_all_rows
         from ..services.court_manager import refresh_courts_from_db
 
         data = request.get_json(silent=True) or {}
@@ -167,7 +167,7 @@ def cleanup_e2e_artifacts():
         for tournament_id in tournament_ids:
             if delete_tournament(tournament_id):
                 deleted_tournaments += 1
-        db.session.expire_all()
+        forget_all_rows()
 
         match_ids = [
             row.id for row in Match.query.filter(
@@ -409,10 +409,11 @@ def director_tablets():
 def director_control_match(match_id: int):
     """Push court, names, score, and match rules onto the umpire tablet."""
     try:
-        from ..db_models import Match, db
+        from ..db_models import Match
+        from ..database import get_row
         from ..services.director_commands import apply_director_control
 
-        match = db.session.get(Match, match_id)
+        match = get_row(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
         payload = request.get_json(silent=True) or {}

@@ -2,7 +2,8 @@
 from flask import Blueprint, jsonify, request
 
 from ..services.court_manager import serialize_public_snapshot
-from ..db_models import db, Match, MatchStatistics, Player, Tournament
+from ..database import get_row
+from ..db_models import Match, MatchStatistics, Player, Tournament
 from ..config import logger
 from ..utils import json_no_cache as _json_no_cache
 
@@ -72,9 +73,9 @@ def history():
 @blueprint.route('/match-stats/<int:match_id>')
 def match_stats(match_id: int):
     """Get match statistics for Details button in history."""
-    match_record = db.session.get(Match, match_id)
+    match_record = get_row(Match, match_id)
     if match_record and match_record.tournament_id:
-        tournament = db.session.get(Tournament, match_record.tournament_id)
+        tournament = get_row(Tournament, match_record.tournament_id)
         if tournament and (
             int(tournament.is_public or 0) != 1
             or int(tournament.stats_enabled or 0) != 1

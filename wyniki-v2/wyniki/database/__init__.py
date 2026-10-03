@@ -2,8 +2,8 @@
 
 A new write goes through a function in this package. A request handler does not
 open the ORM session itself and does not paste SQL. ORM commits live in
-unit_of_work.py. Raw sqlite3 lives in the other modules. One function does not
-use both.
+unit_of_work.py and ORM reads in orm_rows.py. Raw sqlite3 lives in the other
+modules. One function does not use both.
 """
 from __future__ import annotations
 
@@ -174,4 +174,14 @@ from .unit_of_work import (
     delete_row,
     flush_writes,
     rollback_writes,
+)
+
+from .orm_rows import (
+    forget_all_rows,
+    forget_row,
+    get_row,
+    repeated_global_player_surnames,
+    tournament_counts_for_players,
+    tournament_players_grouped_by_name,
+    write_session,
 )

@@ -3,11 +3,23 @@ import os
 from flask import Blueprint, jsonify, request
 from sqlalchemy import or_, func
 
-from ..db_models import db, GlobalPlayer, Player, Tournament
+from ..db_models import GlobalPlayer, Player, Tournament
 from ..config import logger
 from ..services.player_registry import create_tournament_player, find_or_create_global_player, split_player_name
 from ..services.office_event_broker import emit_office_invalidation
-from ..database import add_row, classifications, commit_writes, delete_row, flush_writes
+from ..database import (
+    add_row,
+    classifications,
+    commit_writes,
+    delete_row,
+    flush_writes,
+    forget_row,
+    get_row,
+    repeated_global_player_surnames,
+    tournament_counts_for_players,
+    tournament_players_grouped_by_name,
+    write_session,
+)
 
 blueprint = Blueprint('admin_global_players', __name__, url_prefix='/admin/api/global-players')
 
@@ -52,16 +64,7 @@ def list_global_players():
 
     players = query.order_by(GlobalPlayer.last_name, GlobalPlayer.first_name).all()
     player_ids = [player.id for player in players]
-    tournament_counts = {}
-    if player_ids:
-        tournament_counts = dict(
-            db.session.query(Player.global_player_id, func.count(Player.id))
-            .join(Tournament, Player.tournament_id == Tournament.id)
-            .filter(Player.global_player_id.in_(player_ids))
-            .filter(Tournament.stats_enabled == 1)
-            .group_by(Player.global_player_id)
-            .all()
-        )
+    tournament_counts = tournament_counts_for_players(player_ids)
 
     result = []
     for gp in players:
@@ -102,7 +105,7 @@ def create_global_player():
 @blueprint.route('/<int:gp_id>', methods=['GET'])
 def get_global_player(gp_id: int):
     """Get a global player with career stats."""
-    gp = db.session.get(GlobalPlayer, gp_id)
+    gp = get_row(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -124,7 +127,7 @@ def get_global_player(gp_id: int):
 @blueprint.route('/<int:gp_id>', methods=['PUT'])
 def update_global_player(gp_id: int):
     """Update a global player."""
-    gp = db.session.get(GlobalPlayer, gp_id)
+    gp = get_row(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -164,7 +167,7 @@ def update_global_player(gp_id: int):
             status=data.get('classification_status') if data.get('classification_status') in classifications.STATUSES else 'confirmed',
             note=(data.get('classification_note') or '').strip(),
         )
-        db.session.expire(gp)
+        forget_row(gp)
     logger.info("global_player_updated", id=gp_id)
     return jsonify(gp.to_dict())
 
@@ -172,7 +175,7 @@ def update_global_player(gp_id: int):
 @blueprint.route('/<int:gp_id>/classifications', methods=['GET'])
 def get_classification_history(gp_id: int):
     """The player's sport class history, oldest first."""
-    if not db.session.get(GlobalPlayer, gp_id):
+    if not get_row(GlobalPlayer, gp_id):
         return jsonify({'error': 'Player not found'}), 404
     return jsonify({'history': classifications.fetch_classification_history(gp_id)})
 
@@ -180,7 +183,7 @@ def get_classification_history(gp_id: int):
 @blueprint.route('/tournaments/<int:tid>/classification-review', methods=['GET'])
 def get_classification_review(tid: int):
     """Players of a tournament who played outside their sport class."""
-    if not db.session.get(Tournament, tid):
+    if not get_row(Tournament, tid):
         return jsonify({'error': 'Tournament not found'}), 404
     return jsonify(classifications.classification_review(tid))
 
@@ -188,7 +191,7 @@ def get_classification_review(tid: int):
 @blueprint.route('/tournaments/<int:tid>/classification-review', methods=['POST'])
 def apply_classification_review(tid: int):
     """Body: { decisions: [{ global_player_id, decision: reclassify|play_up|skip, classification? }] }"""
-    if not db.session.get(Tournament, tid):
+    if not get_row(Tournament, tid):
         return jsonify({'error': 'Tournament not found'}), 404
     data = request.get_json(silent=True) or {}
     decisions = data.get('decisions')
@@ -202,7 +205,7 @@ def apply_classification_review(tid: int):
 @blueprint.route('/<int:gp_id>', methods=['DELETE'])
 def delete_global_player(gp_id: int):
     """Delete a global player (only if no tournament entries)."""
-    gp = db.session.get(GlobalPlayer, gp_id)
+    gp = get_row(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -222,7 +225,7 @@ def delete_global_player(gp_id: int):
 @blueprint.route('/<int:gp_id>/photo', methods=['POST'])
 def upload_photo(gp_id: int):
     """Upload a player photo (resized to max 200x200)."""
-    gp = db.session.get(GlobalPlayer, gp_id)
+    gp = get_row(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -263,7 +266,7 @@ def upload_photo(gp_id: int):
 @blueprint.route('/<int:gp_id>/photo', methods=['DELETE'])
 def delete_photo(gp_id: int):
     """Delete a player photo."""
-    gp = db.session.get(GlobalPlayer, gp_id)
+    gp = get_row(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404
 
@@ -283,20 +286,13 @@ def delete_photo(gp_id: int):
 def migrate_existing_players():
     """One-time migration: create GlobalPlayer records from existing players.
     Groups by first_name+last_name, creates global records, links players."""
-    from sqlalchemy import func as sqf
-
     # Check if already migrated
     existing = GlobalPlayer.query.count()
     if existing > 0:
         return jsonify({'message': f'Already migrated ({existing} global players exist)', 'count': existing})
 
     # Group existing players by first_name + last_name
-    groups = db.session.query(
-        Player.first_name, Player.last_name,
-        sqf.max(Player.gender).label('gender'),
-        sqf.max(Player.category).label('category'),
-        sqf.max(Player.country).label('country'),
-    ).group_by(Player.first_name, Player.last_name).all()
+    groups = tournament_players_grouped_by_name()
 
     created = 0
     linked = 0
@@ -355,7 +351,7 @@ def add_global_to_tournament(tid: int):
     Body: { global_player_id: int, category: str (optional override) }
     """
     from ..db_models import Tournament
-    tournament = db.session.get(Tournament, tid)
+    tournament = get_row(Tournament, tid)
     if not tournament:
         return jsonify({'error': 'Tournament not found'}), 404
     if int(tournament.active or 0) != 1:
@@ -366,7 +362,7 @@ def add_global_to_tournament(tid: int):
     if not gp_id:
         return jsonify({'error': 'global_player_id is required'}), 400
 
-    gp = db.session.get(GlobalPlayer, gp_id)
+    gp = get_row(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Global player not found'}), 404
 
@@ -378,7 +374,7 @@ def add_global_to_tournament(tid: int):
     category = data.get('category', '').strip() or gp.category or ''
 
     p = create_tournament_player(
-        db.session,
+        write_session(),
         tournament_id=tid,
         name=gp.full_name,
         first_name=gp.first_name,
@@ -400,7 +396,7 @@ def import_file_to_tournament(tid: int):
     Body: { text: "First Last Category Country\\n..." }
     """
     from ..db_models import Tournament
-    tournament = db.session.get(Tournament, tid)
+    tournament = get_row(Tournament, tid)
     if not tournament:
         return jsonify({'error': 'Tournament not found'}), 404
     if int(tournament.active or 0) != 1:
@@ -444,7 +440,7 @@ def import_file_to_tournament(tid: int):
                 func.lower(func.trim(GlobalPlayer.first_name)) == fn.lower(),
                 func.lower(func.trim(GlobalPlayer.last_name)) == ln.lower(),
             ).first()
-            gp = find_or_create_global_player(db.session, fn, ln, category, country)
+            gp = find_or_create_global_player(write_session(), fn, ln, category, country)
             if not gp:
                 continue
             if gp_exists:
@@ -465,7 +461,7 @@ def import_file_to_tournament(tid: int):
                 continue
 
         create_tournament_player(
-            db.session,
+            write_session(),
             tournament_id=tid,
             name=name,
             first_name=fn,
@@ -492,14 +488,7 @@ def find_duplicates():
     from sqlalchemy import func as sqf
 
     # Find by same last_name
-    dupes_by_lastname = (
-        db.session.query(sqf.lower(sqf.trim(GlobalPlayer.last_name)).label('ln'),
-                         sqf.count(GlobalPlayer.id).label('cnt'))
-        .filter(GlobalPlayer.last_name.isnot(None), sqf.trim(GlobalPlayer.last_name) != '')
-        .group_by(sqf.lower(sqf.trim(GlobalPlayer.last_name)))
-        .having(sqf.count(GlobalPlayer.id) > 1)
-        .all()
-    )
+    dupes_by_lastname = repeated_global_player_surnames()
 
     result = []
     for ln, cnt in dupes_by_lastname:
@@ -563,7 +552,7 @@ def merge_players():
     if not target_id or not source_ids:
         return jsonify({'error': 'target_id and source_ids are required'}), 400
 
-    target = db.session.get(GlobalPlayer, target_id)
+    target = get_row(GlobalPlayer, target_id)
     if not target:
         return jsonify({'error': 'Target player not found'}), 404
 
@@ -573,7 +562,7 @@ def merge_players():
     for src_id in source_ids:
         if src_id == target_id:
             continue
-        source = db.session.get(GlobalPlayer, src_id)
+        source = get_row(GlobalPlayer, src_id)
         if not source:
             continue
 

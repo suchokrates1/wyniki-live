@@ -8,10 +8,12 @@ from typing import Any
 from ..database import (
     add_row,
     commit_writes,
+    get_row,
+    write_session,
     is_knockout_stage_phase,
     rollback_writes,
 )
-from ..db_models import db, Player, Match, MatchStatistics, Tournament, Court, utc_now_iso
+from ..db_models import Player, Match, MatchStatistics, Tournament, Court, utc_now_iso
 from ..services.court_manager import (
     ensure_court_state,
     normalize_kort_id,
@@ -718,9 +720,9 @@ def _resolve_tournament_for_court(kort_id: str | None) -> Tournament | None:
     """Resolve tournament from court, with active tournament fallback."""
     normalized = normalize_kort_id(kort_id)
     if normalized:
-        court = db.session.get(Court, normalized)
+        court = get_row(Court, normalized)
         if court and court.tournament_id:
-            return db.session.get(Tournament, court.tournament_id)
+            return get_row(Tournament, court.tournament_id)
     return Tournament.query.filter_by(active=1).first()
 
 
@@ -1078,7 +1080,7 @@ def get_players():
             if not kort_id:
                 return jsonify({"ok": False, "error": "kort_id required"}), 400
             
-            court = db.session.get(Court, kort_id)
+            court = get_row(Court, kort_id)
             if not court:
                 return jsonify({"ok": False, "error": "court-not-found"}), 404
             access_error = require_court_access(kort_id)
@@ -1099,7 +1101,7 @@ def get_players():
                 return jsonify({"ok": False, "error": "no tournament for court"}), 400
             
             player = create_tournament_player(
-                db.session,
+                write_session(),
                 tournament_id=tournament.id,
                 name=normalized_player["name"],
                 first_name=normalized_player["first_name"],
@@ -1195,7 +1197,7 @@ def authorize_court(kort_id: str):
         }), 400
     
     # Get court from database
-    court = db.session.get(Court, kort_id)
+    court = get_row(Court, kort_id)
     
     if not court:
         logger.warning(f"Court not found: {kort_id}")
@@ -1383,7 +1385,7 @@ def create_match():
 @blueprint.route('/matches/<int:match_id>', methods=['GET'])
 def get_match(match_id: int):
     """Get match details."""
-    match = db.session.get(Match, match_id)
+    match = get_row(Match, match_id)
     
     if not match:
         return jsonify({"error": "Match not found"}), 404
@@ -1398,7 +1400,7 @@ def update_match(match_id: int):
     try:
         data = request.get_json()
         
-        match = db.session.get(Match, match_id)
+        match = get_row(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
         access_error = require_court_access(match.court_id)
@@ -1508,7 +1510,7 @@ def finish_match(match_id: int):
     """Mark match as finished."""
     try:
         data = request.get_json(silent=True) or {}
-        match = db.session.get(Match, match_id)
+        match = get_row(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
         access_error = require_court_access(match.court_id)
@@ -1553,7 +1555,7 @@ def receive_statistics():
             return jsonify({"error": "match_id required"}), 400
         
         # Check if match exists
-        match = db.session.get(Match, match_id)
+        match = get_row(Match, match_id)
         if not match:
             return jsonify({"error": "Match not found"}), 404
         access_error = require_court_access(match.court_id)
@@ -1696,7 +1698,7 @@ def log_match_event():
     is_super_tiebreak = bool(score.get('is_super_tiebreak', False))
     event_match_id = data.get('match_id')
     event_client_uuid = _clean_client_text(data.get('client_match_uuid'), 80)
-    active_match = db.session.get(Match, event_match_id) if event_match_id else None
+    active_match = get_row(Match, event_match_id) if event_match_id else None
     if not active_match and event_client_uuid:
         active_match = (
             Match.query

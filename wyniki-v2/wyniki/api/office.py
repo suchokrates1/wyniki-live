@@ -19,6 +19,7 @@ from ..services.office_event_broker import emit_office_invalidation, office_even
 from ..services import schedule_notifications
 from ..database import (
     apply_schedule_notes,
+    get_row,
     assign_start_numbers,
     fetch_start_numbers,
     swap_knockout_players,
@@ -70,7 +71,7 @@ from ..database import (
     publish_tournament_schedule,
 )
 from ..database.errors import StorageError
-from ..db_models import Tournament, db
+from ..db_models import Tournament
 from ..utils import json_no_cache as _json_no_cache
 from ..services.office_workflow import (
     OfficeWorkflowError,
@@ -225,7 +226,7 @@ def office_auth(slot: int):
     if error:
         return error
 
-    tournament_model = db.session.get(Tournament, int(tournament['id']))
+    tournament_model = get_row(Tournament, int(tournament['id']))
     office_password_hash = (tournament_model.office_password_hash or '').strip() if tournament_model else ''
     if not office_password_hash:
         return jsonify({"error": "Office password is not configured for this tournament"}), 409

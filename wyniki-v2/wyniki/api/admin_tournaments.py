@@ -12,9 +12,10 @@ from werkzeug.utils import secure_filename
 
 from sqlalchemy import func
 
-from ..db_models import Match, Tournament, db
+from ..db_models import Match, Tournament
 from ..database import (
     fetch_tournaments,
+    get_row,
     fetch_active_tournaments,
     fetch_umpire_active_tournaments,
     fetch_tournament,
@@ -468,7 +469,7 @@ def update_tournament_route(tournament_id: int):
         return jsonify({"error": "Tournament not found"}), 404
 
     data = _request_payload()
-    existing_row = db.session.get(Tournament, tournament_id)
+    existing_row = get_row(Tournament, tournament_id)
     
     name = (data.get('name') or '').strip()
     start_date = (data.get('start_date') or '').strip()
@@ -1014,7 +1015,7 @@ def get_all_players():
         gid = canonical.global_player_id
         if not gid and _key.startswith('g:'):
             gid = int(_key.split(':', 1)[1])
-        global_player = db.session.get(GlobalPlayer, gid) if gid else None
+        global_player = get_row(GlobalPlayer, gid) if gid else None
         full_name = canonical.full_name
 
         match_filter = or_(MatchHistory.player_a == full_name, MatchHistory.player_b == full_name)
@@ -1077,7 +1078,7 @@ def get_player_profile(player_id: int):
     is_global = request.args.get('global', '0') == '1'
 
     if is_global:
-        gp = db.session.get(GlobalPlayer, player_id)
+        gp = get_row(GlobalPlayer, player_id)
         if not gp:
             return jsonify({'error': 'Player not found'}), 404
         full_name = gp.full_name
@@ -1100,7 +1101,7 @@ def get_player_profile(player_id: int):
                 _website_stats_filter(),
             ).all()
     else:
-        player = db.session.get(Player, player_id)
+        player = get_row(Player, player_id)
         if not player:
             return jsonify({'error': 'Player not found'}), 404
         if player.tournament and (
@@ -1115,7 +1116,7 @@ def get_player_profile(player_id: int):
         gender_val = player.gender or ''
         category_val = normalize_player_classification(player.category or '')
         if not category_val and player.global_player_id:
-            gp_lookup = db.session.get(GlobalPlayer, player.global_player_id)
+            gp_lookup = get_row(GlobalPlayer, player.global_player_id)
             if gp_lookup:
                 category_val = normalize_player_classification(gp_lookup.category or '')
         country_val = (player.country or '').upper()
@@ -1125,7 +1126,7 @@ def get_player_profile(player_id: int):
 
         # If player has global_player_id, use it for cross-tournament lookup
         if player.global_player_id:
-            gp = db.session.get(GlobalPlayer, player.global_player_id)
+            gp = get_row(GlobalPlayer, player.global_player_id)
             if gp:
                 photo_url = gp.photo_url or ''
                 birth_date = gp.birth_date or ''
@@ -1258,7 +1259,7 @@ def get_player_profile(player_id: int):
     # Build per-tournament data
     tournaments_data = []
     for tid in tournament_ids:
-        tourn = db.session.get(Tournament, tid)
+        tourn = get_row(Tournament, tid)
         if not tourn:
             continue
 
