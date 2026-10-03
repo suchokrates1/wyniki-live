@@ -11,6 +11,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Four projects over one spec. Left to its own devices Playwright opens ten workers
+  // here, and one of them regularly fails to exit afterwards — the run then waits out
+  // the five-minute force-kill and reports an error outside any test. Four workers run
+  // the same 132 tests in a quarter of the time and exit cleanly.
+  workers: 4,
   timeout: 60_000,
   reporter: process.env.CI ? [['list']] : [['list']],
   use: {
