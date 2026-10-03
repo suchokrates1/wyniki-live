@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from ..config import logger
 
 from .brackets import fetch_bracket_groups
+from .errors import StorageError
 from .connection import _utc_now, db_conn, fetch_app_settings, upsert_app_settings
 
 def _tournament_category_counts(cursor: sqlite3.Cursor, category_id: int) -> tuple[int, int, int]:
@@ -219,7 +220,7 @@ def insert_tournament_category(
         return fetch_tournament_category(category_id)
     except Exception as e:
         logger.error("insert_tournament_category_error", error=str(e), tournament_id=tournament_id)
-        return None
+        raise StorageError("insert_tournament_category") from e
 
 def _propagate_tournament_category_label(
     cursor: sqlite3.Cursor,
@@ -290,6 +291,21 @@ def _propagate_tournament_category_label(
         (old_label, new_label, now, tournament_id, old_label + "%"),
     )
 
+def _category_row_for_write(category_id: int) -> Optional[Dict[str, Any]]:
+    """The row a write checks first. Unlike the public read it does not hide a
+    database failure, so a locked database is not reported as a missing category."""
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM tournament_categories WHERE id = ?", (category_id,))
+            if cursor.fetchone() is None:
+                return None
+    except Exception as e:
+        logger.error("category_row_for_write_error", error=str(e), category_id=category_id)
+        raise StorageError("fetch_tournament_category") from e
+    return fetch_tournament_category(category_id)
+
+
 def update_tournament_category(
     category_id: int,
     *,
@@ -302,7 +318,7 @@ def update_tournament_category(
     from ..services.teams import coerce_is_doubles
     from ..services.tournament_categories import normalize_hint_bands
 
-    existing = fetch_tournament_category(category_id)
+    existing = _category_row_for_write(category_id)
     if not existing:
         return None
     tournament_id = int(existing["tournament_id"])
@@ -342,10 +358,10 @@ def update_tournament_category(
         return fetch_tournament_category(category_id)
     except Exception as e:
         logger.error("update_tournament_category_error", error=str(e), category_id=category_id)
-        return None
+        raise StorageError("update_tournament_category") from e
 
 def delete_tournament_category(category_id: int, *, force: bool = False) -> bool:
-    existing = fetch_tournament_category(category_id)
+    existing = _category_row_for_write(category_id)
     if not existing:
         return False
     player_count = int(existing.get("player_count") or 0)
@@ -373,7 +389,7 @@ def delete_tournament_category(category_id: int, *, force: bool = False) -> bool
             return cursor.rowcount > 0
     except Exception as e:
         logger.error("delete_tournament_category_error", error=str(e), category_id=category_id)
-        return False
+        raise StorageError("delete_tournament_category") from e
 
 def migrate_tournament_categories_from_legacy(tournament_id: int) -> List[Dict[str, Any]]:
     """One-time migration: infer tournament categories from bracket group names."""
@@ -452,7 +468,7 @@ def clear_legacy_mixed_categories(tournament_id: int) -> bool:
             return cursor.rowcount > 0
     except Exception as e:
         logger.error("clear_legacy_mixed_categories_error", error=str(e), tournament_id=tournament_id)
-        return False
+        raise StorageError("clear_legacy_mixed_categories") from e
 
 def set_mixed_categories(tournament_id: int, categories: List[str]) -> List[str]:
     """Deprecated — use confirm_tournament_categories instead."""

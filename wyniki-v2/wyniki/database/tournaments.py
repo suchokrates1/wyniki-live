@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from ..config import logger
 
+from .errors import StorageError
 from .connection import (
     _default_simulation_office_password_hash,
     db_conn,
@@ -241,7 +242,7 @@ def insert_tournament(
             return cursor.lastrowid
     except Exception as e:
         logger.error("insert_tournament_error", error=str(e))
-        return None
+        raise StorageError("insert_tournament") from e
 
 def update_tournament(
     tournament_id: int,
@@ -296,7 +297,7 @@ def update_tournament(
             return True
     except Exception as e:
         logger.error("update_tournament_error", error=str(e), tournament_id=tournament_id)
-        return False
+        raise StorageError("update_tournament") from e
 
 def mark_tournament_summary_sent(tournament_id: int, sent_at: Optional[str] = None) -> bool:
     """Persist the timestamp of a sent tournament summary email."""
@@ -314,7 +315,7 @@ def mark_tournament_summary_sent(tournament_id: int, sent_at: Optional[str] = No
         return True
     except Exception as e:
         logger.error("mark_tournament_summary_sent_error", error=str(e), tournament_id=tournament_id)
-        return False
+        raise StorageError("mark_tournament_summary_sent") from e
 
 def delete_tournament(tournament_id: int) -> bool:
     """Delete a tournament and all data owned by it."""
@@ -365,7 +366,7 @@ def delete_tournament(tournament_id: int) -> bool:
             return cursor.rowcount > 0
     except Exception as e:
         logger.error("delete_tournament_error", error=str(e), tournament_id=tournament_id)
-        return False
+        raise StorageError("delete_tournament") from e
 
 def set_active_tournament(tournament_id: int) -> bool:
     """Mark a tournament as active without deactivating others."""
@@ -378,7 +379,7 @@ def set_active_tournament(tournament_id: int) -> bool:
             return True
     except Exception as e:
         logger.error("set_active_tournament_error", error=str(e), tournament_id=tournament_id)
-        return False
+        raise StorageError("set_active_tournament") from e
 
 def set_tournament_active_state(tournament_id: int, active: bool) -> bool:
     """Set active state for a single tournament."""
@@ -394,7 +395,7 @@ def set_tournament_active_state(tournament_id: int, active: bool) -> bool:
             return cursor.rowcount > 0
     except Exception as e:
         logger.error("set_tournament_active_state_error", error=str(e), tournament_id=tournament_id, active=active)
-        return False
+        raise StorageError("set_tournament_active_state") from e
 
 def _tournament_quick_info_key(tournament_id: int) -> str:
     return f"tournament_quick_info:{int(tournament_id)}"

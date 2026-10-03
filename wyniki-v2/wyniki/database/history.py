@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from ..config import logger
 from ..services.match_result import plausible_duration
 
+from .errors import StorageError
 from .connection import db_conn, website_visible_sql
 
 
@@ -133,7 +134,7 @@ def delete_latest_history_entry() -> Optional[Dict]:
         return deleted
     except Exception as e:
         logger.error("delete_history_entry_error", error=str(e))
-        return None
+        raise StorageError("delete_latest_history_entry") from e
 
 def fetch_match_history(
     limit: int = 100,

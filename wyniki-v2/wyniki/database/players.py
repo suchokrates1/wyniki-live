@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 
 from ..config import logger
 
+from .errors import StorageError
 from .connection import db_conn, website_visible_sql
 from .start_numbers import forget_start_numbers
 
@@ -175,7 +176,7 @@ def insert_player(tournament_id: int, name: str, category: str = "", country: st
             return cursor.lastrowid
     except Exception as e:
         logger.error("insert_player_error", error=str(e))
-        return None
+        raise StorageError("insert_player") from e
 
 def _sync_player_name_across_tournament(
     tournament_id: int,
@@ -263,7 +264,7 @@ def update_player(player_id: int, name: str, category: str, country: str,
         return updated
     except Exception as e:
         logger.error("update_player_error", error=str(e), player_id=player_id)
-        return False
+        raise StorageError("update_player") from e
 
 def delete_player(player_id: int, tournament_id: Optional[int] = None) -> bool:
     """Delete a player."""
@@ -281,7 +282,7 @@ def delete_player(player_id: int, tournament_id: Optional[int] = None) -> bool:
             return cursor.rowcount > 0
     except Exception as e:
         logger.error("delete_player_error", error=str(e), player_id=player_id)
-        return False
+        raise StorageError("delete_player") from e
 
 def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
     """Bulk insert players. Returns count of inserted players."""

@@ -10,6 +10,7 @@ from ..services.teams import (
     ordered_player_ids,
     pair_key_from_player_ids,
 )
+from .errors import StorageError
 from .connection import _utc_now, db_conn
 from .start_numbers import _assign as _assign_start_numbers, forget_start_numbers
 
@@ -207,7 +208,16 @@ def insert_tournament_team(
 
 
 def delete_tournament_team(team_id: int) -> bool:
-    existing = fetch_tournament_team(team_id)
+    # Checked inside the same try as the delete: a locked database must not read
+    # as "there is no such team".
+    try:
+        with db_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM tournament_teams WHERE id = ?", (team_id,))
+            existing = cursor.fetchone()
+    except Exception as e:
+        logger.error("delete_tournament_team_error", error=str(e), team_id=team_id)
+        raise StorageError("delete_tournament_team") from e
     if not existing:
         return False
     try:
@@ -229,4 +239,4 @@ def delete_tournament_team(team_id: int) -> bool:
         raise
     except Exception as e:
         logger.error("delete_tournament_team_error", error=str(e), team_id=team_id)
-        return False
+        raise StorageError("delete_tournament_team") from e

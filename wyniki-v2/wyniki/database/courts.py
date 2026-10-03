@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from ..config import logger
 
+from .errors import StorageError
 from .connection import db_conn, website_visible_sql
 
 def fetch_courts(active_only: bool = False, public_only: bool = False) -> List[Dict[str, Optional[str]]]:
@@ -163,7 +164,7 @@ def delete_court(kort_id: str) -> bool:
         return deleted
     except Exception as e:
         logger.error("delete_court_error", kort_id=kort_id, error=str(e))
-        return False
+        raise StorageError("delete_court") from e
 
 def rename_court(old_kort_id: str, new_kort_id: str) -> bool:
     """Rename a court (change kort_id)."""
@@ -183,7 +184,7 @@ def rename_court(old_kort_id: str, new_kort_id: str) -> bool:
         return renamed
     except Exception as e:
         logger.error("rename_court_error", old_kort_id=old_kort_id, new_kort_id=new_kort_id, error=str(e))
-        return False
+        raise StorageError("rename_court") from e
 
 def create_tournament_courts(tournament_id: int, court_count: int) -> List[str]:
     """Create tournament courts with unique IDs and human-friendly names."""
