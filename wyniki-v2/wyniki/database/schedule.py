@@ -220,7 +220,7 @@ def _prune_duplicate_schedule_entries(cursor: sqlite3.Cursor, tournament_id: int
         )
         if not players[0] or not players[1]:
             continue
-        key = (str(row["phase"] or "").strip().casefold(), tuple(players))
+        key = (str(row["phase"] or "").strip().casefold(), (players[0], players[1]))
         grouped.setdefault(key, []).append(row)
 
     deleted = 0
@@ -1064,7 +1064,7 @@ def link_schedule_to_match(
             _claim_schedule_slot(cursor, row["id"], match_id, status)
             _prune_duplicate_schedule_entries(cursor, tournament_id)
             conn.commit()
-            schedule_id = row["id"]
+            schedule_id = int(row["id"])
         return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(schedule_id)), None)
     except Exception as e:
         logger.error("link_schedule_to_match_error", error=str(e), tournament_id=tournament_id, match_id=match_id)
@@ -1339,19 +1339,19 @@ def generate_autoschedule_proposal(
     result_placements = []
     for placement in placements:
         match = placement["match"]
-        entry = entry_by_id.get(int(match["id"])) if match.get("id") else None
+        matched_entry = entry_by_id.get(int(match["id"])) if match.get("id") else None
         placed = bool(placement.get("court_id") and placement.get("scheduled_time"))
         result_placements.append(
             {
                 "schedule_id": match.get("id"),
                 "court_id": placement["court_id"],
-                "day_date": placement["day_date"] if placed else (entry.get("day_date") if entry else placement["day_date"]),
+                "day_date": placement["day_date"] if placed else (matched_entry.get("day_date") if matched_entry else placement["day_date"]),
                 "scheduled_time": placement["scheduled_time"],
                 "band": placement["band"],
-                "category_name": entry.get("category_name") if entry else match.get("category_name"),
-                "phase": entry.get("phase") if entry else match.get("phase"),
-                "player1_name": entry.get("player1_name") if entry else match.get("player1_name"),
-                "player2_name": entry.get("player2_name") if entry else match.get("player2_name"),
+                "category_name": matched_entry.get("category_name") if matched_entry else match.get("category_name"),
+                "phase": matched_entry.get("phase") if matched_entry else match.get("phase"),
+                "player1_name": matched_entry.get("player1_name") if matched_entry else match.get("player1_name"),
+                "player2_name": matched_entry.get("player2_name") if matched_entry else match.get("player2_name"),
             }
         )
     placed_rows = [row for row in result_placements if row["court_id"] and row["scheduled_time"]]

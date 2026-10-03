@@ -240,9 +240,8 @@ def upload_photo(gp_id: int):
         from PIL import Image
         from ..config import settings
 
-        img = Image.open(file.stream)
-        img = img.convert('RGB')
-        img.thumbnail((200, 200), Image.LANCZOS)
+        photo = Image.open(file.stream).convert('RGB')
+        photo.thumbnail((200, 200), Image.Resampling.LANCZOS)
 
         # Store in /data/photos/ (persistent volume), not in static/
         data_dir = os.path.dirname(settings.database_path)
@@ -251,7 +250,7 @@ def upload_photo(gp_id: int):
 
         filename = f'{gp_id}.jpg'
         filepath = os.path.join(photos_dir, filename)
-        img.save(filepath, 'JPEG', quality=85)
+        photo.save(filepath, 'JPEG', quality=85)
 
         gp.photo_url = f'/data/photos/{filename}'
         commit_writes()

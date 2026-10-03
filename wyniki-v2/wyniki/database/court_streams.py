@@ -75,9 +75,9 @@ def parse_iso_date(raw: Any) -> Optional[date]:
 
 def tournament_days(start_raw: Any, end_raw: Any, *, max_days: int = MAX_DAYS) -> List[str]:
     start = parse_iso_date(start_raw)
-    end = parse_iso_date(end_raw) or start
     if start is None:
         return []
+    end = parse_iso_date(end_raw) or start
     if end < start:
         start, end = end, start
     days: List[str] = []

@@ -184,7 +184,8 @@ def save_tournament_schedule(tournament_id: int):
     if error:
         return error
     data = request.get_json(silent=True) or {}
-    raw_entries = data.get('entries') if isinstance(data.get('entries'), list) else [data]
+    raw = data.get('entries')
+    raw_entries = raw if isinstance(raw, list) else [data]
     try:
         schedule = upsert_tournament_schedule_entries(tournament_id, raw_entries)
     except ValueError as exc:
@@ -1372,7 +1373,7 @@ def get_player_profile(player_id: int):
     total_matches = sum(t['matches_played'] for t in tournaments_data)
     total_wins = sum(t['wins'] for t in tournaments_data)
     medals = {'gold': 0, 'silver': 0, 'bronze': 0}
-    medals_by_category = {}
+    medals_by_category: dict[str, dict[str, Any]] = {}
     for t in tournaments_data:
         if t['medal'] in medals:
             medals[t['medal']] += 1

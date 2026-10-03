@@ -98,7 +98,8 @@ def _normalize_name_key(value: str | None) -> str:
 
 
 def _player_pair_key(player1_name: str | None, player2_name: str | None) -> tuple[str, str]:
-    return tuple(sorted((_normalize_name_key(player1_name), _normalize_name_key(player2_name))))
+    first, second = sorted((_normalize_name_key(player1_name), _normalize_name_key(player2_name)))
+    return first, second
 
 
 def _group_players_index(groups: list[Dict[str, Any]]) -> tuple[Dict[int, str], Dict[str, set[int]]]:
@@ -164,7 +165,7 @@ def _office_history_payload(
         if history.phase == 'Grupowa'
         else None
     )
-    group_name = group_lookup.get(group_id)
+    group_name = group_lookup.get(group_id) if group_id else None
     winner_name = history.winner_name if history.winner_name in {history.player_a, history.player_b} else None
     if not winner_name and player1_sets != player2_sets:
         winner_name = history.player_a if player1_sets > player2_sets else history.player_b
@@ -311,7 +312,7 @@ def _office_match_payload(
     group_id = int(match.bracket_group_id) if match.bracket_group_id else None
     if not group_id and player_groups and match.phase == 'Grupowa':
         group_id = _infer_group_id_for_players(match.player1_name, match.player2_name, player_groups)
-    group_name = group_lookup.get(group_id)
+    group_name = group_lookup.get(group_id) if group_id else None
     return {
         "id": match.id,
         "source": "match",
@@ -705,7 +706,7 @@ def _create_office_group_match(tournament_id: int, data: Dict[str, Any]) -> tupl
     )
     return {
         "message": "Group match added",
-        "match": _office_match_payload(match, {group_id: group.get('name')}, player_groups),
+        "match": _office_match_payload(match, {group_id: str(group.get('name') or '')}, player_groups),
         "knockout_generation": generation,
         "dashboard": _build_office_dashboard(tournament_id),
     }, 201

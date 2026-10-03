@@ -90,7 +90,7 @@ def set_tiebreak_due(match: Any, games_a: int, games_b: int) -> bool:
     """Level at the format's tiebreak games (4:4 by default, 3:3 when the format says so)."""
     from .director_commands import default_tiebreak_at_games
 
-    config = {}
+    config: dict[str, Any] = {}
     raw = getattr(match, "match_config", None)
     if raw:
         try:

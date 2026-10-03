@@ -42,7 +42,7 @@ def player_key(name: str) -> str:
     return " ".join(ascii_only.lower().split())
 
 
-def players_in_fixture(*names: str) -> set[str]:
+def players_in_fixture(*names: Any) -> set[str]:
     """Every player a schedule row refers to, splitting doubles pairs."""
     keys: set[str] = set()
     for name in names:

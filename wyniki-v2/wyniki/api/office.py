@@ -561,7 +561,8 @@ def office_schedule_save(slot: int):
         return error
     tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
-    raw_entries = data.get('entries') if isinstance(data.get('entries'), list) else [data]
+    raw = data.get('entries')
+    raw_entries = raw if isinstance(raw, list) else [data]
     try:
         schedule = upsert_tournament_schedule_entries(tournament_id, raw_entries)
     except ValueError as exc:
@@ -659,7 +660,8 @@ def office_create_player(slot: int):
 
 def _schedule_notes_request(tournament_id: int, *, apply: bool):
     data = request.get_json(silent=True) or {}
-    filters = data.get('filters') if isinstance(data.get('filters'), dict) else {}
+    raw_filters = data.get('filters')
+    filters = raw_filters if isinstance(raw_filters, dict) else {}
     result = apply_schedule_notes(
         tournament_id,
         filters,

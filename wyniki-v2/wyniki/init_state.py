@@ -177,7 +177,7 @@ def initialize_state() -> None:
     # Load courts from database
     try:
         db_courts_list = fetch_courts(active_only=True)
-        db_courts = [row["kort_id"] for row in db_courts_list]
+        db_courts = [str(row["kort_id"]) for row in db_courts_list]
         
         if not db_courts:
             logger.info("Seeding default tournament courts (1-5)")

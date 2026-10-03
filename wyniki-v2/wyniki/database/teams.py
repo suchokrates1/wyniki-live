@@ -184,7 +184,7 @@ def insert_tournament_team(
                     _utc_now(),
                 ),
             )
-            team_id = int(cursor.lastrowid)
+            team_id = int(cursor.lastrowid or 0)
             assign_team_start_number(cursor, tournament_id, category_id, team_id)
             conn.commit()
         logger.info(

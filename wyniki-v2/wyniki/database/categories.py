@@ -124,7 +124,7 @@ def _insert_tournament_category_row(
             _utc_now(),
         ),
     )
-    return int(cursor.lastrowid)
+    return int(cursor.lastrowid or 0)
 
 def confirm_tournament_categories(
     tournament_id: int,
@@ -180,7 +180,7 @@ def confirm_tournament_categories(
                     preset_key=preset_key,
                     hint_bands=normalize_hint_bands(hint_bands or []),
                     sort_order=index,
-                    is_doubles=entry.get("is_doubles"),
+                    is_doubles=bool(entry.get("is_doubles")),
                 )
             conn.commit()
         logger.info("tournament_categories_confirmed", tournament_id=tournament_id, count=len(entries))

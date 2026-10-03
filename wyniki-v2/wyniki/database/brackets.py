@@ -466,7 +466,7 @@ def _formatted_unit_slots(
     fmt = str(config.get("format") or "")
     if fmt == "none":
         return []
-    if fmt != KNOCKOUT_UNIT_FORMAT.get(unit.get("type")):
+    if fmt != KNOCKOUT_UNIT_FORMAT.get(str(unit.get("type") or "")):
         return None
     label = str(unit.get("label") or "")
     places = str(config.get("places") or ("third" if fmt in ("table", "direct") else "all"))
@@ -1682,7 +1682,7 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
                         """,
                         (tournament_id, g["name"], idx, category_id, play_format),
                     )
-                    gid = cursor.lastrowid
+                    gid = cursor.lastrowid or 0
                 members = members_by_group.setdefault(int(gid), set())
                 for competitor in _iter_group_competitors(g):
                     team_id = competitor.get("team_id")
@@ -2110,7 +2110,7 @@ def get_full_bracket(tournament_id: int) -> Dict:
             )
             knockout_rows = cursor.fetchall()
 
-            knockout = {}
+            knockout: dict[str, list[dict[str, Any]]] = {}
             for r in knockout_rows:
                 phase = r["phase"]
                 slot = {

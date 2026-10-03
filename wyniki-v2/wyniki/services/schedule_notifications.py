@@ -11,7 +11,7 @@ the office publishing a schedule.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 import structlog
 
@@ -37,9 +37,9 @@ def _when(entry: Mapping[str, Any]) -> str:
     return " ".join(part for part in (day, time) if part)
 
 
-def notify_plan_published(entries: list[Mapping[str, Any]]) -> int:
+def notify_plan_published(entries: Sequence[Mapping[str, Any]]) -> int:
     """One notification per player whose match just became public."""
-    return _notify(entries, "notify_plan", "plan_published")
+    return _notify(list(entries), "notify_plan", "plan_published")
 
 
 def notify_fixture_changed(before: Mapping[str, Any], after: Mapping[str, Any]) -> int:

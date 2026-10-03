@@ -110,23 +110,24 @@ def _preview(category: Dict[str, Any], units: List[Dict[str, Any]], groups: List
         return {"label": label, "group": group, "seed": rank == str(seed_rank)}
 
     if fmt == "main":
-        lines = group_draw_lines(draw_groups, qualifiers=config["qualifiers"], consolation=config["consolation"])
+        group_lines = group_draw_lines(draw_groups, qualifiers=config["qualifiers"], consolation=config["consolation"])
         for key, seed_rank in (("main", 1), ("consolation", config["qualifiers"] + 1)):
-            if lines.get(key):
-                result["draws"].append({"key": key, "lines": [entry(item, seed_rank) for item in swap_lines(lines[key], swaps.get(key))]})
+            drawn = group_lines.get(key)
+            if drawn:
+                result["draws"].append({"key": key, "lines": [entry(item, seed_rank) for item in swap_lines(drawn, swaps.get(key))]})
     elif fmt == "cross":
         # a group still being drawn may hold fewer than two players: no semifinal line for it yet
         complete = len(draw_groups) >= 2 and all(len(group["ranking"]) >= 2 for group in draw_groups[:2])
-        lines = cross_draw_lines(draw_groups) if complete else []
-        result["draws"].append({"key": "main", "lines": [entry(item) for item in swap_lines(lines, swaps.get("main"))]})
+        cross_lines = cross_draw_lines(draw_groups) if complete else []
+        result["draws"].append({"key": "main", "lines": [entry(item) for item in swap_lines(cross_lines, swaps.get("main"))]})
     elif fmt == "direct":
         names = brackets._group_competitor_names(unit["groups"][0])
-        lines = direct_draw_lines(names)
-        byes = len(lines) - len(names)
+        name_lines = direct_draw_lines(names)
+        byes = len(name_lines) - len(names)
         seeds = set(names[:byes]) if byes > 0 else set()
         result["draws"].append({"key": "main", "lines": [
             {"label": name, "group": "", "seed": name in seeds} if name else None
-            for name in swap_lines(lines, swaps.get("main"))
+            for name in swap_lines(name_lines, swaps.get("main"))
         ]})
     elif fmt == "table":
         ranking = draw_groups[0]["ranking"] if draw_groups else []
@@ -135,7 +136,7 @@ def _preview(category: Dict[str, Any], units: List[Dict[str, Any]], groups: List
             result["table"].append({"phase": "third", "a": ranking[2], "b": ranking[3]})
 
     counts = {group["name"]: len(group.get("players") or []) for group in groups}
-    slots = []
+    slots: list[Any] = []
     for item in units:
         slots.extend(brackets._formatted_unit_slots(item, config, complete=False, counts=counts) or [])
     main_rounds = ("Finał", "Półfinał", "Ćwierćfinał")

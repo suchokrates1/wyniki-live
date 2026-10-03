@@ -272,7 +272,9 @@ def apply_classification_decisions(tournament_id: int, decisions: Iterable[Dict[
     applied, errors = [], []
     for raw in decisions or []:
         try:
-            gid = int(raw.get("global_player_id"))
+            gid = int(raw.get("global_player_id") or 0)
+            if not gid:
+                raise ValueError("no player")
         except (TypeError, ValueError):
             errors.append({"global_player_id": raw.get("global_player_id"), "error": "invalid_player"})
             continue

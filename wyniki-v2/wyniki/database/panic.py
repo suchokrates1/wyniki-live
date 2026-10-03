@@ -30,7 +30,7 @@ def insert_panic_recipient(name: str, chat_id: str) -> int:
             (name, chat_id),
         )
         conn.commit()
-        return int(cursor.lastrowid)
+        return int(cursor.lastrowid or 0)
 
 
 def update_panic_recipient(recipient_id: int, name: str, chat_id: str, enabled: bool) -> None:

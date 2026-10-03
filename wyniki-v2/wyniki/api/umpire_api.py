@@ -171,8 +171,10 @@ def _serve_from_payload(data: dict | None) -> str | None:
         return "A"
     if raw in (2, "2", "player2"):
         return "B"
-    player1 = data.get("player1") if isinstance(data.get("player1"), dict) else {}
-    player2 = data.get("player2") if isinstance(data.get("player2"), dict) else {}
+    raw_player1 = data.get("player1")
+    raw_player2 = data.get("player2")
+    player1 = raw_player1 if isinstance(raw_player1, dict) else {}
+    player2 = raw_player2 if isinstance(raw_player2, dict) else {}
     if player1.get("is_serving") is True:
         return "A"
     if player2.get("is_serving") is True:
@@ -1044,11 +1046,12 @@ def get_court_suggested_match(kort_id: str):
     from ..database import find_suggested_schedule_match, get_active_tournament_id, get_tournament_id_for_court
 
     tournament_id = request.args.get("tournament_id", type=int) or get_tournament_id_for_court(kort_id) or get_active_tournament_id()
-    if not tournament_id:
+    court_id = normalize_kort_id(kort_id)
+    if not tournament_id or not court_id:
         return jsonify({"suggestion": None}), 200
     entry = find_suggested_schedule_match(
         tournament_id,
-        normalize_kort_id(kort_id),
+        court_id,
         reference_time=request.args.get("at"),
     )
     return jsonify({"suggestion": _mobile_schedule_suggestion_payload(entry, tournament_id)}), 200

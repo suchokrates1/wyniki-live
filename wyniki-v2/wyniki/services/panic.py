@@ -274,7 +274,8 @@ def _message_id(message: dict[str, Any]) -> str:
 
 
 def _parent_id(message: dict[str, Any]) -> str:
-    raw = message.get("_data") if isinstance(message.get("_data"), dict) else {}
+    data = message.get("_data")
+    raw = data if isinstance(data, dict) else {}
     parent = raw.get("parentMsgId") or message.get("replyTo") or ""
     if isinstance(parent, dict):
         parent = parent.get("id") or parent.get("_serialized") or ""

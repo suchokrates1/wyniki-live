@@ -22,7 +22,7 @@ from .court_manager import STATE_LOCK, _empty_court_state, ensure_court_state, g
 from .event_broker import emit_score_update
 from .office_event_broker import emit_office_invalidation
 
-MATCH_CONFIG_DEFAULTS = {
+MATCH_CONFIG_DEFAULTS: dict[str, Any] = {
     "games_per_set": 4,
     "sets_to_win": 2,
     "tiebreak_points": 7,
@@ -324,7 +324,8 @@ def apply_director_control(match: Match, patch: dict[str, Any]) -> dict[str, Any
 
     if "match_config" in patch:
         current = parse_stored_match_config(match.match_config)
-        incoming = patch.get("match_config") if isinstance(patch.get("match_config"), dict) else {}
+        raw_config = patch.get("match_config")
+        incoming = raw_config if isinstance(raw_config, dict) else {}
         merged = {**current, **incoming}
         # A trigger kept from the previous set length would be unreachable, so re-derive it.
         if "tiebreak_at_games" not in incoming and int(merged.get("games_per_set") or 4) != int(
@@ -671,7 +672,7 @@ def normalize_device_snapshot(raw: Any) -> dict[str, Any] | None:
                 out[key] = flag
     history = raw.get("sets_history")
     if isinstance(history, list):
-        cleaned = []
+        cleaned: list[dict[str, Any]] = []
         for item in history[:5]:
             if not isinstance(item, dict):
                 continue

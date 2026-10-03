@@ -77,7 +77,8 @@ def slot_minutes_for_entry(
 ) -> int:
     """Match duration comes from the category (or its B-band), never from the court."""
     payload = dict(entry or {})
-    match = payload.get("match") if isinstance(payload.get("match"), dict) else {}
+    raw_match = payload.get("match")
+    match = raw_match if isinstance(raw_match, dict) else {}
     cat_slots = _int_minutes_map(config.get("category_slot_minutes"))
     cat_id = str(
         payload.get("tournament_category_id")
@@ -429,7 +430,7 @@ def _place_in_pool(
             placements.append(_unplaced(match, day_date))
             continue
         start, _, court_id = best
-        placement = {
+        placement: dict[str, Any] = {
             "match": match,
             "court_id": court_id,
             "day_date": day_date,

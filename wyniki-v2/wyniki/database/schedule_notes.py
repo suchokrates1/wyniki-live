@@ -64,7 +64,7 @@ def apply_schedule_notes(
         else:
             new = note
         changes.append({
-            "id": row.get("id"),
+            "id": int(row["id"]),
             "day_date": row.get("day_date") or "",
             "scheduled_time": row.get("scheduled_time") or "",
             "court_id": row.get("court_id") or "",
@@ -76,7 +76,7 @@ def apply_schedule_notes(
             "current": current,
             "new": new,
         })
-    result = {
+    result: Dict[str, Any] = {
         "count": len(changes),
         "with_notes": sum(1 for item in changes if item["current"]),
         "changed": sum(1 for item in changes if item["current"] != item["new"]),
@@ -92,7 +92,7 @@ def apply_schedule_notes(
                     continue
                 cursor.execute(
                     "UPDATE tournament_schedule SET notes_public = ?, updated_at = ? WHERE id = ? AND tournament_id = ?",
-                    (item["new"], now, int(item["id"]), int(tournament_id)),
+                    (item["new"], now, item["id"], int(tournament_id)),
                 )
                 result["updated"] += cursor.rowcount
             conn.commit()

@@ -289,7 +289,7 @@ def _fetch_import_ai_suggestions(text: str, players: list[Dict[str, Any]]) -> Di
         f'Source text:\n{text}\n\nCandidates:\n{json.dumps(candidates, ensure_ascii=False)}'
     )
 
-    request_payload = {
+    request_payload: dict[str, Any] = {
         'contents': [{'parts': [{'text': prompt}]}],
         'generationConfig': {
             'temperature': 0.1,
