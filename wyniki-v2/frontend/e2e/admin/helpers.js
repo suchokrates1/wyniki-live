@@ -51,10 +51,13 @@ export async function press(locator, page) {
   await page.keyboard.press('Enter');
 }
 
-export async function openAdmin(page, { tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {} } = {}) {
-  await page.addInitScript(() => {
-    try { sessionStorage.setItem('wyniki-admin-token', 'e2e-token'); } catch { /* private mode */ }
-  });
+export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {} } = {}) {
+  await page.addInitScript((hasToken) => {
+    try {
+      if (hasToken) sessionStorage.setItem('wyniki-admin-token', 'e2e-token');
+      else sessionStorage.removeItem('wyniki-admin-token');
+    } catch { /* private mode */ }
+  }, token);
 
   await page.route(/\/admin\/api\/.*/, async (route) => {
     const request = route.request();

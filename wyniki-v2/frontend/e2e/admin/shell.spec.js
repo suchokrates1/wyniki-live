@@ -62,3 +62,18 @@ test('the rebuilt shell and the Turnieje section pass axe', async ({ page }) => 
     .analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
 });
+
+test('every slot in the page gets its partial, and the login dialog is one of them', async ({ page }) => {
+  await openAdmin(page);
+  const empty = await page.evaluate(() =>
+    [...document.querySelectorAll('[id^="admin-"]')]
+      .filter((slot) => !slot.children.length && !slot.textContent.trim())
+      .map((slot) => slot.id));
+  expect(empty, 'a slot left empty means its partial was not mounted').toEqual([]);
+});
+
+test('without a session the admin shows the login dialog and nothing else', async ({ page }) => {
+  await openAdmin(page, { token: false });
+  await expect(page.locator('#admin-login form')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Panel administratora' })).toBeVisible();
+});

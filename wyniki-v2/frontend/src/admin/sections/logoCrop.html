@@ -1,0 +1,21 @@
+    <!-- Logo crop modal -->
+    <dialog x-ref="cropModal" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Przytnij logo (kwadrat)</h3>
+        <div class="crop-area" x-ref="cropArea">
+          <img x-ref="cropImg" :src="cropImgSrc" alt="Logo turnieju — podgląd kadru" draggable="false"
+               @pointerdown.prevent="startCropDrag($event)"
+               @pointermove="onCropDrag($event)"
+               @pointerup="endCropDrag()" @pointerleave="endCropDrag()">
+        </div>
+        <div class="flex items-center gap-2 mt-3">
+          <span class="text-xs opacity-60">Zoom</span>
+          <input type="range" class="range range-sm flex-1" aria-label="Powiększenie logo" min="100" max="400" step="10"
+                 x-model.number="cropZoom" @input="updateCropTransform()">
+        </div>
+        <div class="modal-action">
+          <button @click="applyCrop()" class="btn btn-primary btn-sm">Zapisz</button>
+          <button @click="$refs.cropModal.close()" class="btn btn-sm">Anuluj</button>
+        </div>
+      </div>
+    </dialog>

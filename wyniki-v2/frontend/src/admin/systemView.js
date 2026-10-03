@@ -14,8 +14,44 @@ export function smtpFieldsFor(prefix = 'adm-smtp') {
 
 export function createSystemView() {
   return {
+    emailSettings: {
+      smtp_host: '',
+      smtp_port: 587,
+      smtp_username: '',
+      smtp_password: '',
+      smtp_use_tls: true,
+      smtp_from_email: '',
+      smtp_from_name: '',
+    },
+
     adminSmtpFields() {
       return smtpFieldsFor('adm-smtp');
+    },
+
+    async loadEmailSettings() {
+      try {
+        const response = await fetch('/admin/api/settings/email');
+        if (!response.ok) throw new Error('Failed to load email settings');
+        this.emailSettings = { ...this.emailSettings, ...(await response.json()) };
+      } catch (err) {
+        console.error('Failed to load email settings:', err);
+        this.showToast('Błąd ładowania ustawień SMTP', 'error');
+      }
+    },
+
+    async saveEmailSettings() {
+      try {
+        const response = await fetch('/admin/api/settings/email', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.emailSettings),
+        });
+        if (!response.ok) throw new Error('Failed to save email settings');
+        this.showToast('Ustawienia SMTP zapisane', 'success');
+      } catch (err) {
+        console.error('Failed to save email settings:', err);
+        this.showToast('Błąd zapisu ustawień SMTP', 'error');
+      }
     },
   };
 }

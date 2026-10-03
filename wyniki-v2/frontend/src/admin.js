@@ -6,10 +6,16 @@ import './styles/admin.css';
 import './styles/admin-list.css';
 import './styles/admin-forms.css';
 import './styles/admin-courts.css';
+import './styles/overlay-canvas.css';
 import { createAuthAdmin, installAdminFetchAuth } from './admin/auth.js';
 import { createCourtsAdmin } from './admin/courts.js';
 import { createDirectorPanel } from './admin/directorPanel.js';
 import { createTournamentsAdmin } from './admin/tournaments.js';
+import { createCourtStreamsAdmin } from './admin/courtStreams.js';
+import { createTournamentEditorAdmin } from './admin/tournamentEditor.js';
+import { createTournamentCategoriesAdmin } from './admin/tournamentCategories.js';
+import { createTournamentPlayersAdmin } from './admin/tournamentPlayers.js';
+import { createPlayerImportAdmin } from './admin/playerImport.js';
 import { createOfficeTabAdmin } from './admin/officeTab.js';
 import { createGlobalPlayersAdmin } from './admin/globalPlayers.js';
 import { createOverlayAdmin } from './admin/overlay.js';
@@ -36,6 +42,11 @@ import { createDevicesListView } from './admin/devicesList.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import systemHtml from './admin/sections/system.html?raw';
 import moreHtml from './admin/sections/more.html?raw';
+import loginHtml from './admin/sections/login.html?raw';
+import directorPanelHtml from './admin/sections/directorPanel.html?raw';
+import officeTabHtml from './admin/sections/officeTab.html?raw';
+import tournamentPlayersHtml from './admin/sections/tournamentPlayers.html?raw';
+import logoCropHtml from './admin/sections/logoCrop.html?raw';
 import { createSystemView } from './admin/systemView.js';
 import { createPluralView } from './admin/plural.js';
 import { mergeAdminModules } from './admin/merge.js';
@@ -64,6 +75,11 @@ mountAdminPartial('admin-courts-list', courtsListHtml);
 mountAdminPartial('admin-devices-list', devicesListHtml);
 mountAdminPartial('admin-system', systemHtml);
 mountAdminPartial('admin-more', moreHtml);
+mountAdminPartial('admin-login', loginHtml);
+mountAdminPartial('admin-director-panel', directorPanelHtml);
+mountAdminPartial('admin-office-tab', officeTabHtml);
+mountAdminPartial('admin-tournament-players', tournamentPlayersHtml);
+mountAdminPartial('admin-logo-crop', logoCropHtml);
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {
@@ -119,6 +135,11 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createCourtsAdmin(),
   createDirectorPanel(),
   createTournamentsAdmin(),
+  createCourtStreamsAdmin(),
+  createTournamentEditorAdmin(),
+  createTournamentCategoriesAdmin(),
+  createTournamentPlayersAdmin(),
+  createPlayerImportAdmin(),
   createOfficeTabAdmin(),
   createGlobalPlayersAdmin(),
   createOverlayAdmin(),
