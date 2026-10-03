@@ -107,3 +107,26 @@ def test_the_api_turns_a_storage_failure_into_a_json_500(full_app_with_temp_db, 
     )
     assert response.status_code == 500
     assert response.get_json()["error"] == "Save failed", "a JSON body, not Flask's HTML page"
+
+
+def test_the_four_writes_that_stay_quiet_on_purpose(locked, monkeypatch):
+    """Not every write should shout. These four are deliberate, and stay that way.
+
+    * save_bracket_groups / save_bracket_knockout already answer False, and their
+      endpoints turn that into a 500 with a message of their own.
+    * advance_knockout runs after a match is finished; a bracket that cannot move
+      must not fail the finish, so its callers log and carry on.
+    * claim_send is the lock that stops a reminder going out twice. A missed
+      reminder beats a crashed reminder loop.
+    """
+    from wyniki.database import brackets, push_subscriptions
+
+    locked(brackets)
+    assert brackets.save_bracket_groups(1, [{"name": "A", "players": []}]) is False
+    assert brackets.save_bracket_knockout(1, []) is False
+    assert brackets.advance_knockout(1, 1) is False
+
+    locked(push_subscriptions)
+    assert push_subscriptions.claim_send(1, "reminder:30") is False
+    with pytest.raises(Exception):
+        push_subscriptions.save_subscription("https://push.example/1", "key", "auth")
