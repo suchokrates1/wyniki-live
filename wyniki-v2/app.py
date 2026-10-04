@@ -11,8 +11,6 @@ monkey.patch_all()
 
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
-from prometheus_client import CollectorRegistry
-from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy import event
 
 from wyniki.config import logger, settings
@@ -68,10 +66,6 @@ def create_app() -> Flask:
     # start unless Web Push is configured, and never starts under pytest.
     with app.app_context():
         reminder_loop.start()
-
-    # Initialize Prometheus metrics
-    metrics = PrometheusMetrics(app, registry=CollectorRegistry())
-    metrics.info('wyniki_live_v2', 'Tennis Live Scores v2', version='2.0.0')
 
     @app.before_request
     def protect_administrator_mutations():

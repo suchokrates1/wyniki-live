@@ -571,17 +571,6 @@ def delete_tournament_route(tournament_id: int):
         return jsonify({"error": "Failed to delete tournament"}), 500
 
 
-@blueprint.route('/<int:tournament_id>/activate', methods=['POST'])
-def activate_tournament(tournament_id: int):
-    """Set a tournament as active."""
-    success = set_active_tournament(tournament_id)
-    
-    if success:
-        return jsonify({"message": "Tournament activated"})
-    else:
-        return jsonify({"error": "Failed to activate tournament"}), 500
-
-
 @blueprint.route('/<int:tournament_id>/active', methods=['PUT'])
 def update_tournament_active_state(tournament_id: int):
     """Toggle active state for a single tournament without affecting others."""

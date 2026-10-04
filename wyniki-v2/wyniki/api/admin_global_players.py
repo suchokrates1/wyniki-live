@@ -4,21 +4,16 @@ from flask import Blueprint, jsonify, request
 
 from ..db_models import GlobalPlayer, Player, Tournament
 from ..config import logger
-from ..services.player_registry import create_tournament_player, find_or_create_global_player, split_player_name
+from ..services.player_registry import create_tournament_player
 from ..services.office_event_broker import emit_office_invalidation
 from ..database import (
     add_row,
-    counting_tournaments_of_global_player,
     entries_count_of_global_player,
     entries_named,
     entries_named_loosely,
     entries_of_global_player,
-    entry_named_in_tournament,
     entry_of_global_player_in_tournament,
-    global_player_by_name,
     global_player_count,
-    global_players_with_surname,
-    global_players_without_first_name,
     search_global_players,
     classifications,
     commit_writes,
@@ -26,7 +21,6 @@ from ..database import (
     flush_writes,
     forget_row,
     get_row,
-    repeated_global_player_surnames,
     tournament_counts_for_players,
     tournament_players_grouped_by_name,
     write_session,
@@ -385,185 +379,3 @@ def add_global_to_tournament(tid: int):
 
     logger.info("global_player_added_to_tournament", gp_id=gp_id, tournament_id=tid, player_id=p.id)
     return jsonify(p.to_dict()), 201
-
-
-@blueprint.route('/tournaments/<int:tid>/import-file', methods=['POST'])
-def import_file_to_tournament(tid: int):
-    """Import players from text — auto-match to global_players or create new.
-    Body: { text: "First Last Category Country\\n..." }
-    """
-    from ..db_models import Tournament
-    tournament = get_row(Tournament, tid)
-    if not tournament:
-        return jsonify({'error': 'Tournament not found'}), 404
-    if int(tournament.active or 0) != 1:
-        return jsonify({'error': 'Tournament is inactive'}), 409
-
-    data = request.get_json(silent=True) or {}
-    text = data.get('text', '')
-    if not text.strip():
-        return jsonify({'error': 'No text provided'}), 400
-
-    lines = text.strip().split('\n')
-    created_global = 0
-    matched_global = 0
-    added_tournament = 0
-
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-
-        parts = line.rsplit(' ', 2)
-        if len(parts) == 3:
-            name, category, country = parts
-        elif len(parts) == 2:
-            name, category = parts
-            country = ''
-        else:
-            name = line
-            category = ''
-            country = ''
-
-        name, fn, ln = split_player_name(name=name.strip())
-
-        # Skip test entry
-        if f"{fn} {ln}".strip().lower() == 'dawid suchodolski':
-            continue
-
-        gp = None
-        if int(tournament.is_simulation or 0) != 1:
-            gp_exists = global_player_by_name(fn, ln)
-            gp = find_or_create_global_player(write_session(), fn, ln, category, country)
-            if not gp:
-                continue
-            if gp_exists:
-                matched_global += 1
-            else:
-                created_global += 1
-
-            existing = entry_of_global_player_in_tournament(tid, gp.id)
-            if existing:
-                continue
-        else:
-            existing = entry_named_in_tournament(tid, fn, ln)
-            if existing:
-                continue
-
-        create_tournament_player(
-            write_session(),
-            tournament_id=tid,
-            name=name,
-            first_name=fn,
-            last_name=ln,
-            gender=(gp.gender if gp else ''),
-            category=category.strip() or ((gp.category or '') if gp else ''),
-            country=country.strip() or ((gp.country or '') if gp else ''),
-            global_player=gp,
-        )
-        added_tournament += 1
-
-    commit_writes()
-    return jsonify({
-        'message': f'Imported {added_tournament} players ({matched_global} matched, {created_global} new)',
-        'added': added_tournament,
-        'matched_global': matched_global,
-        'created_global': created_global,
-    })
-
-
-@blueprint.route('/duplicates', methods=['GET'])
-def find_duplicates():
-    """Find duplicate global players (same last_name or same first+last)."""
-
-    # Find by same last_name
-    dupes_by_lastname = repeated_global_player_surnames()
-
-    result = []
-    for ln, cnt in dupes_by_lastname:
-        players = global_players_with_surname(ln)
-        entries = []
-        for gp in players:
-            tournament_count = counting_tournaments_of_global_player(gp.id)
-            entries.append({
-                **gp.to_dict(),
-                'tournaments_count': tournament_count,
-            })
-        result.append({
-            'last_name': ln,
-            'count': cnt,
-            'players': entries,
-        })
-
-    return jsonify(result)
-
-
-@blueprint.route('/no-first-name', methods=['GET'])
-def find_no_first_name():
-    """Find global players without first names."""
-
-    players = global_players_without_first_name()
-
-    result = []
-    for gp in players:
-        d = gp.to_dict()
-        d['tournaments_count'] = counting_tournaments_of_global_player(gp.id)
-        result.append(d)
-
-    return jsonify(result)
-
-
-@blueprint.route('/merge', methods=['POST'])
-def merge_players():
-    """Merge duplicate global players. Keep target, transfer entries from source.
-    Body: { target_id: int, source_ids: [int, ...] }
-    """
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'No data provided'}), 400
-
-    target_id = data.get('target_id')
-    source_ids = data.get('source_ids', [])
-
-    if not target_id or not source_ids:
-        return jsonify({'error': 'target_id and source_ids are required'}), 400
-
-    target = get_row(GlobalPlayer, target_id)
-    if not target:
-        return jsonify({'error': 'Target player not found'}), 404
-
-    transferred = 0
-    deleted = 0
-    merged_ids = []
-    for src_id in source_ids:
-        if src_id == target_id:
-            continue
-        source = get_row(GlobalPlayer, src_id)
-        if not source:
-            continue
-
-        # Transfer all tournament entries from source to target
-        entries = entries_of_global_player(src_id)
-        for entry in entries:
-            entry.global_player_id = target_id
-            entry.first_name = target.first_name
-            entry.last_name = target.last_name
-            entry.name = target.full_name
-            transferred += 1
-
-        # Delete source global player
-        delete_row(source)
-        merged_ids.append(src_id)
-        deleted += 1
-
-    commit_writes()
-    for src_id in merged_ids:
-        classifications.move_classifications(src_id, target_id)
-    logger.info("global_players_merged", target_id=target_id, source_ids=source_ids,
-                transferred=transferred, deleted=deleted)
-    return jsonify({
-        'message': f'Merged {deleted} duplicates into ID {target_id}, transferred {transferred} entries',
-        'target': target.to_dict(),
-        'transferred': transferred,
-        'deleted': deleted,
-    })

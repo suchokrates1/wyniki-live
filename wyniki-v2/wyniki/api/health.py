@@ -19,8 +19,3 @@ def health_check():
         }
     })
 
-
-@blueprint.route('/metrics')
-def metrics():
-    """Prometheus metrics endpoint (handled by prometheus-flask-exporter)."""
-

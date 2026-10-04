@@ -202,17 +202,12 @@ from .public_profiles import (
 )
 
 from .global_player_rows import (
-    counting_tournaments_of_global_player,
     entries_count_of_global_player,
     entries_named,
     entries_named_loosely,
     entries_of_global_player,
-    entry_named_in_tournament,
     entry_of_global_player_in_tournament,
-    global_player_by_name,
     global_player_count,
-    global_players_with_surname,
-    global_players_without_first_name,
     search_global_players,
 )
 
@@ -224,7 +219,6 @@ from .orm_rows import (
     forget_all_rows,
     forget_row,
     get_row,
-    repeated_global_player_surnames,
     rows_where,
     tournament_counts_for_players,
     tournament_players_by_name,

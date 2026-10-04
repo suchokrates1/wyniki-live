@@ -11,7 +11,7 @@ from typing import Any, Iterable, Optional
 
 from sqlalchemy import func
 
-from ..db_models import GlobalPlayer, Match, Player, Tournament, db
+from ..db_models import Match, Player, Tournament, db
 
 
 def get_row(model, row_id):
@@ -64,18 +64,6 @@ def tournament_players_grouped_by_name() -> list[Any]:
             func.max(Player.country).label("country"),
         )
         .group_by(Player.first_name, Player.last_name)
-        .all()
-    )
-
-
-def repeated_global_player_surnames() -> list[Any]:
-    """Surnames held by more than one person in the base, for the duplicate review."""
-    surname = func.lower(func.trim(GlobalPlayer.last_name))
-    return (
-        db.session.query(surname.label("ln"), func.count(GlobalPlayer.id).label("cnt"))
-        .filter(GlobalPlayer.last_name.isnot(None), func.trim(GlobalPlayer.last_name) != "")
-        .group_by(surname)
-        .having(func.count(GlobalPlayer.id) > 1)
         .all()
     )
 
