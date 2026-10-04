@@ -5,9 +5,7 @@ export const TRANSLATIONS_LT = {
   navLabel: 'Spartusis kortų naršymas',
   courtLabel: 'Kortas {court}',
   watchCourt: 'Žiūrėti {court}',
-  liveBadge: 'LIVE',
   versus: 'prieš',
-  tieBreakLabel: 'TB',
   superTieBreakLabel: 'STB',
   table: {
     columns: {
@@ -25,7 +23,6 @@ export const TRANSLATIONS_LT = {
     phaseSF: 'Pusfinalis',
     phaseFinal: 'Finalas',
   },
-  meta: { lastRefresh: 'Paskutinis atnaujinimas: {time}.' },
   accessibility: {
     versus: 'prieš',
     points: 'taškai',
@@ -60,8 +57,6 @@ export const TRANSLATIONS_LT = {
     noStats: 'Nėra statistikos',
     category: 'Kategorija',
     duration: 'Trukmė',
-    startedAt: 'Pradžia:',
-    endedAt: 'Pabaiga:'
   },
   tabs: { live: 'Tiesiogiai', tournaments: 'Turnyrai', players: 'Žaidėjai' },
   tournamentCard: { players: 'žaidėjų', active: 'Aktyvus', noTournaments: 'Nėra turnyrų', backToList: 'Grįžti į sąrašą' },
@@ -75,8 +70,8 @@ export const TRANSLATIONS_LT = {
     male: 'Vyras', female: 'Moteris', career: 'Karjera', tournaments: 'Turnyrai', matches: 'Mačai',
     wins: 'Pergalės', losses: 'Pralaimėjimai', winRate: 'Sėkmės proc.', medals: 'Medaliai',
     gold: 'Auksas', silver: 'Sidabras', bronze: 'Bronza', tournamentHistory: 'Turnyrų istorija',
-    group: 'Grupė', place: 'vieta', of: 'iš', groupPhase: 'Grupių etapas', knockoutPhase: 'Atkrintamosios',
-    noTournaments: 'Nėra turnyrų', matchesInTournament: 'Mačai turnyre', won: 'L', lost: 'P', vs: 'prieš', duration: 'Trukmė'
+    group: 'Grupė', place: 'vieta', groupPhase: 'Grupių etapas', knockoutPhase: 'Atkrintamosios',
+    noTournaments: 'Nėra turnyrų', won: 'L', lost: 'P', vs: 'prieš', duration: 'Trukmė'
   },
   darkModeTooltip: { light: 'Perjungti šviesųjį režimą', dark: 'Perjungti tamsųjį režimą' },
   liveSub: { scores: 'Rezultatai gyvai', bracket: 'Turnyrinė lentelė', schedule: 'Tvarkaraštis', history: 'Istorija' },
@@ -98,7 +93,7 @@ export const TRANSLATIONS_LT = {
     group: 'Grupė', player: 'Žaidėjas', pair: 'Pora', wins: 'L', losses: 'P',
     setsHeader: 'Setai', gamesHeader: 'Geimai', matchesTitle: 'Grupių mačai',
     knockoutTitle: 'Turnyrinė lentelė', semifinal: 'Pusfinalis',
-    finalLabel: 'Finalas', thirdPlace: 'Mačas dėl 3 vietos', forPlace: 'dėl',
+    finalLabel: 'Finalas', thirdPlace: 'Mačas dėl 3 vietos', 
     quarterfinal: 'Ketvirtfinalis',
     roundOf: '1/{n} finalo',
     placesRange: '{from}–{to} vietos',
@@ -114,8 +109,6 @@ export const TRANSLATIONS_LT = {
     formatPlaces: 'Yra ir mačų dėl tolesnių vietų.',
   },
   tournamentHistory: {
-    selectTournament: 'Pasirinkite turnyrą',
-    chooseTournament: '-- Pasirinkite turnyrą --',
     matchHistory: 'Mačų istorija',
     bracket: 'Turnyrinė lentelė',
     schedule: 'Turnyro planas',
@@ -176,7 +169,6 @@ export const TRANSLATION_PATCHES_LT = {
       privacyNotice: 'Prisijungimas šiame įrenginyje išsaugo biuro sesiją.',
     },
   },
-  meta: { lastRefresh: 'Paskutinis atnaujinimas: {time}.' },
   history: { title: 'Naujausi rezultatai', noMatchesActive: 'Nėra baigtų aktyvaus turnyro mačų', openCategory: 'Rodyti kategoriją {category} turnyrinėje lentelėje' },
   tabs: { navLabel: 'Pagrindinė navigacija' },
   tournamentCard: { backToList: 'Grįžti prie turnyrų' },

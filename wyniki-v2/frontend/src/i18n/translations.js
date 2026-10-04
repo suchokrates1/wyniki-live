@@ -10,9 +10,7 @@ export const TRANSLATIONS = {
     navLabel: 'Szybka nawigacja po kortach',
     courtLabel: 'Kort {court}',
     watchCourt: 'Oglądaj {court}',
-    liveBadge: 'LIVE',
     versus: 'vs',
-    tieBreakLabel: 'TB',
     superTieBreakLabel: 'STB',
     table: {
       columns: {
@@ -30,7 +28,6 @@ export const TRANSLATIONS = {
       phaseSF: 'Półfinał',
       phaseFinal: 'Finał',
     },
-    meta: { lastRefresh: 'Ostatnie odświeżenie: {time}.' },
     accessibility: {
       versus: 'kontra',
       points: 'punkty',
@@ -58,13 +55,11 @@ export const TRANSLATIONS = {
       noStats: 'Brak statystyk',
       category: 'Kategoria',
       duration: 'Czas',
-      startedAt: 'Rozpoczęcie:',
-      endedAt: 'Zakończenie:'
     },
     tabs: { live: 'Na żywo', tournaments: 'Turnieje', players: 'Zawodnicy' },
     tournamentCard: { players: 'zawodników', active: 'Aktywny', noTournaments: 'Brak turniejów', backToList: 'Powrót do listy' },
     playerSection: { title: 'Baza zawodników', searchPlaceholder: 'Szukaj zawodnika...', all: 'Wszyscy', men: 'Mężczyźni', women: 'Kobiety', matchesPlayed: 'meczów', winsLabel: 'W', lossesLabel: 'L', noResults: 'Brak wyników', allCountries: 'Wszystkie kraje', allCategories: 'Wszystkie kategorie', genderShortM: 'M', genderShortF: 'K' },
-    playerProfile: { back: 'Powrót do listy', category: 'Kategoria', country: 'Kraj', gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', career: 'Kariera', tournaments: 'Turnieje', matches: 'Mecze', wins: 'Wygrane', losses: 'Przegrane', winRate: 'Skuteczność', medals: 'Medale', gold: 'Złoto', silver: 'Srebro', bronze: 'Brąz', tournamentHistory: 'Historia turniejów', group: 'Grupa', place: 'miejsce', of: 'z', groupPhase: 'Faza grupowa', knockoutPhase: 'Faza pucharowa', noTournaments: 'Brak turniejów', matchesInTournament: 'Mecze w turnieju', won: 'W', lost: 'P', vs: 'vs', duration: 'Czas' },
+    playerProfile: { back: 'Powrót do listy', category: 'Kategoria', country: 'Kraj', gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', career: 'Kariera', tournaments: 'Turnieje', matches: 'Mecze', wins: 'Wygrane', losses: 'Przegrane', winRate: 'Skuteczność', medals: 'Medale', gold: 'Złoto', silver: 'Srebro', bronze: 'Brąz', tournamentHistory: 'Historia turniejów', group: 'Grupa', place: 'miejsce', groupPhase: 'Faza grupowa', knockoutPhase: 'Faza pucharowa', noTournaments: 'Brak turniejów', won: 'W', lost: 'P', vs: 'vs', duration: 'Czas' },
     darkModeTooltip: { light: 'Zmień na tryb jasny', dark: 'Zmień na tryb ciemny' },
     liveSub: { scores: 'Wyniki live', bracket: 'Drabinka', schedule: 'Terminarz', history: 'Historia' },
     schedule: { title: 'Terminarz rozgrywek', emptyTitle: 'Terminarz nie jest jeszcze opublikowany', emptyText: 'Biuro zawodów uzupełni orientacyjne godziny i korty.', loading: 'Ładowanie terminarza...', refresh: 'Odśwież', time: 'Godzina', court: 'Kort', category: 'Kategoria', phase: 'Etap', match: 'Mecz', status: 'Status', notes: 'Uwagi', searchLabel: 'Szukaj po nazwisku', searchPlaceholder: 'Szukaj nazwiska...', sortLabel: 'Sortowanie', sortCourt: 'Po korcie', sortCategory: 'Po kategorii', tabsLabelCourt: 'Wybierz kort', tabsLabelCategory: 'Wybierz kategorię', noResultsTitle: 'Brak dopasowanych meczów', noResultsText: 'Zmień wyszukiwaną frazę albo przełącz sposób sortowania.', timeTbd: 'godzina do potwierdzenia', courtTbd: 'kort do potwierdzenia', categoryTbd: 'kategoria do potwierdzenia', statusDraft: 'Roboczy', statusPlanned: 'Zaplanowany', statusInProgress: 'W trakcie', statusCompleted: 'Zakończony', updated: 'Terminarz zaktualizowany' },
@@ -73,14 +68,12 @@ export const TRANSLATIONS = {
       group: 'Grupa', player: 'Zawodnik', pair: 'Para', wins: 'W', losses: 'L',
       setsHeader: 'Sety', gamesHeader: 'Gemy', matchesTitle: 'Mecze grupowe',
       knockoutTitle: 'Drabinka', semifinal: 'Półfinał',
-      finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce', forPlace: 'o',
+      finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce', 
       doubles: 'Debel',
       legendTitle: 'Legenda tabeli', legendWins: 'wygrane mecze', legendLosses: 'przegrane mecze',
       legendSets: 'sety wygrane do przegranych', legendGames: 'gemy wygrane do przegranych'
     },
     tournamentHistory: {
-      selectTournament: 'Wybierz turniej',
-      chooseTournament: '-- Wybierz turniej --',
       matchHistory: 'Historia meczów',
       bracket: 'Drabinka',
       schedule: 'Plan turnieju',
@@ -94,9 +87,7 @@ export const TRANSLATIONS = {
     navLabel: 'Schnellnavigation zu den Plätzen',
     courtLabel: 'Platz {court}',
     watchCourt: '{court} ansehen',
-    liveBadge: 'LIVE',
     versus: 'gegen',
-    tieBreakLabel: 'TB',
     superTieBreakLabel: 'STB',
     table: {
       columns: {
@@ -114,7 +105,6 @@ export const TRANSLATIONS = {
       phaseSF: 'Halbfinale',
       phaseFinal: 'Finale',
     },
-    meta: { lastRefresh: 'Letzte Aktualisierung: {time}.' },
     accessibility: {
       versus: 'gegen',
       points: 'Punkte',
@@ -142,13 +132,11 @@ export const TRANSLATIONS = {
       noStats: 'Keine Statistiken',
       category: 'Kategorie',
       duration: 'Dauer',
-      startedAt: 'Beginn:',
-      endedAt: 'Ende:'
     },
     tabs: { live: 'Live', tournaments: 'Turniere', players: 'Spieler' },
     tournamentCard: { players: 'Spieler', active: 'Aktiv', noTournaments: 'Keine Turniere', backToList: 'Zurück zur Liste' },
     playerSection: { title: 'Spielerdatenbank', searchPlaceholder: 'Spieler suchen...', all: 'Alle', men: 'Männer', women: 'Frauen', matchesPlayed: 'Spiele', winsLabel: 'S', lossesLabel: 'N', noResults: 'Keine Ergebnisse', allCountries: 'Alle Länder', allCategories: 'Alle Kategorien', genderShortM: 'M', genderShortF: 'W' },
-    playerProfile: { back: 'Zurück zur Liste', category: 'Kategorie', country: 'Land', gender: 'Geschlecht', male: 'Mann', female: 'Frau', career: 'Karriere', tournaments: 'Turniere', matches: 'Spiele', wins: 'Siege', losses: 'Niederlagen', winRate: 'Siegquote', medals: 'Medaillen', gold: 'Gold', silver: 'Silber', bronze: 'Bronze', tournamentHistory: 'Turniergeschichte', group: 'Gruppe', place: 'Platz', of: 'von', groupPhase: 'Gruppenphase', knockoutPhase: 'K.-o.-Phase', noTournaments: 'Keine Turniere', matchesInTournament: 'Spiele im Turnier', won: 'S', lost: 'N', vs: 'vs', duration: 'Dauer' },
+    playerProfile: { back: 'Zurück zur Liste', category: 'Kategorie', country: 'Land', gender: 'Geschlecht', male: 'Mann', female: 'Frau', career: 'Karriere', tournaments: 'Turniere', matches: 'Spiele', wins: 'Siege', losses: 'Niederlagen', winRate: 'Siegquote', medals: 'Medaillen', gold: 'Gold', silver: 'Silber', bronze: 'Bronze', tournamentHistory: 'Turniergeschichte', group: 'Gruppe', place: 'Platz', groupPhase: 'Gruppenphase', knockoutPhase: 'K.-o.-Phase', noTournaments: 'Keine Turniere', won: 'S', lost: 'N', vs: 'vs', duration: 'Dauer' },
     darkModeTooltip: { light: 'Zum hellen Modus wechseln', dark: 'Zum dunklen Modus wechseln' },
     liveSub: { scores: 'Live-Ergebnisse', bracket: 'Turnierbaum', schedule: 'Zeitplan', history: 'Historie' },
     bracket: {
@@ -156,14 +144,12 @@ export const TRANSLATIONS = {
       group: 'Gruppe', player: 'Spieler', pair: 'Paar', wins: 'S', losses: 'N',
       setsHeader: 'Sätze', gamesHeader: 'Spiele', matchesTitle: 'Gruppenspiele',
       knockoutTitle: 'Turnierbaum', semifinal: 'Halbfinale',
-      finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3', forPlace: 'um Platz',
+      finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3', 
       doubles: 'Doppel',
       legendTitle: 'Tabellenlegende', legendWins: 'gewonnene Spiele', legendLosses: 'verlorene Spiele',
       legendSets: 'gewonnene zu verlorenen Sätzen', legendGames: 'gewonnene zu verlorenen Spielen'
     },
     tournamentHistory: {
-      selectTournament: 'Turnier auswählen',
-      chooseTournament: '-- Turnier auswählen --',
       matchHistory: 'Spielhistorie',
       bracket: 'Turnierbaum',
       schedule: 'Turnierplan',
@@ -177,9 +163,7 @@ export const TRANSLATIONS = {
     navLabel: 'Quick court navigation',
     courtLabel: 'Court {court}',
     watchCourt: 'Watch {court}',
-    liveBadge: 'LIVE',
     versus: 'vs',
-    tieBreakLabel: 'TB',
     superTieBreakLabel: 'STB',
     table: {
       columns: {
@@ -197,7 +181,6 @@ export const TRANSLATIONS = {
       phaseSF: 'Semifinal',
       phaseFinal: 'Final',
     },
-    meta: { lastRefresh: 'Last refresh: {time}.' },
     accessibility: {
       versus: 'versus',
       points: 'points',
@@ -225,13 +208,11 @@ export const TRANSLATIONS = {
       noStats: 'No statistics',
       category: 'Category',
       duration: 'Duration',
-      startedAt: 'Started:',
-      endedAt: 'Ended:'
     },
     tabs: { live: 'Live', tournaments: 'Tournaments', players: 'Players' },
     tournamentCard: { players: 'players', active: 'Active', noTournaments: 'No tournaments', backToList: 'Back to list' },
     playerSection: { title: 'Player database', searchPlaceholder: 'Search player...', all: 'All', men: 'Men', women: 'Women', matchesPlayed: 'matches', winsLabel: 'W', lossesLabel: 'L', noResults: 'No results', allCountries: 'All countries', allCategories: 'All categories', genderShortM: 'M', genderShortF: 'F' },
-    playerProfile: { back: 'Back to list', category: 'Category', country: 'Country', gender: 'Gender', male: 'Male', female: 'Female', career: 'Career', tournaments: 'Tournaments', matches: 'Matches', wins: 'Wins', losses: 'Losses', winRate: 'Win rate', medals: 'Medals', gold: 'Gold', silver: 'Silver', bronze: 'Bronze', tournamentHistory: 'Tournament history', group: 'Group', place: 'place', of: 'of', groupPhase: 'Group phase', knockoutPhase: 'Knockout phase', noTournaments: 'No tournaments', matchesInTournament: 'Tournament matches', won: 'W', lost: 'L', vs: 'vs', duration: 'Duration' },
+    playerProfile: { back: 'Back to list', category: 'Category', country: 'Country', gender: 'Gender', male: 'Male', female: 'Female', career: 'Career', tournaments: 'Tournaments', matches: 'Matches', wins: 'Wins', losses: 'Losses', winRate: 'Win rate', medals: 'Medals', gold: 'Gold', silver: 'Silver', bronze: 'Bronze', tournamentHistory: 'Tournament history', group: 'Group', place: 'place', groupPhase: 'Group phase', knockoutPhase: 'Knockout phase', noTournaments: 'No tournaments', won: 'W', lost: 'L', vs: 'vs', duration: 'Duration' },
     darkModeTooltip: { light: 'Switch to light mode', dark: 'Switch to dark mode' },
     liveSub: { scores: 'Live scores', bracket: 'Bracket', schedule: 'Schedule', history: 'History' },
     schedule: { title: 'Tournament schedule', emptyTitle: 'The schedule is not published yet', emptyText: 'The tournament office will add approximate times and courts.', loading: 'Loading schedule...', refresh: 'Refresh', time: 'Time', court: 'Court', category: 'Category', phase: 'Stage', match: 'Match', status: 'Status', notes: 'Notes', searchLabel: 'Search by surname', searchPlaceholder: 'Search surname...', sortLabel: 'Sorting', sortCourt: 'By court', sortCategory: 'By category', tabsLabelCourt: 'Choose court', tabsLabelCategory: 'Choose category', noResultsTitle: 'No matching matches', noResultsText: 'Change the search phrase or switch the sort mode.', timeTbd: 'time to be confirmed', courtTbd: 'court to be confirmed', categoryTbd: 'category to be confirmed', statusDraft: 'Draft', statusPlanned: 'Planned', statusInProgress: 'In progress', statusCompleted: 'Finished', updated: 'Schedule updated' },
@@ -240,14 +221,12 @@ export const TRANSLATIONS = {
       group: 'Group', player: 'Player', pair: 'Pair', wins: 'W', losses: 'L',
       setsHeader: 'Sets', gamesHeader: 'Games', matchesTitle: 'Group matches',
       knockoutTitle: 'Bracket', semifinal: 'Semifinal',
-      finalLabel: 'Final', thirdPlace: 'Third place match', forPlace: 'for',
+      finalLabel: 'Final', thirdPlace: 'Third place match', 
       doubles: 'Doubles',
       legendTitle: 'Table legend', legendWins: 'matches won', legendLosses: 'matches lost',
       legendSets: 'sets won to sets lost', legendGames: 'games won to games lost'
     },
     tournamentHistory: {
-      selectTournament: 'Select tournament',
-      chooseTournament: '-- Select tournament --',
       matchHistory: 'Match history',
       bracket: 'Bracket',
       schedule: 'Tournament schedule',
@@ -261,9 +240,7 @@ export const TRANSLATIONS = {
     navLabel: 'Navigazione rapida dei campi',
     courtLabel: 'Campo {court}',
     watchCourt: 'Guarda {court}',
-    liveBadge: 'LIVE',
     versus: 'contro',
-    tieBreakLabel: 'TB',
     superTieBreakLabel: 'STB',
     table: {
       columns: {
@@ -281,7 +258,6 @@ export const TRANSLATIONS = {
       phaseSF: 'Semifinale',
       phaseFinal: 'Finale',
     },
-    meta: { lastRefresh: 'Ultimo aggiornamento: {time}.' },
     accessibility: {
       versus: 'contro',
       points: 'punti',
@@ -309,13 +285,11 @@ export const TRANSLATIONS = {
       noStats: 'Nessuna statistica',
       category: 'Categoria',
       duration: 'Durata',
-      startedAt: 'Inizio:',
-      endedAt: 'Fine:'
     },
     tabs: { live: 'Live', tournaments: 'Tornei', players: 'Giocatori' },
     tournamentCard: { players: 'giocatori', active: 'Attivo', noTournaments: 'Nessun torneo', backToList: 'Torna alla lista' },
     playerSection: { title: 'Database giocatori', searchPlaceholder: 'Cerca giocatore...', all: 'Tutti', men: 'Uomini', women: 'Donne', matchesPlayed: 'partite', winsLabel: 'V', lossesLabel: 'S', noResults: 'Nessun risultato', allCountries: 'Tutti i paesi', allCategories: 'Tutte le categorie', genderShortM: 'M', genderShortF: 'F' },
-    playerProfile: { back: 'Torna alla lista', category: 'Categoria', country: 'Paese', gender: 'Genere', male: 'Uomo', female: 'Donna', career: 'Carriera', tournaments: 'Tornei', matches: 'Partite', wins: 'Vittorie', losses: 'Sconfitte', winRate: 'Percentuale', medals: 'Medaglie', gold: 'Oro', silver: 'Argento', bronze: 'Bronzo', tournamentHistory: 'Storico tornei', group: 'Girone', place: 'posto', of: 'di', groupPhase: 'Fase a gironi', knockoutPhase: 'Fase a eliminazione', noTournaments: 'Nessun torneo', matchesInTournament: 'Partite nel torneo', won: 'V', lost: 'S', vs: 'vs', duration: 'Durata' },
+    playerProfile: { back: 'Torna alla lista', category: 'Categoria', country: 'Paese', gender: 'Genere', male: 'Uomo', female: 'Donna', career: 'Carriera', tournaments: 'Tornei', matches: 'Partite', wins: 'Vittorie', losses: 'Sconfitte', winRate: 'Percentuale', medals: 'Medaglie', gold: 'Oro', silver: 'Argento', bronze: 'Bronzo', tournamentHistory: 'Storico tornei', group: 'Girone', place: 'posto', groupPhase: 'Fase a gironi', knockoutPhase: 'Fase a eliminazione', noTournaments: 'Nessun torneo', won: 'V', lost: 'S', vs: 'vs', duration: 'Durata' },
     darkModeTooltip: { light: 'Passa alla modalità chiara', dark: 'Passa alla modalità scura' },
     liveSub: { scores: 'Risultati live', bracket: 'Tabellone', schedule: 'Programma', history: 'Cronologia' },
     bracket: {
@@ -323,14 +297,12 @@ export const TRANSLATIONS = {
       group: 'Girone', player: 'Giocatore', pair: 'Coppia', wins: 'V', losses: 'S',
       setsHeader: 'Set', gamesHeader: 'Game', matchesTitle: 'Partite del girone',
       knockoutTitle: 'Tabellone', semifinal: 'Semifinale',
-      finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto', forPlace: 'per il',
+      finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto', 
       doubles: 'Doppio',
       legendTitle: 'Legenda tabella', legendWins: 'partite vinte', legendLosses: 'partite perse',
       legendSets: 'set vinti rispetto ai set persi', legendGames: 'game vinti rispetto ai game persi'
     },
     tournamentHistory: {
-      selectTournament: 'Seleziona torneo',
-      chooseTournament: '-- Seleziona torneo --',
       matchHistory: 'Cronologia partite',
       bracket: 'Tabellone',
       schedule: 'Programma del torneo',
@@ -344,9 +316,7 @@ export const TRANSLATIONS = {
     navLabel: 'Navegación rápida por canchas',
     courtLabel: 'Cancha {court}',
     watchCourt: 'Ver {court}',
-    liveBadge: 'EN VIVO',
     versus: 'contra',
-    tieBreakLabel: 'TB',
     superTieBreakLabel: 'STB',
     table: {
       columns: {
@@ -364,7 +334,6 @@ export const TRANSLATIONS = {
       phaseSF: 'Semifinal',
       phaseFinal: 'Final',
     },
-    meta: { lastRefresh: 'Última actualización: {time}.' },
     accessibility: {
       versus: 'contra',
       points: 'puntos',
@@ -392,13 +361,11 @@ export const TRANSLATIONS = {
       noStats: 'Sin estadísticas',
       category: 'Categoría',
       duration: 'Duración',
-      startedAt: 'Inicio:',
-      endedAt: 'Fin:'
     },
     tabs: { live: 'En vivo', tournaments: 'Torneos', players: 'Jugadores' },
     tournamentCard: { players: 'jugadores', active: 'Activo', noTournaments: 'Sin torneos', backToList: 'Volver a la lista' },
     playerSection: { title: 'Base de jugadores', searchPlaceholder: 'Buscar jugador...', all: 'Todos', men: 'Hombres', women: 'Mujeres', matchesPlayed: 'partidos', winsLabel: 'V', lossesLabel: 'D', noResults: 'Sin resultados', allCountries: 'Todos los países', allCategories: 'Todas las categorías', genderShortM: 'M', genderShortF: 'F' },
-    playerProfile: { back: 'Volver a la lista', category: 'Categoría', country: 'País', gender: 'Género', male: 'Hombre', female: 'Mujer', career: 'Carrera', tournaments: 'Torneos', matches: 'Partidos', wins: 'Victorias', losses: 'Derrotas', winRate: 'Efectividad', medals: 'Medallas', gold: 'Oro', silver: 'Plata', bronze: 'Bronce', tournamentHistory: 'Historial de torneos', group: 'Grupo', place: 'puesto', of: 'de', groupPhase: 'Fase de grupos', knockoutPhase: 'Fase eliminatoria', noTournaments: 'Sin torneos', matchesInTournament: 'Partidos del torneo', won: 'V', lost: 'D', vs: 'vs', duration: 'Duración' },
+    playerProfile: { back: 'Volver a la lista', category: 'Categoría', country: 'País', gender: 'Género', male: 'Hombre', female: 'Mujer', career: 'Carrera', tournaments: 'Torneos', matches: 'Partidos', wins: 'Victorias', losses: 'Derrotas', winRate: 'Efectividad', medals: 'Medallas', gold: 'Oro', silver: 'Plata', bronze: 'Bronce', tournamentHistory: 'Historial de torneos', group: 'Grupo', place: 'puesto', groupPhase: 'Fase de grupos', knockoutPhase: 'Fase eliminatoria', noTournaments: 'Sin torneos', won: 'V', lost: 'D', vs: 'vs', duration: 'Duración' },
     darkModeTooltip: { light: 'Cambiar a modo claro', dark: 'Cambiar a modo oscuro' },
     liveSub: { scores: 'En vivo', bracket: 'Cuadro', schedule: 'Calendario', history: 'Historial' },
     bracket: {
@@ -406,14 +373,12 @@ export const TRANSLATIONS = {
       group: 'Grupo', player: 'Jugador', pair: 'Pareja', wins: 'V', losses: 'D',
       setsHeader: 'Sets', gamesHeader: 'Juegos', matchesTitle: 'Partidos del grupo',
       knockoutTitle: 'Cuadro', semifinal: 'Semifinal',
-      finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar', forPlace: 'por el',
+      finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar', 
       doubles: 'Dobles',
       legendTitle: 'Leyenda de la tabla', legendWins: 'partidos ganados', legendLosses: 'partidos perdidos',
       legendSets: 'sets ganados frente a perdidos', legendGames: 'juegos ganados frente a perdidos'
     },
     tournamentHistory: {
-      selectTournament: 'Seleccionar torneo',
-      chooseTournament: '-- Seleccionar torneo --',
       matchHistory: 'Historial de partidos',
       bracket: 'Cuadro',
       schedule: 'Calendario del torneo',
@@ -427,9 +392,7 @@ export const TRANSLATIONS = {
     navLabel: 'Navigation rapide des courts',
     courtLabel: 'Court {court}',
     watchCourt: 'Regarder {court}',
-    liveBadge: 'EN DIRECT',
     versus: 'contre',
-    tieBreakLabel: 'TB',
     superTieBreakLabel: 'STB',
     table: {
       columns: {
@@ -447,7 +410,6 @@ export const TRANSLATIONS = {
       phaseSF: 'Demi-finale',
       phaseFinal: 'Finale',
     },
-    meta: { lastRefresh: 'Dernière mise à jour: {time}.' },
     accessibility: {
       versus: 'contre',
       points: 'points',
@@ -475,13 +437,11 @@ export const TRANSLATIONS = {
       noStats: 'Pas de statistiques',
       category: 'Catégorie',
       duration: 'Durée',
-      startedAt: 'Début:',
-      endedAt: 'Fin:'
     },
     tabs: { live: 'En direct', tournaments: 'Tournois', players: 'Joueurs' },
     tournamentCard: { players: 'joueurs', active: 'Actif', noTournaments: 'Aucun tournoi', backToList: 'Retour à la liste' },
     playerSection: { title: 'Base de joueurs', searchPlaceholder: 'Rechercher un joueur...', all: 'Tous', men: 'Hommes', women: 'Femmes', matchesPlayed: 'matchs', winsLabel: 'V', lossesLabel: 'D', noResults: 'Aucun résultat', allCountries: 'Tous les pays', allCategories: 'Toutes les catégories', genderShortM: 'H', genderShortF: 'F' },
-    playerProfile: { back: 'Retour à la liste', category: 'Catégorie', country: 'Pays', gender: 'Genre', male: 'Homme', female: 'Femme', career: 'Carrière', tournaments: 'Tournois', matches: 'Matchs', wins: 'Victoires', losses: 'Défaites', winRate: 'Taux de victoire', medals: 'Médailles', gold: 'Or', silver: 'Argent', bronze: 'Bronze', tournamentHistory: 'Historique des tournois', group: 'Groupe', place: 'place', of: 'sur', groupPhase: 'Phase de groupes', knockoutPhase: 'Phase éliminatoire', noTournaments: 'Aucun tournoi', matchesInTournament: 'Matchs du tournoi', won: 'V', lost: 'D', vs: 'vs', duration: 'Durée' },
+    playerProfile: { back: 'Retour à la liste', category: 'Catégorie', country: 'Pays', gender: 'Genre', male: 'Homme', female: 'Femme', career: 'Carrière', tournaments: 'Tournois', matches: 'Matchs', wins: 'Victoires', losses: 'Défaites', winRate: 'Taux de victoire', medals: 'Médailles', gold: 'Or', silver: 'Argent', bronze: 'Bronze', tournamentHistory: 'Historique des tournois', group: 'Groupe', place: 'place', groupPhase: 'Phase de groupes', knockoutPhase: 'Phase éliminatoire', noTournaments: 'Aucun tournoi', won: 'V', lost: 'D', vs: 'vs', duration: 'Durée' },
     darkModeTooltip: { light: 'Passer au mode clair', dark: 'Passer au mode sombre' },
     liveSub: { scores: 'En direct', bracket: 'Tableau', schedule: 'Programme', history: 'Historique' },
     bracket: {
@@ -489,14 +449,12 @@ export const TRANSLATIONS = {
       group: 'Groupe', player: 'Joueur', pair: 'Paire', wins: 'V', losses: 'D',
       setsHeader: 'Sets', gamesHeader: 'Jeux', matchesTitle: 'Matchs de groupe',
       knockoutTitle: 'Tableau', semifinal: 'Demi-finale',
-      finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place', forPlace: 'pour la',
+      finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place', 
       doubles: 'Double',
       legendTitle: 'Légende du tableau', legendWins: 'matchs gagnés', legendLosses: 'matchs perdus',
       legendSets: 'sets gagnés contre sets perdus', legendGames: 'jeux gagnés contre jeux perdus'
     },
     tournamentHistory: {
-      selectTournament: 'Sélectionner le tournoi',
-      chooseTournament: '-- Sélectionner le tournoi --',
       matchHistory: 'Historique des matchs',
       bracket: 'Tableau',
       schedule: 'Programme du tournoi',
@@ -560,7 +518,6 @@ export const TRANSLATION_PATCHES = {
         privacyNotice: 'Logowanie zapisuje sesję biura na tym urządzeniu.',
       },
     },
-    meta: { lastRefresh: 'Ostatnia aktualizacja: {time}.' },
     history: { title: 'Ostatnie wyniki', noMatchesActive: 'Brak zakończonych meczów aktywnego turnieju', openCategory: 'Pokaż kategorię {category} na drabince' },
     tabs: { navLabel: 'Główna nawigacja' },
     tournamentCard: { backToList: 'Powrót do turniejów' },
