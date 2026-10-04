@@ -33,7 +33,7 @@ def add_court():
     # Save to database
     database.upsert_court(kort_id, pin)
     
-    logger.info(f"Court added: kort={kort_id}, pin={'set' if pin else 'none'}")
+    logger.info("court_added", kort=kort_id, pin_set=bool(pin))
     return jsonify({"status": "ok", "kort_id": kort_id}), 201
 
 
@@ -51,7 +51,7 @@ def update_court_pin(kort_id):
     
     database.upsert_court(kort_id, pin)
     
-    logger.info(f"Court PIN updated: kort={kort_id}")
+    logger.info("court_pin_updated", kort=kort_id)
     return jsonify({"status": "ok", "kort_id": kort_id})
 
 
@@ -71,7 +71,7 @@ def delete_court(kort_id):
     db_courts_list = database.fetch_courts(active_only=True)
     court_manager.refresh_courts_from_db(db_courts_list)
     
-    logger.info(f"Court deleted: kort={kort_id}")
+    logger.info("court_deleted", kort=kort_id)
     return jsonify({"status": "ok", "kort_id": kort_id})
 
 
@@ -98,7 +98,7 @@ def reset_court(kort_id):
         state.update(fresh)
 
     emit_score_update(kort_id, state)
-    logger.info(f"Court reset: kort={kort_id}")
+    logger.info("court_reset", kort=kort_id)
     return jsonify({"status": "ok", "kort_id": kort_id})
 
 
@@ -127,7 +127,7 @@ def update_court(kort_id):
     db_courts_list = database.fetch_courts(active_only=True)
     court_manager.refresh_courts_from_db(db_courts_list)
     
-    logger.info(f"Court renamed: {kort_id} -> {new_kort_id}")
+    logger.info("court_renamed", kort=kort_id, new_kort=new_kort_id)
     return jsonify({"status": "ok", "kort_id": new_kort_id})
 
 
@@ -139,7 +139,7 @@ def delete_latest_history():
     deleted = history_manager.delete_latest_history()
     
     if deleted:
-        logger.info(f"History entry deleted: {deleted}")
+        logger.info("history_entry_deleted", entry=deleted)
         return jsonify({"status": "ok", "deleted": deleted})
     else:
         return jsonify({"status": "ok", "message": "No history to delete"})
@@ -198,7 +198,7 @@ def cleanup_e2e_artifacts():
             rollback_writes()
         except Exception:
             logger.exception("Failed to roll back after E2E cleanup error")
-        logger.error(f"Failed to cleanup E2E artifacts: {e}")
+        logger.error("e2e_cleanup_failed", error=str(e))
         return jsonify({"error": str(e)}), 500
 
 
@@ -324,7 +324,7 @@ def toggle_demo_overlay():
                 event_broker.broadcast(payload)
 
     msg = "Demo widoczne w overlayach" if active else "Overlaye przywrócone do danych produkcyjnych"
-    logger.info(f"Demo overlay toggled: {active}")
+    logger.info("demo_overlay_toggled", active=active)
     return jsonify({"status": "ok", "active": active, "message": msg})
 
 
@@ -390,7 +390,7 @@ def director_control_match(match_id: int):
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
-        logger.error(f"Failed director control: {e}", exc_info=True)
+        logger.error("director_control_failed", error=str(e), exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 

@@ -170,7 +170,7 @@ def refresh_courts_from_db(db_courts: list[Any]) -> None:
         removed = [k for k in COURTS if k not in configured_ids]
         for k in removed:
             del COURTS[k]
-            logger.info(f"Removed court {k} from memory")
+            logger.info("court_removed_from_memory", kort=k)
         
         # Resize log if needed
         max_size = len(COURTS) * settings.log_entries_per_court

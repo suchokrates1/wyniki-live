@@ -46,7 +46,7 @@ def add_match_to_history(kort_id: str, state: dict[str, Any]) -> None:
     
     from ..database import get_tournament_id_for_court, get_active_tournament_id
     entry["tournament_id"] = get_tournament_id_for_court(kort_id) or get_active_tournament_id()
-    logger.info(f"Match added to history: {entry.get('player_a')} vs {entry.get('player_b')}")
+    logger.info("history_entry_added", player_a=entry.get("player_a"), player_b=entry.get("player_b"))
     
     # Persist to database
     _persist_history_entry(entry)
@@ -98,7 +98,7 @@ def _build_history_entry(kort_id: str, state: dict[str, Any]) -> dict[str, Any]:
                 if match_record.sets_history:
                     sets_history_data = json.loads(match_record.sets_history)
         except Exception:
-            logger.exception(f"Failed to read match {match_id} while building history")
+            logger.exception("history_match_read_failed", match_id=match_id)
 
     score_a = [a_data.get(f"set{i}", 0) for i in [1, 2, 3]]
     score_b = [b_data.get(f"set{i}", 0) for i in [1, 2, 3]]
@@ -136,7 +136,7 @@ def _persist_history_entry(entry: dict[str, Any]) -> None:
         from ..database import insert_match_history
         insert_match_history(entry)
     except Exception as e:
-        logger.error(f"Failed to persist history entry: {e}")
+        logger.error("history_persist_failed", error=str(e))
 
 
 def delete_latest_history() -> bool:

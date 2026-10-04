@@ -20,7 +20,7 @@ def get_settings():
         settings = get_overlay_settings()
         return _json_no_cache(settings)
     except Exception as e:
-        logger.error(f"Failed to get overlay settings: {e}")
+        logger.error("overlay_settings_failed", error=str(e))
         return _json_no_cache({"error": str(e)}, 500)
 
 

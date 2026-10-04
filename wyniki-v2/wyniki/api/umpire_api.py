@@ -456,7 +456,7 @@ def _publish_match_finished(match: Match) -> None:
                         if p1.category == p2.category:
                             court_state["history_meta"]["category"] = p1.category
             except Exception as e:
-                logger.warning(f"Could not detect category: {e}")
+                logger.warning("category_detection_failed", error=str(e))
 
             court_state["match_time"] = court_state.get("match_time", {})
             if match.statistics and getattr(match.statistics, 'match_duration_ms', None):
@@ -485,21 +485,21 @@ def _publish_match_finished(match: Match) -> None:
                 send_match_report(match, court_state, tournament)
                 maybe_send_tournament_summary(match.tournament_id)
             except Exception as e:
-                logger.warning(f"Could not send email report: {e}")
+                logger.warning("email_report_failed", error=str(e))
 
         if match.finish_reason != FINISH_REASON_TEST and match.phase == "Grupowa" and match.tournament_id:
             try:
                 from ..database import maybe_generate_knockout_from_completed_groups
                 maybe_generate_knockout_from_completed_groups(match.tournament_id)
             except Exception as e:
-                logger.warning(f"Could not generate knockout: {e}")
+                logger.warning("knockout_generation_failed", error=str(e))
 
         if match.finish_reason != FINISH_REASON_TEST and is_knockout_stage_phase(match.phase) and match.tournament_id:
             try:
                 from ..database import advance_knockout
                 advance_knockout(match_id, match.tournament_id)
             except Exception as e:
-                logger.warning(f"Could not advance knockout: {e}")
+                logger.warning("knockout_advance_failed", error=str(e))
 
         emit_score_update(kort_id, court_state)
 
@@ -523,7 +523,7 @@ def _publish_match_finished(match: Match) -> None:
         else:
             threading.Timer(5.0, emit_cleared).start()
 
-    logger.info(f"Match {match_id} finished on court {kort_id}")
+    logger.info("match_finished", match_id=match_id, kort=kort_id)
     if match.tournament_id:
         emit_office_invalidation(match.tournament_id, ["results", "schedule", "groups", "dashboard"])
 
@@ -1036,7 +1036,7 @@ def get_courts():
         }), 200
         
     except Exception as e:
-        logger.error(f"Error getting courts: {e}", exc_info=True)
+        logger.error("umpire_courts_failed", error=str(e), exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1115,7 +1115,7 @@ def get_players():
             )
             commit_writes()
             
-            logger.info(f"Player created: {player.id} - {player.full_name}")
+            logger.info("umpire_player_created", player_id=player.id, name=player.full_name)
             country_code = (player.country or '').strip() or None
             
             return jsonify({
@@ -1135,7 +1135,7 @@ def get_players():
             
         except Exception as e:
             rollback_writes()
-            logger.error(f"Error creating player: {e}", exc_info=True)
+            logger.error("umpire_player_create_failed", error=str(e), exc_info=True)
             return jsonify({"ok": False, "error": str(e)}), 500
     
     # GET - list players
@@ -1175,7 +1175,7 @@ def get_players():
         }), 200
         
     except Exception as e:
-        logger.error(f"Error getting players: {e}", exc_info=True)
+        logger.error("umpire_players_failed", error=str(e), exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1203,7 +1203,7 @@ def authorize_court(kort_id: str):
     court = get_row(Court, kort_id)
     
     if not court:
-        logger.warning(f"Court not found: {kort_id}")
+        logger.warning("court_not_found", kort=kort_id)
         return jsonify({
             "ok": False,
             "authorized": False,
@@ -1214,7 +1214,7 @@ def authorize_court(kort_id: str):
     correct_pin = court.pin or "0000"
     authorized = provided_pin == correct_pin
     
-    logger.info(f"PIN check for kort {kort_id}: authorized={authorized}")
+    logger.info("court_pin_checked", kort=kort_id, authorized=authorized)
     
     if authorized:
         return jsonify({
@@ -1267,7 +1267,7 @@ def create_match():
         if client_match_uuid:
             existing_match = latest_match_with_uuid(client_match_uuid)
             if existing_match:
-                logger.info(f"Idempotent match create reused: {existing_match.id} uuid={client_match_uuid}")
+                logger.info("match_create_reused", match_id=existing_match.id, client_match_uuid=client_match_uuid)
                 return jsonify(existing_match.to_dict()), 200
         
         if tournament_id and p1_name and p2_name:
@@ -1376,7 +1376,7 @@ def create_match():
         
     except Exception as e:
         rollback_writes()
-        logger.error(f"Error creating match: {e}", exc_info=True)
+        logger.error("match_create_failed", error=str(e), exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1490,7 +1490,7 @@ def update_match(match_id: int):
             # Emit SSE update
             emit_score_update(kort_id, court_state)
             
-            logger.info(f"Match {match_id} updated on court {kort_id}")
+            logger.info("match_updated", match_id=match_id, kort=kort_id)
         
         return jsonify(match.to_dict()), 200
 
@@ -1499,7 +1499,7 @@ def update_match(match_id: int):
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         rollback_writes()
-        logger.error(f"Error updating match: {e}", exc_info=True)
+        logger.error("match_update_failed", error=str(e), exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1538,7 +1538,7 @@ def finish_match(match_id: int):
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         rollback_writes()
-        logger.error(f"Error finishing match: {e}", exc_info=True)
+        logger.error("match_finish_failed", error=str(e), exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1605,15 +1605,20 @@ def receive_statistics():
         
         commit_writes()
         
-        logger.info(f"Statistics saved for match {match_id}")
-        logger.info(f"Player 1 stats: Aces={stats.player1_aces}, DF={stats.player1_double_faults}")
-        logger.info(f"Player 2 stats: Aces={stats.player2_aces}, DF={stats.player2_double_faults}")
+        logger.info(
+            "match_stats_saved",
+            match_id=match_id,
+            player1_aces=stats.player1_aces,
+            player1_double_faults=stats.player1_double_faults,
+            player2_aces=stats.player2_aces,
+            player2_double_faults=stats.player2_double_faults,
+        )
         
         return jsonify({"message": "Statistics received successfully"}), 200
         
     except Exception as e:
         rollback_writes()
-        logger.error(f"Error receiving statistics: {e}", exc_info=True)
+        logger.error("match_stats_failed", error=str(e), exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1681,7 +1686,7 @@ def log_match_event():
     if access_error:
         return access_error
 
-    logger.info(f"Match event: {event_type} on court {kort_id}")
+    logger.info("match_event", event_type=event_type, kort=kort_id)
 
     if not kort_id:
         return jsonify({"success": True, "message": "No court_id, event logged only"}), 200

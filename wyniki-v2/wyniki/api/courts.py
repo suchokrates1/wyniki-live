@@ -38,7 +38,7 @@ def snapshot():
             "tournament_names": tournament_names,
         })
     except Exception as e:
-        logger.error(f"Failed to get snapshot: {e}")
+        logger.error("snapshot_failed", error=str(e))
         return _json_no_cache({"error": str(e)}, 500)
 
 

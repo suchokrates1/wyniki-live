@@ -154,14 +154,14 @@ def initialize_state() -> None:
         init_db()
         logger.info("Database schema initialized")
     except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
+        logger.error("database_init_failed", error=str(e))
 
     try:
         from .database.tournament_upgrade import upgrade_existing_tournaments
 
         upgrade_existing_tournaments()
     except Exception as e:
-        logger.error(f"Failed to upgrade existing tournaments: {e}")
+        logger.error("tournament_upgrade_failed", error=str(e))
     
     # Ensure at least one active tournament exists (skip under pytest — tests insert their own).
     try:
@@ -172,7 +172,7 @@ def initialize_state() -> None:
             insert_tournament("test tournament", date.today().isoformat(), "2099-12-31", active=True)
             logger.info("Seeded default tournament")
     except Exception as e:
-        logger.error(f"Failed to seed tournament: {e}")
+        logger.error("tournament_seed_failed", error=str(e))
     
     # Load courts from database
     try:
@@ -203,13 +203,13 @@ def initialize_state() -> None:
                 state = get_court_state(kid)
                 if state:
                     emit_score_update(kid, state)
-        logger.info(f"Loaded {len(db_courts)} courts from database")
+        logger.info("courts_loaded", count=len(db_courts), source="database")
     except Exception as e:
-        logger.error(f"Failed to load courts: {e}")
+        logger.error("courts_load_failed", error=str(e))
         # Fallback to default courts
         default_courts = [str(i) for i in range(1, 6)]
         refresh_courts_from_db(default_courts)
-        logger.info(f"Using {len(default_courts)} default courts")
+        logger.info("courts_loaded", count=len(default_courts), source="defaults")
     
     logger.info("State initialization complete")
 
