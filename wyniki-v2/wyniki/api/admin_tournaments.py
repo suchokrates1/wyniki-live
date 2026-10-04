@@ -1,101 +1,93 @@
 """Admin API routes for tournaments and players management."""
 import json
-import queue
-
-from flask import Blueprint, Response, jsonify, request, stream_with_context
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 from uuid import uuid4
 
+from flask import Blueprint, jsonify, request
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
-
-from ..db_models import Tournament
+from ..config import logger as logger
+from ..config import settings
 from ..database import (
+    StreamUrlError,
+    bulk_insert_players,
     counting_entries_named,
     counting_entries_of_global_player,
     counting_history_for,
     counting_tournament_ids,
-    entries_in_counting_tournaments,
-    fetch_tournaments,
-    global_player_matching,
-    phases_of_matches,
-    get_row,
-    fetch_active_tournaments,
-    fetch_umpire_active_tournaments,
-    fetch_tournament,
-    fetch_tournament_categories,
-    confirm_tournament_categories,
-    insert_tournament_category,
-    update_tournament_category,
-    delete_tournament_category,
-    migrate_tournament_categories_from_legacy,
-    fetch_tournament_teams,
-    fetch_tournament_team,
-    insert_tournament_team,
-    delete_tournament_team,
-    TeamConflictError,
-    TeamValidationError,
-    get_planning_mixed_bands,
-    insert_tournament,
-    update_tournament,
-    delete_tournament,
-    set_active_tournament,
-    set_tournament_active_state,
     create_tournament_courts,
-    sync_tournament_courts,
-    fetch_courts_for_tournament,
+    delete_player,
+    delete_tournament,
+    entries_in_counting_tournaments,
+    fetch_active_tournaments,
     fetch_courts,
-    fetch_bracket_groups,
-    fetch_tournament_schedule,
+    fetch_courts_for_tournament,
     fetch_players,
     fetch_players_for_active_tournaments,
-    insert_player,
-    update_player,
-    delete_player,
-    bulk_insert_players,
-    ensure_group_schedule_entries,
-    clear_removed_fixtures,
-    ensure_knockout_schedule_entries,
-    seed_knockout_rematch_for_groups,
-    upsert_tournament_schedule_entries,
-    update_tournament_schedule_entry,
-    delete_tournament_schedule_entry,
-    StreamUrlError,
+    fetch_tournament,
+    fetch_tournament_categories,
+    fetch_tournaments,
+    fetch_umpire_active_tournaments,
+    get_planning_mixed_bands,
+    get_row,
     get_tournament_court_streams,
+    global_player_matching,
+    insert_player,
+    insert_tournament,
+    phases_of_matches,
     save_tournament_court_streams,
+    set_active_tournament,
+    set_tournament_active_state,
+    sync_tournament_courts,
+    update_player,
+    update_tournament,
 )
-from ..config import logger as logger, settings
-from ..database.errors import StorageError
-from ..services.office_event_broker import emit_office_invalidation, office_event_broker
-from ..utils import json_no_cache as _json_no_cache
+from ..db_models import Tournament
+from ..services.office_event_broker import emit_office_invalidation
 from ..services.office_workflow import (
-    OfficeWorkflowError,
-    _build_office_dashboard,
-    _create_office_group_match,
-    _create_office_knockout_match,
     _normalize_bool,
     _normalize_int,
-    _update_office_match,
 )
+from ..utils import json_no_cache as _json_no_cache
+from . import tournament_setup
 from .player_import import (
     _apply_import_ai_suggestions as _apply_import_ai_suggestions,
+)
+from .player_import import (
     _build_import_player_entry as _build_import_player_entry,
+)
+from .player_import import (
     _clean_import_line_text as _clean_import_line_text,
+)
+from .player_import import (
     _dedupe_import_warnings as _dedupe_import_warnings,
+)
+from .player_import import (
     _extract_gemini_json_text as _extract_gemini_json_text,
+)
+from .player_import import (
     _fetch_import_ai_suggestions as _fetch_import_ai_suggestions,
+)
+from .player_import import (
     _needs_import_ai_help as _needs_import_ai_help,
+)
+from .player_import import (
     _normalize_import_category,
     _normalize_import_country,
     _normalize_import_gender,
-    _parse_import_player_line as _parse_import_player_line,
-    _parse_import_players_text,
     _parse_import_players_with_ai,
-    _parse_import_section_header as _parse_import_section_header,
-    _should_skip_import_line as _should_skip_import_line,
     _summarize_import_players,
+)
+from .player_import import (
+    _parse_import_player_line as _parse_import_player_line,
+)
+from .player_import import (
+    _parse_import_section_header as _parse_import_section_header,
+)
+from .player_import import (
+    _should_skip_import_line as _should_skip_import_line,
 )
 
 blueprint = Blueprint('admin_tournaments', __name__, url_prefix='/admin/api/tournaments')
@@ -164,100 +156,6 @@ def _require_tournament(tournament_id: int, active_only: bool = False):
     return tournament, None
 
 
-@blueprint.route('/<int:tournament_id>/schedule', methods=['GET'])
-def get_tournament_schedule(tournament_id: int):
-    """Return tournament schedule entries for admin/office planning."""
-    _, error = _require_tournament(tournament_id)
-    if error:
-        return error
-    ensure_group_schedule_entries(tournament_id)
-    ensure_knockout_schedule_entries(tournament_id)
-    return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
-
-
-@blueprint.route('/<int:tournament_id>/schedule', methods=['PUT', 'POST'])
-def save_tournament_schedule(tournament_id: int):
-    """Create or update one or more schedule entries."""
-    _, error = _require_tournament(tournament_id)
-    if error:
-        return error
-    data = request.get_json(silent=True) or {}
-    raw = data.get('entries')
-    raw_entries = raw if isinstance(raw, list) else [data]
-    try:
-        schedule = upsert_tournament_schedule_entries(tournament_id, raw_entries)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-    return _json_no_cache({"schedule": schedule})
-
-
-@blueprint.route('/<int:tournament_id>/schedule/generate', methods=['POST'])
-def generate_tournament_schedule(tournament_id: int):
-    """Regenerate missing schedule entries from groups and concrete knockout slots."""
-    _, error = _require_tournament(tournament_id)
-    if error:
-        return error
-    clear_removed_fixtures(tournament_id)
-    ensure_group_schedule_entries(tournament_id)
-    ensure_knockout_schedule_entries(tournament_id)
-    return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
-
-
-@blueprint.route('/<int:tournament_id>/schedule/generate-rematch', methods=['POST'])
-def generate_tournament_schedule_rematch(tournament_id: int):
-    """Add a second group-stage round robin for selected bracket groups."""
-    _, error = _require_tournament(tournament_id)
-    if error:
-        return error
-    data = request.get_json(silent=True) or {}
-    group_ids = data.get('group_ids') or []
-    if not isinstance(group_ids, list) or not group_ids:
-        return jsonify({"error": "group_ids required"}), 400
-    result = seed_knockout_rematch_for_groups(
-        tournament_id,
-        [int(group_id) for group_id in group_ids if group_id],
-        schedule_day=(data.get('day_date') or None),
-    )
-    if result.get("error"):
-        return jsonify(result), 400
-    return _json_no_cache({
-        "result": result,
-        "schedule": fetch_tournament_schedule(tournament_id),
-    })
-
-
-@blueprint.route('/<int:tournament_id>/schedule/<int:schedule_id>', methods=['PUT', 'PATCH'])
-def update_tournament_schedule(tournament_id: int, schedule_id: int):
-    """Patch one schedule entry."""
-    _, error = _require_tournament(tournament_id)
-    if error:
-        return error
-    try:
-        entry = update_tournament_schedule_entry(tournament_id, schedule_id, request.get_json(silent=True) or {})
-    except StorageError:
-        logger.exception("schedule_update_failed", tournament_id=tournament_id, schedule_id=schedule_id)
-        return jsonify({"error": "Schedule save failed"}), 500
-    if not entry:
-        return jsonify({"error": "Schedule entry not found"}), 404
-    return _json_no_cache({"schedule_entry": entry, "schedule": fetch_tournament_schedule(tournament_id)})
-
-
-@blueprint.route('/<int:tournament_id>/schedule/<int:schedule_id>', methods=['DELETE'])
-def delete_tournament_schedule(tournament_id: int, schedule_id: int):
-    """Delete one schedule entry."""
-    _, error = _require_tournament(tournament_id)
-    if error:
-        return error
-    try:
-        deleted = delete_tournament_schedule_entry(tournament_id, schedule_id)
-    except StorageError:
-        logger.exception("schedule_delete_failed", tournament_id=tournament_id, schedule_id=schedule_id)
-        return jsonify({"error": "Schedule save failed"}), 500
-    if not deleted:
-        return jsonify({"error": "Schedule entry not found"}), 404
-    return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
-
-
 @blueprint.route('', methods=['GET'])
 def get_tournaments():
     """Get all tournaments."""
@@ -277,136 +175,42 @@ def get_tournament(tournament_id: int):
 
 @blueprint.route('/<int:tournament_id>/categories', methods=['GET'])
 def list_tournament_categories(tournament_id: int):
-    tournament = fetch_tournament(tournament_id)
-    if not tournament:
+    if not fetch_tournament(tournament_id):
         return jsonify({"error": "Tournament not found"}), 404
-    categories = fetch_tournament_categories(tournament_id)
-    if not categories and fetch_bracket_groups(tournament_id):
-        categories = migrate_tournament_categories_from_legacy(tournament_id)
-    return jsonify({"categories": categories})
+    body, status = tournament_setup.list_categories(tournament_id)
+    return jsonify(body), status
 
 
 @blueprint.route('/<int:tournament_id>/categories/confirm', methods=['POST'])
 def confirm_tournament_categories_route(tournament_id: int):
     if not fetch_tournament(tournament_id):
         return jsonify({"error": "Tournament not found"}), 404
-    data = _request_payload()
-    entries = data.get("categories") or data.get("entries") or []
-    if not isinstance(entries, list) or not entries:
-        return jsonify({"error": "categories required"}), 400
-    try:
-        categories = confirm_tournament_categories(
-            tournament_id,
-            entries,
-            replace=bool(data.get("replace")),
-        )
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 409
-    return jsonify({"categories": categories})
+    body, status = tournament_setup.confirm_categories(tournament_id, request.get_json(silent=True) or {})
+    return jsonify(body), status
 
 
 @blueprint.route('/<int:tournament_id>/categories', methods=['POST'])
 def create_tournament_category_route(tournament_id: int):
     if not fetch_tournament(tournament_id):
         return jsonify({"error": "Tournament not found"}), 404
-    data = _request_payload()
-    label = str(data.get("label") or "").strip()
-    if not label:
-        return jsonify({"error": "label required"}), 400
-    category = insert_tournament_category(
-        tournament_id,
-        label=label,
-        preset_key=str(data.get("preset_key") or ""),
-        hint_bands=data.get("hint_bands") if isinstance(data.get("hint_bands"), list) else None,
-        is_doubles=data.get("is_doubles", False),
-    )
-    if not category:
-        return jsonify({"error": "Failed to create category"}), 500
-    return jsonify({"category": category, "categories": fetch_tournament_categories(tournament_id)}), 201
+    body, status = tournament_setup.create_category(tournament_id, request.get_json(silent=True) or {})
+    return jsonify(body), status
 
 
 @blueprint.route('/<int:tournament_id>/categories/<int:category_id>', methods=['PUT', 'PATCH'])
 def update_tournament_category_route(tournament_id: int, category_id: int):
     if not fetch_tournament(tournament_id):
         return jsonify({"error": "Tournament not found"}), 404
-    data = _request_payload()
-    category = update_tournament_category(
-        category_id,
-        label=(data.get("label") if "label" in data else None),
-        hint_bands=data.get("hint_bands") if isinstance(data.get("hint_bands"), list) else None,
-        sort_order=data.get("sort_order") if data.get("sort_order") is not None else None,
-        is_active=data.get("is_active") if "is_active" in data else None,
-        is_doubles=data.get("is_doubles") if "is_doubles" in data else None,
-    )
-    if not category or int(category.get("tournament_id") or 0) != tournament_id:
-        return jsonify({"error": "Category not found"}), 404
-    return jsonify({
-        "category": category,
-        "categories": fetch_tournament_categories(tournament_id),
-        "groups": fetch_bracket_groups(tournament_id),
-        "schedule": fetch_tournament_schedule(tournament_id),
-    })
+    body, status = tournament_setup.update_category(tournament_id, category_id, request.get_json(silent=True) or {})
+    return jsonify(body), status
 
 
 @blueprint.route('/<int:tournament_id>/categories/<int:category_id>', methods=['DELETE'])
 def delete_tournament_category_route(tournament_id: int, category_id: int):
     if not fetch_tournament(tournament_id):
         return jsonify({"error": "Tournament not found"}), 404
-    from ..database import fetch_tournament_category
-    existing = fetch_tournament_category(category_id)
-    if not existing or int(existing.get("tournament_id") or 0) != tournament_id:
-        return jsonify({"error": "Category not found"}), 404
-    if not delete_tournament_category(category_id):
-        return jsonify({"error": "Failed to delete category"}), 500
-    return jsonify({"categories": fetch_tournament_categories(tournament_id)})
-
-
-@blueprint.route('/<int:tournament_id>/teams', methods=['GET'])
-def list_tournament_teams_route(tournament_id: int):
-    if not fetch_tournament(tournament_id):
-        return jsonify({"error": "Tournament not found"}), 404
-    category_id = request.args.get("category_id", type=int)
-    return jsonify({"teams": fetch_tournament_teams(tournament_id, category_id=category_id)})
-
-
-@blueprint.route('/<int:tournament_id>/teams', methods=['POST'])
-def create_tournament_team_route(tournament_id: int):
-    if not fetch_tournament(tournament_id):
-        return jsonify({"error": "Tournament not found"}), 404
-    data = _request_payload()
-    try:
-        category_id = int(data.get("category_id") or 0)
-        player1_id = int(data.get("player1_id") or 0)
-        player2_id = int(data.get("player2_id") or 0)
-    except (TypeError, ValueError):
-        return jsonify({"error": "category_id, player1_id and player2_id required"}), 400
-    if not category_id or not player1_id or not player2_id:
-        return jsonify({"error": "category_id, player1_id and player2_id required"}), 400
-    try:
-        team = insert_tournament_team(tournament_id, category_id, player1_id, player2_id)
-    except TeamValidationError as exc:
-        return jsonify({"error": str(exc)}), 400
-    except TeamConflictError as exc:
-        return jsonify({"error": str(exc)}), 409
-    return jsonify({
-        "team": team,
-        "teams": fetch_tournament_teams(tournament_id),
-    }), 201
-
-
-@blueprint.route('/<int:tournament_id>/teams/<int:team_id>', methods=['DELETE'])
-def delete_tournament_team_route(tournament_id: int, team_id: int):
-    if not fetch_tournament(tournament_id):
-        return jsonify({"error": "Tournament not found"}), 404
-    existing = fetch_tournament_team(team_id)
-    if not existing or int(existing.get("tournament_id") or 0) != tournament_id:
-        return jsonify({"error": "Team not found"}), 404
-    try:
-        if not delete_tournament_team(team_id):
-            return jsonify({"error": "Failed to delete team"}), 500
-    except TeamConflictError as exc:
-        return jsonify({"error": str(exc)}), 409
-    return jsonify({"teams": fetch_tournament_teams(tournament_id)})
+    body, status = tournament_setup.delete_category(tournament_id, category_id)
+    return jsonify(body), status
 
 
 @blueprint.route('', methods=['POST'])
@@ -578,14 +382,6 @@ def update_tournament_active_state(tournament_id: int):
 
 # ==================== TOURNAMENT OFFICE ====================
 
-@blueprint.route('/<int:tournament_id>/office', methods=['GET'])
-def get_tournament_office_dashboard(tournament_id: int):
-    """Dashboard data for tournament office: progress and match history only."""
-    _, error = _require_tournament(tournament_id)
-    if error:
-        return error
-    return _json_no_cache(_build_office_dashboard(tournament_id))
-
 
 @blueprint.route('/<int:tournament_id>/court-streams', methods=['GET'])
 def admin_tournament_court_streams_get(tournament_id: int):
@@ -610,79 +406,6 @@ def admin_tournament_court_streams_save(tournament_id: int):
     return _json_no_cache({"court_streams": court_streams})
 
 
-@blueprint.route('/<int:tournament_id>/office/stream', methods=['GET'])
-def admin_tournament_office_stream(tournament_id: int):
-    """SSE invalidation stream for the admin office tab (same broker as office UI)."""
-    _, error = _require_tournament(tournament_id)
-    if error:
-        return error
-
-    def generate():
-        listener = office_event_broker.listen(tournament_id)
-        try:
-            connected = json.dumps({"tournament_id": tournament_id})
-            yield f"event: connected\ndata: {connected}\n\n"
-            while True:
-                try:
-                    event = listener.get(timeout=30)
-                    yield f"event: office_invalidate\ndata: {json.dumps(event)}\n\n"
-                except queue.Empty:
-                    yield ": heartbeat\n\n"
-        finally:
-            office_event_broker.discard(tournament_id, listener)
-
-    return Response(
-        stream_with_context(generate()),
-        mimetype="text/event-stream",
-        headers={
-            "Cache-Control": "no-store, no-cache, must-revalidate",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        },
-    )
-
-
-@blueprint.route('/<int:tournament_id>/office/group-matches', methods=['POST'])
-def create_office_group_match(tournament_id: int):
-    """Add a finished group-stage result, including walkovers, from the office dashboard."""
-    _, error = _require_tournament(tournament_id, active_only=True)
-    if error:
-        return error
-    try:
-        payload, status = _create_office_group_match(tournament_id, request.get_json(silent=True) or {})
-    except OfficeWorkflowError as exc:
-        return jsonify({"error": str(exc)}), exc.status_code
-    return _json_no_cache(payload, status)
-
-
-@blueprint.route('/<int:tournament_id>/office/knockout-matches', methods=['POST'])
-def create_office_knockout_match(tournament_id: int):
-    """Add a finished knockout result from a generated bracket/schedule slot."""
-    _, error = _require_tournament(tournament_id, active_only=True)
-    if error:
-        return error
-    try:
-        payload, status = _create_office_knockout_match(tournament_id, request.get_json(silent=True) or {})
-    except OfficeWorkflowError as exc:
-        return jsonify({"error": str(exc)}), exc.status_code
-    return _json_no_cache(payload, status)
-
-
-@blueprint.route('/<int:tournament_id>/office/matches/<int:match_id>', methods=['PUT'])
-def update_office_match_result(tournament_id: int, match_id: int):
-    """Edit an existing finished match result from the office dashboard."""
-    _, error = _require_tournament(tournament_id, active_only=True)
-    if error:
-        return error
-    try:
-        payload = _update_office_match(tournament_id, match_id, request.get_json(silent=True) or {})
-    except OfficeWorkflowError as exc:
-        return exc.response()
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-    return _json_no_cache(payload)
-
-
 # ==================== PLAYERS ====================
 
 @blueprint.route('/<int:tournament_id>/players', methods=['GET'])
@@ -703,24 +426,10 @@ def create_player(tournament_id: int):
         return error
 
     data = request.get_json(silent=True) or {}
-    
-    first_name = data.get('first_name', '').strip()
-    last_name = data.get('last_name', '').strip()
-    name = data.get('name', '').strip()
-    
-    # Backward compat: if only name provided, split it
-    if not first_name and not last_name:
-        if not name:
-            return jsonify({"error": "Name is required"}), 400
-        parts = name.rsplit(' ', 1)
-        if len(parts) == 2:
-            first_name, last_name = parts[0], parts[1]
-        else:
-            first_name, last_name = '', name
-    
-    if not name:
-        name = f"{first_name} {last_name}".strip()
-    
+    names = tournament_setup.player_names(data)
+    if not names:
+        return jsonify({"error": "Name is required"}), 400
+    name, first_name, last_name = names
     category = data.get('category', '')
     country = data.get('country', '')
     gender = data.get('gender', '')
@@ -743,23 +452,10 @@ def update_player_route(tournament_id: int, player_id: int):
         return error
 
     data = request.get_json(silent=True) or {}
-    
-    first_name = data.get('first_name', '').strip()
-    last_name = data.get('last_name', '').strip()
-    name = data.get('name', '').strip()
-    
-    if not first_name and not last_name:
-        if not name:
-            return jsonify({"error": "Name is required"}), 400
-        parts = name.rsplit(' ', 1)
-        if len(parts) == 2:
-            first_name, last_name = parts[0], parts[1]
-        else:
-            first_name, last_name = '', name
-    
-    if not name:
-        name = f"{first_name} {last_name}".strip()
-    
+    names = tournament_setup.player_names(data)
+    if not names:
+        return jsonify({"error": "Name is required"}), 400
+    name, first_name, last_name = names
     category = data.get('category', '')
     country = data.get('country', '')
     gender = data.get('gender', '')
@@ -787,38 +483,6 @@ def delete_player_route(tournament_id: int, player_id: int):
         return jsonify({"message": "Player deleted"})
     else:
         return jsonify({"error": "Player not found in tournament"}), 404
-
-
-@blueprint.route('/<int:tournament_id>/players/import', methods=['POST'])
-def import_players(tournament_id: int):
-    """Bulk import players from text format.
-    
-    Expected format (one per line):
-    Name Category Country
-    Example: John Doe B1 us
-    """
-    _, error = _require_tournament(tournament_id, active_only=True)
-    if error:
-        return error
-
-    data = request.get_json(silent=True) or {}
-    text = data.get('text', '')
-    
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
-    
-    mixed_bands = get_planning_mixed_bands(tournament_id)
-    players_data = _parse_import_players_text(text, mixed_bands)
-    
-    if not players_data:
-        return jsonify({"error": "No valid players found"}), 400
-    
-    count = bulk_insert_players(tournament_id, players_data)
-    
-    return jsonify({
-        "message": f"Imported {count} players",
-        "count": count
-    })
 
 
 @blueprint.route('/<int:tournament_id>/players/parse-import', methods=['POST'])
@@ -949,7 +613,6 @@ def get_all_players():
     """Get all players across all tournaments with match stats.
     Deduplicates by global_player_id (or name), preferring the latest tournament entry.
     """
-    import json
     from wyniki.db_models import GlobalPlayer, Player
     from wyniki.services.categories import normalize_player_classification
 
@@ -1038,9 +701,8 @@ def get_player_profile(player_id: int):
     """Get full player profile: info, tournament history, matches, medals.
     Accepts either a Player id (tournament entry) or a GlobalPlayer id via ?global=1
     """
-    import json
-    from wyniki.db_models import Player, GlobalPlayer, Tournament
     from wyniki.database import get_full_bracket
+    from wyniki.db_models import GlobalPlayer, Player, Tournament
     from wyniki.services.categories import normalize_player_classification
 
     is_global = request.args.get('global', '0') == '1'

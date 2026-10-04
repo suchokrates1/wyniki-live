@@ -5,10 +5,61 @@ import json
 import queue
 
 import structlog
-
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 from werkzeug.security import check_password_hash
 
+from ..database import (
+    StreamUrlError,
+    TeamConflictError,
+    TeamValidationError,
+    apply_autoschedule_placements,
+    apply_schedule_notes,
+    assign_start_numbers,
+    clear_removed_fixtures,
+    clear_schedule_day,
+    confirm_all_knockout_formats,
+    delete_tournament_schedule_entry,
+    delete_tournament_team,
+    delete_unassigned_schedule_entries,
+    ensure_group_schedule_entries,
+    ensure_knockout_schedule_entries,
+    fetch_bracket_groups,
+    fetch_courts_for_tournament,
+    fetch_players,
+    fetch_start_numbers,
+    fetch_tournament_categories,
+    fetch_tournament_schedule,
+    fetch_tournament_team,
+    fetch_tournament_teams,
+    fetch_tournaments,
+    generate_autoschedule_proposal,
+    get_autoscheduler_config,
+    get_row,
+    get_tournament_court_streams,
+    get_tournament_quick_info,
+    group_schedule_replace_hint,
+    insert_tournament_team,
+    knockout_format_overview,
+    migrate_tournament_categories_from_legacy,
+    move_schedule_entry_with_cascade,
+    publish_tournament_schedule,
+    reflow_placed_schedule,
+    replace_unplayed_group_schedule,
+    save_autoscheduler_config,
+    save_bracket_groups,
+    save_knockout_format,
+    save_tournament_court_streams,
+    save_tournament_quick_info,
+    seed_knockout_rematch_for_groups,
+    seed_provisional_knockout_from_groups,
+    swap_knockout_players,
+    unassign_schedule_entry,
+    update_tournament_schedule_entry,
+    upsert_tournament_schedule_entries,
+)
+from ..database.errors import StorageError
+from ..db_models import Tournament
+from ..services import schedule_notifications
 from ..services.api_auth import (
     issue_office_token,
     office_session_max_age_seconds,
@@ -16,63 +67,6 @@ from ..services.api_auth import (
     require_office_access,
 )
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
-from ..services import schedule_notifications
-from ..database import (
-    apply_schedule_notes,
-    get_row,
-    assign_start_numbers,
-    fetch_start_numbers,
-    swap_knockout_players,
-    confirm_all_knockout_formats,
-    knockout_format_overview,
-    save_knockout_format,
-    apply_autoschedule_placements,
-    group_schedule_replace_hint,
-    replace_unplayed_group_schedule,
-    fetch_bracket_groups,
-    fetch_courts_for_tournament,
-    fetch_players,
-    fetch_tournament_schedule,
-    fetch_tournaments,
-    fetch_tournament_categories,
-    confirm_tournament_categories,
-    insert_tournament_category,
-    update_tournament_category,
-    delete_tournament_category,
-    migrate_tournament_categories_from_legacy,
-    fetch_tournament_teams,
-    fetch_tournament_team,
-    insert_tournament_team,
-    delete_tournament_team,
-    TeamConflictError,
-    TeamValidationError,
-    generate_autoschedule_proposal,
-    get_autoscheduler_config,
-    move_schedule_entry_with_cascade,
-    unassign_schedule_entry,
-    delete_unassigned_schedule_entries,
-    clear_schedule_day,
-    clear_removed_fixtures,
-    ensure_group_schedule_entries,
-    ensure_knockout_schedule_entries,
-    seed_provisional_knockout_from_groups,
-    seed_knockout_rematch_for_groups,
-    save_autoscheduler_config,
-    reflow_placed_schedule,
-    save_bracket_groups,
-    StreamUrlError,
-    get_tournament_court_streams,
-    get_tournament_quick_info,
-    save_tournament_court_streams,
-    save_tournament_quick_info,
-    upsert_tournament_schedule_entries,
-    update_tournament_schedule_entry,
-    delete_tournament_schedule_entry,
-    publish_tournament_schedule,
-)
-from ..database.errors import StorageError
-from ..db_models import Tournament
-from ..utils import json_no_cache as _json_no_cache
 from ..services.office_workflow import (
     OfficeWorkflowError,
     _build_office_dashboard,
@@ -82,6 +76,8 @@ from ..services.office_workflow import (
     _normalize_int,
     _update_office_match,
 )
+from ..utils import json_no_cache as _json_no_cache
+from . import tournament_setup
 
 logger = structlog.get_logger()
 
@@ -340,11 +336,8 @@ def office_categories_list(slot: int):
     tournament, error = _require_office_access(slot)
     if error:
         return error
-    tournament_id = int(tournament['id'])
-    categories = fetch_tournament_categories(tournament_id)
-    if not categories and fetch_bracket_groups(tournament_id):
-        categories = migrate_tournament_categories_from_legacy(tournament_id)
-    return _json_no_cache({"categories": categories})
+    body, status = tournament_setup.list_categories(int(tournament['id']))
+    return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/categories/confirm', methods=['POST'])
@@ -352,20 +345,8 @@ def office_categories_confirm(slot: int):
     tournament, error = _require_office_access(slot)
     if error:
         return error
-    tournament_id = int(tournament['id'])
-    data = request.get_json(silent=True) or {}
-    entries = data.get("categories") or data.get("entries") or []
-    if not isinstance(entries, list) or not entries:
-        return jsonify({"error": "categories required"}), 400
-    try:
-        categories = confirm_tournament_categories(
-            tournament_id,
-            entries,
-            replace=bool(data.get("replace")),
-        )
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 409
-    return _json_no_cache({"categories": categories})
+    body, status = tournament_setup.confirm_categories(int(tournament['id']), request.get_json(silent=True) or {})
+    return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/categories', methods=['POST'])
@@ -373,21 +354,8 @@ def office_categories_create(slot: int):
     tournament, error = _require_office_access(slot)
     if error:
         return error
-    tournament_id = int(tournament['id'])
-    data = request.get_json(silent=True) or {}
-    label = str(data.get("label") or "").strip()
-    if not label:
-        return jsonify({"error": "label required"}), 400
-    category = insert_tournament_category(
-        tournament_id,
-        label=label,
-        preset_key=str(data.get("preset_key") or ""),
-        hint_bands=data.get("hint_bands") if isinstance(data.get("hint_bands"), list) else None,
-        is_doubles=data.get("is_doubles", False),
-    )
-    if not category:
-        return jsonify({"error": "Failed to create category"}), 500
-    return _json_no_cache({"category": category, "categories": fetch_tournament_categories(tournament_id)}), 201
+    body, status = tournament_setup.create_category(int(tournament['id']), request.get_json(silent=True) or {})
+    return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/categories/<int:category_id>', methods=['PUT', 'PATCH'])
@@ -395,24 +363,8 @@ def office_categories_update(slot: int, category_id: int):
     tournament, error = _require_office_access(slot)
     if error:
         return error
-    tournament_id = int(tournament['id'])
-    data = request.get_json(silent=True) or {}
-    category = update_tournament_category(
-        category_id,
-        label=(data.get("label") if "label" in data else None),
-        hint_bands=data.get("hint_bands") if isinstance(data.get("hint_bands"), list) else None,
-        sort_order=data.get("sort_order") if data.get("sort_order") is not None else None,
-        is_active=data.get("is_active") if "is_active" in data else None,
-        is_doubles=data.get("is_doubles") if "is_doubles" in data else None,
-    )
-    if not category or int(category.get("tournament_id") or 0) != tournament_id:
-        return jsonify({"error": "Category not found"}), 404
-    return _json_no_cache({
-        "category": category,
-        "categories": fetch_tournament_categories(tournament_id),
-        "groups": fetch_bracket_groups(tournament_id),
-        "schedule": fetch_tournament_schedule(tournament_id),
-    })
+    body, status = tournament_setup.update_category(int(tournament['id']), category_id, request.get_json(silent=True) or {})
+    return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/categories/<int:category_id>', methods=['DELETE'])
@@ -420,14 +372,8 @@ def office_categories_delete(slot: int, category_id: int):
     tournament, error = _require_office_access(slot)
     if error:
         return error
-    tournament_id = int(tournament['id'])
-    from ..database import fetch_tournament_category
-    existing = fetch_tournament_category(category_id)
-    if not existing or int(existing.get("tournament_id") or 0) != tournament_id:
-        return jsonify({"error": "Category not found"}), 404
-    if not delete_tournament_category(category_id):
-        return jsonify({"error": "Failed to delete category"}), 500
-    return _json_no_cache({"categories": fetch_tournament_categories(tournament_id)})
+    body, status = tournament_setup.delete_category(int(tournament['id']), category_id)
+    return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/teams', methods=['GET'])
@@ -624,19 +570,10 @@ def office_create_player(slot: int):
     tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
 
-    first_name = str(data.get('first_name') or '').strip()
-    last_name = str(data.get('last_name') or '').strip()
-    name = str(data.get('name') or '').strip()
-    if not first_name and not last_name:
-        if not name:
-            return jsonify({"error": "Name is required"}), 400
-        parts = name.rsplit(' ', 1)
-        if len(parts) == 2:
-            first_name, last_name = parts[0], parts[1]
-        else:
-            first_name, last_name = '', name
-    if not name:
-        name = f"{first_name} {last_name}".strip()
+    names = tournament_setup.player_names(data)
+    if not names:
+        return jsonify({"error": "Name is required"}), 400
+    name, first_name, last_name = names
 
     from ..database import insert_player
 

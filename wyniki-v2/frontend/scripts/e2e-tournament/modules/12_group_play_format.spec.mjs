@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, cleanup, seedDoublesTournament, generateKnockout,
-  fetchAdminSchedule, fetchPublicBracket, fetchGroups, officeLogin, officeGroupMatch,
+  fetchOfficeSchedule, fetchPublicBracket, fetchGroups, officeLogin, officeGroupMatch,
   OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
@@ -31,7 +31,7 @@ export default async function run() {
   const groups = await fetchGroups(token, tournament.id);
   const byName = (letter) => groups.find((group) => String(group.name || '').includes(`Grupa ${letter}`));
 
-  const schedule = await fetchAdminSchedule(token, tournament.id);
+  const schedule = await fetchOfficeSchedule(token, tournament.id);
   const dNames = new Set([teams[6].display_name, teams[7].display_name]);
   const dRows = schedule.filter((entry) => dNames.has(entry.player1_name) || dNames.has(entry.player2_name));
   if (dRows.some((entry) => phaseOf(entry).includes('Grupowa'))) {

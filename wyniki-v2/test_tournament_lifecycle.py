@@ -2461,7 +2461,7 @@ def test_office_dashboard_exposes_and_closes_generated_knockout_slot(full_app_wi
 def test_tournament_office_dashboard_adds_walkover_and_edits_result(full_app_with_temp_db):
     from wyniki import database
 
-    tournament_id = database.insert_tournament("Office Cup", "2026-04-26", "2026-04-27", active=True)
+    tournament_id = database.insert_tournament("Office Cup", "2026-04-26", "2026-04-27", active=True, office_password_hash=generate_password_hash("office"))
     player1_id = database.insert_player(
         tournament_id,
         "Office Player One",
@@ -2484,14 +2484,16 @@ def test_tournament_office_dashboard_adds_walkover_and_edits_result(full_app_wit
     )
     group_id = database.fetch_bracket_groups(tournament_id)[0]["id"]
     client = full_app_with_temp_db.test_client()
+    headers = _office_headers(client, "office")
 
-    initial = client.get(f"/admin/api/tournaments/{tournament_id}/office")
+    initial = client.get("/api/office/1/dashboard", headers=headers)
     assert initial.status_code == 200
     assert initial.get_json()["progress"]["expected_matches"] == 1
     assert initial.get_json()["progress"]["finished_matches"] == 0
 
     created = client.post(
-        f"/admin/api/tournaments/{tournament_id}/office/group-matches",
+        "/api/office/1/group-matches",
+        headers=headers,
         json={
             "group_id": group_id,
             "player1_name": "Office Player One",
@@ -2508,7 +2510,8 @@ def test_tournament_office_dashboard_adds_walkover_and_edits_result(full_app_wit
     assert created_payload["match"]["score_text"] == "0:4  0:4"
 
     duplicate = client.post(
-        f"/admin/api/tournaments/{tournament_id}/office/group-matches",
+        "/api/office/1/group-matches",
+        headers=headers,
         json={
             "group_id": group_id,
             "player1_name": "Office Player Two",
@@ -2522,7 +2525,8 @@ def test_tournament_office_dashboard_adds_walkover_and_edits_result(full_app_wit
     assert duplicate.status_code == 409
 
     edited = client.put(
-        f"/admin/api/tournaments/{tournament_id}/office/matches/{match_id}",
+        f"/api/office/1/matches/{match_id}",
+        headers=headers,
         json={
             "sets": [
                 {"player1_games": 4, "player2_games": 1},
@@ -2545,7 +2549,7 @@ def test_tournament_office_dashboard_adds_walkover_and_edits_result(full_app_wit
 def test_tournament_office_dashboard_uses_legacy_match_history_when_matches_are_missing(full_app_with_temp_db):
     from wyniki import database
 
-    tournament_id = database.insert_tournament("Legacy Office Cup", "2026-04-26", "2026-04-27", active=True)
+    tournament_id = database.insert_tournament("Legacy Office Cup", "2026-04-26", "2026-04-27", active=True, office_password_hash=generate_password_hash("office"))
     player1_id = database.insert_player(
         tournament_id,
         "Legacy Player One",
@@ -2588,7 +2592,8 @@ def test_tournament_office_dashboard_uses_legacy_match_history_when_matches_are_
     })
 
     client = full_app_with_temp_db.test_client()
-    dashboard = client.get(f"/admin/api/tournaments/{tournament_id}/office")
+    headers = _office_headers(client, "office")
+    dashboard = client.get("/api/office/1/dashboard", headers=headers)
 
     assert dashboard.status_code == 200
     payload = dashboard.get_json()
@@ -2601,7 +2606,8 @@ def test_tournament_office_dashboard_uses_legacy_match_history_when_matches_are_
 
     history_id = payload["matches"][0]["id"]
     edited = client.put(
-        f"/admin/api/tournaments/{tournament_id}/office/matches/{history_id}",
+        f"/api/office/1/matches/{history_id}",
+        headers=headers,
         json={
             "source": "history",
             "sets": [
@@ -2621,7 +2627,7 @@ def test_tournament_office_dashboard_infers_group_for_matches_without_bracket_gr
     from wyniki import database
     from wyniki.db_models import Match, db
 
-    tournament_id = database.insert_tournament("Simulation Office Cup", "2026-04-26", "2026-04-27", active=False)
+    tournament_id = database.insert_tournament("Simulation Office Cup", "2026-04-26", "2026-04-27", active=True, office_password_hash=generate_password_hash("office"))
     player1_id = database.insert_player(tournament_id, "Sim Player One", "B1", "PL", first_name="Sim", last_name="One")
     player2_id = database.insert_player(tournament_id, "Sim Player Two", "B1", "PL", first_name="Sim", last_name="Two")
     player3_id = database.insert_player(tournament_id, "Sim Player Three", "B1", "PL", first_name="Sim", last_name="Three")
@@ -2652,7 +2658,8 @@ def test_tournament_office_dashboard_infers_group_for_matches_without_bracket_gr
         db.session.commit()
 
     client = full_app_with_temp_db.test_client()
-    dashboard = client.get(f"/admin/api/tournaments/{tournament_id}/office")
+    headers = _office_headers(client, "office")
+    dashboard = client.get("/api/office/1/dashboard", headers=headers)
 
     assert dashboard.status_code == 200
     payload = dashboard.get_json()

@@ -5,7 +5,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, createTournament, addPlayers, saveGroups, generateSchedule,
-  fetchAdminSchedule, cleanup, samplePlayers, resolveOfficeSlot, officeLogin,
+  fetchOfficeSchedule, cleanup, samplePlayers, resolveOfficeSlot, officeLogin,
   OFFICE_PASSWORD, launchBrowser, apiUrl,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
@@ -47,7 +47,7 @@ export default async function run() {
   if (!court) throw new Error('No court to place group matches');
   const day = tournament.tournament?.start_date || new Date().toISOString().slice(0, 10);
 
-  const beforePlace = await fetchAdminSchedule(token, tournament.id);
+  const beforePlace = await fetchOfficeSchedule(token, tournament.id);
   const groupRows = beforePlace.filter((entry) => entry.source_type === 'group');
   if (groupRows.length < 6) throw new Error(`Expected 6 group matches, got ${groupRows.length}`);
   let hour = 10;
@@ -103,7 +103,7 @@ export default async function run() {
     await browser.close();
   }
 
-  const after = await fetchAdminSchedule(token, tournament.id);
+  const after = await fetchOfficeSchedule(token, tournament.id);
   const placed = after.filter((entry) => (
     entry.source_type === 'group'
     && String(entry.court_id || '').trim()

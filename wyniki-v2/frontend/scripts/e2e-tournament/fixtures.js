@@ -155,10 +155,11 @@ export async function fetchGroups(token, tournamentId) {
   return Array.isArray(body) ? body : (body.groups || []);
 }
 
-export async function generateSchedule(token, tournamentId) {
-  return fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/schedule/generate`), {
+export async function generateSchedule(_token, tournamentId) {
+  const office = await officeFor(tournamentId);
+  return fetchJson(apiUrl(`/api/office/${office.slot}/schedule/generate`), {
     method: 'POST',
-    headers: adminHeaders(token),
+    headers: office.headers,
   });
 }
 
@@ -168,6 +169,21 @@ export async function officeLogin(slot, password = OFFICE_PASSWORD) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password }),
   });
+}
+
+/**
+ * The office slot of a tournament and a logged-in header for it, the way the office page gets them.
+ * Slots move when other runs add or remove tournaments, so this is looked up on every call.
+ */
+async function officeFor(tournamentId) {
+  const { tournaments = [] } = await fetchJson(apiUrl('/api/office/tournaments'));
+  const entry = tournaments.find((tournament) => Number(tournament.id) === Number(tournamentId));
+  if (!entry) throw new Error(`Tournament ${tournamentId} has no office slot (is it active?)`);
+  const auth = await officeLogin(entry.slot);
+  return {
+    slot: entry.slot,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
+  };
 }
 
 export async function publishSchedule(_token, _tournamentId, slotOrName = 1) {
@@ -185,10 +201,11 @@ export async function publishSchedule(_token, _tournamentId, slotOrName = 1) {
   });
 }
 
-export async function generateRematch(token, tournamentId, groupIds) {
-  return fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/schedule/generate-rematch`), {
+export async function generateRematch(_token, tournamentId, groupIds) {
+  const office = await officeFor(tournamentId);
+  return fetchJson(apiUrl(`/api/office/${office.slot}/schedule/generate-rematch`), {
     method: 'POST',
-    headers: adminHeaders(token),
+    headers: office.headers,
     body: JSON.stringify({ group_ids: groupIds }),
   });
 }
@@ -210,10 +227,11 @@ export async function confirmCategories(token, tournamentId, entries, { replace 
   });
 }
 
-export async function createTeam(token, tournamentId, categoryId, player1Id, player2Id) {
-  const body = await fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/teams`), {
+export async function createTeam(_token, tournamentId, categoryId, player1Id, player2Id) {
+  const office = await officeFor(tournamentId);
+  const body = await fetchJson(apiUrl(`/api/office/${office.slot}/teams`), {
     method: 'POST',
-    headers: adminHeaders(token),
+    headers: office.headers,
     body: JSON.stringify({
       category_id: categoryId,
       player1_id: player1Id,
@@ -223,9 +241,10 @@ export async function createTeam(token, tournamentId, categoryId, player1Id, pla
   return body.team || body;
 }
 
-export async function fetchAdminSchedule(token, tournamentId) {
-  const body = await fetchJson(apiUrl(`/admin/api/tournaments/${tournamentId}/schedule`), {
-    headers: adminHeaders(token),
+export async function fetchOfficeSchedule(_token, tournamentId) {
+  const office = await officeFor(tournamentId);
+  const body = await fetchJson(apiUrl(`/api/office/${office.slot}/schedule`), {
+    headers: office.headers,
   });
   return Array.isArray(body) ? body : (body.schedule || []);
 }

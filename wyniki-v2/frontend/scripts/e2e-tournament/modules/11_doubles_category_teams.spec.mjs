@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, cleanup, seedDoublesTournament, publishSchedule,
-  fetchPublicSchedule, fetchAdminSchedule, OFFICE_PASSWORD, launchBrowser,
+  fetchPublicSchedule, fetchOfficeSchedule, OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
 import { OfficePlanningPage } from '../pages/officePlanning.js';
@@ -23,7 +23,7 @@ export default async function run() {
     throw new Error(`Expected 4 canonical pair labels, got ${JSON.stringify(pairLabels)}`);
   }
 
-  const adminSchedule = await fetchAdminSchedule(token, tournament.id);
+  const adminSchedule = await fetchOfficeSchedule(token, tournament.id);
   const rrRows = (adminSchedule || []).filter((entry) => String(entry.phase || '').includes('Grupowa'));
   if (!rrRows.length) throw new Error('RR schedule has no Grupowa rows');
   const sample = rrRows[0];

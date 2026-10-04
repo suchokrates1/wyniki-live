@@ -4,7 +4,7 @@
 import { chromium } from '@playwright/test';
 import {
   adminLogin, cleanup, seedDoublesTournament, fetchPublicBracket,
-  fetchAdminSchedule, officeLogin, officeGroupMatch, officeUpdateMatch,
+  fetchOfficeSchedule, officeLogin, officeGroupMatch, officeUpdateMatch,
   OFFICE_PASSWORD, launchBrowser,
 } from '../fixtures.js';
 import { OfficeLoginPage } from '../pages/officeLogin.js';
@@ -17,7 +17,7 @@ export default async function run() {
   const seeded = await seedDoublesTournament(token, { pairCount: 2, playFormat: 'round_robin' });
   const { tournament, teams, slot } = seeded;
   const office = await officeLogin(slot);
-  const schedule = await fetchAdminSchedule(token, tournament.id);
+  const schedule = await fetchOfficeSchedule(token, tournament.id);
   const rr = schedule.find((entry) => String(entry.phase || '').includes('Grupowa'));
   if (!rr) throw new Error('No Grupowa slot to score');
 
