@@ -1,4 +1,4 @@
-/* Shared TV scoreboard — homepage + admin preview. Keep in sync with overlay.html. */
+/* The TV scoreboard: one stylesheet for the homepage, the admin overlay preview and the OBS overlay. */
 .sb-tv {
   width: 100%;
   height: auto;

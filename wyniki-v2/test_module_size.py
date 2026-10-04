@@ -34,7 +34,7 @@ RECORDED_LINES = {
     "frontend/src/modules/office/autoScheduleView.js": 908,
     "wyniki/services/office_workflow.py": 889,
     "wyniki/database/connection.py": 825,
-    "frontend/src/overlay.js": 810,
+    "frontend/src/overlay.js": 546,
     "wyniki/services/director_commands.py": 688,
     "frontend/umpire.html": 667,
     "frontend/src/modules/office/matchesView.js": 643,
@@ -66,7 +66,7 @@ RECORDED_LINES = {
     "wyniki/database/court_streams.py": 310,
     "frontend/src/admin/globalPlayers.js": 319,
     "frontend/src/umpire/match/matchController.js": 318,
-    "frontend/src/shared/tvScoreboard.js": 301,
+    "frontend/src/shared/tvScoreboard.js": 336,
 }
 
 

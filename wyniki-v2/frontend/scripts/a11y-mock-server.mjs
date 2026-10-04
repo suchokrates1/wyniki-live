@@ -58,6 +58,7 @@ export function start(port = 8811) {
 
     const mapped = p === '/' ? '/index.html'
       : (p === '/privacy' || p === '/privacy/') ? '/privacy.html'
+      : p.startsWith('/overlay/') ? '/overlay.html' // as Flask serves /overlay/<id> and /overlay/<slot>/<id>
       : p;
     const file = normalize(join(STATIC, mapped));
     if (!file.startsWith(STATIC)) { res.writeHead(403); res.end('forbidden'); return; }

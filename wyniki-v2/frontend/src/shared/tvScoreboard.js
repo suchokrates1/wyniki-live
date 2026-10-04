@@ -85,20 +85,37 @@ function setCellHtml(val, sup, kind, flashCls) {
   return '<div class="' + cls + '"><span>' + escapeTvHtml(val) + '</span>' + supHtml + '</div>';
 }
 
+const NO_TICKS = { ptsA: 0, ptsB: 0, gamesA: 0, gamesB: 0, sets: 0 };
+
+/**
+ * What changed on this court since the last render. Each change also bumps a counter, and
+ * a flash class alternates on its parity, so two changes in a row still restart the CSS
+ * animation.
+ */
 function takeScoreAnim(cid, sig) {
   const prev = scoreAnim[cid];
   if (!prev) {
-    scoreAnim[cid] = { ...sig, tbLabel: sig.tbLabel || '' };
-    return { just: {}, prevServe: sig.serve };
+    scoreAnim[cid] = { ...sig, tbLabel: sig.tbLabel || '', ticks: { ...NO_TICKS } };
+    return { just: {}, ticks: { ...NO_TICKS }, prevServe: sig.serve };
   }
   const just = {
+    ptsA: sig.ptsA !== prev.ptsA,
+    ptsB: sig.ptsB !== prev.ptsB,
+    gamesA: sig.gamesA !== prev.gamesA,
+    gamesB: sig.gamesB !== prev.gamesB,
     sets: sig.sets !== prev.sets,
     serve: sig.serve !== prev.serve,
     tb: !!(sig.tbLabel && sig.tbLabel !== prev.tbLabel),
     tbHide: !!(!sig.tbLabel && prev.tbLabel),
   };
-  scoreAnim[cid] = { ...sig, tbLabel: sig.tbLabel || '' };
-  return { just, prevServe: prev.serve, prevTbLabel: prev.tbLabel || '' };
+  const ticks = Object.fromEntries(Object.entries(prev.ticks).map(([key, n]) => [key, n + (just[key] ? 1 : 0)]));
+  scoreAnim[cid] = { ...sig, tbLabel: sig.tbLabel || '', ticks };
+  return { just, ticks, prevServe: prev.serve, prevTbLabel: prev.tbLabel || '' };
+}
+
+function flashClass(name, tick, changed) {
+  if (!changed || !tick) return '';
+  return 'is-' + name + '-' + (tick % 2 === 0 ? 'a' : 'b');
 }
 
 function beginScoreAnimHold(cid, flags, look, onHoldEnd) {
@@ -211,6 +228,8 @@ export function renderTvScoreboard({
   look = {},
   bgOpacity = 1,
   onAnimTick,
+  // The OBS overlay flashes points, games and sets as they change; the site does not.
+  flashes = false,
 } = {}) {
   const model = buildTvScoreModel(court);
   const meta = court.history_meta || {};
@@ -248,6 +267,9 @@ export function renderTvScoreboard({
     court.serve || '',
     onAnimTick,
   );
+  const flash = (name, lookKey, tickKey) => (
+    flashes && look[lookKey] !== false ? flashClass(name, anim.ticks[tickKey], !!anim.just[tickKey]) : ''
+  );
 
   const pRow = (p, serveKey, sideClass) => {
     const isServing = motion.shownServe === serveKey;
@@ -263,9 +285,15 @@ export function renderTvScoreboard({
       return setCellHtml(val, sup, 'is-done', flash);
     }).join('');
     const liveHtml = model.liveGames
-      ? setCellHtml(serveKey === 'A' ? model.liveGames.a : model.liveGames.b, '', 'is-live')
+      ? setCellHtml(
+        serveKey === 'A' ? model.liveGames.a : model.liveGames.b,
+        '',
+        'is-live',
+        flash('gameflash', 'anim_game', 'games' + serveKey),
+      )
       : '';
     const ptsVal = serveKey === 'A' ? model.ptA : model.ptB;
+    const ptsFlash = flash('ptflash', 'anim_point', 'pts' + serveKey);
     return '<div class="sb-tv-row ' + sideClass + '">'
       + '<div class="sb-tv-player">'
       + (showFlags ? '<div class="sb-tv-flag">' + flagHtml + '</div>' : '')
@@ -273,7 +301,8 @@ export function renderTvScoreboard({
       + '<span class="sb-tv-serve' + serveCls + '">' + TV_SERVE_SVG + '</span></div>'
       + '<div class="sb-tv-dones">' + doneHtml + '</div>'
       + liveHtml
-      + '<div class="sb-tv-pts' + (model.tbOn ? ' is-tiebreak' : '') + '">' + escapeTvHtml(ptsVal) + '</div>'
+      + '<div class="sb-tv-pts' + (model.tbOn ? ' is-tiebreak' : '') + (ptsFlash ? ' ' + ptsFlash : '') + '">'
+      + escapeTvHtml(ptsVal) + '</div>'
       + '</div>';
   };
 
@@ -283,7 +312,11 @@ export function renderTvScoreboard({
   const tbHtml = tbText
     ? '<span class="sb-tv-tb' + (motion.tbFall ? ' is-fall' : (motion.tbRise ? ' is-rise' : '')) + '">' + tbText + '</span>'
     : '';
-  const clockHtml = timeStr ? '<span class="sb-tv-clock">' + escapeTvHtml(timeStr) + '</span>' : '';
+  const clockHtml = timeStr
+    ? '<span class="sb-tv-clock" data-court="' + escapeTvHtml(courtId) + '">' + escapeTvHtml(timeStr) + '</span>'
+    : '';
+  const wipeFlash = flash('setwipe', 'anim_set', 'sets');
+  const wipeHtml = flashes ? '<div class="sb-tv-wipe' + (wipeFlash ? ' ' + wipeFlash : '') + '"></div>' : '';
   const opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
   const inactiveClass = model.active ? '' : ' match-inactive';
 
@@ -297,5 +330,7 @@ export function renderTvScoreboard({
     + '<div class="sb-tv-rows">'
     + pRow(model.pA, 'A', 'side-a')
     + pRow(model.pB, 'B', 'side-b')
-    + '</div></div></div>';
+    + '</div>'
+    + wipeHtml
+    + '</div></div>';
 }

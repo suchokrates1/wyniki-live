@@ -136,3 +136,29 @@ test('tvFlagSpans splits only when partner country differs', () => {
   });
   assert.equal(same.includes('flag-split'), false);
 });
+
+test('the broadcast flashes the point and the game that changed, the site does not', () => {
+  const court = (ptsA, gamesA) => ({
+    match_status: { active: true },
+    serve: 'A',
+    current_set: 1,
+    A: { full_name: 'Ada Nowak', points: ptsA, set1: gamesA },
+    B: { full_name: 'Ewa Lis', points: '0', set1: 1 },
+  });
+  const render = (courtId, state, flashes) => renderTvScoreboard({ courtId, court: state, flashes });
+
+  render('tv-flash', court('15', 1), true);
+  const pointWon = render('tv-flash', court('30', 1), true);
+  assert.match(pointWon, /sb-tv-pts is-ptflash-b/, 'the point that changed flashes');
+  assert.doesNotMatch(pointWon, /gameflash/, 'the game did not change');
+  assert.match(pointWon, /class="sb-tv-wipe"/, 'the set wipe is in place, idle');
+
+  const gameWon = render('tv-flash', court('0', 2), true);
+  assert.match(gameWon, /is-live is-gameflash-b/);
+  assert.match(gameWon, /is-ptflash-a/, 'a second change flips the class so the animation restarts');
+
+  render('tv-site', court('15', 1), false);
+  const site = render('tv-site', court('30', 1), false);
+  assert.doesNotMatch(site, /flash|sb-tv-wipe/);
+});
+

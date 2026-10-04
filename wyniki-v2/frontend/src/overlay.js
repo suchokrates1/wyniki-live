@@ -6,7 +6,10 @@ import {
   isScoreboardHeld,
 } from './shared/scoreboardHold.js';
 import { calcMatchTime } from './shared/matchTime.js';
-import { overlayCategoryLabel, overlayCourtLabel, overlayPhaseLabel } from './shared/overlayLabel.js';
+import { overlayCourtLabel } from './shared/overlayLabel.js';
+import { renderTvScoreboard } from './shared/tvScoreboard.js';
+import './styles/tvScoreboard.css';
+import './styles/overlay.css';
 import { abbreviatePersonName } from './shared/teamDisplay.js';
 
 const pathParts = window.location.pathname.split('/').filter(Boolean);
@@ -16,21 +19,14 @@ const requestedTournamentSlot = hasTournamentSlot ? (parseInt(pathParts[1], 10) 
 const SETTINGS_POLL_MS = 2000;
 let allCourtIds = [];  // Will be populated from snapshot
 
-function codeToFlag(code) {
-    if (!code || code.length < 2) return '';
-    return 'https://flagcdn.com/w80/' + code.toLowerCase().slice(0, 2) + '.png';
-}
 let courts = {};
 let settings = { tournament_logo: null, tournament_name: '', overlays: {} };
 let activeTournaments = [];
 let activeTournament = null;
 let eventSource = null;
-let scoreAnim = {};
-let scoreAnimHold = {};
 let boardHold = {};
 let holdRefreshTimer = null;
 let exitLocks = {};
-const SERVE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#C6E953" stroke="#ffffff" stroke-width="2"></circle><path d="M6.2 6.4c5.4 4.5 5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path><path d="M25.8 6.4c-5.4 4.5-5.4 14.7 0 19.2" fill="none" stroke="#ffffff" stroke-width="2"></path></svg>';
 
 function getPreset() {
     return settings.overlays?.[overlayId] || { name: '', auto_hide: false, elements: [] };
@@ -129,245 +125,18 @@ function resolveCourtState(courtToken) {
     return courts[courtToken] || {};
 }
 
-function tbSuperscripts(setInfo) {
-    if (!setInfo || setInfo.tb == null || setInfo.stb) return { a: '', b: '' };
-    var a = Number(setInfo.p1 || 0), b = Number(setInfo.p2 || 0);
-    if (a === b) return { a: '', b: '' };
-    var tb = String(setInfo.tb);
-    return a < b ? { a: tb, b: '' } : { a: '', b: tb };
-}
-
-function setCellHtml(val, sup, kind, flashCls) {
-    var supHtml = sup ? '<span class="sb-tv-sup">' + sup + '</span>' : '';
-    var cls = 'sb-tv-set ' + kind + (flashCls ? ' ' + flashCls : '');
-    return '<div class="' + cls + '"><span>' + val + '</span>' + supHtml + '</div>';
-}
-
-function takeScoreAnim(cid, sig) {
-    var prev = scoreAnim[cid];
-    if (!prev) {
-        scoreAnim[cid] = {
-            ptsA: sig.ptsA, ptsB: sig.ptsB, gamesA: sig.gamesA, gamesB: sig.gamesB, sets: sig.sets, serve: sig.serve, tbLabel: sig.tbLabel || '',
-            tickPtsA: 0, tickPtsB: 0, tickGameA: 0, tickGameB: 0, tickSet: 0,
-        };
-        return { tickPtsA: 0, tickPtsB: 0, tickGameA: 0, tickGameB: 0, tickSet: 0, just: {}, prevServe: sig.serve };
-    }
-    var just = {
-        ptsA: sig.ptsA !== prev.ptsA,
-        ptsB: sig.ptsB !== prev.ptsB,
-        gamesA: sig.gamesA !== prev.gamesA,
-        gamesB: sig.gamesB !== prev.gamesB,
-        sets: sig.sets !== prev.sets,
-        serve: sig.serve !== prev.serve,
-        tb: !!(sig.tbLabel && sig.tbLabel !== prev.tbLabel),
-        tbHide: !!(!sig.tbLabel && prev.tbLabel),
-    };
-    var next = {
-        ptsA: sig.ptsA, ptsB: sig.ptsB, gamesA: sig.gamesA, gamesB: sig.gamesB, sets: sig.sets, serve: sig.serve, tbLabel: sig.tbLabel || '',
-        tickPtsA: prev.tickPtsA + (just.ptsA ? 1 : 0),
-        tickPtsB: prev.tickPtsB + (just.ptsB ? 1 : 0),
-        tickGameA: prev.tickGameA + (just.gamesA ? 1 : 0),
-        tickGameB: prev.tickGameB + (just.gamesB ? 1 : 0),
-        tickSet: prev.tickSet + (just.sets ? 1 : 0),
-    };
-    scoreAnim[cid] = next;
-    return {
-        tickPtsA: next.tickPtsA, tickPtsB: next.tickPtsB, tickGameA: next.tickGameA, tickGameB: next.tickGameB, tickSet: next.tickSet,
-        just: just,
-        prevServe: prev.serve,
-        prevTbLabel: prev.tbLabel || '',
-    };
-}
-
-function beginScoreAnimHold(cid, flags, look) {
-    var existed = !!scoreAnimHold[cid];
-    scoreAnimHold[cid] = Object.assign({}, scoreAnimHold[cid] || {}, flags);
-    if (existed) return;
-    var holdMs = Math.round(700 / (look.anim_speed || 1));
-    setTimeout(function() {
-        delete scoreAnimHold[cid];
-        render();
-    }, holdMs);
-}
-
-function resolveScoreAnimMotion(cid, anim, look, actualServe) {
-    var shownServe = actualServe || '';
-    if (look.anim_set) {
-        if (anim.just.sets && anim.just.serve) {
-            beginScoreAnimHold(cid, { enter: true, peel: true }, look);
-        } else if (anim.just.sets) {
-            beginScoreAnimHold(cid, { peel: true }, look);
-        } else if (anim.just.serve) {
-            beginScoreAnimHold(cid, { enter: true }, look);
-        }
-    }
-    if (anim.just.tb) beginScoreAnimHold(cid, { tbRise: true }, look);
-    if (anim.just.tbHide) beginScoreAnimHold(cid, { tbFall: true, tbFallLabel: anim.prevTbLabel || '' }, look);
-    var hold = scoreAnimHold[cid];
-    return {
-        shownServe: (hold && hold.visualServe) ? hold.visualServe : shownServe,
-        setPeel: !!(hold && hold.peel),
-        rideServe: !!(hold && hold.ride),
-        enterServe: !!(hold && hold.enter),
-        tbRise: !!(hold && hold.tbRise),
-        tbFall: !!(hold && hold.tbFall),
-        tbFallLabel: (hold && hold.tbFallLabel) || '',
-    };
-}
-
-function flashCls(prefix, tick, changed) {
-    if (!changed || !tick) return '';
-    return 'is-' + prefix + '-' + (tick % 2 === 0 ? 'a' : 'b');
-}
-
 function renderScoreboard(el, courtOverride) {
-    const cid = el.court_id;
-    const court = courtOverride || resolveCourtState(cid);
-    const pA = court.A || {}, pB = court.B || {};
-    const active = court.match_status?.active || false;
-    const inactiveClass = active ? '' : ' match-inactive';
-    const curSet = court.current_set || 1;
-    const bgOpacity = el.bg_opacity != null ? el.bg_opacity : 0.95;
-    const hasSetDetail = Array.isArray(court.sets_detail) && court.sets_detail.length > 0;
-    const regularSetWins = (function() {
-        const wins = { A: 0, B: 0 };
-        if (hasSetDetail) {
-            for (const setInfo of court.sets_detail) {
-                if (setInfo?.stb) continue;
-                const a = Number(setInfo?.p1 ?? 0);
-                const b = Number(setInfo?.p2 ?? 0);
-                if (a > b) wins.A += 1;
-                else if (b > a) wins.B += 1;
-            }
-            return wins;
-        }
-        for (let setIdx = 1; setIdx <= 2; setIdx += 1) {
-            const a = Number(pA['set'+setIdx] || 0);
-            const b = Number(pB['set'+setIdx] || 0);
-            if (a > b) wins.A += 1;
-            else if (b > a) wins.B += 1;
-        }
-        return wins;
-    })();
-    const isSuperTB = !!court.super_tiebreak_active || (Number(curSet) === 3 && regularSetWins.A === 1 && regularSetWins.B === 1);
-    const readSetValue = (playerState, setIdx) => {
-        if (active && setIdx > curSet) return 0;
-        return playerState['set'+setIdx] || 0;
-    };
-    const completed = [];
-    if (hasSetDetail) {
-        court.sets_detail.forEach(function(d) {
-            if (d?.stb) return;
-            var sup = tbSuperscripts(d);
-            completed.push({ a: Number(d.p1 || 0), b: Number(d.p2 || 0), supA: sup.a, supB: sup.b });
-        });
-    } else {
-        var lastCompleted = active ? (curSet - 1) : 3;
-        for (var s = 1; s <= lastCompleted && s <= 3; s++) {
-            var a = Number(readSetValue(pA, s) || 0), b = Number(readSetValue(pB, s) || 0);
-            if (!active && a === 0 && b === 0) continue;
-            completed.push({ a: a, b: b, supA: '', supB: '' });
-        }
-    }
-    let liveGames = (active && !isSuperTB)
-        ? { a: Number(readSetValue(pA, curSet) || 0), b: Number(readSetValue(pB, curSet) || 0) }
-        : null;
-    if (!liveGames && !isSuperTB && completed.length === 0) {
-        liveGames = { a: 0, b: 0 };
-    }
-    const isTie = court.tie?.visible || false;
-    const ptA = active ? ((isTie || isSuperTB) ? (court.tie?.A || 0) : (pA.points || '0')) : '\u2014';
-    const ptB = active ? ((isTie || isSuperTB) ? (court.tie?.B || 0) : (pB.points || '0')) : '\u2014';
-    const tbOn = active && (isTie || isSuperTB);
-    const look = overlayLook(getPreset());
-    const meta = court.history_meta || {};
-    const cat = look.phase ? overlayCategoryLabel(meta.category) : '';
-    const phase = look.phase ? overlayPhaseLabel(meta.phase) : '';
-    const metaParts = [cat, phase].filter(Boolean).join(' · ');
     const showHeaderCourt = (el.label_position || 'above') !== 'none';
-    const courtName = showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '';
-    const timeStr = look.clock ? (calcMatchTime(court) || '') : '';
-    const showFlags = look.flags;
-    const gridCols = 'minmax(0,1fr) auto' + (liveGames ? ' var(--set-w)' : '') + ' var(--pts-w)';
-    const anim = takeScoreAnim(cid, {
-        ptsA: String(ptA), ptsB: String(ptB),
-        gamesA: liveGames ? String(liveGames.a) : '',
-        gamesB: liveGames ? String(liveGames.b) : '',
-        sets: completed.map(function(c) { return c.a + '-' + c.b; }).join('|'),
-        serve: court.serve || '',
-        tbLabel: tbOn ? (isSuperTB ? 'stb' : 'tb') : '',
+    return renderTvScoreboard({
+        courtId: el.court_id,
+        court: courtOverride || resolveCourtState(el.court_id),
+        courtName: showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '',
+        look: overlayLook(getPreset()),
+        bgOpacity: el.bg_opacity != null ? el.bg_opacity : 0.95,
+        onAnimTick: render,
+        flashes: true,
     });
-    const gameFlashA = look.anim_game ? flashCls('gameflash', anim.tickGameA, !!anim.just.gamesA) : '';
-    const gameFlashB = look.anim_game ? flashCls('gameflash', anim.tickGameB, !!anim.just.gamesB) : '';
-    const motion = resolveScoreAnimMotion(cid, anim, look, court.serve || '');
-    const setPeel = motion.setPeel;
-    const ptsFlashA = look.anim_point ? flashCls('ptflash', anim.tickPtsA, !!anim.just.ptsA) : '';
-    const ptsFlashB = look.anim_point ? flashCls('ptflash', anim.tickPtsB, !!anim.just.ptsB) : '';
-    const wipeCls = look.anim_set ? flashCls('setwipe', anim.tickSet, !!anim.just.sets) : '';
-
-    function pRow(p, serveKey, sideClass) {
-        var isServing = motion.shownServe === serveKey;
-        var flagHtml = showFlags ? (flagSpans(p) || '<span class="player-flag"></span>') : '';
-        var dName = p.full_name || p.surname || '\u2014';
-        var isTeam = String(dName).indexOf(' / ') !== -1;
-        var teamClass = isTeam ? ' is-team' : '';
-        var serveCls = isServing ? ' is-on' : '';
-        if (look.anim_set && isServing && (motion.rideServe || motion.enterServe)) serveCls += ' is-peel';
-        var doneHtml = completed.map(function(c, i) {
-            var val = serveKey === 'A' ? c.a : c.b;
-            var sup = serveKey === 'A' ? c.supA : c.supB;
-            var flash = (setPeel && i === completed.length - 1) ? 'is-peel' : '';
-            return setCellHtml(val, sup, 'is-done', flash);
-        }).join('');
-        var liveHtml = '';
-        if (liveGames) {
-            var liveVal = serveKey === 'A' ? liveGames.a : liveGames.b;
-            var liveFlash = serveKey === 'A' ? gameFlashA : gameFlashB;
-            liveHtml = setCellHtml(liveVal, '', 'is-live', liveFlash);
-        }
-        var ptsVal = serveKey === 'A' ? ptA : ptB;
-        var ptsFlash = serveKey === 'A' ? ptsFlashA : ptsFlashB;
-        return '<div class="sb-tv-row ' + sideClass + '">'
-            + '<div class="sb-tv-player">'
-            + (showFlags ? '<div class="sb-tv-flag">' + flagHtml + '</div>' : '')
-            + nameVariantsHtml(dName, 'player-name' + teamClass)
-            + '<span class="sb-tv-serve' + serveCls + '">' + SERVE_SVG + '</span></div>'
-            + '<div class="sb-tv-dones">' + doneHtml + '</div>'
-            + liveHtml
-            + '<div class="sb-tv-pts' + (tbOn ? ' is-tiebreak' : '') + (ptsFlash ? ' ' + ptsFlash : '') + '">' + ptsVal + '</div>'
-            + '</div>';
-    }
-
-    var tbHtml = '';
-    var tbText = motion.tbFall
-        ? (motion.tbFallLabel === 'stb' ? 'Super tie-break' : 'Tie-break')
-        : (tbOn ? (isSuperTB ? 'Super tie-break' : 'Tie-break') : '');
-    if (tbText) {
-        var tbCls = motion.tbFall ? ' is-fall' : (motion.tbRise ? ' is-rise' : '');
-        tbHtml = '<span class="sb-tv-tb' + tbCls + '">' + tbText + '</span>';
-    }
-    var clockHtml = timeStr
-        ? '<span class="sb-tv-clock" data-court="' + cid + '">' + timeStr + '</span>'
-        : '';
-    var opacityStyle = bgOpacity < 1 ? 'opacity:' + bgOpacity + ';' : '';
-    var speedStyle = '--sb-speed:' + look.anim_speed + ';';
-    var scaleStyle = 'transform:scale(' + look.scale + ');transform-origin:top left;';
-
-    return '<div class="sb-tv' + inactiveClass + '" style="' + opacityStyle + speedStyle + scaleStyle + '--sb-cols:' + gridCols + ';">'
-        + '<div class="sb-tv-card">'
-        + '<div class="sb-tv-header">'
-        + (courtName ? '<span class="sb-tv-court">' + courtName + '</span>' : '')
-        + '<span class="sb-tv-meta">' + metaParts + '</span>'
-        + tbHtml
-        + clockHtml + '</div>'
-        + '<div class="sb-tv-rows">'
-        + pRow(pA, 'A', 'side-a')
-        + pRow(pB, 'B', 'side-b')
-        + '</div>'
-        + '<div class="sb-tv-wipe' + (wipeCls ? ' ' + wipeCls : '') + '"></div>'
-        + '</div></div>';
 }
-
 function _v(val, suffix) { return val != null ? val + (suffix||'') : '\u2014'; }
 function _serveRatio(si, st) { return (si != null && st != null) ? si+'/'+st : '\u2014'; }
 function _totalPtsWon(own, opp) {
@@ -734,24 +503,6 @@ async function loadActiveTournaments() {
     syncTournamentContext();
 }
 
-function lastNameOnly(name) {
-    var raw = String(name || '');
-    if (raw.indexOf(' / ') !== -1) {
-        return raw.split(' / ').map(lastNameOnly).join(' / ');
-    }
-    var parts = raw.trim().split(/\s+/).filter(Boolean);
-    return parts.length ? parts[parts.length - 1] : raw;
-}
-
-function nameVariantsHtml(full, className) {
-    var esc = String(full).replace(/"/g, '&quot;');
-    return '<span class="' + className + '" data-full="' + esc + '">'
-        + '<span class="sb-name-full">' + full + '</span>'
-        + '<span class="sb-name-init">' + abbreviateName(full) + '</span>'
-        + '<span class="sb-name-last">' + lastNameOnly(full) + '</span>'
-        + '</span>';
-}
-
 function abbreviateName(name) {
     var raw = String(name || '');
     if (raw.indexOf(' / ') !== -1) {
@@ -760,23 +511,8 @@ function abbreviateName(name) {
     return abbreviatePersonName(raw);
 }
 
-function flagSpans(p) {
-    var flagUrl = p.flag_url || (p.flag_code ? codeToFlag(p.flag_code) : '');
-    var partnerUrl = p.flag_url_partner || (p.flag_code_partner ? codeToFlag(p.flag_code_partner) : '');
-    var primary = String(p.flag_code || '').toUpperCase();
-    var partner = String(p.flag_code_partner || '').toUpperCase();
-    if (flagUrl && partnerUrl && partner && partner !== primary) {
-        return '<span class="flag-split">'
-            + '<span class="player-flag has-image is-a" style="background-image:url(' + flagUrl + ')"></span>'
-            + '<span class="player-flag has-image is-b" style="background-image:url(' + partnerUrl + ')"></span>'
-            + '</span>';
-    }
-    if (flagUrl) return '<span class="player-flag has-image" style="background-image:url(' + flagUrl + ')"></span>';
-    return '';
-}
-
 function fitPlayerNames() {
-    document.querySelectorAll('.player-name').forEach(function(el) {
+    document.querySelectorAll('.sb-tv .sb-name').forEach(function(el) {
         el.style.transform = '';
         el.style.overflow = 'hidden';
         if (el.scrollWidth <= el.clientWidth + 1) return;
