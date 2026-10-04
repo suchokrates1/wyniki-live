@@ -1,3 +1,5 @@
+import { officeJson } from './api.js';
+
 export function createOfficeQuickInfoView() {
   return {
     applyQuickInfo(info = {}) {
@@ -28,20 +30,15 @@ export function createOfficeQuickInfoView() {
       const sentMessage = this.quickInfoMessage;
       const sentActive = this.quickInfoActive;
       try {
-        const response = await fetch(`/api/office/${this.slot}/quick-info`, {
+        const payload = await officeJson(this, '/quick-info', {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             message: this.quickInfoMessage,
             active: this.quickInfoActive,
-          }),
+          },
+          failure: 'errors.quickInfoFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.quickInfoFailed'));
+        if (!payload) return;
         // a dashboard requested before this save would bring back the old banner text
         this.dashboardSeq = (this.dashboardSeq || 0) + 1;
         const stillAsSent = this.quickInfoMessage === sentMessage && this.quickInfoActive === sentActive;

@@ -1,4 +1,5 @@
 import { defaultOfficeScheduleForm } from './forms.js';
+import { officeJson } from './api.js';
 
 export function createOfficeScheduleView() {
   return {
@@ -185,17 +186,12 @@ export function createOfficeScheduleView() {
       const dayDate = String(this.publishScope || '').trim();
       this.planningPublishing = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/publish`, {
+        const payload = await officeJson(this, '/schedule/publish', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify(dayDate ? { day_date: dayDate } : {}),
+          body: dayDate ? { day_date: dayDate } : {},
+          failure: 'errors.publishFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.publishFailed'));
+        if (!payload) return;
         if (Array.isArray(payload.schedule)) this.planningSchedule = this.keepInspectorEdits(payload.schedule);
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         const count = Number(payload.published || 0);
@@ -244,22 +240,15 @@ export function createOfficeScheduleView() {
       const { start, end } = this.autoTournamentDates();
       const dayDate = this.autoDayDate || (end && end !== start ? end : start) || '';
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/generate-rematch`, {
+        const payload = await officeJson(this, '/schedule/generate-rematch', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             group_ids: groupIds,
             ...(dayDate ? { day_date: dayDate } : {}),
-          }),
+          },
+          failure: 'errors.rematchGenerateFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.rematchGenerateFailed'));
-        }
+        if (!payload) return;
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.showToast(this.ot('toast.rematchGenerated'), 'success');
@@ -277,20 +266,15 @@ export function createOfficeScheduleView() {
       }
       const selectedCourt = this.planningCourts.find(court => String(court.kort_id || '') === String(this.planningNewSchedule.court_id || ''));
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule`, {
+        const payload = await officeJson(this, '/schedule', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             ...this.planningNewSchedule,
             court_label: selectedCourt?.name || '',
-          }),
+          },
+          failure: 'errors.scheduleAddFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.scheduleAddFailed'));
+        if (!payload) return;
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         const dayDate = this.planningNewSchedule.day_date;
@@ -312,16 +296,11 @@ export function createOfficeScheduleView() {
       if (!scheduleId) return;
       if (!options.skipConfirm && !confirm(this.ot('confirm.deleteEntry'))) return;
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/${scheduleId}`, {
+        const payload = await officeJson(this, `/schedule/${scheduleId}`, {
           method: 'DELETE',
-          headers: this.officeHeaders(),
+          failure: 'errors.scheduleDeleteFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.scheduleDeleteFailed'));
+        if (!payload) return;
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : [];
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.showToast(this.ot('toast.scheduleDeleted'), 'success');
@@ -373,19 +352,12 @@ export function createOfficeScheduleView() {
       const { start, end } = this.autoTournamentDates();
       const dayDate = this.autoDayDate || (end && end !== start ? end : start) || '';
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/generate`, {
+        const payload = await officeJson(this, '/schedule/generate', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify(dayDate ? { day_date: dayDate } : {}),
+          body: dayDate ? { day_date: dayDate } : {},
+          failure: 'errors.scheduleGenerateFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.scheduleGenerateFailed'));
-        }
+        if (!payload) return;
         if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.showToast(this.ot('toast.scheduleRefreshed'), 'success');
@@ -399,10 +371,9 @@ export function createOfficeScheduleView() {
       if (!entry?.id) return;
       const selectedCourt = [...this.officeCourts, ...this.planningCourts].find(court => String(court.kort_id || '') === String(entry.court_id || ''));
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/${entry.id}`, {
+        const payload = await officeJson(this, `/schedule/${entry.id}`, {
           method: 'PATCH',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             day_date: entry.day_date,
             scheduled_time: entry.scheduled_time,
             court_id: entry.court_id,
@@ -410,16 +381,10 @@ export function createOfficeScheduleView() {
             status: entry.status,
             notes_public: entry.notes_public,
             notes_internal: entry.notes_internal,
-          }),
+          },
+          failure: 'errors.scheduleEntryFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.scheduleEntryFailed'));
-        }
+        if (!payload) return;
         this.planningInspectorDirtyId = null;
         if (payload.schedule) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });

@@ -12,6 +12,7 @@ import {
   streamUrl,
   toggleStreamCourtOn,
 } from '../../shared/courtStreams.js';
+import { officeJson, officeResponse } from './api.js';
 
 /** The office's stream editor: the shared editing, plus tracking what is not saved yet. */
 export function createOfficeStreamsView() {
@@ -60,15 +61,10 @@ export function createOfficeStreamsView() {
     async loadCourtStreams() {
       if (!this.token) return;
       try {
-        const response = await fetch(`/api/office/${this.slot}/court-streams`, {
-          headers: this.officeHeaders(),
+        const payload = await officeJson(this, '/court-streams', {
+          failure: 'errors.streamsFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.streamsFailed'));
+        if (!payload) return;
         if (payload.court_streams) this.applyCourtStreams(payload.court_streams);
       } catch (error) {
         console.error('Failed to load court streams:', error);
@@ -80,17 +76,13 @@ export function createOfficeStreamsView() {
       if (!this.token) return;
       this.streamsSaving = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/court-streams`, {
+        const result = await officeResponse(this, '/court-streams', {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify(courtStreamsPayload(this.courtStreams, this.streamsSharedAll)),
+          body: courtStreamsPayload(this.courtStreams, this.streamsSharedAll),
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
+        if (!result) return;
+        const { payload } = result;
+        if (!result.ok) {
           const invalid = payload.error === 'invalid_url';
           throw new Error(invalid ? this.ot('toast.streamsInvalid') : (payload.error || this.ot('errors.streamsFailed')));
         }

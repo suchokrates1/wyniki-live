@@ -1,5 +1,6 @@
 import { defaultOfficeForm } from './forms.js';
 import { getMatchSets } from '../history.js';
+import { officeJson, officeResponse } from './api.js';
 
 export function createOfficeMatchesView() {
   return {
@@ -202,21 +203,16 @@ export function createOfficeMatchesView() {
       if (!from) return;
       this.officeKnockoutSwapFrom = null;
       try {
-        const response = await fetch(`/api/office/${this.slot}/knockout/swap`, {
+        const result = await officeResponse(this, '/knockout/swap', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ first: { slot_id: from.slot_id, side: from.side }, second: { slot_id: slot.slot_id, side } }),
+          body: { first: { slot_id: from.slot_id, side: from.side }, second: { slot_id: slot.slot_id, side } },
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
+        if (!result) return;
+        if (!result.ok) {
           this.showToast(this.ot('toast.swapBlocked'), 'warning');
           return;
         }
-        this.applyDashboard(payload.dashboard, { notify: false });
+        this.applyDashboard(result.payload.dashboard, { notify: false });
         this.showToast(this.ot('toast.playersSwapped'), 'success');
       } catch (error) {
         console.error('Failed to swap knockout players:', error);
@@ -362,50 +358,55 @@ export function createOfficeMatchesView() {
       return sets;
     },
 
+    /** Why the result typed in the add form cannot be saved yet, or '' when it can. */
+    officeNewMatchProblem() {
+      const form = this.officeNewMatch;
+      if (form.player1_name === form.player2_name) {
+        return this.officeFormUsesTeams() ? this.ot('toast.pickTwoTeams') : this.ot('toast.pickTwoPlayers');
+      }
+      if (form.walkover && !form.winner_name) return this.ot('toast.walkoverWinnerRequired');
+      if (form.retirement && !form.retired_player_name) return this.ot('toast.retiredPlayerRequired');
+      return '';
+    },
+
+    /** Who played and how it ended: what a group result and a knockout result both send. */
+    officeNewMatchOutcome() {
+      const form = this.officeNewMatch;
+      return {
+        player1_name: form.player1_name,
+        player2_name: form.player2_name,
+        walkover: form.walkover,
+        winner_name: form.winner_name,
+        retirement: form.retirement,
+        retired_player_name: form.retired_player_name,
+        sets: this.officeSetsFromForm(form),
+      };
+    },
+
     async addOfficeGroupMatch() {
       if (!this.officeNewMatch.group_id || !this.officeNewMatch.player1_name || !this.officeNewMatch.player2_name) {
         this.showToast(this.officeFormUsesTeams() ? this.ot('toast.pickGroupTeams') : this.ot('toast.pickGroupPlayers'), 'warning');
         return;
       }
-      if (this.officeNewMatch.player1_name === this.officeNewMatch.player2_name) {
-        this.showToast(this.officeFormUsesTeams() ? this.ot('toast.pickTwoTeams') : this.ot('toast.pickTwoPlayers'), 'warning');
-        return;
-      }
-      if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {
-        this.showToast(this.ot('toast.walkoverWinnerRequired'), 'warning');
-        return;
-      }
-      if (this.officeNewMatch.retirement && !this.officeNewMatch.retired_player_name) {
-        this.showToast(this.ot('toast.retiredPlayerRequired'), 'warning');
+      const problem = this.officeNewMatchProblem();
+      if (problem) {
+        this.showToast(problem, 'warning');
         return;
       }
 
       try {
-        const response = await fetch(`/api/office/${this.slot}/group-matches`, {
+        const payload = await officeJson(this, '/group-matches', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             group_id: this.officeNewMatch.group_id,
             schedule_id: this.officeNewMatch.schedule_id,
-            player1_name: this.officeNewMatch.player1_name,
-            player2_name: this.officeNewMatch.player2_name,
             phase: this.officeNormalizeGroupPhase(this.officeNewMatch.phase),
             court_id: this.officeNewMatch.court_id,
-            walkover: this.officeNewMatch.walkover,
-            winner_name: this.officeNewMatch.winner_name,
-            retirement: this.officeNewMatch.retirement,
-            retired_player_name: this.officeNewMatch.retired_player_name,
-            sets: this.officeSetsFromForm(this.officeNewMatch),
-          }),
+            ...this.officeNewMatchOutcome(),
+          },
+          failure: 'errors.resultFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.resultFailed'));
-        }
+        if (!payload) return;
         this.applyDashboard(payload.dashboard, { notify: false });
         this.closeAddMatchModal();
         const generated = payload.knockout_generation?.status === 'ok' ? this.ot('toast.knockoutGenerated') : '';
@@ -426,45 +427,25 @@ export function createOfficeMatchesView() {
         this.showToast(this.ot('toast.knockoutSlotIncomplete'), 'warning');
         return;
       }
-      if (this.officeNewMatch.player1_name === this.officeNewMatch.player2_name) {
-        this.showToast(this.officeFormUsesTeams() ? this.ot('toast.pickTwoTeams') : this.ot('toast.pickTwoPlayers'), 'warning');
-        return;
-      }
-      if (this.officeNewMatch.walkover && !this.officeNewMatch.winner_name) {
-        this.showToast(this.ot('toast.walkoverWinnerRequired'), 'warning');
-        return;
-      }
-      if (this.officeNewMatch.retirement && !this.officeNewMatch.retired_player_name) {
-        this.showToast(this.ot('toast.retiredPlayerRequired'), 'warning');
+      const problem = this.officeNewMatchProblem();
+      if (problem) {
+        this.showToast(problem, 'warning');
         return;
       }
 
       try {
-        const response = await fetch(`/api/office/${this.slot}/knockout-matches`, {
+        const payload = await officeJson(this, '/knockout-matches', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             schedule_id: this.officeNewMatch.schedule_id,
             knockout_slot_id: this.officeNewMatch.knockout_slot_id,
             court_id: this.officeNewMatch.court_id,
             phase,
-            player1_name: this.officeNewMatch.player1_name,
-            player2_name: this.officeNewMatch.player2_name,
-            walkover: this.officeNewMatch.walkover,
-            winner_name: this.officeNewMatch.winner_name,
-            retirement: this.officeNewMatch.retirement,
-            retired_player_name: this.officeNewMatch.retired_player_name,
-            sets: this.officeSetsFromForm(this.officeNewMatch),
-          }),
+            ...this.officeNewMatchOutcome(),
+          },
+          failure: 'errors.knockoutFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.knockoutFailed'));
-        }
+        if (!payload) return;
         this.applyDashboard(payload.dashboard, { notify: false });
         this.closeAddMatchModal();
         this.showToast(this.ot('toast.knockoutResultSaved'), 'success');
@@ -554,30 +535,24 @@ export function createOfficeMatchesView() {
       }
 
       try {
-        const response = await fetch(`/api/office/${this.slot}/matches/${this.officeEditingMatch.id}`, {
+        const result = await officeResponse(this, `/matches/${this.officeEditingMatch.id}`, {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             source: this.officeEditingMatch.source || 'match',
             walkover: outcome === 'walkover',
             winner_name: outcome === 'walkover' ? outcomePlayer : '',
             retirement: outcome === 'retirement',
             retired_player_name: outcome === 'retirement' ? outcomePlayer : '',
             sets: this.officeSetsFromForm(this.officeEditingMatch),
-          }),
+          },
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (response.status === 409 && payload.blocked_by) {
+        if (!result) return;
+        const { payload } = result;
+        if (result.status === 409 && payload.blocked_by) {
           this.showToast(this.ot('toast.correctionBlocked', { phase: this.officeDisplayLabel(payload.blocked_by) }), 'warning');
           return;
         }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.correctionFailed'));
-        }
+        if (!result.ok) throw new Error(payload.error || this.ot('errors.correctionFailed'));
         this.applyDashboard(payload.dashboard, { notify: false });
         this.closeEditModal();
         this.showToast(this.ot('toast.resultCorrected'), 'success');

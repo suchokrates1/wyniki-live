@@ -10,6 +10,7 @@ import {
   playerMatchesTournamentCategory,
 } from '../../shared/categories.js';
 import { PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
+import { officeJson, officeResponse } from './api.js';
 
 export function createOfficePlayersView() {
   return {
@@ -23,17 +24,10 @@ export function createOfficePlayersView() {
       const revision = this.planningEditRevision;
       this.planningLoading = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/planning`, {
-          headers: this.officeHeaders(),
+        const payload = await officeJson(this, '/planning', {
+          failure: 'errors.planningFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.planningFailed'));
-        }
+        if (!payload) return;
         if (revision !== this.planningEditRevision) {
           // The draw changed while this response was on its way; applying it would undo
           // those edits. Reload once they are saved.
@@ -271,13 +265,12 @@ export function createOfficePlayersView() {
         return;
       }
       try {
-        const response = await fetch(`/api/office/${this.slot}/categories/confirm`, {
+        const payload = await officeJson(this, '/categories/confirm', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ categories: entries }),
+          body: { categories: entries },
+          failure: 'errors.categoriesFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+        if (!payload) return;
         this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : [];
         this.categorySetupOpen = false;
         this.categoryCustomLabel = '';
@@ -295,17 +288,16 @@ export function createOfficePlayersView() {
       const label = (this.categoryCustomLabel || '').trim();
       if (!label) return;
       try {
-        const response = await fetch(`/api/office/${this.slot}/categories`, {
+        const payload = await officeJson(this, '/categories', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             label,
             hint_bands: (this.categoryCustomHints || '').split(/[,/]/).map(v => v.trim()).filter(Boolean),
             is_doubles: Boolean(this.categoryCustomDoubles),
-          }),
+          },
+          failure: 'errors.categoriesFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+        if (!payload) return;
         this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : this.tournamentCategories;
         this.categoryCustomLabel = '';
         this.categoryCustomHints = '';
@@ -320,13 +312,12 @@ export function createOfficePlayersView() {
     async saveTournamentCategoryEdit() {
       if (!this.categoryEditId) return;
       try {
-        const response = await fetch(`/api/office/${this.slot}/categories/${this.categoryEditId}`, {
+        const payload = await officeJson(this, `/categories/${this.categoryEditId}`, {
           method: 'PATCH',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ label: (this.categoryEditLabel || '').trim() }),
+          body: { label: (this.categoryEditLabel || '').trim() },
+          failure: 'errors.categoriesFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+        if (!payload) return;
         this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : this.tournamentCategories;
         if (Array.isArray(payload.groups)) this.planningGroups = payload.groups;
         if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
@@ -341,12 +332,11 @@ export function createOfficePlayersView() {
     async deleteTournamentCategory(categoryId) {
       if (!categoryId || !confirm(this.ot('confirm.deleteCategory'))) return;
       try {
-        const response = await fetch(`/api/office/${this.slot}/categories/${categoryId}`, {
+        const payload = await officeJson(this, `/categories/${categoryId}`, {
           method: 'DELETE',
-          headers: this.officeHeaders(),
+          failure: 'errors.categoriesFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.categoriesFailed'));
+        if (!payload) return;
         this.tournamentCategories = Array.isArray(payload.categories) ? payload.categories : [];
         this.ensurePlanningDefaults();
         this.showToast(this.ot('toast.categoryDeleted'), 'success');
@@ -617,13 +607,8 @@ export function createOfficePlayersView() {
       this.planningStartNumbersPending = true;
       try {
         for (const body of requests) {
-          const response = await fetch(`/api/office/${this.slot}/planning/start-numbers`, {
-            method: 'POST',
-            headers: this.officeHeaders(),
-            body: JSON.stringify(body),
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (response.ok && payload.start_numbers) this.planningStartNumbers = payload.start_numbers;
+          const result = await officeResponse(this, '/planning/start-numbers', { method: 'POST', body });
+          if (result?.ok && result.payload.start_numbers) this.planningStartNumbers = result.payload.start_numbers;
         }
       } catch (error) {
         console.error('Failed to assign start numbers:', error);
@@ -902,17 +887,12 @@ export function createOfficePlayersView() {
       const revision = this.planningEditRevision;
       this.planningSaving = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
+        const payload = await officeJson(this, '/planning/groups', {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ groups, allow_empty: !groups.length }),
+          body: { groups, allow_empty: !groups.length },
+          failure: 'errors.groupsFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.groupsFailed'));
+        if (!payload) return;
         this.applyPlanningGroupsSave(payload, { syncAssignments: revision === this.planningEditRevision });
       } catch (error) {
         console.error('Failed to auto-save office planning groups:', error);
@@ -938,17 +918,12 @@ export function createOfficePlayersView() {
         return;
       }
       try {
-        const response = await fetch(`/api/office/${this.slot}/planning/groups`, {
+        const payload = await officeJson(this, '/planning/groups', {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ groups }),
+          body: { groups },
+          failure: 'errors.groupsFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.groupsFailed'));
+        if (!payload) return;
         this.applyPlanningGroupsSave(payload, { syncAssignments: true });
         this.showToast(this.ot('toast.groupsSaved'), 'success');
       } catch (error) {
@@ -1011,16 +986,11 @@ export function createOfficePlayersView() {
     async replacePlanningScheduleAfterGroups() {
       this.planningReplaceApplying = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/planning/groups/replace-schedule`, {
+        const payload = await officeJson(this, '/planning/groups/replace-schedule', {
           method: 'POST',
-          headers: this.officeHeaders(),
+          failure: 'toast.replaceScheduleError',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('toast.replaceScheduleError'));
+        if (!payload) return;
         this.planningSchedule = Array.isArray(payload.schedule) ? payload.schedule : this.planningSchedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.planningReplaceHandledKey = this.planningReplacePendingKey || this.planningReplaceFingerprint();
@@ -1079,21 +1049,16 @@ export function createOfficePlayersView() {
         return;
       }
       try {
-        const response = await fetch(`/api/office/${this.slot}/teams`, {
+        const payload = await officeJson(this, '/teams', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             category_id: category.id,
             player1_id: player1Id,
             player2_id: player2Id,
-          }),
+          },
+          failure: 'errors.teamAddFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.teamAddFailed'));
+        if (!payload) return;
         this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
         if (payload.start_numbers) this.planningStartNumbers = payload.start_numbers;
         this.planningNewTeam = { player1_id: '', player2_id: '' };
@@ -1111,20 +1076,14 @@ export function createOfficePlayersView() {
         return;
       }
       try {
-        const response = await fetch(`/api/office/${this.slot}/teams/${team.id}`, {
-          method: 'DELETE',
-          headers: this.officeHeaders(),
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (response.status === 409) {
+        const result = await officeResponse(this, `/teams/${team.id}`, { method: 'DELETE' });
+        if (!result) return;
+        const { payload } = result;
+        if (result.status === 409) {
           this.showToast(payload.error || this.ot('toast.teamInGroup'), 'warning');
           return;
         }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.teamDeleteFailed'));
+        if (!result.ok) throw new Error(payload.error || this.ot('errors.teamDeleteFailed'));
         this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
         if (payload.start_numbers) this.planningStartNumbers = payload.start_numbers;
         const assignments = { ...this.planningTeamAssignments };
@@ -1145,25 +1104,18 @@ export function createOfficePlayersView() {
         return;
       }
       try {
-        const response = await fetch(`/api/office/${this.slot}/players`, {
+        const payload = await officeJson(this, '/players', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             first_name: firstName,
             last_name: lastName,
             category: (this.planningNewPlayer.category || '').trim(),
             gender: (this.planningNewPlayer.gender || '').trim(),
             country: (this.planningNewPlayer.country || '').trim(),
-          }),
+          },
+          failure: 'errors.playerAddFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.playerAddFailed'));
-        }
+        if (!payload) return;
         this.planningPlayers = Array.isArray(payload.players) ? payload.players : this.planningPlayers;
         this.ensurePlanningStartNumbers();
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });

@@ -1,3 +1,5 @@
+import { officeJson } from './api.js';
+
 /**
  * "Uwagi do meczów": one public note for many matches at once (a day, courts, categories,
  * a phase), previewed before it is written. Single matches are still edited in the inspector.
@@ -69,17 +71,12 @@ export function createOfficeScheduleNotesView() {
       const body = this.scheduleNotesBody();
       if (body.mode !== 'clear' && !String(body.text || '').trim()) body.text = '·';
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/notes/preview`, {
+        const payload = await officeJson(this, '/schedule/notes/preview', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify(body),
+          body: body,
+          failure: 'scheduleNotes.failed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('scheduleNotes.failed'));
+        if (!payload) return;
         if (seq === this.scheduleNotesSeq) this.scheduleNotesPreview = payload;
       } catch (error) {
         console.error('Schedule notes preview failed:', error);
@@ -109,17 +106,12 @@ export function createOfficeScheduleNotesView() {
       }
       this.scheduleNotesSaving = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/notes`, {
+        const payload = await officeJson(this, '/schedule/notes', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify(this.scheduleNotesBody()),
+          body: this.scheduleNotesBody(),
+          failure: 'scheduleNotes.failed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('scheduleNotes.failed'));
+        if (!payload) return;
         if (Array.isArray(payload.schedule)) this.planningSchedule = this.keepInspectorEdits(payload.schedule);
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.showToast(this.ot('scheduleNotes.applied', { count: payload.updated || 0 }), 'success');

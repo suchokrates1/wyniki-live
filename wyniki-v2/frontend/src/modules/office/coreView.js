@@ -1,6 +1,6 @@
 import { translateStoredScheduleLabel } from '../../shared/labelDisplay.js';
 import { formatTeamLabelForWrap } from '../../shared/teamDisplay.js';
-import { officeAuthHeaders } from './api.js';
+import { officeAuthHeaders, officeJson } from './api.js';
 import { defaultOfficeForm, defaultOfficeScheduleForm } from './forms.js';
 
 export function createOfficeCoreView() {
@@ -506,19 +506,10 @@ export function createOfficeCoreView() {
       this.dashboardSeq = (this.dashboardSeq || 0) + 1;
       const seq = this.dashboardSeq;
       try {
-        const response = await fetch(`/api/office/${this.slot}/dashboard`, {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-          },
+        const payload = await officeJson(this, '/dashboard', {
+          failure: 'errors.refreshFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.refreshFailed'));
-        }
+        if (!payload) return;
         if (seq !== this.dashboardSeq) return;
         this.applyDashboard(payload, { notify: !showLoading });
       } catch (error) {

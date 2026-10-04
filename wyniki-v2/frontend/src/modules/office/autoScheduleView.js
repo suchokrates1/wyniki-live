@@ -1,3 +1,5 @@
+import { officeJson } from './api.js';
+
 /** Auto-scheduler planning board helpers (extracted from scheduleView). */
 
 export function createOfficeAutoScheduleView() {
@@ -6,15 +8,10 @@ export function createOfficeAutoScheduleView() {
       if (!this.token) return;
       this.autoLoading = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/autoschedule/config`, {
-          headers: this.officeHeaders(),
+        const payload = await officeJson(this, '/autoschedule/config', {
+          failure: 'errors.configFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
+        if (!payload) return;
         this.autoConfig = payload.config || null;
         this.autoCourts = Array.isArray(payload.courts) ? payload.courts : [];
         this.autoBands = Array.isArray(payload.bands) ? payload.bands : [];
@@ -83,13 +80,12 @@ export function createOfficeAutoScheduleView() {
         if (this.autoPhaseScope && this.autoPhaseScope !== 'all') {
           body.phases = [this.autoPhaseScope];
         }
-        const response = await fetch(`/api/office/${this.slot}/autoschedule/generate`, {
+        const payload = await officeJson(this, '/autoschedule/generate', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify(body),
+          body: body,
+          failure: 'errors.proposalFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.proposalFailed'));
+        if (!payload) return;
         this.autoConfig = payload.config || this.autoConfig;
         this.autoCourts = Array.isArray(payload.courts) ? payload.courts : this.autoCourts;
         this.autoProposal = Array.isArray(payload.placements) ? payload.placements : [];
@@ -150,13 +146,12 @@ export function createOfficeAutoScheduleView() {
       }
       this.autoLoading = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/autoschedule/apply`, {
+        const payload = await officeJson(this, '/autoschedule/apply', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ placements }),
+          body: { placements },
+          failure: 'errors.approveFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.approveFailed'));
+        if (!payload) return;
         if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.autoProposal = null;
@@ -208,17 +203,12 @@ export function createOfficeAutoScheduleView() {
         return;
       }
       try {
-        const response = await fetch(`/api/office/${this.slot}/autoschedule/config`, {
+        const payload = await officeJson(this, '/autoschedule/config', {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ start_time: start, end_time: end }),
+          body: { start_time: start, end_time: end },
+          failure: 'errors.configFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
+        if (!payload) return;
         // a newer change typed while this was saving stays on the screen
         if (this.autoNormalizeTime(this.autoStartTime) === start && this.autoNormalizeTime(this.autoEndTime) === end) {
           this.autoConfig = payload.config || this.autoConfig;
@@ -236,20 +226,15 @@ export function createOfficeAutoScheduleView() {
       if (!this.token) return;
       const b1Courts = (this.autoB1Courts || []).map(String).filter(Boolean);
       try {
-        const response = await fetch(`/api/office/${this.slot}/autoschedule/config`, {
+        const payload = await officeJson(this, '/autoschedule/config', {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             b1_court_ids: b1Courts,
             b1_court_id: b1Courts[0] || '',
-          }),
+          },
+          failure: 'errors.configFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
+        if (!payload) return;
         this.autoConfig = payload.config || this.autoConfig;
         if (Array.isArray(payload.schedule)) {
           this.planningSchedule = this.keepInspectorEdits(payload.schedule);
@@ -322,17 +307,12 @@ export function createOfficeAutoScheduleView() {
       if (label) next[`label:${label}`] = minutes;
       if (!Object.keys(next).length) return;
       try {
-        const response = await fetch(`/api/office/${this.slot}/autoschedule/config`, {
+        const payload = await officeJson(this, '/autoschedule/config', {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ category_slot_minutes: next }),
+          body: { category_slot_minutes: next },
+          failure: 'errors.configFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.configFailed'));
+        if (!payload) return;
         this.autoConfig = payload.config || this.autoConfig;
         if (Array.isArray(payload.schedule)) {
           this.planningSchedule = this.keepInspectorEdits(payload.schedule);
@@ -706,17 +686,12 @@ export function createOfficeAutoScheduleView() {
       if (!confirm(this.ot('confirm.clearDay', { count, date }))) return;
       this.autoLoading = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/clear-day`, {
+        const payload = await officeJson(this, '/schedule/clear-day', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ day_date: day }),
+          body: { day_date: day },
+          failure: 'errors.clearDayFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.clearDayFailed'));
+        if (!payload) return;
         if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.planningDrawerCollapsed = false;
@@ -822,18 +797,17 @@ export function createOfficeAutoScheduleView() {
       }
       this.autoLoading = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/autoschedule/move`, {
+        const payload = await officeJson(this, '/autoschedule/move', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             schedule_id: scheduleId,
             court_id: courtId,
             scheduled_time: dropTime,
             day_date: this.autoDayDate,
-          }),
+          },
+          failure: 'errors.moveFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.moveFailed'));
+        if (!payload) return;
         if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
       } catch (error) {
@@ -858,16 +832,15 @@ export function createOfficeAutoScheduleView() {
       }
       this.autoLoading = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/autoschedule/unassign`, {
+        const payload = await officeJson(this, '/autoschedule/unassign', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({
+          body: {
             schedule_id: scheduleId,
             day_date: this.autoDayDate,
-          }),
+          },
+          failure: 'errors.unassignFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.unassignFailed'));
+        if (!payload) return;
         if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
       } catch (error) {
@@ -884,16 +857,11 @@ export function createOfficeAutoScheduleView() {
       if (!confirm(this.ot('confirm.deleteAllUnassigned', { count }))) return;
       this.autoLoading = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/schedule/unassigned`, {
+        const payload = await officeJson(this, '/schedule/unassigned', {
           method: 'DELETE',
-          headers: this.officeHeaders(),
+          failure: 'errors.deleteUnassignedFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('errors.deleteUnassignedFailed'));
+        if (!payload) return;
         if (Array.isArray(payload.schedule)) this.planningSchedule = payload.schedule;
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.showToast(this.ot('toast.unassignedDeleted', { count: payload.deleted || count }), 'success');

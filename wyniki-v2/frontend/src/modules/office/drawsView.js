@@ -1,3 +1,5 @@
+import { officeJson, officeResponse } from './api.js';
+
 /**
  * "Drabinki": the knockout format of every category, chosen after groups are drawn and
  * before the schedule. The server builds the preview (who meets whom as "A1", "B2"),
@@ -45,13 +47,10 @@ export function createOfficeDrawsView() {
       if (!this.token) return;
       const seq = ++this.drawLoadSeq;
       try {
-        const response = await fetch(`/api/office/${this.slot}/knockout-formats`, { headers: this.officeHeaders() });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('draws.loadFailed'));
+        const payload = await officeJson(this, '/knockout-formats', {
+          failure: 'draws.loadFailed',
+        });
+        if (!payload) return;
         if (seq !== this.drawLoadSeq) return;
         this.applyDrawFormats(payload.categories);
       } catch (error) {
@@ -226,13 +225,12 @@ export function createOfficeDrawsView() {
       }
       const seq = ++this.drawPreviewSeq;
       try {
-        const response = await fetch(`/api/office/${this.slot}/knockout-formats/preview`, {
+        const payload = await officeJson(this, '/knockout-formats/preview', {
           method: 'POST',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ category_id: active.category_id, config: this.drawDraft }),
+          body: { category_id: active.category_id, config: this.drawDraft },
+          failure: 'draws.previewFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || this.ot('draws.previewFailed'));
+        if (!payload) return;
         if (seq !== this.drawPreviewSeq || active.category_id !== this.drawActiveId) return;
         this.drawPreview = payload.category;
       } catch (error) {
@@ -282,18 +280,14 @@ export function createOfficeDrawsView() {
       if (!active || !this.drawDraft || this.drawSaving) return;
       this.drawSaving = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/knockout-formats/${active.category_id}`, {
+        const result = await officeResponse(this, `/knockout-formats/${active.category_id}`, {
           method: 'PUT',
-          headers: this.officeHeaders(),
-          body: JSON.stringify({ config: { ...this.drawDraft, confirmed: true } }),
+          body: { config: { ...this.drawDraft, confirmed: true } },
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (response.status === 409) throw new Error(payload.error === 'groups_started' ? this.ot('draws.groupsStartedError') : this.ot('draws.lockedError'));
-        if (!response.ok) throw new Error(payload.error || this.ot('draws.saveFailed'));
+        if (!result) return;
+        const { payload } = result;
+        if (result.status === 409) throw new Error(payload.error === 'groups_started' ? this.ot('draws.groupsStartedError') : this.ot('draws.lockedError'));
+        if (!result.ok) throw new Error(payload.error || this.ot('draws.saveFailed'));
         this.drawDraft = null;
         this.drawDraftBase = null;
         this.applyDrawFormats(payload.categories);
@@ -322,16 +316,11 @@ export function createOfficeDrawsView() {
       }
       this.drawSaving = true;
       try {
-        const response = await fetch(`/api/office/${this.slot}/knockout-formats/confirm-all`, {
+        const payload = await officeJson(this, '/knockout-formats/confirm-all', {
           method: 'POST',
-          headers: this.officeHeaders(),
+          failure: 'draws.saveFailed',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (response.status === 401) {
-          this.logout(this.ot('errors.sessionExpired'));
-          return;
-        }
-        if (!response.ok) throw new Error(payload.error || this.ot('draws.saveFailed'));
+        if (!payload) return;
         this.applyDrawFormats(payload.categories);
         if (payload.dashboard) this.applyDashboard(payload.dashboard, { notify: false });
         this.showToast(this.ot('draws.allConfirmed'), 'success');
