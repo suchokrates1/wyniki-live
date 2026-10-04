@@ -17,7 +17,6 @@ def get_courts():
 
 @blueprint.route('/api/courts', methods=['POST'])
 def add_court():
-    """Add a new court."""
     from ..services import court_manager
     from .. import database
     
@@ -39,7 +38,6 @@ def add_court():
 
 @blueprint.route('/api/courts/<kort_id>/pin', methods=['PUT'])
 def update_court_pin(kort_id):
-    """Update PIN for a court."""
     from .. import database
     
     data = request.get_json() or {}
@@ -57,7 +55,6 @@ def update_court_pin(kort_id):
 
 @blueprint.route('/api/courts/<kort_id>', methods=['DELETE'])
 def delete_court(kort_id):
-    """Delete a court."""
     from ..services import court_manager
     from .. import database
     

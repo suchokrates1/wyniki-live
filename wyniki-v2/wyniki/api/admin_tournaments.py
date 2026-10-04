@@ -155,7 +155,6 @@ def _require_tournament(tournament_id: int, active_only: bool = False):
 
 @blueprint.route('', methods=['GET'])
 def get_tournaments():
-    """Get all tournaments."""
     tournaments = fetch_tournaments()
     return jsonify(tournaments)
 
@@ -212,7 +211,6 @@ def delete_tournament_category_route(tournament_id: int, category_id: int):
 
 @blueprint.route('', methods=['POST'])
 def create_tournament():
-    """Create a new tournament."""
     data = _request_payload()
     
     name = (data.get('name') or '').strip()
@@ -263,7 +261,6 @@ def create_tournament():
 
 @blueprint.route('/<int:tournament_id>', methods=['PUT'])
 def update_tournament_route(tournament_id: int):
-    """Update a tournament."""
     existing = fetch_tournament(tournament_id)
     if not existing:
         return jsonify({"error": "Tournament not found"}), 404
@@ -352,7 +349,6 @@ def update_tournament_route(tournament_id: int):
 
 @blueprint.route('/<int:tournament_id>', methods=['DELETE'])
 def delete_tournament_route(tournament_id: int):
-    """Delete a tournament."""
     success = delete_tournament(tournament_id)
     
     if success:
@@ -407,7 +403,6 @@ def admin_tournament_court_streams_save(tournament_id: int):
 
 @blueprint.route('/<int:tournament_id>/players', methods=['GET'])
 def get_tournament_players(tournament_id: int):
-    """Get all players for a tournament."""
     _, error = _require_tournament(tournament_id, active_only=True)
     if error:
         return error
@@ -443,7 +438,6 @@ def create_player(tournament_id: int):
 
 @blueprint.route('/<int:tournament_id>/players/<int:player_id>', methods=['PUT'])
 def update_player_route(tournament_id: int, player_id: int):
-    """Update a player."""
     _, error = _require_tournament(tournament_id, active_only=True)
     if error:
         return error
@@ -469,7 +463,6 @@ def update_player_route(tournament_id: int, player_id: int):
 
 @blueprint.route('/<int:tournament_id>/players/<int:player_id>', methods=['DELETE'])
 def delete_player_route(tournament_id: int, player_id: int):
-    """Delete a player."""
     _, error = _require_tournament(tournament_id, active_only=True)
     if error:
         return error

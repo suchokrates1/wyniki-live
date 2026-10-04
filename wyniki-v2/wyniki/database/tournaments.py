@@ -92,7 +92,6 @@ def get_active_tournament_name(public_only: bool = False) -> str | None:
         return None
 
 def fetch_active_tournaments(public_only: bool = False) -> list[dict]:
-    """Fetch all active tournaments."""
     try:
         return [t for t in fetch_tournaments(public_only=public_only) if t.get("active") == 1]
     except Exception as e:
@@ -114,7 +113,6 @@ def fetch_umpire_active_tournaments() -> list[dict]:
         return []
 
 def fetch_tournaments(public_only: bool = False) -> list[dict]:
-    """Fetch all tournaments."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -206,7 +204,8 @@ def insert_tournament(
     access_key: str = "",
     office_password_hash: str = "",
 ) -> int | None:
-    """Insert a new tournament."""
+    """The new tournament's id. A simulation is never public and keeps no stats, whatever
+    the flags say, and gets the default office password when none is given."""
     try:
         if is_simulation:
             is_public = False
@@ -260,7 +259,7 @@ def update_tournament(
     access_key: str = "",
     office_password_hash: str = "",
 ) -> bool:
-    """Update a tournament."""
+    """Whether it was changed. The simulation rules of insert_tournament apply here too."""
     try:
         if is_simulation:
             is_public = False

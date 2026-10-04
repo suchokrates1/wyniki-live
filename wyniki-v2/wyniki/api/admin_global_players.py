@@ -72,7 +72,6 @@ def list_global_players():
 
 @blueprint.route('', methods=['POST'])
 def create_global_player():
-    """Create a new global player."""
     data = request.get_json(silent=True) or {}
     if not data:
         return jsonify({'error': 'No data provided'}), 400
@@ -121,7 +120,6 @@ def get_global_player(gp_id: int):
 
 @blueprint.route('/<int:gp_id>', methods=['PUT'])
 def update_global_player(gp_id: int):
-    """Update a global player."""
     gp = get_row(GlobalPlayer, gp_id)
     if not gp:
         return jsonify({'error': 'Player not found'}), 404

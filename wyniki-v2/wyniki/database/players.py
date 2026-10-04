@@ -129,7 +129,8 @@ def _ensure_global_player(cursor: sqlite3.Cursor, first_name: str, last_name: st
 
 def insert_player(tournament_id: int, name: str, category: str = "", country: str = "",
                   first_name: str = "", last_name: str = "", gender: str = "") -> int | None:
-    """Insert a new player."""
+    """The new entry's id. In a tournament that links global players, the entry is tied to
+    the global player of that name, who is created when there is none yet."""
     # If first_name/last_name not provided, split from name
     if not first_name and not last_name and name:
         parts = name.strip().rsplit(' ', 1)
@@ -200,7 +201,8 @@ def _sync_player_name_across_tournament(
 def update_player(player_id: int, name: str, category: str, country: str,
                   first_name: str = "", last_name: str = "", gender: str = "",
                   tournament_id: int | None = None) -> bool:
-    """Update a player."""
+    """Whether an entry was changed. A new name also replaces the old one in the
+    tournament's groups and schedule, which store names, and relinks the global player."""
     # If first_name/last_name not provided, split from name
     if not first_name and not last_name and name:
         parts = name.strip().rsplit(' ', 1)
@@ -248,7 +250,7 @@ def update_player(player_id: int, name: str, category: str, country: str,
         raise StorageError("update_player") from e
 
 def delete_player(player_id: int, tournament_id: int | None = None) -> bool:
-    """Delete a player."""
+    """False when there is no such entry (in that tournament, when one is given)."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
