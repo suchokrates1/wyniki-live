@@ -7,7 +7,7 @@ order, player rest gaps, and no overlapping appearances for the same player.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 from .teams import split_team_display_name
 
@@ -19,7 +19,7 @@ DEFAULT_START_TIME = "09:30"
 _BAND_COURT_ORDER = ["B4", "B3", "B2", "B1"]
 
 
-def normalize_band(category_name: Optional[str]) -> str:
+def normalize_band(category_name: str | None) -> str:
     """Extract the B-band (B1..B4) from a category/group label."""
     match = re.search(r"B\s*([1-4])", str(category_name or "").upper())
     return f"B{match.group(1)}" if match else ""
@@ -44,10 +44,10 @@ def time_to_minutes(time_str: str) -> int:
         return 9 * 60 + 30
 
 
-def _int_minutes_map(raw: Any) -> Dict[str, int]:
+def _int_minutes_map(raw: Any) -> dict[str, int]:
     if not isinstance(raw, dict):
         return {}
-    out: Dict[str, int] = {}
+    out: dict[str, int] = {}
     for key, value in raw.items():
         name = str(key or "").strip()
         if not name:
@@ -60,7 +60,7 @@ def _int_minutes_map(raw: Any) -> Dict[str, int]:
     return out
 
 
-def slot_minutes_for(band: str, config: Dict[str, Any]) -> int:
+def slot_minutes_for(band: str, config: dict[str, Any]) -> int:
     """Return slot length in minutes for a band, honouring config overrides."""
     slot_config = config.get("slot_minutes") or {}
     if band and band in slot_config:
@@ -71,8 +71,8 @@ def slot_minutes_for(band: str, config: Dict[str, Any]) -> int:
 
 
 def slot_minutes_for_entry(
-    entry: Optional[Dict[str, Any]],
-    config: Dict[str, Any],
+    entry: dict[str, Any] | None,
+    config: dict[str, Any],
     court_id: str = "",
 ) -> int:
     """Match duration comes from the category (or its B-band), never from the court."""
@@ -108,7 +108,7 @@ def slot_minutes_for_entry(
     return slot_minutes_for(band, config)
 
 
-def normalize_b1_court_ids(config: Dict[str, Any]) -> List[str]:
+def normalize_b1_court_ids(config: dict[str, Any]) -> list[str]:
     """Return all courts designated as B1-special for this tournament."""
     raw_ids = config.get("b1_court_ids")
     if isinstance(raw_ids, list):
@@ -119,14 +119,14 @@ def normalize_b1_court_ids(config: Dict[str, Any]) -> List[str]:
     return [single] if single else []
 
 
-def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
+def build_default_config(courts: list[dict[str, Any]]) -> dict[str, Any]:
     """Build a sensible default config given the tournament courts."""
     ordered = sorted(
         courts or [],
         key=lambda court: (int(court.get("display_order") or 0), str(court.get("kort_id") or "")),
     )
     court_ids = [str(court.get("kort_id")) for court in ordered if court.get("kort_id")]
-    category_courts: Dict[str, str] = {}
+    category_courts: dict[str, str] = {}
     for index, band in enumerate(_BAND_COURT_ORDER):
         if index < len(court_ids):
             category_courts[band] = court_ids[index]
@@ -143,7 +143,7 @@ def build_default_config(courts: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def apply_b1_courts(config: Dict[str, Any], b1_court_ids: Optional[List[str]]) -> Dict[str, Any]:
+def apply_b1_courts(config: dict[str, Any], b1_court_ids: list[str] | None) -> dict[str, Any]:
     """Pin B1 to the first selected court and mark all selected courts as B1-special."""
     ids = [str(court_id).strip() for court_id in (b1_court_ids or []) if str(court_id or "").strip()]
     if not ids:
@@ -164,7 +164,7 @@ def apply_b1_courts(config: Dict[str, Any], b1_court_ids: Optional[List[str]]) -
     return result
 
 
-def _phase_rank(phase: Optional[str]) -> int:
+def _phase_rank(phase: str | None) -> int:
     """Playing order of a phase: group play, then knockout rounds from the widest draw down.
 
     Knockout rounds rank by how many players are still in that part of the draw, so
@@ -203,10 +203,10 @@ def _phase_rank(phase: Optional[str]) -> int:
 _PENDING_NAME = re.compile(r"^(zwycięzca|przegrany|winner|loser)\b|^\d+\.\s", re.IGNORECASE)
 
 
-def _players(match: Dict[str, Any]) -> Set[str]:
+def _players(match: dict[str, Any]) -> set[str]:
     """People on court: a pair counts as both partners (they also play singles); names of
     players not known yet ("Zwycięzca: Półfinał 1") are not people and never clash."""
-    people: Set[str] = set()
+    people: set[str] = set()
     for field in ("player1_name", "player2_name"):
         name = str(match.get(field) or "").strip()
         if not name or _PENDING_NAME.search(name):
@@ -217,11 +217,11 @@ def _players(match: Dict[str, Any]) -> Set[str]:
     return people
 
 
-def order_with_rest(matches: List[Dict[str, Any]], rest_slots: int = 1) -> List[Dict[str, Any]]:
+def order_with_rest(matches: list[dict[str, Any]], rest_slots: int = 1) -> list[dict[str, Any]]:
     """Order matches to maximise rest between a player's matches on the same court."""
     remaining = list(matches)
-    ordered: List[Dict[str, Any]] = []
-    last_pos: Dict[str, int] = {}
+    ordered: list[dict[str, Any]] = []
+    last_pos: dict[str, int] = {}
     never = -(10 ** 6)
     position = 0
     while remaining:
@@ -245,11 +245,11 @@ def order_with_rest(matches: List[Dict[str, Any]], rest_slots: int = 1) -> List[
     return ordered
 
 
-def _ordered_flex_court_ids(config: Dict[str, Any]) -> List[str]:
+def _ordered_flex_court_ids(config: dict[str, Any]) -> list[str]:
     """Non-B1 courts available for load-balanced scheduling: every tournament court that is
     not B1-special (older configs without ``court_ids`` fall back to the band mapping)."""
     b1_set = set(normalize_b1_court_ids(config))
-    seen: List[str] = []
+    seen: list[str] = []
     for court_id in config.get("court_ids") or []:
         value = str(court_id or "").strip()
         if value and value not in b1_set and value not in seen:
@@ -261,11 +261,11 @@ def _ordered_flex_court_ids(config: Dict[str, Any]) -> List[str]:
     return seen
 
 
-def _rest_gap_minutes(config: Dict[str, Any], rest_slots: int) -> int:
+def _rest_gap_minutes(config: dict[str, Any], rest_slots: int) -> int:
     return max(0, rest_slots) * slot_minutes_for("", config)
 
 
-def _placement_window(placement: Dict[str, Any], config: Dict[str, Any]) -> Tuple[int, int]:
+def _placement_window(placement: dict[str, Any], config: dict[str, Any]) -> tuple[int, int]:
     start = time_to_minutes(str(placement.get("scheduled_time") or DEFAULT_START_TIME))
     court_id = str(placement.get("court_id") or "")
     duration = slot_minutes_for_entry(placement.get("match") or placement, config, court_id)
@@ -273,11 +273,11 @@ def _placement_window(placement: Dict[str, Any], config: Dict[str, Any]) -> Tupl
 
 
 def _slot_available_for_player(
-    match: Dict[str, Any],
+    match: dict[str, Any],
     court_id: str,
     start_time: str,
-    config: Dict[str, Any],
-    scheduled: List[Dict[str, Any]],
+    config: dict[str, Any],
+    scheduled: list[dict[str, Any]],
     rest_slots: int,
 ) -> bool:
     start, end = _placement_window(
@@ -300,11 +300,11 @@ def _slot_available_for_player(
     return True
 
 
-def _order_matches_for_scheduling(matches: List[Dict[str, Any]], rest_slots: int) -> List[Dict[str, Any]]:
-    buckets: Dict[int, List[Dict[str, Any]]] = {}
+def _order_matches_for_scheduling(matches: list[dict[str, Any]], rest_slots: int) -> list[dict[str, Any]]:
+    buckets: dict[int, list[dict[str, Any]]] = {}
     for match in matches:
         buckets.setdefault(_phase_rank(match.get("phase")), []).append(match)
-    ordered: List[Dict[str, Any]] = []
+    ordered: list[dict[str, Any]] = []
     for rank in sorted(buckets):
         phase_matches = sorted(
             buckets[rank],
@@ -314,7 +314,7 @@ def _order_matches_for_scheduling(matches: List[Dict[str, Any]], rest_slots: int
     return ordered
 
 
-def _day_end_minutes(config: Dict[str, Any]) -> Optional[int]:
+def _day_end_minutes(config: dict[str, Any]) -> int | None:
     """Latest minute a match may finish, or None when the day has no end."""
     value = str(config.get("end_time") or "").strip()
     if not re.match(r"^\d{1,2}:\d{2}$", value):
@@ -322,13 +322,13 @@ def _day_end_minutes(config: Dict[str, Any]) -> Optional[int]:
     return time_to_minutes(value)
 
 
-def _category_root(match: Dict[str, Any]) -> str:
+def _category_root(match: dict[str, Any]) -> str:
     """Category without the group/phase suffix: "B4 Men — Grupa A — Finał" -> "b4 men"."""
     text = str(match.get("category_name") or match.get("group_name") or match.get("phase") or "")
     return text.split(" — ")[0].strip().casefold()
 
 
-def _phase_floor(match: Dict[str, Any], scheduled: List[Dict[str, Any]], config: Dict[str, Any]) -> int:
+def _phase_floor(match: dict[str, Any], scheduled: list[dict[str, Any]], config: dict[str, Any]) -> int:
     """Earliest minute a match may start: after every earlier-phase match of its category."""
     rank = _phase_rank(match.get("phase"))
     if rank == 0:
@@ -345,7 +345,7 @@ def _phase_floor(match: Dict[str, Any], scheduled: List[Dict[str, Any]], config:
     return floor
 
 
-def _unplaced(match: Dict[str, Any], day_date: Optional[str]) -> Dict[str, Any]:
+def _unplaced(match: dict[str, Any], day_date: str | None) -> dict[str, Any]:
     return {
         "match": match,
         "court_id": None,
@@ -355,7 +355,7 @@ def _unplaced(match: Dict[str, Any], day_date: Optional[str]) -> Dict[str, Any]:
     }
 
 
-def _occupied_until(court_id: str, occupied: List[Dict[str, Any]], config: Dict[str, Any], start_time: str) -> str:
+def _occupied_until(court_id: str, occupied: list[dict[str, Any]], config: dict[str, Any], start_time: str) -> str:
     """Start of the first free slot on a court after fixed placements (played, live, other phase)."""
     latest = time_to_minutes(start_time)
     for placement in occupied:
@@ -367,14 +367,14 @@ def _occupied_until(court_id: str, occupied: List[Dict[str, Any]], config: Dict[
 
 
 def _place_in_pool(
-    matches: List[Dict[str, Any]],
-    courts: List[str],
-    config: Dict[str, Any],
+    matches: list[dict[str, Any]],
+    courts: list[str],
+    config: dict[str, Any],
     day_date: str,
     start_time: str,
     rest_slots: int,
-    occupied: Optional[List[Dict[str, Any]]] = None,
-) -> List[Dict[str, Any]]:
+    occupied: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """Place matches on a pool of courts, each at the earliest start its players can take.
 
     A player never has two overlapping matches; the rest gap is kept when a court can start
@@ -387,12 +387,12 @@ def _place_in_pool(
     ordered = _order_matches_for_scheduling(matches, rest_slots)
     fixed = list(occupied or [])
     court_next_time = {court_id: _occupied_until(court_id, fixed, config, start_time) for court_id in courts}
-    scheduled: List[Dict[str, Any]] = list(fixed)
-    placements: List[Dict[str, Any]] = []
+    scheduled: list[dict[str, Any]] = list(fixed)
+    placements: list[dict[str, Any]] = []
     day_end = _day_end_minutes(config)
     # Without an end time a player conflict can still push a match later, but not forever.
     search_end = day_end if day_end is not None else 24 * 60
-    blocked_categories: Set[str] = set()
+    blocked_categories: set[str] = set()
 
     for match in ordered:
         band = normalize_band(match.get("category_name") or match.get("group_name"))
@@ -403,8 +403,8 @@ def _place_in_pool(
             continue
         floor = _phase_floor(match, scheduled, config)
 
-        def earliest(rest: int) -> Optional[Tuple[int, int, str]]:
-            found: Optional[Tuple[int, int, str]] = None
+        def earliest(rest: int) -> tuple[int, int, str] | None:
+            found: tuple[int, int, str] | None = None
             for order, court_id in enumerate(courts):
                 duration = slot_minutes_for_entry(match, config, court_id)
                 start = time_to_minutes(court_next_time[court_id])
@@ -447,11 +447,11 @@ def _place_in_pool(
 
 
 def place_matches(
-    matches: List[Dict[str, Any]],
-    config: Dict[str, Any],
+    matches: list[dict[str, Any]],
+    config: dict[str, Any],
     day_date: str,
-    occupied: Optional[List[Dict[str, Any]]] = None,
-) -> List[Dict[str, Any]]:
+    occupied: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """Produce time/court placements for the given matches on a single day.
 
     ``config["end_time"]`` (HH:MM, optional) is the latest a match may finish; matches that
@@ -464,9 +464,9 @@ def place_matches(
     b1_courts = normalize_b1_court_ids(config)
     flex_courts = _ordered_flex_court_ids(config)
 
-    b1_matches: List[Dict[str, Any]] = []
-    flex_matches: List[Dict[str, Any]] = []
-    unplaced: List[Dict[str, Any]] = []
+    b1_matches: list[dict[str, Any]] = []
+    flex_matches: list[dict[str, Any]] = []
+    unplaced: list[dict[str, Any]] = []
 
     for match in matches:
         band = normalize_band(match.get("category_name") or match.get("group_name"))
@@ -479,7 +479,7 @@ def place_matches(
         else:
             unplaced.append(match)
 
-    placements: List[Dict[str, Any]] = []
+    placements: list[dict[str, Any]] = []
 
     if b1_matches:
         placements.extend(_place_in_pool(b1_matches, b1_courts, config, day_date, start_time, rest_slots, occupied))
@@ -495,24 +495,24 @@ def place_matches(
 
 
 def place_matches_across_days(
-    matches: List[Dict[str, Any]],
-    config: Dict[str, Any],
-    days: List[str],
-    occupied_by_day: Optional[Dict[str, List[Dict[str, Any]]]] = None,
-) -> List[Dict[str, Any]]:
+    matches: list[dict[str, Any]],
+    config: dict[str, Any],
+    days: list[str],
+    occupied_by_day: dict[str, list[dict[str, Any]]] | None = None,
+) -> list[dict[str, Any]]:
     """Fill day after day from start to end time; what does not fit on the last day stays unplaced."""
     remaining = list(matches)
-    placements: List[Dict[str, Any]] = []
+    placements: list[dict[str, Any]] = []
     occupied_by_day = occupied_by_day or {}
     # A later phase waits for the last day on which its category still plays an earlier phase.
-    last_day_by_phase: Dict[Tuple[str, int], int] = {}
+    last_day_by_phase: dict[tuple[str, int], int] = {}
     for index, day in enumerate(days):
         for placement in occupied_by_day.get(day) or []:
             other = placement.get("match") or {}
             key = (_category_root(other), _phase_rank(other.get("phase")))
             last_day_by_phase[key] = max(last_day_by_phase.get(key, -1), index)
 
-    def waits(match: Dict[str, Any], index: int) -> bool:
+    def waits(match: dict[str, Any], index: int) -> bool:
         root = _category_root(match)
         rank = _phase_rank(match.get("phase"))
         return any(r < rank and last > index for (c, r), last in last_day_by_phase.items() if c == root)
@@ -535,17 +535,17 @@ def place_matches_across_days(
 
 
 def reflow_court_entries(
-    ordered_entries: List[Dict[str, Any]],
-    config: Dict[str, Any],
+    ordered_entries: list[dict[str, Any]],
+    config: dict[str, Any],
     *,
     locked_fn=None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Pack unlocked matches back-to-back using category durations; locked rows keep their start."""
     if not ordered_entries:
         return []
     is_locked = locked_fn or (lambda _entry: False)
     court_id = str(ordered_entries[0].get("court_id") or "").strip()
-    locked_spans: List[Tuple[int, int]] = []
+    locked_spans: list[tuple[int, int]] = []
     for entry in ordered_entries:
         start_raw = str(entry.get("scheduled_time") or "").strip()
         if not is_locked(entry) or not start_raw:
@@ -553,8 +553,8 @@ def reflow_court_entries(
         start = time_to_minutes(start_raw)
         locked_spans.append((start, start + slot_minutes_for_entry(entry, config, court_id)))
 
-    result: List[Dict[str, Any]] = []
-    cursor: Optional[int] = None
+    result: list[dict[str, Any]] = []
+    cursor: int | None = None
     for entry in ordered_entries:
         duration = slot_minutes_for_entry(entry, config, court_id)
         updated = dict(entry)

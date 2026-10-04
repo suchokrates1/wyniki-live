@@ -1,12 +1,12 @@
 """SQLAlchemy models for database."""
-from datetime import datetime, date, timezone
+from datetime import datetime, date, UTC
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class GlobalPlayer(db.Model):

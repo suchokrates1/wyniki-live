@@ -1,8 +1,8 @@
 """Database access layer submodule."""
 import json
 import sqlite3
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime, UTC
+from typing import Any
 
 from ..config import logger
 from ..services.teams import (
@@ -48,10 +48,10 @@ def clear_default_schedule_notes(cursor) -> int:
 
 def ensure_group_rematch_schedule_entries(
     tournament_id: int,
-    bracket_group_ids: List[int],
+    bracket_group_ids: list[int],
     *,
-    schedule_day: Optional[str] = None,
-) -> Dict[str, Any]:
+    schedule_day: str | None = None,
+) -> dict[str, Any]:
     """Add a second round-robin (everyone vs everyone) for selected groups."""
     groups = fetch_bracket_groups(tournament_id)
     group_by_id = {int(group["id"]): group for group in groups if group.get("id")}
@@ -60,7 +60,7 @@ def ensure_group_rematch_schedule_entries(
         return {"status": "error", "error": "no_groups_selected"}
 
     inserted = 0
-    skipped: List[Dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -124,7 +124,7 @@ def ensure_group_rematch_schedule_entries(
 def _schedule_day_for_tournament(cursor: sqlite3.Cursor, tournament_id: int) -> str:
     cursor.execute("SELECT start_date FROM tournaments WHERE id = ?", (tournament_id,))
     row = cursor.fetchone()
-    return str(row["start_date"] if row and row["start_date"] else datetime.now(timezone.utc).date().isoformat())
+    return str(row["start_date"] if row and row["start_date"] else datetime.now(UTC).date().isoformat())
 
 def _knockout_schedule_day_for_tournament(cursor: sqlite3.Cursor, tournament_id: int) -> str:
     """Prefer tournament end_date for knockout schedule entries when it differs from start_date."""
@@ -134,9 +134,9 @@ def _knockout_schedule_day_for_tournament(cursor: sqlite3.Cursor, tournament_id:
     end = str(row["end_date"] or "") if row else ""
     if end and end != start:
         return end
-    return start or datetime.now(timezone.utc).date().isoformat()
+    return start or datetime.now(UTC).date().isoformat()
 
-def _autoschedule_phases_include_knockout(phases: Optional[List[str]]) -> bool:
+def _autoschedule_phases_include_knockout(phases: list[str] | None) -> bool:
     if not phases:
         return True
     wanted = {str(phase).strip().lower() for phase in phases}
@@ -163,7 +163,7 @@ def _schedule_entry_is_unplaced(
         return False
     return not _schedule_entry_is_assigned(court_id, scheduled_time)
 
-def _schedule_entry_priority(row: sqlite3.Row | Dict[str, Any]) -> tuple[int, int, int, int]:
+def _schedule_entry_priority(row: sqlite3.Row | dict[str, Any]) -> tuple[int, int, int, int]:
     """Higher tuple values mean the row should be kept over duplicates."""
     has_match = row["match_id"] not in (None, "", 0) if isinstance(row, dict) else row["match_id"] is not None
     assigned = _schedule_entry_is_assigned(row["court_id"], row["scheduled_time"])
@@ -189,7 +189,7 @@ def _prune_duplicate_schedule_entries(cursor: sqlite3.Cursor, tournament_id: int
         (tournament_id,),
     )
     rows = [dict(row) for row in cursor.fetchall()]
-    grouped: Dict[tuple[str, tuple[str, str]], List[Dict[str, Any]]] = {}
+    grouped: dict[tuple[str, tuple[str, str]], list[dict[str, Any]]] = {}
     for row in rows:
         players = sorted(
             [
@@ -234,7 +234,7 @@ def _format_score_text(sets_history_raw: Any) -> str:
         return ""
     if not isinstance(sets_history, list):
         return ""
-    parts: List[str] = []
+    parts: list[str] = []
     for set_score in sets_history:
         if not isinstance(set_score, dict):
             continue
@@ -247,7 +247,7 @@ def _format_score_text(sets_history_raw: Any) -> str:
             parts.append(f"{p1}:{p2}" + (f"({tb})" if tb is not None else ""))
     return " ".join(parts)
 
-def _schedule_match_result(data: Dict[str, Any]) -> Dict[str, Any]:
+def _schedule_match_result(data: dict[str, Any]) -> dict[str, Any]:
     """Extract a public-friendly result for a schedule row joined with its match."""
     has_match = data.get("match_id") not in (None, "", 0)
     sets_history_raw = data.get("match_sets_history")
@@ -274,7 +274,7 @@ def _schedule_match_result(data: Dict[str, Any]) -> Dict[str, Any]:
         "has_result": bool(has_match and (score_text or data.get("match_winner_name") or data.get("match_status") == "finished")),
     }
 
-def _schedule_row_payload(row: sqlite3.Row | Dict[str, Any], *, public: bool = False) -> Dict[str, Any]:
+def _schedule_row_payload(row: sqlite3.Row | dict[str, Any], *, public: bool = False) -> dict[str, Any]:
     data = dict(row)
     payload = {
         "id": data.get("id"),
@@ -304,7 +304,7 @@ def _schedule_row_payload(row: sqlite3.Row | Dict[str, Any], *, public: bool = F
         payload["notes_internal"] = data.get("notes_internal") or ""
     return payload
 
-def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) -> List[Dict[str, Any]]:
+def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) -> list[dict[str, Any]]:
     """Return flat tournament schedule entries sorted by day, time, court and order."""
     try:
         with db_conn() as conn:
@@ -332,7 +332,7 @@ def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) 
         logger.error("fetch_tournament_schedule_error", error=str(e), tournament_id=tournament_id)
         return []
 
-def _parse_schedule_reference_datetime(value: Optional[str] = None) -> datetime:
+def _parse_schedule_reference_datetime(value: str | None = None) -> datetime:
     if value:
         normalized = str(value).strip().replace("Z", "+00:00")
         try:
@@ -345,8 +345,8 @@ def find_suggested_schedule_match(
     tournament_id: int,
     court_id: str,
     *,
-    reference_time: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
+    reference_time: str | None = None,
+) -> dict[str, Any] | None:
     """Return the nearest unlinked schedule entry for a court and reference time."""
     if not tournament_id or not court_id:
         return None
@@ -388,11 +388,11 @@ def find_suggested_schedule_match(
         logger.error("find_suggested_schedule_match_error", error=str(e), tournament_id=tournament_id, court_id=court_id)
         return None
 
-def build_public_schedule_payload(tournament_id: int) -> Dict[str, Any]:
+def build_public_schedule_payload(tournament_id: int) -> dict[str, Any]:
     """Return schedule grouped by day and category for the public UI."""
     tournament = fetch_tournament(tournament_id) or {}
     entries = fetch_tournament_schedule(tournament_id, public_only=True)
-    days: Dict[str, Dict[str, Any]] = {}
+    days: dict[str, dict[str, Any]] = {}
     for entry in entries:
         day_date = entry.get("day_date") or ""
         day = days.setdefault(day_date, {"date": day_date, "categories": {}})
@@ -443,7 +443,7 @@ def build_public_schedule_payload(tournament_id: int) -> Dict[str, Any]:
         "days": grouped_days,
     }
 
-def _coerce_schedule_entry(tournament_id: int, data: Dict[str, Any], default_order: int = 0) -> Dict[str, Any]:
+def _coerce_schedule_entry(tournament_id: int, data: dict[str, Any], default_order: int = 0) -> dict[str, Any]:
     return {
         "tournament_id": tournament_id,
         "day_date": str(data.get("day_date") or data.get("date") or "").strip(),
@@ -465,7 +465,7 @@ def _coerce_schedule_entry(tournament_id: int, data: Dict[str, Any], default_ord
         "notes_internal": str(data.get("notes_internal") or "").strip(),
     }
 
-def upsert_tournament_schedule_entries(tournament_id: int, entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def upsert_tournament_schedule_entries(tournament_id: int, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Create or update schedule entries and return the refreshed schedule."""
     if not entries:
         return fetch_tournament_schedule(tournament_id)
@@ -563,7 +563,7 @@ def set_schedule_entry_court(schedule_id: int, court_id: str, court_label: str) 
         conn.commit()
 
 
-def update_tournament_schedule_entry(tournament_id: int, schedule_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def update_tournament_schedule_entry(tournament_id: int, schedule_id: int, data: dict[str, Any]) -> dict[str, Any] | None:
     """Patch one schedule entry."""
     allowed_fields = {
         "day_date", "scheduled_time", "court_id", "court_label", "category_name", "bracket_group_id",
@@ -612,12 +612,12 @@ def delete_tournament_schedule_entry(tournament_id: int, schedule_id: int) -> bo
         logger.error("delete_tournament_schedule_error", error=str(e), tournament_id=tournament_id, schedule_id=schedule_id)
         raise StorageError("delete_tournament_schedule_entry") from e
 
-def publish_tournament_schedule(tournament_id: int, day_date: Optional[str] = None) -> int:
+def publish_tournament_schedule(tournament_id: int, day_date: str | None = None) -> int:
     """Promote all draft schedule entries to 'planned' (published). Returns updated count."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            params: List[Any] = [_utc_now(), tournament_id]
+            params: list[Any] = [_utc_now(), tournament_id]
             query = "UPDATE tournament_schedule SET status = 'planned', updated_at = ? WHERE tournament_id = ? AND status = 'draft'"
             if day_date:
                 query += " AND day_date = ?"
@@ -654,7 +654,7 @@ def load_removed_fixtures(tournament_id: int) -> set:
     return {str(value) for value in values if value}
 
 
-def _remember_removed_fixtures(tournament_id: int, rows: List[Dict[str, Any]]) -> None:
+def _remember_removed_fixtures(tournament_id: int, rows: list[dict[str, Any]]) -> None:
     keys = set()
     for row in rows:
         source = str(row.get("source_type") or "").lower()
@@ -675,14 +675,14 @@ def clear_removed_fixtures(tournament_id: int) -> None:
 def _insert_group_round_robin_schedule_entries(
     cursor: sqlite3.Cursor,
     tournament_id: int,
-    group: Dict[str, Any],
+    group: dict[str, Any],
     *,
     phase: str,
     source_type: str,
     default_day: str,
     start_order: int,
     now: str,
-    removed: Optional[set] = None,
+    removed: set | None = None,
 ) -> int:
     """Insert missing round-robin schedule rows for one group and return next sort order."""
     group_id = int(group["id"])
@@ -725,7 +725,7 @@ def _insert_group_round_robin_schedule_entries(
             next_order += 1
     return next_order
 
-def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
+def ensure_group_schedule_entries(tournament_id: int) -> list[dict[str, Any]]:
     """Ensure every configured group round-robin pair has a schedule slot."""
     groups = fetch_bracket_groups(tournament_id)
     if not groups:
@@ -762,8 +762,8 @@ def ensure_group_schedule_entries(tournament_id: int) -> List[Dict[str, Any]]:
 def ensure_knockout_schedule_entries(
     tournament_id: int,
     *,
-    schedule_day: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    schedule_day: str | None = None,
+) -> list[dict[str, Any]]:
     """Ensure every relevant knockout slot has a schedule entry for office assignment."""
     removed = load_removed_fixtures(tournament_id)
     try:
@@ -803,7 +803,7 @@ def ensure_knockout_schedule_entries(
                 existing = cursor.fetchone()
                 status = "completed" if slot["winner_name"] else "draft"
                 if existing:
-                    corrected_status: Optional[str] = None
+                    corrected_status: str | None = None
                     if slot["winner_name"]:
                         corrected_status = "completed"
                     elif existing["status"] == "completed" and not existing["match_id"]:
@@ -882,7 +882,7 @@ def _empty_shell_match_id(
     incoming_match_id: int,
     player1_name: str,
     player2_name: str,
-) -> Optional[int]:
+) -> int | None:
     """In-progress 0:0 row for this pair. A later start of the same match may replace it."""
     if not slot_match_id or int(slot_match_id) == int(incoming_match_id):
         return None
@@ -947,13 +947,13 @@ def link_schedule_to_match(
     tournament_id: int,
     match_id: int,
     *,
-    schedule_id: Optional[int] = None,
+    schedule_id: int | None = None,
     player1_name: str,
     player2_name: str,
-    phase: Optional[str] = None,
-    bracket_group_id: Optional[int] = None,
+    phase: str | None = None,
+    bracket_group_id: int | None = None,
     status: str = "completed",
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Link a planned schedule slot to the real match row.
 
     A second start of the same pair replaces the slot when the row already there
@@ -994,7 +994,7 @@ def link_schedule_to_match(
                 return next((entry for entry in fetch_tournament_schedule(tournament_id) if int(entry["id"]) == int(row["id"])), None)
 
             pair_clause, pair_params = _schedule_pair_clause(player1_name, player2_name)
-            params: List[Any] = [tournament_id, *pair_params]
+            params: list[Any] = [tournament_id, *pair_params]
             filters = ["tournament_id = ?", pair_clause]
             if bracket_group_id:
                 filters.append("bracket_group_id = ?")
@@ -1077,7 +1077,7 @@ def unlink_schedule_from_match(match_id: int, *, fallback_status: str = "planned
 def _autoscheduler_settings_key(tournament_id: int) -> str:
     return f"autoscheduler:{int(tournament_id)}"
 
-def get_autoscheduler_config(tournament_id: int) -> Dict[str, Any]:
+def get_autoscheduler_config(tournament_id: int) -> dict[str, Any]:
     """Return the auto-scheduler config for a tournament, merged over court-based defaults."""
     from ..services import auto_scheduler
 
@@ -1120,7 +1120,7 @@ def get_autoscheduler_config(tournament_id: int) -> Dict[str, Any]:
         config["category_courts"] = defaults.get("category_courts") or {}
     return config
 
-def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dict[str, Any]:
+def save_autoscheduler_config(tournament_id: int, config: dict[str, Any]) -> dict[str, Any]:
     """Persist the auto-scheduler config for a tournament."""
     from ..services import auto_scheduler
 
@@ -1161,7 +1161,7 @@ def save_autoscheduler_config(tournament_id: int, config: Dict[str, Any]) -> Dic
     upsert_app_settings({_autoscheduler_settings_key(tournament_id): json.dumps(current)})
     return current
 
-def _schedule_entry_match_dict(entry: Dict[str, Any]) -> Dict[str, Any]:
+def _schedule_entry_match_dict(entry: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": entry.get("id"),
         "category_name": entry.get("category_name") or entry.get("group_name") or "",
@@ -1178,14 +1178,14 @@ def _schedule_entry_match_dict(entry: Dict[str, Any]) -> Dict[str, Any]:
 def generate_autoschedule_proposal(
     tournament_id: int,
     *,
-    start_time: Optional[str] = None,
-    b1_court_id: Optional[str] = None,
-    b1_court_ids: Optional[List[str]] = None,
-    day_date: Optional[str] = None,
-    phases: Optional[List[str]] = None,
-    end_time: Optional[str] = None,
+    start_time: str | None = None,
+    b1_court_id: str | None = None,
+    b1_court_ids: list[str] | None = None,
+    day_date: str | None = None,
+    phases: list[str] | None = None,
+    end_time: str | None = None,
     mode: str = "day",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build a (non-persisted) auto-placement proposal for the tournament schedule.
 
     mode "day": the selected day's open matches plus everything unassigned, placed between
@@ -1202,7 +1202,7 @@ def generate_autoschedule_proposal(
     ensure_group_schedule_entries(tournament_id)
 
     config = get_autoscheduler_config(tournament_id)
-    window: Dict[str, Any] = {}
+    window: dict[str, Any] = {}
     if start_time:
         config["start_time"] = str(start_time)
         window["start_time"] = str(start_time)
@@ -1265,7 +1265,7 @@ def generate_autoschedule_proposal(
     def _is_placed(entry) -> bool:
         return bool(str(entry.get("court_id") or "").strip() and str(entry.get("scheduled_time") or "").strip())
 
-    def _fixed(entry) -> Dict[str, Any]:
+    def _fixed(entry) -> dict[str, Any]:
         return {
             "match": _schedule_entry_match_dict(entry),
             "court_id": str(entry.get("court_id") or ""),
@@ -1280,7 +1280,7 @@ def generate_autoschedule_proposal(
             row = cursor.fetchone()
         start_day = str((row["start_date"] if row else "") or target_day)
         end_day = str((row["end_date"] if row else "") or start_day)
-        days: List[str] = []
+        days: list[str] = []
         cursor_day = datetime.fromisoformat(start_day).date()
         last_day = datetime.fromisoformat(max(end_day, start_day)).date()
         while cursor_day <= last_day and len(days) < 31:
@@ -1288,7 +1288,7 @@ def generate_autoschedule_proposal(
             cursor_day = cursor_day.fromordinal(cursor_day.toordinal() + 1)
         entries = [entry for entry in all_entries if _phase_match(entry) and not _is_locked(entry)]
         candidate_ids = {int(entry["id"]) for entry in entries}
-        occupied_by_day: Dict[str, List[Dict[str, Any]]] = {}
+        occupied_by_day: dict[str, list[dict[str, Any]]] = {}
         for entry in all_entries:
             if int(entry["id"]) in candidate_ids or not _is_placed(entry):
                 continue
@@ -1347,8 +1347,8 @@ def generate_autoschedule_proposal(
     }
 
 def apply_autoschedule_placements(
-    tournament_id: int, placements: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    tournament_id: int, placements: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Persist court/time/day placements onto schedule entries (publishes them as 'planned')."""
     if not placements:
         return fetch_tournament_schedule(tournament_id)
@@ -1373,7 +1373,7 @@ def apply_autoschedule_placements(
                     "scheduled_time = ?",
                     "updated_at = ?",
                 ]
-                values: List[Any] = [court_id, court_label, scheduled_time, now]
+                values: list[Any] = [court_id, court_label, scheduled_time, now]
                 if day_date:
                     assignments.insert(0, "day_date = ?")
                     values.insert(0, day_date)
@@ -1395,7 +1395,7 @@ def apply_autoschedule_placements(
     return fetch_tournament_schedule(tournament_id)
 
 
-def _is_group_phase_entry(entry: Dict[str, Any]) -> bool:
+def _is_group_phase_entry(entry: dict[str, Any]) -> bool:
     source = str(entry.get("source_type") or "").lower()
     if source == "knockout":
         return False
@@ -1403,18 +1403,18 @@ def _is_group_phase_entry(entry: Dict[str, Any]) -> bool:
     return source in {"group", "group_rematch"} or "grup" in phase
 
 
-def _schedule_entry_is_locked(entry: Dict[str, Any]) -> bool:
+def _schedule_entry_is_locked(entry: dict[str, Any]) -> bool:
     status = str(entry.get("status") or "").lower()
     return bool(entry.get("match_id")) or status in {"completed", "in_progress", "live"}
 
 
-def reflow_placed_schedule(tournament_id: int) -> List[Dict[str, Any]]:
+def reflow_placed_schedule(tournament_id: int) -> list[dict[str, Any]]:
     """Repack unlocked matches on each court/day using current category durations."""
     from ..services import auto_scheduler
 
     config = get_autoscheduler_config(tournament_id)
     entries = fetch_tournament_schedule(tournament_id)
-    grouped: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for entry in entries:
         court_id = str(entry.get("court_id") or "").strip()
         time = str(entry.get("scheduled_time") or "").strip()
@@ -1423,7 +1423,7 @@ def reflow_placed_schedule(tournament_id: int) -> List[Dict[str, Any]]:
         day = str(entry.get("day_date") or "").strip()
         grouped.setdefault((day, court_id), []).append(entry)
 
-    updates: List[Tuple[int, str]] = []
+    updates: list[tuple[int, str]] = []
     for _key, items in grouped.items():
         items.sort(
             key=lambda entry: (
@@ -1462,8 +1462,8 @@ def reflow_placed_schedule(tournament_id: int) -> List[Dict[str, Any]]:
 
 
 def group_schedule_replace_hint(
-    before: List[Dict[str, Any]], after: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+    before: list[dict[str, Any]], after: list[dict[str, Any]]
+) -> dict[str, Any]:
     """True when a laid-out group timetable should be offered a regenerate+replace."""
     before_group = [entry for entry in before if _is_group_phase_entry(entry)]
     after_group = [entry for entry in after if _is_group_phase_entry(entry)]
@@ -1489,7 +1489,7 @@ def group_schedule_replace_hint(
     }
 
 
-def replace_unplayed_group_schedule(tournament_id: int) -> Dict[str, Any]:
+def replace_unplayed_group_schedule(tournament_id: int) -> dict[str, Any]:
     """Unplace unplayed group fixtures, then auto-place the group phase and apply it.
 
     Played and live matches stay put and block their slots. Unplayed group matches
@@ -1546,9 +1546,9 @@ def move_schedule_entry_with_cascade(
     schedule_id: int,
     *,
     court_id: str,
-    scheduled_time: Optional[str] = None,
-    day_date: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    scheduled_time: str | None = None,
+    day_date: str | None = None,
+) -> list[dict[str, Any]]:
     """Move one entry to a court/time. Neighbours keep their times so the hole stays.
 
     Packing and spreading happen only when category match duration changes.
@@ -1595,8 +1595,8 @@ def unassign_schedule_entry(
     tournament_id: int,
     schedule_id: int,
     *,
-    day_date: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    day_date: str | None = None,
+) -> list[dict[str, Any]]:
     """Move a schedule entry back to the unassigned pool. The hole on the court stays."""
     schedule = fetch_tournament_schedule(tournament_id)
     moved = next((e for e in schedule if int(e["id"]) == int(schedule_id)), None)
@@ -1621,7 +1621,7 @@ def unassign_schedule_entry(
         raise StorageError("unassign_schedule_entry") from e
     return fetch_tournament_schedule(tournament_id)
 
-def clear_schedule_day(tournament_id: int, day_date: str) -> Dict[str, int]:
+def clear_schedule_day(tournament_id: int, day_date: str) -> dict[str, int]:
     """Take every match of one day off the board (court and time cleared).
 
     Matches that already have a result or are being played keep their place, so
@@ -1667,7 +1667,7 @@ def clear_schedule_day(tournament_id: int, day_date: str) -> Dict[str, int]:
 def delete_unassigned_schedule_entries(
     tournament_id: int,
     *,
-    day_date: Optional[str] = None,
+    day_date: str | None = None,
 ) -> int:
     """Delete schedule entries with no court or time assigned (optionally for one day).
 
@@ -1677,7 +1677,7 @@ def delete_unassigned_schedule_entries(
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
-            params: List[Any] = [tournament_id]
+            params: list[Any] = [tournament_id]
             where = """
                 WHERE tournament_id = ?
                   AND match_id IS NULL

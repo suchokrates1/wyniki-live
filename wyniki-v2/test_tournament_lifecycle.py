@@ -1,6 +1,6 @@
 import pytest
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -1801,7 +1801,7 @@ def test_rehydrate_live_courts_skips_stale_in_progress_matches(full_app_with_tem
 
     tournament_id = database.insert_tournament("Fresh Live Cup", "2026-05-25", "2026-05-25", active=True)
     database.create_tournament_courts(tournament_id, 2)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     stale_time = (now - timedelta(days=2)).isoformat()
     fresh_time = now.isoformat()
 

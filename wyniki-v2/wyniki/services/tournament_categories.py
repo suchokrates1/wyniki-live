@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Preset keys for checkbox UI — labels are defaults; user may edit before confirm.
-CATEGORY_PRESET_DEFAULTS: Dict[str, Dict[str, Any]] = {
+CATEGORY_PRESET_DEFAULTS: dict[str, dict[str, Any]] = {
     "B1M": {"label": "B1 Mężczyźni", "hint_bands": ["B1"], "gender_hint": "M"},
     "B1K": {"label": "B1 Kobiety", "hint_bands": ["B1"], "gender_hint": "K"},
     "B2M": {"label": "B2 Mężczyźni", "hint_bands": ["B2"], "gender_hint": "M"},
@@ -16,17 +16,17 @@ CATEGORY_PRESET_DEFAULTS: Dict[str, Dict[str, Any]] = {
     "B4K": {"label": "B4 Kobiety", "hint_bands": ["B4"], "gender_hint": "K"},
 }
 
-def preset_defaults(preset_key: str) -> Optional[Dict[str, Any]]:
+def preset_defaults(preset_key: str) -> dict[str, Any] | None:
     key = str(preset_key or "").strip().upper()
     return dict(CATEGORY_PRESET_DEFAULTS[key]) if key in CATEGORY_PRESET_DEFAULTS else None
 
 
-def normalize_hint_bands(values: Any) -> List[str]:
+def normalize_hint_bands(values: Any) -> list[str]:
     if not values:
         return []
     if isinstance(values, str):
         values = [part.strip() for part in values.replace("/", ",").split(",")]
-    bands: List[str] = []
+    bands: list[str] = []
     for value in values:
         raw = str(value or "").strip().upper().replace("/", "")
         if raw in {"B1", "B2", "B3", "B4", "B34"} and raw not in bands:
@@ -34,11 +34,11 @@ def normalize_hint_bands(values: Any) -> List[str]:
     return bands
 
 
-def infer_mixed_player_bands(categories: List[Dict[str, Any]] | None) -> List[str]:
+def infer_mixed_player_bands(categories: list[dict[str, Any]] | None) -> list[str]:
     """Derive legacy mixed player-band codes (B2, B34, …) from tournament categories."""
     from .categories import normalize_category_code
 
-    bands: List[str] = []
+    bands: list[str] = []
     for cat in categories or []:
         if int(cat.get("is_active") or 0) == 0:
             continue
@@ -64,7 +64,7 @@ def infer_mixed_player_bands(categories: List[Dict[str, Any]] | None) -> List[st
     return bands
 
 
-def category_row_payload(row: Any) -> Dict[str, Any]:
+def category_row_payload(row: Any) -> dict[str, Any]:
     import json
 
     from .teams import coerce_is_doubles

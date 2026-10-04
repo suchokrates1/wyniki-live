@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
-from typing import Optional
 
 import structlog
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -26,16 +25,16 @@ class Settings(BaseSettings):
     database_path: str = "/data/wyniki.sqlite3"
     
     # Admin
-    admin_password: Optional[str] = None
+    admin_password: str | None = None
     admin_session_ttl_hours: int = 72
     office_session_ttl_hours: int = 168
 
     # API authorization rollout
     court_session_ttl_hours: int = 24
-    court_auth_grace_until: datetime = datetime(2026, 8, 8, tzinfo=timezone.utc)
+    court_auth_grace_until: datetime = datetime(2026, 8, 8, tzinfo=UTC)
 
     # AI-assisted player import parsing
-    import_players_ai_api_key: Optional[str] = None
+    import_players_ai_api_key: str | None = None
     import_players_ai_model: str = "gemini-2.5-flash"
     import_players_ai_timeout_seconds: int = 20
     

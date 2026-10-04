@@ -1,5 +1,5 @@
 """Winners come from the score, history pages, and match times survive a runaway overlay clock."""
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 import pytest
 
@@ -95,7 +95,7 @@ def full_app(tmp_path, monkeypatch):
     from wyniki.config import settings
 
     settings.database_path = str(db_path)
-    settings.court_auth_grace_until = datetime(2026, 12, 31, tzinfo=timezone.utc)
+    settings.court_auth_grace_until = datetime(2026, 12, 31, tzinfo=UTC)
     from app import create_app
 
     app = create_app()

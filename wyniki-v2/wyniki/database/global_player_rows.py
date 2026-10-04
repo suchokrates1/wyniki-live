@@ -6,7 +6,7 @@ hold the session they come from.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import func, or_
 
@@ -48,7 +48,7 @@ def entries_named_loosely(first_name: str, last_name: str) -> list[Player]:
     )
 
 
-def entry_of_global_player_in_tournament(tournament_id: int, global_player_id: int) -> Optional[Player]:
+def entry_of_global_player_in_tournament(tournament_id: int, global_player_id: int) -> Player | None:
     return (
         db.session.query(Player)
         .filter_by(tournament_id=tournament_id, global_player_id=global_player_id)

@@ -1,5 +1,5 @@
 """Panic message, cooldown, and the umpire endpoint. WAHA is mocked."""
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from wyniki.services import panic
 from wyniki.services.api_auth import issue_admin_token
@@ -11,7 +11,7 @@ def test_compose_message_includes_court_players_and_note():
         court_id="3",
         players="Kowalski – Nowak",
         note="brak piłek",
-        when=datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc),
+        when=datetime(2026, 10, 1, 12, 0, tzinfo=UTC),
     )
     assert text.startswith("Sędzia na korcie 3 potrzebuje pomocy. Turniej: RAKIETY. Kowalski – Nowak.")
     assert "RAKIETY" in text

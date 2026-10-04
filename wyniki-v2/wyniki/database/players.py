@@ -1,6 +1,5 @@
 """Database access layer submodule."""
 import sqlite3
-from typing import Dict, List, Optional
 
 from ..config import logger
 
@@ -8,11 +7,11 @@ from .errors import StorageError
 from .connection import db_conn, website_visible_sql
 from .start_numbers import forget_start_numbers
 
-def _normalize_player_name(value: Optional[str]) -> str:
+def _normalize_player_name(value: str | None) -> str:
     """Normalize player names for tolerant exact matching."""
     return " ".join((value or "").strip().lower().split())
 
-def _player_surname(value: Optional[str]) -> str:
+def _player_surname(value: str | None) -> str:
     """Return the normalized surname/token used by mobile clients.
 
     Pair labels must not be reduced to the second partner's last name.
@@ -26,7 +25,7 @@ def _player_surname(value: Optional[str]) -> str:
         return ""
     return normalized.split()[-1]
 
-def fetch_players(tournament_id: Optional[int] = None) -> List[Dict]:
+def fetch_players(tournament_id: int | None = None) -> list[dict]:
     """Fetch players, optionally filtered by tournament."""
     try:
         with db_conn() as conn:
@@ -51,7 +50,7 @@ def fetch_players(tournament_id: Optional[int] = None) -> List[Dict]:
         return []
 
 
-def fetch_players_for_active_tournaments(public_only: bool = False, include_simulations: bool = False) -> List[Dict]:
+def fetch_players_for_active_tournaments(public_only: bool = False, include_simulations: bool = False) -> list[dict]:
     """Fetch players belonging to any active tournament."""
     try:
         with db_conn() as conn:
@@ -89,7 +88,7 @@ def _tournament_links_global_players(cursor: sqlite3.Cursor, tournament_id: int)
     return int(row["is_simulation"] or 0) == 0
 
 def _ensure_global_player(cursor: sqlite3.Cursor, first_name: str, last_name: str,
-                          category: str = "", country: str = "", gender: str = "") -> Optional[int]:
+                          category: str = "", country: str = "", gender: str = "") -> int | None:
     first_name = (first_name or "").strip()
     last_name = (last_name or "").strip()
     if not first_name and not last_name:
@@ -129,7 +128,7 @@ def _ensure_global_player(cursor: sqlite3.Cursor, first_name: str, last_name: st
     return cursor.lastrowid
 
 def insert_player(tournament_id: int, name: str, category: str = "", country: str = "",
-                  first_name: str = "", last_name: str = "", gender: str = "") -> Optional[int]:
+                  first_name: str = "", last_name: str = "", gender: str = "") -> int | None:
     """Insert a new player."""
     # If first_name/last_name not provided, split from name
     if not first_name and not last_name and name:
@@ -200,7 +199,7 @@ def _sync_player_name_across_tournament(
 
 def update_player(player_id: int, name: str, category: str, country: str,
                   first_name: str = "", last_name: str = "", gender: str = "",
-                  tournament_id: Optional[int] = None) -> bool:
+                  tournament_id: int | None = None) -> bool:
     """Update a player."""
     # If first_name/last_name not provided, split from name
     if not first_name and not last_name and name:
@@ -248,7 +247,7 @@ def update_player(player_id: int, name: str, category: str, country: str,
         logger.error("update_player_error", error=str(e), player_id=player_id)
         raise StorageError("update_player") from e
 
-def delete_player(player_id: int, tournament_id: Optional[int] = None) -> bool:
+def delete_player(player_id: int, tournament_id: int | None = None) -> bool:
     """Delete a player."""
     try:
         with db_conn() as conn:
@@ -266,7 +265,7 @@ def delete_player(player_id: int, tournament_id: Optional[int] = None) -> bool:
         logger.error("delete_player_error", error=str(e), player_id=player_id)
         raise StorageError("delete_player") from e
 
-def bulk_insert_players(tournament_id: int, players_data: List[Dict]) -> int:
+def bulk_insert_players(tournament_id: int, players_data: list[dict]) -> int:
     """Bulk insert players. Returns count of inserted players."""
     try:
         with db_conn() as conn:

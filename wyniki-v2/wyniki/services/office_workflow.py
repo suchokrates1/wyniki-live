@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any
 
 from flask import jsonify
 
@@ -38,7 +38,7 @@ from ..services.teams import PLAY_FORMAT_KNOCKOUT, normalize_play_format
 
 
 class OfficeWorkflowError(ValueError):
-    def __init__(self, message: str, status_code: int = 400, extra: Dict[str, Any] | None = None):
+    def __init__(self, message: str, status_code: int = 400, extra: dict[str, Any] | None = None):
         super().__init__(message)
         self.status_code = status_code
         self.extra = extra or {}
@@ -80,7 +80,7 @@ def _bracket_category_from_group(group_name: str | None) -> str:
     return label
 
 
-def _score_text(sets_history: list[Dict[str, Any]]) -> str:
+def _score_text(sets_history: list[dict[str, Any]]) -> str:
     parts = []
     for set_score in sets_history:
         p1 = set_score.get('player1_games', 0)
@@ -102,9 +102,9 @@ def _player_pair_key(player1_name: str | None, player2_name: str | None) -> tupl
     return first, second
 
 
-def _group_players_index(groups: list[Dict[str, Any]]) -> tuple[Dict[int, str], Dict[str, set[int]]]:
+def _group_players_index(groups: list[dict[str, Any]]) -> tuple[dict[int, str], dict[str, set[int]]]:
     group_lookup = {int(group['id']): group['name'] for group in groups}
-    player_groups: Dict[str, set[int]] = {}
+    player_groups: dict[str, set[int]] = {}
     for group in groups:
         group_id = int(group['id'])
         for player in group.get('players', []):
@@ -115,7 +115,7 @@ def _group_players_index(groups: list[Dict[str, Any]]) -> tuple[Dict[int, str], 
 def _infer_group_id_for_players(
     player1_name: str | None,
     player2_name: str | None,
-    player_groups: Dict[str, set[int]],
+    player_groups: dict[str, set[int]],
 ) -> int | None:
     player1_group_ids = player_groups.get(_normalize_name_key(player1_name), set())
     player2_group_ids = player_groups.get(_normalize_name_key(player2_name), set())
@@ -123,7 +123,7 @@ def _infer_group_id_for_players(
     return common[0] if common else None
 
 
-def _history_sets_payload(history: MatchHistory) -> list[Dict[str, Any]]:
+def _history_sets_payload(history: MatchHistory) -> list[dict[str, Any]]:
     sets_history = _json_loads(history.sets_history, None)
     if isinstance(sets_history, list) and sets_history:
         return sets_history
@@ -142,7 +142,7 @@ def _history_sets_payload(history: MatchHistory) -> list[Dict[str, Any]]:
     return sets
 
 
-def _history_sets_score(sets_history: list[Dict[str, Any]]) -> tuple[int, int]:
+def _history_sets_score(sets_history: list[dict[str, Any]]) -> tuple[int, int]:
     player1_sets = 0
     player2_sets = 0
     for set_score in sets_history:
@@ -155,9 +155,9 @@ def _history_sets_score(sets_history: list[Dict[str, Any]]) -> tuple[int, int]:
 
 def _office_history_payload(
     history: MatchHistory,
-    group_lookup: Dict[int, str],
-    player_groups: Dict[str, set[int]],
-) -> Dict[str, Any]:
+    group_lookup: dict[int, str],
+    player_groups: dict[str, set[int]],
+) -> dict[str, Any]:
     sets_history = _history_sets_payload(history)
     player1_sets, player2_sets = _history_sets_score(sets_history)
     group_id = (
@@ -195,10 +195,10 @@ def _office_history_payload(
 
 
 def office_result_outcome(
-    data: Dict[str, Any],
+    data: dict[str, Any],
     player1_name: str,
     player2_name: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """finish_reason / winner / retired player / note for an office result.
 
     Walkover and retirement ("krecz") name the winner explicitly; a normal result
@@ -217,10 +217,10 @@ def office_result_outcome(
 
 
 def _normalize_office_sets(
-    data: Dict[str, Any],
+    data: dict[str, Any],
     player1_name: str,
     player2_name: str,
-) -> tuple[list[Dict[str, Any]], int, int]:
+) -> tuple[list[dict[str, Any]], int, int]:
     retirement = _normalize_bool(data.get('retirement', False))
     if _normalize_bool(data.get('walkover', False)):
         winner_name = (data.get('winner_name') or '').strip()
@@ -302,9 +302,9 @@ def _sync_office_match_history(match: Match, group_name: str | None = None) -> N
 
 def _office_match_payload(
     match: Match,
-    group_lookup: Dict[int, str],
-    player_groups: Dict[str, set[int]] | None = None,
-) -> Dict[str, Any]:
+    group_lookup: dict[int, str],
+    player_groups: dict[str, set[int]] | None = None,
+) -> dict[str, Any]:
     sets_history = _json_loads(match.sets_history, [])
     winner = match.winner_name if match.winner_name in {match.player1_name, match.player2_name} else (
         match.player1_name if int(match.player1_sets or 0) > int(match.player2_sets or 0) else match.player2_name
@@ -339,10 +339,10 @@ def _office_match_payload(
 
 
 def _office_knockout_item(
-    slot: Dict[str, Any],
-    schedule_entry: Dict[str, Any] | None,
-    match_by_id: Dict[int, Match],
-) -> Dict[str, Any]:
+    slot: dict[str, Any],
+    schedule_entry: dict[str, Any] | None,
+    match_by_id: dict[int, Match],
+) -> dict[str, Any]:
     match = None
     match_id = _normalize_int((schedule_entry or {}).get('match_id'), 0)
     if match_id:
@@ -398,9 +398,9 @@ def _office_knockout_item(
 
 def _build_office_knockout_progress(
     tournament_id: int,
-    schedule: list[Dict[str, Any]],
-    match_by_id: Dict[int, Match],
-) -> Dict[str, Any]:
+    schedule: list[dict[str, Any]],
+    match_by_id: dict[int, Match],
+) -> dict[str, Any]:
     schedule_by_ref = {
         int(entry.get('source_ref_id') or 0): entry
         for entry in schedule
@@ -432,8 +432,8 @@ def _build_office_knockout_progress(
 
 def _resolve_office_knockout_slot(
     tournament_id: int,
-    data: Dict[str, Any],
-) -> tuple[Dict[str, Any], TournamentSchedule | None]:
+    data: dict[str, Any],
+) -> tuple[dict[str, Any], TournamentSchedule | None]:
     schedule_id = _normalize_int(data.get('schedule_id'), 0)
     slot_id = _normalize_int(data.get('knockout_slot_id') or data.get('slot_id') or data.get('source_ref_id'), 0)
     schedule_entry = None
@@ -503,7 +503,7 @@ def _resolve_office_knockout_slot(
     raise OfficeWorkflowError('Knockout phase, players, schedule entry, or bracket slot is required')
 
 
-def _create_office_knockout_match(tournament_id: int, data: Dict[str, Any]) -> tuple[Dict[str, Any], int]:
+def _create_office_knockout_match(tournament_id: int, data: dict[str, Any]) -> tuple[dict[str, Any], int]:
     slot, schedule_entry = _resolve_office_knockout_slot(tournament_id, data)
     player1_name = (slot.get('player1_name') or '').strip()
     player2_name = (slot.get('player2_name') or '').strip()
@@ -590,7 +590,7 @@ def _create_office_knockout_match(tournament_id: int, data: Dict[str, Any]) -> t
     }, 201
 
 
-def _create_office_group_match(tournament_id: int, data: Dict[str, Any]) -> tuple[Dict[str, Any], int]:
+def _create_office_group_match(tournament_id: int, data: dict[str, Any]) -> tuple[dict[str, Any], int]:
     """Create a finished group-stage match and link the schedule entry."""
     schedule_id = _normalize_int(data.get('schedule_id'), 0) or None
     group_id = _normalize_int(data.get('group_id'), 0)
@@ -712,7 +712,7 @@ def _create_office_group_match(tournament_id: int, data: Dict[str, Any]) -> tupl
     }, 201
 
 
-def _build_office_dashboard(tournament_id: int) -> Dict[str, Any]:
+def _build_office_dashboard(tournament_id: int) -> dict[str, Any]:
     tournament = fetch_tournament(tournament_id)
     ensure_group_schedule_entries(tournament_id)
     ensure_knockout_schedule_entries(tournament_id)
@@ -780,7 +780,7 @@ def _knockout_blocked(blocker: str) -> OfficeWorkflowError:
     )
 
 
-def _update_office_match(tournament_id: int, match_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+def _update_office_match(tournament_id: int, match_id: int, data: dict[str, Any]) -> dict[str, Any]:
     """Correct a finished result, by `matches.id` or (source=history) `match_history.id`."""
     source = (data.get('source') or 'match').strip().lower()
     groups = fetch_bracket_groups(tournament_id)

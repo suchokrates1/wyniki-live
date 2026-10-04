@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from .config import logger, settings
 from .database import init_db, fetch_courts, fetch_tournaments, get_active_tournament_id
@@ -41,8 +41,8 @@ def _parse_match_timestamp(value: str | None) -> datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _is_recent_live_match(match: Match) -> bool:
@@ -52,7 +52,7 @@ def _is_recent_live_match(match: Match) -> bool:
     reference = _parse_match_timestamp(match.updated_at) or _parse_match_timestamp(match.created_at)
     if not reference:
         return True
-    age_seconds = (datetime.now(timezone.utc) - reference).total_seconds()
+    age_seconds = (datetime.now(UTC) - reference).total_seconds()
     return age_seconds <= max_age_hours * 3600
 
 

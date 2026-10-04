@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 # A finish the score cannot explain: the stored winner is the only record of it.
 _WINNER_WITHOUT_SCORE = {"walkover", "retirement"}
@@ -21,7 +21,7 @@ def _parse_sets(sets_history: Any) -> list:
     return [s for s in sets_history if isinstance(s, dict)] if isinstance(sets_history, list) else []
 
 
-def _team_key(name: Any) -> Optional[frozenset]:
+def _team_key(name: Any) -> frozenset | None:
     """Doubles pairs compare regardless of partner order ("A / B" == "B / A")."""
     text = str(name or "").strip()
     if not text:
@@ -35,7 +35,7 @@ def same_competitor(a: Any, b: Any) -> bool:
 
 
 def winner_from_score(player1: Any, player2: Any, sets_history: Any = None,
-                      player1_sets: Any = None, player2_sets: Any = None) -> Optional[str]:
+                      player1_sets: Any = None, player2_sets: Any = None) -> str | None:
     """Sets won decide the winner; the set counters are the fallback when no set detail exists."""
     wins1 = wins2 = 0
     for item in _parse_sets(sets_history):
@@ -60,7 +60,7 @@ def winner_from_score(player1: Any, player2: Any, sets_history: Any = None,
 def resolve_match_winner(*, player1: Any, player2: Any, stored_winner: Any = None,
                          finish_reason: Any = None, sets_history: Any = None,
                          player1_sets: Any = None, player2_sets: Any = None,
-                         score_is_final: bool = False) -> Optional[str]:
+                         score_is_final: bool = False) -> str | None:
     """The winner as the match row names them (doubles partners in the row's order).
 
     Walkovers and retirements keep the recorded winner. A score complete under the
@@ -78,7 +78,7 @@ def resolve_match_winner(*, player1: Any, player2: Any, stored_winner: Any = Non
     return player or scored or stored
 
 
-def plausible_duration(seconds: Any) -> Optional[int]:
+def plausible_duration(seconds: Any) -> int | None:
     try:
         value = int(seconds or 0)
     except (TypeError, ValueError):

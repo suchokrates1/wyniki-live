@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import queue
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from .listener_fanout import ListenerFanOut
@@ -50,6 +50,6 @@ def emit_office_invalidation(tournament_id: int, scopes: list[str] | None = None
         {
             "tournament_id": int(tournament_id),
             "scopes": sorted(set(scopes or ["dashboard"])),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         },
     )

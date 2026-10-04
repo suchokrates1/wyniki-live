@@ -16,8 +16,9 @@ middle of a pass cannot repeat them.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
-from typing import Any, Mapping
+from datetime import datetime, timedelta, timezone, UTC
+from typing import Any
+from collections.abc import Mapping
 
 import structlog
 
@@ -112,7 +113,7 @@ def _send(fixture: Mapping[str, Any], subscribers: list[dict[str, Any]], kind: s
     return web_push.send_to(subscribers, payload)
 
 
-def run_pass(now: datetime | None = None, tz: timezone = timezone.utc) -> dict[str, int]:
+def run_pass(now: datetime | None = None, tz: timezone = UTC) -> dict[str, int]:
     """One sweep. Safe to call as often as you like; each fixture fires once."""
     if not web_push.is_enabled():
         return {"reminders": 0, "delays": 0}

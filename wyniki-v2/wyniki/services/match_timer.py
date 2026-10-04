@@ -1,7 +1,7 @@
 """Umpire-driven live match clock for overlay / court RAM state."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from ..db_models import utc_now_iso
@@ -21,10 +21,10 @@ def iso_from_epoch_ms(value: Any) -> str | None:
         return None
     if ms < _MIN_START_MS:
         return None
-    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    now_ms = int(datetime.now(UTC).timestamp() * 1000)
     if ms > now_ms + _MAX_FUTURE_SKEW_MS:
         return None
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat()
+    return datetime.fromtimestamp(ms / 1000, tz=UTC).isoformat()
 
 
 def elapsed_seconds_since(iso_ts: str | None) -> int:
@@ -33,8 +33,8 @@ def elapsed_seconds_since(iso_ts: str | None) -> int:
     try:
         started = parse_iso_datetime(iso_ts)
         if started.tzinfo is None:
-            started = started.replace(tzinfo=timezone.utc)
-        now = datetime.now(timezone.utc)
+            started = started.replace(tzinfo=UTC)
+        now = datetime.now(UTC)
         return max(0, int((now - started).total_seconds()))
     except Exception:
         return 0
@@ -89,8 +89,8 @@ def sync_court_match_timer_from_match(court_state: dict, match: Any) -> None:
         try:
             resumed = parse_iso_datetime(resume_ts)
             if resumed.tzinfo is None:
-                resumed = resumed.replace(tzinfo=timezone.utc)
-            now = datetime.now(timezone.utc)
+                resumed = resumed.replace(tzinfo=UTC)
+            now = datetime.now(UTC)
             elapsed = max(0, int((now - resumed).total_seconds()))
             total = match_time.get("offset_seconds", 0) + elapsed
             match_time["offset_seconds"] = total

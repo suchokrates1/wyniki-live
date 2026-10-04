@@ -1,6 +1,6 @@
 """Admin API routes for tournaments and players management."""
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from uuid import uuid4
 
 from flask import Blueprint, jsonify, request
@@ -100,14 +100,14 @@ def _emit_admin_tournament_invalidation(response):
     return response
 
 
-def _request_payload() -> Dict[str, Any]:
+def _request_payload() -> dict[str, Any]:
     """Read tournament payload from JSON or multipart form."""
     if request.is_json:
         return request.get_json(silent=True) or {}
     return request.form.to_dict()
 
 
-def _normalize_tournament_flags(data: Dict[str, Any]) -> tuple[bool, bool, bool, str]:
+def _normalize_tournament_flags(data: dict[str, Any]) -> tuple[bool, bool, bool, str]:
     is_simulation = _normalize_bool(data.get('is_simulation', False))
     is_public = _normalize_bool(data.get('is_public', not is_simulation))
     stats_enabled = _normalize_bool(data.get('stats_enabled', not is_simulation))

@@ -11,7 +11,7 @@ import threading
 import time
 import uuid
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from ..config import logger
@@ -100,7 +100,7 @@ class DirectorCommandBroker:
             stored = dict(command)
             stored["seq"] = self._seq
             stored.setdefault("id", uuid.uuid4().hex)
-            stored.setdefault("issued_at", datetime.now(timezone.utc).isoformat())
+            stored.setdefault("issued_at", datetime.now(UTC).isoformat())
             self._commands[stored["id"]] = stored
             self._cv.notify_all()
         return stored
@@ -222,7 +222,7 @@ class TabletPresenceStore:
                 "device_model": device_model or existing.get("device_model"),
                 "device_manufacturer": device_manufacturer or existing.get("device_manufacturer"),
                 "snapshot": stored_snapshot or None,
-                "last_seen": datetime.now(timezone.utc).isoformat(),
+                "last_seen": datetime.now(UTC).isoformat(),
                 "last_seen_epoch": time.time(),
             }
 

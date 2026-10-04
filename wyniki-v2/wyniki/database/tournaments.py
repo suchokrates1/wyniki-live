@@ -1,7 +1,7 @@
 """Database access layer submodule."""
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime, UTC
+from typing import Any
 
 from ..config import logger
 
@@ -59,7 +59,7 @@ def _active_tournament_order(public_only: bool) -> str:
     return _PUBLIC_ACTIVE_TOURNAMENT_ORDER if public_only else _ACTIVE_TOURNAMENT_ORDER
 
 
-def get_active_tournament_id(public_only: bool = False) -> Optional[int]:
+def get_active_tournament_id(public_only: bool = False) -> int | None:
     """Get the ID of the currently active tournament."""
     try:
         with db_conn() as conn:
@@ -75,7 +75,7 @@ def get_active_tournament_id(public_only: bool = False) -> Optional[int]:
         logger.error("get_active_tournament_id_error", error=str(e))
         return None
 
-def get_active_tournament_name(public_only: bool = False) -> Optional[str]:
+def get_active_tournament_name(public_only: bool = False) -> str | None:
     """Get the name of the currently active tournament."""
     try:
         with db_conn() as conn:
@@ -91,7 +91,7 @@ def get_active_tournament_name(public_only: bool = False) -> Optional[str]:
         logger.error("get_active_tournament_name_error", error=str(e))
         return None
 
-def fetch_active_tournaments(public_only: bool = False) -> List[Dict]:
+def fetch_active_tournaments(public_only: bool = False) -> list[dict]:
     """Fetch all active tournaments."""
     try:
         return [t for t in fetch_tournaments(public_only=public_only) if t.get("active") == 1]
@@ -100,7 +100,7 @@ def fetch_active_tournaments(public_only: bool = False) -> List[Dict]:
         return []
 
 
-def fetch_umpire_active_tournaments() -> List[Dict]:
+def fetch_umpire_active_tournaments() -> list[dict]:
     """Active events for the Android app: public cups plus Play-review simulations."""
     try:
         return [
@@ -113,13 +113,13 @@ def fetch_umpire_active_tournaments() -> List[Dict]:
         logger.error("fetch_umpire_active_tournaments_error", error=str(e))
         return []
 
-def fetch_tournaments(public_only: bool = False) -> List[Dict]:
+def fetch_tournaments(public_only: bool = False) -> list[dict]:
     """Fetch all tournaments."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             where_clause = f"WHERE {website_visible_sql('t')}" if public_only else ""
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT
                     t.id,
                     t.name,
@@ -146,14 +146,14 @@ def fetch_tournaments(public_only: bool = False) -> List[Dict]:
                          t.logo_path, t.report_email, t.summary_sent_at, t.is_public, t.stats_enabled,
                          t.is_simulation, t.access_key, t.office_password_hash, t.created_at
                 ORDER BY start_date DESC
-            """.format(where_clause=where_clause))
+            """)
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
     except Exception as e:
         logger.error("fetch_tournaments_error", error=str(e))
         return []
 
-def fetch_tournament(tournament_id: int) -> Optional[Dict]:
+def fetch_tournament(tournament_id: int) -> dict | None:
     """Fetch a single tournament by ID."""
     try:
         with db_conn() as conn:
@@ -198,14 +198,14 @@ def insert_tournament(
     active: bool = False,
     city: str = "",
     country: str = "",
-    logo_path: Optional[str] = None,
+    logo_path: str | None = None,
     report_email: str = "",
     is_public: bool = True,
     stats_enabled: bool = True,
     is_simulation: bool = False,
     access_key: str = "",
     office_password_hash: str = "",
-) -> Optional[int]:
+) -> int | None:
     """Insert a new tournament."""
     try:
         if is_simulation:
@@ -252,7 +252,7 @@ def update_tournament(
     active: bool,
     city: str = "",
     country: str = "",
-    logo_path: Optional[str] = None,
+    logo_path: str | None = None,
     report_email: str = "",
     is_public: bool = True,
     stats_enabled: bool = True,
@@ -299,11 +299,11 @@ def update_tournament(
         logger.error("update_tournament_error", error=str(e), tournament_id=tournament_id)
         raise StorageError("update_tournament") from e
 
-def mark_tournament_summary_sent(tournament_id: int, sent_at: Optional[str] = None) -> bool:
+def mark_tournament_summary_sent(tournament_id: int, sent_at: str | None = None) -> bool:
     """Persist the timestamp of a sent tournament summary email."""
 
     try:
-        value = sent_at or datetime.now(timezone.utc).isoformat()
+        value = sent_at or datetime.now(UTC).isoformat()
         with db_conn() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -400,7 +400,7 @@ def set_tournament_active_state(tournament_id: int, active: bool) -> bool:
 def _tournament_quick_info_key(tournament_id: int) -> str:
     return f"tournament_quick_info:{int(tournament_id)}"
 
-def get_tournament_quick_info(tournament_id: int) -> Dict[str, Any]:
+def get_tournament_quick_info(tournament_id: int) -> dict[str, Any]:
     """Return the office-authored quick info banner for a tournament."""
     default = {"message": "", "active": False, "updated_at": None}
     stored = fetch_app_settings([_tournament_quick_info_key(tournament_id)]).get(
@@ -425,7 +425,7 @@ def save_tournament_quick_info(
     message: str,
     *,
     active: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Persist quick info shown as a public banner on the live site."""
     from ..db_models import utc_now_iso
 
@@ -438,7 +438,7 @@ def save_tournament_quick_info(
     upsert_app_settings({_tournament_quick_info_key(tournament_id): json.dumps(payload, ensure_ascii=False)})
     return get_tournament_quick_info(tournament_id)
 
-def get_public_tournament_quick_info(tournament_id: int) -> Optional[Dict[str, Any]]:
+def get_public_tournament_quick_info(tournament_id: int) -> dict[str, Any] | None:
     """Return active quick info for the public site, or None when hidden/empty."""
     info = get_tournament_quick_info(tournament_id)
     if not info.get("active") or not info.get("message"):

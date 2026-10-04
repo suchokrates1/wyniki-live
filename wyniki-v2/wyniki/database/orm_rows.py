@@ -7,7 +7,8 @@ second connection beside it, or cache a row the next read will contradict.
 """
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional
+from typing import Any
+from collections.abc import Iterable
 
 from sqlalchemy import func
 
@@ -88,12 +89,12 @@ def tournament_players_by_name(tournament_id: int) -> list[Player]:
     )
 
 
-def active_tournament_row() -> Optional[Tournament]:
+def active_tournament_row() -> Tournament | None:
     """The tournament the umpire app falls back to when a court names none."""
     return db.session.query(Tournament).filter_by(active=1).first()
 
 
-def latest_match_with_uuid(client_match_uuid: str, *, by_update: bool = False) -> Optional[Match]:
+def latest_match_with_uuid(client_match_uuid: str, *, by_update: bool = False) -> Match | None:
     """The match a tablet means by its own id for the match, newest first.
 
     The tablet keeps playing offline and sends its uuid; by_update picks the one it
@@ -104,7 +105,7 @@ def latest_match_with_uuid(client_match_uuid: str, *, by_update: bool = False) -
     return rows.order_by(*order).first()
 
 
-def latest_match_on_court(court_id: str, status: str = "in_progress") -> Optional[Match]:
+def latest_match_on_court(court_id: str, status: str = "in_progress") -> Match | None:
     """What is open on a court right now."""
     return (
         db.session.query(Match)

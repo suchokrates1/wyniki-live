@@ -12,7 +12,7 @@ from __future__ import annotations
 import copy
 import json
 import threading
-from typing import Any, Dict
+from typing import Any
 
 from ..config import logger
 from ..database import fetch_app_settings, upsert_app_settings
@@ -33,9 +33,9 @@ def _court_el(court_id: str, x: int, y: int, w: int,
               label_position: str = "above",
               font_size: int = 17, bg_opacity: float = 0.95,
               logo_size: int = 60,
-              h: int | None = None) -> Dict[str, Any]:
+              h: int | None = None) -> dict[str, Any]:
     """Build a court-scoreboard element dict."""
-    el: Dict[str, Any] = {
+    el: dict[str, Any] = {
         "type": "court",
         "court_id": str(court_id),
         "visible": True,
@@ -56,7 +56,7 @@ def _court_el(court_id: str, x: int, y: int, w: int,
     return el
 
 
-def _stats_el(court_id: str, x: int, y: int, w: int = 360) -> Dict[str, Any]:
+def _stats_el(court_id: str, x: int, y: int, w: int = 360) -> dict[str, Any]:
     """Build a stats-panel element dict."""
     return {
         "type": "stats",
@@ -75,7 +75,7 @@ def _normalize_stats_mode(mode: Any) -> str | None:
     return None
 
 
-def _resolve_stats_court_id(overlay_id: str, overlay: Dict[str, Any]) -> str:
+def _resolve_stats_court_id(overlay_id: str, overlay: dict[str, Any]) -> str:
     elements = overlay.get("elements") or []
     for element in elements:
         if element.get("type") == "court" and str(element.get("court_id")) == str(overlay_id):
@@ -89,7 +89,7 @@ def _resolve_stats_court_id(overlay_id: str, overlay: Dict[str, Any]) -> str:
     return str(overlay_id)
 
 
-def _ensure_stats_elements(overlay_id: str, overlay: Dict[str, Any]) -> list[Dict[str, Any]]:
+def _ensure_stats_elements(overlay_id: str, overlay: dict[str, Any]) -> list[dict[str, Any]]:
     elements = overlay.setdefault("elements", [])
     stats_elements = [
         element
@@ -112,7 +112,7 @@ _MAIN_COURT_Y = 938
 _COURT_H = 136
 
 
-def _overlay_canvas(name: str) -> Dict[str, Any]:
+def _overlay_canvas(name: str) -> dict[str, Any]:
     """TV broadcast used by overlays 1-4: court 1 large at the bottom, 2-4 on top.
 
     Same placement as the canvas demo. Scoreboard look (peel, TB, flags) lives
@@ -143,7 +143,7 @@ def _overlay_canvas(name: str) -> Dict[str, Any]:
     }
 
 
-def _apply_canvas_layout(overlay: Dict[str, Any]) -> None:
+def _apply_canvas_layout(overlay: dict[str, Any]) -> None:
     canvas = _overlay_canvas(overlay.get("name") or "Korty 1–4")
     overlay["elements"] = copy.deepcopy(canvas["elements"])
     overlay["top_bar"] = copy.deepcopy(canvas["top_bar"])
@@ -171,7 +171,7 @@ def _migrate_canvas_overlays() -> bool:
     return True
 
 
-def _overlay_all() -> Dict[str, Any]:
+def _overlay_all() -> dict[str, Any]:
     """4 courts in a 2x2 grid — no logos, labels above."""
     positions = [(20, 20), (980, 20), (20, 560), (980, 560)]
     elements = [
@@ -184,7 +184,7 @@ def _overlay_all() -> Dict[str, Any]:
 
 # ---------- canonical defaults ----------
 
-_DEFAULT_SETTINGS: Dict[str, Any] = {
+_DEFAULT_SETTINGS: dict[str, Any] = {
     "tournament_logo": None,
     "tournament_name": "",
     "canvas_layout_migrated": _CANVAS_LAYOUT_VERSION,
@@ -198,7 +198,7 @@ _DEFAULT_SETTINGS: Dict[str, Any] = {
 }
 
 # ---------- live state (cache) ----------
-_overlay_settings: Dict[str, Any] = {}
+_overlay_settings: dict[str, Any] = {}
 _loaded_from_db: bool = False
 
 
@@ -240,14 +240,14 @@ def _ensure_defaults() -> None:
 
 # ---------- public API ----------
 
-def get_overlay_settings() -> Dict[str, Any]:
+def get_overlay_settings() -> dict[str, Any]:
     """Return a deep-copy of current overlay settings."""
     with _OVERLAY_LOCK:
         _ensure_defaults()
         return copy.deepcopy(_overlay_settings)
 
 
-def update_overlay_settings(new: Dict[str, Any]) -> Dict[str, Any]:
+def update_overlay_settings(new: dict[str, Any]) -> dict[str, Any]:
     """Merge *new* into current settings, persist, and return updated copy."""
     global _overlay_settings
     with _OVERLAY_LOCK:
@@ -264,7 +264,7 @@ def update_overlay_settings(new: Dict[str, Any]) -> Dict[str, Any]:
         return copy.deepcopy(_overlay_settings)
 
 
-def set_overlay_stats_visibility(active: bool, mode: Any = None) -> Dict[str, Any]:
+def set_overlay_stats_visibility(active: bool, mode: Any = None) -> dict[str, Any]:
     """Toggle stats elements on overlays 1-4, excluding the all-courts preset."""
     global _overlay_settings
     normalized_mode = _normalize_stats_mode(mode)

@@ -1,12 +1,12 @@
 """Database access layer submodule."""
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..config import logger
 
 from .errors import StorageError
 from .connection import db_conn, website_visible_sql
 
-def fetch_courts(active_only: bool = False, public_only: bool = False) -> List[Dict[str, Optional[str]]]:
+def fetch_courts(active_only: bool = False, public_only: bool = False) -> list[dict[str, str | None]]:
     """Fetch courts from database, optionally limited to active tournaments."""
     try:
         with db_conn() as conn:
@@ -52,7 +52,7 @@ def fetch_courts(active_only: bool = False, public_only: bool = False) -> List[D
         logger.error("fetch_courts_error", error=str(e))
         return []
 
-def fetch_courts_for_tournament(tournament_id: int) -> List[Dict[str, Optional[str]]]:
+def fetch_courts_for_tournament(tournament_id: int) -> list[dict[str, str | None]]:
     """Fetch courts assigned to a specific tournament."""
     try:
         with db_conn() as conn:
@@ -68,7 +68,7 @@ def fetch_courts_for_tournament(tournament_id: int) -> List[Dict[str, Optional[s
         logger.error("fetch_courts_for_tournament_error", error=str(e), tournament_id=tournament_id)
         return []
 
-def fetch_court(kort_id: str) -> Optional[Dict[str, Any]]:
+def fetch_court(kort_id: str) -> dict[str, Any] | None:
     """Fetch a single court by ID."""
     try:
         with db_conn() as conn:
@@ -87,7 +87,7 @@ def fetch_court(kort_id: str) -> Optional[Dict[str, Any]]:
         logger.error("fetch_court_error", error=str(e), kort_id=kort_id)
         return None
 
-def get_tournament_id_for_court(kort_id: str) -> Optional[int]:
+def get_tournament_id_for_court(kort_id: str) -> int | None:
     """Resolve tournament ID from a court ID."""
     court = fetch_court(kort_id)
     if not court:
@@ -97,10 +97,10 @@ def get_tournament_id_for_court(kort_id: str) -> Optional[int]:
 
 def upsert_court(
     kort_id: str,
-    pin: Optional[str] = None,
-    tournament_id: Optional[int] = None,
-    name: Optional[str] = None,
-    display_order: Optional[int] = None,
+    pin: str | None = None,
+    tournament_id: int | None = None,
+    name: str | None = None,
+    display_order: int | None = None,
 ) -> None:
     """Insert or update court configuration."""
     try:
@@ -161,9 +161,9 @@ def rename_court(old_kort_id: str, new_kort_id: str) -> bool:
         logger.error("rename_court_error", old_kort_id=old_kort_id, new_kort_id=new_kort_id, error=str(e))
         raise StorageError("rename_court") from e
 
-def create_tournament_courts(tournament_id: int, court_count: int) -> List[str]:
+def create_tournament_courts(tournament_id: int, court_count: int) -> list[str]:
     """Create tournament courts with unique IDs and human-friendly names."""
-    created_courts: List[str] = []
+    created_courts: list[str] = []
     total = max(0, int(court_count or 0))
     if total <= 0:
         return created_courts
@@ -187,7 +187,7 @@ def create_tournament_courts(tournament_id: int, court_count: int) -> List[str]:
         created_courts.append(kort_id)
     return created_courts
 
-def sync_tournament_courts(tournament_id: int, court_count: int) -> Dict[str, List[str]]:
+def sync_tournament_courts(tournament_id: int, court_count: int) -> dict[str, list[str]]:
     """Adjust tournament courts to the requested count.
 
     Adds missing trailing courts or removes trailing inactive ones.
@@ -211,7 +211,7 @@ def sync_tournament_courts(tournament_id: int, court_count: int) -> Dict[str, Li
         reverse=True,
     )[: existing_total - requested_total]
 
-    deleted_ids: List[str] = []
+    deleted_ids: list[str] = []
     for court in courts_to_delete:
         kort_id = str(court.get("kort_id") or "")
         if not kort_id:

@@ -11,7 +11,7 @@ groups do not agree with any single format are left for the office to decide.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 from ..config import logger
 from .connection import _ensure_schema_migrations_table, db_conn, run_once, upsert_app_settings
@@ -27,7 +27,7 @@ def _claim_migration() -> bool:
         return cursor.rowcount == 1
 
 
-def _needs_upgrade(tournament: Dict[str, Any]) -> bool:
+def _needs_upgrade(tournament: dict[str, Any]) -> bool:
     """Old tournaments only: never opened in the "Drabinki" step, and finished or already played.
 
     A tournament being set up now goes through the step by hand.
@@ -47,7 +47,7 @@ def _needs_upgrade(tournament: Dict[str, Any]) -> bool:
     return int(row[0] or 0) > 0
 
 
-def _existing_and_generated_phases(tournament_id: int, item: Dict[str, Any]) -> Tuple[Set[str], Set[str]]:
+def _existing_and_generated_phases(tournament_id: int, item: dict[str, Any]) -> tuple[set[str], set[str]]:
     """Knockout phases the category has in the database, and the ones its format would create."""
     from . import brackets
     from .knockout_formats import _phase_in_category, _units_for
@@ -55,7 +55,7 @@ def _existing_and_generated_phases(tournament_id: int, item: Dict[str, Any]) -> 
     groups = brackets.fetch_bracket_groups(tournament_id)
     category_groups = [group for group in groups if str(group.get("tournament_category_id")) == str(item["category_id"]) and group.get("players")]
     counts = {group["name"]: len(group.get("players") or []) for group in groups}
-    generated: Set[str] = set()
+    generated: set[str] = set()
     for unit in _units_for(category_groups, item["play_format"]):
         slots = brackets._formatted_unit_slots(unit, item["config"], complete=False, counts=counts) or []
         generated |= {str(slot["phase"]) for slot in slots}
@@ -65,7 +65,7 @@ def _existing_and_generated_phases(tournament_id: int, item: Dict[str, Any]) -> 
     return existing, generated
 
 
-def upgrade_tournament(tournament_id: int) -> Dict[str, Any]:
+def upgrade_tournament(tournament_id: int) -> dict[str, Any]:
     from . import brackets
     from .knockout_formats import default_config, knockout_format_overview
     from .start_numbers import assign_start_numbers
@@ -73,9 +73,9 @@ def upgrade_tournament(tournament_id: int) -> Dict[str, Any]:
 
     stored = brackets.load_knockout_formats(tournament_id)
     finished = not int((fetch_tournament(tournament_id) or {}).get("active") or 0)
-    confirmed: List[str] = []
-    imported: List[str] = []
-    skipped: List[str] = []
+    confirmed: list[str] = []
+    imported: list[str] = []
+    skipped: list[str] = []
     for item in knockout_format_overview(tournament_id):
         key = str(item["category_id"])
         config = item["config"]
@@ -100,7 +100,7 @@ def upgrade_tournament(tournament_id: int) -> Dict[str, Any]:
         upsert_app_settings({brackets.knockout_formats_settings_key(tournament_id): json.dumps(stored)})
 
     numbered = 0
-    by_category: Dict[int, List[int]] = {}
+    by_category: dict[int, list[int]] = {}
     for group in brackets.fetch_bracket_groups(tournament_id):
         category_id = group.get("tournament_category_id")
         if not category_id:
@@ -119,10 +119,10 @@ def upgrade_tournament(tournament_id: int) -> Dict[str, Any]:
     return {"confirmed": confirmed, "imported": imported, "skipped": skipped, "numbered": numbered}
 
 
-def _apply_upgrade() -> Dict[str, Any]:
+def _apply_upgrade() -> dict[str, Any]:
     from .tournaments import fetch_tournaments
 
-    summary: Dict[str, Any] = {}
+    summary: dict[str, Any] = {}
     for tournament in fetch_tournaments():
         tournament_id = int(tournament["id"])
         if not _needs_upgrade(tournament):
@@ -139,13 +139,13 @@ def _apply_upgrade() -> Dict[str, Any]:
     return {"status": "ok", "tournaments": summary}
 
 
-def upgrade_existing_tournaments() -> Dict[str, Any]:
+def upgrade_existing_tournaments() -> dict[str, Any]:
     """Run once per database.
 
     A database that already recorded migration:upgrade_existing_tournaments in
     app_settings adopts that flag and does not rewrite tournaments again.
     """
-    outcome: Dict[str, Any] = {"status": "already_done"}
+    outcome: dict[str, Any] = {"status": "already_done"}
 
     def step() -> str:
         nonlocal outcome

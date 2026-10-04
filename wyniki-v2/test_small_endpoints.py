@@ -1,7 +1,7 @@
 """The small pieces nothing else tests: the helpers, /health, and the admin login."""
 
 import secrets
-from datetime import timezone
+from datetime import UTC
 
 import pytest
 from flask import Flask
@@ -35,7 +35,7 @@ def test_a_match_length_is_shown_as_hours_and_minutes():
 def test_the_android_timestamp_with_a_z_is_understood():
     moment = parse_iso_datetime("2026-09-26T09:15:00Z")
     assert moment.tzinfo is not None and moment.utcoffset().total_seconds() == 0
-    assert parse_iso_datetime("2026-09-26T11:15:00+02:00").astimezone(timezone.utc).hour == 9
+    assert parse_iso_datetime("2026-09-26T11:15:00+02:00").astimezone(UTC).hour == 9
     with pytest.raises(ValueError):
         parse_iso_datetime("wczoraj")
 

@@ -2,9 +2,10 @@
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
-from typing import Any, Dict, Generator, List
+from typing import Any
+from collections.abc import Generator
 from werkzeug.security import generate_password_hash
 
 from ..config import settings, logger
@@ -38,7 +39,7 @@ def apply_sqlite_pragmas(connection) -> None:
 
 
 @contextmanager
-def db_conn() -> Generator[sqlite3.Connection, None, None]:
+def db_conn() -> Generator[sqlite3.Connection]:
     """Context manager for database connections."""
     db_path = Path(settings.database_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -776,7 +777,7 @@ def init_db() -> None:
     
     logger.info("database_initialized", db_path=settings.database_path)
 
-def fetch_app_settings(keys: List[str]) -> Dict[str, Any]:
+def fetch_app_settings(keys: list[str]) -> dict[str, Any]:
     """Fetch app settings from database."""
     try:
         with db_conn() as conn:
@@ -802,7 +803,7 @@ def fetch_app_settings(keys: List[str]) -> Dict[str, Any]:
         logger.error("fetch_app_settings_error", error=str(e))
         return {}
 
-def upsert_app_settings(settings_dict: Dict[str, str]) -> None:
+def upsert_app_settings(settings_dict: dict[str, str]) -> None:
     """Insert or update app settings."""
     try:
         with db_conn() as conn:
@@ -822,4 +823,4 @@ def upsert_app_settings(settings_dict: Dict[str, str]) -> None:
         logger.error("upsert_app_settings_error", error=str(e))
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()

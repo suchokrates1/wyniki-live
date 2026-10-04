@@ -12,7 +12,7 @@ HTTP status convention:
 from __future__ import annotations
 
 from hmac import compare_digest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 
 from flask import jsonify, request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -49,7 +49,7 @@ def office_stream_cookie_name(slot: int) -> str:
 
 
 def court_session_expires_at() -> str:
-    return (datetime.now(timezone.utc) + timedelta(hours=settings.court_session_ttl_hours)).isoformat()
+    return (datetime.now(UTC) + timedelta(hours=settings.court_session_ttl_hours)).isoformat()
 
 
 def _bearer_token() -> str:
@@ -85,7 +85,7 @@ def court_id_from_bearer() -> str | None:
 
 
 def _in_court_grace_period() -> bool:
-    return datetime.now(timezone.utc) < settings.court_auth_grace_until
+    return datetime.now(UTC) < settings.court_auth_grace_until
 
 
 def require_court_access(kort_id: str | None):

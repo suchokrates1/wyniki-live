@@ -1,6 +1,5 @@
 """Group standings from finished match rows."""
 import json
-from typing import List
 
 def _is_stb(s: dict) -> bool:
     """Detect super tiebreak set (set 3+ with low games and TB points)."""
@@ -58,7 +57,7 @@ def _format_set_score(s: dict, flipped: bool = False) -> str:
         return f"{g1}:{g2}({tb})"
     return f"{g1}:{g2}"
 
-def _compute_standings(player_names: List[str], matches) -> tuple:
+def _compute_standings(player_names: list[str], matches) -> tuple:
     """Compute standings from a list of matches. Returns (standings, match_results)."""
     stats = {name: {"wins": 0, "losses": 0, "sets_won": 0, "sets_lost": 0,
                      "games_won": 0, "games_lost": 0, "played": 0}

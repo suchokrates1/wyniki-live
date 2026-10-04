@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any
+from collections.abc import Iterable
 
 from ..config import logger
 from .connection import db_conn
@@ -41,9 +42,9 @@ def normalize_class(value: Any) -> str:
     return raw if raw in CLASSES else ""
 
 
-def classes_in_label(label: Any) -> Set[str]:
+def classes_in_label(label: Any) -> set[str]:
     """B-classes a tournament category is open to: "B2 Men" → {B2}, "B3/4 Mixed" → {B3, B4}."""
-    found: Set[str] = set()
+    found: set[str] = set()
     for match in _CLASS_IN_LABEL.finditer(str(label or "")):
         found.add(f"B{match.group(1)}")
         for extra in re.findall(r"[1-4]", match.group(2) or ""):
@@ -93,7 +94,7 @@ def normalize_stored_genders(cursor) -> int:
     return changed
 
 
-def _rows(cursor, global_player_id: int) -> List[Dict[str, Any]]:
+def _rows(cursor, global_player_id: int) -> list[dict[str, Any]]:
     cursor.execute(
         """
         SELECT pc.*, t.name AS tournament_name, t.start_date AS tournament_start, t.end_date AS tournament_end
@@ -106,7 +107,7 @@ def _rows(cursor, global_player_id: int) -> List[Dict[str, Any]]:
     return [dict(row) for row in cursor.fetchall()]
 
 
-def fetch_classification_history(global_player_id: int) -> List[Dict[str, Any]]:
+def fetch_classification_history(global_player_id: int) -> list[dict[str, Any]]:
     """Every class the player had, oldest first; a player never reclassified has one entry."""
     with db_conn() as conn:
         cursor = conn.cursor()
@@ -140,11 +141,11 @@ def record_classification_change(
     classification: str,
     *,
     source: str,
-    tournament_id: Optional[int] = None,
-    effective_date: Optional[str] = None,
+    tournament_id: int | None = None,
+    effective_date: str | None = None,
     status: str = "confirmed",
     note: str = "",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Add a class to the player's history and make the latest one by date current.
 
     A change from a tournament also sets the class of the player's entry in that tournament,
@@ -201,7 +202,7 @@ def record_classification_change(
     return {"id": new_id, "classification": code, "previous_classification": previous, "effective_date": effective_date, "current": current}
 
 
-def played_categories(tournament_id: int) -> List[Dict[str, Any]]:
+def played_categories(tournament_id: int) -> list[dict[str, Any]]:
     """Each database player of a tournament with the singles category they played in."""
     with db_conn() as conn:
         cursor = conn.cursor()
@@ -219,7 +220,7 @@ def played_categories(tournament_id: int) -> List[Dict[str, Any]]:
             """,
             (int(tournament_id),),
         )
-        seen: Set[int] = set()
+        seen: set[int] = set()
         result = []
         for row in cursor.fetchall():
             gid = int(row["global_player_id"])
@@ -241,7 +242,7 @@ def played_categories(tournament_id: int) -> List[Dict[str, Any]]:
         return result
 
 
-def classification_review(tournament_id: int) -> Dict[str, Any]:
+def classification_review(tournament_id: int) -> dict[str, Any]:
     """Players who played outside their class, with what the admin decided so far."""
     with db_conn() as conn:
         cursor = conn.cursor()
@@ -266,7 +267,7 @@ def classification_review(tournament_id: int) -> Dict[str, Any]:
     return {"tournament_id": int(tournament_id), "items": items, "pending": sum(1 for item in items if not item["decision"])}
 
 
-def apply_classification_decisions(tournament_id: int, decisions: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+def apply_classification_decisions(tournament_id: int, decisions: Iterable[dict[str, Any]]) -> dict[str, Any]:
     """reclassify: the class changes from this tournament; play_up / skip: only remembered."""
     review = {item["global_player_id"]: item for item in classification_review(tournament_id)["items"]}
     applied, errors = [], []
@@ -314,7 +315,7 @@ def delete_classifications(global_player_id: int) -> None:
         conn.commit()
 
 
-def played_category_labels(player_entry_ids: Iterable[int]) -> Dict[int, str]:
+def played_category_labels(player_entry_ids: Iterable[int]) -> dict[int, str]:
     """{tournament_id: singles category label} for tournament entries of one person."""
     ids = [int(value) for value in player_entry_ids if value]
     if not ids:
@@ -332,7 +333,7 @@ def played_category_labels(player_entry_ids: Iterable[int]) -> Dict[int, str]:
             """,
             ids,
         ).fetchall()
-    labels: Dict[int, str] = {}
+    labels: dict[int, str] = {}
     for tournament_id, label in rows:
         labels.setdefault(int(tournament_id), str(label or ""))
     return labels

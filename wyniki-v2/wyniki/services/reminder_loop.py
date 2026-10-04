@@ -14,7 +14,7 @@ greenlet and silently ending reminders for the rest of the tournament.
 from __future__ import annotations
 
 import os
-from datetime import timezone
+from datetime import timezone, UTC
 
 import structlog
 
@@ -31,7 +31,7 @@ _started = False
 
 
 def _tz() -> timezone:
-    return timezone.utc
+    return UTC
 
 
 def run_forever() -> None:

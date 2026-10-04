@@ -15,9 +15,10 @@ with only one possible player is left out and that player goes straight to the n
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
+from collections.abc import Sequence
 
-Source = Tuple[str, Any]  # ("seed", name) | ("win", key) | ("lose", key) | ("dead", None)
+Source = tuple[str, Any]  # ("seed", name) | ("win", key) | ("lose", key) | ("dead", None)
 DEAD: Source = ("dead", None)
 
 CONSOLATION = "Pocieszenie"
@@ -30,7 +31,7 @@ def _next_power_of_two(value: int) -> int:
     return size
 
 
-def seed_lines(size: int) -> List[int]:
+def seed_lines(size: int) -> list[int]:
     """Standard bracket order: ``lines[i]`` is the seed number on line ``i``."""
     order = [1, 2]
     while len(order) < size:
@@ -44,7 +45,7 @@ def _distance(line_a: int, line_b: int) -> int:
     return (line_a ^ line_b).bit_length()
 
 
-def place_entrants(tiers: Sequence[Sequence[Tuple[str, str]]]) -> List[Optional[Tuple[str, str]]]:
+def place_entrants(tiers: Sequence[Sequence[tuple[str, str]]]) -> list[tuple[str, str] | None]:
     """Put ``(group, name)`` entrants on bracket lines.
 
     ``tiers[0]`` are the seeds (group winners) in seeding order; later tiers are placed as
@@ -53,7 +54,7 @@ def place_entrants(tiers: Sequence[Sequence[Tuple[str, str]]]) -> List[Optional[
     """
     total = sum(len(tier) for tier in tiers)
     size = max(2, _next_power_of_two(total))
-    lines: List[Optional[Tuple[str, str]]] = [None] * size
+    lines: list[tuple[str, str] | None] = [None] * size
     order = seed_lines(size)
     line_of_seed = {seed: index for index, seed in enumerate(order)}
 
@@ -74,7 +75,7 @@ def place_entrants(tiers: Sequence[Sequence[Tuple[str, str]]]) -> List[Optional[
             free = [index for index, other in enumerate(lines) if other is None and index not in reserved]
             if not free:
                 free = [index for index, other in enumerate(lines) if other is None]
-            def score(index: int) -> Tuple[int, int, int]:
+            def score(index: int) -> tuple[int, int, int]:
                 nearest = min((_distance(index, other) for other in same_group), default=size.bit_length())
                 faces_seed = 1 if lines[index ^ 1] is not None and lines[index ^ 1] in seeds else 0
                 return (nearest, faces_seed, -index)
@@ -83,7 +84,7 @@ def place_entrants(tiers: Sequence[Sequence[Tuple[str, str]]]) -> List[Optional[
     return lines
 
 
-def _group_penalty(lines: Sequence[Optional[Tuple[str, str]]]) -> int:
+def _group_penalty(lines: Sequence[tuple[str, str] | None]) -> int:
     """Lower is better: players of one group meeting early weigh the most."""
     top = len(lines).bit_length()
     penalty = 0
@@ -97,7 +98,7 @@ def _group_penalty(lines: Sequence[Optional[Tuple[str, str]]]) -> int:
     return penalty
 
 
-def _separate_groups(lines: List[Optional[Tuple[str, str]]], seeds: set) -> None:
+def _separate_groups(lines: list[tuple[str, str] | None], seeds: set) -> None:
     """Swap non-seeded entrants while that keeps group mates further apart."""
     movable = [index for index, entrant in enumerate(lines) if entrant and entrant not in seeds]
     best = _group_penalty(lines)
@@ -132,26 +133,26 @@ def build_elimination(
     label: str = "",
     all_places: bool = True,
     third_place: bool = True,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Single elimination with byes collapsed.
 
     ``prefix`` is the category ("B2 Men"), ``label`` an optional draw name
     ("Pocieszenie"). With ``all_places`` every place is played out; without it only the
     title and the 3rd place are. Returns bracket_knockout slot dicts with feed targets.
     """
-    nodes: List[Dict[str, Any]] = []
+    nodes: list[dict[str, Any]] = []
 
     def phase_name(place_from: int, size: int) -> str:
         name = _round_name(place_from, size)
         return f"{prefix} — {label} {name}" if label else f"{prefix} — {name}"
 
-    def bracket(sources: List[Source], place_from: int) -> None:
+    def bracket(sources: list[Source], place_from: int) -> None:
         size = len(sources)
         if size < 2:
             return
         phase = phase_name(place_from, size)
-        winners: List[Source] = []
-        losers: List[Source] = []
+        winners: list[Source] = []
+        losers: list[Source] = []
         for index in range(size // 2):
             key = (phase, index + 1)
             nodes.append({"key": key, "inputs": [sources[2 * index], sources[2 * index + 1]]})
@@ -163,14 +164,14 @@ def build_elimination(
 
     bracket(list(lines), 1)
 
-    alias: Dict[Source, Source] = {}
+    alias: dict[Source, Source] = {}
 
     def resolve(source: Source) -> Source:
         while source in alias:
             source = alias[source]
         return source
 
-    kept: List[Dict[str, Any]] = []
+    kept: list[dict[str, Any]] = []
     for node in nodes:
         left, right = (resolve(source) for source in node["inputs"])
         key = node["key"]
@@ -185,14 +186,14 @@ def build_elimination(
         kept.append({"key": key, "inputs": [left, right]})
 
     # Renumber positions inside each phase after byes removed matches.
-    positions: Dict[Tuple[str, int], Tuple[str, int]] = {}
-    per_phase: Dict[str, int] = {}
+    positions: dict[tuple[str, int], tuple[str, int]] = {}
+    per_phase: dict[str, int] = {}
     for node in kept:
         phase, _ = node["key"]
         per_phase[phase] = per_phase.get(phase, 0) + 1
         positions[node["key"]] = (phase, per_phase[phase])
 
-    slots: Dict[Tuple[str, int], Dict[str, Any]] = {}
+    slots: dict[tuple[str, int], dict[str, Any]] = {}
     for node in kept:
         phase, position = positions[node["key"]]
         slots[node["key"]] = {
@@ -226,13 +227,13 @@ def build_elimination(
 PLACES = ("all", "third", "none")
 
 
-def places_flags(places: str) -> Tuple[bool, bool]:
+def places_flags(places: str) -> tuple[bool, bool]:
     """(every place played out, 3rd-place match) for "all" / "third" / "none"."""
     value = places if places in PLACES else "all"
     return value == "all", value != "none"
 
 
-def swap_lines(lines: Sequence[Any], swaps: Optional[Sequence[Sequence[int]]]) -> List[Any]:
+def swap_lines(lines: Sequence[Any], swaps: Sequence[Sequence[int]] | None) -> list[Any]:
     """Apply manual swaps of first-round lines, in order; invalid pairs are ignored."""
     result = list(lines)
     for pair in swaps or []:
@@ -245,8 +246,8 @@ def swap_lines(lines: Sequence[Any], swaps: Optional[Sequence[Sequence[int]]]) -
     return result
 
 
-def _tiers(groups: Sequence[Dict[str, Any]], first_rank: int, last_rank: Optional[int]) -> List[List[Tuple[str, str]]]:
-    tiers: List[List[Tuple[str, str]]] = []
+def _tiers(groups: Sequence[dict[str, Any]], first_rank: int, last_rank: int | None) -> list[list[tuple[str, str]]]:
+    tiers: list[list[tuple[str, str]]] = []
     deepest = max((len(group["ranking"]) for group in groups), default=0)
     stop = deepest if last_rank is None else min(last_rank, deepest)
     for rank in range(first_rank, stop + 1):
@@ -261,13 +262,13 @@ def _tiers(groups: Sequence[Dict[str, Any]], first_rank: int, last_rank: Optiona
 
 
 def group_draw_lines(
-    groups: Sequence[Dict[str, Any]],
+    groups: Sequence[dict[str, Any]],
     *,
     qualifiers: int = 2,
     consolation: bool = True,
-) -> Dict[str, Optional[List[Optional[Tuple[str, str]]]]]:
+) -> dict[str, list[tuple[str, str] | None] | None]:
     """First-round lines of the main draw and the consolation draw, before manual swaps."""
-    result: Dict[str, Optional[List[Optional[Tuple[str, str]]]]] = {"main": None, "consolation": None}
+    result: dict[str, list[tuple[str, str] | None] | None] = {"main": None, "consolation": None}
     main = _tiers(groups, 1, qualifiers)
     if sum(len(tier) for tier in main) >= 2:
         result["main"] = place_entrants(main)
@@ -280,29 +281,29 @@ def group_draw_lines(
 
 def build_group_draws(
     prefix: str,
-    groups: Sequence[Dict[str, Any]],
+    groups: Sequence[dict[str, Any]],
     *,
     qualifiers: int = 2,
     places: str = "all",
     consolation: bool = True,
-    swaps: Optional[Dict[str, Sequence[Sequence[int]]]] = None,
-) -> List[Dict[str, Any]]:
+    swaps: dict[str, Sequence[Sequence[int]]] | None = None,
+) -> list[dict[str, Any]]:
     """Main draw (top ``qualifiers`` of each group) plus, optionally, a consolation draw for
     the rest. ``groups`` are ``{"name", "ranking": [names or placeholders in order]}``."""
     all_places, third_place = places_flags(places)
     lines = group_draw_lines(groups, qualifiers=qualifiers, consolation=consolation)
-    slots: List[Dict[str, Any]] = []
+    slots: list[dict[str, Any]] = []
     for key, label in (("main", ""), ("consolation", CONSOLATION)):
         draw = lines.get(key)
         if not draw:
             continue
         draw = swap_lines(draw, (swaps or {}).get(key))
-        sources: List[Source] = [("seed", entrant[1]) if entrant else DEAD for entrant in draw]
+        sources: list[Source] = [("seed", entrant[1]) if entrant else DEAD for entrant in draw]
         slots.extend(build_elimination(prefix, sources, label=label, all_places=all_places, third_place=third_place))
     return slots
 
 
-def direct_draw_lines(names: Sequence[str]) -> List[Optional[str]]:
+def direct_draw_lines(names: Sequence[str]) -> list[str | None]:
     """First-round lines of a straight knockout in seeding order (byes to the top seeds)."""
     entrants = [str(name) for name in names if str(name or "").strip()]
     if len(entrants) < 2:
@@ -316,18 +317,18 @@ def build_direct_draw(
     names: Sequence[str],
     *,
     places: str = "third",
-    swaps: Optional[Sequence[Sequence[int]]] = None,
-) -> List[Dict[str, Any]]:
+    swaps: Sequence[Sequence[int]] | None = None,
+) -> list[dict[str, Any]]:
     """Straight knockout for a list in seeding order: byes to the top seeds."""
     lines = swap_lines(direct_draw_lines(names), swaps)
     if not lines:
         return []
     all_places, third_place = places_flags(places)
-    sources: List[Source] = [("seed", name) if name else DEAD for name in lines]
+    sources: list[Source] = [("seed", name) if name else DEAD for name in lines]
     return build_elimination(prefix, sources, all_places=all_places, third_place=third_place)
 
 
-def cross_draw_lines(groups: Sequence[Dict[str, Any]]) -> List[Tuple[str, str]]:
+def cross_draw_lines(groups: Sequence[dict[str, Any]]) -> list[tuple[str, str]]:
     """Semifinal lines for two groups: 1A-2B, 1B-2A."""
     first, second = groups[0], groups[1]
     return [
@@ -340,18 +341,18 @@ def cross_draw_lines(groups: Sequence[Dict[str, Any]]) -> List[Tuple[str, str]]:
 
 def build_cross_draw(
     prefix: str,
-    groups: Sequence[Dict[str, Any]],
+    groups: Sequence[dict[str, Any]],
     *,
     places: str = "all",
-    swaps: Optional[Sequence[Sequence[int]]] = None,
-) -> List[Dict[str, Any]]:
+    swaps: Sequence[Sequence[int]] | None = None,
+) -> list[dict[str, Any]]:
     """Two groups: crossed semifinals, final, 3rd place; with every place also 3rd v 3rd for
     5th and 4th v 4th for 7th."""
     if len(groups) < 2 or any(len(group["ranking"]) < 2 for group in groups[:2]):
         return []
     _, third_place = places_flags(places)
     lines = swap_lines(cross_draw_lines(groups), swaps)
-    sources: List[Source] = [("seed", entrant[1]) for entrant in lines]
+    sources: list[Source] = [("seed", entrant[1]) for entrant in lines]
     slots = build_elimination(prefix, sources, all_places=False, third_place=third_place)
     if places == "all":
         first, second = groups[0]["ranking"], groups[1]["ranking"]
@@ -365,7 +366,7 @@ def build_cross_draw(
     return slots
 
 
-def build_table_final(prefix: str, ranking: Sequence[str], *, places: str = "third") -> List[Dict[str, Any]]:
+def build_table_final(prefix: str, ranking: Sequence[str], *, places: str = "third") -> list[dict[str, Any]]:
     """One group: 1st v 2nd for the title and, with 4 or more players, 3rd v 4th."""
     if len(ranking) < 2:
         return []

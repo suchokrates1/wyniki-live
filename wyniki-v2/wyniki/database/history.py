@@ -1,7 +1,7 @@
 """Database access layer submodule."""
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime, UTC
+from typing import Any
 
 from ..config import logger
 from ..services.match_result import plausible_duration
@@ -10,21 +10,21 @@ from .errors import StorageError
 from .connection import db_conn, website_visible_sql
 
 
-def _seconds_between(start: Any, end: Any) -> Optional[int]:
+def _seconds_between(start: Any, end: Any) -> int | None:
     try:
         started = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
         ended = datetime.fromisoformat(str(end).replace("Z", "+00:00"))
     except (TypeError, ValueError):
         return None
     if started.tzinfo is None:
-        started = started.replace(tzinfo=timezone.utc)
+        started = started.replace(tzinfo=UTC)
     if ended.tzinfo is None:
-        ended = ended.replace(tzinfo=timezone.utc)
+        ended = ended.replace(tzinfo=UTC)
     return int((ended - started).total_seconds())
 
 
 def _history_timing(stored_seconds: Any, tablet_seconds: Any, started_at: Any,
-                    created_at: Any, ended_ts: Any) -> tuple[int, Optional[str]]:
+                    created_at: Any, ended_ts: Any) -> tuple[int, str | None]:
     """Duration and start of a finished match, from the most trustworthy source.
 
     The umpire's own clock (match statistics) wins. The stored value came from the
@@ -41,8 +41,8 @@ def _history_timing(stored_seconds: Any, tablet_seconds: Any, started_at: Any,
         try:
             ended = datetime.fromisoformat(str(ended_ts).replace("Z", "+00:00"))
             if ended.tzinfo is None:
-                ended = ended.replace(tzinfo=timezone.utc)
-            derived = datetime.fromtimestamp(ended.timestamp() - tablet, tz=timezone.utc).isoformat()
+                ended = ended.replace(tzinfo=UTC)
+            derived = datetime.fromtimestamp(ended.timestamp() - tablet, tz=UTC).isoformat()
             # A backfilled end time moves the derived start past the row's creation: distrust it.
             lead = _seconds_between(derived, created_at) if created_at else None
             if lead is not None and 0 <= lead <= 1800:
@@ -51,7 +51,7 @@ def _history_timing(stored_seconds: Any, tablet_seconds: Any, started_at: Any,
             start = None
     return duration or 0, start or created_at
 
-def insert_match_history(entry: Dict[str, Any]) -> None:
+def insert_match_history(entry: dict[str, Any]) -> None:
     """Insert a match history entry."""
     try:
         with db_conn() as conn:
@@ -107,7 +107,7 @@ def insert_match_history(entry: Dict[str, Any]) -> None:
     except Exception as e:
         logger.error("insert_match_history_error", error=str(e), entry=entry)
 
-def delete_latest_history_entry() -> Optional[Dict]:
+def delete_latest_history_entry() -> dict | None:
     """Delete the most recent history entry."""
     try:
         with db_conn() as conn:
@@ -138,17 +138,17 @@ def delete_latest_history_entry() -> Optional[Dict]:
 
 def fetch_match_history(
     limit: int = 100,
-    tournament_id: Optional[int] = None,
+    tournament_id: int | None = None,
     public_only: bool = False,
     stats_enabled_only: bool = False,
     offset: int = 0,
-) -> List[Dict]:
+) -> list[dict]:
     """Fetch match history from database, enriched with full names."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
             conditions = []
-            params: List[Any] = []
+            params: list[Any] = []
             if tournament_id is not None:
                 conditions.append("mh.tournament_id = ?")
                 params.append(tournament_id)
@@ -172,8 +172,8 @@ def fetch_match_history(
 
             # Build lookup: match_id -> (player1_name, player2_name, created_at)
             match_ids = [r["match_id"] for r in rows if "match_id" in col_names and r["match_id"]]
-            match_lookup: Dict[int, Dict] = {}
-            duration_lookup: Dict[int, int] = {}
+            match_lookup: dict[int, dict] = {}
+            duration_lookup: dict[int, int] = {}
             if match_ids:
                 placeholders = ",".join("?" for _ in match_ids)
                 cursor.execute(
@@ -198,7 +198,7 @@ def fetch_match_history(
 
             # Build lookup: last_name -> full_name from players table
             cursor.execute("SELECT first_name, last_name, name FROM players")
-            player_name_map: Dict[str, str] = {}
+            player_name_map: dict[str, str] = {}
             for pr in cursor.fetchall():
                 fn = (pr["first_name"] or "").strip()
                 ln = (pr["last_name"] or "").strip()
@@ -286,7 +286,7 @@ def fetch_match_history(
         logger.error("fetch_match_history_error", error=str(e))
         return []
 
-def _resolve_name(raw: Optional[str], lookup: Dict[str, str]) -> str:
+def _resolve_name(raw: str | None, lookup: dict[str, str]) -> str:
     """Try to resolve a surname or 'X / Y' doubles pair to full names."""
     if not raw or raw == "-":
         return raw or "-"

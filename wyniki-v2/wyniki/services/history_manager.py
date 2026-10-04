@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime, UTC
+from typing import Any
 
 from ..config import logger
 
 
-def _score_arrays_from_sets_history(sets_history: Optional[List[Dict[str, Any]]]) -> tuple[List[int], List[int]]:
+def _score_arrays_from_sets_history(sets_history: list[dict[str, Any]] | None) -> tuple[list[int], list[int]]:
     """Build persisted score arrays from authoritative sets_history data.
 
     Super tie-break points stay in the arrays so public history can show [10:3]
@@ -17,8 +17,8 @@ def _score_arrays_from_sets_history(sets_history: Optional[List[Dict[str, Any]]]
     if not sets_history:
         return [], []
 
-    score_a: List[int] = []
-    score_b: List[int] = []
+    score_a: list[int] = []
+    score_b: list[int] = []
     for set_info in sets_history:
         if not isinstance(set_info, dict):
             continue
@@ -40,7 +40,7 @@ def _score_arrays_from_sets_history(sets_history: Optional[List[Dict[str, Any]]]
     return score_a, score_b
 
 
-def add_match_to_history(kort_id: str, state: Dict[str, Any]) -> None:
+def add_match_to_history(kort_id: str, state: dict[str, Any]) -> None:
     """Add completed match to history."""
     entry = _build_history_entry(kort_id, state)
     
@@ -52,7 +52,7 @@ def add_match_to_history(kort_id: str, state: Dict[str, Any]) -> None:
     _persist_history_entry(entry)
 
 
-def _build_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
+def _build_history_entry(kort_id: str, state: dict[str, Any]) -> dict[str, Any]:
     """Build history entry from court state.
 
     Player names and sets come from the finished Match row when match_id is set.
@@ -124,13 +124,13 @@ def _build_history_entry(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
         "winner_name": winner_name,
         "injured_player_name": injured_player_name,
         "result_note": result_note,
-        "ended_ts": datetime.now(timezone.utc).isoformat(),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ended_ts": datetime.now(UTC).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "completed_at": match_time.get("finished_ts"),
     }
 
 
-def _persist_history_entry(entry: Dict[str, Any]) -> None:
+def _persist_history_entry(entry: dict[str, Any]) -> None:
     """Persist history entry to database."""
     try:
         from ..database import insert_match_history

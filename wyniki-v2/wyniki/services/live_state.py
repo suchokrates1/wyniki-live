@@ -8,12 +8,12 @@ set count, tiebreak flags and server. It is never used for results.
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from ..db_models import utc_now_iso
 
 
-def _sets_played(sets_history: Any) -> Optional[int]:
+def _sets_played(sets_history: Any) -> int | None:
     if sets_history is None:
         return None
     if isinstance(sets_history, str):
@@ -63,7 +63,7 @@ def store_live_state(match: Any, score: dict | None, serve: Any = None) -> None:
     match.live_state = json.dumps(state)
 
 
-def read_live_state(match: Any) -> Optional[dict]:
+def read_live_state(match: Any) -> dict | None:
     """The stored point state when it still describes the match's current game.
 
     A score changed elsewhere (office correction, director command) leaves games or the

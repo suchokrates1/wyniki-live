@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import threading
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
@@ -23,13 +23,13 @@ MAX_DAYS = 21
 MAX_URL_LEN = 500
 
 _CACHE_LOCK = threading.Lock()
-_TODAY_URLS: Dict[str, Any] = {"day": None, "urls": {}}
+_TODAY_URLS: dict[str, Any] = {"day": None, "urls": {}}
 
 
 class StreamUrlError(ValueError):
     """One or more cells have a URL that is not http(s)."""
 
-    def __init__(self, cells: Optional[List[Dict[str, str]]] = None):
+    def __init__(self, cells: list[dict[str, str]] | None = None):
         super().__init__("invalid_url")
         self.cells = list(cells or [])
 
@@ -58,14 +58,14 @@ def invalidate_watch_url_cache() -> None:
         _TODAY_URLS["urls"] = {}
 
 
-def today_warsaw(now: Optional[datetime] = None) -> str:
+def today_warsaw(now: datetime | None = None) -> str:
     stamp = now or datetime.now(WARSAW)
     if stamp.tzinfo is None:
         stamp = stamp.replace(tzinfo=WARSAW)
     return stamp.astimezone(WARSAW).date().isoformat()
 
 
-def parse_iso_date(raw: Any) -> Optional[date]:
+def parse_iso_date(raw: Any) -> date | None:
     text = str(raw or "").strip()[:10]
     try:
         return date.fromisoformat(text)
@@ -73,14 +73,14 @@ def parse_iso_date(raw: Any) -> Optional[date]:
         return None
 
 
-def tournament_days(start_raw: Any, end_raw: Any, *, max_days: int = MAX_DAYS) -> List[str]:
+def tournament_days(start_raw: Any, end_raw: Any, *, max_days: int = MAX_DAYS) -> list[str]:
     start = parse_iso_date(start_raw)
     if start is None:
         return []
     end = parse_iso_date(end_raw) or start
     if end < start:
         start, end = end, start
-    days: List[str] = []
+    days: list[str] = []
     cursor = start
     while cursor <= end and len(days) < max_days:
         days.append(cursor.isoformat())
@@ -102,7 +102,7 @@ def normalize_stream_url(raw: Any) -> str:
     return text
 
 
-def _court_payload(courts: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+def _court_payload(courts: list[dict[str, Any]]) -> list[dict[str, str]]:
     return [
         {
             "kort_id": str(court.get("kort_id") or ""),
@@ -113,13 +113,13 @@ def _court_payload(courts: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     ]
 
 
-def get_tournament_court_streams(tournament_id: int) -> Dict[str, Any]:
+def get_tournament_court_streams(tournament_id: int) -> dict[str, Any]:
     tournament = fetch_tournament(tournament_id) or {}
     courts = fetch_courts_for_tournament(tournament_id)
     court_ids = [str(court["kort_id"]) for court in courts if court.get("kort_id")]
     days = tournament_days(tournament.get("start_date"), tournament.get("end_date"))
-    links: Dict[str, Dict[str, str]] = {day: {cid: "" for cid in court_ids} for day in days}
-    shared: Dict[str, str] = {}
+    links: dict[str, dict[str, str]] = {day: {cid: "" for cid in court_ids} for day in days}
+    shared: dict[str, str] = {}
     off_courts: set[str] = set()
 
     try:
@@ -167,7 +167,7 @@ def get_tournament_court_streams(tournament_id: int) -> Dict[str, Any]:
     }
 
 
-def save_tournament_court_streams(tournament_id: int, payload: Any) -> Dict[str, Any]:
+def save_tournament_court_streams(tournament_id: int, payload: Any) -> dict[str, Any]:
     incoming = payload.get("links") if isinstance(payload, dict) else None
     if incoming is None and isinstance(payload, dict) and "shared" not in payload:
         incoming = payload
@@ -182,8 +182,8 @@ def save_tournament_court_streams(tournament_id: int, payload: Any) -> Dict[str,
     courts = fetch_courts_for_tournament(tournament_id)
     court_ids = {str(court["kort_id"]) for court in courts if court.get("kort_id")}
     allowed_days = set(tournament_days(tournament.get("start_date"), tournament.get("end_date")))
-    rows: List[tuple] = []
-    errors: List[Dict[str, str]] = []
+    rows: list[tuple] = []
+    errors: list[dict[str, str]] = []
 
     def _append_row(kid: str, day_key: str, url_raw: Any) -> None:
         try:
@@ -202,7 +202,7 @@ def save_tournament_court_streams(tournament_id: int, payload: Any) -> Dict[str,
     }
 
     if shared_mode:
-        shared_days: List[str] = []
+        shared_days: list[str] = []
         for day_raw, url_raw in shared_incoming.items():
             day = parse_iso_date(day_raw)
             if day is None:
@@ -257,7 +257,7 @@ def save_tournament_court_streams(tournament_id: int, payload: Any) -> Dict[str,
     return get_tournament_court_streams(tournament_id)
 
 
-def fetch_watch_urls_for_date(day: Optional[str] = None) -> Dict[str, str]:
+def fetch_watch_urls_for_date(day: str | None = None) -> dict[str, str]:
     target = day or today_warsaw()
     use_cache = day is None
     if use_cache:
@@ -265,8 +265,8 @@ def fetch_watch_urls_for_date(day: Optional[str] = None) -> Dict[str, str]:
             if _TODAY_URLS["day"] == target:
                 return dict(_TODAY_URLS["urls"])
 
-    urls: Dict[str, str] = {}
-    shared_by_tournament: Dict[int, str] = {}
+    urls: dict[str, str] = {}
+    shared_by_tournament: dict[int, str] = {}
     off_courts: set[str] = set()
     try:
         with db_conn() as conn:

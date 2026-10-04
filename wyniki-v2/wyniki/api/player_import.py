@@ -1,7 +1,7 @@
 """Parse a pasted start list into player rows."""
 import json
 import re
-from typing import Any, Dict
+from typing import Any
 
 import requests
 
@@ -84,7 +84,7 @@ def _should_skip_import_line(text: str) -> bool:
 def _parse_import_section_header(
     line: str,
     mixed_categories: list[str] | None = None,
-) -> Dict[str, str] | None:
+) -> dict[str, str] | None:
     text = _clean_import_line_text(line)
     if not text:
         return None
@@ -143,7 +143,7 @@ def _build_import_player_entry(
     ai_assisted: bool = False,
     ai_notes: str = '',
     mixed_categories: list[str] | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     first_name = str(first_name or '').strip()
     last_name = str(last_name or '').strip()
     category = _normalize_import_category(category)
@@ -195,7 +195,7 @@ def _build_import_player_entry(
     return payload
 
 
-def _extract_gemini_json_text(payload: Dict[str, Any]) -> str:
+def _extract_gemini_json_text(payload: dict[str, Any]) -> str:
     for candidate in payload.get('candidates', []):
         content = candidate.get('content') or {}
         for part in content.get('parts', []):
@@ -205,7 +205,7 @@ def _extract_gemini_json_text(payload: Dict[str, Any]) -> str:
     return ''
 
 
-def _needs_import_ai_help(player: Dict[str, Any]) -> bool:
+def _needs_import_ai_help(player: dict[str, Any]) -> bool:
     return bool(
         player.get('warnings')
         or not _normalize_import_country(player.get('country'))
@@ -215,11 +215,11 @@ def _needs_import_ai_help(player: Dict[str, Any]) -> bool:
 
 
 def _apply_import_ai_suggestions(
-    players: list[Dict[str, Any]],
-    suggestions: Dict[int, Dict[str, Any]],
+    players: list[dict[str, Any]],
+    suggestions: dict[int, dict[str, Any]],
     mixed_categories: list[str] | None = None,
-) -> list[Dict[str, Any]]:
-    enriched: list[Dict[str, Any]] = []
+) -> list[dict[str, Any]]:
+    enriched: list[dict[str, Any]] = []
     for player in players:
         suggestion = suggestions.get(int(player.get('line_number') or 0)) or {}
         first_name = player.get('first_name') or suggestion.get('first_name') or ''
@@ -255,7 +255,7 @@ def _apply_import_ai_suggestions(
     return enriched
 
 
-def _fetch_import_ai_suggestions(text: str, players: list[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+def _fetch_import_ai_suggestions(text: str, players: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
     api_key = str(settings.import_players_ai_api_key or '').strip()
     model = str(settings.import_players_ai_model or 'gemini-2.5-flash').strip()
     if not api_key or not players:
@@ -314,7 +314,7 @@ def _fetch_import_ai_suggestions(text: str, players: list[Dict[str, Any]]) -> Di
         logger.warning('import_players_ai_failed', error=str(exc), candidates=len(candidates))
         return {}
 
-    suggestions: Dict[int, Dict[str, Any]] = {}
+    suggestions: dict[int, dict[str, Any]] = {}
     for item in parsed.get('players', []):
         line_number = _normalize_int(item.get('line_number'), 0)
         if not line_number:
@@ -330,7 +330,7 @@ def _fetch_import_ai_suggestions(text: str, players: list[Dict[str, Any]]) -> Di
     return suggestions
 
 
-def _parse_import_players_with_ai(text: str, mixed_categories: list[str] | None = None) -> list[Dict[str, Any]]:
+def _parse_import_players_with_ai(text: str, mixed_categories: list[str] | None = None) -> list[dict[str, Any]]:
     players = _parse_import_players_text(text, mixed_categories)
     suggestions = _fetch_import_ai_suggestions(text, players)
     if not suggestions:
@@ -344,7 +344,7 @@ def _parse_import_player_line(
     default_category: str = '',
     default_gender: str = '',
     mixed_categories: list[str] | None = None,
-) -> Dict[str, Any] | None:
+) -> dict[str, Any] | None:
     text = _clean_import_line_text(line)
     if not text:
         return None
@@ -416,8 +416,8 @@ def _parse_import_player_line(
     )
 
 
-def _parse_import_players_text(text: str, mixed_categories: list[str] | None = None) -> list[Dict[str, Any]]:
-    parsed: list[Dict[str, Any]] = []
+def _parse_import_players_text(text: str, mixed_categories: list[str] | None = None) -> list[dict[str, Any]]:
+    parsed: list[dict[str, Any]] = []
     current_category = ''
     current_gender = ''
     for line_number, raw_line in enumerate(str(text or '').splitlines(), start=1):
@@ -445,8 +445,8 @@ def _parse_import_players_text(text: str, mixed_categories: list[str] | None = N
     return parsed
 
 
-def _summarize_import_players(players: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-    grouped: Dict[str, Dict[str, Any]] = {}
+def _summarize_import_players(players: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
     for player in players:
         bucket_key = player.get('start_group') or 'NIEPRZYPISANI'
         bucket = grouped.setdefault(bucket_key, {

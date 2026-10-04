@@ -2,7 +2,7 @@
 import json
 import re
 import sqlite3
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..config import logger
 
@@ -34,7 +34,7 @@ from .bracket_standings import (
     _winner_from_set_details,
 )
 
-def _surname_match_token(name: Optional[str]) -> str:
+def _surname_match_token(name: str | None) -> str:
     """Last-name token for legacy singles matching; empty for doubles pair labels."""
     value = (name or "").strip()
     if not value or is_team_display_name(value):
@@ -107,7 +107,7 @@ def _find_bracket_groups_for_player(cursor: sqlite3.Cursor, tournament_id: int, 
 
     return matched_group_ids, best_priority
 
-def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: int) -> Dict[str, Any]:
+def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: int) -> dict[str, Any]:
     """Detect bracket group/phase for a match based on player names.
     
     Returns dict with:
@@ -123,7 +123,7 @@ def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: 
             p1_surname = _surname_match_token(p1)
             p2_surname = _surname_match_token(p2)
 
-            def _find_explicit_phase(table_name: str) -> Optional[str]:
+            def _find_explicit_phase(table_name: str) -> str | None:
                 pair_clause, pair_params = sql_two_sided_name_match(p1, p2)
                 cursor.execute(
                     f"""
@@ -200,7 +200,7 @@ def detect_bracket_context(player1_name: str, player2_name: str, tournament_id: 
         logger.error("detect_bracket_context_error", error=str(e))
         return {"group_id": None, "phase": None, "warning": None}
 
-def _split_bracket_label(value: Optional[str]) -> tuple[str, str]:
+def _split_bracket_label(value: str | None) -> tuple[str, str]:
     """Split a bracket label into category prefix and suffix.
 
     Uses the last em-dash so nested labels like
@@ -229,7 +229,7 @@ _GROUP_REMATCH_PHASE_MARKERS = (
     "dogryw",
 )
 
-def normalize_group_stage_phase(phase: Optional[str]) -> str:
+def normalize_group_stage_phase(phase: str | None) -> str:
     """Map localized schedule/result labels to canonical group-stage phases."""
     value = (phase or "").strip()
     if not value:
@@ -243,7 +243,7 @@ def normalize_group_stage_phase(phase: Optional[str]) -> str:
         return GROUP_REMATCH_PHASE
     return GROUP_PHASE
 
-def is_group_stage_phase(phase: Optional[str]) -> bool:
+def is_group_stage_phase(phase: str | None) -> bool:
     """Return True for regular or rematch group-stage phases."""
     value = (phase or "").strip()
     if value in {GROUP_PHASE, GROUP_REMATCH_PHASE}:
@@ -255,7 +255,7 @@ def is_group_stage_phase(phase: Optional[str]) -> bool:
         return True
     return any(marker in lowered for marker in _GROUP_REMATCH_PHASE_MARKERS)
 
-def is_knockout_stage_phase(phase: Optional[str]) -> bool:
+def is_knockout_stage_phase(phase: str | None) -> bool:
     """Return True for knockout-style phases (final, semifinal, bronze, etc.)."""
     value = (phase or "").strip()
     if not value or is_group_stage_phase(value):
@@ -293,7 +293,7 @@ def count_group_knockout_progress(tournament_id: int, group_name: str) -> tuple[
                 finished += 1
         return expected, finished
 
-def _phase_kind(phase: Optional[str]) -> Optional[str]:
+def _phase_kind(phase: str | None) -> str | None:
     """Map localized phase labels to a stable semantic kind."""
     _, suffix = _split_bracket_label(phase)
     normalized = (suffix or phase or "").strip().lower()
@@ -347,12 +347,12 @@ def _knockout_bucket_key(group_name: str) -> tuple[str, str]:
         return ("multi", prefix)
     return ("single", name)
 
-def _group_play_format(group: Optional[Dict[str, Any]]) -> str:
+def _group_play_format(group: dict[str, Any] | None) -> str:
     return normalize_play_format((group or {}).get("play_format"))
 
 
-def _group_competitor_names(group: Dict[str, Any]) -> List[str]:
-    names: List[str] = []
+def _group_competitor_names(group: dict[str, Any]) -> list[str]:
+    names: list[str] = []
     for item in group.get("players") or []:
         if isinstance(item, dict):
             label = str(item.get("name") or item.get("player_name") or "").strip()
@@ -369,16 +369,16 @@ def _group_competitor_names(group: Dict[str, Any]) -> List[str]:
     return names
 
 
-def _iter_knockout_units(bracket_groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _iter_knockout_units(bracket_groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Split groups into independent knockout generation units based on play_format."""
-    buckets: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
+    buckets: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for group in bracket_groups:
         name = str(group.get("name") or "").strip()
         if not name:
             continue
         buckets.setdefault(_knockout_bucket_key(name), []).append(group)
 
-    units: List[Dict[str, Any]] = []
+    units: list[dict[str, Any]] = []
     for (bucket_kind, bucket_name), bucket_groups in buckets.items():
         ordered = sorted(bucket_groups, key=lambda group: _group_sort_key(str(group.get("name") or "")))
         groups_knockout = [group for group in ordered if _group_play_format(group) == PLAY_FORMAT_GROUPS_KNOCKOUT]
@@ -415,7 +415,7 @@ def knockout_formats_settings_key(tournament_id: int) -> str:
     return f"knockout_formats:{int(tournament_id)}"
 
 
-def load_knockout_formats(tournament_id: Optional[int]) -> Dict[str, Dict[str, Any]]:
+def load_knockout_formats(tournament_id: int | None) -> dict[str, dict[str, Any]]:
     """Knockout format chosen per category ({category_id: config}); empty when never set."""
     if not tournament_id:
         return {}
@@ -428,7 +428,7 @@ def load_knockout_formats(tournament_id: Optional[int]) -> Dict[str, Dict[str, A
     return data if isinstance(data, dict) else {}
 
 
-def _unit_draw_groups(unit: Dict[str, Any], *, complete: bool, counts: Dict[str, int], label: str) -> List[Dict[str, Any]]:
+def _unit_draw_groups(unit: dict[str, Any], *, complete: bool, counts: dict[str, int], label: str) -> list[dict[str, Any]]:
     """Each group with its finishing order: real names once play is over, else "1. B2 Men — Grupa A"."""
     draw_groups = []
     for group in unit.get("groups") or []:
@@ -444,12 +444,12 @@ def _unit_draw_groups(unit: Dict[str, Any], *, complete: bool, counts: Dict[str,
 
 
 def _formatted_unit_slots(
-    unit: Dict[str, Any],
-    config: Dict[str, Any],
+    unit: dict[str, Any],
+    config: dict[str, Any],
     *,
     complete: bool,
-    counts: Dict[str, int],
-) -> Optional[List[Dict[str, Any]]]:
+    counts: dict[str, int],
+) -> list[dict[str, Any]] | None:
     """Slots for a unit whose category has a chosen format; None when it does not fit the unit."""
     fmt = str(config.get("format") or "")
     if fmt == "none":
@@ -481,12 +481,12 @@ def _formatted_unit_slots(
 
 
 def _slots_for_knockout_unit(
-    unit: Dict[str, Any],
+    unit: dict[str, Any],
     *,
     complete: bool,
-    player_count_by_name: Optional[Dict[str, int]] = None,
-    formats: Optional[Dict[str, Dict[str, Any]]] = None,
-) -> List[Dict[str, Any]]:
+    player_count_by_name: dict[str, int] | None = None,
+    formats: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     counts = player_count_by_name or {}
     config = (formats or {}).get(str(unit.get("category_id"))) if unit.get("category_id") else None
     if config:
@@ -547,21 +547,21 @@ def _slots_for_knockout_unit(
     return []
 
 
-def _encode_feed(target: Optional[tuple]) -> Optional[str]:
+def _encode_feed(target: tuple | None) -> str | None:
     if not target:
         return None
     phase, position, side = target
     return f"{phase}|{int(position)}|{int(side)}"
 
 
-def _decode_feed(value: Optional[str]) -> Optional[tuple]:
+def _decode_feed(value: str | None) -> tuple | None:
     if not value or "|" not in str(value):
         return None
     phase, position, side = str(value).rsplit("|", 2)
     return phase, int(position), int(side)
 
 
-def _encode_feeds(slot: Dict[str, Any]) -> Dict[str, Any]:
+def _encode_feeds(slot: dict[str, Any]) -> dict[str, Any]:
     encoded = dict(slot)
     encoded["winner_to"] = _encode_feed(slot.get("winner_to"))
     encoded["loser_to"] = _encode_feed(slot.get("loser_to"))
@@ -571,9 +571,9 @@ def _encode_feeds(slot: Dict[str, Any]) -> Dict[str, Any]:
 def _unit_group_play_complete(
     cursor: sqlite3.Cursor,
     tournament_id: int,
-    unit: Dict[str, Any],
-    group_id_by_name: Dict[str, int],
-    player_count_by_name: Dict[str, int],
+    unit: dict[str, Any],
+    group_id_by_name: dict[str, int],
+    player_count_by_name: dict[str, int],
 ) -> bool:
     if unit.get("type") == "direct_pool":
         return len(_group_competitor_names((unit.get("groups") or [{}])[0])) >= 2
@@ -585,7 +585,7 @@ def _unit_group_play_complete(
         player_count_by_name,
     )
 
-def _is_knockout_placeholder_name(name: Optional[str]) -> bool:
+def _is_knockout_placeholder_name(name: str | None) -> bool:
     """Detect generated placeholder labels that should be replaced by real players."""
     value = (name or "").strip()
     if not value:
@@ -632,9 +632,9 @@ def _is_group_play_complete(
 def _bucket_groups_play_complete(
     cursor: sqlite3.Cursor,
     tournament_id: int,
-    ordered_groups: List[Dict[str, Any]],
-    group_id_by_name: Dict[str, int],
-    player_count_by_name: Dict[str, int],
+    ordered_groups: list[dict[str, Any]],
+    group_id_by_name: dict[str, int],
+    player_count_by_name: dict[str, int],
 ) -> bool:
     for group in ordered_groups:
         name = str(group.get("name") or "").strip()
@@ -778,7 +778,7 @@ def _knockout_schedule_player_names(slot: sqlite3.Row) -> tuple[str, str]:
         )
     return (player1_name, player2_name)
 
-def _build_knockout_slots_for_category(category_prefix: str, ordered_groups: List[Dict]) -> List[Dict]:
+def _build_knockout_slots_for_category(category_prefix: str, ordered_groups: list[dict]) -> list[dict]:
     """Generate semifinal/final/placement slots for one category."""
     group_a = ordered_groups[0]["standings"]
     group_b = ordered_groups[1]["standings"]
@@ -836,7 +836,7 @@ def _build_knockout_slots_for_category(category_prefix: str, ordered_groups: Lis
         )
     return slots
 
-def _build_single_group_final_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _build_single_group_final_slots(group_name: str, standings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Generate a direct final for one completed 3-player group."""
     if len(standings) < 2:
         return []
@@ -850,7 +850,7 @@ def _build_single_group_final_slots(group_name: str, standings: List[Dict[str, A
         }
     ]
 
-def _build_provisional_single_group_final_slots(group_name: str, category_prefix: str) -> List[Dict[str, Any]]:
+def _build_provisional_single_group_final_slots(group_name: str, category_prefix: str) -> list[dict[str, Any]]:
     final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
     return [
         {
@@ -864,7 +864,7 @@ def _build_provisional_single_group_final_slots(group_name: str, category_prefix
 def _build_provisional_four_player_group_knockout_slots(
     group_name: str,
     category_prefix: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     final_phase = f"{category_prefix} — Finał" if category_prefix else "Finał"
     third_phase = f"{category_prefix} — o 3. miejsce" if category_prefix else "o 3. miejsce"
     return [
@@ -884,8 +884,8 @@ def _build_provisional_four_player_group_knockout_slots(
 
 def _build_provisional_knockout_slots_for_category(
     category_prefix: str,
-    ordered_groups: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    ordered_groups: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     group_a = ordered_groups[0]
     group_b = ordered_groups[1]
     group_a_name = str(group_a.get("name") or category_prefix)
@@ -947,17 +947,17 @@ def _build_provisional_knockout_slots_for_category(
     return slots
 
 def _compute_provisional_knockout_slots_from_bracket(
-    bracket_groups: List[Dict[str, Any]],
+    bracket_groups: list[dict[str, Any]],
     *,
     tournament_id: int,
-    group_id_by_name: Dict[str, int],
-    player_count_by_name: Dict[str, int],
-) -> Dict[str, Any]:
+    group_id_by_name: dict[str, int],
+    player_count_by_name: dict[str, int],
+) -> dict[str, Any]:
     """Build knockout slots with standing placeholders until group play is finished."""
-    slots: List[Dict[str, Any]] = []
+    slots: list[dict[str, Any]] = []
     units = _iter_knockout_units(bracket_groups)
     formats = load_knockout_formats(tournament_id)
-    completeness: Dict[int, bool] = {}
+    completeness: dict[int, bool] = {}
     if tournament_id:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -991,10 +991,10 @@ def _compute_provisional_knockout_slots_from_bracket(
 
 def seed_knockout_rematch_for_groups(
     tournament_id: int,
-    bracket_group_ids: List[int],
+    bracket_group_ids: list[int],
     *,
-    schedule_day: Optional[str] = None,
-) -> Dict[str, Any]:
+    schedule_day: str | None = None,
+) -> dict[str, Any]:
     """Backward-compatible alias for group-stage rematch generation."""
     return ensure_group_rematch_schedule_entries(
         tournament_id,
@@ -1002,7 +1002,7 @@ def seed_knockout_rematch_for_groups(
         schedule_day=schedule_day,
     )
 
-def _build_four_player_group_knockout_slots(group_name: str, standings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _build_four_player_group_knockout_slots(group_name: str, standings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Generate a direct final and 3rd-place match for one 4-player group.
 
     Semifinals are only used when a category has two groups (A/B); a single group of
@@ -1027,9 +1027,9 @@ def _build_four_player_group_knockout_slots(group_name: str, standings: List[Dic
         },
     ]
 
-def _compute_knockout_slots_from_bracket(bracket_groups: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _compute_knockout_slots_from_bracket(bracket_groups: list[dict[str, Any]]) -> dict[str, Any]:
     """Build the expected knockout slots for every eligible category in one tournament."""
-    slots: List[Dict[str, Any]] = []
+    slots: list[dict[str, Any]] = []
     player_count_by_name = {
         str(group.get("name") or ""): len(group.get("standings") or []) or len(_group_competitor_names(group))
         for group in bracket_groups
@@ -1056,8 +1056,8 @@ def _compute_knockout_slots_from_bracket(bracket_groups: List[Dict[str, Any]]) -
 def seed_provisional_knockout_from_groups(
     tournament_id: int,
     *,
-    schedule_day: Optional[str] = None,
-) -> Dict[str, Any]:
+    schedule_day: str | None = None,
+) -> dict[str, Any]:
     """Build or refresh knockout slots with standing placeholders until group play ends."""
     db_groups = fetch_bracket_groups(tournament_id)
     if not db_groups:
@@ -1095,11 +1095,11 @@ def seed_provisional_knockout_from_groups(
 
 def _merge_bracket_knockout_slots(
     tournament_id: int,
-    slots: List[Dict[str, Any]],
+    slots: list[dict[str, Any]],
     *,
-    schedule_day: Optional[str] = None,
+    schedule_day: str | None = None,
     replace_unfinished_players: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Insert missing knockout slots and fill placeholder players without overwriting real results."""
     inserted = 0
     updated = 0
@@ -1145,8 +1145,8 @@ def _merge_bracket_knockout_slots(
                     inserted += 1
                     continue
 
-                assignments: List[str] = []
-                values: List[Any] = []
+                assignments: list[str] = []
+                values: list[Any] = []
                 for field in ("player1_name", "player2_name"):
                     new_value = slot.get(field)
                     current_value = existing[field]
@@ -1186,11 +1186,11 @@ def _merge_bracket_knockout_slots(
         return {"error": str(e)}
 
 def _annotate_groups_with_stored_format(
-    bracket_groups: List[Dict[str, Any]],
-    stored_groups: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    bracket_groups: list[dict[str, Any]],
+    stored_groups: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     by_name = {str(group.get("name") or ""): group for group in stored_groups}
-    annotated: List[Dict[str, Any]] = []
+    annotated: list[dict[str, Any]] = []
     for group in bracket_groups:
         stored = by_name.get(str(group.get("name") or "")) or {}
         merged = dict(group)
@@ -1205,7 +1205,7 @@ def _annotate_groups_with_stored_format(
     return annotated
 
 
-def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[str, Any]:
+def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> dict[str, Any]:
     """Generate knockout for every ready group/pair; do not wait for the whole tournament."""
     groups = fetch_bracket_groups(tournament_id)
     if not groups:
@@ -1221,7 +1221,7 @@ def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[st
         for group in groups
     }
 
-    ready_slots: List[Dict[str, Any]] = []
+    ready_slots: list[dict[str, Any]] = []
     formats = load_knockout_formats(tournament_id)
     pending_units = 0
     eligible_units = 0
@@ -1267,7 +1267,7 @@ def maybe_generate_knockout_from_completed_groups(tournament_id: int) -> Dict[st
         return {"status": "skipped", "reason": "knockout_already_configured"}
     return merged
 
-def _finished_match_row(cursor: sqlite3.Cursor, match_id: int) -> Optional[sqlite3.Row]:
+def _finished_match_row(cursor: sqlite3.Cursor, match_id: int) -> sqlite3.Row | None:
     """The finished match a knockout slot is about, read on the same connection the
     writes below use. Reading it through the ORM session instead would be the one
     place in this package where two connections look at the same rows, and the
@@ -1347,7 +1347,7 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
         logger.error("advance_knockout_error", error=str(e), match_id=match_id)
         return False
 
-def _advance_by_feeds(cursor, tournament_id: int, feed: Optional[str], player_name: str) -> None:
+def _advance_by_feeds(cursor, tournament_id: int, feed: str | None, player_name: str) -> None:
     """Write a player into the slot side named by a winner_to / loser_to feed."""
     target = _decode_feed(feed)
     if not target or not player_name:
@@ -1407,14 +1407,14 @@ def _advance_quarterfinal(cursor, tournament_id: int, quarter_phase: str, qf_pos
         return
     _assign_knockout_slot_player(cursor, semis[sf_index], side, winner)
 
-def _knockout_slot_targets(cursor, tournament_id: int, slot) -> List[tuple]:
+def _knockout_slot_targets(cursor, tournament_id: int, slot) -> list[tuple]:
     """Where a slot's winner and loser go: ``[(target_row, side, "winner"|"loser")]``."""
     cursor.execute(
         "SELECT id, phase, position, player1_name, player2_name, winner_name FROM bracket_knockout WHERE tournament_id = ?",
         (tournament_id,),
     )
     rows = cursor.fetchall()
-    targets: List[tuple] = []
+    targets: list[tuple] = []
     if slot["winner_to"] or slot["loser_to"]:
         for feed, role in ((slot["winner_to"], "winner"), (slot["loser_to"], "loser")):
             target = _decode_feed(feed)
@@ -1447,7 +1447,7 @@ def _knockout_slot_targets(cursor, tournament_id: int, slot) -> List[tuple]:
     return targets
 
 
-def _find_decided_knockout_slot(cursor, tournament_id: int, player1: str, player2: str, phase: Optional[str]):
+def _find_decided_knockout_slot(cursor, tournament_id: int, player1: str, player2: str, phase: str | None):
     cursor.execute(
         """
         SELECT id, phase, position, winner_name, winner_to, loser_to FROM bracket_knockout
@@ -1464,9 +1464,9 @@ def knockout_correction_blocker(
     tournament_id: int,
     player1: str,
     player2: str,
-    phase: Optional[str],
+    phase: str | None,
     new_winner: str,
-) -> Optional[str]:
+) -> str | None:
     """Phase of an already played later match that a changed winner would invalidate, if any."""
     with db_conn() as conn:
         cursor = conn.cursor()
@@ -1483,7 +1483,7 @@ def knockout_correction_blocker(
         return None
 
 
-def correct_knockout_result(match_id: int, tournament_id: int, previous_winner: Optional[str]) -> bool:
+def correct_knockout_result(match_id: int, tournament_id: int, previous_winner: str | None) -> bool:
     """Apply a corrected knockout result: update the slot and, when the winner changed,
     swap the players already moved on (the later matches must not be played yet)."""
     try:
@@ -1535,9 +1535,9 @@ def correct_knockout_result(match_id: int, tournament_id: int, previous_winner: 
 
 def swap_knockout_players(
     tournament_id: int,
-    first: Dict[str, Any],
-    second: Dict[str, Any],
-) -> Optional[str]:
+    first: dict[str, Any],
+    second: dict[str, Any],
+) -> str | None:
     """Swap two players between knockout slots of one category before either has played.
 
     ``first`` / ``second`` are ``{"slot_id": int, "side": 1|2}``. Returns an error code or None.
@@ -1596,12 +1596,12 @@ def swap_knockout_players(
     return None
 
 
-def _iter_group_competitors(group: Dict) -> List[Dict[str, Optional[int]]]:
+def _iter_group_competitors(group: dict) -> list[dict[str, int | None]]:
     """Normalize group payload into person vs team competitor rows."""
-    entries: List[Dict[str, Optional[int]]] = []
+    entries: list[dict[str, int | None]] = []
     seen: set[tuple] = set()
 
-    def _add(player_id: Optional[int], team_id: Optional[int]) -> None:
+    def _add(player_id: int | None, team_id: int | None) -> None:
         key = (player_id, team_id)
         if key in seen:
             return
@@ -1630,7 +1630,7 @@ def _iter_group_competitors(group: Dict) -> List[Dict[str, Optional[int]]]:
     return entries
 
 
-def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
+def save_bracket_groups(tournament_id: int, groups: list[dict]) -> bool:
     """Replace all bracket groups for a tournament.
     groups: [{"name": "A", "players": [player_id, ...], "teams": [team_id, ...]}, ...]
     """
@@ -1667,7 +1667,7 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
             )
             team_map = {int(row["id"]): str(row["display_name"] or "") for row in cursor.fetchall()}
 
-            members_by_group: Dict[int, set] = {}
+            members_by_group: dict[int, set] = {}
             for idx, g in enumerate(groups):
                 category_id = g.get("tournament_category_id")
                 play_format = normalize_play_format(g.get("play_format"))
@@ -1747,7 +1747,7 @@ def save_bracket_groups(tournament_id: int, groups: List[Dict]) -> bool:
         logger.error("save_bracket_groups_error", error=str(e))
         return False
 
-def fetch_bracket_groups(tournament_id: int) -> List[Dict]:
+def fetch_bracket_groups(tournament_id: int) -> list[dict]:
     """Get all bracket groups with players for a tournament."""
     try:
         with db_conn() as conn:
@@ -1788,7 +1788,7 @@ def fetch_bracket_groups(tournament_id: int) -> List[Dict]:
         logger.error("fetch_bracket_groups_error", error=str(e))
         return []
 
-def _find_group_matches(cursor, player_names: List[str], start_date: str, end_date: str, tournament_id: Optional[int] = None) -> List[Dict]:
+def _find_group_matches(cursor, player_names: list[str], start_date: str, end_date: str, tournament_id: int | None = None) -> list[dict]:
     """Find finished matches between a set of players within a date range.
     
     Uses exact name matching plus surname-based fallback to handle mixed storage,
@@ -1797,7 +1797,7 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
     """
     if len(player_names) < 2:
         return []
-    lookup_names: List[str] = []
+    lookup_names: list[str] = []
     seen_lookup: set[str] = set()
     for name in player_names:
         for variant in competitor_label_variants(name) or [str(name or "").strip()]:
@@ -1919,7 +1919,7 @@ def _find_group_matches(cursor, player_names: List[str], start_date: str, end_da
     return merged
 
 
-def save_bracket_knockout(tournament_id: int, slots: List[Dict]) -> bool:
+def save_bracket_knockout(tournament_id: int, slots: list[dict]) -> bool:
     """Save knockout bracket slots."""
     try:
         with db_conn() as conn:
@@ -1943,7 +1943,7 @@ def save_bracket_knockout(tournament_id: int, slots: List[Dict]) -> bool:
         logger.error("save_bracket_knockout_error", error=str(e))
         return False
 
-def fetch_bracket_knockout(tournament_id: int) -> List[Dict]:
+def fetch_bracket_knockout(tournament_id: int) -> list[dict]:
     """Get knockout bracket slots."""
     try:
         with db_conn() as conn:
@@ -1965,9 +1965,9 @@ def _detect_knockout_result(
     p2: str,
     start_date: str,
     end_date: str,
-    tournament_id: Optional[int] = None,
-    phase: Optional[str] = None,
-) -> Optional[Dict]:
+    tournament_id: int | None = None,
+    phase: str | None = None,
+) -> dict | None:
     """Try to find a finished match between two specific players."""
     if not p1 or not p2:
         return None
@@ -1979,7 +1979,7 @@ def _detect_knockout_result(
     surname1 = _surname_match_token(p1) or p1
     surname2 = _surname_match_token(p2) or p2
 
-    def _fetch_finished_match(match_phase: Optional[str]) -> Optional[sqlite3.Row]:
+    def _fetch_finished_match(match_phase: str | None) -> sqlite3.Row | None:
         phase_clause = "AND phase = ?" if match_phase else ""
         phase_params = [match_phase] if match_phase else []
         pair_clause, pair_params = sql_two_sided_name_match(p1, p2)
@@ -2065,7 +2065,7 @@ def _detect_knockout_result(
         "result_note": row["result_note"],
     }
 
-def get_full_bracket(tournament_id: int) -> Dict:
+def get_full_bracket(tournament_id: int) -> dict:
     """Get complete bracket data for a tournament."""
     try:
         with db_conn() as conn:
@@ -2153,7 +2153,7 @@ def get_full_bracket(tournament_id: int) -> Dict:
         logger.error("get_full_bracket_error", error=str(e))
         return {"error": str(e)}
 
-def generate_knockout_from_standings(tournament_id: int) -> Dict:
+def generate_knockout_from_standings(tournament_id: int) -> dict:
     """Auto-generate knockout bracket from completed group standings."""
     try:
         bracket = get_full_bracket(tournament_id)

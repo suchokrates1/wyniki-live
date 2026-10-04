@@ -1,5 +1,5 @@
 """Bulk public notes on schedule rows."""
-from typing import Any, Dict
+from typing import Any
 
 from ..config import logger
 from .connection import _utc_now, db_conn
@@ -8,12 +8,12 @@ from .schedule import fetch_tournament_schedule
 SCHEDULE_NOTE_MODES = ("replace", "append", "clear")
 
 
-def _schedule_note_category(row: Dict[str, Any]) -> str:
+def _schedule_note_category(row: dict[str, Any]) -> str:
     label = str(row.get("category_name") or row.get("group_name") or "").strip()
     return label.split(" — ", 1)[0].strip()
 
 
-def _schedule_row_matches_note_filters(row: Dict[str, Any], filters: Dict[str, Any]) -> bool:
+def _schedule_row_matches_note_filters(row: dict[str, Any], filters: dict[str, Any]) -> bool:
     day = str(filters.get("day_date") or "").strip()
     if day and str(row.get("day_date") or "") != day:
         return False
@@ -40,12 +40,12 @@ def _schedule_row_matches_note_filters(row: Dict[str, Any], filters: Dict[str, A
 
 def apply_schedule_notes(
     tournament_id: int,
-    filters: Dict[str, Any],
+    filters: dict[str, Any],
     *,
     text: str = "",
     mode: str = "replace",
     apply: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Public notes for many matches at once: every match matching the filters (day, courts,
     categories, phase, unplayed only). Without ``apply`` it only reports what would change."""
     if mode not in SCHEDULE_NOTE_MODES:
@@ -76,7 +76,7 @@ def apply_schedule_notes(
             "current": current,
             "new": new,
         })
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "count": len(changes),
         "with_notes": sum(1 for item in changes if item["current"]),
         "changed": sum(1 for item in changes if item["current"] != item["new"]),

@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import smtplib
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from email.message import EmailMessage
 from html import escape
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
+from collections.abc import Iterable
 
 from ..config import logger
 from ..database import (
@@ -28,7 +29,7 @@ SMTP_SETTING_KEYS = [
 ]
 
 
-def get_email_settings() -> Dict[str, Any]:
+def get_email_settings() -> dict[str, Any]:
     """Return SMTP settings with normalized defaults."""
     raw = fetch_app_settings(SMTP_SETTING_KEYS)
     return {
@@ -42,7 +43,7 @@ def get_email_settings() -> Dict[str, Any]:
     }
 
 
-def save_email_settings(settings_dict: Dict[str, Any]) -> None:
+def save_email_settings(settings_dict: dict[str, Any]) -> None:
     """Persist SMTP settings."""
     payload = {
         "smtp_host": (settings_dict.get("smtp_host") or "").strip(),
@@ -56,7 +57,7 @@ def save_email_settings(settings_dict: Dict[str, Any]) -> None:
     upsert_app_settings(payload)
 
 
-def _smtp_ready(config: Dict[str, Any]) -> bool:
+def _smtp_ready(config: dict[str, Any]) -> bool:
     return bool(config.get("smtp_host") and config.get("smtp_from_email"))
 
 
@@ -95,7 +96,7 @@ def _send_email(subject: str, html_body: str, recipients: Iterable[str]) -> bool
         return False
 
 
-def _render_score_line(score_a: List[Any], score_b: List[Any]) -> str:
+def _render_score_line(score_a: list[Any], score_b: list[Any]) -> str:
     pairs = []
     for index, score in enumerate(score_a):
         if index >= len(score_b):
@@ -104,7 +105,7 @@ def _render_score_line(score_a: List[Any], score_b: List[Any]) -> str:
     return " ".join(pairs) if pairs else "-"
 
 
-def send_match_report(match: Any, state: Dict[str, Any], tournament: Optional[Dict[str, Any]]) -> bool:
+def send_match_report(match: Any, state: dict[str, Any], tournament: dict[str, Any] | None) -> bool:
     """Send a completed match report email for a tournament if configured."""
     if not tournament:
         return False
@@ -137,14 +138,14 @@ def send_match_report(match: Any, state: Dict[str, Any], tournament: Optional[Di
         <tr><td><strong>Faza</strong></td><td>{escape(str(phase))}</td></tr>
         <tr><td><strong>Kategoria</strong></td><td>{escape(str(category))}</td></tr>
         <tr><td><strong>Czas</strong></td><td>{duration_minutes} min</td></tr>
-        <tr><td><strong>Zakończono</strong></td><td>{escape(datetime.now(timezone.utc).isoformat())}</td></tr>
+        <tr><td><strong>Zakończono</strong></td><td>{escape(datetime.now(UTC).isoformat())}</td></tr>
       </table>
     </body></html>
     """
     return _send_email(subject, html_body, [report_email])
 
 
-def _resolve_tournament_winner(bracket_data: Dict[str, Any]) -> Optional[str]:
+def _resolve_tournament_winner(bracket_data: dict[str, Any]) -> str | None:
     final_slots = bracket_data.get("knockout", {}).get("final", [])
     for slot in final_slots:
         if slot.get("winner"):

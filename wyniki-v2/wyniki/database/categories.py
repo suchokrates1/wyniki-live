@@ -1,7 +1,7 @@
 """Database access layer submodule."""
 import json
 import sqlite3
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..config import logger
 
@@ -32,7 +32,7 @@ def _tournament_category_counts(cursor: sqlite3.Cursor, category_id: int) -> tup
     team_count = int(cursor.fetchone()[0] or 0)
     return player_count, group_count, team_count
 
-def fetch_tournament_categories(tournament_id: int, *, active_only: bool = False) -> List[Dict[str, Any]]:
+def fetch_tournament_categories(tournament_id: int, *, active_only: bool = False) -> list[dict[str, Any]]:
     from ..services.tournament_categories import category_row_payload
 
     try:
@@ -63,7 +63,7 @@ def fetch_tournament_categories(tournament_id: int, *, active_only: bool = False
         logger.error("fetch_tournament_categories_error", error=str(e), tournament_id=tournament_id)
         return []
 
-def fetch_tournament_category(category_id: int) -> Optional[Dict[str, Any]]:
+def fetch_tournament_category(category_id: int) -> dict[str, Any] | None:
     from ..services.tournament_categories import category_row_payload
 
     try:
@@ -95,8 +95,8 @@ def _insert_tournament_category_row(
     *,
     label: str,
     preset_key: str = "",
-    hint_bands: Optional[List[str]] = None,
-    sort_order: Optional[int] = None,
+    hint_bands: list[str] | None = None,
+    sort_order: int | None = None,
     is_doubles: bool = False,
 ) -> int:
     from ..services.teams import coerce_is_doubles
@@ -129,10 +129,10 @@ def _insert_tournament_category_row(
 
 def confirm_tournament_categories(
     tournament_id: int,
-    entries: List[Dict[str, Any]],
+    entries: list[dict[str, Any]],
     *,
     replace: bool = False,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Create the initial category set for a tournament (after checkbox confirm)."""
     from ..services.tournament_categories import preset_defaults, normalize_hint_bands
 
@@ -197,9 +197,9 @@ def insert_tournament_category(
     *,
     label: str,
     preset_key: str = "",
-    hint_bands: Optional[List[str]] = None,
+    hint_bands: list[str] | None = None,
     is_doubles: bool = False,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     from ..services.tournament_categories import normalize_hint_bands
 
     label = label.strip()
@@ -291,7 +291,7 @@ def _propagate_tournament_category_label(
         (old_label, new_label, now, tournament_id, old_label + "%"),
     )
 
-def _category_row_for_write(category_id: int) -> Optional[Dict[str, Any]]:
+def _category_row_for_write(category_id: int) -> dict[str, Any] | None:
     """The row a write checks first. Unlike the public read it does not hide a
     database failure, so a locked database is not reported as a missing category."""
     try:
@@ -309,12 +309,12 @@ def _category_row_for_write(category_id: int) -> Optional[Dict[str, Any]]:
 def update_tournament_category(
     category_id: int,
     *,
-    label: Optional[str] = None,
-    hint_bands: Optional[List[str]] = None,
-    sort_order: Optional[int] = None,
-    is_active: Optional[bool] = None,
-    is_doubles: Optional[bool] = None,
-) -> Optional[Dict[str, Any]]:
+    label: str | None = None,
+    hint_bands: list[str] | None = None,
+    sort_order: int | None = None,
+    is_active: bool | None = None,
+    is_doubles: bool | None = None,
+) -> dict[str, Any] | None:
     from ..services.teams import coerce_is_doubles
     from ..services.tournament_categories import normalize_hint_bands
 
@@ -331,8 +331,8 @@ def update_tournament_category(
                 _propagate_tournament_category_label(
                     cursor, tournament_id, category_id, old_label, new_label
                 )
-            fields: List[str] = []
-            params: List[Any] = []
+            fields: list[str] = []
+            params: list[Any] = []
             if new_label is not None:
                 fields.append("label = ?")
                 params.append(new_label)
@@ -391,13 +391,13 @@ def delete_tournament_category(category_id: int, *, force: bool = False) -> bool
         logger.error("delete_tournament_category_error", error=str(e), category_id=category_id)
         raise StorageError("delete_tournament_category") from e
 
-def migrate_tournament_categories_from_legacy(tournament_id: int) -> List[Dict[str, Any]]:
+def migrate_tournament_categories_from_legacy(tournament_id: int) -> list[dict[str, Any]]:
     """One-time migration: infer tournament categories from bracket group names."""
     existing = fetch_tournament_categories(tournament_id)
     if existing:
         return existing
     groups = fetch_bracket_groups(tournament_id)
-    labels: List[str] = []
+    labels: list[str] = []
     for group in groups:
         base = str(group.get("name") or "").split(" — ")[0].split(" - ")[0].strip()
         if base and base not in labels:
@@ -431,7 +431,7 @@ def migrate_tournament_categories_from_legacy(tournament_id: int) -> List[Dict[s
 def _mixed_categories_settings_key(tournament_id: int) -> str:
     return f"mixed_categories:{int(tournament_id)}"
 
-def get_mixed_categories(tournament_id: int) -> List[str]:
+def get_mixed_categories(tournament_id: int) -> list[str]:
     """Legacy mixed-band settings (app_settings). Prefer get_planning_mixed_bands()."""
     from ..services.categories import normalize_mixed_categories
 
@@ -448,7 +448,7 @@ def get_mixed_categories(tournament_id: int) -> List[str]:
         pass
     return []
 
-def get_planning_mixed_bands(tournament_id: int) -> List[str]:
+def get_planning_mixed_bands(tournament_id: int) -> list[str]:
     """Mixed player-band codes for import/planning — from tournament_categories, legacy fallback."""
     from ..services.tournament_categories import infer_mixed_player_bands
 
@@ -458,7 +458,7 @@ def get_planning_mixed_bands(tournament_id: int) -> List[str]:
     return get_mixed_categories(tournament_id)
 
 
-def set_mixed_categories(tournament_id: int, categories: List[str]) -> List[str]:
+def set_mixed_categories(tournament_id: int, categories: list[str]) -> list[str]:
     """Deprecated — use confirm_tournament_categories instead."""
     from ..services.categories import normalize_mixed_categories
 

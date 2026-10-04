@@ -5,7 +5,7 @@ statistics, history and base players; the endpoint asks for them by name.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from ..db_models import Court, GlobalPlayer, Match, MatchHistory, MatchStatistics, Tournament, db
 
@@ -81,7 +81,7 @@ def delete_e2e_global_players(marker: str) -> int:
     )
 
 
-def matches_in_progress(court_id: Optional[str] = None) -> list[Match]:
+def matches_in_progress(court_id: str | None = None) -> list[Match]:
     """What the director's remote lists: matches a tablet still has open."""
     rows = db.session.query(Match).filter_by(status="in_progress")
     if court_id:

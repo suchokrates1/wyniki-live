@@ -6,7 +6,6 @@ here, so a handler asks for "the matches that count" instead of spelling it out 
 """
 from __future__ import annotations
 
-from typing import Optional
 
 from sqlalchemy import func, or_
 
@@ -52,7 +51,7 @@ def counting_entries_of_global_player(global_player_id: int) -> list[Player]:
     )
 
 
-def counting_entries_named(first_name: Optional[str], last_name: str) -> list[Player]:
+def counting_entries_named(first_name: str | None, last_name: str) -> list[Player]:
     """Entries of someone who was never linked to the shared base."""
     return (
         db.session.query(Player)
@@ -88,7 +87,7 @@ def counting_tournament_ids() -> set[int]:
     return {row.id for row in db.session.query(Tournament).filter(website_stats_filter()).all()}
 
 
-def global_player_matching(first_name: Optional[str], last_name: Optional[str]) -> Optional[GlobalPlayer]:
+def global_player_matching(first_name: str | None, last_name: str | None) -> GlobalPlayer | None:
     """The base row for a name on an entry, ignoring case and stray spaces."""
     return (
         db.session.query(GlobalPlayer)

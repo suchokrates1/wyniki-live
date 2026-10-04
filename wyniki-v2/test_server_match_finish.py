@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 import pytest
 
@@ -13,7 +13,7 @@ def umpire_app_with_temp_db(tmp_path, monkeypatch):
     from wyniki.config import settings
 
     settings.database_path = str(db_path)
-    settings.court_auth_grace_until = datetime(2026, 12, 31, tzinfo=timezone.utc)
+    settings.court_auth_grace_until = datetime(2026, 12, 31, tzinfo=UTC)
 
     from flask import Flask
     from wyniki import database
@@ -128,13 +128,13 @@ def test_put_winning_score_auto_finishes_like_post_finish(umpire_app_with_temp_d
 
 def test_stale_finish_and_stats_ack_when_token_is_for_another_court(umpire_app_with_temp_db, monkeypatch):
     """Android outbox retries finish/stats for a finished match after the tablet moved courts."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from wyniki import database
     from wyniki.config import settings
     from wyniki.services.api_auth import issue_court_token
 
-    monkeypatch.setattr(settings, "court_auth_grace_until", datetime(2020, 1, 1, tzinfo=timezone.utc))
+    monkeypatch.setattr(settings, "court_auth_grace_until", datetime(2020, 1, 1, tzinfo=UTC))
 
     tournament_id = database.insert_tournament("Vilnius Ghost", "2026-09-01", "2026-09-01", active=True)
     database.create_tournament_courts(tournament_id, 2)

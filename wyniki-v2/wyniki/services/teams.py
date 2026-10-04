@@ -6,7 +6,8 @@ Matching ignores partner order: "A / B" == "B / A".
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from typing import Any
+from collections.abc import Mapping
 
 TEAM_NAME_SEPARATOR = " / "
 
@@ -48,7 +49,7 @@ def format_team_display_name(player_a: Mapping[str, Any], player_b: Mapping[str,
     return f"{left_name}{TEAM_NAME_SEPARATOR}{right_name}"
 
 
-def split_team_display_name(value: Optional[str]) -> Optional[tuple[str, str]]:
+def split_team_display_name(value: str | None) -> tuple[str, str] | None:
     raw = str(value or "")
     if TEAM_NAME_SEPARATOR not in raw:
         return None
@@ -59,7 +60,7 @@ def split_team_display_name(value: Optional[str]) -> Optional[tuple[str, str]]:
     return left, right
 
 
-def is_team_display_name(value: Optional[str]) -> bool:
+def is_team_display_name(value: str | None) -> bool:
     """True for canonical pair labels like 'Anna Kowalska / Ewa Nowak'."""
     return split_team_display_name(value) is not None
 
@@ -72,7 +73,7 @@ def pair_key_from_player_ids(player1_id: int, player2_id: int) -> str:
     return f"{lo}:{hi}"
 
 
-def _as_player_id(value: Any) -> Optional[int]:
+def _as_player_id(value: Any) -> int | None:
     if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, int):
@@ -105,7 +106,7 @@ def normalize_pair_key(left: Any, right: Any = None) -> str:
     return f"{lo}|{hi}"
 
 
-def competitor_label_variants(value: Optional[str]) -> list[str]:
+def competitor_label_variants(value: str | None) -> list[str]:
     """Exact stored labels that represent the same competitor, partner order ignored."""
     raw = str(value or "").strip()
     if not raw:
@@ -130,7 +131,7 @@ def competitor_label_variants(value: Optional[str]) -> list[str]:
     return unique
 
 
-def competitor_identity_key(value: Optional[str]) -> str:
+def competitor_identity_key(value: str | None) -> str:
     """Stable key for one competitor (person or pair) used in matching/deduping."""
     raw = str(value or "").strip()
     if not raw:
@@ -143,7 +144,7 @@ def competitor_identity_key(value: Optional[str]) -> str:
     return " ".join(raw.lower().split())
 
 
-def same_competitor_label(left: Optional[str], right: Optional[str]) -> bool:
+def same_competitor_label(left: str | None, right: str | None) -> bool:
     a = str(left or "").strip()
     b = str(right or "").strip()
     if not a or not b:

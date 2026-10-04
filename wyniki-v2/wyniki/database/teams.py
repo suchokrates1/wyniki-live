@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..config import logger
 from ..services.teams import (
@@ -27,7 +27,7 @@ class TeamConflictError(ValueError):
     """Pair already exists in the category, or delete is blocked by group membership."""
 
 
-def _player_dict(row: sqlite3.Row) -> Dict[str, Any]:
+def _player_dict(row: sqlite3.Row) -> dict[str, Any]:
     return {
         "id": int(row["id"]),
         "tournament_id": int(row["tournament_id"]),
@@ -42,9 +42,9 @@ def _player_dict(row: sqlite3.Row) -> Dict[str, Any]:
 
 def _team_payload(
     row: sqlite3.Row,
-    player1: Optional[Dict[str, Any]] = None,
-    player2: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    player1: dict[str, Any] | None = None,
+    player2: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     payload = {
         "id": int(row["id"]),
         "tournament_id": int(row["tournament_id"]),
@@ -62,7 +62,7 @@ def _team_payload(
     return payload
 
 
-def _load_player(cursor: sqlite3.Cursor, player_id: int, tournament_id: int) -> Dict[str, Any]:
+def _load_player(cursor: sqlite3.Cursor, player_id: int, tournament_id: int) -> dict[str, Any]:
     cursor.execute(
         """
         SELECT id, tournament_id, name, first_name, last_name, category, country, gender
@@ -77,7 +77,7 @@ def _load_player(cursor: sqlite3.Cursor, player_id: int, tournament_id: int) -> 
     return _player_dict(row)
 
 
-def _hydrate_team(cursor: sqlite3.Cursor, row: sqlite3.Row) -> Dict[str, Any]:
+def _hydrate_team(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict[str, Any]:
     player1 = _load_player(cursor, int(row["player1_id"]), int(row["tournament_id"]))
     player2 = _load_player(cursor, int(row["player2_id"]), int(row["tournament_id"]))
     return _team_payload(row, player1, player2)
@@ -86,8 +86,8 @@ def _hydrate_team(cursor: sqlite3.Cursor, row: sqlite3.Row) -> Dict[str, Any]:
 def fetch_tournament_teams(
     tournament_id: int,
     *,
-    category_id: Optional[int] = None,
-) -> List[Dict[str, Any]]:
+    category_id: int | None = None,
+) -> list[dict[str, Any]]:
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -115,7 +115,7 @@ def fetch_tournament_teams(
         return []
 
 
-def fetch_tournament_team(team_id: int) -> Optional[Dict[str, Any]]:
+def fetch_tournament_team(team_id: int) -> dict[str, Any] | None:
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -134,7 +134,7 @@ def insert_tournament_team(
     category_id: int,
     player1_id: int,
     player2_id: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     from .categories import fetch_tournament_category
 
     category = fetch_tournament_category(category_id)

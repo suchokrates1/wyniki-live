@@ -6,7 +6,7 @@ removed competitor's number is not given again (the category keeps its own count
 """
 from __future__ import annotations
 
-from typing import Dict, Iterable, List
+from collections.abc import Iterable
 
 from ..config import logger
 from .connection import db_conn
@@ -73,7 +73,7 @@ def _assign(cursor, tournament_id: int, category_id: int, kind: str, competitor_
     return len(missing)
 
 
-def assign_start_numbers(tournament_id: int, category_id: int, kind: str, competitor_ids: Iterable[int]) -> Dict[str, Dict[str, Dict[str, int]]]:
+def assign_start_numbers(tournament_id: int, category_id: int, kind: str, competitor_ids: Iterable[int]) -> dict[str, dict[str, dict[str, int]]]:
     """Number the competitors of a category that have no number yet, in the order they were added."""
     if kind not in KINDS:
         raise ValueError(f"unknown start number kind: {kind}")
@@ -100,9 +100,9 @@ def assign_start_numbers(tournament_id: int, category_id: int, kind: str, compet
     return fetch_start_numbers(tournament_id)
 
 
-def fetch_start_numbers(tournament_id: int) -> Dict[str, Dict[str, Dict[str, int]]]:
+def fetch_start_numbers(tournament_id: int) -> dict[str, dict[str, dict[str, int]]]:
     """{category_id: {"player": {player_id: number}, "team": {team_id: number}}} (ids as strings for JSON)."""
-    result: Dict[str, Dict[str, Dict[str, int]]] = {}
+    result: dict[str, dict[str, dict[str, int]]] = {}
     with db_conn() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -115,7 +115,7 @@ def fetch_start_numbers(tournament_id: int) -> Dict[str, Dict[str, Dict[str, int
     return result
 
 
-def forget_start_numbers(cursor, kind: str, competitor_ids: List[int]) -> None:
+def forget_start_numbers(cursor, kind: str, competitor_ids: list[int]) -> None:
     """A removed competitor loses its row; the category counter keeps the number from coming back."""
     if not competitor_ids:
         return
@@ -129,7 +129,7 @@ def forget_start_numbers(cursor, kind: str, competitor_ids: List[int]) -> None:
 def number_existing_teams(cursor) -> None:
     """Pairs already in a doubles category get numbers in the order they were created."""
     cursor.execute("SELECT tournament_id, category_id, id FROM tournament_teams ORDER BY id")
-    by_category: Dict[tuple, List[int]] = {}
+    by_category: dict[tuple, list[int]] = {}
     for tournament_id, category_id, team_id in cursor.fetchall():
         by_category.setdefault((int(tournament_id), int(category_id)), []).append(int(team_id))
     for (tournament_id, category_id), team_ids in by_category.items():

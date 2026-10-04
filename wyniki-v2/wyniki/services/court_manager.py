@@ -7,20 +7,22 @@ import time
 from collections import deque
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
+from typing import Any
+from collections.abc import Iterable
 
 from ..config import settings, logger
+from datetime import UTC
 
 
 # Thread-safe state storage
 STATE_LOCK = threading.Lock()
-COURTS: Dict[str, Dict[str, Any]] = {}  # kort_id -> state
-DEMO_COURTS: Dict[str, Dict[str, Any]] = {}  # separate demo storage (never pollutes real data)
+COURTS: dict[str, dict[str, Any]] = {}  # kort_id -> state
+DEMO_COURTS: dict[str, dict[str, Any]] = {}  # separate demo storage (never pollutes real data)
 DEMO_OVERLAY_ACTIVE: bool = False  # when True, public APIs serve DEMO_COURTS
-GLOBAL_LOG: Deque[Dict[str, Any]] = deque()
+GLOBAL_LOG: deque[dict[str, Any]] = deque()
 
 
-def _empty_player_state() -> Dict[str, Any]:
+def _empty_player_state() -> dict[str, Any]:
     """Create empty player data structure."""
     return {
         "surname": "-",
@@ -39,7 +41,7 @@ def _empty_player_state() -> Dict[str, Any]:
     }
 
 
-def _empty_court_state() -> Dict[str, Any]:
+def _empty_court_state() -> dict[str, Any]:
     """Create empty court state structure."""
     return {
         "court_name": None,
@@ -83,7 +85,7 @@ def _empty_court_state() -> Dict[str, Any]:
     }
 
 
-def reset_live_set_columns(court_state: Dict[str, Any]) -> None:
+def reset_live_set_columns(court_state: dict[str, Any]) -> None:
     """Zero overlay set columns so a new live frame cannot show the previous match."""
     for side in ("A", "B"):
         player = court_state.setdefault(side, _empty_player_state())
@@ -93,7 +95,7 @@ def reset_live_set_columns(court_state: Dict[str, Any]) -> None:
     court_state["sets_detail"] = []
 
 
-def _kort_sort_key(value: str) -> Tuple[int, str]:
+def _kort_sort_key(value: str) -> tuple[int, str]:
     """Sort key for court IDs (numeric-aware)."""
     import re
     match = re.match(r'^(\d+)', str(value))
@@ -102,12 +104,12 @@ def _kort_sort_key(value: str) -> Tuple[int, str]:
     return (999999, value)
 
 
-def _sorted_court_ids(values: Iterable[str]) -> List[str]:
+def _sorted_court_ids(values: Iterable[str]) -> list[str]:
     """Sort court IDs naturally (1, 2, 10 not 1, 10, 2)."""
     return sorted(values, key=_kort_sort_key)
 
 
-def normalize_kort_id(raw: Any) -> Optional[str]:
+def normalize_kort_id(raw: Any) -> str | None:
     """Normalize court ID to string format."""
     if raw is None:
         return None
@@ -117,7 +119,7 @@ def normalize_kort_id(raw: Any) -> Optional[str]:
     return text
 
 
-def ensure_court_state(kort_id: str) -> Dict[str, Any]:
+def ensure_court_state(kort_id: str) -> dict[str, Any]:
     """Get or create court state."""
     with STATE_LOCK:
         if kort_id not in COURTS:
@@ -125,23 +127,23 @@ def ensure_court_state(kort_id: str) -> Dict[str, Any]:
         return COURTS[kort_id]
 
 
-def available_courts() -> List[str]:
+def available_courts() -> list[str]:
     """Get list of court IDs."""
     with STATE_LOCK:
         return _sorted_court_ids(COURTS.keys())
 
 
-def get_court_state(kort_id: str) -> Optional[Dict[str, Any]]:
+def get_court_state(kort_id: str) -> dict[str, Any] | None:
     """Get court state without creating it."""
     with STATE_LOCK:
         return COURTS.get(kort_id)
 
 
-def refresh_courts_from_db(db_courts: List[Any]) -> None:
+def refresh_courts_from_db(db_courts: list[Any]) -> None:
     """Update court configuration from database."""
     
     with STATE_LOCK:
-        configured_ids: List[str] = []
+        configured_ids: list[str] = []
         # Ensure all courts have state
         for court in db_courts:
             if isinstance(court, dict):
@@ -178,13 +180,13 @@ def refresh_courts_from_db(db_courts: List[Any]) -> None:
             GLOBAL_LOG = new_log
 
 
-def serialize_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
+def serialize_court_state(state: dict[str, Any]) -> dict[str, Any]:
     """Serialize full court state (internal)."""
     from copy import deepcopy
     return deepcopy(state)
 
 
-def serialize_public_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
+def serialize_public_court_state(state: dict[str, Any]) -> dict[str, Any]:
     """Serialize court state for public API (exclude sensitive data)."""
     from copy import deepcopy
     public = deepcopy(state)
@@ -192,7 +194,7 @@ def serialize_public_court_state(state: Dict[str, Any]) -> Dict[str, Any]:
     return public
 
 
-def serialize_all_states() -> Dict[str, Any]:
+def serialize_all_states() -> dict[str, Any]:
     """Get all court states."""
     with STATE_LOCK:
         return {kort_id: serialize_court_state(state) for kort_id, state in COURTS.items()}
@@ -201,7 +203,7 @@ def serialize_all_states() -> Dict[str, Any]:
 _SNAPSHOT_IDENTITY_KEYS = ("court_name", "display_order", "tournament_id", "tournament_name")
 
 
-def restore_courts_from_snapshot(courts: Dict[str, Any]) -> int:
+def restore_courts_from_snapshot(courts: dict[str, Any]) -> int:
     """Overwrite in-memory court live state from a previously dumped snapshot.
 
     Identity fields from the current COURTS dict win when the snapshot is missing them.
@@ -254,7 +256,7 @@ def restore_overlay_snapshot_file(path: str | Path | None = None, max_age_second
     return restored
 
 
-def serialize_public_snapshot() -> Dict[str, Any]:
+def serialize_public_snapshot() -> dict[str, Any]:
     """Get public snapshot of all courts.
 
     When DEMO_OVERLAY_ACTIVE is True, returns DEMO_COURTS data.
@@ -298,7 +300,7 @@ def has_demo_data() -> bool:
         return bool(DEMO_COURTS)
 
 
-def get_demo_courts_snapshot() -> Dict[str, Any]:
+def get_demo_courts_snapshot() -> dict[str, Any]:
     """Get snapshot of demo courts for admin preview."""
     with STATE_LOCK:
         return {kort_id: serialize_public_court_state(state)
@@ -314,7 +316,7 @@ def clear_demo_data() -> None:
     logger.info("demo_data_cleared")
 
 
-def _generate_ibta_score(scenario: str) -> Dict[str, Any]:
+def _generate_ibta_score(scenario: str) -> dict[str, Any]:
     """Generate IBTA-legal score for a given match scenario.
 
     IBTA blind tennis rules:
@@ -326,7 +328,7 @@ def _generate_ibta_score(scenario: str) -> Dict[str, Any]:
 
     points_options = ["0", "15", "30", "40"]
 
-    def _random_completed_set(winner: str) -> Tuple[int, int]:
+    def _random_completed_set(winner: str) -> tuple[int, int]:
         """Generate a completed set score where `winner` won (A or B)."""
         patterns = [
             (4, 0), (4, 1), (4, 2),  # straight wins
@@ -337,7 +339,7 @@ def _generate_ibta_score(scenario: str) -> Dict[str, Any]:
             return (w_games, l_games)
         return (l_games, w_games)
 
-    def _random_in_progress_set() -> Tuple[int, int]:
+    def _random_in_progress_set() -> tuple[int, int]:
         """Generate an in-progress set score (no winner yet)."""
         options = [
             (0, 0), (1, 0), (0, 1), (1, 1), (2, 0), (0, 2),
@@ -404,7 +406,7 @@ def _generate_ibta_score(scenario: str) -> Dict[str, Any]:
         }
 
 
-def _generate_demo_stats() -> Dict[str, Any]:
+def _generate_demo_stats() -> dict[str, Any]:
     """Generate realistic match statistics for one player.
 
     Includes all fields tracked by the Android app in advanced mode:
@@ -446,7 +448,7 @@ _FALLBACK_DEMO_PLAYERS = [
 ]
 
 
-def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
+def seed_demo_data() -> tuple[bool, str, dict[str, dict[str, Any]]]:
     """Generate IBTA blind tennis demo data and store in DEMO_COURTS.
 
     Uses real players from the active tournament database when available,
@@ -457,7 +459,7 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
         (success, message, demo_courts_dict) tuple.
     """
     import random
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
     from ..database import fetch_players_for_active_tournaments
 
     db_players = fetch_players_for_active_tournaments()
@@ -481,7 +483,7 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
         court_ids = court_ids + extras
     court_ids = court_ids[:num_courts]
 
-    demo_matches: Dict[str, Dict[str, Any]] = {}
+    demo_matches: dict[str, dict[str, Any]] = {}
 
     for i, kort_id in enumerate(court_ids):
         p_a = selected[i * 2]
@@ -494,7 +496,7 @@ def seed_demo_data() -> Tuple[bool, str, Dict[str, Dict[str, Any]]]:
         flag_url_b = f"https://flagcdn.com/w80/{cc_b}.png" if len(cc_b) == 2 else None
         score = _generate_ibta_score(scenarios[i % len(scenarios)])
         cat = p_a.get("category") or p_b.get("category") or "B2"
-        started = datetime.now(timezone.utc) - timedelta(seconds=int(score["time_seconds"]))
+        started = datetime.now(UTC) - timedelta(seconds=int(score["time_seconds"]))
         started_iso = started.isoformat()
         sets_detail = []
         if score["current_set"] >= 2:

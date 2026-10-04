@@ -1,7 +1,7 @@
 """Event broadcasting system with SSE support."""
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from .listener_fanout import ListenerFanOut
 
@@ -13,7 +13,7 @@ class EventBroker(ListenerFanOut):
 event_broker = EventBroker()
 
 
-def emit_score_update(kort_id: str, court_state: Dict[str, Any]) -> None:
+def emit_score_update(kort_id: str, court_state: dict[str, Any]) -> None:
     """Emit score update event to all SSE listeners.
 
     When DEMO_OVERLAY_ACTIVE is True, real court updates are suppressed

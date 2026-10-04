@@ -1,6 +1,6 @@
 """API endpoints for receiving data from Umpire mobile app."""
 from flask import Blueprint, current_app, jsonify, request
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 import json
 import re
 from typing import Any
@@ -468,7 +468,7 @@ def _publish_match_finished(match: Match) -> None:
                     from ..utils import parse_iso_datetime
                     started = parse_iso_datetime(started_ts)
                     court_state["match_time"]["seconds"] = int(
-                        (datetime.now(timezone.utc) - started).total_seconds()
+                        (datetime.now(UTC) - started).total_seconds()
                     )
 
         if match.phase:
@@ -1873,7 +1873,7 @@ def log_match_event():
     return jsonify({
         "success": True,
         "message": "Event processed",
-        "event_id": f"evt_{datetime.now(timezone.utc).timestamp()}"
+        "event_id": f"evt_{datetime.now(UTC).timestamp()}"
     }), 200
 
 from .umpire_presence import register as register_umpire_presence

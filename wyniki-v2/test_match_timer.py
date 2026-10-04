@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from types import SimpleNamespace
 
 import pytest
@@ -43,7 +43,7 @@ def test_iso_from_epoch_ms_rejects_invented_zero():
 
 
 def test_iso_from_epoch_ms_accepts_tablet_clock():
-    started = datetime(2026, 8, 28, 12, 0, tzinfo=timezone.utc)
+    started = datetime(2026, 8, 28, 12, 0, tzinfo=UTC)
     iso = iso_from_epoch_ms(int(started.timestamp() * 1000))
     parsed = datetime.fromisoformat(iso)
     assert parsed == started
@@ -79,7 +79,7 @@ def test_not_started_does_not_invent_overlay_clock():
 
 
 def test_apply_match_start_from_payload_persists_started_at():
-    started = datetime.now(timezone.utc) - timedelta(minutes=12)
+    started = datetime.now(UTC) - timedelta(minutes=12)
     match = SimpleNamespace(started_at=None)
     apply_match_start_from_payload(match, {"match_start_time_ms": int(started.timestamp() * 1000)})
     parsed = datetime.fromisoformat(match.started_at)
@@ -89,7 +89,7 @@ def test_apply_match_start_from_payload_persists_started_at():
 def test_create_match_drives_overlay_timer_from_tablet_start(umpire_app_with_temp_db):
     from wyniki import database
 
-    started = datetime.now(timezone.utc) - timedelta(minutes=63)
+    started = datetime.now(UTC) - timedelta(minutes=63)
     start_ms = int(started.timestamp() * 1000)
 
     with umpire_app_with_temp_db.app_context():
@@ -120,10 +120,10 @@ def test_create_match_drives_overlay_timer_from_tablet_start(umpire_app_with_tem
         body = response.get_json()
         persisted = datetime.fromisoformat(body["started_at"])
         if persisted.tzinfo is None:
-            persisted = persisted.replace(tzinfo=timezone.utc)
+            persisted = persisted.replace(tzinfo=UTC)
         created = datetime.fromisoformat(body["created_at"])
         if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
+            created = created.replace(tzinfo=UTC)
         assert abs((persisted - started).total_seconds()) < 2
         assert (created - persisted).total_seconds() > 50 * 60
 

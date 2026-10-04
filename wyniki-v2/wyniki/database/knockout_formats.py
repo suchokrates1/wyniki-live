@@ -8,7 +8,7 @@ category's draw, which is only allowed before any of its knockout matches has a 
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..config import logger
 from ..services.draw_builder import (
@@ -29,11 +29,11 @@ def default_places(fmt: str) -> str:
     return "third" if fmt in ("table", "direct") else "all"
 
 
-def default_config(fmt: str) -> Dict[str, Any]:
+def default_config(fmt: str) -> dict[str, Any]:
     return {"format": fmt, "qualifiers": 2, "places": default_places(fmt), "consolation": True, "swaps": {}, "confirmed": False, "imported": False}
 
 
-def normalize_config(raw: Dict[str, Any], *, allowed: List[str], expected: str, max_qualifiers: int) -> Dict[str, Any]:
+def normalize_config(raw: dict[str, Any], *, allowed: list[str], expected: str, max_qualifiers: int) -> dict[str, Any]:
     raw = raw if isinstance(raw, dict) else {}
     # a draw made outside these formats (an import, an older tournament) stays as it was played
     imported = bool(raw.get("imported", False))
@@ -49,7 +49,7 @@ def normalize_config(raw: Dict[str, Any], *, allowed: List[str], expected: str, 
     except (TypeError, ValueError):
         qualifiers = 2
     qualifiers = max(1, min(qualifiers, max(1, max_qualifiers)))
-    swaps: Dict[str, List[List[int]]] = {}
+    swaps: dict[str, list[list[int]]] = {}
     for key in ("main", "consolation"):
         pairs = []
         for pair in (raw.get("swaps") or {}).get(key) or []:
@@ -77,21 +77,21 @@ def _group_letter(name: str) -> str:
     return token.upper() if len(token) == 1 and token.isalpha() else label
 
 
-def _category_slots_with_results(tournament_id: int, prefixes: List[str]) -> List[Dict[str, Any]]:
+def _category_slots_with_results(tournament_id: int, prefixes: list[str]) -> list[dict[str, Any]]:
     rows = _brackets().fetch_bracket_knockout(tournament_id)
     return [row for row in rows if _phase_in_category(row.get("phase"), prefixes)]
 
 
-def _phase_in_category(phase: Optional[str], prefixes: List[str]) -> bool:
+def _phase_in_category(phase: str | None, prefixes: list[str]) -> bool:
     text = str(phase or "")
     return any(text == prefix or text.startswith(f"{prefix} — ") for prefix in prefixes if prefix)
 
 
-def _preview(category: Dict[str, Any], units: List[Dict[str, Any]], groups: List[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
+def _preview(category: dict[str, Any], units: list[dict[str, Any]], groups: list[dict[str, Any]], config: dict[str, Any]) -> dict[str, Any]:
     """First-round lines and match counts for a config, with places named "A1", "B2"."""
     brackets = _brackets()
     fmt = config["format"]
-    result: Dict[str, Any] = {"draws": [], "table": [], "placements": [], "matches": 0, "main_matches": 0, "consolation_matches": 0}
+    result: dict[str, Any] = {"draws": [], "table": [], "placements": [], "matches": 0, "main_matches": 0, "consolation_matches": 0}
     if fmt == "none" or not units:
         return result
     unit = units[0]
@@ -140,7 +140,7 @@ def _preview(category: Dict[str, Any], units: List[Dict[str, Any]], groups: List
     for item in units:
         slots.extend(brackets._formatted_unit_slots(item, config, complete=False, counts=counts) or [])
     main_rounds = ("Finał", "Półfinał", "Ćwierćfinał")
-    placements: Dict[str, int] = {}
+    placements: dict[str, int] = {}
     for slot in slots:
         suffix = str(slot["phase"]).rsplit(" — ", 1)[-1]
         if suffix.startswith("Pocieszenie"):
@@ -154,7 +154,7 @@ def _preview(category: Dict[str, Any], units: List[Dict[str, Any]], groups: List
     return result
 
 
-def _safe_preview(tournament_id: int, category, units, groups, config) -> Dict[str, Any]:
+def _safe_preview(tournament_id: int, category, units, groups, config) -> dict[str, Any]:
     """One category's odd data must not take the whole step down: it shows an empty preview."""
     try:
         return _preview(category, units, groups, config)
@@ -171,7 +171,7 @@ def implied_play_format(fmt: str) -> str:
     return FORMAT_PLAY_FORMAT.get(str(fmt or ""), "groups_knockout")
 
 
-def _structure_formats(group_count: int) -> List[str]:
+def _structure_formats(group_count: int) -> list[str]:
     if group_count <= 0:
         return []
     if group_count == 1:
@@ -181,7 +181,7 @@ def _structure_formats(group_count: int) -> List[str]:
     return ["main"]
 
 
-def _default_format(category_groups: List[Dict[str, Any]], structure: List[str]) -> str:
+def _default_format(category_groups: list[dict[str, Any]], structure: list[str]) -> str:
     if not structure:
         return "none"
     play_formats = {str(group.get("play_format") or "") for group in category_groups}
@@ -192,12 +192,12 @@ def _default_format(category_groups: List[Dict[str, Any]], structure: List[str])
     return structure[0]
 
 
-def _units_for(category_groups: List[Dict[str, Any]], play_format: str) -> List[Dict[str, Any]]:
+def _units_for(category_groups: list[dict[str, Any]], play_format: str) -> list[dict[str, Any]]:
     virtual = [{**group, "play_format": play_format} for group in category_groups]
     return _brackets()._iter_knockout_units(virtual)
 
 
-def _played_group_matches(tournament_id: int, group_ids: List[int]) -> int:
+def _played_group_matches(tournament_id: int, group_ids: list[int]) -> int:
     if not group_ids:
         return 0
     placeholders = ",".join("?" for _ in group_ids)
@@ -210,7 +210,7 @@ def _played_group_matches(tournament_id: int, group_ids: List[int]) -> int:
     return int(row[0] or 0)
 
 
-def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+def knockout_format_overview(tournament_id: int, drafts: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """Every active category with its allowed formats, chosen config and a draw preview."""
     brackets = _brackets()
     from .categories import fetch_tournament_categories
@@ -260,7 +260,7 @@ def knockout_format_overview(tournament_id: int, drafts: Optional[Dict[str, Dict
     return overview
 
 
-def _effective(config: Dict[str, Any]) -> str:
+def _effective(config: dict[str, Any]) -> str:
     return json.dumps({k: config.get(k) for k in ("format", "qualifiers", "places", "consolation", "swaps")}, sort_keys=True)
 
 
@@ -297,7 +297,7 @@ def _set_category_play_format(tournament_id: int, category_id: int, play_format:
     ensure_group_schedule_entries(tournament_id)
 
 
-def save_knockout_format(tournament_id: int, category_id: int, raw: Dict[str, Any]) -> Dict[str, Any]:
+def save_knockout_format(tournament_id: int, category_id: int, raw: dict[str, Any]) -> dict[str, Any]:
     """Store a category's format (and the form of play it implies); rebuild its draw when it changes."""
     brackets = _brackets()
     key = str(int(category_id))
@@ -329,7 +329,7 @@ def save_knockout_format(tournament_id: int, category_id: int, raw: Dict[str, An
     return {"status": "ok", "rebuilt": changed}
 
 
-def confirm_all_knockout_formats(tournament_id: int) -> Dict[str, Any]:
+def confirm_all_knockout_formats(tournament_id: int) -> dict[str, Any]:
     """Confirm the current (or automatic) format of every category that is not locked."""
     confirmed = 0
     for item in knockout_format_overview(tournament_id):
