@@ -110,3 +110,14 @@ test('every row control is a real target, at least 44 px tall', async ({ page })
   expect(small).toEqual([]);
   expect(TOURNAMENTS.length).toBe(3);
 });
+
+test('"Biuro" opens the real office for the tournament, not a copy inside the admin', async ({ page }) => {
+  await openAdmin(page);
+  const rows = page.locator('#admin-tournaments-list .adm-row');
+  const running = rows.filter({ hasText: 'RAKIETY ATNiS VII' }).getByRole('link', { name: 'Biuro' });
+  await expect(running).toHaveAttribute('href', /^\/office\/\d+$/);
+  await expect(running).toHaveAttribute('target', '_blank');
+  // A tournament that is switched off has no office to open.
+  await expect(rows.filter({ hasText: 'IBTA World Blind Tennis Championships 2026' }).getByRole('link', { name: 'Biuro' })).toBeHidden();
+  await expect(page.locator('#admin-office-tab')).toHaveCount(0);
+});

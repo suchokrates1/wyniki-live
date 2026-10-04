@@ -41,7 +41,13 @@
         <div class="adm-row__actions">
           <button type="button" class="adm-btn" @click="openTournamentEditor(row.tournament)">Ustawienia</button>
           <button type="button" class="adm-btn adm-btn--quiet" @click="selectTournament(row.id)">Zawodnicy</button>
-          <button type="button" class="adm-btn adm-btn--quiet" @click="openOfficeDashboard(row.id)">Biuro</button>
+          <a
+            class="adm-btn adm-btn--quiet"
+            x-show="activeTournamentSlot(row.id)"
+            :href="'/office/' + activeTournamentSlot(row.id)"
+            target="_blank"
+            rel="noopener"
+          >Biuro</a>
           <button type="button" class="adm-btn adm-btn--danger" @click="deleteTournament(row.id)">Usuń</button>
         </div>
       </li>

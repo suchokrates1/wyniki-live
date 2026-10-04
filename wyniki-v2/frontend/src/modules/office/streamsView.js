@@ -1,88 +1,60 @@
+import {
+  courtStreamsPayload,
+  emptyCourtStreams,
+  fillSharedFromCourts,
+  formatStreamDay,
+  isStreamCourtOn,
+  isStreamToday,
+  normalizeCourtStreams,
+  setSharedStreamUrl,
+  setStreamUrl,
+  sharedStreamUrl,
+  streamUrl,
+  toggleStreamCourtOn,
+} from '../../shared/courtStreams.js';
+
+/** The office's stream editor: the shared editing, plus tracking what is not saved yet. */
 export function createOfficeStreamsView() {
   return {
-    courtStreams: { days: [], today: '', courts: [], links: {}, shared: {}, off_courts: [] },
+    courtStreams: emptyCourtStreams(),
     streamsSharedAll: false,
     streamsDirty: false,
     streamsSaving: false,
     streamsLoaded: false,
 
     applyCourtStreams(payload = {}) {
-      this.courtStreams = {
-        days: Array.isArray(payload.days) ? payload.days : [],
-        today: payload.today || '',
-        courts: Array.isArray(payload.courts) ? payload.courts : [],
-        links: payload.links && typeof payload.links === 'object' ? payload.links : {},
-        shared: payload.shared && typeof payload.shared === 'object' ? payload.shared : {},
-        off_courts: Array.isArray(payload.off_courts) ? payload.off_courts.map(String) : [],
-      };
-      this.streamsSharedAll = !!payload.shared_all_courts;
+      const { streams, sharedAll } = normalizeCourtStreams(payload);
+      this.courtStreams = streams;
+      this.streamsSharedAll = sharedAll;
       this.streamsLoaded = true;
       this.streamsDirty = false;
     },
 
-    streamUrl(day, kortId) {
-      return this.courtStreams.links?.[day]?.[kortId] || '';
-    },
+    streamUrl(day, kortId) { return streamUrl(this.courtStreams, day, kortId); },
+    sharedStreamUrl(day) { return sharedStreamUrl(this.courtStreams, day); },
+    isStreamCourtOn(kortId) { return isStreamCourtOn(this.courtStreams, kortId); },
+    isStreamToday(day) { return isStreamToday(this.courtStreams, day); },
+    formatStreamDay(day) { return formatStreamDay(day, this.officeLocale()); },
 
     setStreamUrl(day, kortId, value) {
-      if (!this.courtStreams.links[day]) this.courtStreams.links[day] = {};
-      this.courtStreams.links[day][kortId] = value;
+      setStreamUrl(this.courtStreams, day, kortId, value);
       this.streamsDirty = true;
-    },
-
-    sharedStreamUrl(day) {
-      return this.courtStreams.shared?.[day] || '';
     },
 
     setSharedStreamUrl(day, value) {
-      if (!this.courtStreams.shared) this.courtStreams.shared = {};
-      this.courtStreams.shared[day] = value;
+      setSharedStreamUrl(this.courtStreams, day, value);
       this.streamsDirty = true;
     },
 
-    isStreamCourtOn(kortId) {
-      return !(this.courtStreams.off_courts || []).includes(String(kortId));
-    },
-
     toggleStreamCourtOn(kortId) {
-      const id = String(kortId);
-      const current = new Set(this.courtStreams.off_courts || []);
-      if (current.has(id)) current.delete(id);
-      else current.add(id);
-      this.courtStreams.off_courts = [...current];
+      toggleStreamCourtOn(this.courtStreams, kortId);
       this.streamsDirty = true;
     },
 
     toggleStreamsSharedAll() {
       this.streamsSharedAll = !this.streamsSharedAll;
       this.streamsDirty = true;
-      if (!this.streamsSharedAll) return;
-      if (!this.courtStreams.off_courts) this.courtStreams.off_courts = [];
-      if (!this.courtStreams.shared) this.courtStreams.shared = {};
-      for (const day of this.courtStreams.days || []) {
-        if (this.courtStreams.shared[day]) continue;
-        const row = this.courtStreams.links?.[day] || {};
-        const first = Object.values(row).find((url) => String(url || '').trim());
-        this.courtStreams.shared[day] = first || '';
-      }
-    },
-
-    formatStreamDay(day) {
-      const date = new Date(`${day}T12:00:00`);
-      if (Number.isNaN(date.getTime())) return String(day || '');
-      try {
-        return new Intl.DateTimeFormat(this.officeLocale(), {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-        }).format(date);
-      } catch {
-        return String(day || '');
-      }
-    },
-
-    isStreamToday(day) {
-      return String(day || '') === String(this.courtStreams.today || '');
+      if (this.streamsSharedAll) fillSharedFromCourts(this.courtStreams);
     },
 
     async loadCourtStreams() {
@@ -111,12 +83,7 @@ export function createOfficeStreamsView() {
         const response = await fetch(`/api/office/${this.slot}/court-streams`, {
           method: 'PUT',
           headers: this.officeHeaders(),
-          body: JSON.stringify({
-            shared_all_courts: !!this.streamsSharedAll,
-            shared: this.courtStreams.shared || {},
-            off_courts: this.courtStreams.off_courts || [],
-            links: this.courtStreams.links || {},
-          }),
+          body: JSON.stringify(courtStreamsPayload(this.courtStreams, this.streamsSharedAll)),
         });
         const payload = await response.json().catch(() => ({}));
         if (response.status === 401) {

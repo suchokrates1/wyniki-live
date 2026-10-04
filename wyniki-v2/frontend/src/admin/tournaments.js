@@ -42,10 +42,6 @@ export function createTournamentsAdmin() {
         this.players = [];
       }
 
-      if (!this.officeTournamentId || !this.getTournamentById(this.officeTournamentId)) {
-        this.officeTournamentId = activeTournaments[0]?.id || null;
-      }
-
       if (this.selectedTournament) {
         await this.loadPlayers(this.selectedTournament);
       }

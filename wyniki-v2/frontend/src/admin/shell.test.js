@@ -20,7 +20,7 @@ test('every old tab has a home in the new rail', () => {
   }
 });
 
-test('the office dashboard is not a section of its own but still lands somewhere', () => {
+test('the office is not in the admin at all, and an old link to it still lands somewhere', () => {
   const railTabs = ADMIN_SECTIONS.flatMap((section) => section.tabs);
   assert.ok(!railTabs.includes('office'));
   assert.equal(sectionForTab('office'), 'turnieje');

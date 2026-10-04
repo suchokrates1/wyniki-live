@@ -44,8 +44,6 @@ export const SECTION_TAB_LABELS = {
   devices: 'Tablety',
 };
 
-// The office dashboard still opens from a row; it is not a section of its own.
-const GUEST_TABS = { office: 'turnieje' };
 
 export const DEFAULT_SECTION = ADMIN_SECTIONS[0].id;
 
@@ -53,7 +51,7 @@ export function sectionForTab(tab) {
   if (tab === 'more') return MORE_SECTION.id;
   const found = ADMIN_SECTIONS.find((section) => section.tabs.includes(tab));
   if (found) return found.id;
-  return GUEST_TABS[tab] || DEFAULT_SECTION;
+  return DEFAULT_SECTION;
 }
 
 export function sectionById(id) {

@@ -16,7 +16,6 @@ import { createTournamentEditorAdmin } from './admin/tournamentEditor.js';
 import { createTournamentCategoriesAdmin } from './admin/tournamentCategories.js';
 import { createTournamentPlayersAdmin } from './admin/tournamentPlayers.js';
 import { createPlayerImportAdmin } from './admin/playerImport.js';
-import { createOfficeTabAdmin } from './admin/officeTab.js';
 import { createGlobalPlayersAdmin } from './admin/globalPlayers.js';
 import { createOverlayAdmin } from './admin/overlay.js';
 import { createPanicAdmin } from './admin/panic.js';
@@ -44,7 +43,6 @@ import systemHtml from './admin/sections/system.html?raw';
 import moreHtml from './admin/sections/more.html?raw';
 import loginHtml from './admin/sections/login.html?raw';
 import directorPanelHtml from './admin/sections/directorPanel.html?raw';
-import officeTabHtml from './admin/sections/officeTab.html?raw';
 import tournamentPlayersHtml from './admin/sections/tournamentPlayers.html?raw';
 import logoCropHtml from './admin/sections/logoCrop.html?raw';
 import { createSystemView } from './admin/systemView.js';
@@ -77,7 +75,6 @@ mountAdminPartial('admin-system', systemHtml);
 mountAdminPartial('admin-more', moreHtml);
 mountAdminPartial('admin-login', loginHtml);
 mountAdminPartial('admin-director-panel', directorPanelHtml);
-mountAdminPartial('admin-office-tab', officeTabHtml);
 mountAdminPartial('admin-tournament-players', tournamentPlayersHtml);
 mountAdminPartial('admin-logo-crop', logoCropHtml);
 
@@ -114,21 +111,6 @@ Alpine.data('adminApp', () => mergeAdminModules(
       this.$nextTick(() => this.updateCanvasScale());
       // Keyboard nudge for selected element(s)
       window.addEventListener('keydown', (e) => this._handleKeyNudge(e));
-      window.addEventListener('visibilitychange', () => {
-        if (document.hidden || this.activeTab !== 'office' || !this.officeTournamentId) return;
-        this.officeSseFailures = 0;
-        this.connectAdminOfficeSSE();
-        this.loadOfficeDashboard(false);
-      });
-      window.addEventListener('pagehide', () => this.stopAdminOfficeSSE());
-      this.$watch('activeTab', (tab) => {
-        if (tab === 'office' && this.officeTournamentId) this.connectAdminOfficeSSE();
-        else this.stopAdminOfficeSSE();
-      });
-      this.$watch('officeTournamentId', (tournamentId) => {
-        if (this.activeTab === 'office' && tournamentId) this.connectAdminOfficeSSE();
-        else if (!tournamentId) this.stopAdminOfficeSSE();
-      });
     },
   },
   createAuthAdmin(),
@@ -140,7 +122,6 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createTournamentCategoriesAdmin(),
   createTournamentPlayersAdmin(),
   createPlayerImportAdmin(),
-  createOfficeTabAdmin(),
   createGlobalPlayersAdmin(),
   createOverlayAdmin(),
   createPanicAdmin(),
