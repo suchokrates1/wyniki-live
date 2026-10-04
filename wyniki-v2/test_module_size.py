@@ -27,7 +27,7 @@ RECORDED_LINES = {
     "frontend/index.html": 1712,
     "frontend/office.html": 1650,
     "frontend/src/umpire/app.js": 1641,
-    "wyniki/api/admin_tournaments.py": 1018,
+    "wyniki/api/admin_tournaments.py": 688,
     "frontend/src/admin/overlay.js": 1293,
     "frontend/src/modules/office/playersView.js": 1183,
     "wyniki/api/office.py": 1034,

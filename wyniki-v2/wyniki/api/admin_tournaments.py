@@ -1,5 +1,4 @@
 """Admin API routes for tournaments and players management."""
-import json
 from pathlib import Path
 from typing import Any, Dict
 from uuid import uuid4
@@ -13,10 +12,7 @@ from ..config import settings
 from ..database import (
     StreamUrlError,
     bulk_insert_players,
-    counting_entries_named,
-    counting_entries_of_global_player,
     counting_history_for,
-    counting_tournament_ids,
     create_tournament_courts,
     delete_player,
     delete_tournament,
@@ -36,7 +32,6 @@ from ..database import (
     global_player_matching,
     insert_player,
     insert_tournament,
-    phases_of_matches,
     save_tournament_court_streams,
     set_active_tournament,
     set_tournament_active_state,
@@ -45,11 +40,13 @@ from ..database import (
     update_tournament,
 )
 from ..db_models import Tournament
+from ..services.history_results import result_winner
 from ..services.office_event_broker import emit_office_invalidation
 from ..services.office_workflow import (
     _normalize_bool,
     _normalize_int,
 )
+from ..services.player_profile import build_player_profile
 from ..utils import json_no_cache as _json_no_cache
 from . import tournament_setup
 from .player_import import (
@@ -660,21 +657,7 @@ def get_all_players():
         counting_matches = counting_history_for(full_name)
         match_count = len(counting_matches)
 
-        wins = 0
-        for match in counting_matches:
-            if not match.score_a or not match.score_b:
-                continue
-            try:
-                sa = json.loads(match.score_a) if isinstance(match.score_a, str) else match.score_a
-                sb = json.loads(match.score_b) if isinstance(match.score_b, str) else match.score_b
-                sets_a = sum(1 for i in range(len(sa)) for _ in [1] if i < len(sb) and sa[i] > sb[i])
-                sets_b = sum(1 for i in range(len(sb)) for _ in [1] if i < len(sa) and sb[i] > sa[i])
-                if match.player_a == full_name and sets_a > sets_b:
-                    wins += 1
-                elif match.player_b == full_name and sets_b > sets_a:
-                    wins += 1
-            except (json.JSONDecodeError, TypeError):
-                pass
+        wins = sum(1 for match in counting_matches if result_winner(match) == full_name)
 
         result.append({
             'id': canonical.id,
@@ -698,321 +681,8 @@ def get_all_players():
 
 @players_public_bp.route('/<int:player_id>/profile', methods=['GET'])
 def get_player_profile(player_id: int):
-    """Get full player profile: info, tournament history, matches, medals.
-    Accepts either a Player id (tournament entry) or a GlobalPlayer id via ?global=1
-    """
-    from wyniki.database import get_full_bracket
-    from wyniki.db_models import GlobalPlayer, Player, Tournament
-    from wyniki.services.categories import normalize_player_classification
-
-    is_global = request.args.get('global', '0') == '1'
-
-    if is_global:
-        gp = get_row(GlobalPlayer, player_id)
-        if not gp:
-            return jsonify({'error': 'Player not found'}), 404
-        full_name = gp.full_name
-        last_name = (gp.last_name or '').strip()
-        first_name_val = gp.first_name or ''
-        gender_val = gp.gender or ''
-        category_val = normalize_player_classification(gp.category or '')
-        country_val = (gp.country or '').upper()
-        photo_url = gp.photo_url or ''
-        birth_date = gp.birth_date or ''
-        age_val = gp.age
-        siblings = counting_entries_of_global_player(gp.id)
-        if not siblings and last_name:
-            siblings = counting_entries_named(gp.first_name, last_name)
-    else:
-        player = get_row(Player, player_id)
-        if not player:
-            return jsonify({'error': 'Player not found'}), 404
-        if player.tournament and (
-            int(player.tournament.is_public or 0) != 1
-            or int(player.tournament.stats_enabled or 0) != 1
-            or int(player.tournament.is_simulation or 0) == 1
-        ):
-            return jsonify({'error': 'Player not found'}), 404
-        full_name = player.full_name
-        last_name = (player.last_name or '').strip()
-        first_name_val = player.first_name or ''
-        gender_val = player.gender or ''
-        category_val = normalize_player_classification(player.category or '')
-        if not category_val and player.global_player_id:
-            gp_lookup = get_row(GlobalPlayer, player.global_player_id)
-            if gp_lookup:
-                category_val = normalize_player_classification(gp_lookup.category or '')
-        country_val = (player.country or '').upper()
-        photo_url = ''
-        birth_date = ''
-        age_val = None
-
-        # If player has global_player_id, use it for cross-tournament lookup
-        if player.global_player_id:
-            gp = get_row(GlobalPlayer, player.global_player_id)
-            if gp:
-                photo_url = gp.photo_url or ''
-                birth_date = gp.birth_date or ''
-                age_val = gp.age
-            siblings = counting_entries_of_global_player(player.global_player_id)
-        elif last_name:
-            siblings = counting_entries_named(player.first_name, last_name)
-        else:
-            siblings = [player]
-
-    if not siblings:
+    """A player's public profile, by tournament entry id or, with ?global=1, by global player id."""
+    profile = build_player_profile(player_id, is_global=request.args.get('global', '0') == '1')
+    if profile is None:
         return jsonify({'error': 'Player not found'}), 404
-
-    tournament_ids = list({s.tournament_id for s in siblings if s.tournament_id})
-    from wyniki.database import classifications as classification_db
-
-    played_labels = classification_db.played_category_labels([s.id for s in siblings])
-    entry_classes = {s.tournament_id: normalize_player_classification(s.category or '') for s in siblings if s.tournament_id}
-    profile_global_id = gp.id if is_global else (player.global_player_id or None)
-
-    # Fetch all matches for this player across all tournaments
-    all_matches = counting_history_for(full_name)
-
-    # Also try matching by last_name alone (match_history stores surnames)
-    if last_name and last_name != full_name:
-        surname_matches = counting_history_for(last_name)
-        existing_ids = {m.id for m in all_matches}
-        for sm in surname_matches:
-            if sm.id not in existing_ids:
-                all_matches.append(sm)
-
-    match_phase_lookup = {}
-    match_ids = sorted({m.match_id for m in all_matches if getattr(m, 'match_id', None)})
-    if match_ids:
-        match_phase_lookup = phases_of_matches(match_ids)
-
-    def parse_sets_history(m):
-        """Parse sets_history from a MatchHistory entry."""
-        sets = []
-        if m.sets_history:
-            try:
-                sh = json.loads(m.sets_history) if isinstance(m.sets_history, str) else m.sets_history
-                for s in sh:
-                    sets.append({
-                        'g1': s.get('player1_games', 0),
-                        'g2': s.get('player2_games', 0),
-                        'tb': s.get('tiebreak_loser_points'),
-                        'stb': bool(s.get('is_super_tiebreak', False))
-                    })
-            except (json.JSONDecodeError, TypeError):
-                pass
-        if not sets and m.score_a and m.score_b:
-            try:
-                sa = json.loads(m.score_a) if isinstance(m.score_a, str) else m.score_a
-                sb = json.loads(m.score_b) if isinstance(m.score_b, str) else m.score_b
-                for i in range(max(len(sa), len(sb))):
-                    sets.append({
-                        'g1': sa[i] if i < len(sa) else 0,
-                        'g2': sb[i] if i < len(sb) else 0,
-                        'tb': None, 'stb': False
-                    })
-            except (json.JSONDecodeError, TypeError):
-                pass
-        return sets
-
-    def determine_winner(m):
-        """Determine winner of a MatchHistory entry."""
-        try:
-            sa = json.loads(m.score_a) if isinstance(m.score_a, str) else (m.score_a or [])
-            sb = json.loads(m.score_b) if isinstance(m.score_b, str) else (m.score_b or [])
-            sets_a = sum(1 for i in range(min(len(sa), len(sb))) if sa[i] > sb[i])
-            sets_b = sum(1 for i in range(min(len(sa), len(sb))) if sb[i] > sa[i])
-            if sets_a > sets_b:
-                return m.player_a
-            elif sets_b > sets_a:
-                return m.player_b
-        except (json.JSONDecodeError, TypeError):
-            pass
-        return None
-
-    def is_semifinal_phase_label(phase_name):
-        phase_lc = str(phase_name or '').lower()
-        return 'półfinał' in phase_lc or 'semifinal' in phase_lc
-
-    def is_final_phase_label(phase_name):
-        phase_lc = str(phase_name or '').lower()
-        return ('finał' in phase_lc or 'final' in phase_lc) and not is_semifinal_phase_label(phase_name)
-
-    def resolve_match_phase(m):
-        phase_name = (m.phase or '').strip()
-        mapped_phase = (match_phase_lookup.get(m.match_id) or '').strip()
-        if mapped_phase:
-            if not phase_name or phase_name.lower() == 'pucharowa':
-                return mapped_phase
-        return phase_name
-
-    def is_this_player(name):
-        """Check if a name refers to this player."""
-        if not name:
-            return False
-        return name == full_name or name == last_name
-
-    # Build per-tournament data
-    tournaments_data = []
-    for tid in tournament_ids:
-        tourn = get_row(Tournament, tid)
-        if not tourn:
-            continue
-
-        # Get bracket data for this tournament
-        bracket = get_full_bracket(tid)
-
-        # Find player's group placement
-        group_name = None
-        group_position = None
-        group_total = None
-        if bracket and 'groups' in bracket:
-            for g in bracket['groups']:
-                for si, st in enumerate(g.get('standings', [])):
-                    sname = st.get('name', '')
-                    if sname == last_name or sname == full_name:
-                        group_name = g['name']
-                        group_position = si + 1
-                        group_total = len(g['standings'])
-                        break
-                if group_name:
-                    break
-
-        # Find knockout placement (medals)
-        medal = None  # '🥇','🥈','🥉' or None
-        knockout_phase = None
-        if bracket and 'knockout' in bracket:
-            for phase, slots in bracket['knockout'].items():
-                for slot in slots:
-                    winner = slot.get('winner') or ''
-                    p1 = slot.get('player1') or ''
-                    p2 = slot.get('player2') or ''
-                    is_participant = (last_name and (last_name in p1 or last_name in p2)) or \
-                                    (full_name and (full_name in p1 or full_name in p2))
-                    if not is_participant:
-                        continue
-                    is_winner = bool(winner and (
-                        (last_name and last_name in winner) or
-                        (full_name and full_name in winner)
-                    ))
-                    phase_lc = phase.lower()
-                    if is_semifinal_phase_label(phase):
-                        knockout_phase = knockout_phase or phase
-                    elif is_final_phase_label(phase):
-                        knockout_phase = phase
-                        if winner:
-                            medal = 'gold' if is_winner else 'silver'
-                    elif '3.' in phase or 'trzecie' in phase_lc or 'third' in phase_lc:
-                        knockout_phase = phase
-                        if winner and is_winner:
-                            medal = medal or 'bronze'
-                    elif '5.' in phase or 'piąte' in phase_lc or 'fifth' in phase_lc:
-                        if winner and is_winner and not medal:
-                            medal = '5th'
-                        if not knockout_phase:
-                            knockout_phase = phase
-
-        # Filter matches for this tournament
-        tourn_matches = [m for m in all_matches if m.tournament_id == tid]
-        matches_detail = []
-        wins = 0
-        losses = 0
-        for m in sorted(tourn_matches, key=lambda x: x.ended_ts or ''):
-            winner = determine_winner(m)
-            is_player_a = is_this_player(m.player_a)
-            opponent = m.player_b if is_player_a else m.player_a
-            won = (is_player_a and winner == m.player_a) or \
-                  (not is_player_a and winner == m.player_b)
-            if won:
-                wins += 1
-            else:
-                losses += 1
-
-            raw_sets = parse_sets_history(m)
-            # Flip scores when profile player is player_b
-            if not is_player_a:
-                raw_sets = [{'g1': s['g2'], 'g2': s['g1'], 'tb': s.get('tb'), 'stb': s.get('stb', False)} for s in raw_sets]
-
-            matches_detail.append({
-                'opponent': opponent,
-                'score': raw_sets,
-                'won': won,
-                'phase': resolve_match_phase(m),
-                'category': m.category or '',
-                'date': m.ended_ts or '',
-                'duration': m.duration_seconds or 0
-            })
-
-        category_label = played_labels.get(tid, '')
-        tournaments_data.append({
-            'tournament_id': tid,
-            'tournament_name': tourn.name,
-            # the category played in and the class held then: results stay with them
-            'category_label': category_label,
-            'category_classes': sorted(classification_db.classes_in_label(category_label)),
-            'player_class': entry_classes.get(tid, ''),
-            'start_date': tourn.start_date or '',
-            'end_date': tourn.end_date or '',
-            'group_name': group_name,
-            'group_position': group_position,
-            'group_total': group_total,
-            'medal': medal,
-            'knockout_phase': knockout_phase,
-            'matches_played': len(matches_detail),
-            'wins': wins,
-            'losses': losses,
-            'matches': matches_detail
-        })
-
-    # Career totals
-    total_matches = sum(t['matches_played'] for t in tournaments_data)
-    total_wins = sum(t['wins'] for t in tournaments_data)
-    medals = {'gold': 0, 'silver': 0, 'bronze': 0}
-    medals_by_category: dict[str, dict[str, Any]] = {}
-    for t in tournaments_data:
-        if t['medal'] in medals:
-            medals[t['medal']] += 1
-            key = '/'.join(t['category_classes']) or t['player_class'] or ''
-            bucket = medals_by_category.setdefault(key, {'category': key, 'gold': 0, 'silver': 0, 'bronze': 0})
-            bucket[t['medal']] += 1
-
-    # class history: tournaments the public cannot see are not named
-    public_tournament_ids = counting_tournament_ids()
-    classification_history = []
-    if profile_global_id:
-        for row in classification_db.fetch_classification_history(profile_global_id):
-            public = row.get('tournament_id') in public_tournament_ids
-            classification_history.append({
-                'classification': row['classification'],
-                'previous_classification': row.get('previous_classification') or '',
-                'effective_date': row.get('effective_date') or '',
-                'source': row.get('source') or 'initial',
-                'status': row.get('status') or 'confirmed',
-                'tournament_id': row.get('tournament_id') if public else None,
-                'tournament_name': row.get('tournament_name') if public else None,
-            })
-
-    return jsonify({
-        'player': {
-            'id': player_id,
-            'first_name': first_name_val,
-            'last_name': last_name,
-            'full_name': full_name,
-            'gender': gender_val,
-            'category': category_val,
-            'country': country_val,
-            'photo_url': photo_url,
-            'birth_date': birth_date,
-            'age': age_val,
-        },
-        'career': {
-            'tournaments': len(tournaments_data),
-            'matches': total_matches,
-            'wins': total_wins,
-            'losses': total_matches - total_wins,
-            'medals': medals,
-            'medals_by_category': sorted(medals_by_category.values(), key=lambda item: item['category']),
-        },
-        'classification_history': classification_history,
-        'tournaments': sorted(tournaments_data, key=lambda t: t.get('start_date', ''), reverse=True)
-    })
+    return jsonify(profile)
