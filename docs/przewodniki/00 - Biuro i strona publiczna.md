@@ -9,7 +9,7 @@ aliases: [MOC Wyniki, score.vestmedia.pl przewodnik]
 > [!info] Vault Obsidian
 > Otwórz folder `wyniki-live/docs/przewodniki/` jako vault **albo** dodaj go do wspólnego vaultu. Wikilinki działają w obrębie jednego vaultu.
 >
-> Deploy / API / runbooki techniczne leżą w `wyniki-v2/docs/` i `API.md` — ten zestaw opisuje **UI i użycie**, nie infrastrukturę.
+> Deploy / API / runbooki techniczne leżą w `wyniki-v2/docs/` i `wyniki-v2/API.md` — ten zestaw opisuje **UI i użycie**, nie infrastrukturę.
 
 Trzy powierzchnie produktu web:
 

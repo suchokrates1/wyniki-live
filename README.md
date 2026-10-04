@@ -28,7 +28,7 @@ Produkcja: https://score.vestmedia.pl / https://blindtennis.app
 
 - **Przewodniki UI:** [docs/przewodniki/](docs/przewodniki/)
 - **Aplikacja (kod):** [wyniki-v2/](wyniki-v2/)
-- **API:** [API.md](API.md) (uwaga: część historyczna może być nieaktualna — źródło prawdy w kodzie `wyniki-v2`)
+- **API:** [wyniki-v2/API.md](wyniki-v2/API.md) — generowane z tras (`python scripts/api_doc.py`), test pilnuje zgodności z kodem
 - **Cursor / PMA:** [CURSOR.md](CURSOR.md)
 - **Deploy techniczny:** `wyniki-v2/docs/` + lokalne runbooki
 
@@ -62,8 +62,7 @@ pytest
 ```
 wyniki-live/
 ├── docs/przewodniki/   # Instrukcje Obsidian (UI / użycie)
-├── wyniki-v2/          # Aplikacja (Flask + frontend)
-├── API.md
+├── wyniki-v2/          # Aplikacja (Flask + frontend), w tym API.md
 └── CURSOR.md
 ```
 
