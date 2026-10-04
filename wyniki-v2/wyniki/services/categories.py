@@ -51,14 +51,6 @@ def is_mixed_category(category: Any, mixed_categories: Iterable[Any] | None = No
     return code in allowed
 
 
-def is_mixed_section_label(value: Any) -> bool:
-    raw = str(value or '').strip().lower()
-    if not raw:
-        return False
-    normalized = raw.replace('/', '').replace('-', ' ').strip()
-    return normalized in _MIXED_SECTION_LABELS
-
-
 def format_category_display(category: Any) -> str:
     code = normalize_category_code(category)
     if code == 'B34':

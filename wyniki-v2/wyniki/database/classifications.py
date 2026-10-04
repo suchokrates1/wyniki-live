@@ -306,19 +306,6 @@ def apply_classification_decisions(tournament_id: int, decisions: Iterable[Dict[
     return {"applied": applied, "errors": errors, "review": classification_review(tournament_id)}
 
 
-def move_classifications(source_id: int, target_id: int) -> None:
-    """Merged duplicates: the kept player takes over the history and the review decisions."""
-    with db_conn() as conn:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE player_classifications SET global_player_id = ? WHERE global_player_id = ?", (int(target_id), int(source_id)))
-        moved = cursor.rowcount
-        cursor.execute("UPDATE OR IGNORE classification_reviews SET global_player_id = ? WHERE global_player_id = ?", (int(target_id), int(source_id)))
-        cursor.execute("DELETE FROM classification_reviews WHERE global_player_id = ?", (int(source_id),))
-        if moved:
-            _sync_current(cursor, target_id)
-        conn.commit()
-
-
 def delete_classifications(global_player_id: int) -> None:
     """Drop the classification history and review rows of a deleted global player."""
     with db_conn() as conn:

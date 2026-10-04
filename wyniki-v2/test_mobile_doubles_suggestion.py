@@ -54,7 +54,7 @@ def _seed_doubles_suggestion(db):
         city="Test",
         country="PL",
     )
-    db.insert_court(
+    db.upsert_court(
         f"t{tournament_id}-1",
         pin="1111",
         tournament_id=tournament_id,

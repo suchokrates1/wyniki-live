@@ -457,18 +457,6 @@ def get_planning_mixed_bands(tournament_id: int) -> List[str]:
         return infer_mixed_player_bands(categories)
     return get_mixed_categories(tournament_id)
 
-def clear_legacy_mixed_categories(tournament_id: int) -> bool:
-    """Remove deprecated mixed_categories:{id} from app_settings."""
-    key = _mixed_categories_settings_key(tournament_id)
-    try:
-        with db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM app_settings WHERE key = ?", (key,))
-            conn.commit()
-            return cursor.rowcount > 0
-    except Exception as e:
-        logger.error("clear_legacy_mixed_categories_error", error=str(e), tournament_id=tournament_id)
-        raise StorageError("clear_legacy_mixed_categories") from e
 
 def set_mixed_categories(tournament_id: int, categories: List[str]) -> List[str]:
     """Deprecated — use confirm_tournament_categories instead."""

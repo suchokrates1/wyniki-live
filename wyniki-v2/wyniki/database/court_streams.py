@@ -308,13 +308,3 @@ def fetch_watch_urls_for_date(day: Optional[str] = None) -> Dict[str, str]:
             _TODAY_URLS["day"] = target
             _TODAY_URLS["urls"] = dict(urls)
     return urls
-
-
-def attach_watch_url(kort_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
-    public = dict(state) if state else {}
-    url = fetch_watch_urls_for_date().get(str(kort_id))
-    if url:
-        public["watch_url"] = url
-    else:
-        public.pop("watch_url", None)
-    return public

@@ -39,11 +39,6 @@ def test_today_url_attaches_to_the_matching_court_only(db, monkeypatch):
     assert urls[court_a] == "https://youtu.be/today-a"
     assert court_b not in urls
 
-    attached = db.attach_watch_url(court_a, {"court_name": "1"})
-    assert attached["watch_url"] == "https://youtu.be/today-a"
-    empty = db.attach_watch_url(court_b, {"court_name": "2"})
-    assert "watch_url" not in empty
-
 
 def test_saving_replaces_the_grid_and_rejects_bad_urls(db):
     tournament_id = db.insert_tournament("Streams Cup", "2026-09-26", "2026-09-27", active=True)
@@ -86,7 +81,6 @@ def test_shared_url_applies_to_every_court_and_court_link_wins(db, monkeypatch):
     urls = db.fetch_watch_urls_for_date()
     assert urls[court_a] == "https://youtu.be/hall"
     assert urls[court_b] == "https://youtu.be/hall"
-    assert db.attach_watch_url(court_b, {})["watch_url"] == "https://youtu.be/hall"
 
     db.save_tournament_court_streams(tournament_id, {
         "shared_all_courts": False,
@@ -111,7 +105,6 @@ def test_shared_url_skips_courts_marked_off(db, monkeypatch):
     urls = db.fetch_watch_urls_for_date()
     assert urls[court_a] == "https://youtu.be/hall"
     assert court_b not in urls
-    assert "watch_url" not in db.attach_watch_url(court_b, {"court_name": "2"})
     assert db.get_tournament_court_streams(tournament_id)["off_courts"] == [court_b]
 
 

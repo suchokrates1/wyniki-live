@@ -1,7 +1,6 @@
 from wyniki.services.categories import (
     format_category_display,
     is_mixed_category,
-    is_mixed_section_label,
     normalize_category_code,
     start_group_key,
 )
@@ -51,9 +50,3 @@ def test_mixed_category_label_per_band():
     from wyniki.services.categories import mixed_category_label
     assert mixed_category_label('B2') == 'B2 Mixed'
     assert mixed_category_label('B34') == 'B3/4 Mixed'
-
-
-def test_is_mixed_section_label():
-    assert is_mixed_section_label('Mixed')
-    assert is_mixed_section_label('mix')
-    assert not is_mixed_section_label('Kobiet')

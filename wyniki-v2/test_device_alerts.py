@@ -1,5 +1,5 @@
 """Tablet inventory and the one-shot low-battery WhatsApp."""
-from wyniki.database.umpire_devices import remember_umpire_device, set_device_sticker, update_umpire_device
+from wyniki.database.umpire_devices import remember_umpire_device, update_umpire_device
 from wyniki.services.api_auth import issue_admin_token
 from wyniki.services.device_alerts import consider_low_battery
 
@@ -24,7 +24,7 @@ def test_a_low_battery_warning_is_sent_once_until_the_tablet_recovers(tmp_path, 
         battery_level=40,
         is_charging=False,
     )
-    set_device_sticker("deace65c4fba06cd", "3")
+    update_umpire_device("deace65c4fba06cd", name="3")
     update_umpire_device("deace65c4fba06cd", battery_alert_percent=20)
     assert consider_low_battery("deace65c4fba06cd") is None
 

@@ -491,7 +491,7 @@ def test_second_start_replaces_empty_shell_on_the_same_schedule_slot(umpire_app_
     from wyniki import database
 
     tournament_id = database.insert_tournament("Restart Cup", "2026-09-26", "2026-09-26", active=True)
-    database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
+    database.upsert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
     with database.db_conn() as conn:
         conn.execute(
             """
@@ -556,7 +556,7 @@ def test_second_start_does_not_replace_a_match_that_already_has_points(umpire_ap
     from wyniki import database
 
     tournament_id = database.insert_tournament("Live Guard Cup", "2026-09-26", "2026-09-26", active=True)
-    database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
+    database.upsert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
     with database.db_conn() as conn:
         conn.execute(
             """
@@ -661,8 +661,8 @@ def test_mobile_suggested_match_uses_selected_court_and_nearest_time(umpire_app_
 
     app = umpire_app_with_temp_db
     tournament_id = database.insert_tournament("Suggestion Cup", "2026-05-29", "2026-05-29", active=True)
-    database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
-    database.insert_court(f"t{tournament_id}-2", pin="2222", tournament_id=tournament_id, name="Kort 2", display_order=2)
+    database.upsert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
+    database.upsert_court(f"t{tournament_id}-2", pin="2222", tournament_id=tournament_id, name="Kort 2", display_order=2)
     for first_name, last_name in [
         ("Early", "One"),
         ("Early", "Two"),
@@ -729,7 +729,7 @@ def test_mobile_create_match_links_explicit_schedule_id(umpire_app_with_temp_db)
 
     app = umpire_app_with_temp_db
     tournament_id = database.insert_tournament("Mobile Explicit Schedule Cup", "2026-05-29", "2026-05-29", active=True)
-    database.insert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
+    database.upsert_court(f"t{tournament_id}-1", pin="1111", tournament_id=tournament_id, name="Kort 1", display_order=1)
     # Two assigned slots for the same pair: upsert would collapse them by phase+names.
     with database.db_conn() as conn:
         cursor = conn.cursor()

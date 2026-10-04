@@ -30,23 +30,6 @@ def device_sticker(android_id: str) -> str:
     return str(row["sticker"] or "").strip()
 
 
-def set_device_sticker(android_id: str, sticker: str) -> None:
-    ident = str(android_id or "").strip()[:32]
-    label = str(sticker or "").strip()[:40]
-    if not ident or not label:
-        return
-    with db_conn() as conn:
-        conn.execute(
-            """
-            INSERT INTO umpire_devices (android_id, sticker)
-            VALUES (?, ?)
-            ON CONFLICT(android_id) DO UPDATE SET sticker = excluded.sticker
-            """,
-            (ident, label),
-        )
-        conn.commit()
-
-
 def claim_low_battery_alert(android_id: str) -> dict | None:
     """Latch a low-battery warning. Return the row once, when WhatsApp should go out."""
     ident = str(android_id or "").strip()[:32]

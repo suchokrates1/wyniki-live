@@ -94,31 +94,6 @@ def get_tournament_id_for_court(kort_id: str) -> Optional[int]:
         return None
     return court.get("tournament_id")
 
-def insert_court(
-    kort_id: str,
-    pin: Optional[str] = None,
-    tournament_id: Optional[int] = None,
-    name: Optional[str] = None,
-    display_order: Optional[int] = None,
-) -> None:
-    """Insert a new court."""
-    try:
-        with db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT OR IGNORE INTO courts (kort_id, pin, name, tournament_id, display_order, active)
-                VALUES (?, ?, ?, ?, ?, 1)
-            """, (
-                kort_id,
-                pin,
-                name or kort_id,
-                tournament_id,
-                display_order if display_order is not None else 0,
-            ))
-            conn.commit()
-        logger.info("court_inserted", kort_id=kort_id)
-    except Exception as e:
-        logger.error("insert_court_error", kort_id=kort_id, error=str(e))
 
 def upsert_court(
     kort_id: str,

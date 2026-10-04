@@ -534,29 +534,6 @@ def place_matches_across_days(
     return placements
 
 
-def recompute_court_times(
-    ordered_entries: List[Dict[str, Any]],
-    config: Dict[str, Any],
-    start_time: Optional[str] = None,
-) -> List[Dict[str, Any]]:
-    """Recompute sequential times for one court after a drag/reorder."""
-    if not ordered_entries:
-        return []
-    cursor = (
-        start_time
-        or str(ordered_entries[0].get("scheduled_time") or "").strip()
-        or str(config.get("start_time") or DEFAULT_START_TIME)
-    )
-    result: List[Dict[str, Any]] = []
-    court_id = str(ordered_entries[0].get("court_id") or "").strip()
-    for entry in ordered_entries:
-        updated = dict(entry)
-        updated["scheduled_time"] = cursor
-        result.append(updated)
-        cursor = add_minutes(cursor, slot_minutes_for_entry(entry, config, court_id))
-    return result
-
-
 def reflow_court_entries(
     ordered_entries: List[Dict[str, Any]],
     config: Dict[str, Any],

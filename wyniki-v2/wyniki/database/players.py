@@ -50,24 +50,6 @@ def fetch_players(tournament_id: Optional[int] = None) -> List[Dict]:
         logger.error("fetch_players_error", error=str(e))
         return []
 
-def fetch_active_tournament_players() -> List[Dict]:
-    """Fetch players from the currently active tournament."""
-    try:
-        with db_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT p.id, p.tournament_id, p.name, p.first_name, p.last_name,
-                       p.category, p.country, p.gender, p.global_player_id, p.created_at
-                FROM players p
-                INNER JOIN tournaments t ON p.tournament_id = t.id
-                WHERE t.active = 1
-                ORDER BY p.last_name, p.first_name
-            """)
-            rows = cursor.fetchall()
-            return [dict(row) for row in rows]
-    except Exception as e:
-        logger.error("fetch_active_tournament_players_error", error=str(e))
-        return []
 
 def fetch_players_for_active_tournaments(public_only: bool = False, include_simulations: bool = False) -> List[Dict]:
     """Fetch players belonging to any active tournament."""

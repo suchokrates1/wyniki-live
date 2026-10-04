@@ -213,16 +213,6 @@ def release_send(schedule_id: int, kind: str) -> None:
         logger.warning("push_sent_log_release_failed", error=str(exc), schedule_id=schedule_id)
 
 
-def forget_sends(schedule_id: int) -> None:
-    """Drop a fixture's history, so a rescheduled match can notify again."""
-    try:
-        with db_conn() as conn:
-            conn.execute("DELETE FROM push_sent_log WHERE schedule_id = ?", (int(schedule_id),))
-            conn.commit()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("push_sent_log_forget_failed", error=str(exc), schedule_id=schedule_id)
-
-
 def count_subscriptions() -> int:
     with db_conn() as conn:
         return int(conn.execute("SELECT COUNT(*) FROM push_subscriptions").fetchone()[0])

@@ -10,7 +10,6 @@ from uuid import uuid4
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
-from sqlalchemy import func
 
 from ..db_models import Tournament
 from ..database import (
@@ -128,14 +127,6 @@ def _normalize_tournament_flags(data: Dict[str, Any]) -> tuple[bool, bool, bool,
         stats_enabled = False
     access_key = (data.get('access_key') or '').strip()
     return is_public, stats_enabled, is_simulation, access_key
-
-
-def _website_tournament_filter():
-    return (Tournament.is_public == 1) & (func.coalesce(Tournament.is_simulation, 0) == 0)
-
-
-def _website_stats_filter():
-    return _website_tournament_filter() & (Tournament.stats_enabled == 1)
 
 
 def _normalize_office_password_hash(raw_password: Any, *, existing_hash: str = '', is_simulation: bool = False, is_create: bool = False) -> str:

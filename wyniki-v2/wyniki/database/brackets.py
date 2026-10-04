@@ -369,18 +369,6 @@ def _group_competitor_names(group: Dict[str, Any]) -> List[str]:
     return names
 
 
-def _knockout_phase_label(prefix: str, kind: str) -> str:
-    suffixes = {
-        "quarterfinal": "Ćwierćfinał",
-        "semifinal": "Półfinał",
-        "final": "Finał",
-        "third_place": "o 3. miejsce",
-    }
-    suffix = suffixes[kind]
-    prefix = (prefix or "").strip()
-    return f"{prefix} — {suffix}" if prefix else suffix
-
-
 def _iter_knockout_units(bracket_groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Split groups into independent knockout generation units based on play_format."""
     buckets: Dict[tuple[str, str], List[Dict[str, Any]]] = {}

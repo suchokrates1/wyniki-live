@@ -155,17 +155,6 @@ def test_phase_rank_orders_group_before_final():
     assert order == [2, 3, 1]  # group, semfinal, final
 
 
-def test_recompute_court_times_cascade():
-    config = sched.build_default_config(_courts())
-    entries = [
-        {"id": 1, "category_name": "B1", "scheduled_time": "10:00"},
-        {"id": 2, "category_name": "B1", "scheduled_time": "08:00"},
-        {"id": 3, "category_name": "B1", "scheduled_time": "07:00"},
-    ]
-    result = sched.recompute_court_times(entries, config)
-    assert [e["scheduled_time"] for e in result] == ["10:00", "11:15", "12:30"]  # +75 each
-
-
 def test_place_matches_load_balances_non_b1_across_flex_courts():
     config = sched.build_default_config(_courts())
     matches = [
@@ -186,16 +175,6 @@ def test_place_matches_load_balances_non_b1_across_flex_courts():
         if court_id in counts:
             counts[court_id] += 1
     assert counts == {"c1": 2, "c2": 2, "c3": 2}
-
-
-def test_recompute_court_times_with_explicit_start():
-    config = sched.build_default_config(_courts())
-    entries = [
-        {"id": 1, "category_name": "B2", "scheduled_time": "10:00"},
-        {"id": 2, "category_name": "B2", "scheduled_time": "11:00"},
-    ]
-    result = sched.recompute_court_times(entries, config, start_time="09:00")
-    assert [e["scheduled_time"] for e in result] == ["09:00", "10:00"]  # +60
 
 
 def _b2_round(count, start_id=1, phase="Grupowa", category="B2 Mężczyźni"):

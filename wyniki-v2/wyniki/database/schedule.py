@@ -46,27 +46,6 @@ def clear_default_schedule_notes(cursor) -> int:
     return cursor.rowcount
 
 
-def _tournament_country_code(tournament_id: int) -> str:
-    try:
-        with db_conn() as conn:
-            row = conn.execute(
-                "SELECT UPPER(COALESCE(country, '')) AS country FROM tournaments WHERE id = ?",
-                (tournament_id,),
-            ).fetchone()
-            return str(row["country"] if row else "")
-    except Exception:
-        return ""
-
-def _default_group_schedule_note(tournament_id: int) -> str:
-    if _tournament_country_code(tournament_id) == "DE":
-        return DEFAULT_GROUP_SCHEDULE_NOTE_DE
-    return DEFAULT_GROUP_SCHEDULE_NOTE_PL
-
-def _default_knockout_schedule_note(tournament_id: int) -> str:
-    if _tournament_country_code(tournament_id) == "DE":
-        return DEFAULT_KNOCKOUT_SCHEDULE_NOTE_DE
-    return DEFAULT_KNOCKOUT_SCHEDULE_NOTE_PL
-
 def ensure_group_rematch_schedule_entries(
     tournament_id: int,
     bracket_group_ids: List[int],

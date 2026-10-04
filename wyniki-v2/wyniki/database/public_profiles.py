@@ -62,13 +62,6 @@ def counting_entries_named(first_name: Optional[str], last_name: str) -> list[Pl
     )
 
 
-def counting_history_count_for(name: str) -> int:
-    """How many counting matches this name appears in."""
-    return _history_of_counting_tournaments().filter(
-        or_(MatchHistory.player_a == name, MatchHistory.player_b == name)
-    ).count()
-
-
 def counting_history_for(name: str) -> list[MatchHistory]:
     """Those matches, newest first."""
     return (

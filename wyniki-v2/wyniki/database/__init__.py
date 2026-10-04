@@ -20,7 +20,6 @@ from .courts import (
     fetch_courts,
     fetch_courts_for_tournament,
     get_tournament_id_for_court,
-    insert_court,
     upsert_court,
     delete_court,
     rename_court,
@@ -129,7 +128,6 @@ from .categories import (
     migrate_tournament_categories_from_legacy,
     get_mixed_categories,
     get_planning_mixed_bands,
-    clear_legacy_mixed_categories,
     set_mixed_categories,
 )
 
@@ -144,7 +142,6 @@ from .teams import (
 
 from .court_streams import (
     StreamUrlError,
-    attach_watch_url,
     fetch_watch_urls_for_date,
     get_tournament_court_streams,
     save_tournament_court_streams,
@@ -191,7 +188,6 @@ from .e2e_artifacts import (
 from .public_profiles import (
     counting_entries_named,
     counting_entries_of_global_player,
-    counting_history_count_for,
     counting_history_for,
     counting_tournament_ids,
     entries_in_counting_tournaments,
