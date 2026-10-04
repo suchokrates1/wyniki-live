@@ -498,7 +498,7 @@ Pliki: `ScheduleSuggestion.kt`, `ScheduleSuggestionSelector.kt`, `PlayerSelectio
 - [x] `detect_bracket_context` / `_find_group_matches`: exact nazwa drużyny, potem para bez kolejności partnerów; **brak** surname-token z `"A / B"`
 - [x] Testy backend (`test_mobile_doubles_suggestion.py`)
 - [x] `ScheduleSuggestionSelectorTest` (4 osoby, `isDoubles`, scheduleId zostaje przy Debel z sugestii)
-- [ ] UI Use suggested doubles (espresso na żywym korcie — Etap 7)
+- [x] UI Use suggested doubles (espresso na żywym korcie — Etap 7) → `DoublesSuggestionE2ETest` zielony na emulatorze (2026-10-04)
 
 **Wejście:** Etap 1 (slot w planie ma nazwy par). **Wyjście:** sędzia z **Użyj meczu** startuje debel podpięty pod slot (`scheduleId` + kanoniczne nazwy par). Espresso na żywym korcie = Etap 7.
 
@@ -589,8 +589,8 @@ Regresja: odpal **cały** `e2e:tournament` (moduły 01–20) na końcu — singi
 
 #### E2E — aplikacja sędziowska
 
-- [ ] Seed slotu double → karta sugestii z parami → **Użyj meczu** → Debel + 4 osoby + `scheduleId` → start → `link` po ID → publiczny slot in_progress/completed
-- [ ] Start debla **bez** sugestii (ręczny checkbox) — mecz się sędziuje; brak twardego crash na schedule
+- ↗ Seed slotu double → karta sugestii z parami → **Użyj meczu** → Debel + 4 osoby + `scheduleId` → start → `link` po ID → publiczny slot in_progress/completed → lista zadań Blind Tennis w vaulcie (`Blind-Tennis-lista`)
+- ↗ Start debla **bez** sugestii (ręczny checkbox) — mecz się sędziuje; brak twardego crash na schedule → lista zadań Blind Tennis w vaulcie (`Blind-Tennis-lista`)
 - [x] Fallback nazw: plan `"A / B"`, appka wysyła `"B / A"` bez `schedule_id` — slot i tak się spina (`test_link_schedule_to_match_fallback_ignores_partner_order`)
 
 > 2026-08-19: espresso na emulatorze **nie odpalone** (brak urządzenia/`adb devices` puste). Unit `gradlew test` zielony; istniejący `UmpireTournamentE2ETest` ma scenariusze `doubles_regular` / mixed, ale nie ścieżki „Użyj meczu” ze slotu double.
@@ -600,7 +600,7 @@ Regresja: odpal **cały** `e2e:tournament` (moduły 01–20) na końcu — singi
 - [x] `pytest -q` (nowe + stare) zielone — 135 passed (2026-08-19)
 - [x] `npm run e2e:tournament` / `run.py office` zielone (01–20, Dell :18087)
 - [x] `gradlew test` zielone (`android-doubles-040b` @ `b437727`, JDK 17)
-- [ ] E2E Androida z seedem double na emulatorze (jak obecny `UmpireTournamentE2ETest`) — zablokowane brakiem emulatora
+- [x] E2E Androida z seedem double na emulatorze (jak obecny `UmpireTournamentE2ETest`) — zablokowane brakiem emulatora → emulator jest; `DoublesSuggestionE2ETest` zielony (2026-10-04)
 - [x] Brakujący klucz i18n failuje, nie warnuje (`npm run test:i18n` + `validation.test.js`)
 
 **Wejście:** etapy 0–6 zaimplementowane. **Wyjście:** feature można merge’ować.
