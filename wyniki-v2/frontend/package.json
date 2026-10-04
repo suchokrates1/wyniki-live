@@ -27,6 +27,8 @@
     "e2e:umpire": "playwright test -c playwright.umpire.config.js",
     "e2e:public-mobile": "playwright test -c playwright.public-mobile.config.js",
     "e2e:admin": "playwright test -c playwright.admin.config.js",
+    "test:visual": "playwright test -c playwright.visual.config.js",
+    "test:visual:update": "playwright test -c playwright.visual.config.js --update-snapshots",
     "e2e:umpire:ios": "playwright test -c playwright.umpire.config.js --project=ios-iphone --project=ios-ipad",
     "e2e:umpire-live": "playwright test -c playwright.umpire-live.config.js",
     "e2e:tournament": "node scripts/e2e-tournament/run.mjs",

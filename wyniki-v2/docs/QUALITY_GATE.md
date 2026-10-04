@@ -8,6 +8,18 @@
 | `a11y.yml` | wyniki-live | `npm run lint`, i18n, match-engine, build, a11y, public phone suite, umpire E2E |
 | `android.yml` | Umpire-App | `testDebugUnitTest`, `lintDebug`, instrumentation compile |
 
+## Pictures of the public site (local only)
+
+`cd wyniki-v2/frontend && npm run test:visual` renders the public views against the mock
+server and compares them with committed baselines. It is the only check that notices a
+stylesheet change, so run it before and after touching `main.css` or `styles/office.css`.
+
+The baselines belong to the machine that took them — the same page differs by a pixel or
+two between Windows and Linux — so they are recorded on the laptop that edits the
+stylesheets and CI does not run this suite. `npm run test:visual:update` re-records; look
+at each changed picture before committing it, because an updated baseline says the new
+look is the correct one.
+
 Locally before a push: `ruff check .`, `mypy`, and `pytest -q` in `wyniki-v2`
 (`pip install -r requirements-dev.txt` once).
 
