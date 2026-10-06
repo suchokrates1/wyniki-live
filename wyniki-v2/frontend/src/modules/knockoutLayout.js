@@ -11,7 +11,7 @@ function decided(name) {
 }
 
 // Doubles pairs come in either order between rounds ("A / B" in the semifinal, "B / A" in the final).
-function competitorKey(name) {
+export function competitorKey(name) {
   return String(name || '').split('/').map((part) => part.trim().toLowerCase()).filter(Boolean).sort().join(' / ');
 }
 
