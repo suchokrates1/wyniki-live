@@ -7,6 +7,7 @@ import { getPrivacyContent } from './i18n/legal/privacyContent.js';
 import { formatTemplate as fmt } from './shared/text.js';
 import { privacyHref } from './shared/privacyHref.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
+import './styles/fonts.css';
 import './main.css';
 
 applyTranslationPatches(TRANSLATIONS, TRANSLATION_PATCHES);

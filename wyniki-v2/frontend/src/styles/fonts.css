@@ -1,0 +1,8 @@
+/* Atkinson Hyperlegible: drawn for low-vision readers (Braille Institute). Served from our own origin. */
+@import '@fontsource-variable/atkinson-hyperlegible-next/index.css';
+@import '@fontsource-variable/atkinson-hyperlegible-mono/index.css';
+
+:root {
+  --font-sans: 'Atkinson Hyperlegible Next Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-mono: 'Atkinson Hyperlegible Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}

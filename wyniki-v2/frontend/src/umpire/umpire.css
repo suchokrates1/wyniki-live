@@ -56,7 +56,7 @@ body {
   overscroll-behavior: none;
   background: var(--ump-bg);
   color: var(--ump-text);
-  font-family: Outfit, system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .ump {

@@ -25,6 +25,7 @@ import { formatPlayerClassification } from './shared/categories.js';
 import { isTeamDisplayName } from './shared/teamDisplay.js';
 import { privacyHref } from './shared/privacyHref.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
+import './styles/fonts.css';
 import './main.css';
 import './styles/mobile.css';
 

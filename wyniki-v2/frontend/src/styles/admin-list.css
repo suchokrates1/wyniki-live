@@ -194,7 +194,7 @@
 .adm-main .text-sm.opacity-60 { opacity: 1; color: var(--adm-muted); }
 .adm-main ::placeholder { color: #5A6872; opacity: 1; }
 
-.adm-mono { font-family: 'Chivo Mono', monospace; }
+.adm-mono { font-family: var(--font-mono); }
 
 /* The "Więcej" menu: what moves off the bottom bar on a phone. */
 .adm-more { display: flex; flex-direction: column; gap: 8px; }

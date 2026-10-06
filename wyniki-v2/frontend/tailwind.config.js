@@ -21,7 +21,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter var', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Atkinson Hyperlegible Next Variable"', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['"Atkinson Hyperlegible Mono Variable"', 'ui-monospace', 'monospace'],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',

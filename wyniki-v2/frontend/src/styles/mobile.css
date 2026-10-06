@@ -36,7 +36,7 @@
   .header-actions { gap: 8px; }
   .header-updated {
     display: inline-flex; align-items: center; gap: 6px;
-    font: 400 13px/1 ui-monospace, "Chivo Mono", monospace; color: var(--header-fg); opacity: .85;
+    font: 400 13px/1 var(--font-mono); color: var(--header-fg); opacity: .85;
   }
   .header-updated__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; }
   .lang-select-wrap { width: 48px; height: 44px; min-width: 44px; min-height: 44px; }
@@ -149,7 +149,7 @@
     background: var(--bg); box-shadow: none;
   }
   .schedule-card__topline { display: contents; }
-  .schedule-card__time { grid-area: time; align-self: start; font: 700 16px/1.4 ui-monospace, "Chivo Mono", monospace; padding-top: 2px; }
+  .schedule-card__time { grid-area: time; align-self: start; font: 700 16px/1.4 var(--font-mono); padding-top: 2px; }
   .schedule-card__topline > .schedule-status { grid-area: status; align-self: start; min-height: 0; padding: 2px 8px; font-size: 13px; border-radius: 999px; }
   .schedule-card__match { grid-area: match; display: block; font-weight: 700; font-size: 17px; line-height: 1.3; }
   .schedule-card__player { display: inline; }

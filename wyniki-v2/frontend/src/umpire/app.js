@@ -79,6 +79,7 @@ import {
   tutorialPrevIndex,
   tutorialStepAt,
 } from './tutorial/tutorialController.js';
+import '../styles/fonts.css';
 import './umpire.css';
 
 const session = createUmpireSession();

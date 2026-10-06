@@ -3,7 +3,7 @@
   width: 100%;
   height: auto;
   container-type: inline-size;
-  font-family: 'Chivo', system-ui, sans-serif;
+  font-family: var(--font-sans);
   --set-w: 56px;
   --pts-w: 62px;
   --flag-gap: 12px;
@@ -94,7 +94,7 @@ a.sb-tv-court:focus-visible {
 .sb-tv-clock {
   flex-shrink: 0;
   margin-left: auto;
-  font-family: 'Chivo Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 15px;
   font-weight: 700;
   color: #FFD400;
@@ -190,7 +190,7 @@ a.sb-tv-court:focus-visible {
   align-items: center;
   justify-content: center;
   border-left: 1px solid rgba(0, 0, 0, .35);
-  font-family: 'Chivo Mono', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   line-height: 1;
 }

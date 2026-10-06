@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs';
 import { ignoreCancelledAlpineTransitions } from './shared/alpineTransitions.js';
+import './styles/fonts.css';
 import './main.css';
 import './styles/tailwind-admin.css';
 import './styles/admin.css';

@@ -1,4 +1,4 @@
-/* Admin shell: the setup panel. Colours come from the TV scoreboard, type is Chivo,
+/* Admin shell: the setup panel. Colours come from the TV scoreboard, type is Atkinson Hyperlegible,
    as on the public site. DaisyUI still styles the insides of the older views. */
 
 .adm-body {
@@ -22,7 +22,7 @@
   min-height: 100vh;
   background: var(--adm-ground);
   color: var(--adm-ink);
-  font-family: Chivo, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .adm-app {
@@ -121,7 +121,7 @@
 }
 .adm-rail__badge {
   margin-left: auto;
-  font-family: 'Chivo Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   padding: 3px 8px;

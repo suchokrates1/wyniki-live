@@ -3,7 +3,7 @@
    homepage and the admin preview use, imported just before this file. */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-    font-family: 'Chivo', system-ui, sans-serif;
+    font-family: var(--font-sans);
     background: transparent;
     overflow: hidden;
     color: white;

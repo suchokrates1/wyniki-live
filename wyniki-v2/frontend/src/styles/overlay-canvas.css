@@ -72,14 +72,14 @@
     /* stats panel inside preview */
     .sp { width:100%; background:linear-gradient(135deg,rgba(30,30,30,0.95),rgba(50,50,50,0.92));
       border-radius:12px; padding:16px 20px; box-shadow:0 4px 24px rgba(0,0,0,0.5);
-      border:2px solid rgba(255,255,255,0.12); color:white; font-family:'Segoe UI',Arial,sans-serif; }
+      border:2px solid rgba(255,255,255,0.12); color:white; font-family:var(--font-sans); }
     .sp-title { text-align:center; font-size:12px; font-weight:700; text-transform:uppercase;
       letter-spacing:1.5px; margin-bottom:12px; opacity:0.7; }
 
     /* coords tooltip */
     .canvas-coords {
       position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.85);
-      color:#4CAF50; font-family:monospace; font-size:12px; padding:4px 12px;
+      color:#4CAF50; font-family:var(--font-mono); font-size:12px; padding:4px 12px;
       border-radius:6px; pointer-events:none; z-index:200;
     }
 
@@ -103,7 +103,7 @@
     /* ruler distance lines */
     .ruler-overlay { position:absolute; inset:0; pointer-events:none; z-index:300; }
     .ruler-line { stroke:rgba(255,200,0,0.7); stroke-width:1; stroke-dasharray:4 3; }
-    .ruler-text { fill:#FFD54F; font-size:11px; font-family:monospace; text-anchor:middle; }
+    .ruler-text { fill:#FFD54F; font-size:11px; font-family:var(--font-mono); text-anchor:middle; }
     .ruler-bg { fill:rgba(0,0,0,0.7); rx:3; }
 
     /* TV-style watermark preview on canvas */
@@ -112,7 +112,7 @@
       object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.35));
     }
 
-    .ov-tryby { color:#e8ecef; font-family:'Chivo',system-ui,sans-serif; }
+    .ov-tryby { color:#e8ecef; font-family:var(--font-sans); }
     .ov-tryby-bar {
       display:flex; align-items:center; gap:16px; flex-wrap:wrap;
       min-height:64px; padding:10px 16px; margin-bottom:16px;
@@ -121,7 +121,7 @@
     .ov-tryby-modes { display:flex; gap:4px; background:#1d242c; border-radius:10px; padding:4px; }
     .ov-mode-btn {
       height:38px; padding:0 18px; border:none; border-radius:7px; cursor:pointer;
-      font-family:'Chivo',sans-serif; font-size:14px; font-weight:700; background:transparent; color:#8b949e;
+      font-family:var(--font-sans); font-size:14px; font-weight:700; background:transparent; color:#8b949e;
     }
     .ov-mode-btn.is-on { background:#FFD400; color:#06222B; }
     .ov-dock { background:#151a20; border:1px solid #232a31; border-radius:14px; padding:18px; }

@@ -8,6 +8,7 @@ import {
 import { calcMatchTime } from './shared/matchTime.js';
 import { overlayCourtLabel } from './shared/overlayLabel.js';
 import { renderTvScoreboard } from './shared/tvScoreboard.js';
+import './styles/fonts.css';
 import './styles/tvScoreboard.css';
 import './styles/overlay.css';
 import { abbreviatePersonName } from './shared/teamDisplay.js';

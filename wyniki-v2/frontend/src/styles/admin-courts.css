@@ -25,7 +25,7 @@
 .adm-pin__value {
   display: block;
   margin: 6px 0 2px;
-  font-family: 'Chivo Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 30px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -48,7 +48,7 @@
 .adm-court__pin { width: 104px; flex-shrink: 0; }
 .adm-court__pininput {
   width: 100%;
-  font-family: 'Chivo Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -59,7 +59,7 @@
   flex-shrink: 0;
   min-width: 56px;
   text-align: right;
-  font-family: 'Chivo Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
 }
@@ -108,7 +108,7 @@
 /* Tablets */
 .adm-device__name { width: 100%; box-sizing: border-box; font-weight: 700; }
 .adm-device__field { width: 118px; flex-shrink: 0; }
-.adm-device__alert { width: 100%; box-sizing: border-box; text-align: center; font-family: 'Chivo Mono', monospace; font-weight: 700; }
+.adm-device__alert { width: 100%; box-sizing: border-box; text-align: center; font-family: var(--font-mono); font-weight: 700; }
 .adm-device__test { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; color: var(--adm-muted); cursor: pointer; }
 .adm-device__test input { width: 20px; height: 20px; }
 /* On a phone the tablet card reads top down: name, what it is, then the battery

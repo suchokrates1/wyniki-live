@@ -18,6 +18,7 @@ import { createOfficeScheduleNotesView } from './modules/office/scheduleNotesVie
 import { createOfficeKnockoutBoardView } from './modules/office/knockoutBoardView.js';
 import { createOfficeTourView } from './modules/office/tourView.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
+import './styles/fonts.css';
 import './main.css';
 import './styles/office.css';
 import './styles/tailwind-office.css';

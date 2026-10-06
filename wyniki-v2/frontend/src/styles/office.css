@@ -52,8 +52,8 @@
   /* schedule board scale: 15 minutes of play (30 min = 2 rows, 60 = 4, 75 = 5) */
   --kort-tick: 26px;
   --kort-rail-open: 300px;
-  --kort-mono: 'Chivo Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
-  --kort-sans: Chivo, 'Segoe UI', system-ui, sans-serif;
+  --kort-mono: var(--font-mono);
+  --kort-sans: var(--font-sans);
 
   /* main.css variables (history scoreboard, competitor names) */
   --bg: var(--kort-void);
