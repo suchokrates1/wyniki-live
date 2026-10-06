@@ -23,7 +23,8 @@ test('a profile: header, tiles, the newest tournament open with its way and matc
 
   // the newest tournament opens by itself; the others wait for a tap
   await expect.poll(() => view.locator('.pfv-tournament').first().evaluate((el) => el.open)).toBe(true);
-  const wilno = view.locator('.pfv-tournament').filter({ hasText: 'Wilna' });
+  const { big } = await tournaments(page);
+  const wilno = view.locator('.pfv-tournament').filter({ hasText: big.name });
   if (!(await wilno.evaluate((el) => el.open))) await wilno.locator('summary').click();
   // a consolation final is no medal
   await expect(wilno.locator('.pfv-result')).not.toHaveText(/Srebro|Złoto|Brąz/);
