@@ -12,8 +12,13 @@ export function applyHashRoute(app, rawHash = location.hash) {
   }
 
   app._navigating = true;
-  const parts = hash.split('/');
+  // "tournaments/31/bracket/B1 Men?pin=Jani Kallunki": the category and a pinned player ride along
+  const [path, query = ''] = hash.split('?');
+  const parts = path.split('/');
   const tab = parts[0];
+  const bracketRoute = tab === 'bracket' || tab === 'drabinka' || (tab === 'live' && parts[1] === 'bracket')
+    || ((tab === 'tournaments' || tab === 'history' || tab === 'historia') && parts[1] && (!parts[2] || parts[2] === 'bracket'));
+  if (bracketRoute) app.bracketPinName = new URLSearchParams(query).get('pin') || '';
 
   if (tab === 'bracket' || tab === 'drabinka') {
     app.activeTab = 'live';
@@ -30,7 +35,10 @@ export function applyHashRoute(app, rawHash = location.hash) {
       app.selectedTournamentId = parts[1];
       if (parts[2] === 'matches') app.historySubTab = 'matches';
       else if (parts[2] === 'schedule') app.historySubTab = 'schedule';
-      else app.historySubTab = 'bracket';
+      else {
+        app.historySubTab = 'bracket';
+        if (parts[3]) app._pendingTournamentCategory = parts.slice(3).join('/');
+      }
       app.onTournamentSelected();
     } else {
       app.selectedTournamentId = '';
@@ -70,6 +78,7 @@ export function applyHashRoute(app, rawHash = location.hash) {
     app.selectedTournamentId = '';
     if (parts[1]) app.liveSubTab = parts[1];
     else app.liveSubTab = 'scores';
+    if (app.liveSubTab === 'bracket' && parts[2]) app._pendingCategory = parts.slice(2).join('/');
     if (app.liveSubTab === 'bracket') app.fetchBracket();
     else if (app.liveSubTab === 'schedule') app.fetchSchedule();
     else if (app.liveSubTab === 'history') app.fetchHistory();
@@ -79,13 +88,22 @@ export function applyHashRoute(app, rawHash = location.hash) {
   app._navigating = false;
 }
 
+function bracketSuffix(category, pin) {
+  return `${category ? `/${category}` : ''}${pin ? `?pin=${pin}` : ''}`;
+}
+
 export function buildHashFromState(app) {
+  if (app.activeTab === 'live' && app.liveSubTab === 'bracket') {
+    return `live/bracket${bracketSuffix(app.bracketCategory, app.bracketPinName)}`;
+  }
+
   if (app.activeTab === 'live' && app.liveSubTab !== 'scores') {
     return `live/${app.liveSubTab}`;
   }
 
   if (app.activeTab === 'tournaments' && app.selectedTournamentId) {
-    return `tournaments/${app.selectedTournamentId}/${app.historySubTab}`;
+    const base = `tournaments/${app.selectedTournamentId}/${app.historySubTab}`;
+    return app.historySubTab === 'bracket' ? `${base}${bracketSuffix(app.tournamentBracketCategory, app.bracketPinName)}` : base;
   }
 
   if (app.activeTab === 'players' && app.selectedPlayerId) {

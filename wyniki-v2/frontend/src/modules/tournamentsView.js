@@ -36,6 +36,7 @@ export function createTournamentView() {
     async selectTournamentBracketCategory(categoryName) {
       this.tournamentBracketCategory = categoryName;
       if (this.selectedTournamentId) await this.fetchTournamentBracket(this.selectedTournamentId);
+      this._updateHash(true);
     },
 
     async fetchTournaments() {

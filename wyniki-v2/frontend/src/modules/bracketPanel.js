@@ -29,12 +29,12 @@ export function createBracketPanelView() {
     toggleBracketPin(name) {
       const same = this.bracketPinName && competitorKey(this.bracketPinName) === competitorKey(name);
       this.bracketPinName = same ? '' : String(name || '').trim();
-      if (typeof this._updateHash === 'function') this._updateHash();
+      if (typeof this._updateHash === 'function') this._updateHash(true);
     },
 
     clearBracketPin() {
       this.bracketPinName = '';
-      if (typeof this._updateHash === 'function') this._updateHash();
+      if (typeof this._updateHash === 'function') this._updateHash(true);
     },
 
     bracketPinLabel(row) {
