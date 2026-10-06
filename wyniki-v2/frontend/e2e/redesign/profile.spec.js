@@ -38,6 +38,12 @@ test('a profile: header, tiles, the newest tournament open with its way and matc
   await expect(naqi.locator('.pfv-match__meta')).toContainText('Porażka');
 
   await expect(view.locator('.pfv-rivals li').first()).toContainText('Mecze:');
+  // where to ask about the data: a prepared e-mail naming the player, and the privacy policy
+  const data = view.locator('.pfv-data');
+  await expect(data).toContainText('contact@blindtennis.app');
+  const mail = await data.getByRole('link', { name: 'Napisz w sprawie danych' }).getAttribute('href');
+  expect(decodeURIComponent(mail)).toContain('mailto:contact@blindtennis.app?subject=Dane zawodnika: Rafał Sudoł');
+  await expect(data.getByRole('link', { name: 'Polityka prywatności' })).toHaveAttribute('href', /\/privacy\?lang=pl#rights/);
   await noSidewaysScroll(page);
   expect(errors).toEqual([]);
 });

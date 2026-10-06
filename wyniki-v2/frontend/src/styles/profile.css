@@ -60,6 +60,9 @@
 .pfv-rivals__wl.is-lost { color: var(--bt-loss-text); }
 .pfv-plain li { padding: 7px 0; border-top: 1px solid var(--bt-row-line); font-size: 0.9rem; }
 .pfv-note { margin: 0 0 6px; font-size: 0.85rem; color: var(--bt-muted); }
+.pfv-data__links { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 8px 0 4px; font-weight: 600; }
+.pfv-data__links a { display: inline-flex; align-items: center; min-height: 44px; }
+.pfv-data__mail { margin: 0; font-family: var(--font-mono); font-size: 0.85rem; color: var(--bt-muted); overflow-wrap: anywhere; }
 .pfv .btv-pin { display: none; }
 .pfv .btv-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
 

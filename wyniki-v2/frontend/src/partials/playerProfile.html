@@ -112,6 +112,16 @@
           </template>
         </ol>
       </section>
+      <section class="pfv-card pfv-data" aria-labelledby="pfv-data-title">
+        <h3 id="pfv-data-title" x-text="profileViewText('dataTitle')"></h3>
+        <p class="pfv-note" x-text="profileViewText('dataNote')"></p>
+        <p class="pfv-data__links">
+          <a :href="profileDataMailto(p.name)" x-text="profileViewText('dataMail')"></a>
+          <span aria-hidden="true">·</span>
+          <a :href="privacyHref('rights')" x-text="profileViewText('dataPolicy')"></a>
+        </p>
+        <p class="pfv-data__mail">contact@blindtennis.app</p>
+      </section>
     </aside>
   </div>
 </div>

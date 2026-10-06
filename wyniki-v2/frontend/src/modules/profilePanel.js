@@ -15,6 +15,13 @@ export function createProfilePanelView() {
     },
 
     /** "25–29 sierpnia 2026", "30 maja – 2 czerwca 2026": the shared month and year said once. */
+    /** A prepared e-mail about this player's data: subject names the player, body links the profile. */
+    profileDataMailto(name) {
+      const subject = this.profileViewText('dataSubject', { name });
+      const body = `${location.origin}${location.pathname}${location.hash}`;
+      return `mailto:contact@blindtennis.app?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    },
+
     profileDateRange(start, end) {
       if (!start) return '';
       if (!end || end === start) return this.profileDate(start);
