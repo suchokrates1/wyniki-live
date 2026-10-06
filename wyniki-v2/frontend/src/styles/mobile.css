@@ -167,17 +167,13 @@
   .player-filter-btns .filter-btn { min-height: 44px; flex: 1 1 0; padding: 6px 8px; }
   .player-filters--row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .player-filters--row2 .player-dropdown,
-  .hm-filters .player-dropdown {
+  .rsv-field .player-dropdown {
     min-height: 44px; min-width: 0; width: 100%;
     /* keep focused select away from the fixed tab bar when the OS opens the picker */
     scroll-margin-bottom: calc(var(--m-bottom-nav) + 24px + env(safe-area-inset-bottom, 0px));
     scroll-margin-top: calc(var(--m-header, 57px) + 12px);
   }
-  .player-filters.hm-filters,
-  .player-filters--row2.hm-filters {
-    padding-bottom: 4px;
-    margin-bottom: 12px;
-  }
+
   .player-list { gap: 0; }
   .player-card {
     display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px;
@@ -190,7 +186,6 @@
   .player-card__stat { display: grid; justify-items: center; min-width: 30px; }
   .player-card__stat-val { font-size: 16px; font-weight: 700; }
   .player-card__stat-label { font-size: 11px; }
-
 
   /* anything pinned stays clear of the bottom bar */
   .toast, .cookie-banner, .consent-banner { bottom: calc(var(--m-bottom-nav) + 12px + env(safe-area-inset-bottom, 0px)); }

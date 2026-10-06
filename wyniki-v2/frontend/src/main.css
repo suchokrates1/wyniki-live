@@ -1501,12 +1501,7 @@ body.has-consent-banner .pwa-toast { bottom: calc(var(--consent-banner-space, 0p
   margin-top: 24px;
   padding-bottom: 48px;
 }
-.hm-filters {
-  margin-bottom: 12px;
-}
-.hm-filters .player-dropdown {
-  min-width: 160px;
-}
+
 .hm-heading {
   margin: 0 0 14px;
   font-size: 17px;
@@ -1514,26 +1509,8 @@ body.has-consent-banner .pwa-toast { bottom: calc(var(--consent-banner-space, 0p
   color: var(--text);
   letter-spacing: 0.2px;
 }
-.hm-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
 /* --- Match card --- */
-.hm-card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  transition: box-shadow 0.2s ease;
-}
-.hm-card:hover {
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-}
-[data-theme="dark"] .hm-card:hover {
-  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
-}
 
 /* --- Scoreboard (two player rows) --- */
 .hm-scoreboard {
@@ -1679,26 +1656,13 @@ button.hm-cat-badge:focus-visible {
 [data-theme="dark"] .hm-cat-badge {
   background: rgba(154, 209, 255, 0.12);
 }
-.hm-phase {
-  font-size: 11px;
-  color: var(--muted);
-}
+
 .hm-time {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   font-size: 11px;
   color: var(--muted);
-}
-.hm-date {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.hm-time-icon {
-  opacity: 0.6;
 }
 
 /* Expand/collapse button */
@@ -1747,15 +1711,6 @@ button.hm-cat-badge:focus-visible {
 }
 
 /* Stats mode label */
-.hm-stats-mode {
-  text-align: center;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--muted);
-  font-weight: 600;
-  margin-bottom: 8px;
-}
 
 /* Stats comparison table (3-column: P1 | Stat | P2) */
 .hm-stats-table {
@@ -1809,34 +1764,6 @@ button.hm-cat-badge:focus-visible {
 }
 
 /* Stats footer (winner + duration) */
-.hm-stats-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 10px 0 2px;
-  font-size: 13px;
-  color: var(--text);
-}
-.hm-stats-winner {
-  font-weight: 600;
-}
-.hm-stats-duration {
-  color: var(--muted);
-}
-.hm-stats-times {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  padding: 6px 0 2px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.hm-stats-times__label {
-  font-weight: 600;
-  margin-right: 4px;
-}
 
 /* --- Responsive --- */
 @media (max-width: 520px) {

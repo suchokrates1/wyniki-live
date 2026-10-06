@@ -1,0 +1,25 @@
+/* Results (live history and a tournament's results), in the bracket's look. */
+
+.rsv { gap: 22px; }
+.rsv-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 16px; border-radius: 16px; background: var(--bt-surface); border: 1px solid var(--bt-border); }
+.rsv-field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 170px; min-width: 0; }
+.rsv-field--wide { flex: 2 1 240px; }
+.rsv-field label { font-size: 0.8rem; color: var(--bt-muted); }
+.rsv-field .player-search, .rsv-field .player-dropdown { width: 100%; max-width: none; min-height: 44px; box-sizing: border-box; }
+.rsv-days { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+.rsv-day { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--bt-border); background: var(--bt-surface-2); color: var(--bt-text); font: inherit; font-size: 0.9rem; cursor: pointer; }
+.rsv-day[aria-pressed="true"] { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-on); font-weight: 700; }
+
+.rsv-day-section { display: flex; flex-direction: column; gap: 12px; }
+.rsv-day-title { margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--bt-border); font-size: 1.2rem; font-weight: 800; }
+.rsv-count { color: var(--bt-muted); font-weight: 400; font-size: 0.95rem; }
+.rsv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.rsv-item { display: flex; flex-direction: column; border-radius: 12px; background: var(--bt-surface); border: 1px solid var(--bt-border); overflow: hidden; }
+.rsv-item .btv-match { border: 0; border-radius: 0; border-top: 1px solid var(--bt-row-line); }
+.rsv-item .btv-pin { display: none; }
+.rsv-item .btv-row { grid-template-columns: 28px minmax(0, 1fr) auto; min-height: 38px; }
+.rsv-phase { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bt-path); }
+.rsv-phase.is-medal { color: var(--bt-gold-text); }
+.rsv-phase.is-side, .rsv-phase.is-group { color: var(--bt-muted); }
+.rsv-cat { font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--bt-muted); }
+.rsv-meta { margin-top: auto; padding: 8px 10px; border-top: 1px solid var(--bt-border); }

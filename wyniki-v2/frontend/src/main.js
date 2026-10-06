@@ -14,6 +14,7 @@ import { createBracketView } from './modules/bracketView.js';
 import { createBracketPanelView } from './modules/bracketPanel.js';
 import { registerBracketPhases } from './modules/bracketPhases.js';
 import { createProfilePanelView } from './modules/profilePanel.js';
+import { createResultsPanelView } from './modules/resultsPanel.js';
 import { createHistoryView } from './modules/historyView.js';
 import { createLiveCourtView } from './modules/liveCourtView.js';
 import { createLiveRuntimeView } from './modules/liveRuntimeView.js';
@@ -35,6 +36,7 @@ import './main.css';
 import './styles/mobile.css';
 import './styles/bracket.css';
 import './styles/profile.css';
+import './styles/results.css';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
@@ -70,6 +72,7 @@ Alpine.data('tennisApp', () => ({
   ...createBracketView(),
   ...createBracketPanelView(),
   ...createProfilePanelView(),
+  ...createResultsPanelView(),
   ...createLiveRuntimeView(),
   ...createLiveCourtView(),
   ...createScheduleView(),

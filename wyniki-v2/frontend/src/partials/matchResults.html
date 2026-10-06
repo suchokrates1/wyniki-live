@@ -1,0 +1,100 @@
+<!-- Finished matches: filters, then a section per day of bracket cards. Expects `scope` ('live' | 'tournament'). -->
+<div class="btv rsv" x-data="{ days: [] }" x-effect="days = resultsDays(scope)">
+  <div class="rsv-filters">
+    <div class="rsv-field rsv-field--wide">
+      <label :for="scope + '-history-search'" x-text="tr().history?.searchLabel || 'Szukaj po nazwisku'"></label>
+      <input type="search" :id="scope + '-history-search'" class="player-search" :placeholder="tr().history?.searchPlaceholder || 'Szukaj nazwiska...'" x-model="historySearch">
+    </div>
+    <div class="rsv-field">
+      <label :for="scope + '-history-category'" x-text="tr().history?.category || 'Kategoria'"></label>
+      <select :id="scope + '-history-category'" class="player-dropdown" x-model="historyCategory">
+        <option value="" x-text="tr().history?.allCategories || 'Wszystkie kategorie'"></option>
+        <template x-for="cat in historyFilterChoices(resultsSource(scope)).categories" :key="'rcat-' + cat">
+          <option :value="cat" x-text="categoryFilterOptionLabel(cat)"></option>
+        </template>
+      </select>
+    </div>
+    <div class="rsv-field">
+      <label :for="scope + '-history-court'" x-text="tr().history?.court || 'Kort'"></label>
+      <select :id="scope + '-history-court'" class="player-dropdown" x-model="historyCourt">
+        <option value="" x-text="tr().history?.allCourts || 'Wszystkie korty'"></option>
+        <template x-for="court in historyFilterChoices(resultsSource(scope)).courts" :key="'rcourt-' + court.value">
+          <option :value="court.value" x-text="historyCourtLabel(court)"></option>
+        </template>
+      </select>
+    </div>
+    <div class="rsv-days" role="group" :aria-label="tr().history?.allDates || 'Dzień'">
+      <button type="button" class="rsv-day" :aria-pressed="historyDate === '' ? 'true' : 'false'" @click="historyDate = ''" x-text="tr().history?.allDates || 'Wszystkie dni'"></button>
+      <template x-for="day in historyFilterChoices(resultsSource(scope)).dates" :key="'rday-' + day">
+        <button type="button" class="rsv-day" :aria-pressed="historyDate === day ? 'true' : 'false'" @click="historyDate = day" x-text="historyDateLabel(day)"></button>
+      </template>
+      <button type="button" class="filter-btn" x-show="historyHasActiveFilters()" @click="clearHistoryFilters()" x-text="tr().history?.clearFilters || 'Wyczyść filtry'"></button>
+    </div>
+  </div>
+
+  <template x-for="day in days" :key="'rd-' + day.key">
+    <section class="rsv-day-section" :aria-label="historyDateLabel(day.key)">
+      <h3 class="rsv-day-title"><span x-text="historyDateLabel(day.key)"></span> <span class="rsv-count" x-text="'· ' + day.matches.length"></span></h3>
+      <ul class="rsv-grid">
+        <template x-for="entry in day.matches" :key="entry.key">
+          <li class="rsv-item" x-data="{ match: entry.match }">
+            <p class="sr-only" x-text="getHistoryAriaLabel(match)"></p>
+            <div class="rsv-phase" :class="resultsPhaseTone(match.phase)" aria-hidden="true">
+              <span x-text="profilePhaseLabel(match.phase) || translatePhase(match.phase || '')"></span>
+              <span class="rsv-cat" x-show="match.category" x-text="bracketCategoryLabel(match.category)"></span>
+            </div>
+            <div aria-hidden="true">
+              <template x-for="card in [entry.card]" :key="entry.key + '-c'">
+                <!-- @partial matchCard -->
+              </template>
+            </div>
+            <div class="hm-meta rsv-meta">
+              <div class="hm-meta-left">
+                <span class="hm-court-badge" x-text="(tr().history?.court || 'Kort') + ' ' + match.kort_id"></span>
+                <button type="button" class="hm-cat-badge" x-show="match.category" @click="openHistoryCategory(match)" :aria-label="historyCategoryAria(match)" x-text="bracketCategoryLabel(match.category)"></button>
+                <span class="hm-time" x-show="match.duration_seconds" x-text="formatTime(match.duration_seconds)"></span>
+              </div>
+              <button class="hm-details-btn" x-show="match.match_id" @click="toggleMatchDetails(match.match_id)" :aria-expanded="isMatchExpanded(match.match_id)">
+                <span x-text="isMatchExpanded(match.match_id) ? (tr().historyDetail?.collapse || 'Zwiń') : (tr().historyDetail?.details || 'Szczegóły')"></span>
+                <svg class="hm-chevron" :class="{ 'hm-chevron--open': isMatchExpanded(match.match_id) }" aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div class="hm-details-panel" x-show="isMatchExpanded(match.match_id)" x-cloak>
+            <template x-if="getMatchStats(match.match_id)?.loading">
+            <div class="hm-details-status"><span class="spinner"></span> <span x-text="tr().historyDetail?.loading || 'Ładowanie...'"></span></div>
+            </template>
+            <template x-if="getMatchStats(match.match_id)?.error">
+            <div class="hm-details-status" x-text="tr().historyDetail?.noStats || 'Brak statystyk'"></div>
+            </template>
+            <template x-if="getMatchStats(match.match_id)?.player1_stats">
+            <div class="hm-stats">
+            <table class="hm-stats-table" role="table">
+            <thead><tr>
+            <th scope="col" class="hm-stats-th hm-stats-th--name" x-text="match.player_a"></th>
+            <th scope="col" class="hm-stats-th hm-stats-th--label"></th>
+            <th scope="col" class="hm-stats-th hm-stats-th--name" x-text="match.player_b"></th>
+            </tr></thead>
+            <tbody>
+            <template x-for="row in getStatsRowsPaired(getMatchStats(match.match_id))" :key="forKey('stat', row.label)">
+            <tr class="hm-stats-row">
+            <td class="hm-stats-val" :class="{ 'hm-stats-val--better': row.p1Better }" x-text="row.p1"></td>
+            <td class="hm-stats-label" x-text="row.label"></td>
+            <td class="hm-stats-val" :class="{ 'hm-stats-val--better': row.p2Better }" x-text="row.p2"></td>
+            </tr>
+            </template>
+            </tbody>
+            </table>
+            </div>
+            </template>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </section>
+  </template>
+
+  <div x-show="resultsSource(scope).length > 0 && !days.length" class="empty-state">
+    <p x-text="tr().history?.noFilterResults || 'Brak meczów dla wybranych filtrów'"></p>
+    <button type="button" class="filter-btn" @click="clearHistoryFilters()" x-text="tr().history?.clearFilters || 'Wyczyść filtry'"></button>
+  </div>
+</div>
