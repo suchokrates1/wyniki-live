@@ -302,10 +302,12 @@ test('players: one row per player, filters in two rows, a row opens the profile'
   await page.locator('#player-search-input').fill('');
   await page.locator('.player-filter-btns .filter-btn').nth(0).click();
   await rows.first().click();
-  await expect(page.locator('.pp-header')).toBeVisible();
-  const header = await page.locator('.pp-header').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
-  expect(header, 'avatar beside the name').toBe(2);
-  const stats = page.locator('.pp-stat');
+  await expect(page.locator('.pfv-head')).toBeVisible();
+  const avatarBox = await page.locator('.pfv-avatar').boundingBox();
+  const nameBox = await page.locator('.pfv-name').boundingBox();
+  expect(nameBox.x, 'avatar beside the name').toBeGreaterThan(avatarBox.x + avatarBox.width - 1);
+  expect(nameBox.y, 'avatar beside the name').toBeLessThan(avatarBox.y + avatarBox.height);
+  const stats = page.locator('.pfv-tile:visible');
   const statTops = new Set();
   for (let index = 0; index < await stats.count(); index += 1) statTops.add(Math.round((await stats.nth(index).boundingBox()).y));
   expect(statTops.size, 'statistics in one row').toBe(1);
