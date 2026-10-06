@@ -9,7 +9,9 @@ export default defineConfig({
   testDir: './e2e/redesign',
   testMatch: '**/*.spec.js',
   fullyParallel: true,
-  workers: 4,
+  workers: 3,
+  // a live stack over the network: one retry tells a slow response from a broken page
+  retries: 1,
   timeout: 90_000,
   expect: { timeout: 15_000 },
   reporter: [['list']],

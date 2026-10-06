@@ -19,6 +19,8 @@ test('a tournament\'s results come in days of cards; a day button and the search
   await expect(card.locator('.hm-court-badge')).toContainText('Kort');
 
   const day = results.locator('.rsv-day', { hasText: '29' }).first();
+  // wait until Alpine has bound the buttons before tapping one
+  await expect(day).toHaveAttribute('aria-pressed', 'false');
   await day.click();
   await expect(day).toHaveAttribute('aria-pressed', 'true');
   await expect(results.locator('.rsv-day-section')).toHaveCount(1);

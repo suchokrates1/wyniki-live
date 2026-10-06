@@ -42,13 +42,14 @@ test('a profile: header, tiles, the newest tournament open with its way and matc
   expect(errors).toEqual([]);
 });
 
-test('an opponent link leads to the opponent, and back leads to the list', async ({ page }) => {
+test('an opponent link leads to the opponent, and back leads to where you came from', async ({ page }) => {
   await open(page, await profileOf(page, 'Rafał Sudoł'));
   await page.locator('.pfv-tournament').evaluateAll((els) => els.forEach((el) => { el.open = true; }));
   await page.locator('.pfv-match .btv-row a', { hasText: 'Luca Parravano' }).first().click();
   await expect(page.locator('.pfv-name')).toHaveText('Luca Parravano');
+  // "back" is the browser's back: from the opponent to the profile the link was on
   await page.getByRole('button', { name: /Powrót/ }).first().click();
-  await expect(page.locator('.player-card').first()).toBeVisible();
+  await expect(page.locator('.pfv-name')).toHaveText('Rafał Sudoł');
 });
 
 test('on a phone the avatar stays beside the name and the numbers keep one row', async ({ page }) => {

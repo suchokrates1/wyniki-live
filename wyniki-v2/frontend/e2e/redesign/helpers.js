@@ -25,6 +25,12 @@ export async function open(page, hash, { theme } = {}) {
     await banner.locator('.consent-banner__btn--ghost').click();
     await expect(banner).toBeHidden();
   }
+  // the "add to home screen" hint covers the bottom of a phone: dismiss it like a user would
+  const hint = page.locator('.pwa-install-hint');
+  if (await hint.isVisible().catch(() => false)) {
+    await hint.locator('.pwa-install-hint__btn:not(.pwa-install-hint__btn--primary)').click();
+    await expect(hint).toBeHidden();
+  }
   if (theme) await page.evaluate((value) => document.documentElement.setAttribute('data-theme', value), theme);
 }
 
