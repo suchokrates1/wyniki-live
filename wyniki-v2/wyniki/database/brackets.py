@@ -2065,6 +2065,23 @@ def _detect_knockout_result(
         "result_note": row["result_note"],
     }
 
+def _bracket_player_directory(cursor: sqlite3.Cursor, tournament_id: int) -> dict[str, dict[str, Any]]:
+    """Who a bracket name is: groups and slots carry only names, the page links them to profiles."""
+    cursor.execute(
+        "SELECT id, name, country, global_player_id FROM players WHERE tournament_id = ?",
+        (tournament_id,),
+    )
+    return {
+        r["name"]: {
+            "player_id": r["id"],
+            "global_player_id": r["global_player_id"],
+            "country": (r["country"] or "").strip().upper(),
+        }
+        for r in cursor.fetchall()
+        if r["name"]
+    }
+
+
 def get_full_bracket(tournament_id: int) -> dict:
     """Get complete bracket data for a tournament."""
     try:
@@ -2148,6 +2165,7 @@ def get_full_bracket(tournament_id: int) -> dict:
                 },
                 "groups": groups_data,
                 "knockout": knockout,
+                "players": _bracket_player_directory(cursor, tournament_id),
             }
     except Exception as e:
         logger.error("get_full_bracket_error", error=str(e))
