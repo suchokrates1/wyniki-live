@@ -43,7 +43,7 @@
               <span x-text="profilePhaseLabel(match.phase) || translatePhase(match.phase || '')"></span>
               <span class="rsv-cat" x-show="match.category" x-text="bracketCategoryLabel(match.category)"></span>
             </div>
-            <div aria-hidden="true">
+            <div>
               <template x-for="card in [entry.card]" :key="entry.key + '-c'">
                 <!-- @partial matchCard -->
               </template>

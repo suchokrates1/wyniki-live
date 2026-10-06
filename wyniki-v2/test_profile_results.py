@@ -62,3 +62,12 @@ def test_the_main_final_is_still_gold_or_silver():
     bracket = {"knockout": {"B1 Men — Finał": [_slot("Naqi Rizvi", "Jani Kallunki", "Jani Kallunki")]}}
     assert _knockout_finish(bracket, _Subject("Jani Kallunki"))[0] == "gold"
     assert _knockout_finish(bracket, _Subject("Naqi Rizvi"))[0] == "silver"
+
+
+def test_a_quarterfinal_is_not_a_final_though_it_ends_in_one():
+    # Wilno 2026: Sudoł lost the B1 doubles quarterfinal and the profile called it silver
+    bracket = {"knockout": {
+        "B1 Men Doubles — Ćwierćfinał": [_slot("Rafał Sudoł / Bernd Wiebe", "Renzo Del Cont / Luca Parravano", "Renzo Del Cont / Luca Parravano")],
+        "B1 Men Doubles — Quarterfinal": [_slot("Rafał Sudoł / Bernd Wiebe", "X Y / Z W", "X Y / Z W")],
+    }}
+    assert _knockout_finish(bracket, _Subject("Rafał Sudoł"))[0] is None

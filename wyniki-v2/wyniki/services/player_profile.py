@@ -42,8 +42,9 @@ def _is_semifinal(phase: str) -> bool:
 
 
 def _is_final(phase: str) -> bool:
+    # "finał" must start a word: "Ćwierćfinał" and "Półfinał" end in it without being finals
     phase_lc = str(phase or '').lower()
-    return ('finał' in phase_lc or 'final' in phase_lc) and not _is_semifinal(phase)
+    return bool(re.search(r'(?<![a-ząćęłńóśźż])fina[lł]', phase_lc)) and not _is_semifinal(phase)
 
 
 def _is_side_draw(phase: str) -> bool:
