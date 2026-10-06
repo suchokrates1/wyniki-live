@@ -36,6 +36,7 @@ def test_the_office_choice_beats_the_guess_and_reaches_the_bracket(db):
     tid = int(db.insert_tournament("RAKIETY ATNiS VII", "2026-09-26", "2026-09-27", city="Giebułtów", country="PL"))
     assert db.get_full_bracket(tid)["tournament"]["title_scope"] == "open"
     assert db.get_full_bracket(tid)["tournament"]["title_scope_guessed"] is True
+    assert db.get_full_bracket(tid)["tournament"]["country"] == "PL"
 
     save_tournament_title(tid, "national", "Puchar ATNiS")
     title = db.get_full_bracket(tid)["tournament"]

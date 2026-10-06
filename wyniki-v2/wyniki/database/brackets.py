@@ -2074,7 +2074,7 @@ def get_full_bracket(tournament_id: int) -> dict:
             cursor = conn.cursor()
 
             # Tournament info
-            cursor.execute("SELECT name, start_date, end_date FROM tournaments WHERE id = ?", (tournament_id,))
+            cursor.execute("SELECT name, start_date, end_date, country FROM tournaments WHERE id = ?", (tournament_id,))
             t = cursor.fetchone()
             if not t:
                 return {"error": "Tournament not found"}
@@ -2147,6 +2147,7 @@ def get_full_bracket(tournament_id: int) -> dict:
                 "tournament": {
                     "id": tournament_id,
                     "name": t["name"],
+                    "country": (t["country"] or "").strip().upper(),
                     **title_fields_with(cursor, tournament_id, t["name"]),
                 },
                 "groups": groups_data,
