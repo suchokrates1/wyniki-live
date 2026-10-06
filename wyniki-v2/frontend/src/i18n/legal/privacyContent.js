@@ -1,4 +1,4 @@
-export const PRIVACY_UPDATED_DATE = '2026-10-02';
+export const PRIVACY_UPDATED_DATE = '2026-10-06';
 
 export const PRIVACY_SECTION_IDS = Object.freeze([
   'controller',
@@ -59,6 +59,7 @@ export const PRIVACY_CONTENT = {
         'Sędziowie i obsługa: imię sędziego lub inicjały, kort, PIN, wybór języka i motywu, dane urządzenia potrzebne do synchronizacji.',
         'Aplikacja Android wysyła na nasz serwer identyfikator ANDROID_ID oraz producenta i model telefonu lub tabletu, żeby odróżnić urządzenia o tym samym modelu. To nie jest identyfikator reklamowy. Nie przekazujemy go firmom trzecim.',
         'Biuro turnieju i administrator: hasło, cookie sesji, adres e-mail do raportów, jeśli go ustawiono.',
+        'Profil zawodnika: wyniki z wszystkich turniejów zebrane w jednym miejscu (bilans, medale, mecze, bilans z rywalami) oraz data urodzenia, jeśli organizator ją poda. Datę urodzenia przechowujemy w bazie, a w profilu pokazujemy tylko wiek w latach.',
       ]),
       section('purposes', 'Cele i podstawy prawne', [
         'Nie sprzedajemy danych i nie używamy ich do reklamy.',
@@ -68,6 +69,7 @@ export const PRIVACY_CONTENT = {
         'Konta biura i administratora — art. 6 ust. 1 lit. f (ochrona serwisu i organizacja turnieju).',
         'Logi techniczne — art. 6 ust. 1 lit. f (bezpieczeństwo i diagnostyka).',
         'Analityka odwiedzin — tylko po zgodzie, art. 6 ust. 1 lit. a.',
+        'Profil zawodnika i wiek — art. 6 ust. 1 lit. f RODO (prawnie uzasadniony interes: historia startów zawodnika w jednym miejscu). Możesz się temu sprzeciwić — patrz „Twoje prawa”.',
       ]),
       section('recipients', 'Odbiorcy danych', [
         'Dane mogą trafić wyłącznie do podmiotów, bez których serwis nie zadziała.',
@@ -88,11 +90,13 @@ export const PRIVACY_CONTENT = {
         'Sesje biura i administratora — do wylogowania albo wygaśnięcia cookie.',
         'Wybór zgody na analitykę — w przeglądarce, do czasu wyczyszczenia danych witryny.',
         'Zdjęcia zawodników — do usunięcia z bazy przez administratora.',
+        'Data urodzenia i profil zawodnika — tak długo jak wyniki zawodnika w archiwum albo do sprzeciwu lub żądania usunięcia.',
       ]),
       section('rights', 'Twoje prawa', [
         'Masz prawo dostępu, sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia danych i sprzeciwu. Zgodę na analitykę możesz wycofać w każdej chwili, odrzucając ją ponownie po wyczyszczeniu danych witryny.',
         'Skargę możesz złożyć do Prezesa Urzędu Ochrony Danych Osobowych (uodo.gov.pl).',
         'Jeśli jesteś zawodnikiem, najpierw skontaktuj się z organizatorem turnieju — to on wprowadza nazwisko i klasę. Możesz też napisać do nas na contact@blindtennis.app.',
+        'Sprzeciw, poprawka lub usunięcie danych: napisz na contact@blindtennis.app (w każdym profilu jest gotowy przycisk „Napisz w sprawie danych”). Odpowiadamy w ciągu miesiąca. Na żądanie usuwamy zdjęcie, datę urodzenia i wiek oraz profil zawodnika. Wyniki w rozegranych drabinkach anonimizujemy (nazwisko zastępujemy oznaczeniem typu „Zawodnik 1”) zamiast je kasować, żeby nie zniekształcić wyników pozostałych zawodników.',
       ]),
       section('analityka', 'Cookies i analityka', [
         'Niezbędne dane w urządzeniu: język, motyw, sesja biura lub administratora. Są potrzebne do działania serwisu, więc nie pytamy o zgodę — informujemy o nich tutaj.',
@@ -129,6 +133,7 @@ export const PRIVACY_CONTENT = {
         'Umpires and staff: umpire name or initials, court, PIN, language and theme, plus device details needed for sync.',
         'The Android app sends ANDROID_ID, plus the phone or tablet manufacturer and model, to our server so we can tell identical models apart. This is not an advertising ID. We do not pass it to third parties.',
         'Tournament office and admin: password, session cookie, and a report email address if one is set.',
+        'Player profile: results from all tournaments in one place (record, medals, matches, head to head) and the date of birth, if the organiser provides it. We store the date of birth and show only the age in years on the profile.',
       ]),
       section('purposes', 'Purposes and legal bases', [
         'We do not sell data and we do not use it for advertising.',
@@ -138,6 +143,7 @@ export const PRIVACY_CONTENT = {
         'Office and admin accounts — Art. 6(1)(f) (security and running the tournament).',
         'Technical logs — Art. 6(1)(f) (security and diagnostics).',
         'Visit analytics — only with consent, Art. 6(1)(a).',
+        'Player profile and age — Art. 6(1)(f) GDPR (legitimate interest: a player\'s competition history in one place). You can object — see “Your rights”.',
       ]),
       section('recipients', 'Recipients', [
         'Data goes only to parties the service needs.',
@@ -158,11 +164,13 @@ export const PRIVACY_CONTENT = {
         'Office and admin sessions — until you sign out or the cookie expires.',
         'Analytics consent — in your browser until you clear site data.',
         'Player photos — until an administrator removes them.',
+        'Date of birth and the player profile — as long as the player\'s results stay in the archive, or until an objection or a request for erasure.',
       ]),
       section('rights', 'Your rights', [
         'You can ask for access, correction, erasure, restriction, portability, or object to processing. You can withdraw analytics consent at any time by clearing site data and choosing Reject.',
         'You may complain to the President of the Personal Data Protection Office in Poland (uodo.gov.pl) or your local authority.',
         'If you are a player, contact the tournament organiser first — they enter the name and class. You can also write to contact@blindtennis.app.',
+        'To object, correct or erase data, write to contact@blindtennis.app (every profile has a ready “Write about your data” button). We reply within one month. On request we delete the photo, the date of birth and age, and the player profile. Results in completed draws are anonymised (the name is replaced with a label such as “Player 1”) rather than deleted, so other players\' results stay correct.',
       ]),
       section('analityka', 'Cookies and analytics', [
         'Essential data on your device: language, theme, office or admin session. The site needs these, so we do not ask for consent — we describe them here.',
@@ -199,6 +207,7 @@ export const PRIVACY_CONTENT = {
         'Schiedsrichter und Team: Name oder Initialen, Platz, PIN, Sprache und Design sowie Gerätedaten für die Synchronisation.',
         'Die Android-App sendet ANDROID_ID sowie Hersteller und Modell des Telefons oder Tablets an unseren Server, damit gleiche Modelle unterscheidbar sind. Das ist keine Werbe-ID. Wir geben sie nicht an Dritte weiter.',
         'Turnierbüro und Admin: Passwort, Sitzungscookie und eine Report-E-Mail, falls hinterlegt.',
+        'Spielerprofil: Ergebnisse aller Turniere an einem Ort (Bilanz, Medaillen, Spiele, direkter Vergleich) sowie das Geburtsdatum, wenn der Veranstalter es angibt. Das Geburtsdatum speichern wir, im Profil zeigen wir nur das Alter in Jahren.',
       ]),
       section('purposes', 'Zwecke und Rechtsgrundlagen', [
         'Wir verkaufen keine Daten und nutzen sie nicht für Werbung.',
@@ -208,6 +217,7 @@ export const PRIVACY_CONTENT = {
         'Büro- und Admin-Konten — Art. 6 Abs. 1 lit. f DSGVO.',
         'Technische Protokolle — Art. 6 Abs. 1 lit. f DSGVO.',
         'Besuchsstatistik — nur mit Einwilligung, Art. 6 Abs. 1 lit. a DSGVO.',
+        'Spielerprofil und Alter — Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse: die Wettkampfgeschichte eines Spielers an einem Ort). Du kannst widersprechen — siehe „Deine Rechte“.',
       ]),
       section('recipients', 'Empfänger', [
         'Daten gehen nur an Stellen, die der Dienst braucht.',
@@ -228,11 +238,13 @@ export const PRIVACY_CONTENT = {
         'Büro- und Admin-Sitzungen — bis zur Abmeldung oder zum Ablauf des Cookies.',
         'Statistik-Einwilligung — im Browser, bis Sie die Website-Daten löschen.',
         'Spielerfotos — bis ein Administrator sie entfernt.',
+        'Geburtsdatum und Spielerprofil — so lange die Ergebnisse des Spielers im Archiv bleiben oder bis zu einem Widerspruch oder Löschantrag.',
       ]),
       section('rights', 'Ihre Rechte', [
         'Sie haben Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch. Die Statistik-Einwilligung können Sie jederzeit widerrufen.',
         'Beschwerde können Sie beim Präsidenten des polnischen Datenschutzamts (uodo.gov.pl) oder bei Ihrer Aufsichtsbehörde einlegen.',
         'Als Spieler wenden Sie sich zuerst an den Veranstalter. Sie können uns auch unter contact@blindtennis.app schreiben.',
+        'Widerspruch, Berichtigung oder Löschung: schreib an contact@blindtennis.app (in jedem Profil gibt es den Knopf „Zu deinen Daten schreiben“). Wir antworten innerhalb eines Monats. Auf Wunsch löschen wir Foto, Geburtsdatum und Alter sowie das Spielerprofil. Ergebnisse in gespielten Turnierbäumen anonymisieren wir (der Name wird durch eine Bezeichnung wie „Spieler 1“ ersetzt), statt sie zu löschen, damit die Ergebnisse der anderen Spieler stimmen.',
       ]),
       section('analityka', 'Cookies und Statistik', [
         'Erforderlich auf dem Gerät: Sprache, Design, Büro- oder Admin-Sitzung. Dafür brauchen wir keine Einwilligung — wir informieren hier.',
@@ -269,6 +281,7 @@ export const PRIVACY_CONTENT = {
         'Arbitri e staff: nome o iniziali, campo, PIN, lingua e tema, dati del dispositivo per la sincronizzazione.',
         'L’app Android invia ANDROID_ID, produttore e modello del telefono o del tablet al nostro server, per distinguere dispositivi dello stesso modello. Non è un ID pubblicitario. Non lo passiamo a terzi.',
         'Ufficio e admin: password, cookie di sessione e indirizzo e-mail dei report, se impostato.',
+        'Profilo del giocatore: i risultati di tutti i tornei in un unico posto (bilancio, medaglie, partite, scontri diretti) e la data di nascita, se l\'organizzatore la fornisce. Conserviamo la data di nascita e nel profilo mostriamo solo l\'età in anni.',
       ]),
       section('purposes', 'Finalità e basi giuridiche', [
         'Non vendiamo i dati e non li usiamo per pubblicità.',
@@ -278,6 +291,7 @@ export const PRIVACY_CONTENT = {
         'Account ufficio e admin — art. 6, par. 1, lett. f GDPR.',
         'Log tecnici — art. 6, par. 1, lett. f GDPR.',
         'Statistiche delle visite — solo con consenso, art. 6, par. 1, lett. a GDPR.',
+        'Profilo del giocatore ed età — art. 6, par. 1, lett. f GDPR (legittimo interesse: la storia sportiva del giocatore in un unico posto). Puoi opporti — vedi «I tuoi diritti».',
       ]),
       section('recipients', 'Destinatari', [
         'I dati vanno solo a chi serve per far funzionare il servizio.',
@@ -298,11 +312,13 @@ export const PRIVACY_CONTENT = {
         'Sessioni ufficio e admin — fino al logout o alla scadenza del cookie.',
         'Consenso alle statistiche — nel browser, finché non cancelli i dati del sito.',
         'Foto dei giocatori — fino alla rimozione da parte di un amministratore.',
+        'Data di nascita e profilo del giocatore — finché i risultati del giocatore restano nell\'archivio, o fino a un\'opposizione o a una richiesta di cancellazione.',
       ]),
       section('rights', 'I tuoi diritti', [
         'Puoi chiedere accesso, rettifica, cancellazione, limitazione, portabilità e opporti al trattamento. Puoi revocare il consenso alle statistiche in qualsiasi momento.',
         'Puoi presentare reclamo al Garante polacco (uodo.gov.pl) o alla tua autorità locale.',
         'Se sei un giocatore, contatta prima l’organizzatore. Puoi anche scrivere a contact@blindtennis.app.',
+        'Per opporti, correggere o cancellare i dati scrivi a contact@blindtennis.app (in ogni profilo c\'è il pulsante «Scrivi per i tuoi dati»). Rispondiamo entro un mese. Su richiesta cancelliamo la foto, la data di nascita e l\'età e il profilo del giocatore. I risultati nei tabelloni giocati vengono resi anonimi (il nome è sostituito da un\'etichetta come «Giocatore 1») invece di essere cancellati, perché i risultati degli altri giocatori restino corretti.',
       ]),
       section('analityka', 'Cookie e statistiche', [
         'Dati essenziali sul dispositivo: lingua, tema, sessione ufficio o admin. Servono al sito, quindi non chiediamo il consenso — li descriviamo qui.',
@@ -339,6 +355,7 @@ export const PRIVACY_CONTENT = {
         'Árbitros y equipo: nombre o iniciales, pista, PIN, idioma y tema, datos del dispositivo para la sincronización.',
         'La app de Android envía ANDROID_ID, fabricante y modelo del teléfono o de la tableta a nuestro servidor, para distinguir dispositivos del mismo modelo. No es un identificador publicitario. No lo cedemos a terceros.',
         'Oficina y administración: contraseña, cookie de sesión y correo de informes si está configurado.',
+        'Perfil del jugador: los resultados de todos los torneos en un solo lugar (balance, medallas, partidos, enfrentamientos) y la fecha de nacimiento, si el organizador la facilita. Guardamos la fecha de nacimiento y en el perfil solo mostramos la edad en años.',
       ]),
       section('purposes', 'Fines y bases jurídicas', [
         'No vendemos datos ni los usamos para publicidad.',
@@ -348,6 +365,7 @@ export const PRIVACY_CONTENT = {
         'Cuentas de oficina y admin — art. 6.1.f del RGPD.',
         'Registros técnicos — art. 6.1.f del RGPD.',
         'Analítica de visitas — solo con consentimiento, art. 6.1.a del RGPD.',
+        'Perfil del jugador y edad — art. 6.1.f RGPD (interés legítimo: el historial deportivo del jugador en un solo lugar). Puedes oponerte — ver «Tus derechos».',
       ]),
       section('recipients', 'Destinatarios', [
         'Los datos solo llegan a quien necesita el servicio.',
@@ -368,11 +386,13 @@ export const PRIVACY_CONTENT = {
         'Sesiones de oficina y admin — hasta cerrar sesión o caducar la cookie.',
         'Consentimiento de analítica — en el navegador hasta que borres los datos del sitio.',
         'Fotos de jugadores — hasta que un administrador las quite.',
+        'Fecha de nacimiento y perfil del jugador — mientras los resultados del jugador sigan en el archivo, o hasta una oposición o una solicitud de supresión.',
       ]),
       section('rights', 'Tus derechos', [
         'Puedes pedir acceso, rectificación, supresión, limitación, portabilidad u oponerte al tratamiento. Puedes retirar el consentimiento de analítica en cualquier momento.',
         'Puedes reclamar ante la autoridad polaca (uodo.gov.pl) o la tuya local.',
         'Si eres jugador, contacta primero con el organizador. También puedes escribir a contact@blindtennis.app.',
+        'Para oponerte, rectificar o suprimir datos escribe a contact@blindtennis.app (cada perfil tiene el botón «Escribir sobre tus datos»). Respondemos en un mes. A petición borramos la foto, la fecha de nacimiento y la edad, y el perfil del jugador. Los resultados de los cuadros jugados se anonimizan (el nombre se sustituye por una etiqueta como «Jugador 1») en vez de borrarse, para que los resultados de los demás jugadores sigan siendo correctos.',
       ]),
       section('analityka', 'Cookies y analítica', [
         'Datos esenciales en el dispositivo: idioma, tema, sesión de oficina o admin. El sitio los necesita, así que no pedimos consentimiento: los describimos aquí.',
@@ -409,6 +429,7 @@ export const PRIVACY_CONTENT = {
         'Arbitres et équipe : nom ou initiales, court, code PIN, langue et thème, données de l’appareil pour la synchronisation.',
         'L’application Android envoie ANDROID_ID, le fabricant et le modèle du téléphone ou de la tablette à notre serveur, afin de distinguer des appareils du même modèle. Ce n’est pas un identifiant publicitaire. Nous ne le transmettons pas à des tiers.',
         'Bureau et administration : mot de passe, cookie de session et e-mail de rapports s’il est renseigné.',
+        'Profil du joueur : les résultats de tous les tournois au même endroit (bilan, médailles, matchs, face-à-face) et la date de naissance, si l\'organisateur la fournit. Nous conservons la date de naissance et n\'affichons que l\'âge en années sur le profil.',
       ]),
       section('purposes', 'Finalités et bases légales', [
         'Nous ne vendons pas les données et ne les utilisons pas pour la publicité.',
@@ -418,6 +439,7 @@ export const PRIVACY_CONTENT = {
         'Comptes bureau et admin — art. 6, § 1, f du RGPD.',
         'Journaux techniques — art. 6, § 1, f du RGPD.',
         'Statistiques de visite — uniquement avec consentement, art. 6, § 1, a du RGPD.',
+        'Profil du joueur et âge — art. 6, par. 1, point f du RGPD (intérêt légitime : l\'historique sportif du joueur au même endroit). Vous pouvez vous y opposer — voir « Vos droits ».',
       ]),
       section('recipients', 'Destinataires', [
         'Les données ne vont qu’aux acteurs nécessaires au service.',
@@ -438,11 +460,13 @@ export const PRIVACY_CONTENT = {
         'Sessions bureau et admin — jusqu’à déconnexion ou expiration du cookie.',
         'Consentement analytics — dans le navigateur jusqu’à effacement des données du site.',
         'Photos des joueurs — jusqu’à suppression par un administrateur.',
+        'Date de naissance et profil du joueur — tant que les résultats du joueur restent dans l\'archive, ou jusqu\'à une opposition ou une demande d\'effacement.',
       ]),
       section('rights', 'Vos droits', [
         'Vous pouvez demander l’accès, la rectification, l’effacement, la limitation, la portabilité ou vous opposer. Vous pouvez retirer le consentement analytics à tout moment.',
         'Vous pouvez saisir le président de l’autorité polonaise (uodo.gov.pl) ou votre autorité locale.',
         'Si vous êtes joueur, contactez d’abord l’organisateur. Vous pouvez aussi écrire à contact@blindtennis.app.',
+        'Pour vous opposer, rectifier ou effacer des données, écrivez à contact@blindtennis.app (chaque profil a le bouton « Écrire au sujet de vos données »). Nous répondons dans un délai d\'un mois. Sur demande, nous supprimons la photo, la date de naissance et l\'âge, ainsi que le profil du joueur. Les résultats des tableaux joués sont anonymisés (le nom est remplacé par une mention comme « Joueur 1 ») plutôt que supprimés, afin que les résultats des autres joueurs restent exacts.',
       ]),
       section('analityka', 'Cookies et statistiques', [
         'Données essentielles sur l’appareil : langue, thème, session bureau ou admin. Le site en a besoin : pas de consentement, mais une information ici.',
@@ -479,6 +503,7 @@ export const PRIVACY_CONTENT = {
         'Teisėjai ir komanda: vardas ar inicialai, kortas, PIN, kalba ir tema, įrenginio duomenys sinchronizacijai.',
         'Android programėlė siunčia ANDROID_ID, gamintoją ir telefono ar planšetės modelį į mūsų serverį, kad atskirtume vienodus įrenginius. Tai ne reklamos identifikatorius. Trečiosioms šalims jo neperduodame.',
         'Biuras ir administratorius: slaptažodis, sesijos slapukas ir ataskaitų el. paštas, jei nustatytas.',
+        'Žaidėjo profilis: visų turnyrų rezultatai vienoje vietoje (balansas, medaliai, mačai, tarpusavio rezultatai) ir gimimo data, jei ją pateikia organizatorius. Gimimo datą saugome, o profilyje rodome tik amžių metais.',
       ]),
       section('purposes', 'Tikslai ir teisiniai pagrindai', [
         'Duomenų neparduodame ir nenaudojame reklamai.',
@@ -488,6 +513,7 @@ export const PRIVACY_CONTENT = {
         'Biuro ir administratoriaus paskyros — BDAR 6 str. 1 d. f punktas.',
         'Techniniai žurnalai — BDAR 6 str. 1 d. f punktas.',
         'Apsilankymų statistika — tik su sutikimu, BDAR 6 str. 1 d. a punktas.',
+        'Žaidėjo profilis ir amžius — BDAR 6 str. 1 d. f punktas (teisėtas interesas: žaidėjo varžybų istorija vienoje vietoje). Galite nesutikti — žr. „Jūsų teisės“.',
       ]),
       section('recipients', 'Gavėjai', [
         'Duomenys perduodami tik tiems, kurių reikia paslaugai.',
@@ -508,11 +534,13 @@ export const PRIVACY_CONTENT = {
         'Biuro ir administratoriaus sesijos — iki atsijungimo arba slapuko pabaigos.',
         'Statistikos sutikimas — naršyklėje, kol išvalote svetainės duomenis.',
         'Žaidėjų nuotraukos — kol administratorius jas pašalina.',
+        'Gimimo data ir žaidėjo profilis — kol žaidėjo rezultatai lieka archyve arba kol pareiškiamas nesutikimas ar prašymas ištrinti.',
       ]),
       section('rights', 'Jūsų teisės', [
         'Galite prašyti susipažinti, ištaisyti, ištrinti, apriboti tvarkymą, perkelti duomenis arba nesutikti. Statistikos sutikimą galite atšaukti bet kada.',
         'Galite skųstis Lenkijos duomenų apsaugos tarnybos pirmininkui (uodo.gov.pl) arba savo priežiūros institucijai.',
         'Jei esate žaidėjas, pirmiausia kreipkitės į organizatorių. Taip pat galite rašyti contact@blindtennis.app.',
+        'Norėdami nesutikti, ištaisyti ar ištrinti duomenis, rašykite contact@blindtennis.app (kiekviename profilyje yra mygtukas „Rašyti dėl duomenų“). Atsakome per mėnesį. Paprašius ištriname nuotrauką, gimimo datą ir amžių bei žaidėjo profilį. Sužaistų lentelių rezultatus anonimizuojame (vardas pakeičiamas žyma, pvz., „Žaidėjas 1“), o ne triname, kad kitų žaidėjų rezultatai liktų teisingi.',
       ]),
       section('analityka', 'Slapukai ir statistika', [
         'Būtini įrenginio duomenys: kalba, tema, biuro arba administratoriaus sesija. Jų svetainei reikia, todėl sutikimo neprašome — aprašome čia.',
