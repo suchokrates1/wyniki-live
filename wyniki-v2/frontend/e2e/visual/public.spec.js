@@ -63,10 +63,9 @@ test('live scores in the dark theme', async ({ page }) => {
 
 test('a player profile', async ({ page }) => {
   await open(page, 'players');
-  const firstRow = page.locator('.player-row, .players-list a, [data-player-row]').first();
-  if (await firstRow.count()) {
-    await firstRow.click();
-    await settle(page);
-  }
+  // the rows are .player-card; the old selector matched nothing and the shot was the list
+  await page.locator('.player-card').first().click();
+  await expect(page.locator('.pfv-head')).toBeVisible();
+  await settle(page);
   await expect(page).toHaveScreenshot('player-profile.png', { fullPage: true });
 });
