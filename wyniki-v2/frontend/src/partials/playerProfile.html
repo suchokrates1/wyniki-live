@@ -1,0 +1,117 @@
+<!-- The player profile; expects `p` (profileModel.js) in scope. Match cards are the bracket's. -->
+<div class="btv pfv">
+  <header class="pfv-head">
+    <div class="pfv-who">
+      <span class="pfv-avatar" aria-hidden="true">
+        <template x-if="p.photo"><img :src="p.photo" alt=""></template>
+        <template x-if="!p.photo"><span x-text="p.initials"></span></template>
+      </span>
+      <div class="pfv-who__text">
+        <h2 class="pfv-name" x-text="p.name"></h2>
+        <ul class="pfv-chips">
+          <li x-show="p.country"><span class="btv-cc" x-text="p.country"></span><span class="sr-only" x-text="(tr().playerProfile?.country || 'Kraj') + ': ' + p.country"></span></li>
+          <li x-show="formatPlayerClassification(playerProfile.player.category)" class="is-strong"><span class="sr-only" x-text="profileText('classLabel', 'Klasa sportowa') + ': '"></span><span x-text="formatPlayerClassification(playerProfile.player.category)"></span></li>
+          <li x-show="playerProfile.player.gender" x-text="playerProfile.player.gender === 'M' ? (tr().playerProfile?.male || 'Mężczyzna') : (tr().playerProfile?.female || 'Kobieta')"></li>
+          <li x-show="playerProfile.player.age" x-text="formatText(tr().playerProfile?.ageLabel || '{years} lat', { years: playerProfile.player.age })"></li>
+        </ul>
+      </div>
+    </div>
+    <ul class="pfv-medals" :aria-label="tr().playerProfile?.medals || 'Medale'">
+      <template x-for="medal in ['gold', 'silver', 'bronze']" :key="medal">
+        <li class="pfv-medal" :class="'is-' + medal + (p.medals[medal] ? '' : ' is-none')">
+          <span class="pfv-medal__count" x-text="p.medals[medal] || 0"></span>
+          <span class="pfv-medal__label" x-text="tr().playerProfile?.[medal] || medal"></span>
+        </li>
+      </template>
+    </ul>
+  </header>
+
+  <dl class="pfv-tiles">
+    <div class="pfv-tile"><dt x-text="tr().playerProfile?.tournaments || 'Turnieje'"></dt><dd x-text="p.tiles.tournaments"></dd></div>
+    <div class="pfv-tile"><dt x-text="tr().playerProfile?.matches || 'Mecze'"></dt><dd x-text="p.tiles.matches"></dd></div>
+    <div class="pfv-tile"><dt x-text="bracketText('record')"></dt><dd x-text="p.tiles.record"></dd></div>
+    <div class="pfv-tile"><dt x-text="tr().bracket?.setsHeader || 'Sety'"></dt><dd x-text="p.tiles.sets"></dd></div>
+    <div class="pfv-tile" x-show="p.tiles.winRate !== null"><dt x-text="tr().playerProfile?.winRate || 'Skuteczność'"></dt><dd x-text="p.tiles.winRate + '%'"></dd></div>
+  </dl>
+
+  <div class="pfv-columns">
+    <section class="btv-section pfv-main" aria-labelledby="pfv-tournaments-title">
+      <h3 id="pfv-tournaments-title" class="btv-h" x-text="tr().playerProfile?.tournamentHistory || 'Historia turniejów'"></h3>
+      <p class="btv-intro" x-show="!p.tournaments.length" x-text="tr().playerProfile?.noTournaments || 'Brak turniejów'"></p>
+      <template x-for="t in p.tournaments" :key="'pt-' + t.id">
+        <details class="btv-fold pfv-tournament" :open="t.open">
+          <summary>
+            <span class="btv-fold__title">
+              <strong x-text="t.name"></strong>
+              <span x-text="[t.city, profileDateRange(t.start, t.end), t.category ? translateCategory(t.category) : ''].filter(Boolean).join(' · ')"></span>
+            </span>
+            <span class="pfv-result" :class="'is-' + (t.result.medal || t.result.kind)" x-text="profileResultText(t.result)"></span>
+            <span class="pfv-wl" x-text="t.wins + '–' + t.losses"></span>
+            <svg class="btv-chev" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l5 5 5-5"></path></svg>
+          </summary>
+          <div class="pfv-body">
+            <ol class="pfv-path" :aria-label="profileViewText('pathLabel')">
+              <template x-for="(step, si) in t.path" :key="si">
+                <li class="pfv-step" :class="step.won === true ? 'is-won' : (step.won === false ? 'is-lost' : '')">
+                  <span x-text="step.kind === 'group' ? profileViewText('groupStep', { group: translateCategory(String(step.phase).split(' — ').pop()), place: step.place }) : profilePhaseLabel(step.phase)"></span>
+                  <strong x-show="step.won !== null" x-text="step.won ? (tr().playerProfile?.won || 'W') : (tr().playerProfile?.lost || 'P')"></strong>
+                  <span class="sr-only" x-show="step.won !== null" x-text="step.won ? profileText('resultWon', 'Wygrana') : profileText('resultLost', 'Porażka')"></span>
+                </li>
+              </template>
+            </ol>
+            <ul class="pfv-matches">
+              <template x-for="m in t.matches" :key="m.key">
+                <li class="pfv-match">
+                  <template x-for="card in [m.card]" :key="m.key + '-c'">
+                    <!-- @partial matchCard -->
+                  </template>
+                  <p class="pfv-match__meta">
+                    <strong :class="m.won ? 'is-won' : 'is-lost'" x-text="m.won ? profileText('resultWon', 'Wygrana') : profileText('resultLost', 'Porażka')"></strong>
+                    <span x-text="[profilePhaseLabel(m.phase), profileDate(m.date)].filter(Boolean).join(' · ')"></span>
+                  </p>
+                </li>
+              </template>
+            </ul>
+            <p class="btv-intro" x-show="!t.matches.length" x-text="tr().playerProfile?.noMatches || 'Brak meczów'"></p>
+          </div>
+        </details>
+      </template>
+    </section>
+
+    <aside class="pfv-aside">
+      <section class="pfv-card" x-show="p.rivals.length" aria-labelledby="pfv-rivals-title">
+        <h3 id="pfv-rivals-title" x-text="profileViewText('rivalsTitle')"></h3>
+        <ul class="pfv-rivals">
+          <template x-for="rival in p.rivals" :key="rival.name">
+            <li>
+              <span class="btv-cc" x-text="rival.country"></span>
+              <span class="pfv-rivals__who">
+                <template x-if="rival.href"><a class="btv-who__name" :href="rival.href" x-text="resolveBracketName(rival.name)"></a></template>
+                <template x-if="!rival.href"><span x-text="resolveBracketName(rival.name)"></span></template>
+                <span class="pfv-rivals__n" x-text="profileViewText('rivalPlayed', { n: rival.played })"></span>
+              </span>
+              <strong class="pfv-rivals__wl" :class="'is-' + rival.tone" x-text="rival.wins + '–' + rival.losses"></strong>
+            </li>
+          </template>
+        </ul>
+      </section>
+      <section class="pfv-card" x-show="p.medalsByCategory.length" aria-labelledby="pfv-medals-title">
+        <h3 id="pfv-medals-title" x-text="profileText('medalsByCategory', 'Medale według kategorii')"></h3>
+        <ul class="pfv-plain">
+          <template x-for="bucket in p.medalsByCategory" :key="'mc-' + bucket.category">
+            <li x-text="profileMedalCategoryText(bucket)"></li>
+          </template>
+        </ul>
+      </section>
+      <section class="pfv-card" x-show="profileClassHistory().length" aria-labelledby="pfv-classes-title">
+        <h3 id="pfv-classes-title" x-text="profileText('classTitle', 'Klasyfikacja sportowa')"></h3>
+        <p class="pfv-note" x-text="profileText('classNote', 'Wyniki zostają w kategorii, w której zostały rozegrane.')"></p>
+        <ol class="pfv-plain">
+          <template x-for="(row, index) in profileClassHistory()" :key="'pc-' + index">
+            <li><strong x-text="row.classification"></strong> · <span x-text="profileClassEntryText(row)"></span><span x-show="index === profileClassHistory().length - 1" x-text="', ' + profileText('classCurrent', 'aktualna')"></span></li>
+          </template>
+        </ol>
+      </section>
+    </aside>
+  </div>
+</div>

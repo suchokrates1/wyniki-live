@@ -84,17 +84,3 @@ export function getPlayerProfileLookupCandidates(players = [], id, mode = 'auto'
 
   return candidates.filter((value, index, arr) => arr.indexOf(value) === index);
 }
-
-export function getProfileMedalEmoji(medal) {
-  if (medal === 'gold') return '🥇';
-  if (medal === 'silver') return '🥈';
-  if (medal === 'bronze') return '🥉';
-  return '';
-}
-
-export function getProfileWinRate(profile) {
-  if (!profile?.career) return '0%';
-  const career = profile.career;
-  if (career.matches === 0) return '0%';
-  return `${Math.round((career.wins / career.matches) * 100)}%`;
-}

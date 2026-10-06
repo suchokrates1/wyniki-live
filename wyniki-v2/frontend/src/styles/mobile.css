@@ -191,16 +191,6 @@
   .player-card__stat-val { font-size: 16px; font-weight: 700; }
   .player-card__stat-label { font-size: 11px; }
 
-  /* ---------- player profile: avatar beside the name, statistics in one row ---------- */
-  .pp-header { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; padding: 14px; text-align: left; }
-  .pp-header .pp-info { text-align: left; }
-  .pp-header .pp-info__details { justify-content: flex-start; }
-  .pp-info__name { font-size: 22px; }
-  .pp-career { padding: 10px; }
-  .pp-stat-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
-  .pp-stat { min-width: 0; padding: 8px 2px; }
-  .pp-stat__val { font-size: 20px; }
-  .pp-stat__label { font-size: 10px; letter-spacing: 0; hyphens: auto; -webkit-hyphens: auto; }
 
   /* anything pinned stays clear of the bottom bar */
   .toast, .cookie-banner, .consent-banner { bottom: calc(var(--m-bottom-nav) + 12px + env(safe-area-inset-bottom, 0px)); }

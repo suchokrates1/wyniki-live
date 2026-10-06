@@ -58,7 +58,6 @@ export function applyHashRoute(app, rawHash = location.hash) {
         app.selectedPlayerId = playerId;
         app._profileIsGlobal = mode === 'global';
         app.playerProfile = null;
-        app.profileExpandedTournaments = {};
         app.fetchPlayerProfile(playerId, mode);
       } else {
         app.selectedPlayerId = null;

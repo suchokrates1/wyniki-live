@@ -33,7 +33,7 @@ export const TRANSLATIONS_LT = {
     serving: 'paduoda'
   },
   history: {
-    title: 'Mačų istorija', court: 'Kortas', vs: 'prieš', score: 'rezultatas', time: 'laikas',
+    title: 'Mačų istorija', court: 'Kortas', score: 'rezultatas', time: 'laikas',
     category: 'Kategorija', phaseGroup: 'Grupių etapas', phaseKnockout: 'Atkrintamosios',
     phaseGroupRematch: 'Grupių etapas — revanšas', catWomen: 'Moterys', catMen: 'Vyrai', catMixed: 'Mišrios',
     catDoubles: 'Dvejetai', searchLabel: 'Ieškoti pagal pavardę', searchPlaceholder: 'Ieškoti pavardės...',
@@ -71,7 +71,7 @@ export const TRANSLATIONS_LT = {
     wins: 'Pergalės', losses: 'Pralaimėjimai', winRate: 'Sėkmės proc.', medals: 'Medaliai',
     gold: 'Auksas', silver: 'Sidabras', bronze: 'Bronza', tournamentHistory: 'Turnyrų istorija',
     group: 'Grupė', place: 'vieta', groupPhase: 'Grupių etapas', knockoutPhase: 'Atkrintamosios',
-    noTournaments: 'Nėra turnyrų', won: 'L', lost: 'P', vs: 'prieš', duration: 'Trukmė'
+    noTournaments: 'Nėra turnyrų', won: 'L', lost: 'P', duration: 'Trukmė'
   },
   darkModeTooltip: { light: 'Perjungti šviesųjį režimą', dark: 'Perjungti tamsųjį režimą' },
   liveSub: { scores: 'Rezultatai gyvai', bracket: 'Turnyrinė lentelė', schedule: 'Tvarkaraštis', history: 'Istorija' },
@@ -173,7 +173,7 @@ export const TRANSLATION_PATCHES_LT = {
   tabs: { navLabel: 'Pagrindinė navigacija' },
   tournamentCard: { backToList: 'Grįžti prie turnyrų' },
   playerSection: { genderFilter: 'Lyties filtras' },
-  playerProfile: { ageLabel: '{years} m.', classLabel: 'Sporto klasė', classTitle: 'Sporto klasifikacija', classNote: 'Rezultatai lieka toje kategorijoje, kurioje buvo sužaisti.', classSince: '{class} nuo {date}', classPrevious: 'anksčiau {class}', classSourceTournament: 'klasifikacija turnyre {tournament}', classSourceTournamentHidden: 'klasifikacija turnyre', classSourceManual: 'pakeista žaidėjų duomenų bazėje', classSourceInitial: 'pirmoji klasė duomenų bazėje', classProvisional: 'laikina klasė', classCurrent: 'dabartinė', playedIn: 'Kategorija: {category}', medalsByCategory: 'Medaliai pagal kategoriją', noCategory: 'be kategorijos', resultWon: 'Pergalė', resultLost: 'Pralaimėjimas', noMatches: 'Nėra mačų', notFound: 'Žaidėjas nerastas' },
+  playerProfile: { ageLabel: '{years} m.', classLabel: 'Sporto klasė', classTitle: 'Sporto klasifikacija', classNote: 'Rezultatai lieka toje kategorijoje, kurioje buvo sužaisti.', classSince: '{class} nuo {date}', classPrevious: 'anksčiau {class}', classSourceTournament: 'klasifikacija turnyre {tournament}', classSourceTournamentHidden: 'klasifikacija turnyre', classSourceManual: 'pakeista žaidėjų duomenų bazėje', classSourceInitial: 'pirmoji klasė duomenų bazėje', classProvisional: 'laikina klasė', classCurrent: 'dabartinė', medalsByCategory: 'Medaliai pagal kategoriją', noCategory: 'be kategorijos', resultWon: 'Pergalė', resultLost: 'Pralaimėjimas', noMatches: 'Nėra mačų', notFound: 'Žaidėjas nerastas' },
   liveSub: { navLabel: 'Gyvosios skiltys', scores: 'Mačai gyvai', schedule: 'Turnyro planas', history: 'Rezultatai' },
   schedule: { title: 'Turnyro planas', emptyTitle: 'Turnyro planas dar nepaskelbtas', loading: 'Kraunamas turnyro planas...', updated: 'Turnyro planas atnaujintas' },
   courtNext: { label: 'Kitas', last: 'Paskutinis šios dienos mačas šiame korte', spoken: 'Kitas mačas šiame korte' },
@@ -183,6 +183,7 @@ export const TRANSLATION_PATCHES_LT = {
     groupTableLabel: 'Grupės {group} lentelė', treeLabel: 'Lentelė {category}',
     placeMatch: 'Mačas dėl {number} vietos', pair: 'Pora',
   },
+  profileView: { pathLabel: 'Kelias turnyre', groupStep: '{group} · {place} vieta', groupResult: '{group}: {place} iš {of}', rivalsTitle: 'Balansas su varžovais', rivalPlayed: 'Mačai: {n}' },
   bracketView: { groupTitle: 'Grupė {name}', matchesToggle: 'Grupės mačai · {count}', record: 'Balansas', legendRecord: 'laimėti–pralaimėti mačai', qualifyLegend: 'patenka į lentelę', pinLegend: 'smeigtukas rodo žaidėjo kelią lentelėse', nameLegend: 'vardas atveria žaidėjo profilį', pinShow: 'Rodyti kelią: {name}', pinHide: 'Atsegti: {name}', pinnedLabel: 'Prisegta:', unpin: 'Atsegti', mainDraw: 'Pagrindinė lentelė', consolation: 'Paguodos turnyras', placesTitle: 'Dėl {from}–{to} vietų', consolationPlaces: 'Paguoda: dėl {from}–{to} vietų', sideTitle: 'Paguoda ir mačai dėl vietų', sideIntro: 'Kiekviena lentelė nupiešta kaip pagrindinė, bet suskleista. Prisegtas žaidėjas šviečia ir čia.', otherMatches: 'Kiti mačai', winnerLine: 'Nugalėtojas: {name}', bye: 'laisvas ratas', final: 'Finalas', semifinal: 'Pusfinalis', quarterfinal: 'Ketvirtfinalis', roundOf: '1/{n} finalo', round: '{n} ratas', placeMatch: 'Dėl {number} vietos', thirdPlace: 'Mačas dėl 3 vietos', reachChampion: 'čempionas', reachPlace: '{place} vieta', reachConsolation: 'paguoda', phasesLabel: 'Etapas', groupsStage: 'Grupės', swipeHint: 'Braukite kairėn arba dešinėn, kad pakeistumėte etapą', titles: { world: { m: 'Pasaulio čempionas {cat}', f: 'Pasaulio čempionė {cat}', pm: 'Pasaulio čempionai {cat}', pf: 'Pasaulio čempionės {cat}' }, continental: { m: 'Europos čempionas {cat}', f: 'Europos čempionė {cat}', pm: 'Europos čempionai {cat}', pf: 'Europos čempionės {cat}' }, national: { m: '{country} čempionas {cat}', f: '{country} čempionė {cat}', pm: '{country} čempionai {cat}', pf: '{country} čempionės {cat}' }, nationalFallback: { m: 'Šalies čempionas {cat}', f: 'Šalies čempionė {cat}', pm: 'Šalies čempionai {cat}', pf: 'Šalies čempionės {cat}' }, open: { m: 'Nugalėtojas {cat}', f: 'Nugalėtoja {cat}', pm: 'Nugalėtojai {cat}', pf: 'Nugalėtojos {cat}' } }, countries: { PL: 'Lenkijos', LT: 'Lietuvos', DE: 'Vokietijos', CZ: 'Čekijos', SK: 'Slovakijos', GB: 'Didžiosios Britanijos', IT: 'Italijos', ES: 'Ispanijos', FR: 'Prancūzijos', FI: 'Suomijos', UA: 'Ukrainos' } },
   tournamentHistory: { navLabel: 'Turnyro skiltys', matchHistory: 'Rezultatai', schedule: 'Turnyro planas' },
   accessibility: {

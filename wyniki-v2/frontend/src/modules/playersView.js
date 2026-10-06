@@ -6,8 +6,6 @@ import {
   getPlayerCategoryOptions,
   getPlayerCountryOptions,
   getPlayerProfileLookupCandidates,
-  getProfileMedalEmoji,
-  getProfileWinRate,
   normalizePlayerProfileMode,
 } from './players.js';
 
@@ -23,7 +21,6 @@ export function createPlayersView() {
     selectedPlayerId: null,
     playerProfile: null,
     playerProfileLoading: false,
-    profileExpandedTournaments: {},
     _profileIsGlobal: false,
     _playerProfileRequestId: 0,
 
@@ -70,7 +67,6 @@ export function createPlayersView() {
       this.selectedPlayerId = id;
       this._profileIsGlobal = isGlobal;
       this.playerProfile = null;
-      this.profileExpandedTournaments = {};
       this.fetchPlayerProfile(id, isGlobal ? 'global' : 'local');
       this._updateHash();
     },
@@ -79,7 +75,6 @@ export function createPlayersView() {
       this.selectedPlayerId = null;
       this._profileIsGlobal = false;
       this.playerProfile = null;
-      this.profileExpandedTournaments = {};
       history.back();
     },
 
@@ -114,14 +109,6 @@ export function createPlayersView() {
       } finally {
         if (requestId === this._playerProfileRequestId) this.playerProfileLoading = false;
       }
-    },
-
-    toggleProfileTournament(tournamentId) {
-      this.profileExpandedTournaments[tournamentId] = !this.profileExpandedTournaments[tournamentId];
-    },
-
-    profileMedalEmoji(medal) {
-      return getProfileMedalEmoji(medal);
     },
 
     profileText(key, fallback, values = {}) {
@@ -159,27 +146,6 @@ export function createPlayersView() {
       return parts.join(', ');
     },
 
-    profileTournamentCategory(t) {
-      if (!t?.category_label) return '';
-      return this.profileText('playedIn', 'Kategoria: {category}', { category: this.translateCategory(t.category_label) });
-    },
-
-    profileTournamentLabel(t) {
-      const parts = [t.tournament_name];
-      const category = this.profileTournamentCategory(t);
-      if (category) parts.push(category);
-      if (t.medal && ['gold', 'silver', 'bronze'].includes(t.medal)) parts.push(this.tr().playerProfile?.[t.medal] || t.medal);
-      parts.push(`${t.wins} ${this.tr().playerProfile?.wins || 'Wygrane'}, ${t.losses} ${this.tr().playerProfile?.losses || 'Przegrane'}`);
-      return parts.join(' – ');
-    },
-
-    profileMatchSummary(m) {
-      const score = (m.score || []).map((set) => (set.stb ? `[${set.g1}:${set.g2}]` : `${set.g1}:${set.g2}`)).join(', ');
-      const result = m.won ? this.profileText('resultWon', 'Wygrana') : this.profileText('resultLost', 'Porażka');
-      const opponent = `${this.tr().playerProfile?.vs || 'vs'} ${this.resolveBracketName(m.opponent)}`;
-      return [result, opponent, score, m.phase ? this.translatePhase(m.phase) : ''].filter(Boolean).join(', ');
-    },
-
     profileMedalCategoryText(bucket) {
       const names = ['gold', 'silver', 'bronze']
         .filter((key) => bucket[key])
@@ -188,8 +154,5 @@ export function createPlayersView() {
       return `${category} – ${names.join(', ')}`;
     },
 
-    profileWinRate() {
-      return getProfileWinRate(this.playerProfile);
-    },
   };
 }

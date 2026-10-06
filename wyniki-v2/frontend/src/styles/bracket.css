@@ -15,6 +15,8 @@
   --bt-loser: #5f6b7a;
   --bt-qualify: #1f8a4c;
   --bt-qualify-on: #ffffff;
+  --bt-win-text: #17703d;
+  --bt-loss-text: #a31515;
   --bt-gold: #e0a92e;
   --bt-gold-text: #7a4d00;
   --bt-gold-soft: #fff6e0;
@@ -37,6 +39,8 @@
   --bt-loser: #8394a8;
   --bt-qualify: #35c46a;
   --bt-qualify-on: #06210f;
+  --bt-win-text: #35c46a;
+  --bt-loss-text: #ff8a80;
   --bt-gold: #f2c94c;
   --bt-gold-text: #f2c94c;
   --bt-gold-soft: #16130a;
@@ -60,6 +64,8 @@
     --bt-loser: #8394a8;
     --bt-qualify: #35c46a;
     --bt-qualify-on: #06210f;
+    --bt-win-text: #35c46a;
+    --bt-loss-text: #ff8a80;
     --bt-gold: #f2c94c;
     --bt-gold-text: #f2c94c;
     --bt-gold-soft: #16130a;

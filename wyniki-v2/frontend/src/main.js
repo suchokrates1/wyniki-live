@@ -13,6 +13,7 @@ import { warnMissingTranslationKeys } from './i18n/validation.js';
 import { createBracketView } from './modules/bracketView.js';
 import { createBracketPanelView } from './modules/bracketPanel.js';
 import { registerBracketPhases } from './modules/bracketPhases.js';
+import { createProfilePanelView } from './modules/profilePanel.js';
 import { createHistoryView } from './modules/historyView.js';
 import { createLiveCourtView } from './modules/liveCourtView.js';
 import { createLiveRuntimeView } from './modules/liveRuntimeView.js';
@@ -33,6 +34,7 @@ import './styles/fonts.css';
 import './main.css';
 import './styles/mobile.css';
 import './styles/bracket.css';
+import './styles/profile.css';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
@@ -67,6 +69,7 @@ Alpine.data('tennisApp', () => ({
   ...createPlayersView(),
   ...createBracketView(),
   ...createBracketPanelView(),
+  ...createProfilePanelView(),
   ...createLiveRuntimeView(),
   ...createLiveCourtView(),
   ...createScheduleView(),
