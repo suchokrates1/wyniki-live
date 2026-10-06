@@ -187,9 +187,14 @@ details[open] > summary .btv-chev { transform: rotate(180deg); }
 .btv-phases__panel .btv-tree { margin: 0; }
 .btv-phases__hint { margin: 8px 0 0; text-align: center; font-size: 0.85rem; color: var(--bt-muted); }
 
-@media (max-width: 899px) {
+/* phone below 700 px, tablet up to the width the main draw needs; the full tree beyond */
+@media (max-width: 1339px) {
   .btv-tree-scroll { display: none; }
-  .btv-phases { display: block; }
+  .btv-phases--tablet { display: block; }
+}
+@media (max-width: 699px) {
+  .btv-phases--tablet { display: none; }
+  .btv-phases--phone { display: block; }
 }
 
 @media (prefers-reduced-motion: reduce) {

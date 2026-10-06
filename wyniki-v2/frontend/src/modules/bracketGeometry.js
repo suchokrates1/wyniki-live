@@ -122,20 +122,28 @@ export function treeGeometry(tree, ctx = {}, t = {}, { champion = null, layout =
 }
 
 /**
- * The tree as phone phases: each round with the next one peeking in, then the final alone
- * (with the 3rd-place match and the champion). Swiping moves from one phase to the next.
+ * The tree as swipeable phases. On a phone (span 2) each round shows with the next one peeking in,
+ * then the final alone; on a tablet (span 3) two rounds show whole with a third peeking in, and the
+ * last phase holds the semifinal and the final. The final phase carries the 3rd-place match and the champion.
  */
-export function phaseGeometries(tree, ctx = {}, t = {}, { champion = null } = {}) {
-  const last = tree.columns.length - 1;
-  return tree.columns.map((_, c) => {
-    const final = c === last;
-    const slice = { ...tree, columns: tree.columns.slice(c, final ? c + 1 : c + 2), third: final ? tree.third : null };
+export function phaseGeometries(tree, ctx = {}, t = {}, { champion = null, span = 2, layout = PHONE_GEOMETRY } = {}) {
+  const columns = tree.columns.length;
+  const lastStart = Math.max(0, columns - (span - 1));
+  const starts = [];
+  for (let c = 0; c <= lastStart; c += 1) starts.push(c);
+  return starts.map((c) => {
+    const final = c === lastStart;
+    const slice = { ...tree, columns: tree.columns.slice(c, final ? columns : c + span), third: final ? tree.third : null };
+    // the final phase starts lower so the champion stands above the final, not off-screen
+    const lowered = final && champion?.name;
+    const label = final && slice.columns.length > 1
+      ? `${roundLabel(tree, c, t)} · ${roundLabel(tree, columns - 1, t)}`
+      : roundLabel(tree, c, t);
     return {
-      label: roundLabel(tree, c, t),
+      label,
       geometry: treeGeometry(slice, ctx, t, {
         champion: final ? champion : null,
-        // the final phase starts lower so the champion stands above the final, not off-screen
-        layout: final && champion?.name ? { ...PHONE_GEOMETRY, top: PHONE_GEOMETRY.top + CHAMP_HEIGHT + CHAMP_GAP } : PHONE_GEOMETRY,
+        layout: lowered ? { ...layout, top: layout.top + CHAMP_HEIGHT + CHAMP_GAP } : layout,
         labelOf: (column) => roundLabel(tree, c + column, t),
       }),
     };

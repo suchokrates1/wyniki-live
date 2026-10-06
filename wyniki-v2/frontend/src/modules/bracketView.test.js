@@ -168,3 +168,21 @@ test('the phone final keeps the champion above it, inside the phone width', asyn
   assert.ok(final.champ.y + final.champ.height <= final.cards[0].y);
   assert.equal(final.width, PHONE_GEOMETRY.width);
 });
+
+test('on a tablet two rounds show whole with a third peeking in; the last phase is semifinal and final', async () => {
+  const { phaseGeometries, GEOMETRY } = await import('./bracketGeometry.js');
+  const { trees } = layoutKnockoutTrees(b1men.knockout);
+  const main = trees.find((tree) => tree.kind === 'main');
+  const t = { final: 'Finał', semifinal: 'Półfinał', quarterfinal: 'Ćwierćfinał', roundOf: '1/{n} finału' };
+  const phases = phaseGeometries(main, {}, t, { champion: { name: 'Jani Kallunki' }, span: 3, layout: GEOMETRY });
+  assert.deepEqual(phases.map((phase) => phase.geometry.labels.filter((l) => l.tone === 'round').map((l) => l.text)), [
+    ['1/8 finału', 'Ćwierćfinał', 'Półfinał'],
+    ['Ćwierćfinał', 'Półfinał', 'Finał'],
+    ['Półfinał', 'Finał'],
+  ]);
+  assert.equal(phases[2].label, 'Półfinał · Finał');
+  const last = phases[2].geometry;
+  assert.ok(last.champ && last.champ.y + last.champ.height <= last.cards.find((entry) => entry.round === 'Finał').y);
+  assert.ok(last.width <= 2 * GEOMETRY.width + GEOMETRY.gap, 'the champion stays inside the two columns');
+  assert.ok(last.cards.some((entry) => entry.key === 'third'));
+});

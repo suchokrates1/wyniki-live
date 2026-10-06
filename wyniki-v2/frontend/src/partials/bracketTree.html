@@ -6,27 +6,10 @@
     </template>
   </div>
 
-  <div class="btv-phases" x-data="bracketPhases(tree.phases.length, tree.startPhase)" :aria-label="tree.title" role="region">
-    <div class="btv-phases__tabs" role="tablist" :aria-label="bracketText('phasesLabel')">
-      <template x-for="(phase, pi) in tree.phases" :key="'pt' + pi">
-        <button type="button" role="tab" class="btv-phases__tab" :class="{ 'is-on': pi === index }"
-                :aria-selected="pi === index ? 'true' : 'false'" @click="go(pi)" x-text="phase.label"></button>
-      </template>
-      <span class="btv-phases__bar" aria-hidden="true" :style="barStyle()"></span>
-    </div>
-    <div class="btv-phases__viewport" :style="'height: ' + (tree.phases[index]?.geometry.height || 0) + 'px'"
-         @pointerdown="down($event)" @pointermove="move($event)" @pointerup="up($event)" @pointercancel="up($event)">
-      <div class="btv-phases__track" :class="{ 'is-dragging': dragging }" :style="trackStyle()">
-        <template x-for="(phase, pi) in tree.phases" :key="'pp' + pi">
-          <section class="btv-phases__panel" role="tabpanel" :aria-label="phase.label" :aria-hidden="pi === index ? 'false' : 'true'" x-effect="$el.inert = pi !== index">
-            <template x-for="geo in [phase.geometry]" :key="'pg' + pi">
-              <!-- @partial treeCanvas -->
-            </template>
-          </section>
-        </template>
-      </div>
-    </div>
-    <p class="btv-phases__hint" x-show="tree.phases.length > 1" x-text="bracketText('swipeHint')"></p>
-    <p class="sr-only" aria-live="polite" x-text="tree.phases[index]?.label || ''"></p>
-  </div>
+  <template x-for="phases in [tree.tabletPhases]" :key="tree.key + '-tablet'">
+    <div class="btv-phases btv-phases--tablet"><!-- @partial treePhases --></div>
+  </template>
+  <template x-for="phases in [tree.phases]" :key="tree.key + '-phone'">
+    <div class="btv-phases btv-phases--phone"><!-- @partial treePhases --></div>
+  </template>
 </div>

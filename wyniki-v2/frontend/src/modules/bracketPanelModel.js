@@ -1,6 +1,6 @@
 import { getCategoryPodiumEntries, groupShowsStandingsTable } from './bracket.js';
 import { groupView, isDecidedName, profileHref, seedMap, slotCard } from './bracketCards.js';
-import { phaseGeometries, roundLabel, treeGeometry } from './bracketGeometry.js';
+import { GEOMETRY, phaseGeometries, roundLabel, treeGeometry } from './bracketGeometry.js';
 import { championTitle } from './championTitle.js';
 import { competitorKey, layoutKnockoutTrees } from './knockoutLayout.js';
 
@@ -111,6 +111,7 @@ export function buildCategoryPanel(cat, data = {}, { pinKey = '', t = {} } = {})
   const treeViews = trees.map((tree, index) => {
     const geometry = treeGeometry(tree, ctx, t, { champion: tree === main ? champion : null });
     const phases = phaseGeometries(tree, ctx, t, { champion: tree === main ? champion : null });
+    const tabletPhases = phaseGeometries(tree, ctx, t, { champion: tree === main ? champion : null, span: 3, layout: GEOMETRY });
     const pinnedHere = Boolean(pinKey) && keysInTree(tree).has(pinKey);
     const rootCell = tree.columns[tree.columns.length - 1].cells[0];
     const winner = tree.kind !== 'main' && rootCell?.type === 'match' ? slotCard(rootCell.slot, ctx).rows.find((row) => row.won) : null;
@@ -123,6 +124,7 @@ export function buildCategoryPanel(cat, data = {}, { pinKey = '', t = {} } = {})
       pinnedHere,
       geometry,
       phases,
+      tabletPhases,
       startPhase: lastPlayedColumn(tree),
     };
   });
