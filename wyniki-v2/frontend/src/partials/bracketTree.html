@@ -1,0 +1,33 @@
+<!-- One knockout tree drawn with connectors; expects `tree` (a tree view of bracketPanelModel.js). -->
+<div class="btv-tree-scroll" tabindex="0" role="region" :aria-label="tree.title" :style="'--btv-need: ' + (tree.geometry.width + 42) + 'px'">
+  <div class="btv-tree" :style="bracketBox(tree.geometry)">
+    <template x-for="(label, li) in tree.geometry.labels" :key="'l' + li">
+      <div class="btv-round-label" :class="'is-' + label.tone" :style="bracketPos(label)" aria-hidden="true" x-text="label.text"></div>
+    </template>
+    <template x-for="(conn, ci) in tree.geometry.conns" :key="'c' + ci">
+      <div class="btv-conn" :style="bracketStyle(conn.style)" aria-hidden="true"></div>
+    </template>
+    <template x-if="tree.geometry.champ">
+      <div class="btv-champ" :style="bracketBox(tree.geometry.champ) + '; ' + bracketPos(tree.geometry.champ)">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--bt-gold)"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg>
+        <span class="btv-champ__title" x-text="tree.geometry.champ.title"></span>
+        <template x-if="tree.geometry.champ.href">
+          <a class="btv-champ__name" :href="tree.geometry.champ.href" x-text="resolveBracketName(tree.geometry.champ.name)"></a>
+        </template>
+        <template x-if="!tree.geometry.champ.href">
+          <span class="btv-champ__name" x-text="resolveBracketName(tree.geometry.champ.name)"></span>
+        </template>
+      </div>
+    </template>
+    <ol>
+      <template x-for="entry in tree.geometry.cards" :key="entry.key">
+        <li class="btv-slot" :style="bracketPos(entry)">
+          <span class="sr-only" x-text="entry.round"></span>
+          <template x-for="card in [entry.card]" :key="entry.key + '-card'">
+            <!-- @partial matchCard -->
+          </template>
+        </li>
+      </template>
+    </ol>
+  </div>
+</div>

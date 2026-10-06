@@ -278,3 +278,15 @@ test('generated Vilnius-format phases fall into main, places and consolation fam
   assert.equal(getKnockoutFamily('B2 Men — Pocieszenie o 5. miejsce'), 3);
   assert.equal(getKnockoutFamily('B1 Men — 08 Consolation 7. miejsce'), 3);
 });
+
+test('round-robin groups followed by a main final still give their medals in the final', () => {
+  const facts = getCategoryFormatFacts({
+    groups: [{ play_format: 'round_robin', standings: [{ name: 'A' }, { name: 'B' }, { name: 'C' }] }],
+    knockout: [{ phase: 'B1 Men — Finał', slots: [] }, { phase: 'B1 Men — Consolation Finał', slots: [] }],
+  });
+  assert.equal(facts.kind, 'groups_knockout');
+  assert.equal(getCategoryFormatFacts({
+    groups: [{ play_format: 'round_robin', standings: [{ name: 'A' }] }],
+    knockout: [{ phase: 'B1 Men — Consolation Finał', slots: [] }],
+  }).kind, 'round_robin');
+});

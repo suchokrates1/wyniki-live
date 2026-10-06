@@ -66,11 +66,11 @@ export const TRANSLATIONS = {
     bracket: {
       emptyTitle: 'Brak drabinki', emptyText: 'Drabinka turniejowa nie została jeszcze skonfigurowana',
       group: 'Grupa', player: 'Zawodnik', pair: 'Para', wins: 'W', losses: 'L',
-      setsHeader: 'Sety', gamesHeader: 'Gemy', matchesTitle: 'Mecze grupowe',
-      knockoutTitle: 'Drabinka', semifinal: 'Półfinał',
+      setsHeader: 'Sety', gamesHeader: 'Gemy',
+      semifinal: 'Półfinał',
       finalLabel: 'Finał', thirdPlace: 'Mecz o 3. miejsce', 
       doubles: 'Debel',
-      legendTitle: 'Legenda tabeli', legendWins: 'wygrane mecze', legendLosses: 'przegrane mecze',
+      legendWins: 'wygrane mecze', legendLosses: 'przegrane mecze',
       legendSets: 'sety wygrane do przegranych', legendGames: 'gemy wygrane do przegranych'
     },
     tournamentHistory: {
@@ -142,11 +142,11 @@ export const TRANSLATIONS = {
     bracket: {
       emptyTitle: 'Kein Turnierbaum', emptyText: 'Der Turnierbaum wurde noch nicht konfiguriert',
       group: 'Gruppe', player: 'Spieler', pair: 'Paar', wins: 'S', losses: 'N',
-      setsHeader: 'Sätze', gamesHeader: 'Spiele', matchesTitle: 'Gruppenspiele',
-      knockoutTitle: 'Turnierbaum', semifinal: 'Halbfinale',
+      setsHeader: 'Sätze', gamesHeader: 'Spiele',
+      semifinal: 'Halbfinale',
       finalLabel: 'Finale', thirdPlace: 'Spiel um Platz 3', 
       doubles: 'Doppel',
-      legendTitle: 'Tabellenlegende', legendWins: 'gewonnene Spiele', legendLosses: 'verlorene Spiele',
+      legendWins: 'gewonnene Spiele', legendLosses: 'verlorene Spiele',
       legendSets: 'gewonnene zu verlorenen Sätzen', legendGames: 'gewonnene zu verlorenen Spielen'
     },
     tournamentHistory: {
@@ -219,11 +219,11 @@ export const TRANSLATIONS = {
     bracket: {
       emptyTitle: 'No bracket', emptyText: 'Tournament bracket has not been configured yet',
       group: 'Group', player: 'Player', pair: 'Pair', wins: 'W', losses: 'L',
-      setsHeader: 'Sets', gamesHeader: 'Games', matchesTitle: 'Group matches',
-      knockoutTitle: 'Bracket', semifinal: 'Semifinal',
+      setsHeader: 'Sets', gamesHeader: 'Games',
+      semifinal: 'Semifinal',
       finalLabel: 'Final', thirdPlace: 'Third place match', 
       doubles: 'Doubles',
-      legendTitle: 'Table legend', legendWins: 'matches won', legendLosses: 'matches lost',
+      legendWins: 'matches won', legendLosses: 'matches lost',
       legendSets: 'sets won to sets lost', legendGames: 'games won to games lost'
     },
     tournamentHistory: {
@@ -295,11 +295,11 @@ export const TRANSLATIONS = {
     bracket: {
       emptyTitle: 'Nessun tabellone', emptyText: 'Il tabellone del torneo non è ancora stato configurato',
       group: 'Girone', player: 'Giocatore', pair: 'Coppia', wins: 'V', losses: 'S',
-      setsHeader: 'Set', gamesHeader: 'Game', matchesTitle: 'Partite del girone',
-      knockoutTitle: 'Tabellone', semifinal: 'Semifinale',
+      setsHeader: 'Set', gamesHeader: 'Game',
+      semifinal: 'Semifinale',
       finalLabel: 'Finale', thirdPlace: 'Finale per il 3° posto', 
       doubles: 'Doppio',
-      legendTitle: 'Legenda tabella', legendWins: 'partite vinte', legendLosses: 'partite perse',
+      legendWins: 'partite vinte', legendLosses: 'partite perse',
       legendSets: 'set vinti rispetto ai set persi', legendGames: 'game vinti rispetto ai game persi'
     },
     tournamentHistory: {
@@ -371,11 +371,11 @@ export const TRANSLATIONS = {
     bracket: {
       emptyTitle: 'Sin cuadro', emptyText: 'El cuadro del torneo aún no ha sido configurado',
       group: 'Grupo', player: 'Jugador', pair: 'Pareja', wins: 'V', losses: 'D',
-      setsHeader: 'Sets', gamesHeader: 'Juegos', matchesTitle: 'Partidos del grupo',
-      knockoutTitle: 'Cuadro', semifinal: 'Semifinal',
+      setsHeader: 'Sets', gamesHeader: 'Juegos',
+      semifinal: 'Semifinal',
       finalLabel: 'Final', thirdPlace: 'Partido por el 3er lugar', 
       doubles: 'Dobles',
-      legendTitle: 'Leyenda de la tabla', legendWins: 'partidos ganados', legendLosses: 'partidos perdidos',
+      legendWins: 'partidos ganados', legendLosses: 'partidos perdidos',
       legendSets: 'sets ganados frente a perdidos', legendGames: 'juegos ganados frente a perdidos'
     },
     tournamentHistory: {
@@ -447,11 +447,11 @@ export const TRANSLATIONS = {
     bracket: {
       emptyTitle: 'Pas de tableau', emptyText: 'Le tableau du tournoi n\'a pas encore été configuré',
       group: 'Groupe', player: 'Joueur', pair: 'Paire', wins: 'V', losses: 'D',
-      setsHeader: 'Sets', gamesHeader: 'Jeux', matchesTitle: 'Matchs de groupe',
-      knockoutTitle: 'Tableau', semifinal: 'Demi-finale',
+      setsHeader: 'Sets', gamesHeader: 'Jeux',
+      semifinal: 'Demi-finale',
       finalLabel: 'Finale', thirdPlace: 'Match pour la 3e place', 
       doubles: 'Double',
-      legendTitle: 'Légende du tableau', legendWins: 'matchs gagnés', legendLosses: 'matchs perdus',
+      legendWins: 'matchs gagnés', legendLosses: 'matchs perdus',
       legendSets: 'sets gagnés contre sets perdus', legendGames: 'jeux gagnés contre jeux perdus'
     },
     tournamentHistory: {

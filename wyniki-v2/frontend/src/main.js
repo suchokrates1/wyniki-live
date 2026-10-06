@@ -11,6 +11,7 @@ import { applyTranslationPatches, lookupTranslation } from './i18n/runtime.js';
 import { TRANSLATIONS, TRANSLATION_PATCHES } from './i18n/translations.js';
 import { warnMissingTranslationKeys } from './i18n/validation.js';
 import { createBracketView } from './modules/bracketView.js';
+import { createBracketPanelView } from './modules/bracketPanel.js';
 import { createHistoryView } from './modules/historyView.js';
 import { createLiveCourtView } from './modules/liveCourtView.js';
 import { createLiveRuntimeView } from './modules/liveRuntimeView.js';
@@ -25,9 +26,12 @@ import { formatPlayerClassification } from './shared/categories.js';
 import { isTeamDisplayName } from './shared/teamDisplay.js';
 import { privacyHref } from './shared/privacyHref.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
+import { mountPartials } from './shared/partials.js';
+import { BRACKET_PARTIALS } from './partials/index.js';
 import './styles/fonts.css';
 import './main.css';
 import './styles/mobile.css';
+import './styles/bracket.css';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
@@ -60,6 +64,7 @@ Alpine.data('tennisApp', () => ({
   ...createHistoryView(),
   ...createPlayersView(),
   ...createBracketView(),
+  ...createBracketPanelView(),
   ...createLiveRuntimeView(),
   ...createLiveCourtView(),
   ...createScheduleView(),
@@ -298,6 +303,7 @@ Alpine.data('tennisApp', () => ({
 }));
 
 ignoreCancelledAlpineTransitions();
+mountPartials(document.body, BRACKET_PARTIALS);
 Alpine.start();
 
 // APG keyboard support (roving tabindex + arrow keys) for all [role=tablist].

@@ -110,6 +110,8 @@ export function isRoundRobinGroupComplete(group) {
 
 export function categoryUsesKnockoutMedals(category = {}) {
   const groups = category?.groups || [];
+  // Imported draws mark their groups round robin even when a main final follows them (Wilno 2026).
+  if ((category?.knockout || []).some((round) => isFinalPhase(round.phase) && !isConsolationPhase(round.phase))) return true;
   if (!groups.length) return (category?.knockout || []).length > 0;
   return groups.some((group) => normalizePlayFormat(group?.play_format) !== PLAY_FORMAT_ROUND_ROBIN);
 }

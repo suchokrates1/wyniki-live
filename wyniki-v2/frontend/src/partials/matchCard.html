@@ -1,0 +1,27 @@
+<!-- One match as two rows; expects `card` in scope (from bracketCards.js). -->
+<div class="btv-match" :class="{ 'is-pinned': card.pinned, 'is-bye': card.bye }" role="group" :aria-label="bracketCardAria(card)">
+  <template x-for="(row, ri) in card.rows" :key="ri">
+    <div class="btv-row" :class="{ 'is-won': row.won, 'is-pinned': row.pinned }">
+      <span class="btv-tag" aria-hidden="true" x-text="row.tag"></span>
+      <template x-if="row.bye">
+        <span class="btv-name btv-name--bye" x-text="ri === 1 ? bracketText('bye') : ''"></span>
+      </template>
+      <template x-if="!row.bye && row.href">
+        <a class="btv-name" :href="row.href" :title="row.name" x-text="row.short"></a>
+      </template>
+      <template x-if="!row.bye && !row.href">
+        <span class="btv-name" :title="row.name" x-text="row.short || '—'"></span>
+      </template>
+      <button type="button" class="btv-pin" :class="{ 'is-hidden': !row.decided }" :tabindex="row.decided ? 0 : -1"
+              :aria-pressed="row.pinned ? 'true' : 'false'" :aria-label="bracketPinLabel(row)" :title="bracketPinLabel(row)"
+              @click="toggleBracketPin(row.name)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"></path><circle cx="12" cy="10" r="2.2"></circle></svg>
+      </button>
+      <span class="btv-sets" aria-hidden="true">
+        <template x-for="(game, gi) in row.games" :key="gi">
+          <span class="btv-set" :class="{ 'is-won': game.won, 'is-stb': game.stb }"><span x-text="game.v"></span><sup x-show="game.tb" x-text="game.tb"></sup></span>
+        </template>
+      </span>
+    </div>
+  </template>
+</div>

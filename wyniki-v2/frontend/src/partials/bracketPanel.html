@@ -1,0 +1,72 @@
+<!-- One category's bracket: podium, groups, the main draw, the side draws. Expects `cat` and `scope`. -->
+<div class="btv-host" x-data="{ v: null }" x-effect="v = bracketPanel(cat, scope)">
+  <template x-if="v">
+    <div class="btv">
+      <p class="bt-format" x-show="categoryFormatText(cat)" x-text="categoryFormatText(cat)"></p>
+
+      <ol class="btv-podium" x-show="v.podium.length === 3" :aria-label="tr().bracket?.podiumLabel || 'Podium'">
+        <template x-for="(entry, pi) in v.podium" :key="'pod-' + pi">
+          <li class="btv-podium__item" :class="{ 'is-gold': pi === 0, 'is-bronze': pi === 2 }">
+            <span class="btv-podium__place" aria-hidden="true" x-text="pi + 1"></span>
+            <span>
+              <template x-if="entry.href"><a class="btv-podium__name" :href="entry.href" x-text="resolveBracketName(entry.player)"></a></template>
+              <template x-if="!entry.href"><span class="btv-podium__name" x-text="resolveBracketName(entry.player)"></span></template>
+              <span class="sr-only" x-text="', ' + entry.place + ' ' + (tr().playerProfile?.place || 'miejsce')"></span>
+            </span>
+          </li>
+        </template>
+      </ol>
+
+      <!-- @partial bracketGroups -->
+
+      <template x-if="v.main">
+        <section class="btv-section" :aria-label="bracketTreeAriaLabel(cat.name)">
+          <div class="btv-section__head">
+            <h2 class="btv-h" x-text="bracketText('mainDraw')"></h2>
+            <div class="btv-pinbar" x-show="bracketPinName" role="status">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color: var(--bt-path)"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"></path></svg>
+              <span x-text="bracketText('pinnedLabel')"></span>
+              <strong x-text="resolveBracketName(bracketPinName)"></strong>
+              <button type="button" @click="clearBracketPin()" x-text="bracketText('unpin')"></button>
+            </div>
+          </div>
+          <template x-for="tree in [v.main]" :key="'main-' + cat.name">
+            <!-- @partial bracketTree -->
+          </template>
+        </section>
+      </template>
+
+      <section class="btv-section" x-show="v.side.length || v.extras.length">
+        <div class="btv-section__head">
+          <h2 class="btv-h" x-text="bracketText('sideTitle')"></h2>
+          <p class="btv-intro" x-text="bracketText('sideIntro')"></p>
+        </div>
+        <template x-for="tree in v.side" :key="tree.key">
+          <details class="btv-fold" :open="tree.open">
+            <summary>
+              <span class="btv-fold__title"><strong x-text="tree.title"></strong><span x-text="tree.winnerLine"></span></span>
+              <svg class="btv-chev" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l5 5 5-5"></path></svg>
+            </summary>
+            <!-- @partial bracketTree -->
+          </details>
+        </template>
+        <details class="btv-fold" x-show="v.extras.length">
+          <summary>
+            <span class="btv-fold__title"><strong x-text="bracketText('otherMatches')"></strong></span>
+            <svg class="btv-chev" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l5 5 5-5"></path></svg>
+          </summary>
+          <ul class="btv-extras">
+            <template x-for="(extra, ei) in v.extras" :key="'x' + ei">
+              <li>
+                <span class="btv-extras__phase" x-text="translateCategory(extra.phase)"></span>
+                <template x-for="card in [extra.card]" :key="'xc' + ei">
+                  <!-- @partial matchCard -->
+                </template>
+              </li>
+            </template>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </template>
+</div>

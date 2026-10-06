@@ -1,0 +1,73 @@
+<!-- The group stage of one category; expects `v` (bracketPanelModel.js) in scope. -->
+<section class="btv-section" x-show="v.hasGroups" :aria-label="tr().bracket?.group || 'Grupy'">
+  <div class="btv-section__head">
+    <h2 class="btv-h" x-text="bracketText('groupsStage')"></h2>
+    <ul class="btv-legend">
+      <li x-show="v.main"><span class="btv-pos is-q" aria-hidden="true">1</span><span x-text="bracketText('qualifyLegend')"></span></li>
+      <li x-show="v.main"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"></path><circle cx="12" cy="10" r="2.2"></circle></svg><span x-text="bracketText('pinLegend')"></span></li>
+      <li><span x-text="bracketText('nameLegend')"></span></li>
+      <li><span x-text="bracketText('record') + ' = ' + bracketText('legendRecord')"></span></li>
+    </ul>
+  </div>
+  <div class="btv-groups">
+    <template x-for="group in v.groups" :key="group.name">
+      <article class="btv-group">
+        <div class="btv-group__table">
+          <h3 class="btv-group__title" x-text="group.letter ? bracketText('groupTitle', { name: group.letter }) : translateCategory(group.name)"></h3>
+          <table class="btv-table" :aria-label="bracketGroupTableAriaLabel(group.name)">
+            <colgroup><col class="btv-col-pos"><col><col class="btv-col-pin"><col class="btv-col-wl"><col class="btv-col-sets"><col class="btv-col-games"></colgroup>
+            <thead>
+              <tr>
+                <th scope="col"><span class="sr-only">#</span></th>
+                <th scope="col" class="btv-table__name" x-text="bracketCompetitorColumnLabel(group)"></th>
+                <th scope="col"><span class="sr-only" x-text="bracketText('pinLegend')"></span></th>
+                <th scope="col" x-text="bracketText('record')"></th>
+                <th scope="col" x-text="tr().bracket?.setsHeader || 'Sety'"></th>
+                <th scope="col" x-text="tr().bracket?.gamesHeader || 'Gemy'"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in group.rows" :key="row.key">
+                <tr :class="{ 'is-pinned': row.pinned }">
+                  <td class="btv-table__pos"><span class="btv-pos" :class="{ 'is-q': row.qualifies }" x-text="row.pos"></span><span class="sr-only" x-show="row.qualifies" x-text="', ' + bracketText('qualifyLegend')"></span></td>
+                  <td class="btv-table__name">
+                    <div class="btv-who">
+                      <div class="btv-who__text">
+                        <template x-if="row.href"><a class="btv-who__name" :class="{ 'is-q': row.qualifies }" :href="row.href" x-text="resolveBracketName(row.name)"></a></template>
+                        <template x-if="!row.href"><span class="btv-who__name" :class="{ 'is-q': row.qualifies }" x-text="resolveBracketName(row.name)"></span></template>
+                        <span class="btv-who__reach" :class="row.reach ? 'is-' + row.reach.tone : ''">
+                          <span class="btv-cc" x-text="row.country"></span>
+                          <span x-show="row.reach" x-text="row.reach ? '→ ' + row.reach.text : ''"></span>
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <button type="button" class="btv-pin" x-show="v.main" :aria-pressed="row.pinned ? 'true' : 'false'"
+                            :aria-label="bracketPinLabel(row)" :title="bracketPinLabel(row)" @click="toggleBracketPin(row.name)">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"></path><circle cx="12" cy="10" r="2.2"></circle></svg>
+                    </button>
+                  </td>
+                  <td class="btv-table__wl" x-text="row.wl"></td>
+                  <td x-text="row.sets"></td>
+                  <td x-text="row.games"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <details class="btv-group__matches">
+          <summary>
+            <span x-text="bracketText('matchesToggle', { count: group.matches.length })"></span>
+            <svg class="btv-chev" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l5 5 5-5"></path></svg>
+          </summary>
+          <ol class="btv-match-list">
+            <template x-for="(card, mi) in group.matches" :key="mi">
+              <li><!-- @partial matchCard --></li>
+            </template>
+          </ol>
+        </details>
+      </article>
+    </template>
+  </div>
+</section>
