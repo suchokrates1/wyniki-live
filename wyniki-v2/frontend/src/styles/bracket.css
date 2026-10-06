@@ -15,11 +15,13 @@
   --bt-loser: #5f6b7a;
   --bt-qualify: #1f8a4c;
   --bt-qualify-on: #ffffff;
-  --bt-gold: #a86b00;
+  --bt-gold: #e0a92e;
+  --bt-gold-text: #7a4d00;
   --bt-gold-soft: #fff6e0;
   --bt-gold-line: #e3c27a;
   --bt-silver: #8a96a3;
-  --bt-bronze: #a5622a;
+  --bt-bronze: #c98a4b;
+  --bt-bronze-text: #8a4b18;
 }
 
 [data-theme="dark"] {
@@ -36,10 +38,12 @@
   --bt-qualify: #35c46a;
   --bt-qualify-on: #06210f;
   --bt-gold: #f2c94c;
+  --bt-gold-text: #f2c94c;
   --bt-gold-soft: #16130a;
   --bt-gold-line: #5a4a1a;
   --bt-silver: #c9d3de;
   --bt-bronze: #c98a4b;
+  --bt-bronze-text: #d69a5c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,10 +61,12 @@
     --bt-qualify: #35c46a;
     --bt-qualify-on: #06210f;
     --bt-gold: #f2c94c;
+    --bt-gold-text: #f2c94c;
     --bt-gold-soft: #16130a;
     --bt-gold-line: #5a4a1a;
     --bt-silver: #c9d3de;
     --bt-bronze: #c98a4b;
+    --bt-bronze-text: #d69a5c;
   }
 }
 
@@ -108,7 +114,7 @@
 a.btv-who__name:hover, a.btv-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .btv-who__name.is-q { font-weight: 700; }
 .btv-who__reach { font-size: 0.75rem; color: var(--bt-muted); }
-.btv-who__reach.is-gold { color: var(--bt-gold); }
+.btv-who__reach.is-gold { color: var(--bt-gold-text); }
 .btv-who__reach.is-main { color: var(--bt-path); }
 .btv-cc { font-family: var(--font-mono); font-size: 0.7rem; color: var(--bt-muted); }
 
@@ -133,6 +139,9 @@ details[open] > summary .btv-chev { transform: rotate(180deg); }
 .btv-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--bt-loser); text-decoration: none; font-size: 0.9rem; }
 .btv-row.is-won .btv-name { color: var(--bt-text); font-weight: 700; }
 .btv-name--bye { font-style: italic; color: var(--bt-muted); }
+/* a pinned player reads at full contrast even on a lost row: the tint behind it costs the grey its margin */
+.btv-row.is-pinned .btv-name,
+.btv-row.is-pinned .btv-set { color: var(--bt-text); }
 .btv-sets { display: flex; gap: 2px; }
 .btv-set { min-width: 22px; text-align: center; font-family: var(--font-mono); font-size: 0.9rem; color: var(--bt-loser); }
 .btv-set.is-won { color: var(--bt-text); font-weight: 700; }
@@ -156,12 +165,12 @@ details[open] > summary .btv-chev { transform: rotate(180deg); }
 .btv-tree { position: relative; margin: 0 auto; }
 .btv-tree > ol { margin: 0; padding: 0; list-style: none; }
 .btv-round-label { position: absolute; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bt-text); }
-.btv-round-label.is-third { color: var(--bt-bronze); }
+.btv-round-label.is-third { color: var(--bt-bronze-text); }
 .btv-conn { position: absolute; box-sizing: border-box; }
 .btv-slot { position: absolute; }
 .btv-slot .btv-match { height: 72px; box-sizing: border-box; }
 .btv-champ { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px; text-align: center; border-radius: 16px; background: var(--bt-gold-soft); border: 1px solid var(--bt-gold-line); }
-.btv-champ__title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bt-gold); }
+.btv-champ__title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bt-gold-text); }
 .btv-champ__name { font-size: 1.35rem; font-weight: 800; color: var(--bt-text); text-decoration: none; }
 
 .btv-fold { background: var(--bt-surface); border: 1px solid var(--bt-border); border-radius: 14px; }

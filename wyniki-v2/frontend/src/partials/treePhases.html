@@ -1,5 +1,5 @@
 <!-- Tabs over a strip of phases (bracketPhases.js); expects `phases` and `tree`. -->
-<div x-data="bracketPhases(phases.length, tree.startPhase)" :aria-label="tree.title" role="region">
+<div x-data="bracketPhases(phases.length, tree.startPhase)">
   <div class="btv-phases__tabs" role="tablist" :aria-label="bracketText('phasesLabel')">
     <template x-for="(phase, pi) in phases" :key="'pt' + pi">
       <button type="button" role="tab" class="btv-phases__tab" :class="{ 'is-on': pi === index }"
@@ -11,11 +11,11 @@
        @pointerdown="down($event)" @pointermove="move($event)" @pointerup="up($event)" @pointercancel="up($event)">
     <div class="btv-phases__track" :class="{ 'is-dragging': dragging }" :style="trackStyle()">
       <template x-for="(phase, pi) in phases" :key="'pp' + pi">
-        <section class="btv-phases__panel" role="tabpanel" :aria-label="phase.label" :aria-hidden="pi === index ? 'false' : 'true'" x-effect="$el.inert = pi !== index">
+        <div class="btv-phases__panel" role="tabpanel" :aria-label="phase.label" :aria-hidden="pi === index ? 'false' : 'true'" x-effect="$el.inert = pi !== index">
           <template x-for="geo in [phase.geometry]" :key="'pg' + pi">
             <!-- @partial treeCanvas -->
           </template>
-        </section>
+        </div>
       </template>
     </div>
   </div>
