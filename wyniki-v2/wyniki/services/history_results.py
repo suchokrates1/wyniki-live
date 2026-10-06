@@ -45,14 +45,14 @@ def result_sets(result) -> list[dict[str, Any]]:
 
 
 def result_winner(result) -> str | None:
-    """The name that won a match-history row by sets, or None for a draw or an unreadable score."""
-    try:
-        sa, sb = _scores(result)
-    except (json.JSONDecodeError, TypeError):
-        return None
-    both = range(min(len(sa), len(sb)))
-    sets_a = sum(1 for i in both if sa[i] > sb[i])
-    sets_b = sum(1 for i in both if sb[i] > sa[i])
+    """The name that won a match-history row by sets, or None for a draw or an unreadable score.
+
+    Sets come from the per-set history when there is one: older rows left the super tie-break
+    out of score_a / score_b, so a match won 10:6 in it read as a 1:1 draw.
+    """
+    sets = result_sets(result)
+    sets_a = sum(1 for s in sets if s['g1'] > s['g2'])
+    sets_b = sum(1 for s in sets if s['g2'] > s['g1'])
     if sets_a > sets_b:
         return result.player_a
     if sets_b > sets_a:

@@ -8,6 +8,7 @@ tournament is shown without naming it.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ..database import classifications as classification_db
@@ -45,6 +46,11 @@ def _is_final(phase: str) -> bool:
     return ('finał' in phase_lc or 'final' in phase_lc) and not _is_semifinal(phase)
 
 
+def _is_side_draw(phase: str) -> bool:
+    phase_lc = str(phase or '').lower()
+    return 'consolation' in phase_lc or 'pocieszeni' in phase_lc or bool(re.search(r'\d+\s*[-–]\s*\d+', phase_lc))
+
+
 def _group_placement(bracket: dict, subject: ProfileSubject) -> tuple[str | None, int | None, int | None]:
     """The group they played in, their place in it, and how many played there."""
     for group in (bracket or {}).get('groups', []):
@@ -61,6 +67,9 @@ def _knockout_finish(bracket: dict, subject: ProfileSubject) -> tuple[str | None
     knockout_phase = None
     for phase, slots in (bracket or {}).get('knockout', {}).items():
         phase_lc = phase.lower()
+        # medals are the main draw's; a consolation final or a 9-16 semifinal decides lower places
+        if _is_side_draw(phase):
+            continue
         for slot in slots:
             winner = slot.get('winner') or ''
             if not (subject.named_in(slot.get('player1') or '') or subject.named_in(slot.get('player2') or '')):
