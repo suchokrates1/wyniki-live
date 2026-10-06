@@ -134,6 +134,12 @@ def _tournament_rows(subject: ProfileSubject, results: list) -> list[dict[str, A
         group_name, group_position, group_total = _group_placement(bracket, subject)
         medal, knockout_phase = _knockout_finish(bracket, subject)
         matches = _match_rows([m for m in results if m.tournament_id == tournament_id], subject, live_phases)
+        # who the opponent is, so the page can link the name and show the country
+        directory = (bracket or {}).get('players') or {}
+        for match in matches:
+            known = directory.get(match['opponent']) or {}
+            match['opponent_global_id'] = known.get('global_player_id')
+            match['opponent_country'] = known.get('country') or ''
         wins = sum(1 for m in matches if m['won'])
         category_label = played_labels.get(tournament_id, '')
         rows.append({
@@ -143,6 +149,7 @@ def _tournament_rows(subject: ProfileSubject, results: list) -> list[dict[str, A
             'category_label': category_label,
             'category_classes': sorted(classification_db.classes_in_label(category_label)),
             'player_class': entry_classes.get(tournament_id, ''),
+            'city': tournament.city or '',
             'start_date': tournament.start_date or '',
             'end_date': tournament.end_date or '',
             'group_name': group_name,

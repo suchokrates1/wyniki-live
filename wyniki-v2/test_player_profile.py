@@ -130,10 +130,16 @@ def test_each_tournament_shows_the_group_the_medal_and_every_match_from_her_side
         ("Rita Zur", False, "B2 — Półfinał", "0:4 1:4"),
         ("Kim Lee", True, "B2 — o 3. miejsce", "4:3 4:3"),
     ]
-    assert spring["matches"][0] == {
-        "opponent": "Ewa Lis", "score": spring["matches"][0]["score"], "won": True, "phase": "Grupowa",
+    first = spring["matches"][0]
+    assert {k: v for k, v in first.items() if not k.startswith("opponent_")} == {
+        "opponent": "Ewa Lis", "score": first["score"], "won": True, "phase": "Grupowa",
         "category": "B1", "date": "2026-05-01T10:00:00Z", "duration": 1800,
     }
+    # the opponent's global profile and country come along, for a link and a tag
+    assert first["opponent_country"] == "PL"
+    assert first["opponent_global_id"] is not None
+    assert spring["matches"][2]["opponent_country"] == "DE"
+    assert spring["city"] is not None
 
 
 def test_the_class_history_does_not_name_a_private_tournament(career):
