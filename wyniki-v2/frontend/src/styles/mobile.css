@@ -20,8 +20,8 @@
 /* the privacy link in the footer is a stand-alone control: at least 24 px (WCAG 2.5.8), 44 px on phones */
 .vm-footer__legal { display: inline-flex; align-items: center; min-height: 24px; }
 
-/* the knockout ladder scrolls sideways on narrow screens: keyboard users reach it too (WCAG 2.1.1) */
-.bt-ladder:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* a knockout tree scrolls sideways on narrow screens: keyboard users reach it too (WCAG 2.1.1) */
+.btv-tree-scroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 @media (max-width: 640px) {
   :root { --m-bottom-nav: 64px; }

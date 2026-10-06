@@ -6,12 +6,6 @@ import {
 import { isPendingCompetitorName } from '../shared/labelDisplay.js';
 import { PLAY_FORMAT_KNOCKOUT, PLAY_FORMAT_ROUND_ROBIN, normalizePlayFormat } from '../shared/playFormat.js';
 
-export function getGroupStandingsRows(group, siblingGroups = []) {
-  const rows = Array.isArray(group?.standings) ? [...group.standings] : [];
-  const maxRows = Math.max(0, ...siblingGroups.map((entry) => Array.isArray(entry?.standings) ? entry.standings.length : 0));
-  while (rows.length < maxRows) rows.push({ _placeholder: true, _key: `placeholder-${group?.name || 'group'}-${rows.length}` });
-  return rows;
-}
 
 function phaseSuffix(phase) {
   const text = String(phase || '').trim();
@@ -45,14 +39,6 @@ export function isPlacementPhase(phase) {
   return getKnockoutRoundKind(phase) === 'placement';
 }
 
-export function getKnockoutPhaseClass(phase) {
-  return {
-    'bt-round--final': isFinalPhase(phase),
-    'bt-round--semifinal': isSemifinalPhase(phase),
-    'bt-round--quarterfinal': isQuarterfinalPhase(phase),
-    'bt-round--placement': isPlacementPhase(phase),
-  };
-}
 
 export function getKnockoutPlaceNumber(phase) {
   const match = String(phase || '').match(/o\s+(\d+)\.\s*miejsce/i);
