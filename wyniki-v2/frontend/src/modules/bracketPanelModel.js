@@ -1,6 +1,6 @@
 import { getCategoryPodiumEntries, groupShowsStandingsTable } from './bracket.js';
 import { groupView, isDecidedName, profileHref, seedMap, slotCard } from './bracketCards.js';
-import { roundLabel, treeGeometry } from './bracketGeometry.js';
+import { phaseGeometries, roundLabel, treeGeometry } from './bracketGeometry.js';
 import { championTitle } from './championTitle.js';
 import { competitorKey, layoutKnockoutTrees } from './knockoutLayout.js';
 
@@ -59,6 +59,15 @@ function furthestMainRound(tree, t) {
   return reach;
 }
 
+/** The phone opens a tree on the latest round with a result: the current one, or the final once done. */
+function lastPlayedColumn(tree) {
+  let found = 0;
+  tree.columns.forEach((column, index) => {
+    if (column.cells.some((cell) => cell?.type === 'match' && (cell.slot?.sets || []).length)) found = index;
+  });
+  return found;
+}
+
 function treeTitle(tree, t) {
   if (tree.kind === 'main') return t.mainDraw || '';
   if (tree.kind === 'consolation') {
@@ -101,6 +110,7 @@ export function buildCategoryPanel(cat, data = {}, { pinKey = '', t = {} } = {})
 
   const treeViews = trees.map((tree, index) => {
     const geometry = treeGeometry(tree, ctx, t, { champion: tree === main ? champion : null });
+    const phases = phaseGeometries(tree, ctx, t, { champion: tree === main ? champion : null });
     const pinnedHere = Boolean(pinKey) && keysInTree(tree).has(pinKey);
     const rootCell = tree.columns[tree.columns.length - 1].cells[0];
     const winner = tree.kind !== 'main' && rootCell?.type === 'match' ? slotCard(rootCell.slot, ctx).rows.find((row) => row.won) : null;
@@ -112,6 +122,8 @@ export function buildCategoryPanel(cat, data = {}, { pinKey = '', t = {} } = {})
       open: tree.kind === 'main' || pinnedHere,
       pinnedHere,
       geometry,
+      phases,
+      startPhase: lastPlayedColumn(tree),
     };
   });
 

@@ -6,8 +6,11 @@ import { competitorKey } from './knockoutLayout.js';
 // A connector lights up when the pinned player won the match it leaves.
 
 export const GEOMETRY = { width: 264, gap: 56, height: 72, pitch: 88, top: 36 };
+// A phone shows one round and a slice of the next: narrower cards, a tighter gap.
+export const PHONE_GEOMETRY = { width: 240, gap: 24, height: 72, pitch: 88, top: 36 };
 const CHAMP_HEIGHT = 160;
 const CHAMP_GAP = 40;
+const LABEL_ROW = 36;
 
 function line(color, width = 2) {
   return `${width}px solid ${color}`;
@@ -39,8 +42,9 @@ function cellCard(cell, ctx) {
   return slotCard(cell.slot, ctx);
 }
 
-export function treeGeometry(tree, ctx = {}, t = {}, { champion = null } = {}) {
-  const { width: W, gap: G, height: H, pitch: P, top: TOP } = GEOMETRY;
+export function treeGeometry(tree, ctx = {}, t = {}, { champion = null, layout = GEOMETRY, labelOf = null } = {}) {
+  const { width: W, gap: G, height: H, pitch: P, top: TOP } = layout;
+  const label = (column) => (labelOf ? labelOf(column) : roundLabel(tree, column, t));
   const accent = ctx.accent || 'var(--bt-path)';
   const quiet = ctx.quiet || 'var(--bt-line)';
   const last = tree.columns.length - 1;
@@ -53,12 +57,12 @@ export function treeGeometry(tree, ctx = {}, t = {}, { champion = null } = {}) {
   const grid = tree.columns.map((column, c) => column.cells.map((cell, i) => {
     const card = cellCard(cell, ctx);
     if (card) {
-      cards.push({ x: colX(c), y: centerY(c, i) - H / 2, card, round: roundLabel(tree, c, t), key: `${c}-${i}` });
+      cards.push({ x: colX(c), y: centerY(c, i) - H / 2, width: W, card, round: label(c), key: `${c}-${i}` });
     }
     return card;
   }));
 
-  tree.columns.forEach((_, c) => labels.push({ x: colX(c), y: 0, text: roundLabel(tree, c, t), tone: 'round' }));
+  tree.columns.forEach((_, c) => labels.push({ x: colX(c), y: 0, width: W, text: label(c), tone: 'round' }));
 
   for (let c = 0; c < last; c += 1) {
     const cells = grid[c];
@@ -92,14 +96,14 @@ export function treeGeometry(tree, ctx = {}, t = {}, { champion = null } = {}) {
 
   if (tree.third) {
     const top = finalY + H / 2 + 64;
-    labels.push({ x: colX(last), y: top - 24, text: thirdLabel(tree, t), tone: 'third' });
-    cards.push({ x: colX(last), y: top, card: slotCard(tree.third.slot, ctx), round: thirdLabel(tree, t), key: 'third' });
+    labels.push({ x: colX(last), y: top - 24, width: W, text: thirdLabel(tree, t), tone: 'third' });
+    cards.push({ x: colX(last), y: top, width: W, card: slotCard(tree.third.slot, ctx), round: thirdLabel(tree, t), key: 'third' });
     height = Math.max(height, top + H + 8);
   }
 
   let champ = null;
   if (champion?.name) {
-    const roomAbove = finalY - H / 2 - CHAMP_GAP - CHAMP_HEIGHT >= TOP;
+    const roomAbove = finalY - H / 2 - CHAMP_GAP - CHAMP_HEIGHT >= LABEL_ROW;
     const lit = Boolean(ctx.pinKey) && competitorKey(champion.name) === ctx.pinKey;
     if (roomAbove) {
       const y = finalY - H / 2 - CHAMP_GAP - CHAMP_HEIGHT;
@@ -115,6 +119,27 @@ export function treeGeometry(tree, ctx = {}, t = {}, { champion = null } = {}) {
   }
 
   return { width, height, cards, conns, labels, champ };
+}
+
+/**
+ * The tree as phone phases: each round with the next one peeking in, then the final alone
+ * (with the 3rd-place match and the champion). Swiping moves from one phase to the next.
+ */
+export function phaseGeometries(tree, ctx = {}, t = {}, { champion = null } = {}) {
+  const last = tree.columns.length - 1;
+  return tree.columns.map((_, c) => {
+    const final = c === last;
+    const slice = { ...tree, columns: tree.columns.slice(c, final ? c + 1 : c + 2), third: final ? tree.third : null };
+    return {
+      label: roundLabel(tree, c, t),
+      geometry: treeGeometry(slice, ctx, t, {
+        champion: final ? champion : null,
+        // the final phase starts lower so the champion stands above the final, not off-screen
+        layout: final && champion?.name ? { ...PHONE_GEOMETRY, top: PHONE_GEOMETRY.top + CHAMP_HEIGHT + CHAMP_GAP } : PHONE_GEOMETRY,
+        labelOf: (column) => roundLabel(tree, c + column, t),
+      }),
+    };
+  });
 }
 
 /** "left: 10px; top: 4px; …" for Alpine's :style. */

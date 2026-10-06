@@ -152,13 +152,13 @@ details[open] > summary .btv-chev { transform: rotate(180deg); }
 .btv-pinbar button { min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--bt-border); background: transparent; color: var(--bt-text); cursor: pointer; font: inherit; }
 .btv-tree-scroll { overflow-x: auto; padding: 20px; border-radius: 16px; background: var(--bt-sunk); border: 1px solid var(--bt-border); box-sizing: border-box; }
 /* The main draw may be wider than the page column: it borrows the window's width, centred. */
-.btv-section > .btv-tree-scroll { position: relative; left: 50%; transform: translateX(-50%); width: max(100%, min(calc(100vw - 64px), var(--btv-need, 100%))); }
+.btv-section > .btv-tree-wrap > .btv-tree-scroll { position: relative; left: 50%; transform: translateX(-50%); width: max(100%, min(calc(100vw - 64px), var(--btv-need, 100%))); }
 .btv-tree { position: relative; margin: 0 auto; }
 .btv-tree > ol { margin: 0; padding: 0; list-style: none; }
-.btv-round-label { position: absolute; width: 264px; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bt-text); }
+.btv-round-label { position: absolute; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bt-text); }
 .btv-round-label.is-third { color: var(--bt-bronze); }
 .btv-conn { position: absolute; box-sizing: border-box; }
-.btv-slot { position: absolute; width: 264px; }
+.btv-slot { position: absolute; }
 .btv-slot .btv-match { height: 72px; box-sizing: border-box; }
 .btv-champ { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px; text-align: center; border-radius: 16px; background: var(--bt-gold-soft); border: 1px solid var(--bt-gold-line); }
 .btv-champ__title { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bt-gold); }
@@ -169,10 +169,32 @@ details[open] > summary .btv-chev { transform: rotate(180deg); }
 .btv-fold__title { display: flex; flex-direction: column; gap: 2px; }
 .btv-fold__title strong { font-size: 1.05rem; }
 .btv-fold__title span { font-size: 0.85rem; color: var(--bt-muted); font-weight: 400; }
-.btv-fold .btv-tree-scroll { margin: 0 18px 18px; }
+.btv-fold .btv-tree-scroll,
+.btv-fold .btv-phases { margin: 0 18px 18px; }
 .btv-extras { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; margin: 0; padding: 0 18px 18px; list-style: none; }
 .btv-extras__phase { display: block; margin-bottom: 6px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bt-muted); }
 
+/* Phone: the tree as phases. Tabs on top, a strip of panels below that slides. */
+.btv-phases { display: none; }
+.btv-phases__tabs { position: relative; display: flex; gap: 4px; margin-bottom: 12px; padding-bottom: 6px; overflow-x: auto; scrollbar-width: none; }
+.btv-phases__tab { flex: 1 0 auto; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--bt-muted); font: inherit; font-size: 0.9rem; cursor: pointer; white-space: nowrap; }
+.btv-phases__tab.is-on { background: var(--bt-surface); color: var(--bt-text); font-weight: 800; }
+.btv-phases__bar { position: absolute; bottom: 0; height: 3px; border-radius: 3px; background: var(--bt-path); transition: left 0.38s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.btv-phases__viewport { overflow: hidden; touch-action: pan-y; transition: height 0.3s ease; }
+.btv-phases__track { display: flex; align-items: flex-start; transition: transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.btv-phases__track.is-dragging { transition: none; }
+.btv-phases__panel { flex: 0 0 100%; min-width: 0; overflow: hidden; }
+.btv-phases__panel .btv-tree { margin: 0; }
+.btv-phases__hint { margin: 8px 0 0; text-align: center; font-size: 0.85rem; color: var(--bt-muted); }
+
+@media (max-width: 899px) {
+  .btv-tree-scroll { display: none; }
+  .btv-phases { display: block; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .btv-chev { transition: none; }
+  .btv-chev,
+  .btv-phases__bar,
+  .btv-phases__viewport,
+  .btv-phases__track { transition: none; }
 }

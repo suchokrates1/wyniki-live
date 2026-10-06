@@ -144,3 +144,27 @@ test('the Wilno B1 Men panel: places, how far each got, and the side draws', asy
   assert.equal(panel.side[0].winnerLine, 'Zwycięzca: Luca Parravano');
   assert.equal(panel.extras.length, 1);
 });
+
+test('on a phone the tree comes as phases: a round with the next one, then the final alone', async () => {
+  const { phaseGeometries } = await import('./bracketGeometry.js');
+  const { trees } = layoutKnockoutTrees(b1men.knockout);
+  const main = trees.find((tree) => tree.kind === 'main');
+  const t = { final: 'Finał', semifinal: 'Półfinał', quarterfinal: 'Ćwierćfinał', roundOf: '1/{n} finału' };
+  const phases = phaseGeometries(main, { seeds: seedMap(b1men.groups) }, t, { champion: { name: 'Jani Kallunki' } });
+  assert.deepEqual(phases.map((phase) => phase.label), ['1/8 finału', 'Ćwierćfinał', 'Półfinał', 'Finał']);
+  assert.equal(phases[0].geometry.cards.length, 8 + 4);
+  assert.deepEqual(phases[1].geometry.labels.map((label) => label.text), ['Ćwierćfinał', 'Półfinał']);
+  assert.equal(phases[3].geometry.cards.length, 2);
+  assert.ok(phases[3].geometry.champ);
+  assert.equal(phases[0].geometry.champ, null);
+});
+
+test('the phone final keeps the champion above it, inside the phone width', async () => {
+  const { phaseGeometries, PHONE_GEOMETRY } = await import('./bracketGeometry.js');
+  const { trees } = layoutKnockoutTrees(b1men.knockout);
+  const main = trees.find((tree) => tree.kind === 'main');
+  const final = phaseGeometries(main, {}, {}, { champion: { name: 'Jani Kallunki' } }).pop().geometry;
+  assert.equal(final.champ.x, 0);
+  assert.ok(final.champ.y + final.champ.height <= final.cards[0].y);
+  assert.equal(final.width, PHONE_GEOMETRY.width);
+});

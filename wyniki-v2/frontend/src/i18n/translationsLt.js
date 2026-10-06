@@ -101,7 +101,7 @@ export const TRANSLATIONS_LT = {
     winnerOf: 'Nugalėtojas: {match}',
     loserOf: 'Pralaimėjęs: {match}',
     doubles: 'Dvejetai',
-    legendWins: 'laimėti mačai', legendLosses: 'pralaimėti mačai',
+    
     legendSets: 'laimėti setai prieš pralaimėtus', legendGames: 'laimėti geimai prieš pralaimėtus',
     formatRoundRobin: 'Kiekvienas su kiekvienu. Medaliai iš lentelės, kai sužaisti visi grupės mačai — finalo nėra.',
     formatGroupsKnockout: 'Pirma grupės, tada atkrintamosios. Iš kiekvienos grupės kyla {count} (pažymėti lentelėje). Medaliai: finalas ir mačas dėl 3 vietos.',
@@ -189,7 +189,7 @@ export const TRANSLATION_PATCHES_LT = {
     scoreJoiner: 'prieš', winner: 'Nugalėtojas', result: 'Mačo rezultatas', court: 'Kortas',
     phase: 'Etapas', duration: 'Trukmė', unknownPlayer: 'žaidėjas nenustatytas',
     unknownPair: 'pora nenustatyta', unknownCourt: 'kortas nenustatytas',
-    scorePending: 'rezultatas dar nepaskelbtas', stageMatch: '{phase}, {number} mačas',
-    groupMatch: '{group}, {number} mačas', tournamentQuickInfoLabel: 'Turnyro pranešimas'
+    scorePending: 'rezultatas dar nepaskelbtas',
+    tournamentQuickInfoLabel: 'Turnyro pranešimas'
   },
 };

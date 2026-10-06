@@ -1,5 +1,5 @@
 <!-- One category's bracket: podium, groups, the main draw, the side draws. Expects `cat` and `scope`. -->
-<div class="btv-host" x-data="{ v: null }" x-effect="v = bracketPanel(cat, scope)">
+<div class="btv-host" x-data="{ v: null }" x-effect="const next = bracketPanel(cat, scope); if (next) v = next">
   <template x-if="v">
     <div class="btv">
       <p class="bt-format" x-show="categoryFormatText(cat)" x-text="categoryFormatText(cat)"></p>

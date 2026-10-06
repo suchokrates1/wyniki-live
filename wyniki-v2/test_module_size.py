@@ -58,7 +58,7 @@ RECORDED_LINES = {
     "wyniki/database/classifications.py": 339,
     "wyniki/services/panic.py": 369,
     "frontend/src/modules/liveCourtView.js": 341,
-    "frontend/src/main.js": 344,
+    "frontend/src/main.js": 346,
     "frontend/src/modules/pwaShellView.js": 332,
     "wyniki/database/players.py": 314,
     "wyniki/services/overlay_settings.py": 326,

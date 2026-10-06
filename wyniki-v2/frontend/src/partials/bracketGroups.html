@@ -21,9 +21,9 @@
                 <th scope="col"><span class="sr-only">#</span></th>
                 <th scope="col" class="btv-table__name" x-text="bracketCompetitorColumnLabel(group)"></th>
                 <th scope="col"><span class="sr-only" x-text="bracketText('pinLegend')"></span></th>
-                <th scope="col" x-text="bracketText('record')"></th>
-                <th scope="col" x-text="tr().bracket?.setsHeader || 'Sety'"></th>
-                <th scope="col" x-text="tr().bracket?.gamesHeader || 'Gemy'"></th>
+                <th scope="col" :title="bracketText('legendRecord')"><span aria-hidden="true" x-text="bracketText('record')"></span><span class="sr-only" x-text="bracketText('legendRecord')"></span></th>
+                <th scope="col" :title="tr().bracket?.legendSets"><span aria-hidden="true" x-text="tr().bracket?.setsHeader || 'Sety'"></span><span class="sr-only" x-text="tr().bracket?.legendSets"></span></th>
+                <th scope="col" :title="tr().bracket?.legendGames"><span aria-hidden="true" x-text="tr().bracket?.gamesHeader || 'Gemy'"></span><span class="sr-only" x-text="tr().bracket?.legendGames"></span></th>
               </tr>
             </thead>
             <tbody>

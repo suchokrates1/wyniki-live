@@ -12,6 +12,7 @@ import { TRANSLATIONS, TRANSLATION_PATCHES } from './i18n/translations.js';
 import { warnMissingTranslationKeys } from './i18n/validation.js';
 import { createBracketView } from './modules/bracketView.js';
 import { createBracketPanelView } from './modules/bracketPanel.js';
+import { registerBracketPhases } from './modules/bracketPhases.js';
 import { createHistoryView } from './modules/historyView.js';
 import { createLiveCourtView } from './modules/liveCourtView.js';
 import { createLiveRuntimeView } from './modules/liveRuntimeView.js';
@@ -55,6 +56,7 @@ window.Alpine = Alpine;
 registerAnalyticsConsent(Alpine);
 registerPwaShell(Alpine);
 registerPwaPush(Alpine);
+registerBracketPhases(Alpine);
 
 Alpine.data('tennisApp', () => ({
   lang: 'pl',

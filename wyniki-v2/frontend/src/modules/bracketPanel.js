@@ -56,7 +56,9 @@ export function createBracketPanelView() {
     },
 
     bracketPos(entry) {
-      return styleText({ left: entry?.x || 0, top: entry?.y || 0 });
+      const box = { left: entry?.x || 0, top: entry?.y || 0 };
+      if (entry?.width && !entry?.height) box.width = entry.width;
+      return styleText(box);
     },
 
     bracketBox(box) {
