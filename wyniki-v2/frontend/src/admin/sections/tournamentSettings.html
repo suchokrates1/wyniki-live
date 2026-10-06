@@ -49,6 +49,25 @@
     </div>
   </div>
 
+  <h3 class="adm-subhead">Tytuł zwycięzcy</h3>
+  <div class="adm-grid">
+    <div class="adm-field">
+      <label class="adm-field__label" for="adm-edit-title-scope">Ranga turnieju</label>
+      <select id="adm-edit-title-scope" class="adm-input adm-field__input" x-model="editTournament.title_scope" @change="editTournament.title_scope_guessed = false">
+        <template x-for="scope in adminTitleScopes()" :key="scope.value">
+          <option :value="scope.value" x-text="scope.label + ' — „' + scope.example + '”'" :selected="editTournament.title_scope === scope.value"></option>
+        </template>
+      </select>
+      <span class="adm-field__hint" x-show="editTournament.title_scope_guessed">Podpowiedź z nazwy turnieju. Sprawdź i zapisz.</span>
+      <span class="adm-field__hint" x-show="!editTournament.title_scope_guessed">Forma żeńska i deblowa dobiera się sama z kategorii.</span>
+    </div>
+    <div class="adm-field">
+      <label class="adm-field__label" for="adm-edit-title-override">Własny napis (opcjonalnie)</label>
+      <input id="adm-edit-title-override" class="adm-input adm-field__input" type="text" maxlength="80" placeholder="np. Puchar ATNiS" x-model="editTournament.title_override">
+      <span class="adm-field__hint">Zastępuje napis nad zwycięzcą drabinki głównej.</span>
+    </div>
+  </div>
+
   <h3 class="adm-subhead">Widoczność</h3>
   <div class="adm-flags">
     <template x-for="flag in adminTournamentFlags()" :key="flag.key">

@@ -39,6 +39,7 @@ from ..database import (
     update_player,
     update_tournament,
 )
+from ..database.tournament_titles import save_tournament_title, title_fields
 from ..db_models import Tournament
 from ..services.history_results import result_winner
 from ..services.office_event_broker import emit_office_invalidation
@@ -156,7 +157,7 @@ def _require_tournament(tournament_id: int, active_only: bool = False):
 @blueprint.route('', methods=['GET'])
 def get_tournaments():
     tournaments = fetch_tournaments()
-    return jsonify(tournaments)
+    return jsonify([{**t, **title_fields(t['id'], t['name'])} for t in tournaments])
 
 
 @blueprint.route('/<int:tournament_id>', methods=['GET'])
@@ -333,6 +334,7 @@ def update_tournament_route(tournament_id: int):
     )
     
     if success:
+        save_tournament_title(tournament_id, data.get('title_scope'), data.get('title_override'))
         court_changes = sync_tournament_courts(tournament_id, requested_court_count)
         from ..services.court_manager import refresh_courts_from_db
         refresh_courts_from_db(fetch_courts(active_only=True))

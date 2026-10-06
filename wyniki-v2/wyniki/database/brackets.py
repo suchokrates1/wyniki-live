@@ -7,6 +7,7 @@ from typing import Any
 from ..config import logger
 
 from .bracket_players import bracket_player_directory
+from .tournament_titles import title_fields_with
 from .connection import db_conn, fetch_app_settings
 from .players import _normalize_player_name, _player_surname
 from ..services.draw_builder import (
@@ -2146,6 +2147,7 @@ def get_full_bracket(tournament_id: int) -> dict:
                 "tournament": {
                     "id": tournament_id,
                     "name": t["name"],
+                    **title_fields_with(cursor, tournament_id, t["name"]),
                 },
                 "groups": groups_data,
                 "knockout": knockout,

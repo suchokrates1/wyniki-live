@@ -20,6 +20,14 @@ export const TOURNAMENT_FLAGS = [
   { key: 'is_simulation', label: 'Symulacja', hint: 'turniej testowy, poza wynikami' },
 ];
 
+/** What the champion is called on the bracket. Unset, the name decides and the panel says so. */
+export const TITLE_SCOPES = [
+  { value: 'world', label: 'Mistrzostwa świata', example: 'Mistrz świata B1' },
+  { value: 'continental', label: 'Mistrzostwa kontynentu', example: 'Mistrz Europy B1' },
+  { value: 'national', label: 'Mistrzostwa kraju', example: 'Mistrz Polski B1' },
+  { value: 'open', label: 'Turniej otwarty', example: 'Zwycięzca B1' },
+];
+
 /** A simulation is never public and never counts: those two switches go dead. */
 export function flagsFor(tournament = {}) {
   const simulation = !!tournament.is_simulation;
@@ -48,6 +56,10 @@ export function createTournamentSettingsView() {
 
     adminTournamentFlags() {
       return flagsFor(this.editTournament || {});
+    },
+
+    adminTitleScopes() {
+      return TITLE_SCOPES;
     },
 
     adminEditTournamentMeta() {

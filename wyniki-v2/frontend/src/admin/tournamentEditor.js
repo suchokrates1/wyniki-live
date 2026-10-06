@@ -22,6 +22,9 @@ export function createTournamentEditorAdmin() {
         has_office_password: false,
         logo: null,
         logo_path: '',
+        title_scope: 'open',
+        title_override: '',
+        title_scope_guessed: false,
       },
 
       async openTournamentEditor(tournament) {
@@ -38,6 +41,9 @@ export function createTournamentEditorAdmin() {
       active: !!tournament.active,
       is_public: !!tournament.is_public,
       stats_enabled: !!tournament.stats_enabled,
+      title_scope: tournament.title_scope || 'open',
+      title_override: tournament.title_override || '',
+      title_scope_guessed: !!tournament.title_scope_guessed,
       is_simulation: !!tournament.is_simulation,
       access_key: tournament.access_key || '',
       office_password: '',
@@ -73,6 +79,9 @@ export function createTournamentEditorAdmin() {
       is_public: true,
       stats_enabled: true,
       is_simulation: false,
+      title_scope: 'open',
+      title_override: '',
+      title_scope_guessed: false,
       access_key: '',
       office_password: '',
       has_office_password: false,
@@ -102,7 +111,7 @@ export function createTournamentEditorAdmin() {
     try {
       const payload = new FormData();
       Object.entries(this.editTournament).forEach(([key, value]) => {
-        if (['id', 'logo', 'logo_path'].includes(key)) return;
+        if (['id', 'logo', 'logo_path', 'title_scope_guessed'].includes(key)) return;
         payload.append(key, value ?? '');
       });
       if (this.editTournament.logo) {

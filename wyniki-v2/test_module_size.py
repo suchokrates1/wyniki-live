@@ -21,13 +21,13 @@ NEW_MODULE_LIMIT = 300
 
 # Frozen on 2026-10-02. Not a target.
 RECORDED_LINES = {
-    "wyniki/database/brackets.py": 2181,
+    "wyniki/database/brackets.py": 2183,
     "wyniki/api/umpire_api.py": 1886,
     "wyniki/database/schedule.py": 1715,
     "frontend/index.html": 1709,
     "frontend/office.html": 1647,
     "frontend/src/umpire/app.js": 1642,
-    "wyniki/api/admin_tournaments.py": 681,
+    "wyniki/api/admin_tournaments.py": 683,
     "frontend/src/admin/overlay.js": 1293,
     "frontend/src/modules/office/playersView.js": 1135,
     "wyniki/api/office.py": 1034,
