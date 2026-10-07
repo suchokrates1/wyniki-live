@@ -12,4 +12,4 @@ structlog==24.1.0
 pywebpush==2.5.0
 # Pinned like the rest: unpinned, a rebuild picked up a new major without anyone noticing.
 Pillow==12.3.0
-
+cryptography==50.0.2  # the SMTP password is stored encrypted (wyniki/services/secret_box.py)

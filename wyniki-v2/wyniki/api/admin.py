@@ -226,9 +226,9 @@ def get_e2e_artifacts():
 @blueprint.route('/api/settings/email', methods=['GET'])
 def get_email_settings():
     """Get SMTP/email settings used for match and tournament reports."""
-    from ..services.email_reports import get_email_settings as load_email_settings
+    from ..services.email_reports import public_email_settings
 
-    return jsonify(load_email_settings())
+    return jsonify(public_email_settings())
 
 
 @blueprint.route('/api/settings/email', methods=['PUT'])

@@ -31,8 +31,14 @@ SMTP_SETTING_KEYS = [
 
 
 def get_email_settings() -> dict[str, Any]:
-    """Return SMTP settings with normalized defaults."""
+    """SMTP settings with normalized defaults, the password readable: for sending only.
+    A password stored before encryption is sealed here, the first time it is read."""
+    from .secret_box import is_sealed, open_sealed, seal
+
     raw = fetch_app_settings(SMTP_SETTING_KEYS)
+    if raw.get("smtp_password") and not is_sealed(raw["smtp_password"]):
+        upsert_app_settings({"smtp_password": seal(raw["smtp_password"])})
+    raw["smtp_password"] = open_sealed(raw.get("smtp_password"))
     return {
         "smtp_host": (raw.get("smtp_host") or "").strip(),
         "smtp_port": int(raw.get("smtp_port") or 587),
@@ -44,17 +50,31 @@ def get_email_settings() -> dict[str, Any]:
     }
 
 
+def public_email_settings() -> dict[str, Any]:
+    """What the admin's form gets: everything but the password, and whether one is set."""
+    config = get_email_settings()
+    password = config.pop("smtp_password")
+    return {**config, "smtp_password": "", "smtp_password_set": bool(password)}
+
+
 def save_email_settings(settings_dict: dict[str, Any]) -> None:
-    """Persist SMTP settings."""
+    """Persist SMTP settings. The password is stored encrypted; an empty one keeps the stored
+    password (the form never holds it), smtp_password_clear takes it away."""
+    from .secret_box import seal
+
+    password = settings_dict.get("smtp_password") or ""
     payload = {
         "smtp_host": (settings_dict.get("smtp_host") or "").strip(),
         "smtp_port": str(settings_dict.get("smtp_port") or "587").strip(),
         "smtp_username": (settings_dict.get("smtp_username") or "").strip(),
-        "smtp_password": settings_dict.get("smtp_password") or "",
         "smtp_use_tls": "true" if settings_dict.get("smtp_use_tls", True) else "false",
         "smtp_from_email": (settings_dict.get("smtp_from_email") or "").strip(),
         "smtp_from_name": (settings_dict.get("smtp_from_name") or "Wyniki Live").strip(),
     }
+    if password:
+        payload["smtp_password"] = seal(password)
+    elif settings_dict.get("smtp_password_clear"):
+        payload["smtp_password"] = ""
     upsert_app_settings(payload)
 
 

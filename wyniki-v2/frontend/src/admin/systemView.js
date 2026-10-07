@@ -19,6 +19,7 @@ export function createSystemView() {
       smtp_port: 587,
       smtp_username: '',
       smtp_password: '',
+      smtp_password_set: false,
       smtp_use_tls: true,
       smtp_from_email: '',
       smtp_from_name: '',
@@ -47,6 +48,8 @@ export function createSystemView() {
           body: JSON.stringify(this.emailSettings),
         });
         if (!response.ok) throw new Error('Failed to save email settings');
+        // the typed password went to the server; the form keeps none
+        if (this.emailSettings.smtp_password) this.emailSettings = { ...this.emailSettings, smtp_password: '', smtp_password_set: true };
         this.showToast('Ustawienia SMTP zapisane', 'success');
       } catch (err) {
         console.error('Failed to save email settings:', err);

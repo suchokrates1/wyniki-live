@@ -69,9 +69,12 @@
           class="adm-input adm-field__input"
           :type="passwordVisible.smtp ? 'text' : 'password'"
           autocomplete="new-password"
+          :placeholder="emailSettings.smtp_password_set ? 'ustawione — wpisz, aby zmienić' : ''"
+          aria-describedby="adm-smtp-pass-hint"
           x-model="emailSettings.smtp_password"
         >
-        <span class="adm-field__hint">
+        <span class="adm-field__hint" id="adm-smtp-pass-hint">
+          <span x-text="emailSettings.smtp_password_set ? 'Hasło jest zapisane (zaszyfrowane). Puste pole je zostawia.' : 'Hasło nie jest ustawione.'"></span>
           <button type="button" class="adm-link" @click="passwordVisible.smtp = !passwordVisible.smtp" x-text="passwordVisible.smtp ? 'Ukryj hasło' : 'Pokaż hasło'"></button>
         </span>
       </div>
