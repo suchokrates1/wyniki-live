@@ -1,0 +1,65 @@
+/* The organizer's panel: the admin's top bar and cards, one column, no rail. */
+
+/* the admin gets this from Tailwind's preflight, this page loads no Tailwind */
+.adm-body *, .adm-body *::before, .adm-body *::after { box-sizing: border-box; }
+
+.org-main {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+.org-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.org-title { margin: 0; font-size: 28px; font-weight: 800; line-height: 1.2; }
+.org-switch { display: flex; flex-direction: column; gap: 4px; min-width: 220px; }
+
+.org-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.org-facts li { display: flex; flex-direction: column; }
+.org-facts span { font-size: 13px; color: var(--adm-muted); }
+.org-facts strong, .org-facts a { font-size: 16px; }
+.org-facts a { color: var(--adm-rail); font-weight: 700; }
+
+.adm-chip.org-tier { background: var(--adm-rail); color: #fff; }
+
+.org-top__button {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+.adm-top__link:focus-visible { outline: 3px solid var(--adm-lime); outline-offset: 2px; border-radius: 2px; }
+
+@media (max-width: 700px) {
+  .org-main { padding: 20px 16px 40px; }
+  .org-title { font-size: 24px; }
+  .org-switch { min-width: 0; width: 100%; }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* a link dressed as the admin's button */
+a.adm-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: var(--adm-ink); }

@@ -143,3 +143,7 @@
   overflow-y: auto;
 }
 .adm-modal .adm-card__footer { flex-shrink: 0; margin-top: 16px; }
+
+/* Turnieje → Serie i konta: the invitation link to pass on */
+.adm-invite { border-color: var(--adm-ok); }
+.adm-invite__link { flex: 1 1 320px; min-width: 0; }

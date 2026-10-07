@@ -28,7 +28,9 @@ test('the office is not in the admin at all, and an old link to it still lands s
 });
 
 test('the address bar carries the section, and the sub-tab where a section has two', () => {
-  assert.equal(adminHashFor('tournaments'), '#/turnieje');
+  assert.equal(adminHashFor('tournaments'), '#/turnieje/tournaments');
+  assert.equal(adminHashFor('series'), '#/turnieje/series');
+  assert.deepEqual(parseAdminHash('#/turnieje'), { section: 'turnieje', tab: 'tournaments' });
   assert.equal(adminHashFor('devices'), '#/korty/devices');
   assert.deepEqual(parseAdminHash('#/korty/devices'), { section: 'korty', tab: 'devices' });
   assert.deepEqual(parseAdminHash('#/korty'), { section: 'korty', tab: 'courts' });

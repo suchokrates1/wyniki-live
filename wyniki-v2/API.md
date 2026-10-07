@@ -53,6 +53,21 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/admin/api/global-players/tournaments/<int:tid>/classification-review` | Players of a tournament who played outside their sport class. |
 | POST | `/admin/api/global-players/tournaments/<int:tid>/classification-review` | Body: { decisions: [{ global_player_id, decision: reclassify\|play_up\|skip, classification? }] } |
 
+## admin_series
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/admin/api/series` |  |
+| POST | `/admin/api/series` |  |
+| DELETE | `/admin/api/series/<int:series_id>` |  |
+| PATCH, PUT | `/admin/api/series/<int:series_id>` |  |
+| POST | `/admin/api/series/<int:series_id>/members` |  |
+| DELETE | `/admin/api/series/<int:series_id>/members/<int:account_id>` |  |
+| PATCH, PUT | `/admin/api/series/<int:series_id>/members/<int:account_id>` |  |
+| POST | `/admin/api/series/<int:series_id>/members/<int:account_id>/invite` |  |
+| DELETE | `/admin/api/series/<int:series_id>/tournaments/<int:tournament_id>` |  |
+| PUT | `/admin/api/series/<int:series_id>/tournaments/<int:tournament_id>` |  |
+
 ## admin_tournaments
 
 | Method | Path | What it does |
@@ -175,6 +190,16 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | DELETE | `/api/office/<int:slot>/teams/<int:team_id>` |  |
 | GET | `/api/office/tournaments` | Tournaments the office can open, with the slot each one uses today (before login). |
 
+## organizer
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/organizer/api/auth` |  |
+| GET | `/organizer/api/invite/<token>` |  |
+| POST | `/organizer/api/invite/<token>` |  |
+| GET | `/organizer/api/me` |  |
+| GET | `/organizer/api/series/<int:series_id>/tournaments` |  |
+
 ## overlay_api
 
 | Method | Path | What it does |
@@ -266,6 +291,8 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/admin` | Serve admin page. |
 | GET | `/admin.html` | Serve admin page. |
 | GET | `/admin/` | Serve admin page. |
+| GET | `/admin/login` | Serve the admin sign-in page; the panel sends you here without a session. |
+| GET | `/admin/login/` | Serve the admin sign-in page; the panel sends you here without a session. |
 | GET | `/assets/<path:filename>` | Serve static assets (JS, CSS, etc.). |
 | GET | `/brand/<path:filename>` |  |
 | GET | `/embed` | Serve embed page with optional language and court parameters. |
@@ -277,6 +304,11 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/office/` | Serve standalone office page. |
 | GET | `/office/<int:slot>` | Serve standalone office page. |
 | GET | `/office/<int:slot>/` | Serve standalone office page. |
+| GET | `/organizer` | Serve the series organizer's panel. |
+| GET | `/organizer/` | Serve the series organizer's panel. |
+| GET | `/organizer/invite` | Serve the organizer's sign-in; with ?token= it sets the password from an invitation. |
+| GET | `/organizer/login` | Serve the organizer's sign-in; with ?token= it sets the password from an invitation. |
+| GET | `/organizer/login/` | Serve the organizer's sign-in; with ?token= it sets the password from an invitation. |
 | GET | `/overlay/<int:tournament_slot>/<overlay_id>` | Serve overlay page for any preset (e.g. /overlay/1, /overlay/all, /overlay/split_1_2). |
 | GET | `/overlay/<overlay_id>` | Serve overlay page for any preset (e.g. /overlay/1, /overlay/all, /overlay/split_1_2). |
 | GET | `/privacy` | Serve the public privacy policy. |

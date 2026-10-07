@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Panel organizatora — blindtennis.app</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script>
+    // No session on this tab: go to the sign-in page before the panel is drawn.
+    try {
+      if (!sessionStorage.getItem('wyniki-organizer-token')) {
+        location.replace('/organizer/login?next=' + encodeURIComponent(location.pathname + location.hash));
+      }
+    } catch (e) { /* storage blocked: the panel's own check sends you there */ }
+  </script>
+</head>
+<body class="adm-body">
+  <div x-data="organizerApp" class="adm-app">
+    <header class="adm-top">
+      <span class="adm-top__brand">wyniki<span>.</span>organizator</span>
+      <template x-if="current()">
+        <span class="adm-top__chip" x-text="current().name"></span>
+      </template>
+      <div class="adm-top__spacer"></div>
+      <span class="adm-top__tag" x-text="account?.email || ''"></span>
+      <a class="adm-top__link" href="/" target="_blank" rel="noopener">Strona publiczna</a>
+      <button type="button" class="adm-top__link org-top__button" @click="signOut()">Wyloguj</button>
+    </header>
+
+    <main class="org-main" id="main">
+      <p class="adm-loading" x-show="loading" role="status">Wczytywanie…</p>
+      <p class="adm-modal__error" role="alert" x-show="error" x-text="error"></p>
+
+      <template x-if="!loading && !seriesList.length && !error">
+        <section class="adm-card">
+          <h1 class="adm-card__title">Brak przypisanej serii</h1>
+          <p>Twoje konto nie należy jeszcze do żadnej serii. Napisz na <a class="adm-link" href="mailto:contact@blindtennis.app">contact@blindtennis.app</a>.</p>
+        </section>
+      </template>
+
+      <template x-if="current()">
+        <div class="adm-stack">
+          <div class="org-head">
+            <h1 class="org-title" x-text="current().name"></h1>
+            <template x-if="seriesList.length > 1">
+              <div class="org-switch">
+                <label for="org-series" class="adm-field__label">Seria</label>
+                <select id="org-series" class="adm-input" x-model.number="currentId">
+                  <template x-for="item in seriesList" :key="item.id">
+                    <option :value="item.id" x-text="item.name"></option>
+                  </template>
+                </select>
+              </div>
+            </template>
+          </div>
+
+          <ul class="org-facts" role="list">
+            <li><span>Twoja rola</span><strong x-text="roleLabel(current().role)"></strong></li>
+            <li x-show="current().valid_until"><span>Abonament do</span><strong x-text="dateRange(current().valid_until)"></strong></li>
+            <li x-show="current().website"><span>Strona serii</span><a class="adm-link" :href="current().website" target="_blank" rel="noopener" x-text="current().website.replace(/^https?:\/\//, '')"></a></li>
+          </ul>
+
+          <section class="adm-card" aria-labelledby="org-tournaments-title">
+            <div class="adm-card__head">
+              <h2 id="org-tournaments-title" class="adm-card__title">Turnieje serii</h2>
+              <span class="adm-card__hint" x-text="tournamentCountText()"></span>
+            </div>
+            <ul class="adm-rows" role="list">
+              <template x-for="row in current().tournaments" :key="row.id">
+                <li class="adm-row">
+                  <div class="adm-row__main">
+                    <div class="adm-row__title">
+                      <span class="adm-row__name" x-text="row.name"></span>
+                      <span class="adm-chip org-tier" x-show="row.tier" x-text="tierLabel(row.tier)"></span>
+                      <span class="adm-chip adm-chip--sim" x-show="row.is_simulation">symulacja</span>
+                      <span class="adm-chip" :class="row.is_public ? 'adm-chip--ok' : ''" x-text="row.is_public ? 'publiczny' : 'niepubliczny'"></span>
+                    </div>
+                    <div class="adm-row__meta" x-text="[dateRange(row.start_date, row.end_date), row.city, row.country].filter(Boolean).join(' · ')"></div>
+                  </div>
+                  <div class="adm-row__actions">
+                    <a class="adm-btn" x-show="row.is_public" :href="'/#tournaments/' + row.id" target="_blank" rel="noopener">
+                      Na stronie<span class="sr-only" x-text="': ' + row.name"></span>
+                    </a>
+                  </div>
+                </li>
+              </template>
+            </ul>
+            <p class="adm-empty" x-show="!current().tournaments.length">Do serii nie dodano jeszcze turniejów.</p>
+          </section>
+        </div>
+      </template>
+    </main>
+  </div>
+  <script type="module" src="/src/organizer.js"></script>
+</body>
+</html>

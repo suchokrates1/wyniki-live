@@ -7,7 +7,7 @@
  */
 
 export const ADMIN_SECTIONS = [
-  { id: 'turnieje', label: 'Turnieje', short: 'Turnieje', tabs: ['tournaments'] },
+  { id: 'turnieje', label: 'Turnieje', short: 'Turnieje', tabs: ['tournaments', 'series'] },
   { id: 'zawodnicy', label: 'Zawodnicy', short: 'Zawodnicy', tabs: ['global_players', 'players'] },
   { id: 'korty', label: 'Korty i tablety', short: 'Korty', tabs: ['courts', 'devices'] },
   { id: 'overlay', label: 'Overlay TV', short: 'Overlay', tabs: ['settings'] },
@@ -29,7 +29,7 @@ export const MORE_ENTRIES = [
 ];
 
 export const SECTION_HEADINGS = {
-  turnieje: ['Turnieje', 'zakładanie, dane, aktywacja'],
+  turnieje: ['Turnieje', 'zakładanie, dane, aktywacja, serie organizatorów'],
   zawodnicy: ['Zawodnicy', 'baza, zgłoszenia, klasy sportowe'],
   korty: ['Korty i tablety', 'PIN-y, przypisanie, bateria'],
   overlay: ['Overlay TV', 'to, co widzi widz na transmisji'],
@@ -38,6 +38,8 @@ export const SECTION_HEADINGS = {
 };
 
 export const SECTION_TAB_LABELS = {
+  tournaments: 'Lista turniejów',
+  series: 'Serie i konta',
   global_players: 'Baza zawodników',
   players: 'Zgłoszenia do turnieju',
   courts: 'Korty',

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Logowanie — panel organizatora</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body class="adl-body">
+  <div class="adl">
+    <aside class="adl-brand">
+      <a class="adl-brand__logo" href="/">
+        <img src="/brand/blindtennis-logo-horizontal-on-dark.svg" width="240" height="64" alt="blindtennis.app">
+      </a>
+      <div class="adl-brand__copy">
+        <p class="adl-brand__kicker">wyniki<span>.</span>organizator</p>
+        <p class="adl-brand__lead">Panel serii turniejów: turnieje serii, ich rangi, zawodnicy i zgłoszenia.</p>
+      </div>
+      <div class="adl-office">
+        <p class="adl-office__title">Prowadzisz dzień turnieju?</p>
+        <p>Terminarz, grupy, wyniki i drabinkę obsługuje biuro turnieju, z własnym hasłem.</p>
+        <a href="/office">Przejdź do biura turnieju</a>
+      </div>
+    </aside>
+
+    <main class="adl-main">
+      <form class="adl-card" id="organizerForm" novalidate>
+        <h1 class="adl-card__title" id="organizerTitle">Panel organizatora</h1>
+        <p class="adl-card__lead" id="organizerLead">Zaloguj się adresem e-mail i hasłem.</p>
+
+        <p class="adl-notice" id="organizerNotice" role="status" hidden></p>
+
+        <label class="adl-label" for="organizerEmail">E-mail</label>
+        <input class="adl-input adl-input--text" id="organizerEmail" name="email" type="email" autocomplete="username" required autofocus>
+
+        <label class="adl-label adl-label--next" for="organizerPassword" id="organizerPasswordLabel">Hasło</label>
+        <div class="adl-field">
+          <input class="adl-input" id="organizerPassword" name="password" type="password" autocomplete="current-password" required aria-describedby="organizerCaps organizerError">
+          <button type="button" class="adl-eye" aria-label="Pokaż hasło" aria-pressed="false" aria-controls="organizerPassword">
+            <svg class="adl-eye__show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.04 12.32a1 1 0 0 1 0-.64C3.42 7.51 7.36 4.5 12 4.5s8.57 3 9.96 7.18a1 1 0 0 1 0 .64C20.58 16.49 16.64 19.5 12 19.5s-8.57-3-9.96-7.18Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="adl-eye__hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.98 8.22A10.5 10.5 0 0 0 1.93 12c1.3 4.34 5.31 7.5 10.07 7.5.99 0 1.95-.14 2.86-.4M6.23 6.23A10.45 10.45 0 0 1 12 4.5c4.76 0 8.77 3.16 10.07 7.5a10.5 10.5 0 0 1-4.3 5.77M6.23 6.23 3 3m3.23 3.23 3.65 3.65m7.9 7.9L21 21m-3.23-3.23-3.65-3.65m0 0a3 3 0 1 0-4.24-4.24m4.24 4.24L9.88 9.88"/></svg>
+          </button>
+        </div>
+
+        <div id="organizerRepeatBlock" hidden>
+          <label class="adl-label adl-label--next" for="organizerRepeat">Powtórz hasło</label>
+          <div class="adl-field">
+            <input class="adl-input" id="organizerRepeat" name="repeat" type="password" autocomplete="new-password" aria-describedby="organizerError">
+            <button type="button" class="adl-eye" aria-label="Pokaż hasło" aria-pressed="false" aria-controls="organizerRepeat">
+              <svg class="adl-eye__show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.04 12.32a1 1 0 0 1 0-.64C3.42 7.51 7.36 4.5 12 4.5s8.57 3 9.96 7.18a1 1 0 0 1 0 .64C20.58 16.49 16.64 19.5 12 19.5s-8.57-3-9.96-7.18Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="adl-eye__hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.98 8.22A10.5 10.5 0 0 0 1.93 12c1.3 4.34 5.31 7.5 10.07 7.5.99 0 1.95-.14 2.86-.4M6.23 6.23A10.45 10.45 0 0 1 12 4.5c4.76 0 8.77 3.16 10.07 7.5a10.5 10.5 0 0 1-4.3 5.77M6.23 6.23 3 3m3.23 3.23 3.65 3.65m7.9 7.9L21 21m-3.23-3.23-3.65-3.65m0 0a3 3 0 1 0-4.24-4.24m4.24 4.24L9.88 9.88"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <p class="adl-hint" id="organizerCaps" hidden>Włączony Caps Lock.</p>
+        <p class="adl-error" id="organizerError" role="alert" hidden></p>
+
+        <button class="adl-submit" id="organizerSubmit" type="submit">Zaloguj</button>
+
+        <p class="adl-foot" id="organizerFoot">
+          Nie pamiętasz hasła? Napisz na <a href="mailto:contact@blindtennis.app">contact@blindtennis.app</a>, wyślemy nowy link.
+          <a href="/privacy?lang=pl">Polityka prywatności</a>
+        </p>
+      </form>
+      <nav class="adl-links" aria-label="Inne strony">
+        <a href="/">← Strona publiczna</a>
+        <a class="adl-links__office" href="/office">Biuro turnieju →</a>
+      </nav>
+    </main>
+  </div>
+  <script type="module" src="/src/organizerLogin.js"></script>
+</body>
+</html>

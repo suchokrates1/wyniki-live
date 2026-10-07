@@ -57,6 +57,21 @@ def admin_login():
     return _html_page('admin-login.html')
 
 
+@blueprint.route('/organizer')
+@blueprint.route('/organizer/')
+def organizer():
+    """Serve the series organizer's panel."""
+    return _html_page('organizer.html')
+
+
+@blueprint.route('/organizer/login')
+@blueprint.route('/organizer/login/')
+@blueprint.route('/organizer/invite')
+def organizer_login():
+    """Serve the organizer's sign-in; with ?token= it sets the password from an invitation."""
+    return _html_page('organizer-login.html')
+
+
 @blueprint.route('/umpire')
 @blueprint.route('/umpire/')
 @blueprint.route('/umpire.html')

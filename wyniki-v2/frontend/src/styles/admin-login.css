@@ -112,6 +112,9 @@
   font-family: var(--font-mono);
   font-size: 17px;
 }
+.adl-input--text { padding-right: 14px; font-family: inherit; }
+.adl-input[readonly] { background: #F3F5F6; color: var(--adm-muted); }
+.adl-label--next { margin-top: 16px; }
 .adl-input:focus { outline: none; border-color: var(--adm-rail); box-shadow: 0 0 0 3px rgba(11, 44, 54, 0.25); }
 .adl-input[aria-invalid="true"] { border-color: var(--adm-error); }
 .adl-eye {

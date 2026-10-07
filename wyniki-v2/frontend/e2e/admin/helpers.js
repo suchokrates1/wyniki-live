@@ -51,7 +51,7 @@ export async function press(locator, page) {
   await page.keyboard.press('Enter');
 }
 
-export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {}, signIn = false } = {}) {
+export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {}, signIn = false, series = [] } = {}) {
   // Seeded once per tab: a sign-out or an expired session must stick across the redirects.
   await page.addInitScript((hasToken) => {
     try {
@@ -70,6 +70,7 @@ export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS,
     onRequest({ url, method: request.method(), body });
     if (request.method() !== 'GET') return route.fulfill({ json: { success: true } });
     if (/\/admin\/api\/tournaments(\?|$)/.test(url)) return route.fulfill({ json: tournaments });
+    if (/\/admin\/api\/series(\?|$)/.test(url)) return route.fulfill({ json: series });
     if (url.includes('/admin/api/courts')) return route.fulfill({ json: courts });
     if (url.includes('/admin/api/devices')) return route.fulfill({ json: { devices } });
     if (/\/admin\/api\/global-players(\?|$)/.test(url)) return route.fulfill({ json: players });

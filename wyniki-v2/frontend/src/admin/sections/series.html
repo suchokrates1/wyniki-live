@@ -1,0 +1,149 @@
+<div class="adm-stack">
+  <p class="adm-modal__error" role="alert" x-show="seriesError" x-text="seriesError"></p>
+
+  <template x-if="seriesInvite">
+    <section class="adm-card adm-invite" aria-labelledby="adm-invite-title">
+      <h2 id="adm-invite-title" class="adm-card__title">Zaproszenie dla <span x-text="seriesInvite.account?.email"></span></h2>
+      <p x-text="seriesInvite.emailed ? 'Wysłaliśmy mail z linkiem. Możesz też przekazać link sam:' : 'Mail nie wyszedł (sprawdź SMTP w System). Przekaż ten link sam:'"></p>
+      <div class="adm-addrow">
+        <label class="sr-only" for="adm-invite-link">Link zaproszenia</label>
+        <input id="adm-invite-link" class="adm-input adm-mono adm-invite__link" readonly :value="seriesInvite.invite_url" @focus="$event.target.select()">
+        <button type="button" class="adm-btn adm-btn--primary" @click="copySeriesInvite()">Kopiuj link</button>
+        <button type="button" class="adm-btn" @click="seriesInvite = null">Zamknij</button>
+      </div>
+      <p class="adm-card__hint">Link działa 72 godziny i tylko raz. Nowy link dla osoby z hasłem działa jak reset hasła.</p>
+    </section>
+  </template>
+
+  <template x-for="item in seriesList" :key="item.id">
+    <section class="adm-card" :aria-label="'Seria ' + item.name">
+      <div class="adm-card__head">
+        <h2 class="adm-card__title" x-text="item.name"></h2>
+        <span class="adm-card__hint adm-mono" x-text="'/' + item.slug"></span>
+        <div class="adm-card__actions">
+          <button type="button" class="adm-btn adm-btn--danger" @click="deleteSeries(item)">Usuń serię<span class="sr-only" x-text="' ' + item.name"></span></button>
+        </div>
+      </div>
+
+      <div class="adm-grid">
+        <div class="adm-field">
+          <label class="adm-field__label" :for="'adm-series-name-' + item.id">Nazwa</label>
+          <input class="adm-input" :id="'adm-series-name-' + item.id" x-model="item.name">
+        </div>
+        <div class="adm-field">
+          <label class="adm-field__label" :for="'adm-series-web-' + item.id">Strona serii</label>
+          <input class="adm-input" type="url" :id="'adm-series-web-' + item.id" x-model="item.website" placeholder="https://">
+        </div>
+        <div class="adm-field">
+          <label class="adm-field__label" :for="'adm-series-valid-' + item.id">Abonament do</label>
+          <input class="adm-input" type="date" :id="'adm-series-valid-' + item.id" x-model="item.valid_until">
+        </div>
+      </div>
+      <div class="adm-card__footer">
+        <button type="button" class="adm-btn adm-btn--primary" @click="saveSeries(item)">Zapisz serię</button>
+      </div>
+
+      <h3 class="adm-subhead">Osoby z dostępem</h3>
+      <ul class="adm-rows" role="list">
+        <template x-for="member in item.members" :key="member.id">
+          <li class="adm-row">
+            <div class="adm-row__main">
+              <div class="adm-row__title">
+                <span class="adm-row__name" x-text="member.name || member.email"></span>
+                <span class="adm-chip" :class="seriesMemberStatus(member).tone ? 'adm-chip--' + seriesMemberStatus(member).tone : ''" x-text="seriesMemberStatus(member).text"></span>
+              </div>
+              <div class="adm-row__meta" x-text="member.email"></div>
+            </div>
+            <div class="adm-row__actions">
+              <label class="sr-only" :for="'adm-role-' + item.id + '-' + member.id" x-text="'Rola: ' + member.email"></label>
+              <select class="adm-input" :id="'adm-role-' + item.id + '-' + member.id" :value="member.role" @change="setSeriesMemberRole(item, member, $event.target.value)">
+                <template x-for="role in seriesRoles()" :key="role.value">
+                  <option :value="role.value" x-text="role.label" :selected="role.value === member.role"></option>
+                </template>
+              </select>
+              <button type="button" class="adm-btn" @click="reinviteSeriesMember(item, member)">Nowy link<span class="sr-only" x-text="': ' + member.email"></span></button>
+              <button type="button" class="adm-btn" @click="toggleSeriesMember(item, member)"><span x-text="member.disabled ? 'Włącz' : 'Wyłącz'"></span><span class="sr-only" x-text="': ' + member.email"></span></button>
+              <button type="button" class="adm-btn adm-btn--danger" @click="removeSeriesMember(item, member)">Odbierz dostęp<span class="sr-only" x-text="': ' + member.email"></span></button>
+            </div>
+          </li>
+        </template>
+      </ul>
+      <p class="adm-empty" x-show="!item.members.length">Nikt nie ma jeszcze dostępu. Dodaj osobę poniżej.</p>
+      <div class="adm-addrow">
+        <label class="sr-only" :for="'adm-member-email-' + item.id">E-mail osoby</label>
+        <input class="adm-input" type="email" :id="'adm-member-email-' + item.id" placeholder="e-mail" x-model="memberDraft(item).email">
+        <label class="sr-only" :for="'adm-member-name-' + item.id">Imię i nazwisko</label>
+        <input class="adm-input" :id="'adm-member-name-' + item.id" placeholder="Imię i nazwisko" x-model="memberDraft(item).name">
+        <label class="sr-only" :for="'adm-member-role-' + item.id">Rola</label>
+        <select class="adm-input" :id="'adm-member-role-' + item.id" x-model="memberDraft(item).role">
+          <template x-for="role in seriesRoles()" :key="role.value">
+            <option :value="role.value" x-text="role.label"></option>
+          </template>
+        </select>
+        <button type="button" class="adm-btn adm-btn--primary" @click="addSeriesMember(item)">Dodaj i zaproś</button>
+      </div>
+
+      <h3 class="adm-subhead">Turnieje serii</h3>
+      <ul class="adm-rows" role="list">
+        <template x-for="row in item.tournaments" :key="row.id">
+          <li class="adm-row">
+            <div class="adm-row__main">
+              <div class="adm-row__title"><span class="adm-row__name" x-text="row.name"></span></div>
+              <div class="adm-row__meta" x-text="[seriesDates(row.start_date, row.end_date), row.city].filter(Boolean).join(' · ')"></div>
+            </div>
+            <div class="adm-row__actions">
+              <label class="sr-only" :for="'adm-tier-' + item.id + '-' + row.id" x-text="'Ranga: ' + row.name"></label>
+              <select class="adm-input" :id="'adm-tier-' + item.id + '-' + row.id" @change="setSeriesTier(item, row, $event.target.value)">
+                <template x-for="tier in seriesTiers()" :key="tier.value">
+                  <option :value="tier.value" x-text="tier.label" :selected="tier.value === row.tier"></option>
+                </template>
+              </select>
+              <button type="button" class="adm-btn adm-btn--danger" @click="detachSeriesTournament(item, row)">Odłącz<span class="sr-only" x-text="': ' + row.name"></span></button>
+            </div>
+          </li>
+        </template>
+      </ul>
+      <p class="adm-empty" x-show="!item.tournaments.length">Seria nie ma jeszcze turniejów.</p>
+      <div class="adm-addrow">
+        <label class="sr-only" :for="'adm-attach-' + item.id">Turniej do dodania</label>
+        <select class="adm-input" :id="'adm-attach-' + item.id" x-model="attachDraft(item).tournament_id">
+          <option value="">Wybierz turniej…</option>
+          <template x-for="row in seriesAttachable(item)" :key="row.id">
+            <option :value="row.id" x-text="row.name + ' (' + seriesDates(row.start_date, row.end_date) + ')'"></option>
+          </template>
+        </select>
+        <label class="sr-only" :for="'adm-attach-tier-' + item.id">Ranga</label>
+        <select class="adm-input" :id="'adm-attach-tier-' + item.id" x-model="attachDraft(item).tier">
+          <template x-for="tier in seriesTiers()" :key="tier.value">
+            <option :value="tier.value" x-text="tier.label"></option>
+          </template>
+        </select>
+        <button type="button" class="adm-btn adm-btn--primary" @click="attachSeriesTournament(item)">Dodaj do serii</button>
+      </div>
+    </section>
+  </template>
+
+  <section class="adm-card" aria-labelledby="adm-new-series-title">
+    <div class="adm-card__head">
+      <h2 id="adm-new-series-title" class="adm-card__title">Nowa seria</h2>
+      <span class="adm-card__hint">np. Takei World Tennis Tour; osoby i turnieje dodasz po zapisaniu</span>
+    </div>
+    <div class="adm-grid">
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-new-series-name">Nazwa</label>
+        <input class="adm-input" id="adm-new-series-name" x-model="seriesDraft.name">
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-new-series-web">Strona serii</label>
+        <input class="adm-input" type="url" id="adm-new-series-web" x-model="seriesDraft.website" placeholder="https://">
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-new-series-valid">Abonament do</label>
+        <input class="adm-input" type="date" id="adm-new-series-valid" x-model="seriesDraft.valid_until">
+      </div>
+    </div>
+    <div class="adm-card__footer">
+      <button type="button" class="adm-btn adm-btn--primary" @click="createSeries()">Dodaj serię</button>
+    </div>
+  </section>
+</div>
