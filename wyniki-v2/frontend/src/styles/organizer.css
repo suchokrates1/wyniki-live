@@ -61,8 +61,7 @@
   border: 0;
 }
 
-/* a link dressed as the admin's button */
-a.adm-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; color: var(--adm-ink); }
+a.adm-btn { color: var(--adm-ink); }
 
 /* ----- stage 3: the tournament and its tabs ----- */
 .org-skip { position: absolute; left: -9999px; top: 8px; z-index: 10; padding: 10px 14px; background: #fff; color: var(--adm-ink); font-weight: 700; border-radius: 8px; }

@@ -1,8 +1,6 @@
 import Alpine from 'alpinejs';
 import './styles/fonts.css';
-import './styles/admin.css';
-import './styles/admin-list.css';
-import './styles/admin-forms.css';
+import './styles/organizer-base.css';
 import './styles/organizer.css';
 import { call, CallError, toSignIn } from './organizer/api.js';
 import { LANGUAGES, formatDate, pickLanguage, plural, rememberLanguage, storedLanguage, supported, translate } from './organizer/i18n/index.js';

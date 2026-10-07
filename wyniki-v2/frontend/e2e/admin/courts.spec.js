@@ -86,6 +86,15 @@ test('tablets: new ones wait for a name, the named fleet shows court, version an
   const low = page.locator('.adm-row').filter({ has: page.locator('#adm-dev-name-tab-3') });
   await expect(low.locator('.adm-row__meta')).toContainText('kort t32-3 · 1.0.0-dev.37');
   await expect(low.locator('.adm-court__battery')).toHaveClass(/is-alert/);
+  // every tablet says what it is
+  await expect(low.locator('.adm-device__model')).toHaveText('Teclast P50Ai_ROW');
+  await expect(page.locator('.adm-row').filter({ has: page.locator('#adm-dev-name-new-1') }).locator('.adm-device__model')).toHaveText('Samsung SM-X115');
+  // the controls share one line: on a wide screen their bottom edges match to the pixel
+  if ((page.viewportSize()?.width || 0) > 860) {
+    const bottoms = await low.locator('.adm-device__name, .adm-device__alert, .adm-device__value, .adm-device__test, .adm-device__save')
+      .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().bottom)));
+    expect(new Set(bottoms).size, `bottoms: ${bottoms}`).toBe(1);
+  }
 
   const fresh = page.locator('.adm-row').filter({ has: page.locator('#adm-dev-name-new-1') });
   await page.locator('#adm-dev-name-new-1').fill('Tablet 5');

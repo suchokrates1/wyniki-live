@@ -1,0 +1,6 @@
+/* The organizer page wears the admin's cards and top bar. They come in through @import, so
+   Vite inlines a copy here: imported as modules they became a chunk shared with the admin,
+   loaded after the admin's own sheets, and the admin's overrides (courts, tablets) lost. */
+@import './admin.css';
+@import './admin-list.css';
+@import './admin-forms.css';

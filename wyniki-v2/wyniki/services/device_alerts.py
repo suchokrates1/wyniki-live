@@ -30,13 +30,23 @@ def charging_flag(value: Any) -> bool | None:
     return str(value).strip().lower() in {"1", "true", "yes"}
 
 
+def stored_tablet_label(row: dict) -> str:
+    """The model of a tablet as stored: the table says manufacturer/model, the heartbeat
+    that tablet_label reads says device_manufacturer/device_model."""
+    return tablet_label({
+        "device_manufacturer": row.get("manufacturer"),
+        "device_model": row.get("model"),
+        "device": row.get("device"),
+    })
+
+
 def _who(row: dict) -> str:
     sticker = str(row.get("sticker") or "").strip()
     if sticker.isdigit():
         return f"Tablet {sticker}"
     if sticker:
         return sticker
-    model = tablet_label(row)
+    model = stored_tablet_label(row)
     if model:
         return model
     return "Tablet"
@@ -75,7 +85,7 @@ def device_rows() -> list[dict]:
         rows.append({
             "android_id": row["android_id"],
             "name": str(row.get("sticker") or ""),
-            "model": tablet_label(row),
+            "model": stored_tablet_label(row),
             "manufacturer": row.get("manufacturer") or "",
             "platform": row.get("platform") or "",
             "last_court_id": row.get("last_court_id") or "",

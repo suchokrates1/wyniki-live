@@ -59,6 +59,8 @@
   cursor: pointer;
 }
 .adm-btn:hover { background: var(--adm-surface-2); }
+/* a link dressed as a button: centred like one, no underline */
+a.adm-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; }
 .adm-btn--primary {
   border-color: var(--adm-accent);
   background: var(--adm-accent);

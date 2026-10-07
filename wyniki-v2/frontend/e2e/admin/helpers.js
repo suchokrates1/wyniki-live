@@ -21,9 +21,10 @@ export const COURTS = [
 ];
 
 export const DEVICES = [
-  { android_id: 'new-1', name: '', battery_level: 96, is_charging: false, app_version: '1.0.0-dev.38', device_model: 'SM-X115', court_id: null, last_seen: new Date().toISOString() },
-  { android_id: 'tab-1', name: 'Tablet 1', battery_level: 82, is_charging: false, app_version: '1.0.0-dev.38', court_id: 't32-1', last_seen: new Date().toISOString() },
-  { android_id: 'tab-3', name: 'Tablet 3', battery_level: 17, is_charging: false, app_version: '1.0.0-dev.37', court_id: 't32-3', last_seen: new Date().toISOString() },
+  // the shape /admin/api/devices answers with (device_alerts.device_rows)
+  { android_id: 'new-1', name: '', model: 'Samsung SM-X115', manufacturer: 'Samsung', battery_level: 96, is_charging: false, app_version: '1.0.0-dev.38', last_court_id: '', last_seen: new Date().toISOString() },
+  { android_id: 'tab-1', name: 'Tablet 1', model: 'Teclast P50Ai_ROW', manufacturer: 'Teclast', battery_level: 82, is_charging: false, app_version: '1.0.0-dev.38', last_court_id: 't32-1', last_seen: new Date().toISOString() },
+  { android_id: 'tab-3', name: 'Tablet 3', model: 'Teclast P50Ai_ROW', manufacturer: 'Teclast', battery_level: 17, is_charging: false, app_version: '1.0.0-dev.37', last_court_id: 't32-3', last_seen: new Date().toISOString() },
 ];
 
 export const PANIC = {

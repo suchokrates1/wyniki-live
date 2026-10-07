@@ -75,14 +75,17 @@
           <button type="button" class="adm-link" @click="passwordVisible.smtp = !passwordVisible.smtp" x-text="passwordVisible.smtp ? 'Ukryj hasło' : 'Pokaż hasło'"></button>
         </span>
       </div>
+      <div class="adm-field">
+        <span class="adm-field__label" aria-hidden="true">Szyfrowanie</span>
+        <label class="adm-device__test adm-field__check">
+          <input type="checkbox" x-model="emailSettings.smtp_use_tls">
+          <span>Użyj STARTTLS</span>
+        </label>
+      </div>
     </div>
 
     <div class="adm-card__footer">
       <button type="button" class="adm-btn adm-btn--primary" @click="saveEmailSettings()">Zapisz SMTP</button>
-      <label class="adm-device__test">
-        <input type="checkbox" x-model="emailSettings.smtp_use_tls">
-        <span>Użyj STARTTLS</span>
-      </label>
     </div>
   </section>
 

@@ -42,10 +42,14 @@
   font-size: 15px;
   font-weight: 700;
 }
-.adm-court__no { width: 58px; flex-shrink: 0; }
+/* number and PIN are label + 44 px box each, from the row's top, so both labels share a line
+   and the number sits level with the PIN */
+.adm-court__no, .adm-court__pin { align-self: flex-start; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.adm-court__no { width: 58px; }
 .adm-court__label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--adm-muted); }
-.adm-court__name { display: block; font-size: 24px; font-weight: 900; line-height: 1.1; }
-.adm-court__pin { width: 104px; flex-shrink: 0; }
+.adm-court__name { display: flex; align-items: center; min-height: 44px; font-size: 24px; font-weight: 900; line-height: 1.1; }
+.adm-court__pin { width: 104px; }
+.adm-addrow .adm-addrow__grow { flex: 1 1 260px; max-width: 360px; }
 .adm-court__pininput {
   width: 100%;
   font-family: var(--font-mono);
@@ -95,27 +99,36 @@
 @media (max-width: 860px) {
   .adm-court__no, .adm-court__pin { width: auto; }
   .adm-addrow .adm-input { flex: 1 1 140px; }
-  .adm-court__no { display: flex; align-items: baseline; gap: 8px; order: 1; }
+  .adm-court__no { display: flex; flex-direction: row; align-items: center; gap: 8px; order: 1; }
   .adm-court__name { font-size: 20px; }
   .adm-court__battery { order: 2; margin-left: auto; width: auto; }
   .adm-row--court .adm-row__main { order: 3; flex-basis: 100%; }
-  .adm-court__pin { order: 4; width: 100%; display: flex; align-items: baseline; gap: 8px; }
+  .adm-court__pin { order: 4; width: 100%; display: flex; flex-direction: row; align-items: center; gap: 8px; }
   .adm-court__pininput { width: 92px; }
   .adm-row--court .adm-row__actions { order: 5; width: 100%; }
   .adm-row--court .adm-row__actions .adm-btn { flex: 1; }
 }
 
-/* Tablets */
+/* Tablets: what it is on top, then one line of controls whose fields share a baseline:
+   every control is label + 44 px box, so the inputs, the battery, the flag and the button
+   all sit on the same line. */
+/* .adm-row.adm-row--device: admin-list.css is shared with the organizer page and may load later */
+.adm-row.adm-row--device { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.adm-device__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.adm-device__model { font-size: 15px; font-weight: 700; color: var(--adm-ink); }
+.adm-device__controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
+.adm-device__field { display: flex; flex-direction: column; gap: 4px; width: 118px; flex-shrink: 0; }
+.adm-device__field--name { flex: 1 1 260px; width: auto; }
+.adm-device__field--battery { width: 76px; }
 .adm-device__name { width: 100%; box-sizing: border-box; font-weight: 700; }
-.adm-device__field { width: 118px; flex-shrink: 0; }
 .adm-device__alert { width: 100%; box-sizing: border-box; text-align: center; font-family: var(--font-mono); font-weight: 700; }
-.adm-device__test { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; color: var(--adm-muted); cursor: pointer; }
+.adm-device__value { display: flex; align-items: center; justify-content: flex-start; min-height: 44px; width: 100%; margin: 0; }
+.adm-device__test { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; color: var(--adm-muted); cursor: pointer; }
 .adm-device__test input { width: 20px; height: 20px; }
-/* On a phone the tablet card reads top down: name, what it is, then the battery
-   row, the test flag and the button. */
+.adm-device__save { min-height: 44px; }
+/* On a phone the controls wrap: the name takes the whole line, the rest share the next. */
 @media (max-width: 860px) {
-  .adm-row--device .adm-device__field { width: auto; flex: 1 1 130px; }
-  .adm-row--device .adm-court__battery { align-self: flex-end; margin-left: auto; }
-  .adm-row--device .adm-row__actions { width: 100%; }
-  .adm-row--device .adm-row__actions .adm-btn { flex: 1; }
+  .adm-device__field--name { flex-basis: 100%; }
+  .adm-device__field { flex: 1 1 100px; width: auto; }
+  .adm-device__save { flex: 1 1 100%; }
 }

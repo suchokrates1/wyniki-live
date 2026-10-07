@@ -2,11 +2,16 @@
 
 import { courtBattery } from './courtsList.js';
 
+/** What the tablet is, as the API names it ("Teclast P50Ai_ROW"). */
+export function deviceModel(row = {}) {
+  return String(row.model || '').trim() || 'Nieznany model';
+}
+
+/** The line under the model: court, app version, when it was last seen. */
 export function deviceMeta(row = {}, now = new Date()) {
   const parts = [];
-  if (row.court_id) parts.push(`kort ${row.court_id}`);
+  if (row.last_court_id) parts.push(`kort ${row.last_court_id}`);
   if (row.app_version) parts.push(row.app_version);
-  if (row.device_model || row.device) parts.push(row.device_model || row.device);
   const seen = row.last_seen ? new Date(row.last_seen) : null;
   if (seen && !Number.isNaN(seen.getTime())) {
     const minutes = Math.round((now.getTime() - seen.getTime()) / 60000);
@@ -36,6 +41,10 @@ export function createDevicesListView() {
 
     adminDeviceMeta(row) {
       return deviceMeta(row);
+    },
+
+    adminDeviceModel(row) {
+      return deviceModel(row);
     },
 
     adminDeviceBattery(row) {

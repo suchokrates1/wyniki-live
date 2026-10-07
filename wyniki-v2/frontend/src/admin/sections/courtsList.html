@@ -81,7 +81,7 @@
 
   <div class="adm-addrow">
     <label class="sr-only" for="adm-new-court-id">ID nowego kortu</label>
-    <input id="adm-new-court-id" type="text" class="adm-input" placeholder="ID nowego kortu (np. t32-5)" x-model="newCourtId">
+    <input id="adm-new-court-id" type="text" class="adm-input adm-addrow__grow" placeholder="ID nowego kortu (np. t32-5)" x-model="newCourtId">
     <label class="sr-only" for="adm-new-court-pin">PIN nowego kortu</label>
     <input id="adm-new-court-pin" type="text" class="adm-input" placeholder="PIN (4 cyfry)" maxlength="4" x-model="newCourtPin">
     <button type="button" class="adm-btn adm-btn--primary" @click="addCourt()">Dodaj kort</button>

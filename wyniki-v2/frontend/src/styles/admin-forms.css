@@ -151,3 +151,36 @@
 /* Zawodnicy → Do sprawdzenia */
 .adm-review__changes { margin: 6px 0 0; padding: 0; list-style: none; font-size: 15px; }
 .adm-review__changes del { color: var(--adm-muted); }
+
+/* Zawodnicy → Zgłoszenia: an entry form whose fields and button share one line */
+.adm-entry-add { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.adm-entry-add .adm-field { flex: 1 1 180px; }
+.adm-entry-add .adm-field--short { flex: 0 1 110px; }
+.adm-entry-add .adm-input { width: 100%; box-sizing: border-box; }
+.adm-entry-add--edit { flex: 1; }
+.adm-entry { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 12px; }
+.adm-details { border: 1px solid var(--adm-line); border-radius: 12px; padding: 0 14px; }
+.adm-details > summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer; }
+.adm-details[open] { padding-bottom: 14px; }
+.adm-textarea { width: 100%; box-sizing: border-box; min-height: 140px; padding: 10px 12px; font: inherit; resize: vertical; }
+
+/* Older views still use DaisyUI classes. Inside an admin card they take the admin's look:
+   the accent instead of violet, 44 px buttons, labels next to their switches. */
+.adm-card .btn { min-height: 44px; height: auto; padding: 0 14px; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 700; text-transform: none; }
+.adm-card .btn-primary { background: var(--adm-accent); border-color: var(--adm-accent); color: #fff; }
+.adm-card .btn-primary:hover { background: #8F3000; border-color: #8F3000; }
+.adm-card .btn-ghost, .adm-card .btn-outline { background: var(--adm-surface); border: 1px solid var(--adm-line); color: var(--adm-ink); }
+.adm-card .btn-xs, .adm-card .btn-sm { min-height: 44px; }
+.adm-card label.label { justify-content: flex-start; gap: 12px; }
+.adm-card .toggle:checked, .adm-card .checkbox:checked, .adm-card .checkbox-primary:checked { --chkbg: var(--adm-rail); --chkfg: #fff; border-color: var(--adm-rail); background-color: var(--adm-rail); }
+.adm-card .divider { justify-content: flex-start; margin: 24px 0 8px; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--adm-muted); }
+.adm-card .divider::before { display: none; }
+.adm-card .input, .adm-card .select { min-height: 44px; border-radius: 10px; border-color: var(--adm-line); font: inherit; }
+.adm-legacy-block { display: flex; flex-direction: column; gap: 12px; }
+.adm-legacy-block select.adm-input { max-width: 420px; }
+
+/* a checkbox standing in a field grid: as tall as the inputs beside it */
+.adm-field__check { min-height: 44px; color: var(--adm-ink); font-size: 15px; }
+/* the file picker's own button wears the admin's button */
+.adm-input[type="file"] { padding: 4px 6px; display: flex; align-items: center; }
+.adm-input[type="file"]::file-selector-button { min-height: 34px; margin-right: 10px; padding: 0 12px; border: 1px solid var(--adm-line); border-radius: 8px; background: var(--adm-surface-2); color: var(--adm-ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }

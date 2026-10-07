@@ -2,13 +2,12 @@
 <section class="adm-card" aria-labelledby="adm-classes-title">
   <h2 id="adm-classes-title" class="adm-card__title">Klasyfikacje po turnieju</h2>
           <!-- Sport classes after a tournament -->
-          <section class="bg-base-200 rounded-box p-4 mb-4" aria-labelledby="class-review-title">
-            <h3 id="class-review-title" class="font-semibold text-lg">Klasyfikacje po turnieju</h3>
-            <p class="text-sm opacity-80 mb-3">Zawodnicy, kt&oacute;rzy grali w kategorii innej ni&#380; ich klasa sportowa. Wyniki zostaj&#261; w kategorii, w kt&oacute;rej zosta&#322;y rozegrane.</p>
+          <section class="adm-legacy-block" aria-labelledby="adm-classes-title">
+            <p class="adm-card__hint">Zawodnicy, kt&oacute;rzy grali w kategorii innej ni&#380; ich klasa sportowa. Wyniki zostaj&#261; w kategorii, w kt&oacute;rej zosta&#322;y rozegrane.</p>
             <div class="flex flex-wrap items-end gap-2 mb-3">
               <div class="form-control">
                 <label for="class-review-tournament" class="label-text text-sm">Turniej do przegl&#261;du klas</label>
-                <select id="class-review-tournament" x-model="classReviewTournamentId" @change="loadClassReview()" class="select select-sm select-bordered min-h-[2.25rem]">
+                <select id="class-review-tournament" x-model="classReviewTournamentId" @change="loadClassReview()" class="adm-input">
                   <option value="">Wybierz turniej</option>
                   <template x-for="t in tournaments" :key="'class_review_t_'+t.id">
                     <option :value="t.id" x-text="t.name + (t.start_date ? ' (' + t.start_date + ')' : '')"></option>
@@ -31,7 +30,7 @@
                             <input type="radio" class="radio radio-sm" :name="'class_decision_'+item.global_player_id" value="reclassify" x-model="classReviewDraft[item.global_player_id].decision">
                             <span>Zmiana klasy na</span>
                           </label>
-                          <select class="select select-sm select-bordered min-h-[2.25rem]" x-model="classReviewDraft[item.global_player_id].classification"
+                          <select class="adm-input" x-model="classReviewDraft[item.global_player_id].classification"
                                   :aria-label="'Nowa klasa: ' + item.first_name + ' ' + item.last_name"
                                   :disabled="classReviewDraft[item.global_player_id].decision !== 'reclassify'">
                             <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option><option value="B4">B4</option>

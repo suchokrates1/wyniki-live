@@ -25,6 +25,9 @@
   font-family: var(--font-sans);
 }
 
+/* main.css pads the public site's body for its fixed footer; the admin has none */
+body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
+
 .adm-app {
   min-height: 100vh;
   display: flex;
