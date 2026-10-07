@@ -357,12 +357,15 @@ test.describe('live stack only', () => {
   });
 });
 
-test('footer: the privacy policy on the left, "powered by" on the right, no last-update line', async ({ page }) => {
+test('footer: the privacy policy and "for organizers" on the left, "powered by" on the right, no last-update line', async ({ page }) => {
   await open(page, 'players');
   const footer = page.locator('.vm-footer');
   await footer.scrollIntoViewIfNeeded();
   await expect(footer).not.toContainText(/aktualizacja|update/i);
-  const legal = await footer.locator('.vm-footer__legal').boundingBox();
+  const links = footer.locator('.vm-footer__legal');
+  await expect(links).toHaveCount(2);
+  await expect(links.nth(1)).toHaveAttribute('href', /^\/panel\?lang=/);
+  const legal = await links.first().boundingBox();
   const powered = await footer.locator('.vm-footer__powered').boundingBox();
   const bar = await footer.boundingBox();
   expect(Math.abs(legal.y + legal.height / 2 - (powered.y + powered.height / 2)), 'one line').toBeLessThanOrEqual(8);
