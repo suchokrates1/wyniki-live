@@ -220,7 +220,7 @@ export default {
   inviteSpentNotice: "This link has expired or has already been used. Sign in or ask for a new link: {contact}.",
   seriesLogo: "Series logo",
   logoHint: "Shown in this panel and next to the tournaments in your series on blindtennis.app. PNG, JPEG or WebP, up to 2 MB.",
-  logoPick: "New logo",
+  logoPick: "New file: {what}",
   logoRemove: "Remove logo",
   logoSaved: "Logo saved.",
   logoRemoved: "Logo removed.",
@@ -228,4 +228,8 @@ export default {
   logoAlt: "{series} logo",
   errLogoType: "The logo must be a PNG, JPEG or WebP file.",
   errLogoSize: "The file is larger than 2 MB.",
+  logoLight: "Logo for a light background",
+  logoDark: "Logo for a dark background",
+  logoLightHint: "Your usual logo, dark lettering. Shown on the light page.",
+  logoDarkHint: "Light (e.g. white) lettering on a transparent background. Shown on the dark page and in this panel; without it the logo stands there on a white plate.",
 };

@@ -64,18 +64,20 @@
       </div>
 
       <h3 class="adm-subhead">Logo serii</h3>
-      <div class="adm-series-logo">
-        <div class="adm-series-logo__frame">
-          <img x-show="item.logo_path" :src="item.logo_path || ''" :alt="'Logo: ' + item.name">
-          <span x-show="!item.logo_path" class="adm-card__hint">brak logo</span>
+      <p class="adm-card__hint">Pokazuje się w panelu organizatora i przy turniejach serii na stronie publicznej. PNG, JPEG albo WebP, do 2 MB. Wersja na ciemne tło: jasny napis na przezroczystym tle; bez niej na ciemnym tle logo stoi na białej podkładce.</p>
+      <template x-for="v in seriesLogoVariants()" :key="v.field">
+        <div class="adm-series-logo">
+          <div class="adm-series-logo__frame" :class="'adm-series-logo__frame--' + v.ground">
+            <img x-show="item[v.field]" :src="item[v.field] || ''" :alt="'Logo: ' + item.name + (v.variant ? ' (na ciemne tło)' : ' (na jasne tło)')">
+            <span x-show="!item[v.field]" class="adm-series-logo__none">brak</span>
+          </div>
+          <div class="adm-series-logo__pick">
+            <label class="adm-field__label" :for="'adm-series-logo-' + item.id + '-' + (v.variant || 'light')" x-text="v.variant ? 'Logo na ciemne tło' : 'Logo na jasne tło'"></label>
+            <input class="adm-input" type="file" accept="image/png,image/jpeg,image/webp" :id="'adm-series-logo-' + item.id + '-' + (v.variant || 'light')" @change="uploadSeriesLogo(item, $event, v)">
+          </div>
+          <button type="button" class="adm-btn" x-show="item[v.field]" @click="removeSeriesLogo(item, v)">Usuń<span class="sr-only" x-text="(v.variant ? ' logo na ciemne tło: ' : ' logo na jasne tło: ') + item.name"></span></button>
         </div>
-        <div class="adm-series-logo__pick">
-          <label class="adm-field__label" :for="'adm-series-logo-' + item.id">Nowe logo (PNG, JPEG, WebP, do 2 MB)</label>
-          <input class="adm-input" type="file" accept="image/png,image/jpeg,image/webp" :id="'adm-series-logo-' + item.id" @change="uploadSeriesLogo(item, $event)">
-          <p class="adm-card__hint">Pokazuje się w panelu organizatora i przy turniejach serii na stronie publicznej.</p>
-        </div>
-        <button type="button" class="adm-btn" x-show="item.logo_path" @click="removeSeriesLogo(item)">Usuń logo<span class="sr-only" x-text="' ' + item.name"></span></button>
-      </div>
+      </template>
 
       <h3 class="adm-subhead">Osoby z dostępem</h3>
       <ul class="adm-rows" role="list">

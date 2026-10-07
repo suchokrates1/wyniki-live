@@ -221,7 +221,7 @@ export default {
   inviteSpentNotice: "Ši nuoroda nebegalioja arba jau buvo panaudota. Prisijunkite arba paprašykite naujos nuorodos: {contact}.",
   seriesLogo: "Serijos logotipas",
   logoHint: "Rodomas šiame skydelyje ir prie jūsų serijos turnyrų blindtennis.app svetainėje. PNG, JPEG arba WebP, iki 2 MB.",
-  logoPick: "Naujas logotipas",
+  logoPick: "Naujas failas: {what}",
   logoRemove: "Pašalinti logotipą",
   logoSaved: "Logotipas išsaugotas.",
   logoRemoved: "Logotipas pašalintas.",
@@ -229,4 +229,8 @@ export default {
   logoAlt: "Logotipas: {series}",
   errLogoType: "Logotipas turi būti PNG, JPEG arba WebP failas.",
   errLogoSize: "Failas didesnis nei 2 MB.",
+  logoLight: "Logotipas šviesiam fonui",
+  logoDark: "Logotipas tamsiam fonui",
+  logoLightHint: "Įprastas jūsų logotipas tamsiu užrašu. Rodomas šviesiame puslapyje.",
+  logoDarkHint: "Šviesus (pvz., baltas) užrašas permatomame fone. Rodomas tamsiame puslapyje ir šiame skydelyje; be jo logotipas ten rodomas ant balto pagrindo.",
 };

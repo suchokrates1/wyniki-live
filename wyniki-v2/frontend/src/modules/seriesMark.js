@@ -2,6 +2,7 @@
 // (a TWT tournament carries the TWT logo), on the cards, the tournament's page and the live tab.
 
 import { tierLabel } from '../organizer/route.js';
+import { pickSeriesLogo } from '../shared/seriesLogo.js';
 
 /** The first series a tournament belongs to, or null. */
 export function seriesOf(tournament) {
@@ -26,6 +27,10 @@ export function createSeriesMarkView() {
     },
     liveSeries() {
       return seriesOf({ series: this.tournamentSeries });
+    },
+    /** The logo version that reads on the page's theme now. */
+    markLogo(series) {
+      return pickSeriesLogo(series, this.darkMode);
     },
   };
 }

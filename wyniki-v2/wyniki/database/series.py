@@ -17,6 +17,10 @@ from .connection import db_conn
 ROLES = ("owner", "editor")
 
 
+#: The series' logo, and its version for a dark background (light ink); either may be ''.
+LOGO_FIELDS = ("logo_path", "logo_dark_path")
+
+
 def ensure_series_tables(cursor: sqlite3.Cursor) -> None:
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS series (
@@ -59,8 +63,10 @@ def ensure_series_tables(cursor: sqlite3.Cursor) -> None:
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_series_tournaments_tournament ON series_tournaments(tournament_id)")
-    if "logo_path" not in {row[1] for row in cursor.execute("PRAGMA table_info(series)")}:
-        cursor.execute("ALTER TABLE series ADD COLUMN logo_path TEXT NOT NULL DEFAULT ''")
+    series_columns = {row[1] for row in cursor.execute("PRAGMA table_info(series)")}
+    for column in LOGO_FIELDS:
+        if column not in series_columns:
+            cursor.execute(f"ALTER TABLE series ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
     from .accounts import ensure_account_columns
     from .series_plan import ensure_series_plan_columns
     from .series_records import ensure_series_record_tables
@@ -142,11 +148,13 @@ def update_series(series_id: int, fields: dict[str, Any]) -> bool:
         return cursor.rowcount > 0
 
 
-def set_logo(series_id: int, logo_path: str) -> str:
-    """Stores the series' logo path ('' takes it away) and returns the one it replaced."""
+def set_logo(series_id: int, logo_path: str, field: str = "logo_path") -> str:
+    """Stores a logo path of the series ('' takes it away) and returns the one it replaced."""
+    if field not in LOGO_FIELDS:
+        raise ValueError(field)
     with db_conn() as conn:
-        row = conn.execute("SELECT logo_path FROM series WHERE id = ?", (series_id,)).fetchone()
-        conn.execute("UPDATE series SET logo_path = ? WHERE id = ?", (logo_path, series_id))
+        row = conn.execute(f"SELECT {field} FROM series WHERE id = ?", (series_id,)).fetchone()
+        conn.execute(f"UPDATE series SET {field} = ? WHERE id = ?", (logo_path, series_id))
         conn.commit()
         return str(row[0] or "") if row else ""
 
@@ -160,7 +168,7 @@ def public_series_of(tournament_ids: list[int]) -> dict[int, list[dict[str, Any]
     with db_conn() as conn:
         rows = conn.execute(
             f"""
-            SELECT st.tournament_id, s.id, s.name, s.slug, s.website, s.logo_path, st.tier
+            SELECT st.tournament_id, s.id, s.name, s.slug, s.website, s.logo_path, s.logo_dark_path, st.tier
             FROM series_tournaments st JOIN series s ON s.id = st.series_id
             WHERE st.tournament_id IN ({marks}) ORDER BY s.name COLLATE NOCASE
             """,
@@ -169,7 +177,8 @@ def public_series_of(tournament_ids: list[int]) -> dict[int, list[dict[str, Any]
     found: dict[int, list[dict[str, Any]]] = {}
     for row in rows:
         found.setdefault(int(row[0]), []).append(
-            {"id": row[1], "name": row[2], "slug": row[3], "website": row[4], "logo_path": row[5] or "", "tier": row[6] or ""}
+            {"id": row[1], "name": row[2], "slug": row[3], "website": row[4],
+             "logo_path": row[5] or "", "logo_dark_path": row[6] or "", "tier": row[7] or ""}
         )
     return found
 
@@ -276,7 +285,7 @@ def series_of_account(account_id: int) -> list[dict[str, Any]]:
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT s.id, s.name, s.slug, s.country, s.website, s.valid_until, s.logo_path,
+            SELECT s.id, s.name, s.slug, s.country, s.website, s.valid_until, s.logo_path, s.logo_dark_path,
                    s.max_tournaments_per_year, s.max_courts, m.role
             FROM series_members m JOIN series s ON s.id = m.series_id
             WHERE m.account_id = ? ORDER BY s.name COLLATE NOCASE

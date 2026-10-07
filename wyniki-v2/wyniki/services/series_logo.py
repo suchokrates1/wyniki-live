@@ -1,4 +1,7 @@
-"""A series' logo: one picture per series, kept next to the database and served under /data/series-logos/.
+"""A series' logo: kept next to the database and served under /data/series-logos/.
+
+Two versions: the logo itself (dark ink, for a light page) and, if the series has one, its version
+for a dark background (light ink). The page picks the one that reads on its theme.
 
 Raster pictures only (PNG, JPEG, WebP): an SVG served from our own address could carry a script.
 """
@@ -25,8 +28,13 @@ def _drop(path: str) -> None:
         (logos_dir() / Path(path[len(prefix):]).name).unlink(missing_ok=True)
 
 
-def save(series_id: int, slug: str, uploaded_file) -> tuple[dict, int]:
-    """Stores the uploaded picture as the series' logo; the old one goes."""
+def field_for(variant: str | None) -> str:
+    """?variant=dark names the version for a dark background; anything else, the logo itself."""
+    return "logo_dark_path" if variant == "dark" else "logo_path"
+
+
+def save(series_id: int, slug: str, uploaded_file, field: str = "logo_path") -> tuple[dict, int]:
+    """Stores the uploaded picture as that version of the series' logo; the old one goes."""
     if not uploaded_file or not uploaded_file.filename:
         return {"error": "No file"}, 400
     extension = Path(uploaded_file.filename).suffix.lower()
@@ -37,13 +45,13 @@ def save(series_id: int, slug: str, uploaded_file) -> tuple[dict, int]:
         return {"error": "File too large", "max_bytes": MAX_BYTES}, 413
     folder = logos_dir()
     folder.mkdir(parents=True, exist_ok=True)
-    name = f"{slug or 'series'}-{uuid4().hex[:8]}{'.jpg' if extension == '.jpeg' else extension}"
+    name = f"{slug or 'series'}{'-dark' if field == 'logo_dark_path' else ''}-{uuid4().hex[:8]}{'.jpg' if extension == '.jpeg' else extension}"
     (folder / name).write_bytes(data)
     path = f"/data/{FOLDER}/{name}"
-    _drop(series.set_logo(series_id, path))
-    return {"logo_path": path}, 200
+    _drop(series.set_logo(series_id, path, field))
+    return {field: path}, 200
 
 
-def remove(series_id: int) -> dict:
-    _drop(series.set_logo(series_id, ""))
-    return {"logo_path": ""}
+def remove(series_id: int, field: str = "logo_path") -> dict:
+    _drop(series.set_logo(series_id, "", field))
+    return {field: ""}

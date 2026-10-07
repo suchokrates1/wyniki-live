@@ -207,16 +207,25 @@ test('ten days before the end the panel says so, with the address to write to', 
 test('the series logo goes up, shows in the header and the series banner, and a wrong file is said plainly', async ({ page }) => {
   await openPanel(page, world());
   let answer = { status: 400, json: { error: 'PNG, JPEG or WebP only' } };
-  await page.route(/\/organizer\/api\/series\/1\/logo$/, (route) => route.fulfill(answer));
+  await page.route(/\/organizer\/api\/series\/1\/logo(\?variant=dark)?$/, (route) => route.fulfill(answer));
   const card = page.getByRole('region', { name: 'Logo serii' });
-  await expect(card.getByText('Seria nie ma jeszcze logo.')).toBeVisible();
-  await card.getByLabel('Nowe logo').setInputFiles('public/brand/blindtennis-logo-email.png');
+  await expect(card.locator('.org-logo__none:visible')).toHaveCount(2);
+  await card.getByLabel('Nowy plik: Logo na jasne tło').setInputFiles('public/brand/blindtennis-logo-email.png');
   await expect(card.getByText('Logo musi być plikiem PNG, JPEG albo WebP.')).toBeVisible();
 
+  // only the light-ground logo: the dark panel puts it on a white plate
   answer = { json: { logo_path: '/brand/blindtennis-logo-email.png' } };
-  await card.getByLabel('Nowe logo').setInputFiles('public/brand/blindtennis-logo-email.png');
+  await card.getByLabel('Nowy plik: Logo na jasne tło').setInputFiles('public/brand/blindtennis-logo-email.png');
   await expect(card.getByText('Logo zapisane.')).toBeVisible();
   await expect(page.locator('.org-hero__logo')).toHaveAttribute('alt', 'Logo: Takei World Tennis Tour');
+  await expect(page.locator('.org-hero__logo')).toHaveClass(/is-plate/);
   await expect(page.locator('.org-top__logo')).toBeVisible();
+
+  // the dark-ground version takes over, plain
+  answer = { json: { logo_dark_path: '/brand/blindtennis-icon-512.svg' } };
+  await card.getByLabel('Nowy plik: Logo na ciemne tło').setInputFiles('public/brand/blindtennis-logo-email.png');
+  await expect(page.locator('.org-hero__logo')).toHaveAttribute('src', '/brand/blindtennis-icon-512.svg');
+  await expect(page.locator('.org-hero__logo')).not.toHaveClass(/is-plate/);
+  await expect(card.locator('.org-logo__none:visible')).toHaveCount(0);
   expect(await axe(page)).toEqual([]);
 });

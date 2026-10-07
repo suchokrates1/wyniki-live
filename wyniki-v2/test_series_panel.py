@@ -215,7 +215,17 @@ def test_a_series_logo_is_set_by_its_organizer_served_and_shown_with_its_tournam
     assert me["series"][0]["logo_path"] == path
     listed = {row["id"]: row for row in client.get("/api/tournament/list").get_json()}
     assert listed[duren]["series"] == [{"id": series_id, "name": "Takei World Tennis Tour", "slug": "twt",
-                                        "website": "", "logo_path": path, "tier": "CH50"}]
+                                        "website": "", "logo_path": path, "logo_dark_path": "", "tier": "CH50"}]
+
+    # the version for a dark background is its own picture; the logo itself stays
+    dark = client.post(f"/organizer/api/series/{series_id}/logo?variant=dark", headers=_auth(session),
+                       data={"logo": (io.BytesIO(PNG), "white.png")}, content_type="multipart/form-data")
+    dark_path = dark.get_json()["logo_dark_path"]
+    assert dark_path.startswith("/data/series-logos/twt-dark-") and client.get(dark_path).data == PNG
+    listed = {row["id"]: row for row in client.get("/api/tournament/list").get_json()}
+    assert (listed[duren]["series"][0]["logo_path"], listed[duren]["series"][0]["logo_dark_path"]) == (path, dark_path)
+    assert client.delete(f"/admin/api/series/{series_id}/logo?variant=dark").get_json() == {"logo_dark_path": ""}
+    assert client.get(dark_path).status_code == 404 and client.get(path).status_code == 200
 
     # the admin replaces it; the old file goes
     replaced = client.post(f"/admin/api/series/{series_id}/logo",

@@ -1,4 +1,4 @@
-/* A tournament's series: its logo on a light plate (any logo reads on either theme) and its name. */
+/* A tournament's series: its logo (the version for the page's theme) and its name. */
 .series-mark {
   display: inline-flex;
   align-items: center;
@@ -13,19 +13,20 @@
   flex: none;
   height: 32px;
   max-width: 96px;
-  padding: 3px;
   object-fit: contain;
-  background: #fff;
   border-radius: 6px;
-  box-shadow: 0 0 0 1px var(--line);
 }
+/* the other theme's version stands on a plate of the ground it was drawn for */
+.series-mark__logo.is-plate-light, .series-mark__logo.is-plate-dark { padding: 3px; box-shadow: 0 0 0 1px var(--line); }
+.series-mark__logo.is-plate-light { background: #fff; }
+.series-mark__logo.is-plate-dark { background: #041519; }
 .series-mark__name { min-width: 0; overflow-wrap: anywhere; }
 .series-mark--large { gap: 14px; margin: 0 0 10px; font-size: 15px; }
-.series-mark--large .series-mark__logo { height: 56px; max-width: 160px; padding: 5px; border-radius: 8px; }
+.series-mark--large .series-mark__logo { height: 56px; max-width: 160px; border-radius: 8px; }
 a.series-mark { text-decoration: none; }
 a.series-mark:hover .series-mark__name, a.series-mark:focus-visible .series-mark__name { color: var(--text); text-decoration: underline; }
 .live-series { display: flex; justify-content: center; margin: 0 0 8px; }
-.live-series .series-mark__logo { height: 44px; max-width: 130px; padding: 4px; }
+.live-series .series-mark__logo { height: 44px; max-width: 130px; }
 
 @media (max-width: 640px) {
   .live-series { justify-content: flex-start; }

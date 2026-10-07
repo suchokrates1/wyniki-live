@@ -71,7 +71,8 @@ def logo_upload(series_id: int):
     item = series.get_series(series_id)
     if not item:
         return _not_found()
-    body, status = series_logo.save(series_id, item["slug"], request.files.get("logo"))
+    field = series_logo.field_for(request.args.get("variant"))
+    body, status = series_logo.save(series_id, item["slug"], request.files.get("logo"), field)
     return jsonify(body), status
 
 
@@ -79,7 +80,7 @@ def logo_upload(series_id: int):
 def logo_remove(series_id: int):
     if not series.get_series(series_id):
         return _not_found()
-    return jsonify(series_logo.remove(series_id))
+    return jsonify(series_logo.remove(series_id, series_logo.field_for(request.args.get("variant"))))
 
 
 @blueprint.route("/<int:series_id>/members", methods=["POST"])

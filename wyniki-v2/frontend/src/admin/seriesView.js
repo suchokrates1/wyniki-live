@@ -4,6 +4,7 @@
  * when no mail goes out the link is shown here to pass on by hand.
  */
 import { LANGUAGES } from '../organizer/i18n/index.js';
+import { LOGO_VARIANTS } from '../shared/seriesLogo.js';
 import { TIERS, dateRange, tierLabel } from '../organizer/route.js';
 
 const SERIES_ERRORS = {
@@ -121,21 +122,23 @@ export function createSeriesView() {
       } catch { /* message shown */ }
     },
 
-    async uploadSeriesLogo(item, event) {
+    seriesLogoVariants() { return LOGO_VARIANTS; },
+
+    async uploadSeriesLogo(item, event, v = LOGO_VARIANTS[0]) {
       const file = event.target.files?.[0];
       if (!file) return;
       const body = new FormData();
       body.append('logo', file);
       try {
-        item.logo_path = (await this._seriesCall(`/admin/api/series/${item.id}/logo`, 'POST', body)).logo_path;
+        Object.assign(item, await this._seriesCall(`/admin/api/series/${item.id}/logo${v.variant ? `?variant=${v.variant}` : ''}`, 'POST', body));
         this.showToast('Logo zapisane', 'success');
       } catch { /* message shown */ }
       event.target.value = '';
     },
 
-    async removeSeriesLogo(item) {
+    async removeSeriesLogo(item, v = LOGO_VARIANTS[0]) {
       try {
-        item.logo_path = (await this._seriesCall(`/admin/api/series/${item.id}/logo`, 'DELETE')).logo_path;
+        Object.assign(item, await this._seriesCall(`/admin/api/series/${item.id}/logo${v.variant ? `?variant=${v.variant}` : ''}`, 'DELETE'));
       } catch { /* message shown */ }
     },
 

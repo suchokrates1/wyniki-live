@@ -92,10 +92,11 @@ def series_tournament_list(series_id: int):
 def series_logo_upload(series_id: int):
     """The series' logo, shown in this panel and next to its tournaments on the public page."""
     item = series.get_series(series_id)
-    body, status = series_logo.save(series_id, item["slug"], request.files.get("logo"))
+    field = series_logo.field_for(request.args.get("variant"))
+    body, status = series_logo.save(series_id, item["slug"], request.files.get("logo"), field)
     return jsonify(body), status
 
 
 @blueprint.route("/series/<int:series_id>/logo", methods=["DELETE"])
 def series_logo_remove(series_id: int):
-    return jsonify(series_logo.remove(series_id))
+    return jsonify(series_logo.remove(series_id, series_logo.field_for(request.args.get("variant"))))

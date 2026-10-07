@@ -182,7 +182,7 @@
             <template x-if="tournamentName && liveSeries()">
                 <div class="live-series">
                     <span class="series-mark">
-                        <img class="series-mark__logo" x-show="liveSeries().logo_path" :src="liveSeries().logo_path || ''" alt="">
+                        <img class="series-mark__logo" x-show="markLogo(liveSeries())" :src="markLogo(liveSeries())?.src || ''" :class="markLogo(liveSeries())?.plate ? 'is-plate-' + markLogo(liveSeries()).plate : ''" alt="">
                         <span class="series-mark__name" x-text="seriesLine(liveSeries())"></span>
                     </span>
                 </div>
@@ -641,7 +641,7 @@
                     <template x-for="t in tournaments" :key="forKey('tid', t.id)">
                         <button class="tournament-card" @click="openTournament(t.id)" :aria-label="t.name + (seriesOf(t) ? ', ' + seriesLine(seriesOf(t)) : '') + (t.location ? ', ' + t.location : '') + ', ' + t.start_date">
                             <span class="series-mark" x-show="seriesOf(t)">
-                                <img class="series-mark__logo" x-show="seriesOf(t)?.logo_path" :src="seriesOf(t)?.logo_path || ''" alt="">
+                                <img class="series-mark__logo" x-show="markLogo(seriesOf(t))" :src="markLogo(seriesOf(t))?.src || ''" :class="markLogo(seriesOf(t))?.plate ? 'is-plate-' + markLogo(seriesOf(t)).plate : ''" alt="">
                                 <span class="series-mark__name" x-text="seriesLine(seriesOf(t))"></span>
                             </span>
                             <h3 class="tournament-card__name" x-text="t.name"></h3>
@@ -672,11 +672,11 @@
                     <template x-if="selectedTournamentSeries()">
                         <div>
                             <a class="series-mark series-mark--large" x-show="selectedTournamentSeries().website" :href="selectedTournamentSeries().website || '#'" target="_blank" rel="noopener">
-                                <img class="series-mark__logo" x-show="selectedTournamentSeries().logo_path" :src="selectedTournamentSeries().logo_path || ''" alt="">
+                                <img class="series-mark__logo" x-show="markLogo(selectedTournamentSeries())" :src="markLogo(selectedTournamentSeries())?.src || ''" :class="markLogo(selectedTournamentSeries())?.plate ? 'is-plate-' + markLogo(selectedTournamentSeries()).plate : ''" alt="">
                                 <span class="series-mark__name" x-text="seriesLine(selectedTournamentSeries())"></span>
                             </a>
                             <p class="series-mark series-mark--large" x-show="!selectedTournamentSeries().website">
-                                <img class="series-mark__logo" x-show="selectedTournamentSeries().logo_path" :src="selectedTournamentSeries().logo_path || ''" alt="">
+                                <img class="series-mark__logo" x-show="markLogo(selectedTournamentSeries())" :src="markLogo(selectedTournamentSeries())?.src || ''" :class="markLogo(selectedTournamentSeries())?.plate ? 'is-plate-' + markLogo(selectedTournamentSeries()).plate : ''" alt="">
                                 <span class="series-mark__name" x-text="seriesLine(selectedTournamentSeries())"></span>
                             </p>
                         </div>

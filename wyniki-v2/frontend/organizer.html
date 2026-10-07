@@ -22,7 +22,7 @@
       <span class="adm-top__brand">blindtennis<span>.</span>app</span>
       <template x-if="current()">
         <span class="adm-top__chip org-top__series">
-          <img class="org-top__logo" x-show="current().logo_path" :src="current().logo_path || ''" alt="">
+          <img class="org-top__logo" x-show="panelLogo(current())" :src="panelLogo(current())?.src || ''" :class="{ 'is-plate': panelLogo(current())?.plate }" alt="">
           <span x-text="current().name"></span>
         </span>
       </template>
