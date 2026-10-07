@@ -41,7 +41,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "invite_heading": "You now have access to {series}",
         "hello": "Hello,",
         "hello_named": "Hello {name},",
-        "invite_body": "You can now run the series' tournaments on blindtennis.app: create them, set up categories and courts, enter players and open the tournament office. Start by setting your password.",
+        "invite_body": "You can now run the tournaments in your series on blindtennis.app: create them, set up categories and courts, enter players and open the tournament office. Start by setting your password.",
         "invite_button": "Set your password and sign in",
         "label_login": "Login",
         "label_series": "Series",

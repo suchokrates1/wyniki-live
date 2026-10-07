@@ -185,7 +185,7 @@ export default {
   errSave: "The changes could not be saved. Try again.",
   loginTitle: "Organizer panel",
   loginLead: "Sign in with your e-mail address and password.",
-  brandLead: "The tournament series panel: the series' tournaments, their tiers, players and entries.",
+  brandLead: "The panel for tournament series: your tournaments, their tiers, players and entries.",
   officeQuestion: "Running the tournament day?",
   officeText: "The schedule, groups, results and draw are handled by the tournament office, with its own password.",
   officeLink: "Go to the tournament office",
