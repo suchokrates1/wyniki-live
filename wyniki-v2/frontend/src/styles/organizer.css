@@ -30,9 +30,9 @@
 .org-facts li { display: flex; flex-direction: column; }
 .org-facts span { font-size: 13px; color: var(--adm-muted); }
 .org-facts strong, .org-facts a { font-size: 16px; }
-.org-facts a { color: var(--adm-rail); font-weight: 700; }
+.org-facts a { color: var(--adm-accent); font-weight: 700; }
 
-.adm-chip.org-tier { background: var(--adm-rail); color: #fff; }
+.adm-chip.org-tier { background: var(--adm-accent-soft); color: var(--adm-accent); }
 
 .org-top__button {
   border: 0;
@@ -64,7 +64,7 @@
 a.adm-btn { color: var(--adm-ink); }
 
 /* ----- stage 3: the tournament and its tabs ----- */
-.org-skip { position: absolute; left: -9999px; top: 8px; z-index: 10; padding: 10px 14px; background: #fff; color: var(--adm-ink); font-weight: 700; border-radius: 8px; }
+.org-skip { position: absolute; left: -9999px; top: 8px; z-index: 10; padding: 10px 14px; background: var(--adm-accent); color: var(--adm-on-accent); font-weight: 700; border-radius: 8px; }
 .org-skip:focus { left: 8px; }
 .org-main:focus { outline: none; }
 
@@ -72,7 +72,7 @@ a.adm-btn { color: var(--adm-ink); }
 .org-banner a { color: inherit; }
 .org-note { margin: 0; padding: 10px 14px; border-radius: 10px; background: var(--adm-ok-soft); color: var(--adm-ok); font-weight: 600; }
 
-.org-back { align-self: flex-start; color: var(--adm-rail); font-weight: 700; }
+.org-back { align-self: flex-start; color: var(--adm-accent); font-weight: 700; }
 .org-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 0; color: var(--adm-muted); }
 .org-row-link { color: var(--adm-ink); text-decoration: underline; text-underline-offset: 3px; }
 .org-row-link:hover { color: var(--adm-accent); }
@@ -85,7 +85,7 @@ a.adm-subtab { display: inline-flex; align-items: center; text-decoration: none;
 .org-fieldset legend { padding: 0; }
 .org-checks { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
 .org-check { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; }
-.org-check input { width: 20px; height: 20px; accent-color: var(--adm-rail); }
+.org-check input { width: 20px; height: 20px; accent-color: var(--adm-accent); }
 .org-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0 16px; margin-bottom: 8px; }
 
 .org-row-flex { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -100,12 +100,15 @@ a.adm-subtab { display: inline-flex; align-items: center; text-decoration: none;
 .org-lang {
   min-height: 44px;
   padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--adm-line);
   border-radius: 8px;
   background: transparent;
-  color: #fff;
+  color: var(--adm-ink);
   font: inherit;
   font-size: 14px;
 }
 .org-lang option { color: var(--adm-ink); }
 .org-lang:focus-visible { outline: 3px solid var(--adm-lime); outline-offset: 2px; }
+
+/* what is live wears the office's orange, as in the admin's court list */
+.adm-chip--live { background: var(--adm-live-soft); color: #ff9a52; }

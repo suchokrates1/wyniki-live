@@ -42,7 +42,7 @@
 }
 .adm-input--search { width: 220px; }
 .adm-input:focus-visible {
-  outline: 2px solid var(--adm-rail);
+  outline: 2px solid var(--adm-accent);
   outline-offset: 1px;
 }
 
@@ -64,11 +64,13 @@ a.adm-btn { display: inline-flex; align-items: center; justify-content: center; 
 .adm-btn--primary {
   border-color: var(--adm-accent);
   background: var(--adm-accent);
-  color: #fff;
+  color: var(--adm-on-accent);
+  font-weight: 900;
 }
-.adm-btn--primary:hover { background: #8A2F00; }
+.adm-btn--primary:hover { background: var(--adm-accent-hover); border-color: var(--adm-accent-hover); }
 .adm-btn--quiet { font-weight: 500; color: var(--adm-muted); }
-.adm-btn--danger { color: #8A2F00; border-color: #E4BFAE; }
+.adm-btn--danger { color: var(--adm-danger); border-color: var(--adm-danger-line); }
+.adm-btn--danger:hover { background: var(--adm-danger-soft); }
 .adm-btn--danger:hover { background: var(--adm-accent-soft); }
 
 .adm-rows {
@@ -90,7 +92,7 @@ a.adm-btn { display: inline-flex; align-items: center; justify-content: center; 
   background: var(--adm-surface);
 }
 .adm-row.is-active {
-  border: 2px solid var(--adm-rail);
+  border: 2px solid var(--adm-accent);
   padding: 12px 13px;
   background: var(--adm-surface-2);
 }
@@ -120,12 +122,12 @@ a.adm-btn { display: inline-flex; align-items: center; justify-content: center; 
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  background: #EEF1F3;
+  background: rgba(232, 244, 242, 0.08);
   color: var(--adm-muted);
 }
 .adm-chip--ok { background: var(--adm-ok-soft); color: var(--adm-ok); }
 .adm-chip--warn { background: var(--adm-warn-soft); color: var(--adm-warn); }
-.adm-chip--sim { background: #E6ECFB; color: #1F3A8A; }
+.adm-chip--sim { background: rgba(147, 197, 253, 0.14); color: #a5c8ff; }
 
 /* The activation switch: a real checkbox, drawn */
 .adm-switch {
@@ -150,7 +152,7 @@ a.adm-btn { display: inline-flex; align-items: center; justify-content: center; 
   width: 56px;
   height: 32px;
   border-radius: 999px;
-  background: #C3CDD4;
+  background: var(--adm-line);
   position: relative;
   transition: background 0.12s ease-out;
 }
@@ -161,13 +163,13 @@ a.adm-btn { display: inline-flex; align-items: center; justify-content: center; 
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--adm-ink);
   transition: left 0.12s ease-out;
 }
-.adm-switch input:checked + .adm-switch__track { background: #1D7A4C; }
+.adm-switch input:checked + .adm-switch__track { background: var(--adm-accent); }
 .adm-switch input:checked + .adm-switch__track .adm-switch__knob { left: 28px; }
 .adm-switch input:focus-visible + .adm-switch__track {
-  outline: 2px solid var(--adm-rail);
+  outline: 2px solid var(--adm-accent);
   outline-offset: 2px;
 }
 
@@ -194,7 +196,7 @@ a.adm-btn { display: inline-flex; align-items: center; justify-content: center; 
 .adm-main .opacity-60,
 .adm-main .opacity-70,
 .adm-main .text-sm.opacity-60 { opacity: 1; color: var(--adm-muted); }
-.adm-main ::placeholder { color: #5A6872; opacity: 1; }
+.adm-main ::placeholder { color: var(--adm-muted); opacity: 0.8; }
 
 .adm-mono { font-family: var(--font-mono); }
 
@@ -227,8 +229,8 @@ a.adm-btn { display: inline-flex; align-items: center; justify-content: center; 
   min-height: 52px;
   margin-top: 6px;
   border-radius: 12px;
-  background: var(--adm-rail);
-  color: #fff;
+  background: var(--adm-accent);
+  color: var(--adm-on-accent);
   font-size: 15px;
   font-weight: 700;
   text-decoration: none;

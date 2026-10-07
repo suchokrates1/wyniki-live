@@ -52,7 +52,7 @@
   background: var(--adm-surface);
   cursor: pointer;
 }
-.adm-flag.is-on { border: 2px solid var(--adm-rail); padding: 11px; background: var(--adm-surface-2); }
+.adm-flag.is-on { border: 2px solid var(--adm-accent); padding: 11px; background: var(--adm-accent-soft); }
 .adm-flag.is-off { opacity: 0.55; cursor: not-allowed; }
 .adm-flag input { width: 20px; height: 20px; flex-shrink: 0; margin: 2px 0 0; }
 .adm-flag__body { display: flex; flex-direction: column; gap: 2px; }
@@ -79,7 +79,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(11, 44, 54, 0.52);
+  background: rgba(4, 21, 25, 0.72);
   overflow: auto;
 }
 .adm-modal__box {
@@ -91,7 +91,7 @@
   background: var(--adm-surface);
   border-radius: 18px;
   padding: 24px 26px;
-  box-shadow: 0 28px 70px rgba(11, 44, 54, 0.35);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.5);
 }
 .adm-modal__head {
   display: flex;
@@ -107,7 +107,7 @@
   padding: 12px 14px;
   border-radius: 10px;
   background: var(--adm-accent-soft);
-  color: #8A2F00;
+  color: var(--adm-danger);
   font-size: 14px;
   font-weight: 500;
 }
@@ -167,12 +167,12 @@
 /* Older views still use DaisyUI classes. Inside an admin card they take the admin's look:
    the accent instead of violet, 44 px buttons, labels next to their switches. */
 .adm-card .btn { min-height: 44px; height: auto; padding: 0 14px; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 700; text-transform: none; }
-.adm-card .btn-primary { background: var(--adm-accent); border-color: var(--adm-accent); color: #fff; }
-.adm-card .btn-primary:hover { background: #8F3000; border-color: #8F3000; }
+.adm-card .btn-primary { background: var(--adm-accent); border-color: var(--adm-accent); color: var(--adm-on-accent); }
+.adm-card .btn-primary:hover { background: var(--adm-accent-hover); border-color: var(--adm-accent-hover); }
 .adm-card .btn-ghost, .adm-card .btn-outline { background: var(--adm-surface); border: 1px solid var(--adm-line); color: var(--adm-ink); }
 .adm-card .btn-xs, .adm-card .btn-sm { min-height: 44px; }
 .adm-card label.label { justify-content: flex-start; gap: 12px; }
-.adm-card .toggle:checked, .adm-card .checkbox:checked, .adm-card .checkbox-primary:checked { --chkbg: var(--adm-rail); --chkfg: #fff; border-color: var(--adm-rail); background-color: var(--adm-rail); }
+.adm-card .toggle:checked, .adm-card .checkbox:checked, .adm-card .checkbox-primary:checked { --chkbg: var(--adm-accent); --chkfg: var(--adm-on-accent); border-color: var(--adm-accent); background-color: var(--adm-accent); }
 .adm-card .divider { justify-content: flex-start; margin: 24px 0 8px; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--adm-muted); }
 .adm-card .divider::before { display: none; }
 .adm-card .input, .adm-card .select { min-height: 44px; border-radius: 10px; border-color: var(--adm-line); font: inherit; }
@@ -184,3 +184,24 @@
 /* the file picker's own button wears the admin's button */
 .adm-input[type="file"] { padding: 4px 6px; display: flex; align-items: center; }
 .adm-input[type="file"]::file-selector-button { min-height: 34px; margin-right: 10px; padding: 0 12px; border: 1px solid var(--adm-line); border-radius: 8px; background: var(--adm-surface-2); color: var(--adm-ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+/* ——— Tailwind/DaisyUI light utilities in the older views → the office palette (as office.css does) ——— */
+:is(.adm-app, .adm-body dialog) :is(.bg-white, .bg-base-100, .modal-box, .card) { background-color: var(--adm-surface); color: var(--adm-ink); }
+:is(.adm-app, .adm-body dialog) :is(.bg-base-200, .bg-base-300, .collapse) { background-color: var(--adm-surface-2); }
+:is(.adm-app, .adm-body dialog) :is(.bg-emerald-50, .bg-emerald-50\/50, .bg-emerald-50\/60) { background-color: var(--adm-accent-soft); }
+:is(.adm-app, .adm-body dialog) :is(.border-base-300, .border-slate-200, .border-emerald-200) { border-color: var(--adm-line); }
+:is(.adm-app, .adm-body dialog) :is(.text-slate-900, .text-slate-800, .text-base-content) { color: var(--adm-ink); }
+:is(.adm-app, .adm-body dialog) :is(.text-slate-700, .text-slate-600, .text-slate-500) { color: var(--adm-muted); }
+:is(.adm-app, .adm-body dialog) :is(.text-error, .text-rose-600, .text-red-700) { color: var(--adm-danger); }
+:is(.adm-app, .adm-body dialog) .text-primary { color: var(--adm-accent); }
+:is(.adm-app, .adm-body dialog) :is(.input, .select, .textarea) { border-color: var(--adm-line); background-color: var(--adm-surface-2); color: var(--adm-ink); }
+:is(.adm-app, .adm-body dialog) :is(.input, .select, .textarea):focus { border-color: var(--adm-accent); outline: 2px solid rgba(198, 233, 83, 0.35); outline-offset: 1px; }
+:is(.adm-app, .adm-body dialog) .table :is(th, td) { border-color: var(--adm-line); }
+:is(.adm-app, .adm-body dialog) .table-zebra tbody tr:nth-child(even) { background-color: var(--adm-surface-2); }
+:is(.adm-app, .adm-body dialog) .badge { border-color: var(--adm-line); background: rgba(232, 244, 242, 0.08); color: var(--adm-ink); }
+:is(.adm-app, .adm-body dialog) :is(.badge-success, .badge-primary) { background: var(--adm-accent-soft); color: var(--adm-accent); border-color: transparent; }
+:is(.adm-app, .adm-body dialog) .badge-warning { background: var(--adm-warn-soft); color: var(--adm-warn); border-color: transparent; }
+:is(.adm-app, .adm-body dialog) .alert { border: 1px solid var(--adm-line); background: var(--adm-surface-2); color: var(--adm-ink); }
+:is(.adm-app, .adm-body dialog) .btn-error { background: var(--adm-danger-soft); border: 1px solid var(--adm-danger-line); color: var(--adm-danger); }
+.adm-body dialog .btn-primary { background: var(--adm-accent); border-color: var(--adm-accent); color: var(--adm-on-accent); }
+.adm-body dialog .btn-ghost { color: var(--adm-muted); }

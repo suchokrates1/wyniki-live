@@ -1,23 +1,36 @@
-/* Admin shell: the setup panel. Colours come from the TV scoreboard, type is Atkinson Hyperlegible,
-   as on the public site. DaisyUI still styles the insides of the older views. */
+/* Admin shell: the setup panel. It wears the office's palette (office.css --kort-*): the dark
+   court ground, deep panels, lime for what you press and orange for what is live, so the admin,
+   the organizer panel and the office look like one product. Type is Atkinson Hyperlegible.
+   DaisyUI still styles the insides of the older views; admin-forms.css brings them into line. */
 
 .adm-body {
-  --adm-ground: #EEF1F3;
-  --adm-surface: #FFFFFF;
-  --adm-surface-2: #F7F9FA;
-  --adm-ink: #10202B;
-  --adm-muted: #4C5D69;
-  --adm-line: #D7DDE1;
-  --adm-rail: #0B2C36;
-  --adm-rail-ink: #CFDDE4;
-  --adm-rail-dim: #7D97A3;
-  --adm-accent: #B23C00;
-  --adm-accent-soft: #FCEFE8;
-  --adm-ok: #14603B;
-  --adm-ok-soft: #E7F3EC;
-  --adm-warn: #6B4E00;
-  --adm-warn-soft: #FFF4CC;
-  --adm-lime: #C6E953;
+  --adm-ground: #041519;      /* kort-void */
+  --adm-surface: #062028;     /* kort-deep */
+  --adm-surface-2: #0a2932;   /* kort-court: fields, nested rows */
+  --adm-raise: #0e3540;       /* kort-raise: hover */
+  --adm-ink: #e8f4f2;         /* kort-ice */
+  --adm-muted: #8fb4bc;       /* kort-mist */
+  --adm-line: #1a4450;        /* kort-line */
+  --adm-grid: #123d48;        /* kort-grid: hairlines between areas */
+  --adm-rail: #041519;
+  --adm-rail-ink: #cfe0e2;
+  --adm-rail-dim: #8fb4bc;
+  --adm-accent: #c6e953;      /* kort-lime: the button you press */
+  --adm-accent-hover: #d4f06f;
+  --adm-on-accent: #141a08;   /* kort-lime-ink */
+  --adm-accent-soft: rgba(198, 233, 83, 0.12);
+  --adm-live: #e85d04;        /* kort-live */
+  --adm-live-soft: rgba(232, 93, 4, 0.16);
+  --adm-danger: #f87171;      /* kort-err */
+  --adm-danger-line: rgba(248, 113, 113, 0.45);
+  --adm-danger-soft: rgba(248, 113, 113, 0.12);
+  --adm-ok: #4ade80;
+  --adm-ok-soft: rgba(74, 222, 128, 0.12);
+  --adm-warn: #f5b83d;
+  --adm-warn-soft: rgba(245, 184, 61, 0.12);
+  --adm-lime: #c6e953;
+  color-scheme: dark;
+  accent-color: var(--adm-accent);
   margin: 0;
   min-height: 100vh;
   background: var(--adm-ground);
@@ -42,7 +55,8 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
   min-height: 68px;
   padding: 10px 24px;
   background: var(--adm-rail);
-  color: #fff;
+  border-bottom: 1px solid var(--adm-grid);
+  color: var(--adm-ink);
   flex-wrap: wrap;
 }
 .adm-top__brand {
@@ -75,7 +89,7 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
   align-items: center;
 }
 .adm-top__link:hover,
-.adm-top__link:focus-visible { color: #fff; }
+.adm-top__link:focus-visible { color: var(--adm-ink); }
 
 /* Rail + main */
 .adm-shell {
@@ -87,6 +101,7 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
   width: 258px;
   flex-shrink: 0;
   background: var(--adm-rail);
+  border-right: 1px solid var(--adm-grid);
   padding: 20px 14px;
   display: flex;
   flex-direction: column;
@@ -116,10 +131,10 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
   text-align: left;
   cursor: pointer;
 }
-.adm-rail__item:hover { background: rgba(255, 255, 255, 0.08); }
+.adm-rail__item:hover { background: rgba(232, 244, 242, 0.07); color: var(--adm-ink); }
 .adm-rail__item.is-active {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: rgba(198, 233, 83, 0.16);
+  color: var(--adm-lime);
   font-weight: 700;
 }
 .adm-rail__badge {
@@ -129,11 +144,12 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(232, 244, 242, 0.1);
 }
 .adm-rail__office {
   margin-top: auto;
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--adm-line);
+  background: var(--adm-surface);
   border-radius: 12px;
   padding: 14px;
 }
@@ -141,13 +157,13 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
   margin: 0 0 6px;
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--adm-ink);
 }
 .adm-rail__office p {
   margin: 0 0 12px;
   font-size: 12px;
   line-height: 1.5;
-  color: #9FB4BE;
+  color: var(--adm-muted);
 }
 .adm-rail__office a {
   display: inline-flex;
@@ -156,7 +172,7 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
   padding: 0 14px;
   border-radius: 9px;
   background: var(--adm-lime);
-  color: var(--adm-ink);
+  color: var(--adm-on-accent);
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
@@ -190,7 +206,8 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
 .adm-subtabs {
   display: flex;
   gap: 6px;
-  background: #E4E9EC;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-line);
   border-radius: 12px;
   padding: 4px;
   margin-left: auto;
@@ -208,8 +225,8 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
   cursor: pointer;
 }
 .adm-subtab.is-active {
-  background: var(--adm-rail);
-  color: #fff;
+  background: var(--adm-accent-soft);
+  color: var(--adm-lime);
   font-weight: 700;
 }
 
@@ -259,8 +276,8 @@ body.adm-body:not(.has-consent-banner) { padding-bottom: 0; }
     width: 100%;
     box-sizing: border-box;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: rgba(232, 244, 242, 0.07);
+    color: var(--adm-ink);
   }
   .adm-top__chip span[aria-hidden] { color: var(--adm-lime); }
   .adm-top__link { margin-left: auto; }
