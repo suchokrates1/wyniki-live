@@ -29,8 +29,9 @@
       <div class="adm-card__head">
         <h2 id="org-tournaments-title" class="adm-card__title" x-text="ot('seriesTournaments')"></h2>
         <span class="adm-card__hint" x-text="tp('tournamentsCount', current().tournaments.length)"></span>
+        <span class="adm-card__hint" x-show="!seriesWide()" x-text="ot('localScope')"></span>
         <div class="adm-card__actions">
-          <button type="button" class="adm-btn adm-btn--primary" x-show="!readOnlySeries()" @click="draftOpen = !draftOpen" :aria-expanded="draftOpen" aria-controls="org-new" x-text="ot('newTournament')"></button>
+          <button type="button" class="adm-btn adm-btn--primary" x-show="!readOnlySeries() && seriesWide()" @click="draftOpen = !draftOpen" :aria-expanded="draftOpen" aria-controls="org-new" x-text="ot('newTournament')"></button>
         </div>
       </div>
 
@@ -83,7 +84,7 @@
       <p class="adm-empty" x-show="!current().tournaments.length" x-text="ot('noTournaments')"></p>
     </section>
 
-    <section class="adm-card" aria-labelledby="org-logo-title">
+    <section class="adm-card" aria-labelledby="org-logo-title" x-show="seriesWide()">
       <div class="adm-card__head">
         <h2 id="org-logo-title" class="adm-card__title" x-text="ot('seriesLogo')"></h2>
       </div>

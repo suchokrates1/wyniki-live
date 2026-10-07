@@ -8,6 +8,7 @@ from __future__ import annotations
 from flask import g, jsonify, request
 
 from ..database import accounts, series
+from ..database.series_access import visible_tournaments
 from ..database.series_plan import contact_email
 from ..services import organizer_auth as auth
 from ..services import series_logo
@@ -72,7 +73,8 @@ def me():
     return jsonify({
         "contact_email": contact_email(),
         "account": {key: g.account[key] for key in ("id", "email", "name", "language")},
-        "series": [{**item, "tournaments": series.series_tournaments(item["id"])} for item in g.series],
+        "series": [{**item, "tournaments": visible_tournaments(item, g.account["id"], series.series_tournaments(item["id"]))}
+                   for item in g.series],
     })
 
 
@@ -85,12 +87,16 @@ def me_update():
 
 @blueprint.route("/series/<int:series_id>/tournaments", methods=["GET"])
 def series_tournament_list(series_id: int):
-    return jsonify(series.series_tournaments(series_id))
+    item = next(row for row in g.series if row["id"] == series_id)
+    return jsonify(visible_tournaments(item, g.account["id"], series.series_tournaments(series_id)))
 
 
 @blueprint.route("/series/<int:series_id>/logo", methods=["POST"])
 def series_logo_upload(series_id: int):
     """The series' logo, shown in this panel and next to its tournaments on the public page."""
+    denied = auth.require_series_wide(series_id)
+    if denied:
+        return denied
     item = series.get_series(series_id)
     field = series_logo.field_for(request.args.get("variant"))
     body, status = series_logo.save(series_id, item["slug"], request.files.get("logo"), field)
@@ -99,4 +105,7 @@ def series_logo_upload(series_id: int):
 
 @blueprint.route("/series/<int:series_id>/logo", methods=["DELETE"])
 def series_logo_remove(series_id: int):
+    denied = auth.require_series_wide(series_id)
+    if denied:
+        return denied
     return jsonify(series_logo.remove(series_id, series_logo.field_for(request.args.get("variant"))))

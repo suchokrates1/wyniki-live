@@ -95,3 +95,21 @@ test('a series logo goes up in both versions, each on its own ground, and comes 
   await expect(card.locator('.adm-series-logo__none:visible')).toHaveCount(2);
   expect(requests.filter((r) => /\/logo/.test(r.url)).map((r) => `${r.method} ${r.url.split('/logo')[1]}`)).toEqual(['POST ?variant=dark', 'DELETE ?variant=dark']);
 });
+
+test('a tournament organizer gets the tournaments they run, one tick each', async ({ page }) => {
+  const requests = await openSeries(page);
+  await page.route(/\/admin\/api\/series\/1\/members\/5$/, (route) => {
+    requests.push({ method: route.request().method(), url: route.request().url(), body: route.request().postDataJSON() });
+    return route.fulfill({ json: { ...TWT, members: [{ ...TWT.members[0], role: 'local' }] } });
+  });
+  const card = page.getByRole('region', { name: 'Seria Takei World Tennis Tour' });
+  await expect(card.getByRole('group', { name: 'Turnieje, które ta osoba prowadzi' })).toBeHidden();
+  await card.getByLabel('Rola: organizer@example.org').selectOption('local');
+  const grant = card.getByRole('group', { name: 'Turnieje, które ta osoba prowadzi' });
+  await expect(grant).toBeVisible();
+  await expect(grant.getByText('Bez zaznaczonego turnieju ta osoba nie widzi żadnego.')).toBeVisible();
+  await grant.getByLabel('5th Dürener Handicup 2026').check();
+  await expect(grant.getByText('Bez zaznaczonego turnieju ta osoba nie widzi żadnego.')).toBeHidden();
+  const patches = requests.filter((r) => r.method === 'PATCH').map((r) => r.body);
+  expect(patches).toEqual([{ role: 'local' }, { tournament_ids: [28] }]);
+});

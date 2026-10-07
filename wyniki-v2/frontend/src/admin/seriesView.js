@@ -16,6 +16,7 @@ const SERIES_ERRORS = {
 export const ROLE_OPTIONS = [
   { value: 'owner', label: 'właściciel' },
   { value: 'editor', label: 'edytor' },
+  { value: 'local', label: 'organizator turnieju' },
 ];
 
 export function memberStatus(member) {
@@ -179,10 +180,24 @@ export function createSeriesView() {
       } catch { /* message shown */ }
     },
 
+    /** A tournament organizer's tournaments (the API lists them as "5,6"). */
+    seriesMemberGranted(member) {
+      return String(member.granted || '').split(',').filter(Boolean).map(Number);
+    },
+
+    async toggleSeriesGrant(item, member, tournamentId, on) {
+      const ids = this.seriesMemberGranted(member).filter((id) => id !== tournamentId);
+      if (on) ids.push(tournamentId);
+      try {
+        await this._seriesCall(`/admin/api/series/${item.id}/members/${member.id}`, 'PATCH', { tournament_ids: ids });
+        member.granted = ids.join(',');
+      } catch { /* message shown */ }
+    },
+
     async setSeriesMemberRole(item, member, role) {
       try {
-        await this._seriesCall(`/admin/api/series/${item.id}/members/${member.id}`, 'PATCH', { role });
-        await this.loadSeries();
+        const updated = await this._seriesCall(`/admin/api/series/${item.id}/members/${member.id}`, 'PATCH', { role });
+        if (Array.isArray(updated.members)) item.members = updated.members;
       } catch { /* message shown */ }
     },
 

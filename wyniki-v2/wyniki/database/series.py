@@ -14,7 +14,7 @@ from typing import Any
 
 from .connection import db_conn
 
-ROLES = ("owner", "editor")
+ROLES = ("owner", "editor", "local")  # local: a tournament organizer, see series_access
 
 
 #: The series' logo, and its version for a dark background (light ink); either may be ''.
@@ -69,9 +69,11 @@ def ensure_series_tables(cursor: sqlite3.Cursor) -> None:
             cursor.execute(f"ALTER TABLE series ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
     from .accounts import ensure_account_columns
     from .series_plan import ensure_series_plan_columns
+    from .series_access import ensure_member_tournaments
     from .series_records import ensure_series_record_tables
 
     ensure_series_record_tables(cursor)
+    ensure_member_tournaments(cursor)
     ensure_series_plan_columns(cursor)
     ensure_account_columns(cursor)
 
@@ -249,7 +251,9 @@ def _members(cursor: sqlite3.Cursor, series_id: int) -> list[dict[str, Any]]:
     cursor.execute(
         """
         SELECT a.id, a.email, a.name, a.language, a.disabled, a.last_login_at, m.role,
-               CASE WHEN a.password_hash = '' THEN 0 ELSE 1 END AS has_password
+               CASE WHEN a.password_hash = '' THEN 0 ELSE 1 END AS has_password,
+               (SELECT group_concat(mt.tournament_id) FROM member_tournaments mt
+                WHERE mt.series_id = m.series_id AND mt.account_id = a.id) AS granted
         FROM series_members m JOIN accounts a ON a.id = m.account_id
         WHERE m.series_id = ? ORDER BY a.name COLLATE NOCASE, a.email
         """,

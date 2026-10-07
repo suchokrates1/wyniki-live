@@ -286,3 +286,46 @@ def test_player_photos_are_served_and_nothing_else_next_to_them(client, app):
     assert client.get("/data/photos/7.jpg").status_code == 200
     assert client.get("/data/photos/7.svg").status_code == 404
     assert client.get("/data/wyniki.sqlite3").status_code == 404
+
+
+def test_a_tournament_organizer_reaches_only_the_tournaments_granted_to_them(client):
+    import io
+
+    series_id, _ = _series_with_member(client)
+    duren = _tournament("5th Dürener Handicup 2026")
+    wilno = _tournament("Lithuanian Open 2026")
+    outside = _tournament("Turniej spoza serii")
+    for tid, tier in ((duren, "CH50"), (wilno, "500")):
+        client.put(f"/admin/api/series/{series_id}/tournaments/{tid}", json={"tier": tier})
+    local = client.post(f"/admin/api/series/{series_id}/members",
+                        json={"email": "duren@example.org", "role": "local", "tournament_ids": [duren, outside]}).get_json()
+    client.post(f"/organizer/api/invite/{_token_from(local['invite_url'])}", json={"password": PASSWORD})
+    _, session = _sign_in(client, email="duren@example.org")
+    headers = _auth(session)
+
+    me = client.get("/organizer/api/me", headers=headers).get_json()
+    assert me["series"][0]["role"] == "local"
+    assert [row["id"] for row in me["series"][0]["tournaments"]] == [duren]
+    assert [row["id"] for row in client.get(f"/organizer/api/series/{series_id}/tournaments", headers=headers).get_json()] == [duren]
+    assert client.get(f"/organizer/api/tournaments/{duren}", headers=headers).status_code == 200
+    assert client.get(f"/organizer/api/tournaments/{wilno}", headers=headers).status_code == 403
+    assert client.get(f"/organizer/api/tournaments/{outside}", headers=headers).status_code == 403
+
+    # the series itself is not theirs
+    created = client.post(f"/organizer/api/series/{series_id}/tournaments", headers=headers,
+                          json={"name": "Nowy", "start_date": "2026-11-01", "end_date": "2026-11-02"})
+    assert created.status_code == 403
+    logo = client.post(f"/organizer/api/series/{series_id}/logo", headers=headers,
+                       data={"logo": (io.BytesIO(PNG), "x.png")}, content_type="multipart/form-data")
+    assert logo.status_code == 403
+
+    # the admin's list names the grant; widening it opens Wilno at once
+    member = next(m for m in client.get("/admin/api/series").get_json()[0]["members"] if m["email"] == "duren@example.org")
+    assert member["role"] == "local" and member["granted"] == str(duren)
+    client.put(f"/admin/api/series/{series_id}/members/{member['id']}", json={"tournament_ids": [duren, wilno]})
+    assert client.get(f"/organizer/api/tournaments/{wilno}", headers=headers).status_code == 200
+
+    # made an editor, they reach the whole series again
+    client.put(f"/admin/api/series/{series_id}/members/{member['id']}", json={"role": "editor"})
+    assert client.post(f"/organizer/api/series/{series_id}/tournaments", headers=headers,
+                       json={"name": "Nowy", "start_date": "2026-11-01", "end_date": "2026-11-02"}).status_code == 201

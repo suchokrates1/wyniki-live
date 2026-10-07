@@ -95,6 +95,9 @@ def _detail(tournament_id: int) -> dict:
 
 @blueprint.route("/series/<int:series_id>/tournaments", methods=["POST"])
 def create(series_id: int):
+    denied = auth.require_series_wide(series_id)
+    if denied:
+        return denied
     data = {key: value for key, value in _payload().items() if key in EDITABLE}
     data["active"] = False
     yearly = limits(series_id)["max_tournaments_per_year"]

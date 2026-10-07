@@ -234,4 +234,6 @@ export default {
   logoDarkHint: "Letras claras (p. ej. blancas) sobre fondo transparente. Aparece en la página oscura y en este panel; sin él, el logo aparece allí sobre una placa blanca.",
   tournamentLogo: "Logo del torneo",
   tournamentLogoHint: "Aparece en la página del torneo en blindtennis.app, junto a su nombre. PNG, JPEG o WebP, hasta 2 MB.",
+  roleLocal: "organizador del torneo",
+  localScope: "Ves los torneos de la serie que organizas.",
 };

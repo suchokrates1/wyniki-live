@@ -125,9 +125,22 @@ def require_series(series_id: int):
 
 
 def require_series_tournament(tournament_id: int):
-    """403 unless the tournament belongs to one of the person's series."""
-    if not series.tournament_in_series(int(tournament_id), series_ids()):
+    """403 unless the tournament belongs to one of the person's series and their role opens it
+    (a tournament organizer reaches only the tournaments granted to them)."""
+    from ..database.series_access import can_reach
+
+    if not can_reach(g.account["id"], int(tournament_id)):
         return jsonify({"error": "Not a tournament of your series"}), 403
+    return None
+
+
+def require_series_wide(series_id: int):
+    """403 for a tournament organizer: the series itself (new tournaments, its logo) is not theirs."""
+    from ..database.series_access import LOCAL
+
+    role = next((item.get("role") for item in getattr(g, "series", []) if item["id"] == int(series_id)), None)
+    if role == LOCAL:
+        return jsonify({"error": "Series-wide changes are not yours"}), 403
     return None
 
 

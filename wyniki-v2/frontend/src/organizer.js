@@ -154,7 +154,9 @@ Alpine.data('organizerApp', () => ({
 
   tabs() { return TOURNAMENT_TABS; },
   tiers() { return TIERS.map((tier) => ({ value: tier, label: tierLabel(tier) })); },
-  roleLabel(role) { return this.ot(role === 'owner' ? 'roleOwner' : 'roleEditor'); },
+  roleLabel(role) { return this.ot({ owner: 'roleOwner', local: 'roleLocal' }[role] || 'roleEditor'); },
+  /** A tournament organizer runs their tournaments; the series itself is not theirs. */
+  seriesWide() { return this.current()?.role !== 'local'; },
   tierLabel,
   dateRange,
 

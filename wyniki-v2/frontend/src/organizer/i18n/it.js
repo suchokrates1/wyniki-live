@@ -234,4 +234,6 @@ export default {
   logoDarkHint: "Scritte chiare (ad es. bianche) su sfondo trasparente. Compare sulla pagina scura e in questo pannello; senza, il logo appare lì su un riquadro bianco.",
   tournamentLogo: "Logo del torneo",
   tournamentLogoHint: "Compare sulla pagina del torneo su blindtennis.app, accanto al nome. PNG, JPEG o WebP, fino a 2 MB.",
+  roleLocal: "organizzatore del torneo",
+  localScope: "Vedi i tornei della serie che organizzi.",
 };

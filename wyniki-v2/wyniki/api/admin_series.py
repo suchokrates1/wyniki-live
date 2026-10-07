@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
-from ..database import accounts, series, series_plan
+from ..database import accounts, series, series_access, series_plan
 from ..database.tournaments import fetch_tournament
 from ..services import series_logo
 from ..services.account_invites import invite_link, send_invite
@@ -94,6 +94,8 @@ def add_member(series_id: int):
         return jsonify({"error": "A valid e-mail is required"}), 400
     account_id = accounts.ensure_account(email, str(data.get("name") or ""), data.get("language"))
     series.add_member(series_id, account_id, str(data.get("role") or "editor"))
+    if "tournament_ids" in data:
+        series_access.set_granted(series_id, account_id, data["tournament_ids"])
     return jsonify(_invite(account_id, item["name"])), 201
 
 
@@ -124,6 +126,8 @@ def update_member(series_id: int, account_id: int):
         accounts.set_disabled(account_id, bool(data["disabled"]))
     if "language" in data:
         accounts.set_language(account_id, data["language"])
+    if "tournament_ids" in data:
+        series_access.set_granted(series_id, account_id, data["tournament_ids"])
     return jsonify(series.get_series(series_id) or {})
 
 

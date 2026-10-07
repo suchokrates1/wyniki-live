@@ -235,4 +235,6 @@ export default {
   logoDarkHint: "Šviesus (pvz., baltas) užrašas permatomame fone. Rodomas tamsiame puslapyje ir šiame skydelyje; be jo logotipas ten rodomas ant balto pagrindo.",
   tournamentLogo: "Turnyro logotipas",
   tournamentLogoHint: "Rodomas turnyro puslapyje blindtennis.app svetainėje, šalia pavadinimo. PNG, JPEG arba WebP, iki 2 MB.",
+  roleLocal: "turnyro organizatorius",
+  localScope: "Matote serijos turnyrus, kuriuos organizuojate.",
 };

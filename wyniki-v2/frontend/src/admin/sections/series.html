@@ -89,6 +89,16 @@
                 <span class="adm-chip" :class="seriesMemberStatus(member).tone ? 'adm-chip--' + seriesMemberStatus(member).tone : ''" x-text="seriesMemberStatus(member).text"></span>
               </div>
               <div class="adm-row__meta" x-text="member.email"></div>
+              <fieldset class="adm-grant" x-show="member.role === 'local'">
+                <legend class="adm-grant__legend">Turnieje, które ta osoba prowadzi</legend>
+                <template x-for="row in item.tournaments" :key="'grant-' + member.id + '-' + row.id">
+                  <label class="adm-grant__item">
+                    <input type="checkbox" :checked="seriesMemberGranted(member).includes(row.id)" @change="toggleSeriesGrant(item, member, row.id, $event.target.checked)">
+                    <span x-text="row.name"></span>
+                  </label>
+                </template>
+                <p class="adm-card__hint" x-show="!seriesMemberGranted(member).length">Bez zaznaczonego turnieju ta osoba nie widzi żadnego.</p>
+              </fieldset>
             </div>
             <div class="adm-row__actions">
               <label class="sr-only" :for="'adm-role-' + item.id + '-' + member.id" x-text="'Rola: ' + member.email"></label>

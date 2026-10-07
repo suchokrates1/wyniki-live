@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => { try { localStorage.setItem('organizer-lang', 'pl'); } catch { /* none */ } });
 });
 
-function world({ lock = '', validUntil = '2027-10-31', active = 0, maxYear = 0, maxCourts = 0 } = {}) {
+function world({ lock = '', validUntil = '2027-10-31', active = 0, maxYear = 0, maxCourts = 0, role = 'owner' } = {}) {
   const state = {
     tournament: {
       id: 28, name: '5th Dürener Handicup 2026', start_date: '2026-07-17', end_date: '2026-07-19', city: 'Düren', country: 'DE',
@@ -26,7 +26,7 @@ function world({ lock = '', validUntil = '2027-10-31', active = 0, maxYear = 0, 
       { id: 7, first_name: 'Naqi', last_name: 'Rizvi', category: 'B1', country: 'GB', gender: 'M', tournaments_count: 3 }],
     requests: [],
   };
-  state.me = { account: { id: 5, email: 'organizer@example.org' }, contact_email: 'organizers@blindtennis.app', series: [{ id: 1, name: 'Takei World Tennis Tour', slug: 'twt', role: 'owner', valid_until: validUntil, max_tournaments_per_year: maxYear, max_courts: maxCourts, tournaments: [{ ...state.tournament, tier: 'CH50' }] }] };
+  state.me = { account: { id: 5, email: 'organizer@example.org' }, contact_email: 'organizers@blindtennis.app', series: [{ id: 1, name: 'Takei World Tennis Tour', slug: 'twt', role, valid_until: validUntil, max_tournaments_per_year: maxYear, max_courts: maxCourts, tournaments: [{ ...state.tournament, tier: 'CH50' }] }] };
   return state;
 }
 
@@ -241,5 +241,16 @@ test('the tournament logo goes up in its settings, in both versions', async ({ p
   await expect(card.getByText('Logo zapisane.')).toBeVisible();
   await expect(card.locator('.org-logo__frame--dark img')).toHaveAttribute('src', '/brand/blindtennis-icon-512.svg');
   await expect(card.locator('.org-logo__none:visible')).toHaveCount(1);
+  expect(await axe(page)).toEqual([]);
+});
+
+test('a tournament organizer runs their tournament; new tournaments and the series logo are not theirs', async ({ page }) => {
+  await openPanel(page, world({ role: 'local' }));
+  await expect(page.locator('.org-facts')).toContainText('organizator turnieju');
+  await expect(page.getByText('Widzisz turnieje serii, które prowadzisz.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Nowy turniej' })).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Logo serii' })).toBeHidden();
+  await page.getByRole('link', { name: '5th Dürener Handicup 2026', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Logo turnieju' })).toBeVisible();
   expect(await axe(page)).toEqual([]);
 });
