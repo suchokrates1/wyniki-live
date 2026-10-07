@@ -136,3 +136,6 @@ a.adm-subtab { display: inline-flex; align-items: center; text-decoration: none;
 
 /* what is live wears the office's orange, as in the admin's court list */
 .adm-chip--live { background: var(--adm-live-soft); color: #ff9a52; }
+
+/* a card after the settings form */
+.org-after { margin-top: 16px; }

@@ -17,6 +17,7 @@ import tabCategoriesHtml from './organizer/partials/tabCategories.html?raw';
 import tabPlayersHtml from './organizer/partials/tabPlayers.html?raw';
 import tabCourtsHtml from './organizer/partials/tabCourts.html?raw';
 import tabLogHtml from './organizer/partials/tabLog.html?raw';
+import logoBoxesHtml from './organizer/partials/logoBoxes.html?raw';
 import { mountPartials } from './shared/partials.js';
 import { storageGet } from './shared/signInForm.js';
 
@@ -28,6 +29,7 @@ mountPartials(document.body, {
   tabPlayers: tabPlayersHtml,
   tabCourts: tabCourtsHtml,
   tabLog: tabLogHtml,
+  logoBoxes: logoBoxesHtml,
 });
 
 const emptyDraft = () => ({ name: '', start_date: '', end_date: '', city: '', country: '', court_count: 4, tier: '', is_public: true, office_password: '' });

@@ -229,3 +229,17 @@ test('the series logo goes up, shows in the header and the series banner, and a 
   await expect(card.locator('.org-logo__none:visible')).toHaveCount(0);
   expect(await axe(page)).toEqual([]);
 });
+
+test('the tournament logo goes up in its settings, in both versions', async ({ page }) => {
+  await openPanel(page, world(), '#/twt/t/28');
+  await page.route(/\/organizer\/api\/tournaments\/28\/logo(\?variant=dark)?$/, (route) => route.fulfill({
+    json: route.request().url().endsWith('variant=dark') ? { logo_dark_path: '/brand/blindtennis-icon-512.svg' } : { logo_path: '/brand/blindtennis-logo-email.png' },
+  }));
+  const card = page.getByRole('region', { name: 'Logo turnieju' });
+  await expect(card.locator('.org-logo__none:visible')).toHaveCount(2);
+  await card.getByLabel('Nowy plik: Logo na ciemne tło').setInputFiles('public/brand/blindtennis-logo-email.png');
+  await expect(card.getByText('Logo zapisane.')).toBeVisible();
+  await expect(card.locator('.org-logo__frame--dark img')).toHaveAttribute('src', '/brand/blindtennis-icon-512.svg');
+  await expect(card.locator('.org-logo__none:visible')).toHaveCount(1);
+  expect(await axe(page)).toEqual([]);
+});

@@ -80,6 +80,13 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/admin/api/series/settings` |  |
 | PUT | `/admin/api/series/settings` |  |
 
+## admin_tournament_logo
+
+| Method | Path | What it does |
+|---|---|---|
+| DELETE | `/admin/api/tournaments/<int:tournament_id>/logo` |  |
+| POST | `/admin/api/tournaments/<int:tournament_id>/logo` |  |
+
 ## admin_tournaments
 
 | Method | Path | What it does |
@@ -246,6 +253,8 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/organizer/api/tournaments/<int:tournament_id>/categories/confirm` |  |
 | PUT | `/organizer/api/tournaments/<int:tournament_id>/courts/<kort_id>/pin` |  |
 | GET | `/organizer/api/tournaments/<int:tournament_id>/log` |  |
+| DELETE | `/organizer/api/tournaments/<int:tournament_id>/logo` |  |
+| POST | `/organizer/api/tournaments/<int:tournament_id>/logo` | Either version of the tournament's logo (?variant=dark: for a dark background). |
 | POST | `/organizer/api/tournaments/<int:tournament_id>/office-session` | Into the office without its password: the organizer already proved who they are. |
 
 ## overlay_api

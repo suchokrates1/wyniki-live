@@ -224,7 +224,7 @@ export default {
   logoRemove: "Logo entfernen",
   logoSaved: "Logo gespeichert.",
   logoRemoved: "Logo entfernt.",
-  logoNone: "Ihre Serie hat noch kein Logo.",
+  logoNone: "Noch kein Logo.",
   logoAlt: "Logo: {series}",
   errLogoType: "Das Logo muss eine PNG-, JPEG- oder WebP-Datei sein.",
   errLogoSize: "Die Datei ist größer als 2 MB.",
@@ -232,4 +232,6 @@ export default {
   logoDark: "Logo für dunklen Hintergrund",
   logoLightHint: "Ihr übliches Logo mit dunkler Schrift. Erscheint auf der hellen Seite.",
   logoDarkHint: "Helle (z. B. weiße) Schrift auf transparentem Hintergrund. Erscheint auf der dunklen Seite und in diesem Panel; ohne diese Version steht das Logo dort auf einer weißen Fläche.",
+  tournamentLogo: "Logo des Turniers",
+  tournamentLogoHint: "Erscheint auf der Turnierseite auf blindtennis.app neben dem Namen. PNG, JPEG oder WebP, bis 2 MB.",
 };

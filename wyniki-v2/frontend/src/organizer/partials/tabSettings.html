@@ -42,3 +42,9 @@
     <button type="submit" class="adm-btn adm-btn--primary" x-text="ot('saveSettings')"></button>
   </div>
 </form>
+
+<section class="adm-card org-after" aria-labelledby="org-tlogo-title">
+  <h2 id="org-tlogo-title" class="adm-card__title" x-text="ot('tournamentLogo')"></h2>
+  <p class="adm-card__hint" x-text="ot('tournamentLogoHint')"></p>
+  <div x-data="{ scope: 'tournament' }"><!-- @partial logoBoxes --></div>
+</section>

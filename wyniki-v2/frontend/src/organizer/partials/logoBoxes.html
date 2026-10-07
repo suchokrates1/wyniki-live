@@ -1,0 +1,20 @@
+<!-- The two versions of a logo, each on the ground it is made for. Inside x-data="{ scope }":
+     'series' (the current series) or 'tournament' (the open tournament). -->
+<template x-for="v in logoVariants()" :key="scope + v.field">
+  <div class="org-logo">
+    <h3 class="adm-subhead org-logo__title" x-text="ot(v.variant ? 'logoDark' : 'logoLight')"></h3>
+    <p class="adm-card__hint org-logo__hint" x-text="ot(v.variant ? 'logoDarkHint' : 'logoLightHint')"></p>
+    <div class="org-logo__frame" :class="'org-logo__frame--' + v.ground">
+      <img x-show="logoTarget(scope)?.[v.field]" :src="logoTarget(scope)?.[v.field] || ''" :alt="ot('logoAlt', { series: logoTarget(scope)?.name || '' }) + ' (' + ot(v.variant ? 'logoDark' : 'logoLight') + ')'">
+      <span x-show="!logoTarget(scope)?.[v.field]" class="org-logo__none" x-text="ot('logoNone')"></span>
+    </div>
+    <div class="adm-field" x-show="!logoLocked(scope)">
+      <label class="adm-field__label" :for="'org-logo-' + scope + '-' + (v.variant || 'light')" x-text="ot('logoPick', { what: ot(v.variant ? 'logoDark' : 'logoLight') })"></label>
+      <input :id="'org-logo-' + scope + '-' + (v.variant || 'light')" class="adm-input" type="file" accept="image/png,image/jpeg,image/webp" @change="uploadLogo($event, v.variant, scope)">
+    </div>
+    <button type="button" class="adm-btn" x-show="logoTarget(scope)?.[v.field] && !logoLocked(scope)" @click="removeLogo(v.variant, scope)">
+      <span x-text="ot('logoRemove')"></span><span class="sr-only" x-text="': ' + ot(v.variant ? 'logoDark' : 'logoLight')"></span>
+    </button>
+  </div>
+</template>
+<p role="status" :class="logoMessage?.ok ? 'org-note' : 'adm-modal__error'" x-show="logoMessage?.scope === scope" x-text="say(logoMessage)"></p>

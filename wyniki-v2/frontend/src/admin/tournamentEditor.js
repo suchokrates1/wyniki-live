@@ -22,6 +22,7 @@ export function createTournamentEditorAdmin() {
         has_office_password: false,
         logo: null,
         logo_path: '',
+        logo_dark_path: '',
         title_scope: 'open',
         title_override: '',
         title_scope_guessed: false,
@@ -52,6 +53,7 @@ export function createTournamentEditorAdmin() {
       has_office_password: !!tournament.has_office_password,
       logo: null,
       logo_path: tournament.logo_path || '',
+      logo_dark_path: tournament.logo_dark_path || '',
     };
     this.adminCategorySetupOpen = true;
     this.adminCategoryEditId = null;
@@ -105,6 +107,28 @@ export function createTournamentEditorAdmin() {
     this.editTournament.logo = event.target.files?.[0] || null;
       },
 
+      /** The dark-background logo is its own picture, saved at once (not with the form). */
+      async uploadTournamentDarkLogo(event) {
+    const file = event.target.files?.[0];
+    if (!file || !this.editTournament.id) return;
+    const body = new FormData();
+    body.append('logo', file);
+    const response = await fetch(`/admin/api/tournaments/${this.editTournament.id}/logo?variant=dark`, { method: 'POST', body });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      this.editTournament.logo_dark_path = data.logo_dark_path;
+      this.showToast('Logo na ciemne tło zapisane', 'success');
+    } else {
+      this.showToast(data.error === 'File too large' ? 'Plik większy niż 2 MB' : 'Tylko PNG, JPEG albo WebP', 'error');
+    }
+    event.target.value = '';
+      },
+
+      async removeTournamentDarkLogo() {
+    const response = await fetch(`/admin/api/tournaments/${this.editTournament.id}/logo?variant=dark`, { method: 'DELETE' });
+    if (response.ok) this.editTournament.logo_dark_path = '';
+      },
+
       async saveTournamentEdit() {
     if (!this.editTournament.id || !this.editTournament.name || !this.editTournament.start_date || !this.editTournament.end_date) {
       this.showToast('Wypełnij wszystkie pola turnieju', 'warning');
@@ -114,7 +138,7 @@ export function createTournamentEditorAdmin() {
     try {
       const payload = new FormData();
       Object.entries(this.editTournament).forEach(([key, value]) => {
-        if (['id', 'logo', 'logo_path', 'title_scope_guessed'].includes(key)) return;
+        if (['id', 'logo', 'logo_path', 'logo_dark_path', 'title_scope_guessed'].includes(key)) return;
         payload.append(key, value ?? '');
       });
       if (this.editTournament.logo) {

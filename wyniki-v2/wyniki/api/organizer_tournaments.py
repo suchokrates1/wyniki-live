@@ -14,7 +14,7 @@ from ..database.series_plan import limits, tournaments_in_year
 from ..database.series_records import log_for_tournament, visibility_lock
 from ..database.tournament_titles import title_fields
 from ..services import organizer_auth as auth
-from ..services import tournament_settings
+from ..services import tournament_logo, tournament_settings
 from ..services.api_auth import issue_office_token
 from ..services.office_workflow import _normalize_bool
 from . import tournament_setup
@@ -206,3 +206,16 @@ def category_update(tournament_id: int, category_id: int):
 def category_delete(tournament_id: int, category_id: int):
     body, status = tournament_setup.delete_category(tournament_id, category_id)
     return jsonify(body), status
+
+
+@blueprint.route("/tournaments/<int:tournament_id>/logo", methods=["POST"])
+def logo_upload(tournament_id: int):
+    """Either version of the tournament's logo (?variant=dark: for a dark background)."""
+    field = tournament_logo.field_for(request.args.get("variant"))
+    body, status = tournament_logo.save(tournament_id, request.files.get("logo"), field)
+    return jsonify(body), status
+
+
+@blueprint.route("/tournaments/<int:tournament_id>/logo", methods=["DELETE"])
+def logo_remove(tournament_id: int):
+    return jsonify(tournament_logo.remove(tournament_id, tournament_logo.field_for(request.args.get("variant"))))

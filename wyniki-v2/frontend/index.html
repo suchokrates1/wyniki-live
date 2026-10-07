@@ -681,7 +681,10 @@
                             </p>
                         </div>
                     </template>
-                    <h2 class="tournament-detail__name" x-text="selectedTournamentName()"></h2>
+                    <div class="tournament-detail__head">
+                        <img class="tournament-detail__logo" x-show="markLogo(selectedTournament())" :src="markLogo(selectedTournament())?.src || ''" :class="markLogo(selectedTournament())?.plate ? 'is-plate-' + markLogo(selectedTournament()).plate : ''" alt="">
+                        <h2 class="tournament-detail__name" x-text="selectedTournamentName()"></h2>
+                    </div>
 
                     <!-- Sub-tabs: Podium+Bracket / Match History -->
                     <div class="th-subtabs" role="tablist" :aria-label="tr().tournamentHistory?.navLabel || 'Szczegóły turnieju'">

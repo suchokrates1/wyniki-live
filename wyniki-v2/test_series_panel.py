@@ -244,3 +244,45 @@ def test_another_series_logo_is_off_limits(client):
     response = client.post(f"/organizer/api/series/{other}/logo", headers=_auth(session),
                            data={"logo": (io.BytesIO(PNG), "x.png")}, content_type="multipart/form-data")
     assert response.status_code in (403, 404)
+
+
+def test_a_tournament_logo_in_both_versions_from_the_organizer_and_the_admin(client):
+    import io
+
+    series_id, invited = _series_with_member(client)
+    client.post(f"/organizer/api/invite/{_token_from(invited['invite_url'])}", json={"password": PASSWORD})
+    duren = _tournament("5th Dürener Handicup 2026")
+    outside = _tournament("Turniej spoza serii")
+    client.put(f"/admin/api/series/{series_id}/tournaments/{duren}", json={"tier": "CH50"})
+    _, session = _sign_in(client)
+
+    upload = lambda url, name="logo.png", data=PNG: client.post(  # noqa: E731
+        url, headers=_auth(session), data={"logo": (io.BytesIO(data), name)}, content_type="multipart/form-data")
+    assert upload(f"/organizer/api/tournaments/{outside}/logo").status_code == 403
+    assert upload(f"/organizer/api/tournaments/{duren}/logo", "x.svg", b"<svg/>").status_code == 400
+
+    light = upload(f"/organizer/api/tournaments/{duren}/logo").get_json()["logo_path"]
+    dark = upload(f"/organizer/api/tournaments/{duren}/logo?variant=dark").get_json()["logo_dark_path"]
+    assert light.startswith(f"/data/tournament-logos/t{duren}-") and dark.startswith(f"/data/tournament-logos/t{duren}-dark-")
+    assert client.get(light).data == PNG and client.get(dark).data == PNG
+    detail = client.get(f"/organizer/api/tournaments/{duren}", headers=_auth(session)).get_json()
+    assert (detail["logo_path"], detail["logo_dark_path"]) == (light, dark)
+    listed = {row["id"]: row for row in client.get("/api/tournament/list").get_json()}
+    assert (listed[duren]["logo_path"], listed[duren]["logo_dark_path"]) == (light, dark)
+
+    assert client.delete(f"/admin/api/tournaments/{duren}/logo?variant=dark").get_json() == {"logo_dark_path": ""}
+    assert client.get(dark).status_code == 404
+    assert client.delete("/admin/api/tournaments/99999/logo").status_code == 404
+
+
+def test_player_photos_are_served_and_nothing_else_next_to_them(client, app):
+    from pathlib import Path
+
+    from wyniki.config import settings
+
+    photos = Path(settings.database_path).parent / "photos"
+    photos.mkdir(parents=True, exist_ok=True)
+    (photos / "7.jpg").write_bytes(b"\xff\xd8\xff" + b"\x00" * 16)
+    assert client.get("/data/photos/7.jpg").status_code == 200
+    assert client.get("/data/photos/7.svg").status_code == 404
+    assert client.get("/data/wyniki.sqlite3").status_code == 404

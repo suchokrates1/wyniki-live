@@ -557,6 +557,9 @@ def init_db() -> None:
         if 'logo_path' not in t_cols:
             cursor.execute("ALTER TABLE tournaments ADD COLUMN logo_path TEXT")
             logger.info("database_migration", action="added_logo_path_to_tournaments")
+        if 'logo_dark_path' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN logo_dark_path TEXT DEFAULT ''")
+            logger.info("database_migration", action="added_logo_dark_path_to_tournaments")
         if 'report_email' not in t_cols:
             cursor.execute("ALTER TABLE tournaments ADD COLUMN report_email TEXT DEFAULT ''")
             logger.info("database_migration", action="added_report_email_to_tournaments")

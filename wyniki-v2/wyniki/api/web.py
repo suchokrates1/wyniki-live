@@ -187,8 +187,9 @@ def brand_assets(filename):
     return response
 
 
-# Pictures uploaded through the panels live next to the database; only these folders are public.
-PUBLIC_DATA_FOLDERS = frozenset({'series-logos', 'tournament-logos'})
+# Pictures uploaded through the panels live next to the database; only these folders are public
+# (player photos are shown on the public profile).
+PUBLIC_DATA_FOLDERS = frozenset({'series-logos', 'tournament-logos', 'photos'})
 
 
 @blueprint.route('/data/<folder>/<filename>')

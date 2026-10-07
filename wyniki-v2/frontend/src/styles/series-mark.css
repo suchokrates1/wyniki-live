@@ -17,9 +17,14 @@
   border-radius: 6px;
 }
 /* the other theme's version stands on a plate of the ground it was drawn for */
-.series-mark__logo.is-plate-light, .series-mark__logo.is-plate-dark { padding: 3px; box-shadow: 0 0 0 1px var(--line); }
-.series-mark__logo.is-plate-light { background: #fff; }
-.series-mark__logo.is-plate-dark { background: #041519; }
+:is(.series-mark__logo, .tournament-detail__logo):is(.is-plate-light, .is-plate-dark) { padding: 3px; box-shadow: 0 0 0 1px var(--line); }
+:is(.series-mark__logo, .tournament-detail__logo).is-plate-light { background: #fff; }
+:is(.series-mark__logo, .tournament-detail__logo).is-plate-dark { background: #041519; }
+
+/* the tournament's own logo, by its name */
+.tournament-detail__head { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; }
+.tournament-detail__head .tournament-detail__name { margin: 0; }
+.tournament-detail__logo { display: block; flex: none; height: 64px; max-width: 180px; object-fit: contain; border-radius: 8px; }
 .series-mark__name { min-width: 0; overflow-wrap: anywhere; }
 .series-mark--large { gap: 14px; margin: 0 0 10px; font-size: 15px; }
 .series-mark--large .series-mark__logo { height: 56px; max-width: 160px; border-radius: 8px; }
@@ -31,4 +36,5 @@ a.series-mark:hover .series-mark__name, a.series-mark:focus-visible .series-mark
 @media (max-width: 640px) {
   .live-series { justify-content: flex-start; }
   .series-mark--large .series-mark__logo { height: 44px; max-width: 120px; }
+  .tournament-detail__logo { height: 48px; max-width: 120px; }
 }

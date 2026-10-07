@@ -225,7 +225,7 @@ export default {
   logoRemove: "Pašalinti logotipą",
   logoSaved: "Logotipas išsaugotas.",
   logoRemoved: "Logotipas pašalintas.",
-  logoNone: "Jūsų serija dar neturi logotipo.",
+  logoNone: "Logotipo dar nėra.",
   logoAlt: "Logotipas: {series}",
   errLogoType: "Logotipas turi būti PNG, JPEG arba WebP failas.",
   errLogoSize: "Failas didesnis nei 2 MB.",
@@ -233,4 +233,6 @@ export default {
   logoDark: "Logotipas tamsiam fonui",
   logoLightHint: "Įprastas jūsų logotipas tamsiu užrašu. Rodomas šviesiame puslapyje.",
   logoDarkHint: "Šviesus (pvz., baltas) užrašas permatomame fone. Rodomas tamsiame puslapyje ir šiame skydelyje; be jo logotipas ten rodomas ant balto pagrindo.",
+  tournamentLogo: "Turnyro logotipas",
+  tournamentLogoHint: "Rodomas turnyro puslapyje blindtennis.app svetainėje, šalia pavadinimo. PNG, JPEG arba WebP, iki 2 MB.",
 };

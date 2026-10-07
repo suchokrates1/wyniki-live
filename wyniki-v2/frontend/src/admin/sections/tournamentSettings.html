@@ -47,6 +47,17 @@
         </template>
       </span>
     </div>
+
+    <div class="adm-field">
+      <label class="adm-field__label" for="adm-edit-logo-dark">Logo na ciemne tło</label>
+      <input id="adm-edit-logo-dark" class="adm-input adm-field__input" type="file" accept="image/png,image/jpeg,image/webp" @change="uploadTournamentDarkLogo($event)">
+      <span class="adm-field__hint">
+        Jasny napis na przezroczystym tle; zapisuje się od razu.
+        <template x-if="editTournament.logo_dark_path">
+          <span><a class="adm-link" :href="editTournament.logo_dark_path" target="_blank" rel="noopener">Obecne</a> · <button type="button" class="adm-link" @click="removeTournamentDarkLogo()">usuń</button></span>
+        </template>
+      </span>
+    </div>
   </div>
 
   <h3 class="adm-subhead">Tytuł zwycięzcy</h3>

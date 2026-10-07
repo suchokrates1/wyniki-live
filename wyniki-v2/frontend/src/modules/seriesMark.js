@@ -22,6 +22,9 @@ export function createSeriesMarkView() {
     tournamentSeries: [],
     seriesOf,
     seriesLine,
+    selectedTournament() {
+      return (this.tournaments || []).find((t) => String(t.id) === String(this.selectedTournamentId)) || null;
+    },
     selectedTournamentSeries() {
       return seriesOf((this.tournaments || []).find((t) => String(t.id) === String(this.selectedTournamentId)));
     },
