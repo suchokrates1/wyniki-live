@@ -46,7 +46,8 @@ export function createTournamentCreateView() {
 
     adminCreateFlags() {
       // A brand new tournament is never the active one: it is switched on from the list when ready.
-      return TOURNAMENT_FLAGS.filter((flag) => flag.key !== 'active');
+      // It is in no series yet either, so there is no publication to lock.
+      return TOURNAMENT_FLAGS.filter((flag) => flag.key !== 'active' && flag.key !== 'visibility_lock');
     },
 
     openTournamentCreate() {

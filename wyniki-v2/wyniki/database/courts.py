@@ -111,7 +111,7 @@ def upsert_court(
                 VALUES (?, ?, ?, ?, ?, 1)
                 ON CONFLICT(kort_id) DO UPDATE SET
                     pin=COALESCE(excluded.pin, courts.pin),
-                    name=COALESCE(excluded.name, courts.name),
+                    name=COALESCE(?, courts.name),
                     tournament_id=COALESCE(excluded.tournament_id, courts.tournament_id),
                     display_order=COALESCE(excluded.display_order, courts.display_order)
             """, (
@@ -120,6 +120,8 @@ def upsert_court(
                 name or kort_id,
                 tournament_id,
                 display_order,
+                # a new court is named after its id; an existing one keeps its name unless given one
+                name,
             ))
             conn.commit()
         logger.info("court_upserted", kort_id=kort_id, pin=pin, tournament_id=tournament_id)

@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from ..db_models import GlobalPlayer, Player, Tournament
 from ..config import logger
-from ..services.player_registry import create_tournament_player
+from ..services import tournament_entries
 from ..services.office_event_broker import emit_office_invalidation
 from ..database import (
     add_row,
@@ -12,18 +12,15 @@ from ..database import (
     entries_named,
     entries_named_loosely,
     entries_of_global_player,
-    entry_of_global_player_in_tournament,
     global_player_count,
     search_global_players,
     classifications,
     commit_writes,
     delete_row,
     flush_writes,
-    forget_row,
     get_row,
     tournament_counts_for_players,
     tournament_players_grouped_by_name,
-    write_session,
 )
 
 blueprint = Blueprint('admin_global_players', __name__, url_prefix='/admin/api/global-players')
@@ -75,25 +72,8 @@ def create_global_player():
     data = request.get_json(silent=True) or {}
     if not data:
         return jsonify({'error': 'No data provided'}), 400
-
-    first_name = data.get('first_name', '').strip()
-    last_name = data.get('last_name', '').strip()
-    if not last_name:
-        return jsonify({'error': 'last_name is required'}), 400
-
-    gp = GlobalPlayer(
-        first_name=first_name,
-        last_name=last_name,
-        gender=classifications.normalize_gender(data.get('gender', '')),
-        birth_date=data.get('birth_date', '').strip() or None,
-        country=data.get('country', '').strip(),
-        category=classifications.normalize_class(data.get('category', '')) or data.get('category', '').strip(),
-        notes=data.get('notes', '').strip() or None,
-    )
-    add_row(gp)
-    commit_writes()
-    logger.info("global_player_created", id=gp.id, name=gp.full_name)
-    return jsonify(gp.to_dict()), 201
+    body, status = tournament_entries.create_global_player(data)
+    return jsonify(body), status
 
 
 @blueprint.route('/<int:gp_id>', methods=['GET'])
@@ -120,49 +100,8 @@ def get_global_player(gp_id: int):
 
 @blueprint.route('/<int:gp_id>', methods=['PUT'])
 def update_global_player(gp_id: int):
-    gp = get_row(GlobalPlayer, gp_id)
-    if not gp:
-        return jsonify({'error': 'Player not found'}), 404
-
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'No data provided'}), 400
-
-    if 'first_name' in data:
-        gp.first_name = data['first_name'].strip()
-    if 'last_name' in data:
-        gp.last_name = data['last_name'].strip()
-    if 'gender' in data:
-        gp.gender = classifications.normalize_gender(data['gender'])
-    if 'birth_date' in data:
-        gp.birth_date = data['birth_date'].strip() or None
-    if 'country' in data:
-        gp.country = data['country'].strip()
-    new_class = None
-    if 'category' in data:
-        requested = data['category'].strip()
-        code = classifications.normalize_class(requested)
-        if code and code != classifications.normalize_class(gp.category):
-            # a class change goes through the history (below), which also sets the category
-            new_class = code
-        elif not code:
-            gp.category = requested
-    if 'notes' in data:
-        gp.notes = data['notes'].strip() or None
-
-    commit_writes()
-    if new_class:
-        classifications.record_classification_change(
-            gp_id,
-            new_class,
-            source='manual',
-            effective_date=(data.get('classification_date') or '').strip() or None,
-            status=data.get('classification_status') if data.get('classification_status') in classifications.STATUSES else 'confirmed',
-            note=(data.get('classification_note') or '').strip(),
-        )
-        forget_row(gp)
-    logger.info("global_player_updated", id=gp_id)
-    return jsonify(gp.to_dict())
+    body, status = tournament_entries.update_global_player(gp_id, request.get_json(silent=True) or {})
+    return jsonify(body), status
 
 
 @blueprint.route('/<int:gp_id>/classifications', methods=['GET'])
@@ -336,44 +275,11 @@ def migrate_existing_players():
 
 @blueprint.route('/tournaments/<int:tid>/add-global', methods=['POST'])
 def add_global_to_tournament(tid: int):
-    """Add a global player to a tournament.
-    Body: { global_player_id: int, category: str (optional override) }
-    """
-    from ..db_models import Tournament
+    """Add a global player to a tournament. Body: { global_player_id: int, category: str (optional override) }"""
     tournament = get_row(Tournament, tid)
     if not tournament:
         return jsonify({'error': 'Tournament not found'}), 404
     if int(tournament.active or 0) != 1:
         return jsonify({'error': 'Tournament is inactive'}), 409
-
-    data = request.get_json(silent=True) or {}
-    gp_id = data.get('global_player_id')
-    if not gp_id:
-        return jsonify({'error': 'global_player_id is required'}), 400
-
-    gp = get_row(GlobalPlayer, gp_id)
-    if not gp:
-        return jsonify({'error': 'Global player not found'}), 404
-
-    # Check if already registered
-    existing = entry_of_global_player_in_tournament(tid, gp_id)
-    if existing:
-        return jsonify({'error': 'Player already in this tournament'}), 409
-
-    category = data.get('category', '').strip() or gp.category or ''
-
-    p = create_tournament_player(
-        write_session(),
-        tournament_id=tid,
-        name=gp.full_name,
-        first_name=gp.first_name,
-        last_name=gp.last_name,
-        gender=gp.gender or '',
-        category=category,
-        country=gp.country or '',
-        global_player=gp,
-    )
-    commit_writes()
-
-    logger.info("global_player_added_to_tournament", gp_id=gp_id, tournament_id=tid, player_id=p.id)
-    return jsonify(p.to_dict()), 201
+    body, status = tournament_entries.add_global_entry(tid, request.get_json(silent=True) or {})
+    return jsonify(body), status

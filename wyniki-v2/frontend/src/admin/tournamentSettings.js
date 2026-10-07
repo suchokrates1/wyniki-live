@@ -18,6 +18,7 @@ export const TOURNAMENT_FLAGS = [
   { key: 'is_public', label: 'Publiczny', hint: 'widoczny na blindtennis.app' },
   { key: 'stats_enabled', label: 'Liczy statystyki', hint: 'wyniki wchodzą do profili zawodników' },
   { key: 'is_simulation', label: 'Symulacja', hint: 'turniej testowy, poza wynikami' },
+  { key: 'visibility_lock', label: 'Blokada publikacji', hint: 'organizator serii nie opublikuje turnieju' },
 ];
 
 /** What the champion is called on the bracket. Unset, the name decides and the panel says so. */
@@ -33,7 +34,8 @@ export function flagsFor(tournament = {}) {
   const simulation = !!tournament.is_simulation;
   return TOURNAMENT_FLAGS.map((flag) => ({
     ...flag,
-    disabled: simulation && (flag.key === 'is_public' || flag.key === 'stats_enabled'),
+    disabled: (simulation && (flag.key === 'is_public' || flag.key === 'stats_enabled'))
+      || (flag.key === 'is_public' && !!tournament.visibility_lock),
   }));
 }
 

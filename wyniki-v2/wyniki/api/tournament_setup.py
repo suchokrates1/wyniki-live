@@ -62,6 +62,10 @@ def create_category(tournament_id: int, data: dict[str, Any]) -> Reply:
 
 
 def update_category(tournament_id: int, category_id: int, data: dict[str, Any]) -> Reply:
+    # checked before the write: a category of another tournament stays untouched
+    existing = fetch_tournament_category(category_id)
+    if not existing or int(existing.get("tournament_id") or 0) != tournament_id:
+        return {"error": "Category not found"}, 404
     category = update_tournament_category(
         category_id,
         label=data.get("label") if "label" in data else None,

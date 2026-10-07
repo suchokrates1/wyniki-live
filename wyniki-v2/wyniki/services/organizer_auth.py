@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict, deque
+from datetime import date
 
 from flask import g, jsonify, request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -128,3 +129,28 @@ def require_series_tournament(tournament_id: int):
     if not series.tournament_in_series(int(tournament_id), series_ids()):
         return jsonify({"error": "Not a tournament of your series"}), 403
     return None
+
+
+# ----- the subscription: past its date a series is read only -----
+
+def series_expired(item: dict) -> bool:
+    until = (item or {}).get("valid_until") or ""
+    return bool(until) and until < date.today().isoformat()
+
+
+def tournament_writable(tournament_id: int) -> bool:
+    """True while one of the person's series that ranks this tournament is paid up."""
+    return any(
+        not series_expired(item) and series.tournament_in_series(int(tournament_id), [item["id"]])
+        for item in getattr(g, "series", [])
+    )
+
+
+def require_paid_up(series_id: int | None = None, tournament_id: int | None = None):
+    if tournament_id is not None:
+        ok = tournament_writable(tournament_id)
+    elif series_id is not None:
+        ok = not series_expired(next((item for item in g.series if item["id"] == int(series_id)), {}))
+    else:
+        ok = any(not series_expired(item) for item in getattr(g, "series", []))
+    return None if ok else (jsonify({"error": "Subscription expired"}), 403)

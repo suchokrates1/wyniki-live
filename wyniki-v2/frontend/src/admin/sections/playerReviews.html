@@ -1,0 +1,34 @@
+<section class="adm-card" aria-labelledby="adm-reviews-title">
+  <div class="adm-card__head">
+    <h2 id="adm-reviews-title" class="adm-card__title">Zmiany od organizatorów serii</h2>
+    <span class="adm-card__hint">już obowiązują; zostaw je albo cofnij do poprzednich wartości</span>
+  </div>
+  <p class="adm-modal__error" role="alert" x-show="playerReviewsError" x-text="playerReviewsError"></p>
+  <ul class="adm-rows" role="list">
+    <template x-for="review in playerReviews" :key="review.id">
+      <li class="adm-row">
+        <div class="adm-row__main">
+          <div class="adm-row__title">
+            <span class="adm-row__name" x-text="review.first_name + ' ' + review.last_name"></span>
+          </div>
+          <div class="adm-row__meta" x-text="review.account_email + ' · ' + reviewDate(review)"></div>
+          <ul class="adm-review__changes" role="list">
+            <template x-for="change in reviewChanges(review)" :key="change.key">
+              <li>
+                <span x-text="change.label + ': '"></span>
+                <del x-text="change.before"></del>
+                <span aria-hidden="true"> → </span><span class="sr-only"> zmienione na </span>
+                <strong x-text="change.after"></strong>
+              </li>
+            </template>
+          </ul>
+        </div>
+        <div class="adm-row__actions">
+          <button type="button" class="adm-btn" @click="decidePlayerReview(review, 'accept')">Zostaw<span class="sr-only" x-text="': ' + review.first_name + ' ' + review.last_name"></span></button>
+          <button type="button" class="adm-btn adm-btn--danger" @click="decidePlayerReview(review, 'revert')">Cofnij<span class="sr-only" x-text="': ' + review.first_name + ' ' + review.last_name"></span></button>
+        </div>
+      </li>
+    </template>
+  </ul>
+  <p class="adm-empty" x-show="!playerReviews.length">Nic do sprawdzenia.</p>
+</section>

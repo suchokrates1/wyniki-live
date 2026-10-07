@@ -1,0 +1,40 @@
+<div class="adm-stack">
+  <a class="org-back" :href="'#/' + (current()?.slug || '')">← Turnieje serii</a>
+  <p class="adm-loading" x-show="!t && !tError" role="status">Wczytywanie turnieju…</p>
+  <p class="adm-modal__error" role="alert" x-show="!t && tError" x-text="tError"></p>
+
+  <template x-if="t">
+    <div class="adm-stack">
+      <div class="org-head">
+        <div>
+          <h1 class="org-title" x-text="t.name"></h1>
+          <p class="org-sub">
+            <span x-text="[dateRange(t.start_date, t.end_date), t.city, t.country].filter(Boolean).join(' · ')"></span>
+            <template x-for="item in t.series" :key="item.id">
+              <span class="adm-chip org-tier" x-show="item.tier" x-text="tierLabel(item.tier)"></span>
+            </template>
+            <span class="adm-chip adm-chip--live" x-show="t.active">trwa</span>
+            <span class="adm-chip" :class="t.is_public ? 'adm-chip--ok' : ''" x-text="t.is_public ? 'publiczny' : 'niepubliczny'"></span>
+            <span class="adm-chip adm-chip--warn" x-show="t.visibility_lock === 'private'">blokada publikacji</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="adm-subtabs org-tabs" role="tablist" aria-label="Części turnieju">
+        <template x-for="tab in tabs()" :key="tab.id">
+          <a class="adm-subtab" role="tab" :id="'org-tab-btn-' + tab.id" :href="'#/' + current().slug + '/t/' + t.id + (tab.id === 'ustawienia' ? '' : '/' + tab.id)"
+             :class="{ 'is-active': route.tab === tab.id }" :aria-selected="route.tab === tab.id" x-text="tab.label"></a>
+        </template>
+      </div>
+
+      <p class="org-note" role="status" x-show="tMessage" x-text="tMessage"></p>
+      <p class="adm-modal__error" role="alert" x-show="tError" x-text="tError"></p>
+
+      <div role="tabpanel" aria-labelledby="org-tab-btn-ustawienia" x-show="route.tab === 'ustawienia'"><!-- @partial tabSettings --></div>
+      <div role="tabpanel" aria-labelledby="org-tab-btn-kategorie" x-show="route.tab === 'kategorie'"><!-- @partial tabCategories --></div>
+      <div role="tabpanel" aria-labelledby="org-tab-btn-zawodnicy" x-show="route.tab === 'zawodnicy'"><!-- @partial tabPlayers --></div>
+      <div role="tabpanel" aria-labelledby="org-tab-btn-korty" x-show="route.tab === 'korty'"><!-- @partial tabCourts --></div>
+      <div role="tabpanel" aria-labelledby="org-tab-btn-historia" x-show="route.tab === 'historia'"><!-- @partial tabLog --></div>
+    </div>
+  </template>
+</div>

@@ -1,0 +1,110 @@
+<div class="adm-stack">
+  <p class="org-note" role="status" x-show="playersMessage" x-text="playersMessage"></p>
+  <p class="adm-modal__error" role="alert" x-show="playersError" x-text="playersError"></p>
+
+  <section class="adm-card" aria-labelledby="org-entries-title">
+    <div class="adm-card__head">
+      <h2 id="org-entries-title" class="adm-card__title">Zgłoszeni zawodnicy</h2>
+      <span class="adm-card__hint" x-text="entriesText(entries.length)"></span>
+    </div>
+    <ul class="adm-rows" role="list">
+      <template x-for="entry in entries" :key="entry.id">
+        <li class="adm-row">
+          <template x-if="editing?.entry.id !== entry.id">
+            <div class="org-row-flex">
+              <div class="adm-row__main">
+                <div class="adm-row__title"><span class="adm-row__name" x-text="entry.name"></span></div>
+                <div class="adm-row__meta" x-text="personLine(entry)"></div>
+              </div>
+              <div class="adm-row__actions" x-show="!t.read_only">
+                <button type="button" class="adm-btn" @click="startEdit(entry)">Popraw<span class="sr-only" x-text="': ' + entry.name"></span></button>
+                <button type="button" class="adm-btn adm-btn--danger" @click="removeEntry(entry)">Wycofaj<span class="sr-only" x-text="': ' + entry.name"></span></button>
+              </div>
+            </div>
+          </template>
+          <template x-if="editing?.entry.id === entry.id">
+            <form class="org-edit" @submit.prevent="saveEdit()" :aria-label="'Popraw: ' + entry.name">
+              <div class="adm-grid">
+                <div class="adm-field"><label class="adm-field__label" :for="'org-ed-first-' + entry.id">Imię</label><input class="adm-input" :id="'org-ed-first-' + entry.id" x-model="editing.first_name"></div>
+                <div class="adm-field"><label class="adm-field__label" :for="'org-ed-last-' + entry.id">Nazwisko</label><input class="adm-input" :id="'org-ed-last-' + entry.id" x-model="editing.last_name"></div>
+                <div class="adm-field"><label class="adm-field__label" :for="'org-ed-class-' + entry.id">Klasa</label>
+                  <select class="adm-input" :id="'org-ed-class-' + entry.id" x-model="editing.category"><option value="">—</option><template x-for="c in classes()" :key="c"><option :value="c" x-text="c" :selected="editing.category === c"></option></template></select></div>
+                <div class="adm-field"><label class="adm-field__label" :for="'org-ed-country-' + entry.id">Kraj</label><input class="adm-input" maxlength="2" :id="'org-ed-country-' + entry.id" x-model="editing.country"></div>
+                <div class="adm-field"><label class="adm-field__label" :for="'org-ed-gender-' + entry.id">Płeć</label>
+                  <select class="adm-input" :id="'org-ed-gender-' + entry.id" x-model="editing.gender"><option value="">—</option><template x-for="g in genders()" :key="g.value"><option :value="g.value" x-text="g.label" :selected="editing.gender === g.value"></option></template></select></div>
+              </div>
+              <p class="adm-field__hint" x-show="entry.global_player_id">Zmiana poprawia też zawodnika w bazie wszystkich turniejów.</p>
+              <div class="adm-card__footer">
+                <button type="submit" class="adm-btn adm-btn--primary">Zapisz</button>
+                <button type="button" class="adm-btn adm-btn--quiet" @click="editing = null">Anuluj</button>
+              </div>
+            </form>
+          </template>
+        </li>
+      </template>
+    </ul>
+    <p class="adm-empty" x-show="!entries.length">Nikt nie jest jeszcze zgłoszony.</p>
+  </section>
+
+  <section class="adm-card" aria-labelledby="org-find-title" x-show="!t.read_only">
+    <h2 id="org-find-title" class="adm-card__title">Dodaj z bazy zawodników</h2>
+    <div class="adm-field">
+      <label class="adm-field__label" for="org-find">Imię lub nazwisko</label>
+      <input class="adm-input" type="search" id="org-find" x-model="playerQuery" @input="searchPlayers()" autocomplete="off" aria-describedby="org-find-count">
+    </div>
+    <p class="adm-card__hint" id="org-find-count" role="status" x-text="playerSearched ? (playerResults.length ? 'Znaleziono: ' + playerResults.length : 'Nie ma takiej osoby w bazie. Dodaj ją niżej.') : ''"></p>
+    <ul class="adm-rows" role="list">
+      <template x-for="person in playerResults" :key="person.id">
+        <li class="adm-row">
+          <div class="adm-row__main">
+            <div class="adm-row__title"><span class="adm-row__name" x-text="person.first_name + ' ' + person.last_name"></span></div>
+            <div class="adm-row__meta" x-text="personLine(person) + (person.tournaments_count ? ' · turnieje: ' + person.tournaments_count : '')"></div>
+          </div>
+          <div class="adm-row__actions">
+            <span class="adm-chip adm-chip--ok" x-show="isEntered(person)">zgłoszony</span>
+            <button type="button" class="adm-btn adm-btn--primary" x-show="!isEntered(person)" @click="enterPerson(person)">Zgłoś<span class="sr-only" x-text="': ' + person.first_name + ' ' + person.last_name"></span></button>
+          </div>
+        </li>
+      </template>
+    </ul>
+  </section>
+
+  <form class="adm-card" aria-labelledby="org-newp-title" x-show="!t.read_only" @submit.prevent="createAndEnter()">
+    <h2 id="org-newp-title" class="adm-card__title">Nowa osoba w bazie</h2>
+    <p class="adm-card__hint">Najpierw sprawdź w wyszukiwarce, czy jej tam nie ma.</p>
+    <div class="adm-grid">
+      <div class="adm-field"><label class="adm-field__label" for="org-np-first">Imię</label><input class="adm-input" id="org-np-first" x-model="newPerson.first_name"></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-np-last">Nazwisko</label><input class="adm-input" id="org-np-last" x-model="newPerson.last_name" required></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-np-class">Klasa</label>
+        <select class="adm-input" id="org-np-class" x-model="newPerson.category"><option value="">—</option><template x-for="c in classes()" :key="c"><option :value="c" x-text="c"></option></template></select></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-np-country">Kraj (kod)</label><input class="adm-input" maxlength="2" id="org-np-country" x-model="newPerson.country"></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-np-gender">Płeć</label>
+        <select class="adm-input" id="org-np-gender" x-model="newPerson.gender"><option value="">—</option><template x-for="g in genders()" :key="g.value"><option :value="g.value" x-text="g.label"></option></template></select></div>
+    </div>
+    <div class="adm-card__footer"><button type="submit" class="adm-btn adm-btn--primary">Dodaj do bazy i zgłoś</button></div>
+  </form>
+
+  <section class="adm-card" aria-labelledby="org-import-title" x-show="!t.read_only">
+    <h2 id="org-import-title" class="adm-card__title">Wklej listę zgłoszeń</h2>
+    <div class="adm-field">
+      <label class="adm-field__label" for="org-import">Jedna osoba w wierszu: imię, nazwisko, klasa, kraj</label>
+      <textarea class="adm-input org-import" id="org-import" rows="6" x-model="importText"></textarea>
+    </div>
+    <div class="adm-card__footer"><button type="button" class="adm-btn" @click="parseImport()">Rozpoznaj</button></div>
+    <template x-if="importPreview">
+      <div>
+        <h3 class="adm-subhead" x-text="'Rozpoznano: ' + importPreview.count"></h3>
+        <ul class="adm-rows" role="list">
+          <template x-for="(row, i) in importPreview.players" :key="i">
+            <li class="adm-row"><div class="adm-row__main"><span class="adm-row__name" x-text="row.name || (row.first_name + ' ' + row.last_name)"></span>
+              <div class="adm-row__meta" x-text="personLine(row) + ((row.warnings || []).length ? ' · sprawdź: ' + row.warnings.join(', ') : '')"></div></div></li>
+          </template>
+        </ul>
+        <div class="adm-card__footer">
+          <button type="button" class="adm-btn adm-btn--primary" @click="confirmImport()">Dodaj wszystkich</button>
+          <button type="button" class="adm-btn adm-btn--quiet" @click="importPreview = null">Anuluj</button>
+        </div>
+      </div>
+    </template>
+  </section>
+</div>

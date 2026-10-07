@@ -8,7 +8,7 @@
 
 export const ADMIN_SECTIONS = [
   { id: 'turnieje', label: 'Turnieje', short: 'Turnieje', tabs: ['tournaments', 'series'] },
-  { id: 'zawodnicy', label: 'Zawodnicy', short: 'Zawodnicy', tabs: ['global_players', 'players'] },
+  { id: 'zawodnicy', label: 'Zawodnicy', short: 'Zawodnicy', tabs: ['global_players', 'players', 'player_reviews'] },
   { id: 'korty', label: 'Korty i tablety', short: 'Korty', tabs: ['courts', 'devices'] },
   { id: 'overlay', label: 'Overlay TV', short: 'Overlay', tabs: ['settings'] },
   { id: 'system', label: 'System', short: 'System', tabs: ['panic'] },
@@ -42,6 +42,7 @@ export const SECTION_TAB_LABELS = {
   series: 'Serie i konta',
   global_players: 'Baza zawodników',
   players: 'Zgłoszenia do turnieju',
+  player_reviews: 'Do sprawdzenia',
   courts: 'Korty',
   devices: 'Tablety',
 };

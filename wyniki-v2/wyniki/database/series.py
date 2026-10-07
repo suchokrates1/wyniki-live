@@ -59,6 +59,9 @@ def ensure_series_tables(cursor: sqlite3.Cursor) -> None:
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_series_tournaments_tournament ON series_tournaments(tournament_id)")
+    from .series_records import ensure_series_record_tables
+
+    ensure_series_record_tables(cursor)
 
 
 def slugify(name: str) -> str:

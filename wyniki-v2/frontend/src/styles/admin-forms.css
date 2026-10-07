@@ -147,3 +147,7 @@
 /* Turnieje → Serie i konta: the invitation link to pass on */
 .adm-invite { border-color: var(--adm-ok); }
 .adm-invite__link { flex: 1 1 320px; min-width: 0; }
+
+/* Zawodnicy → Do sprawdzenia */
+.adm-review__changes { margin: 6px 0 0; padding: 0; list-style: none; font-size: 15px; }
+.adm-review__changes del { color: var(--adm-muted); }

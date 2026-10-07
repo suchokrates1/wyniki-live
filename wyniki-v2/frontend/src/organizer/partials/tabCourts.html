@@ -1,0 +1,44 @@
+<div class="adm-stack">
+  <section class="adm-card" aria-labelledby="org-live-title">
+    <h2 id="org-live-title" class="adm-card__title">Dzień turnieju</h2>
+    <p x-text="t.active ? 'Turniej trwa: sędziowie widzą go w aplikacji, a biuro jest otwarte.' : 'Turniej nie trwa: sędziowie go nie widzą, biuro jest zamknięte.'"></p>
+    <div class="adm-card__footer" x-show="!t.read_only">
+      <button type="button" class="adm-btn" :class="t.active ? '' : 'adm-btn--primary'" @click="toggleLive()" x-text="t.active ? 'Zakończ turniej' : 'Turniej trwa — włącz'"></button>
+      <button type="button" class="adm-btn adm-btn--primary" x-show="t.office_slot" @click="openOffice()">Otwórz biuro turnieju</button>
+    </div>
+  </section>
+
+  <section class="adm-card" aria-labelledby="org-courts-title">
+    <h2 id="org-courts-title" class="adm-card__title">Korty i PIN-y sędziów</h2>
+    <p class="adm-card__hint">Sędzia wpisuje PIN kortu w aplikacji. Liczbę kortów zmienisz w ustawieniach.</p>
+    <ul class="adm-rows" role="list">
+      <template x-for="court in t.courts" :key="court.kort_id">
+        <li class="adm-row">
+          <div class="adm-row__main"><span class="adm-row__name" x-text="'Kort ' + court.name"></span></div>
+          <form class="adm-row__actions" @submit.prevent="savePin(court)">
+            <label class="sr-only" :for="'org-pin-' + court.kort_id" x-text="'PIN kortu ' + court.name"></label>
+            <input class="adm-input adm-mono org-pin" :id="'org-pin-' + court.kort_id" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" x-model="tPins[court.kort_id]" :disabled="t.read_only">
+            <button type="submit" class="adm-btn" x-show="!t.read_only" :disabled="tPins[court.kort_id] === court.pin">Zapisz PIN<span class="sr-only" x-text="': kort ' + court.name"></span></button>
+          </form>
+        </li>
+      </template>
+    </ul>
+    <p class="adm-empty" x-show="!t.courts.length">Turniej nie ma kortów. Ustaw ich liczbę w ustawieniach.</p>
+  </section>
+
+  <section class="adm-card" aria-labelledby="org-overlay-title">
+    <h2 id="org-overlay-title" class="adm-card__title">Nakładki na transmisję</h2>
+    <p class="adm-card__hint">Dla realizatora z własnym streamem: źródło przeglądarki w OBS, 1920×1080.</p>
+    <ul class="adm-rows" role="list">
+      <template x-for="link in t.overlays" :key="link.id">
+        <li class="adm-row">
+          <div class="adm-row__main">
+            <span class="adm-row__name" x-text="link.name"></span>
+            <div class="adm-row__meta adm-mono" x-text="overlayUrl(link) || 'Link pojawi się, gdy turniej będzie trwał.'"></div>
+          </div>
+        </li>
+      </template>
+    </ul>
+    <p class="adm-empty" x-show="!t.overlays.length">Do turnieju nie przypisano nakładek. Jeśli streamujesz, napisz na contact@blindtennis.app.</p>
+  </section>
+</div>

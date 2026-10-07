@@ -5,21 +5,14 @@ anything about a series or a tournament checks it is one of that person's series
 """
 from __future__ import annotations
 
-from flask import Blueprint, g, jsonify, request
+from flask import g, jsonify, request
 
 from ..database import accounts, series
 from ..services import organizer_auth as auth
+from .organizer_common import guarded_blueprint
 
-blueprint = Blueprint("organizer", __name__, url_prefix="/organizer/api")
-
-OPEN_ENDPOINTS = {"organizer.sign_in", "organizer.invite_info", "organizer.invite_accept"}
-
-
-@blueprint.before_request
-def guard():
-    if request.endpoint in OPEN_ENDPOINTS:
-        return None
-    return auth.require_organizer()
+OPEN_ENDPOINTS = frozenset({"organizer.sign_in", "organizer.invite_info", "organizer.invite_accept"})
+blueprint = guarded_blueprint("organizer", "/organizer/api", open_endpoints=OPEN_ENDPOINTS)
 
 
 def _session(account: dict) -> dict:
@@ -74,7 +67,4 @@ def me():
 
 @blueprint.route("/series/<int:series_id>/tournaments", methods=["GET"])
 def series_tournament_list(series_id: int):
-    denied = auth.require_series(series_id)
-    if denied:
-        return denied
     return jsonify(series.series_tournaments(series_id))

@@ -94,12 +94,12 @@ def test_reads_still_come_back_empty_rather_than_blowing_up(locked):
 
 def test_the_api_turns_a_storage_failure_into_a_json_500(full_app_with_temp_db, monkeypatch):
     """Registered once for the whole app, so a new endpoint is covered the day it lands."""
-    from wyniki.api import admin_tournaments
+    from wyniki.services import tournament_settings
 
     def locked_write(*_args, **_kwargs):
         raise StorageError("insert_tournament")
 
-    monkeypatch.setattr(admin_tournaments, "insert_tournament", locked_write)
+    monkeypatch.setattr(tournament_settings, "insert_tournament", locked_write)
     client = full_app_with_temp_db.test_client()
     response = client.post(
         "/admin/api/tournaments",

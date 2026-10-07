@@ -26,6 +26,9 @@ from wyniki.api.panic import admin_blueprint as panic_admin_blueprint, umpire_bl
 from wyniki.api.devices import blueprint as devices_admin_blueprint
 from wyniki.api.admin_series import blueprint as series_admin_blueprint
 from wyniki.api.organizer import blueprint as organizer_blueprint
+from wyniki.api.organizer_tournaments import blueprint as organizer_tournaments_blueprint
+from wyniki.api.organizer_players import blueprint as organizer_players_blueprint
+from wyniki.api.admin_player_reviews import blueprint as player_reviews_admin_blueprint
 from wyniki.api.overlay_api import blueprint as overlay_api_blueprint
 from wyniki.api.brackets import bracket_public_bp, bracket_admin_bp
 from wyniki.services.api_auth import require_admin_access
@@ -119,6 +122,9 @@ def create_app() -> Flask:
     app.register_blueprint(devices_admin_blueprint)
     app.register_blueprint(series_admin_blueprint)
     app.register_blueprint(organizer_blueprint)
+    app.register_blueprint(organizer_tournaments_blueprint)
+    app.register_blueprint(organizer_players_blueprint)
+    app.register_blueprint(player_reviews_admin_blueprint)
     app.register_blueprint(overlay_api_blueprint)
     app.register_blueprint(bracket_public_bp)
     app.register_blueprint(bracket_admin_bp)

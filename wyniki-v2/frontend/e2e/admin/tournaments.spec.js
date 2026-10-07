@@ -84,7 +84,7 @@ test('Ustawienia opens the tournament with its fields, flags and extras', async 
   await expect(page.locator('#adm-edit-start-date')).toHaveValue('2026-09-26');
   await expect(page.locator('#adm-edit-court-count')).toHaveValue('4');
   const settings = page.locator('#admin-tournament-settings');
-  await expect(settings.locator('.adm-flag')).toHaveCount(4);
+  await expect(settings.locator('.adm-flag')).toHaveCount(5);
   await expect(settings.locator('.adm-flag.is-on')).toHaveCount(3);
   await expect(page.getByText('Transmisje i kategorie')).toBeVisible();
 

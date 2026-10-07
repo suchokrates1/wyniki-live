@@ -49,9 +49,17 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | DELETE | `/admin/api/global-players/<int:gp_id>/photo` | Delete a player photo. |
 | POST | `/admin/api/global-players/<int:gp_id>/photo` | Upload a player photo (resized to max 200x200). |
 | POST | `/admin/api/global-players/migrate` | One-time migration: create GlobalPlayer records from existing players. |
-| POST | `/admin/api/global-players/tournaments/<int:tid>/add-global` | Add a global player to a tournament. |
+| POST | `/admin/api/global-players/tournaments/<int:tid>/add-global` | Add a global player to a tournament. Body: { global_player_id: int, category: str (optional override) } |
 | GET | `/admin/api/global-players/tournaments/<int:tid>/classification-review` | Players of a tournament who played outside their sport class. |
 | POST | `/admin/api/global-players/tournaments/<int:tid>/classification-review` | Body: { decisions: [{ global_player_id, decision: reclassify\|play_up\|skip, classification? }] } |
+
+## admin_player_reviews
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/admin/api/player-reviews` |  |
+| POST | `/admin/api/player-reviews/<int:review_id>/accept` |  |
+| POST | `/admin/api/player-reviews/<int:review_id>/revert` |  |
 
 ## admin_series
 
@@ -89,7 +97,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/admin/api/tournaments/<int:tournament_id>/players` | Add a player to a tournament. |
 | DELETE | `/admin/api/tournaments/<int:tournament_id>/players/<int:player_id>` |  |
 | PUT | `/admin/api/tournaments/<int:tournament_id>/players/<int:player_id>` |  |
-| POST | `/admin/api/tournaments/<int:tournament_id>/players/bulk` | Bulk import pre-parsed players from JSON array. |
+| POST | `/admin/api/tournaments/<int:tournament_id>/players/bulk` | Bulk import pre-parsed players: { "players": [{"name": "...", "category": "...", "country": "..."}] } |
 | POST | `/admin/api/tournaments/<int:tournament_id>/players/parse-import` | Parse free-form tournament player import text and return preview data. |
 | GET | `/admin/api/tournaments/active` | Get only active tournaments for admin integrations. |
 
@@ -199,6 +207,38 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/organizer/api/invite/<token>` |  |
 | GET | `/organizer/api/me` |  |
 | GET | `/organizer/api/series/<int:series_id>/tournaments` |  |
+
+## organizer_players
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/organizer/api/players` |  |
+| POST | `/organizer/api/players` |  |
+| PUT | `/organizer/api/players/<int:gp_id>` |  |
+| GET | `/organizer/api/tournaments/<int:tournament_id>/players` |  |
+| POST | `/organizer/api/tournaments/<int:tournament_id>/players` |  |
+| DELETE | `/organizer/api/tournaments/<int:tournament_id>/players/<int:player_id>` |  |
+| PUT | `/organizer/api/tournaments/<int:tournament_id>/players/<int:player_id>` |  |
+| POST | `/organizer/api/tournaments/<int:tournament_id>/players/add-global` |  |
+| POST | `/organizer/api/tournaments/<int:tournament_id>/players/bulk` |  |
+| POST | `/organizer/api/tournaments/<int:tournament_id>/players/parse-import` |  |
+
+## organizer_tournaments
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/organizer/api/series/<int:series_id>/tournaments` |  |
+| GET | `/organizer/api/tournaments/<int:tournament_id>` |  |
+| PUT | `/organizer/api/tournaments/<int:tournament_id>` |  |
+| PUT | `/organizer/api/tournaments/<int:tournament_id>/active` | The day of the tournament: live for the umpires' app and the office, or not. |
+| GET | `/organizer/api/tournaments/<int:tournament_id>/categories` |  |
+| POST | `/organizer/api/tournaments/<int:tournament_id>/categories` |  |
+| DELETE | `/organizer/api/tournaments/<int:tournament_id>/categories/<int:category_id>` |  |
+| PATCH, PUT | `/organizer/api/tournaments/<int:tournament_id>/categories/<int:category_id>` |  |
+| POST | `/organizer/api/tournaments/<int:tournament_id>/categories/confirm` |  |
+| PUT | `/organizer/api/tournaments/<int:tournament_id>/courts/<kort_id>/pin` |  |
+| GET | `/organizer/api/tournaments/<int:tournament_id>/log` |  |
+| POST | `/organizer/api/tournaments/<int:tournament_id>/office-session` | Into the office without its password: the organizer already proved who they are. |
 
 ## overlay_api
 

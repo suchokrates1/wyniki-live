@@ -1,0 +1,15 @@
+<section class="adm-card" aria-labelledby="org-log-title">
+  <h2 id="org-log-title" class="adm-card__title">Historia zmian</h2>
+  <p class="adm-card__hint">Kto i kiedy zmieniał turniej w panelu organizatora. Najnowsze na górze.</p>
+  <ol class="adm-rows org-log" role="list">
+    <template x-for="entry in tLog" :key="entry.id">
+      <li class="adm-row">
+        <div class="adm-row__main">
+          <div class="adm-row__title"><span class="adm-row__name" x-text="logLine(entry)"></span></div>
+          <div class="adm-row__meta" x-text="entry.account_email + ' · ' + logWhen(entry)"></div>
+        </div>
+      </li>
+    </template>
+  </ol>
+  <p class="adm-empty" x-show="!tLog.length">Nikt jeszcze nic nie zmieniał.</p>
+</section>

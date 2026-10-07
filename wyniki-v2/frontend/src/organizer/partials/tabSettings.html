@@ -1,0 +1,40 @@
+<form class="adm-card" @submit.prevent="saveSettings()" aria-labelledby="org-settings-title">
+  <h2 id="org-settings-title" class="adm-card__title">Ustawienia turnieju</h2>
+  <fieldset class="org-fieldset" :disabled="t.read_only">
+    <div class="adm-grid">
+      <div class="adm-field adm-field--wide"><label class="adm-field__label" for="org-set-name">Nazwa</label><input class="adm-input" id="org-set-name" x-model="tForm.name" required></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-set-start">Pierwszy dzień</label><input class="adm-input" type="date" id="org-set-start" x-model="tForm.start_date" required></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-set-end">Ostatni dzień</label><input class="adm-input" type="date" id="org-set-end" x-model="tForm.end_date" required></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-set-city">Miasto</label><input class="adm-input" id="org-set-city" x-model="tForm.city"></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-set-country">Kraj (kod, np. DE)</label><input class="adm-input" id="org-set-country" maxlength="2" x-model="tForm.country"></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-set-courts">Liczba kortów</label><input class="adm-input" type="number" min="0" max="30" id="org-set-courts" x-model.number="tForm.court_count"></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-set-report">E-mail na raporty po meczach</label><input class="adm-input" type="email" id="org-set-report" x-model="tForm.report_email"></div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="org-set-scope">Ranga turnieju (napis nad zwycięzcą)</label>
+        <select class="adm-input" id="org-set-scope" x-model="tForm.title_scope">
+          <template x-for="scope in titleScopes()" :key="scope.value">
+            <option :value="scope.value" x-text="scope.label + ' — „' + scope.example + '”'" :selected="tForm.title_scope === scope.value"></option>
+          </template>
+        </select>
+      </div>
+      <div class="adm-field"><label class="adm-field__label" for="org-set-title">Własny napis (opcjonalnie)</label><input class="adm-input" id="org-set-title" maxlength="80" x-model="tForm.title_override"></div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="org-set-office">Nowe hasło biura</label>
+        <input class="adm-input" type="password" autocomplete="new-password" id="org-set-office" x-model="tForm.office_password" aria-describedby="org-set-office-hint">
+        <span class="adm-field__hint" id="org-set-office-hint" x-text="t.has_office_password ? 'Hasło jest ustawione. Puste pole zostawia obecne.' : 'Biuro nie ma jeszcze hasła.'"></span>
+      </div>
+    </div>
+
+    <div class="org-checks">
+      <label class="org-check">
+        <input type="checkbox" x-model="tForm.is_public" :disabled="t.visibility_lock === 'private' || tForm.is_simulation" aria-describedby="org-set-public-hint">
+        Publiczny na blindtennis.app
+      </label>
+      <p class="adm-field__hint" id="org-set-public-hint" x-show="t.visibility_lock === 'private'">Administrator zablokował publikację tego turnieju. Napisz na contact@blindtennis.app.</p>
+      <label class="org-check"><input type="checkbox" x-model="tForm.is_simulation"> Symulacja (turniej testowy, poza wynikami i statystykami)</label>
+    </div>
+  </fieldset>
+  <div class="adm-card__footer" x-show="!t.read_only">
+    <button type="submit" class="adm-btn adm-btn--primary">Zapisz ustawienia</button>
+  </div>
+</form>

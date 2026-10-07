@@ -25,6 +25,7 @@ export function createTournamentEditorAdmin() {
         title_scope: 'open',
         title_override: '',
         title_scope_guessed: false,
+        visibility_lock: false,
       },
 
       async openTournamentEditor(tournament) {
@@ -44,6 +45,7 @@ export function createTournamentEditorAdmin() {
       title_scope: tournament.title_scope || 'open',
       title_override: tournament.title_override || '',
       title_scope_guessed: !!tournament.title_scope_guessed,
+      visibility_lock: tournament.visibility_lock === 'private',
       is_simulation: !!tournament.is_simulation,
       access_key: tournament.access_key || '',
       office_password: '',
@@ -82,6 +84,7 @@ export function createTournamentEditorAdmin() {
       title_scope: 'open',
       title_override: '',
       title_scope_guessed: false,
+      visibility_lock: false,
       access_key: '',
       office_password: '',
       has_office_password: false,

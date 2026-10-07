@@ -1,55 +1,40 @@
 """Admin API routes for tournaments and players management."""
-from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from flask import Blueprint, jsonify, request
-from werkzeug.security import generate_password_hash
-from werkzeug.utils import secure_filename
 
 from ..config import logger as logger
-from ..config import settings
+from ..config import settings as settings  # the player import reads its AI settings; tests patch them here
 from ..database import (
     StreamUrlError,
-    bulk_insert_players,
     counting_history_for,
-    create_tournament_courts,
-    delete_player,
     delete_tournament,
     entries_in_counting_tournaments,
     fetch_active_tournaments,
     fetch_courts,
-    fetch_courts_for_tournament,
     fetch_players,
     fetch_players_for_active_tournaments,
     fetch_tournament,
     fetch_tournament_categories,
     fetch_tournaments,
     fetch_umpire_active_tournaments,
-    get_planning_mixed_bands,
     get_row,
     get_tournament_court_streams,
     global_player_matching,
-    insert_player,
-    insert_tournament,
     save_tournament_court_streams,
-    set_active_tournament,
     set_tournament_active_state,
-    sync_tournament_courts,
-    update_player,
-    update_tournament,
 )
-from ..database.tournament_titles import save_tournament_title, title_fields
-from ..db_models import Tournament
+from ..database.tournament_titles import title_fields
 from ..services.history_results import result_winner
 from ..services.office_event_broker import emit_office_invalidation
 from ..services.office_workflow import (
     _normalize_bool,
-    _normalize_int,
 )
 from ..services.player_profile import build_player_profile
 from ..utils import json_no_cache as _json_no_cache
 from . import tournament_setup
+from ..services import tournament_entries, tournament_settings
+from ..database.series_records import set_visibility_lock, visibility_locks
 from .player_import import (
     _apply_import_ai_suggestions as _apply_import_ai_suggestions,
 )
@@ -70,13 +55,6 @@ from .player_import import (
 )
 from .player_import import (
     _needs_import_ai_help as _needs_import_ai_help,
-)
-from .player_import import (
-    _normalize_import_category,
-    _normalize_import_country,
-    _normalize_import_gender,
-    _parse_import_players_with_ai,
-    _summarize_import_players,
 )
 from .player_import import (
     _parse_import_player_line as _parse_import_player_line,
@@ -108,43 +86,6 @@ def _request_payload() -> dict[str, Any]:
     return request.form.to_dict()
 
 
-def _normalize_tournament_flags(data: dict[str, Any]) -> tuple[bool, bool, bool, str]:
-    is_simulation = _normalize_bool(data.get('is_simulation', False))
-    is_public = _normalize_bool(data.get('is_public', not is_simulation))
-    stats_enabled = _normalize_bool(data.get('stats_enabled', not is_simulation))
-    if is_simulation:
-        is_public = False
-        stats_enabled = False
-    access_key = (data.get('access_key') or '').strip()
-    return is_public, stats_enabled, is_simulation, access_key
-
-
-def _normalize_office_password_hash(raw_password: Any, *, existing_hash: str = '', is_simulation: bool = False, is_create: bool = False) -> str:
-    password = str(raw_password or '').strip()
-    if is_simulation and not password and (is_create or not existing_hash):
-        password = 'test'
-    if password:
-        return generate_password_hash(password)
-    return existing_hash or ''
-
-
-def _save_tournament_logo(uploaded_file, tournament_name: str) -> str | None:
-    """Save uploaded tournament logo and return public path."""
-    if not uploaded_file or not uploaded_file.filename:
-        return None
-
-    data_dir = Path(settings.database_path).parent
-    logos_dir = data_dir / 'tournament-logos'
-    logos_dir.mkdir(parents=True, exist_ok=True)
-
-    extension = Path(secure_filename(uploaded_file.filename)).suffix.lower() or '.png'
-    stem = secure_filename(tournament_name) or 'tournament'
-    file_name = f"{stem}-{uuid4().hex[:8]}{extension}"
-    target = logos_dir / file_name
-    uploaded_file.save(target)
-    return f"/data/tournament-logos/{file_name}"
-
-
 def _require_tournament(tournament_id: int, active_only: bool = False):
     tournament = fetch_tournament(tournament_id)
     if not tournament:
@@ -157,7 +98,8 @@ def _require_tournament(tournament_id: int, active_only: bool = False):
 @blueprint.route('', methods=['GET'])
 def get_tournaments():
     tournaments = fetch_tournaments()
-    return jsonify([{**t, **title_fields(t['id'], t['name'])} for t in tournaments])
+    locks = visibility_locks()
+    return jsonify([{**t, **title_fields(t['id'], t['name']), 'visibility_lock': locks.get(t['id'], '')} for t in tournaments])
 
 
 @blueprint.route('/<int:tournament_id>', methods=['GET'])
@@ -212,141 +154,17 @@ def delete_tournament_category_route(tournament_id: int, category_id: int):
 
 @blueprint.route('', methods=['POST'])
 def create_tournament():
-    data = _request_payload()
-    
-    name = (data.get('name') or '').strip()
-    start_date = (data.get('start_date') or '').strip()
-    end_date = (data.get('end_date') or '').strip()
-    active = _normalize_bool(data.get('active', False))
-    city = (data.get('city') or '').strip()
-    country = (data.get('country') or '').strip().upper()
-    report_email = (data.get('report_email') or '').strip()
-    court_count = _normalize_int(data.get('court_count'), 0)
-    is_public, stats_enabled, is_simulation, access_key = _normalize_tournament_flags(data)
-    office_password_hash = _normalize_office_password_hash(data.get('office_password'), is_simulation=is_simulation, is_create=True)
-    logo_path = _save_tournament_logo(request.files.get('logo'), name)
-    
-    if not all([name, start_date, end_date]):
-        return jsonify({"error": "Missing required fields"}), 400
-    
-    tournament_id = insert_tournament(
-        name,
-        start_date,
-        end_date,
-        active=active,
-        city=city,
-        country=country,
-        logo_path=logo_path,
-        report_email=report_email,
-        is_public=is_public,
-        stats_enabled=stats_enabled,
-        is_simulation=is_simulation,
-        access_key=access_key,
-        office_password_hash=office_password_hash,
-    )
-    
-    if tournament_id:
-        created_courts = create_tournament_courts(tournament_id, court_count)
-        if active:
-            set_active_tournament(tournament_id)
-        from ..services.court_manager import refresh_courts_from_db
-        refresh_courts_from_db(fetch_courts(active_only=True))
-        return jsonify({
-            "id": tournament_id,
-            "message": "Tournament created",
-            "created_courts": created_courts,
-        }), 201
-    else:
-        return jsonify({"error": "Failed to create tournament"}), 500
+    body, status = tournament_settings.create_from(_request_payload(), request.files.get('logo'))
+    return jsonify(body), status
 
 
 @blueprint.route('/<int:tournament_id>', methods=['PUT'])
 def update_tournament_route(tournament_id: int):
-    existing = fetch_tournament(tournament_id)
-    if not existing:
-        return jsonify({"error": "Tournament not found"}), 404
-
     data = _request_payload()
-    existing_row = get_row(Tournament, tournament_id)
-    
-    name = (data.get('name') or '').strip()
-    start_date = (data.get('start_date') or '').strip()
-    end_date = (data.get('end_date') or '').strip()
-    active = _normalize_bool(data.get('active', False))
-    city = (data.get('city') or '').strip()
-    country = (data.get('country') or '').strip().upper()
-    report_email = (data.get('report_email') or '').strip()
-    requested_court_count = _normalize_int(data.get('court_count'), existing.get('court_count') or 0)
-    is_public, stats_enabled, is_simulation, access_key = _normalize_tournament_flags(data)
-    office_password_hash = _normalize_office_password_hash(
-        data.get('office_password'),
-        existing_hash=existing_row.office_password_hash if existing_row else '',
-        is_simulation=is_simulation,
-        is_create=False,
-    )
-    logo_path = existing.get('logo_path')
-    if request.files.get('logo'):
-        logo_path = _save_tournament_logo(request.files.get('logo'), name)
-    
-    if not all([name, start_date, end_date]):
-        return jsonify({"error": "Missing required fields"}), 400
-
-    if requested_court_count < 0:
-        return jsonify({"error": "Court count cannot be negative"}), 400
-
-    current_courts = fetch_courts_for_tournament(tournament_id)
-    current_count = len(current_courts)
-    if requested_court_count < current_count:
-        from ..services.court_manager import get_court_state
-
-        removable_candidates = sorted(
-            current_courts,
-            key=lambda court: (int(court.get('display_order') or 0), str(court.get('kort_id') or '')),
-            reverse=True,
-        )[: current_count - requested_court_count]
-        busy_courts = []
-        for court in removable_candidates:
-            kort_id = str(court.get('kort_id') or '')
-            state = get_court_state(kort_id)
-            if state and state.get('match_status', {}).get('active'):
-                busy_courts.append(kort_id)
-
-        if busy_courts:
-            return jsonify({
-                "error": f"Cannot remove active courts: {', '.join(busy_courts)}",
-            }), 400
-    
-    success = update_tournament(
-        tournament_id,
-        name,
-        start_date,
-        end_date,
-        active,
-        city=city,
-        country=country,
-        logo_path=logo_path,
-        report_email=report_email,
-        is_public=is_public,
-        stats_enabled=stats_enabled,
-        is_simulation=is_simulation,
-        access_key=access_key,
-        office_password_hash=office_password_hash,
-    )
-    
-    if success:
-        save_tournament_title(tournament_id, data.get('title_scope'), data.get('title_override'))
-        court_changes = sync_tournament_courts(tournament_id, requested_court_count)
-        from ..services.court_manager import refresh_courts_from_db
-        refresh_courts_from_db(fetch_courts(active_only=True))
-        if active:
-            set_active_tournament(tournament_id)
-        return jsonify({
-            "message": "Tournament updated",
-            "created_courts": court_changes["created"],
-            "deleted_courts": court_changes["deleted"],
-        })
-    else:
-        return jsonify({"error": "Failed to update tournament"}), 500
+    body, status = tournament_settings.update_from(tournament_id, data, request.files.get('logo'))
+    if status == 200 and 'visibility_lock' in data:
+        set_visibility_lock(tournament_id, data.get('visibility_lock'))
+    return jsonify(body), status
 
 
 @blueprint.route('/<int:tournament_id>', methods=['DELETE'])
@@ -415,66 +233,17 @@ def get_tournament_players(tournament_id: int):
 @blueprint.route('/<int:tournament_id>/players', methods=['POST'])
 def create_player(tournament_id: int):
     """Add a player to a tournament."""
-    _, error = _require_tournament(tournament_id, active_only=True)
-    if error:
-        return error
-
-    data = request.get_json(silent=True) or {}
-    names = tournament_setup.player_names(data)
-    if not names:
-        return jsonify({"error": "Name is required"}), 400
-    name, first_name, last_name = names
-    category = data.get('category', '')
-    country = data.get('country', '')
-    gender = data.get('gender', '')
-    
-    player_id = insert_player(tournament_id, name, category, country,
-                              first_name=first_name, last_name=last_name,
-                              gender=gender)
-    
-    if player_id:
-        return jsonify({"id": player_id, "message": "Player added"}), 201
-    else:
-        return jsonify({"error": "Failed to add player"}), 500
+    return _with_active(tournament_id, lambda: tournament_entries.add_entry(tournament_id, request.get_json(silent=True) or {}))
 
 
 @blueprint.route('/<int:tournament_id>/players/<int:player_id>', methods=['PUT'])
 def update_player_route(tournament_id: int, player_id: int):
-    _, error = _require_tournament(tournament_id, active_only=True)
-    if error:
-        return error
-
-    data = request.get_json(silent=True) or {}
-    names = tournament_setup.player_names(data)
-    if not names:
-        return jsonify({"error": "Name is required"}), 400
-    name, first_name, last_name = names
-    category = data.get('category', '')
-    country = data.get('country', '')
-    gender = data.get('gender', '')
-    
-    success = update_player(player_id, name, category, country,
-                            first_name=first_name, last_name=last_name,
-                            gender=gender, tournament_id=tournament_id)
-    
-    if success:
-        return jsonify({"message": "Player updated"})
-    else:
-        return jsonify({"error": "Player not found in tournament"}), 404
+    return _with_active(tournament_id, lambda: tournament_entries.update_entry(tournament_id, player_id, request.get_json(silent=True) or {}))
 
 
 @blueprint.route('/<int:tournament_id>/players/<int:player_id>', methods=['DELETE'])
 def delete_player_route(tournament_id: int, player_id: int):
-    _, error = _require_tournament(tournament_id, active_only=True)
-    if error:
-        return error
-
-    success = delete_player(player_id, tournament_id=tournament_id)
-    
-    if success:
-        return jsonify({"message": "Player deleted"})
-    else:
-        return jsonify({"error": "Player not found in tournament"}), 404
+    return _with_active(tournament_id, lambda: tournament_entries.delete_entry(tournament_id, player_id))
 
 
 @blueprint.route('/<int:tournament_id>/players/parse-import', methods=['POST'])
@@ -483,76 +252,22 @@ def parse_import_players(tournament_id: int):
     _, error = _require_tournament(tournament_id, active_only=True)
     if error:
         return error
-
-    data = request.get_json(silent=True) or {}
-    text = data.get('text', '')
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
-
-    mixed_bands = get_planning_mixed_bands(tournament_id)
-    players_data = _parse_import_players_with_ai(text, mixed_bands)
-    if not players_data:
-        return jsonify({"error": "No valid players found"}), 400
-
-    return _json_no_cache({
-        'players': players_data,
-        'tournament_categories': fetch_tournament_categories(tournament_id),
-        'summary': _summarize_import_players(players_data),
-        'needs_attention_count': sum(1 for player in players_data if player.get('warnings')),
-        'count': len(players_data),
-    })
+    body, status = tournament_entries.parse_import(tournament_id, request.get_json(silent=True) or {})
+    return _json_no_cache(body, status) if status == 200 else (jsonify(body), status)
 
 
 @blueprint.route('/<int:tournament_id>/players/bulk', methods=['POST'])
 def bulk_import_players(tournament_id: int):
-    """Bulk import pre-parsed players from JSON array.
-    
-    Expected JSON: { "players": [{"name": "...", "category": "...", "country": "..."}] }
-    """
+    """Bulk import pre-parsed players: { "players": [{"name": "...", "category": "...", "country": "..."}] }"""
+    return _with_active(tournament_id, lambda: tournament_entries.bulk_import(tournament_id, request.get_json(silent=True) or {}))
+
+
+def _with_active(tournament_id: int, action):
     _, error = _require_tournament(tournament_id, active_only=True)
     if error:
         return error
-
-    data = request.get_json(silent=True) or {}
-    players = data.get('players', [])
-    
-    if not players:
-        return jsonify({"error": "No players provided"}), 400
-    
-    players_data = []
-    for p in players:
-        name = p.get('name', '').strip()
-        first_name = p.get('first_name', '').strip()
-        last_name = p.get('last_name', '').strip()
-        if not first_name and not last_name:
-            if not name:
-                continue
-            name_parts = name.rsplit(' ', 1)
-            if len(name_parts) == 2:
-                first_name, last_name = name_parts[0], name_parts[1]
-            else:
-                first_name, last_name = '', name
-        if not name:
-            name = f"{first_name} {last_name}".strip()
-        
-        players_data.append({
-            "name": name,
-            "first_name": first_name,
-            "last_name": last_name,
-            "category": _normalize_import_category(p.get('category', '')).strip(),
-            "country": _normalize_import_country(p.get('country', '')).strip(),
-            "gender": _normalize_import_gender(p.get('gender', '')).strip(),
-        })
-    
-    if not players_data:
-        return jsonify({"error": "No valid players found"}), 400
-    
-    count = bulk_insert_players(tournament_id, players_data)
-    
-    return jsonify({
-        "message": f"Imported {count} players",
-        "count": count
-    })
+    body, status = action()
+    return jsonify(body), status
 
 
 # ==================== PUBLIC API ====================
