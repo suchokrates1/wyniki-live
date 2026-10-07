@@ -1,19 +1,24 @@
 /**
  * One tournament in the organizer's panel: its settings, whether it is live, courts and
  * PINs, the office, overlay links for an outside stream, the categories and the change log.
+ * Messages are text keys; the app translates them with t().
  */
-import { TITLE_SCOPES } from '../admin/tournamentSettings.js';
 import { call, CallError } from './api.js';
 
 export const CATEGORY_PRESETS = ['B1K', 'B1M', 'B2K', 'B2M', 'B3K', 'B3M', 'B4K', 'B4M'];
-const PRESET_LABELS = { B1K: 'B1 kobiety', B1M: 'B1 mężczyźni', B2K: 'B2 kobiety', B2M: 'B2 mężczyźni', B3K: 'B3 kobiety', B3M: 'B3 mężczyźni', B4K: 'B4 kobiety', B4M: 'B4 mężczyźni' };
+export const TITLE_SCOPE_KEYS = [
+  { value: 'world', key: 'scopeWorld' },
+  { value: 'continental', key: 'scopeContinental' },
+  { value: 'national', key: 'scopeNational' },
+  { value: 'open', key: 'scopeOpen' },
+];
 
-const ACTION_LABELS = {
-  create: 'założono turniej', update: 'zmieniono ustawienia', set_active: 'zmieniono „Turniej trwa”',
-  court_pin: 'zmieniono PIN kortu', office_session: 'otwarto biuro', category_create: 'dodano kategorię',
-  categories_confirm: 'dodano kategorie', category_update: 'zmieniono kategorię', category_delete: 'usunięto kategorię',
-  entry_add: 'dodano zgłoszenie', entry_update: 'zmieniono zgłoszenie', entry_delete: 'usunięto zgłoszenie',
-  entry_bulk: 'zaimportowano zgłoszenia', entry_add_global: 'dodano zawodnika z bazy',
+const LOG_KEYS = {
+  create: 'logCreate', update: 'logUpdate', set_active: 'logSetActive', court_pin: 'logCourtPin',
+  office_session: 'logOfficeSession', category_create: 'logCategoryCreate', categories_confirm: 'logCategoriesConfirm',
+  category_update: 'logCategoryUpdate', category_delete: 'logCategoryDelete', entry_add: 'logEntryAdd',
+  entry_update: 'logEntryUpdate', entry_delete: 'logEntryDelete', entry_bulk: 'logEntryBulk',
+  entry_add_global: 'logEntryAddGlobal',
 };
 
 export function settingsForm(t = {}) {
@@ -25,17 +30,20 @@ export function settingsForm(t = {}) {
   };
 }
 
-export function logLine(entry) {
-  return ACTION_LABELS[entry?.action] || entry?.action || '';
+/** The text key for a log line; null for an action this panel does not know yet. */
+export function logKey(entry) {
+  return LOG_KEYS[entry?.action] || null;
 }
+
+/** A message to show: a text key with its values. */
+const note = (key, vars = {}) => ({ key, vars });
 
 export function createTournamentView() {
   return {
     t: null,
     tForm: settingsForm(),
-    tBusy: false,
-    tMessage: '',
-    tError: '',
+    tMessage: null,
+    tError: null,
     tLog: [],
     tCategories: [],
     tPresetPick: {},
@@ -43,20 +51,22 @@ export function createTournamentView() {
     tCategoryDoubles: false,
     tPins: {},
 
-    titleScopes() { return TITLE_SCOPES; },
-    presetLabel(key) { return PRESET_LABELS[key] || key; },
+    titleScopes() { return TITLE_SCOPE_KEYS; },
     categoryPresets() { return CATEGORY_PRESETS; },
-    logLine,
+    logLine(entry) {
+      const key = logKey(entry);
+      return key ? this.ot(key) : entry?.action || '';
+    },
     logWhen(entry) { return String(entry?.created_at || '').slice(0, 16).replace('T', ' '); },
 
-    async _try(work, success = '') {
-      this.tError = '';
-      this.tMessage = '';
+    async _try(work, success = null) {
+      this.tError = null;
+      this.tMessage = null;
       try {
         await work();
-        if (success) this.tMessage = success;
+        if (success) this.tMessage = typeof success === 'function' ? success() : success;
       } catch (error) {
-        this.tError = error instanceof CallError ? error.message : 'Coś poszło nie tak. Odśwież stronę.';
+        this.tError = error instanceof CallError ? note(error.key, error.vars) : note('genericError');
       }
     },
 
@@ -75,21 +85,22 @@ export function createTournamentView() {
         this.tForm = settingsForm(this.t);
         this.tPins = Object.fromEntries(this.t.courts.map((court) => [court.kort_id, court.pin]));
         await this.reloadSeries();
-      }, 'Zapisano.');
+      }, note('saved'));
     },
 
     async toggleLive() {
+      const wasLive = this.t.active;
       await this._try(async () => {
-        const body = await call(`/organizer/api/tournaments/${this.t.id}/active`, 'PUT', { active: !this.t.active });
+        const body = await call(`/organizer/api/tournaments/${this.t.id}/active`, 'PUT', { active: !wasLive });
         this.t = body.tournament;
-      }, this.t.active ? 'Turniej zakończony: zniknął z aplikacji sędziego.' : 'Turniej trwa: sędziowie i biuro go widzą.');
+      }, note(wasLive ? 'liveOffMsg' : 'liveOnMsg'));
     },
 
     async savePin(court) {
       await this._try(async () => {
         await call(`/organizer/api/tournaments/${this.t.id}/courts/${encodeURIComponent(court.kort_id)}/pin`, 'PUT', { pin: this.tPins[court.kort_id] });
         court.pin = this.tPins[court.kort_id];
-      }, `PIN kortu ${court.name} zapisany.`);
+      }, note('pinSaved', { name: court.name }));
     },
 
     async openOffice() {
@@ -119,7 +130,7 @@ export function createTournamentView() {
       const entries = CATEGORY_PRESETS.filter((key) => this.tPresetPick[key]).map((key) => ({ preset_key: key, is_doubles: this.tCategoryDoubles }));
       if (this.tCustomCategory.trim()) entries.push({ label: this.tCustomCategory.trim(), is_doubles: this.tCategoryDoubles });
       if (!entries.length) {
-        this.tError = 'Zaznacz kategorię albo wpisz własną.';
+        this.tError = note('pickCategory');
         return;
       }
       await this._try(async () => {
@@ -127,14 +138,14 @@ export function createTournamentView() {
         this.tPresetPick = {};
         this.tCustomCategory = '';
         this.tCategoryDoubles = false;
-      }, 'Kategorie dodane.');
+      }, note('categoriesAdded'));
     },
 
     async deleteCategory(category) {
-      if (!window.confirm(`Usunąć kategorię „${category.label}”?`)) return;
+      if (!window.confirm(this.ot('confirmDeleteCategory', { label: category.label }))) return;
       await this._try(async () => {
         this.tCategories = (await call(`/organizer/api/tournaments/${this.t.id}/categories/${category.id}`, 'DELETE')).categories;
-      }, 'Kategoria usunięta.');
+      }, note('categoryDeleted'));
     },
   };
 }

@@ -61,7 +61,16 @@ def _smtp_ready(config: dict[str, Any]) -> bool:
     return bool(config.get("smtp_host") and config.get("smtp_from_email"))
 
 
-def _send_email(subject: str, html_body: str, recipients: Iterable[str]) -> bool:
+def _send_email(
+    subject: str,
+    html_body: str,
+    recipients: Iterable[str],
+    *,
+    from_name: str | None = None,
+    from_email: str | None = None,
+    reply_to: str | None = None,
+) -> bool:
+    """Send one HTML mail; the sender defaults to the SMTP settings, a caller may name its own."""
     config = get_email_settings()
     recipient_list = [address.strip() for address in recipients if address and address.strip()]
 
@@ -72,11 +81,13 @@ def _send_email(subject: str, html_body: str, recipients: Iterable[str]) -> bool
         return False
 
     message = EmailMessage()
-    from_name = config["smtp_from_name"]
-    from_email = config["smtp_from_email"]
+    from_name = from_name or config["smtp_from_name"]
+    from_email = from_email or config["smtp_from_email"]
     message["Subject"] = subject
     message["From"] = f"{from_name} <{from_email}>"
     message["To"] = ", ".join(recipient_list)
+    if reply_to:
+        message["Reply-To"] = reply_to
     message.set_content("This message contains HTML content. Please use an HTML-capable email client.")
     message.add_alternative(html_body, subtype="html")
 

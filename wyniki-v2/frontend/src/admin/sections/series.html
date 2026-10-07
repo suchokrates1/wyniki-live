@@ -81,6 +81,12 @@
                   <option :value="role.value" x-text="role.label" :selected="role.value === member.role"></option>
                 </template>
               </select>
+              <label class="sr-only" :for="'adm-lang-' + item.id + '-' + member.id" x-text="'Język maili i panelu: ' + member.email"></label>
+              <select class="adm-input" :id="'adm-lang-' + item.id + '-' + member.id" @change="setSeriesMemberLanguage(item, member, $event.target.value)">
+                <template x-for="lang in seriesLanguages()" :key="lang.code">
+                  <option :value="lang.code" x-text="lang.label" :selected="lang.code === member.language"></option>
+                </template>
+              </select>
               <button type="button" class="adm-btn" @click="reinviteSeriesMember(item, member)">Nowy link<span class="sr-only" x-text="': ' + member.email"></span></button>
               <button type="button" class="adm-btn" @click="toggleSeriesMember(item, member)"><span x-text="member.disabled ? 'Włącz' : 'Wyłącz'"></span><span class="sr-only" x-text="': ' + member.email"></span></button>
               <button type="button" class="adm-btn adm-btn--danger" @click="removeSeriesMember(item, member)">Odbierz dostęp<span class="sr-only" x-text="': ' + member.email"></span></button>
@@ -98,6 +104,12 @@
         <select class="adm-input" :id="'adm-member-role-' + item.id" x-model="memberDraft(item).role">
           <template x-for="role in seriesRoles()" :key="role.value">
             <option :value="role.value" x-text="role.label"></option>
+          </template>
+        </select>
+        <label class="sr-only" :for="'adm-member-lang-' + item.id">Język maili i panelu</label>
+        <select class="adm-input" :id="'adm-member-lang-' + item.id" x-model="memberDraft(item).language">
+          <template x-for="lang in seriesLanguages()" :key="lang.code">
+            <option :value="lang.code" x-text="lang.label"></option>
           </template>
         </select>
         <button type="button" class="adm-btn adm-btn--primary" @click="addSeriesMember(item)">Dodaj i zaproś</button>

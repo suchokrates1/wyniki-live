@@ -205,9 +205,11 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | Method | Path | What it does |
 |---|---|---|
 | POST | `/organizer/api/auth` |  |
+| GET | `/organizer/api/contact` | Where organizers write; the sign-in page names it before anyone is signed in. |
 | GET | `/organizer/api/invite/<token>` |  |
 | POST | `/organizer/api/invite/<token>` |  |
 | GET | `/organizer/api/me` |  |
+| PATCH, PUT | `/organizer/api/me` | The person's own language: the panel's and that of every mail they get. |
 | GET | `/organizer/api/series/<int:series_id>/tournaments` |  |
 
 ## organizer_players

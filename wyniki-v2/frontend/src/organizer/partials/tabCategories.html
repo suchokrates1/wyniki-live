@@ -1,35 +1,35 @@
 <section class="adm-card" aria-labelledby="org-cat-title">
-  <h2 id="org-cat-title" class="adm-card__title">Kategorie</h2>
+  <h2 id="org-cat-title" class="adm-card__title" x-text="ot('categoriesTitle')"></h2>
   <ul class="adm-rows" role="list">
     <template x-for="category in tCategories" :key="category.id">
       <li class="adm-row">
         <div class="adm-row__main">
           <div class="adm-row__title">
             <span class="adm-row__name" x-text="category.label"></span>
-            <span class="adm-chip" x-show="category.is_doubles">debel</span>
+            <span class="adm-chip" x-show="category.is_doubles" x-text="ot('doubles')"></span>
           </div>
         </div>
         <div class="adm-row__actions" x-show="!t.read_only">
-          <button type="button" class="adm-btn adm-btn--danger" @click="deleteCategory(category)">Usuń<span class="sr-only" x-text="': ' + category.label"></span></button>
+          <button type="button" class="adm-btn adm-btn--danger" @click="deleteCategory(category)"><span x-text="ot('delete')"></span><span class="sr-only" x-text="': ' + category.label"></span></button>
         </div>
       </li>
     </template>
   </ul>
-  <p class="adm-empty" x-show="!tCategories.length">Turniej nie ma jeszcze kategorii.</p>
+  <p class="adm-empty" x-show="!tCategories.length" x-text="ot('noCategories')"></p>
 
   <form x-show="!t.read_only" @submit.prevent="addCategories()" class="org-new">
     <fieldset class="org-fieldset">
-      <legend class="adm-subhead">Dodaj kategorie</legend>
+      <legend class="adm-subhead" x-text="ot('addCategories')"></legend>
       <div class="org-presets">
         <template x-for="key in categoryPresets()" :key="key">
-          <label class="org-check"><input type="checkbox" x-model="tPresetPick[key]"> <span x-text="presetLabel(key)"></span></label>
+          <label class="org-check"><input type="checkbox" x-model="tPresetPick[key]"> <span x-text="ot('preset' + key)"></span></label>
         </template>
       </div>
       <div class="adm-grid">
-        <div class="adm-field"><label class="adm-field__label" for="org-cat-custom">Własna kategoria (np. B2 Mixed)</label><input class="adm-input" id="org-cat-custom" x-model="tCustomCategory"></div>
+        <div class="adm-field"><label class="adm-field__label" for="org-cat-custom" x-text="ot('customCategory')"></label><input class="adm-input" id="org-cat-custom" x-model="tCustomCategory"></div>
       </div>
-      <label class="org-check"><input type="checkbox" x-model="tCategoryDoubles"> Debel</label>
+      <label class="org-check"><input type="checkbox" x-model="tCategoryDoubles"> <span x-text="ot('doublesCheck')"></span></label>
     </fieldset>
-    <div class="adm-card__footer"><button type="submit" class="adm-btn adm-btn--primary">Dodaj</button></div>
+    <div class="adm-card__footer"><button type="submit" class="adm-btn adm-btn--primary" x-text="ot('add')"></button></div>
   </form>
 </section>

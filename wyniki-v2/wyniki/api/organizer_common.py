@@ -20,7 +20,9 @@ def _payload() -> dict:
     return request.form.to_dict()
 
 
-def guarded_blueprint(name: str, url_prefix: str, *, open_endpoints: frozenset[str] = frozenset()) -> Blueprint:
+def guarded_blueprint(name: str, url_prefix: str, *, open_endpoints: frozenset[str] = frozenset(),
+                      unpaid_writes: frozenset[str] = frozenset()) -> Blueprint:
+    """unpaid_writes: changes still allowed after the subscription ended (the person's own settings)."""
     blueprint = Blueprint(name, __name__, url_prefix=url_prefix)
 
     @blueprint.before_request
@@ -39,7 +41,7 @@ def guarded_blueprint(name: str, url_prefix: str, *, open_endpoints: frozenset[s
             denied = auth.require_series_tournament(args["tournament_id"])
             if denied:
                 return denied
-        if request.method in MUTATING:
+        if request.method in MUTATING and request.endpoint not in unpaid_writes:
             return auth.require_paid_up(args.get("series_id"), args.get("tournament_id"))
         return None
 

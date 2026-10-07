@@ -1,0 +1,33 @@
+"""Every organizer mail text exists in every language, with the same placeholders."""
+import re
+import string
+
+from wyniki.database.accounts import LANGUAGES
+from wyniki.i18n.organizer_mail import TEXTS
+
+
+def _fields(text):
+    return {name for _, name, _, _ in string.Formatter().parse(text) if name}
+
+
+def test_every_language_has_every_text_with_the_same_placeholders():
+    assert set(TEXTS) == set(LANGUAGES)
+    for language, texts in TEXTS.items():
+        assert set(texts) == set(TEXTS["pl"]), language
+        for key, text in texts.items():
+            assert text.strip(), f"{language}.{key} is empty"
+            assert _fields(text) == _fields(TEXTS["pl"][key]), f"{language}.{key}"
+
+
+def test_the_invite_and_both_notices_render_in_every_language():
+    from wyniki.services.organizer_mails import invite_mail, plan_mail
+
+    for language in LANGUAGES:
+        subject, html = invite_mail(language, name="", email="a@example.org", series_names=["TWT"], link="https://x/i?token=t",
+                                    base_url="https://x", contact="c@example.org", hours=72)
+        assert "TWT" in subject and f'lang="{language}"' in html and "72" in html
+        assert not re.search(r"\{\w+\}", html), language
+        for kind in ("ending", "ended"):
+            subject, html = plan_mail(language, kind, series="TWT", valid_until="2027-10-31", base_url="https://x", contact="c@example.org")
+            assert "TWT" in subject and "2027" in html and "mailto:c@example.org" in html
+            assert not re.search(r"\{\w+\}", subject + html), (language, kind)

@@ -74,7 +74,7 @@ def add_member(series_id: int):
     email = accounts.normalize_email(data.get("email"))
     if "@" not in email or "." not in email.split("@")[-1]:
         return jsonify({"error": "A valid e-mail is required"}), 400
-    account_id = accounts.ensure_account(email, str(data.get("name") or ""))
+    account_id = accounts.ensure_account(email, str(data.get("name") or ""), data.get("language"))
     series.add_member(series_id, account_id, str(data.get("role") or "editor"))
     return jsonify(_invite(account_id, item["name"])), 201
 
@@ -104,6 +104,8 @@ def update_member(series_id: int, account_id: int):
         series.add_member(series_id, account_id, str(data["role"]))
     if "disabled" in data:
         accounts.set_disabled(account_id, bool(data["disabled"]))
+    if "language" in data:
+        accounts.set_language(account_id, data["language"])
     return jsonify(series.get_series(series_id) or {})
 
 

@@ -154,16 +154,32 @@ def test_series_slugs_stay_unique(client):
     assert first["slug"] == "takei-world-tour" and second["slug"] == "takei-world-tour-2"
 
 
-def test_the_invitation_mail_names_the_series_carries_the_link_and_escapes_names(client, monkeypatch):
+def test_the_invitation_mail_comes_in_the_persons_language_from_noreply(client, monkeypatch):
     sent = []
     from wyniki.services import account_invites
 
-    monkeypatch.setattr(account_invites, "_send_email", lambda subject, body, to: sent.append((subject, body, to)) or True)
+    monkeypatch.setattr(account_invites, "_send_email", lambda subject, body, to, **sender: sent.append((subject, body, to, sender)) or True)
     series_id = client.post("/admin/api/series", json={"name": "Takei <World> Tour"}).get_json()["id"]
-    invited = client.post(f"/admin/api/series/{series_id}/members", json={"email": "jan@example.org", "name": "Jan <b>"}).get_json()
-    assert invited["emailed"] is True
-    subject, body, to = sent[0]
-    assert to == ["jan@example.org"] and "Takei <World> Tour" in subject
-    assert "Takei &lt;World&gt; Tour" in body and "Jan &lt;b&gt;" in body and "<b>" not in body.replace("<body", "")
-    assert invited["invite_url"].replace("&", "&amp;") in body or invited["invite_url"] in body
-    assert "/brand/blindtennis-logo-email.png" in body and "contact@blindtennis.app" in body
+    invited = client.post(f"/admin/api/series/{series_id}/members", json={"email": "jan@example.org", "name": "Jan <b>", "language": "fr"}).get_json()
+    assert invited["emailed"] is True and invited["account"]["language"] == "fr"
+    subject, body, to, sender = sent[0]
+    assert to == ["jan@example.org"] and subject == "blindtennis.app : espace organisateurs – Takei <World> Tour"
+    assert sender == {"from_name": "blindtennis.app", "from_email": "noreply@blindtennis.app", "reply_to": "contact@blindtennis.app"}
+    assert 'lang="fr"' in body and "Définir le mot de passe" in body
+    assert "Takei &lt;World&gt; Tour" in body and "Jan &lt;b&gt;" in body
+    assert invited["invite_url"] in body and "/brand/blindtennis-logo-email.png" in body
+
+    token = re.search(r"token=([^&]+)", invited["invite_url"]).group(1)
+    assert client.get(f"/organizer/api/invite/{token}").get_json()["language"] == "fr"
+
+
+def test_an_unknown_language_falls_back_to_english_and_the_person_can_change_theirs(client):
+    series_id, invited = _series_with_member(client)
+    assert invited["account"]["language"] == "en"
+    client.post(f"/organizer/api/invite/{_token_from(invited['invite_url'])}", json={"password": PASSWORD})
+    _, session = _sign_in(client)
+    assert client.put("/organizer/api/me", json={"language": "lt"}, headers=_auth(session)).get_json() == {"language": "lt"}
+    assert client.get("/organizer/api/me", headers=_auth(session)).get_json()["account"]["language"] == "lt"
+    assert client.put("/organizer/api/me", json={"language": "xx"}, headers=_auth(session)).get_json() == {"language": "en"}
+    client.patch(f"/admin/api/series/{series_id}", json={"valid_until": "2020-01-01"})
+    assert client.put("/organizer/api/me", json={"language": "de"}, headers=_auth(session)).status_code == 200, "own settings stay writable"

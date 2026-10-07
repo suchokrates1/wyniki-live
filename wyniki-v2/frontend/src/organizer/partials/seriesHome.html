@@ -4,7 +4,7 @@
       <h1 class="org-title" x-text="current().name"></h1>
       <template x-if="seriesList.length > 1">
         <div class="org-switch">
-          <label for="org-series" class="adm-field__label">Seria</label>
+          <label for="org-series" class="adm-field__label" x-text="ot('seriesLabel')"></label>
           <select id="org-series" class="adm-input" :value="currentId" @change="switchSeries($event.target.value)">
             <template x-for="item in seriesList" :key="item.id">
               <option :value="item.id" x-text="item.name" :selected="item.id === currentId"></option>
@@ -15,46 +15,46 @@
     </div>
 
     <ul class="org-facts" role="list">
-      <li><span>Twoja rola</span><strong x-text="roleLabel(current().role)"></strong></li>
-      <li x-show="current().valid_until"><span>Abonament do</span><strong x-text="dateRange(current().valid_until)"></strong></li>
-      <li x-show="yearUsageText()"><span>Limit abonamentu</span><strong x-text="yearUsageText()"></strong></li>
-      <li x-show="current().max_courts"><span>Korty w turnieju</span><strong x-text="'do ' + current().max_courts"></strong></li>
-      <li x-show="current().website"><span>Strona serii</span><a :href="current().website" target="_blank" rel="noopener" x-text="(current().website || '').replace(/^https?:\/\//, '')"></a></li>
+      <li><span x-text="ot('yourRole')"></span><strong x-text="roleLabel(current().role)"></strong></li>
+      <li x-show="current().valid_until"><span x-text="ot('validUntil')"></span><strong x-text="date(current().valid_until)"></strong></li>
+      <li x-show="yearUsageText()"><span x-text="ot('planLimit')"></span><strong x-text="yearUsageText()"></strong></li>
+      <li x-show="current().max_courts"><span x-text="ot('courtsCap')"></span><strong x-text="ot('upTo', { n: current().max_courts })"></strong></li>
+      <li x-show="current().website"><span x-text="ot('seriesSite')"></span><a :href="current().website" target="_blank" rel="noopener" x-text="(current().website || '').replace(/^https?:\/\//, '')"></a></li>
     </ul>
 
     <section class="adm-card" aria-labelledby="org-tournaments-title">
       <div class="adm-card__head">
-        <h2 id="org-tournaments-title" class="adm-card__title">Turnieje serii</h2>
-        <span class="adm-card__hint" x-text="tournamentCountText()"></span>
+        <h2 id="org-tournaments-title" class="adm-card__title" x-text="ot('seriesTournaments')"></h2>
+        <span class="adm-card__hint" x-text="tp('tournamentsCount', current().tournaments.length)"></span>
         <div class="adm-card__actions">
-          <button type="button" class="adm-btn adm-btn--primary" x-show="!readOnlySeries()" @click="draftOpen = !draftOpen" :aria-expanded="draftOpen" aria-controls="org-new">Nowy turniej</button>
+          <button type="button" class="adm-btn adm-btn--primary" x-show="!readOnlySeries()" @click="draftOpen = !draftOpen" :aria-expanded="draftOpen" aria-controls="org-new" x-text="ot('newTournament')"></button>
         </div>
       </div>
 
-      <p class="adm-card__hint" x-show="draftOpen && yearLimitReached()" x-text="'Limit turniejów na ' + thisYear() + ' jest wykorzystany. Turniej z datą w innym roku założysz bez przeszkód.'"></p>
+      <p class="adm-card__hint" x-show="draftOpen && yearLimitReached()" x-text="ot('yearLimitHint', { year: thisYear() })"></p>
       <form id="org-new" class="org-new" x-show="draftOpen" @submit.prevent="createTournament()" aria-labelledby="org-new-title">
-        <h3 id="org-new-title" class="adm-subhead">Nowy turniej serii</h3>
+        <h3 id="org-new-title" class="adm-subhead" x-text="ot('newTournamentTitle')"></h3>
         <div class="adm-grid">
-          <div class="adm-field adm-field--wide"><label class="adm-field__label" for="org-new-name">Nazwa</label><input class="adm-input" id="org-new-name" x-model="draft.name" required></div>
-          <div class="adm-field"><label class="adm-field__label" for="org-new-start">Pierwszy dzień</label><input class="adm-input" type="date" id="org-new-start" x-model="draft.start_date" required></div>
-          <div class="adm-field"><label class="adm-field__label" for="org-new-end">Ostatni dzień</label><input class="adm-input" type="date" id="org-new-end" x-model="draft.end_date" required></div>
-          <div class="adm-field"><label class="adm-field__label" for="org-new-city">Miasto</label><input class="adm-input" id="org-new-city" x-model="draft.city"></div>
-          <div class="adm-field"><label class="adm-field__label" for="org-new-country">Kraj (kod, np. DE)</label><input class="adm-input" id="org-new-country" maxlength="2" x-model="draft.country"></div>
-          <div class="adm-field"><label class="adm-field__label" for="org-new-courts">Liczba kortów</label><input class="adm-input" type="number" min="0" :max="current().max_courts || 30" id="org-new-courts" x-model.number="draft.court_count"></div>
+          <div class="adm-field adm-field--wide"><label class="adm-field__label" for="org-new-name" x-text="ot('fieldName')"></label><input class="adm-input" id="org-new-name" x-model="draft.name" required></div>
+          <div class="adm-field"><label class="adm-field__label" for="org-new-start" x-text="ot('fieldStart')"></label><input class="adm-input" type="date" id="org-new-start" x-model="draft.start_date" required></div>
+          <div class="adm-field"><label class="adm-field__label" for="org-new-end" x-text="ot('fieldEnd')"></label><input class="adm-input" type="date" id="org-new-end" x-model="draft.end_date" required></div>
+          <div class="adm-field"><label class="adm-field__label" for="org-new-city" x-text="ot('fieldCity')"></label><input class="adm-input" id="org-new-city" x-model="draft.city"></div>
+          <div class="adm-field"><label class="adm-field__label" for="org-new-country" x-text="ot('fieldCountry')"></label><input class="adm-input" id="org-new-country" maxlength="2" x-model="draft.country"></div>
+          <div class="adm-field"><label class="adm-field__label" for="org-new-courts" x-text="ot('fieldCourts')"></label><input class="adm-input" type="number" min="0" :max="current().max_courts || 30" id="org-new-courts" x-model.number="draft.court_count"></div>
           <div class="adm-field">
-            <label class="adm-field__label" for="org-new-tier">Ranga w serii</label>
+            <label class="adm-field__label" for="org-new-tier" x-text="ot('fieldTier')"></label>
             <select class="adm-input" id="org-new-tier" x-model="draft.tier">
-              <option value="">bez rangi</option>
+              <option value="" x-text="ot('noTier')"></option>
               <template x-for="tier in tiers()" :key="tier.value"><option :value="tier.value" x-text="tier.label"></option></template>
             </select>
           </div>
-          <div class="adm-field"><label class="adm-field__label" for="org-new-office">Hasło biura</label><input class="adm-input" type="password" autocomplete="new-password" id="org-new-office" x-model="draft.office_password"></div>
+          <div class="adm-field"><label class="adm-field__label" for="org-new-office" x-text="ot('fieldOfficePassword')"></label><input class="adm-input" type="password" autocomplete="new-password" id="org-new-office" x-model="draft.office_password"></div>
         </div>
-        <label class="org-check"><input type="checkbox" x-model="draft.is_public"> Publiczny na blindtennis.app</label>
-        <p class="adm-modal__error" role="alert" x-show="draftError" x-text="draftError"></p>
+        <label class="org-check"><input type="checkbox" x-model="draft.is_public"> <span x-text="ot('publicOnSite')"></span></label>
+        <p class="adm-modal__error" role="alert" x-show="draftError" x-text="say(draftError)"></p>
         <div class="adm-card__footer">
-          <button type="submit" class="adm-btn adm-btn--primary">Załóż turniej</button>
-          <button type="button" class="adm-btn adm-btn--quiet" @click="draftOpen = false">Anuluj</button>
+          <button type="submit" class="adm-btn adm-btn--primary" x-text="ot('createTournament')"></button>
+          <button type="button" class="adm-btn adm-btn--quiet" @click="draftOpen = false" x-text="ot('cancel')"></button>
         </div>
       </form>
 
@@ -65,19 +65,19 @@
               <div class="adm-row__title">
                 <a class="adm-row__name org-row-link" :href="'#/' + current().slug + '/t/' + row.id" x-text="row.name"></a>
                 <span class="adm-chip org-tier" x-show="row.tier" x-text="tierLabel(row.tier)"></span>
-                <span class="adm-chip adm-chip--live" x-show="row.active">trwa</span>
-                <span class="adm-chip adm-chip--sim" x-show="row.is_simulation">symulacja</span>
-                <span class="adm-chip" :class="row.is_public ? 'adm-chip--ok' : ''" x-text="row.is_public ? 'publiczny' : 'niepubliczny'"></span>
+                <span class="adm-chip adm-chip--live" x-show="row.active" x-text="ot('chipLive')"></span>
+                <span class="adm-chip adm-chip--sim" x-show="row.is_simulation" x-text="ot('chipSimulation')"></span>
+                <span class="adm-chip" :class="row.is_public ? 'adm-chip--ok' : ''" x-text="ot(row.is_public ? 'chipPublic' : 'chipPrivate')"></span>
               </div>
               <div class="adm-row__meta" x-text="[dateRange(row.start_date, row.end_date), row.city, row.country].filter(Boolean).join(' · ')"></div>
             </div>
             <div class="adm-row__actions">
-              <a class="adm-btn" x-show="row.is_public" :href="'/#tournaments/' + row.id" target="_blank" rel="noopener">Na stronie<span class="sr-only" x-text="': ' + row.name"></span></a>
+              <a class="adm-btn" x-show="row.is_public" :href="'/#tournaments/' + row.id" target="_blank" rel="noopener"><span x-text="ot('onSite')"></span><span class="sr-only" x-text="': ' + row.name"></span></a>
             </div>
           </li>
         </template>
       </ul>
-      <p class="adm-empty" x-show="!current().tournaments.length">Do serii nie dodano jeszcze turniejów.</p>
+      <p class="adm-empty" x-show="!current().tournaments.length" x-text="ot('noTournaments')"></p>
     </section>
   </div>
 </template>

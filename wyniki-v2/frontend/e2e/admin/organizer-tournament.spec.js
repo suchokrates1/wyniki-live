@@ -5,6 +5,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
+// these tests read the Polish texts; the languages have their own spec
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('organizer-lang', 'pl'); } catch { /* none */ } });
+});
+
 function world({ lock = '', validUntil = '2027-10-31', active = 0, maxYear = 0, maxCourts = 0 } = {}) {
   const state = {
     tournament: {
@@ -109,7 +114,7 @@ test('a player found in the base is entered, a correction says the admin will lo
   await expect(page.locator('#org-entries-title + .adm-card__hint')).toHaveText('1 zgłoszenie');
   await page.getByLabel('Imię lub nazwisko').fill('Rizvi');
   await page.getByRole('button', { name: /^Zgłoś\s*: Naqi Rizvi$/ }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'zgłoszony do turnieju' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Naqi Rizvi: zgłoszono do turnieju.' })).toBeVisible();
   await expect(page.locator('#org-entries-title + .adm-card__hint')).toHaveText('2 zgłoszenia');
   await expect(page.locator('#org-find-count')).toHaveText('Znaleziono: 1');
   await expect(page.locator('.adm-chip', { hasText: 'zgłoszony' })).toBeVisible();
@@ -129,7 +134,7 @@ test('someone new goes into the base and into the tournament', async ({ page }) 
   await page.getByLabel('Nazwisko', { exact: true }).fill('Testowa');
   await page.getByLabel('Klasa', { exact: true }).selectOption('B3');
   await page.getByRole('button', { name: 'Dodaj do bazy i zgłoś' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Nowy zawodnik dodany' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Nowa osoba dodana do bazy i zgłoszona.' })).toBeVisible();
   expect(state.requests.find((r) => r.method === 'POST' && r.path === '/players').body).toMatchObject({ first_name: 'Ola', last_name: 'Testowa', category: 'B3' });
 });
 
@@ -138,7 +143,7 @@ test('the tournament goes live, PINs change, and the office opens without its pa
   await openPanel(page, state, '#/twt/t/28/korty');
   await expect(page.getByRole('button', { name: 'Otwórz biuro turnieju' })).toBeHidden();
   await page.getByLabel('PIN kortu 2').fill('4821');
-  await page.getByRole('button', { name: /^Zapisz PIN\s*: kort 2$/ }).click();
+  await page.getByRole('button', { name: /^Zapisz PIN\s*: Kort 2$/ }).click();
   await expect(page.getByRole('status').filter({ hasText: 'PIN kortu 2 zapisany.' })).toBeVisible();
   expect(state.requests.find((r) => r.path === '/tournaments/28/courts/t28-2/pin').body).toEqual({ pin: '4821' });
   expect(await axe(page)).toEqual([]);

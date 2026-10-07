@@ -5,6 +5,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
+// these tests read the Polish texts; the languages have their own spec
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { try { localStorage.setItem('organizer-lang', 'pl'); } catch { /* none */ } });
+});
+
 import { randomBytes } from 'node:crypto';
 
 // made up per run: no password literal sits in the repository

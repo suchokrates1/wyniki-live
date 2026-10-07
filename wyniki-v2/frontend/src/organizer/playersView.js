@@ -1,26 +1,20 @@
 /**
  * The organizer's players: who is entered in the tournament, finding someone in the
  * shared base, adding a new person, correcting a person (a class after a medical), and
- * pasting a whole entry list.
+ * pasting a whole entry list. Messages are text keys; the app translates them with t().
  */
 import { call, CallError } from './api.js';
 
 export const CLASSES = ['B1', 'B2', 'B3', 'B4'];
-export const GENDERS = [{ value: 'M', label: 'mężczyzna' }, { value: 'K', label: 'kobieta' }];
+export const GENDERS = [{ value: 'M', key: 'genderM' }, { value: 'K', key: 'genderK' }];
 
 const emptyPerson = () => ({ first_name: '', last_name: '', country: '', gender: '', category: '' });
+const note = (key, vars = {}) => ({ key, vars });
 
-/** "1 zgłoszenie", "3 zgłoszenia", "12 zgłoszeń" */
-export function entriesText(count) {
-  if (count === 1) return '1 zgłoszenie';
-  const lastTwo = count % 100;
-  const few = count % 10 >= 2 && count % 10 <= 4 && (lastTwo < 12 || lastTwo > 14);
-  return `${count} ${few ? 'zgłoszenia' : 'zgłoszeń'}`;
-}
-
-export function personLine(person) {
-  return [person.category, person.country, person.gender === 'K' ? 'kobieta' : person.gender === 'M' ? 'mężczyzna' : '']
-    .filter(Boolean).join(' · ');
+/** Class · country · gender, the gender through `translate` (a function key → text). */
+export function personLine(person, translate = (key) => key) {
+  const gender = person.gender === 'K' ? translate('genderK') : person.gender === 'M' ? translate('genderM') : '';
+  return [person.category, person.country, gender].filter(Boolean).join(' · ');
 }
 
 export function createPlayersView() {
@@ -33,23 +27,22 @@ export function createPlayersView() {
     editing: null,
     importText: '',
     importPreview: null,
-    playersMessage: '',
-    playersError: '',
+    playersMessage: null,
+    playersError: null,
     _searchTimer: null,
 
     classes() { return CLASSES; },
     genders() { return GENDERS; },
-    personLine,
-    entriesText,
+    person(row) { return personLine(row, (key) => this.ot(key)); },
 
-    async _players(work, success = '') {
-      this.playersError = '';
-      this.playersMessage = '';
+    async _players(work, success = null) {
+      this.playersError = null;
+      this.playersMessage = null;
       try {
-        await work();
-        if (success) this.playersMessage = success;
+        const result = await work();
+        this.playersMessage = result?.key ? result : success;
       } catch (error) {
-        this.playersError = error instanceof CallError ? error.message : 'Coś poszło nie tak. Odśwież stronę.';
+        this.playersError = error instanceof CallError ? note(error.key, error.vars) : note('genericError');
       }
     },
 
@@ -83,28 +76,28 @@ export function createPlayersView() {
       await this._players(async () => {
         await call(`/organizer/api/tournaments/${this.t.id}/players/add-global`, 'POST', { global_player_id: person.id });
         await this.loadEntries();
-      }, `${person.first_name} ${person.last_name} zgłoszony do turnieju.`);
+      }, note('enteredMsg', { name: `${person.first_name} ${person.last_name}` }));
     },
 
     async createAndEnter() {
       if (!this.newPerson.last_name.trim()) {
-        this.playersError = 'Podaj nazwisko.';
+        this.playersError = note('lastNameRequired');
         return;
       }
       await this._players(async () => {
-        const person = await call('/organizer/api/players', 'POST', this.newPerson);
-        await call(`/organizer/api/tournaments/${this.t.id}/players/add-global`, 'POST', { global_player_id: person.id });
+        const created = await call('/organizer/api/players', 'POST', this.newPerson);
+        await call(`/organizer/api/tournaments/${this.t.id}/players/add-global`, 'POST', { global_player_id: created.id });
         this.newPerson = emptyPerson();
         await this.loadEntries();
-      }, 'Nowy zawodnik dodany do bazy i zgłoszony.');
+      }, note('createdEntered'));
     },
 
     async removeEntry(entry) {
-      if (!window.confirm(`Wycofać zgłoszenie: ${entry.name}?`)) return;
+      if (!window.confirm(this.ot('confirmWithdraw', { name: entry.name }))) return;
       await this._players(async () => {
         await call(`/organizer/api/tournaments/${this.t.id}/players/${entry.id}`, 'DELETE');
         await this.loadEntries();
-      }, 'Zgłoszenie wycofane.');
+      }, note('withdrawn'));
     },
 
     startEdit(entry) {
@@ -127,15 +120,13 @@ export function createPlayersView() {
         }
         this.editing = null;
         await this.loadEntries();
-        this.playersMessage = queued
-          ? 'Zapisano. Ta osoba gra też w innych turniejach, więc zmianę sprawdzi jeszcze administrator.'
-          : 'Zapisano.';
+        return note(queued ? 'savedReview' : 'saved');
       });
     },
 
     async parseImport() {
       if (!this.importText.trim()) {
-        this.playersError = 'Wklej listę zawodników.';
+        this.playersError = note('pasteList');
         return;
       }
       await this._players(async () => {
@@ -149,7 +140,7 @@ export function createPlayersView() {
         this.importPreview = null;
         this.importText = '';
         await this.loadEntries();
-        this.playersMessage = `Dodano ${body.count} zgłoszeń.`;
+        return note('imported', { n: body.count });
       });
     },
   };

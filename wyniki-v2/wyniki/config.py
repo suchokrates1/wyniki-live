@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     
     # Database
     database_path: str = "/data/wyniki.sqlite3"
+    # Where links and the logo in mails point when there is no request to take it from.
+    mail_base_url: str = "https://blindtennis.app"
     
     # Admin
     admin_password: str | None = None

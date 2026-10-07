@@ -1,7 +1,7 @@
 <div class="adm-stack">
-  <a class="org-back" :href="'#/' + (current()?.slug || '')">← Turnieje serii</a>
-  <p class="adm-loading" x-show="!t && !tError" role="status">Wczytywanie turnieju…</p>
-  <p class="adm-modal__error" role="alert" x-show="!t && tError" x-text="tError"></p>
+  <a class="org-back" :href="'#/' + (current()?.slug || '')" x-text="'← ' + ot('back')"></a>
+  <p class="adm-loading" x-show="!t && !tError" role="status" x-text="ot('loadingTournament')"></p>
+  <p class="adm-modal__error" role="alert" x-show="!t && tError" x-text="say(tError)"></p>
 
   <template x-if="t">
     <div class="adm-stack">
@@ -13,22 +13,22 @@
             <template x-for="item in t.series" :key="item.id">
               <span class="adm-chip org-tier" x-show="item.tier" x-text="tierLabel(item.tier)"></span>
             </template>
-            <span class="adm-chip adm-chip--live" x-show="t.active">trwa</span>
-            <span class="adm-chip" :class="t.is_public ? 'adm-chip--ok' : ''" x-text="t.is_public ? 'publiczny' : 'niepubliczny'"></span>
-            <span class="adm-chip adm-chip--warn" x-show="t.visibility_lock === 'private'">blokada publikacji</span>
+            <span class="adm-chip adm-chip--live" x-show="t.active" x-text="ot('chipLive')"></span>
+            <span class="adm-chip" :class="t.is_public ? 'adm-chip--ok' : ''" x-text="ot(t.is_public ? 'chipPublic' : 'chipPrivate')"></span>
+            <span class="adm-chip adm-chip--warn" x-show="t.visibility_lock === 'private'" x-text="ot('chipLocked')"></span>
           </p>
         </div>
       </div>
 
-      <div class="adm-subtabs org-tabs" role="tablist" aria-label="Części turnieju">
+      <div class="adm-subtabs org-tabs" role="tablist" :aria-label="ot('tabsLabel')">
         <template x-for="tab in tabs()" :key="tab.id">
           <a class="adm-subtab" role="tab" :id="'org-tab-btn-' + tab.id" :href="'#/' + current().slug + '/t/' + t.id + (tab.id === 'ustawienia' ? '' : '/' + tab.id)"
-             :class="{ 'is-active': route.tab === tab.id }" :aria-selected="route.tab === tab.id" x-text="tab.label"></a>
+             :class="{ 'is-active': route.tab === tab.id }" :aria-selected="route.tab === tab.id" x-text="ot(tab.key)"></a>
         </template>
       </div>
 
-      <p class="org-note" role="status" x-show="tMessage" x-text="tMessage"></p>
-      <p class="adm-modal__error" role="alert" x-show="tError" x-text="tError"></p>
+      <p class="org-note" role="status" x-show="tMessage" x-text="say(tMessage)"></p>
+      <p class="adm-modal__error" role="alert" x-show="tError" x-text="say(tError)"></p>
 
       <div role="tabpanel" aria-labelledby="org-tab-btn-ustawienia" x-show="route.tab === 'ustawienia'"><!-- @partial tabSettings --></div>
       <div role="tabpanel" aria-labelledby="org-tab-btn-kategorie" x-show="route.tab === 'kategorie'"><!-- @partial tabCategories --></div>

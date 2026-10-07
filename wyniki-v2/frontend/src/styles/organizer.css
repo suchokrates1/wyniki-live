@@ -96,3 +96,17 @@ a.adm-subtab { display: inline-flex; align-items: center; text-decoration: none;
 .org-log .adm-row { padding-top: 10px; padding-bottom: 10px; }
 .org-main h2.adm-card__title { margin-bottom: 12px; }
 .org-main .adm-card__head h2.adm-card__title { margin-bottom: 0; }
+
+/* the language switch in the top bar */
+.org-lang {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+}
+.org-lang option { color: var(--adm-ink); }
+.org-lang:focus-visible { outline: 3px solid var(--adm-lime); outline-offset: 2px; }

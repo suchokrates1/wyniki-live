@@ -43,7 +43,7 @@ test('adding a person shows the invitation link to pass on when no mail went out
   await expect(invite).toContainText('Mail nie wyszedł');
   await expect(invite.getByLabel('Link zaproszenia')).toHaveValue(/organizer\/invite\?token=abc/);
   expect(requests.find((r) => r.method === 'POST' && r.url.endsWith('/series/1/members'))?.body)
-    .toEqual({ email: 'anna@example.org', name: 'Anna', role: 'editor' });
+    .toEqual({ email: 'anna@example.org', name: 'Anna', role: 'editor', language: 'en' });
 });
 
 test('a tournament joins the series with its tier', async ({ page }) => {

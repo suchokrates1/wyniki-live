@@ -9,15 +9,15 @@ export function storageSet(key, value) {
   try { sessionStorage.setItem(key, value); } catch { /* private mode: the session ends with the page */ }
 }
 
-/** Every `.adl-eye` button shows or hides the password field it controls. */
-export function wirePasswordEyes(root = document) {
+/** Every `.adl-eye` button shows or hides the password field it controls; `label(shown)` names it. */
+export function wirePasswordEyes(root = document, label = (shown) => (shown ? 'Ukryj hasło' : 'Pokaż hasło')) {
   root.querySelectorAll('.adl-eye').forEach((toggle) => {
     const input = document.getElementById(toggle.getAttribute('aria-controls'));
     toggle.addEventListener('click', () => {
       const visible = input.type === 'password';
       input.type = visible ? 'text' : 'password';
       toggle.setAttribute('aria-pressed', String(visible));
-      toggle.setAttribute('aria-label', visible ? 'Ukryj hasło' : 'Pokaż hasło');
+      toggle.setAttribute('aria-label', label(visible));
       input.focus();
     });
   });
@@ -68,7 +68,7 @@ export function wireSignInForm(options) {
     try {
       message = await submit();
     } catch {
-      message = 'Brak połączenia z serwerem. Spróbuj ponownie.';
+      message = options.offline || 'Brak połączenia z serwerem. Spróbuj ponownie.';
     }
     if (!message) return;
     busy(false);

@@ -1,30 +1,26 @@
 """Mail to a series when its subscription is about to end, and when it has ended.
 
 Once per end date and kind: a changed end date (a renewal) starts the reminders afresh.
-The series owners get it (everyone on the series when it has no owner), with a copy to
-the organizer contact address. A notice that could not be mailed is tried again on the
-next pass; it is only marked sent once it went out.
+The series owners get it (everyone on the series when it has no owner), each in their
+own language, with a copy to the organizer contact address. A notice that could not be
+mailed is tried again on the next pass; it is only marked sent once it went out.
 """
 from __future__ import annotations
 
 from datetime import date, timedelta
-from html import escape
 
 import structlog
 
+from ..config import settings
 from ..database import series as series_db
 from ..database import series_plan
 from .email_reports import _send_email
+from .organizer_mails import SENDER_EMAIL, SENDER_NAME, plan_mail
 
 logger = structlog.get_logger()
 
 DAYS_BEFORE = 14
 PASS_INTERVAL_SECONDS = 3600
-
-
-def _pl_date(iso: str) -> str:
-    year, month, day = iso.split("-")
-    return f"{day}.{month}.{year}"
 
 
 def due_kind(valid_until: str, today: date) -> str | None:
@@ -40,34 +36,26 @@ def due_kind(valid_until: str, today: date) -> str | None:
     return None
 
 
-def _recipients(series_id: int) -> list[str]:
+def _recipients(series_id: int) -> dict[str, list[str]]:
+    """Addresses by language: the owners, or everyone on the series when it has no owner."""
     members = [m for m in (series_db.get_series(series_id) or {}).get("members", []) if not m["disabled"]]
-    owners = [m["email"] for m in members if m["role"] == "owner"]
-    return owners or [m["email"] for m in members]
+    chosen = [m for m in members if m["role"] == "owner"] or members
+    by_language: dict[str, list[str]] = {}
+    for member in chosen:
+        by_language.setdefault(member.get("language") or "en", []).append(member["email"])
+    return by_language
 
 
-def _message(kind: str, name: str, valid_until: str, contact: str) -> tuple[str, str]:
-    when = _pl_date(valid_until)
-    if kind == "ending":
-        subject = f"blindtennis.app: abonament serii {name} kończy się {when}"
-        pl = f"Abonament serii <strong>{escape(name)}</strong> kończy się <strong>{when}</strong>. Po tym dniu panel organizatora działa tylko do odczytu; turnieje zostają na stronie."
-        en = f"The subscription of <strong>{escape(name)}</strong> ends on <strong>{when}</strong>. After that the organizer panel is read only; tournaments stay on the site."
-    else:
-        subject = f"blindtennis.app: abonament serii {name} wygasł"
-        pl = f"Abonament serii <strong>{escape(name)}</strong> wygasł {when}. Panel organizatora działa tylko do odczytu; turnieje zostają na stronie."
-        en = f"The subscription of <strong>{escape(name)}</strong> ended on {when}. The organizer panel is read only; tournaments stay on the site."
-    mail = escape(contact)
-    body = f"""
-    <html><body style="font-family:Arial,sans-serif;color:#111;font-size:16px;line-height:1.5">
-      <p>{pl}</p><p>Aby przedłużyć, napisz na <a href="mailto:{mail}">{mail}</a>.</p>
-      <hr><p lang="en">{en} To renew, write to <a href="mailto:{mail}">{mail}</a>.</p>
-    </body></html>
-    """
-    return subject, body
+def _send_notice(send, kind: str, item: dict, language: str, recipients: list[str], contact: str) -> bool:
+    subject, body = plan_mail(language, kind, series=item["name"], valid_until=item["valid_until"],
+                              base_url=settings.mail_base_url, contact=contact)
+    return send(subject, body, recipients, from_name=SENDER_NAME, from_email=SENDER_EMAIL, reply_to=contact)
 
 
 def run_pass(today: date | None = None, send=_send_email) -> list[tuple[int, str]]:
-    """Send what is due; returns (series id, kind) for each notice that went out."""
+    """Send what is due; returns (series id, kind) for each notice that went out.
+
+    Each organizer gets it in their own language, the contact address a copy in Polish."""
     today = today or date.today()
     contact = series_plan.contact_email()
     sent = []
@@ -75,12 +63,13 @@ def run_pass(today: date | None = None, send=_send_email) -> list[tuple[int, str
         kind = due_kind(item["valid_until"], today)
         if not kind or series_plan.notice_sent(item["id"], kind, item["valid_until"]):
             continue
-        recipients = _recipients(item["id"])
-        subject, body = _message(kind, item["name"], item["valid_until"], contact)
-        if send(subject, body, [*recipients, contact]):
+        groups = _recipients(item["id"])
+        results = [_send_notice(send, kind, item, language, addresses, contact) for language, addresses in groups.items()]
+        results.append(_send_notice(send, kind, item, "pl", [contact], contact))
+        if all(results):
             series_plan.mark_notice_sent(item["id"], kind, item["valid_until"])
             sent.append((item["id"], kind))
-            logger.info("subscription_notice_sent", series_id=item["id"], kind=kind, recipients=len(recipients))
+            logger.info("subscription_notice_sent", series_id=item["id"], kind=kind, languages=sorted(groups))
     return sent
 
 

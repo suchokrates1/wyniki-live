@@ -59,11 +59,13 @@ def ensure_series_tables(cursor: sqlite3.Cursor) -> None:
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_series_tournaments_tournament ON series_tournaments(tournament_id)")
+    from .accounts import ensure_account_columns
     from .series_plan import ensure_series_plan_columns
     from .series_records import ensure_series_record_tables
 
     ensure_series_record_tables(cursor)
     ensure_series_plan_columns(cursor)
+    ensure_account_columns(cursor)
 
 
 def slugify(name: str) -> str:
@@ -203,7 +205,7 @@ def tournament_in_series(tournament_id: int, series_ids: list[int]) -> bool:
 def _members(cursor: sqlite3.Cursor, series_id: int) -> list[dict[str, Any]]:
     cursor.execute(
         """
-        SELECT a.id, a.email, a.name, a.disabled, a.last_login_at, m.role,
+        SELECT a.id, a.email, a.name, a.language, a.disabled, a.last_login_at, m.role,
                CASE WHEN a.password_hash = '' THEN 0 ELSE 1 END AS has_password
         FROM series_members m JOIN accounts a ON a.id = m.account_id
         WHERE m.series_id = ? ORDER BY a.name COLLATE NOCASE, a.email

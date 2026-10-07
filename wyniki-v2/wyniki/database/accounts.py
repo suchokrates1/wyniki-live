@@ -12,9 +12,23 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from .connection import _utc_now, db_conn
 
 MIN_PASSWORD_LENGTH = 10
+# The organizer panel and every mail to an organizer come in one of these.
+LANGUAGES = ("pl", "en", "de", "it", "es", "fr", "lt")
+DEFAULT_LANGUAGE = "en"
 # Checked when the address is unknown, so a wrong address takes as long as a wrong password.
 _DUMMY_HASH = generate_password_hash("not-a-real-password")
-_PUBLIC = "id, email, name, disabled, last_login_at, created_at, CASE WHEN password_hash = '' THEN 0 ELSE 1 END AS has_password"
+_PUBLIC = "id, email, name, language, disabled, last_login_at, created_at, CASE WHEN password_hash = '' THEN 0 ELSE 1 END AS has_password"
+
+
+def ensure_account_columns(cursor) -> None:
+    columns = {row[1] for row in cursor.execute("PRAGMA table_info(accounts)")}
+    if "language" not in columns:
+        cursor.execute(f"ALTER TABLE accounts ADD COLUMN language TEXT NOT NULL DEFAULT '{DEFAULT_LANGUAGE}'")
+
+
+def normalize_language(language: str | None) -> str:
+    code = str(language or "").strip().lower()[:2]
+    return code if code in LANGUAGES else DEFAULT_LANGUAGE
 
 
 def normalize_email(email: str | None) -> str:
@@ -33,17 +47,24 @@ def get_account_by_email(email: str) -> dict[str, Any] | None:
         return dict(row) if row else None
 
 
-def ensure_account(email: str, name: str = "") -> int:
-    """The account for this address, created without a password when it is new."""
+def ensure_account(email: str, name: str = "", language: str | None = None) -> int:
+    """The account for this address, created without a password when it is new.
+
+    A language given here replaces the stored one: the admin picks it when inviting."""
     address = normalize_email(email)
     with db_conn() as conn:
         row = conn.execute("SELECT id, name FROM accounts WHERE email = ?", (address,)).fetchone()
         if row:
             if name.strip() and not row["name"]:
                 conn.execute("UPDATE accounts SET name = ? WHERE id = ?", (name.strip(), row["id"]))
-                conn.commit()
+            if language:
+                conn.execute("UPDATE accounts SET language = ? WHERE id = ?", (normalize_language(language), row["id"]))
+            conn.commit()
             return int(row["id"])
-        cursor = conn.execute("INSERT INTO accounts (email, name) VALUES (?, ?)", (address, name.strip()))
+        cursor = conn.execute(
+            "INSERT INTO accounts (email, name, language) VALUES (?, ?, ?)",
+            (address, name.strip(), normalize_language(language)),
+        )
         conn.commit()
         return int(cursor.lastrowid)
 
@@ -80,3 +101,11 @@ def set_disabled(account_id: int, disabled: bool) -> bool:
         cursor = conn.execute("UPDATE accounts SET disabled = ? WHERE id = ?", (1 if disabled else 0, account_id))
         conn.commit()
         return cursor.rowcount > 0
+
+
+def set_language(account_id: int, language: str | None) -> str:
+    code = normalize_language(language)
+    with db_conn() as conn:
+        conn.execute("UPDATE accounts SET language = ? WHERE id = ?", (code, account_id))
+        conn.commit()
+    return code

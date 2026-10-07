@@ -1,20 +1,21 @@
 // Every call of the organizer's panel: with the session, a 401 sends the person back to
-// sign in, and a failed call becomes one sentence the panel can show.
+// sign in, and a failed call becomes a text key the panel shows in the person's language.
 
 import { storageGet } from '../shared/signInForm.js';
 import { ORGANIZER_TOKEN_KEY, organizerLoginUrl } from './route.js';
 
-const MESSAGES = {
-  'Subscription expired': 'Abonament serii wygasł: panel działa tylko do odczytu.',
-  'Missing required fields': 'Uzupełnij nazwę i obie daty.',
-  'Name is required': 'Podaj imię i nazwisko.',
-  'last_name is required': 'Podaj nazwisko.',
-  'PIN must be 4 digits': 'PIN to cztery cyfry.',
-  'Player already in this tournament': 'Ta osoba jest już zgłoszona do turnieju.',
-  'Office not open for this tournament': 'Biuro otwiera się, gdy turniej trwa: włącz „Turniej trwa”.',
-  'No valid players found': 'Nie rozpoznano żadnego zawodnika w tekście.',
-  'Court count cannot be negative': 'Liczba kortów nie może być ujemna.',
-  'Tournament limit reached': 'Limit turniejów w abonamencie na ten rok jest wykorzystany. Napisz do nas, żeby go zwiększyć.',
+const ERROR_KEYS = {
+  'Subscription expired': 'errExpired',
+  'Missing required fields': 'fillNameDates',
+  'Name is required': 'errNameRequired',
+  'last_name is required': 'lastNameRequired',
+  'PIN must be 4 digits': 'errPin',
+  'Player already in this tournament': 'errAlreadyEntered',
+  'Office not open for this tournament': 'errOfficeClosed',
+  'No valid players found': 'errNoPlayers',
+  'Court count cannot be negative': 'errNegativeCourts',
+  'Tournament limit reached': 'errYearLimit',
+  'Court limit exceeded': 'errCourtLimit',
 };
 
 export function toSignIn(reason) {
@@ -31,9 +32,21 @@ export async function organizerFetch(url, init = {}) {
   return response;
 }
 
-export class CallError extends Error {}
+/** A failed call: `key` names the text, `vars` fill it. */
+export class CallError extends Error {
+  constructor(key, vars = {}) {
+    super(key);
+    this.key = key;
+    this.vars = vars;
+  }
+}
 
-/** JSON in, JSON out; throws CallError with a sentence for the person. */
+export function errorKeyFor(raw) {
+  if (String(raw).startsWith('Cannot remove active courts')) return 'errBusyCourt';
+  return ERROR_KEYS[raw] || 'errSave';
+}
+
+/** JSON in, JSON out; throws CallError naming the text for the person. */
 export async function call(url, method = 'GET', body) {
   let response;
   try {
@@ -43,14 +56,9 @@ export async function call(url, method = 'GET', body) {
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new CallError('Brak połączenia z serwerem. Spróbuj ponownie.');
+    throw new CallError('errConnection');
   }
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const raw = String(data.error || '');
-    const busy = raw.startsWith('Cannot remove active courts') ? 'Nie można usunąć kortu, na którym trwa mecz.' : '';
-    const courts = raw === 'Court limit exceeded' ? `Abonament pozwala na najwyżej ${data.limit} kortów w turnieju.` : '';
-    throw new CallError(MESSAGES[raw] || busy || courts || 'Nie udało się zapisać zmian. Spróbuj ponownie.');
-  }
+  if (!response.ok) throw new CallError(errorKeyFor(data.error || ''), { n: data.limit });
   return data;
 }

@@ -253,26 +253,31 @@ def test_the_contact_address_is_a_setting_the_panel_reads(client, twt):
     assert client.get("/organizer/api/me", headers=headers).get_json()["contact_email"] == "organizers@blindtennis.app"
 
 
-def test_subscription_notices_go_once_per_end_date_and_retry_when_mail_fails(client, twt):
+def test_subscription_notices_go_once_per_end_date_in_each_persons_language(client, twt):
     from datetime import date
 
     from wyniki.services import subscription_notices as notices
 
     series_id, _ = twt
+    client.post(f"/admin/api/series/{series_id}/members", json={"email": "de@example.org", "role": "owner", "language": "de"})
     client.patch(f"/admin/api/series/{series_id}", json={"valid_until": "2027-10-31"})
     mails = []
 
-    def mailer(subject, body, recipients):
-        mails.append((subject, recipients))
+    def mailer(subject, body, recipients, **sender):
+        mails.append((subject, recipients, sender, body))
         return True
 
     assert notices.run_pass(date(2027, 10, 1), send=mailer) == []
-    assert notices.run_pass(date(2027, 10, 20), send=lambda *a: False) == [], "SMTP down: nothing marked sent"
+    assert notices.run_pass(date(2027, 10, 20), send=lambda *a, **k: False) == [], "SMTP down: nothing marked sent"
     assert notices.run_pass(date(2027, 10, 20), send=mailer) == [(series_id, "ending")]
     assert notices.run_pass(date(2027, 10, 21), send=mailer) == [], "once per end date"
-    assert notices.run_pass(date(2027, 11, 1), send=mailer) == [(series_id, "ended")]
-    assert mails[0][1] == ["organizer@example.org", "contact@blindtennis.app"]
-    assert "31.10.2027" in mails[0][0]
+    by_to = {tuple(m[1]): m for m in mails}
+    assert by_to[("de@example.org",)][0] == "blindtennis.app: Das Abonnement von Takei World Tennis Tour endet am 31.10.2027"
+    assert by_to[("organizer@example.org",)][0] == "blindtennis.app: the Takei World Tennis Tour subscription ends on 31/10/2027"
+    assert "kończy się 31.10.2027" in by_to[("contact@blindtennis.app",)][0], "the copy to the office is Polish"
+    assert by_to[("de@example.org",)][2] == {"from_name": "blindtennis.app", "from_email": "noreply@blindtennis.app", "reply_to": "contact@blindtennis.app"}
+    assert 'lang="de"' in by_to[("de@example.org",)][3]
 
+    assert notices.run_pass(date(2027, 11, 1), send=mailer) == [(series_id, "ended")]
     client.patch(f"/admin/api/series/{series_id}", json={"valid_until": "2028-10-31"})
     assert notices.run_pass(date(2028, 10, 25), send=mailer) == [(series_id, "ending")], "a renewal starts afresh"

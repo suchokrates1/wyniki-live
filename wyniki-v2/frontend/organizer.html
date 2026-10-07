@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Panel organizatora — blindtennis.app</title>
+  <title>blindtennis.app</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script>
     // No session on this tab: go to the sign-in page before the panel is drawn.
@@ -17,34 +17,40 @@
 </head>
 <body class="adm-body">
   <div x-data="organizerApp" class="adm-app">
-    <a href="#main" class="org-skip">Przejdź do treści</a>
+    <a href="#main" class="org-skip" x-text="ot('skip')"></a>
     <header class="adm-top">
-      <span class="adm-top__brand">wyniki<span>.</span>organizator</span>
+      <span class="adm-top__brand">blindtennis<span>.</span>app</span>
       <template x-if="current()">
         <span class="adm-top__chip" x-text="current().name"></span>
       </template>
       <div class="adm-top__spacer"></div>
       <span class="adm-top__tag" x-text="account?.email || ''"></span>
-      <a class="adm-top__link" href="/" target="_blank" rel="noopener">Strona publiczna</a>
-      <button type="button" class="adm-top__link org-top__button" @click="signOut()">Wyloguj</button>
+      <label class="sr-only" for="org-lang" x-text="ot('language')"></label>
+      <select id="org-lang" class="org-lang" :value="lang" @change="setLanguage($event.target.value)">
+        <template x-for="item in languages()" :key="item.code">
+          <option :value="item.code" :lang="item.code" x-text="item.label" :selected="item.code === lang"></option>
+        </template>
+      </select>
+      <a class="adm-top__link" href="/" target="_blank" rel="noopener" x-text="ot('publicSite')"></a>
+      <button type="button" class="adm-top__link org-top__button" @click="signOut()" x-text="ot('signOut')"></button>
     </header>
 
     <main class="org-main" id="main" tabindex="-1">
-      <p class="adm-loading" x-show="loading" role="status">Wczytywanie…</p>
-      <p class="adm-modal__error" role="alert" x-show="error" x-text="error"></p>
+      <p class="adm-loading" x-show="loading" role="status" x-text="ot('loading')"></p>
+      <p class="adm-modal__error" role="alert" x-show="error" x-text="say(error)"></p>
 
       <template x-if="!loading && !seriesList.length && !error">
         <section class="adm-card">
-          <h1 class="adm-card__title">Brak przypisanej serii</h1>
-          <p>Twoje konto nie należy jeszcze do żadnej serii. Napisz na <a class="adm-link" :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.</p>
+          <h1 class="adm-card__title" x-text="ot('noSeriesTitle')"></h1>
+          <p><span x-text="ot('noSeriesBody')"></span> <a class="adm-link" :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.</p>
         </section>
       </template>
 
       <p class="org-banner" role="status" x-show="current() && readOnlySeries()">
-        Abonament serii wygasł: panel działa tylko do odczytu. Aby przedłużyć, napisz na <a :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.
+        <span x-text="ot('expiredBanner')"></span> <span x-text="ot('renewWrite')"></span> <a :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.
       </p>
       <p class="org-banner" role="status" x-show="current() && endingSoonText()">
-        <span x-text="endingSoonText()"></span> Aby przedłużyć, napisz na <a :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.
+        <span x-text="endingSoonText()"></span> <span x-text="ot('renewWrite')"></span> <a :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.
       </p>
 
       <template x-if="current() && !route.tournamentId"><div><!-- @partial seriesHome --></div></template>

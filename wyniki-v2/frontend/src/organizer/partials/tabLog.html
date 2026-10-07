@@ -1,6 +1,6 @@
 <section class="adm-card" aria-labelledby="org-log-title">
-  <h2 id="org-log-title" class="adm-card__title">Historia zmian</h2>
-  <p class="adm-card__hint">Kto i kiedy zmieniał turniej w panelu organizatora. Najnowsze na górze.</p>
+  <h2 id="org-log-title" class="adm-card__title" x-text="ot('logTitle')"></h2>
+  <p class="adm-card__hint" x-text="ot('logHint')"></p>
   <ol class="adm-rows org-log" role="list">
     <template x-for="entry in tLog" :key="entry.id">
       <li class="adm-row">
@@ -11,5 +11,5 @@
       </li>
     </template>
   </ol>
-  <p class="adm-empty" x-show="!tLog.length">Nikt jeszcze nic nie zmieniał.</p>
+  <p class="adm-empty" x-show="!tLog.length" x-text="ot('noLog')"></p>
 </section>

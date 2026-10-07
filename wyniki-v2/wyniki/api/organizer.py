@@ -12,12 +12,19 @@ from ..database.series_plan import contact_email
 from ..services import organizer_auth as auth
 from .organizer_common import guarded_blueprint
 
-OPEN_ENDPOINTS = frozenset({"organizer.sign_in", "organizer.invite_info", "organizer.invite_accept"})
-blueprint = guarded_blueprint("organizer", "/organizer/api", open_endpoints=OPEN_ENDPOINTS)
+OPEN_ENDPOINTS = frozenset({"organizer.sign_in", "organizer.invite_info", "organizer.invite_accept", "organizer.contact"})
+blueprint = guarded_blueprint("organizer", "/organizer/api", open_endpoints=OPEN_ENDPOINTS,
+                              unpaid_writes=frozenset({"organizer.me_update"}))
 
 
 def _session(account: dict) -> dict:
     return {"token": auth.issue_organizer_token(account["id"]), "expires_in": auth.session_max_age_seconds()}
+
+
+@blueprint.route("/contact", methods=["GET"])
+def contact():
+    """Where organizers write; the sign-in page names it before anyone is signed in."""
+    return jsonify({"contact_email": contact_email()})
 
 
 @blueprint.route("/auth", methods=["POST"])
@@ -42,7 +49,8 @@ def invite_info(token: str):
     if not account or account["disabled"]:
         return jsonify({"error": "Invitation expired or used"}), 410
     names = [item["name"] for item in series.series_of_account(account["id"])]
-    return jsonify({"email": account["email"], "name": account["name"], "series": names, "min_length": accounts.MIN_PASSWORD_LENGTH})
+    return jsonify({"email": account["email"], "name": account["name"], "language": account["language"],
+                    "series": names, "min_length": accounts.MIN_PASSWORD_LENGTH})
 
 
 @blueprint.route("/invite/<token>", methods=["POST"])
@@ -62,9 +70,16 @@ def invite_accept(token: str):
 def me():
     return jsonify({
         "contact_email": contact_email(),
-        "account": {key: g.account[key] for key in ("id", "email", "name")},
+        "account": {key: g.account[key] for key in ("id", "email", "name", "language")},
         "series": [{**item, "tournaments": series.series_tournaments(item["id"])} for item in g.series],
     })
+
+
+@blueprint.route("/me", methods=["PUT", "PATCH"])
+def me_update():
+    """The person's own language: the panel's and that of every mail they get."""
+    language = accounts.set_language(g.account["id"], (request.get_json(silent=True) or {}).get("language"))
+    return jsonify({"language": language})
 
 
 @blueprint.route("/series/<int:series_id>/tournaments", methods=["GET"])

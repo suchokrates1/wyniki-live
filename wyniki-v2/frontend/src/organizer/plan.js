@@ -23,24 +23,25 @@ export function planState(validUntil, today = new Date()) {
   return left <= WARN_DAYS ? 'ending' : 'ok';
 }
 
-export function daysText(count) {
-  if (count === 0) return 'dziś';
-  if (count === 1) return 'jutro';
-  return `za ${count} dni`;
+/** The key and count for "today", "tomorrow" or "in n days". */
+export function daysKey(count) {
+  if (count === 0) return { key: 'today' };
+  if (count === 1) return { key: 'tomorrow' };
+  return { key: 'inDays', n: count };
 }
 
 export function tournamentsInYear(tournaments, year) {
   return (tournaments || []).filter((row) => String(row.start_date || '').startsWith(String(year))).length;
 }
 
-/** "Turnieje w 2026: 2 z 5", or '' without a limit. */
-export function yearUsageText(series, year) {
+/** {used, limit} for the year, or null without a limit. */
+export function yearUsage(series, year) {
   const limit = Number(series?.max_tournaments_per_year || 0);
-  if (!limit) return '';
-  return `Turnieje w ${year}: ${tournamentsInYear(series.tournaments, year)} z ${limit}`;
+  if (!limit) return null;
+  return { used: tournamentsInYear(series.tournaments, year), limit };
 }
 
 export function yearLimitReached(series, year) {
-  const limit = Number(series?.max_tournaments_per_year || 0);
-  return Boolean(limit) && tournamentsInYear(series.tournaments, year) >= limit;
+  const usage = yearUsage(series, year);
+  return Boolean(usage) && usage.used >= usage.limit;
 }

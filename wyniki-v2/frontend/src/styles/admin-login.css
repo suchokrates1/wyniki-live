@@ -185,3 +185,9 @@
 @media (prefers-reduced-motion: no-preference) {
   .adl-input, .adl-submit, .adl-eye { transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s; }
 }
+
+/* organizer sign-in: the language switch above the form */
+.adl-lang { display: flex; align-items: center; gap: 10px; align-self: center; width: 100%; max-width: 420px; justify-content: flex-end; font-size: 15px; font-weight: 600; }
+.adl-lang__select { min-height: 44px; padding: 0 10px; border: 1.5px solid var(--adm-line); border-radius: 10px; background: #fff; color: var(--adm-ink); font: inherit; }
+.adl-lang__select:focus-visible { outline: 3px solid var(--adm-rail); outline-offset: 2px; }
+@media (max-width: 820px) { .adl-lang { align-self: stretch; max-width: none; } }

@@ -3,6 +3,7 @@
  * tournaments it ranks with their tier. People get an invitation link to set a password;
  * when no mail goes out the link is shown here to pass on by hand.
  */
+import { LANGUAGES } from '../organizer/i18n/index.js';
 import { TIERS, dateRange, tierLabel } from '../organizer/route.js';
 
 export const ROLE_OPTIONS = [
@@ -40,6 +41,7 @@ export function createSeriesView() {
       return [{ value: '', label: 'bez rangi' }, ...TIERS.map((tier) => ({ value: tier, label: tierLabel(tier) }))];
     },
     seriesRoles() { return ROLE_OPTIONS; },
+    seriesLanguages() { return LANGUAGES; },
     seriesMemberStatus: memberStatus,
     seriesTierLabel: tierLabel,
     seriesDates: dateRange,
@@ -49,7 +51,7 @@ export function createSeriesView() {
     },
 
     memberDraft(item) {
-      if (!this.seriesMemberDraft[item.id]) this.seriesMemberDraft[item.id] = { email: '', name: '', role: 'editor' };
+      if (!this.seriesMemberDraft[item.id]) this.seriesMemberDraft[item.id] = { email: '', name: '', role: 'editor', language: 'en' };
       return this.seriesMemberDraft[item.id];
     },
 
@@ -124,7 +126,7 @@ export function createSeriesView() {
       const draft = this.memberDraft(item);
       try {
         this.seriesInvite = { seriesId: item.id, ...(await this._seriesCall(`/admin/api/series/${item.id}/members`, 'POST', draft)) };
-        this.seriesMemberDraft[item.id] = { email: '', name: '', role: 'editor' };
+        this.seriesMemberDraft[item.id] = { email: '', name: '', role: 'editor', language: 'en' };
         await this.loadSeries();
       } catch { /* message shown */ }
     },
@@ -138,6 +140,13 @@ export function createSeriesView() {
     async toggleSeriesMember(item, member) {
       try {
         await this._seriesCall(`/admin/api/series/${item.id}/members/${member.id}`, 'PATCH', { disabled: !member.disabled });
+        await this.loadSeries();
+      } catch { /* message shown */ }
+    },
+
+    async setSeriesMemberLanguage(item, member, language) {
+      try {
+        await this._seriesCall(`/admin/api/series/${item.id}/members/${member.id}`, 'PATCH', { language });
         await this.loadSeries();
       } catch { /* message shown */ }
     },

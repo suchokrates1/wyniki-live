@@ -1,12 +1,13 @@
 // The organizer's address bar: #/twt (the series), #/twt/t/31 (a tournament),
 // #/twt/t/31/zawodnicy (one of its tabs).
 
+// The ids stay Polish in every language: they are addresses, not words on the page.
 export const TOURNAMENT_TABS = [
-  { id: 'ustawienia', label: 'Ustawienia' },
-  { id: 'kategorie', label: 'Kategorie' },
-  { id: 'zawodnicy', label: 'Zawodnicy' },
-  { id: 'korty', label: 'Korty i biuro' },
-  { id: 'historia', label: 'Historia zmian' },
+  { id: 'ustawienia', key: 'tabSettings' },
+  { id: 'kategorie', key: 'tabCategories' },
+  { id: 'zawodnicy', key: 'tabPlayers' },
+  { id: 'korty', key: 'tabCourts' },
+  { id: 'historia', key: 'tabLog' },
 ];
 const TAB_IDS = TOURNAMENT_TABS.map((tab) => tab.id);
 
