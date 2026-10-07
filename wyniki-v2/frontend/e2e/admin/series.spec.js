@@ -8,7 +8,7 @@ import { openAdmin, openSection } from './helpers.js';
 
 const TWT = {
   id: 1, name: 'Takei World Tennis Tour', slug: 'twt', country: '', website: 'https://takeitour.com', valid_until: '2027-10-31',
-  members: [{ id: 5, email: 'ivan@takeitour.com', name: 'Ivan R. Deb', role: 'owner', disabled: 0, has_password: 0 }],
+  members: [{ id: 5, email: 'organizer@example.org', name: 'Jan Testowy', role: 'owner', disabled: 0, has_password: 0 }],
   tournaments: [{ id: 28, name: '5th Dürener Handicup 2026', start_date: '2026-07-17', end_date: '2026-07-19', city: 'Düren', tier: 'CH50' }],
 };
 
@@ -27,7 +27,7 @@ test('a series shows its people with their state and its tournaments with their 
   await openSeries(page);
   await expect(page.getByRole('tab', { name: 'Serie i konta' })).toHaveAttribute('aria-selected', 'true');
   const card = page.getByRole('region', { name: 'Seria Takei World Tennis Tour' });
-  await expect(card.locator('.adm-row').filter({ hasText: 'ivan@takeitour.com' })).toContainText('czeka na ustawienie hasła');
+  await expect(card.locator('.adm-row').filter({ hasText: 'organizer@example.org' })).toContainText('czeka na ustawienie hasła');
   await expect(card.getByLabel('Ranga: 5th Dürener Handicup 2026')).toHaveValue('CH50');
   // tournaments already in the series are not offered again
   await expect(card.getByLabel('Turniej do dodania').locator('option')).not.toContainText(['Dürener']);

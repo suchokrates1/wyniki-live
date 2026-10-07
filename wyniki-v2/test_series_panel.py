@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import re
+import secrets
 
 import pytest
 
-PASSWORD = "dobre-haslo-123"
+# made up per run: no password literal sits in the repository
+PASSWORD = secrets.token_urlsafe(12)
 
 
 @pytest.fixture()
@@ -39,11 +41,11 @@ def _tournament(name, start="2026-07-17"):
     return int(database.insert_tournament(name, start, start, city="Düren", country="DE"))
 
 
-def _series_with_member(client, name="Takei World Tennis Tour", email="ivan@takeitour.com"):
+def _series_with_member(client, name="Takei World Tennis Tour", email="organizer@example.org"):
     created = client.post("/admin/api/series", json={"name": name, "slug": "twt" if "Takei" in name else ""})
     assert created.status_code == 201
     series_id = created.get_json()["id"]
-    invited = client.post(f"/admin/api/series/{series_id}/members", json={"email": email, "name": "Ivan", "role": "owner"})
+    invited = client.post(f"/admin/api/series/{series_id}/members", json={"email": email, "name": "Jan", "role": "owner"})
     assert invited.status_code == 201
     return series_id, invited.get_json()
 
@@ -52,7 +54,7 @@ def _token_from(invite_url):
     return re.search(r"token=([^&]+)", invite_url).group(1)
 
 
-def _sign_in(client, email="ivan@takeitour.com", password=PASSWORD):
+def _sign_in(client, email="organizer@example.org", password=PASSWORD):
     response = client.post("/organizer/api/auth", json={"email": email, "password": password})
     return response, (response.get_json() or {}).get("token")
 
@@ -67,17 +69,17 @@ def test_invitation_sets_a_password_once_and_then_the_person_signs_in(client):
     token = _token_from(invited["invite_url"])
 
     info = client.get(f"/organizer/api/invite/{token}").get_json()
-    assert info["email"] == "ivan@takeitour.com" and info["series"] == ["Takei World Tennis Tour"]
-    assert client.post(f"/organizer/api/invite/{token}", json={"password": "short"}).status_code == 400
+    assert info["email"] == "organizer@example.org" and info["series"] == ["Takei World Tennis Tour"]
+    assert client.post(f"/organizer/api/invite/{token}", json={"password": PASSWORD[:4]}).status_code == 400
     accepted = client.post(f"/organizer/api/invite/{token}", json={"password": PASSWORD})
     assert accepted.status_code == 200 and accepted.get_json()["token"]
     # the link is spent
     assert client.post(f"/organizer/api/invite/{token}", json={"password": PASSWORD + "x"}).status_code == 410
 
-    response, session = _sign_in(client, email="IVAN@takeitour.com ")
+    response, session = _sign_in(client, email="ORGANIZER@example.org ")
     assert response.status_code == 200
     me = client.get("/organizer/api/me", headers=_auth(session)).get_json()
-    assert me["account"]["email"] == "ivan@takeitour.com"
+    assert me["account"]["email"] == "organizer@example.org"
     assert [item["slug"] for item in me["series"]] == ["twt"]
     assert me["series"][0]["role"] == "owner"
 
@@ -126,7 +128,7 @@ def test_switching_an_account_off_or_taking_it_off_the_series_works_at_once(clie
     assert client.get("/organizer/api/me", headers=_auth(session)).get_json()["series"] == []
     assert client.get(f"/organizer/api/series/{series_id}/tournaments", headers=_auth(session)).status_code == 403
 
-    client.post(f"/admin/api/series/{series_id}/members", json={"email": "ivan@takeitour.com"})
+    client.post(f"/admin/api/series/{series_id}/members", json={"email": "organizer@example.org"})
     client.patch(f"/admin/api/series/{series_id}/members/{account_id}", json={"disabled": True})
     assert client.get("/organizer/api/me", headers=_auth(session)).status_code == 401
     assert _sign_in(client)[0].status_code == 403
@@ -136,14 +138,14 @@ def test_wrong_passwords_are_throttled(client):
     _, invited = _series_with_member(client)
     client.post(f"/organizer/api/invite/{_token_from(invited['invite_url'])}", json={"password": PASSWORD})
     for _ in range(5):
-        assert _sign_in(client, password="zle-haslo-000")[0].status_code == 403
+        assert _sign_in(client, password=PASSWORD + "-zle")[0].status_code == 403
     assert _sign_in(client)[0].status_code == 429
 
 
 def test_an_account_without_a_password_cannot_sign_in(client):
     _series_with_member(client)
     assert _sign_in(client, password="")[0].status_code == 403
-    assert _sign_in(client, password="cokolwiek-123")[0].status_code == 403
+    assert _sign_in(client, password=secrets.token_urlsafe(12))[0].status_code == 403
 
 
 def test_series_slugs_stay_unique(client):

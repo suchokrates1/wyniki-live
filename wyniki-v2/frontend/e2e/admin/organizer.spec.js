@@ -5,9 +5,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-const PASSWORD = 'dobre-haslo-123';
+import { randomBytes } from 'node:crypto';
+
+// made up per run: no password literal sits in the repository
+const PASSWORD = randomBytes(9).toString('base64url');
+const WRONG = `${PASSWORD}-zle`;
 const ME = {
-  account: { id: 5, email: 'ivan@takeitour.com', name: 'Ivan R. Deb' },
+  account: { id: 5, email: 'organizer@example.org', name: 'Jan Testowy' },
   series: [{
     id: 1, name: 'Takei World Tennis Tour', slug: 'twt', website: 'https://takeitour.com', valid_until: '2027-10-31', role: 'owner',
     tournaments: [
@@ -22,11 +26,11 @@ async function mockApi(page, { attempts = { n: 0 } } = {}) {
     attempts.n += 1;
     const { email, password } = route.request().postDataJSON();
     if (attempts.n > 3) return route.fulfill({ status: 429, json: {} });
-    if (email === 'ivan@takeitour.com' && password === PASSWORD) return route.fulfill({ json: { token: 'org-token' } });
+    if (email === 'organizer@example.org' && password === PASSWORD) return route.fulfill({ json: { token: 'org-token' } });
     return route.fulfill({ status: 403, json: {} });
   });
   await page.route(/\/organizer\/api\/invite\/good$/, (route) => (route.request().method() === 'GET'
-    ? route.fulfill({ json: { email: 'ivan@takeitour.com', name: 'Ivan', series: ['Takei World Tennis Tour'], min_length: 10 } })
+    ? route.fulfill({ json: { email: 'organizer@example.org', name: 'Jan', series: ['Takei World Tennis Tour'], min_length: 10 } })
     : route.fulfill({ json: { token: 'org-token' } })));
   await page.route(/\/organizer\/api\/invite\/spent$/, (route) => route.fulfill({ status: 410, json: {} }));
   await page.route(/\/organizer\/api\/me$/, (route) => (route.request().headers().authorization === 'Bearer org-token'
@@ -45,8 +49,8 @@ test('without a session the panel sends you to sign in, and back after it', asyn
   await expect(page).toHaveURL(/\/organizer\/login/);
   await expect(page.getByRole('heading', { name: 'Panel organizatora' })).toBeVisible();
 
-  await page.getByLabel('E-mail').fill('ivan@takeitour.com');
-  await page.getByLabel('Hasło', { exact: true }).fill('zle-haslo');
+  await page.getByLabel('E-mail').fill('organizer@example.org');
+  await page.getByLabel('Hasło', { exact: true }).fill(WRONG);
   await page.getByRole('button', { name: 'Zaloguj' }).click();
   await expect(page.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.');
 
@@ -68,8 +72,8 @@ test('without a session the panel sends you to sign in, and back after it', asyn
 test('too many wrong passwords are said plainly', async ({ page }) => {
   await mockApi(page, { attempts: { n: 3 } });
   await page.goto('/organizer/login');
-  await page.getByLabel('E-mail').fill('ivan@takeitour.com');
-  await page.getByLabel('Hasło', { exact: true }).fill('zle-haslo');
+  await page.getByLabel('E-mail').fill('organizer@example.org');
+  await page.getByLabel('Hasło', { exact: true }).fill(WRONG);
   await page.getByRole('button', { name: 'Zaloguj' }).click();
   await expect(page.getByRole('alert')).toContainText('Za dużo nieudanych prób');
 });
@@ -79,10 +83,10 @@ test('an invitation sets the password and goes straight in, leaving no token in 
   await page.goto('/organizer/invite?token=good');
   await expect(page.getByRole('heading', { name: 'Ustaw hasło' })).toBeVisible();
   await expect(page).toHaveURL(/\/organizer\/invite$/);
-  await expect(page.getByLabel('E-mail')).toHaveValue('ivan@takeitour.com');
+  await expect(page.getByLabel('E-mail')).toHaveValue('organizer@example.org');
   await expect(page.getByLabel('E-mail')).toHaveAttribute('readonly', '');
 
-  await page.getByLabel('Nowe hasło').fill('krotkie');
+  await page.getByLabel('Nowe hasło').fill(PASSWORD.slice(0, 4));
   await page.getByRole('button', { name: 'Ustaw hasło i wejdź' }).click();
   await expect(page.getByRole('alert')).toHaveText('Hasło musi mieć co najmniej 10 znaków.');
   await page.getByLabel('Nowe hasło').fill(PASSWORD);
