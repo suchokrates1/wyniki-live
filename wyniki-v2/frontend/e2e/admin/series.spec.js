@@ -76,3 +76,18 @@ test('limits and the contact address are saved from the series tab', async ({ pa
   await expect.poll(() => requests.find((r) => r.method === 'PUT' && r.url.endsWith('/series/settings'))?.body)
     .toEqual({ contact_email: 'organizers@blindtennis.app' });
 });
+
+test('a series logo goes up and comes down', async ({ page }) => {
+  const requests = await openSeries(page);
+  await page.route(/\/admin\/api\/series\/1\/logo$/, (route) => {
+    requests.push({ method: route.request().method(), url: route.request().url() });
+    return route.fulfill({ json: { logo_path: route.request().method() === 'POST' ? '/brand/blindtennis-logo-email.png' : '' } });
+  });
+  const card = page.getByRole('region', { name: 'Seria Takei World Tennis Tour' });
+  await expect(card.getByText('brak logo')).toBeVisible();
+  await card.getByLabel('Nowe logo (PNG, JPEG, WebP, do 2 MB)').setInputFiles('public/brand/blindtennis-logo-email.png');
+  await expect(card.getByRole('img', { name: 'Logo: Takei World Tennis Tour' })).toBeVisible();
+  await card.getByRole('button', { name: /^Usuń logo/ }).click();
+  await expect(card.getByText('brak logo')).toBeVisible();
+  expect(requests.filter((r) => /\/logo$/.test(r.url)).map((r) => r.method)).toEqual(['POST', 'DELETE']);
+});

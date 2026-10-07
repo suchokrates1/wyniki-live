@@ -203,3 +203,20 @@ test('ten days before the end the panel says so, with the address to write to', 
   await expect(page.getByText('Abonament: do 4 kortów.')).toBeVisible();
   await expect(page.getByLabel('Liczba kortów')).toHaveAttribute('max', '4');
 });
+
+test('the series logo goes up, shows in the header and the series banner, and a wrong file is said plainly', async ({ page }) => {
+  await openPanel(page, world());
+  let answer = { status: 400, json: { error: 'PNG, JPEG or WebP only' } };
+  await page.route(/\/organizer\/api\/series\/1\/logo$/, (route) => route.fulfill(answer));
+  const card = page.getByRole('region', { name: 'Logo serii' });
+  await expect(card.getByText('Seria nie ma jeszcze logo.')).toBeVisible();
+  await card.getByLabel('Nowe logo').setInputFiles('public/brand/blindtennis-logo-email.png');
+  await expect(card.getByText('Logo musi być plikiem PNG, JPEG albo WebP.')).toBeVisible();
+
+  answer = { json: { logo_path: '/brand/blindtennis-logo-email.png' } };
+  await card.getByLabel('Nowe logo').setInputFiles('public/brand/blindtennis-logo-email.png');
+  await expect(card.getByText('Logo zapisane.')).toBeVisible();
+  await expect(page.locator('.org-hero__logo')).toHaveAttribute('alt', 'Logo: Takei World Tennis Tour');
+  await expect(page.locator('.org-top__logo')).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+});

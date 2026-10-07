@@ -179,6 +179,14 @@
             <div x-show="activeTab === 'live'" id="panel-main-live" role="tabpanel" aria-labelledby="tab-main-live">
 
             <!-- Active tournament name -->
+            <template x-if="tournamentName && liveSeries()">
+                <div class="live-series">
+                    <span class="series-mark">
+                        <img class="series-mark__logo" x-show="liveSeries().logo_path" :src="liveSeries().logo_path || ''" alt="">
+                        <span class="series-mark__name" x-text="seriesLine(liveSeries())"></span>
+                    </span>
+                </div>
+            </template>
             <h2 class="live-tournament-name" x-show="tournamentName" x-text="tournamentName"></h2>
 
             <!-- Live sub-navigation cards -->
@@ -631,7 +639,11 @@
                 <!-- Tournament list (cards) -->
                 <div x-show="!selectedTournamentId" class="tournament-grid">
                     <template x-for="t in tournaments" :key="forKey('tid', t.id)">
-                        <button class="tournament-card" @click="openTournament(t.id)" :aria-label="t.name + (t.location ? ', ' + t.location : '') + ', ' + t.start_date">
+                        <button class="tournament-card" @click="openTournament(t.id)" :aria-label="t.name + (seriesOf(t) ? ', ' + seriesLine(seriesOf(t)) : '') + (t.location ? ', ' + t.location : '') + ', ' + t.start_date">
+                            <span class="series-mark" x-show="seriesOf(t)">
+                                <img class="series-mark__logo" x-show="seriesOf(t)?.logo_path" :src="seriesOf(t)?.logo_path || ''" alt="">
+                                <span class="series-mark__name" x-text="seriesLine(seriesOf(t))"></span>
+                            </span>
                             <h3 class="tournament-card__name" x-text="t.name"></h3>
                             <div class="tournament-card__meta">
                                 <span class="tournament-card__location" x-show="t.location" x-text="t.location"></span>
@@ -657,6 +669,18 @@
                     <button class="back-btn" @click="closeTournamentDetail()" :aria-label="tr().tournamentCard?.backToList || 'Powrót do listy turniejów'">
                         <span aria-hidden="true">←</span> <span x-text="tr().tournamentCard?.backToList || 'Powrót do listy'"></span>
                     </button>
+                    <template x-if="selectedTournamentSeries()">
+                        <div>
+                            <a class="series-mark series-mark--large" x-show="selectedTournamentSeries().website" :href="selectedTournamentSeries().website || '#'" target="_blank" rel="noopener">
+                                <img class="series-mark__logo" x-show="selectedTournamentSeries().logo_path" :src="selectedTournamentSeries().logo_path || ''" alt="">
+                                <span class="series-mark__name" x-text="seriesLine(selectedTournamentSeries())"></span>
+                            </a>
+                            <p class="series-mark series-mark--large" x-show="!selectedTournamentSeries().website">
+                                <img class="series-mark__logo" x-show="selectedTournamentSeries().logo_path" :src="selectedTournamentSeries().logo_path || ''" alt="">
+                                <span class="series-mark__name" x-text="seriesLine(selectedTournamentSeries())"></span>
+                            </p>
+                        </div>
+                    </template>
                     <h2 class="tournament-detail__name" x-text="selectedTournamentName()"></h2>
 
                     <!-- Sub-tabs: Podium+Bracket / Match History -->

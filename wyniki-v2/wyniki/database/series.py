@@ -59,6 +59,8 @@ def ensure_series_tables(cursor: sqlite3.Cursor) -> None:
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_series_tournaments_tournament ON series_tournaments(tournament_id)")
+    if "logo_path" not in {row[1] for row in cursor.execute("PRAGMA table_info(series)")}:
+        cursor.execute("ALTER TABLE series ADD COLUMN logo_path TEXT NOT NULL DEFAULT ''")
     from .accounts import ensure_account_columns
     from .series_plan import ensure_series_plan_columns
     from .series_records import ensure_series_record_tables
@@ -138,6 +140,38 @@ def update_series(series_id: int, fields: dict[str, Any]) -> bool:
         cursor = conn.execute(f"UPDATE series SET {assignments} WHERE id = ?", (*values.values(), series_id))
         conn.commit()
         return cursor.rowcount > 0
+
+
+def set_logo(series_id: int, logo_path: str) -> str:
+    """Stores the series' logo path ('' takes it away) and returns the one it replaced."""
+    with db_conn() as conn:
+        row = conn.execute("SELECT logo_path FROM series WHERE id = ?", (series_id,)).fetchone()
+        conn.execute("UPDATE series SET logo_path = ? WHERE id = ?", (logo_path, series_id))
+        conn.commit()
+        return str(row[0] or "") if row else ""
+
+
+def public_series_of(tournament_ids: list[int]) -> dict[int, list[dict[str, Any]]]:
+    """The series each tournament belongs to, as the public page shows them: name, logo, rank."""
+    ids = [int(tid) for tid in tournament_ids]
+    if not ids:
+        return {}
+    marks = ", ".join("?" for _ in ids)
+    with db_conn() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT st.tournament_id, s.id, s.name, s.slug, s.website, s.logo_path, st.tier
+            FROM series_tournaments st JOIN series s ON s.id = st.series_id
+            WHERE st.tournament_id IN ({marks}) ORDER BY s.name COLLATE NOCASE
+            """,
+            ids,
+        ).fetchall()
+    found: dict[int, list[dict[str, Any]]] = {}
+    for row in rows:
+        found.setdefault(int(row[0]), []).append(
+            {"id": row[1], "name": row[2], "slug": row[3], "website": row[4], "logo_path": row[5] or "", "tier": row[6] or ""}
+        )
+    return found
 
 
 def delete_series(series_id: int) -> bool:
@@ -242,7 +276,7 @@ def series_of_account(account_id: int) -> list[dict[str, Any]]:
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT s.id, s.name, s.slug, s.country, s.website, s.valid_until,
+            SELECT s.id, s.name, s.slug, s.country, s.website, s.valid_until, s.logo_path,
                    s.max_tournaments_per_year, s.max_courts, m.role
             FROM series_members m JOIN series s ON s.id = m.series_id
             WHERE m.account_id = ? ORDER BY s.name COLLATE NOCASE

@@ -10,6 +10,14 @@ from ..utils import json_no_cache as _json_no_cache
 blueprint = Blueprint('courts', __name__, url_prefix='/api')
 
 
+def _active_series() -> list[dict]:
+    """The series of the tournament being played: the live page shows its logo by the name."""
+    from ..database import get_active_tournament_id
+    from ..database.series import public_series_of
+    tournament_id = get_active_tournament_id(public_only=True)
+    return public_series_of([tournament_id]).get(int(tournament_id), []) if tournament_id else []
+
+
 @blueprint.route('/snapshot')
 def snapshot():
     """Get current state of all courts."""
@@ -36,6 +44,7 @@ def snapshot():
             "courts": courts_data,
             "tournament_name": tournament_name,
             "tournament_names": tournament_names,
+            "tournament_series": _active_series(),
         })
     except Exception as e:
         logger.error("snapshot_failed", error=str(e))

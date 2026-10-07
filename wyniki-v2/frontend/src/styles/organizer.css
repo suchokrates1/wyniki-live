@@ -17,6 +17,29 @@
   flex-wrap: wrap;
 }
 .org-title { margin: 0; font-size: 28px; font-weight: 800; line-height: 1.2; }
+
+/* The series' logo: on a light plate, so any logo (dark ink, transparent ground) reads on the court */
+.org-hero { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.org-hero__logo, .org-top__logo, .org-logo__frame img {
+  display: block;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 8px;
+}
+.org-hero__logo { height: 72px; max-width: 200px; padding: 6px; }
+.adm-top__chip.org-top__series { display: inline-flex; align-items: center; gap: 8px; }
+.org-top__logo { height: 22px; max-width: 64px; padding: 2px; border-radius: 4px; }
+.org-logo { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; margin-top: 12px; }
+.org-logo__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  min-height: 96px;
+  border: 1px dashed var(--adm-line);
+  border-radius: 10px;
+}
+.org-logo__frame img { max-width: 100%; max-height: 120px; padding: 8px; }
 .org-switch { display: flex; flex-direction: column; gap: 4px; min-width: 220px; }
 
 .org-facts {
@@ -46,6 +69,7 @@
 @media (max-width: 700px) {
   .org-main { padding: 20px 16px 40px; }
   .org-title { font-size: 24px; }
+  .org-hero__logo { height: 52px; max-width: 140px; }
   .org-switch { min-width: 0; width: 100%; }
 }
 

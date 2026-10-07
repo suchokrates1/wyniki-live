@@ -1,0 +1,32 @@
+/* A tournament's series: its logo on a light plate (any logo reads on either theme) and its name. */
+.series-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+}
+.series-mark__logo {
+  display: block;
+  flex: none;
+  height: 32px;
+  max-width: 96px;
+  padding: 3px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.series-mark__name { min-width: 0; overflow-wrap: anywhere; }
+.series-mark--large { gap: 14px; margin: 0 0 10px; font-size: 15px; }
+.series-mark--large .series-mark__logo { height: 56px; max-width: 160px; padding: 5px; border-radius: 8px; }
+a.series-mark { text-decoration: none; }
+a.series-mark:hover .series-mark__name, a.series-mark:focus-visible .series-mark__name { color: var(--text); text-decoration: underline; }
+.live-series { display: flex; justify-content: center; margin: 0 0 6px; }
+
+@media (max-width: 640px) {
+  .live-series { justify-content: flex-start; }
+  .series-mark--large .series-mark__logo { height: 44px; max-width: 120px; }
+}

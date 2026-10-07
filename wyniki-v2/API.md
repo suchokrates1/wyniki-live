@@ -69,6 +69,8 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/admin/api/series` |  |
 | DELETE | `/admin/api/series/<int:series_id>` |  |
 | PATCH, PUT | `/admin/api/series/<int:series_id>` |  |
+| DELETE | `/admin/api/series/<int:series_id>/logo` |  |
+| POST | `/admin/api/series/<int:series_id>/logo` |  |
 | POST | `/admin/api/series/<int:series_id>/members` |  |
 | DELETE | `/admin/api/series/<int:series_id>/members/<int:account_id>` |  |
 | PATCH, PUT | `/admin/api/series/<int:series_id>/members/<int:account_id>` |  |
@@ -210,6 +212,8 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/organizer/api/invite/<token>` |  |
 | GET | `/organizer/api/me` |  |
 | PATCH, PUT | `/organizer/api/me` | The person's own language: the panel's and that of every mail they get. |
+| DELETE | `/organizer/api/series/<int:series_id>/logo` |  |
+| POST | `/organizer/api/series/<int:series_id>/logo` | The series' logo, shown in this panel and next to its tournaments on the public page. |
 | GET | `/organizer/api/series/<int:series_id>/tournaments` |  |
 
 ## organizer_players
@@ -339,6 +343,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/admin/login/` | Serve the admin sign-in page; the panel sends you here without a session. |
 | GET | `/assets/<path:filename>` | Serve static assets (JS, CSS, etc.). |
 | GET | `/brand/<path:filename>` |  |
+| GET | `/data/<folder>/<filename>` |  |
 | GET | `/embed` | Serve embed page with optional language and court parameters. |
 | GET | `/embed.html` | Serve embed page with optional language and court parameters. |
 | GET | `/embed/<lang>/<int:court>` | Serve embed page with optional language and court parameters. |

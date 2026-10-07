@@ -98,6 +98,7 @@ export function createLiveRuntimeView() {
         return acc;
       }, {});
       this.tournamentName = data.tournament_name || null;
+      this.tournamentSeries = Array.isArray(data.tournament_series) ? data.tournament_series : [];
     },
 
     staleTime() {

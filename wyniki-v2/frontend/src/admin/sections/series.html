@@ -63,6 +63,20 @@
         <button type="button" class="adm-btn adm-btn--primary" @click="saveSeries(item)">Zapisz serię</button>
       </div>
 
+      <h3 class="adm-subhead">Logo serii</h3>
+      <div class="adm-series-logo">
+        <div class="adm-series-logo__frame">
+          <img x-show="item.logo_path" :src="item.logo_path || ''" :alt="'Logo: ' + item.name">
+          <span x-show="!item.logo_path" class="adm-card__hint">brak logo</span>
+        </div>
+        <div class="adm-series-logo__pick">
+          <label class="adm-field__label" :for="'adm-series-logo-' + item.id">Nowe logo (PNG, JPEG, WebP, do 2 MB)</label>
+          <input class="adm-input" type="file" accept="image/png,image/jpeg,image/webp" :id="'adm-series-logo-' + item.id" @change="uploadSeriesLogo(item, $event)">
+          <p class="adm-card__hint">Pokazuje się w panelu organizatora i przy turniejach serii na stronie publicznej.</p>
+        </div>
+        <button type="button" class="adm-btn" x-show="item.logo_path" @click="removeSeriesLogo(item)">Usuń logo<span class="sr-only" x-text="' ' + item.name"></span></button>
+      </div>
+
       <h3 class="adm-subhead">Osoby z dostępem</h3>
       <ul class="adm-rows" role="list">
         <template x-for="member in item.members" :key="member.id">

@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 
 from ..database import accounts, series, series_plan
 from ..database.tournaments import fetch_tournament
+from ..services import series_logo
 from ..services.account_invites import invite_link, send_invite
 
 blueprint = Blueprint("admin_series", __name__, url_prefix="/admin/api/series")
@@ -63,6 +64,22 @@ def delete(series_id: int):
     if not series.delete_series(series_id):
         return _not_found()
     return jsonify({"success": True})
+
+
+@blueprint.route("/<int:series_id>/logo", methods=["POST"])
+def logo_upload(series_id: int):
+    item = series.get_series(series_id)
+    if not item:
+        return _not_found()
+    body, status = series_logo.save(series_id, item["slug"], request.files.get("logo"))
+    return jsonify(body), status
+
+
+@blueprint.route("/<int:series_id>/logo", methods=["DELETE"])
+def logo_remove(series_id: int):
+    if not series.get_series(series_id):
+        return _not_found()
+    return jsonify(series_logo.remove(series_id))
 
 
 @blueprint.route("/<int:series_id>/members", methods=["POST"])

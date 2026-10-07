@@ -21,7 +21,10 @@
     <header class="adm-top">
       <span class="adm-top__brand">blindtennis<span>.</span>app</span>
       <template x-if="current()">
-        <span class="adm-top__chip" x-text="current().name"></span>
+        <span class="adm-top__chip org-top__series">
+          <img class="org-top__logo" x-show="current().logo_path" :src="current().logo_path || ''" alt="">
+          <span x-text="current().name"></span>
+        </span>
       </template>
       <div class="adm-top__spacer"></div>
       <span class="adm-top__tag" x-text="account?.email || ''"></span>

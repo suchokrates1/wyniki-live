@@ -10,6 +10,7 @@ from flask import g, jsonify, request
 from ..database import accounts, series
 from ..database.series_plan import contact_email
 from ..services import organizer_auth as auth
+from ..services import series_logo
 from .organizer_common import guarded_blueprint
 
 OPEN_ENDPOINTS = frozenset({"organizer.sign_in", "organizer.invite_info", "organizer.invite_accept", "organizer.contact"})
@@ -85,3 +86,16 @@ def me_update():
 @blueprint.route("/series/<int:series_id>/tournaments", methods=["GET"])
 def series_tournament_list(series_id: int):
     return jsonify(series.series_tournaments(series_id))
+
+
+@blueprint.route("/series/<int:series_id>/logo", methods=["POST"])
+def series_logo_upload(series_id: int):
+    """The series' logo, shown in this panel and next to its tournaments on the public page."""
+    item = series.get_series(series_id)
+    body, status = series_logo.save(series_id, item["slug"], request.files.get("logo"))
+    return jsonify(body), status
+
+
+@blueprint.route("/series/<int:series_id>/logo", methods=["DELETE"])
+def series_logo_remove(series_id: int):
+    return jsonify(series_logo.remove(series_id))

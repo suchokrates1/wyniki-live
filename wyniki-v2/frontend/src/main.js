@@ -23,6 +23,7 @@ import { registerPwaPush, registerPwaShell } from './modules/pwaShellView.js';
 import { createScheduleView } from './modules/scheduleView.js';
 import { bindSubnavOverflow } from './modules/subnavOverflow.js';
 import { createTournamentView } from './modules/tournamentsView.js';
+import { createSeriesMarkView } from './modules/seriesMark.js';
 import { applyHashRoute, updateHashFromState } from './modules/routing.js';
 import { formatTemplate as fmt } from './shared/text.js';
 import { formatPlayerClassification } from './shared/categories.js';
@@ -37,6 +38,7 @@ import './styles/mobile.css';
 import './styles/bracket.css';
 import './styles/profile.css';
 import './styles/results.css';
+import './styles/series-mark.css';
 
 function codeToFlag(code) {
   if (!code || code.length < 2) return '';
@@ -77,6 +79,7 @@ Alpine.data('tennisApp', () => ({
   ...createLiveCourtView(),
   ...createScheduleView(),
   ...createTournamentView(),
+  ...createSeriesMarkView(),
   activeTab: 'live',
   // Live sub-tab state
   liveSubTab: 'scores',

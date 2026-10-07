@@ -6,6 +6,7 @@ import { call, CallError, toSignIn } from './organizer/api.js';
 import { LANGUAGES, formatDate, pickLanguage, plural, rememberLanguage, storedLanguage, supported, takeChoice, translate } from './organizer/i18n/index.js';
 import { daysKey, daysLeft, planState, yearLimitReached, yearUsage } from './organizer/plan.js';
 import { createPlayersView } from './organizer/playersView.js';
+import { createSeriesLogoView } from './organizer/seriesLogo.js';
 import { ORGANIZER_TOKEN_KEY, TIERS, dateRange, tierLabel } from './organizer/route.js';
 import { TOURNAMENT_TABS, organizerHash, parseOrganizerHash } from './organizer/routing.js';
 import { createTournamentView } from './organizer/tournamentView.js';
@@ -34,6 +35,7 @@ const emptyDraft = () => ({ name: '', start_date: '', end_date: '', city: '', co
 Alpine.data('organizerApp', () => ({
   ...createTournamentView(),
   ...createPlayersView(),
+  ...createSeriesLogoView(),
   lang: pickLanguage({ search: window.location.search, stored: storedLanguage(), navigatorLanguages: navigator.languages || [] }),
   loading: true,
   error: null,

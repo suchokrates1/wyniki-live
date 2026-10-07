@@ -16,6 +16,8 @@ const ERROR_KEYS = {
   'Court count cannot be negative': 'errNegativeCourts',
   'Tournament limit reached': 'errYearLimit',
   'Court limit exceeded': 'errCourtLimit',
+  'PNG, JPEG or WebP only': 'errLogoType',
+  'File too large': 'errLogoSize',
 };
 
 export function toSignIn(reason) {
@@ -46,14 +48,15 @@ export function errorKeyFor(raw) {
   return ERROR_KEYS[raw] || 'errSave';
 }
 
-/** JSON in, JSON out; throws CallError naming the text for the person. */
+/** JSON (or a form with a file) in, JSON out; throws CallError naming the text for the person. */
 export async function call(url, method = 'GET', body) {
+  const json = body !== undefined && !(body instanceof FormData);
   let response;
   try {
     response = await organizerFetch(url, {
       method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: json ? { 'Content-Type': 'application/json' } : undefined,
+      body: json ? JSON.stringify(body) : body,
     });
   } catch {
     throw new CallError('errConnection');

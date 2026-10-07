@@ -166,11 +166,16 @@ def public_tournament_quick_info(tid: int):
 @bracket_public_bp.route('/list')
 def public_tournament_list():
     """List all tournaments for public tournament browsing."""
+    from ..database.series import public_series_of
+
+    tournaments = fetch_tournaments(public_only=True)
+    series_by_tournament = public_series_of([t['id'] for t in tournaments])
     result = []
-    for tournament in fetch_tournaments(public_only=True):
+    for tournament in tournaments:
         d = dict(tournament)
         d.pop('access_key', None)
         d['player_count'] = len(fetch_players(tournament['id']))
+        d['series'] = series_by_tournament.get(int(tournament['id']), [])
         result.append(d)
     return _json_no_cache(result)
 

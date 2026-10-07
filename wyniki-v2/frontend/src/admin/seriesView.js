@@ -6,6 +6,12 @@
 import { LANGUAGES } from '../organizer/i18n/index.js';
 import { TIERS, dateRange, tierLabel } from '../organizer/route.js';
 
+const SERIES_ERRORS = {
+  'A valid e-mail is required': 'Podaj poprawny adres e-mail.',
+  'PNG, JPEG or WebP only': 'Logo: tylko PNG, JPEG albo WebP.',
+  'File too large': 'Logo: plik większy niż 2 MB.',
+};
+
 export const ROLE_OPTIONS = [
   { value: 'owner', label: 'właściciel' },
   { value: 'editor', label: 'edytor' },
@@ -62,14 +68,15 @@ export function createSeriesView() {
 
     async _seriesCall(url, method = 'GET', body) {
       this.seriesError = '';
+      const form = body instanceof FormData;
       const response = await fetch(url, {
         method,
-        headers: body ? { 'Content-Type': 'application/json' } : undefined,
-        body: body ? JSON.stringify(body) : undefined,
+        headers: body && !form ? { 'Content-Type': 'application/json' } : undefined,
+        body: body && !form ? JSON.stringify(body) : body,
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        this.seriesError = data.error === 'A valid e-mail is required' ? 'Podaj poprawny adres e-mail.' : 'Nie udało się zapisać zmian. Spróbuj ponownie.';
+        this.seriesError = SERIES_ERRORS[data.error] || 'Nie udało się zapisać zmian. Spróbuj ponownie.';
         throw new Error(data.error || String(response.status));
       }
       return data;
@@ -111,6 +118,24 @@ export function createSeriesView() {
           max_tournaments_per_year: item.max_tournaments_per_year, max_courts: item.max_courts,
         });
         this.showToast('Seria zapisana', 'success');
+      } catch { /* message shown */ }
+    },
+
+    async uploadSeriesLogo(item, event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const body = new FormData();
+      body.append('logo', file);
+      try {
+        item.logo_path = (await this._seriesCall(`/admin/api/series/${item.id}/logo`, 'POST', body)).logo_path;
+        this.showToast('Logo zapisane', 'success');
+      } catch { /* message shown */ }
+      event.target.value = '';
+    },
+
+    async removeSeriesLogo(item) {
+      try {
+        item.logo_path = (await this._seriesCall(`/admin/api/series/${item.id}/logo`, 'DELETE')).logo_path;
       } catch { /* message shown */ }
     },
 

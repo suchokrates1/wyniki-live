@@ -1,7 +1,10 @@
 <template x-if="current()">
   <div class="adm-stack">
     <div class="org-head">
-      <h1 class="org-title" x-text="current().name"></h1>
+      <div class="org-hero">
+        <img class="org-hero__logo" x-show="current().logo_path" :src="current().logo_path || ''" :alt="ot('logoAlt', { series: current().name })">
+        <h1 class="org-title" x-text="current().name"></h1>
+      </div>
       <template x-if="seriesList.length > 1">
         <div class="org-switch">
           <label for="org-series" class="adm-field__label" x-text="ot('seriesLabel')"></label>
@@ -78,6 +81,25 @@
         </template>
       </ul>
       <p class="adm-empty" x-show="!current().tournaments.length" x-text="ot('noTournaments')"></p>
+    </section>
+
+    <section class="adm-card" aria-labelledby="org-logo-title">
+      <div class="adm-card__head">
+        <h2 id="org-logo-title" class="adm-card__title" x-text="ot('seriesLogo')"></h2>
+      </div>
+      <p class="adm-card__hint" x-text="ot('logoHint')"></p>
+      <div class="org-logo">
+        <div class="org-logo__frame">
+          <img x-show="current().logo_path" :src="current().logo_path || ''" :alt="ot('logoAlt', { series: current().name })">
+          <span x-show="!current().logo_path" class="adm-card__hint" x-text="ot('logoNone')"></span>
+        </div>
+        <div class="adm-field" x-show="!readOnlySeries()">
+          <label class="adm-field__label" for="org-logo-file" x-text="ot('logoPick')"></label>
+          <input id="org-logo-file" class="adm-input" type="file" accept="image/png,image/jpeg,image/webp" @change="uploadLogo($event)">
+        </div>
+        <button type="button" class="adm-btn" x-show="current().logo_path && !readOnlySeries()" @click="removeLogo()" x-text="ot('logoRemove')"></button>
+      </div>
+      <p role="status" :class="logoMessage?.ok ? 'org-note' : 'adm-modal__error'" x-show="logoMessage" x-text="say(logoMessage)"></p>
     </section>
   </div>
 </template>

@@ -187,6 +187,23 @@ def brand_assets(filename):
     return response
 
 
+# Pictures uploaded through the panels live next to the database; only these folders are public.
+PUBLIC_DATA_FOLDERS = frozenset({'series-logos', 'tournament-logos'})
+
+
+@blueprint.route('/data/<folder>/<filename>')
+def uploaded_logo(folder, filename):
+    from flask import abort
+
+    from ..config import settings
+    if folder not in PUBLIC_DATA_FOLDERS or not re.fullmatch(r'[A-Za-z0-9._-]+\.(png|jpe?g|webp|gif)', filename):
+        abort(404)
+    response = send_from_directory(Path(settings.database_path).parent / folder, filename)
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 @blueprint.route('/vest-media-logo.png')
 def vest_media_logo():
     """Vest Media brand mark for TV watermark (same asset as vestmedia.pl)."""
