@@ -60,6 +60,12 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/admin/api/global-players/tournaments/<int:tid>/classification-review` | Players of a tournament who played outside their sport class. |
 | POST | `/admin/api/global-players/tournaments/<int:tid>/classification-review` | Body: { decisions: [{ global_player_id, decision: reclassify\|play_up\|skip, classification? }] } |
 
+## admin_log
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/admin/api/audit` |  |
+
 ## admin_placings
 
 | Method | Path | What it does |

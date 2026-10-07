@@ -1,7 +1,7 @@
 """Every mail to a series organizer, in the seven languages of the site.
 
 Placeholders: {series}, {name}, {hours}, {date}, {contact}. Each language has every key;
-test_organizer_mail.py holds them to that. Lithuanian still waits for a native read.
+test_organizer_mail.py holds them to that. Lithuanian read by a native speaker (2026-10-08).
 """
 from __future__ import annotations
 

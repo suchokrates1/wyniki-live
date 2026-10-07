@@ -262,4 +262,5 @@ export default {
   logPlacings: "Risultati finali salvati",
   logLogo: "Logo salvato",
   logLogoRemove: "Logo rimosso",
+  logAdmin: "Modifica fatta da un amministratore",
 };

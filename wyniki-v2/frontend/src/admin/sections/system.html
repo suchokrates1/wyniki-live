@@ -149,4 +149,26 @@
       <button type="button" class="adm-btn" @click="logoutAdmin()">Wyloguj z tego urządzenia</button>
     </div>
   </section>
+
+  <section class="adm-card" aria-labelledby="adm-log-title">
+    <div class="adm-card__head">
+      <h2 id="adm-log-title" class="adm-card__title">Dziennik zmian</h2>
+      <span class="adm-card__hint">kto, co i kiedy zmienił — w adminie i w panelu organizatora; hasła się tu nie zapisują</span>
+      <div class="adm-card__actions">
+        <button type="button" class="adm-btn" @click="loadChangeLog()">Odśwież</button>
+      </div>
+    </div>
+    <p class="adm-modal__error" role="alert" x-show="changeLogError" x-text="changeLogError"></p>
+    <ol class="adm-rows adm-log" role="list">
+      <template x-for="row in changeLog" :key="row.id">
+        <li class="adm-row">
+          <div class="adm-row__main">
+            <div class="adm-row__title"><span class="adm-row__name adm-mono" x-text="changeWhat(row)"></span></div>
+            <div class="adm-row__meta" x-text="[changeWhen(row), row.account_email || '—', row.tournament_name].filter(Boolean).join(' · ')"></div>
+          </div>
+        </li>
+      </template>
+    </ol>
+    <p class="adm-empty" x-show="!changeLog.length && !changeLogError">Jeszcze nic się nie zmieniło.</p>
+  </section>
 </div>

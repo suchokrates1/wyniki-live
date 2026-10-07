@@ -32,6 +32,7 @@ export function settingsForm(t = {}) {
 
 /** The text key for a log line; null for an action this panel does not know yet. */
 export function logKey(entry) {
+  if (String(entry?.action || '').startsWith('admin.')) return 'logAdmin';
   return LOG_KEYS[entry?.action] || null;
 }
 

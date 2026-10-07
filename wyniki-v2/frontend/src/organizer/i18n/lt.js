@@ -263,4 +263,5 @@ export default {
   logPlacings: "Galutiniai rezultatai išsaugoti",
   logLogo: "Logotipas išsaugotas",
   logLogoRemove: "Logotipas pašalintas",
+  logAdmin: "Pakeitimą atliko administratorius",
 };

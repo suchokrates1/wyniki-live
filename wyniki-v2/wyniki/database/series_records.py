@@ -3,7 +3,7 @@ player edits waiting for the admin to look at them.
 
 - tournament_locks: an empty lock lets the organizer decide whether a tournament is
   public; 'private' means the admin forced it off the website and the switch is locked.
-- audit_log: every change made from the organizer panel, who, what and when.
+- audit_log: every change made from the organizer panel and the admin, who, what and when.
 - player_reviews: an organizer may edit any player in the shared base (a class after a
   medical, say). The edit applies at once; the admin checks it later and may undo it.
 """
@@ -81,12 +81,15 @@ def set_visibility_lock(tournament_id: int, lock: Any) -> None:
 
 # ----- change log -----
 
-_SECRET_KEYS = {"password", "office_password", "pin"}
+def _secret(key: str) -> bool:
+    """Passwords, keys, tokens and PINs never reach the log (smtp_password, office_password, …)."""
+    name = str(key).lower()
+    return name == "pin" or any(part in name for part in ("password", "secret", "token", "access_key"))
 
 
 def _clean(detail: Any) -> Any:
     if isinstance(detail, dict):
-        return {key: ("•••" if key in _SECRET_KEYS and value else _clean(value)) for key, value in detail.items()}
+        return {key: ("•••" if _secret(key) and value else _clean(value)) for key, value in detail.items()}
     if isinstance(detail, list):
         return [_clean(item) for item in detail[:50]]
     return detail
@@ -107,6 +110,17 @@ def log_for_tournament(tournament_id: int, limit: int = 200) -> list[dict[str, A
         rows = conn.execute(
             "SELECT id, account_email, action, detail, created_at FROM audit_log WHERE tournament_id = ? ORDER BY id DESC LIMIT ?",
             (tournament_id, limit),
+        ).fetchall()
+    return [{**dict(row), "detail": json.loads(row["detail"] or "{}")} for row in rows]
+
+
+def recent_changes(limit: int = 200) -> list[dict[str, Any]]:
+    """The newest changes from both panels, with the tournament's name: the admin's change log."""
+    with db_conn() as conn:
+        rows = conn.execute(
+            """SELECT a.id, a.account_email, a.action, a.detail, a.created_at, a.tournament_id, t.name AS tournament_name
+               FROM audit_log a LEFT JOIN tournaments t ON t.id = a.tournament_id ORDER BY a.id DESC LIMIT ?""",
+            (limit,),
         ).fetchall()
     return [{**dict(row), "detail": json.loads(row["detail"] or "{}")} for row in rows]
 

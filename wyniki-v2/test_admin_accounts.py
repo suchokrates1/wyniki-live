@@ -103,3 +103,27 @@ def test_a_forgotten_admin_password_and_an_organizer_who_is_not_an_admin(guarded
     # switched off, the session stops at once
     accounts.set_disabled(admin["account"]["id"], True)
     assert client.get("/admin/api/admins", headers=_bearer(session)).status_code == 401
+
+
+def test_every_admin_change_names_the_administrator_and_hides_passwords(guarded):
+    client, sent = guarded
+    legacy = client.post("/admin/api/auth", json={"password": SHARED}).get_json()["token"]
+    admin = client.post("/admin/api/admins", headers=_bearer(legacy), json={"email": "a@example.org"}).get_json()
+    me = _bearer(client.post(f"/admin/api/invite/{_token(admin['invite_url'])}", json={"password": OWN}).get_json()["token"])
+
+    from wyniki import database
+
+    tid = int(database.insert_tournament("Log Cup", "2026-07-18", "2026-07-19"))
+    series_id = client.post("/admin/api/series", headers=me, json={"name": "Log Tour"}).get_json()["id"]
+    client.put(f"/admin/api/series/{series_id}/tournaments/{tid}", headers=me, json={"tier": "250"})
+    client.put("/admin/api/settings/email", headers=me, json={"smtp_host": "smtp.example.org", "smtp_password": OWN})
+    client.get("/admin/api/series", headers=me)  # reading is not a change
+
+    log = client.get("/admin/api/audit", headers=me).get_json()
+    assert all(row["account_email"] == "a@example.org" for row in log)
+    actions = [row["action"] for row in log]
+    assert actions[:3] == ["admin.admin.update_email_settings", "admin.admin_series.attach", "admin.admin_series.create"]
+    attach = log[1]
+    assert attach["tournament_id"] == tid and attach["tournament_name"] == "Log Cup" and attach["detail"]["tier"] == "250"
+    assert log[0]["detail"]["smtp_password"] == "•••" and OWN not in str(log)
+    assert client.get("/admin/api/audit").status_code == 401

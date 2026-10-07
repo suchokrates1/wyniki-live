@@ -17,7 +17,7 @@ from wyniki.config import logger, settings
 from wyniki.database.connection import apply_sqlite_pragmas
 from wyniki.database.errors import StorageError
 from wyniki.db_models import db
-from wyniki.api import courts, admin, health, push, stream, web, office, admin_accounts
+from wyniki.api import courts, admin, health, push, stream, web, office, admin_accounts, admin_log
 from wyniki.services import reminder_loop, subscription_notices
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp, tournaments_public_bp
 from wyniki.api.admin_global_players import blueprint as global_players_blueprint
@@ -113,6 +113,8 @@ def create_app() -> Flask:
     app.register_blueprint(courts.blueprint)
     app.register_blueprint(admin.blueprint)
     app.register_blueprint(admin_accounts.blueprint)
+    app.register_blueprint(admin_log.blueprint)
+    admin_log.install(app)
     app.register_blueprint(tournaments_blueprint)
     app.register_blueprint(players_public_bp)
     app.register_blueprint(tournaments_public_bp)
