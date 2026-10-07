@@ -18,7 +18,7 @@ const LOG_KEYS = {
   office_session: 'logOfficeSession', category_create: 'logCategoryCreate', categories_confirm: 'logCategoriesConfirm',
   category_update: 'logCategoryUpdate', category_delete: 'logCategoryDelete', entry_add: 'logEntryAdd',
   entry_update: 'logEntryUpdate', entry_delete: 'logEntryDelete', entry_bulk: 'logEntryBulk',
-  entry_add_global: 'logEntryAddGlobal',
+  entry_add_global: 'logEntryAddGlobal', placings_save: 'logPlacings', logo_upload: 'logLogo', logo_remove: 'logLogoRemove',
 };
 
 export function settingsForm(t = {}) {

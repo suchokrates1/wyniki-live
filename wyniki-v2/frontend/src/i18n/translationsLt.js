@@ -108,6 +108,7 @@ export const TRANSLATIONS_LT = {
     formatKnockout: 'Atkrintamosios nuo pradžių. Medaliai: finalas ir mačas dėl 3 vietos.',
     formatPlaces: 'Yra ir mačų dėl tolesnių vietų.',
   },
+  finalResults: { title: "Galutiniai rezultatai", note: "Žaista ne blindtennis.app sistemoje – čia tik galutiniai rezultatai.", W: "Nugalėtojas", F: "Finalas", SF: "Pusfinalis", QF: "Ketvirtfinalis", R16: "Aštuntfinalis", R32: "1/16 finalo", Q: "Grupė / atranka" },
   tournamentHistory: {
     matchHistory: 'Mačų istorija',
     bracket: 'Turnyrinė lentelė',

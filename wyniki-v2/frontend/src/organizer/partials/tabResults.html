@@ -1,0 +1,44 @@
+<section class="adm-card" aria-labelledby="org-results-title">
+  <h2 id="org-results-title" class="adm-card__title" x-text="ot('resultsTitle')"></h2>
+  <fieldset class="org-fieldset" :disabled="t.read_only">
+    <label class="org-check">
+      <input type="checkbox" :checked="placings.external" @change="savePlacings($event.target.checked)" aria-describedby="org-results-external-hint">
+      <span x-text="ot('resultsExternal')"></span>
+    </label>
+    <p class="adm-card__hint" id="org-results-external-hint" x-text="ot(placings.external ? 'resultsExternalHint' : 'resultsInternal')"></p>
+
+    <template x-if="placings.external">
+      <div class="org-results">
+        <p class="adm-empty" x-show="!placings.placings.length" x-text="ot('resultsNoEntries')"></p>
+        <template x-for="group in placingGroups()" :key="group.category">
+          <section class="org-results__group" :aria-label="group.category">
+            <h3 class="adm-subhead" x-text="group.category"></h3>
+            <ul class="adm-rows" role="list">
+              <template x-for="row in group.rows" :key="row.player_id">
+                <li class="adm-row">
+                  <div class="adm-row__main">
+                    <div class="adm-row__title"><span class="adm-row__name" x-text="row.name"></span></div>
+                    <div class="adm-row__meta" x-text="row.country"></div>
+                  </div>
+                  <div class="adm-row__actions">
+                    <label class="sr-only" :for="'org-band-' + row.player_id" x-text="ot('resultsBand', { name: row.name })"></label>
+                    <select class="adm-input" :id="'org-band-' + row.player_id" x-model="row.band">
+                      <option value="" x-text="bandLabel('')"></option>
+                      <template x-for="band in placings.bands" :key="band">
+                        <option :value="band" x-text="bandLabel(band)" :selected="band === row.band"></option>
+                      </template>
+                    </select>
+                  </div>
+                </li>
+              </template>
+            </ul>
+          </section>
+        </template>
+        <div class="adm-card__footer" x-show="placings.placings.length && !t.read_only">
+          <button type="button" class="adm-btn adm-btn--primary" @click="savePlacings()" x-text="ot('resultsSave')"></button>
+        </div>
+      </div>
+    </template>
+  </fieldset>
+  <p role="status" :class="placingsMessage?.ok ? 'org-note' : 'adm-modal__error'" x-show="placingsMessage" x-text="say(placingsMessage)"></p>
+</section>

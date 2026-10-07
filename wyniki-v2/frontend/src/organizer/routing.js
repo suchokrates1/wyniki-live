@@ -7,6 +7,7 @@ export const TOURNAMENT_TABS = [
   { id: 'kategorie', key: 'tabCategories' },
   { id: 'zawodnicy', key: 'tabPlayers' },
   { id: 'korty', key: 'tabCourts' },
+  { id: 'wyniki', key: 'tabResults' },
   { id: 'historia', key: 'tabLog' },
 ];
 const TAB_IDS = TOURNAMENT_TABS.map((tab) => tab.id);

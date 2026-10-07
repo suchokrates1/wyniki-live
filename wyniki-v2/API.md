@@ -53,6 +53,12 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/admin/api/global-players/tournaments/<int:tid>/classification-review` | Players of a tournament who played outside their sport class. |
 | POST | `/admin/api/global-players/tournaments/<int:tid>/classification-review` | Body: { decisions: [{ global_player_id, decision: reclassify\|play_up\|skip, classification? }] } |
 
+## admin_placings
+
+| Method | Path | What it does |
+|---|---|---|
+| GET, PUT | `/admin/api/tournaments/<int:tournament_id>/placings` |  |
+
 ## admin_player_reviews
 
 | Method | Path | What it does |
@@ -224,6 +230,13 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/organizer/api/series/<int:series_id>/logo` | The series' logo, shown in this panel and next to its tournaments on the public page. |
 | GET | `/organizer/api/series/<int:series_id>/tournaments` |  |
 
+## organizer_placings
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/organizer/api/tournaments/<int:tournament_id>/placings` |  |
+| PUT | `/organizer/api/tournaments/<int:tournament_id>/placings` |  |
+
 ## organizer_players
 
 | Method | Path | What it does |
@@ -295,6 +308,12 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/api/players/<int:player_id>/profile` | A player's public profile, by tournament entry id or, with ?global=1, by global player id. |
 | GET | `/api/players/active` | Get players from all active tournaments (for Umpire App). |
 | GET | `/api/players/all` | Get all players across all tournaments with match stats. |
+
+## public_placings
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/tournament/<int:tournament_id>/placings` | Only set bands, and only of a tournament the public may see; no ids beyond the profile's. |
 
 ## push
 

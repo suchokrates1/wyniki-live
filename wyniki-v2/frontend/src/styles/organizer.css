@@ -139,3 +139,7 @@ a.adm-subtab { display: inline-flex; align-items: center; text-decoration: none;
 
 /* a card after the settings form */
 .org-after { margin-top: 16px; }
+
+/* final results: one list of players per category */
+.org-results { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+.org-results__group .adm-subhead { margin: 0 0 8px; }

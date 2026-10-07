@@ -73,6 +73,7 @@ export const TRANSLATIONS = {
       
       legendSets: 'sety wygrane do przegranych', legendGames: 'gemy wygrane do przegranych'
     },
+    finalResults: { title: "Wyniki końcowe", note: "Turniej rozegrany poza blindtennis.app – tu tylko wyniki końcowe.", W: "Zwycięzca", F: "Finał", SF: "Półfinał", QF: "Ćwierćfinał", R16: "1/8 finału", R32: "1/16 finału", Q: "Grupa / kwalifikacje" },
     tournamentHistory: {
       matchHistory: 'Historia meczów',
       bracket: 'Drabinka',
@@ -149,6 +150,7 @@ export const TRANSLATIONS = {
       
       legendSets: 'gewonnene zu verlorenen Sätzen', legendGames: 'gewonnene zu verlorenen Spielen'
     },
+    finalResults: { title: "Endergebnisse", note: "Außerhalb von blindtennis.app gespielt – hier nur die Endergebnisse.", W: "Sieger", F: "Finale", SF: "Halbfinale", QF: "Viertelfinale", R16: "Achtelfinale", R32: "Sechzehntelfinale", Q: "Gruppe / Qualifikation" },
     tournamentHistory: {
       matchHistory: 'Spielhistorie',
       bracket: 'Turnierbaum',
@@ -226,6 +228,7 @@ export const TRANSLATIONS = {
       
       legendSets: 'sets won to sets lost', legendGames: 'games won to games lost'
     },
+    finalResults: { title: "Final results", note: "Played outside blindtennis.app – only the final results are here.", W: "Winner", F: "Final", SF: "Semi-final", QF: "Quarter-final", R16: "Round of 16", R32: "Round of 32", Q: "Group / qualifying" },
     tournamentHistory: {
       matchHistory: 'Match history',
       bracket: 'Bracket',
@@ -302,6 +305,7 @@ export const TRANSLATIONS = {
       
       legendSets: 'set vinti rispetto ai set persi', legendGames: 'game vinti rispetto ai game persi'
     },
+    finalResults: { title: "Risultati finali", note: "Giocato fuori da blindtennis.app: qui solo i risultati finali.", W: "Vincitore", F: "Finale", SF: "Semifinale", QF: "Quarti di finale", R16: "Ottavi di finale", R32: "Sedicesimi di finale", Q: "Girone / qualificazioni" },
     tournamentHistory: {
       matchHistory: 'Cronologia partite',
       bracket: 'Tabellone',
@@ -378,6 +382,7 @@ export const TRANSLATIONS = {
       
       legendSets: 'sets ganados frente a perdidos', legendGames: 'juegos ganados frente a perdidos'
     },
+    finalResults: { title: "Resultados finales", note: "Jugado fuera de blindtennis.app: aquí solo los resultados finales.", W: "Campeón", F: "Final", SF: "Semifinal", QF: "Cuartos de final", R16: "Octavos de final", R32: "Dieciseisavos de final", Q: "Grupo / clasificación" },
     tournamentHistory: {
       matchHistory: 'Historial de partidos',
       bracket: 'Cuadro',
@@ -454,6 +459,7 @@ export const TRANSLATIONS = {
       
       legendSets: 'sets gagnés contre sets perdus', legendGames: 'jeux gagnés contre jeux perdus'
     },
+    finalResults: { title: "Résultats finaux", note: "Joué hors de blindtennis.app : seuls les résultats finaux sont ici.", W: "Vainqueur", F: "Finale", SF: "Demi-finale", QF: "Quart de finale", R16: "Huitième de finale", R32: "Seizième de finale", Q: "Poule / qualifications" },
     tournamentHistory: {
       matchHistory: 'Historique des matchs',
       bracket: 'Tableau',

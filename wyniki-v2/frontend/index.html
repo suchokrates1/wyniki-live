@@ -686,6 +686,22 @@
                         <h2 class="tournament-detail__name" x-text="selectedTournamentName()"></h2>
                     </div>
 
+                    <!-- A tournament played elsewhere: its final results in place of a draw -->
+                    <section class="final-results" x-show="finalPlacings.length" aria-labelledby="final-results-title">
+                        <h3 id="final-results-title" class="final-results__title" x-text="tr().finalResults?.title || 'Wyniki końcowe'"></h3>
+                        <p class="final-results__note" x-text="tr().finalResults?.note || ''"></p>
+                        <template x-for="group in finalPlacings" :key="'fr-' + group.category">
+                            <div class="final-results__group">
+                                <h4 class="final-results__category" x-text="translateCategory(group.category)"></h4>
+                                <ol class="final-results__list">
+                                    <template x-for="row in group.rows" :key="'fr-' + group.category + '-' + row.name">
+                                        <li class="final-results__row"><span class="final-results__band" x-text="bandText(row.band)"></span> <span class="final-results__name" x-text="row.name"></span> <span class="final-results__country" x-text="row.country"></span></li>
+                                    </template>
+                                </ol>
+                            </div>
+                        </template>
+                    </section>
+
                     <!-- Sub-tabs: Podium+Bracket / Match History -->
                     <div class="th-subtabs" role="tablist" :aria-label="tr().tournamentHistory?.navLabel || 'Szczegóły turnieju'">
                         <button class="th-subtab" role="tab" :aria-selected="historySubTab === 'bracket'" :class="{ 'th-subtab--active': historySubTab === 'bracket' }"

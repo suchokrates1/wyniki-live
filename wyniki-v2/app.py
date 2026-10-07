@@ -26,6 +26,7 @@ from wyniki.api.panic import admin_blueprint as panic_admin_blueprint, umpire_bl
 from wyniki.api.devices import blueprint as devices_admin_blueprint
 from wyniki.api.admin_series import blueprint as series_admin_blueprint
 from wyniki.api.admin_tournament_logo import blueprint as tournament_logo_admin_blueprint
+from wyniki.api import placings as placings_api
 from wyniki.api.organizer import blueprint as organizer_blueprint
 from wyniki.api.organizer_tournaments import blueprint as organizer_tournaments_blueprint
 from wyniki.api.organizer_players import blueprint as organizer_players_blueprint
@@ -126,6 +127,8 @@ def create_app() -> Flask:
     app.register_blueprint(devices_admin_blueprint)
     app.register_blueprint(series_admin_blueprint)
     app.register_blueprint(tournament_logo_admin_blueprint)
+    for placings_blueprint in (placings_api.organizer_blueprint, placings_api.admin_blueprint, placings_api.public_blueprint):
+        app.register_blueprint(placings_blueprint)
     app.register_blueprint(organizer_blueprint)
     app.register_blueprint(organizer_tournaments_blueprint)
     app.register_blueprint(organizer_players_blueprint)

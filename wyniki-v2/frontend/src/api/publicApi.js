@@ -51,6 +51,10 @@ export const publicApi = {
     return fetchJson('/api/tournament/info');
   },
 
+  getTournamentPlacings(tournamentId, accessQuery = '') {
+    return fetchJson(`/api/tournament/${encodeURIComponent(tournamentId)}/placings`, accessQuery);
+  },
+
   getTournamentQuickInfo(tournamentId, accessQuery = '') {
     return fetchJson(`/api/tournament/${encodeURIComponent(tournamentId)}/info`, accessQuery);
   },

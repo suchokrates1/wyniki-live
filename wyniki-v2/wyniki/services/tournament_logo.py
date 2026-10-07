@@ -6,24 +6,12 @@ for setting either version on its own (the organizer's panel, the admin's logo b
 """
 from __future__ import annotations
 
-from ..database.connection import db_conn
+from ..database.tournament_logos import set_logo as _set
 from .uploaded_pictures import drop, field_for, read_picture, store
 
 FOLDER = "tournament-logos"
-FIELDS = ("logo_path", "logo_dark_path")
 
 __all__ = ["field_for", "remove", "save"]
-
-
-def _set(tournament_id: int, path: str, field: str) -> str:
-    """Stores the path ('' takes it away) and returns the one it replaced."""
-    if field not in FIELDS:
-        raise ValueError(field)
-    with db_conn() as conn:
-        row = conn.execute(f"SELECT {field} FROM tournaments WHERE id = ?", (tournament_id,)).fetchone()
-        conn.execute(f"UPDATE tournaments SET {field} = ? WHERE id = ?", (path, tournament_id))
-        conn.commit()
-        return str(row[0] or "") if row else ""
 
 
 def save(tournament_id: int, uploaded_file, field: str = "logo_path") -> tuple[dict, int]:

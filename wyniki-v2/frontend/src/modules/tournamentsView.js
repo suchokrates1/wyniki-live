@@ -76,6 +76,7 @@ export function createTournamentView() {
         this.fetchTournamentHistory(tournamentId),
         this.fetchTournamentBracket(tournamentId),
         this.fetchTournamentSchedule(tournamentId),
+        this.loadFinalPlacings(tournamentId),
       ]);
     },
 

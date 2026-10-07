@@ -18,6 +18,8 @@ import tabPlayersHtml from './organizer/partials/tabPlayers.html?raw';
 import tabCourtsHtml from './organizer/partials/tabCourts.html?raw';
 import tabLogHtml from './organizer/partials/tabLog.html?raw';
 import logoBoxesHtml from './organizer/partials/logoBoxes.html?raw';
+import tabResultsHtml from './organizer/partials/tabResults.html?raw';
+import { createPlacingsView } from './organizer/placingsView.js';
 import { mountPartials } from './shared/partials.js';
 import { storageGet } from './shared/signInForm.js';
 
@@ -30,6 +32,7 @@ mountPartials(document.body, {
   tabCourts: tabCourtsHtml,
   tabLog: tabLogHtml,
   logoBoxes: logoBoxesHtml,
+  tabResults: tabResultsHtml,
 });
 
 const emptyDraft = () => ({ name: '', start_date: '', end_date: '', city: '', country: '', court_count: 4, tier: '', is_public: true, office_password: '' });
@@ -38,6 +41,7 @@ Alpine.data('organizerApp', () => ({
   ...createTournamentView(),
   ...createPlayersView(),
   ...createSeriesLogoView(),
+  ...createPlacingsView(),
   lang: pickLanguage({ search: window.location.search, stored: storedLanguage(), navigatorLanguages: navigator.languages || [] }),
   loading: true,
   error: null,
@@ -119,6 +123,7 @@ Alpine.data('organizerApp', () => ({
     if (tab === 'historia') this.loadLog();
     if (tab === 'kategorie') this.loadCategories();
     if (tab === 'zawodnicy') this.loadEntries();
+    if (tab === 'wyniki') this.loadPlacings();
   },
 
   go(tournamentId = null, tab = '') {

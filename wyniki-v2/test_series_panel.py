@@ -363,3 +363,38 @@ def test_a_forgotten_password_gets_a_link_in_the_persons_language_and_the_answer
     sent.clear()
     statuses = [client.post("/organizer/api/forgot", json={"email": "organizer@example.org"}).status_code for _ in range(5)]
     assert sent == [] and statuses[-1] == 429
+
+
+def test_final_results_of_a_tournament_played_elsewhere(client):
+    from wyniki import database
+
+    series_id, invited = _series_with_member(client)
+    client.post(f"/organizer/api/invite/{_token_from(invited['invite_url'])}", json={"password": PASSWORD})
+    lough = _tournament("Loughborough VI Tennis Tournament", start="2026-04-25")
+    other = _tournament("Turniej spoza serii")
+    client.put(f"/admin/api/series/{series_id}/tournaments/{lough}", json={"tier": "250"})
+    rizvi = database.insert_player(lough, "Naqi Rizvi", "B1", "GB")
+    arbos = database.insert_player(lough, "Carlos Arbos", "B1", "FR")
+    stranger = database.insert_player(other, "Ktoś Obcy", "B1", "PL")
+    _, session = _sign_in(client)
+    headers = _auth(session)
+
+    state = client.get(f"/organizer/api/tournaments/{lough}/placings", headers=headers).get_json()
+    assert state["external"] is False and state["bands"][0] == "W" and {row["band"] for row in state["placings"]} == {""}
+    saved = client.put(f"/organizer/api/tournaments/{lough}/placings", headers=headers, json={
+        "external": True,
+        "placings": [{"player_id": rizvi, "band": "W"}, {"player_id": arbos, "band": "f"},
+                     {"player_id": stranger, "band": "W"}, {"player_id": arbos, "band": "XX"}],
+    }).get_json()
+    assert saved["external"] is True
+    assert [(row["name"], row["band"]) for row in saved["placings"]] == [("Naqi Rizvi", "W"), ("Carlos Arbos", "F")]
+    assert client.get(f"/admin/api/tournaments/{other}/placings").get_json()["placings"][0]["band"] == ""
+    assert client.put(f"/organizer/api/tournaments/{other}/placings", headers=headers, json={"external": True}).status_code == 403
+
+    public = client.get(f"/api/tournament/{lough}/placings").get_json()
+    assert public["external"] is True and [row["band"] for row in public["placings"]] == ["W", "F"]
+    assert set(public["placings"][0]) == {"global_player_id", "name", "category", "country", "band"}
+
+    # clearing a band takes it off the public list
+    client.put(f"/admin/api/tournaments/{lough}/placings", json={"placings": [{"player_id": arbos, "band": ""}]})
+    assert [row["name"] for row in client.get(f"/api/tournament/{lough}/placings").get_json()["placings"]] == ["Naqi Rizvi"]

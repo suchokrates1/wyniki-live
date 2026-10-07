@@ -774,9 +774,11 @@ def init_db() -> None:
         from .court_streams import ensure_court_stream_tables
 
         ensure_court_stream_tables(cursor)
+        from .final_placings import ensure_final_placings
         from .series import ensure_series_tables
 
         ensure_series_tables(cursor)
+        ensure_final_placings(cursor)
         run_once(cursor, "normalize_genders", lambda: normalize_stored_genders(cursor))
 
         conn.commit()

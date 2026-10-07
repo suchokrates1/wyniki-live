@@ -24,6 +24,7 @@ import { createScheduleView } from './modules/scheduleView.js';
 import { bindSubnavOverflow } from './modules/subnavOverflow.js';
 import { createTournamentView } from './modules/tournamentsView.js';
 import { createSeriesMarkView } from './modules/seriesMark.js';
+import { createFinalPlacingsView } from './modules/finalPlacings.js';
 import { applyHashRoute, updateHashFromState } from './modules/routing.js';
 import { formatTemplate as fmt } from './shared/text.js';
 import { formatPlayerClassification } from './shared/categories.js';
@@ -80,6 +81,7 @@ Alpine.data('tennisApp', () => ({
   ...createScheduleView(),
   ...createTournamentView(),
   ...createSeriesMarkView(),
+  ...createFinalPlacingsView(),
   activeTab: 'live',
   // Live sub-tab state
   liveSubTab: 'scores',

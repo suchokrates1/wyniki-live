@@ -38,3 +38,15 @@ a.series-mark:hover .series-mark__name, a.series-mark:focus-visible .series-mark
   .series-mark--large .series-mark__logo { height: 44px; max-width: 120px; }
   .tournament-detail__logo { height: 48px; max-width: 120px; }
 }
+
+/* A tournament played elsewhere: final results, one list per category */
+.final-results { margin: 0 0 20px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.final-results__title { margin: 0 0 4px; font-size: 18px; font-weight: 700; color: var(--text); }
+.final-results__note { margin: 0 0 12px; font-size: 13px; color: var(--text-dim); }
+.final-results__group + .final-results__group { margin-top: 14px; }
+.final-results__category { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: var(--text); }
+.final-results__list { margin: 0; padding: 0; list-style: none; }
+.final-results__row { display: grid; grid-template-columns: minmax(110px, 11rem) 1fr auto; gap: 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); color: var(--text); }
+.final-results__band { font-size: 13px; font-weight: 700; color: var(--text-dim); }
+.final-results__name { font-weight: 600; overflow-wrap: anywhere; }
+.final-results__country { font-size: 13px; color: var(--text-dim); }

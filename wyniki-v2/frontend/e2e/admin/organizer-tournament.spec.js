@@ -254,3 +254,34 @@ test('a tournament organizer runs their tournament; new tournaments and the seri
   await expect(page.getByRole('region', { name: 'Logo turnieju' })).toBeVisible();
   expect(await axe(page)).toEqual([]);
 });
+
+test('final results of a tournament played elsewhere: a band for each entered player', async ({ page }) => {
+  const saved = [];
+  let state = {
+    external: false, bands: ['W', 'F', 'SF', 'QF', 'R16', 'R32', 'Q'],
+    placings: [
+      { player_id: 1, name: 'Naqi Rizvi', category: 'B1', country: 'GB', band: '' },
+      { player_id: 2, name: 'Carlos Arbos', category: 'B1', country: 'FR', band: '' },
+    ],
+  };
+  await openPanel(page, world(), '#/twt/t/28/wyniki');
+  await page.route(/\/organizer\/api\/tournaments\/28\/placings$/, (route) => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON();
+      saved.push(body);
+      state = { ...state, external: body.external, placings: state.placings.map((row) => ({ ...row, band: body.placings.find((p) => p.player_id === row.player_id)?.band ?? row.band })) };
+    }
+    return route.fulfill({ json: state });
+  });
+  await page.goto('/organizer#/twt/t/28/historia');
+  await page.getByRole('tab', { name: 'Wyniki końcowe' }).click();
+  await expect(page.getByText('Wyniki tego turnieju liczymy z grup i drabinek')).toBeVisible();
+  await page.getByLabel('Turniej rozegrany poza blindtennis.app').check();
+  await expect(page.getByLabel('Wynik: Naqi Rizvi')).toBeVisible();
+  await page.getByLabel('Wynik: Naqi Rizvi').selectOption('W');
+  await page.getByLabel('Wynik: Carlos Arbos').selectOption('F');
+  await page.getByRole('button', { name: 'Zapisz wyniki' }).click();
+  await expect(page.getByText('Wyniki zapisane.')).toBeVisible();
+  expect(saved.at(-1)).toEqual({ external: true, placings: [{ player_id: 1, band: 'W' }, { player_id: 2, band: 'F' }] });
+  expect(await axe(page)).toEqual([]);
+});
