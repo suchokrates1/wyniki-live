@@ -1,6 +1,6 @@
 import './styles/fonts.css';
 import './styles/admin-login.css';
-import { LANGUAGES, pickLanguage, rememberLanguage, storedLanguage, supported, translate } from './organizer/i18n/index.js';
+import { LANGUAGES, pickLanguage, rememberChoice, rememberLanguage, storedLanguage, supported, translate } from './organizer/i18n/index.js';
 import { ORGANIZER_TOKEN_KEY, safeOrganizerNext } from './organizer/route.js';
 import { showNotice, storageGet, storageSet, wireCapsLock, wirePasswordEyes, wireSignInForm } from './shared/signInForm.js';
 
@@ -49,9 +49,10 @@ function render() {
   if (noticeState) showNotice(notice, t(noticeState.key, { contact }), noticeState.tone);
 }
 
-function setLanguage(code) {
+function setLanguage(code, { chosen = true } = {}) {
   lang = supported(code) || lang;
   rememberLanguage(lang);
+  if (chosen) rememberChoice(lang);
   languageSelect.value = lang;
   render();
 }
@@ -131,11 +132,13 @@ async function startInvite() {
   $('organizerRepeatBlock').hidden = false;
   $('organizerFoot').hidden = true;
   // the invitation names the person's language; their own choice on this page still wins
-  if (!params.get('lang') && supported(invite.language)) setLanguage(invite.language);
+  if (!params.get('lang') && supported(invite.language)) setLanguage(invite.language, { chosen: false });
   else render();
   password.focus();
 }
 
+// a link from a mail names its language: the panel will follow it after sign-in
+if (supported(params.get('lang') || '')) rememberChoice(lang);
 render();
 loadContact().then(render);
 if (inviteToken) {

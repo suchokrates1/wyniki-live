@@ -3,7 +3,7 @@ import './styles/fonts.css';
 import './styles/organizer-base.css';
 import './styles/organizer.css';
 import { call, CallError, toSignIn } from './organizer/api.js';
-import { LANGUAGES, formatDate, pickLanguage, plural, rememberLanguage, storedLanguage, supported, translate } from './organizer/i18n/index.js';
+import { LANGUAGES, formatDate, pickLanguage, plural, rememberLanguage, storedLanguage, supported, takeChoice, translate } from './organizer/i18n/index.js';
 import { daysKey, daysLeft, planState, yearLimitReached, yearUsage } from './organizer/plan.js';
 import { createPlayersView } from './organizer/playersView.js';
 import { ORGANIZER_TOKEN_KEY, TIERS, dateRange, tierLabel } from './organizer/route.js';
@@ -58,7 +58,9 @@ Alpine.data('organizerApp', () => ({
   async init() {
     this.applyLanguage(this.lang);
     await this.reloadSeries();
-    if (supported(this.account?.language)) this.applyLanguage(this.account.language);
+    const chosen = takeChoice();
+    if (chosen && chosen !== this.account?.language) await this.setLanguage(chosen);
+    else if (supported(this.account?.language)) this.applyLanguage(this.account.language);
     this.loading = false;
     window.addEventListener('hashchange', () => this.applyHash());
     this.applyHash();

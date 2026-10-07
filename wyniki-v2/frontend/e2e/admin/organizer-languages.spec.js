@@ -15,6 +15,9 @@ const ME = (language) => ({
 });
 
 async function mock(page, { language = 'de', puts = [] } = {}) {
+  await page.route(/\/organizer\/api\/invite\/de$/, (route) => (route.request().method() === 'GET'
+    ? route.fulfill({ json: { email: 'organizer@example.org', language: 'de', series: ['Takei World Tennis Tour'], min_length: 10 } })
+    : route.fulfill({ json: { token: 'org-token' } })));
   await page.route(/\/organizer\/api\/contact$/, (route) => route.fulfill({ json: { contact_email: 'organizers@blindtennis.app' } }));
   await page.route(/\/organizer\/api\/invite\/fr$/, (route) => route.fulfill({ json: { email: 'jean@example.org', language: 'fr', series: ['Takei World Tennis Tour'], min_length: 10 } }));
   await page.route(/\/organizer\/api\/me$/, (route) => {
@@ -66,4 +69,16 @@ test('the panel speaks the account language, and a switch is saved on the accoun
   expect(puts).toEqual([{ language: 'lt' }]);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
+});
+
+test('a link from an English mail opens English, and the panel stays English after the password', async ({ page }) => {
+  const puts = [];
+  await mock(page, { language: 'de', puts });
+  await page.goto('/organizer/invite?token=de&lang=en');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Set your password');
+  await page.getByLabel('New password').fill('a-long-enough-password');
+  await page.getByLabel('Repeat the password').fill('a-long-enough-password');
+  await page.getByRole('button', { name: 'Set the password and enter' }).click();
+  await expect(page.getByRole('heading', { name: 'Series tournaments' })).toBeVisible();
+  expect(puts).toEqual([{ language: 'en' }]);
 });

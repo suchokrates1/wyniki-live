@@ -56,6 +56,22 @@ export function rememberLanguage(code) {
   try { localStorage.setItem(STORAGE_KEY, code); } catch { /* private mode */ }
 }
 
+// A language chosen on the sign-in page (from a mail's ?lang= or the switch) is carried into
+// the panel once, and saved on the account there: the panel then stays in it.
+const CHOICE_KEY = 'organizer-lang-choice';
+
+export function rememberChoice(code) {
+  try { sessionStorage.setItem(CHOICE_KEY, code); } catch { /* private mode */ }
+}
+
+export function takeChoice() {
+  try {
+    const code = sessionStorage.getItem(CHOICE_KEY) || '';
+    sessionStorage.removeItem(CHOICE_KEY);
+    return supported(code);
+  } catch { return ''; }
+}
+
 export function storedLanguage() {
   try { return localStorage.getItem(STORAGE_KEY) || ''; } catch { return ''; }
 }

@@ -31,3 +31,14 @@ def test_the_invite_and_both_notices_render_in_every_language():
             subject, html = plan_mail(language, kind, series="TWT", valid_until="2027-10-31", base_url="https://x", contact="c@example.org")
             assert "TWT" in subject and "2027" in html and "mailto:c@example.org" in html
             assert not re.search(r"\{\w+\}", subject + html), (language, kind)
+
+
+def test_links_in_a_mail_open_the_page_in_the_mails_language():
+    from wyniki.services.organizer_mails import invite_mail, plan_mail
+
+    _, html = invite_mail("en", name="", email="a@example.org", series_names=["TWT"], link="https://x/organizer/invite?token=t",
+                          base_url="https://x", contact="c@example.org", hours=72)
+    assert 'href="https://x/organizer/invite?token=t&amp;lang=en"' in html
+    assert ">https://x/organizer/invite?token=t&amp;lang=en<" in html, "the link written out as text too"
+    _, html = plan_mail("de", "ending", series="TWT", valid_until="2027-10-31", base_url="https://x", contact="c@example.org")
+    assert 'href="https://x/organizer/login?lang=de"' in html

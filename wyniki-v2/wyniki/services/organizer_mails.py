@@ -77,6 +77,11 @@ def _layout(language: str, *, title: str, preheader: str, kicker: str, heading: 
 </body></html>"""
 
 
+def with_language(link: str, language: str) -> str:
+    """The page a mail links to opens in the mail's language (?lang= wins over the account's)."""
+    return f"{link}{'&' if '?' in link else '?'}lang={language}"
+
+
 def _hello(t: dict[str, str], name: str) -> str:
     return t["hello_named"].format(name=name) if name else t["hello"]
 
@@ -85,6 +90,7 @@ def invite_mail(language: str, *, name: str, email: str, series_names: list[str]
                 base_url: str, contact: str, hours: int) -> tuple[str, str]:
     t = texts(language)
     series = ", ".join(series_names) or "—"
+    link = with_language(link, language)
     href = escape(link, quote=True)
     body = f"""
       <p {P}>{escape(_hello(t, name))}</p>
@@ -107,6 +113,6 @@ def plan_mail(language: str, kind: str, *, series: str, valid_until: str, base_u
       <p {P}>{escape(t["hello"])}</p>
       <p {P}>{escape(t[f"{kind}_body"].format(series=series, date=when))}</p>
       <p {P}>{_contact_line(t["renew"], contact)}</p>
-      {_button(escape(base_url.rstrip("/") + "/organizer", quote=True), t["panel_button"])}"""
+      {_button(escape(with_language(base_url.rstrip("/") + "/organizer/login", language), quote=True), t["panel_button"])}"""
     html = _layout(language, title=heading, preheader=heading, kicker=t["kicker_plan"], heading=heading, body=body, base_url=base_url)
     return t[f"{kind}_subject"].format(series=series, date=when), html
