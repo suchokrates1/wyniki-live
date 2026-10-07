@@ -63,9 +63,44 @@ test('the Turnieje section no longer carries the SMTP form', async ({ page }) =>
   await expect(page.locator('#adm-smtp-smtp-host')).toBeHidden();
 });
 
-test('the panel says where the password lives and offers the way out', async ({ page }) => {
+test('while nobody has an account, the shared password is named; the way out stays', async ({ page }) => {
   await openSystem(page);
   const card = page.locator('#admin-system .adm-card').last();
   await expect(card).toContainText('ADMIN_PASSWORD');
+  await expect(card.getByText('Nie ma jeszcze kont administratorów.')).toBeVisible();
   await expect(card.getByRole('button', { name: 'Wyloguj z tego urządzenia' })).toBeVisible();
+});
+
+test('administrators: you are marked, another one is added with a link and can be removed', async ({ page }) => {
+  const admins = {
+    me: 1, shared_password: false,
+    admins: [
+      { id: 1, email: 'dawid@example.org', name: 'Dawid', has_password: 1, disabled: 0 },
+      { id: 2, email: 'anna@example.org', name: '', has_password: 0, disabled: 0 },
+    ],
+  };
+  await openSystem(page, { admins });
+  const sent = [];
+  await page.route(/\/admin\/api\/admins(\/\d+)?$/, (route) => {
+    const request = route.request();
+    if (request.method() === 'GET') return route.fallback();
+    sent.push(`${request.method()} ${new URL(request.url()).pathname}`);
+    if (request.method() === 'POST') return route.fulfill({ status: 201, json: { account: { id: 3, email: 'nowy@example.org' }, invite_url: 'https://test.blindtennis.app/admin/invite?token=abc', emailed: false } });
+    return route.fulfill({ json: { success: true } });
+  });
+  const card = page.locator('#admin-system .adm-card').last();
+  await expect(card.getByText('ADMIN_PASSWORD')).toBeHidden();
+  const me = card.locator('.adm-row').filter({ hasText: 'dawid@example.org' });
+  await expect(me.getByText('to Ty')).toBeVisible();
+  await expect(me.getByRole('button', { name: /Odbierz uprawnienia/ })).toBeHidden();
+  await expect(card.locator('.adm-row').filter({ hasText: 'anna@example.org' })).toContainText('czeka na ustawienie hasła');
+
+  await card.getByLabel('E-mail nowego administratora').fill('nowy@example.org');
+  await card.getByRole('button', { name: 'Dodaj administratora' }).click();
+  await expect(card.getByLabel('Link do ustawienia hasła')).toHaveValue('https://test.blindtennis.app/admin/invite?token=abc');
+  await expect(card.getByText('Mail nie wyszedł')).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await card.getByRole('button', { name: /Odbierz uprawnienia\s*: anna@example\.org/ }).click();
+  await expect.poll(() => sent).toEqual(['POST /admin/api/admins', 'DELETE /admin/api/admins/2']);
 });

@@ -94,10 +94,54 @@
       <h2 id="adm-access-title" class="adm-card__title">Dostęp do panelu</h2>
       <span class="adm-card__hint">sesja siedzi w tej przeglądarce, nie na serwerze</span>
     </div>
-    <p class="adm-empty">
-      Hasło administratora ustawia się w konfiguracji serwera (<span class="adm-mono">ADMIN_PASSWORD</span>), nie stąd.
-      Wylogowanie kasuje sesję tylko na tym urządzeniu.
+    <p class="adm-modal__error" role="alert" x-show="adminsError" x-text="adminsError"></p>
+    <p class="adm-card__hint" x-show="adminSharedPassword">
+      Dziś działa jeszcze wspólne hasło z konfiguracji serwera (<span class="adm-mono">ADMIN_PASSWORD</span>).
+      Gdy pierwszy administrator ustawi własne hasło z maila, wspólne przestaje działać.
     </p>
+
+    <h3 class="adm-subhead">Administratorzy</h3>
+    <ul class="adm-rows" role="list">
+      <template x-for="row in adminAccounts" :key="row.id">
+        <li class="adm-row">
+          <div class="adm-row__main">
+            <div class="adm-row__title">
+              <span class="adm-row__name" x-text="row.name || row.email"></span>
+              <span class="adm-chip" :class="adminStatus(row).tone ? 'adm-chip--' + adminStatus(row).tone : ''" x-text="adminStatus(row).text"></span>
+              <span class="adm-chip" x-show="row.id === adminMe">to Ty</span>
+            </div>
+            <div class="adm-row__meta" x-text="row.email"></div>
+          </div>
+          <div class="adm-row__actions">
+            <button type="button" class="adm-btn" @click="reinviteAdmin(row)">Nowy link<span class="sr-only" x-text="': ' + row.email"></span></button>
+            <button type="button" class="adm-btn adm-btn--danger" x-show="row.id !== adminMe" @click="removeAdmin(row)">Odbierz uprawnienia<span class="sr-only" x-text="': ' + row.email"></span></button>
+          </div>
+        </li>
+      </template>
+    </ul>
+    <p class="adm-empty" x-show="!adminAccounts.length">Nie ma jeszcze kont administratorów. Dodaj swoje poniżej.</p>
+
+    <template x-if="adminInvite">
+      <div class="adm-invite" role="status">
+        <p x-text="adminInvite.emailed ? 'Wysłaliśmy mail z linkiem do ustawienia hasła. Możesz też przekazać link sam:' : 'Mail nie wyszedł (sprawdź SMTP wyżej). Przekaż ten link sam:'"></p>
+        <div class="adm-addrow">
+          <label class="sr-only" for="adm-admin-invite-link">Link do ustawienia hasła</label>
+          <input id="adm-admin-invite-link" class="adm-input adm-mono" readonly :value="adminInvite.invite_url" @focus="$event.target.select()">
+          <button type="button" class="adm-btn adm-btn--primary" @click="copyAdminInvite()">Kopiuj link</button>
+          <button type="button" class="adm-btn" @click="adminInvite = null">Zamknij</button>
+        </div>
+        <p class="adm-card__hint">Link działa 72 godziny i tylko raz. Dla osoby z hasłem działa jak reset hasła.</p>
+      </div>
+    </template>
+
+    <form class="adm-addrow" @submit.prevent="addAdmin()">
+      <label class="sr-only" for="adm-admin-email">E-mail nowego administratora</label>
+      <input id="adm-admin-email" class="adm-input" type="email" placeholder="e-mail" x-model="adminDraft.email">
+      <label class="sr-only" for="adm-admin-name">Imię i nazwisko</label>
+      <input id="adm-admin-name" class="adm-input" placeholder="Imię i nazwisko" x-model="adminDraft.name">
+      <button type="submit" class="adm-btn adm-btn--primary">Dodaj administratora</button>
+    </form>
+    <p class="adm-card__hint">Wylogowanie kasuje sesję tylko na tym urządzeniu.</p>
     <div class="adm-card__footer">
       <button type="button" class="adm-btn" @click="logoutAdmin()">Wyloguj z tego urządzenia</button>
     </div>

@@ -59,7 +59,7 @@ export function start(port = 8811) {
     const mapped = p === '/' ? '/index.html'
       : (p === '/privacy' || p === '/privacy/') ? '/privacy.html'
       : (p === '/admin' || p === '/admin/') ? '/admin.html'
-      : (p === '/admin/login' || p === '/admin/login/') ? '/admin-login.html'
+      : (p === '/admin/login' || p === '/admin/login/' || p === '/admin/invite') ? '/admin-login.html'
       : (p === '/organizer' || p === '/organizer/') ? '/organizer.html'
       : (p === '/organizer/login' || p === '/organizer/invite') ? '/organizer-login.html'
       : (p === '/panel' || p === '/panel/') ? '/panel.html'

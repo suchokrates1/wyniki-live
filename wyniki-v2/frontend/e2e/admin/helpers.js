@@ -52,7 +52,7 @@ export async function press(locator, page) {
   await page.keyboard.press('Enter');
 }
 
-export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {}, signIn = false, series = [], reviews = [] } = {}) {
+export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {}, signIn = false, series = [], reviews = [], admins = { admins: [], me: null, shared_password: true } } = {}) {
   // Seeded once per tab: a sign-out or an expired session must stick across the redirects.
   await page.addInitScript((hasToken) => {
     try {
@@ -71,6 +71,7 @@ export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS,
     onRequest({ url, method: request.method(), body });
     if (request.method() !== 'GET') return route.fulfill({ json: { success: true } });
     if (/\/admin\/api\/tournaments(\?|$)/.test(url)) return route.fulfill({ json: tournaments });
+    if (/\/admin\/api\/admins(\?|$)/.test(url) && route.request().method() === 'GET') return route.fulfill({ json: admins });
     if (/\/admin\/api\/series\/settings(\?|$)/.test(url)) return route.fulfill({ json: { contact_email: 'contact@blindtennis.app' } });
     if (/\/admin\/api\/series(\?|$)/.test(url)) return route.fulfill({ json: series });
     if (/\/admin\/api\/player-reviews(\?|$)/.test(url)) return route.fulfill({ json: reviews });

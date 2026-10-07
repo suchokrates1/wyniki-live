@@ -6,7 +6,7 @@ from datetime import UTC
 import pytest
 from flask import Flask
 
-from wyniki.api import admin_auth, health
+from wyniki.api import admin_accounts, health
 from wyniki.config import settings
 from wyniki.utils import format_duration, json_no_cache, parse_iso_datetime
 
@@ -16,10 +16,14 @@ PASSWORD = "pw-" + secrets.token_urlsafe(12)
 
 
 @pytest.fixture
-def client():
+def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "database_path", str(tmp_path / "small.sqlite3"))
+    from wyniki import database
+
+    database.init_db()
     app = Flask(__name__)
     app.register_blueprint(health.blueprint)
-    app.register_blueprint(admin_auth.blueprint)
+    app.register_blueprint(admin_accounts.blueprint)
     app.config["TESTING"] = True
     return app.test_client()
 

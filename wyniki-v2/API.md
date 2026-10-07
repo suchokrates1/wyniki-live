@@ -30,11 +30,18 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/admin/api/settings/email` | Get SMTP/email settings used for match and tournament reports. |
 | PUT | `/admin/api/settings/email` | Persist SMTP/email settings. |
 
-## admin_auth
+## admin_accounts
 
 | Method | Path | What it does |
 |---|---|---|
+| GET | `/admin/api/admins` |  |
+| POST | `/admin/api/admins` |  |
+| DELETE | `/admin/api/admins/<int:account_id>` | Takes the admin role away (the account stays for its series). Never your own, never the last. |
+| POST | `/admin/api/admins/<int:account_id>/invite` |  |
 | POST | `/admin/api/auth` |  |
+| POST | `/admin/api/forgot` | A new-password link to the address if it is an administrator's; the answer never says. |
+| GET | `/admin/api/invite/<token>` |  |
+| POST | `/admin/api/invite/<token>` |  |
 
 ## admin_global_players
 
@@ -368,6 +375,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/admin` | Serve admin page. |
 | GET | `/admin.html` | Serve admin page. |
 | GET | `/admin/` | Serve admin page. |
+| GET | `/admin/invite` | Serve the admin sign-in page; the panel sends you here without a session. |
 | GET | `/admin/login` | Serve the admin sign-in page; the panel sends you here without a session. |
 | GET | `/admin/login/` | Serve the admin sign-in page; the panel sends you here without a session. |
 | GET | `/assets/<path:filename>` | Serve static assets (JS, CSS, etc.). |

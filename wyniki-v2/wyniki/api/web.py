@@ -52,6 +52,7 @@ def admin():
 
 @blueprint.route('/admin/login')
 @blueprint.route('/admin/login/')
+@blueprint.route('/admin/invite')
 def admin_login():
     """Serve the admin sign-in page; the panel sends you here without a session."""
     return _html_page('admin-login.html')

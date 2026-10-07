@@ -46,6 +46,7 @@ import directorPanelHtml from './admin/sections/directorPanel.html?raw';
 import tournamentPlayersHtml from './admin/sections/tournamentPlayers.html?raw';
 import logoCropHtml from './admin/sections/logoCrop.html?raw';
 import { createSystemView } from './admin/systemView.js';
+import { createAdminsView } from './admin/adminsView.js';
 import { createSeriesView } from './admin/seriesView.js';
 import seriesHtml from './admin/sections/series.html?raw';
 import { createPlayerReviewsView } from './admin/playerReviewsView.js';
@@ -104,6 +105,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
       this.loadGlobalPlayers();
       this.loadPanic();
       this.loadSeries();
+      this.loadAdmins();
       this.loadPlayerReviews();
       this._loadDemoStatus();
       // Load live court data (battery, scores) for courts tab
@@ -142,6 +144,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createCourtsListView(),
   createDevicesListView(),
   createSystemView(),
+  createAdminsView(),
   createSeriesView(),
   createPlayerReviewsView(),
   createPluralView(),

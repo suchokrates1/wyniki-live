@@ -14,7 +14,7 @@ from __future__ import annotations
 from hmac import compare_digest
 from datetime import datetime, timedelta, UTC
 
-from flask import jsonify, request
+from flask import g, jsonify, request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from ..config import logger, settings
@@ -34,8 +34,12 @@ def issue_court_token(kort_id: str) -> str:
     return _serializer("court-session").dumps({"kort_id": str(kort_id)})
 
 
-def issue_admin_token() -> str:
-    return _serializer("admin-access").dumps({"role": "admin"})
+def issue_admin_token(account_id: int | None = None) -> str:
+    """An administrator's session; it names the account (None: the shared password, while it works)."""
+    payload = {"role": "admin"}
+    if account_id is not None:
+        payload["aid"] = int(account_id)
+    return _serializer("admin-access").dumps(payload)
 
 
 def issue_office_token(slot: int, tournament_id: int) -> str:
@@ -117,24 +121,6 @@ def require_court_access(kort_id: str | None):
     return jsonify({"error": "Court authorization required"}), 401
 
 
-def admin_login_response():
-    if not settings.admin_password:
-        return jsonify({"error": "Admin API is not configured"}), 503
-    from . import login_throttle
-
-    refused = login_throttle.refusal("admin")
-    if refused:
-        return refused
-    payload = request.get_json(silent=True) or {}
-    password = str(payload.get("password") or "")
-    # ADMIN_PASSWORD is deployed as a plaintext environment secret.
-    if not password or not compare_digest(password, settings.admin_password):
-        login_throttle.note_failure("admin")
-        return jsonify({"error": "Invalid administrator password"}), 403
-    login_throttle.forget("admin")
-    return jsonify({"token": issue_admin_token(), "expires_in": settings.admin_session_ttl_hours * 3600})
-
-
 def require_admin_access() -> tuple | None:
     token = _bearer_token()
     if not token:
@@ -149,6 +135,16 @@ def require_admin_access() -> tuple | None:
         return jsonify({"error": "Invalid administrator session"}), 401
     if payload.get("role") != "admin":
         return jsonify({"error": "Invalid administrator session"}), 401
+    from ..database import admins
+
+    account_id = payload.get("aid")
+    if account_id is None:
+        # a session from the shared password ends once an administrator has a password
+        if admins.active_admins_with_password():
+            return jsonify({"error": "Administrator session expired"}), 401
+    elif not admins.is_active_admin(int(account_id)):
+        return jsonify({"error": "Invalid administrator session"}), 401
+    g.admin_account_id = int(account_id) if account_id is not None else None
     return None
 
 

@@ -11,8 +11,8 @@ const PASSWORD = 'e2e-admin';
 
 async function stubSignIn(page) {
   await page.route(/\/admin\/api\/auth$/, async (route) => {
-    const { password } = route.request().postDataJSON();
-    if (password === PASSWORD) return route.fulfill({ json: { token: 'e2e-token', expires_in: 43200 } });
+    const { email, password } = route.request().postDataJSON();
+    if (email === 'dawid@example.org' && password === PASSWORD) return route.fulfill({ json: { token: 'e2e-token', expires_in: 43200 } });
     return route.fulfill({ status: 403, json: { error: 'Invalid administrator password' } });
   });
 }
@@ -23,11 +23,13 @@ test('a wrong password stays on the page, the right one opens the section you as
   await page.goto('/admin#/korty/devices');
   await expect(page).toHaveURL(/\/admin\/login\?next=%2Fadmin%23%2Fkorty%2Fdevices/);
 
+  const email = page.getByLabel('E-mail');
   const password = page.getByLabel('Hasło', { exact: true });
-  await expect(password).toBeFocused();
+  await expect(email).toBeFocused();
+  await email.fill('dawid@example.org');
   await password.fill('nope');
   await page.getByRole('button', { name: 'Zaloguj' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Nieprawidłowe hasło administratora.');
+  await expect(page.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.');
   await expect(password).toHaveAttribute('aria-invalid', 'true');
 
   await page.getByRole('button', { name: 'Pokaż hasło' }).click();
@@ -71,4 +73,35 @@ test('the sign-in page passes axe and fits a phone', async ({ page }) => {
   expect(sideways).toBeLessThanOrEqual(0);
   // the office is one tap away, in the brand panel on a desk, under the form on a phone
   await expect(page.getByRole('link', { name: /biura turnieju|Biuro turnieju/ }).filter({ visible: true })).toHaveAttribute('href', '/office');
+});
+
+test('a mailed link sets the password and goes straight in, leaving no token in the address', async ({ page }) => {
+  await openAdmin(page, { token: false, signIn: true });
+  await page.route(/\/admin\/api\/invite\/good$/, (route) => (route.request().method() === 'GET'
+    ? route.fulfill({ json: { email: 'dawid@example.org', name: 'Dawid', min_length: 10 } })
+    : route.fulfill({ json: { token: 'e2e-token' } })));
+  await page.goto('/admin/invite?token=good');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ustaw hasło');
+  await expect(page).toHaveURL(/\/admin\/invite$/);
+  await expect(page.getByLabel('E-mail')).toHaveValue('dawid@example.org');
+  await page.getByLabel('Nowe hasło').fill(PASSWORD + '-dlugie');
+  await page.getByLabel('Powtórz hasło').fill(PASSWORD + '-inne');
+  await page.getByRole('button', { name: 'Ustaw hasło i wejdź' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Hasła się różnią.');
+  await page.getByLabel('Powtórz hasło').fill(PASSWORD + '-dlugie');
+  await page.getByRole('button', { name: 'Ustaw hasło i wejdź' }).click();
+  await expect(page).toHaveURL(/\/admin(#.*)?$/);
+});
+
+test('a forgotten password: a link to the address, without saying whether it is an administrator', async ({ page }) => {
+  await openAdmin(page, { token: false, signIn: true });
+  const asked = [];
+  await page.route(/\/admin\/api\/forgot$/, (route) => asked.push(route.request().postDataJSON()) && route.fulfill({ json: { sent: true } }));
+  await page.goto('/admin/login');
+  await page.getByRole('button', { name: 'Nie pamiętasz hasła?' }).click();
+  await expect(page.getByLabel('Hasło', { exact: true })).toBeHidden();
+  await page.getByLabel('E-mail').fill('dawid@example.org');
+  await page.getByRole('button', { name: 'Wyślij link' }).click();
+  await expect(page.getByRole('status')).toHaveText('Jeśli to adres administratora, za chwilę przyjdzie mail z linkiem.');
+  expect(asked).toEqual([{ email: 'dawid@example.org' }]);
 });

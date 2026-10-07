@@ -26,26 +26,44 @@
 
     <main class="adl-main">
       <form class="adl-card" id="adminLoginForm" novalidate>
-        <h1 class="adl-card__title">Panel administratora</h1>
-        <p class="adl-card__lead">Zaloguj się hasłem administratora.</p>
+        <h1 class="adl-card__title" id="adminTitle">Panel administratora</h1>
+        <p class="adl-card__lead" id="adminLead">Zaloguj się adresem e-mail i hasłem.</p>
 
         <p class="adl-notice" id="adminLoginNotice" role="status" hidden></p>
 
-        <label class="adl-label" for="adminPassword">Hasło</label>
+        <label class="adl-label" for="adminEmail">E-mail</label>
+        <input class="adl-input adl-input--text" id="adminEmail" name="email" type="email" autocomplete="username" required autofocus>
+
+        <div id="adminPasswordBlock">
+        <label class="adl-label adl-label--next" for="adminPassword" id="adminPasswordLabel">Hasło</label>
         <div class="adl-field">
-          <input class="adl-input" id="adminPassword" name="password" type="password" autocomplete="current-password" required autofocus aria-describedby="adminLoginCaps adminLoginError">
-          <button type="button" class="adl-eye" id="adminPasswordToggle" aria-label="Pokaż hasło" aria-pressed="false" aria-controls="adminPassword">
+          <input class="adl-input" id="adminPassword" name="password" type="password" autocomplete="current-password" required aria-describedby="adminLoginCaps adminLoginError">
+          <button type="button" class="adl-eye" aria-label="Pokaż hasło" aria-pressed="false" aria-controls="adminPassword">
             <svg class="adl-eye__show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.04 12.32a1 1 0 0 1 0-.64C3.42 7.51 7.36 4.5 12 4.5s8.57 3 9.96 7.18a1 1 0 0 1 0 .64C20.58 16.49 16.64 19.5 12 19.5s-8.57-3-9.96-7.18Z"/><circle cx="12" cy="12" r="3"/></svg>
             <svg class="adl-eye__hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.98 8.22A10.5 10.5 0 0 0 1.93 12c1.3 4.34 5.31 7.5 10.07 7.5.99 0 1.95-.14 2.86-.4M6.23 6.23A10.45 10.45 0 0 1 12 4.5c4.76 0 8.77 3.16 10.07 7.5a10.5 10.5 0 0 1-4.3 5.77M6.23 6.23 3 3m3.23 3.23 3.65 3.65m7.9 7.9L21 21m-3.23-3.23-3.65-3.65m0 0a3 3 0 1 0-4.24-4.24m4.24 4.24L9.88 9.88"/></svg>
           </button>
         </div>
+        </div>
+
+        <div id="adminRepeatBlock" hidden>
+          <label class="adl-label adl-label--next" for="adminRepeat">Powtórz hasło</label>
+          <div class="adl-field">
+            <input class="adl-input" id="adminRepeat" name="repeat" type="password" autocomplete="new-password" aria-describedby="adminLoginError">
+            <button type="button" class="adl-eye" aria-label="Pokaż hasło" aria-pressed="false" aria-controls="adminRepeat">
+            <svg class="adl-eye__show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.04 12.32a1 1 0 0 1 0-.64C3.42 7.51 7.36 4.5 12 4.5s8.57 3 9.96 7.18a1 1 0 0 1 0 .64C20.58 16.49 16.64 19.5 12 19.5s-8.57-3-9.96-7.18Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="adl-eye__hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.98 8.22A10.5 10.5 0 0 0 1.93 12c1.3 4.34 5.31 7.5 10.07 7.5.99 0 1.95-.14 2.86-.4M6.23 6.23A10.45 10.45 0 0 1 12 4.5c4.76 0 8.77 3.16 10.07 7.5a10.5 10.5 0 0 1-4.3 5.77M6.23 6.23 3 3m3.23 3.23 3.65 3.65m7.9 7.9L21 21m-3.23-3.23-3.65-3.65m0 0a3 3 0 1 0-4.24-4.24m4.24 4.24L9.88 9.88"/></svg>
+          </button>
+          </div>
+        </div>
+
         <p class="adl-hint" id="adminLoginCaps" hidden>Włączony Caps Lock.</p>
         <p class="adl-error" id="adminLoginError" role="alert" hidden></p>
 
         <button class="adl-submit" id="adminLoginSubmit" type="submit">Zaloguj</button>
 
         <p class="adl-foot">
-          Sesja trwa na tej karcie przeglądarki. Po jej zamknięciu zalogujesz się ponownie.
+          <button type="button" class="adl-textlink" id="adminForgot">Nie pamiętasz hasła?</button>
+          <button type="button" class="adl-textlink" id="adminBack" hidden>Wróć do logowania</button>
           <a href="/privacy?lang=pl">Polityka prywatności</a>
         </p>
       </form>

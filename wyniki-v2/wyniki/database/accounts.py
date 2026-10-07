@@ -1,4 +1,4 @@
-"""Personal accounts for people who run a series. The admin keeps its own single password.
+"""Personal accounts: people who run a series, and administrators (admins.py).
 
 An account starts without a password: the admin invites the person, and the link in
 the invitation lets them set one. The hash is werkzeug's (scrypt).
@@ -24,6 +24,8 @@ def ensure_account_columns(cursor) -> None:
     columns = {row[1] for row in cursor.execute("PRAGMA table_info(accounts)")}
     if "language" not in columns:
         cursor.execute(f"ALTER TABLE accounts ADD COLUMN language TEXT NOT NULL DEFAULT '{DEFAULT_LANGUAGE}'")
+    if "is_admin" not in columns:  # see admins.py
+        cursor.execute("ALTER TABLE accounts ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
 
 
 def normalize_language(language: str | None) -> str:

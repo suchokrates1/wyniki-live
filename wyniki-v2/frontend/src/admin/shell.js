@@ -25,7 +25,7 @@ export const MORE_ENTRIES = [
   { section: 'overlay', label: 'Overlay TV', hint: 'układ, elementy, animacje, źródła OBS' },
   { section: 'system', label: 'Panic', hint: 'odbiorcy alarmu na WhatsApp' },
   { section: 'system', label: 'Poczta (SMTP)', hint: 'raporty po turnieju' },
-  { section: 'system', label: 'Dostęp do panelu', hint: 'sesja i hasło administratora' },
+  { section: 'system', label: 'Dostęp do panelu', hint: 'konta administratorów, wylogowanie' },
 ];
 
 export const SECTION_HEADINGS = {
