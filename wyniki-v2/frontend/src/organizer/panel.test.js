@@ -40,3 +40,21 @@ test('a person in one line', () => {
   assert.equal(personLine({ category: 'B2', country: 'DE', gender: 'K' }), 'B2 · DE · kobieta');
   assert.equal(personLine({ category: 'B1' }), 'B1');
 });
+
+test('days left and the state of the subscription', async () => {
+  const { daysLeft, daysText, planState, yearLimitReached, yearUsageText } = await import('./plan.js');
+  const today = new Date('2027-10-17T10:00:00Z');
+  assert.equal(daysLeft('2027-10-31', today), 14);
+  assert.equal(planState('2027-10-31', today), 'ending');
+  assert.equal(planState('2027-11-30', today), 'ok');
+  assert.equal(planState('2027-10-16', today), 'ended');
+  assert.equal(planState('', today), 'ok');
+  assert.equal(planState('2027-10-17', today), 'ending', 'the last day still counts');
+  assert.equal(daysText(0), 'dziś');
+  assert.equal(daysText(1), 'jutro');
+  assert.equal(daysText(5), 'za 5 dni');
+  const series = { max_tournaments_per_year: 2, tournaments: [{ start_date: '2027-03-01' }, { start_date: '2026-07-17' }] };
+  assert.equal(yearUsageText(series, 2027), 'Turnieje w 2027: 1 z 2');
+  assert.equal(yearLimitReached(series, 2027), false);
+  assert.equal(yearUsageText({ max_tournaments_per_year: 0 }, 2027), '');
+});

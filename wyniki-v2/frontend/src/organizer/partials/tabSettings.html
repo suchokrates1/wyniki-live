@@ -7,7 +7,8 @@
       <div class="adm-field"><label class="adm-field__label" for="org-set-end">Ostatni dzień</label><input class="adm-input" type="date" id="org-set-end" x-model="tForm.end_date" required></div>
       <div class="adm-field"><label class="adm-field__label" for="org-set-city">Miasto</label><input class="adm-input" id="org-set-city" x-model="tForm.city"></div>
       <div class="adm-field"><label class="adm-field__label" for="org-set-country">Kraj (kod, np. DE)</label><input class="adm-input" id="org-set-country" maxlength="2" x-model="tForm.country"></div>
-      <div class="adm-field"><label class="adm-field__label" for="org-set-courts">Liczba kortów</label><input class="adm-input" type="number" min="0" max="30" id="org-set-courts" x-model.number="tForm.court_count"></div>
+      <div class="adm-field"><label class="adm-field__label" for="org-set-courts">Liczba kortów</label><input class="adm-input" type="number" min="0" :max="t.max_courts || 30" id="org-set-courts" x-model.number="tForm.court_count" aria-describedby="org-set-courts-hint">
+        <span class="adm-field__hint" id="org-set-courts-hint" x-show="t.max_courts" x-text="'Abonament: do ' + t.max_courts + ' kortów.'"></span></div>
       <div class="adm-field"><label class="adm-field__label" for="org-set-report">E-mail na raporty po meczach</label><input class="adm-input" type="email" id="org-set-report" x-model="tForm.report_email"></div>
       <div class="adm-field">
         <label class="adm-field__label" for="org-set-scope">Ranga turnieju (napis nad zwycięzcą)</label>
@@ -30,7 +31,7 @@
         <input type="checkbox" x-model="tForm.is_public" :disabled="t.visibility_lock === 'private' || tForm.is_simulation" aria-describedby="org-set-public-hint">
         Publiczny na blindtennis.app
       </label>
-      <p class="adm-field__hint" id="org-set-public-hint" x-show="t.visibility_lock === 'private'">Administrator zablokował publikację tego turnieju. Napisz na contact@blindtennis.app.</p>
+      <p class="adm-field__hint" id="org-set-public-hint" x-show="t.visibility_lock === 'private'">Administrator zablokował publikację tego turnieju.</p>
       <label class="org-check"><input type="checkbox" x-model="tForm.is_simulation"> Symulacja (turniej testowy, poza wynikami i statystykami)</label>
     </div>
   </fieldset>

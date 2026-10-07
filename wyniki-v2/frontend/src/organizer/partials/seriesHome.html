@@ -17,6 +17,8 @@
     <ul class="org-facts" role="list">
       <li><span>Twoja rola</span><strong x-text="roleLabel(current().role)"></strong></li>
       <li x-show="current().valid_until"><span>Abonament do</span><strong x-text="dateRange(current().valid_until)"></strong></li>
+      <li x-show="yearUsageText()"><span>Limit abonamentu</span><strong x-text="yearUsageText()"></strong></li>
+      <li x-show="current().max_courts"><span>Korty w turnieju</span><strong x-text="'do ' + current().max_courts"></strong></li>
       <li x-show="current().website"><span>Strona serii</span><a :href="current().website" target="_blank" rel="noopener" x-text="(current().website || '').replace(/^https?:\/\//, '')"></a></li>
     </ul>
 
@@ -29,6 +31,7 @@
         </div>
       </div>
 
+      <p class="adm-card__hint" x-show="draftOpen && yearLimitReached()" x-text="'Limit turniejów na ' + thisYear() + ' jest wykorzystany. Turniej z datą w innym roku założysz bez przeszkód.'"></p>
       <form id="org-new" class="org-new" x-show="draftOpen" @submit.prevent="createTournament()" aria-labelledby="org-new-title">
         <h3 id="org-new-title" class="adm-subhead">Nowy turniej serii</h3>
         <div class="adm-grid">
@@ -37,7 +40,7 @@
           <div class="adm-field"><label class="adm-field__label" for="org-new-end">Ostatni dzień</label><input class="adm-input" type="date" id="org-new-end" x-model="draft.end_date" required></div>
           <div class="adm-field"><label class="adm-field__label" for="org-new-city">Miasto</label><input class="adm-input" id="org-new-city" x-model="draft.city"></div>
           <div class="adm-field"><label class="adm-field__label" for="org-new-country">Kraj (kod, np. DE)</label><input class="adm-input" id="org-new-country" maxlength="2" x-model="draft.country"></div>
-          <div class="adm-field"><label class="adm-field__label" for="org-new-courts">Liczba kortów</label><input class="adm-input" type="number" min="0" max="30" id="org-new-courts" x-model.number="draft.court_count"></div>
+          <div class="adm-field"><label class="adm-field__label" for="org-new-courts">Liczba kortów</label><input class="adm-input" type="number" min="0" :max="current().max_courts || 30" id="org-new-courts" x-model.number="draft.court_count"></div>
           <div class="adm-field">
             <label class="adm-field__label" for="org-new-tier">Ranga w serii</label>
             <select class="adm-input" id="org-new-tier" x-model="draft.tier">

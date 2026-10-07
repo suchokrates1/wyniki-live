@@ -36,12 +36,15 @@
       <template x-if="!loading && !seriesList.length && !error">
         <section class="adm-card">
           <h1 class="adm-card__title">Brak przypisanej serii</h1>
-          <p>Twoje konto nie należy jeszcze do żadnej serii. Napisz na <a class="adm-link" href="mailto:contact@blindtennis.app">contact@blindtennis.app</a>.</p>
+          <p>Twoje konto nie należy jeszcze do żadnej serii. Napisz na <a class="adm-link" :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.</p>
         </section>
       </template>
 
       <p class="org-banner" role="status" x-show="current() && readOnlySeries()">
-        Abonament serii wygasł: panel działa tylko do odczytu. Napisz na <a href="mailto:contact@blindtennis.app">contact@blindtennis.app</a>.
+        Abonament serii wygasł: panel działa tylko do odczytu. Aby przedłużyć, napisz na <a :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.
+      </p>
+      <p class="org-banner" role="status" x-show="current() && endingSoonText()">
+        <span x-text="endingSoonText()"></span> Aby przedłużyć, napisz na <a :href="'mailto:' + contactEmail" x-text="contactEmail"></a>.
       </p>
 
       <template x-if="current() && !route.tournamentId"><div><!-- @partial seriesHome --></div></template>

@@ -24,7 +24,7 @@ export function attachableTournaments(all, series) {
     .sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')));
 }
 
-const emptyDraft = () => ({ name: '', website: '', valid_until: '' });
+const emptyDraft = () => ({ name: '', website: '', valid_until: '', max_tournaments_per_year: 0, max_courts: 0 });
 
 export function createSeriesView() {
   return {
@@ -34,6 +34,7 @@ export function createSeriesView() {
     seriesAttachDraft: {},
     seriesInvite: null,
     seriesError: '',
+    seriesContact: '',
 
     seriesTiers() {
       return [{ value: '', label: 'bez rangi' }, ...TIERS.map((tier) => ({ value: tier, label: tierLabel(tier) }))];
@@ -75,9 +76,17 @@ export function createSeriesView() {
     async loadSeries() {
       try {
         this.seriesList = await this._seriesCall('/admin/api/series');
+        this.seriesContact = (await this._seriesCall('/admin/api/series/settings')).contact_email;
       } catch (err) {
         console.error('Failed to load series:', err);
       }
+    },
+
+    async saveSeriesContact() {
+      try {
+        this.seriesContact = (await this._seriesCall('/admin/api/series/settings', 'PUT', { contact_email: this.seriesContact })).contact_email;
+        this.showToast('Adres zapisany', 'success');
+      } catch { /* message shown */ }
     },
 
     async createSeries() {
@@ -95,7 +104,10 @@ export function createSeriesView() {
 
     async saveSeries(item) {
       try {
-        await this._seriesCall(`/admin/api/series/${item.id}`, 'PATCH', { name: item.name, website: item.website, valid_until: item.valid_until });
+        await this._seriesCall(`/admin/api/series/${item.id}`, 'PATCH', {
+          name: item.name, website: item.website, valid_until: item.valid_until,
+          max_tournaments_per_year: item.max_tournaments_per_year, max_courts: item.max_courts,
+        });
         this.showToast('Seria zapisana', 'success');
       } catch { /* message shown */ }
     },

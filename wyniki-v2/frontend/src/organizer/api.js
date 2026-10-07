@@ -5,7 +5,7 @@ import { storageGet } from '../shared/signInForm.js';
 import { ORGANIZER_TOKEN_KEY, organizerLoginUrl } from './route.js';
 
 const MESSAGES = {
-  'Subscription expired': 'Abonament serii wygasł: panel działa tylko do odczytu. Napisz na contact@blindtennis.app.',
+  'Subscription expired': 'Abonament serii wygasł: panel działa tylko do odczytu.',
   'Missing required fields': 'Uzupełnij nazwę i obie daty.',
   'Name is required': 'Podaj imię i nazwisko.',
   'last_name is required': 'Podaj nazwisko.',
@@ -14,6 +14,7 @@ const MESSAGES = {
   'Office not open for this tournament': 'Biuro otwiera się, gdy turniej trwa: włącz „Turniej trwa”.',
   'No valid players found': 'Nie rozpoznano żadnego zawodnika w tekście.',
   'Court count cannot be negative': 'Liczba kortów nie może być ujemna.',
+  'Tournament limit reached': 'Limit turniejów w abonamencie na ten rok jest wykorzystany. Napisz do nas, żeby go zwiększyć.',
 };
 
 export function toSignIn(reason) {
@@ -48,7 +49,8 @@ export async function call(url, method = 'GET', body) {
   if (!response.ok) {
     const raw = String(data.error || '');
     const busy = raw.startsWith('Cannot remove active courts') ? 'Nie można usunąć kortu, na którym trwa mecz.' : '';
-    throw new CallError(MESSAGES[raw] || busy || 'Nie udało się zapisać zmian. Spróbuj ponownie.');
+    const courts = raw === 'Court limit exceeded' ? `Abonament pozwala na najwyżej ${data.limit} kortów w turnieju.` : '';
+    throw new CallError(MESSAGES[raw] || busy || courts || 'Nie udało się zapisać zmian. Spróbuj ponownie.');
   }
   return data;
 }

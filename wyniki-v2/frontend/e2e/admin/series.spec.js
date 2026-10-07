@@ -61,3 +61,18 @@ test('the series tab passes axe', async ({ page }) => {
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
 });
+
+
+test('limits and the contact address are saved from the series tab', async ({ page }) => {
+  const requests = await openSeries(page);
+  const card = page.getByRole('region', { name: 'Seria Takei World Tennis Tour' });
+  await card.getByLabel('Turnieje na rok (0 = bez limitu)').fill('6');
+  await card.getByLabel('Korty w turnieju (0 = bez limitu)').fill('4');
+  await card.getByRole('button', { name: 'Zapisz serię' }).click();
+  await expect.poll(() => requests.find((r) => r.method === 'PATCH' && r.url.endsWith('/series/1'))?.body)
+    .toMatchObject({ max_tournaments_per_year: 6, max_courts: 4 });
+  await page.getByLabel('Adres kontaktowy dla organizatorów').fill('organizers@blindtennis.app');
+  await page.getByRole('button', { name: 'Zapisz adres' }).click();
+  await expect.poll(() => requests.find((r) => r.method === 'PUT' && r.url.endsWith('/series/settings'))?.body)
+    .toEqual({ contact_email: 'organizers@blindtennis.app' });
+});

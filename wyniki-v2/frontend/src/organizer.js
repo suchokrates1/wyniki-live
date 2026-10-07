@@ -7,6 +7,7 @@ import './styles/organizer.css';
 import { call, CallError, toSignIn } from './organizer/api.js';
 import { createPlayersView } from './organizer/playersView.js';
 import { ORGANIZER_TOKEN_KEY, TIERS, dateRange, tierLabel } from './organizer/route.js';
+import { daysLeft, daysText, planState, yearLimitReached, yearUsageText } from './organizer/plan.js';
 import { TOURNAMENT_TABS, organizerHash, parseOrganizerHash } from './organizer/routing.js';
 import { createTournamentView } from './organizer/tournamentView.js';
 import seriesHomeHtml from './organizer/partials/seriesHome.html?raw';
@@ -38,6 +39,7 @@ Alpine.data('organizerApp', () => ({
   loading: true,
   error: '',
   account: null,
+  contactEmail: 'contact@blindtennis.app',
   seriesList: [],
   currentId: null,
   route: { slug: '', tournamentId: null, tab: '' },
@@ -56,6 +58,7 @@ Alpine.data('organizerApp', () => ({
     try {
       const data = await call('/organizer/api/me');
       this.account = data.account;
+      this.contactEmail = data.contact_email || this.contactEmail;
       this.seriesList = data.series || [];
     } catch (error) {
       this.error = error instanceof CallError ? 'Nie udało się wczytać panelu. Odśwież stronę.' : '';
@@ -103,9 +106,18 @@ Alpine.data('organizerApp', () => ({
   },
 
   readOnlySeries() {
-    const until = this.current()?.valid_until || '';
-    return Boolean(until) && until < new Date().toISOString().slice(0, 10);
+    return planState(this.current()?.valid_until) === 'ended';
   },
+
+  endingSoonText() {
+    const until = this.current()?.valid_until;
+    if (planState(until) !== 'ending') return '';
+    return `Abonament serii kończy się ${dateRange(until)} (${daysText(daysLeft(until))}). Po tym dniu panel będzie tylko do odczytu.`;
+  },
+
+  thisYear() { return new Date().getFullYear(); },
+  yearUsageText() { return yearUsageText(this.current(), this.thisYear()); },
+  yearLimitReached() { return yearLimitReached(this.current(), this.thisYear()); },
 
   tabs() { return TOURNAMENT_TABS; },
   tiers() { return TIERS.map((tier) => ({ value: tier, label: tierLabel(tier) })); },

@@ -5,7 +5,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-function world({ lock = '', validUntil = '2027-10-31', active = 0 } = {}) {
+function world({ lock = '', validUntil = '2027-10-31', active = 0, maxYear = 0, maxCourts = 0 } = {}) {
   const state = {
     tournament: {
       id: 28, name: '5th Dürener Handicup 2026', start_date: '2026-07-17', end_date: '2026-07-19', city: 'Düren', country: 'DE',
@@ -13,14 +13,15 @@ function world({ lock = '', validUntil = '2027-10-31', active = 0 } = {}) {
       visibility_lock: lock, series: [{ id: 1, name: 'Takei World Tennis Tour', tier: 'CH50' }],
       courts: [{ kort_id: 't28-1', name: '1', pin: '1234' }, { kort_id: 't28-2', name: '2', pin: '5678' }],
       office_slot: active ? 2 : null, overlays: [{ id: 'k1', name: 'Kort 1', path: active ? '/overlay/2/k1' : '' }],
-      read_only: validUntil < '2026-10-07',
+      read_only: validUntil < new Date().toISOString().slice(0, 10),
+      max_courts: maxCourts,
     },
     entries: [{ id: 1, name: 'Carlos Arbos', first_name: 'Carlos', last_name: 'Arbos', category: 'B1', country: 'FR', gender: 'M', global_player_id: 3 }],
     base: [{ id: 3, first_name: 'Carlos', last_name: 'Arbos', category: 'B1', country: 'FR', gender: 'M', tournaments_count: 2 },
       { id: 7, first_name: 'Naqi', last_name: 'Rizvi', category: 'B1', country: 'GB', gender: 'M', tournaments_count: 3 }],
     requests: [],
   };
-  state.me = { account: { id: 5, email: 'organizer@example.org' }, series: [{ id: 1, name: 'Takei World Tennis Tour', slug: 'twt', role: 'owner', valid_until: validUntil, tournaments: [{ ...state.tournament, tier: 'CH50' }] }] };
+  state.me = { account: { id: 5, email: 'organizer@example.org' }, contact_email: 'organizers@blindtennis.app', series: [{ id: 1, name: 'Takei World Tennis Tour', slug: 'twt', role: 'owner', valid_until: validUntil, max_tournaments_per_year: maxYear, max_courts: maxCourts, tournaments: [{ ...state.tournament, tier: 'CH50' }] }] };
   return state;
 }
 
@@ -164,7 +165,7 @@ test('categories and the change log', async ({ page }) => {
 
 test('a lapsed subscription leaves the panel to read only', async ({ page }) => {
   await openPanel(page, world({ validUntil: '2020-01-01' }), '#/twt/t/28/zawodnicy');
-  await expect(page.locator('.org-banner')).toContainText('Abonament serii wygasł');
+  await expect(page.locator('.org-banner').filter({ hasText: 'wygasł' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Popraw/ })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Dodaj z bazy zawodników' })).toBeHidden();
   await page.getByRole('tab', { name: 'Ustawienia' }).click();
@@ -177,4 +178,23 @@ test('on a phone nothing scrolls sideways', async ({ page }) => {
   await openPanel(page, world(), '#/twt/t/28/zawodnicy');
   await expect(page.locator('.adm-row').first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+});
+
+
+function isoInDays(days) {
+  return new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+}
+
+test('ten days before the end the panel says so, with the address to write to', async ({ page }) => {
+  await openPanel(page, world({ validUntil: isoInDays(10), maxYear: 5, maxCourts: 4 }));
+  const banner = page.locator('.org-banner').filter({ hasText: 'kończy się' });
+  await expect(banner).toContainText('za 10 dni');
+  await expect(banner.getByRole('link', { name: 'organizers@blindtennis.app' })).toHaveAttribute('href', 'mailto:organizers@blindtennis.app');
+  const year = new Date().getFullYear();
+  await expect(page.locator('.org-facts')).toContainText(`Turnieje w ${year}:`);
+  await expect(page.locator('.org-facts')).toContainText('z 5');
+  await expect(page.locator('.org-facts')).toContainText('do 4');
+  await page.getByRole('link', { name: '5th Dürener Handicup 2026', exact: true }).click();
+  await expect(page.getByText('Abonament: do 4 kortów.')).toBeVisible();
+  await expect(page.getByLabel('Liczba kortów')).toHaveAttribute('max', '4');
 });

@@ -10,6 +10,7 @@ from __future__ import annotations
 from flask import g, jsonify, request
 
 from ..database import fetch_courts, fetch_courts_for_tournament, fetch_tournament, series, set_tournament_active_state, upsert_court
+from ..database.series_plan import limits, tournaments_in_year
 from ..database.series_records import log_for_tournament, visibility_lock
 from ..database.tournament_titles import title_fields
 from ..services import organizer_auth as auth
@@ -31,6 +32,20 @@ def _payload() -> dict:
 
 def _series_of_tournament(tournament_id: int) -> list[dict]:
     return [row for row in g.series if series.tournament_in_series(tournament_id, [row["id"]])]
+
+
+def _court_limit(series_ids: list[int]) -> int:
+    """The most courts one of these series allows; 0 when any of them has no limit."""
+    caps = [limits(sid)["max_courts"] for sid in series_ids]
+    return 0 if not caps or 0 in caps else max(caps)
+
+
+def _over_court_limit(series_ids: list[int], requested) -> bool:
+    cap = _court_limit(series_ids)
+    try:
+        return bool(cap) and int(requested or 0) > cap
+    except (TypeError, ValueError):
+        return False
 
 
 def _office_slot(tournament_id: int) -> int | None:
@@ -74,6 +89,7 @@ def _detail(tournament_id: int) -> dict:
         "office_slot": _office_slot(tournament_id),
         "overlays": _overlay_links(tournament_id),
         "read_only": not auth.tournament_writable(tournament_id),
+        "max_courts": _court_limit(list(tiers)),
     }
 
 
@@ -81,6 +97,12 @@ def _detail(tournament_id: int) -> dict:
 def create(series_id: int):
     data = {key: value for key, value in _payload().items() if key in EDITABLE}
     data["active"] = False
+    yearly = limits(series_id)["max_tournaments_per_year"]
+    year = str(data.get("start_date") or "")[:4]
+    if yearly and year and tournaments_in_year(series_id, year) >= yearly:
+        return jsonify({"error": "Tournament limit reached", "limit": yearly, "year": year}), 403
+    if _over_court_limit([series_id], data.get("court_count")):
+        return jsonify({"error": "Court limit exceeded", "limit": _court_limit([series_id])}), 400
     body, status = tournament_settings.create_from(data, request.files.get("logo"))
     if status == 201:
         series.attach_tournament(series_id, body["id"], str(_payload().get("tier") or ""))
@@ -95,6 +117,9 @@ def detail(tournament_id: int):
 
 @blueprint.route("/tournaments/<int:tournament_id>", methods=["PUT"])
 def update(tournament_id: int):
+    in_series = [row["id"] for row in _series_of_tournament(tournament_id)]
+    if "court_count" in _payload() and _over_court_limit(in_series, _payload().get("court_count")):
+        return jsonify({"error": "Court limit exceeded", "limit": _court_limit(in_series)}), 400
     existing = fetch_tournament(tournament_id)
     data = {
         "name": existing["name"], "start_date": existing["start_date"], "end_date": existing["end_date"],

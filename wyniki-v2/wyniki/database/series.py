@@ -59,9 +59,11 @@ def ensure_series_tables(cursor: sqlite3.Cursor) -> None:
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_series_tournaments_tournament ON series_tournaments(tournament_id)")
+    from .series_plan import ensure_series_plan_columns
     from .series_records import ensure_series_record_tables
 
     ensure_series_record_tables(cursor)
+    ensure_series_plan_columns(cursor)
 
 
 def slugify(name: str) -> str:
@@ -116,7 +118,13 @@ def create_series(name: str, *, slug: str = "", country: str = "", website: str 
 
 def update_series(series_id: int, fields: dict[str, Any]) -> bool:
     allowed = {"name", "country", "website", "valid_until"}
-    values = {key: str(value or "").strip() for key, value in fields.items() if key in allowed}
+    values: dict[str, Any] = {key: str(value or "").strip() for key, value in fields.items() if key in allowed}
+    for key in ("max_tournaments_per_year", "max_courts"):
+        if key in fields:
+            try:
+                values[key] = max(0, int(fields[key] or 0))
+            except (TypeError, ValueError):
+                values[key] = 0
     if "country" in values:
         values["country"] = values["country"].upper()[:2]
     if values.get("name") == "":
@@ -232,7 +240,8 @@ def series_of_account(account_id: int) -> list[dict[str, Any]]:
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT s.id, s.name, s.slug, s.country, s.website, s.valid_until, m.role
+            SELECT s.id, s.name, s.slug, s.country, s.website, s.valid_until,
+                   s.max_tournaments_per_year, s.max_courts, m.role
             FROM series_members m JOIN series s ON s.id = m.series_id
             WHERE m.account_id = ? ORDER BY s.name COLLATE NOCASE
             """,

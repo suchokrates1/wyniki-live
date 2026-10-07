@@ -75,6 +75,8 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/admin/api/series/<int:series_id>/members/<int:account_id>/invite` |  |
 | DELETE | `/admin/api/series/<int:series_id>/tournaments/<int:tournament_id>` |  |
 | PUT | `/admin/api/series/<int:series_id>/tournaments/<int:tournament_id>` |  |
+| GET | `/admin/api/series/settings` |  |
+| PUT | `/admin/api/series/settings` |  |
 
 ## admin_tournaments
 

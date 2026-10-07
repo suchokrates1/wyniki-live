@@ -1,6 +1,18 @@
 <div class="adm-stack">
   <p class="adm-modal__error" role="alert" x-show="seriesError" x-text="seriesError"></p>
 
+  <section class="adm-card" aria-labelledby="adm-series-contact-title">
+    <div class="adm-card__head">
+      <h2 id="adm-series-contact-title" class="adm-card__title">Kontakt dla organizatorów</h2>
+      <span class="adm-card__hint">pokazywany w panelu organizatora; dostaje kopię przypomnień o abonamencie</span>
+    </div>
+    <div class="adm-addrow">
+      <label class="sr-only" for="adm-series-contact">Adres kontaktowy dla organizatorów</label>
+      <input id="adm-series-contact" class="adm-input" type="email" x-model="seriesContact" placeholder="contact@blindtennis.app">
+      <button type="button" class="adm-btn adm-btn--primary" @click="saveSeriesContact()">Zapisz adres</button>
+    </div>
+  </section>
+
   <template x-if="seriesInvite">
     <section class="adm-card adm-invite" aria-labelledby="adm-invite-title">
       <h2 id="adm-invite-title" class="adm-card__title">Zaproszenie dla <span x-text="seriesInvite.account?.email"></span></h2>
@@ -37,6 +49,14 @@
         <div class="adm-field">
           <label class="adm-field__label" :for="'adm-series-valid-' + item.id">Abonament do</label>
           <input class="adm-input" type="date" :id="'adm-series-valid-' + item.id" x-model="item.valid_until">
+        </div>
+        <div class="adm-field">
+          <label class="adm-field__label" :for="'adm-series-year-' + item.id">Turnieje na rok (0 = bez limitu)</label>
+          <input class="adm-input" type="number" min="0" :id="'adm-series-year-' + item.id" x-model.number="item.max_tournaments_per_year">
+        </div>
+        <div class="adm-field">
+          <label class="adm-field__label" :for="'adm-series-courts-' + item.id">Korty w turnieju (0 = bez limitu)</label>
+          <input class="adm-input" type="number" min="0" :id="'adm-series-courts-' + item.id" x-model.number="item.max_courts">
         </div>
       </div>
       <div class="adm-card__footer">
@@ -140,6 +160,14 @@
       <div class="adm-field">
         <label class="adm-field__label" for="adm-new-series-valid">Abonament do</label>
         <input class="adm-input" type="date" id="adm-new-series-valid" x-model="seriesDraft.valid_until">
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-new-series-year">Turnieje na rok (0 = bez limitu)</label>
+        <input class="adm-input" type="number" min="0" id="adm-new-series-year" x-model.number="seriesDraft.max_tournaments_per_year">
+      </div>
+      <div class="adm-field">
+        <label class="adm-field__label" for="adm-new-series-courts">Korty w turnieju (0 = bez limitu)</label>
+        <input class="adm-input" type="number" min="0" id="adm-new-series-courts" x-model.number="seriesDraft.max_courts">
       </div>
     </div>
     <div class="adm-card__footer">

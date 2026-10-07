@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
-from ..database import accounts, series
+from ..database import accounts, series, series_plan
 from ..database.tournaments import fetch_tournament
 from ..services.account_invites import invite_link, send_invite
 
@@ -23,6 +23,19 @@ def list_all():
     return jsonify(series.list_series())
 
 
+@blueprint.route("/settings", methods=["GET"])
+def settings_get():
+    return jsonify({"contact_email": series_plan.contact_email()})
+
+
+@blueprint.route("/settings", methods=["PUT"])
+def settings_put():
+    address = str(_body().get("contact_email") or "").strip()
+    if address and ("@" not in address or "." not in address.split("@")[-1]):
+        return jsonify({"error": "A valid e-mail is required"}), 400
+    return jsonify({"contact_email": series_plan.set_contact_email(address)})
+
+
 @blueprint.route("", methods=["POST"])
 def create():
     data = _body()
@@ -33,6 +46,7 @@ def create():
         name, slug=str(data.get("slug") or ""), country=str(data.get("country") or ""),
         website=str(data.get("website") or ""), valid_until=str(data.get("valid_until") or ""),
     )
+    series.update_series(series_id, {key: data[key] for key in ("max_tournaments_per_year", "max_courts") if key in data})
     return jsonify(series.get_series(series_id)), 201
 
 

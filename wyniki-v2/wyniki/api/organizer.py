@@ -8,6 +8,7 @@ from __future__ import annotations
 from flask import g, jsonify, request
 
 from ..database import accounts, series
+from ..database.series_plan import contact_email
 from ..services import organizer_auth as auth
 from .organizer_common import guarded_blueprint
 
@@ -60,6 +61,7 @@ def invite_accept(token: str):
 @blueprint.route("/me", methods=["GET"])
 def me():
     return jsonify({
+        "contact_email": contact_email(),
         "account": {key: g.account[key] for key in ("id", "email", "name")},
         "series": [{**item, "tournaments": series.series_tournaments(item["id"])} for item in g.series],
     })

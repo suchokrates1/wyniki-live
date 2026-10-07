@@ -219,3 +219,60 @@ def test_a_category_of_another_tournament_stays_untouched(client, twt):
     mine = client.post(f"/organizer/api/tournaments/{tid}/categories", json={"label": "B2 Mixed"}, headers=headers)
     assert mine.status_code == 201
     assert client.patch(f"/organizer/api/tournaments/{tid}/categories/{mine.get_json()['category']['id']}", json={"label": "B2 Women"}, headers=headers).status_code == 200
+
+
+def test_the_yearly_tournament_limit_counts_by_start_year(client, twt):
+    series_id, headers = twt
+    client.patch(f"/admin/api/series/{series_id}", json={"max_tournaments_per_year": 1})
+    _new(client, twt)  # 2027
+    blocked = client.post(f"/organizer/api/series/{series_id}/tournaments", headers=headers,
+                          json={"name": "Drugi 2027", "start_date": "2027-09-01", "end_date": "2027-09-02"})
+    assert blocked.status_code == 403 and blocked.get_json()["error"] == "Tournament limit reached"
+    next_year = client.post(f"/organizer/api/series/{series_id}/tournaments", headers=headers,
+                            json={"name": "Pierwszy 2028", "start_date": "2028-03-01", "end_date": "2028-03-02"})
+    assert next_year.status_code == 201
+
+
+def test_the_court_limit_holds_on_create_and_on_change(client, twt):
+    series_id, headers = twt
+    client.patch(f"/admin/api/series/{series_id}", json={"max_courts": 2})
+    too_many = client.post(f"/organizer/api/series/{series_id}/tournaments", headers=headers,
+                           json={"name": "Duży", "start_date": "2027-01-01", "end_date": "2027-01-02", "court_count": 3})
+    assert too_many.status_code == 400 and too_many.get_json()["limit"] == 2
+    tid = _new(client, twt)
+    assert client.get(f"/organizer/api/tournaments/{tid}", headers=headers).get_json()["max_courts"] == 2
+    assert client.put(f"/organizer/api/tournaments/{tid}", json={"court_count": 3}, headers=headers).status_code == 400
+    assert client.put(f"/organizer/api/tournaments/{tid}", json={"court_count": 1}, headers=headers).status_code == 200
+
+
+def test_the_contact_address_is_a_setting_the_panel_reads(client, twt):
+    _, headers = twt
+    assert client.get("/organizer/api/me", headers=headers).get_json()["contact_email"] == "contact@blindtennis.app"
+    assert client.put("/admin/api/series/settings", json={"contact_email": "nie-mail"}).status_code == 400
+    client.put("/admin/api/series/settings", json={"contact_email": "Organizers@blindtennis.app"})
+    assert client.get("/organizer/api/me", headers=headers).get_json()["contact_email"] == "organizers@blindtennis.app"
+
+
+def test_subscription_notices_go_once_per_end_date_and_retry_when_mail_fails(client, twt):
+    from datetime import date
+
+    from wyniki.services import subscription_notices as notices
+
+    series_id, _ = twt
+    client.patch(f"/admin/api/series/{series_id}", json={"valid_until": "2027-10-31"})
+    mails = []
+
+    def mailer(subject, body, recipients):
+        mails.append((subject, recipients))
+        return True
+
+    assert notices.run_pass(date(2027, 10, 1), send=mailer) == []
+    assert notices.run_pass(date(2027, 10, 20), send=lambda *a: False) == [], "SMTP down: nothing marked sent"
+    assert notices.run_pass(date(2027, 10, 20), send=mailer) == [(series_id, "ending")]
+    assert notices.run_pass(date(2027, 10, 21), send=mailer) == [], "once per end date"
+    assert notices.run_pass(date(2027, 11, 1), send=mailer) == [(series_id, "ended")]
+    assert mails[0][1] == ["organizer@example.org", "contact@blindtennis.app"]
+    assert "31.10.2027" in mails[0][0]
+
+    client.patch(f"/admin/api/series/{series_id}", json={"valid_until": "2028-10-31"})
+    assert notices.run_pass(date(2028, 10, 25), send=mailer) == [(series_id, "ending")], "a renewal starts afresh"

@@ -70,6 +70,7 @@ export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS,
     onRequest({ url, method: request.method(), body });
     if (request.method() !== 'GET') return route.fulfill({ json: { success: true } });
     if (/\/admin\/api\/tournaments(\?|$)/.test(url)) return route.fulfill({ json: tournaments });
+    if (/\/admin\/api\/series\/settings(\?|$)/.test(url)) return route.fulfill({ json: { contact_email: 'contact@blindtennis.app' } });
     if (/\/admin\/api\/series(\?|$)/.test(url)) return route.fulfill({ json: series });
     if (/\/admin\/api\/player-reviews(\?|$)/.test(url)) return route.fulfill({ json: reviews });
     if (url.includes('/admin/api/courts')) return route.fulfill({ json: courts });
