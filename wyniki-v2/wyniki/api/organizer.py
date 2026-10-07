@@ -14,7 +14,8 @@ from ..services import organizer_auth as auth
 from ..services import series_logo
 from .organizer_common import guarded_blueprint
 
-OPEN_ENDPOINTS = frozenset({"organizer.sign_in", "organizer.invite_info", "organizer.invite_accept", "organizer.contact"})
+OPEN_ENDPOINTS = frozenset({"organizer.sign_in", "organizer.invite_info", "organizer.invite_accept", "organizer.contact",
+                            "organizer.forgot"})
 blueprint = guarded_blueprint("organizer", "/organizer/api", open_endpoints=OPEN_ENDPOINTS,
                               unpaid_writes=frozenset({"organizer.me_update"}))
 
@@ -42,6 +43,23 @@ def sign_in():
         return jsonify({"error": "Invalid e-mail or password"}), 403
     auth.forget_login_failures(email)
     return jsonify(_session(account))
+
+
+@blueprint.route("/forgot", methods=["POST"])
+def forgot():
+    """A new-password link to the address, if it is an organizer's. The answer never says
+    whether it is, and a few requests per address and client are all it takes."""
+    from ..services.account_invites import send_reset
+
+    email = accounts.normalize_email((request.get_json(silent=True) or {}).get("email"))
+    key = f"reset:{email}"
+    if auth.login_blocked(key):
+        return jsonify({"error": "Too many attempts"}), 429
+    auth.note_login_failure(key)
+    account = accounts.get_account_by_email(email) if "@" in email else None
+    if account and not account["disabled"] and series.series_of_account(account["id"]):
+        send_reset(account)
+    return jsonify({"sent": True})
 
 
 @blueprint.route("/invite/<token>", methods=["GET"])

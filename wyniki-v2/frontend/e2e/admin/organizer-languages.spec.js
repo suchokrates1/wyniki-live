@@ -34,7 +34,7 @@ test('the sign-in page switches language at once and remembers it', async ({ pag
   await page.goto('/organizer/login?lang=en');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Organizer panel');
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
-  await expect(page.locator('#organizerForgot')).toContainText('organizers@blindtennis.app');
+  await expect(page.getByRole('button', { name: 'Forgot your password?' })).toBeVisible();
   await page.getByLabel('Language').selectOption('de');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Veranstalterbereich');
   await expect(page.locator('html')).toHaveAttribute('lang', 'de');

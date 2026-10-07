@@ -215,6 +215,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 |---|---|---|
 | POST | `/organizer/api/auth` |  |
 | GET | `/organizer/api/contact` | Where organizers write; the sign-in page names it before anyone is signed in. |
+| POST | `/organizer/api/forgot` | A new-password link to the address, if it is an organizer's. The answer never says |
 | GET | `/organizer/api/invite/<token>` |  |
 | POST | `/organizer/api/invite/<token>` |  |
 | GET | `/organizer/api/me` |  |

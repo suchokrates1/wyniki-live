@@ -9,6 +9,8 @@ import { showNotice, storageGet, storageSet, wireCapsLock, wirePasswordEyes, wir
 // the invitation's, else ?lang=, else what this browser chose before, else the browser's.
 
 const NOTICES = { expired: ['noticeExpired', 'warn'], out: ['noticeOut', ''] };
+const SUBMIT = { login: 'signIn', invite: 'inviteSubmit', forgot: 'forgotSubmit' };
+const BUSY = { login: 'signingIn', invite: 'saving', forgot: 'sending' };
 
 const params = new URLSearchParams(window.location.search);
 const next = safeOrganizerNext(params.get('next'));
@@ -38,14 +40,20 @@ function render() {
   document.querySelectorAll('[data-t]').forEach((node) => { node.textContent = t(node.dataset.t); });
   document.querySelectorAll('[data-t-aria]').forEach((node) => node.setAttribute('aria-label', t(node.dataset.tAria)));
   document.querySelectorAll('.adl-eye').forEach((eye) => eye.setAttribute('aria-label', t(eye.getAttribute('aria-pressed') === 'true' ? 'hidePassword' : 'showPassword')));
-  $('organizerForgot').textContent = t('forgot', { contact });
   $('organizerPrivacy').href = `/privacy?lang=${lang}`;
+  $('organizerPasswordBlock').hidden = mode === 'forgot';
+  $('organizerForgot').hidden = mode !== 'login';
+  $('organizerBack').hidden = mode !== 'forgot';
+  if (mode === 'forgot') {
+    $('organizerTitle').textContent = t('forgotTitle');
+    $('organizerLead').textContent = t('forgotLead');
+  }
   if (mode === 'invite') {
     $('organizerTitle').textContent = t('inviteTitle');
     $('organizerLead').textContent = t('inviteLead', { series: invite.series.join(', '), n: minLength });
     $('organizerPasswordLabel').textContent = t('newPassword');
   }
-  button.textContent = t(mode === 'invite' ? 'inviteSubmit' : 'signIn');
+  button.textContent = t(SUBMIT[mode]);
   if (noticeState) showNotice(notice, t(noticeState.key, { contact }), noticeState.tone);
 }
 
@@ -75,10 +83,11 @@ const form = wireSignInForm({
   error: $('organizerError'),
   notice,
   button,
-  get label() { return t(mode === 'invite' ? 'inviteSubmit' : 'signIn'); },
-  get busyLabel() { return t(mode === 'invite' ? 'saving' : 'signingIn'); },
+  get label() { return t(SUBMIT[mode]); },
+  get busyLabel() { return t(BUSY[mode]); },
   get offline() { return t('errConnection'); },
   validate() {
+    if (mode === 'forgot') return email.value.trim() ? null : { message: t('errEnterEmail'), field: email };
     if (mode === 'login') {
       if (!email.value.trim()) return { message: t('errEnterEmail'), field: email };
       if (!password.value) return { message: t('errEnterPassword'), field: password };
@@ -89,6 +98,7 @@ const form = wireSignInForm({
     return null;
   },
   async submit() {
+    if (mode === 'forgot') return askForLink();
     const inviting = mode === 'invite';
     const response = await fetch(inviting ? `/organizer/api/invite/${encodeURIComponent(inviteToken)}` : '/organizer/api/auth', {
       method: 'POST',
@@ -104,6 +114,30 @@ const form = wireSignInForm({
     return t(inviting ? 'errSetFailed' : 'errBadLogin');
   },
 });
+
+async function askForLink() {
+  const response = await fetch('/organizer/api/forgot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.value.trim() }),
+  });
+  if (response.status === 429) return t('errThrottled');
+  if (!response.ok) return t('errConnection');
+  noticeState = { key: 'forgotSent', tone: '' };
+  render();
+  return '';
+}
+
+function setMode(next) {
+  mode = next;
+  noticeState = null;
+  notice.hidden = true;
+  render();
+  email.focus();
+}
+
+$('organizerForgot').addEventListener('click', () => setMode('forgot'));
+$('organizerBack').addEventListener('click', () => setMode('login'));
 
 async function loadContact() {
   try {

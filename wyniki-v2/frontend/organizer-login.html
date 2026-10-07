@@ -39,6 +39,7 @@
         <label class="adl-label" for="organizerEmail" data-t="email"></label>
         <input class="adl-input adl-input--text" id="organizerEmail" name="email" type="email" autocomplete="username" required autofocus>
 
+        <div id="organizerPasswordBlock">
         <label class="adl-label adl-label--next" for="organizerPassword" id="organizerPasswordLabel" data-t="password"></label>
         <div class="adl-field">
           <input class="adl-input" id="organizerPassword" name="password" type="password" autocomplete="current-password" required aria-describedby="organizerCaps organizerError">
@@ -46,6 +47,7 @@
             <svg class="adl-eye__show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.04 12.32a1 1 0 0 1 0-.64C3.42 7.51 7.36 4.5 12 4.5s8.57 3 9.96 7.18a1 1 0 0 1 0 .64C20.58 16.49 16.64 19.5 12 19.5s-8.57-3-9.96-7.18Z"/><circle cx="12" cy="12" r="3"/></svg>
             <svg class="adl-eye__hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.98 8.22A10.5 10.5 0 0 0 1.93 12c1.3 4.34 5.31 7.5 10.07 7.5.99 0 1.95-.14 2.86-.4M6.23 6.23A10.45 10.45 0 0 1 12 4.5c4.76 0 8.77 3.16 10.07 7.5a10.5 10.5 0 0 1-4.3 5.77M6.23 6.23 3 3m3.23 3.23 3.65 3.65m7.9 7.9L21 21m-3.23-3.23-3.65-3.65m0 0a3 3 0 1 0-4.24-4.24m4.24 4.24L9.88 9.88"/></svg>
           </button>
+        </div>
         </div>
 
         <div id="organizerRepeatBlock" hidden>
@@ -65,7 +67,8 @@
         <button class="adl-submit" id="organizerSubmit" type="submit" data-t="signIn"></button>
 
         <p class="adl-foot" id="organizerFoot">
-          <span id="organizerForgot"></span>
+          <button type="button" class="adl-textlink" id="organizerForgot" data-t="forgotLink"></button>
+          <button type="button" class="adl-textlink" id="organizerBack" data-t="backToSignIn" hidden></button>
           <a id="organizerPrivacy" href="/privacy" data-t="privacy"></a>
         </p>
       </form>

@@ -157,6 +157,9 @@
 
 .adl-foot { margin: 20px 0 0; color: var(--kort-mist); font-size: 14px; }
 .adl-foot a, .adl-links a { color: var(--kort-lime); font-weight: 700; }
+.adl-foot { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.adl-textlink { padding: 0; border: 0; background: none; color: var(--kort-lime); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.adl-textlink[hidden] { display: none; }
 .adl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; font-size: 15px; }
 
 @media (max-width: 600px) {

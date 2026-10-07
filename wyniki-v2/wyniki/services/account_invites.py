@@ -7,7 +7,7 @@ from ..database import series as series_db
 from ..database.series_plan import contact_email
 from .email_reports import _send_email
 from .organizer_auth import INVITE_MAX_AGE_SECONDS, issue_invite_token
-from .organizer_mails import SENDER_EMAIL, SENDER_NAME, invite_mail
+from .organizer_mails import SENDER_EMAIL, SENDER_NAME, invite_mail, reset_mail
 
 
 def invite_link(account_id: int) -> str:
@@ -34,3 +34,19 @@ def send_invite(account: dict, series_name: str, link: str) -> bool:
     subject, body = invite_message(account, link, request.host_url)
     return _send_email(subject, body, [account["email"]],
                        from_name=SENDER_NAME, from_email=SENDER_EMAIL, reply_to=contact_email())
+
+
+def send_reset(account: dict) -> bool:
+    """The person forgot their password: a fresh single-use link, in their language."""
+    subject, body = reset_mail(
+        account.get("language") or "en",
+        name=account.get("name") or "",
+        email=account["email"],
+        link=invite_link(account["id"]),
+        base_url=request.host_url,
+        contact=contact_email(),
+        hours=INVITE_MAX_AGE_SECONDS // 3600,
+    )
+    return _send_email(subject, body, [account["email"]],
+                       from_name=SENDER_NAME, from_email=SENDER_EMAIL, reply_to=contact_email())
+

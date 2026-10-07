@@ -134,3 +134,23 @@ test('both pages pass axe and fit the screen', async ({ page }) => {
   expect(await axe(page)).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 });
+
+test('a forgotten password: the address gets a link, the page says so without telling whether it is an account', async ({ page }) => {
+  await mockApi(page);
+  const asked = [];
+  await page.route(/\/organizer\/api\/forgot$/, (route) => asked.push(route.request().postDataJSON()) && route.fulfill({ json: { sent: true } }));
+  await page.goto('/organizer/login');
+  await page.getByRole('button', { name: 'Nie pamiętasz hasła?' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Nowe hasło');
+  await expect(page.getByLabel('Hasło', { exact: true })).toBeHidden();
+  await page.getByRole('button', { name: 'Wyślij link' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Wpisz adres e-mail.');
+  await page.getByLabel('E-mail').fill('organizer@example.org');
+  await page.getByRole('button', { name: 'Wyślij link' }).click();
+  await expect(page.getByRole('status')).toContainText('Jeśli to adres konta organizatora');
+  expect(asked).toEqual([{ email: 'organizer@example.org' }]);
+  expect(await axe(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Wróć do logowania' }).click();
+  await expect(page.getByLabel('Hasło', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toBeHidden();
+});

@@ -116,3 +116,21 @@ def plan_mail(language: str, kind: str, *, series: str, valid_until: str, base_u
       {_button(escape(with_language(base_url.rstrip("/") + "/organizer/login", language), quote=True), t["panel_button"])}"""
     html = _layout(language, title=heading, preheader=heading, kicker=t["kicker_plan"], heading=heading, body=body, base_url=base_url)
     return t[f"{kind}_subject"].format(series=series, date=when), html
+
+
+def reset_mail(language: str, *, name: str, email: str, link: str, base_url: str, contact: str, hours: int) -> tuple[str, str]:
+    """The person asked for a new password: the same single-use link as an invitation."""
+    t = texts(language)
+    link = with_language(link, language)
+    href = escape(link, quote=True)
+    body = f"""
+      <p {P}>{escape(_hello(t, name))}</p>
+      <p {P}>{escape(t["reset_body"])}</p>
+      {_button(href, t["reset_button"])}
+      {_facts([(t["label_login"], email), (t["label_valid"], t["valid_value"].format(hours=hours))])}
+      <p {SMALL}>{escape(t["fallback"])}<br><a href="{href}" style="color:{RAIL};word-break:break-all">{escape(link)}</a></p>
+      <p {SMALL}>{escape(t["reset_ignore"])} {_contact_line(t["questions"], contact)}</p>"""
+    html = _layout(language, title=t["reset_heading"], preheader=t["reset_preheader"],
+                   kicker=t["kicker_panel"], heading=t["reset_heading"], body=body, base_url=base_url)
+    return t["reset_subject"], html
+

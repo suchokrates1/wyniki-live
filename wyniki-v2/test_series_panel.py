@@ -329,3 +329,37 @@ def test_a_tournament_organizer_reaches_only_the_tournaments_granted_to_them(cli
     client.put(f"/admin/api/series/{series_id}/members/{member['id']}", json={"role": "editor"})
     assert client.post(f"/organizer/api/series/{series_id}/tournaments", headers=headers,
                        json={"name": "Nowy", "start_date": "2026-11-01", "end_date": "2026-11-02"}).status_code == 201
+
+
+def test_a_forgotten_password_gets_a_link_in_the_persons_language_and_the_answer_tells_nothing(client, monkeypatch):
+    sent = []
+    from wyniki.services import account_invites
+
+    monkeypatch.setattr(account_invites, "_send_email", lambda subject, body, to, **sender: sent.append((subject, body, to)) or True)
+    series_id, invited = _series_with_member(client)
+    client.put(f"/admin/api/series/{series_id}/members/{invited['account']['id']}", json={"language": "de"})
+    client.post(f"/organizer/api/invite/{_token_from(invited['invite_url'])}", json={"password": PASSWORD})
+    sent.clear()
+
+    for email in ("nobody@example.org", "not-an-address"):
+        response = client.post("/organizer/api/forgot", json={"email": email})
+        assert response.status_code == 200 and response.get_json() == {"sent": True}
+    assert sent == []
+
+    assert client.post("/organizer/api/forgot", json={"email": "ORGANIZER@example.org"}).get_json() == {"sent": True}
+    subject, body, to = sent[0]
+    assert to == ["organizer@example.org"] and subject == "blindtennis.app: neues Passwort für den Veranstalterbereich"
+    link = re.search(r'href="([^"]*/organizer/invite\?token=[^"]+)"', body).group(1).replace("&amp;", "&")
+    assert link.endswith("&lang=de")
+    token = re.search(r"token=([^&]+)", link).group(1)
+    # the old password still works until the new one is set, then the link is spent
+    assert _sign_in(client)[0].status_code == 200
+    assert client.post(f"/organizer/api/invite/{token}", json={"password": PASSWORD + "-new"}).status_code == 200
+    assert client.post(f"/organizer/api/invite/{token}", json={"password": PASSWORD + "-x"}).status_code == 410
+    assert _sign_in(client, password=PASSWORD + "-new")[0].status_code == 200
+
+    # a switched-off account gets nothing; asking again and again is stopped
+    client.put(f"/admin/api/series/{series_id}/members/{invited['account']['id']}", json={"disabled": True})
+    sent.clear()
+    statuses = [client.post("/organizer/api/forgot", json={"email": "organizer@example.org"}).status_code for _ in range(5)]
+    assert sent == [] and statuses[-1] == 429
