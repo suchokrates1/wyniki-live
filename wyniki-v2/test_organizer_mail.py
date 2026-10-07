@@ -42,3 +42,26 @@ def test_links_in_a_mail_open_the_page_in_the_mails_language():
     assert ">https://x/organizer/invite?token=t&amp;lang=en<" in html, "the link written out as text too"
     _, html = plan_mail("de", "ending", series="TWT", valid_until="2027-10-31", base_url="https://x", contact="c@example.org")
     assert 'href="https://x/organizer/login?lang=de"' in html
+
+
+def test_the_sender_name_is_quoted_so_mail_clients_show_it(monkeypatch):
+    """A bare 'blindtennis.app <noreply@…>' is not a valid header (the dot): Gmail showed 'noreply'."""
+    from wyniki.services import email_reports
+
+    sent = []
+
+    class FakeSMTP:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *exc): return False
+        def ehlo(self): pass
+        def starttls(self): pass
+        def login(self, *args): pass
+        def send_message(self, message): sent.append(message)
+
+    monkeypatch.setattr(email_reports, "get_email_settings", lambda: {
+        "smtp_host": "smtp.example.org", "smtp_port": 587, "smtp_username": "", "smtp_password": "",
+        "smtp_use_tls": False, "smtp_from_email": "reports@example.org", "smtp_from_name": "Wyniki Live"})
+    monkeypatch.setattr(email_reports.smtplib, "SMTP", FakeSMTP)
+    assert email_reports._send_email("s", "<p>x</p>", ["a@example.org"], from_name="blindtennis.app", from_email="noreply@blindtennis.app")
+    assert sent[0]["From"] == '"blindtennis.app" <noreply@blindtennis.app>'

@@ -4,6 +4,7 @@ from __future__ import annotations
 import smtplib
 from datetime import datetime, UTC
 from email.message import EmailMessage
+from email.utils import formataddr
 from html import escape
 from typing import Any
 from collections.abc import Iterable
@@ -84,7 +85,9 @@ def _send_email(
     from_name = from_name or config["smtp_from_name"]
     from_email = from_email or config["smtp_from_email"]
     message["Subject"] = subject
-    message["From"] = f"{from_name} <{from_email}>"
+    # quoted: a name with a dot ("blindtennis.app") is not a valid bare display name, and Gmail
+    # would show the bare address ("noreply") instead
+    message["From"] = formataddr((from_name, from_email))
     message["To"] = ", ".join(recipient_list)
     if reply_to:
         message["Reply-To"] = reply_to
