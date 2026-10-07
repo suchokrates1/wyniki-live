@@ -46,8 +46,10 @@ test('21 walkover picks a winner and hides Undo', async ({ page }) => {
   await startBasicMatch(page);
   await page.getByRole('button', { name: 'Finish' }).click();
   await page.getByRole('button', { name: 'Walkover' }).click();
-  await expect(page.getByText('Who wins the walkover?')).toBeVisible();
-  await page.getByRole('button', { name: /Kowalski/ }).click();
+  const prompt = page.getByText('Who wins the walkover?');
+  await expect(prompt).toBeVisible();
+  // in landscape the serve buttons stay beside the finish sheet and carry the same name
+  await prompt.locator('xpath=..').getByRole('button', { name: /Kowalski/ }).click();
   await expect(page.getByRole('heading', { name: 'Match Finished!' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
 });

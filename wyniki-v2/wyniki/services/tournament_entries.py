@@ -193,7 +193,7 @@ def update_global_player(gp_id: int, data: dict[str, Any]) -> Result:
             new_class,
             source='manual',
             effective_date=str(data.get('classification_date') or '').strip() or None,
-            status=data.get('classification_status') if data.get('classification_status') in classifications.STATUSES else 'confirmed',
+            status=str(data.get('classification_status')) if data.get('classification_status') in classifications.STATUSES else 'confirmed',
             note=str(data.get('classification_note') or '').strip(),
         )
         forget_row(gp)

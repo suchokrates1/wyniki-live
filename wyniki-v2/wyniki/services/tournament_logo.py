@@ -16,8 +16,8 @@ __all__ = ["field_for", "remove", "save"]
 
 def save(tournament_id: int, uploaded_file, field: str = "logo_path") -> tuple[dict, int]:
     data, extension, error = read_picture(uploaded_file)
-    if error:
-        return error
+    if error or data is None:
+        return error or ({"error": "No file"}, 400)
     stem = f"t{tournament_id}{'-dark' if field == 'logo_dark_path' else ''}"
     path = store(FOLDER, stem, data, extension)
     drop(FOLDER, _set(tournament_id, path, field))

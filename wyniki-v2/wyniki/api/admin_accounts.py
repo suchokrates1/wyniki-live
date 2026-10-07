@@ -120,6 +120,8 @@ def reinvite(account_id: int):
 
 def _invite(account_id: int) -> dict:
     account = accounts.get_account(account_id)
+    if account is None:
+        raise LookupError(f"account {account_id}")
     mailed, link = send_admin_mail("invite", account)
     return {"account": account, "invite_url": link, "emailed": mailed}
 

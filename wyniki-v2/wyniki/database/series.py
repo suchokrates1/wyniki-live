@@ -125,7 +125,7 @@ def create_series(name: str, *, slug: str = "", country: str = "", website: str 
             (name.strip(), candidate, country.strip().upper()[:2], website.strip(), valid_until.strip()),
         )
         conn.commit()
-        return int(cursor.lastrowid)
+        return int(cursor.lastrowid or 0)
 
 
 def update_series(series_id: int, fields: dict[str, Any]) -> bool:

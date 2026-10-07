@@ -116,6 +116,8 @@ def series_logo_upload(series_id: int):
     if denied:
         return denied
     item = series.get_series(series_id)
+    if not item:
+        return jsonify({"error": "Series not found"}), 404
     field = series_logo.field_for(request.args.get("variant"))
     body, status = series_logo.save(series_id, item["slug"], request.files.get("logo"), field)
     return jsonify(body), status

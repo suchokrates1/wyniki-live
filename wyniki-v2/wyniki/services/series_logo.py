@@ -16,8 +16,8 @@ __all__ = ["field_for", "remove", "save"]
 def save(series_id: int, slug: str, uploaded_file, field: str = "logo_path") -> tuple[dict, int]:
     """Stores the uploaded picture as that version of the series' logo; the old one goes."""
     data, extension, error = read_picture(uploaded_file)
-    if error:
-        return error
+    if error or data is None:
+        return error or ({"error": "No file"}, 400)
     stem = f"{slug or 'series'}{'-dark' if field == 'logo_dark_path' else ''}"
     path = store(FOLDER, stem, data, extension)
     drop(FOLDER, series.set_logo(series_id, path, field))

@@ -109,6 +109,8 @@ def reinvite(series_id: int, account_id: int):
 
 def _invite(account_id: int, series_name: str) -> dict:
     account = accounts.get_account(account_id)
+    if account is None:
+        raise LookupError(f"account {account_id}")
     link = invite_link(account_id)
     emailed = send_invite(account, series_name, link)
     return {"account": account, "invite_url": link, "emailed": emailed}

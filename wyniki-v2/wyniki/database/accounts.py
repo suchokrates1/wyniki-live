@@ -68,7 +68,7 @@ def ensure_account(email: str, name: str = "", language: str | None = None) -> i
             (address, name.strip(), normalize_language(language)),
         )
         conn.commit()
-        return int(cursor.lastrowid)
+        return int(cursor.lastrowid or 0)
 
 
 def password_fingerprint(account_id: int) -> str | None:

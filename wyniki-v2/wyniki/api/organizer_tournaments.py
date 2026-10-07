@@ -77,6 +77,8 @@ def _overlay_links(tournament_id: int) -> list[dict]:
 
 def _detail(tournament_id: int) -> dict:
     tournament = fetch_tournament(tournament_id)
+    if tournament is None:  # the guard let it through, so it is in a series: it exists
+        raise LookupError(f"tournament {tournament_id}")
     tournament.pop("access_key", None)
     tiers = {row["id"]: row for row in _series_of_tournament(tournament_id)}
     return {
@@ -124,6 +126,8 @@ def update(tournament_id: int):
     if "court_count" in _payload() and _over_court_limit(in_series, _payload().get("court_count")):
         return jsonify({"error": "Court limit exceeded", "limit": _court_limit(in_series)}), 400
     existing = fetch_tournament(tournament_id)
+    if existing is None:
+        return jsonify({"error": "Tournament not found"}), 404
     data = {
         "name": existing["name"], "start_date": existing["start_date"], "end_date": existing["end_date"],
         "city": existing.get("city") or "", "country": existing.get("country") or "",

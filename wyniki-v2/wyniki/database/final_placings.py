@@ -66,7 +66,7 @@ def save(tournament_id: int, items: list[dict]) -> list[dict[str, Any]]:
         own = {int(row[0]) for row in conn.execute("SELECT id FROM players WHERE tournament_id = ?", (tournament_id,))}
         for item in items or []:
             try:
-                player_id = int(item.get("player_id"))
+                player_id = int(item.get("player_id") or 0)
             except (TypeError, ValueError, AttributeError):
                 continue
             band = str(item.get("band") or "").upper()

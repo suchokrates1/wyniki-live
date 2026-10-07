@@ -11,7 +11,6 @@ HTTP status convention:
 """
 from __future__ import annotations
 
-from hmac import compare_digest
 from datetime import datetime, timedelta, UTC
 
 from flask import g, jsonify, request
@@ -36,7 +35,7 @@ def issue_court_token(kort_id: str) -> str:
 
 def issue_admin_token(account_id: int | None = None) -> str:
     """An administrator's session; it names the account (None: the shared password, while it works)."""
-    payload = {"role": "admin"}
+    payload: dict[str, str | int] = {"role": "admin"}
     if account_id is not None:
         payload["aid"] = int(account_id)
     return _serializer("admin-access").dumps(payload)
