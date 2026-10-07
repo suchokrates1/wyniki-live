@@ -112,29 +112,29 @@
       object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,0.35));
     }
 
-    .ov-tryby { color:#e8ecef; font-family:var(--font-sans); }
+    .ov-tryby { color:#e8f4f2; font-family:var(--font-sans); }
     .ov-tryby-bar {
       display:flex; align-items:center; gap:16px; flex-wrap:wrap;
       min-height:64px; padding:10px 16px; margin-bottom:16px;
-      background:#151a20; border:1px solid #232a31; border-radius:14px;
+      background:#062028; border:1px solid #1a4450; border-radius:14px;
     }
-    .ov-tryby-modes { display:flex; gap:4px; background:#1d242c; border-radius:10px; padding:4px; }
+    .ov-tryby-modes { display:flex; gap:4px; background:#0a2932; border-radius:10px; padding:4px; }
     .ov-mode-btn {
       height:38px; padding:0 18px; border:none; border-radius:7px; cursor:pointer;
-      font-family:var(--font-sans); font-size:14px; font-weight:700; background:transparent; color:#8b949e;
+      font-family:var(--font-sans); font-size:14px; font-weight:700; background:transparent; color:#8fb4bc;
     }
-    .ov-mode-btn.is-on { background:#FFD400; color:#06222B; }
-    .ov-dock { background:#151a20; border:1px solid #232a31; border-radius:14px; padding:18px; }
-    .ov-dock-title { font-size:12px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; color:#8b949e; margin-bottom:14px; }
-    .ov-el-card { background:#1b2129; border:1px solid #2b333c; border-radius:10px; padding:14px; }
-    .ov-el-card.is-on { border-color:#FFD400; }
+    .ov-mode-btn.is-on { background:#c6e953; color:#141a08; }
+    .ov-dock { background:#062028; border:1px solid #1a4450; border-radius:14px; padding:18px; }
+    .ov-dock-title { font-size:12px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; color:#8fb4bc; margin-bottom:14px; }
+    .ov-el-card { background:#0a2932; border:1px solid #1a4450; border-radius:10px; padding:14px; }
+    .ov-el-card.is-on { border-color:#c6e953; }
     .ov-el-card.is-off { opacity:.55; }
-    .ov-tpl { border:1px solid #2b333c; border-radius:10px; overflow:hidden; cursor:pointer; background:#0a0d10; }
-    .ov-tpl.is-on { border:2px solid #FFD400; }
-    .ov-tpl-thumb { aspect-ratio:16/9; position:relative; background:#0a0d10; }
+    .ov-tpl { border:1px solid #1a4450; border-radius:10px; overflow:hidden; cursor:pointer; background:#041519; }
+    .ov-tpl.is-on { border:2px solid #c6e953; }
+    .ov-tpl-thumb { aspect-ratio:16/9; position:relative; background:#041519; }
     .ov-tpl-thumb span { position:absolute; background:#0B2C36; border-radius:2px; }
     .ov-look-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; font-size:14px; cursor:pointer; }
-    .ov-out-url { display:flex; align-items:center; gap:12px; background:#1b2129; border:1px solid #2b333c; border-radius:10px; padding:12px 14px; }
-    .ov-out-url.is-on { border-color:#FFD400; }
-    .ov-wm-pos { height:52px; font-size:18px; border:1px solid #2b333c; border-radius:8px; background:#1d242c; color:#e8ecef; cursor:pointer; }
-    .ov-wm-pos.is-on { border-color:#FFD400; background:#FFD400; color:#06222B; }
+    .ov-out-url { display:flex; align-items:center; gap:12px; background:#0a2932; border:1px solid #1a4450; border-radius:10px; padding:12px 14px; }
+    .ov-out-url.is-on { border-color:#c6e953; }
+    .ov-wm-pos { height:52px; font-size:18px; border:1px solid #1a4450; border-radius:8px; background:#0a2932; color:#e8f4f2; cursor:pointer; }
+    .ov-wm-pos.is-on { border-color:#c6e953; background:#c6e953; color:#141a08; }

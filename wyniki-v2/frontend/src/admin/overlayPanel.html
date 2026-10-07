@@ -3,7 +3,7 @@
 
       <div class="ov-tryby-bar">
         <span class="font-black tracking-[0.12em] uppercase text-[15px]">Overlay</span>
-        <select class="select select-sm bg-[#1d242c] border-[#2b333c] text-[#e8ecef] font-bold"
+        <select class="select select-sm bg-[#0a2932] border-[#1a4450] text-[#e8f4f2] font-bold"
                 :value="currentOverlayId"
                 @change="currentOverlayId = $event.target.value; selectedElIdx = -1; selectedElIdxSet = []; addElCourtId = overlayCourtOptions((overlaySettings.overlays || {})[$event.target.value])[0]?.value || '1'">
           <template x-for="(ov, oid) in (overlaySettings.overlays || {})" :key="'otab_'+oid">
@@ -16,16 +16,16 @@
           <button type="button" class="ov-mode-btn" :class="overlayEditorMode === 'out' && 'is-on'" @click="overlayEditorMode = 'out'">Wyjście</button>
         </div>
         <div class="flex-1"></div>
-        <button @click="addOverlay()" class="btn btn-sm btn-ghost text-[#e8ecef]">+ Nowy</button>
+        <button @click="addOverlay()" class="btn btn-sm btn-ghost text-[#e8f4f2]">+ Nowy</button>
         <button x-show="currentOverlayId && Object.keys(overlaySettings.overlays||{}).length > 1"
                 @click="removeOverlay()" class="btn btn-sm btn-ghost text-error">Usuń</button>
-        <button @click="loadDemoData()" class="btn btn-sm bg-[#1d242c] border border-[#2b333c] text-[#e8ecef]">🎾 Demo dane</button>
+        <button @click="loadDemoData()" class="btn btn-sm bg-[#0a2932] border border-[#1a4450] text-[#e8f4f2]">🎾 Demo dane</button>
         <button x-show="demoPreview" @click="toggleDemoOverlay()" class="btn btn-sm" :class="demoOverlayActive ? 'btn-error' : 'btn-outline'">
           <span x-text="demoOverlayActive ? '● DEMO W OVERLAY' : '▶ Pokaż w overlay'"></span>
         </button>
         <button x-show="demoPreview" @click="clearDemo()" class="btn btn-sm btn-ghost">× Wyczyść</button>
         <span class="font-mono text-xs"
-              :class="overlayPreviewStatus() === 'live' ? 'text-[#4ade80]' : overlayPreviewStatus() === 'mock' ? 'text-[#FFD400]' : 'opacity-50'"
+              :class="overlayPreviewStatus() === 'live' ? 'text-[#4ade80]' : overlayPreviewStatus() === 'mock' ? 'text-[#c6e953]' : 'opacity-50'"
               x-text="overlayPreviewStatus() === 'live' ? '● na żywo' : overlayPreviewStatus() === 'mock' ? '● mock TV' : '○ brak meczu'"></span>
       </div>
 
@@ -91,13 +91,13 @@
             <div class="flex items-center mb-3.5">
               <span class="ov-dock-title mb-0">Elementy na obrazie</span>
               <div class="ml-auto flex items-center gap-2">
-                <select x-model="addElCourtId" class="select select-xs bg-[#111721] border-[#2b333c] text-[#e8ecef] w-28">
+                <select x-model="addElCourtId" class="select select-xs bg-[#0a2932] border-[#1a4450] text-[#e8f4f2] w-28">
                   <template x-for="option in overlayCourtOptions()" :key="'addel_'+option.value">
                     <option :value="option.value" x-text="option.label"></option>
                   </template>
                 </select>
-                <button @click="addElement('court')" class="btn btn-sm border-none bg-[#FFD400] text-[#06222B] font-bold">+ Kort</button>
-                <button @click="addElement('stats')" class="btn btn-sm bg-[#1d242c] border border-[#2b333c] text-[#e8ecef]">+ Stats</button>
+                <button @click="addElement('court')" class="btn btn-sm border-none bg-[#c6e953] text-[#141a08] font-bold">+ Kort</button>
+                <button @click="addElement('stats')" class="btn btn-sm bg-[#0a2932] border border-[#1a4450] text-[#e8f4f2]">+ Stats</button>
               </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -105,36 +105,36 @@
                 <div class="ov-el-card" :class="{ 'is-on': selectedElIdx === idx, 'is-off': el.visible === false }" @click="selectedElIdx = idx; selectedElIdxSet = [idx]">
                   <div class="flex items-center gap-2 mb-3">
                     <span class="font-black text-[15px]" x-text="elementTitle(el)"></span>
-                    <span class="ml-auto font-mono text-[11px] text-[#8b949e]" x-text="elementPlacementLabel(el)"></span>
+                    <span class="ml-auto font-mono text-[11px] text-[#8fb4bc]" x-text="elementPlacementLabel(el)"></span>
                     <input type="checkbox" class="toggle toggle-success toggle-sm"
                            :checked="el.visible !== false"
                            @click.stop
                            @change="selectedElIdx = idx; setElProp('visible', $event.target.checked)">
                   </div>
                   <div class="flex items-center gap-2 mb-2">
-                    <select class="select select-sm bg-[#111721] border-[#2b333c] text-[#e8ecef] flex-1"
+                    <select class="select select-sm bg-[#0a2932] border-[#1a4450] text-[#e8f4f2] flex-1"
                             :value="el.court_id || '1'"
                             @change="selectedElIdx = idx; setElProp('court_id', $event.target.value)">
                       <template x-for="option in overlayCourtOptions()" :key="'elc_'+idx+'_'+option.value">
                         <option :value="option.value" x-text="option.label"></option>
                       </template>
                     </select>
-                    <input type="text" class="input input-sm bg-[#111721] border-[#2b333c] text-[#e8ecef] flex-1"
+                    <input type="text" class="input input-sm bg-[#0a2932] border-[#1a4450] text-[#e8f4f2] flex-1"
                            :value="el.label_text || ''" placeholder="Etykieta"
                            @change="selectedElIdx = idx; setElProp('label_text', $event.target.value)">
                   </div>
                   <div class="grid grid-cols-4 gap-2" x-show="el.zone !== 'top' || !currentOverlay()?.top_bar?.enabled">
-                    <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8b949e]">X</span>
-                      <input type="number" class="input input-sm font-mono bg-[#111721] border-[#2b333c] text-[#e8ecef]" :value="el.x" @change="selectedElIdx = idx; setElProp('x', +$event.target.value)"></label>
-                    <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8b949e]">Y</span>
-                      <input type="number" class="input input-sm font-mono bg-[#111721] border-[#2b333c] text-[#e8ecef]" :value="el.y" @change="selectedElIdx = idx; setElProp('y', +$event.target.value)"></label>
-                    <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8b949e]">W</span>
-                      <input type="number" class="input input-sm font-mono bg-[#111721] border-[#2b333c] text-[#e8ecef]" :value="el.w" @change="selectedElIdx = idx; setDimension('w', +$event.target.value)"></label>
-                    <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8b949e]">H</span>
-                      <input type="number" class="input input-sm font-mono bg-[#111721] border-[#2b333c] text-[#e8ecef]" :value="el.h || ''" placeholder="auto" @change="selectedElIdx = idx; setDimension('h', $event.target.value ? +$event.target.value : null)"></label>
+                    <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8fb4bc]">X</span>
+                      <input type="number" class="input input-sm font-mono bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]" :value="el.x" @change="selectedElIdx = idx; setElProp('x', +$event.target.value)"></label>
+                    <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8fb4bc]">Y</span>
+                      <input type="number" class="input input-sm font-mono bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]" :value="el.y" @change="selectedElIdx = idx; setElProp('y', +$event.target.value)"></label>
+                    <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8fb4bc]">W</span>
+                      <input type="number" class="input input-sm font-mono bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]" :value="el.w" @change="selectedElIdx = idx; setDimension('w', +$event.target.value)"></label>
+                    <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8fb4bc]">H</span>
+                      <input type="number" class="input input-sm font-mono bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]" :value="el.h || ''" placeholder="auto" @change="selectedElIdx = idx; setDimension('h', $event.target.value ? +$event.target.value : null)"></label>
                   </div>
                   <div class="flex items-center gap-2 mt-2">
-                    <select class="select select-xs bg-[#111721] border-[#2b333c] text-[#e8ecef]"
+                    <select class="select select-xs bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]"
                             :value="el.zone || 'free'"
                             @change="selectedElIdx = idx; setElZone($event.target.value)">
                       <option value="free">Swobodny</option>
@@ -169,16 +169,16 @@
                 </div>
                 <div class="text-xs font-bold px-2.5 py-2">Główny + stats</div>
               </button>
-              <button type="button" class="ov-tpl text-left border-dashed min-h-24 flex items-center justify-center text-[#8b949e] text-xs font-bold" @click="saveCurrentAsNewOverlay()">+ Zapisz obecny</button>
+              <button type="button" class="ov-tpl text-left border-dashed min-h-24 flex items-center justify-center text-[#8fb4bc] text-xs font-bold" @click="saveCurrentAsNewOverlay()">+ Zapisz obecny</button>
             </div>
             <div class="flex flex-wrap gap-1 mt-3">
               <template x-for="option in overlayCourtOptions()" :key="'tpl_focus_'+option.value">
-                <button @click="applyTemplate('kort'+option.value+'-focus')" class="btn btn-xs bg-[#1d242c] border border-[#2b333c] text-[#e8ecef]" x-text="option.label + ' focus'"></button>
+                <button @click="applyTemplate('kort'+option.value+'-focus')" class="btn btn-xs bg-[#0a2932] border border-[#1a4450] text-[#e8f4f2]" x-text="option.label + ' focus'"></button>
               </template>
-              <button @click="applyTemplate('4kort-top')" class="btn btn-xs bg-[#1d242c] border border-[#2b333c] text-[#e8ecef]">4 korty góra</button>
-              <button @click="applyTemplate('all-top')" class="btn btn-xs bg-[#1d242c] border border-[#2b333c] text-[#e8ecef]">Wszystkie góra</button>
+              <button @click="applyTemplate('4kort-top')" class="btn btn-xs bg-[#0a2932] border border-[#1a4450] text-[#e8f4f2]">4 korty góra</button>
+              <button @click="applyTemplate('all-top')" class="btn btn-xs bg-[#0a2932] border border-[#1a4450] text-[#e8f4f2]">Wszystkie góra</button>
             </div>
-            <div class="h-px bg-[#232a31] my-4"></div>
+            <div class="h-px bg-[#1a4450] my-4"></div>
             <label class="ov-look-row">
               <span>Autoukrywanie pustych kortów</span>
               <input type="checkbox" class="toggle toggle-success"
@@ -194,26 +194,26 @@
             <template x-if="currentOverlay()?.top_bar?.enabled">
               <div class="mt-2">
                 <div class="flex items-center gap-2 mb-2">
-                  <span class="text-xs text-[#8b949e]">Kolumny</span>
-                  <button class="btn btn-xs" :class="currentOverlay()?.top_bar?.columns === 3 ? 'bg-[#FFD400] text-[#06222B] border-none' : 'bg-[#1d242c] border-[#2b333c] text-[#e8ecef]'" @click="setTopBarProp('columns', 3)">3</button>
-                  <button class="btn btn-xs" :class="currentOverlay()?.top_bar?.columns === 4 ? 'bg-[#FFD400] text-[#06222B] border-none' : 'bg-[#1d242c] border-[#2b333c] text-[#e8ecef]'" @click="setTopBarProp('columns', 4)">4</button>
+                  <span class="text-xs text-[#8fb4bc]">Kolumny</span>
+                  <button class="btn btn-xs" :class="currentOverlay()?.top_bar?.columns === 3 ? 'bg-[#c6e953] text-[#141a08] border-none' : 'bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]'" @click="setTopBarProp('columns', 3)">3</button>
+                  <button class="btn btn-xs" :class="currentOverlay()?.top_bar?.columns === 4 ? 'bg-[#c6e953] text-[#141a08] border-none' : 'bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]'" @click="setTopBarProp('columns', 4)">4</button>
                 </div>
                 <div class="grid grid-cols-3 gap-2">
-                  <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8b949e]">Margines X</span>
-                    <input type="number" class="input input-xs font-mono bg-[#111721] border-[#2b333c] text-[#e8ecef]" :value="currentOverlay()?.top_bar?.margin_x || 0" @change="setTopBarProp('margin_x', +$event.target.value)"></label>
-                  <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8b949e]">Góra</span>
-                    <input type="number" class="input input-xs font-mono bg-[#111721] border-[#2b333c] text-[#e8ecef]" :value="currentOverlay()?.top_bar?.margin_top || 0" @change="setTopBarProp('margin_top', +$event.target.value)"></label>
-                  <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8b949e]">Odstęp</span>
-                    <input type="number" class="input input-xs font-mono bg-[#111721] border-[#2b333c] text-[#e8ecef]" :value="currentOverlay()?.top_bar?.gap ?? 10" @change="setTopBarProp('gap', +$event.target.value)"></label>
+                  <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8fb4bc]">Margines X</span>
+                    <input type="number" class="input input-xs font-mono bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]" :value="currentOverlay()?.top_bar?.margin_x || 0" @change="setTopBarProp('margin_x', +$event.target.value)"></label>
+                  <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8fb4bc]">Góra</span>
+                    <input type="number" class="input input-xs font-mono bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]" :value="currentOverlay()?.top_bar?.margin_top || 0" @change="setTopBarProp('margin_top', +$event.target.value)"></label>
+                  <label class="flex flex-col gap-1"><span class="font-mono text-[11px] text-[#8fb4bc]">Odstęp</span>
+                    <input type="number" class="input input-xs font-mono bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]" :value="currentOverlay()?.top_bar?.gap ?? 10" @change="setTopBarProp('gap', +$event.target.value)"></label>
                 </div>
               </div>
             </template>
-            <div class="h-px bg-[#232a31] my-4"></div>
+            <div class="h-px bg-[#1a4450] my-4"></div>
             <div class="ov-dock-title">Overlay</div>
-            <label class="flex flex-col gap-1 mb-2"><span class="text-xs text-[#8b949e]">Nazwa</span>
-              <input type="text" class="input input-sm bg-[#111721] border-[#2b333c] text-[#e8ecef]" :value="currentOverlay()?.name || ''" @change="updateOverlayProp('name', $event.target.value)"></label>
-            <label class="flex flex-col gap-1"><span class="text-xs text-[#8b949e]">Turniej</span>
-              <select class="select select-sm bg-[#111721] border-[#2b333c] text-[#e8ecef]"
+            <label class="flex flex-col gap-1 mb-2"><span class="text-xs text-[#8fb4bc]">Nazwa</span>
+              <input type="text" class="input input-sm bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]" :value="currentOverlay()?.name || ''" @change="updateOverlayProp('name', $event.target.value)"></label>
+            <label class="flex flex-col gap-1"><span class="text-xs text-[#8fb4bc]">Turniej</span>
+              <select class="select select-sm bg-[#0a2932] border-[#1a4450] text-[#e8f4f2]"
                       :value="currentOverlay()?.tournament_id || ''"
                       @change="setCurrentOverlayTournament($event.target.value)">
                 <option value="">Bez przypisania</option>
@@ -239,18 +239,18 @@
             <label class="ov-look-row"><span>Puls wygranego gema</span><input type="checkbox" class="toggle toggle-success" :checked="overlayLook().anim_game !== false" @change="setLookProp('anim_game', $event.target.checked)"></label>
             <label class="ov-look-row"><span>Przejazd światła po secie</span><input type="checkbox" class="toggle toggle-success" :checked="overlayLook().anim_set !== false" @change="setLookProp('anim_set', $event.target.checked)"></label>
             <label class="flex flex-col gap-2 pt-3">
-              <span>Tempo animacji <span class="font-mono text-[#8b949e]" x-text="(overlayLook().anim_speed || 1).toFixed(1) + '×'"></span></span>
+              <span>Tempo animacji <span class="font-mono text-[#8fb4bc]" x-text="(overlayLook().anim_speed || 1).toFixed(1) + '×'"></span></span>
               <input type="range" min="50" max="200" step="10" :value="Math.round((overlayLook().anim_speed || 1) * 100)" @input="setLookProp('anim_speed', +$event.target.value / 100)">
             </label>
           </div>
           <div class="ov-dock">
             <div class="ov-dock-title">Skala i krycie</div>
             <label class="flex flex-col gap-2 py-2">
-              <span>Skala scoreboardu <span class="font-mono text-[#8b949e]" x-text="Math.round((overlayLook().scale || 1) * 100) + '%'"></span></span>
+              <span>Skala scoreboardu <span class="font-mono text-[#8fb4bc]" x-text="Math.round((overlayLook().scale || 1) * 100) + '%'"></span></span>
               <input type="range" min="70" max="130" step="5" :value="Math.round((overlayLook().scale || 1) * 100)" @input="setLookProp('scale', +$event.target.value / 100)">
             </label>
             <label class="flex flex-col gap-2 py-2" x-show="selectedEl()?.type === 'court'">
-              <span>Krycie tła <span class="font-mono text-[#8b949e]" x-text="Math.round((selectedEl()?.bg_opacity != null ? selectedEl().bg_opacity : 0.95) * 100) + '%'"></span></span>
+              <span>Krycie tła <span class="font-mono text-[#8fb4bc]" x-text="Math.round((selectedEl()?.bg_opacity != null ? selectedEl().bg_opacity : 0.95) * 100) + '%'"></span></span>
               <input type="range" min="0" max="100" step="5" :value="Math.round((selectedEl()?.bg_opacity != null ? selectedEl().bg_opacity : 0.95) * 100)" @input="setElProp('bg_opacity', +$event.target.value / 100)">
             </label>
           </div>
@@ -264,9 +264,9 @@
                 <div class="ov-out-url" :class="oid === currentOverlayId && 'is-on'">
                   <div class="flex-1 min-w-0">
                     <div class="font-bold text-sm mb-0.5" x-text="ov.name || oid"></div>
-                    <div class="font-mono text-xs text-[#8b949e] truncate" x-text="overlayUrl(oid) || ('Brak slotu: ' + (getTournamentById(ov.tournament_id)?.name || 'nieprzypisany'))"></div>
+                    <div class="font-mono text-xs text-[#8fb4bc] truncate" x-text="overlayUrl(oid) || ('Brak slotu: ' + (getTournamentById(ov.tournament_id)?.name || 'nieprzypisany'))"></div>
                   </div>
-                  <button x-show="overlayUrl(oid)" @click="copyUrl(overlayUrl(oid))" class="btn btn-sm border-none bg-[#FFD400] text-[#06222B] font-bold">Kopiuj</button>
+                  <button x-show="overlayUrl(oid)" @click="copyUrl(overlayUrl(oid))" class="btn btn-sm border-none bg-[#c6e953] text-[#141a08] font-bold">Kopiuj</button>
                 </div>
               </template>
             </div>
@@ -286,11 +286,11 @@
               <button type="button" class="ov-wm-pos" :class="(currentOverlay()?.watermark?.position || 'bottom-right') === 'bottom-right' && 'is-on'" @click="setWatermarkProp('position', 'bottom-right')">↘</button>
             </div>
             <label class="flex flex-col gap-2 py-2">
-              <span>Rozmiar <span class="font-mono text-[#8b949e]" x-text="(currentOverlay()?.watermark?.size || 140) + ' px'"></span></span>
+              <span>Rozmiar <span class="font-mono text-[#8fb4bc]" x-text="(currentOverlay()?.watermark?.size || 140) + ' px'"></span></span>
               <input type="range" min="40" max="400" step="10" :value="currentOverlay()?.watermark?.size || 140" @input="setWatermarkProp('size', +$event.target.value)">
             </label>
             <label class="flex flex-col gap-2 py-2">
-              <span>Krycie <span class="font-mono text-[#8b949e]" x-text="Math.round((currentOverlay()?.watermark?.opacity != null ? currentOverlay().watermark.opacity : 0.4) * 100) + '%'"></span></span>
+              <span>Krycie <span class="font-mono text-[#8fb4bc]" x-text="Math.round((currentOverlay()?.watermark?.opacity != null ? currentOverlay().watermark.opacity : 0.4) * 100) + '%'"></span></span>
               <input type="range" min="10" max="100" step="5" :value="Math.round((currentOverlay()?.watermark?.opacity != null ? currentOverlay().watermark.opacity : 0.4) * 100)" @input="setWatermarkProp('opacity', +$event.target.value / 100)">
             </label>
           </div>

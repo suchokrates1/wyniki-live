@@ -62,7 +62,7 @@
           <div class="divider">Kategorie turnieju</div>
           <p class="text-sm opacity-70 -mt-2">Standardowe kategorie (B1–B4 K/M) i własne (np. B2 Mixed, B3/4 Mixed). Zatwierdź przed dodaniem zawodników.</p>
 
-          <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 mt-2" x-show="!adminTournamentCategories.length || adminCategorySetupOpen">
+          <div class="adm-catpick" x-show="!adminTournamentCategories.length || adminCategorySetupOpen">
             <div class="flex flex-wrap gap-2">
               <template x-for="preset in adminCategoryPresetKeys()" :key="'edit_preset_'+preset">
                 <label class="inline-flex flex-col gap-1 rounded-2xl border border-base-300 bg-base-100 px-3 py-2 text-sm cursor-pointer">
@@ -78,8 +78,8 @@
               </template>
             </div>
             <div class="mt-3 grid gap-2 sm:grid-cols-3">
-              <input type="text" class="input input-bordered sm:col-span-2" placeholder="Np. B2 Mixed lub B3/4 Mixed" x-model="adminCategoryCustomLabel">
-              <input type="text" class="input input-bordered" placeholder="B2 / B3,B4" x-model="adminCategoryCustomHints">
+              <input type="text" class="adm-input sm:col-span-2" aria-label="Własna kategoria" placeholder="Np. B2 Mixed lub B3/4 Mixed" x-model="adminCategoryCustomLabel">
+              <input type="text" class="adm-input" aria-label="Klasy własnej kategorii" placeholder="B2 / B3,B4" x-model="adminCategoryCustomHints">
             </div>
             <label class="mt-2 inline-flex items-center gap-2 text-sm">
               <input type="checkbox" class="checkbox checkbox-sm" x-model="adminCategoryCustomDoubles">

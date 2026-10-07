@@ -177,7 +177,8 @@
 .adm-card .divider::before { display: none; }
 .adm-card .input, .adm-card .select { min-height: 44px; border-radius: 10px; border-color: var(--adm-line); font: inherit; }
 .adm-legacy-block { display: flex; flex-direction: column; gap: 12px; }
-.adm-legacy-block select.adm-input { max-width: 420px; }
+.adm-legacy-block select.adm-input { max-width: min(420px, 100%); }
+.adm-legacy-block .form-control { min-width: 0; max-width: 100%; }
 
 /* a checkbox standing in a field grid: as tall as the inputs beside it */
 .adm-field__check { min-height: 44px; color: var(--adm-ink); font-size: 15px; }
@@ -205,3 +206,17 @@
 :is(.adm-app, .adm-body dialog) .btn-error { background: var(--adm-danger-soft); border: 1px solid var(--adm-danger-line); color: var(--adm-danger); }
 .adm-body dialog .btn-primary { background: var(--adm-accent); border-color: var(--adm-accent); color: var(--adm-on-accent); }
 .adm-body dialog .btn-ghost { color: var(--adm-muted); }
+
+/* the import preview is a wide table: the modal takes the room it needs */
+.adm-body dialog .modal-box.max-w-6xl { width: min(72rem, calc(100vw - 32px)); max-width: none; }
+:is(.adm-app, .adm-body dialog) :is(.stats, .stat) { background: var(--adm-surface-2); color: var(--adm-ink); border-color: var(--adm-line); }
+:is(.adm-app, .adm-body dialog) .stat-title { color: var(--adm-muted); }
+:is(.adm-app, .adm-body dialog) :is(.checkbox, .radio, .toggle) { border-color: var(--adm-muted); }
+:is(.adm-app, .adm-body dialog) .radio:checked { --chkbg: var(--adm-accent); background-color: var(--adm-accent); border-color: var(--adm-accent); box-shadow: 0 0 0 4px var(--adm-surface) inset, 0 0 0 4px var(--adm-surface) inset; }
+/* a plain legacy button in a dialog reads as the panel's quiet button */
+.adm-body dialog .btn:not(.btn-primary):not(.btn-error):not(.btn-ghost) { background: var(--adm-surface); border: 1px solid var(--adm-line); color: var(--adm-ink); }
+/* radio rows keep their gaps */
+.adm-app .gap-x-6 { column-gap: 1.5rem; }
+.adm-app .gap-y-2 { row-gap: 0.5rem; }
+/* the category picker: a raised box of the panel, not a green island */
+.adm-catpick { margin-top: 8px; padding: 16px; border: 1px solid var(--adm-line); border-radius: 12px; background: var(--adm-surface-2); }
