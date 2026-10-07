@@ -154,3 +154,17 @@ test('a forgotten password: the address gets a link, the page says so without te
   await expect(page.getByLabel('Hasło', { exact: true })).toBeVisible();
   await expect(page.getByRole('status')).toBeHidden();
 });
+
+test('the doors page: the office and the organizer, in the language chosen, and no way to the admin', async ({ page }) => {
+  await page.goto('/panel?lang=de');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Für Veranstalter');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+  await expect(page.getByRole('link', { name: /Turnierbüro/ })).toHaveAttribute('href', '/office?lang=de');
+  await expect(page.getByRole('link', { name: /Veranstalterbereich der Serie/ })).toHaveAttribute('href', '/organizer/login?lang=de');
+  await expect(page.locator('a[href*="/admin"]')).toHaveCount(0);
+  await page.getByLabel('Sprache').selectOption('pl');
+  await expect(page.getByRole('link', { name: /Biuro turnieju/ })).toHaveAttribute('href', '/office?lang=pl');
+  expect(await page.evaluate(() => localStorage.getItem('lang'))).toBe('pl');
+  expect(await axe(page)).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+});

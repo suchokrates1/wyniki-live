@@ -62,6 +62,7 @@ export function start(port = 8811) {
       : (p === '/admin/login' || p === '/admin/login/') ? '/admin-login.html'
       : (p === '/organizer' || p === '/organizer/') ? '/organizer.html'
       : (p === '/organizer/login' || p === '/organizer/invite') ? '/organizer-login.html'
+      : (p === '/panel' || p === '/panel/') ? '/panel.html'
       : p.startsWith('/overlay/') ? '/overlay.html' // as Flask serves /overlay/<id> and /overlay/<slot>/<id>
       : p;
     const file = normalize(join(STATIC, mapped));

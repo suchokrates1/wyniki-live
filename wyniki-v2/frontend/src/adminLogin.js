@@ -41,6 +41,7 @@ wireSignInForm({
       window.location.replace(next);
       return '';
     }
+    if (response.status === 429) return 'Za dużo nieudanych prób. Odczekaj 15 minut i spróbuj ponownie.';
     return response.status === 503
       ? 'Panel administratora nie jest skonfigurowany na tym serwerze.'
       : 'Nieprawidłowe hasło administratora.';

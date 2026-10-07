@@ -27,6 +27,7 @@ export default defineConfig({
         adminLogin: path.resolve(__dirname, 'admin-login.html'),
         organizer: path.resolve(__dirname, 'organizer.html'),
         organizerLogin: path.resolve(__dirname, 'organizer-login.html'),
+        panel: path.resolve(__dirname, 'panel.html'),
         embed: path.resolve(__dirname, 'embed.html'),
         office: path.resolve(__dirname, 'office.html'),
         umpire: path.resolve(__dirname, 'umpire.html'),

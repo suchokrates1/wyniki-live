@@ -227,10 +227,17 @@ def office_auth(slot: int):
     if not office_password_hash:
         return jsonify({"error": "Office password is not configured for this tournament"}), 409
 
+    from ..services import login_throttle
+
+    refused = login_throttle.refusal("office")
+    if refused:
+        return refused
     payload = request.get_json(silent=True) or {}
     password = (payload.get('password') or '').strip()
     if not password or not check_password_hash(office_password_hash, password):
+        login_throttle.note_failure("office")
         return jsonify({"error": "Invalid office password"}), 403
+    login_throttle.forget("office")
 
     response = _json_no_cache({
         "token": issue_office_token(slot, int(tournament['id'])),

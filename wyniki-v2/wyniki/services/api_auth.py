@@ -120,11 +120,18 @@ def require_court_access(kort_id: str | None):
 def admin_login_response():
     if not settings.admin_password:
         return jsonify({"error": "Admin API is not configured"}), 503
+    from . import login_throttle
+
+    refused = login_throttle.refusal("admin")
+    if refused:
+        return refused
     payload = request.get_json(silent=True) or {}
     password = str(payload.get("password") or "")
     # ADMIN_PASSWORD is deployed as a plaintext environment secret.
     if not password or not compare_digest(password, settings.admin_password):
+        login_throttle.note_failure("admin")
         return jsonify({"error": "Invalid administrator password"}), 403
+    login_throttle.forget("admin")
     return jsonify({"token": issue_admin_token(), "expires_in": settings.admin_session_ttl_hours * 3600})
 
 

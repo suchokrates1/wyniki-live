@@ -1,0 +1,33 @@
+/* The doors page: the sign-in pages' court ground (admin-login.css), two big doors as cards. */
+
+.pnl-main { align-items: stretch; width: min(760px, 100%); margin: 0 auto; }
+.pnl-title { margin: 0; font-size: clamp(1.8rem, 3.4vw, 2.5rem); font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; color: #fff; }
+.pnl-lead { margin: 0; color: var(--kort-mist); font-size: 17px; }
+
+.pnl-doors { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 6px 0 0; padding: 0; list-style: none; }
+.pnl-door {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  padding: 22px;
+  border: 1px solid var(--kort-line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(198, 233, 83, 0.05), transparent 40%), var(--kort-deep);
+  color: var(--kort-ice);
+  text-decoration: none;
+}
+.pnl-door:hover, .pnl-door:focus-visible { border-color: var(--kort-lime); }
+.pnl-door__name { font-size: 22px; font-weight: 900; color: #fff; }
+.pnl-door__name::after { content: " →"; color: var(--kort-lime); }
+.pnl-door__text { font-size: 16px; line-height: 1.45; }
+.pnl-door__how { margin-top: auto; padding-top: 6px; font-size: 14px; color: var(--kort-mist); }
+
+.pnl-note { margin: 4px 0 0; color: var(--kort-mist); font-size: 15px; }
+.pnl-note a { color: var(--kort-lime); font-weight: 700; }
+.pnl-main .adl-links { justify-content: flex-start; }
+
+@media (max-width: 600px) {
+  .pnl-main { padding-top: 56px; }
+  .pnl-door { padding: 18px; }
+}

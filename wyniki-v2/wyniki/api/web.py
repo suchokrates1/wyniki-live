@@ -57,6 +57,13 @@ def admin_login():
     return _html_page('admin-login.html')
 
 
+@blueprint.route('/panel')
+@blueprint.route('/panel/')
+def panel():
+    """Serve the page with the doors for the people who run tournaments: the office, the organizer."""
+    return _html_page('panel.html')
+
+
 @blueprint.route('/organizer')
 @blueprint.route('/organizer/')
 def organizer():

@@ -19,6 +19,8 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       hidePassword: 'Slėpti slaptažodį',
       enter: 'Įeiti į biurą',
       loggingIn: 'Jungiamasi...',
+      organizerAsk: "Organizuojate turnyrų seriją?",
+      organizerLink: "Organizatoriaus skydelis",
       privacyNotice: 'Prisijungimas šiame įrenginyje išsaugo biuro sesiją.',
     },
     tour: {
@@ -693,6 +695,7 @@ export const OFFICE_TRANSLATION_PATCHES_LT = {
       passwordRequired: 'Įveskite biuro slaptažodį.',
       authFailed: 'Nepavyko prisijungti prie biuro.',
       wrongPassword: 'Neteisingas biuro slaptažodis.',
+      tooManyAttempts: "Per daug nesėkmingų bandymų. Palaukite 15 minučių ir bandykite dar kartą.",
       refreshFailed: 'Nepavyko atnaujinti biuro.',
       sessionExpired: 'Biuro sesija baigėsi. Prisijunkite iš naujo.',
       planningFailed: 'Nepavyko įkelti turnyro plano.',

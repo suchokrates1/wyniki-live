@@ -481,7 +481,8 @@ export function createOfficeCoreView() {
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.authFailed'));
+          const key = { 403: 'errors.wrongPassword', 429: 'errors.tooManyAttempts' }[response.status] || 'errors.authFailed';
+          throw new Error(this.ot(key));
         }
         this.setToken(payload.token || '');
         this.tournamentMeta = payload.tournament || null;

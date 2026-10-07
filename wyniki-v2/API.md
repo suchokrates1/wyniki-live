@@ -389,6 +389,8 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/organizer/login/` | Serve the organizer's sign-in; with ?token= it sets the password from an invitation. |
 | GET | `/overlay/<int:tournament_slot>/<overlay_id>` | Serve overlay page for any preset (e.g. /overlay/1, /overlay/all, /overlay/split_1_2). |
 | GET | `/overlay/<overlay_id>` | Serve overlay page for any preset (e.g. /overlay/1, /overlay/all, /overlay/split_1_2). |
+| GET | `/panel` | Serve the page with the doors for the people who run tournaments: the office, the organizer. |
+| GET | `/panel/` | Serve the page with the doors for the people who run tournaments: the office, the organizer. |
 | GET | `/privacy` | Serve the public privacy policy. |
 | GET | `/privacy.html` | Serve the public privacy policy. |
 | GET | `/privacy/` | Serve the public privacy policy. |

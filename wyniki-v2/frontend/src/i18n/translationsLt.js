@@ -126,6 +126,7 @@ export const TRANSLATION_PATCHES_LT = {
     languageSelect: 'Pasirinkite kalbą',
     poweredBy: 'Technologija',
     privacyPolicy: 'Privatumo politika',
+    forOrganizers: "Organizatoriams",
     privacyPageTitle: 'Privatumo politika',
     privacyPageDescription: 'Kaip Vest Media tvarko duomenis svetainėje blindtennis.app ir programėlėje Blind Tennis Referee.',
     backToScores: 'Grįžti prie rezultatų',

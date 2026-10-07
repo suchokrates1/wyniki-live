@@ -105,6 +105,10 @@
           <span x-text="ot('login.privacyNotice')"></span>
           <a class="link link-primary underline" :href="'/privacy?lang=' + lang" x-text="officeUi().privacyPolicy"></a>
         </p>
+        <p class="text-sm text-slate-600">
+          <span x-text="ot('login.organizerAsk')"></span>
+          <a class="link link-primary underline" :href="'/organizer/login?lang=' + lang" x-text="ot('login.organizerLink')"></a>
+        </p>
       </form>
     </section>
   </main>

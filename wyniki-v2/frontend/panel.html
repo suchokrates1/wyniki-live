@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>blindtennis.app</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body class="adl-body">
+  <!-- The doors for the people who run tournaments, from the public site's footer. The
+       admin's door is not here: one person uses it, from a bookmark. -->
+  <div class="adl">
+    <header class="adl-brand">
+      <a class="adl-brand__logo" href="/" id="panelHome">
+        <img src="/brand/blindtennis-logo-horizontal-on-dark.svg" width="240" height="64" alt="blindtennis.app">
+      </a>
+    </header>
+
+    <main class="adl-main pnl-main" id="main">
+      <div class="adl-lang">
+        <label for="panelLang" data-t="language"></label>
+        <select id="panelLang" class="adl-lang__select"></select>
+      </div>
+
+      <h1 class="pnl-title" data-t="title"></h1>
+      <p class="pnl-lead" data-t="lead"></p>
+
+      <ul class="pnl-doors" role="list">
+        <li>
+          <a class="pnl-door" id="panelOffice" href="/office">
+            <span class="pnl-door__name" data-t="officeName"></span>
+            <span class="pnl-door__text" data-t="officeText"></span>
+            <span class="pnl-door__how" data-t="officeHow"></span>
+          </a>
+        </li>
+        <li>
+          <a class="pnl-door" id="panelOrganizer" href="/organizer/login">
+            <span class="pnl-door__name" data-t="organizerName"></span>
+            <span class="pnl-door__text" data-t="organizerText"></span>
+            <span class="pnl-door__how" data-t="organizerHow"></span>
+          </a>
+        </li>
+      </ul>
+
+      <p class="pnl-note"><span data-t="contactAsk"></span> <a href="mailto:contact@blindtennis.app">contact@blindtennis.app</a></p>
+      <nav class="adl-links" data-t-aria="otherPages">
+        <a href="/" id="panelBack" data-t="backToScores"></a>
+        <a href="/privacy" id="panelPrivacy" data-t="privacy"></a>
+      </nav>
+    </main>
+  </div>
+  <script type="module" src="/src/panel.js"></script>
+</body>
+</html>
