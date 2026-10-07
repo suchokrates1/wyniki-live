@@ -10,6 +10,7 @@ import pytest
 PAGES = [
     ("/", "index.html"),
     ("/admin", "admin.html"),
+    ("/admin/login", "admin-login.html"),
     ("/umpire", "umpire.html"),
     ("/office", "office.html"),
     ("/office/1", "office.html"),

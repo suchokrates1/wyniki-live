@@ -5,12 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel Administracyjny - Wyniki Live</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>⚙️</text></svg>">
+  <script>
+    // No session on this tab: go to the sign-in page before the panel is drawn.
+    try {
+      if (!sessionStorage.getItem('wyniki-admin-token')) {
+        location.replace('/admin/login?next=' + encodeURIComponent(location.pathname + location.hash));
+      }
+    } catch (e) { /* storage blocked: the panel's own check sends you there */ }
+  </script>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
 </head>
 <body class="adm-body">
   <div x-data="adminApp" x-init="initAdminShell()" @admin-session-expired.window="handleAdminSessionExpired()" class="adm-app">
-    <div id="admin-login"></div>
-
     <div class="adm-top">
       <span class="adm-top__brand">wyniki<span>.</span>admin</span>
       <span class="adm-top__tag">setup systemu i turniejów</span>

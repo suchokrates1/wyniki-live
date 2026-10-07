@@ -13,15 +13,14 @@ export class AdminBootstrapPage {
   }
 
   async login(password = 'e2e-admin') {
+    // Without a session /admin hands over to its own sign-in page, /admin/login.
+    await this.page.waitForURL(/\/admin\/login/, { timeout: 10000 });
     const form = this.page.locator('form').filter({ hasText: 'Panel administratora' });
     await form.locator('input[type="password"]').fill(password);
     await form.getByRole('button', { name: /Zaloguj|Login/i }).click();
-    // The panel is in once the section rail is drawn and the login dialog is gone.
-    // (Before the 2026-10 redesign this waited for an "Panel Administracyjny" heading,
-    // which the new shell does not have.)
+    // The panel is in once the sign-in sent us back and the section rail is drawn.
     await this.page.waitForFunction(
-      () => document.querySelectorAll('.adm-rail__item').length > 0
-        && !document.body.innerText.includes('Podaj hasło administratora'),
+      () => !location.pathname.startsWith('/admin/login') && document.querySelectorAll('.adm-rail__item').length > 0,
       undefined,
       { timeout: 10000 }
     );

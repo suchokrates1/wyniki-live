@@ -8,7 +8,7 @@ import './styles/admin-list.css';
 import './styles/admin-forms.css';
 import './styles/admin-courts.css';
 import './styles/overlay-canvas.css';
-import { createAuthAdmin, installAdminFetchAuth } from './admin/auth.js';
+import { createAuthAdmin, goToAdminLogin, hasAdminSession, installAdminFetchAuth } from './admin/auth.js';
 import { createCourtsAdmin } from './admin/courts.js';
 import { createDirectorPanel } from './admin/directorPanel.js';
 import { createTournamentsAdmin } from './admin/tournaments.js';
@@ -42,7 +42,6 @@ import { createDevicesListView } from './admin/devicesList.js';
 import overlayPanelHtml from './admin/overlayPanel.html?raw';
 import systemHtml from './admin/sections/system.html?raw';
 import moreHtml from './admin/sections/more.html?raw';
-import loginHtml from './admin/sections/login.html?raw';
 import directorPanelHtml from './admin/sections/directorPanel.html?raw';
 import tournamentPlayersHtml from './admin/sections/tournamentPlayers.html?raw';
 import logoCropHtml from './admin/sections/logoCrop.html?raw';
@@ -74,7 +73,6 @@ mountAdminPartial('admin-courts-list', courtsListHtml);
 mountAdminPartial('admin-devices-list', devicesListHtml);
 mountAdminPartial('admin-system', systemHtml);
 mountAdminPartial('admin-more', moreHtml);
-mountAdminPartial('admin-login', loginHtml);
 mountAdminPartial('admin-director-panel', directorPanelHtml);
 mountAdminPartial('admin-tournament-players', tournamentPlayersHtml);
 mountAdminPartial('admin-logo-crop', logoCropHtml);
@@ -140,4 +138,6 @@ Alpine.data('adminApp', () => mergeAdminModules(
 ));
 
 ignoreCancelledAlpineTransitions();
-Alpine.start();
+// Without a session the sign-in page takes over; the head script usually got there first.
+if (hasAdminSession()) Alpine.start();
+else goToAdminLogin();

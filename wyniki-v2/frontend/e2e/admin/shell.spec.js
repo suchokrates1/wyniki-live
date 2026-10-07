@@ -63,7 +63,7 @@ test('the rebuilt shell and the Turnieje section pass axe', async ({ page }) => 
   expect(results.violations.map((v) => `${v.id}: ${v.nodes[0]?.target.join(' ')}`)).toEqual([]);
 });
 
-test('every slot in the page gets its partial, and the login dialog is one of them', async ({ page }) => {
+test('every slot in the page gets its partial', async ({ page }) => {
   await openAdmin(page);
   const empty = await page.evaluate(() =>
     [...document.querySelectorAll('[id^="admin-"]')]
@@ -72,8 +72,9 @@ test('every slot in the page gets its partial, and the login dialog is one of th
   expect(empty, 'a slot left empty means its partial was not mounted').toEqual([]);
 });
 
-test('without a session the admin shows the login dialog and nothing else', async ({ page }) => {
-  await openAdmin(page, { token: false });
-  await expect(page.locator('#admin-login form')).toBeVisible();
+test('the sign-in is its own page, not a layer over the panel', async ({ page }) => {
+  await openAdmin(page, { token: false, signIn: true });
+  await expect(page).toHaveURL(/\/admin\/login(\?|$)/);
   await expect(page.getByRole('heading', { name: 'Panel administratora' })).toBeVisible();
+  await expect(page.locator('.adm-rail')).toHaveCount(0);
 });

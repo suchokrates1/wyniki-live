@@ -51,9 +51,12 @@ export async function press(locator, page) {
   await page.keyboard.press('Enter');
 }
 
-export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {} } = {}) {
+export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS, players = PLAYERS, entries = ENTRIES, courts = COURTS, devices = DEVICES, panic = PANIC, emailSettings = EMAIL_SETTINGS, snapshot = {}, onRequest = () => {}, signIn = false } = {}) {
+  // Seeded once per tab: a sign-out or an expired session must stick across the redirects.
   await page.addInitScript((hasToken) => {
     try {
+      if (sessionStorage.getItem('e2e-seeded')) return;
+      sessionStorage.setItem('e2e-seeded', '1');
       if (hasToken) sessionStorage.setItem('wyniki-admin-token', 'e2e-token');
       else sessionStorage.removeItem('wyniki-admin-token');
     } catch { /* private mode */ }
@@ -81,6 +84,8 @@ export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS,
   await page.route(/\/api\/stream(\?|$)/, (route) => route.fulfill({ status: 204, body: '' }));
 
   await page.goto('/admin.html');
+  // without a session the panel hands over to the sign-in page
+  if (signIn) return;
   await page.locator('.adm-rail__item').first().waitFor();
   await page.waitForTimeout(300);
   const consent = page.locator('.consent-banner');

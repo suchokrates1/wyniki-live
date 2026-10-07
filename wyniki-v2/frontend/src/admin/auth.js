@@ -1,3 +1,5 @@
+import { adminLoginUrl } from './loginRoute.js';
+
 const ADMIN_TOKEN_KEY = 'wyniki-admin-token';
 const nativeFetch = window.fetch.bind(window);
 
@@ -23,13 +25,25 @@ export function installAdminFetchAuth() {
 
 export { ADMIN_TOKEN_KEY, nativeFetch };
 
+/** Where the panel is now, so the sign-in can bring you back to the same section. */
+function here() {
+  return window.location.pathname + window.location.hash;
+}
+
+export function goToAdminLogin(reason = '') {
+  window.location.replace(adminLoginUrl({ next: here(), reason }));
+}
+
+/** No session on this tab: the panel is not drawn at all, the sign-in page is. */
+export function hasAdminSession() {
+  try { return Boolean(sessionStorage.getItem(ADMIN_TOKEN_KEY)); } catch { return false; }
+}
+
 export function createAuthAdmin() {
   return {
-    adminPassword: '',
-    adminNeedsAuth: !sessionStorage.getItem(ADMIN_TOKEN_KEY),
-    adminAuthError: '',
+    adminNeedsAuth: !hasAdminSession(),
+    adminSessionEnding: false,
     passwordVisible: {
-      admin: false,
       officeEdit: false,
       officeNew: false,
       smtp: false,
@@ -42,35 +56,15 @@ export function createAuthAdmin() {
     },
 
     handleAdminSessionExpired() {
-      if (this.adminNeedsAuth) return;
-      this.adminNeedsAuth = true;
-      this.adminPassword = '';
-      this.adminAuthError = 'Sesja administratora wygasła. Zaloguj się ponownie.';
+      if (this.adminSessionEnding) return;
+      this.adminSessionEnding = true;
+      goToAdminLogin('expired');
     },
 
     logoutAdmin() {
-      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-      this.adminNeedsAuth = true;
-      this.adminPassword = '';
-      this.adminAuthError = '';
-    },
-
-    async loginAdmin() {
-      this.adminAuthError = '';
-      const response = await nativeFetch('/admin/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: this.adminPassword }),
-      });
-      if (!response.ok) {
-        this.adminAuthError = 'Nieprawidłowe hasło administratora.';
-        return;
-      }
-      const payload = await response.json();
-      sessionStorage.setItem(ADMIN_TOKEN_KEY, payload.token);
-      this.adminPassword = '';
-      this.adminNeedsAuth = false;
-      await this.init();
+      this.adminSessionEnding = true;
+      try { sessionStorage.removeItem(ADMIN_TOKEN_KEY); } catch { /* private mode */ }
+      window.location.replace(adminLoginUrl({ reason: 'out' }));
     },
 
     // ===== TOAST =====
