@@ -152,3 +152,18 @@ def test_series_slugs_stay_unique(client):
     first = client.post("/admin/api/series", json={"name": "Takei World Tour"}).get_json()
     second = client.post("/admin/api/series", json={"name": "Takei World Tour"}).get_json()
     assert first["slug"] == "takei-world-tour" and second["slug"] == "takei-world-tour-2"
+
+
+def test_the_invitation_mail_names_the_series_carries_the_link_and_escapes_names(client, monkeypatch):
+    sent = []
+    from wyniki.services import account_invites
+
+    monkeypatch.setattr(account_invites, "_send_email", lambda subject, body, to: sent.append((subject, body, to)) or True)
+    series_id = client.post("/admin/api/series", json={"name": "Takei <World> Tour"}).get_json()["id"]
+    invited = client.post(f"/admin/api/series/{series_id}/members", json={"email": "jan@example.org", "name": "Jan <b>"}).get_json()
+    assert invited["emailed"] is True
+    subject, body, to = sent[0]
+    assert to == ["jan@example.org"] and "Takei <World> Tour" in subject
+    assert "Takei &lt;World&gt; Tour" in body and "Jan &lt;b&gt;" in body and "<b>" not in body.replace("<body", "")
+    assert invited["invite_url"].replace("&", "&amp;") in body or invited["invite_url"] in body
+    assert "/brand/blindtennis-logo-email.png" in body and "contact@blindtennis.app" in body
