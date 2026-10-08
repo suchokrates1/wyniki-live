@@ -69,6 +69,19 @@ export function createLiveCourtView() {
       return formatTeamLabelForWrap(name);
     },
 
+    /** A name from the court's data, not the "Player A" stand-in. */
+    hasNamedPlayer(courtId, side) {
+      const player = this.courts[courtId]?.[side];
+      if (!player) return false;
+      const surname = String(player.surname || '').trim();
+      return !!String(player.full_name || '').trim() || (!!surname && surname !== '-');
+    },
+
+    /** Nobody on the court: a screen reader hears "no match", not "Player A versus Player B". */
+    isCourtEmpty(courtId) {
+      return !this.hasNamedPlayer(courtId, 'A') && !this.hasNamedPlayer(courtId, 'B');
+    },
+
     getSpokenPlayerName(courtId, side) {
       return String(this.getPlayerName(courtId, side) || '').replaceAll(TEAM_WRAP_BREAK, '');
     },
@@ -102,8 +115,9 @@ export function createLiveCourtView() {
     getHeadingAria(courtId) {
       // Tournament name is already announced by the H2 above the courts.
       // VoiceOver heading/region swipe lands here, so include the same
-      // spoken score line that getScoreSummary() builds for .score-summary.
+      // spoken score line that getScoreSummary() builds; .score-summary only announces changes.
       const courtLabel = this.getCourtDisplayLabel(courtId);
+      if (this.isCourtEmpty(courtId)) return `${courtLabel}: ${this.acc().noMatch || 'brak meczu'}`;
       const nameA = this.getSpokenPlayerName(courtId, 'A');
       const nameB = this.getSpokenPlayerName(courtId, 'B');
       const vs = this.acc().versus || 'kontra';
@@ -175,7 +189,7 @@ export function createLiveCourtView() {
 
     getScoreSummary(courtId) {
       const court = this.courts[courtId];
-      if (!court) return '';
+      if (!court || this.isCourtEmpty(courtId)) return '';
       const a = this.acc();
       const isTie = this.isTiebreak(courtId);
       const isSuper = this.isSuperTiebreak(courtId);

@@ -35,7 +35,7 @@ export function describeSpeechSetSequence(accessibilityText = {}, sets = []) {
   });
 
   if (!visibleSets.length) {
-    return accessibilityText.scorePending || 'wynik nie jest jeszcze dostepny';
+    return accessibilityText.scorePending || 'wynik nie jest jeszcze dostępny';
   }
 
   return visibleSets

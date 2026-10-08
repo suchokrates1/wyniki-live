@@ -119,9 +119,27 @@ def screen_size() -> tuple[int, int]:
     return (int(match.group(1)), int(match.group(2))) if match else (1080, 2400)
 
 
-def page_shows(text: str) -> bool:
+def screen_xml() -> str:
     adb("shell", "uiautomator", "dump", "/sdcard/talkback-ui.xml")
-    return text in adb("shell", "cat", "/sdcard/talkback-ui.xml")
+    return adb("shell", "cat", "/sdcard/talkback-ui.xml")
+
+
+def page_shows(text: str) -> bool:
+    return text in screen_xml()
+
+
+def take_new_version(finger: Finger) -> bool:
+    """After a new build the page offers "Nowa wersja · Odśwież": press it, as a person would
+    (a tap puts TalkBack on it, a double tap presses), so the walk hears the page, not the offer."""
+    match = re.search(r'text="(?:Odśwież|Refresh)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', screen_xml())
+    if not match:
+        return False
+    x1, y1, x2, y2 = (int(v) for v in match.groups())
+    finger.tap((x1 + x2) // 2, (y1 + y2) // 2)
+    time.sleep(1.5)
+    finger.double_tap()
+    time.sleep(6)
+    return True
 
 
 def walk(url: str, steps: int, ready: str, first: str) -> list[str]:
@@ -137,6 +155,12 @@ def walk(url: str, steps: int, ready: str, first: str) -> list[str]:
         if page_shows(ready):
             break
     time.sleep(3)  # the announcements of a page that has just loaded
+    if take_new_version(finger):
+        for _ in range(30):
+            time.sleep(1)
+            if page_shows(ready):
+                break
+        time.sleep(4)  # the old page can still show the text while the new one loads
     width, height = screen_size()
     left = lambda: finger.swipe(width * 5 // 6, height * 7 // 12, width // 5, height * 7 // 12)  # noqa: E731
     right = lambda: finger.swipe(width // 5, height * 7 // 12, width * 5 // 6, height * 7 // 12)  # noqa: E731

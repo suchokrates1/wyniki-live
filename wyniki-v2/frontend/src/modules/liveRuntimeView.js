@@ -99,6 +99,7 @@ export function createLiveRuntimeView() {
       }, {});
       this.tournamentName = data.tournament_name || null;
       this.tournamentSeries = Array.isArray(data.tournament_series) ? data.tournament_series : [];
+      this.refreshCourtAnnouncements?.();
     },
 
     staleTime() {

@@ -25,10 +25,11 @@
                 </h1>
                 <div class="header-actions">
                     <span class="header-updated" x-show="lastUpdate" aria-hidden="true"><i class="header-updated__dot"></i><span x-text="lastUpdate ? lastUpdate.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : ''"></span></span>
-                    <label class="sr-only" for="langSelect" x-text="uiText().languageSelect || 'Wybierz jezyk'">Wybierz jezyk</label>
+                    <!-- names the list (aria-labelledby reads hidden text too) without being a stop of its own -->
+                    <span class="sr-only" id="langSelectLabel" aria-hidden="true" x-text="uiText().languageSelect || 'Wybierz język'">Wybierz język</span>
                     <span class="lang-select-wrap">
                     <span class="lang-select__code" aria-hidden="true" x-text="String(lang || 'pl').toUpperCase()"></span>
-                    <select id="langSelect" class="lang-select" x-model="lang" @change="onLangChange()">
+                    <select id="langSelect" class="lang-select" aria-labelledby="langSelectLabel" x-model="lang" @change="onLangChange()">
                         <option value="pl">Polski</option>
                         <option value="de">Deutsch</option>
                         <option value="en">English</option>
@@ -128,7 +129,7 @@
                             </template>
                         </div>
                     </span>
-                    <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')" :title="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')">
+                    <button class="dark-mode-toggle" @click="toggleDarkMode()" :aria-label="darkMode ? (tr().darkModeTooltip?.light || 'Zmień na tryb jasny') : (tr().darkModeTooltip?.dark || 'Zmień na tryb ciemny')">
                         <span class="dark-mode-toggle__icon" aria-hidden="true" x-text="darkMode ? '☀️' : '🌙'"></span>
                     </button>
                 </div>
@@ -247,7 +248,7 @@
                             </p>
                         </template>
                         <p class="sr-only score-summary" :id="'k'+courtId+'-summary'" aria-live="polite"
-                           x-text="getScoreSummary(courtId)"></p>
+                           x-text="courtAnnouncement(courtId)"></p>
                     </section>
                 </template>
             </div>
@@ -925,10 +926,11 @@
             <a class="vm-footer__legal" :href="privacyHref()" x-text="uiText().privacyPolicy || 'Polityka prywatności'">Polityka prywatności</a>
             <a class="vm-footer__legal" :href="'/panel?lang=' + lang" x-text="uiText().forOrganizers || 'Dla organizatorów'">Dla organizatorów</a>
             <span class="vm-footer__powered">
-                <span x-text="uiText().poweredBy || 'Powered by'">Powered by</span>
-                <a href="https://vestmedia.pl" target="_blank" rel="noopener noreferrer" class="vm-footer__link">
+                <span aria-hidden="true" x-text="uiText().poweredBy || 'Powered by'">Powered by</span>
+                <a href="https://vestmedia.pl" target="_blank" rel="noopener noreferrer" class="vm-footer__link"
+                   :aria-label="(uiText().poweredBy || 'Powered by') + ' Vest Media'">
                     <img src="https://vestmedia.pl/wp-content/uploads/2024/12/Vest-Media-5.png"
-                         alt="Vest Media" class="vm-footer__logo" loading="lazy">
+                         alt="" class="vm-footer__logo" loading="lazy">
                 </a>
             </span>
         </footer>

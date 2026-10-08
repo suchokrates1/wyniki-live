@@ -17,6 +17,7 @@ import { createProfilePanelView } from './modules/profilePanel.js';
 import { createResultsPanelView } from './modules/resultsPanel.js';
 import { createHistoryView } from './modules/historyView.js';
 import { createLiveCourtView } from './modules/liveCourtView.js';
+import { createCourtAnnouncementsView } from './modules/courtAnnouncements.js';
 import { createLiveRuntimeView } from './modules/liveRuntimeView.js';
 import { createPlayersView } from './modules/playersView.js';
 import { registerPwaPush, registerPwaShell } from './modules/pwaShellView.js';
@@ -78,6 +79,7 @@ Alpine.data('tennisApp', () => ({
   ...createResultsPanelView(),
   ...createLiveRuntimeView(),
   ...createLiveCourtView(),
+  ...createCourtAnnouncementsView(),
   ...createScheduleView(),
   ...createTournamentView(),
   ...createSeriesMarkView(),

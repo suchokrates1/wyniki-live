@@ -3,6 +3,7 @@ import test from 'node:test';
 import { spokenScore } from '../a11y/scoreNarration.js';
 import { TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
 import { createLiveCourtView } from './liveCourtView.js';
+import { createCourtAnnouncementsView } from './courtAnnouncements.js';
 
 function makeView(court) {
   const accessibility = {
@@ -28,6 +29,7 @@ function makeView(court) {
     t(_key, values) { return `Court ${values.court}`; },
     spokenScore(left, right) { return spokenScore(accessibility, left, right); },
     ...createLiveCourtView(),
+    ...createCourtAnnouncementsView(),
   };
 }
 
@@ -115,3 +117,36 @@ test('homepage keeps finished and empty courts in the grid', () => {
   };
   assert.deepEqual(view.getCourtIds(), ['c3', 'empty']);
 });
+
+test('the live region says a changed score once, not the scores of a page that has just loaded', () => {
+  const view = makeView({ kort_id: 'c3', current_set: 1, serve: 'A', A: { full_name: 'Anna Nowak', set1: 0, points: '15' }, B: { full_name: 'Bela Kovacs', set1: 0, points: '0' } });
+  view.lang = 'en';
+  view.refreshCourtAnnouncements();
+  assert.equal(view.courtAnnouncement('c3'), '', 'the first snapshot is not read out');
+
+  view.courts.c3 = { ...view.courts.c3, A: { ...view.courts.c3.A, points: '30' } };
+  view.refreshCourtAnnouncements();
+  assert.match(view.courtAnnouncement('c3'), /points 30 to 0/);
+
+  view.refreshCourtAnnouncements();
+  assert.match(view.courtAnnouncement('c3'), /points 30 to 0/, 'the same score again changes nothing');
+
+  view.lang = 'de';
+  view.courts.c3 = { ...view.courts.c3, A: { ...view.courts.c3.A, points: '40' } };
+  view.courtAnnouncements = {};
+  view.refreshCourtAnnouncements();
+  assert.equal(view.courtAnnouncement('c3'), '', 'a language change is not a new point');
+  for (const timer of Object.values(view._announceTimers)) clearTimeout(timer);
+});
+
+test('a court with nobody on it is "no match" to a screen reader, with no score to announce', () => {
+  const view = makeView({ kort_id: 'c3', current_set: 1, A: { full_name: '', surname: '-', points: '0' }, B: { points: '0' } });
+  view.acc = () => ({ noMatch: 'no match', versus: 'versus' });
+  assert.equal(view.isCourtEmpty('c3'), true);
+  assert.match(view.getHeadingAria('c3'), /^Court .*: no match$/);
+  assert.equal(view.getScoreSummary('c3'), '');
+  view.courts.c3.A = { full_name: 'Anna Nowak', points: '0' };
+  assert.equal(view.isCourtEmpty('c3'), false);
+  assert.match(view.getHeadingAria('c3'), /Anna Nowak versus Player B/);
+});
+
