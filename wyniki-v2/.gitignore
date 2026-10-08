@@ -69,3 +69,6 @@ wyniki/static/
 INFRASTRUCTURE.md
 docs/DEPLOYMENT.md
 docs/traefik-optimization-proposal.md
+
+# TalkBack walks: every run writes its transcript here; only golden/ is kept
+scripts/talkback/runs/

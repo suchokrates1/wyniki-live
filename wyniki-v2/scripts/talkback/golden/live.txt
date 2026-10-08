@@ -1,0 +1,37 @@
+000  Przejdź do treści | link
+001  blindtennis.app - live scores
+002  Wybierz język
+003  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
+004  Zmień na tryb ciemny | przycisk | Zmień na tryb ciemny
+005  wybrano,  | Na żywo | tab
+006  Turnieje | tab
+007  Zawodnicy | tab
+008  główny | Na żywo | panel karty | 5th Dürener Handicup 2026
+009  5th Dürener Handicup 2026
+010  Sekcje na żywo | lista kart
+011  wybrano,  | Mecze na żywo | tab
+012  Drabinka | tab
+013  Plan turnieju | tab
+014  Wyniki | tab
+015  Kort 1 | link | 1/4, 4 elementy
+016  Kort 2 | link | 2/4
+017  Kort 3 | link | 3/4
+018  Kort 4 | link | 4/4
+019  Kort 1: Anna Nowak kontra Béla Kovács. Anna Nowak serwuje. punkty 40 do 30. Set 1, 6 do 4. Set 2, aktywny, 3 do 3
+020  Anna Nowak serwuje. punkty 40 do 30. Set 1, 6 do 4. Set 2, aktywny, 3 do 3
+021  Kort 2: Gracz A kontra Gracz B. punkty 0 do 0. Set 1, aktywny, 0 do 0
+022  punkty 0 do 0. Set 1, aktywny, 0 do 0
+023  Kort 3: Gracz A kontra Gracz B. punkty 0 do 0. Set 1, aktywny, 0 do 0
+024  punkty 0 do 0. Set 1, aktywny, 0 do 0
+025  Kort 4: Gracz A kontra Gracz B. punkty 0 do 0. Set 1, aktywny, 0 do 0
+026  punkty 0 do 0. Set 1, aktywny, 0 do 0
+027  Polityka prywatności
+028  Dla organizatorów | link
+029  Technologia
+030  Vest Media | link
+031  Analityka odwiedzin | nagłówek 2
+032  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
+033  Więcej w polityce prywatności
+034  Odrzuć | przycisk
+035  Akceptuj | przycisk
+036  (koniec strony)
