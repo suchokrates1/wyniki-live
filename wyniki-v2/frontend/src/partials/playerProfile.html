@@ -10,7 +10,7 @@
         <h2 class="pfv-name" x-text="p.name"></h2>
         <ul class="pfv-chips">
           <li x-show="p.country"><span class="btv-cc" aria-hidden="true" x-text="p.country"></span><span class="sr-only" x-text="(tr().playerProfile?.country || 'Kraj') + ': ' + countryName(p.country)"></span></li>
-          <li x-show="formatPlayerClassification(playerProfile.player.category)" class="is-strong"><span class="sr-only" x-text="profileText('classLabel', 'Klasa sportowa') + ': ' + formatPlayerClassification(playerProfile.player.category)"></span><span aria-hidden="true" x-text="formatPlayerClassification(playerProfile.player.category)"></span></li>
+          <li x-show="formatPlayerClassification(playerProfile.player.category)" class="is-strong"><span class="sr-only" x-text="(tr().playerProfile?.category || 'Kategoria') + ': ' + formatPlayerClassification(playerProfile.player.category)"></span><span aria-hidden="true" x-text="formatPlayerClassification(playerProfile.player.category)"></span></li>
           <li x-show="playerProfile.player.gender" x-text="playerProfile.player.gender === 'M' ? (tr().playerProfile?.male || 'Mężczyzna') : (tr().playerProfile?.female || 'Kobieta')"></li>
           <li x-show="playerProfile.player.age" x-text="ageText(playerProfile.player.age)"></li>
         </ul>
@@ -93,7 +93,7 @@
                 <span class="pfv-rivals__n" aria-hidden="true" x-text="profileViewText('rivalPlayed', { n: rival.played })"></span>
               </span>
               <strong class="pfv-rivals__wl" :class="'is-' + rival.tone" aria-hidden="true" x-text="rival.wins + '–' + rival.losses"></strong>
-              <span class="sr-only" x-text="', ' + profileViewText('rivalPlayed', { n: rival.played }) + ', ' + (tr().bracketView?.record || 'Bilans') + ' ' + rival.wins + '–' + rival.losses"></span>
+              <span class="sr-only" x-text="', ' + profileViewText('rivalPlayed', { n: rival.played }) + ', ' + bracketScoreText(tr().bracketView?.record || 'Bilans', rival.wins + '–' + rival.losses)"></span>
             </li>
           </template>
         </ul>
@@ -107,7 +107,7 @@
         </ul>
       </section>
       <section class="pfv-card" x-show="profileClassHistory().length" aria-labelledby="pfv-classes-title">
-        <h3 id="pfv-classes-title" x-text="profileText('classTitle', 'Klasyfikacja sportowa')"></h3>
+        <h3 id="pfv-classes-title" x-text="profileText('classTitle', 'Historia kategorii')"></h3>
         <p class="pfv-note" x-text="profileText('classNote', 'Wyniki zostają w kategorii, w której zostały rozegrane.')"></p>
         <ol class="pfv-plain">
           <template x-for="(row, index) in profileClassHistory()" :key="'pc-' + index">

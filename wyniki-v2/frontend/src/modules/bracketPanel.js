@@ -48,11 +48,19 @@ export function createBracketPanelView() {
       if (card.bye) return `${this.resolveBracketName(a.name)}, ${this.bracketText('bye')}`;
       const names = [a, b].map((row) => this.resolveBracketName(row?.name) || '—');
       const winner = [a, b].find((row) => row?.won);
-      const score = (a.games || []).map((game, index) => `${game.v}:${b?.games?.[index]?.v ?? ''}`).join(', ');
+      const joiner = this.acc().scoreJoiner || 'do';
+      const score = (a.games || []).map((game, index) => `${game.v} ${joiner} ${b?.games?.[index]?.v ?? ''}`).join(', ');
       const parts = [`${names[0]} – ${names[1]}`];
       if (winner) parts.push(`${this.acc().winner || 'Zwycięzca'}: ${this.resolveBracketName(winner.name)}`);
       if (score) parts.push(`${this.acc().result || 'Wynik'}: ${score}`);
       return parts.join('. ');
+    },
+
+    /** A group table's number said with its column: "Sety: 4 do 1" (shown as "4:1"). */
+    bracketScoreText(label, value) {
+      const [won, lost] = String(value ?? '').split(/[–:-]/).map((part) => part.trim());
+      if (lost === undefined) return `${label}: ${value ?? ''}`;
+      return `${label}: ${won} ${this.acc().scoreJoiner || 'do'} ${lost}`;
     },
 
     bracketPos(entry) {

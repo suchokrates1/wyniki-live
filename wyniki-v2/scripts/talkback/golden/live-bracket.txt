@@ -4,7 +4,7 @@
 003  Odrzuć | przycisk
 004  Akceptuj | przycisk
 005  Przejdź do treści | link
-006  blindtennis.app - live scores
+006  blindtennis.app - live scores | nagłówek 1
 007  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
 008  Zmień na tryb ciemny | przycisk
 009  Menu główne | nagłówek 2
@@ -24,9 +24,9 @@
 023  Najpierw grupy, potem puchar. Z każdej grupy awansują 2 (zaznaczeni w tabeli). Medale: finał i mecz o 3. miejsce.
 024  Grupy | nagłówek 2
 025  awans do drabinki | 1/4, 4 elementy
-026  pinezka pokazuje drogę zawodnika w drabinkach | 2/4
-027  nazwisko otwiera profil zawodnika | 3/4
-028  Bilans = wygrane–przegrane mecze | 4/4
+026  pinezka pokazuje drogę zawodnika w drabinkach
+027  nazwisko otwiera profil zawodnika
+028  Bilans = wygrane–przegrane mecze
 029  B1 Men | nagłówek 3
 030  MIEJSCE | nagłówek kolumny | Wiersz 1, tabela Tabela grupy B1 Men, 5 wierszy, 6 kolumn
 031  ZAWODNIK | nagłówek kolumny
@@ -37,27 +37,27 @@
 036  1, awans do drabinki | Wiersz 2, Kolumna 1
 037  Lars Stetten | Kolumna 2
 038  Wyłączone | Pokaż drogę: Lars Stetten | przycisk przełączania | Pokaż drogę: Lars Stetten, Kolumna 3
-039  0–0 | Kolumna 4
-040  0:0 | Kolumna 5
-041  0:0 | Kolumna 6
+039  Bilans: 0 do 0 | Kolumna 4
+040  Sety: 0 do 0 | Kolumna 5
+041  Gemy: 0 do 0 | Kolumna 6
 042  2, awans do drabinki | Wiersz 3, Kolumna 1
 043  Carlos Arbos | Kolumna 2
 044  Wyłączone | Pokaż drogę: Carlos Arbos | przycisk przełączania | Pokaż drogę: Carlos Arbos, Kolumna 3
-045  0–0 | Kolumna 4
-046  0:0 | Kolumna 5
-047  0:0 | Kolumna 6
+045  Bilans: 0 do 0 | Kolumna 4
+046  Sety: 0 do 0 | Kolumna 5
+047  Gemy: 0 do 0 | Kolumna 6
 048  3 | Wiersz 4, Kolumna 1
 049  Naqi Rizvi | Kolumna 2
 050  Wyłączone | Pokaż drogę: Naqi Rizvi | przycisk przełączania | Pokaż drogę: Naqi Rizvi, Kolumna 3
-051  0–0 | Kolumna 4
-052  0:0 | Kolumna 5
-053  0:0 | Kolumna 6
+051  Bilans: 0 do 0 | Kolumna 4
+052  Sety: 0 do 0 | Kolumna 5
+053  Gemy: 0 do 0 | Kolumna 6
 054  4 | Wiersz 5, Kolumna 1
 055  Lucas Bartlewski | Kolumna 2
 056  Wyłączone | Pokaż drogę: Lucas Bartlewski | przycisk przełączania | Pokaż drogę: Lucas Bartlewski, Kolumna 3
-057  0–0 | Kolumna 4
-058  0:0 | Kolumna 5
-059  0:0 | Kolumna 6
+057  Bilans: 0 do 0 | Kolumna 4
+058  Sety: 0 do 0 | Kolumna 5
+059  Gemy: 0 do 0 | Kolumna 6
 060  widok zwinięty,  | Mecze grupy · 0 | trójkąt rozwinięcia | Z: tabela Tabela grupy B1 Men
 061  Drabinka główna | nagłówek 2
 062  wybrano,  | Finał | tab

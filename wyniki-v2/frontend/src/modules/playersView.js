@@ -148,7 +148,7 @@ export function createPlayersView() {
       const since = row.effective_date
         ? this.profileText('classSince', '{class} od {date}', { class: row.classification, date: this.profileDate(row.effective_date) })
         : row.classification;
-      let source = this.profileText('classSourceInitial', 'pierwsza klasa w bazie');
+      let source = this.profileText('classSourceInitial', 'pierwsza kategoria w bazie');
       if (row.source === 'tournament') {
         source = row.tournament_name
           ? this.profileText('classSourceTournament', 'klasyfikacja na turnieju {tournament}', { tournament: row.tournament_name })
@@ -159,7 +159,7 @@ export function createPlayersView() {
       const parts = [since];
       if (row.previous_classification) parts.push(this.profileText('classPrevious', 'wcześniej {class}', { class: row.previous_classification }));
       parts.push(source);
-      if (row.status === 'provisional') parts.push(this.profileText('classProvisional', 'klasa tymczasowa'));
+      if (row.status === 'provisional') parts.push(this.profileText('classProvisional', 'kategoria tymczasowa'));
       return parts.join(', ');
     },
 
