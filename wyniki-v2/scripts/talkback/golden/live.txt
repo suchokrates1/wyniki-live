@@ -1,6 +1,6 @@
 000  Analityka odwiedzin | nagłówek 2
 001  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
-002  Więcej w polityce prywatności
+002  Więcej w polityce prywatności | link
 003  Odrzuć | przycisk
 004  Akceptuj | przycisk
 005  Przejdź do treści | link
@@ -16,17 +16,17 @@
 015  Sekcje na żywo | lista kart
 016  wybrano,  | Mecze na żywo | tab
 017  Drabinka | tab
-018  (cisza)
-019  Kort 3: brak meczu | Plan turnieju | Wyniki | tab
+018  Plan turnieju | tab
+019  Wyniki | tab
 020  Kort 1 | link | 1/4, 4 elementy
 021  Kort 2 | link | 2/4
 022  Kort 3 | link | 3/4
 023  Kort 4 | link | 4/4
 024  Kort 1: Anna Nowak kontra Béla Kovács. Anna Nowak serwuje. punkty 40 do 30. Set 1, 6 do 4. Set 2, aktywny, 3 do 3
 025  Kort 2: brak meczu | nagłówek 2
-026  Kort 3: brak meczu
-027  Kort 4: brak meczu
-028  nagłówek 2 | Polityka prywatności | link
+026  Kort 3: brak meczu | nagłówek 2
+027  Kort 4: brak meczu | nagłówek 2
+028  Polityka prywatności | link
 029  Dla organizatorów | link
-030  Technologia Vest Media
+030  Technologia Vest Media | link
 031  (koniec strony)

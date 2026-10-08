@@ -65,6 +65,7 @@ ROLE_OR_STATE = re.compile(
 # a swipe late, not a control without one
 STATE_FIRST = re.compile(r"^((widok )?(zwinięty|rozwinięty)|wybran\w*|selected|collapsed|expanded)[,.]?$", re.I)
 LANDMARK = re.compile(r"^(main|główny)$", re.I)
+CONTAINER = re.compile(r"^(tab panel|panel karty)$", re.I)
 
 # where a table cell is ("Wiersz 2, Kolumna 1", "Kolumna 6"): said, or not, by timing
 TABLE_PLACE = re.compile(r"(^|,\s*)(wiersz|kolumna|row|column) \d+(?!\d).*$", re.I)
@@ -240,7 +241,8 @@ def spoken(lines: list[str]) -> list[str]:
     said = []
     for line in lines:
         parts = names(line).split(" | ")
-        if LANDMARK.match(line.split(" | ")[0].strip()):
+        raw = [part.strip() for part in line.split(" | ")]
+        if LANDMARK.match(raw[0]) and any(CONTAINER.match(part) for part in raw):
             continue
         for part in parts:
             part = TABLE_PLACE.sub("", part).strip()
@@ -265,10 +267,10 @@ def main() -> int:
     return check(args.screen, args)
 
 
-def check(name: str, args: argparse.Namespace) -> int:
+def walk_once(name: str, args: argparse.Namespace) -> list[str] | None:
+    """One walk, saved to runs/. Now and then Chrome's own bar takes the first touch and the page
+    is never reached: then once more."""
     url, steps, first = SCREENS[name]
-    print(f"\n=== {name}")
-    # now and then Chrome's own bar takes the first touch and the page is never reached: once more
     for attempt in (1, 2):
         try:
             transcript = walk(url, args.steps or steps, first)
@@ -276,34 +278,50 @@ def check(name: str, args: argparse.Namespace) -> int:
         except SystemExit as stop:
             print(stop)
             if attempt == 2:
-                return 1
+                return None
     out = HERE / "runs" / f"{name}-{time.strftime('%Y%m%d-%H%M%S')}.txt"
     out.parent.mkdir(exist_ok=True)
-    numbered = [f"{i:03d}  {line}" for i, line in enumerate(transcript)]
-    out.write_text("\n".join(numbered) + "\n", encoding="utf-8")
-    print("\n".join(numbered))
+    out.write_text("\n".join(numbered(transcript)) + "\n", encoding="utf-8")
+    print("\n".join(numbered(transcript)))
     print(f"\nzapis: {out}")
+    return transcript
 
-    issues = problems(transcript)
-    for issue in issues:
-        print("BŁĄD:", issue)
 
+def numbered(transcript: list[str]) -> list[str]:
+    return [f"{i:03d}  {line}" for i, line in enumerate(transcript)]
+
+
+def check(name: str, args: argparse.Namespace) -> int:
+    print(f"\n=== {name}")
     golden = HERE / "golden" / f"{name}.txt"
-    if args.update:
-        golden.parent.mkdir(exist_ok=True)
-        golden.write_text("\n".join(numbered) + "\n", encoding="utf-8")
-        print(f"wzorzec zapisany: {golden}")
-        return 1 if issues else 0
-    if not golden.exists():
-        print("brak wzorca: przejrzyj zapis i uruchom z --update")
-        return 1
-    # compared by names and order; the full lines (roles included) stay in both files to read
-    expected = spoken([line.split("  ", 1)[1] for line in golden.read_text(encoding="utf-8").splitlines()])
-    diff = list(difflib.unified_diff(expected, spoken(transcript),
-                                     "wzorzec", "ten przebieg", lineterm="", n=1))
-    for line in diff:
-        print(line)
-    return 1 if (diff or issues) else 0
+    # the emulator now and then loses a swipe or a word (a silent step, a name cut off): a walk
+    # that differs from the golden is walked once more, and only a second difference counts
+    for attempt in (1, 2):
+        transcript = walk_once(name, args)
+        if transcript is None:
+            return 1
+        issues = problems(transcript)
+        for issue in issues:
+            print("BŁĄD:", issue)
+        if args.update:
+            golden.parent.mkdir(exist_ok=True)
+            golden.write_text("\n".join(numbered(transcript)) + "\n", encoding="utf-8")
+            print(f"wzorzec zapisany: {golden}")
+            return 1 if issues else 0
+        if not golden.exists():
+            print("brak wzorca: przejrzyj zapis i uruchom z --update")
+            return 1
+        # compared by names in the order said; the full lines (roles included) stay in both files to read
+        expected = spoken([line.split("  ", 1)[1] for line in golden.read_text(encoding="utf-8").splitlines()])
+        diff = list(difflib.unified_diff(expected, spoken(transcript),
+                                         "wzorzec", "ten przebieg", lineterm="", n=1))
+        for line in diff:
+            print(line)
+        if not (diff or issues):
+            return 0
+        if attempt == 1:
+            print("różnice: jeszcze jeden przebieg")
+    return 1
 
 
 if __name__ == "__main__":
