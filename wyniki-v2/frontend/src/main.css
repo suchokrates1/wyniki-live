@@ -640,7 +640,7 @@ td:has(> .schedule-player.is-winner) .schedule-player:not(.is-winner) {
 }
 
 .schedule-archive__summary::after {
-  content: '+';
+  content: '+' / '';
   flex: 0 0 auto;
   color: var(--accent);
   font-size: 1.25rem;
@@ -652,7 +652,7 @@ td:has(> .schedule-player.is-winner) .schedule-player:not(.is-winner) {
 }
 
 .schedule-archive[open] .schedule-archive__summary::after {
-  content: '−';
+  content: '−' / '';
 }
 
 .schedule-archive__content {

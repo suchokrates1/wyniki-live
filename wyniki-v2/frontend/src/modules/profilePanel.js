@@ -39,6 +39,13 @@ export function createProfilePanelView() {
       return `${this.profileDate(start)} – ${this.profileDate(end)}`;
     },
 
+    /** One step of a tournament's path: "Grupa A · 1. miejsce" or the round ("Finał"). */
+    profileStepLabel(step) {
+      if (step?.kind !== 'group') return this.profilePhaseLabel(step?.phase);
+      const group = this.translateCategory(String(step.phase).split(' — ').pop());
+      return this.profileViewText('groupStep', { group, place: step.place });
+    },
+
     /** "B1 Men — 06 Consolation Ćwierćfinał" → "Pocieszenie · Ćwierćfinał": the category and draw order go. */
     profilePhaseLabel(phase) {
       let text = String(phase || '').split(' — ').pop().replace(/^\d+\s+/, '').trim();

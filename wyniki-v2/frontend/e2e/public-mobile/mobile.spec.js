@@ -470,7 +470,9 @@ test('a played match in the schedule marks its winner for sight and for screen r
     loser.evaluate((el) => Number(getComputedStyle(el).fontWeight)),
   ]);
   expect(winWeight).toBeGreaterThan(loseWeight);
-  await expect(card).toHaveAttribute('aria-label', /Zwycięzca: Emil Stopierzyński/);
+  // a screen reader hears the card as one sentence (TalkBack reads no name off a list item)
+  await expect(card.locator('.sr-only')).toHaveText(/Zwycięzca: Emil Stopierzyński/);
+  await expect(card.locator('.schedule-card__match')).toHaveAttribute('aria-hidden', 'true');
   const found = await new AxeBuilder({ page }).include('.schedule-cards').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(found.violations.map((v) => v.id)).toEqual([]);
 });

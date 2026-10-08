@@ -1,5 +1,6 @@
 import { publicApi } from '../api/publicApi.js';
 import { registerCompetitorName } from '../shared/teamDisplay.js';
+import { countedText, countedWord, countryName } from '../shared/plural.js';
 import {
   dedupePlayersList,
   filterPlayersList,
@@ -109,6 +110,22 @@ export function createPlayersView() {
       } finally {
         if (requestId === this._playerProfileRequestId) this.playerProfileLoading = false;
       }
+    },
+
+    /** "3 mecze": counted in the page's language. */
+    matchesCountText(n) {
+      return countedText(this.lang, this.tr().playerSection?.matchesForms, n);
+    },
+    matchesCountWord(n) {
+      return countedWord(this.lang, this.tr().playerSection?.matchesForms, n);
+    },
+    /** "34 lata". */
+    ageText(years) {
+      return countedText(this.lang, this.tr().playerProfile?.ageForms, years);
+    },
+    /** "Polska" for PL, in the page's language. */
+    countryName(code) {
+      return countryName(this.lang, code);
     },
 
     profileText(key, fallback, values = {}) {

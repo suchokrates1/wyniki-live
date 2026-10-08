@@ -1,0 +1,57 @@
+000  Analityka odwiedzin | nagłówek 2
+001  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
+002  Więcej w polityce prywatności
+003  Odrzuć | przycisk
+004  Akceptuj | przycisk
+005  Przejdź do treści | link
+006  blindtennis.app - live scores
+007  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
+008  Zmień na tryb ciemny | przycisk
+009  Menu główne | nagłówek 2
+010  Na żywo | tab
+011  Turnieje | tab
+012  wybrano,  | Zawodnicy | tab
+013  główny | Zawodnicy | panel karty | Anna Przykład | nagłówek 2 | Lista,  | Medale | Lista, Lista,  | Historia turniejów | region | Historia turniejów | nagłówek 3 | Droga w turnieju
+014  Lista, Lista,  | Powrót do listy | przycisk
+015  Anna Przykład | nagłówek 2
+016  Kraj: Polska | 1/4, 4 elementy
+017  Klasa sportowa: B3
+018  Kobieta | 3/4
+019  34 lata
+020  Złoto: 1 | 1/3, 3 elementy
+021  Srebro: 1 | 2/3
+022  Brąz: 0 | 3/3
+023  TURNIEJE | termin
+024  2 | definicja
+025  MECZE | termin
+026  5 | definicja
+027  BILANS | termin
+028  3–2 | definicja
+029  SETY | termin
+030  2–0 | definicja
+031  SKUTECZNOŚĆ | termin
+032  60% | definicja
+033  Historia turniejów | nagłówek 3
+034  widok rozwinięty,  | Sample Open 2026 25–29 sierpnia 2026 · B3 Women Złoto 2–1
+035  Group A · 1. miejsce
+036  Finał, Wygrana | 2/2
+037  Anna Przykład – Ewa Test. Zwycięzca: Anna Przykład. Wynik meczu: 4:1, 4:2. Wygrana, Finał
+038  widok zwinięty,  | Spring Sample Cup 2026 23–24 maja 2026 · B2 Kobiety Srebro 1–1
+039  Bilans z rywalami | nagłówek 3
+040  Ewa Test, Mecze: 1, Bilans 1–0
+041  Medale według kategorii | nagłówek 3
+042  B2 – Srebro: 1 | 1/2, 2 elementy
+043  B3 – Złoto: 1
+044  Klasyfikacja sportowa
+045  Wyniki zostają w kategorii, w której zostały rozegrane.
+046  B2, pierwsza klasa w bazie
+047  B3 od 29 sierpnia 2026, wcześniej B2, klasyfikacja na turnieju Sample Open 2026, aktualna
+048  Dane w profilu | nagłówek 3
+049  Pokazujemy tu imię i nazwisko, kraj, wiek, klasę startową i wyniki z turniejów, w których zawodnik wystąpił. Chcesz coś poprawić albo usunąć? Napisz do nas.
+050  Napisz w sprawie danych | link
+051  Polityka prywatności
+052  contact@blindtennis.app
+053  Polityka prywatności | link
+054  Dla organizatorów | link
+055  Technologia Vest Media | link
+056  (koniec strony)

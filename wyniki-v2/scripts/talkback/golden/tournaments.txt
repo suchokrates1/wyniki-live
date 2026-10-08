@@ -1,0 +1,23 @@
+000  Analityka odwiedzin | nagłówek 2
+001  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
+002  Więcej w polityce prywatności
+003  Odrzuć | przycisk
+004  Akceptuj | przycisk
+005  Przejdź do treści | link
+006  blindtennis.app - live scores
+007  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
+008  Zmień na tryb ciemny
+009  przycisk | Menu główne | nagłówek 2
+010  Na żywo | tab
+011  wybrano,  | Turnieje | tab
+012  Zawodnicy | tab
+013  główny | Turnieje | panel karty
+014  5th Dürener Handicup 2026, Düren, DE, piątek, 17 lipca 2026
+015  Duren Test, Duren, DE, środa, 10 czerwca 2026
+016  III Mistrzostwa Polski w Blind Tenisie, Leszno, sobota, 23 maja 2026
+017  App Review Access, Review, US, sobota, 23 maja 2026
+018  Turniej Blind Tennisa "Sokole Oko", Chorzów, PL, piątek, 10 kwietnia 2026
+019  Polityka prywatności
+020  Dla organizatorów | link
+021  Technologia Vest Media
+022  (koniec strony)

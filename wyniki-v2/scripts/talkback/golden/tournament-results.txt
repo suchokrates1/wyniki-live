@@ -1,0 +1,25 @@
+000  Analityka odwiedzin
+001  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
+002  Więcej w polityce prywatności
+003  Odrzuć | przycisk
+004  Akceptuj | przycisk
+005  Przejdź do treści | link
+006  blindtennis.app - live scores
+007  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
+008  Zmień na tryb ciemny
+009  Menu główne | nagłówek 2
+010  Na żywo | tab
+011  wybrano,  | Turnieje | tab
+012  Zawodnicy | tab
+013  główny | Turnieje | panel karty | 5th Dürener Handicup 2026
+014  Powrót do turniejów | przycisk
+015  5th Dürener Handicup 2026
+016  Sekcje turnieju | lista kart
+017  Drabinka | tab
+018  Plan turnieju | tab
+019  wybrano,  | Wyniki | tab
+020  Brak meczów w tym turnieju
+021  Polityka prywatności | link
+022  Dla organizatorów | link
+023  Technologia Vest Media
+024  (koniec strony)

@@ -1,0 +1,58 @@
+000  Analityka odwiedzin
+001  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
+002  Więcej w polityce prywatności
+003  Odrzuć | przycisk
+004  Akceptuj | przycisk
+005  Przejdź do treści | link
+006  blindtennis.app - live scores
+007  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
+008  Zmień na tryb ciemny
+009  przycisk | Menu główne | nagłówek 2
+010  Na żywo | tab
+011  wybrano,  | Turnieje | tab
+012  Zawodnicy | tab
+013  główny | Turnieje | panel karty | 5th Dürener Handicup 2026
+014  Powrót do turniejów | przycisk
+015  5th Dürener Handicup 2026
+016  Sekcje turnieju | lista kart
+017  Drabinka | tab
+018  wybrano,  | Plan turnieju | tab
+019  Wyniki | tab
+020  piątek, 17 lipca 2026
+021  B2 Mixed | nagłówek 4
+022  Mecz: Dana Granowski kontra Simone Kaminski. Kort 2. Godzina: 16:00. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+023  Mecz: Dana Granowski kontra Axel Teichmann. Kort 2. Godzina: 17:10. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+024  Mecz: Dana Granowski kontra Yannik Neumann. Kort 2. Godzina: 18:20. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+025  sobota, 18 lipca 2026
+026  B1 Men | nagłówek 4
+027  Mecz: Lars Stetten kontra Carlos Arbos. Kort 1. Godzina: 10:00. Kategoria: B1 Men. Etap: Faza grupowa. Status: Zaplanowany
+028  Mecz: Lars Stetten kontra Naqi Rizvi. Kort 4. Godzina: 11:10. Kategoria: B1 Men. Etap: Faza grupowa. Status: Zaplanowany
+029  Mecz: Lars Stetten kontra Lucas Bartlewski. Kort 1. Godzina: 12:20. Kategoria: B1 Men. Etap: Faza grupowa. Status: Zaplanowany
+030  Mecz: Carlos Arbos kontra Naqi Rizvi. Kort 4. Godzina: 12:20. Kategoria: B1 Men. Etap: Faza grupowa. Status: Zaplanowany
+031  Mecz: Carlos Arbos kontra Lucas Bartlewski. Kort 1. Godzina: 14:40. Kategoria: B1 Men. Etap: Faza grupowa. Status: Zaplanowany
+032  Mecz: Naqi Rizvi kontra Lucas Bartlewski. Kort 4. Godzina: 14:40. Kategoria: B1 Men. Etap: Faza grupowa. Status: Zaplanowany
+033  B2 Mixed | nagłówek 4
+034  Mecz: Dana Granowski kontra Marian Wywiórski. Kort 3. Godzina: 10:00. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+035  Mecz: Simone Kaminski kontra Axel Teichmann. Kort 2. Godzina: 11:10. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+036  Mecz: Simone Kaminski kontra Yannik Neumann. Kort 2. Godzina: 13:30. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+037  Mecz: Simone Kaminski kontra Marian Wywiórski. Kort 3. Godzina: 13:30. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+038  Mieszane | nagłówek 4
+039  Mecz: Christian Schäfer kontra Rick Bouwens. Kort 2. Godzina: 10:00. Kategoria: Mieszane. Etap: Faza grupowa. Status: Zaplanowany
+040  Mecz: Christian Schäfer kontra Daniela Wallace. Kort 2. Godzina: 12:20. Kategoria: Mieszane. Etap: Faza grupowa. Status: Zaplanowany
+041  Mecz: Rick Bouwens kontra Daniela Wallace. Kort 2. Godzina: 14:40. Kategoria: Mieszane. Etap: Faza grupowa. Status: Zaplanowany
+042  niedziela, 19 lipca 2026
+043  B1 Men | nagłówek 4
+044  Mecz: 3. B1 Men kontra 4. B1 Men. Kort 1. Godzina: 10:00. Kategoria: B1 Men. Etap: Mecz o 3. miejsce. Status: Zaplanowany
+045  Mecz: 1. B1 Men kontra 2. B1 Men. Kort 1. Godzina: 11:10. Kategoria: B1 Men. Etap: Finał. Status: Zaplanowany
+046  B2 Mixed | nagłówek 4
+047  Mecz: Axel Teichmann kontra Yannik Neumann. Kort 2. Godzina: 10:00. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+048  Mecz: Axel Teichmann kontra Marian Wywiórski. Kort 3. Godzina: 10:00. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+049  Mecz: Yannik Neumann kontra Marian Wywiórski. Kort 2. Godzina: 11:10. Kategoria: B2 Mixed. Etap: Faza grupowa. Status: Zaplanowany
+050  Mecz: 1. B2 Mixed kontra 2. B2 Mixed. Kort 2. Godzina: 12:20. Kategoria: B2 Mixed. Etap: Finał. Status: Zaplanowany
+051  Mecz: 3. B2 Mixed kontra 4. B2 Mixed. Kort 3. Godzina: 12:20. Kategoria: B2 Mixed. Etap: Mecz o 3. miejsce. Status: Zaplanowany
+052  Mieszane | nagłówek 4
+053  Mecz: 1. Mieszane kontra 2. Mieszane. Kort 3. Godzina: 11:10. Kategoria: Mieszane. Etap: Finał. Status: Zaplanowany
+054  Polityka prywatności | link
+055  Dla organizatorów | link
+056  Technologia Vest Media
+057  (koniec strony)

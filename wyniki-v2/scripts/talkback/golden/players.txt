@@ -1,0 +1,117 @@
+000  Analityka odwiedzin | nagłówek 2
+001  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
+002  Więcej w polityce prywatności
+003  Odrzuć | przycisk
+004  Akceptuj | przycisk
+005  Przejdź do treści | link
+006  blindtennis.app - live scores
+007  widok zwinięty, 
+008  Polski | Zmień na tryb ciemny
+009  Menu główne | nagłówek 2
+010  Na żywo | tab
+011  Turnieje | tab
+012  wybrano,  | Zawodnicy | tab
+013  (cisza)
+014  główny | Baza zawodników | nagłówek 2
+015  pole tekstowe wyszukiwania | Szukaj zawodnika...
+016  Włączone | Wszyscy | przycisk przełączania
+017  Wyłączone | Mężczyźni | przycisk przełączania
+018  Wyłączone | Kobiety | przycisk przełączania
+019  widok zwinięty,  | Wszystkie kraje (92)
+020  widok zwinięty,  | Wszystkie kategorie (92)
+021  Katarzyna Antczak – B4 – 3 mecze
+022  Carlos Arbos – B1 – 0 meczów
+023  Jonathan Yanez Avalos – B1 – 0 meczów
+024  Mateusz Balwierz – B4 – 8 meczów
+025  Lucas Bartlewski – B1 – 0 meczów
+026  Giancarlo Berganti – B1 – 0 meczów
+027  Nicolas Berodt – B2 – 0 meczów
+028  Dominik Biskupek – B4 – 4 mecze
+029  Marcin Błoński – B3 – 3 mecze
+030  Tomasz Błoński – B3 – 4 mecze
+031  Rick Bouwens – B3 – 0 meczów
+032  Matteo Maria Briglia – B1 – 0 meczów
+033  Kamil Byczyński – B3 – 3 mecze
+034  Grzegorz Bzowski – B1 – 3 mecze
+035  Gabriel Caparrós – B1 – 0 meczów
+036  Łukasz Chmielewski – B1 – 2 mecze
+037  Mateusz Ciborowski – B2 – 6 meczów
+038  Liz Conzemius – B2 – 0 meczów
+039  Tom Delaval – B2 – 0 meczów
+040  Delphine Deschamps – B2 – 1 mecz
+041  Monika dubiel – B1 – 0 meczów
+042  Adam Dyczka – B1 – 4 mecze
+043  Paweł Ejzenberg – B1 – 4 mecze
+044  Oliver Fanchawe – B2 – 0 meczów
+045  Tomasz Gawrych – B2 – 7 meczów
+046  Jessica Gonzalez – B2 – 0 meczów
+047  David Gordon – B2 – 1 mecz
+048  Bianka Graming – B1 – 0 meczów
+049  Dana Granowski – B2 – 0 meczów
+050  Zbigniew Haftka – B4 – 7 meczów
+051  Mark Haskett – B2 – 0 meczów
+052  Guillaume Hervier – B1 – 0 meczów
+053  Damian Hortecki – B3 – 7 meczów
+054  Patryk Hyla – B1 – 4 mecze
+055  Małgorzata Ignasiak – B2 – 3 mecze
+056  Jerzy Janas – B1 – 3 mecze
+057  Marta Jędrzejczyk – B1 – 2 mecze
+058  Carlos Arbos Jinard – B1 – 0 meczów
+059  Simone Kaminski – B2 – 0 meczów
+060  Mykhailo Kandala – B3 – 3 mecze
+061  Aleksandra Karakula – B3 – 5 meczów
+062  Mateusz Kaznodziej – B4 – 3 mecze
+063  Magdalena Kokot-Rybińska – B1 – 4 mecze
+064  Piotr Kopyciński – B3 – 3 mecze
+065  Mariusz Kowalski – B2 – 6 meczów
+066  Bernadeta Kozioł – B1 – 3 mecze
+067  Yasser Ait Lahcem – B1 – 0 meczów
+068  Michael Leigh – B2 – 0 meczów
+069  Kristin Linck – B1 – 0 meczów
+070  Michał Lipski – B2 – 3 mecze
+071  Katarzyna Lis – B2 – 2 mecze
+072  Jakub Maciejewski – B3 – 4 mecze
+073  Kamilla Malak – B3 – 3 mecze
+074  Piotr Malicki – B1 – 4 mecze
+075  Oliwia Marciniak – B4 – 5 meczów
+076  Nibin Mathew – B1 – 0 meczów
+077  Aranzazu Meso – B2 – 3 mecze
+078  Marta Hignesto Munoz – B2 – 0 meczów
+079  Yannik Neumann – B2 – 0 meczów
+080  Tobias Nitschmann – 1 mecz
+081  Małgorzata Olkiewicz – B3 – 2 mecze
+082  Miłosz Opoka – B4 – 8 meczów
+083  Michał Orchowski – B2 – 8 meczów
+084  Rosa Daniela Pierri – B1 – 0 meczów
+085  Katarzyna Pietruszynska – 0 meczów | przycisk
+086  Katarzyna Pietruszyńska – B2 – 4 mecze
+087  Kinga Przewoźna – B4 – 2 mecze
+088  Naqi Rizvi – B1 – 1 mecz
+089  Andrzej Rybitwa – B3 – 3 mecze
+090  Christian Schäfer – B3 – 1 mecz | przycisk
+091  Jarosław Skarżyński – B4 – 8 meczów | przycisk
+092  Dmytro Skasyrskyy – B4 – 3 mecze
+093  Brendan Spencer – B1 – 0 meczów
+094  Michał Stanisławski – B4 – 7 meczów
+095  Lars Stetten – B1 – 2 mecze
+096  Emil Stopierzynski – B2 – 6 meczów
+097  Justyna Stopierzyńska – B2 – 3 mecze
+098  Jarosław Stopierzyński – B2 – 5 meczów
+099  Michal Stypa – B3 – 7 meczów
+100  Rafał Sudoł – B1 – 3 mecze | przycisk
+101  Martyna Swatowska – B1 – 3 mecze
+102  Justyna Szafranek – B1 – 3 mecze
+103  Kamil Szulc – B4 – 7 meczów
+104  Axel Teichmann – B2 – 0 meczów | przycisk
+105  Sławomir Tolak-Ciszewski – B1 – 7 meczów | przycisk
+106  Karolis Verbliugevicius – B1 – 0 meczów | przycisk
+107  Jose Daniel Viera – B1 – 0 meczów | przycisk
+108  Daniela Wallace – B4 – 0 meczów
+109  Teresa Whelan – B1 – 0 meczów
+110  Marta Woźniak – B1 – 2 mecze
+111  Marian Wywiórski – B2 – 7 meczów
+112  Dajana Zgrzebska – B4 – 0 meczów
+113  Polityka prywatności | link
+114  Dla organizatorów
+115  Technologia Vest Media
+116  (koniec strony)

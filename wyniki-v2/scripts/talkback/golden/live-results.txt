@@ -6,7 +6,7 @@
 005  Przejdź do treści | link
 006  blindtennis.app - live scores
 007  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
-008  Zmień na tryb ciemny | przycisk
+008  Zmień na tryb ciemny
 009  Menu główne | nagłówek 2
 010  wybrano,  | Na żywo | tab
 011  Turnieje | tab
@@ -14,19 +14,12 @@
 013  główny | Na żywo | panel karty | 5th Dürener Handicup 2026
 014  5th Dürener Handicup 2026
 015  Sekcje na żywo | lista kart
-016  wybrano,  | Mecze na żywo | tab
+016  Mecze na żywo | tab
 017  Drabinka | tab
-018  (cisza)
-019  Kort 3: brak meczu | Plan turnieju | Wyniki | tab
-020  Kort 1 | link | 1/4, 4 elementy
-021  Kort 2 | link | 2/4
-022  Kort 3 | link | 3/4
-023  Kort 4 | link | 4/4
-024  Kort 1: Anna Nowak kontra Béla Kovács. Anna Nowak serwuje. punkty 40 do 30. Set 1, 6 do 4. Set 2, aktywny, 3 do 3
-025  Kort 2: brak meczu | nagłówek 2
-026  Kort 3: brak meczu
-027  Kort 4: brak meczu
-028  nagłówek 2 | Polityka prywatności | link
-029  Dla organizatorów | link
-030  Technologia Vest Media
-031  (koniec strony)
+018  Plan turnieju | tab
+019  wybrano,  | Wyniki | tab
+020  Brak zakończonych meczów aktywnego turnieju
+021  Polityka prywatności | link
+022  Dla organizatorów | link
+023  Technologia Vest Media | link
+024  (koniec strony)

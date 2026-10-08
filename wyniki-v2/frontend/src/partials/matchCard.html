@@ -1,16 +1,19 @@
-<!-- One match as two rows; expects `card` in scope (from bracketCards.js). -->
-<div class="btv-match" :class="{ 'is-pinned': card.pinned, 'is-bye': card.bye }" role="group" :aria-label="bracketCardAria(card)">
+<!-- One match as two rows; expects `card` in scope (from bracketCards.js). A screen reader hears
+     it as one sentence with the result (TalkBack does not say a group's name); the names that
+     are links and the pins stay as stops of their own. -->
+<div class="btv-match" :class="{ 'is-pinned': card.pinned, 'is-bye': card.bye }">
+  <span class="sr-only" x-text="bracketCardAria(card)"></span>
   <template x-for="(row, ri) in card.rows" :key="ri">
     <div class="btv-row" :class="{ 'is-won': row.won, 'is-pinned': row.pinned }">
       <span class="btv-tag" aria-hidden="true" x-text="row.tag"></span>
       <template x-if="row.bye">
-        <span class="btv-name btv-name--bye" x-text="ri === 1 ? bracketText('bye') : ''"></span>
+        <span class="btv-name btv-name--bye" aria-hidden="true" x-text="ri === 1 ? bracketText('bye') : ''"></span>
       </template>
       <template x-if="!row.bye && row.href">
         <a class="btv-name" :href="row.href" :title="row.name" x-text="row.short"></a>
       </template>
       <template x-if="!row.bye && !row.href">
-        <span class="btv-name" :title="row.name" x-text="row.short || '—'"></span>
+        <span class="btv-name" aria-hidden="true" :title="row.name" x-text="row.short || '—'"></span>
       </template>
       <button type="button" class="btv-pin" :class="{ 'is-hidden': !row.decided }" :tabindex="row.decided ? 0 : -1"
               :aria-pressed="row.pinned ? 'true' : 'false'" :aria-label="bracketPinLabel(row)" :title="bracketPinLabel(row)"

@@ -273,7 +273,8 @@ export function createScheduleView() {
         this.scheduleCourtLabel(match),
         `${labels.time}: ${timeLabel}`,
         `${labels.category}: ${this.scheduleCategoryLabel(match)}`,
-        `${labels.phase}: ${this.translatePhase(match?.phase || '')}`,
+        // "B1 Men — Finał": the category is said just before, so only the round
+        `${labels.phase}: ${this.translatePhase(String(match?.phase || '').split(' — ').pop())}`,
         match?.notes_public ? `${labels.notes}: ${match.notes_public}` : '',
         `${labels.status}: ${this.scheduleStatusLabel(match?.status)}`,
         this.scheduleMatchHasResult(match) ? this.scheduleMatchScore(match) : '',

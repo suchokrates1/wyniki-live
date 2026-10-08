@@ -1,0 +1,11 @@
+000  blindtennis.app | link
+001  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
+002  Dla organizatorów
+003  nagłówek 1 | Logowanie dla osób, które prowadzą turnieje na blindtennis.app.
+004  Biuro turnieju Dzień turnieju: zawodnicy, losowanie, plan meczów, grupy, drabinka i wyniki. Logujesz się hasłem biura, które daje organizator turnieju.
+005  Panel organizatora serii Dla serii turniejów: zakładanie turniejów, zgłoszenia, korty, logo i wyniki serii. Logujesz się adresem e-mail i hasłem ustawionym z zaproszenia.
+006  Chcesz poprowadzić turniej albo serię na blindtennis.app? Napisz:
+007  contact@blindtennis.app
+008  Wróć do wyników | link
+009  Polityka prywatności | link
+010  (koniec strony)
