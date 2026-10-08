@@ -14,6 +14,26 @@
     <meta name="description" content="blindtennis.app - live scores">
 </head>
 <body>
+    <!-- first in the page: a screen reader meets the choice before the scores, not after the footer -->
+    <div
+        x-data="analyticsConsent"
+        class="consent-banner"
+        x-show="visible"
+        x-cloak
+        role="region"
+        aria-labelledby="consent-title"
+        aria-describedby="consent-body"
+    >
+        <div class="consent-banner__inner">
+            <h2 id="consent-title" class="consent-banner__title" x-text="consentText().title">Analityka odwiedzin</h2>
+            <p id="consent-body" class="consent-banner__body" x-text="consentText().body"></p>
+            <div class="consent-banner__actions">
+                <a class="consent-banner__link" :href="privacyHref()" x-text="consentText().privacyLink">Więcej w polityce prywatności</a>
+                <button type="button" class="consent-banner__btn consent-banner__btn--ghost" @click="reject()" x-text="consentText().reject">Odrzuć</button>
+                <button type="button" class="consent-banner__btn" @click="accept()" x-text="consentText().accept">Akceptuj</button>
+            </div>
+        </div>
+    </div>
     <div x-data="tennisApp" x-cloak class="wrap" x-effect="document.title = tr().pageTitle || 'blindtennis.app - live scores'; document.documentElement.lang = tr().htmlLang || lang || 'pl'">
         <a href="#main" class="skip-link" x-text="uiText().skipToContent || 'Skip to main content'">Skip to main content</a>
         
@@ -151,16 +171,18 @@
         </div>
 
         <!-- Tab Navigation -->
-        <nav class="tab-bar" role="tablist" :aria-label="tr().tabs?.navLabel || 'Główna nawigacja'">
+        <!-- the main menu, read first; TalkBack does not say a tab list's own name, so a hidden heading says it -->
+        <h2 class="sr-only" id="main-menu-title" x-text="tr().tabs?.navLabel || 'Menu główne'">Menu główne</h2>
+        <div class="tab-bar" role="tablist" aria-labelledby="main-menu-title">
                 <button class="tab-btn" id="tab-main-live" role="tab" aria-controls="panel-main-live" :aria-selected="activeTab === 'live'" :class="{ 'tab-btn--active': activeTab === 'live' }" @click="openMainTab('live')"><svg class="tab-btn__icon" aria-hidden="true" viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.2 7.5c3.2 1.6 3.2 7.4 0 9M18.8 7.5c-3.2 1.6-3.2 7.4 0 9" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span class="tab-btn__label" x-text="tr().tabs?.live || 'Na żywo'"></span></button>
                 <button class="tab-btn" id="tab-main-tournaments" role="tab" aria-controls="panel-main-tournaments" :aria-selected="activeTab === 'tournaments'" :class="{ 'tab-btn--active': activeTab === 'tournaments' }" @click="openMainTab('tournaments')"><svg class="tab-btn__icon" aria-hidden="true" viewBox="0 0 24 24" width="22" height="22"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z M12 13v4 M8 20h8 M7 6H4a3 3 0 0 0 3 4 M17 6h3a3 3 0 0 1-3 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="tab-btn__label" x-text="tr().tabs?.tournaments || 'Historia'"></span></button>
                 <button class="tab-btn" id="tab-main-players" role="tab" aria-controls="panel-main-players" :aria-selected="activeTab === 'players'" :class="{ 'tab-btn--active': activeTab === 'players' }" @click="openMainTab('players')"><svg class="tab-btn__icon" aria-hidden="true" viewBox="0 0 24 24" width="22" height="22"><circle cx="9" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5 M16 4.8a3.3 3.3 0 0 1 0 6.4 M18 14.8c1.8.7 3 2.4 3.5 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="tab-btn__label" x-text="tr().tabs?.players || 'Zawodnicy'"></span></button>
-        </nav>
+        </div>
         
         <!-- Loading State -->
-        <div x-show="loading" class="loading-state" role="status">
+        <!-- not announced: the scores follow at once, and "loading" before them is only noise -->
+        <div x-show="loading" class="loading-state" aria-hidden="true">
             <span class="spinner spinner--large"></span>
-            <span class="sr-only" x-text="t('loading')">Ładowanie wyników...</span>
         </div>
         
         <!-- Error State -->
@@ -977,26 +999,6 @@
         </div>
     </div>
 
-    <div
-        x-data="analyticsConsent"
-        class="consent-banner"
-        x-show="visible"
-        x-cloak
-        role="region"
-        aria-labelledby="consent-title"
-        aria-describedby="consent-body"
-    >
-        <div class="consent-banner__inner">
-            <h2 id="consent-title" class="consent-banner__title" x-text="consentText().title">Analityka odwiedzin</h2>
-            <p id="consent-body" class="consent-banner__body" x-text="consentText().body"></p>
-            <div class="consent-banner__actions">
-                <a class="consent-banner__link" :href="privacyHref()" x-text="consentText().privacyLink">Więcej w polityce prywatności</a>
-                <button type="button" class="consent-banner__btn consent-banner__btn--ghost" @click="reject()" x-text="consentText().reject">Odrzuć</button>
-                <button type="button" class="consent-banner__btn" @click="accept()" x-text="consentText().accept">Akceptuj</button>
-            </div>
-        </div>
-    </div>
-    
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>

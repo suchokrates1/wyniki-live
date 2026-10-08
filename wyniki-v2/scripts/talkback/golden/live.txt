@@ -1,31 +1,32 @@
-000  Przejdź do treści | link
-001  blindtennis.app - live scores
-002  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
-003  Zmień na tryb ciemny | przycisk
-004  wybrano,  | Na żywo | tab
-005  Turnieje | tab
-006  Zawodnicy | tab
-007  główny | Na żywo | panel karty | 5th Dürener Handicup 2026
-008  5th Dürener Handicup 2026
-009  Sekcje na żywo | lista kart
-010  wybrano,  | Mecze na żywo | tab
-011  Drabinka | tab
-012  Plan turnieju | tab
-013  Wyniki | tab
-014  Kort 1 | link | 1/4, 4 elementy
-015  Kort 2 | link | 2/4
-016  Kort 3 | link | 3/4
-017  Kort 4 | link | 4/4
-018  Kort 1: Anna Nowak kontra Béla Kovács. Anna Nowak serwuje. punkty 40 do 30. Set 1, 6 do 4. Set 2, aktywny, 3 do 3
-019  Kort 2: brak meczu
-020  Kort 3: brak meczu
-021  Kort 4: brak meczu
-022  Polityka prywatności | link
-023  Dla organizatorów | link
-024  Technologia Vest Media
-025  link | Analityka odwiedzin | nagłówek 2
-026  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
-027  Więcej w polityce prywatności
-028  Odrzuć | przycisk
-029  Akceptuj | przycisk
-030  (koniec strony)
+000  Analityka odwiedzin | nagłówek 2
+001  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
+002  Więcej w polityce prywatności
+003  Odrzuć | przycisk
+004  Akceptuj | przycisk
+005  Przejdź do treści | link
+006  blindtennis.app - live scores
+007  widok zwinięty,  | Polski | wyskakujący przycisk otwierający menu
+008  Zmień na tryb ciemny | przycisk
+009  Menu główne | nagłówek 2
+010  wybrano,  | Na żywo | tab
+011  Turnieje | tab
+012  Zawodnicy | tab
+013  główny | Na żywo | panel karty | 5th Dürener Handicup 2026
+014  5th Dürener Handicup 2026
+015  Sekcje na żywo | lista kart
+016  wybrano,  | Mecze na żywo | tab
+017  Drabinka | tab
+018  Plan turnieju | tab
+019  Wyniki | tab
+020  Kort 1 | link | 1/4, 4 elementy
+021  Kort 2 | link | 2/4
+022  Kort 3 | link | 3/4
+023  Kort 4 | link | 4/4
+024  Kort 1: Anna Nowak kontra Béla Kovács. Anna Nowak serwuje. punkty 40 do 30. Set 1, 6 do 4. Set 2, aktywny, 3 do 3
+025  Kort 2: brak meczu
+026  Kort 3: brak meczu
+027  Kort 4: brak meczu
+028  Polityka prywatności
+029  Dla organizatorów | link
+030  Technologia Vest Media
+031  (koniec strony)

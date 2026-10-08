@@ -172,7 +172,7 @@ export const TRANSLATION_PATCHES_LT = {
     },
   },
   history: { title: 'Naujausi rezultatai', noMatchesActive: 'Nėra baigtų aktyvaus turnyro mačų', openCategory: 'Rodyti kategoriją {category} turnyrinėje lentelėje' },
-  tabs: { navLabel: 'Pagrindinė navigacija' },
+  tabs: { navLabel: 'Pagrindinis meniu' },
   tournamentCard: { backToList: 'Grįžti prie turnyrų' },
   playerSection: { genderFilter: 'Lyties filtras' },
   playerProfile: { ageLabel: '{years} m.', classLabel: 'Sporto klasė', classTitle: 'Sporto klasifikacija', classNote: 'Rezultatai lieka toje kategorijoje, kurioje buvo sužaisti.', classSince: '{class} nuo {date}', classPrevious: 'anksčiau {class}', classSourceTournament: 'klasifikacija turnyre {tournament}', classSourceTournamentHidden: 'klasifikacija turnyre', classSourceManual: 'pakeista žaidėjų duomenų bazėje', classSourceInitial: 'pirmoji klasė duomenų bazėje', classProvisional: 'laikina klasė', classCurrent: 'dabartinė', medalsByCategory: 'Medaliai pagal kategoriją', noCategory: 'be kategorijos', resultWon: 'Pergalė', resultLost: 'Pralaimėjimas', noMatches: 'Nėra mačų', notFound: 'Žaidėjas nerastas' },

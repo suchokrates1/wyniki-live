@@ -57,7 +57,7 @@ PAGE_END = re.compile(r"nie ma następnego elementu|no next item", re.I)
 
 SCREENS = {
     # name: (address, most steps, text that says the page has loaded, what TalkBack says on its first element)
-    "live": ("http://localhost:8811/?lang=pl", 80, "5th Dürener Handicup 2026", "Przejdź do treści"),
+    "live": ("http://localhost:8811/?lang=pl", 80, "5th Dürener Handicup 2026", "Analityka odwiedzin"),
 }
 
 
