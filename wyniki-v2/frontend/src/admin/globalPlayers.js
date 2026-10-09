@@ -91,7 +91,7 @@ export function createGlobalPlayersAdmin() {
      classSourceText(row) {
        if (row.source === 'tournament') return row.tournament_name ? `klasyfikacja na turnieju: ${row.tournament_name}` : 'klasyfikacja na turnieju';
        if (row.source === 'manual') return 'zmiana ręczna w bazie';
-       return 'klasa w bazie przed prowadzeniem historii';
+       return 'kategoria w bazie sprzed prowadzenia historii';
      },
 
      classHistoryText(row) {
@@ -103,7 +103,7 @@ export function createGlobalPlayersAdmin() {
 
      classHistoryTitle() {
        const gp = this.globalPlayers.find((row) => row.id === this.classHistoryOpenId);
-       return `Historia klas: ${gp ? `${gp.first_name} ${gp.last_name}` : ''}`;
+       return `Historia kategorii: ${gp ? `${gp.first_name} ${gp.last_name}` : ''}`;
      },
 
      async toggleClassHistory(gp) {
@@ -119,7 +119,7 @@ export function createGlobalPlayersAdmin() {
          if (!r.ok) throw new Error('Failed');
          this.classHistory = (await r.json()).history || [];
        } catch (err) {
-         this.showToast('Nie udało się wczytać historii klas', 'error');
+         this.showToast('Nie udało się wczytać historii kategorii', 'error');
        } finally {
          this.classHistoryLoading = false;
        }
@@ -148,7 +148,7 @@ export function createGlobalPlayersAdmin() {
            ? `Do decyzji: ${pending} ${pending === 1 ? 'zawodnik' : 'zawodników'}.`
            : 'Brak zawodników do decyzji w tym turnieju.';
        } catch (err) {
-         this.classReviewStatus = 'Nie udało się wczytać przeglądu klas.';
+         this.classReviewStatus = 'Nie udało się wczytać przeglądu kategorii.';
        } finally {
          this.classReviewLoading = false;
        }
@@ -162,13 +162,13 @@ export function createGlobalPlayersAdmin() {
 
      classReviewHint(item) {
        return item.hint === 'reclassification_required'
-         ? `Zagrał(a) w kategorii niższej niż klasa ${item.entry_class || item.current_class} — to możliwe tylko po nowej klasyfikacji.`
-         : `Grał(a) w kategorii wyższej niż klasa ${item.entry_class || item.current_class} — nowa klasyfikacja albo gra w wyższej kategorii.`;
+         ? `Zagrał(a) w kategorii niższej niż kategoria zawodnika ${item.entry_class || item.current_class} — to możliwe tylko po nowej klasyfikacji.`
+         : `Grał(a) w kategorii wyższej niż kategoria zawodnika ${item.entry_class || item.current_class} — nowa klasyfikacja albo gra w wyższej kategorii.`;
      },
 
      classReviewDecisionText(item) {
-       if (item.decision === 'reclassify') return `Zapisano: nowa klasa ${item.classification}.`;
-       if (item.decision === 'play_up') return 'Zapisano: gra w wyższej kategorii, klasa bez zmian.';
+       if (item.decision === 'reclassify') return `Zapisano: nowa kategoria ${item.classification}.`;
+       if (item.decision === 'play_up') return 'Zapisano: gra w wyższej kategorii, kategoria zawodnika bez zmian.';
        return 'Zapisano: pominięty.';
      },
 

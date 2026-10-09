@@ -8,7 +8,7 @@ export const FIELD_LABELS = {
   last_name: 'Nazwisko',
   gender: 'Płeć',
   country: 'Kraj',
-  category: 'Klasa',
+  category: 'Kategoria',
   birth_date: 'Data urodzenia',
 };
 

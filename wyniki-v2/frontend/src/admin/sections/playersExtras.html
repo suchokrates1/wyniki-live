@@ -3,10 +3,10 @@
   <h2 id="adm-classes-title" class="adm-card__title">Klasyfikacje po turnieju</h2>
           <!-- Sport classes after a tournament -->
           <section class="adm-legacy-block" aria-labelledby="adm-classes-title">
-            <p class="adm-card__hint">Zawodnicy, kt&oacute;rzy grali w kategorii innej ni&#380; ich klasa sportowa. Wyniki zostaj&#261; w kategorii, w kt&oacute;rej zosta&#322;y rozegrane.</p>
+            <p class="adm-card__hint">Zawodnicy, kt&oacute;rzy grali w kategorii innej ni&#380; ich kategoria zawodnika (B1&ndash;B4). Wyniki zostaj&#261; w kategorii, w kt&oacute;rej zosta&#322;y rozegrane.</p>
             <div class="flex flex-wrap items-end gap-2 mb-3">
               <div class="form-control">
-                <label for="class-review-tournament" class="label-text text-sm">Turniej do przegl&#261;du klas</label>
+                <label for="class-review-tournament" class="label-text text-sm">Turniej do przegl&#261;du kategorii</label>
                 <select id="class-review-tournament" x-model="classReviewTournamentId" @change="loadClassReview()" class="adm-input">
                   <option value="">Wybierz turniej</option>
                   <template x-for="t in tournaments" :key="'class_review_t_'+t.id">
@@ -21,23 +21,23 @@
                 <template x-for="item in (classReview ? classReview.items : [])" :key="'class_review_'+item.global_player_id+'_'+(item.decision || 'open')">
                   <li class="bg-base-100 rounded-box p-3">
                     <fieldset :disabled="!!item.decision">
-                      <legend class="font-semibold" x-text="item.first_name + ' ' + item.last_name + ' — gra w: ' + item.category_label + ', klasa: ' + (item.entry_class || item.current_class || 'brak')"></legend>
+                      <legend class="font-semibold" x-text="item.first_name + ' ' + item.last_name + ' — gra w: ' + item.category_label + ', kategoria zawodnika: ' + (item.entry_class || item.current_class || 'brak')"></legend>
                       <p class="text-sm mb-2" x-show="!item.decision" x-text="classReviewHint(item)"></p>
                       <p class="text-sm mb-2" x-show="item.decision" x-text="classReviewDecisionText(item)"></p>
                       <template x-if="!item.decision && classReviewDraft[item.global_player_id]">
                         <div class="flex flex-wrap gap-x-6 gap-y-2 items-center">
                           <label class="flex items-center gap-2 min-h-[2.25rem] cursor-pointer">
                             <input type="radio" class="radio radio-sm" :name="'class_decision_'+item.global_player_id" value="reclassify" x-model="classReviewDraft[item.global_player_id].decision">
-                            <span>Zmiana klasy na</span>
+                            <span>Zmiana kategorii na</span>
                           </label>
                           <select class="adm-input" x-model="classReviewDraft[item.global_player_id].classification"
-                                  :aria-label="'Nowa klasa: ' + item.first_name + ' ' + item.last_name"
+                                  :aria-label="'Nowa kategoria: ' + item.first_name + ' ' + item.last_name"
                                   :disabled="classReviewDraft[item.global_player_id].decision !== 'reclassify'">
                             <option value="B1">B1</option><option value="B2">B2</option><option value="B3">B3</option><option value="B4">B4</option>
                           </select>
                           <label class="flex items-center gap-2 min-h-[2.25rem] cursor-pointer" x-show="item.hint !== 'reclassification_required'">
                             <input type="radio" class="radio radio-sm" :name="'class_decision_'+item.global_player_id" value="play_up" x-model="classReviewDraft[item.global_player_id].decision">
-                            <span>Gra w wy&#380;szej kategorii (klasa bez zmian)</span>
+                            <span>Gra w wy&#380;szej kategorii (kategoria zawodnika bez zmian)</span>
                           </label>
                           <label class="flex items-center gap-2 min-h-[2.25rem] cursor-pointer">
                             <input type="radio" class="radio radio-sm" :name="'class_decision_'+item.global_player_id" value="skip" x-model="classReviewDraft[item.global_player_id].decision">
@@ -57,7 +57,7 @@
           <section id="class-history-panel" class="bg-base-200 rounded-box p-4 mb-4" x-show="classHistoryOpenId" aria-labelledby="class-history-title">
             <h3 id="class-history-title" class="font-semibold" x-text="classHistoryTitle()"></h3>
             <p role="status" class="text-sm" x-show="classHistoryLoading">Wczytywanie…</p>
-            <p class="text-sm" x-show="!classHistoryLoading && !classHistory.length">Brak klasy w bazie.</p>
+            <p class="text-sm" x-show="!classHistoryLoading && !classHistory.length">Brak kategorii w bazie.</p>
             <ol class="list-decimal pl-6 mt-2 text-sm" x-show="classHistory.length">
               <template x-for="(row, index) in classHistory" :key="'class_history_'+index">
                 <li x-text="classHistoryText(row)"></li>

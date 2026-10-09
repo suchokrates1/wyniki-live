@@ -25,18 +25,13 @@ export function createProfilePanelView() {
     profileDateRange(start, end) {
       if (!start) return '';
       if (!end || end === start) return this.profileDate(start);
-      const [y1, m1] = start.split('-');
-      const [y2, m2] = end.split('-');
-      const day = (value, options) => {
-        try {
-          return new Intl.DateTimeFormat(this.locale(), { ...options, timeZone: 'UTC' }).format(new Date(`${value}T12:00:00Z`));
-        } catch {
-          return value;
-        }
-      };
-      if (y1 === y2 && m1 === m2) return `${day(start, { day: 'numeric' })}–${this.profileDate(end)}`;
-      if (y1 === y2) return `${day(start, { day: 'numeric', month: 'long' })} – ${this.profileDate(end)}`;
-      return `${this.profileDate(start)} – ${this.profileDate(end)}`;
+      // each language orders a range its own way ("25–29 sierpnia 2026", "August 25 – 29, 2026")
+      try {
+        const format = new Intl.DateTimeFormat(this.locale(), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+        return format.formatRange(new Date(`${start}T12:00:00Z`), new Date(`${end}T12:00:00Z`));
+      } catch {
+        return `${this.profileDate(start)} – ${this.profileDate(end)}`;
+      }
     },
 
     /** One step of a tournament's path: "Grupa A · 1. miejsce" or the round ("Finał"). */

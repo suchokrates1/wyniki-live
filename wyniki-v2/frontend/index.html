@@ -344,6 +344,7 @@
                                 type="search"
                                 inputmode="search"
                                 autocomplete="off"
+                                :aria-label="scheduleText().searchPlaceholder"
                                 :placeholder="scheduleText().searchPlaceholder"
                             >
                         </label>
@@ -873,6 +874,7 @@
                 <!-- Search + filters (hidden when profile is open) -->
                 <div x-show="!selectedPlayerId" class="player-filters">
                     <input type="search" id="player-search-input" class="player-search"
+                           :aria-label="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika...'"
                            :placeholder="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika...'"
                            x-model="playerSearch"
                            @input="filterPlayers()">

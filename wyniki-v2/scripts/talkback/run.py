@@ -43,7 +43,7 @@ HINTS = re.compile(r"^(double-tap to (activate|toggle|edit text)|double-tap and 
                    # the language list's name: TalkBack says it as the list's hint, after a pause
                    r"wybierz język$|choose language$)", re.I)
 # a text field: TalkBack says its name (and placeholder) only after a pause, as the field's hint
-TEXT_FIELD = re.compile(r"\b(pole tekstowe|pole edycji|edit box|search field)\b", re.I)
+TEXT_FIELD = re.compile(r"\b(pole tekstowe|pole edycji|edit box|search field|text field)\b", re.I)
 # the system speaking over the page (a notification), not the page
 NOISE = re.compile(r"physical keyboards? configured|skonfigurowano klawiatur", re.I)
 SPOKEN = re.compile(r'Speaking fragment text="(.*?)", utteranceId=')
@@ -57,7 +57,9 @@ ROLE_OR_STATE = re.compile(
     r"column header|nagłówek kolumny|toggle button|przycisk przełączania|disclosure triangle|trójkąt rozwinięcia|"
     r"collapsed|zwinięt\w*|expanded|rozwinięt\w*|checked|zaznaczon\w*|not checked|niezaznaczon\w*|"
     r"((lista|list),\s*)+(lista|list)?|(widok )?(zwinięty|rozwinięty)|wyskakujący przycisk otwierający menu|complementary|pomocniczy|region|"
-    r"\d+ (of|z) \d+.*|\d+/\d+.*|\d+ (items|element\w*))[,.]?$", re.I)
+    r"\d+ (of|z) \d+.*|\d+/\d+.*|\d+ (items|element\w*)|"
+    # English TalkBack also says where focus went: "In list, 4 items", "Out of Main menu"
+    r"(in|out of) .*|edit box|search field|switch|on|off)[,.]?$", re.I)
 # a landmark entered ("główny | Zawodnicy | panel karty | …"): TalkBack runs on through what is in
 # it for as long as the next swipe lets it, and its name is the tab just chosen; left out of the
 # comparison
@@ -71,9 +73,16 @@ CONTAINER = re.compile(r"^(tab panel|panel karty)$", re.I)
 TABLE_PLACE = re.compile(r"(^|,\s*)(wiersz|kolumna|row|column) \d+(?!\d).*$", re.I)
 
 # TalkBack at the last element of the page: the walk ends here (what follows is Chrome's own bar)
-PAGE_END = re.compile(r"nie ma następnego elementu|no next item", re.I)
+PAGE_END = re.compile(r"nie ma następnego elementu|no next item|^no next\b", re.I)
 
 BANNER = "Analityka odwiedzin"  # the consent banner is the first thing on every page of the site
+# the walk's language (--lang): the device locale for Chrome and TalkBack, and the banner's title
+LANGS = {
+    "pl": ("pl-PL", BANNER), "en": ("en-US", "Visit analytics"), "de": ("de-DE", "Besuchsstatistik"),
+    "it": ("it-IT", "Statistiche delle visite"), "es": ("es-ES", "Analítica de visitas"),
+    "fr": ("fr-FR", "Statistiques de visite"), "lt": ("lt-LT", "Apsilankymų statistika"),
+}
+LANG = "pl"
 BASE = "http://localhost:8811"
 
 SCREENS = {
@@ -154,10 +163,21 @@ def screen_size() -> tuple[int, int]:
 def fresh_chrome() -> None:
     """Chrome as on a first visit: one tab, no remembered scroll or service worker, the consent
     banner showing. Its welcome screens stay away through the startup flags set once on the
-    emulator (see the plan); the notification question is answered here, in Polish."""
+    emulator (see the plan); the notification question is answered here. Chrome and TalkBack
+    speak the walk's language (TalkBack's roles and states included)."""
     adb("shell", "pm", "clear", "com.android.chrome")
     adb("shell", "pm", "grant", "com.android.chrome", "android.permission.POST_NOTIFICATIONS")
-    adb("shell", "cmd", "locale", "set-app-locales", "com.android.chrome", "--locales", "pl-PL")
+    locale = LANGS[LANG][0]
+    adb("shell", "cmd", "locale", "set-app-locales", "com.android.chrome", "--locales", locale)
+    talkback = "com.google.android.marvin.talkback"
+    if locale not in adb("shell", "cmd", "locale", "get-app-locales", talkback):
+        # TalkBack keeps speaking its old language until it starts again
+        adb("shell", "cmd", "locale", "set-app-locales", talkback, "--locales", locale)
+        service = adb("shell", "settings", "get", "secure", "enabled_accessibility_services").strip()
+        adb("shell", "settings", "put", "secure", "enabled_accessibility_services", "null")
+        time.sleep(3)
+        adb("shell", "settings", "put", "secure", "enabled_accessibility_services", service)
+        time.sleep(5)
 
 
 def screen_xml() -> str:
@@ -258,7 +278,10 @@ def main() -> int:
     parser.add_argument("screen", choices=sorted(SCREENS) + ["all"])
     parser.add_argument("--update", action="store_true", help="accept this run as the golden transcript")
     parser.add_argument("--steps", type=int, help="how many swipes (default: the screen's own)")
+    parser.add_argument("--lang", choices=sorted(LANGS), default="pl", help="the page's and TalkBack's language")
     args = parser.parse_args()
+    global LANG
+    LANG = args.lang
 
     if args.screen == "all":
         failed = [screen for screen in SCREENS if check(screen, args)]
@@ -271,6 +294,8 @@ def walk_once(name: str, args: argparse.Namespace) -> list[str] | None:
     """One walk, saved to runs/. Now and then Chrome's own bar takes the first touch and the page
     is never reached: then once more."""
     url, steps, first = SCREENS[name]
+    url = url.replace("lang=pl", f"lang={LANG}")
+    first = LANGS[LANG][1] if first == BANNER else first
     for attempt in (1, 2):
         try:
             transcript = walk(url, args.steps or steps, first)
@@ -279,12 +304,17 @@ def walk_once(name: str, args: argparse.Namespace) -> list[str] | None:
             print(stop)
             if attempt == 2:
                 return None
-    out = HERE / "runs" / f"{name}-{time.strftime('%Y%m%d-%H%M%S')}.txt"
+    out = HERE / "runs" / f"{golden_name(name)}-{time.strftime('%Y%m%d-%H%M%S')}.txt"
     out.parent.mkdir(exist_ok=True)
     out.write_text("\n".join(numbered(transcript)) + "\n", encoding="utf-8")
     print("\n".join(numbered(transcript)))
     print(f"\nzapis: {out}")
     return transcript
+
+
+def golden_name(name: str) -> str:
+    """"live" in Polish, "live.en" in English: each language has its own golden transcript."""
+    return name if LANG == "pl" else f"{name}.{LANG}"
 
 
 def numbered(transcript: list[str]) -> list[str]:
@@ -293,7 +323,7 @@ def numbered(transcript: list[str]) -> list[str]:
 
 def check(name: str, args: argparse.Namespace) -> int:
     print(f"\n=== {name}")
-    golden = HERE / "golden" / f"{name}.txt"
+    golden = HERE / "golden" / f"{golden_name(name)}.txt"
     # the emulator now and then loses a swipe or a word (a silent step, a name cut off): a walk
     # that differs from the golden is walked once more, and only a second difference counts
     for attempt in (1, 2):

@@ -35,9 +35,9 @@
       <option value="M">Mężczyźni</option>
       <option value="K">Kobiety</option>
     </select>
-    <label class="sr-only" for="adm-players-category">Klasa sportowa</label>
+    <label class="sr-only" for="adm-players-category">Kategoria</label>
     <select id="adm-players-category" class="adm-input" x-model="globalPlayersFilter.category" @change="loadGlobalPlayers()">
-      <option value="">Każda klasa</option>
+      <option value="">Każda kategoria</option>
       <template x-for="key in globalPlayerCategoryKeys()" :key="'adm_gp_cat_' + key">
         <option :value="key" x-text="globalPlayerCategoryLabel(key)"></option>
       </template>
@@ -65,7 +65,7 @@
             @click="addGlobalToTournament(row.id)"
             x-text="adminPhone ? 'Dopisz' : 'Dopisz do: ' + adminPlayersTournamentName()"
           ></button>
-          <button type="button" class="adm-btn adm-btn--quiet" @click="toggleClassHistory(row.player)">Historia klas</button>
+          <button type="button" class="adm-btn adm-btn--quiet" @click="toggleClassHistory(row.player)">Historia kategorii</button>
         </div>
       </li>
     </template>

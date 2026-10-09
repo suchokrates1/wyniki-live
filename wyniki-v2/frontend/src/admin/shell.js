@@ -30,7 +30,7 @@ export const MORE_ENTRIES = [
 
 export const SECTION_HEADINGS = {
   turnieje: ['Turnieje', 'zakładanie, dane, aktywacja, serie organizatorów'],
-  zawodnicy: ['Zawodnicy', 'baza, zgłoszenia, klasy sportowe'],
+  zawodnicy: ['Zawodnicy', 'baza, zgłoszenia, kategorie'],
   korty: ['Korty i tablety', 'PIN-y, przypisanie, bateria'],
   overlay: ['Overlay TV', 'to, co widzi widz na transmisji'],
   system: ['System', 'poczta, alarmy, dostęp do panelu'],
