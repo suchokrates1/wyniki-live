@@ -83,6 +83,7 @@ LANGS = {
     "fr": ("fr-FR", "Statistiques de visite"), "lt": ("lt-LT", "Apsilankymų statistika"),
 }
 LANG = "pl"
+TALKBACK_LOCALE = ""  # the language TalkBack was last started in during this run
 BASE = "http://localhost:8811"
 
 SCREENS = {
@@ -134,9 +135,11 @@ class Speech:
     def drain(self) -> None:
         self.seen.update((uid, pos) for uid, pos, _ in self._fragments())
 
-    # quiet: TalkBack may pause inside one element ("widok zwinięty," … its name) for over a second
-    def collect(self, first_wait: float = 4.0, quiet: float = 2.0, poll: float = 0.3) -> list[str]:
+    # quiet: TalkBack may pause inside one element ("widok zwinięty," … its name) for over a second,
+    # longer on a slower machine (TALKBACK_QUIET)
+    def collect(self, first_wait: float = 4.0, quiet: float | None = None, poll: float = 0.3) -> list[str]:
         """Everything said after a gesture: wait for the first words, then until it is quiet."""
+        quiet = quiet if quiet is not None else float(os.environ.get("TALKBACK_QUIET", "2"))
         said: list[str] = []
         started = last_new = time.monotonic()
         while True:
@@ -170,14 +173,17 @@ def fresh_chrome() -> None:
     locale = LANGS[LANG][0]
     adb("shell", "cmd", "locale", "set-app-locales", "com.android.chrome", "--locales", locale)
     talkback = "com.google.android.marvin.talkback"
-    if locale not in adb("shell", "cmd", "locale", "get-app-locales", talkback):
-        # TalkBack keeps speaking its old language until it starts again
+    global TALKBACK_LOCALE
+    if TALKBACK_LOCALE != locale:
+        # TalkBack keeps speaking the language it started with, whatever the setting says, so it
+        # starts again once per run (and on a change of language)
         adb("shell", "cmd", "locale", "set-app-locales", talkback, "--locales", locale)
         service = adb("shell", "settings", "get", "secure", "enabled_accessibility_services").strip()
         adb("shell", "settings", "put", "secure", "enabled_accessibility_services", "null")
         time.sleep(3)
         adb("shell", "settings", "put", "secure", "enabled_accessibility_services", service)
         time.sleep(5)
+        TALKBACK_LOCALE = locale
 
 
 def screen_xml() -> str:
@@ -262,7 +268,7 @@ def names(line: str) -> str:
 def spoken(lines: list[str]) -> list[str]:
     """The names in the order said, one per line. A fragment may come a swipe late (TalkBack still
     finishing the last element), so the comparison follows what is said, not which swipe said it."""
-    said = []
+    said: list[str] = []
     for line in lines:
         parts = names(line).split(" | ")
         raw = [part.strip() for part in line.split(" | ")]
