@@ -196,11 +196,15 @@ def open_page(url: str) -> None:
     Chrome, and one that saw TalkBack paused by a screen dump, keeps the page's content away from
     TalkBack until it starts again. From here on nothing dumps the screen."""
     fresh_chrome()
+    # the mock site reaches the emulator through adb; a restarted adb server forgets the forward
+    adb("reverse", "tcp:8811", "tcp:8811")
+    # a slower machine (software rendering, as on the Linux test box) needs longer for the page
+    page_wait = float(os.environ.get("TALKBACK_PAGE_WAIT", "12"))
     adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url, "com.android.chrome")
-    time.sleep(15)  # a cleared Chrome starts slowly
+    time.sleep(page_wait + 3)  # a cleared Chrome starts slowly
     adb("shell", "am", "force-stop", "com.android.chrome")
     adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url, "com.android.chrome")
-    time.sleep(12)
+    time.sleep(page_wait)
 
 
 def walk(url: str, steps: int, first: str) -> list[str]:
