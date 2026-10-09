@@ -15,7 +15,9 @@ import time
 from pathlib import Path
 
 CACHE = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "talkback-e2e-grpc"
-PROTO = Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk" / "emulator" / "lib" / "emulator_controller.proto"
+# the SDK: ANDROID_HOME where it is set (Linux), else Android Studio's place on Windows
+SDK = Path(os.environ.get("ANDROID_HOME") or Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk")
+PROTO = SDK / "emulator" / "lib" / "emulator_controller.proto"
 
 
 def _stubs():
