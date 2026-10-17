@@ -5,6 +5,11 @@ name: VoiceOver walk (macOS)
 # transcript come back as the run's artifact. Free on a public repository.
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: "Only the tests whose name matches (e.g. report, live); empty runs all"
+        required: false
+        default: ""
 
 concurrency:
   group: voiceover-${{ github.ref }}
@@ -49,7 +54,9 @@ jobs:
         run: npx --yes @guidepup/setup@0.29.1 install
 
       - name: Walk the page with VoiceOver
-        run: npx playwright test -c playwright.voiceover.config.js
+        env:
+          ONLY: ${{ inputs.only }}
+        run: npx playwright test -c playwright.voiceover.config.js ${ONLY:+-g "$ONLY"}
 
       # the runner has no sound: what VoiceOver said is laid on the recording at its times
       - name: Voice the recording
