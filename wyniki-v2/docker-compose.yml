@@ -54,8 +54,8 @@ services:
 
       # Court lector. Empty key = the page stays quiet and no clip is requested.
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
-      - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID:-}
-      - ELEVENLABS_MODEL=${ELEVENLABS_MODEL:-}
+      - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID:-gnPxliFHTp6OK6tcoA6i}
+      - ELEVENLABS_MODEL=${ELEVENLABS_MODEL:-eleven_v4}
 
     restart: unless-stopped
     
