@@ -18,6 +18,18 @@ test('the report form opens, is read and closes back to its button with VoiceOve
     timeline.push({ t: Date.now() - started - wait, text });
     return text;
   };
+  // after VO+Space or Escape VoiceOver speaks once the page has moved focus: wait for a new phrase
+  const sayNext = async (before, limit = 6000) => {
+    const until = Date.now() + limit;
+    let text = '';
+    while (Date.now() < until) {
+      await page.waitForTimeout(400);
+      text = (await voiceOver.lastSpokenPhrase()).trim();
+      if (text && text !== before) break;
+    }
+    timeline.push({ t: Date.now() - started, text });
+    return text;
+  };
   try {
     await page.goto('/?lang=pl#players/7', { waitUntil: 'load' });
     await page.locator('.pfv-step').first().waitFor({ state: 'attached' });
@@ -30,13 +42,13 @@ test('the report form opens, is read and closes back to its button with VoiceOve
     expect(text, 'VoiceOver reaches the report button').toMatch(/Zgłoś błąd/);
 
     await voiceOver.act();
-    const opened = await say(1500);
+    const opened = await sayNext(text);
     expect(await page.locator('#pfv-report-message').evaluate((el) => el === document.activeElement), 'focus is in the text field').toBe(true);
     expect(opened, 'VoiceOver says the field name').toMatch(/Co jest nie tak/);
     expect(opened, 'the field name is said once').not.toMatch(/Co jest nie tak\?.*Co jest nie tak\?/s);
 
     await voiceOver.press('Escape');
-    const closed = await say(1500);
+    const closed = await sayNext(opened);
     expect(await page.locator('.pfv-report').isVisible(), 'the form is closed').toBe(false);
     expect(closed, 'VoiceOver is back on the report button').toMatch(/Zgłoś błąd/);
   } finally {
