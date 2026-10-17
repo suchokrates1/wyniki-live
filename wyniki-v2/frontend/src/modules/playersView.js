@@ -8,6 +8,7 @@ import {
   getPlayerCountryOptions,
   getPlayerProfileLookupCandidates,
   normalizePlayerProfileMode,
+  playerListName,
 } from './players.js';
 
 export function createPlayersView() {
@@ -45,6 +46,11 @@ export function createPlayersView() {
       } finally {
         this.playersLoading = false;
       }
+    },
+
+    /** "Antczak Katarzyna": the list is ordered by surname, so it shows the surname first. */
+    playerListName(player) {
+      return playerListName(player);
     },
 
     filterPlayers() {

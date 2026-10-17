@@ -19,6 +19,13 @@ export function dedupePlayersList(players = []) {
   });
 }
 
+/** The list's name: surname first, as the list is ordered ("Antczak Katarzyna"); the full name when the parts are missing. */
+export function playerListName(player) {
+  const last = String(player?.last_name || '').trim();
+  const first = String(player?.first_name || '').trim();
+  return last && first ? `${last} ${first}` : String(player?.name || last || first).trim();
+}
+
 export function filterPlayersList(players = [], { search = '', gender = '', country = '', category = '' } = {}) {
   let list = Array.isArray(players) ? players : [];
   const query = String(search || '').trim().toLowerCase();

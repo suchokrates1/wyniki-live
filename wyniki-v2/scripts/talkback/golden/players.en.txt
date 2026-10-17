@@ -1,7 +1,7 @@
 000  Visit analytics | heading 2
 001  We can count visits to see if the site works. Language, theme and the login session always stay.
 002  More in the privacy policy
-003  Reject | button
+003  link | Reject | button
 004  Accept | button
 005  Skip to main content | link
 006  blindtennis.app - live scores
@@ -19,98 +19,98 @@
 018  Off | Women | toggle button
 019  collapsed,  | All countries (92) | menu pop up button | Country
 020  collapsed,  | All categories (92) | menu pop up button | Category
-021  Katarzyna Antczak – B4 – 3 matches
-022  Carlos Arbos – B1 – 0 matches
-023  Jonathan Yanez Avalos – B1 – 0 matches
-024  Mateusz Balwierz – B4 – 8 matches
-025  Lucas Bartlewski – B1 – 0 matches | button
-026  Giancarlo Berganti – B1 – 0 matches | button
-027  Nicolas Berodt – B2 – 0 matches
-028  Dominik Biskupek – B4 – 4 matches
-029  Marcin Błoński – B3 – 3 matches
-030  Tomasz Błoński – B3 – 4 matches
-031  Rick Bouwens – B3 – 0 matches
-032  button | Matteo Maria Briglia – B1 – 0 matches
-033  Kamil Byczyński – B3 – 3 matches
-034  Grzegorz Bzowski – B1 – 3 matches
-035  Gabriel Caparrós – B1 – 0 matches
-036  Łukasz Chmielewski – B1 – 2 matches
-037  Mateusz Ciborowski – B2 – 6 matches
-038  Liz Conzemius – B2 – 0 matches
-039  Tom Delaval – B2 – 0 matches
-040  Delphine Deschamps – B2 – 1 match
-041  Monika dubiel – B1 – 0 matches
-042  Adam Dyczka – B1 – 4 matches
-043  Paweł Ejzenberg – B1 – 4 matches
-044  Oliver Fanchawe – B2 – 0 matches
-045  Tomasz Gawrych – B2 – 7 matches
-046  Jessica Gonzalez – B2 – 0 matches
-047  David Gordon – B2 – 1 match | button
-048  Bianka Graming – B1 – 0 matches
-049  Dana Granowski – B2 – 0 matches
-050  Zbigniew Haftka – B4 – 7 matches
-051  Mark Haskett – B2 – 0 matches
-052  Guillaume Hervier – B1 – 0 matches | button
-053  Damian Hortecki – B3 – 7 matches
-054  Patryk Hyla – B1 – 4 matches
-055  Małgorzata Ignasiak – B2 – 3 matches
-056  Jerzy Janas – B1 – 3 matches | button
-057  Marta Jędrzejczyk – B1 – 2 matches | button
-058  Carlos Arbos Jinard – B1 – 0 matches
-059  Simone Kaminski – B2 – 0 matches
-060  Mykhailo Kandala – B3 – 3 matches
-061  Aleksandra Karakula – B3 – 5 matches
-062  Mateusz Kaznodziej – B4 – 3 matches
-063  Magdalena Kokot-Rybińska – B1 – 4 matches
-064  Piotr Kopyciński – B3 – 3 matches
-065  Mariusz Kowalski – B2 – 6 matches | button
-066  Bernadeta Kozioł – B1 – 3 matches | button
-067  Yasser Ait Lahcem – B1 – 0 matches
-068  Michael Leigh – B2 – 0 matches | button
-069  Kristin Linck – B1 – 0 matches | button
-070  Michał Lipski – B2 – 3 matches
-071  Katarzyna Lis – B2 – 2 matches
-072  Jakub Maciejewski – B3 – 4 matches
-073  Kamilla Malak – B3 – 3 matches | button
-074  Piotr Malicki – B1 – 4 matches
-075  Oliwia Marciniak – B4 – 5 matches
-076  Nibin Mathew – B1 – 0 matches
-077  Aranzazu Meso – B2 – 3 matches | button
-078  Marta Hignesto Munoz – B2 – 0 matches
-079  Yannik Neumann – B2 – 0 matches | button
-080  Tobias Nitschmann – 1 match | button
-081  Małgorzata Olkiewicz – B3 – 2 matches
-082  Miłosz Opoka – B4 – 8 matches | button
-083  Michał Orchowski – B2 – 8 matches
-084  Rosa Daniela Pierri – B1 – 0 matches
-085  Katarzyna Pietruszynska – 0 matches
-086  Katarzyna Pietruszyńska – B2 – 4 matches
-087  button | Kinga Przewoźna – B4 – 2 matches
-088  Naqi Rizvi – B1 – 1 match
-089  Andrzej Rybitwa – B3 – 3 matches | button
-090  Christian Schäfer – B3 – 1 match | button
-091  Jarosław Skarżyński – B4 – 8 matches
-092  Dmytro Skasyrskyy – B4 – 3 matches
-093  Brendan Spencer – B1 – 0 matches
-094  Michał Stanisławski – B4 – 7 matches
-095  Lars Stetten – B1 – 2 matches
-096  Justyna Stopierzyńska – B2 – 3 matches
-097  Emil Stopierzynski – B2 – 6 matches
-098  Jarosław Stopierzyński – B2 – 5 matches
-099  Michal Stypa – B3 – 7 matches
-100  Rafał Sudoł – B1 – 3 matches | button
-101  Martyna Swatowska – B1 – 3 matches
-102  Justyna Szafranek – B1 – 3 matches
-103  Kamil Szulc – B4 – 7 matches | button
-104  Axel Teichmann – B2 – 0 matches
-105  Sławomir Tolak-Ciszewski – B1 – 7 matches
-106  Karolis Verbliugevicius – B1 – 0 matches
-107  Jose Daniel Viera – B1 – 0 matches
-108  Daniela Wallace – B4 – 0 matches
-109  Teresa Whelan – B1 – 0 matches
-110  Marta Woźniak – B1 – 2 matches | button
-111  Marian Wywiórski – B2 – 7 matches
-112  Dajana Zgrzebska – B4 – 0 matches
+021  Antczak Katarzyna – B4 – 3 matches
+022  Arbos Carlos – B1 – 0 matches
+023  Avalos Jonathan Yanez – B1 – 0 matches
+024  Balwierz Mateusz – B4 – 8 matches
+025  Bartlewski Lucas – B1 – 0 matches
+026  Berganti Giancarlo – B1 – 0 matches
+027  Berodt Nicolas – B2 – 0 matches
+028  Biskupek Dominik – B4 – 4 matches
+029  Błoński Marcin – B3 – 3 matches
+030  Błoński Tomasz – B3 – 4 matches
+031  Bouwens Rick – B3 – 0 matches
+032  Briglia Matteo Maria – B1 – 0 matches
+033  Byczyński Kamil – B3 – 3 matches
+034  Bzowski Grzegorz – B1 – 3 matches
+035  Caparrós Gabriel – B1 – 0 matches
+036  Chmielewski Łukasz – B1 – 2 matches
+037  Ciborowski Mateusz – B2 – 6 matches
+038  Conzemius Liz – B2 – 0 matches
+039  Delaval Tom – B2 – 0 matches
+040  Deschamps Delphine – B2 – 1 match
+041  dubiel Monika – B1 – 0 matches
+042  Dyczka Adam – B1 – 4 matches
+043  button | Ejzenberg Paweł – B1 – 4 matches
+044  Fanchawe Oliver – B2 – 0 matches
+045  Gawrych Tomasz – B2 – 7 matches
+046  button | Gonzalez Jessica – B2 – 0 matches
+047  Gordon David – B2 – 1 match
+048  Graming Bianka – B1 – 0 matches
+049  Granowski Dana – B2 – 0 matches
+050  Haftka Zbigniew – B4 – 7 matches
+051  Haskett Mark – B2 – 0 matches
+052  Hervier Guillaume – B1 – 0 matches
+053  Hortecki Damian – B3 – 7 matches
+054  Hyla Patryk – B1 – 4 matches
+055  Ignasiak Małgorzata – B2 – 3 matches
+056  Janas Jerzy – B1 – 3 matches
+057  Jędrzejczyk Marta – B1 – 2 matches
+058  Jinard Carlos Arbos – B1 – 0 matches
+059  Kaminski Simone – B2 – 0 matches
+060  Kandala Mykhailo – B3 – 3 matches
+061  Karakula Aleksandra – B3 – 5 matches
+062  Kaznodziej Mateusz – B4 – 3 matches
+063  Kokot-Rybińska Magdalena – B1 – 4 matches
+064  Kopyciński Piotr – B3 – 3 matches
+065  Kowalski Mariusz – B2 – 6 matches
+066  Kozioł Bernadeta – B1 – 3 matches
+067  Lahcem Yasser Ait – B1 – 0 matches
+068  Leigh Michael – B2 – 0 matches | button
+069  Linck Kristin – B1 – 0 matches
+070  Lipski Michał – B2 – 3 matches
+071  Lis Katarzyna – B2 – 2 matches
+072  Maciejewski Jakub – B3 – 4 matches
+073  Malak Kamilla – B3 – 3 matches
+074  Malicki Piotr – B1 – 4 matches
+075  Marciniak Oliwia – B4 – 5 matches
+076  Mathew Nibin – B1 – 0 matches
+077  Meso Aranzazu – B2 – 3 matches
+078  Munoz Marta Hignesto – B2 – 0 matches
+079  Neumann Yannik – B2 – 0 matches
+080  Nitschmann Tobias – 1 match | button
+081  Olkiewicz Małgorzata – B3 – 2 matches
+082  Opoka Miłosz – B4 – 8 matches
+083  Orchowski Michał – B2 – 8 matches
+084  Pierri Rosa Daniela – B1 – 0 matches
+085  Pietruszynska Katarzyna – 0 matches
+086  button | Pietruszyńska Katarzyna – B2 – 4 matches
+087  Przewoźna Kinga – B4 – 2 matches
+088  Rizvi Naqi – B1 – 1 match
+089  Rybitwa Andrzej – B3 – 3 matches
+090  Schäfer Christian – B3 – 1 match | button
+091  Skarżyński Jarosław – B4 – 8 matches
+092  Skasyrskyy Dmytro – B4 – 3 matches
+093  Spencer Brendan – B1 – 0 matches
+094  Stanisławski Michał – B4 – 7 matches
+095  Stetten Lars – B1 – 2 matches | button
+096  Stopierzyńska Justyna – B2 – 3 matches
+097  Stopierzynski Emil – B2 – 6 matches
+098  Stopierzyński Jarosław – B2 – 5 matches
+099  Stypa Michal – B3 – 7 matches | button
+100  Sudoł Rafał – B1 – 3 matches | button
+101  Swatowska Martyna – B1 – 3 matches
+102  Szafranek Justyna – B1 – 3 matches
+103  Szulc Kamil – B4 – 7 matches
+104  Teichmann Axel – B2 – 0 matches
+105  Tolak-Ciszewski Sławomir – B1 – 7 matches
+106  Verbliugevicius Karolis – B1 – 0 matches
+107  Viera Jose Daniel – B1 – 0 matches
+108  Wallace Daniela – B4 – 0 matches
+109  Whelan Teresa – B1 – 0 matches
+110  Woźniak Marta – B1 – 2 matches | button
+111  Wywiórski Marian – B2 – 7 matches
+112  Zgrzebska Dajana – B4 – 0 matches
 113  Privacy policy | link
 114  For organizers | link
 115  Powered by Vest Media | link
