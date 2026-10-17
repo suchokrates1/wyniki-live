@@ -1,0 +1,59 @@
+name: VoiceOver walk (macOS)
+
+# A real VoiceOver on a macOS runner walks a page of the built site and checks what it says.
+# Run by hand (Actions → VoiceOver walk → Run workflow); the screen recording and the
+# transcript come back as the run's artifact. Free on a public repository.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: voiceover-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  voiceover:
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: wyniki-v2/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: wyniki-v2/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build public frontend
+        run: npm run build
+
+      # only this job needs them, so they stay out of package.json
+      - name: Install Guidepup
+        run: npm install --no-save @guidepup/playwright@0.19.1 @guidepup/guidepup@0.35.0 @guidepup/record@0.2.0
+
+      - name: Install Playwright WebKit
+        run: npx playwright install webkit
+
+      - name: Set up VoiceOver for automation
+        uses: guidepup/setup-action@0.21.0
+        with:
+          record: true
+
+      - name: Walk the page with VoiceOver
+        run: npx playwright test -c playwright.voiceover.config.js
+
+      - name: Recording and transcript
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voiceover-walk
+          path: |
+            wyniki-v2/frontend/voiceover-results/
+            wyniki-v2/frontend/recordings/
+            wyniki-v2/frontend/test-results/
+          if-no-files-found: warn
