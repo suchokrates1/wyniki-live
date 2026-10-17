@@ -7,6 +7,17 @@
 .pfv-avatar { flex: none; width: 84px; height: 84px; border-radius: 999px; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--bt-path-soft); border: 2px solid var(--bt-path); color: var(--bt-path); font-size: 1.9rem; font-weight: 800; }
 .pfv-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .pfv-name { margin: 0; font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 800; line-height: 1.1; overflow-wrap: anywhere; }
+.pfv-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pfv-action { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--bt-border); background: var(--bt-surface-2); color: var(--bt-text); font: inherit; font-weight: 700; cursor: pointer; }
+.pfv-action:focus-visible { outline: 2px solid var(--bt-path); outline-offset: 2px; }
+.pfv-action:disabled { opacity: 0.6; cursor: default; }
+.pfv-action--strong { border-color: var(--bt-path); }
+.pfv-report { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(8, 10, 14, 0.55); }
+.pfv-report__box { width: min(32rem, 100%); display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 18px; background: var(--bt-surface); border: 1px solid var(--bt-border); color: var(--bt-text); }
+.pfv-report__box h3 { margin: 0; font-size: 1.25rem; }
+.pfv-report textarea { width: 100%; min-height: 8rem; padding: 12px; border-radius: 12px; border: 1px solid var(--bt-border); background: var(--bt-surface-2); color: inherit; font: inherit; resize: vertical; }
+.pfv-report__buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.pfv-report__blank { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .pfv-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .pfv-chips li { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--bt-surface-2); border: 1px solid var(--bt-border); font-size: 0.9rem; }
 .pfv-chips li.is-strong { border-color: var(--bt-path); font-weight: 800; }

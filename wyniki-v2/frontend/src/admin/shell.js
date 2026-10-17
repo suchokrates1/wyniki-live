@@ -8,7 +8,7 @@
 
 export const ADMIN_SECTIONS = [
   { id: 'turnieje', label: 'Turnieje', short: 'Turnieje', tabs: ['tournaments', 'series'] },
-  { id: 'zawodnicy', label: 'Zawodnicy', short: 'Zawodnicy', tabs: ['global_players', 'players', 'player_reviews'] },
+  { id: 'zawodnicy', label: 'Zawodnicy', short: 'Zawodnicy', tabs: ['global_players', 'players', 'player_reviews', 'profile_reports'] },
   { id: 'korty', label: 'Korty i tablety', short: 'Korty', tabs: ['courts', 'devices'] },
   { id: 'overlay', label: 'Overlay TV', short: 'Overlay', tabs: ['settings'] },
   { id: 'system', label: 'System', short: 'System', tabs: ['panic'] },
@@ -43,6 +43,7 @@ export const SECTION_TAB_LABELS = {
   global_players: 'Baza zawodników',
   players: 'Zgłoszenia do turnieju',
   player_reviews: 'Do sprawdzenia',
+  profile_reports: 'Błędy w profilu',
   courts: 'Korty',
   devices: 'Tablety',
 };
@@ -149,6 +150,7 @@ export function createAdminShell() {
       const hash = adminHashFor(tab);
       if (window.location.hash !== hash) window.history.replaceState(null, '', hash);
       if (tab === 'devices') this.loadDevices?.();
+      if (tab === 'profile_reports') this.loadProfileReports?.();
       if (tab === 'panic') this.loadPanic?.();
       if (tab === 'settings') this.$nextTick?.(() => { this.updateCanvasScale?.(); this._fitPreviewNames?.(); });
     },

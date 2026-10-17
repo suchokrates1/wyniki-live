@@ -52,6 +52,8 @@ import { createSeriesView } from './admin/seriesView.js';
 import seriesHtml from './admin/sections/series.html?raw';
 import { createPlayerReviewsView } from './admin/playerReviewsView.js';
 import playerReviewsHtml from './admin/sections/playerReviews.html?raw';
+import { createProfileReportsView } from './admin/profileReportsView.js';
+import profileReportsHtml from './admin/sections/profileReports.html?raw';
 import { createPluralView } from './admin/plural.js';
 import { mergeAdminModules } from './admin/merge.js';
 import { registerAnalyticsConsent } from './consent/banner.js';
@@ -84,6 +86,7 @@ mountAdminPartial('admin-tournament-players', tournamentPlayersHtml);
 mountAdminPartial('admin-logo-crop', logoCropHtml);
 mountAdminPartial('admin-series', seriesHtml);
 mountAdminPartial('admin-player-reviews', playerReviewsHtml);
+mountAdminPartial('admin-profile-reports', profileReportsHtml);
 
 Alpine.data('adminApp', () => mergeAdminModules(
   {
@@ -109,6 +112,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
       this.loadAdmins();
       this.loadChangeLog();
       this.loadPlayerReviews();
+      this.loadProfileReports();
       this._loadDemoStatus();
       // Load live court data (battery, scores) for courts tab
       fetch('/api/snapshot').then(r => r.json()).then(d => {
@@ -150,6 +154,7 @@ Alpine.data('adminApp', () => mergeAdminModules(
   createChangeLogView(),
   createSeriesView(),
   createPlayerReviewsView(),
+  createProfileReportsView(),
   createPluralView(),
 ));
 

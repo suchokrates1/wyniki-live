@@ -1,0 +1,25 @@
+<section class="adm-card" aria-labelledby="adm-profile-reports-title">
+  <div class="adm-card__head">
+    <h2 id="adm-profile-reports-title" class="adm-card__title">Błędy zgłoszone z profilu</h2>
+    <span class="adm-card__hint">odsłuch nazwiska, imię, kategoria, wynik — cokolwiek ktoś wpisał</span>
+  </div>
+  <p class="adm-modal__error" role="alert" x-show="profileReportsError" x-text="profileReportsError"></p>
+  <ul class="adm-rows" role="list">
+    <template x-for="report in profileReports" :key="report.id">
+      <li class="adm-row">
+        <div class="adm-row__main">
+          <div class="adm-row__title">
+            <span class="adm-row__name" x-text="report.player_name"></span>
+          </div>
+          <div class="adm-row__meta" x-text="reportDate(report)"></div>
+          <p x-text="report.message"></p>
+        </div>
+        <div class="adm-row__actions">
+          <a class="adm-btn" x-show="report.global_player_id" :href="'/#players/global/' + report.global_player_id">Profil<span class="sr-only" x-text="': ' + report.player_name"></span></a>
+          <button type="button" class="adm-btn" @click="closeProfileReport(report)">Załatwione<span class="sr-only" x-text="': ' + report.player_name"></span></button>
+        </div>
+      </li>
+    </template>
+  </ul>
+  <p class="adm-empty" x-show="!profileReports.length">Brak zgłoszeń.</p>
+</section>

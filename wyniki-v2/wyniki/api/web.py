@@ -200,6 +200,22 @@ def brand_assets(filename):
 PUBLIC_DATA_FOLDERS = frozenset({'series-logos', 'tournament-logos', 'photos'})
 
 
+@blueprint.route('/data/name-audio/<int:global_id>.mp3')
+def name_audio(global_id):
+    """How the lector says this player's name. Only the numbered mp3, nothing else in the folder."""
+    from flask import abort
+
+    from ..services.name_audio import audio_file
+
+    path = audio_file(global_id)
+    if not path.is_file():
+        abort(404)
+    response = send_from_directory(path.parent, path.name, mimetype='audio/mpeg')
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 @blueprint.route('/data/<folder>/<filename>')
 def uploaded_logo(folder, filename):
     from flask import abort

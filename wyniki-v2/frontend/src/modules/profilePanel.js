@@ -5,8 +5,67 @@ import { formatTemplate as fmt } from '../shared/text.js';
 
 export function createProfilePanelView() {
   return {
+    profileReportOpen: false,
+    profileReportMessage: '',
+    profileReportBlank: '',
+    profileReportStatus: '',
+    profileReportSending: false,
+    _profileNameAudio: null,
+
     profileViewModel() {
       return buildProfileView(this.playerProfile);
+    },
+
+    playProfileName() {
+      const url = this.playerProfile?.player?.name_audio_url;
+      if (!url) return;
+      if (!this._profileNameAudio) this._profileNameAudio = new Audio();
+      this._profileNameAudio.src = url;
+      this._profileNameAudio.play();
+    },
+
+    stopProfileName() {
+      if (!this._profileNameAudio) return;
+      this._profileNameAudio.pause();
+      this._profileNameAudio.src = '';
+    },
+
+    openProfileReport() {
+      this.profileReportMessage = '';
+      this.profileReportBlank = '';
+      this.profileReportStatus = '';
+      this.profileReportOpen = true;
+      this.$nextTick?.(() => this.$refs.profileReportMessage?.focus());
+    },
+
+    closeProfileReport() {
+      this.profileReportOpen = false;
+    },
+
+    async submitProfileReport() {
+      const player = this.playerProfile?.player;
+      if (!player || this.profileReportSending) return;
+      this.profileReportSending = true;
+      this.profileReportStatus = '';
+      try {
+        const response = await fetch('/api/players/reports', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            global_player_id: player.global_id || null,
+            entry_id: player.global_id ? null : player.id,
+            message: this.profileReportMessage,
+            leave_blank: this.profileReportBlank,
+          }),
+        });
+        if (response.status === 429) this.profileReportStatus = 'limit';
+        else if (!response.ok) this.profileReportStatus = 'failed';
+        else this.profileReportStatus = 'sent';
+      } catch {
+        this.profileReportStatus = 'failed';
+      } finally {
+        this.profileReportSending = false;
+      }
     },
 
     profileViewText(key, values) {

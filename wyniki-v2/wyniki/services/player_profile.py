@@ -21,6 +21,7 @@ from ..database import (
 )
 from ..db_models import Tournament
 from .categories import normalize_player_classification
+from .name_audio import public_url as name_audio_url
 from .history_results import result_sets, result_winner
 from .profile_subject import ProfileSubject, subject_from_entry, subject_from_global_player
 
@@ -225,6 +226,8 @@ def build_player_profile(player_id: int, *, is_global: bool) -> dict[str, Any] |
             'photo_url': subject.photo_url,
             'birth_date': subject.birth_date,
             'age': subject.age,
+            'global_id': subject.global_id,
+            'name_audio_url': name_audio_url(subject.global_id),
         },
         'career': _career(tournaments),
         'classification_history': _class_history(subject.global_id),

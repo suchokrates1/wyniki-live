@@ -99,6 +99,7 @@ def test_the_career_adds_up_over_the_public_tournaments_only(career):
     assert profile["player"] == {
         "id": career["global"], "first_name": "Ada", "last_name": "Nowak", "full_name": "Ada Nowak",
         "gender": "K", "category": "B1", "country": "PL", "photo_url": "", "birth_date": "", "age": None,
+        "global_id": career["global"], "name_audio_url": "",
     }
     assert profile["career"] == {
         "tournaments": 2, "matches": 5, "wins": 3, "losses": 2,

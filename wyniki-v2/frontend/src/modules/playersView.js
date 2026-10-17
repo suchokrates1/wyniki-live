@@ -82,6 +82,8 @@ export function createPlayersView() {
     async fetchPlayerProfile(id, mode = 'auto') {
       const requestId = ++this._playerProfileRequestId;
       this.playerProfileLoading = true;
+      this.profileReportOpen = false;
+      this.stopProfileName?.();
       try {
         const requestedMode = normalizePlayerProfileMode(mode);
         const candidates = getPlayerProfileLookupCandidates(this.allPlayers, id, requestedMode);
