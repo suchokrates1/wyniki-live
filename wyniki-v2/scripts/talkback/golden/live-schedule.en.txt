@@ -1,0 +1,29 @@
+000  Visit analytics | heading 2
+001  We can count visits to see if the site works. Language, theme and the login session always stay.
+002  More in the privacy policy | link
+003  Reject | button
+004  Accept | button
+005  Skip to main content | link
+006  blindtennis.app - live scores
+007  collapsed,  | English | menu pop up button | Select language
+008  Switch to dark mode | button
+009  Main menu | heading 2
+010  selected,  | Live | tab
+011  Tournaments | tab
+012  Players | tab
+013  main | Live | tab panel | 5th Dürener Handicup 2026
+014  5th Dürener Handicup 2026
+015  Live sections | tab list
+016  Live matches | tab
+017  Bracket | tab
+018  selected,  | Tournament schedule | tab
+019  Results | tab
+020  search text field | Search surname...  
+021  Sorting
+022  On | By court | toggle button
+023  Off | By category | toggle button
+024  collapsed,  | Completed days (3) | disclosure triangle
+025  Privacy policy | link
+026  For organizers | link
+027  Powered by Vest Media | link
+028  (koniec strony)

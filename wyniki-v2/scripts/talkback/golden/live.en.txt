@@ -1,0 +1,32 @@
+000  Visit analytics | heading 2
+001  We can count visits to see if the site works. Language, theme and the login session always stay.
+002  More in the privacy policy | link
+003  Reject | button
+004  Accept | button
+005  Skip to main content | link
+006  blindtennis.app - live scores
+007  collapsed,  | English | menu pop up button | Select language
+008  Switch to dark mode | button
+009  Main menu | heading 2
+010  selected,  | Live | tab
+011  Tournaments | tab
+012  Players | tab
+013  main | Live | tab panel | 5th Dürener Handicup 2026
+014  5th Dürener Handicup 2026
+015  heading 2 | Live sections | tab list
+016  selected,  | Live matches | tab
+017  Bracket | tab
+018  Tournament schedule | tab
+019  Results | tab
+020  Court 1 | link | 1 of 4, 4 items
+021  Court 2 | link | 2 of 4
+022  Court 3 | link | 3 of 4
+023  Court 4 | link | 4 of 4
+024  Court 1: Anna Nowak versus Béla Kovács. Anna Nowak serving. points 40 to 30. Set 1, 6 to 4. Set 2, active, 3 to 3
+025  Court 2: no match | heading 2
+026  Court 3: no match | heading 2
+027  Court 4: no match | heading 2
+028  Privacy policy | link
+029  For organizers | link
+030  Powered by Vest Media | link
+031  (koniec strony)

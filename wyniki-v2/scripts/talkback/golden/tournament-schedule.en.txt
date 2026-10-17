@@ -1,0 +1,58 @@
+000  Visit analytics | heading 2
+001  We can count visits to see if the site works. Language, theme and the login session always stay.
+002  More in the privacy policy | link
+003  Reject | button
+004  Accept | button
+005  Skip to main content | link
+006  blindtennis.app - live scores
+007  collapsed,  | English | menu pop up button | Select language
+008  Switch to dark mode | button
+009  Main menu | heading 2
+010  Live | tab
+011  selected,  | Tournaments | tab
+012  Players | tab
+013  main | Tournaments | tab panel | 5th Dürener Handicup 2026
+014  Back to tournaments | button
+015  5th Dürener Handicup 2026
+016  Tournament sections | tab list
+017  Bracket | tab
+018  selected,  | Tournament schedule | tab
+019  Results | tab
+020  Friday, July 17, 2026
+021  B2 Mixed | heading 4
+022  Match: Dana Granowski versus Simone Kaminski. Court 2. Time: 16:00. Category: B2 Mixed. Stage: Group stage. Status: Planned
+023  Match: Dana Granowski versus Axel Teichmann. Court 2. Time: 17:10. Category: B2 Mixed. Stage: Group stage. Status: Planned
+024  Match: Dana Granowski versus Yannik Neumann. Court 2. Time: 18:20. Category: B2 Mixed. Stage: Group stage. Status: Planned
+025  Saturday, July 18, 2026
+026  B1 Men | heading 4
+027  Match: Lars Stetten versus Carlos Arbos. Court 1. Time: 10:00. Category: B1 Men. Stage: Group stage. Status: Planned
+028  Match: Lars Stetten versus Naqi Rizvi. Court 4. Time: 11:10. Category: B1 Men. Stage: Group stage. Status: Planned
+029  Match: Lars Stetten versus Lucas Bartlewski. Court 1. Time: 12:20. Category: B1 Men. Stage: Group stage. Status: Planned
+030  Match: Carlos Arbos versus Naqi Rizvi. Court 4. Time: 12:20. Category: B1 Men. Stage: Group stage. Status: Planned
+031  Match: Carlos Arbos versus Lucas Bartlewski. Court 1. Time: 14:40. Category: B1 Men. Stage: Group stage. Status: Planned
+032  Match: Naqi Rizvi versus Lucas Bartlewski. Court 4. Time: 14:40. Category: B1 Men. Stage: Group stage. Status: Planned
+033  B2 Mixed | heading 4
+034  Match: Dana Granowski versus Marian Wywiórski. Court 3. Time: 10:00. Category: B2 Mixed. Stage: Group stage. Status: Planned
+035  Match: Simone Kaminski versus Axel Teichmann. Court 2. Time: 11:10. Category: B2 Mixed. Stage: Group stage. Status: Planned
+036  Match: Simone Kaminski versus Yannik Neumann. Court 2. Time: 13:30. Category: B2 Mixed. Stage: Group stage. Status: Planned
+037  Match: Simone Kaminski versus Marian Wywiórski. Court 3. Time: 13:30. Category: B2 Mixed. Stage: Group stage. Status: Planned
+038  Mixed | heading 4
+039  Match: Christian Schäfer versus Rick Bouwens. Court 2. Time: 10:00. Category: Mixed. Stage: Group stage. Status: Planned
+040  Match: Christian Schäfer versus Daniela Wallace. Court 2. Time: 12:20. Category: Mixed. Stage: Group stage. Status: Planned
+041  Match: Rick Bouwens versus Daniela Wallace. Court 2. Time: 14:40. Category: Mixed. Stage: Group stage. Status: Planned
+042  Sunday, July 19, 2026
+043  B1 Men | heading 4
+044  Match: 3. B1 Men versus 4. B1 Men. Court 1. Time: 10:00. Category: B1 Men. Stage: Match for place 3. Status: Planned
+045  Match: 1. B1 Men versus 2. B1 Men. Court 1. Time: 11:10. Category: B1 Men. Stage: Final. Status: Planned
+046  B2 Mixed | heading 4
+047  Match: Axel Teichmann versus Yannik Neumann. Court 2. Time: 10:00. Category: B2 Mixed. Stage: Group stage. Status: Planned
+048  Match: Axel Teichmann versus Marian Wywiórski. Court 3. Time: 10:00. Category: B2 Mixed. Stage: Group stage. Status: Planned
+049  Match: Yannik Neumann versus Marian Wywiórski. Court 2. Time: 11:10. Category: B2 Mixed. Stage: Group stage. Status: Planned
+050  Match: 1. B2 Mixed versus 2. B2 Mixed. Court 2. Time: 12:20. Category: B2 Mixed. Stage: Final. Status: Planned
+051  Match: 3. B2 Mixed versus 4. B2 Mixed. Court 3. Time: 12:20. Category: B2 Mixed. Stage: Match for place 3. Status: Planned
+052  Mixed | heading 4
+053  Match: 1. Mixed versus 2. Mixed. Court 3. Time: 11:10. Category: Mixed. Stage: Final. Status: Planned
+054  Privacy policy | link
+055  For organizers | link
+056  Powered by Vest Media | link
+057  (koniec strony)

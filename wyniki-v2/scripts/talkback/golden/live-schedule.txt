@@ -1,6 +1,6 @@
 000  Analityka odwiedzin | nagłówek 2
 001  Możemy zliczać odwiedziny, żeby wiedzieć, czy strona działa. Niezbędne dane — język, motyw i sesja logowania — zostają zawsze.
-002  Więcej w polityce prywatności
+002  Więcej w polityce prywatności | link
 003  Odrzuć | przycisk
 004  Akceptuj | przycisk
 005  Przejdź do treści | link
@@ -18,12 +18,12 @@
 017  Drabinka | tab
 018  wybrano,  | Plan turnieju | tab
 019  Wyniki | tab
-020  pole tekstowe wyszukiwania | Szukaj nazwiska...
+020  pole tekstowe wyszukiwania | Szukaj nazwiska...  
 021  Sortowanie
 022  Włączone | Po korcie | przycisk przełączania
 023  Wyłączone | Po kategorii | przycisk przełączania
 024  widok zwinięty,  | Zakończone dni (3) | trójkąt rozwinięcia
-025  Polityka prywatności
+025  Polityka prywatności | link
 026  Dla organizatorów | link
-027  Technologia Vest Media
+027  Technologia Vest Media | link
 028  (koniec strony)

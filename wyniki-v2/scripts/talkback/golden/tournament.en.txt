@@ -1,0 +1,73 @@
+000  Visit analytics | heading 2
+001  We can count visits to see if the site works. Language, theme and the login session always stay.
+002  More in the privacy policy | link
+003  Reject | button
+004  Accept | button
+005  Skip to main content | link
+006  blindtennis.app - live scores
+007  collapsed,  | English | menu pop up button | Select language
+008  Switch to dark mode | button
+009  Main menu | heading 2
+010  Live | tab
+011  selected,  | Tournaments | tab
+012  Players | tab
+013  main | Tournaments | tab panel | 5th Dürener Handicup 2026
+014  Back to tournaments | button
+015  5th Dürener Handicup 2026
+016  Tournament sections | tab list
+017  selected,  | Bracket | tab
+018  Tournament schedule | tab
+019  Results | tab
+020  selected,  | B1 Men | tab
+021  B2 Mixed | tab
+022  Mixed | tab
+023  Groups first, then knockout. The top 2 from each group go through (highlighted in the table). Medals: the final and the 3rd-place match.
+024  Groups | heading 2
+025  goes on to the draw | 1 of 4, 4 items
+026  the pin shows a player's way through the draws
+027  a name opens the player profile | 3 of 4
+028  Record = matches won–lost | 4 of 4
+029  B1 Men | heading 3
+030  PLACE | column header | Row 1, In table Standings for group B1 Men, 5 rows, 6 columns
+031  PLAYER | column header
+032  PIN | column header
+033  MATCHES WON–LOST | column header
+034  SETS WON TO SETS LOST | column header
+035  GAMES WON TO GAMES LOST | column header
+036  1, goes on to the draw | Row 2, Column 1
+037  Lars Stetten | Column 2
+038  Off | Show the way of Lars Stetten | toggle button | Show the way of Lars Stetten, Column 3
+039  Record: 0 to 0 | Column 4
+040  Sets: 0 to 0 | Column 5
+041  Games: 0 to 0 | Column 6
+042  2, goes on to the draw | Row 3, Column 1
+043  Carlos Arbos | Column 2
+044  Off | Show the way of Carlos Arbos | toggle button | Show the way of Carlos Arbos, Column 3
+045  Record: 0 to 0 | Column 4
+046  Sets: 0 to 0 | Column 5
+047  Games: 0 to 0 | Column 6
+048  3 | Row 4, Column 1
+049  Naqi Rizvi | Column 2
+050  Off | Show the way of Naqi Rizvi | toggle button | Show the way of Naqi Rizvi, Column 3
+051  Record: 0 to 0 | Column 4
+052  Sets: 0 to 0 | Column 5
+053  Games: 0 to 0 | Column 6
+054  4 | Row 5, Column 1
+055  Lucas Bartlewski | Column 2
+056  Off | Show the way of Lucas Bartlewski | toggle button | Show the way of Lucas Bartlewski, Column 3
+057  Record: 0 to 0 | Column 4
+058  Sets: 0 to 0 | Column 5
+059  Games: 0 to 0 | Column 6
+060  collapsed,  | Group matches · 0 | disclosure triangle | Out of table Standings for group B1 Men
+061  Main draw | heading 2
+062  selected,  | Final | tab
+063  Final
+064  1. B1 Men – 2. B1 Men
+065  Final
+066  Consolation and placement matches | heading 2
+067  Each draw is drawn like the main one, folded away. A pinned player lights up here too.
+068  collapsed,  | Other matches | disclosure triangle
+069  Privacy policy | link
+070  For organizers | link
+071  Powered by Vest Media | link
+072  (koniec strony)

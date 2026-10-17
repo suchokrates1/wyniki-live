@@ -1,0 +1,57 @@
+000  Visit analytics | heading 2
+001  We can count visits to see if the site works. Language, theme and the login session always stay.
+002  More in the privacy policy | link
+003  Reject | button
+004  Accept | button
+005  Skip to main content | link
+006  blindtennis.app - live scores
+007  collapsed,  | English | menu pop up button | Select language
+008  Switch to dark mode | button
+009  Main menu | heading 2
+010  Live | tab
+011  Tournaments | tab
+012  selected,  | Players | tab
+013  main | Players | tab panel | Anna Przykład | heading 2 | List,  | Medals | List, List,  | Tournament history | region | Tournament history | heading 3 | Way through the tournament | List, List,  | complementary | Head to head | region | Head to head | heading 3 | List,  | Medals by category | region | Medals by category | heading 3 | List,  | Category history | region | Category history | heading 3 | Results stay in the category they were played in.
+014  Back to list | button
+015  Anna Przykład | heading 2
+016  Country: Poland | 1 of 4, 4 items
+017  Category: B3 | 2 of 4
+018  Female | 3 of 4
+019  34 years | 4 of 4
+020  Gold: 1 | 1 of 3, 3 items
+021  Silver: 1 | 2 of 3
+022  Bronze: 0 | 3 of 3
+023  TOURNAMENTS | term
+024  2 | definition
+025  MATCHES | term
+026  5 | definition
+027  RECORD | term
+028  3–2 | definition
+029  SETS | term
+030  2–0 | definition
+031  WIN RATE | term
+032  60% | definition
+033  Tournament history | heading 3
+034  expanded,  | Sample Open 2026 August 25 – 29, 2026 · B3 Women Gold 2–1
+035  Group A · place 1 | 1 of 2, 2 items
+036  Final, Won | 2 of 2
+037  Anna Przykład – Ewa Test. Winner: Anna Przykład. Match score: 4 to 1, 4 to 2. Won, Final
+038  collapsed,  | Spring Sample Cup 2026 May 23 – 24, 2026 · B2 Women Silver 1–1
+039  Head to head | heading 3
+040  Ewa Test, Matches: 1, Record: 1 to 0
+041  Medals by category | heading 3
+042  B2 – Silver: 1 | 1 of 2, 2 items
+043  B3 – Gold: 1 | 2 of 2
+044  Category history | heading 3
+045  Results stay in the category they were played in.
+046  B2, first category in the database
+047  B3 since August 29, 2026, previously B2, classified at Sample Open 2026, current
+048  Data on this profile | heading 3
+049  We show the name, country, age, category (B1–B4) and results from the tournaments the player took part in. Want something corrected or removed? Write to us.
+050  Write about your data | link
+051  Privacy policy | link
+052  contact@blindtennis.app
+053  Privacy policy | link
+054  For organizers | link
+055  Powered by Vest Media | link
+056  (koniec strony)

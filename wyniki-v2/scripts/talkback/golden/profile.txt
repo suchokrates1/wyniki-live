@@ -47,7 +47,7 @@
 046  B2, pierwsza kategoria w bazie | 1/2, 2 elementy
 047  B3 od 29 sierpnia 2026, wcześniej B2, klasyfikacja na turnieju Sample Open 2026, aktualna
 048  Dane w profilu | nagłówek 3
-049  Pokazujemy tu imię i nazwisko, kraj, wiek, klasę startową i wyniki z turniejów, w których zawodnik wystąpił. Chcesz coś poprawić albo usunąć? Napisz do nas.
+049  Pokazujemy tu imię i nazwisko, kraj, wiek, kategorię (B1–B4) i wyniki z turniejów, w których zawodnik wystąpił. Chcesz coś poprawić albo usunąć? Napisz do nas.
 050  Napisz w sprawie danych | link
 051  Polityka prywatności | link
 052  contact@blindtennis.app
