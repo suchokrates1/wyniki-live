@@ -120,7 +120,7 @@ test('a player found in the base is entered, a correction says the admin will lo
   await expect(page.locator('.adm-chip', { hasText: 'zgłoszony' })).toBeVisible();
 
   await page.getByRole('button', { name: /^Popraw\s*: Carlos Arbos$/ }).click();
-  await page.getByRole('form', { name: 'Popraw: Carlos Arbos' }).getByLabel('Klasa').selectOption('B2');
+  await page.getByRole('form', { name: 'Popraw: Carlos Arbos' }).getByLabel('Kategoria').selectOption('B2');
   await page.getByRole('button', { name: 'Zapisz', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: 'zmianę sprawdzi jeszcze administrator' })).toBeVisible();
   expect(state.requests.find((r) => r.method === 'PUT' && r.path === '/players/3').body.category).toBe('B2');
@@ -132,7 +132,7 @@ test('someone new goes into the base and into the tournament', async ({ page }) 
   await openPanel(page, state, '#/twt/t/28/zawodnicy');
   await page.getByLabel('Imię', { exact: true }).fill('Ola');
   await page.getByLabel('Nazwisko', { exact: true }).fill('Testowa');
-  await page.getByLabel('Klasa', { exact: true }).selectOption('B3');
+  await page.getByLabel('Kategoria', { exact: true }).selectOption('B3');
   await page.getByRole('button', { name: 'Dodaj do bazy i zgłoś' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Nowa osoba dodana do bazy i zgłoszona.' })).toBeVisible();
   expect(state.requests.find((r) => r.method === 'POST' && r.path === '/players').body).toMatchObject({ first_name: 'Ola', last_name: 'Testowa', category: 'B3' });

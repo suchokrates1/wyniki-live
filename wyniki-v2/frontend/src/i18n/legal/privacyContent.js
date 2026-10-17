@@ -55,7 +55,7 @@ export const PRIVACY_CONTENT = {
         'Zakres zależy od tego, z czego korzystasz.',
       ], [
         'Odwiedzający tablicę wyników: adres IP, data i godzina, żądany adres, przeglądarka — w logach serwera i u Cloudflare.',
-        'Zawodnicy: imię, nazwisko, kraj, płeć, klasa startowa B1–B4, zdjęcie (jeśli organizator je wgra), wyniki, drabinki, plan i historia meczów. Klasa B1–B4 dotyczy niepełnosprawności wzrokowej — to dana szczególnej kategorii.',
+        'Zawodnicy: imię, nazwisko, kraj, płeć, kategoria B1–B4, zdjęcie (jeśli organizator je wgra), wyniki, drabinki, plan i historia meczów. Kategoria B1–B4 dotyczy niepełnosprawności wzrokowej — to dana szczególnej kategorii.',
         'Sędziowie i obsługa: imię sędziego lub inicjały, kort, PIN, wybór języka i motywu, dane urządzenia potrzebne do synchronizacji.',
         'Aplikacja Android wysyła na nasz serwer identyfikator ANDROID_ID oraz producenta i model telefonu lub tabletu, żeby odróżnić urządzenia o tym samym modelu. To nie jest identyfikator reklamowy. Nie przekazujemy go firmom trzecim.',
         'Biuro turnieju i administrator: hasło, cookie sesji, adres e-mail do raportów, jeśli go ustawiono.',
@@ -65,7 +65,7 @@ export const PRIVACY_CONTENT = {
         'Nie sprzedajemy danych i nie używamy ich do reklamy.',
       ], [
         'Publikacja wyników turnieju — art. 6 ust. 1 lit. b lub f RODO (usługa wyników / prawnie uzasadniony interes informowania o zawodach).',
-        'Klasa B1–B4 na tablicy i w profilu — art. 9 ust. 2 lit. e lub a RODO (dane ujawnione w sporcie klasyfikowanym albo zgoda wyrażona przez zgłoszenie do zawodów).',
+        'Kategoria B1–B4 na tablicy i w profilu — art. 9 ust. 2 lit. e lub a RODO (dane ujawnione w sporcie klasyfikowanym albo zgoda wyrażona przez zgłoszenie do zawodów).',
         'Konta biura i administratora — art. 6 ust. 1 lit. f (ochrona serwisu i organizacja turnieju).',
         'Logi techniczne — art. 6 ust. 1 lit. f (bezpieczeństwo i diagnostyka).',
         'Analityka odwiedzin — tylko po zgodzie, art. 6 ust. 1 lit. a.',
@@ -95,7 +95,7 @@ export const PRIVACY_CONTENT = {
       section('rights', 'Twoje prawa', [
         'Masz prawo dostępu, sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia danych i sprzeciwu. Zgodę na analitykę możesz wycofać w każdej chwili, odrzucając ją ponownie po wyczyszczeniu danych witryny.',
         'Skargę możesz złożyć do Prezesa Urzędu Ochrony Danych Osobowych (uodo.gov.pl).',
-        'Jeśli jesteś zawodnikiem, najpierw skontaktuj się z organizatorem turnieju — to on wprowadza nazwisko i klasę. Możesz też napisać do nas na contact@blindtennis.app.',
+        'Jeśli jesteś zawodnikiem, najpierw skontaktuj się z organizatorem turnieju — to on wprowadza nazwisko i kategorię. Możesz też napisać do nas na contact@blindtennis.app.',
         'Sprzeciw, poprawka lub usunięcie danych: napisz na contact@blindtennis.app (w każdym profilu jest gotowy przycisk „Napisz w sprawie danych”). Odpowiadamy w ciągu miesiąca. Na żądanie usuwamy zdjęcie, datę urodzenia i wiek oraz profil zawodnika. Wyniki w rozegranych drabinkach anonimizujemy (nazwisko zastępujemy oznaczeniem typu „Zawodnik 1”) zamiast je kasować, żeby nie zniekształcić wyników pozostałych zawodników.',
       ]),
       section('analityka', 'Cookies i analityka', [
@@ -129,7 +129,7 @@ export const PRIVACY_CONTENT = {
         'The data depends on how you use the service.',
       ], [
         'Scoreboard visitors: IP address, time, requested URL and browser — in server logs and at Cloudflare.',
-        'Players: first name, last name, country, gender, sport class B1–B4, photo if the organiser uploads one, results, brackets, schedule and match history. Class B1–B4 relates to visual impairment and is special-category data.',
+        'Players: first name, last name, country, gender, category B1–B4, photo if the organiser uploads one, results, brackets, schedule and match history. Category B1–B4 relates to visual impairment and is special-category data.',
         'Umpires and staff: umpire name or initials, court, PIN, language and theme, plus device details needed for sync.',
         'The Android app sends ANDROID_ID, plus the phone or tablet manufacturer and model, to our server so we can tell identical models apart. This is not an advertising ID. We do not pass it to third parties.',
         'Tournament office and admin: password, session cookie, and a report email address if one is set.',
@@ -139,7 +139,7 @@ export const PRIVACY_CONTENT = {
         'We do not sell data and we do not use it for advertising.',
       ], [
         'Publishing tournament results — GDPR Art. 6(1)(b) or (f) (the scoring service / legitimate interest in reporting the event).',
-        'Class B1–B4 on the board and profile — Art. 9(2)(e) or (a) (data made public in classified sport, or consent given by entering the event).',
+        'Category B1–B4 on the board and profile — Art. 9(2)(e) or (a) (data made public in classified sport, or consent given by entering the event).',
         'Office and admin accounts — Art. 6(1)(f) (security and running the tournament).',
         'Technical logs — Art. 6(1)(f) (security and diagnostics).',
         'Visit analytics — only with consent, Art. 6(1)(a).',
@@ -169,7 +169,7 @@ export const PRIVACY_CONTENT = {
       section('rights', 'Your rights', [
         'You can ask for access, correction, erasure, restriction, portability, or object to processing. You can withdraw analytics consent at any time by clearing site data and choosing Reject.',
         'You may complain to the President of the Personal Data Protection Office in Poland (uodo.gov.pl) or your local authority.',
-        'If you are a player, contact the tournament organiser first — they enter the name and class. You can also write to contact@blindtennis.app.',
+        'If you are a player, contact the tournament organiser first — they enter the name and category. You can also write to contact@blindtennis.app.',
         'To object, correct or erase data, write to contact@blindtennis.app (every profile has a ready “Write about your data” button). We reply within one month. On request we delete the photo, the date of birth and age, and the player profile. Results in completed draws are anonymised (the name is replaced with a label such as “Player 1”) rather than deleted, so other players\' results stay correct.',
       ]),
       section('analityka', 'Cookies and analytics', [
@@ -203,7 +203,7 @@ export const PRIVACY_CONTENT = {
         'Der Umfang hängt davon ab, wie Sie den Dienst nutzen.',
       ], [
         'Besucher der Anzeigetafel: IP-Adresse, Zeit, aufgerufene Adresse, Browser — in Serverprotokollen und bei Cloudflare.',
-        'Spieler: Vorname, Nachname, Land, Geschlecht, Startklasse B1–B4, Foto falls der Veranstalter eines hochlädt, Ergebnisse, Tableau, Zeitplan und Spielhistorie. Klasse B1–B4 betrifft eine Sehbehinderung und ist eine besondere Datenkategorie.',
+        'Spieler: Vorname, Nachname, Land, Geschlecht, Kategorie B1–B4, Foto falls der Veranstalter eines hochlädt, Ergebnisse, Tableau, Zeitplan und Spielhistorie. Kategorie B1–B4 betrifft eine Sehbehinderung und ist eine besondere Datenkategorie.',
         'Schiedsrichter und Team: Name oder Initialen, Platz, PIN, Sprache und Design sowie Gerätedaten für die Synchronisation.',
         'Die Android-App sendet ANDROID_ID sowie Hersteller und Modell des Telefons oder Tablets an unseren Server, damit gleiche Modelle unterscheidbar sind. Das ist keine Werbe-ID. Wir geben sie nicht an Dritte weiter.',
         'Turnierbüro und Admin: Passwort, Sitzungscookie und eine Report-E-Mail, falls hinterlegt.',
@@ -213,7 +213,7 @@ export const PRIVACY_CONTENT = {
         'Wir verkaufen keine Daten und nutzen sie nicht für Werbung.',
       ], [
         'Veröffentlichung der Turnierergebnisse — Art. 6 Abs. 1 lit. b oder f DSGVO.',
-        'Klasse B1–B4 auf Tafel und Profil — Art. 9 Abs. 2 lit. e oder a DSGVO (im klassifizierten Sport öffentlich oder Einwilligung durch die Meldung).',
+        'Kategorie B1–B4 auf Tafel und Profil — Art. 9 Abs. 2 lit. e oder a DSGVO (im klassifizierten Sport öffentlich oder Einwilligung durch die Meldung).',
         'Büro- und Admin-Konten — Art. 6 Abs. 1 lit. f DSGVO.',
         'Technische Protokolle — Art. 6 Abs. 1 lit. f DSGVO.',
         'Besuchsstatistik — nur mit Einwilligung, Art. 6 Abs. 1 lit. a DSGVO.',
@@ -277,7 +277,7 @@ export const PRIVACY_CONTENT = {
         'I dati dipendono da come usi il servizio.',
       ], [
         'Visitatori del tabellone: indirizzo IP, orario, URL e browser — nei log del server e presso Cloudflare.',
-        'Giocatori: nome, cognome, paese, genere, classe B1–B4, foto se l’organizzatore la carica, risultati, tabelloni, programma e storico. La classe B1–B4 riguarda la disabilità visiva ed è una categoria particolare.',
+        'Giocatori: nome, cognome, paese, genere, categoria B1–B4, foto se l’organizzatore la carica, risultati, tabelloni, programma e storico. La categoria B1–B4 riguarda la disabilità visiva ed è una categoria particolare.',
         'Arbitri e staff: nome o iniziali, campo, PIN, lingua e tema, dati del dispositivo per la sincronizzazione.',
         'L’app Android invia ANDROID_ID, produttore e modello del telefono o del tablet al nostro server, per distinguere dispositivi dello stesso modello. Non è un ID pubblicitario. Non lo passiamo a terzi.',
         'Ufficio e admin: password, cookie di sessione e indirizzo e-mail dei report, se impostato.',
@@ -287,7 +287,7 @@ export const PRIVACY_CONTENT = {
         'Non vendiamo i dati e non li usiamo per pubblicità.',
       ], [
         'Pubblicazione dei risultati — art. 6, par. 1, lett. b o f GDPR.',
-        'Classe B1–B4 su tabellone e profilo — art. 9, par. 2, lett. e o a GDPR.',
+        'Categoria B1–B4 su tabellone e profilo — art. 9, par. 2, lett. e o a GDPR.',
         'Account ufficio e admin — art. 6, par. 1, lett. f GDPR.',
         'Log tecnici — art. 6, par. 1, lett. f GDPR.',
         'Statistiche delle visite — solo con consenso, art. 6, par. 1, lett. a GDPR.',
@@ -351,7 +351,7 @@ export const PRIVACY_CONTENT = {
         'Los datos dependen de cómo uses el servicio.',
       ], [
         'Visitantes del marcador: dirección IP, hora, URL y navegador — en registros del servidor y en Cloudflare.',
-        'Jugadores: nombre, apellidos, país, género, clase B1–B4, foto si el organizador la sube, resultados, cuadros, calendario e historial. La clase B1–B4 se refiere a discapacidad visual y es una categoría especial.',
+        'Jugadores: nombre, apellidos, país, género, categoría B1–B4, foto si el organizador la sube, resultados, cuadros, calendario e historial. La categoría B1–B4 se refiere a discapacidad visual y es una categoría especial.',
         'Árbitros y equipo: nombre o iniciales, pista, PIN, idioma y tema, datos del dispositivo para la sincronización.',
         'La app de Android envía ANDROID_ID, fabricante y modelo del teléfono o de la tableta a nuestro servidor, para distinguir dispositivos del mismo modelo. No es un identificador publicitario. No lo cedemos a terceros.',
         'Oficina y administración: contraseña, cookie de sesión y correo de informes si está configurado.',
@@ -361,7 +361,7 @@ export const PRIVACY_CONTENT = {
         'No vendemos datos ni los usamos para publicidad.',
       ], [
         'Publicar resultados — art. 6.1.b o f del RGPD.',
-        'Clase B1–B4 en el marcador y el perfil — art. 9.2.e o a del RGPD.',
+        'Categoría B1–B4 en el marcador y el perfil — art. 9.2.e o a del RGPD.',
         'Cuentas de oficina y admin — art. 6.1.f del RGPD.',
         'Registros técnicos — art. 6.1.f del RGPD.',
         'Analítica de visitas — solo con consentimiento, art. 6.1.a del RGPD.',
@@ -425,7 +425,7 @@ export const PRIVACY_CONTENT = {
         'Les données dépendent de votre usage du service.',
       ], [
         'Visiteurs du tableau : adresse IP, heure, URL et navigateur — dans les journaux serveur et chez Cloudflare.',
-        'Joueurs : prénom, nom, pays, genre, classe B1–B4, photo si l’organisateur en ajoute une, résultats, tableaux, programme et historique. La classe B1–B4 concerne un handicap visuel : donnée particulière.',
+        'Joueurs : prénom, nom, pays, genre, catégorie B1–B4, photo si l’organisateur en ajoute une, résultats, tableaux, programme et historique. La catégorie B1–B4 concerne un handicap visuel : donnée particulière.',
         'Arbitres et équipe : nom ou initiales, court, code PIN, langue et thème, données de l’appareil pour la synchronisation.',
         'L’application Android envoie ANDROID_ID, le fabricant et le modèle du téléphone ou de la tablette à notre serveur, afin de distinguer des appareils du même modèle. Ce n’est pas un identifiant publicitaire. Nous ne le transmettons pas à des tiers.',
         'Bureau et administration : mot de passe, cookie de session et e-mail de rapports s’il est renseigné.',
@@ -435,7 +435,7 @@ export const PRIVACY_CONTENT = {
         'Nous ne vendons pas les données et ne les utilisons pas pour la publicité.',
       ], [
         'Publication des résultats — art. 6, § 1, b ou f du RGPD.',
-        'Classe B1–B4 sur le tableau et le profil — art. 9, § 2, e ou a du RGPD.',
+        'Catégorie B1–B4 sur le tableau et le profil — art. 9, § 2, e ou a du RGPD.',
         'Comptes bureau et admin — art. 6, § 1, f du RGPD.',
         'Journaux techniques — art. 6, § 1, f du RGPD.',
         'Statistiques de visite — uniquement avec consentement, art. 6, § 1, a du RGPD.',
@@ -499,7 +499,7 @@ export const PRIVACY_CONTENT = {
         'Duomenys priklauso nuo to, kaip naudojatės paslauga.',
       ], [
         'Rezultatų lentos lankytojai: IP adresas, laikas, URL ir naršyklė — serverio žurnaluose ir Cloudflare.',
-        'Žaidėjai: vardas, pavardė, šalis, lytis, klasė B1–B4, nuotrauka, jei organizatorius ją įkelia, rezultatai, lentelės, tvarkaraštis ir istorija. Klasė B1–B4 susijusi su regos negalia — tai ypatingų kategorijų duomenys.',
+        'Žaidėjai: vardas, pavardė, šalis, lytis, kategorija B1–B4, nuotrauka, jei organizatorius ją įkelia, rezultatai, lentelės, tvarkaraštis ir istorija. Kategorija B1–B4 susijusi su regos negalia — tai ypatingų kategorijų duomenys.',
         'Teisėjai ir komanda: vardas ar inicialai, kortas, PIN, kalba ir tema, įrenginio duomenys sinchronizacijai.',
         'Android programėlė siunčia ANDROID_ID, gamintoją ir telefono ar planšetės modelį į mūsų serverį, kad atskirtume vienodus įrenginius. Tai ne reklamos identifikatorius. Trečiosioms šalims jo neperduodame.',
         'Biuras ir administratorius: slaptažodis, sesijos slapukas ir ataskaitų el. paštas, jei nustatytas.',
@@ -509,7 +509,7 @@ export const PRIVACY_CONTENT = {
         'Duomenų neparduodame ir nenaudojame reklamai.',
       ], [
         'Turnyro rezultatų skelbimas — BDAR 6 str. 1 d. b arba f punktai.',
-        'Klasė B1–B4 lentoje ir profilyje — BDAR 9 str. 2 d. e arba a punktai.',
+        'Kategorija B1–B4 lentoje ir profilyje — BDAR 9 str. 2 d. e arba a punktai.',
         'Biuro ir administratoriaus paskyros — BDAR 6 str. 1 d. f punktas.',
         'Techniniai žurnalai — BDAR 6 str. 1 d. f punktas.',
         'Apsilankymų statistika — tik su sutikimu, BDAR 6 str. 1 d. a punktas.',
