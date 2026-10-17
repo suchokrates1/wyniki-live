@@ -110,6 +110,11 @@ export function createProfilePanelView() {
     async submitProfileReport() {
       const player = this.playerProfile?.player;
       if (!player || this.profileReportSending) return;
+      // checked here, not by `required`: VoiceOver announced an untouched empty field as "invalid data"
+      if (!this.profileReportMessage.trim()) {
+        this.$refs.profileReportMessage?.focus();
+        return;
+      }
       this.profileReportSending = true;
       this.profileReportStatus = '';
       try {

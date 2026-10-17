@@ -41,14 +41,21 @@ test('the report form opens, is read and closes back to its button with VoiceOve
     }
     expect(text, 'VoiceOver reaches the report button').toMatch(/Zgłoś błąd/);
 
+    // What VoiceOver says by itself when focus moves ("Zgłoś błąd w profilu, web dialog, with 3 items,
+    // Co jest nie tak?, edit text" on the recording) is not in Guidepup's spoken log, which holds the
+    // speech after its own commands: where VoiceOver's cursor is (its item text) is checked instead.
     await voiceOver.act();
-    const opened = await sayNext(text);
+    await sayNext(text);
+    const opened = (await voiceOver.itemText()).trim();
+    timeline.push({ t: Date.now() - started, text: `[cursor] ${opened}` });
     expect(await page.locator('#pfv-report-message').evaluate((el) => el === document.activeElement), 'focus is in the text field').toBe(true);
-    expect(opened, 'VoiceOver says the field name').toMatch(/Co jest nie tak/);
-    expect(opened, 'the field name is said once').not.toMatch(/Co jest nie tak\?.*Co jest nie tak\?/s);
+    expect(opened, 'VoiceOver is in the field').toMatch(/Co jest nie tak/);
+    expect(opened, 'an untouched field is not announced as invalid').not.toMatch(/invalid/i);
 
     await voiceOver.press('Escape');
-    const closed = await sayNext(opened);
+    await sayNext(opened);
+    const closed = (await voiceOver.itemText()).trim();
+    timeline.push({ t: Date.now() - started, text: `[cursor] ${closed}` });
     expect(await page.locator('.pfv-report').isVisible(), 'the form is closed').toBe(false);
     expect(closed, 'VoiceOver is back on the report button').toMatch(/Zgłoś błąd/);
   } finally {
