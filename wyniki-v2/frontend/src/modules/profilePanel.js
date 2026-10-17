@@ -40,7 +40,15 @@ export function createProfilePanelView() {
       this.profileReportOpen = true;
       this.$nextTick?.(() => {
         this.holdPageBehindReport(true);
-        this.$refs.profileReportMessage?.focus();
+        // Safari (with VoiceOver above all) can refuse focus in the frame the form appears in, and
+        // VoiceOver then stays on the button: try again once the form is painted
+        const field = this.$refs.profileReportMessage;
+        const focusField = () => {
+          if (this.profileReportOpen && field && document.activeElement !== field) field.focus();
+        };
+        focusField();
+        requestAnimationFrame(focusField);
+        setTimeout(focusField, 150);
       });
     },
 

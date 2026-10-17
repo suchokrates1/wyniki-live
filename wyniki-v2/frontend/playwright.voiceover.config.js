@@ -12,7 +12,7 @@ export default {
   testMatch: '**/*.spec.js',
   reportSlowTests: null,
   timeout: 15 * 60 * 1000,
-  retries: 0, // a finding, not flakiness: a retry would only walk the page again
+  retries: 1, // GitHub's Macs now and then fail to start VoiceOver at all; a real finding fails twice
   reporter: [['list']],
   use: { baseURL: `http://127.0.0.1:${port}`, locale: 'pl-PL' },
   webServer: {
