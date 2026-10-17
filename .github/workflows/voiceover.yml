@@ -51,6 +51,14 @@ jobs:
       - name: Walk the page with VoiceOver
         run: npx playwright test -c playwright.voiceover.config.js
 
+      # the runner has no sound: what VoiceOver said is laid on the recording at its times
+      - name: Voice the recording
+        if: always()
+        run: |
+          for t in voiceover-results/*-timeline.json; do
+            [ -e "$t" ] && node scripts/voiceover-narrate.mjs "${t%-timeline.json}" || true
+          done
+
       - name: Recording and transcript
         if: always()
         uses: actions/upload-artifact@v4
