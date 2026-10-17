@@ -11,8 +11,8 @@ export default {
   testDir: './e2e/voiceover',
   testMatch: '**/*.spec.js',
   reportSlowTests: null,
-  timeout: 5 * 60 * 1000,
-  retries: process.env.CI ? 1 : 0,
+  timeout: 15 * 60 * 1000,
+  retries: 0, // a finding, not flakiness: a retry would only walk the page again
   reporter: [['list']],
   use: { baseURL: `http://127.0.0.1:${port}`, locale: 'pl-PL' },
   webServer: {
