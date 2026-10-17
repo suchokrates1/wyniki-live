@@ -126,40 +126,17 @@ def bricks_for(
     return list(dict.fromkeys(lines))
 
 
-def _rows(query: str, tournament_id: int) -> list:
-    from ..database.connection import db_conn
-
-    with db_conn() as conn:
-        return list(conn.execute(query, (tournament_id,)))
-
-
 def lines_for_tournament(tournament_id: int) -> list[str]:
     from ..database.courts import fetch_courts_for_tournament
+    from ..database.lector_rows import group_player_names, match_pairs, match_set_histories
 
     courts = [row.get("name") for row in fetch_courts_for_tournament(tournament_id)]
     pairs: list[tuple[str, str]] = []
-    grouped: dict[int, list[str]] = {}
-    for row in _rows(
-        """
-        SELECT bgp.group_id, bgp.player_name
-        FROM bracket_group_players bgp
-        JOIN bracket_groups bg ON bg.id = bgp.group_id
-        WHERE bg.tournament_id = ?
-        """,
-        tournament_id,
-    ):
-        grouped.setdefault(int(row["group_id"]), []).append(str(row["player_name"] or ""))
-    for names in grouped.values():
+    for names in group_player_names(tournament_id).values():
         pairs.extend(combinations(names, 2))
-    for table in ("tournament_schedule", "matches", "bracket_knockout"):
-        for row in _rows(
-            f"SELECT player1_name, player2_name FROM {table} WHERE tournament_id = ?",
-            tournament_id,
-        ):
-            pairs.append((str(row["player1_name"] or ""), str(row["player2_name"] or "")))
+    pairs.extend(match_pairs(tournament_id))
     lines = bricks_for(courts=courts, pairs=pairs)
-    for row in _rows("SELECT sets_history FROM matches WHERE tournament_id = ?", tournament_id):
-        raw = row["sets_history"]
+    for raw in match_set_histories(tournament_id):
         try:
             history = json.loads(raw) if raw else []
         except (TypeError, ValueError):
