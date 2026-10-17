@@ -642,10 +642,14 @@
 
             <!-- SUB: Live History (active tournament) -->
             <div x-show="liveSubTab === 'history'" role="tabpanel" id="panel-live-history" aria-labelledby="tab-live-history">
-                <section x-show="history.length > 0" aria-labelledby="live-history-title" x-data="{ scope: 'live' }">
-                    <h3 id="live-history-title" class="hm-heading" x-text="tr().history?.title || 'Historia meczów'"></h3>
-                    <!-- @partial matchResults -->
-                </section>
+                <!-- built only while this tab is open: a hidden results filter <select> leaves VoiceOver
+                     (WebKit) stuck in a phantom "menu" for the rest of the page -->
+                <template x-if="liveSubTab === 'history' && history.length > 0">
+                    <section aria-labelledby="live-history-title" x-data="{ scope: 'live' }">
+                        <h3 id="live-history-title" class="hm-heading" x-text="tr().history?.title || 'Historia meczów'"></h3>
+                        <!-- @partial matchResults -->
+                    </section>
+                </template>
                 <div x-show="history.length === 0" class="empty-state">
                     <div class="empty-state__icon" aria-hidden="true">📋</div>
                     <p x-text="tr().history?.noMatchesActive || tr().tournamentHistory?.noMatches || 'Brak meczow w tym turnieju'"></p>
@@ -859,7 +863,7 @@
                         <div x-show="tournamentHistory.length === 0" class="bracket-empty">
                             <p x-text="tr().tournamentHistory?.noMatches || 'Brak meczów w tym turnieju'"></p>
                         </div>
-                        <template x-if="tournamentHistory.length > 0">
+                        <template x-if="historySubTab === 'matches' && tournamentHistory.length > 0">
                             <div x-data="{ scope: 'tournament' }"><!-- @partial matchResults --></div>
                         </template>
                     </section>
