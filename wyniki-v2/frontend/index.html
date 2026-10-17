@@ -493,7 +493,7 @@
                                                                 <td>
                                                                     <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                                     <span aria-hidden="true"> vs </span>
-                                                                    <span class="sr-only" x-text="acc().versus"></span>
+                                                                    <span class="sr-only" x-text="' ' + acc().versus + ' '"></span>
                                                                     <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                                 </td>
                                                                 <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
@@ -620,7 +620,7 @@
                                                                         <td>
                                                                             <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                                             <span aria-hidden="true"> vs </span>
-                                                                            <span class="sr-only" x-text="acc().versus"></span>
+                                                                            <span class="sr-only" x-text="' ' + acc().versus + ' '"></span>
                                                                             <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                                         </td>
                                                                         <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
@@ -843,7 +843,7 @@
                                                             <td>
                                                                 <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
                                                                 <span aria-hidden="true"> vs </span>
-                                                                <span class="sr-only" x-text="acc().versus"></span>
+                                                                <span class="sr-only" x-text="' ' + acc().versus + ' '"></span>
                                                                 <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
                                                             </td>
                                                             <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
@@ -895,23 +895,27 @@
                                 x-text="tr().playerSection?.women || 'Kobiety'"></button>
                     </div>
                 </div>
-                <div x-show="!selectedPlayerId" class="player-filters player-filters--row2">
-                    <!-- the lists are named by hidden text (aria-labelledby), with no stop of its own -->
-                    <span class="sr-only" id="player-country-label" aria-hidden="true" x-text="tr().playerProfile?.country || 'Kraj'"></span>
-                    <select id="player-country-select" class="player-dropdown" aria-labelledby="player-country-label" x-model="playerCountry" @change="filterPlayers()">
-                        <option value="" x-text="(tr().playerSection?.allCountries || 'Wszystkie kraje') + ' (' + allPlayers.length + ')'"></option>
-                        <template x-for="opt in playerCountryOptions()" :key="forKey('pc', opt.code)">
-                            <option :value="opt.code" x-text="opt.code + ' (' + opt.count + ')'"></option>
-                        </template>
-                    </select>
-                    <span class="sr-only" id="player-category-label" aria-hidden="true" x-text="tr().playerProfile?.category || 'Kategoria'"></span>
-                    <select id="player-category-select" class="player-dropdown" aria-labelledby="player-category-label" x-model="playerCategory" @change="filterPlayers()">
-                        <option value="" x-text="(tr().playerSection?.allCategories || 'Wszystkie kategorie') + ' (' + allPlayers.length + ')'"></option>
-                        <template x-for="opt in playerCategoryOptions()" :key="forKey('pcat', opt.name)">
-                            <option :value="opt.name" x-text="categoryFilterOptionLabel(opt.name) + ' (' + opt.count + ')'"></option>
-                        </template>
-                    </select>
-                </div>
+                <!-- built only on this tab: a hidden filter <select> leaves VoiceOver (WebKit) stuck in a
+                     phantom "menu" for the rest of the page, as on the live results -->
+                <template x-if="activeTab === 'players'">
+                    <div x-show="!selectedPlayerId" class="player-filters player-filters--row2">
+                        <!-- the lists are named by hidden text (aria-labelledby), with no stop of its own -->
+                        <span class="sr-only" id="player-country-label" aria-hidden="true" x-text="tr().playerProfile?.country || 'Kraj'"></span>
+                        <select id="player-country-select" class="player-dropdown" aria-labelledby="player-country-label" x-model="playerCountry" @change="filterPlayers()">
+                            <option value="" x-text="(tr().playerSection?.allCountries || 'Wszystkie kraje') + ' (' + allPlayers.length + ')'"></option>
+                            <template x-for="opt in playerCountryOptions()" :key="forKey('pc', opt.code)">
+                                <option :value="opt.code" x-text="opt.code + ' (' + opt.count + ')'"></option>
+                            </template>
+                        </select>
+                        <span class="sr-only" id="player-category-label" aria-hidden="true" x-text="tr().playerProfile?.category || 'Kategoria'"></span>
+                        <select id="player-category-select" class="player-dropdown" aria-labelledby="player-category-label" x-model="playerCategory" @change="filterPlayers()">
+                            <option value="" x-text="(tr().playerSection?.allCategories || 'Wszystkie kategorie') + ' (' + allPlayers.length + ')'"></option>
+                            <template x-for="opt in playerCategoryOptions()" :key="forKey('pcat', opt.name)">
+                                <option :value="opt.name" x-text="categoryFilterOptionLabel(opt.name) + ' (' + opt.count + ')'"></option>
+                            </template>
+                        </select>
+                    </div>
+                </template>
 
                 <!-- Players list -->
                 <div class="player-list" x-show="!selectedPlayerId">

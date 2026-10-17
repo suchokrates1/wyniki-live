@@ -25,7 +25,17 @@ export async function walkPage({ page, voiceOver }, { name, url, ready, maxSteps
     for (let step = 0; step < maxSteps; step += 1) {
       const t = Date.now() - started;
       await page.waitForTimeout(SETTLE_MS);
-      const text = (await voiceOver.lastSpokenPhrase()).trim();
+      let text = (await voiceOver.lastSpokenPhrase()).trim();
+      // a big group (the category tabs) can take VoiceOver longer to say: wait, then one more move
+      if (!text) {
+        await page.waitForTimeout(1500);
+        text = (await voiceOver.lastSpokenPhrase()).trim();
+      }
+      if (!text) {
+        await voiceOver.next();
+        await page.waitForTimeout(1500);
+        text = (await voiceOver.lastSpokenPhrase()).trim();
+      }
       // past the last element VoiceOver says nothing new, or the same phrase again: the end
       if (!text || (timeline.length && timeline[timeline.length - 1].text === text)) break;
       timeline.push({ t, text });

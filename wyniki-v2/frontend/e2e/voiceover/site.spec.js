@@ -10,7 +10,8 @@ const SCREENS = [
   },
   {
     name: 'tournament-schedule', url: '/?lang=pl#tournaments/28/schedule', ready: '.schedule-card', maxSteps: 220,
-    names: ['Plan turnieju', 'Mecz: Dana Granowski kontra Simone Kaminski', 'Kort 2', 'Faza grupowa'],
+    // a wide screen shows the table (phones get the cards), read cell by cell
+    names: ['Plan turnieju', 'Dana Granowski kontra Simone Kaminski', 'Kort 2', 'Faza grupowa'],
   },
   {
     name: 'tournament', url: '/?lang=pl#tournaments/28', ready: '.btv', maxSteps: 200,
