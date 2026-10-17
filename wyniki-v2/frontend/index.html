@@ -491,10 +491,13 @@
                                                                 <td x-text="scheduleCategoryLabel(match)"></td>
                                                                 <td x-text="translatePhase(match.phase || '')"></td>
                                                                 <td>
-                                                                    <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
-                                                                    <span aria-hidden="true"> vs </span>
-                                                                    <span class="sr-only" x-text="' ' + acc().versus + ' '"></span>
-                                                                    <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                    <!-- one sentence for a screen reader: WebKit trims the spaces around a hidden word -->
+                                                                    <span class="sr-only" x-text="scheduleMatchupLabel(match)"></span>
+                                                                    <span aria-hidden="true">
+                                                                        <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                        <span> vs </span>
+                                                                        <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                    </span>
                                                                 </td>
                                                                 <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                                 <td x-text="match.notes_public || ''"></td>
@@ -618,10 +621,13 @@
                                                                         <td x-text="scheduleCategoryLabel(match)"></td>
                                                                         <td x-text="translatePhase(match.phase || '')"></td>
                                                                         <td>
-                                                                            <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
-                                                                            <span aria-hidden="true"> vs </span>
-                                                                            <span class="sr-only" x-text="' ' + acc().versus + ' '"></span>
-                                                                            <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                            <!-- one sentence for a screen reader: WebKit trims the spaces around a hidden word -->
+                                                                            <span class="sr-only" x-text="scheduleMatchupLabel(match)"></span>
+                                                                            <span aria-hidden="true">
+                                                                                <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                                <span> vs </span>
+                                                                                <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                            </span>
                                                                         </td>
                                                                         <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                                         <td x-text="match.notes_public || ''"></td>
@@ -841,10 +847,13 @@
                                                             <td x-text="scheduleCourtLabel(match)"></td>
                                                             <td x-text="translatePhase(match.phase || '')"></td>
                                                             <td>
-                                                                <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
-                                                                <span aria-hidden="true"> vs </span>
-                                                                <span class="sr-only" x-text="' ' + acc().versus + ' '"></span>
-                                                                <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                <!-- one sentence for a screen reader: WebKit trims the spaces around a hidden word -->
+                                                                <span class="sr-only" x-text="scheduleMatchupLabel(match)"></span>
+                                                                <span aria-hidden="true">
+                                                                    <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player1_name) }" x-text="resolveBracketName(match.player1_name) || match.player1_name"></span>
+                                                                    <span> vs </span>
+                                                                    <span class="schedule-player" :class="{ 'is-winner': scheduleIsWinner(match, match.player2_name) }" x-text="resolveBracketName(match.player2_name) || match.player2_name"></span>
+                                                                </span>
                                                             </td>
                                                             <td><span class="schedule-status" :data-status="match.status" x-text="scheduleStatusDisplay(match)"></span></td>
                                                             <td x-text="match.notes_public || ''"></td>

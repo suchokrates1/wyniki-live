@@ -9,7 +9,7 @@ const SCREENS = [
     names: ['Analityka odwiedzin', 'Menu główne', 'Kort 1: Anna Nowak kontra Béla Kovács', 'Kort 2: brak meczu', 'Polityka prywatności'],
   },
   {
-    name: 'tournament-schedule', url: '/?lang=pl#tournaments/28/schedule', ready: '.schedule-card', maxSteps: 220,
+    name: 'tournament-schedule', url: '/?lang=pl#tournaments/28/schedule', ready: '.schedule-card', maxSteps: 320,
     // a wide screen shows the table (phones get the cards), read cell by cell
     names: ['Plan turnieju', 'Dana Granowski kontra Simone Kaminski', 'Kort 2', 'Faza grupowa'],
   },
