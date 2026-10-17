@@ -200,6 +200,16 @@ def test_a_new_court_gets_its_own_lector_and_odd_scores_are_queued(tmp_path, mon
     assert calls[1] == "Piotr Malicki, serwuje, kontra Łukasz Chmielewski."
 
 
+def test_the_slow_fill_leaves_the_live_reserve(monkeypatch):
+    from wyniki.services import lector_fill
+
+    monkeypatch.setattr(lector_fill, "_character_budget", lambda: 0)
+    called = []
+    monkeypatch.setattr(lector_fill, "fill_missing", lambda *a, **k: called.append(k))
+    assert lector_fill.fill_next()["created"] == 0
+    assert called == []
+
+
 def test_the_page_plays_the_published_clip(full_app_with_temp_db, tmp_path, monkeypatch):
     from wyniki.database.courts import create_tournament_courts
     from wyniki.database.tournaments import insert_tournament

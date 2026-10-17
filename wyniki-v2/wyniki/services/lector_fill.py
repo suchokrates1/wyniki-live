@@ -192,11 +192,14 @@ def fill_missing(
 
 
 def fill_next() -> dict:
-    """One missing brick for an active tournament. The live loop calls this slowly."""
+    """One missing brick for an active tournament. Stops while the live reserve is all that's left."""
     from ..database.tournaments import fetch_active_tournaments
 
+    budget = _character_budget()
+    if not budget:
+        return {"created": 0, "skipped": 0, "spent": 0, "left": 0}
     for tournament in fetch_active_tournaments():
-        result = fill_missing(int(tournament["id"]), limit=1)
+        result = fill_missing(int(tournament["id"]), limit=1, character_budget=budget)
         if result["created"] or result["left"]:
             return result
     return {"created": 0, "skipped": 0, "spent": 0, "left": 0}
