@@ -9,8 +9,8 @@
       <div class="pfv-who__text">
         <h2 class="pfv-name" x-text="p.name"></h2>
         <div class="pfv-actions">
-          <button type="button" class="pfv-action" x-show="playerProfile.player.name_audio_url" @click="playProfileName()" x-text="profileText('listenName', 'Odsłuchaj nazwisko')"></button>
-          <button type="button" class="pfv-action" @click="openProfileReport()" x-text="profileText('reportError', 'Zgłoś błąd')"></button>
+          <button type="button" class="pfv-action" x-show="playerProfile.player.name_audio_url" @click="playProfileName()"><span x-text="profileText('listenName', 'Odsłuchaj nazwisko')"></span><span class="sr-only" x-text="', ' + p.name"></span></button>
+          <button type="button" class="pfv-action" x-ref="profileReportButton" @click="openProfileReport()"><span x-text="profileText('reportError', 'Zgłoś błąd')"></span><span class="sr-only" x-text="', ' + p.name"></span></button>
         </div>
         <ul class="pfv-chips">
           <li x-show="p.country"><span class="btv-cc" aria-hidden="true" x-text="p.country"></span><span class="sr-only" x-text="(tr().playerProfile?.country || 'Kraj') + ': ' + countryName(p.country)"></span></li>
@@ -133,10 +133,10 @@
   </div>
 
   <template x-teleport="body">
-  <div class="pfv-report" x-show="profileReportOpen" x-cloak @keydown.escape.window="closeProfileReport()">
-    <div class="pfv-report__box" role="dialog" aria-modal="true" aria-labelledby="pfv-report-title">
+  <div class="pfv-report" x-ref="profileReportLayer" x-show="profileReportOpen" x-cloak @keydown.escape.window="closeProfileReport()" @keydown.tab="trapProfileReport($event)">
+    <div class="pfv-report__box" x-ref="profileReportBox" role="dialog" aria-modal="true" aria-labelledby="pfv-report-title" aria-describedby="pfv-report-hint">
       <h3 id="pfv-report-title" x-text="profileText('reportTitle', 'Zgłoś błąd w profilu')"></h3>
-      <p class="pfv-note" x-show="profileReportStatus !== 'sent'" x-text="profileText('reportHint', 'Napisz, co jest nie tak: odczytanie nazwiska, imię, kategoria, kraj albo wynik.')"></p>
+      <p id="pfv-report-hint" class="pfv-note" x-show="profileReportStatus !== 'sent'" x-text="profileText('reportHint', 'Napisz, co jest nie tak: odczytanie nazwiska, imię, kategoria, kraj albo wynik.')"></p>
       <p class="pfv-note" role="status" x-show="profileReportStatus === 'sent'" x-text="profileText('reportSent', 'Zgłoszenie zapisane. Dziękujemy.')"></p>
       <p class="pfv-note" role="alert" x-show="profileReportStatus === 'failed'" x-text="profileText('reportFailed', 'Nie udało się wysłać. Spróbuj jeszcze raz.')"></p>
       <p class="pfv-note" role="status" x-show="profileReportStatus === 'limit'" x-text="profileText('reportLimit', 'To zgłoszenie już do nas dotarło. Dziękujemy.')"></p>

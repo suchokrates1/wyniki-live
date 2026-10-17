@@ -82,7 +82,7 @@ export function createPlayersView() {
     async fetchPlayerProfile(id, mode = 'auto') {
       const requestId = ++this._playerProfileRequestId;
       this.playerProfileLoading = true;
-      this.profileReportOpen = false;
+      this.releaseProfileReport?.();
       this.stopProfileName?.();
       try {
         const requestedMode = normalizePlayerProfileMode(mode);

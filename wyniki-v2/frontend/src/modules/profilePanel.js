@@ -11,6 +11,8 @@ export function createProfilePanelView() {
     profileReportStatus: '',
     profileReportSending: false,
     _profileNameAudio: null,
+    _profileReportReturn: null,
+    _profileReportHeld: [],
 
     profileViewModel() {
       return buildProfileView(this.playerProfile);
@@ -34,12 +36,64 @@ export function createProfilePanelView() {
       this.profileReportMessage = '';
       this.profileReportBlank = '';
       this.profileReportStatus = '';
+      this._profileReportReturn = document.activeElement;
       this.profileReportOpen = true;
-      this.$nextTick?.(() => this.$refs.profileReportMessage?.focus());
+      this.$nextTick?.(() => {
+        this.holdPageBehindReport(true);
+        this.$refs.profileReportMessage?.focus();
+      });
     },
 
     closeProfileReport() {
+      if (!this.profileReportOpen) return;
       this.profileReportOpen = false;
+      this.holdPageBehindReport(false);
+      const back = this._profileReportReturn;
+      this._profileReportReturn = null;
+      this.$nextTick?.(() => {
+        if (back && document.contains(back)) back.focus();
+        else this.$refs.profileReportButton?.focus();
+      });
+    },
+
+    /** Drop the dialog when the profile itself goes away, without pulling focus back. */
+    releaseProfileReport() {
+      this.profileReportOpen = false;
+      this.holdPageBehindReport(false);
+      this._profileReportReturn = null;
+    },
+
+    holdPageBehindReport(hold) {
+      if (!hold) {
+        for (const el of this._profileReportHeld) el.removeAttribute('inert');
+        this._profileReportHeld = [];
+        return;
+      }
+      const layer = this.$refs.profileReportLayer;
+      const held = [];
+      for (const child of document.body.children) {
+        if (layer && (child === layer || child.contains(layer))) continue;
+        if (child.hasAttribute('inert')) continue;
+        child.setAttribute('inert', '');
+        held.push(child);
+      }
+      this._profileReportHeld = held;
+    },
+
+    trapProfileReport(event) {
+      const root = this.$refs.profileReportBox;
+      if (!root) return;
+      const items = [...root.querySelectorAll('button, textarea, a[href]')].filter((el) => (
+        !el.disabled && el.tabIndex >= 0 && el.offsetParent !== null
+      ));
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const inside = root.contains(document.activeElement);
+      if (!inside || (event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      }
     },
 
     async submitProfileReport() {
