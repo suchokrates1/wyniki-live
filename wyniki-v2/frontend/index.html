@@ -337,7 +337,7 @@
                     </div>
 
                     <div class="schedule-toolbar" x-show="!scheduleLoading && scheduleDays().length > 0">
-                        <label class="schedule-search">
+                        <label class="schedule-search search-field">
                             <input
                                 x-model="scheduleSearch"
                                 class="schedule-search__input"
@@ -345,8 +345,9 @@
                                 inputmode="search"
                                 autocomplete="off"
                                 :aria-label="scheduleText().searchPlaceholder"
-                                :placeholder="scheduleText().searchPlaceholder"
+                                placeholder=" "
                             >
+                            <span class="search-field__hint" aria-hidden="true" x-text="scheduleText().searchPlaceholder"></span>
                         </label>
                         <div class="schedule-sort">
                             <span class="schedule-sort__label" x-text="scheduleText().sortLabel"></span>
@@ -877,11 +878,14 @@
 
                 <!-- Search + filters (hidden when profile is open) -->
                 <div x-show="!selectedPlayerId" class="player-filters">
-                    <input type="search" id="player-search-input" class="player-search"
-                           :aria-label="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika...'"
-                           :placeholder="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika...'"
-                           x-model="playerSearch"
-                           @input="filterPlayers()">
+                    <div class="search-field search-field--players">
+                        <input type="search" id="player-search-input" class="player-search"
+                               :aria-label="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika...'"
+                               placeholder=" "
+                               x-model="playerSearch"
+                               @input="filterPlayers()">
+                        <span class="search-field__hint" aria-hidden="true" x-text="tr().playerSection?.searchPlaceholder || 'Szukaj zawodnika...'"></span>
+                    </div>
                     <div class="player-filter-btns" role="group" :aria-label="tr().playerSection?.genderFilter || 'Filtr płci'">
                         <button class="filter-btn" :class="{ 'filter-btn--active': playerGender === '' }" :aria-pressed="playerGender === ''" @click="playerGender = ''; filterPlayers()"
                                 x-text="tr().playerSection?.all || 'Wszyscy'"></button>

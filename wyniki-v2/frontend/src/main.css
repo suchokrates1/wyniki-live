@@ -2066,6 +2066,27 @@ button.hm-cat-badge:focus-visible {
 .player-search:focus {
   border-color: var(--accent);
 }
+/* A search field's grey hint, drawn over the empty field for the eye only. As a placeholder it
+   was said after the field's name ("Szukaj zawodnika Szukaj zawodnika..."), and English TalkBack
+   says a placeholder alone not at all: the field is named by aria-label, the hint is aria-hidden
+   and drawn by CSS (no Alpine: its x-show did not follow the players field in Chromium). */
+.search-field { position: relative; display: block; }
+.search-field__hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--text-dim); /* full strength: unlike a placeholder, it is checked for contrast */
+  pointer-events: none;
+}
+/* gone as soon as there is text: the field's placeholder is a single space, read by no one */
+.search-field input:not(:placeholder-shown) ~ .search-field__hint { display: none; }
+.search-field--players { flex: 1; min-width: 200px; max-width: 360px; font-size: 14px; }
+.search-field--players .player-search { width: 100%; max-width: none; }
+
 .player-search::placeholder {
   color: var(--text-dim);
   opacity: 0.7;
@@ -2235,7 +2256,7 @@ button.hm-cat-badge:focus-visible {
   .player-filters { flex-direction: column; align-items: stretch; }
   .player-filters--row2 { flex-direction: column; margin-top: 0; }
   .player-dropdown { min-width: 100%; }
-  .player-search { max-width: 100%; }
+  .player-search, .search-field--players { max-width: 100%; }
   .player-card { flex-direction: column; align-items: flex-start; gap: 8px; }
   .player-card__stats { width: 100%; justify-content: space-around; }
 }
