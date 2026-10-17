@@ -322,6 +322,19 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/api/players/active` | Get players from all active tournaments (for Umpire App). |
 | GET | `/api/players/all` | Get all players across all tournaments with match stats. |
 
+## profile_reports_admin
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/admin/api/profile-reports` |  |
+| POST | `/admin/api/profile-reports/<int:report_id>/done` |  |
+
+## profile_reports_public
+
+| Method | Path | What it does |
+|---|---|---|
+| POST | `/api/players/reports` |  |
+
 ## public_placings
 
 | Method | Path | What it does |
@@ -387,6 +400,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | GET | `/assets/<path:filename>` | Serve static assets (JS, CSS, etc.). |
 | GET | `/brand/<path:filename>` |  |
 | GET | `/data/<folder>/<filename>` |  |
+| GET | `/data/name-audio/<int:global_id>.mp3` | How the lector says this player's name. Only the numbered mp3, nothing else in the folder. |
 | GET | `/embed` | Serve embed page with optional language and court parameters. |
 | GET | `/embed.html` | Serve embed page with optional language and court parameters. |
 | GET | `/embed/<lang>/<int:court>` | Serve embed page with optional language and court parameters. |
