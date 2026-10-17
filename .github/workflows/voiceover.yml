@@ -44,6 +44,10 @@ jobs:
         with:
           record: true
 
+      # the action configures macOS; VoiceOver's own settings for the run come with the project
+      - name: Install VoiceOver settings for this project
+        run: npx --yes @guidepup/setup@0.29.1 install
+
       - name: Walk the page with VoiceOver
         run: npx playwright test -c playwright.voiceover.config.js
 
