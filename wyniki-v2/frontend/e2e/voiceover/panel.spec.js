@@ -30,6 +30,8 @@ test('the doors page reads from start to end with VoiceOver', async ({ page, voi
       // at the last element "next" leaves VoiceOver where it is: the same phrase twice is the end
       if (timeline.length && timeline[timeline.length - 1].text === text) break;
       timeline.push({ t, text });
+      // past "end of main" VoiceOver is out of the page (it says nothing more): the end too
+      if (/^end of main$/i.test(text)) break;
       await voiceOver.next();
     }
     const items = timeline.map((entry) => entry.text);
