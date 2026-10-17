@@ -6,7 +6,7 @@
  * Firefox cannot install a PWA at all, so a hint there would be a lie.
  */
 
-const STORAGE_KEY = 'wyniki.iosInstallHintDismissed';
+export const STORAGE_KEY = 'wyniki.iosInstallHintDismissed';
 
 /** iOS Safari, including iPadOS, which reports itself as a Mac with touch. */
 export function isIosSafari(userAgent, maxTouchPoints = 0, platform = '') {

@@ -3,6 +3,8 @@
  * changed something, and the person who changed it decides whether that was the point.
  */
 import { expect, test } from '@playwright/test';
+import { ANALYTICS_CONSENT_KEY } from '../../src/consent/analytics.js';
+import { STORAGE_KEY as INSTALL_HINT_KEY } from '../../src/modules/iosInstallHint.js';
 
 const ROUTES = [
   ['live-scores', 'live/scores'],
@@ -37,12 +39,15 @@ async function settle(page) {
 }
 
 async function open(page, hash, { theme = 'light' } = {}) {
-  await page.addInitScript((code) => {
+  // the consent banner answered and the install hint dismissed, so neither covers the page (the keys
+  // are the app's own: an old name left the banner over the bracket, unchecked in every shot)
+  await page.addInitScript(({ code, consentKey, hintKey }) => {
     try {
       localStorage.setItem('lang', code);
-      localStorage.setItem('analytics-consent', 'rejected');
+      localStorage.setItem(consentKey, 'rejected');
+      localStorage.setItem(hintKey, '1');
     } catch { /* private mode */ }
-  }, 'pl');
+  }, { code: 'pl', consentKey: ANALYTICS_CONSENT_KEY, hintKey: INSTALL_HINT_KEY });
   await page.emulateMedia({ colorScheme: theme });
   await page.goto(`/?lang=pl#${hash}`);
   await expect(page.locator('.tab-bar')).toBeVisible();
