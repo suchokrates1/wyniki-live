@@ -4,6 +4,8 @@
   "first_name": "Anna",
   "last_name": "Przykład",
   "full_name": "Anna Przykład",
+  "global_id": 7,
+  "name_audio_url": "/data/name-audio/7.mp3",
   "gender": "K",
   "category": "B3",
   "country": "PL",

@@ -19,7 +19,7 @@ const SCREENS = [
   },
   {
     name: 'profile', url: '/?lang=pl#players/7', ready: '.pfv-step, h2', maxSteps: 160,
-    names: ['Anna Przykład', 'Kraj: Polska', 'Kategoria: B3', 'Złoto: 1', 'Bilans: 1 do 0', 'Historia kategorii'],
+    names: ['Anna Przykład', 'Odsłuchaj nazwisko, Anna Przykład', 'Zgłoś błąd, Anna Przykład', 'Kraj: Polska', 'Kategoria: B3', 'Złoto: 1', 'Bilans: 1 do 0', 'Historia kategorii'],
   },
 ];
 

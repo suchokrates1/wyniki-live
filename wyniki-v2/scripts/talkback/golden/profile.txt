@@ -14,44 +14,46 @@
 013  główny | Zawodnicy | panel karty | Anna Przykład | nagłówek 2 | Lista,  | Medale | Lista, Lista,  | Historia turniejów | region | Historia turniejów | nagłówek 3 | Droga w turnieju | Lista, Lista,  | pomocniczy | Bilans z rywalami | region | Bilans z rywalami | nagłówek 3 | Lista,  | Medale według kategorii | region | Medale według kategorii | nagłówek 3 | Lista,  | Historia kategorii | region | Historia kategorii | nagłówek 3 | Wyniki zostają w kategorii, w której zostały rozegrane.
 014  Powrót do listy | przycisk
 015  Anna Przykład | nagłówek 2
-016  Kraj: Polska | 1/4, 4 elementy
-017  Kategoria: B3 | 2/4
-018  Kobieta | 3/4
-019  34 lata | 4/4
-020  Złoto: 1 | 1/3, 3 elementy
-021  Srebro: 1 | 2/3
-022  Brąz: 0 | 3/3
-023  TURNIEJE | termin
-024  2 | definicja
-025  MECZE | termin
-026  5 | definicja
-027  BILANS | termin
-028  3–2 | definicja
-029  SETY | termin
-030  2–0 | definicja
-031  SKUTECZNOŚĆ | termin
-032  60% | definicja
-033  Historia turniejów | nagłówek 3
-034  widok rozwinięty,  | Sample Open 2026 25–29 sierpnia 2026 · B3 Women Złoto 2–1
-035  Group A · 1. miejsce | 1/2, 2 elementy
-036  Finał, Wygrana | 2/2
-037  Anna Przykład – Ewa Test. Zwycięzca: Anna Przykład. Wynik meczu: 4 do 1, 4 do 2. Wygrana, Finał
-038  widok zwinięty,  | Spring Sample Cup 2026 23–24 maja 2026 · B2 Kobiety Srebro 1–1
-039  Bilans z rywalami | nagłówek 3
-040  Ewa Test, Mecze: 1, Bilans: 1 do 0
-041  Medale według kategorii | nagłówek 3
-042  B2 – Srebro: 1 | 1/2, 2 elementy
-043  B3 – Złoto: 1 | 2/2
-044  Historia kategorii | nagłówek 3
-045  Wyniki zostają w kategorii, w której zostały rozegrane.
-046  B2, pierwsza kategoria w bazie | 1/2, 2 elementy
-047  B3 od 29 sierpnia 2026, wcześniej B2, klasyfikacja na turnieju Sample Open 2026, aktualna
-048  Dane w profilu | nagłówek 3
-049  Pokazujemy tu imię i nazwisko, kraj, wiek, kategorię (B1–B4) i wyniki z turniejów, w których zawodnik wystąpił. Chcesz coś poprawić albo usunąć? Napisz do nas.
-050  Napisz w sprawie danych | link
-051  Polityka prywatności | link
-052  contact@blindtennis.app
+016  Odsłuchaj nazwisko, Anna Przykład
+017  przycisk | Zgłoś błąd, Anna Przykład | przycisk
+018  Kraj: Polska | 1/4, 4 elementy
+019  Kategoria: B3 | 2/4
+020  Kobieta | 3/4
+021  34 lata | 4/4
+022  Złoto: 1 | 1/3, 3 elementy
+023  Srebro: 1 | 2/3
+024  Brąz: 0 | 3/3
+025  TURNIEJE | termin
+026  2 | definicja
+027  MECZE | termin
+028  5 | definicja
+029  BILANS | termin
+030  3–2 | definicja
+031  SETY | termin
+032  2–0 | definicja
+033  SKUTECZNOŚĆ | termin
+034  60% | definicja
+035  Historia turniejów | nagłówek 3
+036  widok rozwinięty,  | Sample Open 2026 25–29 sierpnia 2026 · B3 Women Złoto 2–1
+037  Group A · 1. miejsce | 1/2, 2 elementy
+038  Finał, Wygrana | 2/2
+039  Anna Przykład – Ewa Test. Zwycięzca: Anna Przykład. Wynik meczu: 4 do 1, 4 do 2. Wygrana, Finał
+040  widok zwinięty,  | Spring Sample Cup 2026 23–24 maja 2026 · B2 Kobiety Srebro 1–1
+041  Bilans z rywalami | nagłówek 3
+042  Ewa Test, Mecze: 1, Bilans: 1 do 0
+043  Medale według kategorii | nagłówek 3
+044  B2 – Srebro: 1 | 1/2, 2 elementy
+045  B3 – Złoto: 1 | 2/2
+046  Historia kategorii | nagłówek 3
+047  Wyniki zostają w kategorii, w której zostały rozegrane.
+048  B2, pierwsza kategoria w bazie | 1/2, 2 elementy
+049  B3 od 29 sierpnia 2026, wcześniej B2, klasyfikacja na turnieju Sample Open 2026, aktualna
+050  Dane w profilu | nagłówek 3
+051  Pokazujemy tu imię i nazwisko, kraj, wiek, kategorię (B1–B4) i wyniki z turniejów, w których zawodnik wystąpił. Chcesz coś poprawić albo usunąć? Napisz do nas.
+052  Napisz w sprawie danych | link
 053  Polityka prywatności | link
-054  Dla organizatorów | link
-055  Technologia Vest Media | link
-056  (koniec strony)
+054  contact@blindtennis.app
+055  Polityka prywatności | link
+056  Dla organizatorów | link
+057  Technologia Vest Media | link
+058  (koniec strony)

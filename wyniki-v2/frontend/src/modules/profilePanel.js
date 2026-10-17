@@ -51,7 +51,10 @@ export function createProfilePanelView() {
       const back = this._profileReportReturn;
       this._profileReportReturn = null;
       this.$nextTick?.(() => {
-        if (back && document.contains(back)) back.focus();
+        // Safari does not focus a clicked button: the opener is then the page or <main tabindex="-1">
+        // (the skip link's target), so only a control is returned to, else the report button
+        const control = back?.matches?.('button, a[href], input, select, textarea, [role="button"]');
+        if (control && document.contains(back)) back.focus();
         else this.$refs.profileReportButton?.focus();
       });
     },

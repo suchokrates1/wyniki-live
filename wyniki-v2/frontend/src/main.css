@@ -2083,7 +2083,9 @@ button.hm-cat-badge:focus-visible {
   pointer-events: none;
 }
 /* gone as soon as there is text: the field's placeholder is a single space, read by no one */
-.search-field input:not(:placeholder-shown) ~ .search-field__hint { display: none; }
+.search-field :is(input, textarea):not(:placeholder-shown) ~ .search-field__hint { display: none; }
+/* a text area: the hint sits on its first line (padding 12px + border) */
+.search-field__hint--top { align-items: flex-start; padding: 13px; }
 .search-field--players { flex: 1; min-width: 200px; max-width: 360px; font-size: 14px; }
 .search-field--players .player-search { width: 100%; max-width: none; }
 

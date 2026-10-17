@@ -12,7 +12,7 @@
 .pfv-action:focus-visible { outline: 2px solid var(--bt-path); outline-offset: 2px; }
 .pfv-action:disabled { opacity: 0.6; cursor: default; }
 .pfv-action--strong { border-color: var(--bt-path); }
-.pfv-report { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(8, 10, 14, 0.55); }
+.pfv-report { position: fixed; inset: 0; z-index: 70; /* above the consent banner (60): it covered Send */  display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(8, 10, 14, 0.55); }
 .pfv-report__box { width: min(32rem, 100%); display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 18px; background: var(--bt-surface); border: 1px solid var(--bt-border); color: var(--bt-text); }
 .pfv-report__box h3 { margin: 0; font-size: 1.25rem; }
 .pfv-report textarea { width: 100%; min-height: 8rem; padding: 12px; border-radius: 12px; border: 1px solid var(--bt-border); background: var(--bt-surface-2); color: inherit; font: inherit; resize: vertical; }
