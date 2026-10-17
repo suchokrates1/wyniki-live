@@ -67,6 +67,48 @@ def edge_lines(
     return lines
 
 
+def _winner_points(loser: int) -> int | None:
+    if loser < 0:
+        return None
+    return 7 if loser <= 5 else loser + 2
+
+
+def history_lines(history: object) -> list[str]:
+    """Set and tie-break bricks implied by stored history. A super tie-break's games are its points."""
+    if not isinstance(history, list):
+        return []
+    sets: list[tuple[int, int, int]] = []
+    ties: list[tuple[int, int, bool]] = []
+    for index, entry in enumerate(history, start=1):
+        if not isinstance(entry, dict):
+            continue
+        try:
+            left = int(entry.get("player1_games") or 0)
+            right = int(entry.get("player2_games") or 0)
+            number = int(entry.get("set_number") or index)
+        except (TypeError, ValueError):
+            continue
+        if entry.get("is_super_tiebreak"):
+            ties.append((left, right, True))
+            continue
+        sets.append((number, left, right))
+        raw = entry.get("tiebreak_loser_points")
+        if raw is None:
+            continue
+        try:
+            loser = int(raw)
+        except (TypeError, ValueError):
+            continue
+        winner = _winner_points(loser)
+        if winner is None:
+            continue
+        if left > right:
+            ties.append((winner, loser, False))
+        elif right > left:
+            ties.append((loser, winner, False))
+    return edge_lines(sets, ties)
+
+
 def bricks_for(
     *,
     courts: Sequence[object],
@@ -115,25 +157,15 @@ def lines_for_tournament(tournament_id: int) -> list[str]:
             tournament_id,
         ):
             pairs.append((str(row["player1_name"] or ""), str(row["player2_name"] or "")))
-    sets: list[tuple[int, int, int]] = []
-    ties: list[tuple[int, int, bool]] = []
+    lines = bricks_for(courts=courts, pairs=pairs)
     for row in _rows("SELECT sets_history FROM matches WHERE tournament_id = ?", tournament_id):
         raw = row["sets_history"]
         try:
             history = json.loads(raw) if raw else []
         except (TypeError, ValueError):
             continue
-        for index, entry in enumerate(history, start=1):
-            if not isinstance(entry, dict):
-                continue
-            try:
-                left = int(entry.get("player1_games") or 0)
-                right = int(entry.get("player2_games") or 0)
-            except (TypeError, ValueError):
-                continue
-            number = int(entry.get("set_number") or index)
-            sets.append((number, left, right))
-    return bricks_for(courts=courts, pairs=pairs, sets=sets, ties=ties)
+        lines.extend(history_lines(history))
+    return list(dict.fromkeys(lines))
 
 
 def fill_missing(

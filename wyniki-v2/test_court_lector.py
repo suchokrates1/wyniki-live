@@ -167,6 +167,18 @@ def test_a_new_court_gets_its_own_lector_and_odd_scores_are_queued(tmp_path, mon
     assert "Set jeden, sześć do czterech." not in lines
     assert all("Zwycięzca" not in line for line in lines)
     assert all("siedem do pięciu" not in line for line in lines)
+    spoken = lector_fill.history_lines([
+        {"player1_games": 10, "player2_games": 8, "is_super_tiebreak": True, "tiebreak_loser_points": 8},
+        {"player1_games": 7, "player2_games": 6, "tiebreak_loser_points": 9},
+        {"player1_games": 6, "player2_games": 7, "tiebreak_loser_points": 11},
+        {"set_number": 1, "player1_games": 8, "player2_games": 6},
+        {"player1_games": 12, "player2_games": 10, "is_super_tiebreak": True},
+    ])
+    assert "Set trzy, dziesięć do ośmiu." not in spoken
+    assert "Tie-break, jedenaście do dziewięciu." in spoken
+    assert "Tie-break, jedenaście do trzynastu." in spoken
+    assert "Set jeden, osiem do sześciu." in spoken
+    assert "Super tie-break, dwanaście do dziesięciu." in spoken
 
     monkeypatch.setattr(court_lector, "_data_root", lambda: tmp_path)
     monkeypatch.setattr(
