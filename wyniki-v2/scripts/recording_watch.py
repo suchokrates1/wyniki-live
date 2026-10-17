@@ -48,6 +48,11 @@ class Watch:
     never_started: set[str] = field(default_factory=set)
 
 
+def duration(seconds: float) -> str:
+    """'3 min', or '20 s' under a minute."""
+    return f"{int(seconds // 60)} min" if seconds >= 60 else f"{int(seconds)} s"
+
+
 def newest_file(folder: Path, camera: str) -> Path | None:
     files = [p for p in folder.glob(f"{camera}- *") if p.is_file()]
     return max(files, key=lambda p: p.stat().st_mtime) if files else None
@@ -73,7 +78,7 @@ def assess(watch: Watch, now: float) -> list[str]:
     if recording and len(stopped) == len(recording) == len(watch.cameras):
         if not watch.all_stopped:
             watch.all_stopped = True
-            messages.append(f"Nagrywanie stoi na wszystkich kamerach od {int(watch.stall // 60)} min (koniec dnia?).")
+            messages.append(f"Nagrywanie stoi na wszystkich kamerach od {duration(watch.stall)} (koniec dnia?).")
         for camera in stopped:
             camera.stalled = True
         return messages
@@ -82,7 +87,7 @@ def assess(watch: Watch, now: float) -> list[str]:
     for camera in recording:
         if camera in stopped and not camera.stalled:
             camera.stalled = True
-            messages.append(f"{camera.name}: plik nie rośnie od {int((now - camera.grew_at) // 60)} min ({camera.path.name if camera.path else '-'}).")
+            messages.append(f"{camera.name}: plik nie rośnie od {duration(now - camera.grew_at)} ({camera.path.name if camera.path else '-'}).")
         elif camera not in stopped and camera.stalled:
             camera.stalled = False
             messages.append(f"{camera.name}: znów nagrywa.")
