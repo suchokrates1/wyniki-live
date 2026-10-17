@@ -179,9 +179,9 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 
 | Method | Path | What it does |
 |---|---|---|
-| GET | `/api/lektor/<court_id>` | Whether court 1 has a clip ready, and the address of that clip. |
-| GET | `/data/lector/court-1.mp3` | The current court 1 announcement. Missing until the score has sat still. |
-| GET | `/lektor/<court_id>` | The page that plays court 1. Court 2 and the rest are not served. |
+| GET | `/api/lektor/<court_id>` | Whether this court has a clip ready, and the address of that clip. |
+| GET | `/data/lector/<filename>` | The current announcement for that court. Missing until the score has sat still. |
+| GET | `/lektor/<court_id>` | The page that plays one court. A court that does not exist is not served. |
 
 ## office
 

@@ -1,0 +1,214 @@
+"""Bricks a tournament still needs: its court numbers, known names, odd scores.
+
+The closed shelf already holds the ordinary points and sets. This adds what
+that shelf cannot know ahead of time. A missing file is generated; a file
+that is already there is left alone.
+"""
+from __future__ import annotations
+
+import json
+from collections.abc import Sequence
+from itertools import combinations
+
+from .court_lector import chunk_path, warm_shelf
+from .lector_lines import _set_sentence, court_sentence
+
+_SKIPPED = ("zwycięz", "zwyciez", "przegran", "tbd", "tba", "bye")
+
+
+def clean_name(value: object) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) < 3 or text == "-":
+        return ""
+    folded = text.casefold()
+    if any(folded.startswith(prefix) for prefix in _SKIPPED):
+        return ""
+    return text
+
+
+def name_lines(pairs: list[tuple[str, str]]) -> list[str]:
+    lines = []
+    seen: set[tuple[str, str]] = set()
+    for left, right in pairs:
+        a, b = clean_name(left), clean_name(right)
+        if not a or not b or a == b:
+            continue
+        key = (a, b)
+        if key in seen:
+            continue
+        seen.add(key)
+        lines.append(f"{a}, serwuje, kontra {b}.")
+        lines.append(f"{b}, serwuje, kontra {a}.")
+    return lines
+
+
+def edge_lines(
+    sets: list[tuple[int, int, int]],
+    ties: list[tuple[int, int, bool]],
+) -> list[str]:
+    """Scores the ordinary shelf does not contain: games past 7, tie-breaks past 10."""
+    lines = []
+    for number, left, right in sets:
+        if left <= 7 and right <= 7:
+            continue
+        spoken = _set_sentence(number, left, right, active=False)
+        if spoken:
+            lines.append(spoken)
+    for left, right, super_break in ties:
+        if left <= 10 and right <= 10:
+            continue
+        from .lector_lines import _pair
+
+        pair = _pair(left, right)
+        if pair is None:
+            continue
+        label = "Super tie-break" if super_break else "Tie-break"
+        lines.append(f"{label}, {pair}.")
+    return lines
+
+
+def bricks_for(
+    *,
+    courts: Sequence[object],
+    pairs: list[tuple[str, str]],
+    sets: list[tuple[int, int, int]] | None = None,
+    ties: list[tuple[int, int, bool]] | None = None,
+) -> list[str]:
+    lines: list[str] = []
+    for court in courts:
+        spoken = court_sentence(court)
+        if spoken:
+            lines.append(spoken)
+    lines.extend(name_lines(pairs))
+    lines.extend(edge_lines(sets or [], ties or []))
+    return list(dict.fromkeys(lines))
+
+
+def _rows(query: str, tournament_id: int) -> list:
+    from ..database.connection import db_conn
+
+    with db_conn() as conn:
+        return list(conn.execute(query, (tournament_id,)))
+
+
+def lines_for_tournament(tournament_id: int) -> list[str]:
+    from ..database.courts import fetch_courts_for_tournament
+
+    courts = [row.get("name") for row in fetch_courts_for_tournament(tournament_id)]
+    pairs: list[tuple[str, str]] = []
+    grouped: dict[int, list[str]] = {}
+    for row in _rows(
+        """
+        SELECT bgp.group_id, bgp.player_name
+        FROM bracket_group_players bgp
+        JOIN bracket_groups bg ON bg.id = bgp.group_id
+        WHERE bg.tournament_id = ?
+        """,
+        tournament_id,
+    ):
+        grouped.setdefault(int(row["group_id"]), []).append(str(row["player_name"] or ""))
+    for names in grouped.values():
+        pairs.extend(combinations(names, 2))
+    for table in ("tournament_schedule", "matches", "bracket_knockout"):
+        for row in _rows(
+            f"SELECT player1_name, player2_name FROM {table} WHERE tournament_id = ?",
+            tournament_id,
+        ):
+            pairs.append((str(row["player1_name"] or ""), str(row["player2_name"] or "")))
+    sets: list[tuple[int, int, int]] = []
+    ties: list[tuple[int, int, bool]] = []
+    for row in _rows("SELECT sets_history FROM matches WHERE tournament_id = ?", tournament_id):
+        raw = row["sets_history"]
+        try:
+            history = json.loads(raw) if raw else []
+        except (TypeError, ValueError):
+            continue
+        for index, entry in enumerate(history, start=1):
+            if not isinstance(entry, dict):
+                continue
+            try:
+                left = int(entry.get("player1_games") or 0)
+                right = int(entry.get("player2_games") or 0)
+            except (TypeError, ValueError):
+                continue
+            number = int(entry.get("set_number") or index)
+            sets.append((number, left, right))
+    return bricks_for(courts=courts, pairs=pairs, sets=sets, ties=ties)
+
+
+def fill_missing(
+    tournament_id: int,
+    *,
+    speaker=None,
+    limit: int | None = None,
+    character_budget: int | None = None,
+) -> dict:
+    """Generate bricks this tournament does not have yet. Existing files are skipped."""
+    from ..config import settings
+
+    if speaker is None and not settings.elevenlabs_api_key:
+        return {"created": 0, "skipped": 0, "spent": 0, "left": 0}
+    pending = []
+    for sentence in lines_for_tournament(tournament_id):
+        path = chunk_path(sentence, None, None, shared=True)
+        if path.is_file() and path.stat().st_size > 0:
+            continue
+        pending.append(sentence)
+        if limit is not None and len(pending) >= limit:
+            break
+    return warm_shelf(pending, speaker=speaker, character_budget=character_budget)
+
+
+def fill_next() -> dict:
+    """One missing brick for an active tournament. The live loop calls this slowly."""
+    from ..database.tournaments import fetch_active_tournaments
+
+    for tournament in fetch_active_tournaments():
+        result = fill_missing(int(tournament["id"]), limit=1)
+        if result["created"] or result["left"]:
+            return result
+    return {"created": 0, "skipped": 0, "spent": 0, "left": 0}
+
+
+def _character_budget() -> int | None:
+    """Leave 8000 characters for live announcements. None when the quota cannot be read."""
+    import urllib.request
+
+    from ..config import settings
+
+    if not settings.elevenlabs_api_key:
+        return 0
+    request = urllib.request.Request(
+        "https://api.elevenlabs.io/v1/user/subscription",
+        headers={"xi-api-key": settings.elevenlabs_api_key},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = json.load(response)
+    except (OSError, ValueError):
+        return 0
+    remaining = int(data.get("character_limit") or 0) - int(data.get("character_count") or 0)
+    return max(0, remaining - 8000)
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Generate missing lector bricks for a tournament.")
+    parser.add_argument("--tournament", type=int, action="append", default=[])
+    parser.add_argument("--limit", type=int, default=0, help="Stop after this many new bricks. 0 means all.")
+    args = parser.parse_args()
+    from ..database.tournaments import fetch_active_tournaments
+
+    ids = args.tournament or [int(row["id"]) for row in fetch_active_tournaments()]
+    budget = _character_budget()
+    limit = args.limit or None
+    for tournament_id in ids:
+        result = fill_missing(tournament_id, limit=limit, character_budget=budget)
+        print({"tournament": tournament_id, **result}, flush=True)
+        if budget is not None:
+            budget = max(0, budget - int(result["spent"]))
+
+
+if __name__ == "__main__":
+    main()

@@ -30,12 +30,8 @@ def _data_root() -> Path:
 
 
 def _shared_sentence(text: str) -> bool:
-    """Score bricks are reused. A name line stays tied to its neighbours."""
-    if text == "Kort jeden.":
-        return True
-    if text.startswith(("Set ", "Tie-break", "Super tie-break", "Przewaga ")):
-        return True
-    return " do " in text and "kontra" not in text and "serwuje" not in text
+    """One recording per sentence. Neighbours are heard only on the first take."""
+    return bool(text)
 
 
 def chunk_path(text: str, previous: str | None, following: str | None, *, shared: bool = False) -> Path:
@@ -52,8 +48,8 @@ def chunk_path(text: str, previous: str | None, following: str | None, *, shared
     return _data_root() / "lector-chunks" / f"{digest}.mp3"
 
 
-def announcement_path() -> Path:
-    return _data_root() / "lector" / "court-1.mp3"
+def announcement_path(court: str = "1") -> Path:
+    return _data_root() / "lector" / f"court-{court}.mp3"
 
 
 def speak_sentence(text: str, previous: str | None, following: str | None) -> bytes:
@@ -193,9 +189,9 @@ def prepare(sentences: list[str], *, speaker=speak_sentence) -> list[Path]:
     return paths
 
 
-def build_announcement(sentences: list[str], *, speaker=speak_sentence) -> Path:
+def build_announcement(sentences: list[str], *, speaker=speak_sentence, court: str = "1") -> Path:
     paths = prepare(sentences, speaker=speaker)
-    dest = announcement_path()
+    dest = announcement_path(court)
     stitch_chunks(paths, dest)
     return dest
 
@@ -208,7 +204,15 @@ class Playback:
     again after the repeat interval, without building it a second time.
     """
 
-    def __init__(self, *, quiet: float = QUIET_SECONDS, repeat: float = REPEAT_SECONDS, speaker=speak_sentence):
+    def __init__(
+        self,
+        *,
+        quiet: float = QUIET_SECONDS,
+        repeat: float = REPEAT_SECONDS,
+        speaker=speak_sentence,
+        court: str = "1",
+    ):
+        self.court = str(court)
         self.quiet = quiet
         self.repeat = repeat
         self.speaker = speaker
@@ -224,7 +228,7 @@ class Playback:
     def snapshot(self) -> dict:
         with self._lock:
             return {
-                "court": COURT_ID,
+                "court": self.court,
                 "token": self.token,
                 "url": self.url,
                 "sentences": list(self.sentences),
@@ -252,13 +256,13 @@ class Playback:
                 if should_repeat:
                     self._published_at = now
                     self.token = uuid.uuid4().hex
-                    self.url = f"/data/lector/court-1.mp3?v={self.token}"
+                    self.url = f"/data/lector/court-{self.court}.mp3?v={self.token}"
                 return
 
         if not should_build:
             return
         try:
-            build_announcement(pending_sentences, speaker=self.speaker)
+            build_announcement(pending_sentences, speaker=self.speaker, court=self.court)
         except Exception as exc:  # noqa: BLE001 - a failed clip must not kill the loop
             logger.warning("lector_build_failed", error=str(exc))
             return
@@ -270,10 +274,25 @@ class Playback:
             self._published_at = now
             self.sentences = pending_sentences
             self.token = uuid.uuid4().hex
-            self.url = f"/data/lector/court-1.mp3?v={self.token}"
+            self.url = f"/data/lector/court-{self.court}.mp3?v={self.token}"
 
     def tick(self, now: float | None = None) -> None:
-        self.observe(sentences_for_court(court_state_for_lector()), time.monotonic() if now is None else now)
+        state = court_state_for_lector(self.court)
+        self.observe(sentences_for_court(state), time.monotonic() if now is None else now)
+
+_playbacks: dict[str, Playback] = {}
 
 
-playback = Playback(quiet=settings.lector_quiet_seconds, repeat=settings.lector_repeat_seconds)
+def playback_for(court: str) -> Playback:
+    key = str(court)
+    found = _playbacks.get(key)
+    if found is None:
+        found = Playback(
+            quiet=settings.lector_quiet_seconds,
+            repeat=settings.lector_repeat_seconds,
+            court=key,
+        )
+        _playbacks[key] = found
+    return found
+
+playback = playback_for("1")

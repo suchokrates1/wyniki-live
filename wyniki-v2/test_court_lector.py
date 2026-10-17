@@ -60,7 +60,7 @@ def test_only_the_settled_score_is_spoken_and_it_repeats():
     def speaker(text, previous, following):
         return f"{previous}|{text}|{following}".encode()
 
-    def build(sentences, *, speaker):
+    def build(sentences, *, speaker, court="1"):
         built.append(list(sentences))
         return Path("announcement.mp3")
 
@@ -100,17 +100,10 @@ def test_score_bricks_are_shared_and_do_not_say_punkty():
     same = chunk_path("Zero do zera.", "Kort jeden.", "Set jeden, aktywny, zero do zera.", shared=True)
     other = chunk_path("Zero do zera.", "Inna para.", "Set dwa, aktywny, jeden do zera.", shared=True)
     assert same == other
-    first_name = chunk_path(
-        "Marta Jędrzejczyk, serwuje, kontra Emil Stopierzyński.",
-        "Kort jeden.",
-        "Zero do zera.",
-    )
-    later_name = chunk_path(
-        "Marta Jędrzejczyk, serwuje, kontra Emil Stopierzyński.",
-        "Kort jeden.",
-        "Trzydzieści do piętnastu.",
-    )
-    assert first_name != later_name
+    name = "Marta Jędrzejczyk, serwuje, kontra Emil Stopierzyński."
+    first_name = chunk_path(name, "Kort jeden.", "Zero do zera.", shared=True)
+    later_name = chunk_path(name, "Kort dwa.", "Trzydzieści do piętnastu.", shared=True)
+    assert first_name == later_name
 
     shelf = set(score_shelf())
     assert "Kort jeden." in shelf
@@ -150,12 +143,61 @@ def test_warming_skips_a_brick_that_exists_and_stops_at_the_budget(tmp_path, mon
     assert calls == [("Kort jeden.", None), ("Zero do zera.", "Kort jeden.")]
 
 
+def test_a_new_court_gets_its_own_lector_and_odd_scores_are_queued(tmp_path, monkeypatch):
+    from wyniki.services import court_lector, lector_fill
+
+    second = _court(MARTA, EMIL, "A", "0", "0", {1: (0, 0)}, 1)
+    second["court_name"] = "2"
+    assert sentences_for_court(second)[0] == "Kort dwa."
+
+    lines = lector_fill.bricks_for(
+        courts=["1", "2", "boisko"],
+        pairs=[
+            ("Piotr Malicki", "Łukasz Chmielewski"),
+            ("Zwycięzca grupy", "Jan Kowalski"),
+        ],
+        sets=[(1, 8, 6), (1, 6, 4)],
+        ties=[(11, 9, False), (7, 5, False)],
+    )
+    assert "Kort dwa." in lines
+    assert "Piotr Malicki, serwuje, kontra Łukasz Chmielewski." in lines
+    assert "Łukasz Chmielewski, serwuje, kontra Piotr Malicki." in lines
+    assert "Set jeden, osiem do sześciu." in lines
+    assert "Tie-break, jedenaście do dziewięciu." in lines
+    assert "Set jeden, sześć do czterech." not in lines
+    assert all("Zwycięzca" not in line for line in lines)
+    assert all("siedem do pięciu" not in line for line in lines)
+
+    monkeypatch.setattr(court_lector, "_data_root", lambda: tmp_path)
+    monkeypatch.setattr(
+        lector_fill,
+        "lines_for_tournament",
+        lambda tournament_id: ["Kort dwa.", "Piotr Malicki, serwuje, kontra Łukasz Chmielewski."],
+    )
+    calls = []
+
+    def speaker(text, previous, following):
+        calls.append(text)
+        return b"mp3-bytes"
+
+    first = lector_fill.fill_missing(7, speaker=speaker, limit=1)
+    assert first["created"] == 1
+    assert calls == ["Kort dwa."]
+    second_pass = lector_fill.fill_missing(7, speaker=speaker)
+    assert second_pass["created"] == 1
+    assert calls[1] == "Piotr Malicki, serwuje, kontra Łukasz Chmielewski."
+
+
 def test_the_page_plays_the_published_clip(full_app_with_temp_db, tmp_path, monkeypatch):
+    from wyniki.database.courts import create_tournament_courts
+    from wyniki.database.tournaments import insert_tournament
     from wyniki.services import court_lector
 
+    tournament_id = insert_tournament("Lektor", "2026-10-17", "2026-10-18", active=True)
+    create_tournament_courts(tournament_id, 2)
     audio = tmp_path / "court-1.mp3"
     audio.write_bytes(b"ID3lector")
-    monkeypatch.setattr(court_lector, "announcement_path", lambda: audio)
+    monkeypatch.setattr(court_lector, "announcement_path", lambda court="1": audio)
     court_lector.playback.token = "abc"
     court_lector.playback.url = "/data/lector/court-1.mp3?v=abc"
     court_lector.playback.sentences = ["Kort jeden."]
@@ -164,7 +206,9 @@ def test_the_page_plays_the_published_clip(full_app_with_temp_db, tmp_path, monk
     page = client.get("/lektor/1")
     assert page.status_code == 200
     assert b"/api/lektor/1" in page.data
-    assert client.get("/lektor/2").status_code == 404
+    assert client.get("/lektor/2").status_code == 200
+    assert b"/api/lektor/2" in client.get("/lektor/2").data
+    assert client.get("/lektor/3").status_code == 404
 
     status = client.get("/api/lektor/1").get_json()
     assert status["token"] == "abc"

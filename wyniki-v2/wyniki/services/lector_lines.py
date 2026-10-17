@@ -42,6 +42,40 @@ _GENITIVE = {
     40: "czterdziestu",
 }
 _SET_WORD = {1: "jeden", 2: "dwa", 3: "trzy"}
+_TEENS = {
+    16: ("szesnaście", "szesnastu"),
+    17: ("siedemnaście", "siedemnastu"),
+    18: ("osiemnaście", "osiemnastu"),
+    19: ("dziewiętnaście", "dziewiętnastu"),
+}
+
+
+def _spell(number: int, *, genitive: bool) -> str | None:
+    table = _GENITIVE if genitive else _NOMINATIVE
+    if number in table:
+        return table[number]
+    pair = _TEENS.get(number)
+    if pair:
+        return pair[1] if genitive else pair[0]
+    if number == 20:
+        return "dwudziestu" if genitive else "dwadzieścia"
+    if 21 <= number <= 29:
+        unit = _spell(number - 20, genitive=genitive)
+        if unit:
+            head = "dwudziestu" if genitive else "dwadzieścia"
+            return f"{head} {unit}"
+    return None
+
+
+def court_sentence(court_name: object) -> str | None:
+    """'Kort dwa.' for a court whose name is its number. Anything else is silent."""
+    text = str(court_name or "").strip()
+    if not text.isdigit() or text == "0":
+        return None
+    word = _spell(int(text), genitive=False)
+    if not word:
+        return None
+    return f"Kort {word}."
 
 
 def _name(player: dict | None) -> str:
@@ -52,8 +86,12 @@ def _name(player: dict | None) -> str:
     return text
 
 
-def _pair(left: int, right: int) -> str:
-    return f"{_NOMINATIVE[left]} do {_GENITIVE[right]}"
+def _pair(left: int, right: int) -> str | None:
+    spoken_left = _spell(left, genitive=False)
+    spoken_right = _spell(right, genitive=True)
+    if not spoken_left or not spoken_right:
+        return None
+    return f"{spoken_left} do {spoken_right}"
 
 
 def _point_word(raw: object, *, side: str) -> str | None:
@@ -76,10 +114,11 @@ def _points_sentence(state: dict) -> str | None:
             right = int(tie.get("B") or 0)
         except (TypeError, ValueError):
             return None
-        if left not in _NOMINATIVE or right not in _GENITIVE:
+        pair = _pair(left, right)
+        if pair is None:
             return None
         label = "Super tie-break" if state.get("super_tiebreak_active") else "Tie-break"
-        return f"{label}, {_pair(left, right)}."
+        return f"{label}, {pair}."
 
     player_a = state.get("A") or {}
     player_b = state.get("B") or {}
@@ -97,9 +136,9 @@ def _points_sentence(state: dict) -> str | None:
 
 def _set_sentence(number: int, left: int, right: int, *, active: bool) -> str | None:
     word = _SET_WORD.get(number)
-    if word is None or left not in _NOMINATIVE or right not in _GENITIVE:
-        return None
     score = _pair(left, right)
+    if word is None or score is None:
+        return None
     if active:
         return f"Set {word}, aktywny, {score}."
     return f"Set {word}, {score}."
@@ -110,7 +149,7 @@ def score_shelf() -> list[str]:
     lines = ["Kort jeden."]
     for left in (0, 15, 30, 40):
         for right in (0, 15, 30, 40):
-            spoken = f"{_NOMINATIVE[left]} do {_GENITIVE[right]}."
+            spoken = f"{_spell(left, genitive=False)} do {_spell(right, genitive=True)}."
             lines.append(spoken[:1].upper() + spoken[1:])
     lines.extend(["Przewaga do czterdziestu.", "Czterdzieści do przewagi."])
     for number in (1, 2, 3):
@@ -131,12 +170,14 @@ def tiebreak_shelf() -> list[str]:
         label = "Super tie-break" if super_break else "Tie-break"
         for left in range(11):
             for right in range(11):
-                lines.append(f"{label}, {_pair(left, right)}.")
+                pair = _pair(left, right)
+                if pair:
+                    lines.append(f"{label}, {pair}.")
     return lines
 
 
-def court_state_for_lector() -> dict | None:
-    """The live state of the court named 1.
+def court_state_for_lector(court_name: str = "1") -> dict | None:
+    """The live state of the court with this name.
 
     Several tournaments can each have a court called 1. The one that currently
     has two names is the match being read. If more than one does, the latest
@@ -146,7 +187,7 @@ def court_state_for_lector() -> dict | None:
 
     named = []
     for state in serialize_all_states().values():
-        if str(state.get("court_name") or "").strip() != "1":
+        if str(state.get("court_name") or "").strip() != str(court_name):
             continue
         if sentences_for_court(state):
             named.append(state)
@@ -162,7 +203,8 @@ def sentences_for_court(state: dict | None) -> list[str] | None:
         return None
     name_a = _name(state.get("A"))
     name_b = _name(state.get("B"))
-    if not name_a or not name_b:
+    opening = court_sentence(state.get("court_name") or "1")
+    if not opening or not name_a or not name_b:
         return None
     server = state.get("serve")
     if server == "A":
@@ -196,4 +238,4 @@ def sentences_for_court(state: dict | None) -> list[str] | None:
         sets.append(spoken)
     if not sets:
         return None
-    return ["Kort jeden.", names, points, *sets]
+    return [opening, names, points, *sets]
