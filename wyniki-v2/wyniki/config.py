@@ -72,6 +72,14 @@ class Settings(BaseSettings):
     waha_api_key: str = ""
     waha_session: str = "default"
     panic_cooldown_seconds: int = 60
+
+    # Court lector. The key stays in the host env (Vaultwarden), never in the repo.
+    # Empty key means the page stays quiet and no clip is requested.
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = "gnPxliFHTp6OK6tcoA6i"
+    elevenlabs_model: str = "eleven_v4"
+    lector_quiet_seconds: float = 20
+    lector_repeat_seconds: float = 300
     
     # Paths
     base_dir: Path = Path(__file__).parent.parent.parent

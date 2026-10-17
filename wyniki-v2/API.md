@@ -175,6 +175,14 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 |---|---|---|
 | GET | `/health` | Health check endpoint for monitoring. |
 
+## lector
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/api/lektor/<court_id>` | Whether court 1 has a clip ready, and the address of that clip. |
+| GET | `/data/lector/court-1.mp3` | The current court 1 announcement. Missing until the score has sat still. |
+| GET | `/lektor/<court_id>` | The page that plays court 1. Court 2 and the rest are not served. |
+
 ## office
 
 | Method | Path | What it does |

@@ -18,7 +18,7 @@ from wyniki.database.connection import apply_sqlite_pragmas
 from wyniki.database.errors import StorageError
 from wyniki.db_models import db
 from wyniki.api import courts, admin, health, push, stream, web, office, admin_accounts, admin_log
-from wyniki.services import reminder_loop, subscription_notices
+from wyniki.services import lector_loop, reminder_loop, subscription_notices
 from wyniki.api.admin_tournaments import blueprint as tournaments_blueprint, players_public_bp, tournaments_public_bp
 from wyniki.api.admin_global_players import blueprint as global_players_blueprint
 from wyniki.api.umpire_api import blueprint as umpire_api_blueprint
@@ -34,6 +34,7 @@ from wyniki.api.admin_player_reviews import blueprint as player_reviews_admin_bl
 from wyniki.api.profile_reports import admin_blueprint as profile_reports_admin_blueprint, public_blueprint as profile_reports_public_blueprint
 from wyniki.api.overlay_api import blueprint as overlay_api_blueprint
 from wyniki.api.brackets import bracket_public_bp, bracket_admin_bp
+from wyniki.api.lector import blueprint as lector_blueprint
 from wyniki.services.api_auth import require_admin_access
 from wyniki.init_state import initialize_state
 
@@ -74,6 +75,7 @@ def create_app() -> Flask:
     # start unless Web Push is configured, and never starts under pytest.
     with app.app_context():
         reminder_loop.start()
+        lector_loop.start()
     # Series subscriptions: a mail before the end date and after it, checked hourly.
     if not app.config.get("TESTING"):
         subscription_notices.start()
@@ -139,6 +141,7 @@ def create_app() -> Flask:
     app.register_blueprint(profile_reports_public_blueprint)
     app.register_blueprint(profile_reports_admin_blueprint)
     app.register_blueprint(overlay_api_blueprint)
+    app.register_blueprint(lector_blueprint)
     app.register_blueprint(bracket_public_bp)
     app.register_blueprint(bracket_admin_bp)
     

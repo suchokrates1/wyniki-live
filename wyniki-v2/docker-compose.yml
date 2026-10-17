@@ -52,6 +52,11 @@ services:
       - WAHA_SESSION=${WAHA_SESSION:-default}
       - PANIC_COOLDOWN_SECONDS=${PANIC_COOLDOWN_SECONDS:-60}
 
+      # Court lector. Empty key = the page stays quiet and no clip is requested.
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID:-}
+      - ELEVENLABS_MODEL=${ELEVENLABS_MODEL:-}
+
     restart: unless-stopped
     
     labels:
