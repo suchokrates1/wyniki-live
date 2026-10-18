@@ -785,6 +785,8 @@ def init_db() -> None:
         ensure_final_placings(cursor)
         from .profile_reports import ensure_profile_reports
         ensure_profile_reports(cursor)
+        from .table_order import ensure_table_order
+        ensure_table_order(cursor)
         run_once(cursor, "normalize_genders", lambda: normalize_stored_genders(cursor))
 
         conn.commit()

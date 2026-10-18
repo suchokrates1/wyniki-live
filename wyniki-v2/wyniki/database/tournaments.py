@@ -145,6 +145,7 @@ def fetch_tournaments(public_only: bool = False) -> list[dict]:
                     COALESCE(t.access_key, '') AS access_key,
                     CASE WHEN COALESCE(t.office_password_hash, '') != '' THEN 1 ELSE 0 END AS has_office_password,
                     COALESCE(t.language, 'pl') AS language,
+                    COALESCE(t.table_order, 'wins_sets_games') AS table_order,
                     t.created_at,
                     COUNT(c.kort_id) AS court_count
                 FROM tournaments t
@@ -152,7 +153,7 @@ def fetch_tournaments(public_only: bool = False) -> list[dict]:
                 {where_clause}
                 GROUP BY t.id, t.name, t.start_date, t.end_date, t.active, t.location, t.city, t.country,
                          t.logo_path, t.report_email, t.summary_sent_at, t.is_public, t.stats_enabled,
-                         t.is_simulation, t.access_key, t.office_password_hash, t.language, t.created_at
+                         t.is_simulation, t.access_key, t.office_password_hash, t.language, t.table_order, t.created_at
                 ORDER BY start_date DESC
             """)
             rows = cursor.fetchall()
@@ -186,6 +187,7 @@ def fetch_tournament(tournament_id: int) -> dict | None:
                     COALESCE(t.access_key, '') AS access_key,
                     CASE WHEN COALESCE(t.office_password_hash, '') != '' THEN 1 ELSE 0 END AS has_office_password,
                     COALESCE(t.language, 'pl') AS language,
+                    COALESCE(t.table_order, 'wins_sets_games') AS table_order,
                     t.created_at,
                     COUNT(c.kort_id) AS court_count
                 FROM tournaments t
@@ -193,7 +195,7 @@ def fetch_tournament(tournament_id: int) -> dict | None:
                 WHERE t.id = ?
                 GROUP BY t.id, t.name, t.start_date, t.end_date, t.active, t.location, t.city, t.country,
                         t.logo_path, t.report_email, t.summary_sent_at, t.is_public, t.stats_enabled,
-                        t.is_simulation, t.access_key, t.office_password_hash, t.language, t.created_at
+                        t.is_simulation, t.access_key, t.office_password_hash, t.language, t.table_order, t.created_at
             """, (tournament_id,))
             row = cursor.fetchone()
             return dict(row) if row else None

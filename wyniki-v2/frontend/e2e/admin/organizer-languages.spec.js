@@ -62,7 +62,7 @@ test('the panel speaks the account language, and a switch is saved on the accoun
   await expect(page.locator('#org-tournaments-title + .adm-card__hint')).toHaveText('2 Turniere');
   await expect(page.locator('.org-facts')).toContainText('Inhaber');
 
-  await page.getByLabel('Sprache').selectOption('lt');
+  await page.getByLabel('Sprache', { exact: true }).selectOption('lt');
   await expect(page.getByRole('heading', { name: 'Serijos turnyrai' })).toBeVisible();
   await expect(page.locator('#org-tournaments-title + .adm-card__hint')).toHaveText('2 turnyrai');
   await expect(page.locator('html')).toHaveAttribute('lang', 'lt');

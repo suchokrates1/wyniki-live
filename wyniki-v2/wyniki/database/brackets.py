@@ -2074,7 +2074,7 @@ def get_full_bracket(tournament_id: int) -> dict:
             cursor = conn.cursor()
 
             # Tournament info
-            cursor.execute("SELECT name, start_date, end_date, country FROM tournaments WHERE id = ?", (tournament_id,))
+            cursor.execute("SELECT name, start_date, end_date, country, table_order FROM tournaments WHERE id = ?", (tournament_id,))
             t = cursor.fetchone()
             if not t:
                 return {"error": "Tournament not found"}
@@ -2097,7 +2097,7 @@ def get_full_bracket(tournament_id: int) -> dict:
                 )
                 player_names = [r["player_name"] for r in cursor.fetchall()]
                 matches = _find_group_matches(cursor, player_names, start_date, end_date, tournament_id)
-                standings, match_results = _compute_standings(player_names, matches)
+                standings, match_results = _compute_standings(player_names, matches, t["table_order"])
                 play_format = g["play_format"] if "play_format" in g.keys() else DEFAULT_PLAY_FORMAT
                 groups_data.append({
                     "id": g["id"],

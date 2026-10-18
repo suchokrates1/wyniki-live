@@ -24,7 +24,7 @@ const LOG_KEYS = {
 export function settingsForm(t = {}) {
   return {
     name: t.name || '', start_date: t.start_date || '', end_date: t.end_date || '',
-    city: t.city || '', country: t.country || '', language: t.language || 'pl', report_email: t.report_email || '',
+    city: t.city || '', country: t.country || '', language: t.language || 'pl', table_order: t.table_order || 'wins_sets_games', report_email: t.report_email || '',
     court_count: Number(t.court_count || 0), is_public: !!t.is_public, is_simulation: !!t.is_simulation,
     title_scope: t.title_scope || 'open', title_override: t.title_override || '', office_password: '',
   };

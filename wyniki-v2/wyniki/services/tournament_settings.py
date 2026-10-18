@@ -25,6 +25,7 @@ from ..database import (
     sync_tournament_courts,
     update_tournament,
 )
+from ..database.table_order import set_tournament_table_order
 from ..database.tournament_titles import save_tournament_title
 from ..db_models import Tournament
 from .office_workflow import _normalize_bool, _normalize_int
@@ -97,6 +98,7 @@ def create_from(data: dict[str, Any], logo=None) -> Result:
     )
     if not tournament_id:
         return {"error": "Failed to create tournament"}, 500
+    set_tournament_table_order(tournament_id, data.get('table_order'))
     created_courts = create_tournament_courts(tournament_id, _normalize_int(data.get('court_count'), 0))
     if active:
         set_active_tournament(tournament_id)
@@ -168,6 +170,8 @@ def update_from(tournament_id: int, data: dict[str, Any], logo=None) -> Result:
     )
     if not success:
         return {"error": "Failed to update tournament"}, 500
+    if 'table_order' in data:
+        set_tournament_table_order(tournament_id, data['table_order'])
     save_tournament_title(tournament_id, data.get('title_scope'), data.get('title_override'))
     court_changes = sync_tournament_courts(tournament_id, requested_court_count)
     _refresh_live_courts()

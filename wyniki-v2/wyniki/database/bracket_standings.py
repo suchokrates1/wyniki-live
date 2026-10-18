@@ -1,5 +1,57 @@
 """Group standings from finished match rows."""
 import json
+from itertools import groupby
+
+from .table_order import DEFAULT_TABLE_ORDER
+
+# What splits players level on wins, in turn, for each tournament rule (table_order.py). A
+# criterion that splits a block starts the list again on each part, so two players left level
+# after "% of sets" in a three-way tie are then split by their own match.
+_TIE_BREAKS = {
+    "wins_sets_games": ("set_diff", "game_diff"),
+    "wins_h2h_sets_games": ("h2h", "set_diff", "game_diff"),
+    "itf": ("h2h_pair", "set_pct", "game_pct"),  # ITF: their match for two, percentages for three or more
+}
+
+
+def _share(won: int, lost: int) -> float:
+    return won / (won + lost) if won + lost else 0.0
+
+
+def _tie_value(criterion: str, row: dict, level: set, results: list) -> float:
+    if criterion in ("h2h", "h2h_pair"):  # wins among the players level with each other
+        return sum(1 for r in results
+                   if r["winner"] == row["name"] and r["player_a"] in level and r["player_b"] in level)
+    if criterion == "set_pct":
+        return _share(row["sets_won"], row["sets_lost"])
+    if criterion == "game_pct":
+        return _share(row["games_won"], row["games_lost"])
+    return row[criterion]
+
+
+def _split_level(block: list, criteria: tuple, results: list) -> list:
+    if len(block) < 2:
+        return block
+    level = {row["name"] for row in block}
+    for criterion in criteria:
+        if criterion == "h2h_pair" and len(block) != 2:
+            continue
+        values = {row["name"]: _tie_value(criterion, row, level, results) for row in block}
+        if len(set(values.values())) == 1:
+            continue
+        ordered = sorted(block, key=lambda row: values[row["name"]], reverse=True)
+        return [row for _, part in groupby(ordered, key=lambda row: values[row["name"]])
+                for row in _split_level(list(part), criteria, results)]
+    return block
+
+
+def order_standings(rows: list, results: list, table_order: str = DEFAULT_TABLE_ORDER) -> list:
+    """Wins first, then the tournament's rule for players level on wins."""
+    criteria = _TIE_BREAKS.get(table_order, _TIE_BREAKS[DEFAULT_TABLE_ORDER])
+    by_wins = sorted(rows, key=lambda row: row["wins"], reverse=True)
+    return [row for _, block in groupby(by_wins, key=lambda row: row["wins"])
+            for row in _split_level(list(block), criteria, results)]
+
 
 def _is_stb(s: dict) -> bool:
     """Detect super tiebreak set (set 3+ with low games and TB points)."""
@@ -57,7 +109,7 @@ def _format_set_score(s: dict, flipped: bool = False) -> str:
         return f"{g1}:{g2}({tb})"
     return f"{g1}:{g2}"
 
-def _compute_standings(player_names: list[str], matches) -> tuple:
+def _compute_standings(player_names: list[str], matches, table_order: str = DEFAULT_TABLE_ORDER) -> tuple:
     """Compute standings from a list of matches. Returns (standings, match_results)."""
     stats = {name: {"wins": 0, "losses": 0, "sets_won": 0, "sets_lost": 0,
                      "games_won": 0, "games_lost": 0, "played": 0}
@@ -126,7 +178,6 @@ def _compute_standings(player_names: list[str], matches) -> tuple:
             "result_note": m.get("result_note") if isinstance(m, dict) else None,
         })
 
-    # Sort: wins desc, set_diff desc, game_diff desc
     standings = []
     for name, s in stats.items():
         standings.append({
@@ -135,5 +186,4 @@ def _compute_standings(player_names: list[str], matches) -> tuple:
             "set_diff": s["sets_won"] - s["sets_lost"],
             "game_diff": s["games_won"] - s["games_lost"],
         })
-    standings.sort(key=lambda x: (x["wins"], x["set_diff"], x["game_diff"]), reverse=True)
-    return standings, match_results
+    return order_standings(standings, match_results, table_order), match_results

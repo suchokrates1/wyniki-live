@@ -19,6 +19,15 @@
           <option value="lt">Lietuvių</option>
         </select>
       </div>
+      <div class="adm-field adm-field--wide">
+        <label class="adm-field__label" for="org-set-table-order" x-text="ot('fieldTableOrder')"></label>
+        <select class="adm-input" id="org-set-table-order" x-model="tForm.table_order" aria-describedby="org-set-table-order-hint">
+          <option value="wins_sets_games" x-text="ot('tableOrderWinsSetsGames')"></option>
+          <option value="wins_h2h_sets_games" x-text="ot('tableOrderHeadToHead')"></option>
+          <option value="itf" x-text="ot('tableOrderItf')"></option>
+        </select>
+        <span class="adm-field__hint" id="org-set-table-order-hint" x-text="ot('tableOrderHint')"></span>
+      </div>
       <div class="adm-field">
         <label class="adm-field__label" for="org-set-courts" x-text="ot('fieldCourts')"></label>
         <input class="adm-input" type="number" min="0" :max="t.max_courts || 30" id="org-set-courts" x-model.number="tForm.court_count" aria-describedby="org-set-courts-hint">

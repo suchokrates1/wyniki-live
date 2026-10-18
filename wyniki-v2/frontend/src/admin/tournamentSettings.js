@@ -12,6 +12,18 @@ export const TOURNAMENT_LANGUAGES = [
   { value: 'lt', label: 'Lietuvių' },
 ];
 
+/** How players level on wins are ordered in a group table (wyniki/database/table_order.py). */
+export const TABLE_ORDERS = [
+  { value: 'wins_sets_games', label: 'Zwycięstwa, różnica setów, różnica gemów' },
+  { value: 'wins_h2h_sets_games', label: 'Zwycięstwa, mecz bezpośredni, różnica setów, różnica gemów' },
+  { value: 'itf', label: 'ITF: zwycięstwa; dwoje równych – mecz bezpośredni; troje i więcej – % setów, potem % gemów' },
+];
+
+export const TABLE_ORDER_FIELD = {
+  key: 'table_order', label: 'Kolejność w tabeli grupy', type: 'select', options: TABLE_ORDERS, wide: true,
+  hint: 'Przy równej liczbie zwycięstw. Ustal z organizatorem przed pierwszym meczem.',
+};
+
 export const TOURNAMENT_FIELDS = [
   { key: 'name', label: 'Nazwa turnieju', type: 'text', wide: true },
   { key: 'start_date', label: 'Data rozpoczęcia', type: 'date' },
@@ -20,6 +32,7 @@ export const TOURNAMENT_FIELDS = [
   { key: 'city', label: 'Miasto', type: 'text' },
   { key: 'country', label: 'Kraj', type: 'text' },
   { key: 'language', label: 'Język turnieju', type: 'select', options: TOURNAMENT_LANGUAGES, hint: 'Lektor i overlay. B1 i B4 zostają.' },
+  TABLE_ORDER_FIELD,
   { key: 'report_email', label: 'E-mail raportów', type: 'email', hint: 'Tam idzie podsumowanie po turnieju.' },
   { key: 'access_key', label: 'Klucz dostępu', type: 'text', hint: 'Potrzebny tylko przy turnieju niepublicznym.' },
 ];
