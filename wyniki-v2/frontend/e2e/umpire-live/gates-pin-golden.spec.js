@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './device.js';
 import {
   advancedPoint, artifacts, authorizeCourt, cleanupFixture, courtSnapshot, createFixture, enterPin, loadFixture,
   openUmpire, playGame, startMatch, waitForMatch,
@@ -16,7 +16,8 @@ export function goldenSummary(found, match) {
     sets: [match.score?.player1_sets ?? match.player1_sets, match.score?.player2_sets ?? match.player2_sets],
     sets_history: (match.score?.sets_history || []).map((set) => [set.player1_games, set.player2_games]),
     history_rows: history.length,
-    statistics: stats.map((row) => Object.fromEntries(Object.entries(row).filter(([key, value]) => typeof value === 'number' && !/id$|_at$|duration|time/i.test(key)))),
+    // aces, double faults, winners, errors and first serves of each side (the counts sit under playerN_stats)
+    statistics: stats.map((row) => ({ mode: row.stats_mode, player1: row.player1_stats, player2: row.player2_stats })),
   };
 }
 
@@ -71,7 +72,13 @@ test('Gate 3 / G1: the Android scenario (3 games, 1 set, Advanced) ends the same
       }));
     }
 
-    const { match, artifacts: found } = await waitForMatch(fixture.marker, (row) => row.player1_name === players[0].full && row.status === 'finished', { message: 'finished PWA match' });
+    const { match } = await waitForMatch(fixture.marker, (row) => row.player1_name === players[0].full && row.status === 'finished', { message: 'finished PWA match' });
+    // the statistics row is posted after the finish: compare once it is there
+    let found = await artifacts(fixture.marker);
+    for (let attempt = 0; attempt < 40 && !found.statistics.some((row) => row.match_id === match.id); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      found = await artifacts(fixture.marker);
+    }
     const summary = goldenSummary(found, match);
     expect(summary.sets).toEqual([1, 0]);
     expect(summary.sets_history).toEqual([[3, 0]]);

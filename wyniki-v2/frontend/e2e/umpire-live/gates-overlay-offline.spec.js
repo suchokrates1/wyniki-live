@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { ANDROID_CDP, PAGE_URL, expect, restartAndroidChrome, setNetwork, test } from './device.js';
 import {
   adminApi, authorizeCourt, authorizeCourtApi, api, basicPoint, boardPoints, cleanupFixture, courtSnapshot, createFixture, dismissAnnouncement,
   openUmpire, playGame, startMatch, waitForMatch,
@@ -50,7 +50,7 @@ test('Gate 5: airplane mode — five points offline, the overlay catches up when
     const court = fixture.court(1);
     await waitForSnapshot(court, (snap) => snap.match_status?.active, 'match active');
 
-    await context.setOffline(true);
+    await setNetwork(context, false);
     // game to team 1, then 15:0 in the next game: five points without network
     for (let point = 0; point < 5; point += 1) await basicPoint(page, true);
     await dismissAnnouncement(page);
@@ -58,7 +58,7 @@ test('Gate 5: airplane mode — five points offline, the overlay catches up when
     const offlineSnap = await courtSnapshot(court);
     expect(offlineSnap.A.current_games, 'the overlay cannot know yet').toBe(0);
 
-    await context.setOffline(false);
+    await setNetwork(context, true);
     const snap = await waitForSnapshot(court, (s) => s.A?.current_games === 1 && s.A?.points === '15', 'after reconnect: games 1:0, 15:0', 40_000);
     expect(snap.B.current_games).toBe(0);
     expect(await boardPoints(page)).toContain('15');
@@ -74,7 +74,7 @@ test('Gate 5: airplane mode — five points offline, the overlay catches up when
     await expect(page.locator('h1.ump-title')).toHaveText('Match History', { timeout: 10_000 });
     await expect(page.getByRole('button', { name: new RegExp(`${a.last} vs ${b.last}.*1 : 0`) })).toBeVisible();
   } finally {
-    await context.setOffline(false);
+    await setNetwork(context, true);
     await cleanupFixture(fixture);
   }
 });
@@ -267,7 +267,38 @@ test('P1: a PUT that reaches sets_to_win finishes the match without POST /finish
   }
 });
 
+test('Gate 7 on Android: Chrome is left and killed mid-match, and the umpire carries on where it was', async ({ context }) => {
+  test.skip(!ANDROID_CDP, 'needs Chrome on an Android device');
+  const fixture = await createFixture({ label: 'PWA gate 7 Android restart' });
+  let phone = context.__phone;
+  try {
+    let page = await openUmpire(context);
+    await authorizeCourt(page, fixture, 1);
+    const [a, b] = fixture.players;
+    await startMatch(page, { players: [a, b], gamesPerSet: 4, setsToWin: 1 });
+    await basicPoint(page, true);
+    await basicPoint(page, true);
+    await expect(page.locator('.ump-board__pts').first()).toHaveText('30');
+    await waitForSnapshot(fixture.court(1), (snap) => snap.A?.points === '30', '30:0 on the overlay');
+
+    // the umpire leaves Chrome and Android kills it: sessionStorage and the page are gone, site storage stays
+    phone = await restartAndroidChrome(phone, `${PAGE_URL}/umpire`);
+    page = phone.page;
+    page.on('pageerror', (error) => { page.__errors = [...(page.__errors || []), String(error)]; });
+    await expect(page.locator('h1.ump-title')).toHaveText('Match', { timeout: 15_000 });
+    await expect(page.locator('.ump-board__pts').first()).toHaveText('30');
+    page.__teams = [a.last, b.last];
+    await basicPoint(page, true);
+    await waitForSnapshot(fixture.court(1), (snap) => snap.A?.points === '40', 'point after the Chrome restart on the overlay');
+    expect(page.__errors || []).toEqual([]);
+  } finally {
+    await phone.browser.close().catch(() => {});
+    await cleanupFixture(fixture);
+  }
+});
+
 test('Gate 7: the PWA survives a browser restart mid-match; a language change between matches keeps the court', async ({ browser }) => {
+  test.skip(!!ANDROID_CDP, 'desktop restart: the Android run has its own');
   const fixture = await createFixture({ label: 'PWA gate 7 restart' });
   const storage = test.info().outputPath('state.json');
   const device = { viewport: { width: 800, height: 1280 }, isMobile: true, hasTouch: true };

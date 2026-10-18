@@ -5,8 +5,10 @@
  * UMPIRE_LIVE_BASE_URL   backend that also serves /umpire (e.g. http://192.168.31.10:18087)
  * E2E_ADMIN_PASSWORD     admin password of that backend
  * UMPIRE_LIVE_MARKER     optional: play on an existing E2E-* fixture (shared with the Android run)
+ * UMPIRE_ANDROID_CDP     optional: play in Chrome on an Android device (see device.js)
  */
 import { expect } from '@playwright/test';
+import { ANDROID_CDP, PAGE_URL } from './device.js';
 
 export const BASE_URL = (process.env.UMPIRE_LIVE_BASE_URL || '').replace(/\/$/, '');
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || '';
@@ -119,7 +121,8 @@ export async function openUmpire(context, { language = 'English' } = {}) {
     localStorage.setItem('umpire.tutorial_prompted', '1');
     sessionStorage.setItem('umpire.pwa_gate_dismissed', '1');
   });
-  const page = context.pages()[0] || await context.newPage();
+  // the phone's Chrome keeps its other tabs: the umpire gets a tab of its own
+  const page = (!ANDROID_CDP && context.pages()[0]) || await context.newPage();
   page.on('pageerror', (error) => { page.__errors = [...(page.__errors || []), String(error)]; });
   if (process.env.UMPIRE_LIVE_DEBUG) {
     page.on('response', async (response) => {
@@ -137,7 +140,7 @@ export async function openUmpire(context, { language = 'English' } = {}) {
     page.on('console', (message) => { if (['error', 'warning'].includes(message.type())) console.log(`  [console] ${message.text().slice(0, 300)}`); });
     page.on('requestfailed', (request) => console.log(`  [api-failed] ${request.method()} ${request.url().replace(BASE_URL, '')} ${request.failure()?.errorText}`));
   }
-  await page.goto(`${BASE_URL}/umpire`);
+  await page.goto(`${PAGE_URL || BASE_URL}/umpire`);
   await page.locator('h1.ump-title').first().waitFor();
   if (language && await page.getByRole('button', { name: new RegExp(language) }).isVisible().catch(() => false)) {
     await page.getByRole('button', { name: new RegExp(language) }).click();
