@@ -163,15 +163,17 @@ export async function authorizeCourt(page, fixture, courtNumber, pin = PIN) {
 /** From the players screen to the scoring screen. */
 export async function startMatch(page, { players, doubles = false, advanced = false, gamesPerSet = null, setsToWin = null, noAdvantage = false, firstServer = 0 }) {
   await expect(page.locator('h1.ump-title')).toHaveText('Select Players', { timeout: 15_000 });
-  if (doubles) await page.getByRole('button', { name: 'Doubles' }).click();
+  // set either way: after a doubles the players screen stays on doubles
+  await page.getByRole('button', { name: doubles ? 'Doubles' : 'Singles', exact: true }).click();
   for (const player of players) {
     await page.getByRole('button', { name: new RegExp(player.last) }).click();
   }
   await expect(page.locator('h1.ump-title')).toHaveText('Match Setup', { timeout: 10_000 });
   if (gamesPerSet) await page.getByRole('group', { name: 'Games per set' }).getByRole('button', { name: String(gamesPerSet), exact: true }).click();
   if (setsToWin) await page.getByRole('group', { name: 'Sets to win' }).getByRole('button', { name: String(setsToWin), exact: true }).click();
-  if (noAdvantage) await page.getByRole('switch', { name: 'No-Advantage (Deciding Point)' }).click();
-  if (advanced) await page.getByRole('switch', { name: 'Advanced' }).click();
+  // set, not toggled: "Next Match (same setup)" keeps the previous match's switches
+  await page.getByRole('switch', { name: 'No-Advantage (Deciding Point)' }).setChecked(noAdvantage);
+  await page.getByRole('switch', { name: 'Advanced' }).setChecked(advanced);
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.locator('h1.ump-title')).toHaveText('Who serves first?', { timeout: 10_000 });
   // team 1 = the first player picked (and their partner in doubles)

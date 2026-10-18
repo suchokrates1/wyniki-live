@@ -29,7 +29,8 @@ test('Gate 8 soak: a day of matches on one tablet', async ({ context }) => {
     for (let index = 0; index < MATCHES; index += 1) {
       const kind = KINDS[index % KINDS.length];
       const players = kind.players.map((n) => fixture.players[n]);
-      if (index > 0) await page.getByRole('button', { name: /New Match|Next Match/ }).first().click();
+      // a new setup each time: the next match changes mode or players
+      if (index > 0) await page.getByRole('button', { name: /New Match \(different setup\)|new setup/ }).click();
       await startMatch(page, { players, doubles: kind.doubles, advanced: kind.advanced, gamesPerSet: 3, setsToWin: 1 });
       const point = kind.advanced ? advancedPoint : basicPoint;
       const offline = index % 3 === 2;
@@ -58,6 +59,7 @@ test('Gate 8 soak: a day of matches on one tablet', async ({ context }) => {
     const heapEnd = await heapMb(page);
     if (heapStart && heapEnd) {
       test.info().annotations.push({ type: 'heap', description: `${heapStart} MB → ${heapEnd} MB after ${MATCHES} matches` });
+      console.log(`  heap ${heapStart} MB → ${heapEnd} MB after ${MATCHES} matches`);
       expect(heapEnd, `JS heap ${heapStart} → ${heapEnd} MB`).toBeLessThan(Math.max(heapStart * 3, heapStart + 40));
     }
   } finally {

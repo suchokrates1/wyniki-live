@@ -64,6 +64,12 @@ async function safari() {
       browserName: 'Safari',
       'appium:automationName': 'XCUITest',
       'appium:udid': UDID,
+      ...(process.env.IPAD_VERSION ? { 'appium:platformVersion': process.env.IPAD_VERSION } : {}),
+      // a fresh runner builds WebDriverAgent first: minutes, not seconds
+      'appium:simulatorStartupTimeout': 300_000,
+      'appium:wdaLaunchTimeout': 600_000,
+      'appium:wdaConnectionTimeout': 600_000,
+      'appium:showXcodeLog': true,
       'appium:noReset': true,
       'appium:safariInitialUrl': `${BASE}/health`,
       'appium:newCommandTimeout': 600,
