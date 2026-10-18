@@ -54,7 +54,7 @@ async function stopServer() {
 
 // --- Safari on the iPad ------------------------------------------------------------------------
 async function safari() {
-  return remote({
+  const driver = await remote({
     hostname: APPIUM.hostname,
     port: Number(APPIUM.port),
     logLevel: 'warn',
@@ -75,6 +75,9 @@ async function safari() {
       'appium:newCommandTimeout': 600,
     },
   });
+  // Appium's Safari session starts with no time for async scripts (IndexedDB, Wake Lock)
+  await driver.setTimeout({ script: 30_000 });
+  return driver;
 }
 
 async function shot(driver, name) {
