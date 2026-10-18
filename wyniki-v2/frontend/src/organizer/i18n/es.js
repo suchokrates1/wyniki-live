@@ -34,6 +34,7 @@ export default {
   fieldEnd: "Último día",
   fieldCity: "Ciudad",
   fieldCountry: "País (código, p. ej. DE)",
+  fieldLanguage: "Idioma del torneo (locutor y overlay)",
   fieldCourts: "Número de pistas",
   fieldTier: "Categoría en la serie",
   noTier: "sin categoría",

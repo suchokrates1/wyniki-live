@@ -35,6 +35,7 @@ export default {
   fieldEnd: "Paskutinė diena",
   fieldCity: "Miestas",
   fieldCountry: "Šalis (kodas, pvz. DE)",
+  fieldLanguage: "Turnyro kalba (skelbėjas ir overlay)",
   fieldCourts: "Kortų skaičius",
   fieldTier: "Rangas serijoje",
   noTier: "be rango",

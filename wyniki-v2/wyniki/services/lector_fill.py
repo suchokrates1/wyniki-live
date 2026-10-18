@@ -10,7 +10,8 @@ import json
 from collections.abc import Sequence
 from itertools import combinations
 
-from .court_lector import chunk_path, warm_shelf
+from .court_lector import chunk_path
+from .lector_shelf import warm_shelf
 from .lector_lines import _set_sentence, court_sentence
 
 _SKIPPED = ("zwycięz", "zwyciez", "przegran", "tbd", "tba", "bye")
@@ -26,7 +27,7 @@ def clean_name(value: object) -> str:
     return text
 
 
-def name_lines(pairs: list[tuple[str, str]]) -> list[str]:
+def name_lines(pairs: list[tuple[str, str]], language: str = "pl") -> list[str]:
     lines = []
     seen: set[tuple[str, str]] = set()
     for left, right in pairs:
@@ -37,33 +38,52 @@ def name_lines(pairs: list[tuple[str, str]]) -> list[str]:
         if key in seen:
             continue
         seen.add(key)
-        lines.append(f"{a}, serwuje, kontra {b}.")
-        lines.append(f"{b}, serwuje, kontra {a}.")
-    return lines
+        if language == "pl":
+            lines.append(f"{a}, serwuje, kontra {b}.")
+            lines.append(f"{b}, serwuje, kontra {a}.")
+        else:
+            from .lector_speech import name_line
+
+            lines.append(name_line(a, b, language, serving=True) or "")
+            lines.append(name_line(b, a, language, serving=True) or "")
+    return [line for line in lines if line]
 
 
 def edge_lines(
     sets: list[tuple[int, int, int]],
     ties: list[tuple[int, int, bool]],
+    language: str = "pl",
 ) -> list[str]:
     """Scores the ordinary shelf does not contain: games past 7, tie-breaks past 10."""
     lines = []
     for number, left, right in sets:
         if left <= 7 and right <= 7:
             continue
-        spoken = _set_sentence(number, left, right, active=False)
+        if language == "pl":
+            spoken = _set_sentence(number, left, right, active=False)
+        else:
+            from .lector_speech import set_line
+
+            spoken = set_line(number, left, right, language, active=False)
         if spoken:
             lines.append(spoken)
     for left, right, super_break in ties:
         if left <= 10 and right <= 10:
             continue
-        from .lector_lines import _pair
+        if language == "pl":
+            from .lector_lines import _pair
 
-        pair = _pair(left, right)
-        if pair is None:
-            continue
-        label = "Super tie-break" if super_break else "Tie-break"
-        lines.append(f"{label}, {pair}.")
+            pair = _pair(left, right)
+            if pair is None:
+                continue
+            label = "Super tie-break" if super_break else "Tie-break"
+            lines.append(f"{label}, {pair}.")
+        else:
+            from .lector_speech import tie_line
+
+            spoken = tie_line(left, right, language, super_break=super_break)
+            if spoken:
+                lines.append(spoken)
     return lines
 
 
@@ -73,7 +93,7 @@ def _winner_points(loser: int) -> int | None:
     return 7 if loser <= 5 else loser + 2
 
 
-def history_lines(history: object) -> list[str]:
+def history_lines(history: object, language: str = "pl") -> list[str]:
     """Set and tie-break bricks implied by stored history. A super tie-break's games are its points."""
     if not isinstance(history, list):
         return []
@@ -106,7 +126,7 @@ def history_lines(history: object) -> list[str]:
             ties.append((winner, loser, False))
         elif right > left:
             ties.append((loser, winner, False))
-    return edge_lines(sets, ties)
+    return edge_lines(sets, ties, language)
 
 
 def bricks_for(
@@ -115,33 +135,47 @@ def bricks_for(
     pairs: list[tuple[str, str]],
     sets: list[tuple[int, int, int]] | None = None,
     ties: list[tuple[int, int, bool]] | None = None,
+    language: str = "pl",
 ) -> list[str]:
     lines: list[str] = []
     for court in courts:
-        spoken = court_sentence(court)
+        if language == "pl":
+            spoken = court_sentence(court)
+        else:
+            from .lector_speech import court_line
+
+            spoken = court_line(court, language)
         if spoken:
             lines.append(spoken)
-    lines.extend(name_lines(pairs))
-    lines.extend(edge_lines(sets or [], ties or []))
+    lines.extend(name_lines(pairs, language))
+    lines.extend(edge_lines(sets or [], ties or [], language))
     return list(dict.fromkeys(lines))
+
+
+def tournament_speech(tournament_id: int) -> str:
+    from ..database.tournaments import fetch_tournament, tournament_language
+
+    row = fetch_tournament(tournament_id) or {}
+    return tournament_language(row.get("language"))
 
 
 def lines_for_tournament(tournament_id: int) -> list[str]:
     from ..database.courts import fetch_courts_for_tournament
     from ..database.lector_rows import group_player_names, match_pairs, match_set_histories
 
+    language = tournament_speech(tournament_id)
     courts = [row.get("name") for row in fetch_courts_for_tournament(tournament_id)]
     pairs: list[tuple[str, str]] = []
     for names in group_player_names(tournament_id).values():
         pairs.extend(combinations(names, 2))
     pairs.extend(match_pairs(tournament_id))
-    lines = bricks_for(courts=courts, pairs=pairs)
+    lines = bricks_for(courts=courts, pairs=pairs, language=language)
     for raw in match_set_histories(tournament_id):
         try:
             history = json.loads(raw) if raw else []
         except (TypeError, ValueError):
             continue
-        lines.extend(history_lines(history))
+        lines.extend(history_lines(history, language))
     return list(dict.fromkeys(lines))
 
 
@@ -157,15 +191,16 @@ def fill_missing(
 
     if speaker is None and not settings.elevenlabs_api_key:
         return {"created": 0, "skipped": 0, "spent": 0, "left": 0}
+    language = tournament_speech(tournament_id)
     pending = []
     for sentence in lines_for_tournament(tournament_id):
-        path = chunk_path(sentence, None, None, shared=True)
+        path = chunk_path(sentence, None, None, shared=True, language=language)
         if path.is_file() and path.stat().st_size > 0:
             continue
         pending.append(sentence)
         if limit is not None and len(pending) >= limit:
             break
-    return warm_shelf(pending, speaker=speaker, character_budget=character_budget)
+    return warm_shelf(pending, speaker=speaker, character_budget=character_budget, language=language)
 
 
 def fill_next() -> dict:

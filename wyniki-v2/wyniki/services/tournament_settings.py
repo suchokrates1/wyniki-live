@@ -21,6 +21,7 @@ from ..database import (
     get_row,
     insert_tournament,
     set_active_tournament,
+    tournament_language,
     sync_tournament_courts,
     update_tournament,
 )
@@ -92,6 +93,7 @@ def create_from(data: dict[str, Any], logo=None) -> Result:
         is_simulation=is_simulation,
         access_key=access_key,
         office_password_hash=office_password_hash(data.get('office_password'), is_simulation=is_simulation, is_create=True),
+        language=tournament_language(data.get('language')),
     )
     if not tournament_id:
         return {"error": "Failed to create tournament"}, 500
@@ -162,6 +164,7 @@ def update_from(tournament_id: int, data: dict[str, Any], logo=None) -> Result:
             existing_hash=existing_row.office_password_hash if existing_row else '',
             is_simulation=is_simulation,
         ),
+        language=tournament_language(data.get('language') or existing.get('language')),
     )
     if not success:
         return {"error": "Failed to update tournament"}, 500

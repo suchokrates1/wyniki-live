@@ -2,6 +2,16 @@
 
 import { tournamentDates } from './tournamentsList.js';
 
+export const TOURNAMENT_LANGUAGES = [
+  { value: 'pl', label: 'Polski' },
+  { value: 'en', label: 'English' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'it', label: 'Italiano' },
+  { value: 'es', label: 'Español' },
+  { value: 'fr', label: 'Français' },
+  { value: 'lt', label: 'Lietuvių' },
+];
+
 export const TOURNAMENT_FIELDS = [
   { key: 'name', label: 'Nazwa turnieju', type: 'text', wide: true },
   { key: 'start_date', label: 'Data rozpoczęcia', type: 'date' },
@@ -9,6 +19,7 @@ export const TOURNAMENT_FIELDS = [
   { key: 'court_count', label: 'Liczba kortów', type: 'number', min: 0, hint: 'Tyle kortów dostaje PIN-y i pojawia się na stronie.' },
   { key: 'city', label: 'Miasto', type: 'text' },
   { key: 'country', label: 'Kraj', type: 'text' },
+  { key: 'language', label: 'Język turnieju', type: 'select', options: TOURNAMENT_LANGUAGES, hint: 'Lektor i overlay. B1 i B4 zostają.' },
   { key: 'report_email', label: 'E-mail raportów', type: 'email', hint: 'Tam idzie podsumowanie po turnieju.' },
   { key: 'access_key', label: 'Klucz dostępu', type: 'text', hint: 'Potrzebny tylko przy turnieju niepublicznym.' },
 ];

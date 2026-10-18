@@ -11,14 +11,28 @@
     <template x-for="field in adminTournamentFields()" :key="field.id">
       <div class="adm-field" :class="field.wide ? 'adm-field--wide' : ''">
         <label class="adm-field__label" :for="field.id" x-text="field.label"></label>
-        <input
-          class="adm-input adm-field__input"
-          :id="field.id"
-          :type="field.type"
-          :min="field.min"
-          :value="editTournament[field.key]"
-          @input="editTournament[field.key] = $event.target.value"
-        >
+        <template x-if="field.type === 'select'">
+          <select
+            class="adm-input adm-field__input"
+            :id="field.id"
+            :value="editTournament[field.key]"
+            @change="editTournament[field.key] = $event.target.value"
+          >
+            <template x-for="option in field.options" :key="option.value">
+              <option :value="option.value" x-text="option.label" :selected="editTournament[field.key] === option.value"></option>
+            </template>
+          </select>
+        </template>
+        <template x-if="field.type !== 'select'">
+          <input
+            class="adm-input adm-field__input"
+            :id="field.id"
+            :type="field.type"
+            :min="field.min"
+            :value="editTournament[field.key]"
+            @input="editTournament[field.key] = $event.target.value"
+          >
+        </template>
         <span class="adm-field__hint" x-show="field.hint" x-text="field.hint"></span>
       </div>
     </template>

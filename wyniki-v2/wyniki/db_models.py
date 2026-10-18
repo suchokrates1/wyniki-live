@@ -83,6 +83,7 @@ class Tournament(db.Model):
     is_simulation = db.Column(db.Integer, default=0)
     access_key = db.Column(db.String(100), nullable=True, default='')
     office_password_hash = db.Column(db.String(255), nullable=True, default='')
+    language = db.Column(db.String(2), nullable=False, default='pl')
     created_at = db.Column(db.String(50), default=utc_now_iso)
     
     # Relationships
@@ -107,6 +108,7 @@ class Tournament(db.Model):
             'is_simulation': self.is_simulation,
             'access_key': self.access_key or '',
             'has_office_password': bool(self.office_password_hash),
+            'language': self.language or 'pl',
             'court_count': self.courts.count() if self.courts is not None else 0,
             'created_at': self.created_at
         }

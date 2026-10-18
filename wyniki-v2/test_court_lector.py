@@ -60,7 +60,7 @@ def test_only_the_settled_score_is_spoken_and_it_repeats():
     def speaker(text, previous, following):
         return f"{previous}|{text}|{following}".encode()
 
-    def build(sentences, *, speaker, court="1"):
+    def build(sentences, *, speaker, court="1", language="pl"):
         built.append(list(sentences))
         return Path("announcement.mp3")
 
@@ -198,6 +198,23 @@ def test_a_new_court_gets_its_own_lector_and_odd_scores_are_queued(tmp_path, mon
     second_pass = lector_fill.fill_missing(7, speaker=speaker)
     assert second_pass["created"] == 1
     assert calls[1] == "Piotr Malicki, serwuje, kontra Łukasz Chmielewski."
+
+
+def test_english_tournament_is_spoken_in_english_and_polish_stays_polish():
+    from wyniki.database.tournaments import tournament_language
+
+    assert tournament_language("EN") == "en"
+    assert tournament_language("nope") == "pl"
+    english = _court(MARTA, EMIL, "B", "40", "30", {1: (4, 2)}, 1)
+    english["court_name"] = "2"
+    english["tournament_language"] = "en"
+    assert sentences_for_court(english) == [
+        "Court two.",
+        "Emil Stopierzyński, serving, against Marta Jędrzejczyk.",
+        "Forty to thirty.",
+        "Set one, active, four to two.",
+    ]
+    assert "B1" not in " ".join(sentences_for_court(english) or [])
 
 
 def test_the_slow_fill_leaves_the_live_reserve(monkeypatch):

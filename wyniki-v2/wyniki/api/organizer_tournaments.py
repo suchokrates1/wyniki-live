@@ -22,7 +22,7 @@ from .organizer_common import guarded_blueprint
 
 blueprint = guarded_blueprint("organizer_tournaments", "/organizer/api")
 
-EDITABLE = ("name", "start_date", "end_date", "city", "country", "report_email", "court_count",
+EDITABLE = ("name", "start_date", "end_date", "city", "country", "report_email", "court_count", "language",
             "is_public", "is_simulation", "office_password", "title_scope", "title_override")
 
 

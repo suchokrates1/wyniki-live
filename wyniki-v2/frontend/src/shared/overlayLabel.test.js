@@ -5,17 +5,25 @@ import {
   localizeScoreboardPhase,
   overlayCategoryLabel,
   overlayCourtLabel,
+  overlayScoreLabels,
   overlayMetaParts,
   overlayPhaseLabel,
 } from './overlayLabel.js';
 
-test('court labels become English COURT N', () => {
-  assert.equal(overlayCourtLabel('Kort 1', 't31-1'), 'COURT 1');
-  assert.equal(overlayCourtLabel('KORT 2', '2'), 'COURT 2');
-  assert.equal(overlayCourtLabel('Court 8', '8'), 'COURT 8');
-  assert.equal(overlayCourtLabel('Open • Kort 16', 't31-16'), 'COURT 16');
-  assert.equal(overlayCourtLabel('MAIN', '1'), 'MAIN');
-  assert.equal(overlayCourtLabel('', 't31-4'), 'COURT 4');
+test('court labels follow the tournament language and keep B codes out of the name', () => {
+  assert.equal(overlayCourtLabel('Kort 1', 't31-1', 'pl'), 'Kort 1');
+  assert.equal(overlayCourtLabel('1', 't31-1', 'en'), 'Court 1');
+  assert.equal(overlayCourtLabel('KORT 2', '2', 'de'), 'Platz 2');
+  assert.equal(overlayCourtLabel('', 't31-4', 'lt'), 'Kortas 4');
+  assert.equal(overlayCourtLabel('MAIN', '1', 'pl'), 'MAIN');
+  assert.equal(overlayCourtLabel('Open • Kort 16', 't31-16', 'es'), 'Cancha 16');
+});
+
+test('B1 and B4 stay while the surrounding words follow the tournament', () => {
+  const polish = overlayScoreLabels('pl');
+  assert.equal(localizeScoreboardCategory('B1 Women', polish), 'B1 Kobiety');
+  assert.equal(localizeScoreboardCategory('B4 Men', polish), 'B4 Mężczyźni');
+  assert.equal(localizeScoreboardPhase('Finał', polish), 'Finał');
 });
 
 test('categories become English B1 Women / B1 Men', () => {

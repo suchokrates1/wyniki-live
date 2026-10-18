@@ -19,7 +19,8 @@ def fetch_courts(active_only: bool = False, public_only: bool = False) -> list[d
                     c.tournament_id,
                     c.display_order,
                     c.active,
-                    t.name AS tournament_name
+                    t.name AS tournament_name,
+                    COALESCE(t.language, 'pl') AS tournament_language
                 FROM courts c
                 LEFT JOIN tournaments t ON t.id = c.tournament_id
             """
@@ -43,6 +44,7 @@ def fetch_courts(active_only: bool = False, public_only: bool = False) -> list[d
                 "display_order": row["display_order"],
                 "active": row["active"],
                 "tournament_name": row["tournament_name"],
+                "tournament_language": row["tournament_language"] or "pl",
             }
             for row in rows
         ]

@@ -35,7 +35,7 @@ mountPartials(document.body, {
   tabResults: tabResultsHtml,
 });
 
-const emptyDraft = () => ({ name: '', start_date: '', end_date: '', city: '', country: '', court_count: 4, tier: '', is_public: true, office_password: '' });
+const emptyDraft = () => ({ name: '', start_date: '', end_date: '', city: '', country: '', language: 'pl', court_count: 4, tier: '', is_public: true, office_password: '' });
 
 Alpine.data('organizerApp', () => ({
   ...createTournamentView(),

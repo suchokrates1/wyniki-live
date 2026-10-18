@@ -8,6 +8,18 @@
       <div class="adm-field"><label class="adm-field__label" for="org-set-city" x-text="ot('fieldCity')"></label><input class="adm-input" id="org-set-city" x-model="tForm.city"></div>
       <div class="adm-field"><label class="adm-field__label" for="org-set-country" x-text="ot('fieldCountry')"></label><input class="adm-input" id="org-set-country" maxlength="2" x-model="tForm.country"></div>
       <div class="adm-field">
+        <label class="adm-field__label" for="org-set-language" x-text="ot('fieldLanguage')"></label>
+        <select class="adm-input" id="org-set-language" x-model="tForm.language">
+          <option value="pl">Polski</option>
+          <option value="en">English</option>
+          <option value="de">Deutsch</option>
+          <option value="it">Italiano</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="lt">Lietuvių</option>
+        </select>
+      </div>
+      <div class="adm-field">
         <label class="adm-field__label" for="org-set-courts" x-text="ot('fieldCourts')"></label>
         <input class="adm-input" type="number" min="0" :max="t.max_courts || 30" id="org-set-courts" x-model.number="tForm.court_count" aria-describedby="org-set-courts-hint">
         <span class="adm-field__hint" id="org-set-courts-hint" x-show="t.max_courts" x-text="ot('courtsPlan', { n: t.max_courts })"></span>

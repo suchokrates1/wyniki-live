@@ -152,12 +152,14 @@ def refresh_courts_from_db(db_courts: list[Any]) -> None:
                 display_order = court.get("display_order") or 0
                 tournament_id = court.get("tournament_id")
                 tournament_name = court.get("tournament_name")
+                tournament_language = court.get("tournament_language") or "pl"
             else:
                 kort_id = str(court)
                 court_name = kort_id
                 display_order = 0
                 tournament_id = None
                 tournament_name = None
+                tournament_language = "pl"
             configured_ids.append(kort_id)
             if kort_id not in COURTS:
                 COURTS[kort_id] = _empty_court_state()
@@ -165,6 +167,7 @@ def refresh_courts_from_db(db_courts: list[Any]) -> None:
             COURTS[kort_id]["display_order"] = display_order
             COURTS[kort_id]["tournament_id"] = tournament_id
             COURTS[kort_id]["tournament_name"] = tournament_name
+            COURTS[kort_id]["tournament_language"] = tournament_language
         
         # Remove courts no longer in config
         removed = [k for k in COURTS if k not in configured_ids]
@@ -200,7 +203,7 @@ def serialize_all_states() -> dict[str, Any]:
         return {kort_id: serialize_court_state(state) for kort_id, state in COURTS.items()}
 
 
-_SNAPSHOT_IDENTITY_KEYS = ("court_name", "display_order", "tournament_id", "tournament_name")
+_SNAPSHOT_IDENTITY_KEYS = ("court_name", "display_order", "tournament_id", "tournament_name", "tournament_language")
 
 
 def restore_courts_from_snapshot(courts: dict[str, Any]) -> int:

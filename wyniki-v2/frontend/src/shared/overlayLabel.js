@@ -1,6 +1,61 @@
 const COURT_PREFIX = /^(court|kort|platz|campo|cancha|kortas)\s+/i;
 
-export function overlayCourtLabel(labelText, courtId) {
+export const COURT_WORD = {
+  pl: 'Kort',
+  en: 'Court',
+  de: 'Platz',
+  it: 'Campo',
+  es: 'Cancha',
+  fr: 'Court',
+  lt: 'Kortas',
+};
+
+const SCORE_LABELS = {
+  pl: {
+    women: 'Kobiety', men: 'Mężczyźni', mixed: 'Mieszane', doubles: 'Debel',
+    group: 'Grupowa', groupRematch: 'Rewanż grupowy', knockout: 'Pucharowa',
+    r16: '1/8', qf: 'Ćwierćfinał', sf: 'Półfinał', final: 'Finał', third: '3. miejsce',
+    consolation: 'Pocieszenie', placesRange: 'Miejsca {from}–{to}', placeFor: '{number}. miejsce',
+  },
+  de: {
+    women: 'Frauen', men: 'Männer', mixed: 'Mixed', doubles: 'Doppel',
+    group: 'Gruppe', groupRematch: 'Gruppenrückspiel', knockout: 'K.-o.',
+    r16: '1/8', qf: 'Viertelfinale', sf: 'Halbfinale', final: 'Finale', third: '3. Platz',
+    consolation: 'Trost', placesRange: 'Plätze {from}–{to}', placeFor: '{number}. Platz',
+  },
+  it: {
+    women: 'Donne', men: 'Uomini', mixed: 'Misto', doubles: 'Doppio',
+    group: 'Girone', groupRematch: 'Ritorno', knockout: 'Eliminazione',
+    r16: '1/8', qf: 'Quarti', sf: 'Semifinale', final: 'Finale', third: '3° posto',
+    consolation: 'Consolazione', placesRange: 'Posti {from}–{to}', placeFor: '{number}° posto',
+  },
+  es: {
+    women: 'Mujeres', men: 'Hombres', mixed: 'Mixto', doubles: 'Dobles',
+    group: 'Grupo', groupRematch: 'Vuelta', knockout: 'Eliminatoria',
+    r16: '1/8', qf: 'Cuartos', sf: 'Semifinal', final: 'Final', third: '3er puesto',
+    consolation: 'Consuelo', placesRange: 'Puestos {from}–{to}', placeFor: 'Puesto {number}',
+  },
+  fr: {
+    women: 'Femmes', men: 'Hommes', mixed: 'Mixte', doubles: 'Double',
+    group: 'Groupe', groupRematch: 'Retour', knockout: 'Élimination',
+    r16: '1/8', qf: 'Quarts', sf: 'Demi-finale', final: 'Finale', third: '3e place',
+    consolation: 'Consolation', placesRange: 'Places {from}–{to}', placeFor: '{number}e place',
+  },
+  lt: {
+    women: 'Moterys', men: 'Vyrai', mixed: 'Mišrios', doubles: 'Dvejetai',
+    group: 'Grupė', groupRematch: 'Pakartojimas', knockout: 'Atkrintamosios',
+    r16: '1/8', qf: 'Ketvirtfinalis', sf: 'Pusfinalis', final: 'Finalas', third: '3 vieta',
+    consolation: 'Paguoda', placesRange: 'Vietos {from}–{to}', placeFor: '{number} vieta',
+  },
+};
+
+export function overlayScoreLabels(language = 'pl') {
+  if (language === 'en') return null;
+  return SCORE_LABELS[language] || SCORE_LABELS.pl;
+}
+
+export function overlayCourtLabel(labelText, courtId, language = 'en') {
+  const word = COURT_WORD[language] || COURT_WORD.en;
   const raw = String(labelText || '').trim();
   if (/^main$/i.test(raw)) return 'MAIN';
 
@@ -8,14 +63,14 @@ export function overlayCourtLabel(labelText, courtId) {
   const ordinalFromId = fromId ? fromId[1] : '';
 
   if (!raw) {
-    return ordinalFromId ? `COURT ${ordinalFromId}` : '';
+    return ordinalFromId ? `${word} ${ordinalFromId}` : '';
   }
 
   const afterDot = raw.split('•').pop().trim();
   const stripped = afterDot.replace(COURT_PREFIX, '').trim();
-  if (/^\d+$/.test(stripped)) return `COURT ${stripped}`;
+  if (/^\d+$/.test(stripped)) return `${word} ${stripped}`;
 
-  return afterDot.replace(COURT_PREFIX, 'COURT ');
+  return afterDot.replace(COURT_PREFIX, `${word} `);
 }
 
 export function overlayCategoryLabel(category) {

@@ -35,6 +35,7 @@ from .tournaments import (
     fetch_tournaments,
     fetch_tournament,
     insert_tournament,
+    tournament_language,
     update_tournament,
     mark_tournament_summary_sent,
     delete_tournament,

@@ -198,9 +198,14 @@ def court_state_for_lector(court_name: str = "1") -> dict | None:
 
 
 def sentences_for_court(state: dict | None) -> list[str] | None:
-    """The hybrid sentences for court 1, or None when the court has no match."""
+    """The hybrid sentences for one court, or None when the court has no match."""
     if not state:
         return None
+    language = str(state.get("tournament_language") or "pl").strip().lower()[:2]
+    if language and language != "pl":
+        from .lector_speech import sentences
+
+        return sentences(state, language)
     name_a = _name(state.get("A"))
     name_b = _name(state.get("B"))
     opening = court_sentence(state.get("court_name") or "1")

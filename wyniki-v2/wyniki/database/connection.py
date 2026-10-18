@@ -130,6 +130,7 @@ def init_db() -> None:
                 is_simulation INTEGER DEFAULT 0,
                 access_key TEXT DEFAULT '',
                 office_password_hash TEXT DEFAULT '',
+                language TEXT NOT NULL DEFAULT 'pl',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -581,6 +582,9 @@ def init_db() -> None:
         if 'office_password_hash' not in t_cols:
             cursor.execute("ALTER TABLE tournaments ADD COLUMN office_password_hash TEXT DEFAULT ''")
             logger.info("database_migration", action="added_office_password_hash_to_tournaments")
+        if 'language' not in t_cols:
+            cursor.execute("ALTER TABLE tournaments ADD COLUMN language TEXT NOT NULL DEFAULT 'pl'")
+            logger.info("database_migration", action="added_language_to_tournaments")
         simulation_office_password_hash = generate_password_hash('test')
         cursor.execute(
             """

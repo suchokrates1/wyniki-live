@@ -44,6 +44,18 @@
           <div class="adm-field"><label class="adm-field__label" for="org-new-end" x-text="ot('fieldEnd')"></label><input class="adm-input" type="date" id="org-new-end" x-model="draft.end_date" required></div>
           <div class="adm-field"><label class="adm-field__label" for="org-new-city" x-text="ot('fieldCity')"></label><input class="adm-input" id="org-new-city" x-model="draft.city"></div>
           <div class="adm-field"><label class="adm-field__label" for="org-new-country" x-text="ot('fieldCountry')"></label><input class="adm-input" id="org-new-country" maxlength="2" x-model="draft.country"></div>
+          <div class="adm-field">
+            <label class="adm-field__label" for="org-new-language" x-text="ot('fieldLanguage')"></label>
+            <select class="adm-input" id="org-new-language" x-model="draft.language">
+              <option value="pl">Polski</option>
+              <option value="en">English</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="lt">Lietuvių</option>
+            </select>
+          </div>
           <div class="adm-field"><label class="adm-field__label" for="org-new-courts" x-text="ot('fieldCourts')"></label><input class="adm-input" type="number" min="0" :max="current().max_courts || 30" id="org-new-courts" x-model.number="draft.court_count"></div>
           <div class="adm-field">
             <label class="adm-field__label" for="org-new-tier" x-text="ot('fieldTier')"></label>

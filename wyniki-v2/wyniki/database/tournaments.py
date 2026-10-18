@@ -16,6 +16,14 @@ from .connection import (
 
 PUBLIC_RESULT_GRACE_DAYS = 7
 
+
+def tournament_language(value: object) -> str:
+    """A tournament speaks one of the site languages. Anything else stays Polish."""
+    from .accounts import LANGUAGES
+
+    code = str(value or "").strip().lower()[:2]
+    return code if code in LANGUAGES else "pl"
+
 # Prefer the tournament whose dates include today, then the newest start_date.
 # Without this, SQLite LIMIT 1 returns the lowest id (e.g. App Review 26 over IBTA 31).
 # date('now') is UTC. The process timezone is Warsaw in CI and UTC in the image,
@@ -136,6 +144,7 @@ def fetch_tournaments(public_only: bool = False) -> list[dict]:
                     COALESCE(t.is_simulation, 0) AS is_simulation,
                     COALESCE(t.access_key, '') AS access_key,
                     CASE WHEN COALESCE(t.office_password_hash, '') != '' THEN 1 ELSE 0 END AS has_office_password,
+                    COALESCE(t.language, 'pl') AS language,
                     t.created_at,
                     COUNT(c.kort_id) AS court_count
                 FROM tournaments t
@@ -143,7 +152,7 @@ def fetch_tournaments(public_only: bool = False) -> list[dict]:
                 {where_clause}
                 GROUP BY t.id, t.name, t.start_date, t.end_date, t.active, t.location, t.city, t.country,
                          t.logo_path, t.report_email, t.summary_sent_at, t.is_public, t.stats_enabled,
-                         t.is_simulation, t.access_key, t.office_password_hash, t.created_at
+                         t.is_simulation, t.access_key, t.office_password_hash, t.language, t.created_at
                 ORDER BY start_date DESC
             """)
             rows = cursor.fetchall()
@@ -176,6 +185,7 @@ def fetch_tournament(tournament_id: int) -> dict | None:
                     COALESCE(t.is_simulation, 0) AS is_simulation,
                     COALESCE(t.access_key, '') AS access_key,
                     CASE WHEN COALESCE(t.office_password_hash, '') != '' THEN 1 ELSE 0 END AS has_office_password,
+                    COALESCE(t.language, 'pl') AS language,
                     t.created_at,
                     COUNT(c.kort_id) AS court_count
                 FROM tournaments t
@@ -183,7 +193,7 @@ def fetch_tournament(tournament_id: int) -> dict | None:
                 WHERE t.id = ?
                 GROUP BY t.id, t.name, t.start_date, t.end_date, t.active, t.location, t.city, t.country,
                         t.logo_path, t.report_email, t.summary_sent_at, t.is_public, t.stats_enabled,
-                        t.is_simulation, t.access_key, t.office_password_hash, t.created_at
+                        t.is_simulation, t.access_key, t.office_password_hash, t.language, t.created_at
             """, (tournament_id,))
             row = cursor.fetchone()
             return dict(row) if row else None
@@ -205,6 +215,7 @@ def insert_tournament(
     is_simulation: bool = False,
     access_key: str = "",
     office_password_hash: str = "",
+    language: str = "pl",
 ) -> int | None:
     """The new tournament's id. A simulation is never public and keeps no stats, whatever
     the flags say, and gets the default office password when none is given."""
@@ -219,9 +230,9 @@ def insert_tournament(
             cursor.execute("""
                 INSERT INTO tournaments (
                     name, start_date, end_date, active, location, city, country, logo_path, report_email,
-                    is_public, stats_enabled, is_simulation, access_key, office_password_hash
+                    is_public, stats_enabled, is_simulation, access_key, office_password_hash, language
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 name,
                 start_date,
@@ -237,6 +248,7 @@ def insert_tournament(
                 1 if is_simulation else 0,
                 access_key.strip(),
                 office_password_hash,
+                tournament_language(language),
             ))
             conn.commit()
             logger.info("tournament_inserted", id=cursor.lastrowid, name=name)
@@ -260,6 +272,7 @@ def update_tournament(
     is_simulation: bool = False,
     access_key: str = "",
     office_password_hash: str = "",
+    language: str = "pl",
 ) -> bool:
     """Whether it was changed. The simulation rules of insert_tournament apply here too."""
     try:
@@ -274,7 +287,7 @@ def update_tournament(
                 UPDATE tournaments
                 SET name = ?, start_date = ?, end_date = ?, active = ?, location = ?, city = ?, country = ?,
                     logo_path = ?, report_email = ?, is_public = ?, stats_enabled = ?, is_simulation = ?,
-                    access_key = ?, office_password_hash = ?
+                    access_key = ?, office_password_hash = ?, language = ?
                 WHERE id = ?
             """, (
                 name,
@@ -291,6 +304,7 @@ def update_tournament(
                 1 if is_simulation else 0,
                 access_key.strip(),
                 office_password_hash,
+                tournament_language(language),
                 tournament_id,
             ))
             conn.commit()

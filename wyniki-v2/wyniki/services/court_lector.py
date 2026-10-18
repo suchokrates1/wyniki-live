@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
 import threading
 import time
 import urllib.error
@@ -19,6 +18,7 @@ from pathlib import Path
 
 from ..config import logger, settings
 from .lector_lines import court_state_for_lector, sentences_for_court
+from .lector_shelf import stitch_chunks, warm_shelf as warm_shelf
 
 COURT_ID = "1"
 QUIET_SECONDS = 20
@@ -34,11 +34,18 @@ def _shared_sentence(text: str) -> bool:
     return bool(text)
 
 
-def chunk_path(text: str, previous: str | None, following: str | None, *, shared: bool = False) -> Path:
+def chunk_path(
+    text: str,
+    previous: str | None,
+    following: str | None,
+    *,
+    shared: bool = False,
+    language: str = "pl",
+) -> Path:
     parts = [
         settings.elevenlabs_voice_id,
         settings.elevenlabs_model,
-        "pl",
+        language or "pl",
         text,
     ]
     if not shared:
@@ -52,14 +59,19 @@ def announcement_path(court: str = "1") -> Path:
     return _data_root() / "lector" / f"court-{court}.mp3"
 
 
-def speak_sentence(text: str, previous: str | None, following: str | None) -> bytes:
+def speak_sentence(
+    text: str,
+    previous: str | None,
+    following: str | None,
+    language: str = "pl",
+) -> bytes:
     """One hybrid sentence from ElevenLabs. The key is never written to the log."""
     if not settings.elevenlabs_api_key:
         raise RuntimeError("lector voice is not configured")
     body: dict = {
         "text": text,
         "model_id": settings.elevenlabs_model,
-        "language_code": "pl",
+        "language_code": language or "pl",
         "voice_settings": {"stability": 0.55, "similarity_boost": 0.8},
     }
     if previous:
@@ -94,84 +106,26 @@ def ensure_chunk(
     *,
     speaker=speak_sentence,
     shared: bool = False,
+    language: str = "pl",
 ) -> Path:
-    path = chunk_path(text, previous, following, shared=shared)
+    path = chunk_path(text, previous, following, shared=shared, language=language)
     if path.is_file() and path.stat().st_size > 0:
         return path
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = speaker(text, previous, following)
+    payload = _invoke(speaker, text, previous, following, language)
     temporary = path.with_suffix(".tmp")
     temporary.write_bytes(payload)
     temporary.replace(path)
     return path
 
 
-def warm_shelf(
-    sentences: list[str],
-    *,
-    speaker=None,
-    character_budget: int | None = None,
-) -> dict:
-    """Create missing shared bricks. Stops before the character budget is passed."""
-    speaker = speaker or speak_sentence
-    created = skipped = spent = 0
-    for index, sentence in enumerate(sentences):
-        if character_budget is not None and spent + len(sentence) > character_budget:
-            return {
-                "created": created,
-                "skipped": skipped,
-                "spent": spent,
-                "left": len(sentences) - index,
-            }
-        path = chunk_path(sentence, None, None, shared=True)
-        if path.is_file() and path.stat().st_size > 0:
-            skipped += 1
-            continue
-        previous = None if sentence == "Kort jeden." else "Kort jeden."
-        ensure_chunk(sentence, previous, None, speaker=speaker, shared=True)
-        created += 1
-        spent += len(sentence)
-    return {"created": created, "skipped": skipped, "spent": spent, "left": 0}
+def _invoke(speaker, text: str, previous: str | None, following: str | None, language: str) -> bytes:
+    if speaker is speak_sentence:
+        return speak_sentence(text, previous, following, language=language)
+    return speaker(text, previous, following)
 
 
-def stitch_chunks(paths: list[Path], dest: Path) -> None:
-    """Join sentence clips with a short breath between them."""
-    if not paths:
-        raise RuntimeError("nothing to stitch")
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    temporary = dest.with_suffix(".tmp.mp3")
-    if len(paths) == 1:
-        temporary.write_bytes(paths[0].read_bytes())
-        temporary.replace(dest)
-        return
-    filters = []
-    labels = []
-    for index in range(len(paths)):
-        if index < len(paths) - 1:
-            filters.append(f"[{index}:a]apad=pad_dur=0.06[a{index}]")
-        else:
-            filters.append(f"[{index}:a]anull[a{index}]")
-        labels.append(f"[a{index}]")
-    filters.append(f"{''.join(labels)}concat=n={len(paths)}:v=0:a=1[out]")
-    command = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error"]
-    for path in paths:
-        command.extend(["-i", str(path)])
-    command.extend([
-        "-filter_complex", ";".join(filters),
-        "-map", "[out]",
-        "-c:a", "libmp3lame",
-        "-q:a", "4",
-        str(temporary),
-    ])
-    try:
-        subprocess.run(command, check=True, capture_output=True)
-    except subprocess.CalledProcessError as exc:
-        detail = (exc.stderr or b"").decode("utf-8", "replace")[:240]
-        raise RuntimeError(f"lector stitch failed: {detail}") from None
-    temporary.replace(dest)
-
-
-def prepare(sentences: list[str], *, speaker=speak_sentence) -> list[Path]:
+def prepare(sentences: list[str], *, speaker=speak_sentence, language: str = "pl") -> list[Path]:
     """Generate any missing chunks for this exact line. Neighbours are part of the clip."""
     paths = []
     for index, sentence in enumerate(sentences):
@@ -184,13 +138,20 @@ def prepare(sentences: list[str], *, speaker=speak_sentence) -> list[Path]:
                 following,
                 speaker=speaker,
                 shared=_shared_sentence(sentence),
+                language=language,
             )
         )
     return paths
 
 
-def build_announcement(sentences: list[str], *, speaker=speak_sentence, court: str = "1") -> Path:
-    paths = prepare(sentences, speaker=speaker)
+def build_announcement(
+    sentences: list[str],
+    *,
+    speaker=speak_sentence,
+    court: str = "1",
+    language: str = "pl",
+) -> Path:
+    paths = prepare(sentences, speaker=speaker, language=language)
     dest = announcement_path(court)
     stitch_chunks(paths, dest)
     return dest
@@ -234,7 +195,7 @@ class Playback:
                 "sentences": list(self.sentences),
             }
 
-    def observe(self, sentences: list[str] | None, now: float) -> None:
+    def observe(self, sentences: list[str] | None, now: float, language: str = "pl") -> None:
         text = "\n".join(sentences or [])
         with self._lock:
             if not text:
@@ -262,7 +223,12 @@ class Playback:
         if not should_build:
             return
         try:
-            build_announcement(pending_sentences, speaker=self.speaker, court=self.court)
+            build_announcement(
+                pending_sentences,
+                speaker=self.speaker,
+                court=self.court,
+                language=language,
+            )
         except Exception as exc:  # noqa: BLE001 - a failed clip must not kill the loop
             logger.warning("lector_build_failed", error=str(exc))
             return
@@ -278,7 +244,12 @@ class Playback:
 
     def tick(self, now: float | None = None) -> None:
         state = court_state_for_lector(self.court)
-        self.observe(sentences_for_court(state), time.monotonic() if now is None else now)
+        language = str((state or {}).get("tournament_language") or "pl")
+        self.observe(
+            sentences_for_court(state),
+            time.monotonic() if now is None else now,
+            language=language,
+        )
 
 _playbacks: dict[str, Playback] = {}
 

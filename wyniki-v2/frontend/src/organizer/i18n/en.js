@@ -34,6 +34,7 @@ export default {
   fieldEnd: "Last day",
   fieldCity: "City",
   fieldCountry: "Country (code, e.g. DE)",
+  fieldLanguage: "Tournament language (lector and overlay)",
   fieldCourts: "Number of courts",
   fieldTier: "Tier in the series",
   noTier: "no tier",

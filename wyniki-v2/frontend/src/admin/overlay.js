@@ -1,6 +1,6 @@
 import { abbreviateCompetitorName } from '../shared/teamDisplay.js';
 import { calcMatchTime } from '../shared/matchTime.js';
-import { overlayCourtLabel } from '../shared/overlayLabel.js';
+import { overlayCourtLabel, overlayScoreLabels } from '../shared/overlayLabel.js';
 import { courtLooksEmpty, previewMockCourt } from './overlayPreviewMock.js';
 import { renderTvScoreboard } from '../shared/tvScoreboard.js';
 
@@ -1115,12 +1115,14 @@ export function createOverlayAdmin() {
     // ===== LIVE SCOREBOARD RENDER IN PREVIEW =====
     renderLiveScoreboard(el) {
       const court = this.resolveOverlayCourtData(el.court_id);
+      const language = court?.tournament_language || 'pl';
       const look = this.overlayLook();
+      look.labels = overlayScoreLabels(language);
       const showHeaderCourt = (el.label_position || 'above') !== 'none';
       return renderTvScoreboard({
         courtId: el.court_id,
         court,
-        courtName: showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '',
+        courtName: showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id, language) : '',
         look,
         bgOpacity: el.bg_opacity != null ? el.bg_opacity : 0.95,
         onAnimTick: () => { this.serveAnimTick += 1; },

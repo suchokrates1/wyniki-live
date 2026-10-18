@@ -6,7 +6,7 @@ import {
   isScoreboardHeld,
 } from './shared/scoreboardHold.js';
 import { calcMatchTime } from './shared/matchTime.js';
-import { overlayCourtLabel } from './shared/overlayLabel.js';
+import { overlayCourtLabel, overlayScoreLabels } from './shared/overlayLabel.js';
 import { renderTvScoreboard } from './shared/tvScoreboard.js';
 import './styles/fonts.css';
 import './styles/tvScoreboard.css';
@@ -126,13 +126,20 @@ function resolveCourtState(courtToken) {
     return courts[courtToken] || {};
 }
 
+function overlayLanguage() {
+    return activeTournament?.language || 'pl';
+}
+
 function renderScoreboard(el, courtOverride) {
     const showHeaderCourt = (el.label_position || 'above') !== 'none';
+    const language = overlayLanguage();
+    const look = overlayLook(getPreset());
+    look.labels = overlayScoreLabels(language);
     return renderTvScoreboard({
         courtId: el.court_id,
         court: courtOverride || resolveCourtState(el.court_id),
-        courtName: showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id) : '',
-        look: overlayLook(getPreset()),
+        courtName: showHeaderCourt ? overlayCourtLabel(el.label_text, el.court_id, language) : '',
+        look,
         bgOpacity: el.bg_opacity != null ? el.bg_opacity : 0.95,
         onAnimTick: render,
         flashes: true,

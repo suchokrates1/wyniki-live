@@ -1,6 +1,6 @@
 /** The "Nowy turniej" dialog: which fields it asks for and when it may be submitted. */
 
-import { TOURNAMENT_FLAGS } from './tournamentSettings.js';
+import { TOURNAMENT_FLAGS, TOURNAMENT_LANGUAGES } from './tournamentSettings.js';
 
 export const CREATE_FIELDS = [
   { key: 'name', label: 'Nazwa turnieju', type: 'text', wide: true, placeholder: 'np. RAKIETY ATNiS VIII' },
@@ -8,6 +8,7 @@ export const CREATE_FIELDS = [
   { key: 'end_date', label: 'Data zakończenia', type: 'date' },
   { key: 'city', label: 'Miasto', type: 'text', placeholder: 'Giebułtów' },
   { key: 'country', label: 'Kraj', type: 'text', placeholder: 'PL' },
+  { key: 'language', label: 'Język turnieju', type: 'select', options: TOURNAMENT_LANGUAGES, hint: 'Lektor i overlay. B1 i B4 zostają.' },
   { key: 'court_count', label: 'Liczba kortów', type: 'number', min: 1, hint: 'Tyle kortów dostaje PIN-y.' },
   { key: 'report_email', label: 'E-mail raportów', type: 'email', placeholder: 'biuro@klub.pl' },
   { key: 'office_password', label: 'Hasło modułu biura', type: 'password', wide: true, hint: 'Bez niego biuro nie wejdzie do turnieju.' },
@@ -25,7 +26,7 @@ export function createFieldsFor(prefix = 'adm-new') {
 export function createTournamentDraft() {
   return {
     name: '', start_date: '', end_date: '', city: '', country: '', report_email: '',
-    court_count: 1, is_public: true, stats_enabled: true, is_simulation: false,
+    court_count: 1, language: 'pl', is_public: true, stats_enabled: true, is_simulation: false,
     access_key: '', office_password: '', logo: null,
   };
 }
