@@ -589,8 +589,8 @@ Regresja: odpal **cały** `e2e:tournament` (moduły 01–20) na końcu — singi
 
 #### E2E — aplikacja sędziowska
 
-- ↗ Seed slotu double → karta sugestii z parami → **Użyj meczu** → Debel + 4 osoby + `scheduleId` → start → `link` po ID → publiczny slot in_progress/completed → lista zadań Blind Tennis w vaulcie (`Blind-Tennis-lista`)
-- ↗ Start debla **bez** sugestii (ręczny checkbox) — mecz się sędziuje; brak twardego crash na schedule → lista zadań Blind Tennis w vaulcie (`Blind-Tennis-lista`)
+- [x] Seed slotu double → karta sugestii z parami → **Użyj meczu** → Debel + 4 osoby + `scheduleId` → start → slot in_progress → completed z tym meczem (`suggestedDoubles_runsOnItsScheduleSlotToTheEnd`, 2026-10-18)
+- [x] Start debla **bez** sugestii (ręczny checkbox, inne pary niż w slocie) — komunikat „towarzyski”, mecz do końca, slot zostaje `planned` (`manualDoubles_isUmpiredWithoutTouchingTheSlot`, 2026-10-18). Te same pary co w slocie wybrane ręcznie serwer łączy ze slotem po nazwach (fallback, celowo).
 - [x] Fallback nazw: plan `"A / B"`, appka wysyła `"B / A"` bez `schedule_id` — slot i tak się spina (`test_link_schedule_to_match_fallback_ignores_partner_order`)
 
 > 2026-08-19: espresso na emulatorze **nie odpalone** (brak urządzenia/`adb devices` puste). Unit `gradlew test` zielony; istniejący `UmpireTournamentE2ETest` ma scenariusze `doubles_regular` / mixed, ale nie ścieżki „Użyj meczu” ze slotu double.
