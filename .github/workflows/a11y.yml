@@ -33,8 +33,8 @@ jobs:
       - name: Validate translations (all locales)
         run: npm run test:i18n
 
-      - name: Match engine unit tests (Android domain oracle)
-        run: npm run test:match-engine
+      - name: Unit tests (public site, admin, organizer, match engine oracle)
+        run: npm run test:unit
 
       - name: Build public frontend
         run: npm run build
@@ -47,6 +47,9 @@ jobs:
 
       - name: Public site on phones (layout, touch targets, axe) on mocked build
         run: npm run e2e:public-mobile -- --project=android-pixel7 --project=android-small-360 --project=android-dark
+
+      - name: Admin and organizer panel E2E on mocked build
+        run: npm run e2e:admin
 
   umpire-e2e:
     runs-on: ubuntu-latest
