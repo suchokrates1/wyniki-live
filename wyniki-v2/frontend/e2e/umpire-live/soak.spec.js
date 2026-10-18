@@ -34,10 +34,16 @@ test('Gate 8 soak: a day of matches on one tablet', async ({ context }) => {
       await startMatch(page, { players, doubles: kind.doubles, advanced: kind.advanced, gamesPerSet: 3, setsToWin: 1 });
       const point = kind.advanced ? advancedPoint : basicPoint;
       const offline = index % 3 === 2;
-      for (let game = 0; game < 3; game += 1) {
-        if (offline && game === 1) await setNetwork(context, false);
-        await playGame(page, true, point);
-        if (offline && game === 1) await setNetwork(context, true);
+      try {
+        for (let game = 0; game < 3; game += 1) {
+          if (offline && game === 1) await setNetwork(context, false);
+          await playGame(page, true, point);
+          if (offline && game === 1) await setNetwork(context, true);
+        }
+      } catch (error) {
+        // what the tablet showed when the run got stuck
+        await page.screenshot({ path: test.info().outputPath(`stuck-match-${index + 1}.png`) }).catch(() => {});
+        throw new Error(`match ${index + 1} (${kind.name}${offline ? ', offline part' : ''}): ${error.message}`);
       }
       await dismissAnnouncement(page);
       await expect(page.getByRole('heading', { name: 'Match Finished!' }), `match ${index + 1} (${kind.name})`).toBeVisible({ timeout: 30_000 });

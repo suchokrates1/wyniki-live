@@ -1590,6 +1590,11 @@ function createUmpireApp() {
       return `${state.player1Stats.getFirstServePercentage()}% / ${state.player2Stats.getFirstServePercentage()}%`;
     },
 
+    /** Whether the screen is kept on (the iPad check reads it). */
+    wakeLockHeld() {
+      return wakeLock.active;
+    },
+
     nextMatch(sameSetup) {
       if (this.tutorialMode) {
         this.exitTutorial();

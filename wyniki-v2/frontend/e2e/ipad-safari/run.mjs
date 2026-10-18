@@ -70,6 +70,8 @@ async function safari() {
       'appium:wdaLaunchTimeout': 600_000,
       'appium:wdaConnectionTimeout': 600_000,
       'appium:showXcodeLog': true,
+      // element clicks become real taps through XCUITest, so Safari sees a user gesture
+      'appium:nativeWebTap': true,
       'appium:noReset': true,
       'appium:safariInitialUrl': `${BASE}/health`,
       'appium:newCommandTimeout': 600,
@@ -174,7 +176,8 @@ await check('a match starts on the iPad', async () => {
   await waitFor('match setup', async () => (await title(driver)) === 'Match Setup');
   await press(driver, 'Next');
   await waitFor('server choice', async () => (await title(driver)) === 'Who serves first?');
-  await driver.execute(() => document.querySelector('.ump-serve-btn')?.click());
+  // a real tap (not a script click): Safari grants the wake lock only on a user gesture
+  await (await driver.$('.ump-serve-btn')).click();
   await waitFor('scoring screen', async () => (await title(driver)) === 'Match');
   await winPoint(driver);
   await winPoint(driver);
@@ -183,12 +186,14 @@ await check('a match starts on the iPad', async () => {
 });
 
 await check('Wake Lock is held while the match is on (the screen does not dim)', async () => {
-  const state = await driver.executeAsync((done) => {
-    if (!('wakeLock' in navigator)) return done('unsupported');
-    navigator.wakeLock.request('screen').then((sentinel) => done(`granted (released=${sentinel.released})`), (error) => done(`refused: ${error.name}`));
-  });
-  if (!String(state).startsWith('granted')) throw new Error(state);
-  return state;
+  const held = () => driver.execute(() => window.Alpine?.$data(document.querySelector('[x-data]'))?.wakeLockHeld?.() === true);
+  try {
+    await waitFor('the app holds a screen wake lock', held, 10_000);
+  } catch (error) {
+    const support = await driver.execute(() => ('wakeLock' in navigator ? 'API present' : 'no Wake Lock API'));
+    throw new Error(`${error.message}; ${support}`);
+  }
+  return 'navigator.wakeLock sentinel held by the app';
 });
 
 await check('points scored without the server survive Safari being closed', async () => {

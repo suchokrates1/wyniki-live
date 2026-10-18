@@ -15,5 +15,6 @@ export default defineConfig({
   retries: 0,
   timeout: 240_000,
   reporter: [['list']],
-  use: { baseURL: base, trace: 'off' },
+  // a stuck tap fails in 30 s (the soak then saves what the tablet showed) instead of at the test timeout
+  use: { baseURL: base, trace: 'off', actionTimeout: 30_000 },
 });
