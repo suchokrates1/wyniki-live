@@ -326,9 +326,11 @@ function createUmpireApp() {
         }
       });
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && this.screen === 'match' && this.match?.state?.matchStartTime) {
-          wakeLock.request();
-        }
+        if (document.visibilityState !== 'visible') return;
+        if (this.screen === 'match' && this.match?.state?.matchStartTime) wakeLock.request();
+        // back from the background (iPad home screen, another app): the network may have come back
+        // without an 'online' event, so the queued points go out now, not with the next point
+        if (navigator.onLine && !this.tutorialMode) this.flushOutbox();
       });
       this._timerId = setInterval(() => {
         if (this.match?.state) this.timerText = matchTimerText(this.match.state, Date.now());

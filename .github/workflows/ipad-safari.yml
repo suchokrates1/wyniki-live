@@ -1,0 +1,74 @@
+name: iPad Safari (umpire PWA)
+
+# The umpire PWA in the real Safari of an iPad simulator: install instruction, Wake Lock, the
+# offline queue surviving Safari being closed, and the queue going out after the background.
+# Run by hand; macOS runners are free for a public repo. Script: wyniki-v2/frontend/e2e/ipad-safari/run.mjs
+on:
+  workflow_dispatch:
+
+jobs:
+  ipad-safari:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      SECRET_KEY: ipad-e2e-secret
+      DATABASE_PATH: ${{ github.workspace }}/ipad-e2e.sqlite3
+      ADMIN_PASSWORD: e2e-admin
+      E2E_ADMIN_PASSWORD: e2e-admin
+      DEBUG: 'false'
+      LOG_LEVEL: WARNING
+      UMPIRE_LIVE_BASE_URL: http://127.0.0.1:8080
+      BACKEND_DIR: ${{ github.workspace }}/wyniki-v2
+    defaults:
+      run:
+        working-directory: wyniki-v2/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: wyniki-v2/frontend/package-lock.json
+
+      - name: Backend dependencies
+        working-directory: wyniki-v2
+        run: pip install -r requirements.txt
+
+      - name: Build the frontend into the backend
+        run: npm ci && npm run build && npm i --no-save webdriverio@9.24.0
+
+      - name: Appium with the XCUITest driver
+        run: |
+          npm i -g appium@3.8.0
+          appium driver install xcuitest@12.8.3
+          appium --log-level warn > "$RUNNER_TEMP/appium.log" 2>&1 &
+
+      - name: Boot an iPad simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          devices = json.load(sys.stdin)['devices']
+          ipads = [(runtime, d) for runtime, items in devices.items() if 'iOS' in runtime for d in items if d['name'].startswith('iPad')]
+          ipads.sort(key=lambda item: item[0])
+          print(ipads[-1][1]['udid'])")
+          echo "IPAD_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl list devices | grep "$UDID"
+
+      - name: Umpire PWA on the iPad
+        run: node e2e/ipad-safari/run.mjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ipad-safari
+          path: |
+            wyniki-v2/frontend/ipad-results/
+            ${{ runner.temp }}/appium.log
+          retention-days: 14

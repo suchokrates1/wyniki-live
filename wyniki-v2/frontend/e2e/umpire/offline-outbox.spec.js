@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { confirmMatchSetup, openUmpire, seedThroughCourt } from './helpers.js';
 
-test('airplane scoring queues updates and flushes when back online', async ({ page }) => {
-  const writes = [];
-  let apiDown = false;
-
+/** The umpire API with match writes failing while state.apiDown; the writes that got through are in state.writes. */
+async function mockOutboxApi(page, state) {
   await page.route('**/api/**', async (route) => {
     const url = route.request().url();
     const method = route.request().method();
@@ -14,7 +12,7 @@ test('airplane scoring queues updates and flushes when back online', async ({ pa
         || url.includes('/match-statistics')
         || url.includes('/match-events')
       ));
-    if (apiDown && isMatchWrite) {
+    if (state.apiDown && isMatchWrite) {
       return route.fulfill({ status: 503, json: { error: 'offline' } });
     }
     if (url.includes('/tournaments/active')) {
@@ -49,15 +47,15 @@ test('airplane scoring queues updates and flushes when back online', async ({ pa
       });
     }
     if (url.includes('/match-events') && method === 'POST') {
-      writes.push({ method, kind: 'event' });
+      state.writes.push({ method, kind: 'event' });
       return route.fulfill({ json: { success: true } });
     }
     if (url.includes('/matches') && method === 'POST' && !url.includes('/finish')) {
-      writes.push({ method, kind: 'create' });
+      state.writes.push({ method, kind: 'create' });
       return route.fulfill({ json: { id: 99 } });
     }
     if (url.includes('/matches') && method === 'PUT') {
-      writes.push({ method, kind: 'update' });
+      state.writes.push({ method, kind: 'update' });
       return route.fulfill({ json: { id: 99, ok: true } });
     }
     if (url.includes('umpire-heartbeat') || url.includes('/umpire/commands')) {
@@ -65,7 +63,10 @@ test('airplane scoring queues updates and flushes when back online', async ({ pa
     }
     return route.fulfill({ status: 200, json: { ok: true } });
   });
+}
 
+/** Two points scored while the server cannot be reached; returns how many events had gone out before. */
+async function scoreTwoPointsWithoutServer(page, state) {
   await seedThroughCourt(page);
   await openUmpire(page, '#/players');
   await page.getByRole('button', { name: 'Kowalski' }).click();
@@ -74,16 +75,42 @@ test('airplane scoring queues updates and flushes when back online', async ({ pa
   await page.getByRole('button', { name: /Kowalski/ }).first().click();
   await expect(page.locator('.ump-win').first()).toBeVisible();
 
-  await expect.poll(() => writes.some((item) => item.kind === 'create')).toBeTruthy();
-  const eventsAfterStart = writes.filter((item) => item.kind === 'event').length;
-  apiDown = true;
+  await expect.poll(() => state.writes.some((item) => item.kind === 'create')).toBeTruthy();
+  const eventsAfterStart = state.writes.filter((item) => item.kind === 'event').length;
+  state.apiDown = true;
   await page.locator('.ump-win').first().click();
   await expect(page.locator('.ump-board__pts').first()).toHaveText('15');
   await page.locator('.ump-win').first().click();
   await expect(page.locator('.ump-board__pts').first()).toHaveText('30');
-  expect(writes.filter((item) => item.kind === 'event').length).toBe(eventsAfterStart);
+  expect(state.writes.filter((item) => item.kind === 'event').length).toBe(eventsAfterStart);
+  return eventsAfterStart;
+}
 
-  apiDown = false;
+test('airplane scoring queues updates and flushes when back online', async ({ page }) => {
+  const state = { writes: [], apiDown: false };
+  await mockOutboxApi(page, state);
+  const eventsAfterStart = await scoreTwoPointsWithoutServer(page, state);
+
+  state.apiDown = false;
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect.poll(() => writes.filter((item) => item.kind === 'event').length).toBeGreaterThan(eventsAfterStart);
+  await expect.poll(() => state.writes.filter((item) => item.kind === 'event').length).toBeGreaterThan(eventsAfterStart);
+});
+
+test('back from the background, the queued points go out without an online event', async ({ page }) => {
+  const state = { writes: [], apiDown: false };
+  await mockOutboxApi(page, state);
+  const eventsAfterStart = await scoreTwoPointsWithoutServer(page, state);
+
+  // the tablet left the app; the server came back while it was away (no 'online' event: the
+  // device never lost its own network)
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  state.apiDown = false;
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(() => state.writes.filter((item) => item.kind === 'event').length).toBeGreaterThan(eventsAfterStart);
 });
