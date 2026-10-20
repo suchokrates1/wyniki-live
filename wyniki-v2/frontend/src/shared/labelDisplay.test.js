@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { translateStoredScheduleLabel } from './labelDisplay.js';
+import { translateResultNote, translateStoredScheduleLabel } from './labelDisplay.js';
 
 const LT_LABELS = {
   women: 'Moterys',
@@ -39,4 +39,20 @@ test('generated draw labels are translated', () => {
   assert.equal(translateStoredScheduleLabel('Zwycięzca: Pocieszenie Półfinał 2', en), 'Winner of Consolation Semifinal 2');
   assert.equal(translateStoredScheduleLabel('Przegrany: o miejsca 9–16 1', en), 'Loser of Places 9–16 1');
   assert.equal(translateStoredScheduleLabel('B2 Men — Pocieszenie o 7. miejsce', en), 'B2 Men — Consolation Match for place 7');
+});
+
+test('pending final names are translated', () => {
+  const en = { winnerSf: 'SF winner {number}', loserSf: 'SF loser {number}' };
+  assert.equal(translateStoredScheduleLabel('Zwycięzca PF 1', en), 'SF winner 1');
+  assert.equal(translateStoredScheduleLabel('Przegrany PF 2', en), 'SF loser 2');
+});
+
+test('finish notes stored in Polish are shown in the page language', () => {
+  const en = { retirement: 'Retired: {name}', walkover: 'Walkover', test: 'Test match' };
+  assert.equal(translateResultNote('Krecz: Maria Lewandowska', en), 'Retired: Maria Lewandowska');
+  assert.equal(translateResultNote('Walkower', en), 'Walkover');
+  assert.equal(translateResultNote('Mecz testowy', en), 'Test match');
+  assert.equal(translateResultNote('kontuzja kolana', en), 'kontuzja kolana');
+  assert.equal(translateResultNote('Krecz: Maria Lewandowska', {}), 'Krecz: Maria Lewandowska');
+  assert.equal(translateResultNote('', en), '');
 });

@@ -142,6 +142,8 @@ export function createBracketView() {
         consolation: t.bracket?.consolation,
         winnerOf: t.bracket?.winnerOf,
         loserOf: t.bracket?.loserOf,
+        winnerSf: t.bracket?.winnerSf,
+        loserSf: t.bracket?.loserSf,
         group: t.history?.phaseGroup || t.playerProfile?.groupPhase || 'Group stage',
         groupRematch: t.history?.phaseGroupRematch || 'Group stage — rematch',
         knockout: t.history?.phaseKnockout || t.playerProfile?.knockoutPhase || 'Knockout stage',

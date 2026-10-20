@@ -23,6 +23,7 @@ import {
   normalizeScheduleText,
   scheduleMatchMatchesQuery as doesScheduleMatchMatchQuery,
 } from './schedule.js';
+import { translateResultNote } from '../shared/labelDisplay.js';
 
 export function createScheduleView() {
   return {
@@ -232,7 +233,14 @@ export function createScheduleView() {
 
     scheduleMatchScore(match) {
       if (!match) return '';
-      if (match.result_note) return match.result_note;
+      if (match.result_note) {
+        const labels = this.scheduleText();
+        return translateResultNote(match.result_note, {
+          retirement: labels.resultRetirement,
+          walkover: labels.resultWalkover,
+          test: labels.resultTest,
+        });
+      }
       return match.score_text || '';
     },
 

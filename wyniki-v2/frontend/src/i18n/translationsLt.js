@@ -86,7 +86,8 @@ export const TRANSLATIONS_LT = {
     noResultsText: 'Pakeiskite paiešką arba rikiavimą.', timeTbd: 'laikas bus patvirtintas',
     courtTbd: 'kortas bus patvirtintas', categoryTbd: 'kategorija bus patvirtinta',
     statusDraft: 'Juodraštis', statusPlanned: 'Suplanuotas', statusInProgress: 'Vyksta',
-    statusCompleted: 'Baigtas', updated: 'Tvarkaraštis atnaujintas'
+    statusCompleted: 'Baigtas', updated: 'Tvarkaraštis atnaujintas',
+    resultRetirement: 'Pasitraukė: {name}', resultWalkover: 'Walkover', resultTest: 'Bandomosios rungtynės'
   },
   bracket: {
     emptyTitle: 'Nėra lentelės', emptyText: 'Turnyrinė lentelė dar nesudaryta',
@@ -100,6 +101,8 @@ export const TRANSLATIONS_LT = {
     consolation: 'Paguodos turnyras',
     winnerOf: 'Nugalėtojas: {match}',
     loserOf: 'Pralaimėjęs: {match}',
+    winnerSf: 'PF {number} nugalėtojas',
+    loserSf: 'PF {number} pralaimėtojas',
     doubles: 'Dvejetai',
     
     legendSets: 'laimėti setai prieš pralaimėtus', legendGames: 'laimėti geimai prieš pralaimėtus',

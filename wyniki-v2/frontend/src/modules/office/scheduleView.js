@@ -1,5 +1,6 @@
 import { defaultOfficeScheduleForm } from './forms.js';
 import { officeJson } from './api.js';
+import { translateResultNote } from '../../shared/labelDisplay.js';
 
 export function createOfficeScheduleView() {
   return {
@@ -334,7 +335,12 @@ export function createOfficeScheduleView() {
 
     officeScheduleResultLabel(entry) {
       if (!entry) return '';
-      if (entry.result_note) return entry.result_note;
+      if (entry.result_note) {
+        return translateResultNote(entry.result_note, {
+          retirement: `${this.ot('modals.retirement')}: {name}`,
+          walkover: this.ot('modals.walkover'),
+        });
+      }
       if (entry.score_text) return entry.score_text;
       if (entry.winner_name) return this.ot('status.completed');
       return '';

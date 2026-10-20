@@ -6,6 +6,17 @@ export function isPendingCompetitorName(name) {
   return /^(Zwycięzca|Przegrany)( PF)?[: ]/.test(text) || /^\d+\.\s/.test(text);
 }
 
+/** The server stores finish notes in Polish ("Krecz: Jan Nowak", "Walkower", "Mecz testowy"). */
+export function translateResultNote(note, labels = {}) {
+  const text = String(note || '').trim();
+  if (!text) return '';
+  const retired = text.match(/^Krecz:\s*(.+)$/);
+  if (retired) return formatTemplate(labels.retirement || 'Krecz: {name}', { name: retired[1] });
+  if (text === 'Walkower') return labels.walkover || text;
+  if (text === 'Mecz testowy') return labels.test || text;
+  return text;
+}
+
 /** Translate Polish/canonical DB labels for UI display (category, phase, group names). */
 export function translateStoredScheduleLabel(name, labels = {}) {
   const text = String(name || '').trim();
