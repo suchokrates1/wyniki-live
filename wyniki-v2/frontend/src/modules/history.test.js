@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { formatHistoryScore, filterMatchHistory, getMatchSets, getMatchWinner, historyFilterOptions } from './history.js';
+import { formatHistoryScore, filterMatchHistory, getMatchSets, getMatchWinner, historyCourtName, historyFilterOptions } from './history.js';
+
+test('result cards name the court, never its internal id', () => {
+  assert.equal(historyCourtName({ kort_id: 't32-3', court_name: '3' }), '3');
+  assert.equal(historyCourtName({ kort_id: 'office-32', court_name: null }), '');
+});
 
 const lescanoPierri = {
   player_a: 'Rosana Lescano',

@@ -50,7 +50,7 @@
             </div>
             <div class="hm-meta rsv-meta">
               <div class="hm-meta-left">
-                <span class="hm-court-badge" x-text="(tr().history?.court || 'Kort') + ' ' + match.kort_id"></span>
+                <span class="hm-court-badge" x-show="historyCourtName(match)" x-text="(tr().history?.court || 'Kort') + ' ' + historyCourtName(match)"></span>
                 <button type="button" class="hm-cat-badge" x-show="match.category" @click="openHistoryCategory(match)" :aria-label="historyCategoryAria(match)" x-text="bracketCategoryLabel(match.category)"></button>
                 <span class="hm-time" x-show="match.duration_seconds" x-text="formatTime(match.duration_seconds)"></span>
               </div>

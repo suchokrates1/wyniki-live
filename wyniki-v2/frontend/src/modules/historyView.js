@@ -6,6 +6,7 @@ import {
   getMatchSets as getHistoryMatchSets,
   getMatchWinner as getHistoryMatchWinner,
   getStatsRowsPaired as getHistoryStatsRowsPaired,
+  historyCourtName,
   historyFilterOptions,
 } from './history.js';
 
@@ -108,9 +109,13 @@ export function createHistoryView() {
       return getHistoryStatsRowsPaired(stats, this.tr().stats || {});
     },
 
+    historyCourtName(match) {
+      return historyCourtName(match);
+    },
+
     getHistoryAriaLabel(match) {
       const h = this.tr().history || {};
-      const courtName = match.court_name || match.kort_id || this.acc().unknownCourt || 'kort nieustalony';
+      const courtName = historyCourtName(match) || this.acc().unknownCourt || 'kort nieustalony';
       const winner = this.getMatchWinner(match);
       const winnerName = winner === 'A'
         ? match.player_a

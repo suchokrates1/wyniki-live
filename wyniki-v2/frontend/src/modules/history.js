@@ -171,6 +171,11 @@ export function matchEndedDateKey(match) {
   return matchDate ? matchDate[1] : '';
 }
 
+/** Court label for a finished match: the court's name, never its internal id (t32-3, office-32). */
+export function historyCourtName(match) {
+  return String(match?.court_name || '').trim();
+}
+
 export function matchCourtKey(match) {
   return String(match?.kort_id || match?.court_name || '').trim();
 }
