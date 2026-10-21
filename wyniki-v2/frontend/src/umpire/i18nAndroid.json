@@ -333,7 +333,7 @@
     "tiebreakMode": "Tie-break (to {points}, win by 2)",
     "superTiebreakMode": "Match Tie-break (to {points}, win by 2)",
     "bracketWarningTitle": "Match Notice",
-    "bracketWarningDifferentGroups": "These players are from different groups. Is this a knockout phase match?",
+    "bracketWarningDifferentGroups": "These players are from different groups. Is this a knockout stage match?",
     "bracketWarningFriendly": "These players are not assigned to any tournament group. This match will be recorded as a friendly.",
     "ace": "ACE",
     "fault": "FAULT",
