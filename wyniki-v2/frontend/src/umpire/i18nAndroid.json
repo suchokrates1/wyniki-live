@@ -725,7 +725,7 @@
     "tiebreakMode": "Jeu décisif (à {points}, victoire par 2)",
     "superTiebreakMode": "Jeu décisif du match (à {points}, victoire par 2)",
     "bracketWarningTitle": "Information sur le match",
-    "bracketWarningDifferentGroups": "Ces joueurs sont de groupes différents. Est-ce un match de phase éliminatoire ?",
+    "bracketWarningDifferentGroups": "Ces joueurs sont de poules différentes. Est-ce un match de phase finale ?",
     "bracketWarningFriendly": "Ces joueurs ne sont assignés à aucun groupe de tournoi. Ce match sera enregistré comme amical.",
     "ace": "ACE",
     "fault": "FAUTE",

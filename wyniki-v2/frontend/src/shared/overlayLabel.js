@@ -105,7 +105,7 @@ export function overlayPhaseToken(phase) {
   const suffix = text.includes(' — ') ? text.split(' — ').pop().trim() : text;
   const lower = suffix.toLowerCase();
   if (/rewan|rematch/.test(lower)) return 'groupRematch';
-  if (lower === 'grupowa' || /group stage|^group$|faza grupowa|gruppenphase|fase a gironi|fase de grupos|phase de groupes|grupių/.test(lower)) {
+  if (lower === 'grupowa' || /group stage|^group$|faza grupowa|gruppenphase|fase a gironi|fase de grupos|phase de groupes|phase de poules|grupių/.test(lower)) {
     return 'group';
   }
   if (/1\s*\/\s*8|r16|round of 16|ósem/.test(lower)) return 'r16';
