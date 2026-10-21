@@ -22,6 +22,7 @@ import { formatTemplate as fmt } from '../shared/text.js';
 import { formatTeamLabelForWrap, isTeamDisplayName, lastNameToken, splitTeamDisplayName, TEAM_WRAP_BREAK } from '../shared/teamDisplay.js';
 import { publicApi } from '../api/publicApi.js';
 import { nextMatchForCourt, pageFeatures } from './courtNext.js';
+import { overlayScoreLabels } from '../shared/overlayLabel.js';
 import { renderTvScoreboard } from '../shared/tvScoreboard.js';
 import { sanitizeWatchUrl } from '../shared/watchUrl.js';
 
@@ -259,7 +260,11 @@ export function createLiveCourtView() {
       const history = this.tr()?.history || {};
       const scoreboard = this.tr()?.scoreboard || {};
       const bracket = this.tr()?.bracket || {};
+      const short = overlayScoreLabels(this.lang) || {};
       return {
+        placeFor: short.placeFor,
+        placesRange: short.placesRange,
+        consolation: short.consolation,
         women: history.catWomen,
         men: history.catMen,
         mixed: history.catMixed,

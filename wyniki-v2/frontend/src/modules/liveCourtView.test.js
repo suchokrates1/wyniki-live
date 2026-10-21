@@ -80,6 +80,21 @@ test('visual TV board stays decorative and spoken names drop wrap marks', () => 
   assert.match(summary, /points 40 to 30/);
 });
 
+test('a placement match is labelled in the page language on the live board', () => {
+  const view = makeView({
+    court_name: '3',
+    match_status: { active: true },
+    history_meta: { category: 'B3 Mężczyźni', phase: 'B3 Mężczyźni — o 5. miejsce' },
+    A: { full_name: 'Michał Kaczor', set1: 0, points: '0' },
+    B: { full_name: 'Felix Hoffmann', set1: 0, points: '0' },
+  });
+  view.lang = 'pl';
+  assert.match(view.renderLiveTvScoreboard('c3'), /5\. miejsce/);
+  assert.equal(view.renderLiveTvScoreboard('c3').includes('5TH PLACE'), false);
+  view.lang = 'en';
+  assert.match(view.renderLiveTvScoreboard('c3'), /5TH PLACE/);
+});
+
 test('courtMatchClock uses started_ts instead of frozen seconds', () => {
   const started = '2026-09-01T10:00:00.000Z';
   const view = makeView({
