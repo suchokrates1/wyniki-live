@@ -1,6 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildScheduleGroups, normalizeScheduleText, scheduleMatchMatchesQuery } from './schedule.js';
+import { buildScheduleGroups, formatScheduleArchivedDaysLabel, normalizeScheduleText, scheduleMatchMatchesQuery } from './schedule.js';
+import { applyTranslationPatches } from '../i18n/runtime.js';
+import { TRANSLATIONS, TRANSLATION_PATCHES } from '../i18n/translations.js';
+
+test('completed days label is translated in every site language', () => {
+  const table = structuredClone(TRANSLATIONS);
+  applyTranslationPatches(table, TRANSLATION_PATCHES);
+  const labels = Object.keys(table).map((lang) => formatScheduleArchivedDaysLabel(2, {
+    custom: table[lang].schedule?.archivedDaysLabel,
+    lang,
+  }));
+  assert.ok(labels.every((label) => label.endsWith('(2)')));
+  assert.equal(new Set(labels).size, Object.keys(table).length);
+  assert.equal(labels[Object.keys(table).indexOf('fr')], 'Journées terminées (2)');
+});
 
 const doublesMatch = {
   player1_name: 'Anna Kowalska / Ewa Nowak',
