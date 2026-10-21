@@ -102,6 +102,10 @@ export function createLiveRuntimeView() {
       this.refreshCourtAnnouncements?.();
     },
 
+    noActiveTournament() {
+      return !this.loading && !this.error && !this.tournamentName;
+    },
+
     staleTime() {
       if (!this.staleSince) return '';
       return this.staleSince.toLocaleTimeString(this.locale(), { hour: '2-digit', minute: '2-digit' });

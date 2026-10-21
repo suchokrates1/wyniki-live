@@ -1901,6 +1901,21 @@ button.hm-cat-badge:focus-visible {
   text-align: center;
 }
 
+.live-no-tournament {
+  text-align: center;
+  margin: 0 0 14px;
+}
+
+.live-no-tournament .live-tournament-name {
+  margin-bottom: 4px;
+}
+
+.live-no-tournament__text {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
 .live-subnav {
   display: flex;
   gap: 10px;

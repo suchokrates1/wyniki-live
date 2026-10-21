@@ -47,6 +47,7 @@ export const TRANSLATIONS = {
     },
     emptyTitle: 'Brak aktywnych kortów',
     emptyText: 'Skonfiguruj korty w panelu administratora',
+    noActiveTournament: { title: 'Brak aktywnego turnieju', text: 'Wyniki poprzednich turniejów znajdziesz w zakładce Turnieje.' },
     loading: 'Ładowanie wyników...',
     historyDetail: {
       details: 'Szczegóły',
@@ -125,6 +126,7 @@ export const TRANSLATIONS = {
     },
     emptyTitle: 'Keine aktiven Plätze',
     emptyText: 'Plätze im Adminbereich konfigurieren',
+    noActiveTournament: { title: 'Derzeit kein aktives Turnier', text: 'Ergebnisse früherer Turniere findest du im Tab Turniere.' },
     loading: 'Ergebnisse werden geladen...',
     historyDetail: {
       details: 'Details',
@@ -202,6 +204,7 @@ export const TRANSLATIONS = {
     },
     emptyTitle: 'No active courts',
     emptyText: 'Configure courts in the admin panel',
+    noActiveTournament: { title: 'No active tournament', text: 'Results of past tournaments are in the Tournaments tab.' },
     loading: 'Loading scores...',
     historyDetail: {
       details: 'Details',
@@ -280,6 +283,7 @@ export const TRANSLATIONS = {
     },
     emptyTitle: 'Nessun campo attivo',
     emptyText: 'Configura i campi nel pannello di amministrazione',
+    noActiveTournament: { title: 'Nessun torneo attivo', text: 'I risultati dei tornei passati sono nella scheda Tornei.' },
     loading: 'Caricamento risultati...',
     historyDetail: {
       details: 'Dettagli',
@@ -357,6 +361,7 @@ export const TRANSLATIONS = {
     },
     emptyTitle: 'No hay canchas activas',
     emptyText: 'Configure las canchas en el panel de administración',
+    noActiveTournament: { title: 'No hay ningún torneo activo', text: 'Los resultados de torneos anteriores están en la pestaña Torneos.' },
     loading: 'Cargando resultados...',
     historyDetail: {
       details: 'Detalles',
@@ -434,6 +439,7 @@ export const TRANSLATIONS = {
     },
     emptyTitle: 'Aucun court actif',
     emptyText: 'Configurez les courts dans le panneau d\'administration',
+    noActiveTournament: { title: 'Aucun tournoi en cours', text: 'Les résultats des tournois précédents sont dans l\'onglet Tournois.' },
     loading: 'Chargement des résultats...',
     historyDetail: {
       details: 'Détails',

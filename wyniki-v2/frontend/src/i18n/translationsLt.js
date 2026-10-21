@@ -49,6 +49,7 @@ export const TRANSLATIONS_LT = {
   },
   emptyTitle: 'Nėra aktyvių kortų',
   emptyText: 'Kortus nustatykite administratoriaus skydelyje',
+  noActiveTournament: { title: 'Šiuo metu aktyvaus turnyro nėra', text: 'Ankstesnių turnyrų rezultatus rasite skiltyje Turnyrai.' },
   loading: 'Kraunami rezultatai...',
   historyDetail: {
     details: 'Išsamiau',

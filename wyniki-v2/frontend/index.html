@@ -211,6 +211,10 @@
                 </div>
             </template>
             <h2 class="live-tournament-name" x-show="tournamentName" x-text="tournamentName"></h2>
+            <div class="live-no-tournament" x-show="noActiveTournament()" role="status">
+                <h2 class="live-tournament-name" x-text="tr().noActiveTournament?.title"></h2>
+                <p class="live-no-tournament__text" x-text="tr().noActiveTournament?.text"></p>
+            </div>
 
             <!-- Live sub-navigation cards -->
             <div class="live-subnav" role="tablist" :aria-label="tr().liveSub?.navLabel || 'Podzakładki Na żywo'" x-init="bindLiveSubnavOverflow($el)">
@@ -245,7 +249,7 @@
             </nav>
 
             <!-- Empty State -->
-            <div x-show="!loading && getCourtIds().length === 0" class="empty-state" role="status">
+            <div x-show="!loading && getCourtIds().length === 0 && !noActiveTournament()" class="empty-state" role="status">
                 <div class="empty-state__icon" aria-hidden="true">🎾</div>
                 <h2 class="empty-state__title" x-text="t('emptyTitle')">Brak aktywnych kortów</h2>
                 <p class="empty-state__text" x-text="t('emptyText')">Skonfiguruj korty w panelu administratora</p>
