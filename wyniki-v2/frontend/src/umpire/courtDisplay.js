@@ -1,4 +1,4 @@
-const COURT_PREFIX = /^(court|kort|platz|campo|cancha|kortas)\s+/i;
+const COURT_PREFIX = /^(court|kort|platz|campo|cancha|pista|kortas)\s+/i;
 const TOURNAMENT_COURT_ID = /^t\d+-(\d+)$/i;
 
 export function extractCourtOrdinal(rawValue) {

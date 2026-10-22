@@ -26,7 +26,7 @@ _PHRASE = {
     "en": ("Court", "to", "advantage", "serving, against", "against", "Set", "active"),
     "de": ("Platz", "zu", "Vorteil", "Aufschlag, gegen", "gegen", "Satz", "aktiv"),
     "it": ("Campo", "a", "vantaggio", "al servizio, contro", "contro", "Set", "attivo"),
-    "es": ("Cancha", "a", "ventaja", "al servicio, contra", "contra", "Set", "activo"),
+    "es": ("Pista", "a", "ventaja", "al servicio, contra", "contra", "Set", "activo"),
     "fr": ("Court", "à", "avantage", "au service, contre", "contre", "Set", "actif"),
     "lt": ("Kortas", "prieš", "pranašumas", "paduoda, prieš", "prieš", "Setas", "aktyvus"),
 }

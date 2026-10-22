@@ -71,7 +71,7 @@ def delete_recipient(recipient_id: int) -> bool:
     return delete_panic_recipient(recipient_id)
 
 
-_COURT_PREFIX = re.compile(r"^(court|kort|platz|campo|cancha|kortas)\s+", re.IGNORECASE)
+_COURT_PREFIX = re.compile(r"^(court|kort|platz|campo|cancha|pista|kortas)\s+", re.IGNORECASE)
 _COURT_ID = re.compile(r"^t\d+-(\d+)$", re.IGNORECASE)
 
 

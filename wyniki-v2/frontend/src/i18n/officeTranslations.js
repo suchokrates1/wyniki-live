@@ -2897,10 +2897,10 @@ export const OFFICE_TRANSLATION_PATCHES = {
   },
   es: {
     office: {
-      pageTitle: 'Oficina del torneo - Resultados en vivo',
+      pageTitle: 'Oficina de competición - Resultados en directo',
       versus: 'vs',
       login: {
-        title: 'Acceso a la oficina del torneo',
+        title: 'Acceso a la oficina de competición',
         tournamentAssigned: 'Torneo seleccionado',
         tournamentLabel: 'Torneo',
         noTournaments: 'No hay torneos disponibles en la oficina',
@@ -3025,8 +3025,8 @@ export const OFFICE_TRANSLATION_PATCHES = {
         missingPairs: '{category} · parejas sin grupo: {count}',
         missingNoPairs: '{category} · sin parejas',
         missingNoPlayers: '{category} · sin jugadores',
-        nextGenerate: 'Todos los grupos están listos. Genera los partidos de grupos en el calendario y asígnalos a las canchas.',
-        nextPlanGroups: 'Todos los grupos están listos. Arma el calendario: marca las canchas B1, fija las horas del día y pulsa “Programar la fase de grupos”.',
+        nextGenerate: 'Todos los grupos están listos. Genera los partidos de grupos en el calendario y asígnalos a las pistas.',
+        nextPlanGroups: 'Todos los grupos están listos. Arma el calendario: marca las pistas B1, fija las horas del día y pulsa “Programar la fase de grupos”.',
         nextPlacing: 'Programados {placed} de {total} partidos de grupos. En el cajón esperan todavía {left}:',
         missingUnplaced: '{category} · {count}',
         nextPublish: 'Todos los partidos de grupos están programados. Publica el calendario para que el público lo vea (sin publicar: {drafts}).',
@@ -3137,7 +3137,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         },
       },
       hero: {
-        defaultTitle: 'Oficina del torneo',
+        defaultTitle: 'Oficina de competición',
         logoAlt: 'Logo del torneo',
         notifications: 'Notificaciones de nuevos partidos',
         testNotification: 'Probar notificación',
@@ -3191,7 +3191,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
       quickInfo: {
         subtitle: 'Mensaje para jugadores',
         title: 'Info rápida del torneo',
-        description: 'Mensaje breve en la parte superior de la página de resultados en vivo (p. ej. retrasos, cambios de pista, avisos importantes).',
+        description: 'Mensaje breve en la parte superior de la página de resultados en directo (p. ej. retrasos, cambios de pista, avisos importantes).',
         placeholder: 'p. ej. Los partidos B2 empiezan con 30 minutos de retraso por lluvia.',
         messageLabel: 'Texto del anuncio del torneo',
         showPublic: 'Mostrar en el sitio público',
@@ -3202,7 +3202,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
       streams: {
         subtitle: 'Transmisiones',
         title: 'Enlaces de transmisión',
-        description: 'URL de YouTube (u otra) por día y pista. La página en vivo cambia el enlace en el nombre de la pista ese día.',
+        description: 'URL de YouTube (u otra) por día y pista. La página en directo cambia el enlace en el nombre de la pista ese día.',
         urlLabel: 'Dirección de la transmisión',
         save: 'Guardar enlaces',
         emptyCourts: 'No hay pistas en este torneo — añádelas en admin.',
@@ -3476,7 +3476,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         notificationsBlocked: 'Las notificaciones del sistema están bloqueadas en el navegador.',
         notificationsDenied: 'No se concedió permiso para notificaciones del sistema.',
         notificationsFailed: 'No se pudo solicitar permiso de notificaciones.',
-        unlocked: 'Oficina del torneo desbloqueada',
+        unlocked: 'Oficina de competición desbloqueada',
         newMatchOne: 'Ha aparecido un nuevo partido terminado.',
         newMatchMany: 'Han aparecido {count} nuevos partidos terminados.',
         testStarted: 'Prueba de notificación iniciada.',
@@ -3497,7 +3497,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         dayClearedKept: 'Quitados {count} partidos del cuadro; {kept} con resultado o en juego se quedan',
         nothingToClear: 'No hay partidos que quitar en este día',
         clearDayError: 'No se pudo vaciar el día',
-        quickInfoSaved: 'Mensaje publicado en el sitio de resultados en vivo.',
+        quickInfoSaved: 'Mensaje publicado en el sitio de resultados en directo.',
         quickInfoError: 'No se pudo guardar el mensaje.',
         streamsSaved: 'Enlaces de transmisión guardados.',
         streamsError: 'No se pudieron guardar los enlaces.',
@@ -3561,7 +3561,7 @@ export const OFFICE_TRANSLATION_PATCHES = {
         hintGroups: 'Crea primero grupos en la pestaña “Plan del torneo” (sorteo) y vuelve aquí.',
       },
       notifications: {
-        defaultTitle: 'Oficina del torneo',
+        defaultTitle: 'Oficina de competición',
         newResult: '{tournament}: nuevo resultado',
         newResults: '{tournament}: {count} nuevos resultados',
         playerA: 'Jugador A',

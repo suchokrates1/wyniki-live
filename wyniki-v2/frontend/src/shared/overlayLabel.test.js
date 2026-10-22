@@ -16,7 +16,7 @@ test('court labels follow the tournament language and keep B codes out of the na
   assert.equal(overlayCourtLabel('KORT 2', '2', 'de'), 'Platz 2');
   assert.equal(overlayCourtLabel('', 't31-4', 'lt'), 'Kortas 4');
   assert.equal(overlayCourtLabel('MAIN', '1', 'pl'), 'MAIN');
-  assert.equal(overlayCourtLabel('Open • Kort 16', 't31-16', 'es'), 'Cancha 16');
+  assert.equal(overlayCourtLabel('Open • Kort 16', 't31-16', 'es'), 'Pista 16');
 });
 
 test('B1 and B4 stay while the surrounding words follow the tournament', () => {

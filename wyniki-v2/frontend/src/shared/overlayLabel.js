@@ -1,11 +1,11 @@
-const COURT_PREFIX = /^(court|kort|platz|campo|cancha|kortas)\s+/i;
+const COURT_PREFIX = /^(court|kort|platz|campo|cancha|pista|kortas)\s+/i;
 
 export const COURT_WORD = {
   pl: 'Kort',
   en: 'Court',
   de: 'Platz',
   it: 'Campo',
-  es: 'Cancha',
+  es: 'Pista',
   fr: 'Court',
   lt: 'Kortas',
 };

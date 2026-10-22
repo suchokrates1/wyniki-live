@@ -339,7 +339,7 @@ export const PRIVACY_CONTENT = {
   es: page(
     'es',
     'Política de privacidad',
-    'Este documento explica cómo Vest Media trata datos personales en blindtennis.app (marcadores en vivo, oficina del torneo, administración, PWA de árbitro) y en la app Blind Tennis Referee.',
+    'Este documento explica cómo Vest Media trata datos personales en blindtennis.app (marcadores en directo, oficina de competición, administración, PWA de árbitro) y en la app Blind Tennis Referee.',
     'Última actualización: {date}',
     'Índice',
     [

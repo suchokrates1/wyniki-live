@@ -7,7 +7,7 @@ const formats = {
   en: (court) => `Court ${court}`,
   de: (court) => `Platz ${court}`,
   it: (court) => `Campo ${court}`,
-  es: (court) => `Cancha ${court}`,
+  es: (court) => `Pista ${court}`,
   fr: (court) => `Court ${court}`,
   lt: (court) => `Kortas ${court}`,
 };

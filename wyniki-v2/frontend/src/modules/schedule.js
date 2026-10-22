@@ -153,7 +153,7 @@ export function getScheduleCourtTabLabel(match, { labels = {}, courtLabelPattern
   if (!rawLabel) return labels.courtTbd;
 
   const normalized = rawLabel
-    .replace(/^(kort|court|platz|cancha|campo)\s*/i, '')
+    .replace(/^(kort|court|platz|cancha|pista|campo)\s*/i, '')
     .trim();
 
   if (!normalized) return courtLabel(match);

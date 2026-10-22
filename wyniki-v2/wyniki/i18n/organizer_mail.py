@@ -155,7 +155,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "invite_heading": "Ya tienes acceso a {series}",
         "hello": "Hola:",
         "hello_named": "Hola, {name}:",
-        "invite_body": "Ya puedes gestionar los torneos de la serie en blindtennis.app: crearlos, configurar categorías y pistas, inscribir a los jugadores y abrir la oficina del torneo. Empieza estableciendo tu contraseña.",
+        "invite_body": "Ya puedes gestionar los torneos de la serie en blindtennis.app: crearlos, configurar categorías y pistas, inscribir a los jugadores y abrir la oficina de competición. Empieza estableciendo tu contraseña.",
         "invite_button": "Establecer contraseña e iniciar sesión",
         "label_login": "Usuario",
         "label_series": "Serie",

@@ -57,7 +57,7 @@ export const PANEL_TEXTS = {
     pageTitle: 'Para organizadores — blindtennis.app', language: 'Idioma', otherPages: 'Otras páginas',
     title: 'Para organizadores',
     lead: 'Acceso para quienes organizan torneos en blindtennis.app.',
-    officeName: 'Oficina del torneo',
+    officeName: 'Oficina de competición',
     officeText: 'El día del torneo: jugadores, sorteo, calendario, grupos, cuadro y resultados.',
     officeHow: 'Entras con la contraseña de la oficina que te da el organizador del torneo.',
     organizerName: 'Panel de organizador de la serie',
