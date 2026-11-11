@@ -1,6 +1,7 @@
 """Email reporting for completed matches and tournaments."""
 from __future__ import annotations
 
+import json
 import smtplib
 from datetime import datetime, UTC
 from email.message import EmailMessage
@@ -139,6 +140,34 @@ def _render_score_line(score_a: list[Any], score_b: list[Any]) -> str:
     return " ".join(pairs) if pairs else "-"
 
 
+def _score_from_match(match: Any) -> str | None:
+    """The result as the match row holds it: every set, a super tiebreak included.
+
+    None when the row has no set detail, so the caller can fall back to the court state."""
+    raw = getattr(match, "sets_history", None)
+    try:
+        sets = json.loads(raw) if isinstance(raw, str) else raw
+    except ValueError:
+        return None
+    if not isinstance(sets, list):
+        return None
+    parts = []
+    for item in sets:
+        if not isinstance(item, dict):
+            continue
+        games_a, games_b = item.get("player1_games") or 0, item.get("player2_games") or 0
+        tiebreak = item.get("tiebreak_loser_points")
+        if not games_a and not games_b and tiebreak is None:
+            continue  # a set the app opened but nobody played
+        if item.get("is_super_tiebreak"):
+            parts.append(f"[{games_a}:{games_b}]")
+        elif tiebreak is not None:
+            parts.append(f"{games_a}:{games_b}({tiebreak})")
+        else:
+            parts.append(f"{games_a}:{games_b}")
+    return " ".join(parts) if parts else None
+
+
 def send_match_report(match: Any, state: dict[str, Any], tournament: dict[str, Any] | None) -> bool:
     """Send a completed match report email for a tournament if configured."""
     if not tournament:
@@ -153,8 +182,13 @@ def send_match_report(match: Any, state: dict[str, Any], tournament: dict[str, A
     # Prefer the finished match row: overlay may already show the next pair.
     player_a = match.player1_name or state.get("A", {}).get("full_name")
     player_b = match.player2_name or state.get("B", {}).get("full_name")
-    score_a = [state.get("A", {}).get(f"set{i}", 0) for i in [1, 2, 3]]
-    score_b = [state.get("B", {}).get(f"set{i}", 0) for i in [1, 2, 3]]
+    # The court state is live: by the time this runs it may hold the next match, it has
+    # three set columns whatever was played, and a super tiebreak is not in any of them.
+    score_line = _score_from_match(match)
+    if score_line is None:
+        score_a = [state.get("A", {}).get(f"set{i}", 0) for i in [1, 2, 3]]
+        score_b = [state.get("B", {}).get(f"set{i}", 0) for i in [1, 2, 3]]
+        score_line = _render_score_line(score_a, score_b)
     duration_seconds = state.get("match_time", {}).get("seconds", 0)
     duration_minutes = round(duration_seconds / 60, 1) if duration_seconds else 0
     phase = match.phase or state.get("history_meta", {}).get("phase") or "Grupowa"
@@ -168,7 +202,7 @@ def send_match_report(match: Any, state: dict[str, Any], tournament: dict[str, A
       <table cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;border:1px solid #ddd;\">
         <tr><td><strong>Zawodnik A</strong></td><td>{escape(str(player_a))}</td></tr>
         <tr><td><strong>Zawodnik B</strong></td><td>{escape(str(player_b))}</td></tr>
-        <tr><td><strong>Wynik</strong></td><td>{escape(_render_score_line(score_a, score_b))}</td></tr>
+        <tr><td><strong>Wynik</strong></td><td>{escape(score_line)}</td></tr>
         <tr><td><strong>Faza</strong></td><td>{escape(str(phase))}</td></tr>
         <tr><td><strong>Kategoria</strong></td><td>{escape(str(category))}</td></tr>
         <tr><td><strong>Czas</strong></td><td>{duration_minutes} min</td></tr>

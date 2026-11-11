@@ -34,6 +34,7 @@ from ..database import (
     _is_knockout_placeholder_name,
 )
 from ..db_models import Match, MatchHistory, TournamentSchedule, utc_now_iso
+from ..services.match_result import winner_by_sets
 from ..services.teams import PLAY_FORMAT_KNOCKOUT, normalize_play_format
 
 
@@ -167,8 +168,8 @@ def _office_history_payload(
     )
     group_name = group_lookup.get(group_id) if group_id else None
     winner_name = history.winner_name if history.winner_name in {history.player_a, history.player_b} else None
-    if not winner_name and player1_sets != player2_sets:
-        winner_name = history.player_a if player1_sets > player2_sets else history.player_b
+    if not winner_name:
+        winner_name = winner_by_sets(history.player_a, history.player_b, player1_sets, player2_sets)
     return {
         "id": history.id,
         "source": "history",
@@ -214,6 +215,14 @@ def office_result_outcome(
         winner = player2_name if retired == player1_name else player1_name
         return {"finish_reason": "retirement", "winner_name": winner, "injured_player_name": retired, "result_note": f"Krecz: {retired}"}
     return {"finish_reason": "normal", "winner_name": None, "injured_player_name": None, "result_note": None}
+
+
+def _required_winner(player1_name: str, player2_name: str, player1_sets: int, player2_sets: int) -> str:
+    """The winner of a result being saved; a level score has none and is refused."""
+    winner = winner_by_sets(player1_name, player2_name, player1_sets, player2_sets)
+    if not winner:
+        raise OfficeWorkflowError('Match winner is required')
+    return winner
 
 
 def _blank(value: Any) -> bool:
@@ -322,7 +331,7 @@ def _office_match_payload(
 ) -> dict[str, Any]:
     sets_history = _json_loads(match.sets_history, [])
     winner = match.winner_name if match.winner_name in {match.player1_name, match.player2_name} else (
-        match.player1_name if int(match.player1_sets or 0) > int(match.player2_sets or 0) else match.player2_name
+        winner_by_sets(match.player1_name, match.player2_name, match.player1_sets, match.player2_sets)
     )
     group_id = int(match.bracket_group_id) if match.bracket_group_id else None
     if not group_id and player_groups and match.phase == 'Grupowa':
@@ -367,7 +376,7 @@ def _office_knockout_item(
     winner_name = (slot.get('winner_name') or '').strip()
     if match and match.status == 'finished':
         winner_name = match.winner_name or (
-            match.player1_name if int(match.player1_sets or 0) > int(match.player2_sets or 0) else match.player2_name
+            winner_by_sets(match.player1_name, match.player2_name, match.player1_sets, match.player2_sets) or ''
         )
     player1_name = (slot.get('player1_name') or (schedule_entry or {}).get('player1_name') or '').strip()
     player2_name = (slot.get('player2_name') or (schedule_entry or {}).get('player2_name') or '').strip()
@@ -560,7 +569,7 @@ def _create_office_knockout_match(tournament_id: int, data: dict[str, Any]) -> t
         raise OfficeWorkflowError(str(exc)) from exc
     winner_name = outcome["winner_name"] or ''
     if not winner_name:
-        winner_name = player1_name if player1_sets > player2_sets else player2_name
+        winner_name = _required_winner(player1_name, player2_name, player1_sets, player2_sets)
 
     now = utc_now_iso()
     match = Match(
@@ -807,7 +816,7 @@ def _update_office_match(tournament_id: int, match_id: int, data: dict[str, Any]
             raise OfficeWorkflowError("Match not found", 404)
         sets_history, player1_sets, player2_sets = _normalize_office_sets(data, history.player_a, history.player_b)
         outcome = office_result_outcome(data, history.player_a, history.player_b)
-        history_winner = outcome["winner_name"] or (history.player_a if player1_sets > player2_sets else history.player_b)
+        history_winner = outcome["winner_name"] or _required_winner(history.player_a, history.player_b, player1_sets, player2_sets)
         if _is_knockout_phase(history.phase):
             blocker = knockout_correction_blocker(tournament_id, history.player_a, history.player_b, history.phase, history_winner)
             if blocker:
@@ -863,7 +872,7 @@ def _update_office_match(tournament_id: int, match_id: int, data: dict[str, Any]
 
     previous_winner = match.winner_name
     if _is_knockout_phase(match.phase):
-        new_winner = outcome["winner_name"] or (match.player1_name if player1_sets > player2_sets else match.player2_name)
+        new_winner = outcome["winner_name"] or _required_winner(match.player1_name, match.player2_name, player1_sets, player2_sets)
         blocker = knockout_correction_blocker(tournament_id, match.player1_name, match.player2_name, match.phase, new_winner)
         if blocker:
             raise _knockout_blocked(blocker)

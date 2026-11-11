@@ -57,6 +57,19 @@ def winner_from_score(player1: Any, player2: Any, sets_history: Any = None,
     return None
 
 
+def winner_by_sets(player1: Any, player2: Any, player1_sets: Any, player2_sets: Any) -> str | None:
+    """The side with more sets, or None when they are level.
+
+    Every place that falls back to the set count uses this. The old inline form,
+    "player 1 if they have more sets, else player 2", gave a level score to player 2."""
+    wins1, wins2 = int(player1_sets or 0), int(player2_sets or 0)
+    if wins1 > wins2:
+        return player1 or None
+    if wins2 > wins1:
+        return player2 or None
+    return None
+
+
 def resolve_match_winner(*, player1: Any, player2: Any, stored_winner: Any = None,
                          finish_reason: Any = None, sets_history: Any = None,
                          player1_sets: Any = None, player2_sets: Any = None,

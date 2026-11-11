@@ -16,6 +16,7 @@ from ..services.draw_builder import (
     build_group_draws,
     build_table_final,
 )
+from ..services.match_result import winner_by_sets
 from ..services.teams import (
     DEFAULT_PLAY_FORMAT,
     PLAY_FORMAT_GROUPS_KNOCKOUT,
@@ -1298,9 +1299,10 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
 
             p1 = match["player1_name"]
             p2 = match["player2_name"]
-            winner = match["winner_name"] or (
-                p1 if (match["player1_sets"] or 0) > (match["player2_sets"] or 0) else p2
-            )
+            winner = match["winner_name"] or winner_by_sets(p1, p2, match["player1_sets"], match["player2_sets"])
+            if not winner:
+                logger.warning("knockout_match_without_winner", match_id=match_id, tournament_id=tournament_id)
+                return False
 
             sets_history = json.loads(match["sets_history"]) if match["sets_history"] else []
             score_parts = []
@@ -1525,9 +1527,10 @@ def correct_knockout_result(match_id: int, tournament_id: int, previous_winner: 
             if not match:
                 return False
             p1, p2 = match["player1_name"], match["player2_name"]
-            winner = match["winner_name"] or (
-                p1 if (match["player1_sets"] or 0) > (match["player2_sets"] or 0) else p2
-            )
+            winner = match["winner_name"] or winner_by_sets(p1, p2, match["player1_sets"], match["player2_sets"])
+            if not winner:
+                logger.warning("knockout_match_without_winner", match_id=match_id, tournament_id=tournament_id)
+                return False
             loser = p2 if winner == p1 else p1
             sets_history = json.loads(match["sets_history"]) if match["sets_history"] else []
             score_summary = " ".join(
@@ -2070,7 +2073,9 @@ def _detect_knockout_result(
     score_parts = [_format_set_score(s, flipped) for s in sh]
     sets_detail = [_build_set_detail(s, flipped) for s in sh]
 
-    match_winner = row["winner_name"] or (row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"])
+    match_winner = row["winner_name"] or winner_by_sets(
+        row["player1_name"], row["player2_name"], row["player1_sets"], row["player2_sets"]
+    )
     if same_competitor_label(match_winner, p1):
         mapped_winner = p1
     elif same_competitor_label(match_winner, p2):

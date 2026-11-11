@@ -144,12 +144,26 @@ class DirectorCommandBroker:
                     return []
                 self._cv.wait(timeout=remaining)
 
-    def ack(self, command_id: str) -> bool:
+    def ack(self, command_id: str, court_id: str | None = None) -> bool:
+        """Drop a command the tablet has applied.
+
+        With `court_id` (the court of the caller's session) only a command for that court
+        is dropped: the court it was sent to, or the court it moves the match to, since a
+        tablet acknowledges a court move with its new session. Any court token used to be
+        enough to drop any command."""
         command_id = str(command_id or "").strip()
         if not command_id:
             return False
         with self._lock:
-            return self._commands.pop(command_id, None) is not None
+            command = self._commands.get(command_id)
+            if command is None:
+                return False
+            if court_id is not None:
+                courts = {str(command.get(key) or "").strip() for key in ("session_court_id", "court_id")} - {""}
+                if courts and str(court_id).strip() not in courts:
+                    return False
+            del self._commands[command_id]
+            return True
 
     def expire_stale(self) -> None:
         with self._lock:

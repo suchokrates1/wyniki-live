@@ -1,5 +1,6 @@
 """Report mail: what is sent, to whom, and when the summary is marked as sent."""
 
+import json
 import secrets
 from types import SimpleNamespace
 
@@ -267,3 +268,24 @@ def test_a_broken_connection_is_reported_as_a_failure_not_an_exception(monkeypat
 
     monkeypatch.setattr(email_reports.smtplib, "SMTP", explode)
     assert email_reports._send_email("temat", "<p>treść</p>", ["biuro@atnis.pl"]) is False
+
+
+def test_the_report_shows_the_result_from_the_match_row_not_the_live_court(sent):
+    """The court may already show the next pair, and a super tiebreak is in none of its set columns."""
+    match = _match(sets_history=json.dumps([
+        {"player1_games": 4, "player2_games": 2},
+        {"player1_games": 3, "player2_games": 4, "tiebreak_loser_points": 5},
+        {"player1_games": 7, "player2_games": 4, "is_super_tiebreak": True, "tiebreak_loser_points": 4},
+        {"player1_games": 0, "player2_games": 0},
+    ]))
+    next_pair_on_court = _state(A={"set1": 1, "set2": 0, "set3": 0}, B={"set1": 0, "set2": 0, "set3": 0})
+
+    send_match_report(match, next_pair_on_court, {"report_email": "biuro@atnis.pl"})
+
+    assert "4:2 3:4(5) [7:4]" in sent[0]["html"]
+    assert "1:0" not in sent[0]["html"]
+
+
+def test_without_set_detail_the_report_falls_back_to_the_court_state(sent):
+    send_match_report(_match(sets_history=None), _state(), {"report_email": "biuro@atnis.pl"})
+    assert "4:1 4:2 0:0" in sent[0]["html"]

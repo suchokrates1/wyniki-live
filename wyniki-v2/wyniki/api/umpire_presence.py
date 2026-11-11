@@ -126,5 +126,5 @@ def register(blueprint) -> None:
         access_error = require_court_access(session_court_id)
         if access_error:
             return access_error
-        acked = director_command_broker.ack(command_id)
+        acked = director_command_broker.ack(command_id, court_id=session_court_id or None)
         return jsonify({"ok": True, "acked": acked}), 200
