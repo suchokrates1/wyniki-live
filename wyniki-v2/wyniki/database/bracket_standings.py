@@ -111,6 +111,33 @@ def _format_set_score(s: dict, flipped: bool = False) -> str:
         return f"{g1}:{g2}({tb})"
     return f"{g1}:{g2}"
 
+def _finish_reason(m) -> str:
+    try:
+        return str(m["finish_reason"] or "normal").strip().lower()
+    except (KeyError, IndexError):
+        return "normal"
+
+
+def _counted_sets(reason: str, winner, p1: str, p2: str, s1: int, s2: int) -> tuple[int, int, bool]:
+    """Sets for each side and whether the games count, as the professional tours count them.
+
+    ATP Rulebook 2026, chapter IV (ATP Finals and United Cup round robin):
+    - a retirement or default "shall count as a straight-set win or loss", and games of
+      that match "shall not be counted in the percentage of games won" (so nobody gains
+      by retiring once a set is won);
+    - a walkover is a win, and "does not count towards ... percentage of sets or
+      percentage of games won": nothing was played.
+    The match still counts as won, lost and played. Only what breaks a tie changes.
+    """
+    s1, s2 = int(s1 or 0), int(s2 or 0)
+    if reason == "walkover":
+        return 0, 0, False
+    if reason == "retirement" and winner in (p1, p2):
+        straight = max(2, s1, s2)
+        return (straight, 0, False) if winner == p1 else (0, straight, False)
+    return s1, s2, True
+
+
 def _compute_standings(player_names: list[str], matches, table_order: str = DEFAULT_TABLE_ORDER) -> tuple:
     """Compute standings from a list of matches. Returns (standings, match_results)."""
     stats = {name: {"wins": 0, "losses": 0, "sets_won": 0, "sets_lost": 0,
@@ -150,12 +177,13 @@ def _compute_standings(player_names: list[str], matches, table_order: str = DEFA
             stats[p2]["wins"] += 1
             stats[p1]["losses"] += 1
 
-        stats[p1]["sets_won"] += s1
-        stats[p1]["sets_lost"] += s2
-        stats[p2]["sets_won"] += s2
-        stats[p2]["sets_lost"] += s1
+        counted_s1, counted_s2, games_count = _counted_sets(_finish_reason(m), winner, p1, p2, s1, s2)
+        stats[p1]["sets_won"] += counted_s1
+        stats[p1]["sets_lost"] += counted_s2
+        stats[p2]["sets_won"] += counted_s2
+        stats[p2]["sets_lost"] += counted_s1
 
-        for s in sh:
+        for s in sh if games_count else ():
             if not _is_stb(s):
                 stats[p1]["games_won"] += s.get("player1_games", 0)
                 stats[p1]["games_lost"] += s.get("player2_games", 0)
