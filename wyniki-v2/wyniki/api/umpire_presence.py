@@ -50,9 +50,13 @@ def register(blueprint) -> None:
                 is_charging=charging_flag(is_charging),
                 app_version=heartbeat_meta.get("app_version") or app_version or "",
             )
-            warning = consider_low_battery(android_id)
-            if warning:
-                notify_low_battery(warning)
+            # The list above is open on purpose; a WhatsApp alert is not. Only a tablet
+            # holding a signed court session may raise one, or anyone could invent a
+            # device with 3% battery and message the recipients.
+            if court_id_from_bearer():
+                warning = consider_low_battery(android_id)
+                if warning:
+                    notify_low_battery(warning)
 
         if access_error:
             return access_error

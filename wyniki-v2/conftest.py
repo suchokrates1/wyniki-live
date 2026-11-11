@@ -1,7 +1,12 @@
 """Test runtime defaults that should not depend on calendar date or seeded prod data."""
+import os
 from datetime import datetime, UTC
 
 import pytest
+
+# The app refuses to start in production mode with the placeholder key from the
+# repository. Tests get their own, set before anything imports the settings.
+os.environ.setdefault("SECRET_KEY", "pytest-only-secret-key")
 
 
 @pytest.fixture(autouse=True)

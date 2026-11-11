@@ -11,7 +11,12 @@ export const MutationStatus = Object.freeze({
   IN_FLIGHT: 'IN_FLIGHT',
   DONE: 'DONE',
   FAILED_AUTH: 'FAILED_AUTH',
+  // refused for good (a 400 every time): kept for diagnosis, never sent again
+  FAILED: 'FAILED',
 });
+
+// How many times a request the server answers with a plain refusal is tried.
+export const MAX_REFUSED_ATTEMPTS = 5;
 
 export function classifyHttp(status) {
   if (status === 401) return 'AUTH';

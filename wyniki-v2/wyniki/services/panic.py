@@ -196,7 +196,17 @@ def reset_cooldowns() -> None:
     _last_sent.clear()
 
 
-def dispatch_panic(*, court_id: str, note: str, remote_addr: str, client: dict[str, Any] | None = None) -> tuple[dict[str, Any], int]:
+def dispatch_panic(
+    *,
+    court_id: str,
+    note: str,
+    remote_addr: str,
+    client: dict[str, Any] | None = None,
+    court_verified: bool = False,
+) -> tuple[dict[str, Any], int]:
+    """Send the alarm. `court_verified` says the court comes from a signed court session;
+    a court the caller merely named is shown in the message but does not get its own
+    cooldown, or naming a new court each time would skip the cooldown altogether."""
     meta = client or {}
     android_id = str(meta.get("android_id") or "").strip()
     remember_umpire_device(
@@ -219,7 +229,7 @@ def dispatch_panic(*, court_id: str, note: str, remote_addr: str, client: dict[s
     if not recipients:
         return {"error": "No panic recipients"}, 503
 
-    key = cooldown_key(court_id, remote_addr)
+    key = cooldown_key(court_id if court_verified else "", remote_addr)
     remaining = cooldown_remaining(key)
     if remaining:
         return {"error": "Cooldown", "retry_after": remaining}, 429

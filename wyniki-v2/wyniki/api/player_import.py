@@ -296,11 +296,14 @@ def _fetch_import_ai_suggestions(text: str, players: list[dict[str, Any]]) -> di
             'responseMimeType': 'application/json',
         },
     }
-    endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}'
+    # The key travels in a header: in the address it would end up in every error text
+    # the HTTP library builds, and from there in the logs.
+    endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
 
     try:
         response = requests.post(
             endpoint,
+            headers={'x-goog-api-key': api_key},
             json=request_payload,
             timeout=max(5, int(settings.import_players_ai_timeout_seconds or 20)),
         )
@@ -311,7 +314,12 @@ def _fetch_import_ai_suggestions(text: str, players: list[dict[str, Any]]) -> di
             return {}
         parsed = json.loads(json_text)
     except Exception as exc:
-        logger.warning('import_players_ai_failed', error=str(exc), candidates=len(candidates))
+        logger.warning(
+            'import_players_ai_failed',
+            error=type(exc).__name__,
+            status=getattr(getattr(exc, 'response', None), 'status_code', None),
+            candidates=len(candidates),
+        )
         return {}
 
     suggestions: dict[int, dict[str, Any]] = {}

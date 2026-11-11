@@ -1,9 +1,15 @@
-import { MutationStatus, MutationType, classifyHttp } from './syncRules.js';
+import { MAX_REFUSED_ATTEMPTS, MutationStatus, MutationType, classifyHttp } from './syncRules.js';
+
+// FAILED_AUTH waits for a new court session; the next flush simply tries it again and
+// stops at once if the session is still missing.
+const WAITING = [MutationStatus.PENDING, MutationStatus.IN_FLIGHT, MutationStatus.FAILED_AUTH];
 
 export function createOutbox({ table, now = () => Date.now() } = {}) {
+  let flushing = null;
+
   async function pending() {
     return (await table.all())
-      .filter((row) => row.status === MutationStatus.PENDING || row.status === MutationStatus.IN_FLIGHT)
+      .filter((row) => WAITING.includes(row.status))
       .sort((a, b) => {
         if (a.type === MutationType.CREATE && b.type !== MutationType.CREATE) return -1;
         if (b.type === MutationType.CREATE && a.type !== MutationType.CREATE) return 1;
@@ -46,7 +52,16 @@ export function createOutbox({ table, now = () => Date.now() } = {}) {
       .map((row) => table.put({ ...row, serverMatchId })));
   }
 
-  async function flush(dispatch) {
+  // One flush at a time: 'online' and 'visibilitychange' often fire together, and two
+  // passes over the same rows would send each of them twice.
+  function flush(dispatch) {
+    if (!flushing) {
+      flushing = flushOnce(dispatch).finally(() => { flushing = null; });
+    }
+    return flushing;
+  }
+
+  async function flushOnce(dispatch) {
     const queue = await pending();
     const resolvedIds = {};
     let flushed = 0;
@@ -77,8 +92,14 @@ export function createOutbox({ table, now = () => Date.now() } = {}) {
         } else if (kind === 'DROP') {
           await dropPendingForMatch(row.clientMatchUuid);
           dropped += 1;
+        } else if (kind === 'FAIL' && status >= 400 && next.attempts >= MAX_REFUSED_ATTEMPTS) {
+          // the server refuses this request itself; sending it forever helps nobody
+          await table.put({ ...next, status: MutationStatus.FAILED, lastError: `HTTP ${status}` });
+          failed += 1;
         } else {
-          await table.put({ ...next, status: MutationStatus.PENDING, lastError: `HTTP ${status || 'network'}` });
+          // status 0 means it was not sent at all (no server match id yet): that is not an attempt
+          const attempts = status ? next.attempts : row.attempts;
+          await table.put({ ...next, attempts, status: MutationStatus.PENDING, lastError: `HTTP ${status || 'network'}` });
           failed += 1;
         }
       } catch (error) {

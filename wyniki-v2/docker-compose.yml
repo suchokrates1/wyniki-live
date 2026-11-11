@@ -11,7 +11,8 @@ services:
       - wyniki_data:/data
     environment:
       # Flask
-      - SECRET_KEY=${SECRET_KEY:-prod-secret-key-change-me}
+      # No default: the app refuses to start without a real key in the host's .env.
+      - SECRET_KEY=${SECRET_KEY:?set SECRET_KEY in .env}
       - FLASK_ENV=production
       - DEBUG=false
       

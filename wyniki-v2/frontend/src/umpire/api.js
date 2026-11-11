@@ -1,8 +1,15 @@
 import { attachBattery } from './offline/battery.js';
 import { umpireClientHeaders } from './offline/clientHeaders.js';
 
+// A request with no answer must end: on a venue network that accepts the connection and
+// then goes quiet, fetch would otherwise wait for minutes while the umpire keeps scoring.
+export const REQUEST_TIMEOUT_MS = 15_000;
+// How much longer than its own wait a long poll may take before it is given up.
+const LONG_POLL_MARGIN_MS = 10_000;
+
 export function createUmpireApi({
   fetchImpl = fetch,
+  requestTimeoutMs = REQUEST_TIMEOUT_MS,
   getToken = () => null,
   getClientHeaders = () => umpireClientHeaders(),
   getBattery = () => ({ level: null, charging: null }),
@@ -19,14 +26,21 @@ export function createUmpireApi({
     const token = getToken();
     const skipAuth = String(path).includes('/authorize');
     if (token && !skipAuth) headers.Authorization = `Bearer ${token}`;
-    const response = await fetchImpl(path, { ...options, headers });
-    let data = null;
+    const { timeoutMs = requestTimeoutMs, ...fetchOptions } = options;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      data = await response.json();
-    } catch {
-      data = null;
+      const response = await fetchImpl(path, { ...fetchOptions, headers, signal: controller.signal });
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+      return { ok: response.ok, status: response.status, data };
+    } finally {
+      clearTimeout(timer);
     }
-    return { ok: response.ok, status: response.status, data };
   }
 
   return {
@@ -107,7 +121,7 @@ export function createUmpireApi({
       if (clientMatchUuid) params.set('client_match_uuid', clientMatchUuid);
       if (waitMs) params.set('wait_ms', String(waitMs));
       const query = params.toString() ? `?${params}` : '';
-      return request(`/api/umpire/commands${query}`);
+      return request(`/api/umpire/commands${query}`, { timeoutMs: waitMs + LONG_POLL_MARGIN_MS });
     },
 
     sendPanic({ courtId, note } = {}) {

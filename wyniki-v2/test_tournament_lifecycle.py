@@ -1203,8 +1203,11 @@ def test_player_import_preview_uses_ai_to_fill_missing_country(app_with_temp_db,
                 ]
             }
 
-    def fake_post(url, json=None, timeout=None):
+    def fake_post(url, json=None, timeout=None, headers=None):
         assert 'gemini-2.5-flash:generateContent' in url
+        # the key goes in a header; in the address it would reach the logs with every error
+        assert 'test-key' not in url
+        assert headers == {'x-goog-api-key': 'test-key'}
         assert json['generationConfig']['responseMimeType'] == 'application/json'
         assert timeout == 5
         return FakeResponse()

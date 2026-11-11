@@ -97,3 +97,123 @@ test('create success returns bracketWarning from the API', async () => {
   assert.equal(result.matchId, 44);
   assert.equal(result.bracketWarning, 'different_groups');
 });
+
+function finishedState(uuid, matchId = 9) {
+  const state = matchState({ matchId, clientMatchUuid: uuid });
+  state.matchId = matchId;
+  state.clientMatchUuid = uuid;
+  state.matchStartTime = 1;
+  state.isMatchFinished = true;
+  state.player1Sets = 2;
+  state.player2Sets = 0;
+  return state;
+}
+
+async function queuedTypes(outbox) {
+  return (await outbox.pending()).map((row) => row.type);
+}
+
+const networkDown = async () => { throw new TypeError('Failed to fetch'); };
+const answers = (status) => async () => ({ ok: false, status, data: null });
+
+test('finalize: a network error on the final score queues the score, the finish and the statistics', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  const result = await syncMatchLive({
+    api: apiStub({ updateMatch: networkDown }),
+    outbox,
+    reason: 'finalize',
+    state: finishedState('uuid-f1'),
+    online: () => true, // the browser still believes it is online
+  });
+  assert.equal(result.failed, true);
+  assert.deepEqual(await queuedTypes(outbox), ['UPDATE', 'FINISH', 'STATS']);
+});
+
+test('finalize: a network error on the finish itself queues the finish and the statistics, not the score again', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  await syncMatchLive({
+    api: apiStub({ finishMatch: networkDown }),
+    outbox,
+    reason: 'finalize',
+    state: finishedState('uuid-f2'),
+    online: () => true,
+  });
+  assert.deepEqual(await queuedTypes(outbox), ['FINISH', 'STATS']);
+});
+
+test('finalize: an expired court session (401) keeps the whole result for after the next PIN', async () => {
+  for (const failing of ['updateMatch', 'finishMatch']) {
+    const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+    const result = await syncMatchLive({
+      api: apiStub({ [failing]: answers(401) }),
+      outbox,
+      reason: 'finalize',
+      state: finishedState(`uuid-401-${failing}`),
+      online: () => true,
+    });
+    assert.equal(result.status, 401);
+    const types = await queuedTypes(outbox);
+    assert.ok(types.includes('FINISH') && types.includes('STATS'), `${failing}: ${types}`);
+    assert.equal(types.includes('UPDATE'), failing === 'updateMatch');
+  }
+});
+
+test('finalize: a server error on the final score still queues the finish', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  await syncMatchLive({
+    api: apiStub({ updateMatch: answers(503) }),
+    outbox,
+    reason: 'finalize',
+    state: finishedState('uuid-503'),
+    online: () => true,
+  });
+  assert.deepEqual(await queuedTypes(outbox), ['UPDATE', 'FINISH', 'STATS']);
+});
+
+test('finalize: a plain refusal (400) is reported and not queued', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  const result = await syncMatchLive({
+    api: apiStub({ finishMatch: answers(400) }),
+    outbox,
+    reason: 'finalize',
+    state: finishedState('uuid-400'),
+    online: () => true,
+  });
+  assert.equal(result.status, 400);
+  assert.deepEqual(await queuedTypes(outbox), []);
+});
+
+test('finalize offline: the queued finish carries the API field names, also for a walkover', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  await syncMatchLive({
+    api: apiStub({}),
+    outbox,
+    reason: 'finalize',
+    state: finishedState('uuid-wo'),
+    extra: { finishReason: 'WALKOVER', winnerName: 'A', injuredPlayerName: null, resultNote: 'no show' },
+    online: () => false,
+  });
+  const finish = (await outbox.pending()).find((row) => row.type === MutationType.FINISH);
+  assert.equal(finish.payload.winner_name, 'A');
+  assert.equal(finish.payload.result_note, 'no show');
+  assert.ok('finish_reason' in finish.payload);
+  assert.equal('finishReason' in finish.payload, false);
+});
+
+test('finalize: a match the server has not seen yet is created, then finished', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  const calls = [];
+  const state = finishedState('uuid-new', null);
+  const result = await syncMatchLive({
+    api: apiStub({
+      createMatch: async () => { calls.push('create'); return { ok: true, status: 201, data: { id: 31 } }; },
+      finishMatch: async (id) => { calls.push(`finish ${id}`); return { ok: true, status: 200, data: {} }; },
+    }),
+    outbox,
+    reason: 'finalize',
+    state,
+    online: () => true,
+  });
+  assert.deepEqual(calls, ['create', 'finish 31']);
+  assert.equal(result.matchId, 31);
+});

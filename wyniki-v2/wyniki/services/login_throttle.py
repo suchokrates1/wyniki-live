@@ -36,10 +36,14 @@ def _recent(door: str) -> deque:
     return stamps
 
 
-def refusal(door: str):
+def refusal(door: str, limit: int = MAX_FAILURES):
     """A 429 answer when this client has used up its wrong passwords at this door, else None."""
-    if len(_recent(door)) >= MAX_FAILURES:
-        return jsonify({"error": "Too many attempts"}), 429
+    stamps = _recent(door)
+    if len(stamps) >= limit:
+        response = jsonify({"error": "Too many attempts"})
+        wait = int(stamps[0] + WINDOW_SECONDS - time.monotonic()) + 1
+        response.headers["Retry-After"] = str(max(wait, 1))
+        return response, 429
     return None
 
 

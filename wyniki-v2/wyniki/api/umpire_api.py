@@ -1,8 +1,10 @@
 """API endpoints for receiving data from Umpire mobile app."""
 from flask import Blueprint, current_app, jsonify, request
 from datetime import datetime, UTC
+import hmac
 import json
 import re
+import threading
 from typing import Any
 
 from ..database import (
@@ -31,7 +33,7 @@ from ..services.event_broker import emit_score_update
 from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
-from ..services import web_push
+from ..services import login_throttle, web_push
 from ..services.api_auth import court_id_from_bearer as court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
 from ..services.director_commands import director_command_broker as director_command_broker, dump_match_config, tablet_presence
 from ..services.match_format import match_score_satisfies_format
@@ -41,6 +43,8 @@ from ..services.match_timer import apply_match_start_from_payload, sync_court_ma
 from ..config import logger
 
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
+
+COURT_PIN_MAX_FAILURES = 10
 
 
 _CLIENT_HEADER_MAP = {
@@ -1210,13 +1214,23 @@ def authorize_court(kort_id: str):
             "error": "court-not-found"
         }), 404
     
+    # A four-digit PIN is ten thousand guesses: cap the wrong ones per client and court.
+    # The cap is looser than the admin's because a whole venue shares one address and
+    # an umpire entering the PIN by ear mistypes more often than a typed password.
+    door = f"court-pin:{kort_id}"
+    refused = login_throttle.refusal(door, limit=COURT_PIN_MAX_FAILURES)
+    if refused:
+        logger.warning("court_pin_throttled", kort=kort_id)
+        return refused
+
     # Verify PIN
     correct_pin = court.pin or "0000"
-    authorized = provided_pin == correct_pin
-    
+    authorized = hmac.compare_digest(provided_pin.encode(), correct_pin.encode())
+
     logger.info("court_pin_checked", kort=kort_id, authorized=authorized)
-    
+
     if authorized:
+        login_throttle.forget(door)
         return jsonify({
             "ok": True,
             "authorized": True,
@@ -1227,12 +1241,13 @@ def authorize_court(kort_id: str):
             "message": "Access granted"
         }), 200
     else:
+        login_throttle.note_failure(door)
         return jsonify({
             "ok": False,
             "authorized": False,
             "error": "invalid-pin"
         }), 403
-        
+
 
 
 @blueprint.route('/matches', methods=['POST'])
@@ -1360,17 +1375,19 @@ def create_match():
             f"warning={bracket_warning}, country={client_audit['client_country']}, ip={client_audit['client_ip']}"
         )
 
-        # Tell spectators watching this court. Best-effort and last: the umpire's
-        # match must already be safely created before anyone else is notified.
-        try:
-            web_push.notify_match_started(
+        # Tell spectators watching this court. Best-effort, last, and off this request:
+        # each push may wait seconds on a slow push service, and the tablet must not.
+        threading.Thread(
+            target=web_push.notify_match_started,
+            args=(
                 kort_id,
                 (court_state or {}).get("court_name") or kort_id,
                 match.player1_name,
                 match.player2_name,
-            )
-        except Exception as push_error:  # noqa: BLE001
-            logger.warning("match_started_push_failed", error=str(push_error), kort_id=kort_id)
+            ),
+            name="match-started-push",
+            daemon=True,
+        ).start()
 
         return jsonify(match.to_dict(bracket_warning=bracket_warning)), 201
         

@@ -52,6 +52,7 @@ import {
   formatHistoryWhen,
   historyEntryFromState,
 } from './offline/history.js';
+import { directorPollDelayMs } from './offline/directorPollDelay.js';
 import { syncMatchLive } from './offline/matchSync.js';
 import { createOutboxDispatcher } from './offline/outbox.js';
 import { openUmpireStores } from './offline/store.js';
@@ -422,6 +423,7 @@ function createUmpireApp() {
       if (this.tutorialMode || this._pollActive) return;
       this._pollActive = true;
       const poll = async () => {
+        let failures = 0;
         while (this._pollActive) {
           if (this.tutorialMode) {
             await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -440,9 +442,18 @@ function createUmpireApp() {
               clientMatchUuid: state?.clientMatchUuid,
               waitMs: 20_000,
             });
-            this.applyDirectorCommands(result?.data?.commands);
+            if (result?.ok) {
+              failures = 0;
+              this.applyDirectorCommands(result.data?.commands);
+              continue;
+            }
+            // an answer, but a refusal (expired session, server error): asking again at once
+            // would be a request loop for as long as the refusal lasts
+            failures += 1;
+            await new Promise((resolve) => setTimeout(resolve, directorPollDelayMs(result?.status, failures)));
           } catch {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            failures += 1;
+            await new Promise((resolve) => setTimeout(resolve, directorPollDelayMs(0, failures)));
           }
         }
       };
@@ -732,6 +743,8 @@ function createUmpireApp() {
       });
       this.closePin();
       this._heartbeat?.sendNow();
+      // whatever waited for a court session (a result refused with 401) goes out now
+      this.flushOutbox();
       this.go('players');
     },
 
