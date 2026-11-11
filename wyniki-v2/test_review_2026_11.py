@@ -1,5 +1,7 @@
 """Guards added after the November 2026 code review: PIN guessing, the panic cooldown,
-battery alerts from unknown devices, and the placeholder SECRET_KEY."""
+battery alerts from unknown devices, the placeholder SECRET_KEY, late events for a finished match."""
+
+
 import pytest
 
 from wyniki.config import settings
@@ -158,3 +160,35 @@ def test_a_real_key_or_a_development_run_starts(monkeypatch):
     monkeypatch.setattr(settings, "flask_env", "development")
     monkeypatch.setattr(settings, "secret_key", "dev-secret-key-change-in-production")
     app_module.refuse_placeholder_secret_key()
+
+
+def test_an_event_for_a_finished_match_does_not_repaint_the_court(app):
+    from wyniki.services.api_auth import issue_court_token
+    from wyniki.services.court_manager import get_court_state
+
+    court_id, _pin = _court(app)
+    client = app.test_client()
+    headers = {"Authorization": f"Bearer {issue_court_token(court_id)}"}
+    zero = {"player1_sets": 0, "player2_sets": 0, "player1_games": 0, "player2_games": 0,
+            "player1_points": 0, "player2_points": 0, "sets_history": []}
+    final = {**zero, "player1_sets": 2,
+             "sets_history": [{"player1_games": 4, "player2_games": 0}, {"player1_games": 4, "player2_games": 1}]}
+    match_id = client.post("/api/matches", headers=headers, json={
+        "court_id": court_id, "player1_name": "Jan Malicki", "player2_name": "Ana Dutra",
+        "client_match_uuid": "late-end", "score": zero,
+        "match_config": {"games_per_set": 4, "sets_to_win": 2}}).get_json()["id"]
+    client.put(f"/api/matches/{match_id}", headers=headers, json={"score": final, "status": "finished"})
+    assert client.post(f"/api/matches/{match_id}/finish", headers=headers, json={}).status_code == 200
+    before = get_court_state(court_id)
+    names_before = (before["A"].get("surname"), before["A"].get("full_name"), before["match_status"]["active"])
+
+    late = client.post("/api/match-events", headers=headers, json={
+        "event_type": "match_end", "court_id": court_id, "match_id": match_id,
+        "player1": {"name": "Malicki", "full_name": "LATE NAME"}, "player2": {"name": "Dutra"},
+        "score": {**final, "match_finished": True}})
+
+    assert late.status_code == 200
+    assert late.get_json()["match_finished"] is True
+    after = get_court_state(court_id)
+    assert (after["A"].get("surname"), after["A"].get("full_name"), after["match_status"]["active"]) == names_before
+    assert after["A"].get("full_name") != "LATE NAME"

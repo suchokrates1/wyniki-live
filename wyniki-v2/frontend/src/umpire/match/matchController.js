@@ -281,6 +281,9 @@ export function createMatchController({
       undoMessage = result.description;
       pendingAnnouncementType = null;
       view = scoringView();
+      // The server and the stream showed the point that was just taken back.
+      requestSync('event', { eventType: 'undo' });
+      requestSync('update');
       notify();
     },
 
@@ -303,6 +306,8 @@ export function createMatchController({
         const command = parseDirectorCommand(raw);
         if (!DirectorCommandApplier.appliesTo(state, command)) continue;
         state = DirectorCommandApplier.apply(state, command);
+        // a corrected score has no undo history (see DirectorCommandApplier)
+        if (command.score) canUndo = false;
         applied.push(command);
       }
       if (applied.length) notify();

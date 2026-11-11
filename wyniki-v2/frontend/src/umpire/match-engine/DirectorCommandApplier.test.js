@@ -148,3 +148,48 @@ test('doublesRenameUpdatesTeamDisplayNames', () => {
   assert.equal(next.getTeam1FullName(), 'New Pair A');
   assert.equal(next.getTeam2FullName(), 'New Pair B');
 });
+
+test('aCorrectedScoreRecountsTheGamesOfTheSetAndLeavesTheShownStateAlone', () => {
+  const state = new MatchState({
+    matchId: 671,
+    clientMatchUuid: 'uuid-count',
+    player1: playerOne,
+    player2: playerTwo,
+    courtId: 't31-2',
+    courtName: 'Kort 2',
+  });
+  state.player1Games = 1;
+  state.player2Games = 1;
+  state.totalGamesPlayed = 2;
+  state.actionsHistory.push({ marker: 'before the correction' });
+
+  const next = DirectorCommandApplier.apply(state, directorCommandDto({
+    matchId: 671,
+    score: directorScoreDto({ player1Games: 2, player2Games: 1 }),
+  }));
+
+  assert.equal(next.totalGamesPlayed, 3);
+  assert.deepEqual(next.actionsHistory, []);
+  assert.notEqual(next.setsHistory, state.setsHistory);
+  // the state still on screen keeps its own history
+  assert.equal(state.actionsHistory.length, 1);
+  assert.equal(state.totalGamesPlayed, 2);
+});
+
+test('aCommandWithoutAScoreKeepsTheGameCountAndTheUndoHistory', () => {
+  const state = new MatchState({
+    matchId: 671,
+    clientMatchUuid: 'uuid-move',
+    player1: playerOne,
+    player2: playerTwo,
+    courtId: 't31-2',
+    courtName: 'Kort 2',
+  });
+  state.totalGamesPlayed = 3;
+  state.actionsHistory.push({ marker: 'kept' });
+
+  const next = DirectorCommandApplier.apply(state, directorCommandDto({ matchId: 671, courtId: 't31-8' }));
+
+  assert.equal(next.totalGamesPlayed, 3);
+  assert.equal(next.actionsHistory.length, 1);
+});

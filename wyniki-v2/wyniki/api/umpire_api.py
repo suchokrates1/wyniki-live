@@ -1721,6 +1721,8 @@ def log_match_event():
     active_match = get_row(Match, event_match_id) if event_match_id else None
     if not active_match and event_client_uuid:
         active_match = latest_match_with_uuid(event_client_uuid, by_update=True)
+    # The event names its match (by id or client uuid) rather than "whatever is on the court".
+    names_its_match = active_match is not None
     if not active_match:
         active_match = latest_match_on_court(kort_id)
     restore_match_score = bool(
@@ -1768,6 +1770,13 @@ def log_match_event():
             "stale_court": True,
             "expected_court_id": expected_court,
         }), 200
+
+    # An event for a match that is already finished arrives late: a queued point, or the
+    # match_end of a second finalize. The court has been handed over by then (cleared, or
+    # showing the next match), and painting the old names and score onto it would undo that.
+    if names_its_match and active_match.status == "finished":
+        logger.info("finished_match_event_ignored", match_id=active_match.id, event_type=event_type, kort=kort_id)
+        return jsonify({"success": True, "match_finished": True}), 200
 
     court_state = ensure_court_state(kort_id)
     with STATE_LOCK:

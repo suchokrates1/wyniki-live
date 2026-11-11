@@ -49,6 +49,10 @@ export const DirectorCommandApplier = {
     }
     if (command.score) {
       const score = command.score;
+      // Lists of its own: copy() shares them with the state the screen still shows.
+      // The undo history goes: its snapshots predate the correction, and undoing into
+      // them would bring the corrected score back to the wrong one.
+      next = next.copy({ setsHistory: [...next.setsHistory], actionsHistory: [] });
       if (score.player1Sets != null) next.player1Sets = score.player1Sets;
       if (score.player2Sets != null) next.player2Sets = score.player2Sets;
       if (score.player1Games != null) next.player1Games = score.player1Games;
@@ -61,6 +65,10 @@ export const DirectorCommandApplier = {
       if (score.setsHistory != null) {
         next.setsHistory.length = 0;
         next.setsHistory.push(...score.setsHistory.map(setScoreDtoToModel));
+      }
+      if (score.player1Games != null || score.player2Games != null) {
+        // Games played in the current set; the change of ends is decided from it.
+        next.totalGamesPlayed = next.player1Games + next.player2Games;
       }
     }
     return next;
