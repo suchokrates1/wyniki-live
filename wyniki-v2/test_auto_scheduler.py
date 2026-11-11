@@ -348,3 +348,27 @@ def test_a_pair_blocks_both_partners_and_pending_names_never_clash():
     placements = {p["match"]["id"]: p for p in sched.place_matches(matches, config, "2026-08-25")}
     assert placements[1]["scheduled_time"] != placements[2]["scheduled_time"]
     assert placements[3]["scheduled_time"] == placements[4]["scheduled_time"] == "09:00"
+
+
+def test_a_player_in_a_b1_match_and_another_category_is_not_double_booked():
+    config = {"start_time": "09:30", "rest_slots": 0, "b1_court_ids": ["c1"], "court_ids": ["c1", "c2"]}
+    matches = [
+        {"id": 1, "player1_name": "Jan Nowak", "player2_name": "X", "category_name": "B1 Men", "phase": "Grupowa"},
+        {"id": 2, "player1_name": "Jan Nowak", "player2_name": "Y", "category_name": "Open Doubles", "phase": "Grupowa"},
+    ]
+
+    placements = {p["match"]["id"]: p for p in sched.place_matches(matches, config, "2026-11-11")}
+
+    assert placements[1]["court_id"] == "c1" and placements[1]["scheduled_time"] == "09:30"
+    assert placements[2]["court_id"] == "c2"
+    # the B1 match takes 75 minutes; the other one starts once it is over
+    assert sched.time_to_minutes(placements[2]["scheduled_time"]) >= sched.time_to_minutes("09:30") + 75
+
+
+def test_rest_slots_zero_means_no_rest_and_missing_means_one():
+    assert sched._rest_slots({"rest_slots": 0}) == 0
+    assert sched._rest_slots({"rest_slots": "0"}) == 0
+    assert sched._rest_slots({}) == 1
+    assert sched._rest_slots({"rest_slots": None}) == 1
+    assert sched._rest_slots({"rest_slots": "x"}) == 1
+    assert sched._rest_slots({"rest_slots": 2}) == 2

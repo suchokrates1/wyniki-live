@@ -132,7 +132,7 @@ def create_app() -> Flask:
         if not request.path.startswith(("/api/", "/admin/api/")):
             raise exc
         logger.error("unhandled_api_error", path=request.path, error=str(exc), exc_info=True)
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Internal error"}), 500
 
     # Register blueprints
     app.register_blueprint(web.blueprint)

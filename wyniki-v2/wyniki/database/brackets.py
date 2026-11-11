@@ -1310,18 +1310,23 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
                     continue
                 score_parts.append(f"{g1}:{g2}")
             score_summary = " ".join(score_parts)
-            # Find the knockout slot matching these two players
-            cursor.execute("""
-                SELECT id, phase, position, winner_to, loser_to FROM bracket_knockout
-                WHERE tournament_id = ?
-                  AND ((player1_name = ? AND player2_name = ?)
-                    OR (player1_name = ? AND player2_name = ?))
-                  AND winner_name IS NULL
-                ORDER BY CASE WHEN phase = ? THEN 0 ELSE 1 END, id
-            """, (tournament_id, p1, p2, p2, p1, match["phase"] or ""))
-            slot = cursor.fetchone()
+            slot = _open_knockout_slot_for(cursor, tournament_id, p1, p2, match["phase"] or "")
             if not slot:
+                if is_knockout_stage_phase(match["phase"]):
+                    # a knockout result with no slot to carry it: the bracket will not move
+                    logger.warning(
+                        "knockout_slot_not_found",
+                        match_id=match_id, tournament_id=tournament_id, phase=match["phase"],
+                    )
                 return False
+
+            # From here on the bracket's own spelling of each side is used, so the next
+            # round shows the pair exactly as the draw has it ("Nowak / Kowal", whichever
+            # order the tablet sent).
+            if same_competitor_label(winner, slot["player1_name"]):
+                winner, p1, p2 = slot["player1_name"], slot["player1_name"], slot["player2_name"]
+            elif same_competitor_label(winner, slot["player2_name"]):
+                winner, p1, p2 = slot["player2_name"], slot["player1_name"], slot["player2_name"]
 
             # Update the slot with winner and score
             cursor.execute("""
@@ -1348,6 +1353,31 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
     except Exception as e:
         logger.error("advance_knockout_error", error=str(e), match_id=match_id)
         return False
+
+def _open_knockout_slot_for(cursor, tournament_id: int, p1: str, p2: str, phase: str):
+    """The undecided knockout slot these two sides play in, or None.
+
+    Sides are compared the way the rest of the code compares them: a pair is the same
+    pair whichever partner is named first, and the slot may list the sides either way
+    round. A slot in the match's own phase is preferred."""
+    cursor.execute(
+        """
+        SELECT id, phase, position, winner_to, loser_to, player1_name, player2_name
+        FROM bracket_knockout
+        WHERE tournament_id = ? AND winner_name IS NULL
+          AND player1_name IS NOT NULL AND player2_name IS NOT NULL
+        ORDER BY CASE WHEN phase = ? THEN 0 ELSE 1 END, id
+        """,
+        (tournament_id, phase),
+    )
+    for row in cursor.fetchall():
+        a, b = row["player1_name"], row["player2_name"]
+        if (same_competitor_label(a, p1) and same_competitor_label(b, p2)) or (
+            same_competitor_label(a, p2) and same_competitor_label(b, p1)
+        ):
+            return row
+    return None
+
 
 def _advance_by_feeds(cursor, tournament_id: int, feed: str | None, player_name: str) -> None:
     """Write a player into the slot side named by a winner_to / loser_to feed."""

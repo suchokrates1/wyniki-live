@@ -45,6 +45,9 @@ from ..config import logger
 blueprint = Blueprint('umpire_api', __name__, url_prefix='/api')
 
 COURT_PIN_MAX_FAILURES = 10
+# What a 500 says. The exception itself goes to the log, never to the caller: its text
+# names tables, columns and file paths.
+INTERNAL_ERROR = "Internal error"
 
 
 _CLIENT_HEADER_MAP = {
@@ -1041,7 +1044,7 @@ def get_courts():
         
     except Exception as e:
         logger.error("umpire_courts_failed", error=str(e), exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": INTERNAL_ERROR}), 500
 
 
 @blueprint.route('/courts/<kort_id>/suggested-match', methods=['GET'])
@@ -1076,7 +1079,7 @@ def get_players():
     # POST - add new player (requires court PIN)
     if request.method == 'POST':
         try:
-            data = request.get_json()
+            data = request.get_json(silent=True)
             if not data:
                 return jsonify({"ok": False, "error": "invalid-payload"}), 400
             
@@ -1140,7 +1143,7 @@ def get_players():
         except Exception as e:
             rollback_writes()
             logger.error("umpire_player_create_failed", error=str(e), exc_info=True)
-            return jsonify({"ok": False, "error": str(e)}), 500
+            return jsonify({"ok": False, "error": INTERNAL_ERROR}), 500
     
     # GET - list players
     try:
@@ -1180,13 +1183,13 @@ def get_players():
         
     except Exception as e:
         logger.error("umpire_players_failed", error=str(e), exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": INTERNAL_ERROR}), 500
 
 
 @blueprint.route('/courts/<kort_id>/authorize', methods=['POST'])
 def authorize_court(kort_id: str):
     """Verify PIN for court access."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data:
         return jsonify({
             "ok": False,
@@ -1254,7 +1257,7 @@ def authorize_court(kort_id: str):
 def create_match():
     """Create new match on server."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         if not data:
             return jsonify({"error": "Invalid payload"}), 400
         score = data.get("score", {})
@@ -1394,7 +1397,7 @@ def create_match():
     except Exception as e:
         rollback_writes()
         logger.error("match_create_failed", error=str(e), exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": INTERNAL_ERROR}), 500
 
 
 @blueprint.route('/matches/<int:match_id>', methods=['GET'])
@@ -1413,7 +1416,7 @@ def get_match(match_id: int):
 def update_match(match_id: int):
     """Update match score and state."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         
         match = get_row(Match, match_id)
         if not match:
@@ -1422,6 +1425,9 @@ def update_match(match_id: int):
         if access_error:
             return access_error
         
+        if not isinstance(data, dict) or not isinstance(data.get("score", {}), dict):
+            return jsonify({"error": "Invalid payload"}), 400
+
         # Update match data
         score = data.get("score", {})
         match.player1_sets = score.get("player1_sets", 0)
@@ -1517,7 +1523,7 @@ def update_match(match_id: int):
     except Exception as e:
         rollback_writes()
         logger.error("match_update_failed", error=str(e), exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": INTERNAL_ERROR}), 500
 
 
 @blueprint.route('/matches/<int:match_id>/finish', methods=['POST'])
@@ -1556,15 +1562,17 @@ def finish_match(match_id: int):
     except Exception as e:
         rollback_writes()
         logger.error("match_finish_failed", error=str(e), exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": INTERNAL_ERROR}), 500
 
 
 @blueprint.route('/match-statistics', methods=['POST'])
 def receive_statistics():
     """Receive match statistics from app."""
     try:
-        data = request.get_json()
-        
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"error": "Invalid payload"}), 400
+
         match_id = data.get("match_id")
         if not match_id:
             return jsonify({"error": "match_id required"}), 400
@@ -1636,7 +1644,7 @@ def receive_statistics():
     except Exception as e:
         rollback_writes()
         logger.error("match_stats_failed", error=str(e), exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": INTERNAL_ERROR}), 500
 
 
 def _paint_live_points(
@@ -1696,7 +1704,9 @@ def _raw_points_to_tennis(raw_a: int, raw_b: int) -> tuple[str, str]:
 @blueprint.route('/match-events', methods=['POST'])
 def log_match_event():
     """Process match event and push real-time score update via SSE."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "Invalid payload"}), 400
     event_type = data.get('event_type', '')
     kort_id = normalize_kort_id(data.get('court_id'))
     access_error = require_court_access(kort_id)
@@ -1708,12 +1718,16 @@ def log_match_event():
     if not kort_id:
         return jsonify({"success": True, "message": "No court_id, event logged only"}), 200
 
-    score = data.get('score', {})
-    player1 = data.get('player1', {})
-    player2 = data.get('player2', {})
-
-    raw_pts_a = int(score.get('player1_points', 0))
-    raw_pts_b = int(score.get('player2_points', 0))
+    score = data.get('score') or {}
+    player1 = data.get('player1') or {}
+    player2 = data.get('player2') or {}
+    if not all(isinstance(part, dict) for part in (score, player1, player2)):
+        return jsonify({"error": "Invalid payload"}), 400
+    try:
+        raw_pts_a = int(score.get('player1_points') or 0)
+        raw_pts_b = int(score.get('player2_points') or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid score"}), 400
     is_tiebreak = bool(score.get('is_tiebreak', False))
     is_super_tiebreak = bool(score.get('is_super_tiebreak', False))
     event_match_id = data.get('match_id')

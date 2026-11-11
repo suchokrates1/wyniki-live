@@ -71,15 +71,17 @@ def _build_set_detail(s: dict, flipped: bool = False) -> dict:
     g1, g2 = s.get("player1_games", 0), s.get("player2_games", 0)
     tb = s.get("tiebreak_loser_points")
     stb = _is_stb(s)
-    if stb and tb is not None:
-        # STB: convert games 0/1 → actual tiebreak points
-        # Winner gets max(10, tb+2), loser gets tb
+    if stb and tb is not None and max(g1, g2) <= 1:
+        # Old rows store a super tiebreak as games 1:0 plus the loser's points; the
+        # winner's points are rebuilt (to 10, win by two). The umpire app stores the
+        # points themselves (7:4 in a super tiebreak to 7), and those are shown as stored.
         winner_pts = max(10, tb + 2)
         if g1 > g2:  # player1 won STB
             g1, g2 = winner_pts, tb
         else:
             g1, g2 = tb, winner_pts
-        tb = None  # no separate TB display needed
+    if stb:
+        tb = None  # the set shows the points themselves; no separate tiebreak figure
     if flipped:
         g1, g2 = g2, g1
     return {"g1": g1, "g2": g2, "tb": tb, "stb": stb}

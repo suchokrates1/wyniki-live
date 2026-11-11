@@ -192,3 +192,101 @@ def test_an_event_for_a_finished_match_does_not_repaint_the_court(app):
     after = get_court_state(court_id)
     assert (after["A"].get("surname"), after["A"].get("full_name"), after["match_status"]["active"]) == names_before
     assert after["A"].get("full_name") != "LATE NAME"
+
+
+def test_a_super_tiebreak_to_seven_is_shown_as_played():
+    from wyniki.database.bracket_standings import _build_set_detail
+
+    played = {"set_number": 3, "player1_games": 7, "player2_games": 4,
+              "tiebreak_loser_points": 4, "is_super_tiebreak": True}
+    assert _build_set_detail(played) == {"g1": 7, "g2": 4, "tb": None, "stb": True}
+    assert _build_set_detail({**played, "player1_games": 10, "player2_games": 12, "tiebreak_loser_points": 10}) \
+        == {"g1": 10, "g2": 12, "tb": None, "stb": True}
+    # rows stored the old way (games 1:0 and the loser's points) are still rebuilt
+    legacy = {"set_number": 3, "player1_games": 1, "player2_games": 0, "tiebreak_loser_points": 8}
+    assert _build_set_detail(legacy) == {"g1": 10, "g2": 8, "tb": None, "stb": True}
+
+
+def test_a_doubles_final_advances_when_the_tablet_names_the_partners_the_other_way_round(app):
+    from wyniki import database
+    from wyniki.database.connection import db_conn
+
+    court_id, _pin = _court(app)
+    with app.app_context():
+        tournament_id = database.get_tournament_id_for_court(court_id)
+        with db_conn() as conn:
+            conn.execute(
+                "INSERT INTO bracket_knockout (tournament_id, phase, position, player1_name, player2_name) VALUES (?,?,?,?,?)",
+                (tournament_id, "Debel — Finał", 1, "Nowak Jan / Kowal Adam", "Lis Ewa / Mak Ola"),
+            )
+            conn.execute(
+                """INSERT INTO matches (court_id, player1_name, player2_name, status, tournament_id, phase,
+                   player1_sets, player2_sets, sets_history, winner_name, finish_reason, created_at, updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (court_id, "Kowal Adam / Nowak Jan", "Lis Ewa / Mak Ola", "finished", tournament_id, "Debel — Finał",
+                 2, 0, '[{"player1_games":4,"player2_games":0},{"player1_games":4,"player2_games":1}]',
+                 "Kowal Adam / Nowak Jan", "normal", "2026-11-11T10:00:00", "2026-11-11T10:30:00"),
+            )
+            match_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            conn.commit()
+
+        assert database.advance_knockout(match_id, tournament_id) is True
+        with db_conn() as conn:
+            slot = conn.execute(
+                "SELECT winner_name, score_summary FROM bracket_knockout WHERE tournament_id = ? AND phase = ?",
+                (tournament_id, "Debel — Finał"),
+            ).fetchone()
+    # the winner is written the way the draw spells the pair
+    assert slot["winner_name"] == "Nowak Jan / Kowal Adam"
+    assert slot["score_summary"] == "4:0 4:1"
+
+
+def test_an_office_result_with_an_unreadable_set_is_refused_not_shortened():
+    from wyniki.services.office_workflow import _normalize_office_sets
+
+    good = [{"player1_games": 4, "player2_games": 1}, {"player1_games": "4", "player2_games": "2"}]
+    sets, s1, s2 = _normalize_office_sets({"sets": [*good, {"player1_games": "", "player2_games": None}]}, "A", "B")
+    assert (len(sets), s1, s2) == (2, 2, 0)  # the empty third row of the form is not a set
+
+    for broken in (
+        [good[0], {"player1_games": "x", "player2_games": 4}, good[1]],
+        [good[0], {"player1_games": "", "player2_games": 4}],
+        [good[0], {"player1_games": "", "player2_games": ""}, good[1]],
+        [good[0], "4:2"],
+    ):
+        with pytest.raises(ValueError):
+            _normalize_office_sets({"sets": broken}, "A", "B")
+
+
+def test_malformed_umpire_requests_get_400(app):
+    from wyniki.services.api_auth import issue_court_token
+
+    court_id, _pin = _court(app)
+    client = app.test_client()
+    headers = {"Authorization": f"Bearer {issue_court_token(court_id)}"}
+    zero = {"player1_sets": 0, "player2_sets": 0, "player1_games": 0, "player2_games": 0,
+            "player1_points": 0, "player2_points": 0, "sets_history": []}
+    match_id = client.post("/api/matches", headers=headers, json={
+        "court_id": court_id, "player1_name": "A", "player2_name": "B",
+        "client_match_uuid": "bad-input", "score": zero}).get_json()["id"]
+
+    assert client.put(f"/api/matches/{match_id}", headers=headers, data="", content_type="application/json").status_code == 400
+    assert client.put(f"/api/matches/{match_id}", headers=headers, data="{not json", content_type="application/json").status_code == 400
+    assert client.put(f"/api/matches/{match_id}", headers=headers, json={"score": "4:0"}).status_code == 400
+    assert client.post("/api/match-events", headers=headers, data="", content_type="application/json").status_code == 400
+    assert client.post("/api/match-events", headers=headers,
+                       json={"court_id": court_id, "score": {"player1_points": "abc"}}).status_code == 400
+    assert client.post("/api/match-events", headers=headers,
+                       json={"court_id": court_id, "score": [1, 2]}).status_code == 400
+    assert client.post("/api/match-statistics", headers=headers, data="", content_type="application/json").status_code == 400
+
+
+def test_a_500_never_quotes_the_exception(app):
+    @app.route("/api/_boom")
+    def boom():
+        raise RuntimeError("no such table: secret_things at /srv/app/data.sqlite3")
+
+    app.config["PROPAGATE_EXCEPTIONS"] = False
+    response = app.test_client().get("/api/_boom")
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "Internal error"}

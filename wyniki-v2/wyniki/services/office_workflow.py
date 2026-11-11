@@ -216,6 +216,10 @@ def office_result_outcome(
     return {"finish_reason": "normal", "winner_name": None, "injured_player_name": None, "result_note": None}
 
 
+def _blank(value: Any) -> bool:
+    return value is None or str(value).strip() == ''
+
+
 def _normalize_office_sets(
     data: dict[str, Any],
     player1_name: str,
@@ -237,11 +241,22 @@ def _normalize_office_sets(
     player1_sets = 0
     player2_sets = 0
     parsed_sets = []
+    # A row the form left empty is not a set. Anything else must be readable: dropping a
+    # set that was typed wrong ("4", "x") used to save a different result than the one entered.
+    blank_seen = False
     for raw_set in raw_sets:
-        try:
-            parsed_sets.append((raw_set, int(raw_set.get('player1_games')), int(raw_set.get('player2_games'))))
-        except (TypeError, ValueError):
+        if not isinstance(raw_set, dict):
+            raise ValueError('Set score is not readable')
+        raw_p1, raw_p2 = raw_set.get('player1_games'), raw_set.get('player2_games')
+        if _blank(raw_p1) and _blank(raw_p2):
+            blank_seen = True
             continue
+        if blank_seen:
+            raise ValueError('Set scores must not skip a set')
+        try:
+            parsed_sets.append((raw_set, int(raw_p1), int(raw_p2)))
+        except (TypeError, ValueError):
+            raise ValueError('Set score is not readable') from None
     for index, (raw_set, p1_games, p2_games) in enumerate(parsed_sets, start=1):
         if p1_games < 0 or p2_games < 0:
             raise ValueError('Set scores cannot be negative')
