@@ -323,3 +323,67 @@ def test_a_500_never_quotes_the_exception(app):
     response = app.test_client().get("/api/_boom")
     assert response.status_code == 500
     assert response.get_json() == {"error": "Internal error"}
+
+
+def test_match_finished_emails_run_on_a_background_thread_with_an_intact_snapshot(app, monkeypatch):
+    import threading
+    from wyniki import database
+    from wyniki.api import umpire_api
+    from wyniki.services import email_reports
+    from wyniki.services.api_auth import issue_court_token
+
+    with app.app_context():
+        tournament_id = database.insert_tournament(
+            "Async Mail Cup", "2026-11-11", "2026-11-12", active=True, report_email="biuro@example.com"
+        )
+        court_id = database.create_tournament_courts(tournament_id, 1)[0]
+
+    captured = []
+    done = threading.Event()
+    request_thread = threading.get_ident()
+
+    def fake_send_report(match_obj, state_snapshot, tournament):
+        captured.append({
+            "thread": threading.get_ident(),
+            "player1": match_obj.player1_name,
+            "set1_a": state_snapshot["A"]["set1"],
+            "report_email": (tournament or {}).get("report_email"),
+        })
+        done.set()
+        return True
+
+    monkeypatch.setattr(email_reports, "send_match_report", fake_send_report)
+    monkeypatch.setattr(email_reports, "maybe_send_tournament_summary", lambda tid: False)
+    # Prevent 5s clear-overlay Timer from waiting in production-mode branch during test
+    monkeypatch.setattr(umpire_api.threading, "Timer", lambda _delay, fn: threading.Thread(target=fn, daemon=True))
+
+    headers = {"Authorization": f"Bearer {issue_court_token(court_id)}"}
+    client = app.test_client()
+    created = client.post("/api/matches", headers=headers, json={
+        "court_id": court_id,
+        "player1_name": "Ada",
+        "player2_name": "Bea",
+        "client_match_uuid": "mail-bg-1",
+        "score": {"player1_sets": 0, "player2_sets": 0, "sets_history": []},
+    }).get_json()
+
+    app.config["TESTING"] = False
+    try:
+        resp = client.put(f"/api/matches/{created['id']}", headers=headers, json={
+            "status": "finished",
+            "score": {
+                "player1_sets": 2,
+                "player2_sets": 0,
+                "sets_history": [{"player1_games": 4, "player2_games": 1}, {"player1_games": 4, "player2_games": 2}],
+            },
+        })
+        assert resp.status_code == 200
+        assert done.wait(timeout=5.0), "background email thread did not run"
+    finally:
+        app.config["TESTING"] = True
+
+    assert len(captured) == 1
+    assert captured[0]["thread"] != request_thread
+    assert captured[0]["player1"] == "Ada"
+    assert captured[0]["set1_a"] == 4
+    assert captured[0]["report_email"] == "biuro@example.com"

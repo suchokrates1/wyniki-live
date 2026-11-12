@@ -65,6 +65,18 @@ export function hydrateMatchState(raw) {
   });
 }
 
+/** Detached MatchState snapshot for outgoing sync, without the 100-entry undo history. */
+export function snapshotMatchStateForSync(state) {
+  if (!state) return null;
+  return state.copy({
+    matchConfig: new MatchConfig({ ...state.matchConfig }),
+    setsHistory: state.setsHistory.map((set) => new SetScore({ ...set })),
+    player1Stats: new MatchStatistics({ ...state.player1Stats }),
+    player2Stats: new MatchStatistics({ ...state.player2Stats }),
+    actionsHistory: [],
+  });
+}
+
 function serializePlayer(player) {
   return {
     id: player.id,

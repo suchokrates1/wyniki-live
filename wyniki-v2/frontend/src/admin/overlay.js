@@ -3,7 +3,7 @@ import { calcMatchTime } from '../shared/matchTime.js';
 import { overlayCourtLabel, overlayScoreLabels } from '../shared/overlayLabel.js';
 import { courtLooksEmpty, previewMockCourt } from './overlayPreviewMock.js';
 import { renderTvScoreboard } from '../shared/tvScoreboard.js';
-import { statsPanelData } from '../shared/statsPanel.js';
+import { statsPanelData, statsPanelLabels } from '../shared/statsPanel.js';
 
 export const VEST_MEDIA_LOGO_URL = '/vest-media-logo.png';
 
@@ -1152,15 +1152,19 @@ export function createOverlayAdmin() {
       // ===== STATS PANEL RENDER IN PREVIEW =====
       renderStatsPanel(el) {
      const court = this.resolveOverlayCourtData(el.court_id);
+     const lang = court?.tournament_language || 'pl';
      const active = court.match_status?.active || false;
-     if (!active) return '<div class="sp-title">Statystyki</div><div style="text-align:center;opacity:0.4;font-size:11px;">Brak aktywnego meczu</div>';
+     if (!active) {
+       const lbl = statsPanelLabels(lang);
+       return '<div class="sp-title">' + lbl.title + '</div><div style="text-align:center;opacity:0.4;font-size:11px;">' + lbl.noActiveMatch + '</div>';
+     }
      // The preview shows surnames; statsPanelData escapes every name and number it returns.
      const surnames = {
        ...court,
        A: { full_name: court.A?.surname || court.A?.full_name },
        B: { full_name: court.B?.surname || court.B?.full_name },
      };
-     const data = statsPanelData(surnames, el.stats_mode || 'simple', (name) => this._abbreviateName(name));
+     const data = statsPanelData(surnames, el.stats_mode || 'simple', (name) => this._abbreviateName(name), lang);
      const header = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:10px;font-weight:700;margin-bottom:6px;opacity:0.7;"><div></div><div style="text-align:center;">' + data.nameA + '</div><div style="text-align:center;">' + data.nameB + '</div></div>';
      const body = data.rows.map(r => '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;font-size:11px;padding:2px 0;"><div style="opacity:0.7;">' + r.label + '</div><div style="text-align:center;font-weight:600;">' + r.a + '</div><div style="text-align:center;font-weight:600;">' + r.b + '</div></div>').join('');
      return '<div class="sp-title">' + data.title + '</div>' + header + body;

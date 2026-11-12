@@ -52,3 +52,16 @@ test('a missing value shows a dash and a missing name the side letter', () => {
   assert.equal(data.nameA, 'A');
   assert.equal(data.rows[0].a, '—');
 });
+
+test('stats panel follows tournament language across all seven locales', () => {
+  const de = statsPanelData(court({ tournament_language: 'de' }), 'simple');
+  assert.equal(de.title, 'Statistik');
+  assert.deepEqual(de.rows.map((r) => r.label), ['Asse', 'Doppelfehler', 'Winner', 'Unerzw. Fehler', '1. Aufschlag %']);
+
+  const en = statsPanelData(court(), 'advanced', undefined, 'en');
+  assert.equal(en.title, 'Advanced Statistics');
+  assert.equal(en.rows.at(-1).label, 'Points won');
+
+  const lt = statsPanelData(court({ tournament_language: 'lt' }), 'simple');
+  assert.equal(lt.rows[0].label, 'Esai');
+});

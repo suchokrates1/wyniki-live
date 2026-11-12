@@ -54,6 +54,7 @@ import {
 } from './offline/history.js';
 import { directorPollDelayMs } from './offline/directorPollDelay.js';
 import { syncMatchLive } from './offline/matchSync.js';
+import { createMatchSyncQueue } from './offline/matchSyncQueue.js';
 import { createOutboxDispatcher } from './offline/outbox.js';
 import { openUmpireStores } from './offline/store.js';
 import { applyTheme, readTheme, saveTheme, THEMES } from './offline/theme.js';
@@ -1630,8 +1631,13 @@ function createUmpireApp() {
       this.go('players');
     },
 
-    async syncMatch(reason, state, extra) {
-      if (this.tutorialMode) return { failed: false };
+    syncMatch(reason, state, extra) {
+      if (this.tutorialMode) return Promise.resolve({ failed: false });
+      this._syncQueue ||= createMatchSyncQueue((r, snap, ex) => this.runQueuedSync(r, snap, ex));
+      return this._syncQueue.enqueue(reason, state, extra);
+    },
+
+    async runQueuedSync(reason, state, extra) {
       if (reason === 'finalize') {
         // the tablet's own history must never stop the result reaching the server
         try {

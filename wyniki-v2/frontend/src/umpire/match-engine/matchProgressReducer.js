@@ -25,7 +25,7 @@ export const MatchProgressReducer = {
 
     if (!state.isGameWon()) {
       if (
-        state.noAdvantage
+        state.isNoAdvantage()
         && state.player1Points === 3
         && state.player2Points === 3
         && !state.isTiebreak

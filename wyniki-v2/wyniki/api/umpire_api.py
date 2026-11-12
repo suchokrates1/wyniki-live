@@ -1,10 +1,12 @@
 """API endpoints for receiving data from Umpire mobile app."""
+import copy
 from flask import Blueprint, current_app, jsonify, request
 from datetime import datetime, UTC
 import hmac
 import json
 import re
 import threading
+from types import SimpleNamespace
 from typing import Any
 
 from ..database import (
@@ -406,6 +408,17 @@ def _publish_match_finished(match: Match) -> None:
     if kort_id:
         court_state = ensure_court_state(kort_id)
 
+        detected_category = None
+        try:
+            if match.tournament_id:
+                p1 = first_row_where(Player, tournament_id=match.tournament_id, name=match.player1_name)
+                p2 = first_row_where(Player, tournament_id=match.tournament_id, name=match.player2_name)
+                if p1 and p2 and p1.category and p2.category and p1.category == p2.category:
+                    detected_category = p1.category
+        except Exception as e:
+            logger.warning("category_detection_failed", error=str(e))
+
+        recorded_duration_ms = getattr(match.statistics, 'match_duration_ms', None) if match.statistics else None
         sets_history = json.loads(match.sets_history) if match.sets_history else []
         with STATE_LOCK:
             court_state["match_status"]["active"] = False
@@ -448,21 +461,14 @@ def _publish_match_finished(match: Match) -> None:
             court_state["history_meta"]["winner_name"] = match.winner_name
             court_state["history_meta"]["injured_player_name"] = match.injured_player_name
             court_state["history_meta"]["result_note"] = match.result_note
-
-            try:
-                if match.tournament_id:
-                    p1 = first_row_where(Player, tournament_id=match.tournament_id, name=match.player1_name)
-                    p2 = first_row_where(Player, tournament_id=match.tournament_id, name=match.player2_name)
-                    if p1 and p2 and p1.category and p2.category:
-                        if p1.category == p2.category:
-                            court_state["history_meta"]["category"] = p1.category
-            except Exception as e:
-                logger.warning("category_detection_failed", error=str(e))
+            if detected_category:
+                court_state["history_meta"]["category"] = detected_category
+            if match.phase:
+                court_state["history_meta"]["phase"] = match.phase
 
             court_state["match_time"] = court_state.get("match_time", {})
-            if match.statistics and getattr(match.statistics, 'match_duration_ms', None):
-                duration_ms = match.statistics.match_duration_ms
-                court_state["match_time"]["seconds"] = duration_ms // 1000
+            if recorded_duration_ms:
+                court_state["match_time"]["seconds"] = recorded_duration_ms // 1000
             else:
                 started_ts = court_state["match_time"].get("started_ts")
                 if started_ts:
@@ -471,22 +477,10 @@ def _publish_match_finished(match: Match) -> None:
                     court_state["match_time"]["seconds"] = int(
                         (datetime.now(UTC) - started).total_seconds()
                     )
+            state_snapshot = copy.deepcopy(court_state)
 
-        if match.phase:
-            court_state["history_meta"]["phase"] = match.phase
         if match.finish_reason != FINISH_REASON_TEST:
-            add_match_to_history(kort_id, court_state)
-
-        if match.finish_reason != FINISH_REASON_TEST and match.tournament_id:
-            try:
-                from ..database import fetch_tournament
-                from ..services.email_reports import maybe_send_tournament_summary, send_match_report
-
-                tournament = fetch_tournament(match.tournament_id)
-                send_match_report(match, court_state, tournament)
-                maybe_send_tournament_summary(match.tournament_id)
-            except Exception as e:
-                logger.warning("email_report_failed", error=str(e))
+            add_match_to_history(kort_id, state_snapshot)
 
         if match.finish_reason != FINISH_REASON_TEST and match.phase == "Grupowa" and match.tournament_id:
             try:
@@ -502,6 +496,9 @@ def _publish_match_finished(match: Match) -> None:
             except Exception as e:
                 logger.warning("knockout_advance_failed", error=str(e))
 
+        if match.finish_reason != FINISH_REASON_TEST and match.tournament_id:
+            _dispatch_match_finished_emails(match, state_snapshot)
+
         emit_score_update(kort_id, court_state)
 
         with STATE_LOCK:
@@ -516,7 +513,6 @@ def _publish_match_finished(match: Match) -> None:
             court_state["history_meta"] = {}
             reset_live_set_columns(court_state)
 
-        import threading
         def emit_cleared():
             emit_score_update(kort_id, court_state)
         if current_app.config.get("TESTING"):
@@ -527,6 +523,41 @@ def _publish_match_finished(match: Match) -> None:
     logger.info("match_finished", match_id=match_id, kort=kort_id)
     if match.tournament_id:
         emit_office_invalidation(match.tournament_id, ["results", "schedule", "groups", "dashboard"])
+
+
+def _dispatch_match_finished_emails(match: Match, state_snapshot: dict) -> None:
+    """Send match report and optional tournament summary off the umpire's HTTP request."""
+    tournament_id = int(match.tournament_id)
+    match_snapshot = SimpleNamespace(
+        id=match.id,
+        court_id=match.court_id,
+        player1_name=match.player1_name,
+        player2_name=match.player2_name,
+        phase=match.phase,
+        sets_history=match.sets_history,
+        finish_reason=match.finish_reason,
+        winner_name=match.winner_name,
+        injured_player_name=match.injured_player_name,
+        result_note=match.result_note,
+    )
+    app = current_app._get_current_object()
+
+    def send_reports() -> None:
+        try:
+            with app.app_context():
+                from ..database import fetch_tournament
+                from ..services.email_reports import maybe_send_tournament_summary, send_match_report
+
+                tournament = fetch_tournament(tournament_id)
+                send_match_report(match_snapshot, state_snapshot, tournament)
+                maybe_send_tournament_summary(tournament_id)
+        except Exception as e:
+            logger.warning("email_report_failed", error=str(e))
+
+    if app.config.get("TESTING"):
+        send_reports()
+    else:
+        threading.Thread(target=send_reports, name="match-finished-email", daemon=True).start()
 
 
 def _sync_court_match_timer_from_match(court_state: dict, match: Match) -> None:
@@ -656,9 +687,6 @@ def _sync_live_score_to_court_state(court_state: dict, match: Match, score: dict
             int(stored["p2"]) if stored else int(match.player2_points or 0),
             is_tiebreak=in_tiebreak,
             is_super_tiebreak=live_stb,
-            player1_games=games_a,
-            player2_games=games_b,
-            infer_tiebreak=False,
         )
         if stored and stored.get("serve") in ("A", "B"):
             court_state["serve"] = stored["serve"]
@@ -1649,23 +1677,13 @@ def _paint_live_points(
     *,
     is_tiebreak: bool,
     is_super_tiebreak: bool,
-    player1_games: int = 0,
-    player2_games: int = 0,
-    infer_tiebreak: bool = True,
 ) -> None:
     """Write overlay point columns from tablet raw integers.
 
     Match-events already convert 2→30. PUT/rehydrate used to dump the raw
     count, so the overlay flashed 2:0 instead of 30:0 until the next event.
-    Set TB at 4-4 (or flagged) stays numeric in the tie column.
     """
-    in_set_tiebreak = is_tiebreak or (
-        infer_tiebreak
-        and not is_super_tiebreak
-        and player1_games == player2_games
-        and player1_games >= 4
-    )
-    if in_set_tiebreak or is_super_tiebreak:
+    if is_tiebreak or is_super_tiebreak:
         court_state["A"]["points"] = "0"
         court_state["B"]["points"] = "0"
         court_state["tie"]["A"] = int(raw_a)
@@ -1707,11 +1725,10 @@ def log_match_event():
     access_error = require_court_access(kort_id)
     if access_error:
         return access_error
+    if not kort_id:
+        return jsonify({"error": "court_id required"}), 400
 
     logger.info("match_event", event_type=event_type, kort=kort_id)
-
-    if not kort_id:
-        return jsonify({"success": True, "message": "No court_id, event logged only"}), 200
 
     score = data.get('score') or {}
     player1 = data.get('player1') or {}

@@ -27,12 +27,10 @@ services:
       - IMPORT_PLAYERS_AI_TIMEOUT_SECONDS=${IMPORT_PLAYERS_AI_TIMEOUT_SECONDS:-20}
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
-      - UNO_BASE=${UNO_BASE:-https://app.overlays.uno/apiv2/controlapps}
       # Public-site features on trial here before production (prod compose leaves it unset).
       - PUBLIC_FEATURES=court-next
       # Links and the logo in mails the server sends without a request (subscription notices).
       - MAIL_BASE_URL=https://test.blindtennis.app
-      # Intentionally unset: KORT*_ID / UNO_AUTH_BEARER — test must not write prod overlays.
     restart: unless-stopped
     labels:
       - "traefik.enable=true"

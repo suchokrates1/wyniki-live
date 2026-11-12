@@ -153,7 +153,7 @@ function renderStats(el, courtOverride) {
     // statsPanelData escapes every name and number it returns
     var data = statsPanelData(court, el.stats_mode || 'simple', function(name) {
         return name.indexOf(' / ') !== -1 ? abbreviateName(name) : name;
-    });
+    }, court?.tournament_language || overlayLanguage());
     return '<div class="stats-panel">'
         +'<div class="stats-title">'+data.title+'</div>'
         +'<div class="stats-header"><div></div><div class="player-col">'+data.nameA+'</div><div class="player-col">'+data.nameB+'</div></div>'
