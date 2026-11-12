@@ -60,8 +60,11 @@ export function createOverlayAdmin() {
      async loadOverlaySettings() {
        try {
          const response = await fetch('/api/overlay/settings');
-         const keyResponse = await fetch('/api/overlay/stats/key');
-         if (keyResponse.ok) this.statsDeckOn = (await keyResponse.json()).on || '';
+         // The StreamDeck address is a convenience: failing to read it must not stop the editor loading.
+         fetch('/api/overlay/stats/key')
+           .then((keyResponse) => (keyResponse.ok ? keyResponse.json() : null))
+           .then((body) => { this.statsDeckOn = body?.on || ''; })
+           .catch(() => {});
          if (response.ok) {
            this.overlaySettings = await response.json();
            // Migrate: ensure grid defaults exist on each overlay

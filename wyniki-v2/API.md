@@ -303,6 +303,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | PUT | `/api/overlay/settings` | Update overlay settings (merge semantics). |
 | POST | `/api/overlay/stats` | Toggle stats panels on overlays 1-4 for StreamDeck/webhook integrations. |
 | GET, POST | `/api/overlay/stats/<action>` | Toggle stats panels on overlays 1-4 for StreamDeck/webhook integrations. |
+| GET | `/api/overlay/stats/key` | The address StreamDeck calls. Only an administrator may read it. |
 
 ## panic_admin
 
@@ -379,7 +380,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/api/match-events` | Process match event and push real-time score update via SSE. |
 | POST | `/api/match-statistics` | Receive match statistics from app. |
 | POST | `/api/matches` | Create new match on server. |
-| GET | `/api/matches/<int:match_id>` | Get match details. |
+| GET | `/api/matches/<int:match_id>` | Match details for the court playing it, or for an administrator. |
 | PUT | `/api/matches/<int:match_id>` | Update match score and state. |
 | POST | `/api/matches/<int:match_id>/finish` | Mark match as finished. |
 | GET, POST | `/api/players` | Get list of available players for app, or add a new player (POST). |

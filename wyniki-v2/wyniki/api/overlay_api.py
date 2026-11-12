@@ -82,7 +82,8 @@ def _stats_get_allowed() -> bool:
     """StreamDeck sends the key. An administrator's session works without it."""
     presented = (request.args.get("key") or "").strip()
     expected = stats_toggle_key()
-    if presented and hmac.compare_digest(presented, expected):
+    # bytes: compare_digest refuses a str with a non-ASCII character, which would be a 500
+    if presented and hmac.compare_digest(presented.encode(), expected.encode()):
         return True
     return require_admin_access() is None
 

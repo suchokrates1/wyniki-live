@@ -103,3 +103,8 @@ def test_a_json_toggle_carries_the_flag_and_the_mode(client):
     assert response.get_json()["active"] is True
     assert ("stats", True, "simple") in client.state["calls"]
     assert client.post("/api/overlay/stats", json={"active": 0}).get_json()["active"] is False
+
+
+def test_a_stats_key_with_odd_characters_is_refused_not_a_server_error(client):
+    response = client.get("/api/overlay/stats/on?key=zażółć")
+    assert response.status_code == 401

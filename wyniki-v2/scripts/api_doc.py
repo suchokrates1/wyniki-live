@@ -64,6 +64,8 @@ def build_app():
     from wyniki.config import settings
 
     settings.database_path = os.environ["DATABASE_PATH"]
+    # Reading the routes needs no real key; production mode would refuse to start without one.
+    settings.flask_env = "development"
     from app import create_app
 
     return create_app()
