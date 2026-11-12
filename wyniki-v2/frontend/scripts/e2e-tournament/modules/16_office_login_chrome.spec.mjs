@@ -84,7 +84,7 @@ export default async function run() {
     await adminPage.addInitScript(() => { window.sessionStorage.setItem('wyniki-admin-token', 'expired-token'); });
     await adminPage.goto(`${BASE_URL}/admin`, { waitUntil: 'domcontentloaded' });
     await adminPage.waitForFunction(
-      () => document.body.innerText.includes('Podaj hasło administratora') && document.body.innerText.includes('Sesja administratora wygasła'),
+      () => document.body.innerText.includes('Panel administratora') && document.body.innerText.includes('Sesja administratora wygasła'),
       undefined,
       { timeout: 15000 },
     );

@@ -1891,6 +1891,7 @@ def save_bracket_groups(tournament_id: int, groups: list[dict]) -> bool:
             logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
         # A new draw means new fixtures: forget matches deleted from the previous one.
         clear_removed_fixtures(tournament_id)
+        migrate_tournament_categories_from_legacy(tournament_id)
         ensure_group_schedule_entries(tournament_id)
         maybe_generate_knockout_from_completed_groups(tournament_id)
         return True
@@ -2327,7 +2328,8 @@ def generate_knockout_from_standings(tournament_id: int) -> dict:
         return {"error": str(e)}
 
 
-# Imported last: schedule imports this module too.
+# Imported last: categories and schedule import this module too.
+from .categories import migrate_tournament_categories_from_legacy  # noqa: E402
 from .schedule import (  # noqa: E402
     clear_removed_fixtures,
     ensure_group_rematch_schedule_entries,

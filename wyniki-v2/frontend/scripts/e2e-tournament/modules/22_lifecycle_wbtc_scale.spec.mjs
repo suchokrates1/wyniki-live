@@ -111,17 +111,29 @@ function expectedStandings(names, results) {
     let gamesA = 0;
     let gamesB = 0;
     if (result.kind === 'walkover') {
-      [setsA, setsB] = result.winnerIsA ? [2, 0] : [0, 2];
-      [gamesA, gamesB] = result.winnerIsA ? [8, 0] : [0, 8];
-    } else {
+      // ATP Rulebook 2026 ch. IV: walkover counts as win/loss/played, 0 sets and 0 games.
+      [setsA, setsB] = [0, 0];
+      [gamesA, gamesB] = [0, 0];
+    } else if (result.kind === 'retirement') {
+      // ATP Rulebook 2026 ch. IV: straight-set win/loss, games of a retirement match do not count.
+      let rawSetsA = 0;
+      let rawSetsB = 0;
       result.sets.forEach(([p1, p2], index) => {
+        const interrupted = index === result.sets.length - 1 && !result.stb;
+        if (!interrupted) {
+          if (p1 > p2) rawSetsA += 1;
+          else rawSetsB += 1;
+        }
+      });
+      const straight = Math.max(2, rawSetsA, rawSetsB);
+      [setsA, setsB] = result.winnerIsA ? [straight, 0] : [0, straight];
+      [gamesA, gamesB] = [0, 0];
+    } else {
+      result.sets.forEach(([p1, p2]) => {
         gamesA += p1;
         gamesB += p2;
-        const interrupted = result.kind === 'retirement' && index === result.sets.length - 1 && !result.stb;
-        if (!interrupted) {
-          if (p1 > p2) setsA += 1;
-          else setsB += 1;
-        }
+        if (p1 > p2) setsA += 1;
+        else setsB += 1;
       });
       if (result.stb) {
         if (result.stb[0] > result.stb[1]) setsA += 1;
