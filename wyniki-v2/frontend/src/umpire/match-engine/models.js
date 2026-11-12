@@ -344,8 +344,8 @@ export class MatchState {
     umpireName = null,
     manualStartTime = null,
     currentServer = 1,
-    noAdvantage = false,
     matchConfig = new MatchConfig(),
+    noAdvantage = matchConfig.noAdvantage,
     player1Sets = 0,
     player2Sets = 0,
     player1Games = 0,
@@ -365,7 +365,7 @@ export class MatchState {
     matchDuration = 0,
     player1Stats = new MatchStatistics(),
     player2Stats = new MatchStatistics(),
-    statsMode = StatsMode.ADVANCED,
+    statsMode = matchConfig.statsMode,
     actionsHistory = [],
     finishReason = MatchFinishReason.NORMAL,
     finishWinnerName = null,
@@ -527,12 +527,16 @@ export class MatchState {
     return 'Singles';
   }
 
+  isNoAdvantage() {
+    return Boolean(this.noAdvantage || this.matchConfig?.noAdvantage);
+  }
+
   getPlayer1PointsDisplay() {
-    return getPointsDisplay(this.player1Points, this.player2Points, this.isTiebreak || this.isSuperTiebreak, this.noAdvantage);
+    return getPointsDisplay(this.player1Points, this.player2Points, this.isTiebreak || this.isSuperTiebreak, this.isNoAdvantage());
   }
 
   getPlayer2PointsDisplay() {
-    return getPointsDisplay(this.player2Points, this.player1Points, this.isTiebreak || this.isSuperTiebreak, this.noAdvantage);
+    return getPointsDisplay(this.player2Points, this.player1Points, this.isTiebreak || this.isSuperTiebreak, this.isNoAdvantage());
   }
 
   isGameWon() {
@@ -546,7 +550,7 @@ export class MatchState {
       return (this.player1Points >= stbPts || this.player2Points >= stbPts)
         && Math.abs(this.player1Points - this.player2Points) >= 2;
     }
-    if (this.noAdvantage) {
+    if (this.isNoAdvantage()) {
       return this.player1Points >= 4 || this.player2Points >= 4;
     }
     return (this.player1Points >= 4 || this.player2Points >= 4)

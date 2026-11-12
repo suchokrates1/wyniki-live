@@ -14,7 +14,7 @@ export const BASE_URL = (process.env.UMPIRE_LIVE_BASE_URL || '').replace(/\/$/, 
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || '';
 export const PIN = '4242';
 
-let adminToken = null;
+let adminToken = process.env.E2E_ADMIN_TOKEN || null;
 
 export async function api(path, { method = 'GET', body, token, allowFailure = false } = {}) {
   const headers = { 'Content-Type': 'application/json' };

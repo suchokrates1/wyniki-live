@@ -8,6 +8,7 @@ from typing import Any
 from collections.abc import Generator
 from werkzeug.security import generate_password_hash
 
+from .errors import StorageError
 from ..config import settings, logger
 
 def _default_simulation_office_password_hash(is_simulation: bool, office_password_hash: str) -> str:
@@ -793,8 +794,12 @@ def init_db() -> None:
     
     logger.info("database_initialized", db_path=settings.database_path)
 
-def fetch_app_settings(keys: list[str]) -> dict[str, Any]:
-    """Fetch app settings from database."""
+def fetch_app_settings(keys: list[str], *, strict: bool = False) -> dict[str, Any]:
+    """Fetch app settings from database.
+
+    A page that only shows a setting gets {} when the database cannot be read. A caller
+    that goes on to write passes strict=True: to it, {} would mean "nothing is stored",
+    and it would save defaults over what is there. It gets StorageError instead."""
     try:
         with db_conn() as conn:
             cursor = conn.cursor()
@@ -817,6 +822,8 @@ def fetch_app_settings(keys: list[str]) -> dict[str, Any]:
         return settings_dict
     except Exception as e:
         logger.error("fetch_app_settings_error", error=str(e))
+        if strict:
+            raise StorageError("fetch_app_settings") from e
         return {}
 
 def upsert_app_settings(settings_dict: dict[str, str]) -> None:
@@ -837,6 +844,7 @@ def upsert_app_settings(settings_dict: dict[str, str]) -> None:
         logger.info("app_settings_upserted", count=len(settings_dict))
     except Exception as e:
         logger.error("upsert_app_settings_error", error=str(e))
+        raise StorageError("upsert_app_settings") from e
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat()

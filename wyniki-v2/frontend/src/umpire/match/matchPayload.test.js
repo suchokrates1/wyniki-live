@@ -84,3 +84,12 @@ test('doubles API names use A / B team strings', () => {
   assert.equal(payload.player2_name, 'Nowak / Wojcik');
   assert.match(payload.player1_name, / \/ /);
 });
+
+test('statistics name the winner the umpire picked when a walkover leaves no sets', () => {
+  const state = matchState({ matchId: 7 });
+  state.matchId = 7;
+  state.isMatchFinished = true;
+  state.finishReason = MatchFinishReason.WALKOVER;
+  state.finishWinnerName = state.getTeam2FullName();
+  assert.equal(toStatisticsPayload(state).winner, state.player2.getFullName());
+});

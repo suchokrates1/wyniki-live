@@ -13,8 +13,14 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ffmpeg && \
+    apt-get install -y --no-install-recommends curl ffmpeg tzdata && \
     rm -rf /var/lib/apt/lists/*
+
+# "Today" is read in three ways in the code: date.today(), SQLite's date('now','localtime')
+# and an explicit Europe/Warsaw clock. In UTC the first two ran one to two hours behind the
+# third, so around midnight they disagreed about which tournament day it is. Timestamps
+# that are stored stay UTC; they are written with an explicit zone.
+ENV TZ=Europe/Warsaw
 
 # Copy requirements and install
 COPY requirements.txt .

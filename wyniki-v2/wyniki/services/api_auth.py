@@ -72,6 +72,24 @@ def _office_token_from_request(slot: int) -> str:
     ).strip()
 
 
+def _admin_token_is_signed(token: str) -> bool:
+    try:
+        payload = _serializer("admin-access").loads(
+            token, max_age=settings.admin_session_ttl_hours * 60 * 60
+        )
+    except (SignatureExpired, BadSignature):
+        return False
+    return payload.get("role") == "admin"
+
+
+def require_match_read(court_id: str | None):
+    """The court playing this match, or an administrator opening it in the director."""
+    token = _bearer_token()
+    if token and _admin_token_is_signed(token):
+        return require_admin_access()
+    return require_court_access(court_id)
+
+
 def court_id_from_bearer() -> str | None:
     """Return the court bound to the request Bearer token, if any."""
     token = _bearer_token()

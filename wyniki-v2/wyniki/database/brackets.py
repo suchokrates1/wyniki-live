@@ -16,6 +16,7 @@ from ..services.draw_builder import (
     build_group_draws,
     build_table_final,
 )
+from ..services.match_result import winner_by_sets
 from ..services.teams import (
     DEFAULT_PLAY_FORMAT,
     PLAY_FORMAT_GROUPS_KNOCKOUT,
@@ -295,6 +296,121 @@ def count_group_knockout_progress(tournament_id: int, group_name: str) -> tuple[
                 finished += 1
         return expected, finished
 
+
+def compute_groups_progress(tournament_id: int, groups: list[dict[str, Any]]) -> dict[int, tuple[int, int]]:
+    """Compute (expected, finished) match counts for all groups on a single SQLite connection."""
+    if not groups:
+        return {}
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT phase, winner_name FROM bracket_knockout WHERE tournament_id = ?",
+            (tournament_id,),
+        )
+        ko_rows = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT bracket_group_id, COUNT(*) AS count
+            FROM tournament_schedule
+            WHERE tournament_id = ?
+              AND bracket_group_id IS NOT NULL
+              AND phase IN (?, ?)
+            GROUP BY bracket_group_id
+            """,
+            (tournament_id, GROUP_PHASE, GROUP_REMATCH_PHASE),
+        )
+        scheduled_by_group = {int(r["bracket_group_id"]): int(r["count"] or 0) for r in cursor.fetchall()}
+
+        group_ids = [int(g["id"]) for g in groups]
+        placeholders = ",".join("?" for _ in group_ids)
+        cursor.execute(
+            f"SELECT group_id, player_name FROM bracket_group_players WHERE group_id IN ({placeholders})",
+            group_ids,
+        )
+        keys_by_group: dict[int, set[str]] = {gid: set() for gid in group_ids}
+        for row in cursor.fetchall():
+            key = competitor_identity_key(row["player_name"])
+            if key:
+                keys_by_group[int(row["group_id"])].add(key)
+
+        cursor.execute(
+            """
+            SELECT id, player1_name, player2_name, bracket_group_id
+            FROM matches
+            WHERE tournament_id = ?
+              AND status = 'finished'
+              AND COALESCE(finish_reason, 'normal') != 'test'
+              AND phase IN (?, ?)
+            """,
+            (tournament_id, GROUP_PHASE, GROUP_REMATCH_PHASE),
+        )
+        finished_matches = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT match_id, player_a, player_b, phase
+            FROM match_history
+            WHERE tournament_id = ?
+              AND COALESCE(finish_reason, 'normal') != 'test'
+            """,
+            (tournament_id,),
+        )
+        unlinked_history = [
+            row for row in cursor.fetchall()
+            if row["match_id"] in (None, "", 0) and is_group_stage_phase(row["phase"])
+        ]
+
+    out: dict[int, tuple[int, int]] = {}
+    for group in groups:
+        gid = int(group["id"])
+        play_format = normalize_play_format(group.get("play_format"))
+        if play_format == PLAY_FORMAT_KNOCKOUT:
+            label = str(group.get("name") or "").strip()
+            if not label:
+                out[gid] = (0, 0)
+                continue
+            prefix = f"{label} — "
+            exp = fin = 0
+            for row in ko_rows:
+                phase = str(row["phase"] or "")
+                if phase == label or phase.startswith(prefix):
+                    exp += 1
+                    if row["winner_name"]:
+                        fin += 1
+            out[gid] = (exp, fin)
+            continue
+
+        player_count = len(group.get("players") or [])
+        if player_count < 2:
+            expected = 0
+        else:
+            scheduled = scheduled_by_group.get(gid, 0)
+            expected_rr = player_count * (player_count - 1) // 2
+            if scheduled > expected_rr > 0:
+                expected = expected_rr
+            elif scheduled > 0:
+                expected = scheduled
+            else:
+                expected = expected_rr
+
+        gkeys = keys_by_group.get(gid, set())
+        counted_ids: set[int] = set()
+        for row in finished_matches:
+            bgid = row["bracket_group_id"]
+            linked = bgid not in (None, "", 0) and int(bgid) == gid
+            inferred = bgid in (None, "", 0) and _both_competitors_in_group(
+                row["player1_name"], row["player2_name"], gkeys
+            )
+            if linked or inferred:
+                counted_ids.add(int(row["id"]))
+        extra = sum(
+            1 for row in unlinked_history
+            if _both_competitors_in_group(row["player_a"], row["player_b"], gkeys)
+        )
+        out[gid] = (expected, len(counted_ids) + extra)
+    return out
+
 def _phase_kind(phase: str | None) -> str | None:
     """Map localized phase labels to a stable semantic kind."""
     _, suffix = _split_bracket_label(phase)
@@ -422,7 +538,8 @@ def load_knockout_formats(tournament_id: int | None) -> dict[str, dict[str, Any]
     if not tournament_id:
         return {}
     key = knockout_formats_settings_key(tournament_id)
-    raw = fetch_app_settings([key]).get(key)
+    # strict: the draw is generated from these, and "never set" would build the default format
+    raw = fetch_app_settings([key], strict=True).get(key)
     try:
         data = json.loads(raw) if raw else {}
     except (TypeError, ValueError):
@@ -1298,9 +1415,10 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
 
             p1 = match["player1_name"]
             p2 = match["player2_name"]
-            winner = match["winner_name"] or (
-                p1 if (match["player1_sets"] or 0) > (match["player2_sets"] or 0) else p2
-            )
+            winner = match["winner_name"] or winner_by_sets(p1, p2, match["player1_sets"], match["player2_sets"])
+            if not winner:
+                logger.warning("knockout_match_without_winner", match_id=match_id, tournament_id=tournament_id)
+                return False
 
             sets_history = json.loads(match["sets_history"]) if match["sets_history"] else []
             score_parts = []
@@ -1310,18 +1428,23 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
                     continue
                 score_parts.append(f"{g1}:{g2}")
             score_summary = " ".join(score_parts)
-            # Find the knockout slot matching these two players
-            cursor.execute("""
-                SELECT id, phase, position, winner_to, loser_to FROM bracket_knockout
-                WHERE tournament_id = ?
-                  AND ((player1_name = ? AND player2_name = ?)
-                    OR (player1_name = ? AND player2_name = ?))
-                  AND winner_name IS NULL
-                ORDER BY CASE WHEN phase = ? THEN 0 ELSE 1 END, id
-            """, (tournament_id, p1, p2, p2, p1, match["phase"] or ""))
-            slot = cursor.fetchone()
+            slot = _open_knockout_slot_for(cursor, tournament_id, p1, p2, match["phase"] or "")
             if not slot:
+                if is_knockout_stage_phase(match["phase"]):
+                    # a knockout result with no slot to carry it: the bracket will not move
+                    logger.warning(
+                        "knockout_slot_not_found",
+                        match_id=match_id, tournament_id=tournament_id, phase=match["phase"],
+                    )
                 return False
+
+            # From here on the bracket's own spelling of each side is used, so the next
+            # round shows the pair exactly as the draw has it ("Nowak / Kowal", whichever
+            # order the tablet sent).
+            if same_competitor_label(winner, slot["player1_name"]):
+                winner, p1, p2 = slot["player1_name"], slot["player1_name"], slot["player2_name"]
+            elif same_competitor_label(winner, slot["player2_name"]):
+                winner, p1, p2 = slot["player2_name"], slot["player1_name"], slot["player2_name"]
 
             # Update the slot with winner and score
             cursor.execute("""
@@ -1348,6 +1471,31 @@ def advance_knockout(match_id: int, tournament_id: int) -> bool:
     except Exception as e:
         logger.error("advance_knockout_error", error=str(e), match_id=match_id)
         return False
+
+def _open_knockout_slot_for(cursor, tournament_id: int, p1: str, p2: str, phase: str):
+    """The undecided knockout slot these two sides play in, or None.
+
+    Sides are compared the way the rest of the code compares them: a pair is the same
+    pair whichever partner is named first, and the slot may list the sides either way
+    round. A slot in the match's own phase is preferred."""
+    cursor.execute(
+        """
+        SELECT id, phase, position, winner_to, loser_to, player1_name, player2_name
+        FROM bracket_knockout
+        WHERE tournament_id = ? AND winner_name IS NULL
+          AND player1_name IS NOT NULL AND player2_name IS NOT NULL
+        ORDER BY CASE WHEN phase = ? THEN 0 ELSE 1 END, id
+        """,
+        (tournament_id, phase),
+    )
+    for row in cursor.fetchall():
+        a, b = row["player1_name"], row["player2_name"]
+        if (same_competitor_label(a, p1) and same_competitor_label(b, p2)) or (
+            same_competitor_label(a, p2) and same_competitor_label(b, p1)
+        ):
+            return row
+    return None
+
 
 def _advance_by_feeds(cursor, tournament_id: int, feed: str | None, player_name: str) -> None:
     """Write a player into the slot side named by a winner_to / loser_to feed."""
@@ -1495,9 +1643,10 @@ def correct_knockout_result(match_id: int, tournament_id: int, previous_winner: 
             if not match:
                 return False
             p1, p2 = match["player1_name"], match["player2_name"]
-            winner = match["winner_name"] or (
-                p1 if (match["player1_sets"] or 0) > (match["player2_sets"] or 0) else p2
-            )
+            winner = match["winner_name"] or winner_by_sets(p1, p2, match["player1_sets"], match["player2_sets"])
+            if not winner:
+                logger.warning("knockout_match_without_winner", match_id=match_id, tournament_id=tournament_id)
+                return False
             loser = p2 if winner == p1 else p1
             sets_history = json.loads(match["sets_history"]) if match["sets_history"] else []
             score_summary = " ".join(
@@ -1742,6 +1891,7 @@ def save_bracket_groups(tournament_id: int, groups: list[dict]) -> bool:
             logger.info("bracket_groups_saved", tournament_id=tournament_id, count=len(groups))
         # A new draw means new fixtures: forget matches deleted from the previous one.
         clear_removed_fixtures(tournament_id)
+        migrate_tournament_categories_from_legacy(tournament_id)
         ensure_group_schedule_entries(tournament_id)
         maybe_generate_knockout_from_completed_groups(tournament_id)
         return True
@@ -1940,7 +2090,8 @@ def save_bracket_knockout(tournament_id: int, slots: list[dict]) -> bool:
                 )
             conn.commit()
             logger.info("bracket_knockout_saved", tournament_id=tournament_id, count=len(slots))
-            return True
+        ensure_knockout_schedule_entries(tournament_id)
+        return True
     except Exception as e:
         logger.error("save_bracket_knockout_error", error=str(e))
         return False
@@ -2040,7 +2191,9 @@ def _detect_knockout_result(
     score_parts = [_format_set_score(s, flipped) for s in sh]
     sets_detail = [_build_set_detail(s, flipped) for s in sh]
 
-    match_winner = row["winner_name"] or (row["player1_name"] if row["player1_sets"] > row["player2_sets"] else row["player2_name"])
+    match_winner = row["winner_name"] or winner_by_sets(
+        row["player1_name"], row["player2_name"], row["player1_sets"], row["player2_sets"]
+    )
     if same_competitor_label(match_winner, p1):
         mapped_winner = p1
     elif same_competitor_label(match_winner, p2):
@@ -2052,9 +2205,9 @@ def _detect_knockout_result(
         elif winner_surname and winner_surname == _surname_match_token(p2).lower():
             mapped_winner = p2
         else:
-            mapped_winner = match_winner
+            mapped_winner = match_winner or ""
     else:
-        mapped_winner = match_winner
+        mapped_winner = match_winner or ""
     if mapped_winner in (p1, p2):
         winner = mapped_winner
     else:
@@ -2175,7 +2328,8 @@ def generate_knockout_from_standings(tournament_id: int) -> dict:
         return {"error": str(e)}
 
 
-# Imported last: schedule imports this module too.
+# Imported last: categories and schedule import this module too.
+from .categories import migrate_tournament_categories_from_legacy  # noqa: E402
 from .schedule import (  # noqa: E402
     clear_removed_fixtures,
     ensure_group_rematch_schedule_entries,

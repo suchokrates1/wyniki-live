@@ -28,7 +28,7 @@
               :class="overlayPreviewStatus() === 'live' ? 'text-[#4ade80]' : overlayPreviewStatus() === 'mock' ? 'text-[#c6e953]' : 'opacity-50'"
               x-text="overlayPreviewStatus() === 'live' ? '● na żywo' : overlayPreviewStatus() === 'mock' ? '● mock TV' : '○ brak meczu'"></span>
       </div>
-
+      <p class="text-xs font-mono opacity-70 mb-2 break-all" x-show="statsDeckOn" x-text="'StreamDeck  ' + statsDeckOn"></p>
       <div x-show="currentOverlayId">
         <div class="ov-dock mb-5">
           <div class="canvas-outer" x-ref="canvasOuter"

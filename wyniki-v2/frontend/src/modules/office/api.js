@@ -14,6 +14,12 @@ export function officeAuthHeaders(token) {
  * out here as well would end the session before that check could save it. Any other
  * answer comes back as status and body.
  */
+function notifyOfficeSessionExpired() {
+  if (typeof globalThis.window?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+    globalThis.window.dispatchEvent(new CustomEvent('office-session-expired'));
+  }
+}
+
 export async function officeResponse(view, path, { method = 'GET', body } = {}) {
   const response = await fetch(`/api/office/${view.slot}${path}`, {
     method,
@@ -21,8 +27,28 @@ export async function officeResponse(view, path, { method = 'GET', body } = {}) 
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const payload = await response.json().catch(() => ({}));
-  if (response.status === 401) return null;
+  if (response.status === 401) {
+    notifyOfficeSessionExpired();
+    return null;
+  }
+  if (response.status === 403 && /session|sesj/i.test(String(payload?.error || ''))) {
+    notifyOfficeSessionExpired();
+  }
   return { ok: response.ok, status: response.status, payload };
+}
+
+/**
+ * What the office shows for a refused call.
+ *
+ * The server names the refusals a person at the desk can act on with a `code`; the office
+ * has its own text for each, in the page's language. Without a code (or with one this
+ * build does not know yet) the server's sentence is shown as before, and with no sentence
+ * at all the office text under `failure`.
+ */
+export function officeErrorText(view, payload, failure) {
+  const code = String(payload?.code || '').trim();
+  const known = /^[a-z0-9_]+$/.test(code) ? view.ot(`errors.api.${code}`) : '';
+  return known || payload?.error || (failure ? view.ot(failure) : '');
 }
 
 /**
@@ -32,6 +58,6 @@ export async function officeResponse(view, path, { method = 'GET', body } = {}) 
 export async function officeJson(view, path, { failure, ...request } = {}) {
   const result = await officeResponse(view, path, request);
   if (!result) return null;
-  if (!result.ok) throw new Error(result.payload.error || view.ot(failure));
+  if (!result.ok) throw new Error(officeErrorText(view, result.payload, failure));
   return result.payload;
 }

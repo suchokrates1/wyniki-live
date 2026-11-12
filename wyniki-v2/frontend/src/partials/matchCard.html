@@ -13,7 +13,7 @@
         <a class="btv-name" :href="row.href" :title="row.name" x-text="row.short"></a>
       </template>
       <template x-if="!row.bye && !row.href">
-        <span class="btv-name" aria-hidden="true" :title="row.name" x-text="row.short || '—'"></span>
+        <span class="btv-name" aria-hidden="true" :title="row.decided ? row.name : resolveBracketName(row.name)" x-text="(row.decided ? row.short : resolveBracketName(row.name)) || '—'"></span>
       </template>
       <button type="button" class="btv-pin" :class="{ 'is-hidden': !row.decided }" :tabindex="row.decided ? 0 : -1"
               :aria-pressed="row.pinned ? 'true' : 'false'" :aria-label="bracketPinLabel(row)" :title="bracketPinLabel(row)"

@@ -2,6 +2,11 @@ import { FinishMatchRequest } from '../match-engine/models.js';
 import { toFinishPayload, toMatchEventPayload, toMatchPayload, toStatisticsPayload } from '../match/matchPayload.js';
 import { MutationType, classifyHttp } from './syncRules.js';
 
+// Finishing a match is three requests in a fixed order: the final score, the finish,
+// the statistics. Whichever of them cannot be delivered now, that one and every later
+// one go to the queue, so the result never depends on the first attempt.
+const FinalizeStep = Object.freeze({ SCORE: 'score', FINISH: 'finish', STATS: 'stats' });
+
 export async function syncMatchLive({
   api,
   outbox,
@@ -11,194 +16,138 @@ export async function syncMatchLive({
   online = () => globalThis.navigator?.onLine !== false,
 }) {
   const payload = toMatchPayload(state);
+  const eventPayload = reason === 'event' ? toMatchEventPayload(state, extra?.eventType || 'point') : null;
+
   if (!online()) {
     if (reason === 'event') {
-      await outbox.enqueue({
-        clientMatchUuid: state.clientMatchUuid,
-        type: MutationType.EVENT,
-        payload: toMatchEventPayload(state, extra?.eventType || 'point'),
-        serverMatchId: state.matchId,
-      });
-      return { failed: true, offline: true };
-    }
-    if (reason === 'finalize') {
-      await outbox.enqueue({
-        clientMatchUuid: state.clientMatchUuid,
-        type: state.matchId == null ? MutationType.CREATE : MutationType.UPDATE,
-        payload,
-        serverMatchId: state.matchId,
-      });
-      await enqueueForRetry({
-        outbox,
-        reason,
-        state,
-        extra,
-        type: MutationType.FINISH,
-      });
-      const stats = toStatisticsPayload(state);
-      if (stats) {
-        await outbox.enqueue({
-          clientMatchUuid: state.clientMatchUuid,
-          type: MutationType.STATS,
-          payload: stats,
-          serverMatchId: state.matchId,
-        });
-      }
+      await enqueue(outbox, state, MutationType.EVENT, eventPayload);
+    } else if (reason === 'finalize') {
+      await enqueueFinalize({ outbox, state, extra, from: FinalizeStep.SCORE });
+    } else if (reason === 'create') {
+      await enqueue(outbox, state, MutationType.CREATE, payload);
     } else {
-      await enqueueForRetry({
-        outbox,
-        reason,
-        state,
-        extra,
-        type: state.matchId == null ? MutationType.CREATE : MutationType.UPDATE,
-      });
+      // An `update` after a failed create must not open a second CREATE row.
+      await enqueue(outbox, state, MutationType.UPDATE, payload);
     }
     return { failed: true, offline: true };
   }
+
+  // what a network error in the middle of the sequence still has to deliver
+  let finalizeFrom = FinalizeStep.SCORE;
   try {
     if (reason === 'event') {
-      const payload = extra?.eventType
-        ? toMatchEventPayload(state, extra.eventType)
-        : toMatchEventPayload(state, 'point');
-      const result = await api.logMatchEvent(payload);
-      if (!result.ok) {
+      const result = await api.logMatchEvent(eventPayload);
+      if (result.ok) return { matchId: state.matchId };
+      return handleFailure({ outbox, state, result, online, type: MutationType.EVENT, payload: eventPayload });
+    }
+
+    let matchId = state.matchId;
+    let bracketWarning = null;
+    // Only an explicit `create` (or finalize of a match the server does not know yet) may
+    // open a row. A timed-out create leaves later `update`s with a null matchId — those
+    // must wait in the outbox, not open a second live match.
+    const mayCreate = reason === 'create' || (reason === 'finalize' && matchId == null);
+    if (mayCreate) {
+      const created = await api.createMatch(payload);
+      if (!created.ok) {
         return handleFailure({
-          api,
-          outbox,
-          reason,
-          state,
-          extra: payload,
-          result,
-          online,
-          type: MutationType.EVENT,
-          payload,
+          outbox, state, extra, result: created, online, type: MutationType.CREATE, payload,
+          finalizeFrom: reason === 'finalize' ? FinalizeStep.SCORE : null,
         });
       }
-      return { matchId: state.matchId };
-    }
-
-    if (reason === 'create' || state.matchId == null) {
-      const result = await api.createMatch(payload);
-      if (result.ok) {
-        return {
-          matchId: result.data?.id,
-          bracketWarning: result.data?.bracket_warning || result.data?.bracketWarning || null,
-        };
+      matchId = created.data?.id;
+      bracketWarning = created.data?.bracket_warning || created.data?.bracketWarning || null;
+      if (reason !== 'finalize' || matchId == null) return { matchId, bracketWarning };
+    } else if (matchId == null) {
+      await enqueue(outbox, state, MutationType.UPDATE, payload);
+      return { failed: true, waitingForCreate: true };
+    } else {
+      const update = await api.updateMatch(matchId, payload);
+      if (!update.ok) {
+        return handleFailure({
+          outbox, state, extra, result: update, online, type: MutationType.UPDATE, payload,
+          finalizeFrom: reason === 'finalize' ? FinalizeStep.SCORE : null,
+        });
       }
-      return handleFailure({ api, outbox, reason, state, extra, result, online, type: MutationType.CREATE, payload });
-    }
-
-    const update = await api.updateMatch(state.matchId, payload);
-    if (!update.ok) {
-      return handleFailure({
-        api,
-        outbox,
-        reason,
-        state,
-        extra,
-        result: update,
-        online,
-        type: MutationType.UPDATE,
-        payload,
-      });
     }
 
     if (reason === 'finalize') {
-      const request = extra || new FinishMatchRequest({
-        finishReason: state.finishReason,
-        winnerName: state.finishWinnerName,
-        injuredPlayerName: state.injuredPlayerName,
-        resultNote: state.resultNote,
-      });
-      const finishPayload = toFinishPayload(request);
-      const finish = await api.finishMatch(state.matchId, finishPayload);
+      finalizeFrom = FinalizeStep.FINISH;
+      const finishPayload = finishPayloadFor(state, extra);
+      const finish = await api.finishMatch(matchId, finishPayload);
       if (!finish.ok) {
         return handleFailure({
-          api,
-          outbox,
-          reason: 'finalize',
-          state,
-          extra: finishPayload,
-          result: finish,
-          online,
-          type: MutationType.FINISH,
-          payload: finishPayload,
+          outbox, state, extra, result: finish, online, type: MutationType.FINISH, payload: finishPayload,
+          finalizeFrom: FinalizeStep.FINISH, matchId,
         });
       }
-      const stats = toStatisticsPayload({ ...state, matchId: state.matchId });
+      finalizeFrom = FinalizeStep.STATS;
+      const stats = toStatisticsPayload({ ...state, matchId });
       if (stats) {
         const sent = await api.sendStatistics(stats);
-        if (!sent.ok) {
-          await outbox.enqueue({
-            clientMatchUuid: state.clientMatchUuid,
-            type: MutationType.STATS,
-            payload: stats,
-            serverMatchId: state.matchId,
-          });
-        }
+        if (!sent.ok) await enqueue(outbox, state, MutationType.STATS, stats, matchId);
       }
     }
-    return { matchId: state.matchId };
+    return { matchId, bracketWarning };
   } catch {
-    await enqueueForRetry({
-      outbox,
-      reason,
-      state,
-      extra,
-      type: reason === 'event'
-        ? MutationType.EVENT
-        : reason === 'finalize'
-          ? MutationType.FINISH
-          : (state.matchId == null ? MutationType.CREATE : MutationType.UPDATE),
-    });
+    // The request never got an answer (the browser may still call itself online).
+    if (reason === 'event') {
+      await enqueue(outbox, state, MutationType.EVENT, eventPayload);
+    } else if (reason === 'finalize') {
+      await enqueueFinalize({ outbox, state, extra, from: finalizeFrom });
+    } else if (reason === 'create') {
+      await enqueue(outbox, state, MutationType.CREATE, payload);
+    } else {
+      // Timed-out create leaves matchId null; later updates must not open a second CREATE.
+      await enqueue(outbox, state, MutationType.UPDATE, payload);
+    }
     return { failed: true, offline: !online() };
   }
 }
 
-async function handleFailure({ outbox, reason, state, extra, result, online, type, payload }) {
+function scoreMutationType(state) {
+  return state.matchId == null ? MutationType.CREATE : MutationType.UPDATE;
+}
+
+function finishPayloadFor(state, request) {
+  return toFinishPayload(request || new FinishMatchRequest({
+    finishReason: state.finishReason,
+    winnerName: state.finishWinnerName,
+    injuredPlayerName: state.injuredPlayerName,
+    resultNote: state.resultNote,
+  }));
+}
+
+function enqueue(outbox, state, type, payload, serverMatchId = state.matchId) {
+  return outbox.enqueue({ clientMatchUuid: state.clientMatchUuid, type, payload, serverMatchId });
+}
+
+async function enqueueFinalize({ outbox, state, extra, from, matchId = state.matchId }) {
+  if (from === FinalizeStep.SCORE) {
+    await enqueue(outbox, state, scoreMutationType(state), toMatchPayload(state));
+  }
+  if (from === FinalizeStep.SCORE || from === FinalizeStep.FINISH) {
+    await enqueue(outbox, state, MutationType.FINISH, finishPayloadFor(state, extra), matchId);
+  }
+  const stats = toStatisticsPayload(matchId == null ? state : { ...state, matchId });
+  if (stats) await enqueue(outbox, state, MutationType.STATS, stats, matchId);
+}
+
+async function handleFailure({ outbox, state, extra, result, online, type, payload, finalizeFrom = null, matchId }) {
   const kind = classifyHttp(result.status);
   if (kind === 'DROP') {
     await outbox.dropPendingForMatch(state.clientMatchUuid);
     return { failed: true, status: result.status };
   }
-  if (kind === 'RETRY' || !online()) {
-    await outbox.enqueue({
-      clientMatchUuid: state.clientMatchUuid,
-      type,
-      payload: extra && type === MutationType.FINISH ? extra : payload,
-      serverMatchId: state.matchId,
-    });
-    if (reason === 'finalize' && type === MutationType.FINISH) {
-      const stats = toStatisticsPayload(state);
-      if (stats) {
-        await outbox.enqueue({
-          clientMatchUuid: state.clientMatchUuid,
-          type: MutationType.STATS,
-          payload: stats,
-          serverMatchId: state.matchId,
-        });
-      }
+  // RETRY: the server may accept it later. AUTH: the court session ran out; the queue
+  // sends it again once the umpire has entered the PIN. Anything else (a 400) would be
+  // refused the same way every time, so it is reported and not queued.
+  if (kind === 'RETRY' || kind === 'AUTH' || !online()) {
+    if (finalizeFrom) {
+      await enqueueFinalize({ outbox, state, extra, from: finalizeFrom, matchId });
+    } else {
+      await enqueue(outbox, state, type, payload);
     }
-    return { failed: true, offline: !online(), status: result.status };
   }
   return { failed: true, offline: !online(), status: result.status };
-}
-
-async function enqueueForRetry({ outbox, reason, state, extra, type }) {
-  const payload = type === MutationType.FINISH
-    ? (extra || toFinishPayload(new FinishMatchRequest({
-      finishReason: state.finishReason,
-      winnerName: state.finishWinnerName,
-      injuredPlayerName: state.injuredPlayerName,
-      resultNote: state.resultNote,
-    })))
-    : type === MutationType.EVENT
-      ? (extra?.eventType ? toMatchEventPayload(state, extra.eventType) : toMatchEventPayload(state, extra?.event_type || 'point'))
-      : toMatchPayload(state);
-  await outbox.enqueue({
-    clientMatchUuid: state.clientMatchUuid,
-    type,
-    payload,
-    serverMatchId: state.matchId,
-  });
 }

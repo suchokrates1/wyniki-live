@@ -81,10 +81,15 @@ export default async function run() {
 
     // Same for the admin panel.
     const adminPage = await browser.newPage();
-    await adminPage.addInitScript(() => { window.sessionStorage.setItem('wyniki-admin-token', 'expired-token'); });
+    await adminPage.addInitScript(() => {
+      if (!window.sessionStorage.getItem('e2e-seeded-expired')) {
+        window.sessionStorage.setItem('e2e-seeded-expired', '1');
+        window.sessionStorage.setItem('wyniki-admin-token', 'expired-token');
+      }
+    });
     await adminPage.goto(`${BASE_URL}/admin`, { waitUntil: 'domcontentloaded' });
     await adminPage.waitForFunction(
-      () => document.body.innerText.includes('Podaj hasło administratora') && document.body.innerText.includes('Sesja administratora wygasła'),
+      () => document.body.innerText.includes('Panel administratora') && document.body.innerText.includes('Sesja administratora wygasła'),
       undefined,
       { timeout: 15000 },
     );

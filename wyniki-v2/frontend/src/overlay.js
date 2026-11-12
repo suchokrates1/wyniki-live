@@ -8,6 +8,7 @@ import {
 import { calcMatchTime } from './shared/matchTime.js';
 import { overlayCourtLabel, overlayScoreLabels } from './shared/overlayLabel.js';
 import { renderTvScoreboard } from './shared/tvScoreboard.js';
+import { statsPanelData } from './shared/statsPanel.js';
 import './styles/fonts.css';
 import './styles/tvScoreboard.css';
 import './styles/overlay.css';
@@ -145,48 +146,18 @@ function renderScoreboard(el, courtOverride) {
         flashes: true,
     });
 }
-function _v(val, suffix) { return val != null ? val + (suffix||'') : '\u2014'; }
-function _serveRatio(si, st) { return (si != null && st != null) ? si+'/'+st : '\u2014'; }
-function _totalPtsWon(own, opp) {
-    var a = (own.aces||0) + (own.winners||0);
-    var b = (opp.double_faults||0) + (opp.forced_errors||0) + (opp.unforced_errors||0);
-    return a + b;
-}
-
 function renderStats(el, courtOverride) {
     var court = courtOverride || resolveCourtState(el.court_id);
     var active = court.match_status?.active || false;
     if (!active) return '';
-    var st = court.stats || {};
-    var pA = court.A || {}, pB = court.B || {};
-    var nA = pA.full_name||pA.surname||'A';
-    var nB = pB.full_name||pB.surname||'B';
-    if (String(nA).indexOf(' / ') !== -1) nA = abbreviateName(nA);
-    if (String(nB).indexOf(' / ') !== -1) nB = abbreviateName(nB);
-    var sA = st.player_a||{}, sB = st.player_b||{};
-    var mode = el.stats_mode || 'simple';
-    var rows = [
-        {l:'Asy', a:_v(sA.aces), b:_v(sB.aces)},
-        {l:'Podw. b\u0142\u0119dy', a:_v(sA.double_faults), b:_v(sB.double_faults)},
-        {l:'Winnery', a:_v(sA.winners), b:_v(sB.winners)},
-    ];
-    if (mode === 'advanced') {
-        rows.push({l:'B\u0142. wymuszone', a:_v(sA.forced_errors), b:_v(sB.forced_errors)});
-    }
-    rows.push({l:'B\u0142. niewymuszone', a:_v(sA.unforced_errors), b:_v(sB.unforced_errors)});
-    if (mode === 'advanced') {
-        rows.push({l:'1. serwis', a:_serveRatio(sA.first_serves_in, sA.first_serves_total), b:_serveRatio(sB.first_serves_in, sB.first_serves_total)});
-    }
-    rows.push({l:'1. serwis %', a:_v(sA.first_serve_pct,'%'), b:_v(sB.first_serve_pct,'%')});
-    if (mode === 'advanced') {
-        rows.push({l:'2. serwis %', a:_v(sA.second_serve_pct,'%'), b:_v(sB.second_serve_pct,'%')});
-        rows.push({l:'Pkt wygrane', a:_totalPtsWon(sA,sB), b:_totalPtsWon(sB,sA)});
-    }
-    var title = mode === 'advanced' ? 'Statystyki zaawansowane' : 'Statystyki';
+    // statsPanelData escapes every name and number it returns
+    var data = statsPanelData(court, el.stats_mode || 'simple', function(name) {
+        return name.indexOf(' / ') !== -1 ? abbreviateName(name) : name;
+    }, court?.tournament_language || overlayLanguage());
     return '<div class="stats-panel">'
-        +'<div class="stats-title">'+title+'</div>'
-        +'<div class="stats-header"><div></div><div class="player-col">'+nA+'</div><div class="player-col">'+nB+'</div></div>'
-        +rows.map(function(r){return '<div class="stats-row"><div class="stat-label">'+r.l+'</div><div class="stat-value">'+r.a+'</div><div class="stat-value">'+r.b+'</div></div>';}).join('')
+        +'<div class="stats-title">'+data.title+'</div>'
+        +'<div class="stats-header"><div></div><div class="player-col">'+data.nameA+'</div><div class="player-col">'+data.nameB+'</div></div>'
+        +data.rows.map(function(r){return '<div class="stats-row"><div class="stat-label">'+r.label+'</div><div class="stat-value">'+r.a+'</div><div class="stat-value">'+r.b+'</div></div>';}).join('')
         +'</div>';
 }
 

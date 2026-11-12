@@ -26,8 +26,8 @@ def tournament_language(value: object) -> str:
 
 # Prefer the tournament whose dates include today, then the newest start_date.
 # Without this, SQLite LIMIT 1 returns the lowest id (e.g. App Review 26 over IBTA 31).
-# date('now') is UTC. The process timezone is Warsaw in CI and UTC in the image,
-# so "today" follows localtime and matches date.today() in the tests.
+# date('now') is UTC, so "today" follows localtime and matches date.today(). The process
+# timezone is Europe/Warsaw in CI and in the image (ENV TZ in the Dockerfile).
 _ACTIVE_TOURNAMENT_ORDER = """
 ORDER BY
   CASE

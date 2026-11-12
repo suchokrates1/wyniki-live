@@ -144,8 +144,10 @@ test('G8 PWA finish Normal Test Retirement Walkover', () => {
     finishReason: MatchFinishReason.WALKOVER,
     winnerName: walkover.getTeam1FullName(),
   }));
-  assert.equal(walkover.player1Sets, 2);
-  assert.equal(walkover.setsHistory.length, 2);
+  // a walkover has no score: nothing was played
+  assert.equal(walkover.player1Sets, 0);
+  assert.equal(walkover.setsHistory.length, 0);
+  assert.equal(walkover.finishWinnerName, walkover.getTeam1FullName());
 });
 
 test('skip side change toggles sidesSwapped and returns to scoring', () => {
@@ -310,4 +312,37 @@ test('dictionary 30 is never shown as 0', () => {
   assert.equal(state.getPlayer1PointsDisplay(), '30');
   assert.equal(state.getPlayer2PointsDisplay(), '0');
   assert.notEqual(state.getPlayer1PointsDisplay(), '0');
+});
+
+test('taking a point back tells the server: an undo event and the score', () => {
+  const state = matchState({ matchId: 99, clientMatchUuid: 'uuid-undo' });
+  state.matchId = 99;
+  const seen = [];
+  const ctl = createMatchController({
+    now: () => 1_000,
+    onSync: (reason, synced, extra) => {
+      seen.push({ reason, eventType: extra?.eventType || null, points: synced.player1Points });
+      return { matchId: 99 };
+    },
+  });
+  ctl.initialize(state);
+  ctl.setFirstServer(1);
+  ctl.handleBasicWin(true);
+  seen.length = 0;
+
+  ctl.undoLastAction();
+
+  assert.deepEqual(seen, [
+    { reason: 'event', eventType: 'undo', points: 0 },
+    { reason: 'update', eventType: null, points: 0 },
+  ]);
+});
+
+test('an undo with nothing to take back sends nothing', () => {
+  const seen = [];
+  const ctl = createMatchController({ now: () => 1_000, onSync: (reason) => { seen.push(reason); return {}; } });
+  ctl.initialize(matchState({ matchId: 99, clientMatchUuid: 'uuid-none' }));
+  seen.length = 0;
+  ctl.undoLastAction();
+  assert.deepEqual(seen, []);
 });

@@ -1,4 +1,4 @@
-import { officeJson, officeResponse } from './api.js';
+import { officeErrorText, officeJson, officeResponse } from './api.js';
 
 /**
  * "Drabinki": the knockout format of every category, chosen after groups are drawn and
@@ -287,7 +287,7 @@ export function createOfficeDrawsView() {
         if (!result) return;
         const { payload } = result;
         if (result.status === 409) throw new Error(payload.error === 'groups_started' ? this.ot('draws.groupsStartedError') : this.ot('draws.lockedError'));
-        if (!result.ok) throw new Error(payload.error || this.ot('draws.saveFailed'));
+        if (!result.ok) throw new Error(officeErrorText(this, payload, 'draws.saveFailed'));
         this.drawDraft = null;
         this.drawDraftBase = null;
         this.applyDrawFormats(payload.categories);

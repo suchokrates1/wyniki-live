@@ -106,6 +106,10 @@ def _build_history_entry(kort_id: str, state: dict[str, Any]) -> dict[str, Any]:
     if derived_score_a and derived_score_b:
         score_a = derived_score_a
         score_b = derived_score_b
+    elif finish_reason == "walkover":
+        # The court columns are still 0. A walkover has no set score to keep.
+        score_a = []
+        score_b = []
 
     return {
         "kort_id": kort_id,

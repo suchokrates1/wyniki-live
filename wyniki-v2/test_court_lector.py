@@ -244,12 +244,68 @@ def test_the_page_plays_the_published_clip(full_app_with_temp_db, tmp_path, monk
     client = full_app_with_temp_db.test_client()
     page = client.get("/lektor/1")
     assert page.status_code == 200
-    assert b"/api/lektor/1" in page.data
-    assert client.get("/lektor/2").status_code == 200
-    assert b"/api/lektor/2" in client.get("/lektor/2").data
+    assert b'const courtId = "1"' in page.data
+    assert b"encodeURIComponent(courtId)" in page.data
+    court_two = client.get("/lektor/2")
+    assert court_two.status_code == 200
+    assert b'const courtId = "2"' in court_two.data
     assert client.get("/lektor/3").status_code == 404
 
     status = client.get("/api/lektor/1").get_json()
     assert status["token"] == "abc"
     assert status["url"].endswith("v=abc")
     assert client.get("/data/lector/court-1.mp3").status_code == 200
+
+
+def test_the_lector_page_does_not_treat_the_court_name_as_code():
+    from wyniki.api.lector import _page
+
+    page = _page('1"></script><img src=x onerror=alert(1)>')
+    assert page.lower().count("<script") == 1
+    assert page.lower().count("</script>") == 1
+    assert "<img" not in page
+    assert "\\u003c/script" in page
+
+
+def test_stitch_stops_when_ffmpeg_stalls(tmp_path, monkeypatch):
+    import subprocess
+
+    from wyniki.services import lector_shelf
+
+    first = tmp_path / "a.mp3"
+    second = tmp_path / "b.mp3"
+    first.write_bytes(b"a")
+    second.write_bytes(b"b")
+    dest = tmp_path / "out.mp3"
+
+    def stalled(*_args, **_kwargs):
+        raise subprocess.TimeoutExpired(cmd="ffmpeg", timeout=lector_shelf.STITCH_TIMEOUT_SECONDS)
+
+    monkeypatch.setattr(lector_shelf.subprocess, "run", stalled)
+    try:
+        lector_shelf.stitch_chunks([first, second], dest)
+    except RuntimeError as exc:
+        assert "timed out" in str(exc)
+    else:
+        raise AssertionError("a stalled ffmpeg must fail the stitch")
+    assert not dest.exists()
+    assert not dest.with_suffix(".tmp.mp3").exists()
+
+
+def test_stitch_tells_ffmpeg_how_long_it_may_run(tmp_path, monkeypatch):
+    import subprocess
+
+    from wyniki.services import lector_shelf
+
+    seen = {}
+
+    def fake_run(command, **kwargs):
+        seen["timeout"] = kwargs.get("timeout")
+        Path(command[-1]).write_bytes(b"ok")
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(lector_shelf.subprocess, "run", fake_run)
+    dest = tmp_path / "out.mp3"
+    lector_shelf.stitch_chunks([tmp_path / "a.mp3", tmp_path / "b.mp3"], dest)
+    assert seen["timeout"] == lector_shelf.STITCH_TIMEOUT_SECONDS
+    assert dest.read_bytes() == b"ok"

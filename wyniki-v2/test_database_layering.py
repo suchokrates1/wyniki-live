@@ -87,7 +87,7 @@ def test_request_handlers_do_not_hold_the_orm_session():
     global_player_rows.py, public_profiles.py and e2e_artifacts.py are the door.
     """
     offenders = []
-    for path in (PACKAGE / "api").rglob("*.py"):
+    for path in [*(PACKAGE / "api").rglob("*.py"), PACKAGE / "services" / "office_workflow.py"]:
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             if SESSION.search(line):
                 offenders.append(f"{path.relative_to(PACKAGE).as_posix()}:{number}")

@@ -45,7 +45,7 @@ def test_key_endpoint_reports_push_off_when_unconfigured(app_client):
 
 def test_subscribing_is_refused_while_push_is_unconfigured(app_client):
     response = app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/abc",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/abc",
         "keys": {"p256dh": "p", "auth": "a"},
     })
     assert response.status_code == 503
@@ -59,8 +59,9 @@ def test_key_endpoint_hands_out_the_public_key(app_client, with_keys):
 @pytest.mark.parametrize("payload", [
     {},
     {"endpoint": "http://push.example/abc", "keys": {"p256dh": "p", "auth": "a"}},  # not https
-    {"endpoint": "https://push.example/abc"},  # no keys
-    {"endpoint": "https://push.example/abc", "keys": {"p256dh": "p"}},  # no auth
+    {"endpoint": "https://fcm.googleapis.com/fcm/send/abc"},  # no keys
+    {"endpoint": "https://fcm.googleapis.com/fcm/send/abc", "keys": {"p256dh": "p"}},  # no auth
+    {"endpoint": "https://slow.example/stall", "keys": {"p256dh": "p", "auth": "a"}},  # not a push service
     {"endpoint": "https://" + "x" * 2000, "keys": {"p256dh": "p", "auth": "a"}},  # absurd length
 ])
 def test_malformed_subscriptions_are_rejected(app_client, with_keys, payload):
@@ -71,7 +72,7 @@ def test_a_subscription_is_stored_once_per_endpoint(app_client, with_keys):
     from wyniki.database import push_subscriptions
 
     payload = {
-        "endpoint": "https://push.example/abc",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/abc",
         "keys": {"p256dh": "p256", "auth": "auth"},
         "court_id": "t32-1",
     }
@@ -82,7 +83,7 @@ def test_a_subscription_is_stored_once_per_endpoint(app_client, with_keys):
 
     assert push_subscriptions.count_subscriptions() == 1
     assert [s["endpoint"] for s in push_subscriptions.subscriptions_for_court("t32-2")] == [
-        "https://push.example/abc"
+        "https://fcm.googleapis.com/fcm/send/abc"
     ]
     assert push_subscriptions.subscriptions_for_court("t32-1") == []
 
@@ -91,13 +92,13 @@ def test_a_subscription_without_a_court_hears_about_every_court(app_client, with
     from wyniki.database import push_subscriptions
 
     app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/all",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/all",
         "keys": {"p256dh": "p", "auth": "a"},
     })
 
     for court in ("t32-1", "t32-9", "anything"):
         assert [s["endpoint"] for s in push_subscriptions.subscriptions_for_court(court)] == [
-            "https://push.example/all"
+            "https://fcm.googleapis.com/fcm/send/all"
         ]
 
 
@@ -105,10 +106,10 @@ def test_unsubscribing_removes_the_row(app_client, with_keys):
     from wyniki.database import push_subscriptions
 
     app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/gone",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/gone",
         "keys": {"p256dh": "p", "auth": "a"},
     })
-    body = app_client.post("/api/push/unsubscribe", json={"endpoint": "https://push.example/gone"}).get_json()
+    body = app_client.post("/api/push/unsubscribe", json={"endpoint": "https://fcm.googleapis.com/fcm/send/gone"}).get_json()
 
     assert body["removed"] is True
     assert push_subscriptions.count_subscriptions() == 0
@@ -127,7 +128,7 @@ def test_a_dead_endpoint_is_pruned_and_a_live_one_is_kept(app_client, with_keys,
 
     for name in ("live", "dead"):
         app_client.post("/api/push/subscribe", json={
-            "endpoint": f"https://push.example/{name}",
+            "endpoint": f"https://fcm.googleapis.com/fcm/send/{name}",
             "keys": {"p256dh": "p", "auth": "a"},
         })
 
@@ -139,14 +140,14 @@ def test_a_dead_endpoint_is_pruned_and_a_live_one_is_kept(app_client, with_keys,
 
     assert sent == 1
     remaining = [s["endpoint"] for s in push_subscriptions.subscriptions_for_court("t32-1")]
-    assert remaining == ["https://push.example/live"]
+    assert remaining == ["https://fcm.googleapis.com/fcm/send/live"]
 
 
 def test_a_failing_push_service_never_breaks_the_caller(app_client, with_keys, monkeypatch):
     from wyniki.services import web_push
 
     app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/x",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/x",
         "keys": {"p256dh": "p", "auth": "a"},
     })
 
@@ -181,13 +182,13 @@ def test_only_devices_following_the_player_and_wanting_the_type_are_picked(app_c
     from wyniki.database import push_subscriptions
 
     app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/fan",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/fan",
         "keys": {"p256dh": "p", "auth": "a"},
         "players": ["Bernadeta Kozioł"],
         "preferences": {"notify_plan": True, "notify_change": False},
     })
     app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/other",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/other",
         "keys": {"p256dh": "p", "auth": "a"},
         "players": ["Jerzy Janas"],
         "preferences": {"notify_plan": True},
@@ -195,7 +196,7 @@ def test_only_devices_following_the_player_and_wanting_the_type_are_picked(app_c
 
     # Accent-insensitive match, and only the follower who asked for this type.
     found = push_subscriptions.subscriptions_for_players({"bernadeta koziol"}, "notify_plan")
-    assert [s["endpoint"] for s in found] == ["https://push.example/fan"]
+    assert [s["endpoint"] for s in found] == ["https://fcm.googleapis.com/fcm/send/fan"]
     assert push_subscriptions.subscriptions_for_players({"bernadeta koziol"}, "notify_change") == []
 
 
@@ -203,7 +204,7 @@ def test_publishing_a_plan_notifies_only_the_players_in_it(app_client, with_keys
     from wyniki.services import schedule_notifications, web_push
 
     app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/kowalski",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/kowalski",
         "keys": {"p256dh": "p", "auth": "a"},
         "players": ["Jan Kowalski"],
         "preferences": {"notify_plan": True},
@@ -228,7 +229,7 @@ def test_a_fixture_change_notifies_both_the_old_and_the_new_cast(app_client, wit
 
     for name in ("Jan Kowalski", "Adam Nowak"):
         app_client.post("/api/push/subscribe", json={
-            "endpoint": f"https://push.example/{name.split()[1].lower()}",
+            "endpoint": f"https://fcm.googleapis.com/fcm/send/{name.split()[1].lower()}",
             "keys": {"p256dh": "p", "auth": "a"},
             "players": [name],
             "preferences": {"notify_change": True},
@@ -248,7 +249,7 @@ def test_noise_in_the_schedule_does_not_wake_anyone(app_client, with_keys, monke
     from wyniki.services import schedule_notifications, web_push
 
     app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/quiet",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/quiet",
         "keys": {"p256dh": "p", "auth": "a"},
         "players": ["Jan Kowalski"],
         "preferences": {"notify_change": True},
@@ -270,11 +271,11 @@ def test_following_is_capped_so_nobody_subscribes_to_the_whole_draw(app_client, 
     from wyniki.database import push_subscriptions
 
     app_client.post("/api/push/subscribe", json={
-        "endpoint": "https://push.example/greedy",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/greedy",
         "keys": {"p256dh": "p", "auth": "a"},
         "players": [f"Gracz Numer{i}" for i in range(40)],
     })
-    assert len(push_subscriptions.followed_players("https://push.example/greedy")) == 10
+    assert len(push_subscriptions.followed_players("https://fcm.googleapis.com/fcm/send/greedy")) == 10
 
 
 def test_each_device_is_notified_in_the_language_it_asked_for(app_client, with_keys, monkeypatch):
@@ -284,7 +285,7 @@ def test_each_device_is_notified_in_the_language_it_asked_for(app_client, with_k
 
     for name, lang in (("pl", "pl"), ("lt", "lt"), ("en", "en")):
         app_client.post("/api/push/subscribe", json={
-            "endpoint": f"https://push.example/{name}",
+            "endpoint": f"https://fcm.googleapis.com/fcm/send/{name}",
             "keys": {"p256dh": "p", "auth": "a"},
             "players": ["Jan Kowalski"],
             "lang": lang,
@@ -302,9 +303,9 @@ def test_each_device_is_notified_in_the_language_it_asked_for(app_client, with_k
         {"player1_name": "Jan Kowalski", "player2_name": "Adam Nowak", "court_label": "2"},
     ])
 
-    assert seen["https://push.example/pl"] == "Twój mecz jest w planie"
-    assert seen["https://push.example/lt"] == "Jūsų mačas yra tvarkaraštyje"
-    assert seen["https://push.example/en"] == "Your match is in the schedule"
+    assert seen["https://fcm.googleapis.com/fcm/send/pl"] == "Twój mecz jest w planie"
+    assert seen["https://fcm.googleapis.com/fcm/send/lt"] == "Jūsų mačas yra tvarkaraštyje"
+    assert seen["https://fcm.googleapis.com/fcm/send/en"] == "Your match is in the schedule"
 
 
 def test_the_payload_is_built_once_per_language_not_once_per_device(app_client, with_keys, monkeypatch):
@@ -312,14 +313,14 @@ def test_the_payload_is_built_once_per_language_not_once_per_device(app_client, 
 
     for i in range(5):
         app_client.post("/api/push/subscribe", json={
-            "endpoint": f"https://push.example/pl{i}",
+            "endpoint": f"https://fcm.googleapis.com/fcm/send/pl{i}",
             "keys": {"p256dh": "p", "auth": "a"},
             "lang": "pl",
         })
 
     builds = []
     monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
-    subscribers = [{"endpoint": f"https://push.example/pl{i}", "p256dh": "p", "auth": "a", "lang": "pl"}
+    subscribers = [{"endpoint": f"https://fcm.googleapis.com/fcm/send/pl{i}", "p256dh": "p", "auth": "a", "lang": "pl"}
                    for i in range(5)]
 
     def build(lang):
@@ -430,7 +431,7 @@ def test_a_push_waits_for_a_phone_that_reconnects(monkeypatch):
     from wyniki.services.web_push import PUSH_TTL_SECONDS, _send_one
 
     status = _send_one(
-        {"endpoint": "https://push.example/a", "p256dh": "k", "auth": "a"},
+        {"endpoint": "https://fcm.googleapis.com/fcm/send/a", "p256dh": "k", "auth": "a"},
         "{}",
     )
     assert status == 201

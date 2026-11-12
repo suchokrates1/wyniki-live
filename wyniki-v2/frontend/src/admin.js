@@ -8,7 +8,7 @@ import './styles/admin-list.css';
 import './styles/admin-forms.css';
 import './styles/admin-courts.css';
 import './styles/overlay-canvas.css';
-import { createAuthAdmin, goToAdminLogin, hasAdminSession, installAdminFetchAuth } from './admin/auth.js';
+import { createAuthAdmin, goToAdminLogin, hasAdminSession } from './admin/auth.js';
 import { createCourtsAdmin } from './admin/courts.js';
 import { createDirectorPanel } from './admin/directorPanel.js';
 import { createTournamentsAdmin } from './admin/tournaments.js';
@@ -60,7 +60,6 @@ import { registerAnalyticsConsent } from './consent/banner.js';
 
 window.Alpine = Alpine;
 registerAnalyticsConsent(Alpine);
-installAdminFetchAuth();
 
 const mountAdminPartial = (id, html) => {
   const slot = document.getElementById(id);

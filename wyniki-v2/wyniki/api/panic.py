@@ -39,21 +39,27 @@ def _client() -> dict[str, str]:
     return meta
 
 
-def _court_id() -> str:
+def _court_id() -> tuple[str, bool]:
+    """The court and whether a signed court session vouches for it.
+
+    The button works before the court PIN too, so a court named only in the body is
+    accepted for the message text, but not trusted."""
     bound = court_id_from_bearer()
     if bound:
-        return bound
+        return bound, True
     payload = request.get_json(silent=True) or {}
-    return str(payload.get("court_id") or "").strip()
+    return str(payload.get("court_id") or "").strip()[:40], False
 
 
 @umpire_blueprint.route("/api/umpire/panic", methods=["POST"])
 def post_panic():
+    court_id, court_verified = _court_id()
     body, status = dispatch_panic(
-        court_id=_court_id(),
+        court_id=court_id,
         note=_note(),
         remote_addr=request.headers.get("CF-Connecting-IP") or request.remote_addr or "",
         client=_client(),
+        court_verified=court_verified,
     )
     response = jsonify(body)
     if status == 429:

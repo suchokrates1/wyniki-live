@@ -3,6 +3,7 @@
  * tournaments it ranks with their tier. People get an invitation link to set a password;
  * when no mail goes out the link is shown here to pass on by hand.
  */
+import { adminFetch } from './auth.js';
 import { LANGUAGES } from '../organizer/i18n/index.js';
 import { LOGO_VARIANTS } from '../shared/seriesLogo.js';
 import { TIERS, dateRange, tierLabel } from '../organizer/route.js';
@@ -71,7 +72,7 @@ export function createSeriesView() {
     async _seriesCall(url, method = 'GET', body) {
       this.seriesError = '';
       const form = body instanceof FormData;
-      const response = await fetch(url, {
+      const response = await adminFetch(url, {
         method,
         headers: body && !form ? { 'Content-Type': 'application/json' } : undefined,
         body: body && !form ? JSON.stringify(body) : body,

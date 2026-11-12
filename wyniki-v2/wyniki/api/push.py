@@ -7,6 +7,8 @@ account, no identifier we chose, and the row disappears as soon as the push
 service says the endpoint is gone.
 """
 
+from urllib.parse import urlparse
+
 from flask import Blueprint, jsonify, request
 
 from ..database import push_subscriptions
@@ -14,11 +16,24 @@ from ..services import web_push
 
 blueprint = Blueprint("push", __name__, url_prefix="/api/push")
 
-# A push endpoint is a URL from the browser vendor; anything longer is not one.
+# A push endpoint is a URL the browser's own push service handed out.
+# Anything else can be a slow address that stalls the match-start notification.
+_PUSH_HOSTS = {
+    "fcm.googleapis.com",
+    "updates.push.services.mozilla.com",
+    "web.push.apple.com",
+}
 MAX_ENDPOINT_LENGTH = 1024
 MAX_KEY_LENGTH = 256
 # Following a whole draw would be a notification firehose, not a feature.
 MAX_FOLLOWED_PLAYERS = 10
+
+
+def is_browser_push_endpoint(endpoint: str) -> bool:
+    host = (urlparse(endpoint).hostname or "").lower().rstrip(".")
+    if host in _PUSH_HOSTS:
+        return True
+    return host.endswith(".notify.windows.com")
 
 
 @blueprint.route("/key", methods=["GET"])
@@ -38,7 +53,11 @@ def subscribe():
     p256dh = str(keys.get("p256dh") or "").strip()
     auth = str(keys.get("auth") or "").strip()
 
-    if not endpoint.startswith("https://") or len(endpoint) > MAX_ENDPOINT_LENGTH:
+    if (
+        not endpoint.startswith("https://")
+        or len(endpoint) > MAX_ENDPOINT_LENGTH
+        or not is_browser_push_endpoint(endpoint)
+    ):
         return jsonify({"error": "Invalid endpoint"}), 400
     if not p256dh or not auth or len(p256dh) > MAX_KEY_LENGTH or len(auth) > MAX_KEY_LENGTH:
         return jsonify({"error": "Invalid keys"}), 400

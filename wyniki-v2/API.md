@@ -201,7 +201,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/api/office/<int:slot>/categories/confirm` |  |
 | GET | `/api/office/<int:slot>/court-streams` | Return the day × court stream URL grid for the authenticated office. |
 | PUT | `/api/office/<int:slot>/court-streams` | Save YouTube / stream URLs per tournament day and court. |
-| GET | `/api/office/<int:slot>/dashboard` | Return office dashboard for one office slot. |
+| GET | `/api/office/<int:slot>/dashboard` | Return office dashboard for one office slot (pure read). |
 | POST | `/api/office/<int:slot>/group-matches` | Create a finished group-stage result from the standalone office module. |
 | GET | `/api/office/<int:slot>/knockout-formats` | Knockout format, allowed formats and a draw preview for every category. |
 | PUT | `/api/office/<int:slot>/knockout-formats/<int:category_id>` | Save (and confirm) a category's knockout format; rebuilds its draw when it changed. |
@@ -211,14 +211,14 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/api/office/<int:slot>/knockout/swap` | Swap two players between knockout slots of one category before they have played. |
 | PUT | `/api/office/<int:slot>/matches/<int:match_id>` | Edit an existing office match result from the standalone office module. |
 | GET | `/api/office/<int:slot>/meta` | Return public metadata for one office slot before login. |
-| GET | `/api/office/<int:slot>/planning` | Return all data needed by the office planning workflow. |
+| GET | `/api/office/<int:slot>/planning` | Return all data needed by the office planning workflow (pure read). |
 | PUT | `/api/office/<int:slot>/planning/groups` | Replace bracket groups from the standalone office planning workflow. |
 | POST | `/api/office/<int:slot>/planning/groups/replace-schedule` | Regenerate unplayed group fixtures and put them back on the timetable. |
 | POST | `/api/office/<int:slot>/planning/start-numbers` | Give start numbers to the players listed in a category that have none yet. |
 | POST | `/api/office/<int:slot>/players` | Add a player to the tournament from the office workflow. |
 | GET | `/api/office/<int:slot>/quick-info` | Return the quick info banner draft for the authenticated office. |
 | PUT | `/api/office/<int:slot>/quick-info` | Publish or hide the quick info banner on the public live site. |
-| GET | `/api/office/<int:slot>/schedule` | Return schedule entries for one authenticated office slot. |
+| GET | `/api/office/<int:slot>/schedule` | Return schedule entries for one authenticated office slot (pure read). |
 | POST, PUT | `/api/office/<int:slot>/schedule` | Create or update manual schedule entries from the office workflow. |
 | DELETE | `/api/office/<int:slot>/schedule/<int:schedule_id>` | Delete one schedule entry from the office workflow. |
 | PATCH, PUT | `/api/office/<int:slot>/schedule/<int:schedule_id>` | Update date, time, court, status or notes for one schedule entry. |
@@ -303,6 +303,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | PUT | `/api/overlay/settings` | Update overlay settings (merge semantics). |
 | POST | `/api/overlay/stats` | Toggle stats panels on overlays 1-4 for StreamDeck/webhook integrations. |
 | GET, POST | `/api/overlay/stats/<action>` | Toggle stats panels on overlays 1-4 for StreamDeck/webhook integrations. |
+| GET | `/api/overlay/stats/key` | The address StreamDeck calls. Only an administrator may read it. |
 
 ## panic_admin
 
@@ -379,7 +380,7 @@ The umpire app's calls are explained in more detail in [UMPIRE_API.md](UMPIRE_AP
 | POST | `/api/match-events` | Process match event and push real-time score update via SSE. |
 | POST | `/api/match-statistics` | Receive match statistics from app. |
 | POST | `/api/matches` | Create new match on server. |
-| GET | `/api/matches/<int:match_id>` | Get match details. |
+| GET | `/api/matches/<int:match_id>` | Match details for the court playing it, or for an administrator. |
 | PUT | `/api/matches/<int:match_id>` | Update match score and state. |
 | POST | `/api/matches/<int:match_id>/finish` | Mark match as finished. |
 | GET, POST | `/api/players` | Get list of available players for app, or add a new player (POST). |

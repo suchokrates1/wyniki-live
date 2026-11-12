@@ -191,7 +191,7 @@ def upload_photo(gp_id: int):
         return jsonify({'photo_url': gp.photo_url})
     except Exception as e:
         logger.error("photo_upload_error", id=gp_id, error=str(e))
-        return jsonify({'error': f'Failed to process image: {str(e)}'}), 500
+        return jsonify({'error': 'Failed to process image'}), 500
 
 
 @blueprint.route('/<int:gp_id>/photo', methods=['DELETE'])

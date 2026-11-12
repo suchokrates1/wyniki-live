@@ -4,6 +4,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+STITCH_TIMEOUT_SECONDS = 60
+
 
 def stitch_chunks(paths: list[Path], dest: Path) -> None:
     """Join sentence clips with a short breath between them."""
@@ -29,8 +31,12 @@ def stitch_chunks(paths: list[Path], dest: Path) -> None:
         command.extend(["-i", str(path)])
     command.extend(["-filter_complex", ";".join(filters), "-map", "[out]", "-c:a", "libmp3lame", "-q:a", "4", str(temporary)])
     try:
-        subprocess.run(command, check=True, capture_output=True)
+        subprocess.run(command, check=True, capture_output=True, timeout=STITCH_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        temporary.unlink(missing_ok=True)
+        raise RuntimeError("lector stitch timed out") from None
     except subprocess.CalledProcessError as exc:
+        temporary.unlink(missing_ok=True)
         detail = (exc.stderr or b"").decode("utf-8", "replace")[:240]
         raise RuntimeError(f"lector stitch failed: {detail}") from None
     temporary.replace(dest)

@@ -196,7 +196,7 @@ def cleanup_e2e_artifacts():
         except Exception:
             logger.exception("Failed to roll back after E2E cleanup error")
         logger.error("e2e_cleanup_failed", error=str(e))
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Internal error"}), 500
 
 
 @blueprint.route('/api/e2e/artifacts', methods=['GET'])
@@ -388,7 +388,7 @@ def director_control_match(match_id: int):
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error("director_control_failed", error=str(e), exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Internal error"}), 500
 
 
 

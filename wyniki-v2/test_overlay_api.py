@@ -1,7 +1,7 @@
 """The overlay endpoints OBS and the StreamDeck call: what each one answers, and when it refuses."""
 
 import pytest
-from flask import Flask
+from flask import Flask, request
 
 from wyniki.api import overlay_api
 
@@ -25,6 +25,7 @@ def client(monkeypatch):
     monkeypatch.setattr(overlay_api, "update_overlay_settings", update)
     monkeypatch.setattr(overlay_api, "delete_overlay", lambda oid: oid in state["settings"]["overlays"])
     monkeypatch.setattr(overlay_api, "set_overlay_stats_visibility", toggle)
+    monkeypatch.setattr(overlay_api, "_stats_get_allowed", lambda: request.args.get("key") == "deck")
 
     app = Flask(__name__)
     app.register_blueprint(overlay_api.blueprint)
@@ -48,7 +49,7 @@ def test_a_broken_settings_store_answers_500_rather_than_a_blank_overlay(client,
     monkeypatch.setattr(overlay_api, "get_overlay_settings", explode)
     response = client.get("/api/overlay/settings")
     assert response.status_code == 500
-    assert "baza padła" in response.get_json()["error"]
+    assert response.get_json()["error"] == "Internal error"
 
 
 def test_saving_settings_passes_the_body_through_and_refuses_an_empty_one(client):
@@ -79,12 +80,15 @@ def test_the_logo_goes_in_as_a_data_url_and_comes_out_again(client):
     assert ("update", {"tournament_logo": None}) in client.state["calls"]
 
 
-def test_the_streamdeck_can_toggle_stats_with_a_plain_url(client):
-    response = client.get("/api/overlay/stats/on")
-    assert response.get_json() == {"ok": True, "active": True, "overlay_ids": ["1", "2", "3", "4"], "mode": None}
-    assert client.get("/api/overlay/stats/off").get_json()["active"] is False
+def test_the_streamdeck_can_toggle_stats_with_its_key(client):
+    refused = client.get("/api/overlay/stats/on")
+    assert refused.status_code == 401
 
-    response = client.get("/api/overlay/stats/on?mode=advanced")
+    response = client.get("/api/overlay/stats/on?key=deck")
+    assert response.get_json() == {"ok": True, "active": True, "overlay_ids": ["1", "2", "3", "4"], "mode": None}
+    assert client.get("/api/overlay/stats/off?key=deck").get_json()["active"] is False
+
+    response = client.get("/api/overlay/stats/on?key=deck&mode=advanced")
     assert response.get_json()["mode"] == "advanced", "the mode may ride in the query string"
 
 
@@ -99,3 +103,8 @@ def test_a_json_toggle_carries_the_flag_and_the_mode(client):
     assert response.get_json()["active"] is True
     assert ("stats", True, "simple") in client.state["calls"]
     assert client.post("/api/overlay/stats", json={"active": 0}).get_json()["active"] is False
+
+
+def test_a_stats_key_with_odd_characters_is_refused_not_a_server_error(client):
+    response = client.get("/api/overlay/stats/on?key=zażółć")
+    assert response.status_code == 401

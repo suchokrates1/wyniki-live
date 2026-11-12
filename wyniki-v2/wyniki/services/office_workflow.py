@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 
 from flask import jsonify
@@ -9,17 +10,15 @@ from flask import jsonify
 from ..database import (
     GROUP_PHASE,
     advance_knockout,
-    count_finished_group_matches,
+    compute_groups_progress,
     correct_knockout_result,
-    count_group_knockout_progress,
-    ensure_group_schedule_entries,
-    ensure_knockout_schedule_entries,
-    expected_group_matches_count,
     fetch_bracket_groups,
     fetch_bracket_knockout,
     fetch_courts_for_tournament,
     fetch_tournament,
     fetch_tournament_schedule,
+    finished_pair_match,
+    first_row_where,
     get_tournament_court_streams,
     get_tournament_quick_info,
     is_group_stage_phase,
@@ -31,10 +30,11 @@ from ..database import (
     link_schedule_to_match,
     maybe_generate_knockout_from_completed_groups,
     normalize_group_stage_phase,
+    rows_where,
     _is_knockout_placeholder_name,
 )
 from ..db_models import Match, MatchHistory, TournamentSchedule, utc_now_iso
-from ..services.teams import PLAY_FORMAT_KNOCKOUT, normalize_play_format
+from ..services.match_result import winner_by_sets
 
 
 class OfficeWorkflowError(ValueError):
@@ -64,6 +64,19 @@ def _normalize_bool(value: Any) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _recorded_at(data: dict[str, Any], now: str) -> str:
+    """The end time the office sent. A missing one means now; anything else is refused."""
+    raw = data.get("ended_at")
+    if raw in (None, ""):
+        return now
+    if not isinstance(raw, str):
+        raise OfficeWorkflowError("ended_at must be an ISO timestamp")
+    try:
+        return datetime.fromisoformat(raw.strip()).isoformat()
+    except ValueError:
+        raise OfficeWorkflowError("ended_at must be an ISO timestamp") from None
+
+
 def _json_loads(value: str | None, fallback):
     if not value:
         return fallback
@@ -78,6 +91,13 @@ def _bracket_category_from_group(group_name: str | None) -> str:
     if ' — ' in label:
         return label.split(' — ', 1)[0].strip()
     return label
+
+
+def _shown_score(finish_reason: str | None, result_note: str | None, sets_history: list[dict[str, Any]]) -> str:
+    """A walkover has no games to print. The note says who was given the match."""
+    if (finish_reason or "") == "walkover" and not sets_history:
+        return (result_note or "").strip() or "Walkower"
+    return _score_text(sets_history)
 
 
 def _score_text(sets_history: list[dict[str, Any]]) -> str:
@@ -167,8 +187,8 @@ def _office_history_payload(
     )
     group_name = group_lookup.get(group_id) if group_id else None
     winner_name = history.winner_name if history.winner_name in {history.player_a, history.player_b} else None
-    if not winner_name and player1_sets != player2_sets:
-        winner_name = history.player_a if player1_sets > player2_sets else history.player_b
+    if not winner_name:
+        winner_name = winner_by_sets(history.player_a, history.player_b, player1_sets, player2_sets)
     return {
         "id": history.id,
         "source": "history",
@@ -179,6 +199,7 @@ def _office_history_payload(
         "winner_name": winner_name,
         "status": 'finished',
         "phase": history.phase,
+        "is_group_stage": bool(group_id or is_group_stage_phase(history.phase)),
         "finish_reason": history.finish_reason or 'normal',
         "injured_player_name": history.injured_player_name,
         "result_note": history.result_note,
@@ -188,7 +209,7 @@ def _office_history_payload(
         "player1_sets": player1_sets,
         "player2_sets": player2_sets,
         "sets_history": sets_history,
-        "score_text": _score_text(sets_history),
+        "score_text": _shown_score(history.finish_reason, history.result_note, sets_history),
         "created_at": history.ended_ts,
         "updated_at": history.ended_ts,
     }
@@ -216,6 +237,18 @@ def office_result_outcome(
     return {"finish_reason": "normal", "winner_name": None, "injured_player_name": None, "result_note": None}
 
 
+def _required_winner(player1_name: str, player2_name: str, player1_sets: int, player2_sets: int) -> str:
+    """The winner of a result being saved; a level score has none and is refused."""
+    winner = winner_by_sets(player1_name, player2_name, player1_sets, player2_sets)
+    if not winner:
+        raise OfficeWorkflowError('Match winner is required')
+    return winner
+
+
+def _blank(value: Any) -> bool:
+    return value is None or str(value).strip() == ''
+
+
 def _normalize_office_sets(
     data: dict[str, Any],
     player1_name: str,
@@ -226,22 +259,29 @@ def _normalize_office_sets(
         winner_name = (data.get('winner_name') or '').strip()
         if winner_name not in {player1_name, player2_name}:
             raise ValueError('Winner is required for walkover')
-        p1_wins = winner_name == player1_name
-        return [
-            {"set_number": 1, "player1_games": 4 if p1_wins else 0, "player2_games": 0 if p1_wins else 4},
-            {"set_number": 2, "player1_games": 4 if p1_wins else 0, "player2_games": 0 if p1_wins else 4},
-        ], 2 if p1_wins else 0, 0 if p1_wins else 2
+        return [], 0, 0
 
     raw_sets = data.get('sets') or []
     sets_history = []
     player1_sets = 0
     player2_sets = 0
     parsed_sets = []
+    # A row the form left empty is not a set. Anything else must be readable: dropping a
+    # set that was typed wrong ("4", "x") used to save a different result than the one entered.
+    blank_seen = False
     for raw_set in raw_sets:
-        try:
-            parsed_sets.append((raw_set, int(raw_set.get('player1_games')), int(raw_set.get('player2_games'))))
-        except (TypeError, ValueError):
+        if not isinstance(raw_set, dict):
+            raise ValueError('Set score is not readable')
+        raw_p1, raw_p2 = raw_set.get('player1_games'), raw_set.get('player2_games')
+        if _blank(raw_p1) and _blank(raw_p2):
+            blank_seen = True
             continue
+        if blank_seen:
+            raise ValueError('Set scores must not skip a set')
+        try:
+            parsed_sets.append((raw_set, int(str(raw_p1).strip()), int(str(raw_p2).strip())))
+        except (TypeError, ValueError):
+            raise ValueError('Set score is not readable') from None
     for index, (raw_set, p1_games, p2_games) in enumerate(parsed_sets, start=1):
         if p1_games < 0 or p2_games < 0:
             raise ValueError('Set scores cannot be negative')
@@ -279,7 +319,7 @@ def _sync_office_match_history(match: Match, group_name: str | None = None) -> N
     sets_history = _json_loads(match.sets_history, [])
     score_a = [set_score.get('player1_games', 0) for set_score in sets_history]
     score_b = [set_score.get('player2_games', 0) for set_score in sets_history]
-    history = MatchHistory.query.filter_by(match_id=match.id).first()
+    history = first_row_where(MatchHistory, match_id=match.id)
     if not history:
         history = MatchHistory(match_id=match.id, duration_seconds=0)
         add_row(history)
@@ -307,7 +347,7 @@ def _office_match_payload(
 ) -> dict[str, Any]:
     sets_history = _json_loads(match.sets_history, [])
     winner = match.winner_name if match.winner_name in {match.player1_name, match.player2_name} else (
-        match.player1_name if int(match.player1_sets or 0) > int(match.player2_sets or 0) else match.player2_name
+        winner_by_sets(match.player1_name, match.player2_name, match.player1_sets, match.player2_sets)
     )
     group_id = int(match.bracket_group_id) if match.bracket_group_id else None
     if not group_id and player_groups and match.phase == 'Grupowa':
@@ -323,6 +363,7 @@ def _office_match_payload(
         "winner_name": winner if match.status == 'finished' else None,
         "status": match.status,
         "phase": match.phase,
+        "is_group_stage": bool(group_id or is_group_stage_phase(match.phase)),
         "finish_reason": match.finish_reason or 'normal',
         "injured_player_name": match.injured_player_name,
         "result_note": match.result_note,
@@ -332,7 +373,7 @@ def _office_match_payload(
         "player1_sets": match.player1_sets,
         "player2_sets": match.player2_sets,
         "sets_history": sets_history,
-        "score_text": _score_text(sets_history),
+        "score_text": _shown_score(match.finish_reason, match.result_note, sets_history),
         "created_at": match.created_at,
         "updated_at": match.updated_at,
     }
@@ -352,7 +393,7 @@ def _office_knockout_item(
     winner_name = (slot.get('winner_name') or '').strip()
     if match and match.status == 'finished':
         winner_name = match.winner_name or (
-            match.player1_name if int(match.player1_sets or 0) > int(match.player2_sets or 0) else match.player2_name
+            winner_by_sets(match.player1_name, match.player2_name, match.player1_sets, match.player2_sets) or ''
         )
     player1_name = (slot.get('player1_name') or (schedule_entry or {}).get('player1_name') or '').strip()
     player2_name = (slot.get('player2_name') or (schedule_entry or {}).get('player2_name') or '').strip()
@@ -385,7 +426,7 @@ def _office_knockout_item(
         "ready": ready,
         "finish_reason": (match.finish_reason if match else slot.get('finish_reason')) or 'normal',
         "result_note": (match.result_note if match else slot.get('result_note')),
-        "score_text": _score_text(sets_history) if match else (slot.get('score_summary') or ''),
+        "score_text": _shown_score(match.finish_reason, match.result_note, sets_history) if match else (slot.get('score_summary') or ''),
         "sets_history": sets_history,
         "day_date": (schedule_entry or {}).get('day_date') or '',
         "scheduled_time": (schedule_entry or {}).get('scheduled_time') or '',
@@ -439,10 +480,11 @@ def _resolve_office_knockout_slot(
     schedule_entry = None
 
     if schedule_id:
-        schedule_entry = TournamentSchedule.query.filter_by(
+        schedule_entry = first_row_where(
+            TournamentSchedule,
             id=schedule_id,
             tournament_id=tournament_id,
-        ).first()
+        )
         if not schedule_entry:
             raise OfficeWorkflowError('Schedule entry not found', 404)
         if schedule_entry.match_id:
@@ -476,16 +518,18 @@ def _resolve_office_knockout_slot(
                 409,
             )
         if not schedule_entry:
-            schedule_entry = TournamentSchedule.query.filter_by(
+            schedule_entry = first_row_where(
+                TournamentSchedule,
                 tournament_id=tournament_id,
                 source_type='knockout',
                 source_ref_id=slot_id,
-            ).first()
+            )
             if not schedule_entry and schedule_id:
-                schedule_entry = TournamentSchedule.query.filter_by(
+                schedule_entry = first_row_where(
+                    TournamentSchedule,
                     id=schedule_id,
                     tournament_id=tournament_id,
-                ).first()
+                )
         return slot, schedule_entry
 
     phase = str(data.get('phase') or '').strip()
@@ -522,15 +566,7 @@ def _create_office_knockout_match(tournament_id: int, data: dict[str, Any]) -> t
     player1_name = requested_player1 or player1_name
     player2_name = requested_player2 or player2_name
     match_phase = str(slot.get('phase') or data.get('phase') or 'Pucharowa').strip()
-    existing_match = Match.query.filter(
-        Match.tournament_id == tournament_id,
-        Match.phase == match_phase,
-        Match.status == 'finished',
-        (
-            ((Match.player1_name == player1_name) & (Match.player2_name == player2_name))
-            | ((Match.player1_name == player2_name) & (Match.player2_name == player1_name))
-        ),
-    ).first()
+    existing_match = finished_pair_match(tournament_id, match_phase, player1_name, player2_name)
     if existing_match:
         raise OfficeWorkflowError('This knockout match already has a result. Edit the existing result instead.', 409)
 
@@ -545,7 +581,7 @@ def _create_office_knockout_match(tournament_id: int, data: dict[str, Any]) -> t
         raise OfficeWorkflowError(str(exc)) from exc
     winner_name = outcome["winner_name"] or ''
     if not winner_name:
-        winner_name = player1_name if player1_sets > player2_sets else player2_name
+        winner_name = _required_winner(player1_name, player2_name, player1_sets, player2_sets)
 
     now = utc_now_iso()
     match = Match(
@@ -562,7 +598,7 @@ def _create_office_knockout_match(tournament_id: int, data: dict[str, Any]) -> t
         player1_sets=player1_sets,
         player2_sets=player2_sets,
         sets_history=json.dumps(sets_history),
-        created_at=data.get('ended_at') or now,
+        created_at=_recorded_at(data, now),
         updated_at=now,
     )
     add_row(match)
@@ -586,7 +622,7 @@ def _create_office_knockout_match(tournament_id: int, data: dict[str, Any]) -> t
         "message": "Knockout match added",
         "match": _office_match_payload(match, group_lookup, player_groups),
         "knockout_generation": None,
-        "dashboard": _build_office_dashboard(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id, groups=groups),
     }, 201
 
 
@@ -633,23 +669,16 @@ def _create_office_group_match(tournament_id: int, data: dict[str, Any]) -> tupl
         raise OfficeWorkflowError('Unsupported group-stage phase')
     phase = normalize_group_stage_phase(raw_phase)
 
-    existing_match = Match.query.filter(
-        Match.tournament_id == tournament_id,
-        Match.bracket_group_id == group_id,
-        Match.phase == phase,
-        Match.status == 'finished',
-        (
-            ((Match.player1_name == player1_name) & (Match.player2_name == player2_name))
-            | ((Match.player1_name == player2_name) & (Match.player2_name == player1_name))
-        ),
-    ).first()
+    existing_match = finished_pair_match(
+        tournament_id, phase, player1_name, player2_name, bracket_group_id=group_id
+    )
     if existing_match:
         raise OfficeWorkflowError(
             'This group match already has a result. Edit the existing result instead.',
             409,
         )
 
-    for history in MatchHistory.query.filter_by(tournament_id=tournament_id).all():
+    for history in rows_where(MatchHistory, tournament_id=tournament_id):
         if normalize_group_stage_phase(history.phase) != phase:
             continue
         if _infer_group_id_for_players(history.player_a, history.player_b, player_groups) != group_id:
@@ -682,7 +711,7 @@ def _create_office_group_match(tournament_id: int, data: dict[str, Any]) -> tupl
         player1_sets=player1_sets,
         player2_sets=player2_sets,
         sets_history=json.dumps(sets_history),
-        created_at=data.get('ended_at') or now,
+        created_at=_recorded_at(data, now),
         updated_at=now,
     )
     add_row(match)
@@ -708,34 +737,32 @@ def _create_office_group_match(tournament_id: int, data: dict[str, Any]) -> tupl
         "message": "Group match added",
         "match": _office_match_payload(match, {group_id: str(group.get('name') or '')}, player_groups),
         "knockout_generation": generation,
-        "dashboard": _build_office_dashboard(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id, groups=groups),
     }, 201
 
 
-def _build_office_dashboard(tournament_id: int) -> dict[str, Any]:
+def _build_office_dashboard(
+    tournament_id: int,
+    *,
+    groups: list[dict[str, Any]] | None = None,
+    schedule: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     tournament = fetch_tournament(tournament_id)
-    ensure_group_schedule_entries(tournament_id)
-    ensure_knockout_schedule_entries(tournament_id)
-    groups = fetch_bracket_groups(tournament_id)
+    groups = groups if groups is not None else fetch_bracket_groups(tournament_id)
     group_lookup, player_groups = _group_players_index(groups)
+    progress_by_group = compute_groups_progress(tournament_id, groups)
     progress_groups = []
     expected_total = 0
     finished_total = 0
 
-    match_rows = Match.query.filter_by(tournament_id=tournament_id).all()
+    match_rows = rows_where(Match, tournament_id=tournament_id)
     match_by_id = {int(match.id): match for match in match_rows}
-    history_rows = MatchHistory.query.filter_by(tournament_id=tournament_id).all()
-    schedule = fetch_tournament_schedule(tournament_id)
+    history_rows = rows_where(MatchHistory, tournament_id=tournament_id)
+    schedule = schedule if schedule is not None else fetch_tournament_schedule(tournament_id)
 
     for group in groups:
         group_id = int(group['id'])
-        player_count = len(group.get('players') or [])
-        play_format = normalize_play_format(group.get('play_format'))
-        if play_format == PLAY_FORMAT_KNOCKOUT:
-            expected, finished = count_group_knockout_progress(tournament_id, group.get('name') or '')
-        else:
-            expected = expected_group_matches_count(tournament_id, group_id, player_count)
-            finished = count_finished_group_matches(tournament_id, group_id)
+        expected, finished = progress_by_group.get(group_id, (0, 0))
         expected_total += expected
         finished_total += finished
         progress_groups.append({
@@ -787,12 +814,12 @@ def _update_office_match(tournament_id: int, match_id: int, data: dict[str, Any]
     group_lookup, player_groups = _group_players_index(groups)
 
     if source == 'history':
-        history = MatchHistory.query.filter_by(id=match_id, tournament_id=tournament_id).first()
+        history = first_row_where(MatchHistory, id=match_id, tournament_id=tournament_id)
         if not history:
             raise OfficeWorkflowError("Match not found", 404)
         sets_history, player1_sets, player2_sets = _normalize_office_sets(data, history.player_a, history.player_b)
         outcome = office_result_outcome(data, history.player_a, history.player_b)
-        history_winner = outcome["winner_name"] or (history.player_a if player1_sets > player2_sets else history.player_b)
+        history_winner = outcome["winner_name"] or _required_winner(history.player_a, history.player_b, player1_sets, player2_sets)
         if _is_knockout_phase(history.phase):
             blocker = knockout_correction_blocker(tournament_id, history.player_a, history.player_b, history.phase, history_winner)
             if blocker:
@@ -807,7 +834,7 @@ def _update_office_match(tournament_id: int, match_id: int, data: dict[str, Any]
         history.injured_player_name = outcome["injured_player_name"]
         history.result_note = outcome["result_note"]
         if history.match_id:
-            match = Match.query.filter_by(id=history.match_id, tournament_id=tournament_id).first()
+            match = first_row_where(Match, id=history.match_id, tournament_id=tournament_id)
             if match:
                 match.status = 'finished'
                 match.finish_reason = history.finish_reason
@@ -836,10 +863,10 @@ def _update_office_match(tournament_id: int, match_id: int, data: dict[str, Any]
             "message": "Match result updated",
             "match": _office_history_payload(history, group_lookup, player_groups),
             "knockout_generation": None,
-            "dashboard": _build_office_dashboard(tournament_id),
+            "dashboard": _build_office_dashboard(tournament_id, groups=groups),
         }
 
-    match = Match.query.filter_by(id=match_id, tournament_id=tournament_id).first()
+    match = first_row_where(Match, id=match_id, tournament_id=tournament_id)
     if not match:
         raise OfficeWorkflowError("Match not found", 404)
 
@@ -848,7 +875,7 @@ def _update_office_match(tournament_id: int, match_id: int, data: dict[str, Any]
 
     previous_winner = match.winner_name
     if _is_knockout_phase(match.phase):
-        new_winner = outcome["winner_name"] or (match.player1_name if player1_sets > player2_sets else match.player2_name)
+        new_winner = outcome["winner_name"] or _required_winner(match.player1_name, match.player2_name, player1_sets, player2_sets)
         blocker = knockout_correction_blocker(tournament_id, match.player1_name, match.player2_name, match.phase, new_winner)
         if blocker:
             raise _knockout_blocked(blocker)
@@ -885,5 +912,5 @@ def _update_office_match(tournament_id: int, match_id: int, data: dict[str, Any]
         "message": "Match result updated",
         "match": _office_match_payload(match, {match.bracket_group_id: group_name} if group_name else {}, player_groups),
         "knockout_generation": generation,
-        "dashboard": _build_office_dashboard(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id, groups=groups),
     }

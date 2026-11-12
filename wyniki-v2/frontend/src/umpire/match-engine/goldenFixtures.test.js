@@ -240,7 +240,9 @@ test('G8 finish Normal Test Retirement Walkover', () => {
     }),
     5_000,
   );
-  assert.equal(walkover.player1Sets, 2);
+  // a walkover has no score: nothing was played, the winner is the name the umpire picked
+  assert.equal(walkover.player1Sets, 0);
   assert.equal(walkover.player2Sets, 0);
-  assert.equal(walkover.setsHistory.length, 2);
+  assert.equal(walkover.setsHistory.length, 0);
+  assert.equal(walkover.finishWinnerName, 'Jan Kowalski');
 });

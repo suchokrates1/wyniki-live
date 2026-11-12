@@ -1,5 +1,6 @@
 /** The director's remote: reading a tablet's live score and pushing a new one back. */
 
+import { adminFetch } from './auth.js';
 import {
   applyTabletToDirectorForm,
   asPlayerList,
@@ -52,7 +53,7 @@ export function createDirectorPanel() {
         this.directorForm.courtId = kortId;
         try {
           const [tabletsRes, matchHint] = await Promise.all([
-            fetch('/admin/api/director/tablets?court_id=' + encodeURIComponent(kortId)),
+            adminFetch('/admin/api/director/tablets?court_id=' + encodeURIComponent(kortId)),
             Promise.resolve(this.courtData[kortId] || {}),
             this.loadDirectorPlayers(kortId),
           ]);
@@ -98,7 +99,7 @@ export function createDirectorPanel() {
         }
         if (this.directorPlayersTournamentId === tournamentId && this.directorPlayers.length) return;
         try {
-          const response = await fetch('/admin/api/tournaments/' + tournamentId + '/players');
+          const response = await adminFetch('/admin/api/tournaments/' + tournamentId + '/players');
           if (!response.ok) throw new Error('Nie udało się wczytać zawodników');
           this.directorPlayers = asPlayerList(await response.json());
           this.directorPlayersTournamentId = tournamentId;
@@ -169,7 +170,7 @@ export function createDirectorPanel() {
           this.directorLoadedScore = this.directorScorePayload();
           return;
         }
-        const response = await fetch('/api/matches/' + tablet.match_id);
+        const response = await adminFetch('/api/matches/' + tablet.match_id);
         if (!response.ok) {
           this.directorLoadedScore = this.directorScorePayload();
           return;
@@ -214,7 +215,7 @@ export function createDirectorPanel() {
         }
         this.directorSaving = true;
         try {
-          const response = await fetch('/admin/api/matches/' + this.directorForm.matchId + '/control', {
+          const response = await adminFetch('/admin/api/matches/' + this.directorForm.matchId + '/control', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

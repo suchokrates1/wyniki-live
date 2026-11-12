@@ -1,100 +1,36 @@
 import Alpine from 'alpinejs';
+import { mergeAdminModules } from '../admin/merge.js';
 import { createUmpireApi } from './api.js';
 import { umpireText } from './i18n.js';
-import { courtDisplayName } from './courtDisplay.js';
-import {
-  buildMatchConfig,
-  DEFAULT_MATCH_CONFIG_FORM,
-  normalizeTiebreakAtGames,
-  startDraft,
-} from './matchConfigForm.js';
+import { DEFAULT_MATCH_CONFIG_FORM } from './matchConfigForm.js';
 import { createPinPad } from './pinPad.js';
-import {
-  AVAILABLE_LANGUAGES,
-  createUmpireSession,
-  firstScreen,
-  parseExpiresAt,
-} from './session.js';
-import { FinishMatchRequest, MatchFinishReason, tiebreakAtOptions } from './match-engine/models.js';
-import { announcementContent } from './match/announcementView.js';
-import { buildAdvancedRally, buildAdvancedServe } from './match/advancedScoringView.js';
-import { buildBasicScoring } from './match/basicScoringView.js';
-import { createMatchFromDraft } from './match/createMatchFromDraft.js';
+import { AVAILABLE_LANGUAGES, createUmpireSession, firstScreen } from './session.js';
 import { createMatchController } from './match/matchController.js';
-import {
-  finalSetBySetLine,
-  finalSetsLine,
-  finishStatRows,
-  finishStatValue,
-} from './match/finishView.js';
-import { finishWinnerName, toDirectorSnapshot } from './match/matchPayload.js';
-import { hydrateMatchState, serializeMatchState } from './match/matchStateIo.js';
 import { matchTimerText } from './match/matchTimer.js';
-import { MatchView, SyncStatus } from './match/matchViews.js';
-import { suggestionScheduleId } from './match/suggestion.js';
-import {
-  MOTION_MS,
-  emptyMotionUi,
-  motionPatches,
-  panelVisible,
-  snapshotMatchMotion,
-} from './match/matchMotion.js';
-import { buildScoreboard } from './match/scoreboardView.js';
-import { buildServerButtons, resolveServerNumber } from './match/serverSelection.js';
+import { emptyMotionUi } from './match/matchMotion.js';
 import { createWakeLock } from './match/wakeLock.js';
-import { createDiagnostics, diagnosticsClipboardText, deviceLabel, SYNC_STATUS_KEYS } from './offline/diagnostics.js';
+import { createDiagnostics } from './offline/diagnostics.js';
 import { createBatteryMonitor } from './offline/battery.js';
 import { umpireClientHeaders } from './offline/clientHeaders.js';
-import { APP_VERSION, createHeartbeat, heartbeatBody } from './offline/heartbeat.js';
-import {
-  formatHistoryDuration,
-  formatHistoryScore,
-  formatHistoryWhen,
-  historyEntryFromState,
-} from './offline/history.js';
-import { syncMatchLive } from './offline/matchSync.js';
-import { createOutboxDispatcher } from './offline/outbox.js';
-import { openUmpireStores } from './offline/store.js';
-import { applyTheme, readTheme, saveTheme, THEMES } from './offline/theme.js';
-import { bindFullscreenChange, isFullscreen, toggleFullscreen } from './fullscreen.js';
-import { playerRowClass as selectionRowClass } from './playerRowClass.js';
-import {
-  detectOsInstalledPwa,
-  dismissPwaGate,
-  enableInstalledPwa,
-  isStandaloneDisplay,
-  markPwaInstalled,
-  pwaGateMode,
-  shouldShowFullscreenButton,
-  wasPwaGateDismissed,
-} from './pwaInstallGate.js';
-import { isIosSafari } from '../modules/iosInstallHint.js';
-import { TUTORIAL_COURT_1, TUTORIAL_MATCH_UUID, TUTORIAL_PIN, tutorialCatalog } from './tutorial/catalog.js';
-import { loadTutorialSnapshot } from './tutorial/presets.js';
-import {
-  tutorialCanAdvance,
-  tutorialIsLast,
-  tutorialMatchesAction,
-  tutorialNextIndex,
-  tutorialPrevIndex,
-  tutorialStepAt,
-} from './tutorial/tutorialController.js';
+import { APP_VERSION } from './offline/heartbeat.js';
+import { applyTheme, readTheme, THEMES } from './offline/theme.js';
+import { wasPwaGateDismissed } from './pwaInstallGate.js';
+import { createUmpireCourtPinSlice } from './app/courtPinSlice.js';
+import { createUmpireDirectorAndSyncSlice } from './app/directorAndSyncSlice.js';
+import { createUmpireMatchFinishSlice } from './app/matchFinishSlice.js';
+import { createUmpireMatchScreenSlice } from './app/matchScreenSlice.js';
+import { createUmpireNavigationSlice } from './app/navigationSlice.js';
+import { createUmpirePlayersAndConfigSlice } from './app/playersAndConfigSlice.js';
+import { createUmpirePwaShellSlice } from './app/pwaShellSlice.js';
+import { createUmpireSettingsHistoryPanicSlice } from './app/settingsHistoryPanicSlice.js';
+import { createUmpireTutorialSlice } from './app/tutorialSlice.js';
 import '../styles/fonts.css';
 import './umpire.css';
 
 const session = createUmpireSession();
 const wakeLock = createWakeLock();
 
-/** Scope for this worker. The public PWA owns '/', so we must not register there too.
- *
- * Both workers sit in the site root, so both used to default to scope '/'. A scope holds
- * one registration, so whichever page was opened last replaced the other's worker — and
- * each worker then dropped every cache but its own. Opening the public page in the same
- * browser therefore took the referee's offline shell with it. A nested scope keeps both:
- * the longest matching scope wins, so '/umpire*' stays with this worker and '/' with the
- * public one. Pages under this scope still route every request they make through this
- * worker, '/assets/*' included.
- */
+/** Scope for this worker. The public PWA owns '/', so we must not register there too. */
 const UMPIRE_SW_SCOPE = '/umpire';
 
 async function registerUmpireServiceWorker() {
@@ -103,58 +39,24 @@ async function registerUmpireServiceWorker() {
   } catch {
     return;
   }
-  // Drop the root-scoped registration left by earlier releases, so it stops fighting
-  // the public worker for '/'.
   try {
     const stale = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(stale
-      .filter((registration) => {
-        const scope = new URL(registration.scope).pathname;
-        const script = registration.active?.scriptURL || registration.waiting?.scriptURL
-          || registration.installing?.scriptURL || '';
-        return scope === '/' && script.endsWith('/umpire-sw.js');
-      })
-      .map((registration) => registration.unregister().catch(() => false)));
+    await Promise.all(
+      stale
+        .filter((registration) => {
+          const scope = new URL(registration.scope).pathname;
+          const script = registration.active?.scriptURL || registration.waiting?.scriptURL
+            || registration.installing?.scriptURL || '';
+          return scope === '/' && script.endsWith('/umpire-sw.js');
+        })
+        .map((registration) => registration.unregister().catch(() => false)),
+    );
   } catch {
     /* the new registration is in place either way */
   }
 }
 
-function playerId(player) {
-  return player?.id;
-}
-
-function playerLabel(player) {
-  if (!player) return '';
-  const full = `${player.first_name || player.firstName || ''} ${player.last_name || player.lastName || player.surname || ''}`.trim();
-  return full || player.name || player.full_name || '';
-}
-
-function neededCount(isDoubles) {
-  return isDoubles ? 4 : 2;
-}
-
-function formFromLastConfig(last) {
-  if (!last) return { ...DEFAULT_MATCH_CONFIG_FORM };
-  return {
-    ...DEFAULT_MATCH_CONFIG_FORM,
-    gamesPerSet: last.gamesPerSet ?? DEFAULT_MATCH_CONFIG_FORM.gamesPerSet,
-    setsToWin: last.setsToWin ?? DEFAULT_MATCH_CONFIG_FORM.setsToWin,
-    tiebreakPoints: last.tiebreakPoints ?? DEFAULT_MATCH_CONFIG_FORM.tiebreakPoints,
-    superTiebreakPoints: last.superTiebreakPoints ?? DEFAULT_MATCH_CONFIG_FORM.superTiebreakPoints,
-    tiebreakAtGames: normalizeTiebreakAtGames(
-      last.gamesPerSet ?? DEFAULT_MATCH_CONFIG_FORM.gamesPerSet,
-      last.tiebreakAtGames,
-    ),
-    tbOnlyPoints: last.tbOnlyPoints ?? DEFAULT_MATCH_CONFIG_FORM.tbOnlyPoints,
-    noAdvantage: Boolean(last.noAdvantage),
-    tiebreakOnly: Boolean(last.tiebreakOnly),
-    umpireName: last.umpireName || '',
-    advancedStats: last.advancedStats === true || last.statsMode === 'ADVANCED',
-  };
-}
-
-function createUmpireApp() {
+export function createUmpireApp() {
   const pinPad = createPinPad();
   const battery = createBatteryMonitor();
   const api = createUmpireApi({
@@ -166,1484 +68,129 @@ function createUmpireApp() {
     getBattery: () => battery.get(),
   });
 
-  return {
-    languages: AVAILABLE_LANGUAGES,
-    screen: firstScreen({
-      hasLanguage: session.hasLanguageSelected(),
-      hasTournamentToday: Boolean(session.getTournamentForToday()),
-    }),
-    lang: session.hasLanguageSelected() ? session.getLanguage() : 'en',
-    loading: false,
-    error: '',
-    tournaments: [],
-    courts: [],
-    players: [],
-    suggestion: null,
-    selectedIds: [],
-    isDoubles: false,
-    search: '',
-    showAddPlayer: false,
-    addForm: { firstName: '', lastName: '', country: '', category: '' },
-    team1Name: null,
-    team2Name: null,
-    selectedScheduleId: null,
-    _advanceTimer: null,
-    pinOpen: false,
-    pinCourt: null,
-    pinBusy: false,
-    pinError: '',
-    pinBoxes: ['', '', '', ''],
-    configForm: { ...DEFAULT_MATCH_CONFIG_FORM },
-    draft: null,
-    settingsFrom: 'court',
-    match: null,
-    matchRev: 0,
-    motion: emptyMotionUi(),
-    _motionPrev: null,
-    _motionTimers: {},
-    _lastAnnouncement: null,
-    timerText: '00:00',
-    _timerId: null,
-    dialog: null,
-    finishStep: null,
-    theme: readTheme(),
-    themes: THEMES,
-    historyEntries: [],
-    historyDetail: null,
-    diagnosticsCopyOk: false,
-    canInstall: false,
-    installed: false,
-    osInstalled: false,
-    pwaGateDismissed: wasPwaGateDismissed(globalThis.sessionStorage),
-    isFullscreen: false,
-    directorToast: false,
-    _directorToastTimer: null,
-    _pollActive: false,
-    _outbox: null,
-    _history: null,
-    _diagnostics: createDiagnostics(),
-    _heartbeat: null,
-    _battery: battery,
-    tutorialMode: false,
-    tutorialStepIndex: 0,
-    tutorialActionOk: false,
-    tutorialReturnScreen: 'settings',
-    tutorialCourtSession: null,
-    tutorialBanner: false,
+  return mergeAdminModules(
+    {
+      languages: AVAILABLE_LANGUAGES,
+      screen: firstScreen({
+        hasLanguage: session.hasLanguageSelected(),
+        hasTournamentToday: Boolean(session.getTournamentForToday()),
+      }),
+      lang: session.hasLanguageSelected() ? session.getLanguage() : 'en',
+      loading: false,
+      error: '',
+      tournaments: [],
+      courts: [],
+      players: [],
+      suggestion: null,
+      selectedIds: [],
+      isDoubles: false,
+      search: '',
+      showAddPlayer: false,
+      addForm: { firstName: '', lastName: '', country: '', category: '' },
+      team1Name: null,
+      team2Name: null,
+      selectedScheduleId: null,
+      _advanceTimer: null,
+      pinOpen: false,
+      pinCourt: null,
+      pinBusy: false,
+      pinError: '',
+      pinBoxes: ['', '', '', ''],
+      configForm: { ...DEFAULT_MATCH_CONFIG_FORM },
+      draft: null,
+      settingsFrom: 'court',
+      match: null,
+      matchRev: 0,
+      motion: emptyMotionUi(),
+      _motionPrev: null,
+      _motionTimers: {},
+      _lastAnnouncement: null,
+      timerText: '00:00',
+      _timerId: null,
+      dialog: null,
+      finishStep: null,
+      panicNote: '',
+      panicStatus: '',
+      panicToast: '',
+      theme: readTheme(),
+      themes: THEMES,
+      historyEntries: [],
+      historyDetail: null,
+      diagnosticsCopyOk: false,
+      canInstall: false,
+      installed: false,
+      osInstalled: false,
+      pwaGateDismissed: wasPwaGateDismissed(globalThis.sessionStorage),
+      isFullscreen: false,
+      directorToast: false,
+      _directorToastTimer: null,
+      _pollActive: false,
+      _outbox: null,
+      _history: null,
+      _diagnostics: createDiagnostics(),
+      _heartbeat: null,
+      _battery: battery,
+      tutorialMode: false,
+      tutorialStepIndex: 0,
+      tutorialActionOk: false,
+      tutorialReturnScreen: 'settings',
+      tutorialCourtSession: null,
+      tutorialBanner: false,
 
-    t(key, vars) {
-      return umpireText(this.lang, key, vars);
-    },
+      t(key, vars) {
+        return umpireText(this.lang, key, vars);
+      },
 
-    gateLang() {
-      const raw = String(globalThis.navigator?.language || this.lang || 'en').slice(0, 2).toLowerCase();
-      return AVAILABLE_LANGUAGES.some((item) => item.code === raw) ? raw : 'en';
-    },
-
-    gt(key, vars) {
-      return umpireText(this.gateLang(), key, vars);
-    },
-
-    showFullscreenButton() {
-      return shouldShowFullscreenButton();
-    },
-
-    pwaGate() {
-      if (this.screen !== 'language') return null;
-      return pwaGateMode({
-        standalone: isStandaloneDisplay(),
-        canInstall: this.canInstall,
-        osInstalled: this.osInstalled,
-        dismissed: this.pwaGateDismissed,
-        iosSafari: isIosSafari(navigator.userAgent, navigator.maxTouchPoints, navigator.platform),
-      });
-    },
-
-    courtName(court) {
-      if (!court) return '';
-      return courtDisplayName(court.name, court.kort_id || court.id, (ordinal) => (
-        this.t('courtName', { name: ordinal })
-      ));
-    },
-
-    tournamentMeta(tournament) {
-      if (!tournament) return '';
-      const place = [tournament.location, tournament.city, tournament.country]
-        .filter(Boolean)
-        .join(', ');
-      const dates = [tournament.start_date, tournament.end_date].filter(Boolean).join(' - ');
-      return [place, dates].filter(Boolean).join('\n');
-    },
-
-    bracketNotice() {
-      const type = this.match?.bracketWarning;
-      if (type === 'different_groups') {
-        return {
-          title: this.t('bracketWarningTitle'),
-          message: this.t('bracketWarningDifferentGroups'),
-        };
-      }
-      if (type === 'no_bracket') {
-        return {
-          title: this.t('bracketWarningTitle'),
-          message: this.t('bracketWarningFriendly'),
-        };
-      }
-      return null;
-    },
-
-    dismissBracketNotice() {
-      this.match?.clearBracketWarning?.();
-    },
-
-    dismissSuggestion() {
-      this.suggestion = null;
-    },
-
-    async init() {
-      applyTheme(this.theme);
-      this.applyChromeLanguage(this.lang);
-      this.watchInstallPrompt();
-      this.match = createMatchController({
-        onChange: () => this.onMatchChange(),
-        onSync: (reason, state, extra) => this.syncMatch(reason, state, extra),
-      });
-      await this.initOffline();
-      const hashScreen = (location.hash.replace(/^#\/?/, '') || '').split('/')[0];
-      if (hashScreen) this.screen = hashScreen;
-      if (!session.isTutorialMode()) this.restoreActiveMatch();
-      this.ensureMatchFromDraft();
-      this.go(this.screen, { replace: true });
-      this.maybeShowTutorialBanner();
-      window.addEventListener('hashchange', () => this.syncFromHash());
-      window.addEventListener('online', () => {
-        if (!this.tutorialMode) this.flushOutbox();
-      });
-      window.addEventListener('beforeunload', (event) => {
-        if (this.match?.chrome()?.confirmLeave) {
-          event.preventDefault();
-          event.returnValue = '';
-        }
-      });
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'visible') return;
-        if (this.screen === 'match' && this.match?.state?.matchStartTime) wakeLock.request();
-        // back from the background (iPad home screen, another app): the network may have come back
-        // without an 'online' event, so the queued points go out now, not with the next point
-        if (navigator.onLine && !this.tutorialMode) this.flushOutbox();
-      });
-      this._timerId = setInterval(() => {
-        if (this.match?.state) this.timerText = matchTimerText(this.match.state, Date.now());
-      }, 1000);
-      this.isFullscreen = isFullscreen();
-      this._unbindFullscreen = bindFullscreenChange((value) => {
-        this.isFullscreen = value;
-      });
-    },
-
-    async toggleFullscreen() {
-      try {
-        await toggleFullscreen();
-      } catch {
-        this.isFullscreen = isFullscreen();
-      }
-    },
-
-    async initOffline() {
-      const stores = await openUmpireStores();
-      this._outbox = stores.outbox;
-      this._history = stores.history;
-      this._heartbeat = createHeartbeat({
-        send: (body) => api.sendHeartbeat(body),
-        getBody: () => this.heartbeatPayload(),
-        canSend: () => !this.tutorialMode && Boolean(session.getCourtSession()?.token),
-      });
-      this._heartbeat.start();
-      if (!this.tutorialMode) this.startDirectorPoll();
-      if (navigator.onLine && !this.tutorialMode) this.flushOutbox();
-    },
-
-    heartbeatPayload() {
-      const court = session.getCourtSession();
-      const state = this.match?.state;
-      const screen = this.screen === 'match'
-        ? `Match:${this.matchView()}`
-        : this.screen === 'historyDetail'
-          ? 'MatchDetail'
-          : this.screen === 'history'
-            ? 'MatchHistory'
-            : this.screen;
-      const bat = this._battery.get();
-      return heartbeatBody({
-        courtId: court?.courtId || state?.courtId || '',
-        screen,
-        matchId: state?.matchId ?? null,
-        clientMatchUuid: state?.clientMatchUuid || null,
-        appVersion: APP_VERSION,
-        batteryLevel: bat.level,
-        isCharging: bat.charging,
-        snapshot: state ? toDirectorSnapshot(state) : null,
-      });
-    },
-
-    applyDirectorCommands(commands) {
-      if (!commands?.length || !this.match) return;
-      const applied = this.match.applyDirectorCommands(commands);
-      if (!applied.length) return;
-      const uuid = this.match.state?.clientMatchUuid;
-      if (uuid && this._outbox?.dropPendingForMatch) {
-        this._outbox.dropPendingForMatch(uuid);
-      }
-      for (const command of applied) {
-        if (command.courtToken && command.courtId) {
-          const current = session.getCourtSession() || {};
-          session.saveCourtSession({
-            ...current,
-            courtId: command.courtId,
-            courtName: command.courtName || command.courtId,
-            token: command.courtToken,
-            expiresAtMillis: parseExpiresAt(command.courtTokenExpiresAt) ?? current.expiresAtMillis,
-          });
-        }
-        if (command.id) api.ackDirectorCommand(command.id, command.courtId || session.getCourtSession()?.courtId);
-      }
-      this.showDirectorToast();
-    },
-
-    showDirectorToast() {
-      this.directorToast = true;
-      clearTimeout(this._directorToastTimer);
-      this._directorToastTimer = setTimeout(() => {
-        this.directorToast = false;
-      }, 2800);
-    },
-
-    startDirectorPoll() {
-      if (this.tutorialMode || this._pollActive) return;
-      this._pollActive = true;
-      const poll = async () => {
-        while (this._pollActive) {
-          if (this.tutorialMode) {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-            continue;
+      async init() {
+        applyTheme(this.theme);
+        this.applyChromeLanguage(this.lang);
+        this.watchInstallPrompt();
+        this.match = createMatchController({
+          onChange: () => this.onMatchChange(),
+          onSync: (reason, state, extra) => this.syncMatch(reason, state, extra),
+        });
+        await this.initOffline();
+        const hashScreen = (location.hash.replace(/^#\/?/, '') || '').split('/')[0];
+        if (hashScreen) this.screen = hashScreen;
+        if (!session.isTutorialMode()) this.restoreActiveMatch();
+        this.ensureMatchFromDraft();
+        this.go(this.screen, { replace: true });
+        this.maybeShowTutorialBanner();
+        window.addEventListener('hashchange', () => this.syncFromHash());
+        window.addEventListener('online', () => {
+          if (!this.tutorialMode) this.flushOutbox();
+        });
+        window.addEventListener('beforeunload', (event) => {
+          if (this.match?.chrome()?.confirmLeave) {
+            event.preventDefault();
+            event.returnValue = '';
           }
-          const court = session.getCourtSession();
-          if (!court?.courtId || !navigator.onLine) {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-            continue;
-          }
-          try {
-            const state = this.match?.state;
-            const result = await api.getDirectorCommands({
-              courtId: court.courtId,
-              matchId: state?.matchId,
-              clientMatchUuid: state?.clientMatchUuid,
-              waitMs: 20_000,
-            });
-            this.applyDirectorCommands(result?.data?.commands);
-          } catch {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-          }
-        }
-      };
-      poll();
-    },
-
-    onMatchChange() {
-      this.matchRev += 1;
-      this.applyMotion();
-      if (this.match?.state) {
-        this.timerText = matchTimerText(this.match.state, Date.now());
-        if (!this.tutorialMode) {
-          session.saveActiveMatch({
-            view: this.match.view,
-            pendingAnnouncementType: this.match.pendingAnnouncementType,
-            canUndo: this.match.canUndo,
-            state: serializeMatchState(this.match.state),
-          });
-        }
-      }
-    },
-
-    ensureMatchFromDraft() {
-      this.draft = session.getDraft();
-      if (!this.match?.state && this.draft) {
-        this.match.initialize(createMatchFromDraft(this.draft));
-      }
-    },
-
-    restoreActiveMatch() {
-      const snapshot = session.getActiveMatch();
-      if (!snapshot?.state) return;
-      const state = hydrateMatchState(snapshot.state);
-      if (!state) return;
-      this.match.restoreSnapshot({
-        state,
-        view: snapshot.view,
-        pendingAnnouncementType: snapshot.pendingAnnouncementType,
-        canUndo: snapshot.canUndo,
-      });
-      this.screen = 'match';
-    },
-
-    syncFromHash() {
-      const name = (location.hash.replace(/^#\/?/, '') || this.screen).split('/')[0];
-      if (name === 'match' && this.match?.chrome()?.confirmLeave && this.screen === 'match') return;
-      if (name && name !== this.screen) {
-        if (this.screen === 'match' && this.match?.chrome()?.confirmLeave) {
-          this.dialog = 'leave';
-          history.forward();
-          return;
-        }
-        this.screen = name;
-        this.onScreen(name);
-      }
-    },
-
-    go(name, { replace = false } = {}) {
-      this.screen = name;
-      this.error = '';
-      const hash = `#/${name}`;
-      if (replace) history.replaceState(null, '', hash);
-      else location.hash = hash;
-      this.onScreen(name);
-    },
-
-    onScreen(name) {
-      if (name === 'tournament') this.loadTournaments();
-      if (name === 'court') this.loadCourts();
-      if (name === 'players') this.loadPlayers();
-      if (name === 'serve') this.go('match', { replace: true });
-      if (name === 'match') this.ensureMatchFromDraft();
-      if (name === 'history') this.loadHistory();
-      this.maybeShowTutorialBanner();
-      if (!this.tutorialMode) this._heartbeat?.sendNow();
-    },
-
-    applyChromeLanguage(code) {
-      document.documentElement.lang = code;
-      document.title = umpireText(code, 'appName');
-    },
-
-    selectLanguage(code) {
-      session.setLanguage(code);
-      this.lang = code;
-      this.applyChromeLanguage(code);
-      this.matchRev += 1;
-      if (this.settingsFrom === 'settings' || this.screen === 'settings') {
-        this.go('settings');
-        return;
-      }
-      this.go('tournament');
-    },
-
-    watchInstallPrompt() {
-      this.installed = isStandaloneDisplay();
-      window.addEventListener('beforeinstallprompt', (event) => {
-        event.preventDefault();
-        this._installEvent = event;
-        this.canInstall = true;
-      });
-      window.addEventListener('appinstalled', () => {
-        markPwaInstalled(globalThis.localStorage);
-        this.installed = true;
-        this.osInstalled = true;
-        this.canInstall = false;
-        this._installEvent = null;
-      });
-      if ('serviceWorker' in navigator) {
-        registerUmpireServiceWorker();
-      }
-      detectOsInstalledPwa({
-        storage: globalThis.localStorage,
-        getRelatedApps: navigator.getInstalledRelatedApps?.bind(navigator),
-      }).then((osInstalled) => {
-        if (osInstalled) this.osInstalled = true;
-      }).catch(() => {});
-    },
-
-    skipPwaGate() {
-      dismissPwaGate(globalThis.sessionStorage);
-      this.pwaGateDismissed = true;
-    },
-
-    async acceptPwaGate() {
-      const mode = this.pwaGate();
-      if (mode === 'install') {
-        await this.installApp();
-        return;
-      }
-      if (mode === 'open') {
-        await this.openInstalledPwa();
-        this.skipPwaGate();
-      }
-    },
-
-    async openInstalledPwa() {
-      await enableInstalledPwa({
-        requestFullscreen: async () => {
-          if (!isFullscreen()) await toggleFullscreen();
-        },
-        userAgent: globalThis.navigator?.userAgent || '',
-        origin: globalThis.location?.origin || '',
-        assignLocation: (url) => {
-          globalThis.location.href = url;
-        },
-      });
-    },
-
-    async installApp() {
-      if (!this._installEvent) return;
-      this._installEvent.prompt();
-      const choice = await this._installEvent.userChoice.catch(() => null);
-      this._installEvent = null;
-      this.canInstall = false;
-      if (choice?.outcome === 'accepted') {
-        markPwaInstalled(globalThis.localStorage);
-        this.osInstalled = true;
-        this.installed = true;
-        return;
-      }
-      this.skipPwaGate();
-    },
-
-    setTheme(theme) {
-      this.theme = saveTheme(theme);
-      applyTheme(this.theme);
-    },
-
-    themeLabel(theme) {
-      return this.t({
-        light: 'themeLight',
-        dark: 'themeDark',
-        system: 'themeSystem',
-      }[theme] || 'themeSystem');
-    },
-
-    async loadTournaments() {
-      if (this.tutorialMode) {
-        this.tournaments = [tutorialCatalog((key) => this.t(key)).tournament];
-        return;
-      }
-      this.loading = true;
-      const { ok, data } = await api.getActiveTournaments();
-      this.loading = false;
-      if (!ok) {
-        this.error = this.t('error');
-        this.tournaments = [];
-        return;
-      }
-      this.tournaments = Array.isArray(data) ? data : (data?.tournaments || []);
-    },
-
-    selectTournament(tournament) {
-      session.saveTournament(tournament);
-      this.go('court');
-    },
-
-    async loadCourts() {
-      if (this.tutorialMode) {
-        this.courts = tutorialCatalog((key) => this.t(key)).courts;
-        return;
-      }
-      const tournament = session.getTournamentForToday();
-      if (!tournament) {
-        this.go('tournament');
-        return;
-      }
-      this.loading = true;
-      const { ok, data } = await api.getCourts(tournament.id);
-      this.loading = false;
-      if (!ok) {
-        this.error = this.t('error');
-        this.courts = [];
-        return;
-      }
-      this.courts = data?.courts || [];
-    },
-
-    openPin(court) {
-      this.pinCourt = court;
-      this.pinError = '';
-      this.pinBusy = false;
-      pinPad.clear();
-      this.pinBoxes = pinPad.boxes();
-      this.pinOpen = true;
-      if (this.tutorialMode && (court.kort_id || court.id) === TUTORIAL_COURT_1) {
-        this.tutorialNote('selectCourt');
-      }
-    },
-
-    closePin() {
-      this.pinOpen = false;
-      this.pinCourt = null;
-      pinPad.clear();
-      this.pinBoxes = pinPad.boxes();
-    },
-
-    async enterPinDigit(digit) {
-      if (this.pinBusy) return;
-      pinPad.append(digit);
-      this.pinBoxes = pinPad.boxes();
-      if (pinPad.complete) await this.submitPin();
-    },
-
-    pinBackspace() {
-      if (this.pinBusy) return;
-      pinPad.backspace();
-      this.pinBoxes = pinPad.boxes();
-    },
-
-    async submitPin() {
-      if (!this.pinCourt || !pinPad.complete || this.pinBusy) return;
-      this.pinBusy = true;
-      this.pinError = '';
-      if (this.tutorialMode) {
-        this.pinBusy = false;
-        if (pinPad.value !== TUTORIAL_PIN) {
-          pinPad.clear();
-          this.pinBoxes = pinPad.boxes();
-          this.pinError = this.t('pinInvalid', { name: '' }).replace(/:\s*$/, '');
-          return;
-        }
-        this.tutorialCourtSession = {
-          courtId: this.pinCourt.kort_id || this.pinCourt.id,
-          courtName: this.courtName(this.pinCourt),
-          token: 'tutorial',
-        };
-        this.closePin();
-        this.tutorialNote('enterPin');
-        this.go('players');
-        return;
-      }
-      const { ok, data } = await api.authorizeCourt(this.pinCourt.kort_id || this.pinCourt.id, pinPad.value);
-      this.pinBusy = false;
-      if (!ok || !data?.authorized) {
-        pinPad.clear();
-        this.pinBoxes = pinPad.boxes();
-        this.pinError = this.t('pinInvalid', { name: data?.error || data?.detail || '' }).replace(/:\s*$/, '');
-        return;
-      }
-      session.saveCourtSession({
-        courtId: data.court_id || data.kort_id || this.pinCourt.kort_id,
-        courtName: this.courtName(this.pinCourt),
-        token: data.token,
-        expiresAtMillis: parseExpiresAt(data.expires_at),
-      });
-      this.closePin();
-      this._heartbeat?.sendNow();
-      this.go('players');
-    },
-
-    async loadPlayers() {
-      if (this.tutorialMode) {
-        this.players = tutorialCatalog((key) => this.t(key)).players;
-        this.suggestion = null;
-        return;
-      }
-      const court = session.getCourtSession();
-      if (!court?.courtId) {
-        this.go('court');
-        return;
-      }
-      const tournament = session.getTournamentForToday();
-      this.loading = true;
-      const [playersRes, suggestionRes] = await Promise.all([
-        api.getPlayers(court.courtId),
-        api.getSuggestedMatch(court.courtId, tournament?.id),
-      ]);
-      this.loading = false;
-      if (!playersRes.ok) {
-        this.error = this.t('error');
-        this.players = [];
-        return;
-      }
-      this.players = playersRes.data?.players || [];
-      this.suggestion = suggestionRes.ok ? suggestionRes.data?.suggestion : null;
-    },
-
-    filteredPlayers() {
-      const query = this.search.trim().toLowerCase();
-      if (!query) return this.players;
-      return this.players.filter((player) => playerLabel(player).toLowerCase().includes(query));
-    },
-
-    isSelected(player) {
-      return this.selectedIds.includes(playerId(player));
-    },
-
-    playerRowClass(player) {
-      return selectionRowClass(this.isDoubles, this.isSelected(player) ? this.selectionIndex(player) : -1);
-    },
-
-    setSingles() {
-      this.isDoubles = false;
-      this.selectedIds = this.selectedIds.slice(0, 2);
-      this.scheduleAdvanceToConfig();
-    },
-
-    setDoubles() {
-      this.isDoubles = true;
-    },
-
-    selectionIndex(player) {
-      return this.selectedIds.indexOf(playerId(player));
-    },
-
-    togglePlayer(player) {
-      this.selectedScheduleId = null;
-      this.team1Name = null;
-      this.team2Name = null;
-      const id = playerId(player);
-      const index = this.selectedIds.indexOf(id);
-      if (index >= 0) {
-        this.selectedIds = this.selectedIds.filter((item) => item !== id);
-        return;
-      }
-      if (this.selectedIds.length >= neededCount(this.isDoubles)) return;
-      this.selectedIds = [...this.selectedIds, id];
-      this.scheduleAdvanceToConfig();
-    },
-
-    scheduleAdvanceToConfig() {
-      clearTimeout(this._advanceTimer);
-      if (!this.canContinuePlayers()) return;
-      if (this.tutorialMode) {
-        this.tutorialNote('selectPlayers');
-        return;
-      }
-      this._advanceTimer = setTimeout(() => {
-        if (this.screen === 'players' && this.canContinuePlayers()) this.openConfig();
-      }, 300);
-    },
-
-    selectedPlayers() {
-      return this.selectedIds
-        .map((id) => this.players.find((player) => playerId(player) === id))
-        .filter(Boolean);
-    },
-
-    canContinuePlayers() {
-      return this.selectedPlayers().length === neededCount(this.isDoubles);
-    },
-
-    applySuggestion() {
-      const suggestion = this.suggestion;
-      if (!suggestion) return;
-      this.isDoubles = Boolean(suggestion.is_doubles);
-      const ids = [];
-      const pushPerson = (person) => {
-        if (!person?.id) return;
-        ids.push(person.id);
-        if (person.partner?.id) ids.push(person.partner.id);
-      };
-      pushPerson(suggestion.player1);
-      pushPerson(suggestion.player2);
-      this.selectedIds = ids.slice(0, neededCount(this.isDoubles));
-      this.selectedScheduleId = suggestionScheduleId(suggestion);
-      this.team1Name = suggestion.player1_name || null;
-      this.team2Name = suggestion.player2_name || null;
-      this.scheduleAdvanceToConfig();
-    },
-
-    async saveNewPlayer() {
-      const court = session.getCourtSession();
-      const lastName = this.addForm.lastName.trim();
-      if (!court?.courtId || !lastName) return;
-      this.loading = true;
-      const firstName = this.addForm.firstName.trim();
-      const country = this.addForm.country.trim().toUpperCase();
-      const { ok, data } = await api.addPlayer({
-        kort_id: court.courtId,
-        first_name: firstName,
-        last_name: lastName,
-        name: `${firstName} ${lastName}`.trim(),
-        country_code: country || undefined,
-        category: this.addForm.category.trim() || undefined,
-      });
-      this.loading = false;
-      if (!ok) {
-        this.error = this.t('error');
-        return;
-      }
-      this.showAddPlayer = false;
-      this.addForm = { firstName: '', lastName: '', country: '', category: '' };
-      await this.loadPlayers();
-      const created = data?.player || data;
-      if (created?.id) this.togglePlayer(created);
-    },
-
-    openConfig() {
-      if (!this.canContinuePlayers()) return;
-      if (this.tutorialMode) {
-        this.configForm = { ...DEFAULT_MATCH_CONFIG_FORM };
-        this.go('config');
-        return;
-      }
-      const last = session.getLastMatchConfig();
-      this.configForm = last ? formFromLastConfig(last) : { ...DEFAULT_MATCH_CONFIG_FORM };
-      this.go('config');
-    },
-
-    tiebreakAtChoices() {
-      return tiebreakAtOptions(this.configForm.gamesPerSet);
-    },
-
-    setGamesPerSet(value) {
-      this.configForm.gamesPerSet = value;
-      this.configForm.tiebreakAtGames = normalizeTiebreakAtGames(value, this.configForm.tiebreakAtGames);
-    },
-
-    startMatch() {
-      this.startWithMode(this.configForm.advancedStats ? 'ADVANCED' : 'BASIC');
-    },
-
-    startWithMode(statsMode) {
-      const court = this.tutorialMode ? this.tutorialCourtSession : session.getCourtSession();
-      const config = buildMatchConfig(this.configForm, statsMode);
-      const selected = this.selectedPlayers();
-      const draft = startDraft({
-        selectedPlayers: selected,
-        isDoubles: this.isDoubles,
-        isMixedDoubles: this.isDoubles && this.isMixedSelection(selected),
-        team1Name: this.team1Name,
-        team2Name: this.team2Name,
-        courtId: court.courtId,
-        courtName: court.courtName,
-        scheduleId: this.selectedScheduleId,
-        config,
-        umpireName: this.configForm.umpireName,
-        manualStartTime: this.configForm.manualStartTime
-          ? Date.parse(this.configForm.manualStartTime)
-          : null,
-      });
-      if (this.tutorialMode) {
-        draft.clientMatchUuid = TUTORIAL_MATCH_UUID;
-        this.draft = draft;
-        this.match.initialize(createMatchFromDraft(draft));
-        this.tutorialNote('startMatch');
-        this.go('match');
-        return;
-      }
-      session.saveDraft(draft);
-      session.saveLastMatchConfig({ ...this.configForm, statsMode });
-      this.draft = draft;
-      this.match.initialize(createMatchFromDraft(draft));
-      this.go('match');
-    },
-
-    isMixedSelection(players) {
-      const genders = players.map((player) => String(player.gender || '').toUpperCase());
-      const hasWomen = genders.some((gender) => gender === 'F' || gender === 'K');
-      const hasMen = genders.some((gender) => gender === 'M');
-      return hasWomen && hasMen;
-    },
-
-    screenTitle() {
-      this.matchRev;
-      const titles = {
-        language: 'languageTitle',
-        tournament: 'tournamentTitle',
-        court: 'courtTitle',
-        players: 'playersTitle',
-        config: 'configTitle',
-        serve: 'serveTitle',
-        match: this.matchView() === MatchView.SERVER_SELECTION ? 'serveTitle' : 'matchTitle',
-        settings: 'settings',
-        history: 'matchHistory',
-        historyDetail: 'matchHistory',
-      };
-      return this.t(titles[this.screen] || 'appName');
-    },
-
-    back() {
-      if (this.tutorialMode) {
-        this.tutorialBack();
-        return;
-      }
-      if (this.screen === 'match') {
-        if (this.match?.chrome()?.confirmLeave) {
-          this.dialog = 'leave';
-          return;
-        }
-        this.leaveMatch();
-        return;
-      }
-      const from = {
-        tournament: 'language',
-        court: 'tournament',
-        players: 'court',
-        config: 'players',
-        serve: 'config',
-        settings: this.settingsFrom || 'court',
-        history: 'settings',
-        historyDetail: 'history',
-      };
-      if (this.screen === 'language') return;
-      if (this.screen === 'court' && this.pinOpen) {
-        this.closePin();
-        return;
-      }
-      this.go(from[this.screen] || 'language');
-    },
-
-    leaveMatch() {
-      wakeLock.release();
-      session.clearActiveMatch();
-      this.dialog = null;
-      const finished = this.match?.state?.isMatchFinished;
-      this.go(finished ? 'players' : 'config');
-    },
-
-    confirmLeave() {
-      this.leaveMatch();
-    },
-
-    panicNote: '',
-    panicStatus: '',
-    panicToast: '',
-
-    openPanic() {
-      this.panicNote = '';
-      this.panicStatus = '';
-      this.dialog = 'panic';
-    },
-
-    async confirmPanic() {
-      this.panicStatus = '';
-      const court = session.getCourtSession();
-      const result = await api.sendPanic({
-        courtId: court?.courtId || this.pinCourt?.kort_id || this.pinCourt?.id || this.match?.state?.courtId || '',
-        note: this.panicNote,
-      });
-      if (result.status === 429) {
-        this.panicStatus = this.t('panicCooldown');
-        return;
-      }
-      if (!result.ok) {
-        this.panicStatus = this.t('panicFailed');
-        return;
-      }
-      this.dialog = null;
-      this.panicToast = this.t('panicSent');
-    },
-
-    openSettings() {
-      this.settingsFrom = this.screen;
-      this.diagnosticsCopyOk = false;
-      this.go('settings');
-    },
-
-    openLanguageFromSettings() {
-      this.settingsFrom = 'settings';
-      this.go('language');
-    },
-
-    async loadHistory() {
-      this.historyEntries = this._history ? await this._history.list() : [];
-    },
-
-    async openHistory() {
-      await this.loadHistory();
-      this.go('history');
-    },
-
-    openHistoryDetail(entry) {
-      this.historyDetail = entry;
-      this.go('historyDetail');
-    },
-
-    historyWhen(entry) {
-      return formatHistoryWhen(entry);
-    },
-
-    historyScore(entry) {
-      return formatHistoryScore(entry);
-    },
-
-    historyDuration(entry) {
-      return formatHistoryDuration(entry);
-    },
-
-    async askDeleteHistory(entry) {
-      if (!window.confirm(this.t('confirmDeleteMatch'))) return;
-      await this._history?.remove(entry.clientMatchUuid);
-      if (this.historyDetail?.clientMatchUuid === entry.clientMatchUuid) {
-        this.historyDetail = null;
-        this.go('history');
-      }
-      await this.loadHistory();
-    },
-
-    async askDeleteAllHistory() {
-      if (!window.confirm(this.t('confirmDeleteAllMatches'))) return;
-      await this._history?.clear();
-      this.historyDetail = null;
-      await this.loadHistory();
-    },
-
-    diagnosticsRows() {
-      const snap = this._diagnostics.get();
-      const statusKey = SYNC_STATUS_KEYS[snap.status] || 'syncIdle';
-      return [
-        { label: this.t('diagnosticsAppVersion'), value: APP_VERSION },
-        { label: this.t('diagnosticsBackend'), value: location.origin },
-        { label: this.t('diagnosticsDevice'), value: deviceLabel() },
-        { label: this.t('diagnosticsLocale'), value: this.lang },
-        { label: this.t('diagnosticsTimezone'), value: Intl.DateTimeFormat().resolvedOptions().timeZone || '' },
-        { label: this.t('diagnosticsSyncStatus'), value: this.t(statusKey) || snap.status },
-        {
-          label: this.t('diagnosticsLastUpdate'),
-          value: snap.updatedAt ? formatHistoryWhen({ startTime: snap.updatedAt }) : this.t('diagnosticsNever'),
-        },
-        { label: this.t('diagnosticsLastError'), value: snap.lastError || this.t('diagnosticsNoError') },
-      ];
-    },
-
-    async copyDiagnostics() {
-      const snap = this._diagnostics.get();
-      const statusKey = SYNC_STATUS_KEYS[snap.status] || 'syncIdle';
-      const text = diagnosticsClipboardText({
-        appVersion: APP_VERSION,
-        backend: location.origin,
-        device: deviceLabel(),
-        locale: this.lang,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
-        statusLabel: this.t(statusKey) || snap.status,
-        updatedLabel: snap.updatedAt ? formatHistoryWhen({ startTime: snap.updatedAt }) : this.t('diagnosticsNever'),
-        errorLabel: snap.lastError || this.t('diagnosticsNoError'),
-      });
-      try {
-        await navigator.clipboard.writeText(text);
-        this.diagnosticsCopyOk = true;
-      } catch {
-        this.diagnosticsCopyOk = false;
-      }
-    },
-
-    recordSyncDiagnostics(result) {
-      if (result?.offline) this._diagnostics.record('OFFLINE', result.status ? `HTTP ${result.status}` : '');
-      else if (result?.failed) this._diagnostics.record('FAILED', result.status ? `HTTP ${result.status}` : '');
-      else this._diagnostics.record('SYNCED');
-    },
-
-    tutorialStep() {
-      return this.tutorialMode ? tutorialStepAt(this.tutorialStepIndex) : null;
-    },
-
-    tutorialBubble() {
-      const step = this.tutorialStep();
-      if (!step) return null;
-      return {
-        title: this.t(step.titleKey),
-        body: this.t(step.bodyKey),
-        canBack: this.tutorialStepIndex > 0,
-        canNext: tutorialCanAdvance(step, this.tutorialActionOk),
-        isLast: tutorialIsLast(this.tutorialStepIndex),
-        target: step.target,
-      };
-    },
-
-    maybeShowTutorialBanner() {
-      this.tutorialBanner = !this.tutorialMode
-        && !session.tutorialDone()
-        && !session.tutorialPrompted()
-        && (this.screen === 'language' || this.screen === 'court' || this.screen === 'tournament');
-    },
-
-    acceptTutorialBanner() {
-      session.markTutorialPrompted();
-      this.tutorialBanner = false;
-      this.startTutorial();
-    },
-
-    dismissTutorialBanner() {
-      session.markTutorialPrompted();
-      this.tutorialBanner = false;
-    },
-
-    startTutorial() {
-      session.setTutorialMode(true);
-      session.markTutorialPrompted();
-      this.tutorialMode = true;
-      this.tutorialStepIndex = 0;
-      this.tutorialActionOk = false;
-      this.tutorialReturnScreen = this.screen === 'settings' ? 'settings' : 'court';
-      this.tutorialCourtSession = null;
-      this.tutorialBanner = false;
-      this.selectedIds = [];
-      this.isDoubles = false;
-      this.dialog = null;
-      this.finishStep = null;
-      this.closePin();
-      this.applyTutorialStep();
-    },
-
-    exitTutorial() {
-      session.setTutorialMode(false);
-      session.markTutorialDone();
-      this.tutorialMode = false;
-      this.tutorialActionOk = false;
-      this.tutorialCourtSession = null;
-      this.tutorialBanner = false;
-      this.dialog = null;
-      this.finishStep = null;
-      this.closePin();
-      this.go(this.tutorialReturnScreen || 'settings');
-    },
-
-    tutorialNote(action) {
-      const step = this.tutorialStep();
-      if (!tutorialMatchesAction(step, action)) return;
-      this.tutorialActionOk = true;
-      this.tutorialNext();
-    },
-
-    tutorialNext() {
-      const step = this.tutorialStep();
-      if (!tutorialCanAdvance(step, this.tutorialActionOk)) return;
-      if (tutorialIsLast(this.tutorialStepIndex)) {
-        this.exitTutorial();
-        return;
-      }
-      this.tutorialStepIndex = tutorialNextIndex(this.tutorialStepIndex);
-      this.tutorialActionOk = !tutorialStepAt(this.tutorialStepIndex)?.requireAction;
-      this.applyTutorialStep();
-    },
-
-    tutorialBack() {
-      if (this.tutorialStepIndex <= 0) {
-        this.exitTutorial();
-        return;
-      }
-      this.tutorialStepIndex = tutorialPrevIndex(this.tutorialStepIndex);
-      this.tutorialActionOk = !tutorialStepAt(this.tutorialStepIndex)?.requireAction;
-      this.applyTutorialStep();
-    },
-
-    applyTutorialStep() {
-      const step = this.tutorialStep();
-      if (!step) return;
-      this.dialog = null;
-      if (step.snapshot) {
-        const preset = loadTutorialSnapshot(step.snapshot, (key) => this.t(key));
-        if (preset) {
-          this.match.restoreSnapshot(preset);
-          this.go('match');
-        }
-      } else if (step.scene === 'court' || step.scene === 'pin') {
-        this.go('court');
-        if (step.scene === 'pin') {
-          const court = this.courts.find((item) => (item.kort_id || item.id) === TUTORIAL_COURT_1) || this.courts[0];
-          if (court) this.openPin(court);
-        } else {
-          this.closePin();
-        }
-      } else if (step.scene === 'players') {
-        this.closePin();
-        this.go('players');
-      } else if (step.scene === 'config') {
-        this.openConfig();
-      } else if (step.scene === 'finish') {
-        this.go('match');
-      }
-      if (step.id === 'finish') this.dialog = null;
-      if (step.id === 'retirement') {
-        this.finishStep = 'reason';
-        this.dialog = 'finish';
-      }
-    },
-
-    async persistHistory(state) {
-      if (this.tutorialMode) return;
-      const entry = historyEntryFromState(state);
-      if (entry && this._history) await this._history.save(entry);
-    },
-
-    async flushOutbox() {
-      if (this.tutorialMode) return;
-      if (!this._outbox) return;
-      const result = await this._outbox.flush(createOutboxDispatcher(api));
-      if (result.dropped || result.failed) {
-        this._diagnostics.record(result.dropped ? 'FAILED' : 'OFFLINE', result.dropped ? 'HTTP 403' : '');
-        this.match?.setSyncStatus(result.dropped ? SyncStatus.FAILED : SyncStatus.OFFLINE);
-      } else if (result.flushed) {
-        this._diagnostics.record('SYNCED');
-        this.match?.setSyncStatus(SyncStatus.SYNCED);
-      }
-    },
-
-    matchView() {
-      this.matchRev;
-      return this.match?.view || MatchView.SERVER_SELECTION;
-    },
-
-    matchState() {
-      this.matchRev;
-      return this.match?.state || null;
-    },
-
-    chrome() {
-      this.matchRev;
-      return this.match?.chrome() || {
-        showScoreboard: false,
-        showUndo: false,
-        showFinish: false,
-        undoEnabled: false,
-        confirmLeave: false,
-        showTimer: false,
-      };
-    },
-
-    scoreboard() {
-      this.matchRev;
-      return this.match?.state ? buildScoreboard(this.match.state) : null;
-    },
-
-    serverButtons() {
-      this.matchRev;
-      return this.match?.state ? buildServerButtons(this.match.state).filter((button) => button.visible) : [];
-    },
-
-    basicView() {
-      this.matchRev;
-      return this.match?.state ? buildBasicScoring(this.match.state) : null;
-    },
-
-    announcement() {
-      this.matchRev;
-      if (!this.match?.state) return this.motion.leavingView === MatchView.ANNOUNCEMENT ? this._lastAnnouncement : null;
-      const content = announcementContent(this.match.pendingAnnouncementType, this.match.state, (key, vars) => this.t(key, vars));
-      if (content) this._lastAnnouncement = content;
-      if (!content && this.motion.leavingView === MatchView.ANNOUNCEMENT) return this._lastAnnouncement;
-      return content;
-    },
-
-    syncLabel() {
-      this.matchRev;
-      const status = this.match?.syncStatus || 'IDLE';
-      return this.t({
-        IDLE: 'syncIdle',
-        SYNCING: 'syncSyncing',
-        SYNCED: 'syncSynced',
-        FAILED: 'syncFailed',
-        OFFLINE: 'syncOffline',
-      }[status] || 'syncIdle');
-    },
-
-    chooseServer(buttonIndex) {
-      if (this.tutorialMode) {
-        this.tutorialNote('chooseServer');
-        return;
-      }
-      const state = this.match?.state;
-      if (!state) return;
-      this.match.setFirstServer(resolveServerNumber(buttonIndex, state));
-      wakeLock.request();
-    },
-
-    swapSides() {
-      this.tutorialNote('swapSides');
-      if (this.motion.sideSwapPhase) return;
-      this.motion.sideSwapPhase = 'out';
-      this.clearMotionTimer('sideOut');
-      this._motionTimers.sideOut = setTimeout(() => {
-        this.match?.swapSides();
-        this.motion.sideSwapPhase = 'in';
-        this.clearMotionTimer('sideIn');
-        this._motionTimers.sideIn = setTimeout(() => {
-          this.motion.sideSwapPhase = '';
-        }, MOTION_MS.sideSwap);
-      }, MOTION_MS.sideSwap);
-    },
-
-    clearMotionTimer(name) {
-      if (this._motionTimers[name]) {
-        clearTimeout(this._motionTimers[name]);
-        this._motionTimers[name] = null;
-      }
-    },
-
-    flagMotion(name, duration) {
-      this.motion[name] = false;
-      const apply = () => {
-        this.motion[name] = true;
-        this.clearMotionTimer(name);
-        this._motionTimers[name] = setTimeout(() => {
-          this.motion[name] = false;
-        }, duration);
-      };
-      if (this.$nextTick) this.$nextTick(apply);
-      else queueMicrotask(apply);
-    },
-
-    applyMotion() {
-      const next = snapshotMatchMotion(this.match?.state, this.matchView());
-      const patch = motionPatches(this._motionPrev, next);
-      this._motionPrev = next;
-
-      if (Object.prototype.hasOwnProperty.call(patch, 'leavingView')
-        || Object.prototype.hasOwnProperty.call(patch, 'enteringView')) {
-        this.motion.leavingView = patch.leavingView || null;
-        this.motion.enteringView = patch.enteringView || null;
-        this.clearMotionTimer('leave');
-        this.clearMotionTimer('enter');
-        this._motionTimers.leave = setTimeout(() => {
-          this.motion.leavingView = null;
-        }, MOTION_MS.panelExit);
-        this._motionTimers.enter = setTimeout(() => {
-          this.motion.enteringView = null;
-        }, MOTION_MS.panelEnter);
-      }
-
-      const pulses = ['pulseP1', 'pulseP2', 'pulseSet1P1', 'pulseSet1P2', 'pulseSet2P1', 'pulseSet2P2'];
-      for (const key of pulses) {
-        if (patch[key]) this.flagMotion(key, MOTION_MS.pulse);
-      }
-      const serveFlags = ['serveLeaveP1', 'serveLeaveP2', 'serveEnterP1', 'serveEnterP2'];
-      for (const key of serveFlags) {
-        if (patch[key]) this.flagMotion(key, MOTION_MS.serveIcon);
-      }
-      if (patch.cardSwap) this.flagMotion('cardSwap', MOTION_MS.cardSwap);
-      if (patch.secondServe) this.flagMotion('secondServe', MOTION_MS.secondServe);
-      if (patch.secondServeAdvanced) this.flagMotion('secondServeAdvanced', MOTION_MS.secondServeFade);
-    },
-
-    panelVisible(name) {
-      return panelVisible(this.matchView(), this.motion.leavingView, name);
-    },
-
-    panelClass(name) {
-      return {
-        'is-shown': this.panelVisible(name),
-        'is-enter': this.motion.enteringView === name,
-        'is-exit': this.motion.leavingView === name,
-      };
-    },
-
-    basicWin(isPlayer1) {
-      this.match?.handleBasicWin(isPlayer1);
-      this.tutorialNote('awardPoint');
-    },
-
-    basicFault() {
-      const kind = this.basicView()?.faultKind;
-      this.match?.handleBasicFault();
-      this.tutorialNote(kind === 'double' ? 'doubleFault' : 'secondServe');
-    },
-
-    advancedServe() {
-      this.matchRev;
-      return this.match?.state ? buildAdvancedServe(this.match.state) : null;
-    },
-
-    advancedRally() {
-      this.matchRev;
-      return this.match?.state ? buildAdvancedRally(this.match.state) : null;
-    },
-
-    ace() {
-      this.match?.handleAce();
-    },
-
-    fault() {
-      this.match?.handleFault();
-    },
-
-    footFault() {
-      this.match?.handleFootFault();
-    },
-
-    ballInPlay() {
-      this.match?.handleBallInPlay();
-    },
-
-    winner(isPlayer1) {
-      this.match?.handleWinner(isPlayer1);
-    },
-
-    forcedError(isPlayer1) {
-      this.match?.handleForcedError(isPlayer1);
-    },
-
-    unforcedError(isPlayer1) {
-      this.match?.handleUnforcedError(isPlayer1);
-    },
-
-    continueAnnouncement() {
-      this.match?.continueFromAnnouncement();
-    },
-
-    skipSideChange() {
-      this.match?.skipSideChange();
-    },
-
-    askUndo() {
-      if (!this.chrome().undoEnabled) return;
-      if (this.tutorialMode) {
-        this.match?.undoLastAction();
-        this.tutorialNote('undo');
-        return;
-      }
-      this.dialog = 'undo';
-    },
-
-    confirmUndo() {
-      this.dialog = null;
-      this.match?.undoLastAction();
-      this.tutorialNote('undo');
-    },
-
-    askFinish() {
-      if (!this.chrome().showFinish) return;
-      this.finishStep = 'reason';
-      this.dialog = 'finish';
-      this.tutorialNote('openFinish');
-    },
-
-    pickFinishReason(reason) {
-      if (this.tutorialMode && reason === MatchFinishReason.RETIREMENT) {
-        this.finishStep = 'retirement';
-        this.tutorialNote('openFinish');
-        return;
-      }
-      if (reason === MatchFinishReason.RETIREMENT) {
-        this.finishStep = 'retirement';
-        return;
-      }
-      if (reason === MatchFinishReason.WALKOVER) {
-        this.finishStep = 'walkover';
-        return;
-      }
-      this.confirmFinish(new FinishMatchRequest({ finishReason: reason }));
-    },
-
-    pickRetirement(injuredIsTeam1) {
-      this.tutorialNote('pickRetirement');
-      const state = this.match.state;
-      this.confirmFinish(new FinishMatchRequest({
-        finishReason: MatchFinishReason.RETIREMENT,
-        injuredPlayerName: injuredIsTeam1 ? state.getTeam1FullName() : state.getTeam2FullName(),
-        winnerName: injuredIsTeam1 ? state.getTeam2FullName() : state.getTeam1FullName(),
-      }));
-    },
-
-    pickWalkover(winnerIsTeam1) {
-      const state = this.match.state;
-      this.confirmFinish(new FinishMatchRequest({
-        finishReason: MatchFinishReason.WALKOVER,
-        winnerName: winnerIsTeam1 ? state.getTeam1FullName() : state.getTeam2FullName(),
-      }));
-    },
-
-    confirmFinish(request) {
-      this.dialog = null;
-      this.finishStep = null;
-      this.match.finishMatchWithOutcome(request);
-      wakeLock.release();
-    },
-
-    winnerName() {
-      this.matchRev;
-      return this.match?.state ? finishWinnerName(this.match.state) : '';
-    },
-
-    finalSets() {
-      this.matchRev;
-      return this.match?.state ? finalSetsLine(this.match.state) : '';
-    },
-
-    finalSetBySet() {
-      this.matchRev;
-      return this.match?.state ? finalSetBySetLine(this.match.state) : '';
-    },
-
-    finishStats() {
-      this.matchRev;
-      return this.match?.state ? finishStatRows(this.match.state) : [];
-    },
-
-    finishStatText(row) {
-      this.matchRev;
-      return this.match?.state ? finishStatValue(this.match.state, row) : '';
-    },
-
-    gameModeLabel() {
-      const board = this.scoreboard();
-      if (!board?.gameMode) return '';
-      return board.gameMode === 'super_tiebreak'
-        ? this.t('superTiebreakMode', { points: board.gameModePoints })
-        : this.t('tiebreakMode', { points: board.gameModePoints });
-    },
-
-    statsLine(field) {
-      this.matchRev;
-      const state = this.match?.state;
-      if (!state) return '';
-      return `${state.player1Stats[field]} / ${state.player2Stats[field]}`;
-    },
-
-    servePctLine() {
-      this.matchRev;
-      const state = this.match?.state;
-      if (!state) return '';
-      return `${state.player1Stats.getFirstServePercentage()}% / ${state.player2Stats.getFirstServePercentage()}%`;
-    },
-
-    /** Whether the screen is kept on (the iPad check reads it). */
-    wakeLockHeld() {
-      return wakeLock.active;
-    },
-
-    nextMatch(sameSetup) {
-      if (this.tutorialMode) {
-        this.exitTutorial();
-        return;
-      }
-      wakeLock.release();
-      session.clearActiveMatch();
-      this.motion = emptyMotionUi();
-      this._motionPrev = null;
-      this._lastAnnouncement = null;
-      this.selectedIds = [];
-      this.team1Name = null;
-      this.team2Name = null;
-      this.selectedScheduleId = null;
-      this.suggestion = null;
-      this.configForm = sameSetup
-        ? formFromLastConfig(session.getLastMatchConfig())
-        : { ...DEFAULT_MATCH_CONFIG_FORM };
-      if (!sameSetup) session.clearLastMatchConfig();
-      this.go('players');
-    },
-
-    async syncMatch(reason, state, extra) {
-      if (this.tutorialMode) return { failed: false };
-      if (reason === 'finalize') {
-        // the tablet's own history must never stop the result reaching the server
-        try {
-          await this.persistHistory(state);
-        } catch (error) {
-          console.error('Umpire history save failed:', error);
-        }
-      }
-      if (!this._outbox) {
-        return { failed: true, offline: !navigator.onLine };
-      }
-      const result = await syncMatchLive({
-        api,
-        outbox: this._outbox,
-        reason,
-        state,
-        extra,
-        online: () => navigator.onLine,
-      });
-      this.recordSyncDiagnostics(result);
-      return result;
-    },
-  };
+        });
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState !== 'visible') return;
+          if (this.screen === 'match' && this.match?.state?.matchStartTime) wakeLock.request();
+          if (navigator.onLine && !this.tutorialMode) this.flushOutbox();
+        });
+        this._timerId = setInterval(() => {
+          if (this.match?.state) this.timerText = matchTimerText(this.match.state, Date.now());
+        }, 1000);
+        this.bindFullscreenWatcher();
+      },
+    },
+    createUmpireNavigationSlice({ session, wakeLock }),
+    createUmpirePwaShellSlice({ registerServiceWorker: registerUmpireServiceWorker }),
+    createUmpireDirectorAndSyncSlice({ api, session }),
+    createUmpireCourtPinSlice({ api, session, pinPad }),
+    createUmpirePlayersAndConfigSlice({ api, session }),
+    createUmpireSettingsHistoryPanicSlice({ api, session }),
+    createUmpireTutorialSlice({ session }),
+    createUmpireMatchScreenSlice({ wakeLock }),
+    createUmpireMatchFinishSlice({ session, wakeLock }),
+  );
 }
 
-window.Alpine = Alpine;
-Alpine.data('umpireApp', createUmpireApp);
-Alpine.start();
+if (typeof window !== 'undefined') {
+  window.Alpine = Alpine;
+  Alpine.data('umpireApp', createUmpireApp);
+  Alpine.start();
+}

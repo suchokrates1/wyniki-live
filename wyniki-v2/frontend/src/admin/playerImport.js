@@ -1,3 +1,4 @@
+import { adminFetch } from './auth.js';
 import { planningDivisionKey as sharedPlanningDivisionKey } from '../shared/categories.js';
 
 /** Importing a start list: the pasted text, the preview the office corrects, and the confirm. */
@@ -19,7 +20,7 @@ export function createPlayerImportAdmin() {
         }
         
         try {
-     const response = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/parse-import`, {
+     const response = await adminFetch(`/admin/api/tournaments/${this.selectedTournament}/players/parse-import`, {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
        body: JSON.stringify({ text: this.importText }),
@@ -139,7 +140,7 @@ export function createPlayerImportAdmin() {
        };
      });
 
-     const response = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/bulk`, {
+     const response = await adminFetch(`/admin/api/tournaments/${this.selectedTournament}/players/bulk`, {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
        body: JSON.stringify({ players }),

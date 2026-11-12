@@ -50,9 +50,13 @@ def register(blueprint) -> None:
                 is_charging=charging_flag(is_charging),
                 app_version=heartbeat_meta.get("app_version") or app_version or "",
             )
-            warning = consider_low_battery(android_id)
-            if warning:
-                notify_low_battery(warning)
+            # The list above is open on purpose; a WhatsApp alert is not. Only a tablet
+            # holding a signed court session may raise one, or anyone could invent a
+            # device with 3% battery and message the recipients.
+            if court_id_from_bearer():
+                warning = consider_low_battery(android_id)
+                if warning:
+                    notify_low_battery(warning)
 
         if access_error:
             return access_error
@@ -61,8 +65,9 @@ def register(blueprint) -> None:
         if kort_id:
             court_state = ensure_court_state(kort_id)
             with STATE_LOCK:
-                if battery_level:
-                    court_state["battery_level"] = int(battery_level)
+                level = battery_percent(battery_level)
+                if level is not None:
+                    court_state["battery_level"] = level
                 if is_charging is not None:
                     court_state["is_charging"] = is_charging in (True, "true", "True")
                 court_state["last_heartbeat"] = utc_now_iso()
@@ -122,5 +127,5 @@ def register(blueprint) -> None:
         access_error = require_court_access(session_court_id)
         if access_error:
             return access_error
-        acked = director_command_broker.ack(command_id)
+        acked = director_command_broker.ack(command_id, court_id=session_court_id or None)
         return jsonify({"ok": True, "acked": acked}), 200

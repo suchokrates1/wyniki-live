@@ -48,8 +48,32 @@ def _apply_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
         cursor.close()
 
 
+# Values that ship in the repository. Anyone can read them, so anyone could sign an
+# administrator token with them.
+PLACEHOLDER_SECRET_KEYS = frozenset({
+    "",
+    "change-me",
+    "dev-secret-key-change-in-production",
+    "prod-secret-key-change-me",
+})
+
+
+def refuse_placeholder_secret_key() -> None:
+    """Stop a production start that would sign sessions with a key from the repository."""
+    if settings.flask_env != "production":
+        return
+    if settings.secret_key.strip() in PLACEHOLDER_SECRET_KEYS:
+        raise RuntimeError(
+            "SECRET_KEY is not set (or is the placeholder from the repository). "
+            "Set SECRET_KEY in the host's .env to a long random value, e.g. "
+            "`python -c \"import secrets; print(secrets.token_urlsafe(48))\"`. "
+            "For local development set FLASK_ENV=development instead."
+        )
+
+
 def create_app() -> Flask:
     """Create and configure the Flask application."""
+    refuse_placeholder_secret_key()
     app = Flask(
         __name__,
         static_folder=str(settings.static_dir),
@@ -109,7 +133,7 @@ def create_app() -> Flask:
         if not request.path.startswith(("/api/", "/admin/api/")):
             raise exc
         logger.error("unhandled_api_error", path=request.path, error=str(exc), exc_info=True)
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Internal error"}), 500
 
     # Register blueprints
     app.register_blueprint(web.blueprint)

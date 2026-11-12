@@ -1,5 +1,7 @@
 /** The System section: which SMTP fields the form shows. */
 
+import { adminFetch } from './auth.js';
+
 export const SMTP_FIELDS = [
   { key: 'smtp_host', label: 'Host SMTP', type: 'text', placeholder: 'smtp.example.com' },
   { key: 'smtp_port', label: 'Port', type: 'number', placeholder: '587' },
@@ -31,7 +33,7 @@ export function createSystemView() {
 
     async loadEmailSettings() {
       try {
-        const response = await fetch('/admin/api/settings/email');
+        const response = await adminFetch('/admin/api/settings/email');
         if (!response.ok) throw new Error('Failed to load email settings');
         this.emailSettings = { ...this.emailSettings, ...(await response.json()) };
       } catch (err) {
@@ -42,7 +44,7 @@ export function createSystemView() {
 
     async saveEmailSettings() {
       try {
-        const response = await fetch('/admin/api/settings/email', {
+        const response = await adminFetch('/admin/api/settings/email', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(this.emailSettings),

@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   public-frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: wyniki-v2/frontend
@@ -52,7 +52,7 @@ jobs:
         run: npm run e2e:admin
 
   umpire-e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: wyniki-v2/frontend

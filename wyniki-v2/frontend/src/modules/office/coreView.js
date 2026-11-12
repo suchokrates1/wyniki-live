@@ -1,6 +1,6 @@
 import { translateStoredScheduleLabel } from '../../shared/labelDisplay.js';
 import { formatTeamLabelForWrap } from '../../shared/teamDisplay.js';
-import { officeAuthHeaders, officeJson } from './api.js';
+import { officeAuthHeaders, officeErrorText, officeJson } from './api.js';
 import { defaultOfficeForm, defaultOfficeScheduleForm } from './forms.js';
 
 export function createOfficeCoreView() {
@@ -454,7 +454,7 @@ export function createOfficeCoreView() {
         const response = await fetch(`/api/office/${this.slot}/meta`);
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(payload.error || this.ot('errors.slotMeta'));
+          throw new Error(officeErrorText(this, payload, 'errors.slotMeta'));
         }
         this.tournamentMeta = payload.tournament || null;
       } catch (error) {

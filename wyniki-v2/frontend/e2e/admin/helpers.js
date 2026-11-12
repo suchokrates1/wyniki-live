@@ -88,8 +88,12 @@ export async function openAdmin(page, { token = true, tournaments = TOURNAMENTS,
   });
   await page.route(/\/api\/snapshot(\?|$)/, (route) => route.fulfill({ json: { courts: snapshot } }));
   await page.route(/\/api\/stream(\?|$)/, (route) => route.fulfill({ status: 204, body: '' }));
+  await page.route(/\/api\/overlay\/stats\/key(\?|$)/, (route) => route.fulfill({
+    json: { key: 'e2e-stats-key', on: '/api/overlay/stats/on?key=e2e-stats-key', off: '/api/overlay/stats/off?key=e2e-stats-key' },
+  }));
+  await page.route(/\/api\/overlay\/settings(\?|$)/, (route) => route.fulfill({ json: { overlays: {} } }));
 
-  await page.goto('/admin.html');
+  await page.goto(process.env.ADMIN_BASE_URL ? '/admin' : '/admin.html');
   // without a session the panel hands over to the sign-in page
   if (signIn) return;
   await page.locator('.adm-rail__item').first().waitFor();

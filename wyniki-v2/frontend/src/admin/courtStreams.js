@@ -1,6 +1,7 @@
 /** Court stream links per day, edited from the tournament settings. The shape and the
     editing live in shared/courtStreams.js, which the office uses too. */
 
+import { adminFetch } from './auth.js';
 import {
   courtStreamsPayload,
   emptyCourtStreams,
@@ -48,7 +49,7 @@ export function createCourtStreamsAdmin() {
       async loadAdminCourtStreams(tournamentId) {
         if (!tournamentId) return;
         try {
-          const response = await fetch(`/admin/api/tournaments/${tournamentId}/court-streams`);
+          const response = await adminFetch(`/admin/api/tournaments/${tournamentId}/court-streams`);
           const payload = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(payload.error || 'Błąd ładowania linków transmisji');
           this.applyAdminCourtStreams(payload.court_streams || {});
@@ -62,7 +63,7 @@ export function createCourtStreamsAdmin() {
         if (!this.editTournament.id) return;
         this.streamsSaving = true;
         try {
-          const response = await fetch(`/admin/api/tournaments/${this.editTournament.id}/court-streams`, {
+          const response = await adminFetch(`/admin/api/tournaments/${this.editTournament.id}/court-streams`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(courtStreamsPayload(this.courtStreams, this.streamsSharedAll)),

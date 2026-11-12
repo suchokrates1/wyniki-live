@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import json
+import secrets
 import threading
 from typing import Any
 
@@ -262,6 +263,21 @@ def update_overlay_settings(new: dict[str, Any]) -> dict[str, Any]:
         _save_to_db()
         logger.info("overlay_settings_updated")
         return copy.deepcopy(_overlay_settings)
+
+
+_STATS_KEY = "overlay_stats_key"
+
+
+def stats_toggle_key() -> str:
+    """The secret StreamDeck puts in the stats on/off address. Created once and kept."""
+    # strict: an unreadable database must not look like "no key yet" and mint a new one
+    row = fetch_app_settings([_STATS_KEY], strict=True)
+    key = str(row.get(_STATS_KEY) or "").strip()
+    if key:
+        return key
+    key = secrets.token_urlsafe(18)
+    upsert_app_settings({_STATS_KEY: key})
+    return key
 
 
 def set_overlay_stats_visibility(active: bool, mode: Any = None) -> dict[str, Any]:

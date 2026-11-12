@@ -446,6 +446,17 @@ def _place_in_pool(
     return placements
 
 
+def _rest_slots(config: dict[str, Any]) -> int:
+    """Slots of rest between a player's matches: 1 when not set; 0 is a choice (no rest), not "not set"."""
+    raw = config.get("rest_slots")
+    if raw is None or raw == "":
+        return 1
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 1
+
+
 def place_matches(
     matches: list[dict[str, Any]],
     config: dict[str, Any],
@@ -460,7 +471,7 @@ def place_matches(
     their rest gap.
     """
     start_time = str(config.get("start_time") or DEFAULT_START_TIME)
-    rest_slots = int(config.get("rest_slots") or 1)
+    rest_slots = _rest_slots(config)
     b1_courts = normalize_b1_court_ids(config)
     flex_courts = _ordered_flex_court_ids(config)
 
@@ -485,7 +496,11 @@ def place_matches(
         placements.extend(_place_in_pool(b1_matches, b1_courts, config, day_date, start_time, rest_slots, occupied))
 
     if flex_courts:
-        placements.extend(_place_in_pool(flex_matches, flex_courts, config, day_date, start_time, rest_slots, occupied))
+        # The B1 courts were filled first. Their matches count as occupied here, or a player
+        # with a B1 match and a match in another category would get both at the same time.
+        b1_placed = [p for p in placements if p.get("court_id") and p.get("scheduled_time")]
+        taken = list(occupied or []) + b1_placed
+        placements.extend(_place_in_pool(flex_matches, flex_courts, config, day_date, start_time, rest_slots, taken))
     else:
         unplaced.extend(flex_matches)
 

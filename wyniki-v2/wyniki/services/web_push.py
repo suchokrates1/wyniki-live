@@ -113,8 +113,8 @@ def send_to(subscribers: list[dict[str, Any]], build_payload) -> int:
 def notify_match_started(court_id: str, court_name: str, player_a: str, player_b: str) -> int:
     """Tell everyone watching this court that a match just started.
 
-    Returns how many notifications went out. Never raises: the caller is the
-    umpire's match-create request and it must not fail over this.
+    Returns how many notifications went out. Never raises: it runs on its own
+    thread beside the umpire's match-create request, where nobody would catch it.
     """
     if not is_enabled():
         return 0
@@ -123,6 +123,14 @@ def notify_match_started(court_id: str, court_name: str, player_a: str, player_b
     except Exception as exc:  # noqa: BLE001
         logger.warning("web_push_lookup_failed", error=str(exc), court_id=court_id)
         return 0
+    try:
+        return _notify_match_started(subscribers, court_id, court_name, player_a, player_b)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("match_started_push_failed", error=str(exc), court_id=court_id)
+        return 0
+
+
+def _notify_match_started(subscribers, court_id: str, court_name: str, player_a: str, player_b: str) -> int:
 
     def payload(lang: str) -> dict[str, Any]:
         players = " – ".join(name for name in (player_a, player_b) if name)

@@ -1,7 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import { officeJson, officeResponse } from './api.js';
+import { SUPPORTED_LANGUAGES } from '../../i18n/locale.js';
+import { createOfficeI18n } from '../../i18n/officeI18n.js';
+import { officeErrorText, officeJson, officeResponse } from './api.js';
 
 const view = () => ({
   slot: 3,
@@ -51,4 +55,25 @@ test('a caller that handles a refusal itself gets the status and the body', asyn
   assert.deepEqual(await officeResponse(view(), '/matches/7', { method: 'PUT', body: {} }), {
     ok: false, status: 409, payload: { blocked_by: 'B1 — Finał' },
   });
+});
+
+test('a refusal carrying a known API code translates in every supported office language', async () => {
+  const pyPath = fileURLToPath(new URL('../../../../wyniki/services/office_errors.py', import.meta.url));
+  const pySource = readFileSync(pyPath, 'utf8');
+  const codes = [...new Set([...pySource.matchAll(/:\s*"([a-z0-9_]+)"/g)].map((m) => m[1]))];
+  assert.ok(codes.length >= 15, `expected office error codes, got ${codes.length}`);
+
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const i18n = createOfficeI18n();
+    i18n.lang = lang;
+    for (const code of codes) {
+      const translated = officeErrorText(i18n, { error: 'English fallback', code }, 'errors.slotMeta');
+      assert.ok(translated && translated !== 'English fallback', `missing ${lang} translation for ${code}`);
+    }
+    // Unknown code safely falls back to server error text
+    assert.equal(
+      officeErrorText(i18n, { error: 'Custom server explanation', code: 'future_unknown_code' }, 'errors.slotMeta'),
+      'Custom server explanation',
+    );
+  }
 });

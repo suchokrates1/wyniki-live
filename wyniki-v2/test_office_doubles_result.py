@@ -176,9 +176,7 @@ def test_normalize_office_sets_walkover_accepts_team_names():
         team_a,
         team_b,
     )
-    assert player1_sets == 2
-    assert player2_sets == 0
-    assert sets[0]["player1_games"] == 4
+    assert (sets, player1_sets, player2_sets) == ([], 0, 0)
     with pytest.raises(ValueError, match="Winner is required"):
         _normalize_office_sets(
             {"walkover": True, "winner_name": "Ewa Nowak"},

@@ -330,7 +330,12 @@ def fetch_tournament_schedule(tournament_id: int, *, public_only: bool = False) 
             return [_schedule_row_payload(row, public=public_only) for row in cursor.fetchall()]
     except Exception as e:
         logger.error("fetch_tournament_schedule_error", error=str(e), tournament_id=tournament_id)
-        return []
+        if public_only:
+            # the public page shows nothing rather than an error
+            return []
+        # The office and the planner write on top of what they read here. To them an
+        # empty plan means "no fixtures yet", and they would generate or delete on that.
+        raise StorageError("fetch_tournament_schedule") from e
 
 def _parse_schedule_reference_datetime(value: str | None = None) -> datetime:
     if value:
@@ -646,7 +651,8 @@ def _knockout_fixture_key(source_ref_id: Any) -> str:
 def load_removed_fixtures(tournament_id: int) -> set:
     """Group/knockout fixtures the office deleted; ensure_* must not rebuild them."""
     key = _removed_fixtures_key(tournament_id)
-    raw = fetch_app_settings([key]).get(key)
+    # strict: read as empty, the deleted fixtures would be rebuilt, or the list overwritten
+    raw = fetch_app_settings([key], strict=True).get(key)
     try:
         values = json.loads(raw) if raw else []
     except (ValueError, TypeError):
@@ -1083,7 +1089,8 @@ def get_autoscheduler_config(tournament_id: int) -> dict[str, Any]:
 
     courts = fetch_courts_for_tournament(tournament_id)
     config = auto_scheduler.build_default_config(courts)
-    stored = fetch_app_settings([_autoscheduler_settings_key(tournament_id)]).get(
+    # strict: saving merges over this, so defaults read from a failed query would replace the config
+    stored = fetch_app_settings([_autoscheduler_settings_key(tournament_id)], strict=True).get(
         _autoscheduler_settings_key(tournament_id)
     )
     if stored:
@@ -1234,6 +1241,7 @@ def generate_autoschedule_proposal(
     if _autoschedule_phases_include_knockout(phases):
         seed_day = target_day if day_date else knockout_day
         seed_provisional_knockout_from_groups(tournament_id, schedule_day=seed_day)
+        ensure_knockout_schedule_entries(tournament_id, schedule_day=seed_day)
     else:
         ensure_knockout_schedule_entries(tournament_id)
 

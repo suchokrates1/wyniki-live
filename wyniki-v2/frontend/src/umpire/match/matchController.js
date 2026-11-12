@@ -6,6 +6,7 @@ import { MatchPointEvent } from '../match-engine/matchPointReducer.js';
 import { MatchUndoManager, MatchUndoResult } from '../match-engine/matchUndoManager.js';
 import { ActionType, StatsMode } from '../match-engine/models.js';
 import { parseDirectorCommand } from '../offline/directorCommandParse.js';
+import { snapshotMatchStateForSync } from './matchStateIo.js';
 import { MatchView, SyncStatus, matchChrome } from './matchViews.js';
 
 export function createMatchController({
@@ -98,20 +99,30 @@ export function createMatchController({
     if (result.syncMatch) requestSync('update');
   }
 
+  let syncSeq = 0;
+
   function requestSync(reason, extra = null) {
     if (!onSync || !state) return;
+    const snapshot = snapshotMatchStateForSync(state);
+    const seq = ++syncSeq;
     syncStatus = SyncStatus.SYNCING;
-    Promise.resolve(onSync(reason, state, extra))
+    Promise.resolve(onSync(reason, snapshot, extra))
       .then((result) => {
-        if (result?.matchId != null) state.matchId = result.matchId;
+        if (result?.matchId != null && state?.clientMatchUuid === snapshot.clientMatchUuid) {
+          state.matchId = result.matchId;
+        }
         if (result?.bracketWarning) bracketWarning = result.bracketWarning;
-        if (result?.offline) syncStatus = SyncStatus.OFFLINE;
-        else if (result?.failed) syncStatus = SyncStatus.FAILED;
-        else syncStatus = SyncStatus.SYNCED;
+        if (seq === syncSeq) {
+          if (result?.offline) syncStatus = SyncStatus.OFFLINE;
+          else if (result?.failed) syncStatus = SyncStatus.FAILED;
+          else syncStatus = SyncStatus.SYNCED;
+        }
         notify();
       })
       .catch(() => {
-        syncStatus = navigatorOnLine() ? SyncStatus.FAILED : SyncStatus.OFFLINE;
+        if (seq === syncSeq) {
+          syncStatus = navigatorOnLine() ? SyncStatus.FAILED : SyncStatus.OFFLINE;
+        }
         notify();
       });
   }
@@ -281,6 +292,9 @@ export function createMatchController({
       undoMessage = result.description;
       pendingAnnouncementType = null;
       view = scoringView();
+      // The server and the stream showed the point that was just taken back.
+      requestSync('event', { eventType: 'undo' });
+      requestSync('update');
       notify();
     },
 
@@ -303,6 +317,8 @@ export function createMatchController({
         const command = parseDirectorCommand(raw);
         if (!DirectorCommandApplier.appliesTo(state, command)) continue;
         state = DirectorCommandApplier.apply(state, command);
+        // a corrected score has no undo history (see DirectorCommandApplier)
+        if (command.score) canUndo = false;
         applied.push(command);
       }
       if (applied.length) notify();

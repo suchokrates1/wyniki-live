@@ -1,3 +1,5 @@
+import { adminFetch } from './auth.js';
+
 export function createTournamentsAdmin() {
   return {
       // Tournaments
@@ -31,7 +33,7 @@ export function createTournamentsAdmin() {
       async loadTournaments() {
     this.loading.tournaments = true;
     try {
-      const response = await fetch('/admin/api/tournaments');
+      const response = await adminFetch('/admin/api/tournaments');
       if (!response.ok) throw new Error('Failed to load tournaments');
       this.tournaments = await response.json();
       const activeTournaments = this.activeTournamentsList();
@@ -69,7 +71,7 @@ export function createTournamentsAdmin() {
         payload.append('logo', this.newTournament.logo);
       }
 
-      const response = await fetch('/admin/api/tournaments', {
+      const response = await adminFetch('/admin/api/tournaments', {
         method: 'POST',
         body: payload,
       });
@@ -128,7 +130,7 @@ export function createTournamentsAdmin() {
     if (!confirm('Czy na pewno usunąć ten turniej?')) return;
 
     try {
-      const response = await fetch(`/admin/api/tournaments/${tournamentId}`, {
+      const response = await adminFetch(`/admin/api/tournaments/${tournamentId}`, {
         method: 'DELETE',
       });
       
@@ -144,7 +146,7 @@ export function createTournamentsAdmin() {
       
       async toggleTournamentActive(tournamentId, active) {
     try {
-      const response = await fetch(`/admin/api/tournaments/${tournamentId}/active`, {
+      const response = await adminFetch(`/admin/api/tournaments/${tournamentId}/active`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
