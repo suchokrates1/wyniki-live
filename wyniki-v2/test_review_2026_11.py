@@ -328,8 +328,7 @@ def test_a_500_never_quotes_the_exception(app):
 def test_match_finished_emails_run_on_a_background_thread_with_an_intact_snapshot(app, monkeypatch):
     import threading
     from wyniki import database
-    from wyniki.api import umpire_api
-    from wyniki.services import email_reports
+    from wyniki.services import email_reports, umpire_match_finalize
     from wyniki.services.api_auth import issue_court_token
 
     with app.app_context():
@@ -355,7 +354,7 @@ def test_match_finished_emails_run_on_a_background_thread_with_an_intact_snapsho
     monkeypatch.setattr(email_reports, "send_match_report", fake_send_report)
     monkeypatch.setattr(email_reports, "maybe_send_tournament_summary", lambda tid: False)
     # Prevent 5s clear-overlay Timer from waiting in production-mode branch during test
-    monkeypatch.setattr(umpire_api.threading, "Timer", lambda _delay, fn: threading.Thread(target=fn, daemon=True))
+    monkeypatch.setattr(umpire_match_finalize.threading, "Timer", lambda _delay, fn: threading.Thread(target=fn, daemon=True))
 
     headers = {"Authorization": f"Bearer {issue_court_token(court_id)}"}
     client = app.test_client()
