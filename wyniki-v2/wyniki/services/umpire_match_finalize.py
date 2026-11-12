@@ -97,7 +97,7 @@ def _dispatch_match_finished_emails(match: Match, state_snapshot: dict) -> None:
         injured_player_name=match.injured_player_name,
         result_note=match.result_note,
     )
-    app = current_app._get_current_object()
+    app = current_app._get_current_object()  # type: ignore[attr-defined]  # the real app behind the proxy
 
     def send_reports() -> None:
         try:

@@ -279,7 +279,7 @@ def _normalize_office_sets(
         if blank_seen:
             raise ValueError('Set scores must not skip a set')
         try:
-            parsed_sets.append((raw_set, int(raw_p1), int(raw_p2)))
+            parsed_sets.append((raw_set, int(str(raw_p1).strip()), int(str(raw_p2).strip())))
         except (TypeError, ValueError):
             raise ValueError('Set score is not readable') from None
     for index, (raw_set, p1_games, p2_games) in enumerate(parsed_sets, start=1):

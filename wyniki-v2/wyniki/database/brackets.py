@@ -2204,9 +2204,9 @@ def _detect_knockout_result(
         elif winner_surname and winner_surname == _surname_match_token(p2).lower():
             mapped_winner = p2
         else:
-            mapped_winner = match_winner
+            mapped_winner = match_winner or ""
     else:
-        mapped_winner = match_winner
+        mapped_winner = match_winner or ""
     if mapped_winner in (p1, p2):
         winner = mapped_winner
     else:

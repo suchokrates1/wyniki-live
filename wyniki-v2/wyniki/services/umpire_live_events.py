@@ -105,7 +105,7 @@ def process_umpire_match_event(kort_id: str, data: dict) -> tuple[dict, int]:
             "expected_court_id": expected_court,
         }, 200
 
-    if names_its_match and active_match.status == "finished":
+    if names_its_match and active_match is not None and active_match.status == "finished":
         logger.info(
             "finished_match_event_ignored",
             match_id=active_match.id,
@@ -139,7 +139,7 @@ def process_umpire_match_event(kort_id: str, data: dict) -> tuple[dict, int]:
             court_state["B"].get("full_name") or court_state["B"].get("surname"),
         )
 
-        if restore_match_score:
+        if restore_match_score and active_match is not None:
             _sync_live_score_to_court_state(court_state, active_match, score)
             court_state["match_status"]["active"] = True
             _sync_court_match_timer_from_match(court_state, active_match)

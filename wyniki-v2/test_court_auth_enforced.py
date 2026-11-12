@@ -3,6 +3,8 @@ token ended on 2026-08-08. The rest of the suite extends it to 2099 (conftest), 
 without this module nothing would notice a write endpoint losing its guard."""
 from datetime import datetime, UTC
 
+import re
+
 import pytest
 
 from wyniki.config import settings
@@ -135,7 +137,7 @@ def test_every_office_route_refuses_a_caller_without_an_office_session(full_app_
         values = {name: 1 for name in rule.arguments}
         path = rule.rule
         for name in rule.arguments:
-            path = __import__("re").sub(r"<(?:[^:<>]+:)?%s>" % name, str(values[name]), path)
+            path = re.sub(rf"<(?:[^:<>]+:)?{name}>", str(values[name]), path)
         for method in sorted(rule.methods - {"HEAD", "OPTIONS"}):
             response = client.open(path, method=method, json={})
             assert response.status_code == 401, f"{method} {rule.rule}: {response.status_code}"
