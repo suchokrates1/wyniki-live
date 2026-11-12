@@ -3,6 +3,8 @@
  * each under the account that made it.
  */
 
+import { adminFetch } from './auth.js';
+
 /** "admin_series.attach" for an admin's change, the organizer's own action otherwise. */
 export function changeWhat(row) {
   const action = String(row?.action || '');
@@ -25,7 +27,7 @@ export function createChangeLogView() {
     async loadChangeLog() {
       this.changeLogError = '';
       try {
-        const response = await fetch('/admin/api/audit?limit=200');
+        const response = await adminFetch('/admin/api/audit?limit=200');
         if (!response.ok) throw new Error(String(response.status));
         this.changeLog = await response.json();
       } catch (err) {

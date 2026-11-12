@@ -1,3 +1,4 @@
+import { adminFetch } from './auth.js';
 import { inferMixedPlayerBands } from '../shared/categories.js';
 
 /** The tournament settings panel: what it opens with, what it saves, and the logo. */
@@ -119,7 +120,7 @@ export function createTournamentEditorAdmin() {
     if (!file || !this.editTournament.id) return;
     const body = new FormData();
     body.append('logo', file);
-    const response = await fetch(`/admin/api/tournaments/${this.editTournament.id}/logo?variant=dark`, { method: 'POST', body });
+    const response = await adminFetch(`/admin/api/tournaments/${this.editTournament.id}/logo?variant=dark`, { method: 'POST', body });
     const data = await response.json().catch(() => ({}));
     if (response.ok) {
       this.editTournament.logo_dark_path = data.logo_dark_path;
@@ -131,7 +132,7 @@ export function createTournamentEditorAdmin() {
       },
 
       async removeTournamentDarkLogo() {
-    const response = await fetch(`/admin/api/tournaments/${this.editTournament.id}/logo?variant=dark`, { method: 'DELETE' });
+    const response = await adminFetch(`/admin/api/tournaments/${this.editTournament.id}/logo?variant=dark`, { method: 'DELETE' });
     if (response.ok) this.editTournament.logo_dark_path = '';
       },
 
@@ -151,7 +152,7 @@ export function createTournamentEditorAdmin() {
         payload.append('logo', this.editTournament.logo);
       }
 
-      const response = await fetch(`/admin/api/tournaments/${this.editTournament.id}`, {
+      const response = await adminFetch(`/admin/api/tournaments/${this.editTournament.id}`, {
         method: 'PUT',
         body: payload,
       });

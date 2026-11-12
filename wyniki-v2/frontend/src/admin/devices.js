@@ -1,4 +1,6 @@
 /** Admin list of umpire tablets, with a per-tablet low-battery WhatsApp threshold. */
+import { adminFetch } from './auth.js';
+
 export function createDevicesAdmin() {
   return {
     devices: [],
@@ -6,7 +8,7 @@ export function createDevicesAdmin() {
 
     async loadDevices() {
       this.devicesError = '';
-      const response = await fetch('/admin/api/devices');
+      const response = await adminFetch('/admin/api/devices');
       if (!response.ok) {
         this.devicesError = 'Nie udało się wczytać tabletów.';
         return;
@@ -47,7 +49,7 @@ export function createDevicesAdmin() {
 
     async saveDevice(row) {
       this.devicesError = '';
-      const response = await fetch('/admin/api/devices/' + encodeURIComponent(row.android_id), {
+      const response = await adminFetch('/admin/api/devices/' + encodeURIComponent(row.android_id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -3,6 +3,8 @@
  * Open rows stay until someone at the desk marks them done.
  */
 
+import { adminFetch } from './auth.js';
+
 export function createProfileReportsView() {
   return {
     profileReports: [],
@@ -14,7 +16,7 @@ export function createProfileReportsView() {
 
     async loadProfileReports() {
       try {
-        const response = await fetch('/admin/api/profile-reports');
+        const response = await adminFetch('/admin/api/profile-reports');
         if (!response.ok) throw new Error(String(response.status));
         this.profileReports = await response.json();
       } catch (err) {
@@ -25,7 +27,7 @@ export function createProfileReportsView() {
     async closeProfileReport(report) {
       this.profileReportsError = '';
       try {
-        const response = await fetch(`/admin/api/profile-reports/${report.id}/done`, { method: 'POST' });
+        const response = await adminFetch(`/admin/api/profile-reports/${report.id}/done`, { method: 'POST' });
         if (!response.ok) throw new Error(String(response.status));
         this.showToast?.('Zgłoszenie załatwione', 'success');
         await this.loadProfileReports();

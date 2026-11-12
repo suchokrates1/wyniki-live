@@ -1,5 +1,7 @@
 /** Entries of one tournament: the list, adding, editing and removing a player. */
 
+import { adminFetch } from './auth.js';
+
 export function createTournamentPlayersAdmin() {
   return {
     players: [],
@@ -31,7 +33,7 @@ export function createTournamentPlayersAdmin() {
         
         this.loading.players = true;
         try {
-     const response = await fetch(`/admin/api/tournaments/${tournamentId}/players`);
+     const response = await adminFetch(`/admin/api/tournaments/${tournamentId}/players`);
      if (!response.ok) throw new Error('Failed to load players');
      this.players = await response.json();
      await this.loadTournamentCategoriesCache(tournamentId);
@@ -50,7 +52,7 @@ export function createTournamentPlayersAdmin() {
         }
         
         try {
-     const response = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players`, {
+     const response = await adminFetch(`/admin/api/tournaments/${this.selectedTournament}/players`, {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
        body: JSON.stringify(this.newPlayer),
@@ -71,7 +73,7 @@ export function createTournamentPlayersAdmin() {
         if (!confirm('Czy na pewno usunąć tego gracza?')) return;
         
         try {
-     const response = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/${playerId}`, {
+     const response = await adminFetch(`/admin/api/tournaments/${this.selectedTournament}/players/${playerId}`, {
        method: 'DELETE',
      });
      
@@ -102,7 +104,7 @@ export function createTournamentPlayersAdmin() {
 
       async savePlayer(playerId) {
         try {
-     const response = await fetch(`/admin/api/tournaments/${this.selectedTournament}/players/${playerId}`, {
+     const response = await adminFetch(`/admin/api/tournaments/${this.selectedTournament}/players/${playerId}`, {
        method: 'PUT',
        headers: { 'Content-Type': 'application/json' },
        body: JSON.stringify(this.editPlayerData),

@@ -2,10 +2,6 @@ import { adminLoginUrl } from './loginRoute.js';
 
 const ADMIN_TOKEN_KEY = 'wyniki-admin-token';
 
-function nativeFetch(input, init) {
-  return window.fetch.call(window, input, init);
-}
-
 /** Whether this admin-page request should carry the administrator session. */
 export function adminRequestCarriesSession(url, method = 'GET') {
   if (url === '/admin/api/auth') return false;
@@ -17,24 +13,43 @@ export function adminRequestCarriesSession(url, method = 'GET') {
   return verb === 'GET' && /^\/api\/matches\/\d+$/.test(path);
 }
 
-export function installAdminFetchAuth() {
-  window.fetch = (input, init = {}) => {
-    const url = typeof input === 'string' ? input : input.url;
-    if (!adminRequestCarriesSession(url, init.method)) return nativeFetch(input, init);
-    const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
-    const headers = new Headers(init.headers || {});
-    if (token) headers.set('Authorization', `Bearer ${token}`);
-    return nativeFetch(input, { ...init, headers }).then((response) => {
-      if (response.status === 401) {
-        sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-        window.dispatchEvent(new CustomEvent('admin-session-expired'));
-      }
-      return response;
-    });
-  };
+function readAdminToken() {
+  try {
+    return globalThis.sessionStorage?.getItem(ADMIN_TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
 }
 
-export { ADMIN_TOKEN_KEY, nativeFetch };
+function clearAdminToken() {
+  try {
+    globalThis.sessionStorage?.removeItem(ADMIN_TOKEN_KEY);
+  } catch {
+    /* private mode */
+  }
+}
+
+/** Explicit HTTP client for the admin panel without patching global `window.fetch`. */
+export function adminFetch(input, init = {}) {
+  const url = typeof input === 'string' ? input : input.url;
+  if (!adminRequestCarriesSession(url, init.method)) {
+    return globalThis.fetch(input, init);
+  }
+  const token = readAdminToken();
+  const headers = new Headers(init.headers || {});
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return globalThis.fetch(input, { ...init, headers }).then((response) => {
+    if (response.status === 401) {
+      clearAdminToken();
+      if (typeof globalThis.window?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+        globalThis.window.dispatchEvent(new CustomEvent('admin-session-expired'));
+      }
+    }
+    return response;
+  });
+}
+
+export { ADMIN_TOKEN_KEY };
 
 /** Where the panel is now, so the sign-in can bring you back to the same section. */
 function here() {
@@ -47,7 +62,7 @@ export function goToAdminLogin(reason = '') {
 
 /** No session on this tab: the panel is not drawn at all, the sign-in page is. */
 export function hasAdminSession() {
-  try { return Boolean(sessionStorage.getItem(ADMIN_TOKEN_KEY)); } catch { return false; }
+  return Boolean(readAdminToken());
 }
 
 export function createAuthAdmin() {
@@ -74,7 +89,7 @@ export function createAuthAdmin() {
 
     logoutAdmin() {
       this.adminSessionEnding = true;
-      try { sessionStorage.removeItem(ADMIN_TOKEN_KEY); } catch { /* private mode */ }
+      clearAdminToken();
       window.location.replace(adminLoginUrl({ reason: 'out' }));
     },
 

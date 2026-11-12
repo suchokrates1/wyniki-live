@@ -1,5 +1,7 @@
 /** Tournament categories: the presets, the custom ones, and what is confirmed for a tournament. */
 
+import { adminFetch } from './auth.js';
+
 export function createTournamentCategoriesAdmin() {
   return {
       adminTournamentCategories: [],
@@ -70,7 +72,7 @@ export function createTournamentCategoriesAdmin() {
       return;
     }
     try {
-      const response = await fetch(`/admin/api/tournaments/${tournamentId}/categories`);
+      const response = await adminFetch(`/admin/api/tournaments/${tournamentId}/categories`);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || 'Failed to load categories');
       const categories = Array.isArray(payload.categories) ? payload.categories : [];
@@ -110,7 +112,7 @@ export function createTournamentCategoriesAdmin() {
       return false;
     }
     try {
-      const response = await fetch(`/admin/api/tournaments/${tournamentId}/categories/confirm`, {
+      const response = await adminFetch(`/admin/api/tournaments/${tournamentId}/categories/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categories: payloadEntries }),
@@ -138,7 +140,7 @@ export function createTournamentCategoriesAdmin() {
     const label = String(this.adminCategoryCustomLabel || '').trim();
     if (!label) return;
     try {
-      const response = await fetch(`/admin/api/tournaments/${tournamentId}/categories`, {
+      const response = await adminFetch(`/admin/api/tournaments/${tournamentId}/categories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -168,7 +170,7 @@ export function createTournamentCategoriesAdmin() {
       async saveAdminCategoryEdit(tournamentId) {
     if (!this.adminCategoryEditId) return;
     try {
-      const response = await fetch(`/admin/api/tournaments/${tournamentId}/categories/${this.adminCategoryEditId}`, {
+      const response = await adminFetch(`/admin/api/tournaments/${tournamentId}/categories/${this.adminCategoryEditId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label: String(this.adminCategoryEditLabel || '').trim() }),
@@ -188,7 +190,7 @@ export function createTournamentCategoriesAdmin() {
       async deleteAdminTournamentCategory(tournamentId, categoryId) {
     if (!categoryId || !confirm('Usunąć tę kategorię turniejową?')) return;
     try {
-      const response = await fetch(`/admin/api/tournaments/${tournamentId}/categories/${categoryId}`, {
+      const response = await adminFetch(`/admin/api/tournaments/${tournamentId}/categories/${categoryId}`, {
         method: 'DELETE',
       });
       const payload = await response.json().catch(() => ({}));

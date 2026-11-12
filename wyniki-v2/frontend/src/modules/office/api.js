@@ -14,6 +14,12 @@ export function officeAuthHeaders(token) {
  * out here as well would end the session before that check could save it. Any other
  * answer comes back as status and body.
  */
+function notifyOfficeSessionExpired() {
+  if (typeof globalThis.window?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+    globalThis.window.dispatchEvent(new CustomEvent('office-session-expired'));
+  }
+}
+
 export async function officeResponse(view, path, { method = 'GET', body } = {}) {
   const response = await fetch(`/api/office/${view.slot}${path}`, {
     method,
@@ -21,7 +27,13 @@ export async function officeResponse(view, path, { method = 'GET', body } = {}) 
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const payload = await response.json().catch(() => ({}));
-  if (response.status === 401) return null;
+  if (response.status === 401) {
+    notifyOfficeSessionExpired();
+    return null;
+  }
+  if (response.status === 403 && /session|sesj/i.test(String(payload?.error || ''))) {
+    notifyOfficeSessionExpired();
+  }
   return { ok: response.ok, status: response.status, payload };
 }
 

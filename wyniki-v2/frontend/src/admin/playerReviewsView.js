@@ -3,6 +3,8 @@
  * elsewhere. They are already in effect; the admin keeps them or puts the old values back.
  */
 
+import { adminFetch } from './auth.js';
+
 export const FIELD_LABELS = {
   first_name: 'Imię',
   last_name: 'Nazwisko',
@@ -35,7 +37,7 @@ export function createPlayerReviewsView() {
 
     async loadPlayerReviews() {
       try {
-        const response = await fetch('/admin/api/player-reviews');
+        const response = await adminFetch('/admin/api/player-reviews');
         if (!response.ok) throw new Error(String(response.status));
         this.playerReviews = await response.json();
       } catch (err) {
@@ -46,7 +48,7 @@ export function createPlayerReviewsView() {
     async decidePlayerReview(review, decision) {
       this.playerReviewsError = '';
       try {
-        const response = await fetch(`/admin/api/player-reviews/${review.id}/${decision}`, { method: 'POST' });
+        const response = await adminFetch(`/admin/api/player-reviews/${review.id}/${decision}`, { method: 'POST' });
         if (!response.ok) throw new Error(String(response.status));
         this.showToast(decision === 'revert' ? 'Zmiana cofnięta' : 'Zmiana zostaje', 'success');
         await this.loadPlayerReviews();

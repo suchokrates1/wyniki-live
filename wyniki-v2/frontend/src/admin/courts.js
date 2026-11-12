@@ -1,5 +1,7 @@
 /** Korty: the list, adding and renaming them, PINs, status and reset. */
 
+import { adminFetch } from './auth.js';
+
 export function createCourtsAdmin() {
   return {
       // Courts
@@ -80,7 +82,7 @@ export function createCourtsAdmin() {
     async loadCourts() {
       this.loading.courts = true;
       try {
-        const response = await fetch('/admin/api/courts');
+        const response = await adminFetch('/admin/api/courts');
         if (!response.ok) throw new Error('Failed to load courts');
         this.courts = await response.json();
         this.syncSelectedCourtTournamentIds();
@@ -137,7 +139,7 @@ export function createCourtsAdmin() {
           return;
         }
         
-        const response = await fetch(`/admin/api/courts/${kortId}/pin`, {
+        const response = await adminFetch(`/admin/api/courts/${kortId}/pin`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pin: pin || null }),
@@ -166,7 +168,7 @@ export function createCourtsAdmin() {
       }
       
       try {
-        const response = await fetch('/admin/api/courts', {
+        const response = await adminFetch('/admin/api/courts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -213,7 +215,7 @@ export function createCourtsAdmin() {
       }
       
       try {
-        const response = await fetch(`/admin/api/courts/${oldKortId}`, {
+        const response = await adminFetch(`/admin/api/courts/${oldKortId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ kort_id: this.editCourtId }),
@@ -239,7 +241,7 @@ export function createCourtsAdmin() {
       }
       
       try {
-        const response = await fetch(`/admin/api/courts/${kortId}`, {
+        const response = await adminFetch(`/admin/api/courts/${kortId}`, {
           method: 'DELETE',
         });
         
@@ -300,7 +302,7 @@ export function createCourtsAdmin() {
       async resetCourt(kortId) {
      if (!confirm('Czy na pewno chcesz zresetować mecz na korcie ' + kortId + '? Wszystkie dane meczu zostaną usunięte.')) return;
      try {
-       const r = await fetch('/admin/api/courts/' + kortId + '/reset', { method: 'POST' });
+       const r = await adminFetch('/admin/api/courts/' + kortId + '/reset', { method: 'POST' });
        if (!r.ok) { const d = await r.json(); throw new Error(d.error || 'Reset failed'); }
        this.showToast('Kort ' + kortId + ' zresetowany', 'success');
      } catch (err) {

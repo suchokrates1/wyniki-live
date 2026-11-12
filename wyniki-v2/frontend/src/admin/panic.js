@@ -1,4 +1,6 @@
 /** Admin list of WhatsApp recipients for the umpire panic button. */
+import { adminFetch } from './auth.js';
+
 export function createPanicAdmin() {
   return {
     panicEnabled: true,
@@ -9,7 +11,7 @@ export function createPanicAdmin() {
 
     async loadPanic() {
       this.panicError = '';
-      const response = await fetch('/admin/api/panic/settings');
+      const response = await adminFetch('/admin/api/panic/settings');
       if (!response.ok) {
         this.panicError = 'Nie udało się wczytać listy.';
         return;
@@ -20,7 +22,7 @@ export function createPanicAdmin() {
     },
 
     async savePanicEnabled() {
-      await fetch('/admin/api/panic/settings', {
+      await adminFetch('/admin/api/panic/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: this.panicEnabled }),
@@ -29,7 +31,7 @@ export function createPanicAdmin() {
 
     async addPanicRecipient() {
       this.panicError = '';
-      const response = await fetch('/admin/api/panic/recipients', {
+      const response = await adminFetch('/admin/api/panic/recipients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: this.panicName, chat_id: this.panicChatId }),
@@ -45,7 +47,7 @@ export function createPanicAdmin() {
     },
 
     async togglePanicRecipient(row) {
-      await fetch(`/admin/api/panic/recipients/${row.id}`, {
+      await adminFetch(`/admin/api/panic/recipients/${row.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !row.enabled }),
@@ -54,7 +56,7 @@ export function createPanicAdmin() {
     },
 
     async deletePanicRecipient(row) {
-      await fetch(`/admin/api/panic/recipients/${row.id}`, { method: 'DELETE' });
+      await adminFetch(`/admin/api/panic/recipients/${row.id}`, { method: 'DELETE' });
       await this.loadPanic();
     },
   };

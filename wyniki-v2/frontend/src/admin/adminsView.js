@@ -2,6 +2,7 @@
  * System → Dostęp do panelu: the administrators, each with their own e-mail and password.
  * A new one gets a mailed link to set a password; with no mail out, the link shows here.
  */
+import { adminFetch } from './auth.js';
 import { memberStatus } from './seriesView.js';
 
 const ERRORS = {
@@ -23,7 +24,7 @@ export function createAdminsView() {
 
     async _adminsCall(url, method = 'GET', body) {
       this.adminsError = '';
-      const response = await fetch(url, {
+      const response = await adminFetch(url, {
         method,
         headers: body ? { 'Content-Type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,

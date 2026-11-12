@@ -1,3 +1,4 @@
+import { adminFetch } from './auth.js';
 import { STANDARD_CATEGORY_KEYS, categoryFilterLabel } from '../shared/categories.js';
 
 export function createGlobalPlayersAdmin() {
@@ -44,7 +45,7 @@ export function createGlobalPlayersAdmin() {
          if (categoryKey) params.set('category', categoryKey[1]);
          if (this.globalPlayersFilter.country) params.set('country', this.globalPlayersFilter.country);
          const url = '/admin/api/global-players' + (params.toString() ? '?' + params : '');
-         const r = await fetch(url);
+         const r = await adminFetch(url);
          if (!r.ok) throw new Error('Failed to load');
          this.globalPlayers = await r.json();
        } catch (err) {
@@ -58,7 +59,7 @@ export function createGlobalPlayersAdmin() {
          return;
        }
        try {
-         const r = await fetch('/admin/api/global-players', {
+         const r = await adminFetch('/admin/api/global-players', {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify(this.newGlobalPlayer),
@@ -115,7 +116,7 @@ export function createGlobalPlayersAdmin() {
        this.classHistory = [];
        this.classHistoryLoading = true;
        try {
-         const r = await fetch(`/admin/api/global-players/${gp.id}/classifications`);
+         const r = await adminFetch(`/admin/api/global-players/${gp.id}/classifications`);
          if (!r.ok) throw new Error('Failed');
          this.classHistory = (await r.json()).history || [];
        } catch (err) {
@@ -132,7 +133,7 @@ export function createGlobalPlayersAdmin() {
        if (!this.classReviewTournamentId) return;
        this.classReviewLoading = true;
        try {
-         const r = await fetch(`/admin/api/global-players/tournaments/${this.classReviewTournamentId}/classification-review`);
+         const r = await adminFetch(`/admin/api/global-players/tournaments/${this.classReviewTournamentId}/classification-review`);
          if (!r.ok) throw new Error('Failed');
          this.classReview = await r.json();
          for (const item of this.classReview.items) {
@@ -180,7 +181,7 @@ export function createGlobalPlayersAdmin() {
        }
        this.classReviewSaving = true;
        try {
-         const r = await fetch(`/admin/api/global-players/tournaments/${this.classReviewTournamentId}/classification-review`, {
+         const r = await adminFetch(`/admin/api/global-players/tournaments/${this.classReviewTournamentId}/classification-review`, {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify({ decisions }),
@@ -202,7 +203,7 @@ export function createGlobalPlayersAdmin() {
 
      async saveGlobal(gpId) {
        try {
-         const r = await fetch(`/admin/api/global-players/${gpId}`, {
+         const r = await adminFetch(`/admin/api/global-players/${gpId}`, {
            method: 'PUT',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify(this.editGlobalData),
@@ -219,7 +220,7 @@ export function createGlobalPlayersAdmin() {
      async deleteGlobal(gpId) {
        if (!confirm('Usunąć zawodnika z bazy globalnej?')) return;
        try {
-         const r = await fetch(`/admin/api/global-players/${gpId}`, { method: 'DELETE' });
+         const r = await adminFetch(`/admin/api/global-players/${gpId}`, { method: 'DELETE' });
          if (!r.ok) {
            const d = await r.json();
            this.showToast(d.error || 'Błąd usuwania', 'error');
@@ -238,7 +239,7 @@ export function createGlobalPlayersAdmin() {
        const formData = new FormData();
        formData.append('photo', file);
        try {
-         const r = await fetch(`/admin/api/global-players/${gpId}/photo`, {
+         const r = await adminFetch(`/admin/api/global-players/${gpId}/photo`, {
            method: 'POST',
            body: formData,
          });
@@ -252,7 +253,7 @@ export function createGlobalPlayersAdmin() {
 
      async deleteGlobalPhoto(gpId) {
        try {
-         await fetch(`/admin/api/global-players/${gpId}/photo`, { method: 'DELETE' });
+         await adminFetch(`/admin/api/global-players/${gpId}/photo`, { method: 'DELETE' });
          this.showToast('Zdjęcie usunięte', 'success');
          await this.loadGlobalPlayers();
        } catch (err) { this.showToast('Błąd', 'error'); }
@@ -261,7 +262,7 @@ export function createGlobalPlayersAdmin() {
      async migrateGlobalPlayers() {
        if (!confirm('Zmigrować istniejących graczy do bazy globalnej? (jednorazowa operacja)')) return;
        try {
-         const r = await fetch('/admin/api/global-players/migrate', { method: 'POST' });
+         const r = await adminFetch('/admin/api/global-players/migrate', { method: 'POST' });
          const d = await r.json();
          this.showToast(d.message, 'success');
          this.globalMigrated = true;
@@ -278,7 +279,7 @@ export function createGlobalPlayersAdmin() {
          return;
        }
        try {
-         const r = await fetch(`/admin/api/global-players/tournaments/${this.selectedTournament}/add-global`, {
+         const r = await adminFetch(`/admin/api/global-players/tournaments/${this.selectedTournament}/add-global`, {
            method: 'POST',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify({

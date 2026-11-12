@@ -1,3 +1,4 @@
+import { adminFetch } from './auth.js';
 import { abbreviateCompetitorName } from '../shared/teamDisplay.js';
 import { calcMatchTime } from '../shared/matchTime.js';
 import { overlayCourtLabel, overlayScoreLabels } from '../shared/overlayLabel.js';
@@ -59,9 +60,9 @@ export function createOverlayAdmin() {
      // ===== OVERLAY SETTINGS =====
      async loadOverlaySettings() {
        try {
-         const response = await fetch('/api/overlay/settings');
+         const response = await adminFetch('/api/overlay/settings');
          // The StreamDeck address is a convenience: failing to read it must not stop the editor loading.
-         fetch('/api/overlay/stats/key')
+         adminFetch('/api/overlay/stats/key')
            .then((keyResponse) => (keyResponse.ok ? keyResponse.json() : null))
            .then((body) => { this.statsDeckOn = body?.on || ''; })
            .catch(() => {});
@@ -90,7 +91,7 @@ export function createOverlayAdmin() {
 
      async saveOverlaySettings() {
        try {
-         const response = await fetch('/api/overlay/settings', {
+         const response = await adminFetch('/api/overlay/settings', {
            method: 'PUT',
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify(this.overlaySettings),
@@ -210,7 +211,7 @@ export function createOverlayAdmin() {
     // ===== DEMO DATA =====
     async _loadDemoStatus() {
       try {
-        const r = await fetch('/admin/api/demo/status');
+        const r = await adminFetch('/admin/api/demo/status');
         if (r.ok) {
           const d = await r.json();
           this.demoOverlayActive = d.demo_overlay_active || false;
@@ -228,7 +229,7 @@ export function createOverlayAdmin() {
       this.demoPreview = true;
       this._fitPreviewNames();
       try {
-        const r = await fetch('/admin/api/demo', { method: 'POST' });
+        const r = await adminFetch('/admin/api/demo', { method: 'POST' });
         const data = await r.json();
         if (r.ok && data.demo_courts) {
           Object.keys(data.demo_courts).forEach(id => { this.courtData[id] = data.demo_courts[id]; });
@@ -246,7 +247,7 @@ export function createOverlayAdmin() {
     async toggleDemoOverlay() {
       const newState = !this.demoOverlayActive;
       try {
-        const r = await fetch('/admin/api/demo/overlay', {
+        const r = await adminFetch('/admin/api/demo/overlay', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ active: newState }),
@@ -266,7 +267,7 @@ export function createOverlayAdmin() {
 
     async clearDemo() {
       try {
-        const r = await fetch('/admin/api/demo', { method: 'DELETE' });
+        const r = await adminFetch('/admin/api/demo', { method: 'DELETE' });
         const data = await r.json();
         if (!r.ok) {
           this.showToast(data.error || 'Błąd czyszczenia demo', 'error');
@@ -277,7 +278,7 @@ export function createOverlayAdmin() {
         this.overlayPreviewMock = false;
         // Restore real court data
         try {
-          const snap = await fetch('/api/snapshot').then(r2 => r2.json());
+          const snap = await adminFetch('/api/snapshot').then(r2 => r2.json());
           const c = snap.courts || snap;
           Object.keys(c).forEach(id => { this.courtData[id] = c[id]; });
           this._fitPreviewNames();
@@ -933,7 +934,7 @@ export function createOverlayAdmin() {
       if (!this.currentOverlayId) return;
       if (!confirm('Usunąć overlay "' + (this.currentOverlay()?.name || this.currentOverlayId) + '"?')) return;
       try {
-        const r = await fetch('/api/overlay/overlays/' + encodeURIComponent(this.currentOverlayId), { method: 'DELETE' });
+        const r = await adminFetch('/api/overlay/overlays/' + encodeURIComponent(this.currentOverlayId), { method: 'DELETE' });
         if (!r.ok) throw new Error('Failed');
         delete this.overlaySettings.overlays[this.currentOverlayId];
         const ids = Object.keys(this.overlaySettings.overlays || {});
@@ -1240,7 +1241,7 @@ export function createOverlayAdmin() {
      this.$refs.cropModal.close();
 
      try {
-       const r = await fetch('/api/overlay/logo', {
+       const r = await adminFetch('/api/overlay/logo', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ logo: dataUrl }),
@@ -1256,7 +1257,7 @@ export function createOverlayAdmin() {
 
       async removeLogo() {
      try {
-       await fetch('/api/overlay/logo', { method: 'DELETE' });
+       await adminFetch('/api/overlay/logo', { method: 'DELETE' });
        this.overlaySettings.tournament_logo = null;
        this.showToast('Logo usunięte', 'success');
      } catch (err) {
