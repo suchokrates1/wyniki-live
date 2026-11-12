@@ -69,7 +69,8 @@ export function createOutbox({ table, now = () => Date.now() } = {}) {
     let failed = 0;
     let stoppedOnAuth = false;
 
-    for (const row of queue) {
+    for (let index = 0; index < queue.length; index += 1) {
+      const row = queue[index];
       const serverMatchId = row.serverMatchId ?? resolvedIds[row.clientMatchUuid] ?? null;
       const next = { ...row, attempts: row.attempts + 1, status: MutationStatus.IN_FLIGHT };
       await table.put(next);
@@ -90,7 +91,7 @@ export function createOutbox({ table, now = () => Date.now() } = {}) {
           failed += 1;
           break;
         } else if (kind === 'DROP') {
-          await dropPendingForMatch(row.clientMatchUuid);
+          await table.delete(row.id);
           dropped += 1;
         } else if (kind === 'FAIL' && status >= 400 && next.attempts >= MAX_REFUSED_ATTEMPTS) {
           // the server refuses this request itself; sending it forever helps nobody
@@ -108,7 +109,8 @@ export function createOutbox({ table, now = () => Date.now() } = {}) {
           status: MutationStatus.PENDING,
           lastError: error?.message || 'network',
         });
-        failed += 1;
+        failed += queue.length - index;
+        break;
       }
     }
 

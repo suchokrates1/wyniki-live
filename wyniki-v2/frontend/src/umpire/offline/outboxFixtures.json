@@ -1,0 +1,228 @@
+{
+  "scenarios": [
+    {
+      "id": "O1_create_first_and_propagate_id",
+      "description": "CREATE runs ahead of earlier-queued rows and propagates resolved serverMatchId to UPDATE and FINISH",
+      "enqueue": [
+        { "clientMatchUuid": "m-1", "type": "UPDATE", "serverMatchId": null },
+        { "clientMatchUuid": "m-1", "type": "FINISH", "serverMatchId": null },
+        { "clientMatchUuid": "m-1", "type": "CREATE", "serverMatchId": null }
+      ],
+      "flushes": [
+        {
+          "responses": [
+            { "status": 201, "createdId": 77 },
+            { "status": 200 },
+            { "status": 200 }
+          ],
+          "expectCalls": [
+            { "type": "CREATE", "serverMatchId": null },
+            { "type": "UPDATE", "serverMatchId": 77 },
+            { "type": "FINISH", "serverMatchId": 77 }
+          ],
+          "expectResult": { "flushed": 3, "failed": 0, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": []
+        }
+      ]
+    },
+    {
+      "id": "O2_update_coalesces_latest_pending",
+      "description": "Enqueuing a newer UPDATE for the same match replaces older pending UPDATE rows while keeping FINISH",
+      "enqueue": [
+        { "clientMatchUuid": "m-2", "type": "UPDATE", "serverMatchId": 12 },
+        { "clientMatchUuid": "m-2", "type": "UPDATE", "serverMatchId": 12 },
+        { "clientMatchUuid": "m-2", "type": "FINISH", "serverMatchId": 12 }
+      ],
+      "flushes": [
+        {
+          "responses": [
+            { "status": 200 },
+            { "status": 200 }
+          ],
+          "expectCalls": [
+            { "type": "UPDATE", "serverMatchId": 12 },
+            { "type": "FINISH", "serverMatchId": 12 }
+          ],
+          "expectResult": { "flushed": 2, "failed": 0, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": []
+        }
+      ]
+    },
+    {
+      "id": "O3_auth_401_stops_pass_and_resumes_next_flush",
+      "description": "HTTP 401 stops the current flush immediately and retries all rows once the court session returns",
+      "enqueue": [
+        { "clientMatchUuid": "m-3", "type": "UPDATE", "serverMatchId": 31 },
+        { "clientMatchUuid": "m-3", "type": "FINISH", "serverMatchId": 31 }
+      ],
+      "flushes": [
+        {
+          "responses": [
+            { "status": 401 }
+          ],
+          "expectCalls": [
+            { "type": "UPDATE", "serverMatchId": 31 }
+          ],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": true },
+          "expectPendingTypes": ["UPDATE", "FINISH"]
+        },
+        {
+          "responses": [
+            { "status": 200 },
+            { "status": 200 }
+          ],
+          "expectCalls": [
+            { "type": "UPDATE", "serverMatchId": 31 },
+            { "type": "FINISH", "serverMatchId": 31 }
+          ],
+          "expectResult": { "flushed": 2, "failed": 0, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": []
+        }
+      ]
+    },
+    {
+      "id": "O4_stale_403_drops_row_and_continues",
+      "description": "HTTP 403 drops the stale row for a foreign court and lets subsequent valid rows flush",
+      "enqueue": [
+        { "clientMatchUuid": "stale", "type": "FINISH", "serverMatchId": 10 },
+        { "clientMatchUuid": "live", "type": "UPDATE", "serverMatchId": 20 }
+      ],
+      "flushes": [
+        {
+          "responses": [
+            { "status": 403 },
+            { "status": 200 }
+          ],
+          "expectCalls": [
+            { "type": "FINISH", "serverMatchId": 10 },
+            { "type": "UPDATE", "serverMatchId": 20 }
+          ],
+          "expectResult": { "flushed": 1, "failed": 0, "dropped": 1, "stoppedOnAuth": false },
+          "expectPendingTypes": []
+        }
+      ]
+    },
+    {
+      "id": "O5_refused_400_gives_up_after_five_tries",
+      "description": "A malformed 400 row is tried 5 times and then parked as FAILED while 503 retries indefinitely",
+      "enqueue": [
+        { "clientMatchUuid": "bad", "type": "FINISH", "serverMatchId": 44 }
+      ],
+      "flushes": [
+        {
+          "responses": [{ "status": 400 }],
+          "expectCalls": [{ "type": "FINISH", "serverMatchId": 44 }],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [{ "status": 400 }],
+          "expectCalls": [{ "type": "FINISH", "serverMatchId": 44 }],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [{ "status": 400 }],
+          "expectCalls": [{ "type": "FINISH", "serverMatchId": 44 }],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [{ "status": 400 }],
+          "expectCalls": [{ "type": "FINISH", "serverMatchId": 44 }],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [{ "status": 400 }],
+          "expectCalls": [{ "type": "FINISH", "serverMatchId": 44 }],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": []
+        },
+        {
+          "responses": [],
+          "expectCalls": [],
+          "expectResult": { "flushed": 0, "failed": 0, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": []
+        }
+      ]
+    },
+    {
+      "id": "O6_network_exception_aborts_remaining_pass",
+      "description": "A network exception aborts the rest of the pass so queued rows do not each block on a dead socket",
+      "enqueue": [
+        { "clientMatchUuid": "m-6", "type": "UPDATE", "serverMatchId": 60 },
+        { "clientMatchUuid": "m-6", "type": "FINISH", "serverMatchId": 60 }
+      ],
+      "flushes": [
+        {
+          "responses": [
+            { "networkError": true }
+          ],
+          "expectCalls": [
+            { "type": "UPDATE", "serverMatchId": 60 }
+          ],
+          "expectResult": { "flushed": 0, "failed": 2, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["UPDATE", "FINISH"]
+        },
+        {
+          "responses": [
+            { "status": 200 },
+            { "status": 200 }
+          ],
+          "expectCalls": [
+            { "type": "UPDATE", "serverMatchId": 60 },
+            { "type": "FINISH", "serverMatchId": 60 }
+          ],
+          "expectResult": { "flushed": 2, "failed": 0, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": []
+        }
+      ]
+    },
+    {
+      "id": "O7_missing_server_id_does_not_burn_attempts",
+      "description": "Rows waiting for a serverMatchId are skipped without counting against MAX_REFUSED_ATTEMPTS",
+      "enqueue": [
+        { "clientMatchUuid": "m-7", "type": "FINISH", "serverMatchId": null }
+      ],
+      "flushes": [
+        {
+          "responses": [],
+          "expectCalls": [],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [],
+          "expectCalls": [],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [],
+          "expectCalls": [],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [],
+          "expectCalls": [],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [],
+          "expectCalls": [],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        },
+        {
+          "responses": [],
+          "expectCalls": [],
+          "expectResult": { "flushed": 0, "failed": 1, "dropped": 0, "stoppedOnAuth": false },
+          "expectPendingTypes": ["FINISH"]
+        }
+      ]
+    }
+  ]
+}
