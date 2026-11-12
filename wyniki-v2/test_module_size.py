@@ -25,7 +25,6 @@ RECORDED_LINES = {
     "wyniki/database/schedule.py": 1723,
     "frontend/index.html": 1049,
     "frontend/office.html": 1651,
-    "frontend/src/umpire/app.js": 1668,
     "wyniki/api/admin_tournaments.py": 398,
     "frontend/src/admin/overlay.js": 1284,
     "frontend/src/modules/office/playersView.js": 1135,
