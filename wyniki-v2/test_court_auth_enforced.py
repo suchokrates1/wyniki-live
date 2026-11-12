@@ -44,11 +44,12 @@ def _requests(court_id, match_id):
         "add player": ("post", "/api/players", {"kort_id": court_id, "first_name": "Eve", "last_name": "New"}),
         "heartbeat": ("post", "/api/umpire-heartbeat", {"court_id": court_id, "battery_level": 80}),
         "ack command": ("post", "/api/umpire/commands/some-id/ack", {"court_id": court_id}),
+        "read match": ("get", f"/api/matches/{match_id}", None),
     }
 
 
 NAMES = ["create match", "update match", "finish match", "match event", "statistics",
-         "add player", "heartbeat", "ack command"]
+         "add player", "heartbeat", "ack command", "read match"]
 
 
 @pytest.mark.parametrize("name", NAMES)
@@ -65,6 +66,17 @@ def test_a_token_for_another_court_is_refused(production_like, name):
     assert response.status_code == 403, f"{name}: {response.status_code} {response.get_data(as_text=True)[:200]}"
 
 
+def test_an_administrator_can_read_a_match_without_a_court_token(production_like):
+    from wyniki.services.api_auth import issue_admin_token
+
+    response = production_like["client"].get(
+        f"/api/matches/{production_like['match_id']}",
+        headers={"Authorization": f"Bearer {issue_admin_token()}"},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["id"] == production_like["match_id"]
+
+
 def test_polling_commands_without_a_token_is_refused(production_like):
     response = production_like["client"].get(f"/api/umpire/commands?court_id={production_like['court_id']}")
     assert response.status_code == 401
@@ -73,7 +85,7 @@ def test_polling_commands_without_a_token_is_refused(production_like):
 def test_with_its_own_token_the_tablet_still_works(production_like):
     client, token = production_like["client"], production_like["token"]
     requests = _requests(production_like["court_id"], production_like["match_id"])
-    for name in ("update match", "match event", "heartbeat"):
+    for name in ("update match", "match event", "heartbeat", "read match"):
         method, path, body = requests[name]
         assert getattr(client, method)(path, json=body, headers=token).status_code == 200, name
 

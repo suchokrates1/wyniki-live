@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 
 from flask import jsonify
@@ -65,6 +66,19 @@ def _normalize_bool(value: Any) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _recorded_at(data: dict[str, Any], now: str) -> str:
+    """The end time the office sent. A missing one means now; anything else is refused."""
+    raw = data.get("ended_at")
+    if raw in (None, ""):
+        return now
+    if not isinstance(raw, str):
+        raise OfficeWorkflowError("ended_at must be an ISO timestamp")
+    try:
+        return datetime.fromisoformat(raw.strip()).isoformat()
+    except ValueError:
+        raise OfficeWorkflowError("ended_at must be an ISO timestamp") from None
+
+
 def _json_loads(value: str | None, fallback):
     if not value:
         return fallback
@@ -79,6 +93,13 @@ def _bracket_category_from_group(group_name: str | None) -> str:
     if ' — ' in label:
         return label.split(' — ', 1)[0].strip()
     return label
+
+
+def _shown_score(finish_reason: str | None, result_note: str | None, sets_history: list[dict[str, Any]]) -> str:
+    """A walkover has no games to print. The note says who was given the match."""
+    if (finish_reason or "") == "walkover" and not sets_history:
+        return (result_note or "").strip() or "Walkower"
+    return _score_text(sets_history)
 
 
 def _score_text(sets_history: list[dict[str, Any]]) -> str:
@@ -189,7 +210,7 @@ def _office_history_payload(
         "player1_sets": player1_sets,
         "player2_sets": player2_sets,
         "sets_history": sets_history,
-        "score_text": _score_text(sets_history),
+        "score_text": _shown_score(history.finish_reason, history.result_note, sets_history),
         "created_at": history.ended_ts,
         "updated_at": history.ended_ts,
     }
@@ -239,11 +260,7 @@ def _normalize_office_sets(
         winner_name = (data.get('winner_name') or '').strip()
         if winner_name not in {player1_name, player2_name}:
             raise ValueError('Winner is required for walkover')
-        p1_wins = winner_name == player1_name
-        return [
-            {"set_number": 1, "player1_games": 4 if p1_wins else 0, "player2_games": 0 if p1_wins else 4},
-            {"set_number": 2, "player1_games": 4 if p1_wins else 0, "player2_games": 0 if p1_wins else 4},
-        ], 2 if p1_wins else 0, 0 if p1_wins else 2
+        return [], 0, 0
 
     raw_sets = data.get('sets') or []
     sets_history = []
@@ -356,7 +373,7 @@ def _office_match_payload(
         "player1_sets": match.player1_sets,
         "player2_sets": match.player2_sets,
         "sets_history": sets_history,
-        "score_text": _score_text(sets_history),
+        "score_text": _shown_score(match.finish_reason, match.result_note, sets_history),
         "created_at": match.created_at,
         "updated_at": match.updated_at,
     }
@@ -409,7 +426,7 @@ def _office_knockout_item(
         "ready": ready,
         "finish_reason": (match.finish_reason if match else slot.get('finish_reason')) or 'normal',
         "result_note": (match.result_note if match else slot.get('result_note')),
-        "score_text": _score_text(sets_history) if match else (slot.get('score_summary') or ''),
+        "score_text": _shown_score(match.finish_reason, match.result_note, sets_history) if match else (slot.get('score_summary') or ''),
         "sets_history": sets_history,
         "day_date": (schedule_entry or {}).get('day_date') or '',
         "scheduled_time": (schedule_entry or {}).get('scheduled_time') or '',
@@ -586,7 +603,7 @@ def _create_office_knockout_match(tournament_id: int, data: dict[str, Any]) -> t
         player1_sets=player1_sets,
         player2_sets=player2_sets,
         sets_history=json.dumps(sets_history),
-        created_at=data.get('ended_at') or now,
+        created_at=_recorded_at(data, now),
         updated_at=now,
     )
     add_row(match)
@@ -706,7 +723,7 @@ def _create_office_group_match(tournament_id: int, data: dict[str, Any]) -> tupl
         player1_sets=player1_sets,
         player2_sets=player2_sets,
         sets_history=json.dumps(sets_history),
-        created_at=data.get('ended_at') or now,
+        created_at=_recorded_at(data, now),
         updated_at=now,
     )
     add_row(match)

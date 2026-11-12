@@ -122,6 +122,29 @@ test('aMatchWonInTheSuperTiebreakLeavesNoPointsToRenderAsAGame', () => {
   assert.equal(state.player2Points, 0);
   assert.equal(state.getPlayer1PointsDisplay(), '0');
   assert.equal(state.getPlayer2PointsDisplay(), '0');
+  assert.deepEqual(result.events, [MatchProgressEvent.Game, MatchProgressEvent.Set]);
+  assert.equal(result.syncMatch, false);
+});
+
+test('setWonByTiebreakEmitsGameAndSet', () => {
+  const state = matchState({ matchConfig: new MatchConfig({ gamesPerSet: 6, setsToWin: 2 }) });
+  state.isTiebreak = true;
+  state.player1Games = 6;
+  state.player2Games = 6;
+  state.player1Points = 7;
+  state.player2Points = 5;
+
+  const result = MatchProgressReducer.reduceAfterPoint(state, null, 9_000);
+
+  assert.equal(state.player1Sets, 1);
+  assert.equal(state.player1Games, 0);
+  assert.equal(state.player2Games, 0);
+  assert.equal(state.setsHistory[0].player1Games, 7);
+  assert.equal(state.setsHistory[0].player2Games, 6);
+  assert.equal(state.setsHistory[0].tiebreakLoserPoints, 5);
+  assert.deepEqual(result.events, [MatchProgressEvent.Game, MatchProgressEvent.Set]);
+  assert.equal(result.syncMatch, true);
+  assert.equal(result.finalizeMatch, false);
 });
 
 test('fourGameSetWithTiebreakAtThreeAllEndsFourThree', () => {

@@ -412,7 +412,7 @@ def test_mobile_finish_keeps_match_names_when_court_shows_next_pair(umpire_app_w
     assert history[0]["score_b"] == [1, 0]
 
 
-def test_mobile_finish_walkover_records_four_zero_history(umpire_app_with_temp_db):
+def test_mobile_finish_walkover_records_the_winner_without_a_score(umpire_app_with_temp_db):
     from wyniki import database
 
     tournament_id = database.insert_tournament("Walkover Cup", "2026-05-25", "2026-05-26", active=True)
@@ -440,16 +440,13 @@ def test_mobile_finish_walkover_records_four_zero_history(umpire_app_with_temp_d
     payload = finished.get_json()
     assert payload["finish_reason"] == "walkover"
     assert payload["winner_name"] == "Walk Player Two"
-    assert payload["score"]["sets_history"] == [
-        {"set_number": 1, "player1_games": 0, "player2_games": 4},
-        {"set_number": 2, "player1_games": 0, "player2_games": 4},
-    ]
+    assert payload["score"]["sets_history"] == []
     history = database.fetch_match_history(tournament_id=tournament_id)
     assert len(history) == 1
     assert history[0]["finish_reason"] == "walkover"
     assert history[0]["winner_name"] == "Walk Player Two"
-    assert history[0]["score_a"] == [0, 0]
-    assert history[0]["score_b"] == [4, 4]
+    assert history[0]["score_a"] == []
+    assert history[0]["score_b"] == []
     assert any(entry["match_id"] == match_id and entry["status"] == "completed" for entry in database.fetch_tournament_schedule(tournament_id))
 
 
@@ -2510,7 +2507,8 @@ def test_tournament_office_dashboard_adds_walkover_and_edits_result(full_app_wit
     assert created_payload["dashboard"]["progress"]["finished_matches"] == 1
     assert created_payload["dashboard"]["progress"]["complete"] is True
     match_id = created_payload["match"]["id"]
-    assert created_payload["match"]["score_text"] == "0:4  0:4"
+    assert created_payload["match"]["score_text"] == "Walkower"
+    assert created_payload["match"]["sets_history"] == []
 
     duplicate = client.post(
         "/api/office/1/group-matches",

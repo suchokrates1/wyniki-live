@@ -141,6 +141,27 @@ def test_a_heartbeat_without_a_court_session_lists_the_device_but_sends_no_batte
     assert len(alerts) == 1
 
 
+def test_a_dead_battery_is_stored_and_a_nonsense_level_is_ignored(app):
+    from wyniki.services.court_manager import get_court_state
+
+    court_id, _pin = _court(app)
+    client = app.test_client()
+
+    dead = client.post(
+        "/api/umpire-heartbeat",
+        json={"court_id": court_id, "battery_level": 0, "is_charging": False},
+    )
+    assert dead.status_code == 200
+    assert get_court_state(court_id)["battery_level"] == 0
+
+    nonsense = client.post(
+        "/api/umpire-heartbeat",
+        json={"court_id": court_id, "battery_level": "nope"},
+    )
+    assert nonsense.status_code == 200
+    assert get_court_state(court_id)["battery_level"] == 0
+
+
 @pytest.mark.parametrize("key", ["", "dev-secret-key-change-in-production", "prod-secret-key-change-me"])
 def test_production_refuses_to_start_with_a_key_from_the_repository(monkeypatch, key):
     import app as app_module
@@ -239,6 +260,18 @@ def test_a_doubles_final_advances_when_the_tablet_names_the_partners_the_other_w
     # the winner is written the way the draw spells the pair
     assert slot["winner_name"] == "Nowak Jan / Kowal Adam"
     assert slot["score_summary"] == "4:0 4:1"
+
+
+def test_an_office_result_time_must_be_a_real_timestamp():
+    from wyniki.services.office_workflow import OfficeWorkflowError, _recorded_at
+
+    assert _recorded_at({}, "2026-11-12T00:00:00+00:00") == "2026-11-12T00:00:00+00:00"
+    assert _recorded_at({"ended_at": ""}, "now") == "now"
+    assert _recorded_at({"ended_at": "2026-11-11T18:00:00+00:00"}, "now") == "2026-11-11T18:00:00+00:00"
+    assert _recorded_at({"ended_at": "2026-11-11T18:00:00Z"}, "now") == "2026-11-11T18:00:00+00:00"
+    for broken in ("yesterday", "2026-13-40", 1_700_000_000, {"at": "now"}):
+        with pytest.raises(OfficeWorkflowError):
+            _recorded_at({"ended_at": broken}, "now")
 
 
 def test_an_office_result_with_an_unreadable_set_is_refused_not_shortened():

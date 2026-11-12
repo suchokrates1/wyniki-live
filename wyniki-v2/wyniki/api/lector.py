@@ -1,41 +1,56 @@
 """The court lector page. It is not the overlay: that page is also on the main picture."""
 from __future__ import annotations
 
+import html
+import json
+
 from flask import Blueprint, Response, abort, jsonify, send_from_directory
 
 from ..services import court_lector
 
 blueprint = Blueprint("lector", __name__)
 
+
+def _js(value: str) -> str:
+    """A JavaScript string. < would otherwise close the surrounding script tag."""
+    return (
+        json.dumps(value, ensure_ascii=False)
+        .replace("<", r"\u003c")
+        .replace(">", r"\u003e")
+        .replace("&", r"\u0026")
+    )
+
+
 def _page(court_id: str) -> str:
-    return f"""<!doctype html>
+    return """<!doctype html>
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<title>Lektor kort {court_id}</title>
+<title>Lektor kort __COURT_TITLE__</title>
 </head>
 <body>
 <audio id="clip" preload="auto"></audio>
 <script>
 let token = "";
-async function look() {{
-  try {{
-    const response = await fetch("/api/lektor/{court_id}", {{ cache: "no-store" }});
+const courtId = __COURT_JS__;
+async function look() {
+  try {
+    const response = await fetch("/api/lektor/" + encodeURIComponent(courtId), { cache: "no-store" });
     if (!response.ok) return;
     const body = await response.json();
     if (!body.token || body.token === token || !body.url) return;
     token = body.token;
     const clip = document.getElementById("clip");
     clip.src = body.url;
-    clip.play().catch(() => {{}});
-  }} catch (error) {{}}
-}}
+    clip.play().catch(() => {});
+  } catch (error) {}
+}
 look();
 setInterval(look, 1000);
 </script>
 </body>
 </html>
-"""
+""".replace("__COURT_TITLE__", html.escape(court_id, quote=True)).replace("__COURT_JS__", _js(court_id))
 
 
 def _known_court(court_id: str) -> bool:

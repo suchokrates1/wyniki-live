@@ -34,10 +34,11 @@ from ..services.office_event_broker import emit_office_invalidation
 from ..services.history_manager import add_match_to_history
 from ..services.player_registry import create_tournament_player, player_payload
 from ..services import login_throttle, web_push
-from ..services.api_auth import court_id_from_bearer as court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access
+from ..services.api_auth import court_id_from_bearer as court_id_from_bearer, court_session_expires_at, issue_court_token, require_court_access, require_match_read
 from ..services.director_commands import director_command_broker as director_command_broker, dump_match_config, tablet_presence
 from ..services.match_format import match_score_satisfies_format
 from ..services.match_result import resolve_match_winner, same_competitor
+from ..services.device_alerts import battery_percent
 from ..services.live_state import read_live_state, set_tiebreak_due, store_live_state
 from ..services.match_timer import apply_match_start_from_payload, sync_court_match_timer_from_match
 from ..config import logger
@@ -294,26 +295,19 @@ def _winner_from_score(match: Match) -> str | None:
     return None
 
 
-def _apply_walkover_score(match: Match, winner_name: str) -> None:
-    player1_wins = winner_name == match.player1_name
-    match.player1_sets = 2 if player1_wins else 0
-    match.player2_sets = 0 if player1_wins else 2
+def _apply_walkover_score(match: Match, _winner_name: str) -> None:
+    """A walkover is a win with no score. Nothing was played, so there are no sets or games.
+
+    ATP Rulebook 2026, chapter IV: a walkover does not count towards the percentage
+    of sets or games. The draw shows who advanced, not a made-up 4:0 4:0.
+    """
+    match.player1_sets = 0
+    match.player2_sets = 0
     match.player1_games = 0
     match.player2_games = 0
     match.player1_points = 0
     match.player2_points = 0
-    match.sets_history = json.dumps([
-        {
-            "set_number": 1,
-            "player1_games": 4 if player1_wins else 0,
-            "player2_games": 0 if player1_wins else 4,
-        },
-        {
-            "set_number": 2,
-            "player1_games": 4 if player1_wins else 0,
-            "player2_games": 0 if player1_wins else 4,
-        },
-    ])
+    match.sets_history = "[]"
 
 
 def _append_retirement_current_score(match: Match) -> None:
@@ -1402,12 +1396,13 @@ def create_match():
 
 @blueprint.route('/matches/<int:match_id>', methods=['GET'])
 def get_match(match_id: int):
-    """Get match details."""
+    """Match details for the court playing it, or for an administrator."""
     match = get_row(Match, match_id)
-    
     if not match:
         return jsonify({"error": "Match not found"}), 404
-    
+    access_error = require_match_read(match.court_id)
+    if access_error:
+        return access_error
     return jsonify(match.to_dict()), 200
     
 
@@ -1891,9 +1886,9 @@ def log_match_event():
         court_state["updated"] = utc_now_iso()
 
         # --- Battery level from tablet ---
-        battery_level = data.get('battery_level')
-        if battery_level is not None:
-            court_state["battery_level"] = int(battery_level)
+        level = battery_percent(data.get('battery_level'))
+        if level is not None:
+            court_state["battery_level"] = level
         is_charging = data.get('is_charging')
         if is_charging is not None:
             court_state["is_charging"] = bool(is_charging)

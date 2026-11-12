@@ -65,8 +65,9 @@ def register(blueprint) -> None:
         if kort_id:
             court_state = ensure_court_state(kort_id)
             with STATE_LOCK:
-                if battery_level:
-                    court_state["battery_level"] = int(battery_level)
+                level = battery_percent(battery_level)
+                if level is not None:
+                    court_state["battery_level"] = level
                 if is_charging is not None:
                     court_state["is_charging"] = is_charging in (True, "true", "True")
                 court_state["last_heartbeat"] = utc_now_iso()

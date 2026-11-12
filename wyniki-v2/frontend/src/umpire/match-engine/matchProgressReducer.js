@@ -92,6 +92,9 @@ export const MatchProgressReducer = {
       state.sidesSwapped = !state.sidesSwapped;
       state.totalGamesPlayed = 0;
       pendingAnnouncementType = this.ANNOUNCEMENT_SIDE_CHANGE;
+      // The tie-break is the last game of the set, including when that set ends the match.
+      events.push(MatchProgressEvent.Game);
+      events.push(MatchProgressEvent.Set);
 
       if (state.shouldEndMatch()) {
         state.isMatchFinished = true;
@@ -135,8 +138,8 @@ export const MatchProgressReducer = {
 
     if (!completedTiebreak) {
       TiebreakServeRule.rotate(state);
+      events.push(MatchProgressEvent.Game);
     }
-    events.push(MatchProgressEvent.Game);
 
     if (state.isSetWon()) {
       const setWinner = state.player1Games > state.player2Games ? 1 : 2;

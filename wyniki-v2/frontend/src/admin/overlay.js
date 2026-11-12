@@ -11,6 +11,7 @@ export function createOverlayAdmin() {
   return {
       VEST_MEDIA_LOGO_URL,
       // Overlay settings (new preset-based model)
+      statsDeckOn: '',
       overlaySettings: {
         tournament_logo: null,
         tournament_name: '',
@@ -59,6 +60,8 @@ export function createOverlayAdmin() {
      async loadOverlaySettings() {
        try {
          const response = await fetch('/api/overlay/settings');
+         const keyResponse = await fetch('/api/overlay/stats/key');
+         if (keyResponse.ok) this.statsDeckOn = (await keyResponse.json()).on || '';
          if (response.ok) {
            this.overlaySettings = await response.json();
            // Migrate: ensure grid defaults exist on each overlay

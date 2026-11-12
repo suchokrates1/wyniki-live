@@ -1,4 +1,6 @@
 """Overlay settings API endpoints."""
+import hmac
+
 from flask import Blueprint, jsonify, request
 
 from ..services.overlay_settings import (
@@ -6,7 +8,9 @@ from ..services.overlay_settings import (
     update_overlay_settings,
     delete_overlay,
     set_overlay_stats_visibility,
+    stats_toggle_key,
 )
+from ..services.api_auth import require_admin_access
 from ..config import logger
 from ..utils import json_no_cache as _json_no_cache
 
@@ -21,7 +25,7 @@ def get_settings():
         return _json_no_cache(settings)
     except Exception as e:
         logger.error("overlay_settings_failed", error=str(e))
-        return _json_no_cache({"error": str(e)}, 500)
+        return _json_no_cache({"error": "Internal error"}, 500)
 
 
 @blueprint.route('/settings', methods=['PUT'])
@@ -61,6 +65,28 @@ def delete_logo():
     return jsonify({"ok": True})
 
 
+@blueprint.route('/stats/key', methods=['GET'])
+def stats_key():
+    """The address StreamDeck calls. Only an administrator may read it."""
+    denied = require_admin_access()
+    if denied:
+        return denied
+    key = stats_toggle_key()
+    return jsonify({
+        "on": f"/api/overlay/stats/on?key={key}",
+        "off": f"/api/overlay/stats/off?key={key}",
+    })
+
+
+def _stats_get_allowed() -> bool:
+    """StreamDeck sends the key. An administrator's session works without it."""
+    presented = (request.args.get("key") or "").strip()
+    expected = stats_toggle_key()
+    if presented and hmac.compare_digest(presented, expected):
+        return True
+    return require_admin_access() is None
+
+
 @blueprint.route('/stats', methods=['POST'])
 @blueprint.route('/stats/<action>', methods=['GET', 'POST'])
 def toggle_stats(action=None):
@@ -70,6 +96,8 @@ def toggle_stats(action=None):
         normalized_action = str(action).strip().lower()
         if normalized_action not in {"on", "off"}:
             return jsonify({"error": "Action must be 'on' or 'off'"}), 400
+        if request.method == "GET" and not _stats_get_allowed():
+            return jsonify({"error": "Stats key required"}), 401
         active = normalized_action == "on"
     elif "active" in data:
         active = bool(data.get("active"))

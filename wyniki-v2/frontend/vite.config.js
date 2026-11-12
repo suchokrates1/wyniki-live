@@ -42,7 +42,8 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'https://score.vestmedia.pl',
+        // This machine's backend (compose publishes 8087). Set VITE_API_PROXY to use another.
+        target: process.env.VITE_API_PROXY || 'http://127.0.0.1:8087',
         changeOrigin: true,
       },
     },

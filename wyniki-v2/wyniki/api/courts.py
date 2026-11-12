@@ -48,7 +48,7 @@ def snapshot():
         })
     except Exception as e:
         logger.error("snapshot_failed", error=str(e))
-        return _json_no_cache({"error": str(e)}, 500)
+        return _json_no_cache({"error": "Internal error"}, 500)
 
 
 HISTORY_PAGE_MAX = 500

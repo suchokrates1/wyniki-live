@@ -122,7 +122,7 @@ def test_a_reminder_goes_out_once_and_only_once(push_app, monkeypatch):
     tournament_id = database.insert_tournament("Reminder Cup", "2026-10-03", "2026-10-04", active=True)
     now = datetime(2026, 10, 3, 9, 0, tzinfo=UTC)
     _fixture_row(database, tournament_id, now + timedelta(minutes=20))
-    _subscribe(push_app, "https://push.example/a", {"notify_reminder": True}, lead=30)
+    _subscribe(push_app, "https://fcm.googleapis.com/fcm/send/a", {"notify_reminder": True}, lead=30)
 
     monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
     first = match_reminders.run_pass(now=now)
@@ -139,8 +139,8 @@ def test_everyone_is_reminded_at_their_own_lead_time(push_app, monkeypatch):
     tournament_id = database.insert_tournament("Lead Cup", "2026-10-03", "2026-10-04", active=True)
     now = datetime(2026, 10, 3, 9, 0, tzinfo=UTC)
     _fixture_row(database, tournament_id, now + timedelta(minutes=40))
-    _subscribe(push_app, "https://push.example/early", {"notify_reminder": True}, lead=60)
-    _subscribe(push_app, "https://push.example/late", {"notify_reminder": True}, lead=15)
+    _subscribe(push_app, "https://fcm.googleapis.com/fcm/send/early", {"notify_reminder": True}, lead=60)
+    _subscribe(push_app, "https://fcm.googleapis.com/fcm/send/late", {"notify_reminder": True}, lead=15)
 
     reached = []
     monkeypatch.setattr(web_push, "_send_one", lambda sub, body: reached.append(sub["endpoint"]) or 201)
@@ -148,11 +148,11 @@ def test_everyone_is_reminded_at_their_own_lead_time(push_app, monkeypatch):
     # 40 minutes out: the one who asked for 60 hears about it, the one who asked
     # for 15 does not.
     match_reminders.run_pass(now=now)
-    assert reached == ["https://push.example/early"]
+    assert reached == ["https://fcm.googleapis.com/fcm/send/early"]
 
     reached.clear()
     match_reminders.run_pass(now=now + timedelta(minutes=30))
-    assert reached == ["https://push.example/late"]
+    assert reached == ["https://fcm.googleapis.com/fcm/send/late"]
 
 
 def test_a_free_court_produces_no_delay_warning(push_app, monkeypatch):
@@ -162,7 +162,7 @@ def test_a_free_court_produces_no_delay_warning(push_app, monkeypatch):
     tournament_id = database.insert_tournament("Free Cup", "2026-10-03", "2026-10-04", active=True)
     now = datetime(2026, 10, 3, 9, 0, tzinfo=UTC)
     _fixture_row(database, tournament_id, now + timedelta(minutes=20))
-    _subscribe(push_app, "https://push.example/d", {"notify_delay": True})
+    _subscribe(push_app, "https://fcm.googleapis.com/fcm/send/d", {"notify_delay": True})
 
     monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
     assert match_reminders.run_pass(now=now)["delays"] == 0
@@ -192,7 +192,7 @@ def _run_delay_case(client, monkeypatch, minutes_away: int):
     tournament_id = database.insert_tournament("Delay Cup", "2026-10-03", "2026-10-04", active=True)
     now = datetime(2026, 10, 3, 9, 0, tzinfo=UTC)
     _fixture_row(database, tournament_id, now + timedelta(minutes=minutes_away))
-    _subscribe(client, "https://push.example/delay", {"notify_delay": True, "notify_reminder": False})
+    _subscribe(client, "https://fcm.googleapis.com/fcm/send/delay", {"notify_delay": True, "notify_reminder": False})
 
     monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
     return match_reminders.run_pass(now=now)
@@ -205,7 +205,7 @@ def test_a_send_that_reached_nobody_can_be_retried(push_app, monkeypatch):
     tournament_id = database.insert_tournament("Retry Cup", "2026-10-03", "2026-10-04", active=True)
     now = datetime(2026, 10, 3, 9, 0, tzinfo=UTC)
     _fixture_row(database, tournament_id, now + timedelta(minutes=20))
-    _subscribe(push_app, "https://push.example/r", {"notify_reminder": True})
+    _subscribe(push_app, "https://fcm.googleapis.com/fcm/send/r", {"notify_reminder": True})
 
     # Every push fails, so the claim must be given back rather than burning the
     # one chance this fixture had.
@@ -243,7 +243,7 @@ def test_an_overdue_match_still_gets_its_delay_warning(push_app, monkeypatch):
     tournament_id = database.insert_tournament("Overdue Cup", "2026-10-03", "2026-10-04", active=True)
     now = datetime(2026, 10, 3, 10, 0, tzinfo=UTC)
     _fixture_row(database, tournament_id, now - timedelta(minutes=25))
-    _subscribe(push_app, "https://push.example/late", {"notify_delay": True, "notify_reminder": True})
+    _subscribe(push_app, "https://fcm.googleapis.com/fcm/send/late", {"notify_delay": True, "notify_reminder": True})
 
     monkeypatch.setattr(match_reminders, "court_busy_for", lambda court: 20)
     monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
@@ -263,7 +263,7 @@ def test_a_fixture_abandoned_long_ago_is_left_alone(push_app, monkeypatch):
     # Five hours past its time: played, walked over or dropped without the plan
     # being updated. Saying anything now would only confuse.
     _fixture_row(database, tournament_id, now - timedelta(hours=5))
-    _subscribe(push_app, "https://push.example/stale", {"notify_delay": True})
+    _subscribe(push_app, "https://fcm.googleapis.com/fcm/send/stale", {"notify_delay": True})
 
     monkeypatch.setattr(match_reminders, "court_busy_for", lambda court: 40)
     monkeypatch.setattr(web_push, "_send_one", lambda sub, body: 201)
@@ -284,7 +284,7 @@ def test_the_delay_message_says_how_long_the_court_is_still_needed(push_app, mon
     tournament_id = database.insert_tournament("Wording Cup", "2026-10-03", "2026-10-04", active=True)
     now = datetime(2026, 10, 3, 10, 0, tzinfo=UTC)
     _fixture_row(database, tournament_id, now - timedelta(minutes=25))
-    _subscribe(push_app, "https://push.example/w", {"notify_delay": True, "notify_reminder": False})
+    _subscribe(push_app, "https://fcm.googleapis.com/fcm/send/w", {"notify_delay": True, "notify_reminder": False})
 
     bodies = []
     monkeypatch.setattr(match_reminders, "court_busy_for", lambda court: 20)
