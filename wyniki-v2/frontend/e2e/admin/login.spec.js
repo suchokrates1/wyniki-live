@@ -57,6 +57,7 @@ test('an expired session sends you to sign in again, then back to the same secti
   await openAdmin(page);
   await stubSignIn(page);
   await page.route(/\/admin\/api\/tournaments(\?|$)/, (route) => route.fulfill({ status: 401, json: { error: 'Administrator session expired' } }));
+  await page.goto('about:blank');
   await page.goto('/admin#/korty/courts');
   await expect(page).toHaveURL(/\/admin\/login\?next=%2Fadmin%23%2Fkorty%2Fcourts&reason=expired$/);
   await expect(page.getByRole('status')).toHaveText('Sesja administratora wygasła. Zaloguj się ponownie.');
