@@ -116,3 +116,28 @@ def test_a_court_move_is_acknowledged_with_the_new_court_session(production_like
         "target_match_id": production_like["match_id"],
     })
     assert director_command_broker.ack(command["id"], court_id=moved_to) is True
+
+
+def test_every_office_route_refuses_a_caller_without_an_office_session(full_app_with_temp_db):
+    """Read off the route table, so an office route added later is covered the day it lands."""
+    from wyniki import database
+
+    app = full_app_with_temp_db
+    with app.app_context():
+        database.insert_tournament("Office Guard", "2026-11-11", "2099-12-31", active=True)
+    client = app.test_client()
+    open_endpoints = {"office.office_tournament_list", "office.office_slot_meta", "office.office_auth"}
+    checked = 0
+    for rule in app.url_map.iter_rules():
+        if not rule.endpoint.startswith("office.") or rule.endpoint in open_endpoints:
+            continue
+        assert "slot" in rule.arguments, f"{rule.rule}: an office route without a slot is not guarded"
+        values = {name: 1 for name in rule.arguments}
+        path = rule.rule
+        for name in rule.arguments:
+            path = __import__("re").sub(r"<(?:[^:<>]+:)?%s>" % name, str(values[name]), path)
+        for method in sorted(rule.methods - {"HEAD", "OPTIONS"}):
+            response = client.open(path, method=method, json={})
+            assert response.status_code == 401, f"{method} {rule.rule}: {response.status_code}"
+            checked += 1
+    assert checked > 30
