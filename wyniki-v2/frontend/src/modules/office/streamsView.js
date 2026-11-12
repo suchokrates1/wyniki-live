@@ -12,7 +12,7 @@ import {
   streamUrl,
   toggleStreamCourtOn,
 } from '../../shared/courtStreams.js';
-import { officeJson, officeResponse } from './api.js';
+import { officeErrorText, officeJson, officeResponse } from './api.js';
 
 /** The office's stream editor: the shared editing, plus tracking what is not saved yet. */
 export function createOfficeStreamsView() {
@@ -84,7 +84,7 @@ export function createOfficeStreamsView() {
         const { payload } = result;
         if (!result.ok) {
           const invalid = payload.error === 'invalid_url';
-          throw new Error(invalid ? this.ot('toast.streamsInvalid') : (payload.error || this.ot('errors.streamsFailed')));
+          throw new Error(invalid ? this.ot('toast.streamsInvalid') : officeErrorText(this, payload, 'errors.streamsFailed'));
         }
         this.dashboardSeq = (this.dashboardSeq || 0) + 1;
         if (payload.court_streams) this.applyCourtStreams(payload.court_streams);

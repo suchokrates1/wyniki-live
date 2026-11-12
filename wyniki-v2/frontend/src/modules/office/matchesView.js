@@ -1,6 +1,6 @@
 import { defaultOfficeForm } from './forms.js';
 import { getMatchSets } from '../history.js';
-import { officeJson, officeResponse } from './api.js';
+import { officeErrorText, officeJson, officeResponse } from './api.js';
 
 export function createOfficeMatchesView() {
   return {
@@ -552,7 +552,7 @@ export function createOfficeMatchesView() {
           this.showToast(this.ot('toast.correctionBlocked', { phase: this.officeDisplayLabel(payload.blocked_by) }), 'warning');
           return;
         }
-        if (!result.ok) throw new Error(payload.error || this.ot('errors.correctionFailed'));
+        if (!result.ok) throw new Error(officeErrorText(this, payload, 'errors.correctionFailed'));
         this.applyDashboard(payload.dashboard, { notify: false });
         this.closeEditModal();
         this.showToast(this.ot('toast.resultCorrected'), 'success');
@@ -568,9 +568,8 @@ export function createOfficeMatchesView() {
     },
 
     officePhaseTone(match) {
-      const phase = (match.phase || '').toLowerCase();
-      if (match.group_name || phase.startsWith('grupowa')) return 'office-chip-group';
-      if (phase) return 'office-chip-knockout';
+      if (match.is_group_stage || match.group_name || match.bracket_group_id) return 'office-chip-group';
+      if (match.phase) return 'office-chip-knockout';
       return 'office-chip-neutral';
     },
 

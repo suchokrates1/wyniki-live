@@ -387,3 +387,23 @@ def test_match_finished_emails_run_on_a_background_thread_with_an_intact_snapsho
     assert captured[0]["player1"] == "Ada"
     assert captured[0]["set1_a"] == 4
     assert captured[0]["report_email"] == "biuro@example.com"
+
+
+def test_office_refusal_includes_stable_error_code(app):
+    from werkzeug.security import generate_password_hash
+    from wyniki import database
+
+    with app.app_context():
+        database.insert_tournament(
+            "Office Code Cup", "2026-11-11", "2026-11-12",
+            active=True, office_password_hash=generate_password_hash("secret123"),
+        )
+    client = app.test_client()
+    auth = client.post("/api/office/1/auth", json={"password": "secret123"}).get_json()
+    headers = {"Authorization": f"Bearer {auth['token']}"}
+
+    resp = client.post("/api/office/1/group-matches", headers=headers, json={})
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert body["code"] == "group_players_required"
+    assert "error" in body

@@ -26,12 +26,26 @@ export async function officeResponse(view, path, { method = 'GET', body } = {}) 
 }
 
 /**
+ * What the office shows for a refused call.
+ *
+ * The server names the refusals a person at the desk can act on with a `code`; the office
+ * has its own text for each, in the page's language. Without a code (or with one this
+ * build does not know yet) the server's sentence is shown as before, and with no sentence
+ * at all the office text under `failure`.
+ */
+export function officeErrorText(view, payload, failure) {
+  const code = String(payload?.code || '').trim();
+  const known = /^[a-z0-9_]+$/.test(code) ? view.ot(`errors.api.${code}`) : '';
+  return known || payload?.error || (failure ? view.ot(failure) : '');
+}
+
+/**
  * The body of a successful call, or null after a 401. A refusal throws the server's error,
  * or the office text under `failure` when the server gave none, for the caller's toast.
  */
 export async function officeJson(view, path, { failure, ...request } = {}) {
   const result = await officeResponse(view, path, request);
   if (!result) return null;
-  if (!result.ok) throw new Error(result.payload.error || view.ot(failure));
+  if (!result.ok) throw new Error(officeErrorText(view, result.payload, failure));
   return result.payload;
 }

@@ -10,7 +10,7 @@ import {
   playerMatchesTournamentCategory,
 } from '../../shared/categories.js';
 import { PLAY_FORMATS, normalizePlayFormat, playFormatLabelKey } from '../../shared/playFormat.js';
-import { officeJson, officeResponse } from './api.js';
+import { officeErrorText, officeJson, officeResponse } from './api.js';
 
 export function createOfficePlayersView() {
   return {
@@ -1080,10 +1080,10 @@ export function createOfficePlayersView() {
         if (!result) return;
         const { payload } = result;
         if (result.status === 409) {
-          this.showToast(payload.error || this.ot('toast.teamInGroup'), 'warning');
+          this.showToast(officeErrorText(this, payload, 'toast.teamInGroup'), 'warning');
           return;
         }
-        if (!result.ok) throw new Error(payload.error || this.ot('errors.teamDeleteFailed'));
+        if (!result.ok) throw new Error(officeErrorText(this, payload, 'errors.teamDeleteFailed'));
         this.planningTeams = Array.isArray(payload.teams) ? payload.teams : this.planningTeams;
         if (payload.start_numbers) this.planningStartNumbers = payload.start_numbers;
         const assignments = { ...this.planningTeamAssignments };

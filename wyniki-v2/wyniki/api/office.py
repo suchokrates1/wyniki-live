@@ -81,6 +81,8 @@ from . import tournament_setup
 
 logger = structlog.get_logger()
 
+from ..services.office_errors import office_error_code
+
 blueprint = Blueprint('office', __name__, url_prefix='/api/office')
 
 
@@ -162,6 +164,20 @@ def _require_office_access(slot: int):
     if auth_error:
         return None, auth_error
     return tournament, None
+
+
+@blueprint.after_request
+def _name_office_refusal(response):
+    """Put the refusal's code next to its English text, for the page to translate."""
+    if response.status_code < 400 or not response.is_json:
+        return response
+    body = response.get_json(silent=True)
+    if not isinstance(body, dict) or "code" in body:
+        return response
+    code = office_error_code(body.get("error"))
+    if code:
+        response.set_data(json.dumps({**body, "code": code}))
+    return response
 
 
 @blueprint.after_request
