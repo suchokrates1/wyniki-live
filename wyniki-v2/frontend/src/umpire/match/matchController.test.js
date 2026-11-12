@@ -144,8 +144,10 @@ test('G8 PWA finish Normal Test Retirement Walkover', () => {
     finishReason: MatchFinishReason.WALKOVER,
     winnerName: walkover.getTeam1FullName(),
   }));
-  assert.equal(walkover.player1Sets, 2);
-  assert.equal(walkover.setsHistory.length, 2);
+  // a walkover has no score: nothing was played
+  assert.equal(walkover.player1Sets, 0);
+  assert.equal(walkover.setsHistory.length, 0);
+  assert.equal(walkover.finishWinnerName, walkover.getTeam1FullName());
 });
 
 test('skip side change toggles sidesSwapped and returns to scoring', () => {

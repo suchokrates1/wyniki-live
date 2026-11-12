@@ -22,11 +22,12 @@ test('appliesWalkoverScoreForSelectedWinner', () => {
   assert.equal(state.isMatchFinished, true);
   assert.equal(state.finishReason, MatchFinishReason.WALKOVER);
   assert.equal(state.finishWinnerName, 'Adam Nowak');
+  // a walkover has no score: nothing was played
   assert.equal(state.player1Sets, 0);
-  assert.equal(state.player2Sets, 2);
-  assert.equal(state.setsHistory.length, 2);
-  assert.equal(state.setsHistory[0].player1Games, 0);
-  assert.equal(state.setsHistory[0].player2Games, 4);
+  assert.equal(state.player2Sets, 0);
+  assert.equal(state.player1Games, 0);
+  assert.equal(state.player2Games, 0);
+  assert.equal(state.setsHistory.length, 0);
   assert.equal(state.matchDuration, 10_000);
 });
 

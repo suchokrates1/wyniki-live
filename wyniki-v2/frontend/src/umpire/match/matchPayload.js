@@ -111,11 +111,13 @@ export function toFinishPayload(request) {
 export function toStatisticsPayload(state) {
   if (state.matchId == null || !state.isMatchFinished) return null;
   if (state.finishReason === MatchFinishReason.TEST) return null;
-  const winner = state.player1Sets > state.player2Sets
-    ? state.player1.getFullName()
-    : state.player2Sets > state.player1Sets
-      ? state.player2.getFullName()
-      : null;
+  // The winner the umpire named (walkover, retirement) comes first; a walkover has no sets.
+  const named = (state.finishWinnerName || '').trim();
+  let winner = null;
+  if (named && named === state.getTeam1FullName()) winner = state.player1.getFullName();
+  else if (named && named === state.getTeam2FullName()) winner = state.player2.getFullName();
+  else if (state.player1Sets > state.player2Sets) winner = state.player1.getFullName();
+  else if (state.player2Sets > state.player1Sets) winner = state.player2.getFullName();
   return {
     match_id: state.matchId,
     player1_name: state.player1.getFullName(),

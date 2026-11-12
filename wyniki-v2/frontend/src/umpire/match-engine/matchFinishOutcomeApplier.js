@@ -1,4 +1,4 @@
-import { MatchFinishReason, SetScore } from './models.js';
+import { MatchFinishReason } from './models.js';
 
 export const MatchFinishOutcomeApplier = {
   apply(state, request, nowMs) {
@@ -18,15 +18,13 @@ export const MatchFinishOutcomeApplier = {
   },
 };
 
+// A walkover is a win with no score: nothing was played, so there are no sets and no games.
+// The server stores it the same way; the winner is the name the umpire picked (finishWinnerName).
 function applyWalkoverScore(state, winnerName) {
-  const teamOneName = state.getTeam1FullName();
-  const teamTwoName = state.getTeam2FullName();
-  const playerOneWins = winnerName === teamOneName;
-  const playerTwoWins = winnerName === teamTwoName;
-  if (!playerOneWins && !playerTwoWins) return;
+  if (winnerName !== state.getTeam1FullName() && winnerName !== state.getTeam2FullName()) return;
 
-  state.player1Sets = playerOneWins ? 2 : 0;
-  state.player2Sets = playerTwoWins ? 2 : 0;
+  state.player1Sets = 0;
+  state.player2Sets = 0;
   state.player1Games = 0;
   state.player2Games = 0;
   state.player1Points = 0;
@@ -34,14 +32,4 @@ function applyWalkoverScore(state, winnerName) {
   state.isTiebreak = false;
   state.isSuperTiebreak = false;
   state.setsHistory.length = 0;
-  state.setsHistory.push(new SetScore({
-    setNumber: 1,
-    player1Games: playerOneWins ? 4 : 0,
-    player2Games: playerTwoWins ? 4 : 0,
-  }));
-  state.setsHistory.push(new SetScore({
-    setNumber: 2,
-    player1Games: playerOneWins ? 4 : 0,
-    player2Games: playerTwoWins ? 4 : 0,
-  }));
 }
