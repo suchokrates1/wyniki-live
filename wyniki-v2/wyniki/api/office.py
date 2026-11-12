@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import json
 import queue
+import re
 
 import structlog
-from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask import Blueprint, Response, g, jsonify, request, stream_with_context
 from werkzeug.security import check_password_hash
 
 from ..database import (
@@ -38,9 +39,9 @@ from ..database import (
     get_tournament_court_streams,
     get_tournament_quick_info,
     group_schedule_replace_hint,
+    insert_player,
     insert_tournament_team,
     knockout_format_overview,
-    migrate_tournament_categories_from_legacy,
     move_schedule_entry_with_cascade,
     publish_tournament_schedule,
     reflow_placed_schedule,
@@ -66,6 +67,7 @@ from ..services.api_auth import (
     office_stream_cookie_name,
     require_office_access,
 )
+from ..services.office_errors import office_error_code
 from ..services.office_event_broker import emit_office_invalidation, office_event_broker
 from ..services.office_workflow import (
     OfficeWorkflowError,
@@ -81,21 +83,13 @@ from . import tournament_setup
 
 logger = structlog.get_logger()
 
-from ..services.office_errors import office_error_code
-
 blueprint = Blueprint('office', __name__, url_prefix='/api/office')
 
-
-def _notify_quietly(send, kind: str) -> None:
-    """Run a push send without letting it touch the office's own response.
-
-    The office publishing a schedule must succeed whether or not a push service
-    is reachable, so anything this raises is logged and dropped.
-    """
-    try:
-        send()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("schedule_notification_failed", kind=kind, error=str(exc))
+_OPEN_ENDPOINTS = frozenset({
+    "office.office_tournament_list",
+    "office.office_slot_meta",
+    "office.office_auth",
+})
 
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _NON_MUTATING_ENDPOINTS = {
@@ -106,6 +100,14 @@ _NON_MUTATING_ENDPOINTS = {
     "office_session_cookie",
     "office_autoschedule_generate",
 }
+
+
+def _notify_quietly(send, kind: str) -> None:
+    """Run a push send without letting it touch the office's own response."""
+    try:
+        send()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("schedule_notification_failed", kind=kind, error=str(exc))
 
 
 def _office_slot_tournaments() -> list[dict]:
@@ -138,12 +140,10 @@ def _resolve_office_tournament_slot(slot: int):
     office_tournaments = _office_slot_tournaments()
     if slot < 1 or slot > len(office_tournaments):
         return None, (jsonify({"error": "Office slot not found"}), 404)
-    tournament = office_tournaments[slot - 1]
-    return tournament, None
+    return office_tournaments[slot - 1], None
 
 
 def _set_office_stream_cookie(response, slot: int, tournament_id: int):
-    # secure only on HTTPS — local Docker E2E uses plain HTTP (port 18087).
     response.set_cookie(
         office_stream_cookie_name(slot),
         issue_office_token(slot, tournament_id),
@@ -164,6 +164,22 @@ def _require_office_access(slot: int):
     if auth_error:
         return None, auth_error
     return tournament, None
+
+
+@blueprint.before_request
+def _guard_office_slot():
+    """Verify slot existence and office session once before any protected office route."""
+    if request.endpoint in _OPEN_ENDPOINTS:
+        return None
+    slot = (request.view_args or {}).get("slot")
+    if slot is None:
+        return None
+    tournament, error = _require_office_access(int(slot))
+    if error:
+        return error
+    g.office_tournament = tournament
+    g.office_tournament_id = int(tournament["id"])
+    return None
 
 
 @blueprint.after_request
@@ -189,12 +205,9 @@ def _emit_office_mutation_invalidation(response):
         or (request.endpoint or "").rsplit(".", 1)[-1] in _NON_MUTATING_ENDPOINTS
     ):
         return response
-    slot = (request.view_args or {}).get("slot")
-    if slot is None:
-        return response
-    tournament, error = _resolve_office_tournament_slot(int(slot))
-    if not error and tournament:
-        emit_office_invalidation(int(tournament["id"]), ["dashboard"])
+    tournament_id = getattr(g, "office_tournament_id", None)
+    if tournament_id is not None:
+        emit_office_invalidation(int(tournament_id), ["dashboard"])
     return response
 
 
@@ -212,11 +225,8 @@ def office_tournament_list():
 @blueprint.route('/<int:slot>/session', methods=['POST'])
 def office_session_cookie(slot: int):
     """Re-issue the event-stream cookie after the tournament moved to another slot."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    response = _json_no_cache({'slot': int(slot), 'tournament': _office_tournament_payload(tournament, slot)})
-    return _set_office_stream_cookie(response, slot, int(tournament["id"]))
+    response = _json_no_cache({'slot': int(slot), 'tournament': _office_tournament_payload(g.office_tournament, slot)})
+    return _set_office_stream_cookie(response, slot, g.office_tournament_id)
 
 
 @blueprint.route('/<int:slot>/meta', methods=['GET'])
@@ -237,8 +247,9 @@ def office_auth(slot: int):
     tournament, error = _resolve_office_tournament_slot(slot)
     if error:
         return error
+    tournament_id = int(tournament['id'])
 
-    tournament_model = get_row(Tournament, int(tournament['id']))
+    tournament_model = get_row(Tournament, tournament_id)
     office_password_hash = (tournament_model.office_password_hash or '').strip() if tournament_model else ''
     if not office_password_hash:
         return jsonify({"error": "Office password is not configured for this tournament"}), 409
@@ -256,21 +267,18 @@ def office_auth(slot: int):
     login_throttle.forget("office")
 
     response = _json_no_cache({
-        "token": issue_office_token(slot, int(tournament['id'])),
+        "token": issue_office_token(slot, tournament_id),
         "slot": slot,
         "tournament": _office_tournament_payload(tournament, slot),
-        "dashboard": _build_office_dashboard(int(tournament['id'])),
+        "dashboard": _build_office_dashboard(tournament_id),
     })
-    return _set_office_stream_cookie(response, slot, int(tournament["id"]))
+    return _set_office_stream_cookie(response, slot, tournament_id)
 
 
 @blueprint.route('/<int:slot>/stream', methods=['GET'])
 def office_stream(slot: int):
     """Authenticated, tournament-scoped invalidation stream for the office UI."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament["id"])
+    tournament_id = g.office_tournament_id
 
     def generate():
         listener = office_event_broker.listen(tournament_id)
@@ -299,36 +307,28 @@ def office_stream(slot: int):
 
 @blueprint.route('/<int:slot>/dashboard', methods=['GET'])
 def office_dashboard(slot: int):
-    """Return office dashboard for one office slot."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
+    """Return office dashboard for one office slot (pure read)."""
+    tournament_id = g.office_tournament_id
     return _set_office_stream_cookie(
-        _json_no_cache(_build_office_dashboard(int(tournament["id"]))),
+        _json_no_cache(_build_office_dashboard(tournament_id)),
         slot,
-        int(tournament["id"]),
+        tournament_id,
     )
 
 
 @blueprint.route('/<int:slot>/planning', methods=['GET'])
 def office_planning(slot: int):
-    """Return all data needed by the office planning workflow."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
-    ensure_group_schedule_entries(tournament_id)
-    ensure_knockout_schedule_entries(tournament_id)
-    dashboard = _build_office_dashboard(tournament_id)
-    categories = fetch_tournament_categories(tournament_id)
-    if not categories and fetch_bracket_groups(tournament_id):
-        categories = migrate_tournament_categories_from_legacy(tournament_id)
+    """Return all data needed by the office planning workflow (pure read)."""
+    tournament_id = g.office_tournament_id
+    groups = fetch_bracket_groups(tournament_id)
+    schedule = fetch_tournament_schedule(tournament_id)
+    dashboard = _build_office_dashboard(tournament_id, groups=groups, schedule=schedule)
     return _json_no_cache({
         "players": fetch_players(tournament_id),
-        "groups": fetch_bracket_groups(tournament_id),
-        "schedule": fetch_tournament_schedule(tournament_id),
+        "groups": groups,
+        "schedule": schedule,
         "courts": dashboard.get("courts", []),
-        "tournament_categories": categories,
+        "tournament_categories": fetch_tournament_categories(tournament_id),
         "teams": fetch_tournament_teams(tournament_id),
         "start_numbers": fetch_start_numbers(tournament_id),
         "dashboard": dashboard,
@@ -338,9 +338,6 @@ def office_planning(slot: int):
 @blueprint.route('/<int:slot>/planning/start-numbers', methods=['POST'])
 def office_planning_start_numbers(slot: int):
     """Give start numbers to the players listed in a category that have none yet."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
     data = request.get_json(silent=True) or {}
     try:
         category_id = int(data.get('category_id') or 0)
@@ -348,7 +345,7 @@ def office_planning_start_numbers(slot: int):
     except (TypeError, ValueError):
         return jsonify({"error": "category_id and player_ids required"}), 400
     try:
-        numbers = assign_start_numbers(int(tournament['id']), category_id, 'player', player_ids)
+        numbers = assign_start_numbers(g.office_tournament_id, category_id, 'player', player_ids)
     except LookupError:
         return jsonify({"error": "category_not_found"}), 404
     return _json_no_cache({"start_numbers": numbers})
@@ -356,66 +353,44 @@ def office_planning_start_numbers(slot: int):
 
 @blueprint.route('/<int:slot>/categories', methods=['GET'])
 def office_categories_list(slot: int):
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    body, status = tournament_setup.list_categories(int(tournament['id']))
+    body, status = tournament_setup.list_categories(g.office_tournament_id)
     return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/categories/confirm', methods=['POST'])
 def office_categories_confirm(slot: int):
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    body, status = tournament_setup.confirm_categories(int(tournament['id']), request.get_json(silent=True) or {})
+    body, status = tournament_setup.confirm_categories(g.office_tournament_id, request.get_json(silent=True) or {})
     return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/categories', methods=['POST'])
 def office_categories_create(slot: int):
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    body, status = tournament_setup.create_category(int(tournament['id']), request.get_json(silent=True) or {})
+    body, status = tournament_setup.create_category(g.office_tournament_id, request.get_json(silent=True) or {})
     return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/categories/<int:category_id>', methods=['PUT', 'PATCH'])
 def office_categories_update(slot: int, category_id: int):
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    body, status = tournament_setup.update_category(int(tournament['id']), category_id, request.get_json(silent=True) or {})
+    body, status = tournament_setup.update_category(g.office_tournament_id, category_id, request.get_json(silent=True) or {})
     return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/categories/<int:category_id>', methods=['DELETE'])
 def office_categories_delete(slot: int, category_id: int):
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    body, status = tournament_setup.delete_category(int(tournament['id']), category_id)
+    body, status = tournament_setup.delete_category(g.office_tournament_id, category_id)
     return _json_no_cache(body, status)
 
 
 @blueprint.route('/<int:slot>/teams', methods=['GET'])
 def office_teams_list(slot: int):
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
     category_id = request.args.get("category_id", type=int)
-    teams = fetch_tournament_teams(tournament_id, category_id=category_id)
+    teams = fetch_tournament_teams(g.office_tournament_id, category_id=category_id)
     return _json_no_cache({"teams": teams})
 
 
 @blueprint.route('/<int:slot>/teams', methods=['POST'])
 def office_teams_create(slot: int):
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     try:
         category_id = int(data.get("category_id") or 0)
@@ -440,10 +415,7 @@ def office_teams_create(slot: int):
 
 @blueprint.route('/<int:slot>/teams/<int:team_id>', methods=['DELETE'])
 def office_teams_delete(slot: int, team_id: int):
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     existing = fetch_tournament_team(team_id)
     if not existing or int(existing.get("tournament_id") or 0) != tournament_id:
         return jsonify({"error": "Team not found"}), 404
@@ -458,21 +430,15 @@ def office_teams_delete(slot: int, team_id: int):
 @blueprint.route('/<int:slot>/planning/groups', methods=['PUT'])
 def office_planning_groups(slot: int):
     """Replace bracket groups from the standalone office planning workflow."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     groups = data.get("groups", [])
-    # An empty draw is only saved when asked for explicitly ("Wyczyść" on the last category).
     if not groups and not data.get("allow_empty"):
         return jsonify({"error": "No groups provided"}), 400
     before = fetch_tournament_schedule(tournament_id)
     if not save_bracket_groups(tournament_id, groups):
         return jsonify({"error": "Failed to save groups"}), 500
-    ensure_group_schedule_entries(tournament_id)
-    ensure_knockout_schedule_entries(tournament_id)
-    after = fetch_tournament_schedule(tournament_id)
+    after = ensure_knockout_schedule_entries(tournament_id)
     hint = group_schedule_replace_hint(before, after)
     replaced = False
     replace_summary: dict = {}
@@ -481,9 +447,10 @@ def office_planning_groups(slot: int):
         after = result["schedule"]
         replaced = True
         replace_summary = result.get("summary") or {}
-    dashboard = _build_office_dashboard(tournament_id)
+    saved_groups = fetch_bracket_groups(tournament_id)
+    dashboard = _build_office_dashboard(tournament_id, groups=saved_groups, schedule=after)
     return _json_no_cache({
-        "groups": fetch_bracket_groups(tournament_id),
+        "groups": saved_groups,
         "schedule": after,
         "dashboard": dashboard,
         "ask_replace_schedule": bool(hint.get("ask_replace_schedule")) and not replaced,
@@ -497,14 +464,12 @@ def office_planning_groups(slot: int):
 @blueprint.route('/<int:slot>/planning/groups/replace-schedule', methods=['POST'])
 def office_planning_groups_replace_schedule(slot: int):
     """Regenerate unplayed group fixtures and put them back on the timetable."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     result = replace_unplayed_group_schedule(tournament_id)
+    schedule = result["schedule"]
     return _json_no_cache({
-        "schedule": result["schedule"],
-        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule": schedule,
+        "dashboard": _build_office_dashboard(tournament_id, schedule=schedule),
         "schedule_replaced": True,
         "replace_summary": result.get("summary") or {},
     })
@@ -512,23 +477,14 @@ def office_planning_groups_replace_schedule(slot: int):
 
 @blueprint.route('/<int:slot>/schedule', methods=['GET'])
 def office_schedule(slot: int):
-    """Return schedule entries for one authenticated office slot."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
-    ensure_group_schedule_entries(tournament_id)
-    ensure_knockout_schedule_entries(tournament_id)
-    return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id)})
+    """Return schedule entries for one authenticated office slot (pure read)."""
+    return _json_no_cache({"schedule": fetch_tournament_schedule(g.office_tournament_id)})
 
 
 @blueprint.route('/<int:slot>/schedule', methods=['POST', 'PUT'])
 def office_schedule_save(slot: int):
     """Create or update manual schedule entries from the office workflow."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     raw = data.get('entries')
     raw_entries = raw if isinstance(raw, list) else [data]
@@ -538,17 +494,14 @@ def office_schedule_save(slot: int):
         return jsonify({"error": str(exc)}), 400
     return _json_no_cache({
         "schedule": schedule,
-        "dashboard": _build_office_dashboard(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id, schedule=schedule),
     })
 
 
 @blueprint.route('/<int:slot>/schedule/generate', methods=['POST'])
 def office_schedule_generate(slot: int):
     """Create missing schedule entries from groups and knockout slots."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     clear_removed_fixtures(tournament_id)
     ensure_group_schedule_entries(tournament_id)
@@ -556,16 +509,14 @@ def office_schedule_generate(slot: int):
         tournament_id,
         schedule_day=(data.get('day_date') or None),
     )
-    return _json_no_cache({"schedule": fetch_tournament_schedule(tournament_id), "dashboard": _build_office_dashboard(tournament_id)})
+    dashboard = _build_office_dashboard(tournament_id)
+    return _json_no_cache({"schedule": dashboard["schedule"], "dashboard": dashboard})
 
 
 @blueprint.route('/<int:slot>/schedule/generate-rematch', methods=['POST'])
 def office_schedule_generate_rematch(slot: int):
     """Add a second group-stage round robin for selected bracket groups."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     group_ids = data.get('group_ids') or []
     if not isinstance(group_ids, list) or not group_ids:
@@ -577,28 +528,24 @@ def office_schedule_generate_rematch(slot: int):
     )
     if result.get("error"):
         return jsonify(result), 400
+    dashboard = _build_office_dashboard(tournament_id)
     return _json_no_cache({
         "result": result,
-        "schedule": fetch_tournament_schedule(tournament_id),
-        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule": dashboard["schedule"],
+        "dashboard": dashboard,
     })
 
 
 @blueprint.route('/<int:slot>/players', methods=['POST'])
 def office_create_player(slot: int):
     """Add a player to the tournament from the office workflow."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
 
     names = tournament_setup.player_names(data)
     if not names:
         return jsonify({"error": "Name is required"}), 400
     name, first_name, last_name = names
-
-    from ..database import insert_player
 
     player_id = insert_player(
         tournament_id,
@@ -637,37 +584,29 @@ def _schedule_notes_request(tournament_id: int, *, apply: bool):
 @blueprint.route('/<int:slot>/schedule/notes/preview', methods=['POST'])
 def office_schedule_notes_preview(slot: int):
     """Which matches a bulk note would touch, and how."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    result = _schedule_notes_request(int(tournament['id']), apply=False)
+    result = _schedule_notes_request(g.office_tournament_id, apply=False)
     return result if isinstance(result, tuple) else _json_no_cache(result)
 
 
 @blueprint.route('/<int:slot>/schedule/notes', methods=['POST'])
 def office_schedule_notes_apply(slot: int):
     """Write (replace, append or clear) the public note of every matching match."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     result = _schedule_notes_request(tournament_id, apply=True)
     if isinstance(result, tuple):
         return result
+    dashboard = _build_office_dashboard(tournament_id)
     return _json_no_cache({
         **result,
-        "schedule": fetch_tournament_schedule(tournament_id),
-        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule": dashboard["schedule"],
+        "dashboard": dashboard,
     })
 
 
 @blueprint.route('/<int:slot>/schedule/<int:schedule_id>', methods=['PUT', 'PATCH'])
 def office_schedule_update(slot: int, schedule_id: int):
     """Update date, time, court, status or notes for one schedule entry."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     before = next(
         (e for e in fetch_tournament_schedule(tournament_id) if int(e.get('id') or 0) == schedule_id),
         None,
@@ -680,43 +619,38 @@ def office_schedule_update(slot: int, schedule_id: int):
         return jsonify({"error": "Schedule entry not found"}), 404
     if before:
         _notify_quietly(lambda: schedule_notifications.notify_fixture_changed(before, entry), "fixture_changed")
+    dashboard = _build_office_dashboard(tournament_id)
     return _json_no_cache({
         "schedule_entry": entry,
-        "schedule": fetch_tournament_schedule(tournament_id),
-        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule": dashboard["schedule"],
+        "dashboard": dashboard,
     })
 
 
 @blueprint.route('/<int:slot>/schedule/<int:schedule_id>', methods=['DELETE'])
 def office_schedule_delete(slot: int, schedule_id: int):
     """Delete one schedule entry from the office workflow."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     try:
         deleted = delete_tournament_schedule_entry(tournament_id, schedule_id)
     except StorageError:
         return jsonify({"error": "Schedule save failed"}), 500
     if not deleted:
         return jsonify({"error": "Schedule entry not found"}), 404
+    dashboard = _build_office_dashboard(tournament_id)
     return _json_no_cache({
-        "schedule": fetch_tournament_schedule(tournament_id),
-        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule": dashboard["schedule"],
+        "dashboard": dashboard,
     })
 
 
 @blueprint.route('/<int:slot>/schedule/publish', methods=['POST'])
 def office_schedule_publish(slot: int):
     """Promote all draft schedule entries to published (planned)."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     day_date = (data.get('day_date') or '').strip() or None
 
-    # Capture what is about to be published so the right players can be told.
     drafts = [
         entry for entry in fetch_tournament_schedule(tournament_id)
         if str(entry.get('status') or '') == 'draft'
@@ -726,33 +660,26 @@ def office_schedule_publish(slot: int):
     if published:
         _notify_quietly(lambda: schedule_notifications.notify_plan_published(drafts), "plan_published")
 
+    dashboard = _build_office_dashboard(tournament_id)
     return _json_no_cache({
         "published": published,
-        "schedule": fetch_tournament_schedule(tournament_id),
-        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule": dashboard["schedule"],
+        "dashboard": dashboard,
     })
 
 
 @blueprint.route('/<int:slot>/quick-info', methods=['GET'])
 def office_quick_info_get(slot: int):
     """Return the quick info banner draft for the authenticated office."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
-    return _json_no_cache({"quick_info": get_tournament_quick_info(tournament_id)})
+    return _json_no_cache({"quick_info": get_tournament_quick_info(g.office_tournament_id)})
 
 
 @blueprint.route('/<int:slot>/quick-info', methods=['PUT'])
 def office_quick_info_save(slot: int):
     """Publish or hide the quick info banner on the public live site."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
     quick_info = save_tournament_quick_info(
-        tournament_id,
+        g.office_tournament_id,
         str(data.get('message') or ''),
         active=_normalize_bool(data.get('active', True)),
     )
@@ -762,23 +689,15 @@ def office_quick_info_save(slot: int):
 @blueprint.route('/<int:slot>/court-streams', methods=['GET'])
 def office_court_streams_get(slot: int):
     """Return the day × court stream URL grid for the authenticated office."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
-    return _json_no_cache({"court_streams": get_tournament_court_streams(tournament_id)})
+    return _json_no_cache({"court_streams": get_tournament_court_streams(g.office_tournament_id)})
 
 
 @blueprint.route('/<int:slot>/court-streams', methods=['PUT'])
 def office_court_streams_save(slot: int):
     """Save YouTube / stream URLs per tournament day and court."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
     try:
-        court_streams = save_tournament_court_streams(tournament_id, data)
+        court_streams = save_tournament_court_streams(g.office_tournament_id, data)
     except StreamUrlError as exc:
         return _json_no_cache({"error": "invalid_url", "cells": exc.cells}, 400)
     return _json_no_cache({"court_streams": court_streams})
@@ -787,10 +706,7 @@ def office_court_streams_save(slot: int):
 @blueprint.route('/<int:slot>/autoschedule/config', methods=['GET'])
 def office_autoschedule_config(slot: int):
     """Return auto-scheduler config plus available courts and detected category bands."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     config = get_autoscheduler_config(tournament_id)
     courts = fetch_courts_for_tournament(tournament_id)
     bands = sorted({
@@ -803,7 +719,6 @@ def office_autoschedule_config(slot: int):
 
 
 def _player_band(player: dict) -> str:
-    import re
     match = re.search(r"B\s*([1-4])", str(player.get('category') or '').upper())
     return f"B{match.group(1)}" if match else ""
 
@@ -811,10 +726,7 @@ def _player_band(player: dict) -> str:
 @blueprint.route('/<int:slot>/autoschedule/config', methods=['PUT'])
 def office_autoschedule_config_save(slot: int):
     """Persist auto-scheduler config (court mapping, slot minutes, start time, rest)."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     config = save_autoscheduler_config(tournament_id, data)
     schedule = reflow_placed_schedule(tournament_id)
@@ -824,14 +736,10 @@ def office_autoschedule_config_save(slot: int):
 @blueprint.route('/<int:slot>/autoschedule/generate', methods=['POST'])
 def office_autoschedule_generate(slot: int):
     """Build a non-persisted auto-placement proposal to review on the board."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
     data = request.get_json(silent=True) or {}
     b1_court_ids = data.get('b1_court_ids') if isinstance(data.get('b1_court_ids'), list) else None
     proposal = generate_autoschedule_proposal(
-        tournament_id,
+        g.office_tournament_id,
         start_time=(data.get('start_time') or None),
         b1_court_id=(data.get('b1_court_id') or None),
         b1_court_ids=b1_court_ids,
@@ -846,10 +754,7 @@ def office_autoschedule_generate(slot: int):
 @blueprint.route('/<int:slot>/autoschedule/apply', methods=['POST'])
 def office_autoschedule_apply(slot: int):
     """Persist a reviewed set of placements to the schedule."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     placements = data.get('placements')
     if not isinstance(placements, list) or not placements:
@@ -857,17 +762,14 @@ def office_autoschedule_apply(slot: int):
     schedule = apply_autoschedule_placements(tournament_id, placements)
     return _json_no_cache({
         "schedule": schedule,
-        "dashboard": _build_office_dashboard(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id, schedule=schedule),
     })
 
 
 @blueprint.route('/<int:slot>/autoschedule/move', methods=['POST'])
 def office_autoschedule_move(slot: int):
     """Move one match to a court/time. Other matches keep their times."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     schedule_id = _normalize_int(data.get('schedule_id'), 0)
     if not schedule_id:
@@ -881,17 +783,14 @@ def office_autoschedule_move(slot: int):
     )
     return _json_no_cache({
         "schedule": schedule,
-        "dashboard": _build_office_dashboard(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id, schedule=schedule),
     })
 
 
 @blueprint.route('/<int:slot>/autoschedule/unassign', methods=['POST'])
 def office_autoschedule_unassign(slot: int):
     """Return a match to the unassigned pool (clear court and time)."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     schedule_id = _normalize_int(data.get('schedule_id'), 0)
     if not schedule_id:
@@ -903,53 +802,46 @@ def office_autoschedule_unassign(slot: int):
     )
     return _json_no_cache({
         "schedule": schedule,
-        "dashboard": _build_office_dashboard(tournament_id),
+        "dashboard": _build_office_dashboard(tournament_id, schedule=schedule),
     })
 
 
 @blueprint.route('/<int:slot>/schedule/unassigned', methods=['DELETE'])
 def office_schedule_delete_unassigned(slot: int):
     """Delete all unassigned schedule entries (no court or time), optionally for one day."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     day_date = (request.args.get('day_date') or '').strip() or None
     deleted = delete_unassigned_schedule_entries(tournament_id, day_date=day_date)
+    dashboard = _build_office_dashboard(tournament_id)
     return _json_no_cache({
         "deleted": deleted,
-        "schedule": fetch_tournament_schedule(tournament_id),
-        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule": dashboard["schedule"],
+        "dashboard": dashboard,
     })
 
 
 @blueprint.route('/<int:slot>/schedule/clear-day', methods=['POST'])
 def office_schedule_clear_day(slot: int):
     """Move one day's matches back to the unassigned pool; played and live ones stay."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     day_date = str(data.get('day_date') or '').strip()
     if not day_date:
         return jsonify({"error": "day_date is required"}), 400
     result = clear_schedule_day(tournament_id, day_date)
+    dashboard = _build_office_dashboard(tournament_id)
     return _json_no_cache({
         **result,
-        "schedule": fetch_tournament_schedule(tournament_id),
-        "dashboard": _build_office_dashboard(tournament_id),
+        "schedule": dashboard["schedule"],
+        "dashboard": dashboard,
     })
 
 
 @blueprint.route('/<int:slot>/group-matches', methods=['POST'])
 def office_group_match(slot: int):
     """Create a finished group-stage result from the standalone office module."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
     try:
-        payload, status = _create_office_group_match(int(tournament['id']), request.get_json(silent=True) or {})
+        payload, status = _create_office_group_match(g.office_tournament_id, request.get_json(silent=True) or {})
     except OfficeWorkflowError as exc:
         return jsonify({"error": str(exc)}), exc.status_code
     return _json_no_cache(payload, status)
@@ -958,21 +850,15 @@ def office_group_match(slot: int):
 @blueprint.route('/<int:slot>/knockout-formats', methods=['GET'])
 def office_knockout_formats(slot: int):
     """Knockout format, allowed formats and a draw preview for every category."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    return _json_no_cache({"categories": knockout_format_overview(int(tournament['id']))})
+    return _json_no_cache({"categories": knockout_format_overview(g.office_tournament_id)})
 
 
 @blueprint.route('/<int:slot>/knockout-formats/preview', methods=['POST'])
 def office_knockout_format_preview(slot: int):
     """Preview an unsaved format for one category."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
     data = request.get_json(silent=True) or {}
     category_id = str(data.get('category_id') or '')
-    overview = knockout_format_overview(int(tournament['id']), drafts={category_id: data.get('config') or {}})
+    overview = knockout_format_overview(g.office_tournament_id, drafts={category_id: data.get('config') or {}})
     category = next((item for item in overview if str(item['category_id']) == category_id), None)
     if category is None:
         return jsonify({"error": "category_not_found"}), 404
@@ -982,10 +868,7 @@ def office_knockout_format_preview(slot: int):
 @blueprint.route('/<int:slot>/knockout-formats/<int:category_id>', methods=['PUT'])
 def office_save_knockout_format(slot: int, category_id: int):
     """Save (and confirm) a category's knockout format; rebuilds its draw when it changed."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     result = save_knockout_format(tournament_id, category_id, (request.get_json(silent=True) or {}).get('config') or {})
     if result.get('error') == 'category_not_found':
         return jsonify({"error": "category_not_found"}), 404
@@ -1003,10 +886,7 @@ def office_save_knockout_format(slot: int, category_id: int):
 @blueprint.route('/<int:slot>/knockout-formats/confirm-all', methods=['POST'])
 def office_confirm_all_knockout_formats(slot: int):
     """Confirm the current format of every category."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     confirm_all_knockout_formats(tournament_id)
     return _json_no_cache({
         "categories": knockout_format_overview(tournament_id),
@@ -1017,10 +897,7 @@ def office_confirm_all_knockout_formats(slot: int):
 @blueprint.route('/<int:slot>/knockout/swap', methods=['POST'])
 def office_knockout_swap(slot: int):
     """Swap two players between knockout slots of one category before they have played."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
-    tournament_id = int(tournament['id'])
+    tournament_id = g.office_tournament_id
     data = request.get_json(silent=True) or {}
     problem = swap_knockout_players(tournament_id, data.get('first') or {}, data.get('second') or {})
     if problem:
@@ -1032,11 +909,8 @@ def office_knockout_swap(slot: int):
 @blueprint.route('/<int:slot>/knockout-matches', methods=['POST'])
 def office_knockout_match(slot: int):
     """Create a finished knockout result from the standalone office module."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
     try:
-        payload, status = _create_office_knockout_match(int(tournament['id']), request.get_json(silent=True) or {})
+        payload, status = _create_office_knockout_match(g.office_tournament_id, request.get_json(silent=True) or {})
     except OfficeWorkflowError as exc:
         return jsonify({"error": str(exc)}), exc.status_code
     return _json_no_cache(payload, status)
@@ -1045,11 +919,8 @@ def office_knockout_match(slot: int):
 @blueprint.route('/<int:slot>/matches/<int:match_id>', methods=['PUT'])
 def office_update_match(slot: int, match_id: int):
     """Edit an existing office match result from the standalone office module."""
-    tournament, error = _require_office_access(slot)
-    if error:
-        return error
     try:
-        payload = _update_office_match(int(tournament['id']), match_id, request.get_json(silent=True) or {})
+        payload = _update_office_match(g.office_tournament_id, match_id, request.get_json(silent=True) or {})
     except OfficeWorkflowError as exc:
         return exc.response()
     except ValueError as exc:

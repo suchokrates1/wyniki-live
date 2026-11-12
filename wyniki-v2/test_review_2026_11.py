@@ -407,3 +407,69 @@ def test_office_refusal_includes_stable_error_code(app):
     body = resp.get_json()
     assert body["code"] == "group_players_required"
     assert "error" in body
+
+
+def test_office_reads_do_not_write_and_dashboard_connection_count_stays_constant(app, monkeypatch):
+    from werkzeug.security import generate_password_hash
+    from wyniki import database
+    from wyniki.database import connection as conn_mod
+    from wyniki.services.office_workflow import _build_office_dashboard
+
+    with app.app_context():
+        tid = database.insert_tournament(
+            "Constant Conn Cup", "2026-11-11", "2026-11-12",
+            active=True, office_password_hash=generate_password_hash("secret123"),
+        )
+        pids = [
+            database.insert_player(tid, f"Player {i}", "B1", "PL", first_name="Player", last_name=str(i))
+            for i in range(1, 13)
+        ]
+        database.save_bracket_groups(tid, [{"name": "B1 — Grupa A", "players": pids[:2]}])
+
+    real_db_conn = conn_mod.db_conn
+    opens = []
+
+    from contextlib import contextmanager
+
+    @contextmanager
+    def counting_conn():
+        opens.append(1)
+        with real_db_conn() as c:
+            yield c
+
+    # Patch db_conn in modules invoked by _build_office_dashboard
+    from wyniki.database import brackets as brackets_mod, courts as courts_mod, court_streams as streams_mod
+    from wyniki.database import schedule as sched_mod, tournaments as tourn_mod
+
+    for mod in (brackets_mod, courts_mod, streams_mod, sched_mod, tourn_mod):
+        if hasattr(mod, "db_conn"):
+            monkeypatch.setattr(mod, "db_conn", counting_conn)
+
+    with app.app_context():
+        opens.clear()
+        _build_office_dashboard(tid)
+        conns_one_group = len(opens)
+
+        database.save_bracket_groups(
+            tid,
+            [{"name": f"B1 — Grupa {chr(65 + g)}", "players": pids[g * 2 : g * 2 + 2]} for g in range(6)],
+        )
+        opens.clear()
+        dash = _build_office_dashboard(tid)
+        conns_six_groups = len(opens)
+
+    assert conns_six_groups == conns_one_group, f"expected O(1) connections, got {conns_one_group} vs {conns_six_groups}"
+    assert dash["progress"]["expected_matches"] == 6
+
+    client = app.test_client()
+    token = client.post("/api/office/1/auth", json={"password": "secret123"}).get_json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Verify GET routes do not write schedule rows when the schedule table was cleared behind the scenes
+    with real_db_conn() as conn:
+        conn.execute("DELETE FROM tournament_schedule WHERE tournament_id = ?", (tid,))
+        conn.commit()
+    assert client.get("/api/office/1/dashboard", headers=headers).status_code == 200
+    assert client.get("/api/office/1/schedule", headers=headers).status_code == 200
+    assert client.get("/api/office/1/planning", headers=headers).status_code == 200
+    assert database.fetch_tournament_schedule(tid) == []

@@ -99,6 +99,7 @@ from .brackets import (
     expected_group_matches_count,
     count_finished_group_matches,
     count_group_knockout_progress,
+    compute_groups_progress,
     _is_knockout_placeholder_name,
     _compute_provisional_knockout_slots_from_bracket,
     seed_knockout_rematch_for_groups,
@@ -210,6 +211,7 @@ from .global_player_rows import (
 
 from .orm_rows import (
     active_tournament_row,
+    finished_pair_match,
     first_row_where,
     latest_match_on_court,
     latest_match_with_uuid,

@@ -296,6 +296,121 @@ def count_group_knockout_progress(tournament_id: int, group_name: str) -> tuple[
                 finished += 1
         return expected, finished
 
+
+def compute_groups_progress(tournament_id: int, groups: list[dict[str, Any]]) -> dict[int, tuple[int, int]]:
+    """Compute (expected, finished) match counts for all groups on a single SQLite connection."""
+    if not groups:
+        return {}
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT phase, winner_name FROM bracket_knockout WHERE tournament_id = ?",
+            (tournament_id,),
+        )
+        ko_rows = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT bracket_group_id, COUNT(*) AS count
+            FROM tournament_schedule
+            WHERE tournament_id = ?
+              AND bracket_group_id IS NOT NULL
+              AND phase IN (?, ?)
+            GROUP BY bracket_group_id
+            """,
+            (tournament_id, GROUP_PHASE, GROUP_REMATCH_PHASE),
+        )
+        scheduled_by_group = {int(r["bracket_group_id"]): int(r["count"] or 0) for r in cursor.fetchall()}
+
+        group_ids = [int(g["id"]) for g in groups]
+        placeholders = ",".join("?" for _ in group_ids)
+        cursor.execute(
+            f"SELECT group_id, player_name FROM bracket_group_players WHERE group_id IN ({placeholders})",
+            group_ids,
+        )
+        keys_by_group: dict[int, set[str]] = {gid: set() for gid in group_ids}
+        for row in cursor.fetchall():
+            key = competitor_identity_key(row["player_name"])
+            if key:
+                keys_by_group[int(row["group_id"])].add(key)
+
+        cursor.execute(
+            """
+            SELECT id, player1_name, player2_name, bracket_group_id
+            FROM matches
+            WHERE tournament_id = ?
+              AND status = 'finished'
+              AND COALESCE(finish_reason, 'normal') != 'test'
+              AND phase IN (?, ?)
+            """,
+            (tournament_id, GROUP_PHASE, GROUP_REMATCH_PHASE),
+        )
+        finished_matches = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT match_id, player_a, player_b, phase
+            FROM match_history
+            WHERE tournament_id = ?
+              AND COALESCE(finish_reason, 'normal') != 'test'
+            """,
+            (tournament_id,),
+        )
+        unlinked_history = [
+            row for row in cursor.fetchall()
+            if row["match_id"] in (None, "", 0) and is_group_stage_phase(row["phase"])
+        ]
+
+    out: dict[int, tuple[int, int]] = {}
+    for group in groups:
+        gid = int(group["id"])
+        play_format = normalize_play_format(group.get("play_format"))
+        if play_format == PLAY_FORMAT_KNOCKOUT:
+            label = str(group.get("name") or "").strip()
+            if not label:
+                out[gid] = (0, 0)
+                continue
+            prefix = f"{label} — "
+            exp = fin = 0
+            for row in ko_rows:
+                phase = str(row["phase"] or "")
+                if phase == label or phase.startswith(prefix):
+                    exp += 1
+                    if row["winner_name"]:
+                        fin += 1
+            out[gid] = (exp, fin)
+            continue
+
+        player_count = len(group.get("players") or [])
+        if player_count < 2:
+            expected = 0
+        else:
+            scheduled = scheduled_by_group.get(gid, 0)
+            expected_rr = player_count * (player_count - 1) // 2
+            if scheduled > expected_rr > 0:
+                expected = expected_rr
+            elif scheduled > 0:
+                expected = scheduled
+            else:
+                expected = expected_rr
+
+        gkeys = keys_by_group.get(gid, set())
+        counted_ids: set[int] = set()
+        for row in finished_matches:
+            bgid = row["bracket_group_id"]
+            linked = bgid not in (None, "", 0) and int(bgid) == gid
+            inferred = bgid in (None, "", 0) and _both_competitors_in_group(
+                row["player1_name"], row["player2_name"], gkeys
+            )
+            if linked or inferred:
+                counted_ids.add(int(row["id"]))
+        extra = sum(
+            1 for row in unlinked_history
+            if _both_competitors_in_group(row["player_a"], row["player_b"], gkeys)
+        )
+        out[gid] = (expected, len(counted_ids) + extra)
+    return out
+
 def _phase_kind(phase: str | None) -> str | None:
     """Map localized phase labels to a stable semantic kind."""
     _, suffix = _split_bracket_label(phase)
@@ -1974,7 +2089,8 @@ def save_bracket_knockout(tournament_id: int, slots: list[dict]) -> bool:
                 )
             conn.commit()
             logger.info("bracket_knockout_saved", tournament_id=tournament_id, count=len(slots))
-            return True
+        ensure_knockout_schedule_entries(tournament_id)
+        return True
     except Exception as e:
         logger.error("save_bracket_knockout_error", error=str(e))
         return False

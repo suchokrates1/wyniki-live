@@ -113,3 +113,26 @@ def latest_match_on_court(court_id: str, status: str = "in_progress") -> Match |
         .order_by(Match.updated_at.desc(), Match.id.desc())
         .first()
     )
+
+
+def finished_pair_match(
+    tournament_id: int,
+    phase: str,
+    player1_name: str,
+    player2_name: str,
+    *,
+    bracket_group_id: int | None = None,
+) -> Match | None:
+    """A finished match between these two players (in either side order) in this phase."""
+    query = db.session.query(Match).filter(
+        Match.tournament_id == tournament_id,
+        Match.phase == phase,
+        Match.status == "finished",
+        (
+            ((Match.player1_name == player1_name) & (Match.player2_name == player2_name))
+            | ((Match.player1_name == player2_name) & (Match.player2_name == player1_name))
+        ),
+    )
+    if bracket_group_id is not None:
+        query = query.filter(Match.bracket_group_id == bracket_group_id)
+    return query.first()

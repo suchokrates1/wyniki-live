@@ -16,8 +16,6 @@ from wyniki.database import (
     fetch_match_history,
     fetch_players,
     build_public_schedule_payload,
-    ensure_group_schedule_entries,
-    ensure_knockout_schedule_entries,
     get_public_tournament_quick_info,
 )
 from wyniki.utils import json_no_cache as _json_no_cache
@@ -122,8 +120,6 @@ def public_schedule():
         if error:
             return error
         tid = tournament["id"]
-    ensure_group_schedule_entries(tid)
-    ensure_knockout_schedule_entries(tid)
     return _json_no_cache(build_public_schedule_payload(tid))
 
 
@@ -222,8 +218,6 @@ def public_tournament_schedule(tid: int):
     tournament, error = _resolve_requested_stage(tournament)
     if error:
         return error
-    ensure_group_schedule_entries(tournament["id"])
-    ensure_knockout_schedule_entries(tournament["id"])
     return _json_no_cache(build_public_schedule_payload(tournament["id"]))
 
 
@@ -261,7 +255,6 @@ def admin_set_knockout(tid: int):
     slots = data.get("knockout", [])
     ok = save_bracket_knockout(tid, slots)
     if ok:
-        ensure_knockout_schedule_entries(tid)
         return jsonify({"status": "ok"})
     return jsonify({"error": "Failed to save knockout"}), 500
 

@@ -1241,6 +1241,7 @@ def generate_autoschedule_proposal(
     if _autoschedule_phases_include_knockout(phases):
         seed_day = target_day if day_date else knockout_day
         seed_provisional_knockout_from_groups(tournament_id, schedule_day=seed_day)
+        ensure_knockout_schedule_entries(tournament_id, schedule_day=seed_day)
     else:
         ensure_knockout_schedule_entries(tournament_id)
 
