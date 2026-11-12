@@ -8,6 +8,7 @@ from typing import Any
 from collections.abc import Generator
 from werkzeug.security import generate_password_hash
 
+from .errors import StorageError
 from ..config import settings, logger
 
 def _default_simulation_office_password_hash(is_simulation: bool, office_password_hash: str) -> str:
@@ -837,6 +838,7 @@ def upsert_app_settings(settings_dict: dict[str, str]) -> None:
         logger.info("app_settings_upserted", count=len(settings_dict))
     except Exception as e:
         logger.error("upsert_app_settings_error", error=str(e))
+        raise StorageError("upsert_app_settings") from e
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat()

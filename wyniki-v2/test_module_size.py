@@ -33,7 +33,7 @@ RECORDED_LINES = {
     "wyniki/api/office.py": 1041,
     "frontend/src/modules/office/autoScheduleView.js": 876,
     "wyniki/services/office_workflow.py": 930,
-    "wyniki/database/connection.py": 842,
+    "wyniki/database/connection.py": 844,
     "frontend/src/overlay.js": 525,
     "wyniki/services/director_commands.py": 702,
     "frontend/umpire.html": 664,

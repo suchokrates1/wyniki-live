@@ -131,3 +131,15 @@ def test_the_four_writes_that_stay_quiet_on_purpose(locked, monkeypatch):
     # This one already re-raises what the database threw, which the app turns into a 500.
     with pytest.raises(sqlite3.OperationalError):
         push_subscriptions.save_subscription("https://push.example/1", "key", "auth")
+
+
+def test_a_setting_and_a_court_write_raise(locked):
+    """Both used to log the failure and return as if the value had been saved."""
+    from wyniki.database import connection
+
+    locked(connection)
+    with pytest.raises(StorageError):
+        connection.upsert_app_settings({"panic_enabled": "1"})
+    locked(courts)
+    with pytest.raises(StorageError):
+        courts.upsert_court("t32-1", pin="1234", tournament_id=32)

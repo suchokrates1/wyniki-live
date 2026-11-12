@@ -129,6 +129,7 @@ def upsert_court(
         logger.info("court_upserted", kort_id=kort_id, pin=pin, tournament_id=tournament_id)
     except Exception as e:
         logger.error("upsert_court_error", kort_id=kort_id, error=str(e))
+        raise StorageError("upsert_court") from e
 
 def delete_court(kort_id: str) -> bool:
     """Delete a court from database."""
