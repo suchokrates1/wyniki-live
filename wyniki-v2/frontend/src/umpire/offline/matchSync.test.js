@@ -58,6 +58,37 @@ test('offline create is queued without calling the API', async () => {
   assert.equal((await outbox.pending())[0].type, MutationType.CREATE);
 });
 
+test('update with null matchId waits as UPDATE — never opens a second CREATE', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  const state = matchState({ clientMatchUuid: 'uuid-dup' });
+  state.clientMatchUuid = 'uuid-dup';
+  state.matchId = null;
+  let createCalls = 0;
+  const result = await syncMatchLive({
+    api: apiStub({
+      createMatch: async () => { createCalls += 1; return { ok: true, status: 201, data: { id: 99 } }; },
+    }),
+    outbox,
+    reason: 'update',
+    state,
+    online: () => true,
+  });
+  assert.equal(createCalls, 0);
+  assert.equal(result.waitingForCreate, true);
+  assert.equal((await outbox.pending())[0].type, MutationType.UPDATE);
+
+  await syncMatchLive({
+    api: apiStub({ createMatch: async () => { createCalls += 1; return { ok: true, status: 201, data: { id: 99 } }; } }),
+    outbox,
+    reason: 'update',
+    state,
+    online: () => false,
+  });
+  assert.equal(createCalls, 0);
+  const types = (await outbox.pending()).map((row) => row.type);
+  assert.ok(types.every((t) => t === MutationType.UPDATE), types);
+});
+
 test('offline point event is queued as EVENT', async () => {
   const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
   const state = matchState({ matchId: 9, clientMatchUuid: 'uuid-3' });

@@ -12,7 +12,10 @@ test('a request the server never answers is given up after the timeout', async (
       options.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
     }),
   });
-  await assert.rejects(api.updateMatch(1, {}), { name: 'AbortError' });
+  const result = await api.updateMatch(1, {});
+  assert.equal(result.ok, false);
+  assert.equal(result.status, 0);
+  assert.equal(result.aborted, true);
 });
 
 test('an answer in time is returned and the timeout option does not reach fetch', async () => {

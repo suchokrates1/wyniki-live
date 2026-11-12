@@ -92,10 +92,18 @@ export function createOutbox({ table, now = () => Date.now() } = {}) {
           break;
         } else if (kind === 'DROP') {
           await table.delete(row.id);
+          if (row.type === MutationType.CREATE) {
+            // No create will ever supply a serverMatchId for this UUID — drop dependents
+            // that would otherwise sit forever with status 0 / "no server match id".
+            await dropCreateDependents(row.clientMatchUuid, queue, index);
+          }
           dropped += 1;
         } else if (kind === 'FAIL' && status >= 400 && next.attempts >= MAX_REFUSED_ATTEMPTS) {
           // the server refuses this request itself; sending it forever helps nobody
           await table.put({ ...next, status: MutationStatus.FAILED, lastError: `HTTP ${status}` });
+          if (row.type === MutationType.CREATE) {
+            await dropCreateDependents(row.clientMatchUuid, queue, index);
+          }
           failed += 1;
         } else {
           // status 0 means it was not sent at all (no server match id yet): that is not an attempt
@@ -115,6 +123,22 @@ export function createOutbox({ table, now = () => Date.now() } = {}) {
     }
 
     return { flushed, dropped, failed, stoppedOnAuth };
+  }
+
+  async function dropCreateDependents(clientMatchUuid, queue, index) {
+    const types = [
+      MutationType.UPDATE, MutationType.EVENT, MutationType.FINISH, MutationType.STATS,
+    ];
+    await dropPendingForMatch(clientMatchUuid, types);
+    // pending() was snapshotted at the start of this flush — strip the same rows here
+    // so a later UPDATE/FINISH in this pass is not resurrected after the DB delete.
+    const dropTypes = new Set(types);
+    for (let j = index + 1; j < queue.length; j += 1) {
+      if (queue[j].clientMatchUuid === clientMatchUuid && dropTypes.has(queue[j].type)) {
+        queue.splice(j, 1);
+        j -= 1;
+      }
+    }
   }
 
   return {
@@ -148,7 +172,11 @@ export function createOutboxDispatcher(api) {
         return { ok: result.ok, status: result.status };
       }
       case MutationType.STATS: {
-        const result = await api.sendStatistics(mutation.payload);
+        if (mutation.serverMatchId == null) return { ok: false, status: 0 };
+        const payload = mutation.payload?.match_id === mutation.serverMatchId
+          ? mutation.payload
+          : { ...mutation.payload, match_id: mutation.serverMatchId };
+        const result = await api.sendStatistics(payload);
         return { ok: result.ok, status: result.status };
       }
       default:

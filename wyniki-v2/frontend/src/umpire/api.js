@@ -38,6 +38,16 @@ export function createUmpireApi({
         data = null;
       }
       return { ok: response.ok, status: response.status, data };
+    } catch (error) {
+      // Timeout (AbortError) and network failures must not bubble as uncaught rejections —
+      // callers clear pinBusy/loading from the returned `{ ok: false }` shape.
+      return {
+        ok: false,
+        status: 0,
+        data: null,
+        aborted: error?.name === 'AbortError',
+        error,
+      };
     } finally {
       clearTimeout(timer);
     }

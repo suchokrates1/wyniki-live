@@ -162,7 +162,7 @@ def test_a_dead_battery_is_stored_and_a_nonsense_level_is_ignored(app):
     assert get_court_state(court_id)["battery_level"] == 0
 
 
-@pytest.mark.parametrize("key", ["", "dev-secret-key-change-in-production", "prod-secret-key-change-me"])
+@pytest.mark.parametrize("key", ["", "change-me", "dev-secret-key-change-in-production", "prod-secret-key-change-me"])
 def test_production_refuses_to_start_with_a_key_from_the_repository(monkeypatch, key):
     import app as app_module
 

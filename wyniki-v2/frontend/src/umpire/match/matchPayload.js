@@ -109,7 +109,7 @@ export function toFinishPayload(request) {
 }
 
 export function toStatisticsPayload(state) {
-  if (state.matchId == null || !state.isMatchFinished) return null;
+  if (!state.isMatchFinished) return null;
   if (state.finishReason === MatchFinishReason.TEST) return null;
   // The winner the umpire named (walkover, retirement) comes first; a walkover has no sets.
   const named = (state.finishWinnerName || '').trim();

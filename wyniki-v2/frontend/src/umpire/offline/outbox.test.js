@@ -31,6 +31,25 @@ test('CREATE succeeds first and backfills server id', async () => {
   assert.equal((await outbox.pending()).length, 0);
 });
 
+test('CREATE dropped with 403 also drops UPDATE/FINISH/STATS for that UUID', async () => {
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  await outbox.enqueue({ clientMatchUuid: 'u-drop', type: MutationType.CREATE, payload: { court_id: '1' } });
+  await outbox.enqueue({ clientMatchUuid: 'u-drop', type: MutationType.UPDATE, payload: { n: 1 } });
+  await outbox.enqueue({ clientMatchUuid: 'u-drop', type: MutationType.FINISH, payload: {} });
+  await outbox.enqueue({ clientMatchUuid: 'u-drop', type: MutationType.STATS, payload: {} });
+  await outbox.enqueue({ clientMatchUuid: 'other', type: MutationType.FINISH, payload: {}, serverMatchId: 3 });
+
+  await outbox.flush(async (mutation) => {
+    if (mutation.type === MutationType.CREATE) return { ok: false, status: 403 };
+    // Unrelated match: keep it pending so we can see the DROP did not sweep other UUIDs.
+    throw new Error('leave other');
+  });
+  const pending = await outbox.pending();
+  assert.equal(pending.filter((row) => row.clientMatchUuid === 'u-drop').length, 0);
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].clientMatchUuid, 'other');
+});
+
 test('network errors stay pending for later flush', async () => {
   const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
   await outbox.enqueue({ clientMatchUuid: 'u1', type: MutationType.UPDATE, payload: {}, serverMatchId: 1 });

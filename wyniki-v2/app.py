@@ -52,6 +52,7 @@ def _apply_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
 # administrator token with them.
 PLACEHOLDER_SECRET_KEYS = frozenset({
     "",
+    "change-me",
     "dev-secret-key-change-in-production",
     "prod-secret-key-change-me",
 })

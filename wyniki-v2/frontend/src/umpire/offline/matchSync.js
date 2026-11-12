@@ -23,8 +23,11 @@ export async function syncMatchLive({
       await enqueue(outbox, state, MutationType.EVENT, eventPayload);
     } else if (reason === 'finalize') {
       await enqueueFinalize({ outbox, state, extra, from: FinalizeStep.SCORE });
+    } else if (reason === 'create') {
+      await enqueue(outbox, state, MutationType.CREATE, payload);
     } else {
-      await enqueue(outbox, state, scoreMutationType(state), payload);
+      // An `update` after a failed create must not open a second CREATE row.
+      await enqueue(outbox, state, MutationType.UPDATE, payload);
     }
     return { failed: true, offline: true };
   }
@@ -40,7 +43,11 @@ export async function syncMatchLive({
 
     let matchId = state.matchId;
     let bracketWarning = null;
-    if (reason === 'create' || matchId == null) {
+    // Only an explicit `create` (or finalize of a match the server does not know yet) may
+    // open a row. A timed-out create leaves later `update`s with a null matchId — those
+    // must wait in the outbox, not open a second live match.
+    const mayCreate = reason === 'create' || (reason === 'finalize' && matchId == null);
+    if (mayCreate) {
       const created = await api.createMatch(payload);
       if (!created.ok) {
         return handleFailure({
@@ -51,6 +58,9 @@ export async function syncMatchLive({
       matchId = created.data?.id;
       bracketWarning = created.data?.bracket_warning || created.data?.bracketWarning || null;
       if (reason !== 'finalize' || matchId == null) return { matchId, bracketWarning };
+    } else if (matchId == null) {
+      await enqueue(outbox, state, MutationType.UPDATE, payload);
+      return { failed: true, waitingForCreate: true };
     } else {
       const update = await api.updateMatch(matchId, payload);
       if (!update.ok) {
@@ -85,8 +95,11 @@ export async function syncMatchLive({
       await enqueue(outbox, state, MutationType.EVENT, eventPayload);
     } else if (reason === 'finalize') {
       await enqueueFinalize({ outbox, state, extra, from: finalizeFrom });
+    } else if (reason === 'create') {
+      await enqueue(outbox, state, MutationType.CREATE, payload);
     } else {
-      await enqueue(outbox, state, scoreMutationType(state), payload);
+      // Timed-out create leaves matchId null; later updates must not open a second CREATE.
+      await enqueue(outbox, state, MutationType.UPDATE, payload);
     }
     return { failed: true, offline: !online() };
   }
