@@ -200,6 +200,9 @@ await check('points scored without the server survive Safari being closed', asyn
   await stopServer();
   await winPoint(driver);
   await waitFor('40 on the board', async () => (await points(driver))[0] === '40');
+  // The live PUT can sit in REQUEST_TIMEOUT_MS before api.js returns status 0 and the
+  // row lands in IndexedDB — wait for the queue, do not sample it once.
+  await waitFor('queued write in the outbox', async () => (await outboxSize(driver)) > 0, 40_000);
   const queued = await outboxSize(driver);
   if (!(queued > 0)) throw new Error(`outbox holds ${queued}`);
   // the umpire leaves Safari and iPadOS closes it
@@ -221,6 +224,9 @@ await check('points queued while Safari was in the background go out when it com
   await stopServer();
   await winPoint(driver); // 40 → game
   await waitFor('game on the board', async () => (await points(driver))[0] === '0');
+  // Same as the close-Safari case: wait until status 0 has landed in IndexedDB before
+  // suspending the page, or the in-flight PUT never becomes a queued write.
+  await waitFor('game queued in the outbox', async () => (await outboxSize(driver)) > 0, 40_000);
   simctl('launch', UDID, 'com.apple.Preferences');
   await startServer();
   await sleep(2000);
