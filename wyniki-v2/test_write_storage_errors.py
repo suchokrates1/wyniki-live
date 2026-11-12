@@ -143,3 +143,30 @@ def test_a_setting_and_a_court_write_raise(locked):
     locked(courts)
     with pytest.raises(StorageError):
         courts.upsert_court("t32-1", pin="1234", tournament_id=32)
+
+
+def test_a_read_that_a_write_is_built_on_raises(locked, monkeypatch):
+    """Empty is safe on a page and dangerous before a save: the office would generate
+    fixtures over an unread plan, and a new StreamDeck key would replace the old one."""
+    from wyniki.database import brackets, connection, schedule
+    from wyniki.services import overlay_settings
+
+    locked(schedule)
+    assert schedule.fetch_tournament_schedule(1, public_only=True) == []  # the public page
+    with pytest.raises(StorageError):
+        schedule.fetch_tournament_schedule(1)
+
+    locked(connection)
+    assert connection.fetch_app_settings(["panic_enabled"]) == {}  # a page showing a setting
+    with pytest.raises(StorageError):
+        connection.fetch_app_settings(["panic_enabled"], strict=True)
+    with pytest.raises(StorageError):
+        schedule.load_removed_fixtures(1)
+    with pytest.raises(StorageError):
+        brackets.load_knockout_formats(1)
+
+    written = []
+    monkeypatch.setattr(overlay_settings, "upsert_app_settings", written.append)
+    with pytest.raises(StorageError):
+        overlay_settings.stats_toggle_key()
+    assert written == [], "no new key was minted over the one that could not be read"

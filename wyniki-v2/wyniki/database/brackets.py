@@ -423,7 +423,8 @@ def load_knockout_formats(tournament_id: int | None) -> dict[str, dict[str, Any]
     if not tournament_id:
         return {}
     key = knockout_formats_settings_key(tournament_id)
-    raw = fetch_app_settings([key]).get(key)
+    # strict: the draw is generated from these, and "never set" would build the default format
+    raw = fetch_app_settings([key], strict=True).get(key)
     try:
         data = json.loads(raw) if raw else {}
     except (TypeError, ValueError):

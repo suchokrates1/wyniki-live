@@ -21,9 +21,9 @@ NEW_MODULE_LIMIT = 300
 
 # Frozen on 2026-10-02. Not a target.
 RECORDED_LINES = {
-    "wyniki/database/brackets.py": 2219,
+    "wyniki/database/brackets.py": 2220,
     "wyniki/api/umpire_api.py": 1921,
-    "wyniki/database/schedule.py": 1715,
+    "wyniki/database/schedule.py": 1722,
     "frontend/index.html": 1049,
     "frontend/office.html": 1651,
     "frontend/src/umpire/app.js": 1662,
@@ -33,7 +33,7 @@ RECORDED_LINES = {
     "wyniki/api/office.py": 1041,
     "frontend/src/modules/office/autoScheduleView.js": 876,
     "wyniki/services/office_workflow.py": 930,
-    "wyniki/database/connection.py": 844,
+    "wyniki/database/connection.py": 850,
     "frontend/src/overlay.js": 525,
     "wyniki/services/director_commands.py": 702,
     "frontend/umpire.html": 664,
@@ -60,7 +60,7 @@ RECORDED_LINES = {
     "frontend/src/main.js": 359,
     "frontend/src/modules/pwaShellView.js": 332,
     "wyniki/database/players.py": 314,
-    "wyniki/services/overlay_settings.py": 341,
+    "wyniki/services/overlay_settings.py": 342,
     "wyniki/database/court_streams.py": 310,
     "frontend/src/admin/globalPlayers.js": 319,
     "frontend/src/umpire/match/matchController.js": 323,

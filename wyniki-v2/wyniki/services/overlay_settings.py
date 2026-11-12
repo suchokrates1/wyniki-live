@@ -270,7 +270,8 @@ _STATS_KEY = "overlay_stats_key"
 
 def stats_toggle_key() -> str:
     """The secret StreamDeck puts in the stats on/off address. Created once and kept."""
-    row = fetch_app_settings([_STATS_KEY])
+    # strict: an unreadable database must not look like "no key yet" and mint a new one
+    row = fetch_app_settings([_STATS_KEY], strict=True)
     key = str(row.get(_STATS_KEY) or "").strip()
     if key:
         return key
