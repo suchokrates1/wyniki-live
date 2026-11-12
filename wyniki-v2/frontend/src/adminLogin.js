@@ -137,6 +137,9 @@ render();
 if (inviteToken) {
   startInvite();
 } else {
+  if (params.get('reason') === 'expired') {
+    try { sessionStorage.removeItem(ADMIN_TOKEN_KEY); } catch { /* private mode */ }
+  }
   // Already signed in on this tab: straight on. A stale token comes back here as "expired".
   if (storageGet(ADMIN_TOKEN_KEY)) window.location.replace(next);
   showNotice(notice, ...(NOTICES[params.get('reason')] || []));
