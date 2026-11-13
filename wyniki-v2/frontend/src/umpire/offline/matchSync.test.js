@@ -42,6 +42,27 @@ test('500 queues an UPDATE; 403 drops the stale queue', async () => {
   assert.equal((await outbox.pending()).length, 0);
 });
 
+test('a failed fetch (status 0) queues an UPDATE even when the browser still says online', async () => {
+  // Real api.js never throws: timeout / ECONNREFUSED become { ok: false, status: 0 }.
+  // iPad Safari keeps navigator.onLine true after the e2e harness stops gunicorn.
+  const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
+  const state = matchState({ matchId: 9, clientMatchUuid: 'uuid-status-0' });
+  state.matchId = 9;
+  state.clientMatchUuid = 'uuid-status-0';
+  state.matchStartTime = 1;
+
+  const result = await syncMatchLive({
+    api: apiStub({ updateMatch: async () => ({ ok: false, status: 0, data: null }) }),
+    outbox,
+    reason: 'update',
+    state,
+    online: () => true,
+  });
+  assert.equal(result.failed, true);
+  assert.equal((await outbox.pending()).length, 1);
+  assert.equal((await outbox.pending())[0].type, MutationType.UPDATE);
+});
+
 test('offline create is queued without calling the API', async () => {
   const outbox = createOutbox({ table: createMemoryTable(), now: () => 1 });
   const state = matchState({ clientMatchUuid: 'uuid-2' });

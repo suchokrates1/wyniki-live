@@ -9,7 +9,7 @@ on:
 jobs:
   ipad-safari:
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       SECRET_KEY: ipad-e2e-secret
       DATABASE_PATH: ${{ github.workspace }}/ipad-e2e.sqlite3
@@ -62,9 +62,36 @@ jobs:
           print(device['udid'], runtime.rsplit('iOS-', 1)[1].replace('-', '.'))")"
           echo "IPAD_UDID=$UDID" >> "$GITHUB_ENV"
           echo "IPAD_VERSION=$VERSION" >> "$GITHUB_ENV"
-          xcrun simctl boot "$UDID"
+          # Appium restarts a headless-booted sim so the UI is visible; open Simulator first
+          # so session create does not pay that reboot on the critical path.
+          open -a Simulator --args -CurrentDeviceUDID "$UDID"
+          xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl list devices | grep "$UDID"
+
+      - name: Prebuild WebDriverAgent for the booted iPad
+        run: |
+          WDA="$HOME/.appium/node_modules/appium-xcuitest-driver/node_modules/appium-webdriveragent"
+          DERIVED="$RUNNER_TEMP/wda-derived"
+          echo "WDA_DERIVED_DATA=$DERIVED" >> "$GITHUB_ENV"
+          xcodebuild build-for-testing \
+            -project "$WDA/WebDriverAgent.xcodeproj" \
+            -scheme WebDriverAgentRunner \
+            -destination "id=$IPAD_UDID" \
+            -derivedDataPath "$DERIVED" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Wait for Appium
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf "http://127.0.0.1:4723/status" >/dev/null; then
+              curl -s "http://127.0.0.1:4723/status"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Appium did not become ready" >&2
+          exit 1
 
       - name: Umpire PWA on the iPad
         run: node e2e/ipad-safari/run.mjs

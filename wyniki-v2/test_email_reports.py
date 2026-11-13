@@ -283,7 +283,9 @@ def test_the_report_shows_the_result_from_the_match_row_not_the_live_court(sent)
     send_match_report(match, next_pair_on_court, {"report_email": "biuro@atnis.pl"})
 
     assert "4:2 3:4(5) [7:4]" in sent[0]["html"]
-    assert "1:0" not in sent[0]["html"]
+    # the next pair's score as the court columns would give it; not a bare "1:0",
+    # which also turns up inside the timestamp of the report (…:41:09)
+    assert "1:0 0:0 0:0" not in sent[0]["html"]
 
 
 def test_without_set_detail_the_report_falls_back_to_the_court_state(sent):

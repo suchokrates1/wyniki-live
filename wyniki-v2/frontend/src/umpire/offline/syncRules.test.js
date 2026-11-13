@@ -10,3 +10,10 @@ test('403/404 drop stale outbox ids like the Vilnius finish fix', () => {
   assert.equal(classifyHttp(401), 'AUTH');
   assert.equal(classifyHttp(200), 'OK');
 });
+
+test('no HTTP answer (timeout / failed fetch → status 0) is retryable', () => {
+  assert.equal(classifyHttp(0), 'RETRY');
+  assert.equal(classifyHttp(null), 'RETRY');
+  assert.equal(classifyHttp(undefined), 'RETRY');
+  assert.equal(isRetryableStatus(0), true);
+});

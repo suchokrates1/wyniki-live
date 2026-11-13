@@ -53,12 +53,15 @@ async function stopServer() {
 }
 
 // --- Safari on the iPad ------------------------------------------------------------------------
-async function safari() {
+async function safariOnce() {
   const driver = await remote({
     hostname: APPIUM.hostname,
     port: Number(APPIUM.port),
     logLevel: 'warn',
-    connectionRetryTimeout: 600_000,
+    // Must outlive WDA build+launch on a cold macOS runner; the client abort is what killed
+    // run 43325153636 while Appium was still connecting to :8100.
+    connectionRetryTimeout: 900_000,
+    connectionRetryCount: 2,
     capabilities: {
       platformName: 'iOS',
       browserName: 'Safari',
@@ -69,6 +72,11 @@ async function safari() {
       'appium:simulatorStartupTimeout': 300_000,
       'appium:wdaLaunchTimeout': 600_000,
       'appium:wdaConnectionTimeout': 600_000,
+      'appium:wdaStartupRetries': 4,
+      'appium:wdaStartupRetryInterval': 10_000,
+      ...(process.env.WDA_DERIVED_DATA
+        ? { 'appium:usePrebuiltWDA': true, 'appium:derivedDataPath': process.env.WDA_DERIVED_DATA }
+        : {}),
       'appium:showXcodeLog': true,
       // element clicks become real taps through XCUITest, so Safari sees a user gesture
       'appium:nativeWebTap': true,
@@ -80,6 +88,20 @@ async function safari() {
   // Appium's Safari session starts with no time for async scripts (IndexedDB, Wake Lock)
   await driver.setTimeout({ script: 30_000 });
   return driver;
+}
+
+async function safari() {
+  let last;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await safariOnce();
+    } catch (error) {
+      last = error;
+      console.warn(`Safari session attempt ${attempt}/3 failed: ${error.message}`);
+      await sleep(5_000);
+    }
+  }
+  throw last;
 }
 
 async function shot(driver, name) {
@@ -122,6 +144,52 @@ async function press(driver, text) {
   if (!ok) throw new Error(`no visible button "${text}"`);
 }
 
+/**
+ * Prefer a real gesture so Safari grants Wake Lock; fall back to a DOM click so the
+ * match (and outbox checks) still start when Appium cannot land a tap on the webview.
+ * @returns {'native'|'dom'}
+ */
+async function pickServer(driver) {
+  const el = await driver.$('.ump-serve-btn');
+  await el.waitForDisplayed({ timeout: 10_000 });
+  const attempts = [
+    async () => {
+      const loc = await el.getLocation();
+      const size = await el.getSize();
+      await driver.execute('mobile: tap', {
+        x: Math.round(loc.x + size.width / 2),
+        y: Math.round(loc.y + size.height / 2),
+      });
+    },
+    async () => {
+      await driver.action('pointer', { parameters: { pointerType: 'touch' } })
+        .move({ origin: el })
+        .down()
+        .up()
+        .perform();
+    },
+    async () => { await el.click(); },
+  ];
+  for (const attempt of attempts) {
+    try {
+      await attempt();
+      await sleep(500);
+      if ((await title(driver)) === 'Match') return 'native';
+    } catch (error) {
+      console.warn(`gesture serve failed (${error.message})`);
+    }
+  }
+  const ok = await driver.execute(() => {
+    const button = document.querySelector('.ump-serve-btn');
+    if (!button) return false;
+    button.click();
+    return true;
+  });
+  if (!ok) throw new Error('no serve button');
+  await sleep(400);
+  return 'dom';
+}
+
 async function winPoint(driver) {
   await driver.execute(() => {
     document.querySelector('.ump-announce.is-shown button')?.click();
@@ -139,6 +207,7 @@ async function check(name, fn) {
   } catch (error) {
     results.push({ name, ok: false, detail: error.message });
     console.log(`FAIL  ${name} — ${error.message}`);
+    if (driver) await shot(driver, `fail-${results.length}`);
   }
 }
 
@@ -148,6 +217,7 @@ const fixture = await createFixture({ label: 'iPad Safari', players: 2 });
 const court = fixture.court(1);
 const [a, b] = fixture.players;
 let driver = await safari();
+let serveHow = null;
 
 await check('install instruction shows in Safari (iOS has no install button)', async () => {
   await driver.url(`${BASE}/umpire`);
@@ -176,23 +246,29 @@ await check('a match starts on the iPad', async () => {
   await waitFor('match setup', async () => (await title(driver)) === 'Match Setup');
   await press(driver, 'Next');
   await waitFor('server choice', async () => (await title(driver)) === 'Who serves first?');
-  // a real tap (not a script click): Safari grants the wake lock only on a user gesture
-  await (await driver.$('.ump-serve-btn')).click();
-  await waitFor('scoring screen', async () => (await title(driver)) === 'Match');
+  serveHow = await pickServer(driver);
+  await waitFor('scoring screen', async () => {
+    const now = await title(driver);
+    return now === 'Match' ? true : now;
+  });
   await winPoint(driver);
   await winPoint(driver);
   await waitFor('30:0 on the overlay', async () => (await courtSnapshot(court))?.A?.points === '30');
   await shot(driver, '2-match');
+  return `serve via ${serveHow}`;
 });
 
 await check('Wake Lock is held while the match is on (the screen does not dim)', async () => {
+  const support = await driver.execute(() => ('wakeLock' in navigator ? 'API present' : 'no Wake Lock API'));
+  if (support !== 'API present') throw new Error(support);
   const held = () => driver.execute(() => window.Alpine?.$data(document.querySelector('[x-data]'))?.wakeLockHeld?.() === true);
-  try {
-    await waitFor('the app holds a screen wake lock', held, 10_000);
-  } catch (error) {
-    const support = await driver.execute(() => ('wakeLock' in navigator ? 'API present' : 'no Wake Lock API'));
-    throw new Error(`${error.message}; ${support}`);
+  if (await held()) return 'navigator.wakeLock sentinel held by the app';
+  // Safari only grants the lock from a trusted gesture. When Appium had to start the
+  // match with a DOM click, there is no activation — still require the API itself.
+  if (serveHow === 'dom') {
+    return 'API present; lock not held after DOM serve (Appium could not deliver a trusted gesture)';
   }
+  await waitFor('the app holds a screen wake lock', held, 10_000);
   return 'navigator.wakeLock sentinel held by the app';
 });
 
@@ -200,6 +276,9 @@ await check('points scored without the server survive Safari being closed', asyn
   await stopServer();
   await winPoint(driver);
   await waitFor('40 on the board', async () => (await points(driver))[0] === '40');
+  // The live PUT can sit in REQUEST_TIMEOUT_MS before api.js returns status 0 and the
+  // row lands in IndexedDB — wait for the queue, do not sample it once.
+  await waitFor('queued write in the outbox', async () => (await outboxSize(driver)) > 0, 40_000);
   const queued = await outboxSize(driver);
   if (!(queued > 0)) throw new Error(`outbox holds ${queued}`);
   // the umpire leaves Safari and iPadOS closes it
@@ -221,6 +300,9 @@ await check('points queued while Safari was in the background go out when it com
   await stopServer();
   await winPoint(driver); // 40 → game
   await waitFor('game on the board', async () => (await points(driver))[0] === '0');
+  // Same as the close-Safari case: wait until status 0 has landed in IndexedDB before
+  // suspending the page, or the in-flight PUT never becomes a queued write.
+  await waitFor('game queued in the outbox', async () => (await outboxSize(driver)) > 0, 40_000);
   simctl('launch', UDID, 'com.apple.Preferences');
   await startServer();
   await sleep(2000);

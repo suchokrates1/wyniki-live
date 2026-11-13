@@ -19,6 +19,11 @@ export const MutationStatus = Object.freeze({
 export const MAX_REFUSED_ATTEMPTS = 5;
 
 export function classifyHttp(status) {
+  // api.js turns timeouts and failed fetches into status 0. Safari (and many venue
+  // networks) still report navigator.onLine === true in that case, so a live sync
+  // that only queues on !online() would drop the point. Treat "no HTTP answer" as
+  // retryable the same way as a 5xx.
+  if (!status) return 'RETRY';
   if (status === 401) return 'AUTH';
   if (status === 403 || status === 404) return 'DROP';
   if (status === 408 || status === 429 || (status >= 500 && status <= 599)) return 'RETRY';
