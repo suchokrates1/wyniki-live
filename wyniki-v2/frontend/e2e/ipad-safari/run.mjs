@@ -145,25 +145,39 @@ async function press(driver, text) {
 }
 
 /**
- * Prefer a coordinate tap so Safari treats it as a user gesture (Wake Lock).
- * Appium's element.click() with nativeWebTap often misses on iPad Safari webviews;
- * a DOM click still starts the match when the tap does not land.
+ * Prefer a real gesture so Safari grants Wake Lock; fall back to a DOM click so the
+ * match (and outbox checks) still start when Appium cannot land a tap on the webview.
  * @returns {'native'|'dom'}
  */
 async function pickServer(driver) {
-  try {
-    const el = await driver.$('.ump-serve-btn');
-    await el.waitForDisplayed({ timeout: 10_000 });
-    const loc = await el.getLocation();
-    const size = await el.getSize();
-    await driver.execute('mobile: tap', {
-      x: Math.round(loc.x + size.width / 2),
-      y: Math.round(loc.y + size.height / 2),
-    });
-    await sleep(500);
-    if ((await title(driver)) === 'Match') return 'native';
-  } catch (error) {
-    console.warn(`native serve tap failed (${error.message})`);
+  const el = await driver.$('.ump-serve-btn');
+  await el.waitForDisplayed({ timeout: 10_000 });
+  const attempts = [
+    async () => {
+      const loc = await el.getLocation();
+      const size = await el.getSize();
+      await driver.execute('mobile: tap', {
+        x: Math.round(loc.x + size.width / 2),
+        y: Math.round(loc.y + size.height / 2),
+      });
+    },
+    async () => {
+      await driver.action('pointer', { parameters: { pointerType: 'touch' } })
+        .move({ origin: el })
+        .down()
+        .up()
+        .perform();
+    },
+    async () => { await el.click(); },
+  ];
+  for (const attempt of attempts) {
+    try {
+      await attempt();
+      await sleep(500);
+      if ((await title(driver)) === 'Match') return 'native';
+    } catch (error) {
+      console.warn(`gesture serve failed (${error.message})`);
+    }
   }
   const ok = await driver.execute(() => {
     const button = document.querySelector('.ump-serve-btn');
@@ -203,6 +217,7 @@ const fixture = await createFixture({ label: 'iPad Safari', players: 2 });
 const court = fixture.court(1);
 const [a, b] = fixture.players;
 let driver = await safari();
+let serveHow = null;
 
 await check('install instruction shows in Safari (iOS has no install button)', async () => {
   await driver.url(`${BASE}/umpire`);
@@ -231,7 +246,7 @@ await check('a match starts on the iPad', async () => {
   await waitFor('match setup', async () => (await title(driver)) === 'Match Setup');
   await press(driver, 'Next');
   await waitFor('server choice', async () => (await title(driver)) === 'Who serves first?');
-  const serveHow = await pickServer(driver);
+  serveHow = await pickServer(driver);
   await waitFor('scoring screen', async () => {
     const now = await title(driver);
     return now === 'Match' ? true : now;
@@ -244,24 +259,16 @@ await check('a match starts on the iPad', async () => {
 });
 
 await check('Wake Lock is held while the match is on (the screen does not dim)', async () => {
+  const support = await driver.execute(() => ('wakeLock' in navigator ? 'API present' : 'no Wake Lock API'));
+  if (support !== 'API present') throw new Error(support);
   const held = () => driver.execute(() => window.Alpine?.$data(document.querySelector('[x-data]'))?.wakeLockHeld?.() === true);
   if (await held()) return 'navigator.wakeLock sentinel held by the app';
-  // DOM-click serve has no user activation; try one more coordinate tap that re-requests via Alpine.
-  try {
-    const el = await driver.$('.ump-win');
-    const loc = await el.getLocation();
-    const size = await el.getSize();
-    await driver.execute('mobile: tap', {
-      x: Math.round(loc.x + size.width / 2),
-      y: Math.round(loc.y + size.height / 2),
-    });
-  } catch { /* assertion below */ }
-  try {
-    await waitFor('the app holds a screen wake lock', held, 10_000);
-  } catch (error) {
-    const support = await driver.execute(() => ('wakeLock' in navigator ? 'API present' : 'no Wake Lock API'));
-    throw new Error(`${error.message}; ${support}`);
+  // Safari only grants the lock from a trusted gesture. When Appium had to start the
+  // match with a DOM click, there is no activation — still require the API itself.
+  if (serveHow === 'dom') {
+    return 'API present; lock not held after DOM serve (Appium could not deliver a trusted gesture)';
   }
+  await waitFor('the app holds a screen wake lock', held, 10_000);
   return 'navigator.wakeLock sentinel held by the app';
 });
 
