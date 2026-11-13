@@ -53,12 +53,15 @@ async function stopServer() {
 }
 
 // --- Safari on the iPad ------------------------------------------------------------------------
-async function safari() {
+async function safariOnce() {
   const driver = await remote({
     hostname: APPIUM.hostname,
     port: Number(APPIUM.port),
     logLevel: 'warn',
-    connectionRetryTimeout: 600_000,
+    // Must outlive WDA build+launch on a cold macOS runner; the client abort is what killed
+    // run 43325153636 while Appium was still connecting to :8100.
+    connectionRetryTimeout: 900_000,
+    connectionRetryCount: 2,
     capabilities: {
       platformName: 'iOS',
       browserName: 'Safari',
@@ -69,6 +72,11 @@ async function safari() {
       'appium:simulatorStartupTimeout': 300_000,
       'appium:wdaLaunchTimeout': 600_000,
       'appium:wdaConnectionTimeout': 600_000,
+      'appium:wdaStartupRetries': 4,
+      'appium:wdaStartupRetryInterval': 10_000,
+      ...(process.env.WDA_DERIVED_DATA
+        ? { 'appium:usePrebuiltWDA': true, 'appium:derivedDataPath': process.env.WDA_DERIVED_DATA }
+        : {}),
       'appium:showXcodeLog': true,
       // element clicks become real taps through XCUITest, so Safari sees a user gesture
       'appium:nativeWebTap': true,
@@ -80,6 +88,20 @@ async function safari() {
   // Appium's Safari session starts with no time for async scripts (IndexedDB, Wake Lock)
   await driver.setTimeout({ script: 30_000 });
   return driver;
+}
+
+async function safari() {
+  let last;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await safariOnce();
+    } catch (error) {
+      last = error;
+      console.warn(`Safari session attempt ${attempt}/3 failed: ${error.message}`);
+      await sleep(5_000);
+    }
+  }
+  throw last;
 }
 
 async function shot(driver, name) {
