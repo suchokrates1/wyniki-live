@@ -144,6 +144,38 @@ async function press(driver, text) {
   if (!ok) throw new Error(`no visible button "${text}"`);
 }
 
+/**
+ * Prefer a coordinate tap so Safari treats it as a user gesture (Wake Lock).
+ * Appium's element.click() with nativeWebTap often misses on iPad Safari webviews;
+ * a DOM click still starts the match when the tap does not land.
+ * @returns {'native'|'dom'}
+ */
+async function pickServer(driver) {
+  try {
+    const el = await driver.$('.ump-serve-btn');
+    await el.waitForDisplayed({ timeout: 10_000 });
+    const loc = await el.getLocation();
+    const size = await el.getSize();
+    await driver.execute('mobile: tap', {
+      x: Math.round(loc.x + size.width / 2),
+      y: Math.round(loc.y + size.height / 2),
+    });
+    await sleep(500);
+    if ((await title(driver)) === 'Match') return 'native';
+  } catch (error) {
+    console.warn(`native serve tap failed (${error.message})`);
+  }
+  const ok = await driver.execute(() => {
+    const button = document.querySelector('.ump-serve-btn');
+    if (!button) return false;
+    button.click();
+    return true;
+  });
+  if (!ok) throw new Error('no serve button');
+  await sleep(400);
+  return 'dom';
+}
+
 async function winPoint(driver) {
   await driver.execute(() => {
     document.querySelector('.ump-announce.is-shown button')?.click();
@@ -161,6 +193,7 @@ async function check(name, fn) {
   } catch (error) {
     results.push({ name, ok: false, detail: error.message });
     console.log(`FAIL  ${name} — ${error.message}`);
+    if (driver) await shot(driver, `fail-${results.length}`);
   }
 }
 
@@ -198,17 +231,31 @@ await check('a match starts on the iPad', async () => {
   await waitFor('match setup', async () => (await title(driver)) === 'Match Setup');
   await press(driver, 'Next');
   await waitFor('server choice', async () => (await title(driver)) === 'Who serves first?');
-  // a real tap (not a script click): Safari grants the wake lock only on a user gesture
-  await (await driver.$('.ump-serve-btn')).click();
-  await waitFor('scoring screen', async () => (await title(driver)) === 'Match');
+  const serveHow = await pickServer(driver);
+  await waitFor('scoring screen', async () => {
+    const now = await title(driver);
+    return now === 'Match' ? true : now;
+  });
   await winPoint(driver);
   await winPoint(driver);
   await waitFor('30:0 on the overlay', async () => (await courtSnapshot(court))?.A?.points === '30');
   await shot(driver, '2-match');
+  return `serve via ${serveHow}`;
 });
 
 await check('Wake Lock is held while the match is on (the screen does not dim)', async () => {
   const held = () => driver.execute(() => window.Alpine?.$data(document.querySelector('[x-data]'))?.wakeLockHeld?.() === true);
+  if (await held()) return 'navigator.wakeLock sentinel held by the app';
+  // DOM-click serve has no user activation; try one more coordinate tap that re-requests via Alpine.
+  try {
+    const el = await driver.$('.ump-win');
+    const loc = await el.getLocation();
+    const size = await el.getSize();
+    await driver.execute('mobile: tap', {
+      x: Math.round(loc.x + size.width / 2),
+      y: Math.round(loc.y + size.height / 2),
+    });
+  } catch { /* assertion below */ }
   try {
     await waitFor('the app holds a screen wake lock', held, 10_000);
   } catch (error) {
